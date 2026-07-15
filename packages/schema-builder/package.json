@@ -1,0 +1,164 @@
+{
+  "name": "@constructive-io/schema-builder",
+  "version": "0.1.0",
+  "description": "Framework-agnostic React schema builder for Constructive applications",
+  "keywords": [
+    "react",
+    "postgresql",
+    "schema-builder",
+    "shadcn"
+  ],
+  "author": "Constructive",
+  "license": "MIT",
+  "type": "module",
+  "sideEffects": [
+    "**/*.css"
+  ],
+  "files": [
+    "dist",
+    "src/styles.css",
+    "README.md",
+    "CHANGELOG.md",
+    "LICENSE"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/constructive-io/blocks.git",
+    "directory": "packages/schema-builder"
+  },
+  "homepage": "https://constructive-io.github.io/blocks/blocks/schema-builder",
+  "exports": {
+    ".": {
+      "import": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.js"
+      },
+      "require": {
+        "types": "./dist/index.d.cts",
+        "default": "./dist/index.cjs"
+      }
+    },
+    "./core": {
+      "import": {
+        "types": "./dist/core.d.ts",
+        "default": "./dist/core.js"
+      },
+      "require": {
+        "types": "./dist/core.d.cts",
+        "default": "./dist/core.cjs"
+      }
+    },
+    "./fields": {
+      "import": {
+        "types": "./dist/fields.d.ts",
+        "default": "./dist/fields.js"
+      },
+      "require": {
+        "types": "./dist/fields.d.cts",
+        "default": "./dist/fields.cjs"
+      }
+    },
+    "./relationships": {
+      "import": {
+        "types": "./dist/relationships.d.ts",
+        "default": "./dist/relationships.js"
+      },
+      "require": {
+        "types": "./dist/relationships.d.cts",
+        "default": "./dist/relationships.cjs"
+      }
+    },
+    "./indexes": {
+      "import": {
+        "types": "./dist/indexes.d.ts",
+        "default": "./dist/indexes.js"
+      },
+      "require": {
+        "types": "./dist/indexes.d.cts",
+        "default": "./dist/indexes.cjs"
+      }
+    },
+    "./policies": {
+      "import": {
+        "types": "./dist/policies.d.ts",
+        "default": "./dist/policies.js"
+      },
+      "require": {
+        "types": "./dist/policies.d.cts",
+        "default": "./dist/policies.cjs"
+      }
+    },
+    "./tables": {
+      "import": {
+        "types": "./dist/tables.d.ts",
+        "default": "./dist/tables.js"
+      },
+      "require": {
+        "types": "./dist/tables.d.cts",
+        "default": "./dist/tables.cjs"
+      }
+    },
+    "./styles.css": "./src/styles.css",
+    "./testing": {
+      "import": {
+        "types": "./dist/testing.d.ts",
+        "default": "./dist/testing.js"
+      },
+      "require": {
+        "types": "./dist/testing.d.cts",
+        "default": "./dist/testing.cjs"
+      }
+    },
+    "./package.json": "./package.json"
+  },
+  "scripts": {
+    "build": "tsup && pnpm check:boundaries",
+    "build:registry": "node scripts/build-registry.mjs",
+    "check:registry": "node scripts/build-registry.mjs --check",
+    "check:boundaries": "node scripts/check-boundaries.mjs",
+    "typecheck": "tsc --noEmit",
+    "lint:types": "pnpm typecheck",
+    "test": "vitest run",
+    "prepack": "pnpm build"
+  },
+  "peerDependencies": {
+    "@constructive-io/ui": "^0.4.2",
+    "@tanstack/react-query": "^5.0.0",
+    "react": "^18.0.0 || ^19.0.0",
+    "react-dom": "^18.0.0 || ^19.0.0"
+  },
+  "devDependencies": {
+    "@constructive-io/ui": "workspace:*",
+    "@tanstack/react-query": "^5.90.16",
+    "@testing-library/react": "^16.3.1",
+    "@types/node": "^24.10.1",
+    "@types/react": "^19.2.0",
+    "@types/react-dom": "^19.2.0",
+    "jsdom": "^26.1.0",
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0",
+    "tsup": "^8.5.1",
+    "typescript": "^5.9.3",
+    "vitest": "^3.2.4"
+  },
+  "dependencies": {
+    "@dnd-kit/core": "^6.3.1",
+    "@dnd-kit/utilities": "^3.2.2",
+    "@fluentui/react-context-selector": "^9.2.13",
+    "@pgsql/types": "^17.6.2",
+    "@remixicon/react": "^4.8.0",
+    "clsx": "^2.1.1",
+    "lucide-react": "^0.525.0",
+    "motion": "^12.40.0",
+    "node-type-registry": "0.48.0",
+    "pg-ast": "^2.11.3",
+    "tailwind-merge": "^3.4.0",
+    "zustand": "^5.0.9"
+  },
+  "engines": {
+    "node": ">=22"
+  }
+}

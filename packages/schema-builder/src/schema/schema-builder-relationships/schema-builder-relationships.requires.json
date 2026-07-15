@@ -1,0 +1,24 @@
+{
+  "requires": [
+    {
+      "namespace": "schema-builder",
+      "mutations": [
+        "createField",
+        "createForeignKeyConstraint",
+        "createPrimaryKeyConstraint",
+        "createTable",
+        "createUniqueConstraint",
+        "deleteForeignKeyConstraint",
+        "updateForeignKeyConstraint"
+      ],
+      "queries": [],
+      "models": ["CreateTableInput"]
+    },
+    {
+      "namespace": "modules",
+      "mutations": ["createRelationProvision"],
+      "queries": ["relationProvisions"],
+      "models": []
+    }
+  ]
+}

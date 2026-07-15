@@ -1,0 +1,6 @@
+{
+  "namespace": "auth",
+  "mutations": ["enableTotp", "confirmTotpSetup", "generateBackupCodes"],
+  "queries": [],
+  "models": []
+}

@@ -1,0 +1,33 @@
+{
+  "name": "@constructive-io/blocks-root",
+  "version": "0.0.0",
+  "private": true,
+  "packageManager": "pnpm@10.28.0",
+  "engines": {
+    "node": ">=22.0.0",
+    "pnpm": ">=10.0.0"
+  },
+  "scripts": {
+    "build": "lerna run build",
+    "build:packages": "pnpm --filter @constructive-io/ui build && pnpm --filter @constructive-io/schema-builder build",
+    "build:registry": "pnpm --filter @constructive-io/registry build",
+    "build:pages": "pnpm build:packages && pnpm --filter blocks build:pages",
+    "build:storybook": "pnpm --filter @constructive-io/ui build-sb",
+    "dev": "pnpm --filter blocks dev",
+    "test": "lerna run test",
+    "lint:types": "lerna run lint:types",
+    "check": "pnpm check:public && pnpm build:packages && pnpm --filter blocks gen:check && pnpm --filter blocks check:flows && pnpm --filter blocks check:selections && pnpm lint:types && pnpm test && pnpm build:storybook && pnpm build:registry && pnpm check:registry-contract && pnpm --filter @constructive-io/registry smoke:install && pnpm pack:check",
+    "check:public": "node scripts/check-public-surface.mjs",
+    "check:registry-contract": "node scripts/check-registry-contract.mjs",
+    "pack:local": "node scripts/pack-local.mjs",
+    "pack:check": "pnpm pack:local && node scripts/check-packed-packages.mjs",
+    "local:registry": "node scripts/serve-local-registry.mjs",
+    "release:version": "lerna version --conventional-commits --no-push",
+    "clean": "lerna run clean --if-present",
+    "bootstrap": "pnpm install"
+  },
+  "devDependencies": {
+    "lerna": "^8.2.4",
+    "typescript": "^5.9.3"
+  }
+}

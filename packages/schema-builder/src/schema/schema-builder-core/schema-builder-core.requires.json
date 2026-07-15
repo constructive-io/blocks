@@ -1,0 +1,29 @@
+{
+  "requires": [
+    {
+      "namespace": "schema-builder",
+      "mutations": [],
+      "queries": [
+        "apiSchemas",
+        "apis",
+        "databases",
+        "fields",
+        "foreignKeyConstraints",
+        "indices",
+        "policies",
+        "primaryKeyConstraints",
+        "schemas",
+        "table",
+        "tables",
+        "uniqueConstraints"
+      ],
+      "models": ["Field", "Table"]
+    },
+    {
+      "namespace": "auth",
+      "mutations": [],
+      "queries": ["users"],
+      "models": []
+    }
+  ]
+}

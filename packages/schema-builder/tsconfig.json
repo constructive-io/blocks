@@ -1,0 +1,33 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "jsx": "react-jsx",
+    "strict": true,
+    "skipLibCheck": true,
+    "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true,
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "noEmit": true,
+    "baseUrl": ".",
+    "paths": {
+      "@constructive-io/ui": ["../ui/src/index.ts"],
+      "@constructive-io/ui/*": ["../ui/src/components/*"],
+      "@/blocks/schema/schema-builder-core/context/block-config": ["src/compat/block-config.tsx"],
+      "@/blocks/schema/*": ["src/schema/*"],
+      "@/lib/utils": ["src/lib/utils.ts"],
+      "@/generated/schema-builder": ["src/compat/schema-builder-sdk.ts"],
+      "@/generated/auth/hooks": ["src/compat/auth-sdk.ts"],
+      "@/generated/admin/hooks": ["src/compat/admin-sdk.ts"],
+      "@/generated/modules": ["src/compat/modules-sdk.ts"],
+      "@/generated/modules/hooks/client": ["src/compat/modules-client.ts"],
+      "@/generated/modules/hooks/queries/useRelationProvisionsQuery": ["src/compat/relation-provisions.ts"]
+    },
+    "types": ["vitest/globals", "node"]
+  },
+  "include": ["src", "tsup.config.ts", "vitest.config.ts"],
+  "exclude": ["dist", "registry", "registry-src"]
+}

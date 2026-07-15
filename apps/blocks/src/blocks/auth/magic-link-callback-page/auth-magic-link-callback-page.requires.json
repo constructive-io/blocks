@@ -1,0 +1,6 @@
+{
+  "namespace": "auth",
+  "mutations": ["signInMagicLink"],
+  "queries": [],
+  "models": []
+}

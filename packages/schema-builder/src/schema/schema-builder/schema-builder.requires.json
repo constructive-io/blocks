@@ -1,0 +1,62 @@
+{
+  "requires": [
+    {
+      "namespace": "schema-builder",
+      "mutations": [
+        "createField",
+        "createForeignKeyConstraint",
+        "createIndex",
+        "createPrimaryKeyConstraint",
+        "createTable",
+        "createTableGrant",
+        "createUniqueConstraint",
+        "deleteField",
+        "deleteForeignKeyConstraint",
+        "deleteIndex",
+        "deletePolicy",
+        "deletePrimaryKeyConstraint",
+        "deleteTable",
+        "deleteUniqueConstraint",
+        "updateField",
+        "updateForeignKeyConstraint",
+        "updateIndex",
+        "updatePolicy",
+        "updatePrimaryKeyConstraint",
+        "updateTable"
+      ],
+      "queries": [
+        "apiSchemas",
+        "apis",
+        "databases",
+        "fields",
+        "foreignKeyConstraints",
+        "indices",
+        "policies",
+        "primaryKeyConstraints",
+        "schemas",
+        "table",
+        "tables",
+        "uniqueConstraints"
+      ],
+      "models": ["CreateTableInput", "Field", "Table"]
+    },
+    {
+      "namespace": "modules",
+      "mutations": ["createRelationProvision", "createSecureTableProvision"],
+      "queries": ["relationProvisions"],
+      "models": []
+    },
+    {
+      "namespace": "auth",
+      "mutations": [],
+      "queries": ["users"],
+      "models": []
+    },
+    {
+      "namespace": "admin",
+      "mutations": [],
+      "queries": ["appPermissions", "orgPermissions"],
+      "models": []
+    }
+  ]
+}

@@ -1,0 +1,6 @@
+{
+  "namespace": "auth",
+  "mutations": ["requestMagicLink"],
+  "queries": [],
+  "models": []
+}

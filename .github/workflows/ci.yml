@@ -1,0 +1,60 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+    tags:
+      - '@constructive-io/ui@*'
+      - '@constructive-io/schema-builder@*'
+  pull_request:
+    branches: [main]
+  workflow_dispatch: {}
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Validate packages, Blocks, and registry
+        run: pnpm check
+
+      - name: Install Playwright Chromium
+        run: pnpm --filter blocks exec playwright install --with-deps chromium
+
+      - name: Run visual regression suite
+        run: pnpm --filter blocks test:visual
+
+      - name: Upload visual failure artifacts
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-results
+          path: |
+            apps/blocks/playwright-report
+            apps/blocks/test-results
+          if-no-files-found: ignore
+
+# npm releases are intentionally manual. This workflow only validates package
+# tags; it contains no registry token, trusted-publishing step, or publish job.

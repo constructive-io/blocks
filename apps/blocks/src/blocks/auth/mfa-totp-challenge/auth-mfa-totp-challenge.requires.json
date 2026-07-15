@@ -1,0 +1,6 @@
+{
+  "namespace": "auth",
+  "mutations": ["completeMfaChallenge"],
+  "queries": [],
+  "models": []
+}

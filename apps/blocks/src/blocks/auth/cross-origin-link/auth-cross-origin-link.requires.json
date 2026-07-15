@@ -1,0 +1,6 @@
+{
+  "namespace": "auth",
+  "mutations": ["requestCrossOriginToken"],
+  "queries": [],
+  "models": []
+}

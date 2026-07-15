@@ -1,0 +1,6 @@
+{
+  "namespace": "auth",
+  "mutations": ["updateUser"],
+  "queries": [],
+  "models": ["users"]
+}

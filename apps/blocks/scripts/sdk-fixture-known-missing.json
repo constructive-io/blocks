@@ -1,0 +1,44 @@
+[
+  {
+    "namespace": "auth",
+    "kind": "mutations",
+    "names": [
+      "anonymousSignIn",
+      "completeMfaChallenge",
+      "confirmTotpSetup",
+      "disableTotp",
+      "enableTotp",
+      "generateBackupCodes",
+      "passkeyBeginRegistration",
+      "passkeyBeginSignIn",
+      "passkeyFinishRegistration",
+      "passkeyFinishSignIn",
+      "requestMagicLink",
+      "sendEmailOtp",
+      "sendSmsOtp",
+      "signInEmailOtp",
+      "signInMagicLink",
+      "switchContext",
+      "verifyPhoneOtp"
+    ],
+    "reason": "These operations are declared by backend-pending auth blocks, but the corresponding procedures are absent from the current generated auth schema. The blocks use explicit host override seams until those procedures ship."
+  },
+  {
+    "namespace": "admin",
+    "kind": "mutations",
+    "names": ["removeOrgMember", "transferOrgOwnership"],
+    "reason": "The membership UI documents these future actions, but the current generated admin schema exposes only updateOrgMembership and deleteOrgMembership."
+  },
+  {
+    "namespace": "public",
+    "kind": "queries",
+    "names": ["notifications"],
+    "reason": "Notification blocks are API-config-pending and accept host-owned data; this repository has no generated public SDK fixture yet."
+  },
+  {
+    "namespace": "public",
+    "kind": "mutations",
+    "names": ["dismissNotification", "markAllNotificationsRead", "markNotificationRead"],
+    "reason": "Notification blocks are API-config-pending and expose host callback seams; this repository has no generated public SDK fixture yet."
+  }
+]

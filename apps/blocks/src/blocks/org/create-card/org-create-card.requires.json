@@ -1,0 +1,6 @@
+{
+  "namespace": "auth",
+  "mutations": ["createUser"],
+  "queries": [],
+  "models": ["users"]
+}

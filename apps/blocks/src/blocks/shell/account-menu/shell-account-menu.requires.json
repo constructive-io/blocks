@@ -1,0 +1,6 @@
+{
+  "namespace": "auth",
+  "mutations": ["signOut"],
+  "queries": ["currentUser"],
+  "models": []
+}
