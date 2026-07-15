@@ -35,7 +35,7 @@ Run `pnpm gen` after changing any authored input. Never edit the generated files
 | `check:selections` | Reject empty mutation selections in `src/blocks` |
 | `lint:types` | `tsc --noEmit` |
 | `test` | `vitest run` |
-| `test:visual` | Compare the static Pages site with the Playwright screenshot baselines |
+| `test:visual` | Compare the static Pages site with platform-specific Playwright screenshot baselines |
 | `build:pages` | `BLOCKS_PAGES=1 next build` — static export for GitHub Pages |
 
 ## Layout
