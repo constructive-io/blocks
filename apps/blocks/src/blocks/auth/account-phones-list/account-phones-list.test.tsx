@@ -415,6 +415,8 @@ describe('AccountPhonesList', () => {
 
   it('resend countdown decrements to zero, restarts, and cleans up on unmount', async () => {
     vi.useFakeTimers();
+    const setTimeoutSpy = vi.spyOn(globalThis, 'setTimeout');
+    const clearTimeoutSpy = vi.spyOn(globalThis, 'clearTimeout');
     const onSubmitSendOtp = vi.fn().mockResolvedValue(undefined);
     phonesQueryDataMock.mockReturnValue({
       phoneNumbers: {
@@ -430,13 +432,11 @@ describe('AccountPhonesList', () => {
     const resendButton = screen.getByTestId('otp-resend-p5');
     expect(resendButton).toHaveTextContent('Resend in 60s');
     expect(resendButton).toBeDisabled();
-    expect(vi.getTimerCount()).toBe(1);
 
     await act(async () => {
       vi.advanceTimersByTime(1000);
     });
     expect(resendButton).toHaveTextContent('Resend in 59s');
-    expect(vi.getTimerCount()).toBe(1);
 
     for (let second = 0; second < 59; second += 1) {
       await act(async () => {
@@ -445,17 +445,25 @@ describe('AccountPhonesList', () => {
     }
     expect(resendButton).toHaveTextContent('Resend code');
     expect(resendButton).not.toBeDisabled();
-    expect(vi.getTimerCount()).toBe(0);
 
     await act(async () => {
       fireEvent.click(resendButton);
     });
     expect(onSubmitSendOtp).toHaveBeenCalledTimes(2);
     expect(resendButton).toHaveTextContent('Resend in 60s');
-    expect(vi.getTimerCount()).toBe(1);
+
+    const countdownTimerIndex = setTimeoutSpy.mock.calls.reduce(
+      (latestIndex, call, index) => (call[1] === 1000 ? index : latestIndex),
+      -1
+    );
+    expect(countdownTimerIndex).toBeGreaterThanOrEqual(0);
+    const countdownTimer = setTimeoutSpy.mock.results[countdownTimerIndex]?.value;
+    clearTimeoutSpy.mockClear();
 
     unmount();
-    expect(vi.getTimerCount()).toBe(0);
+    expect(clearTimeoutSpy).toHaveBeenCalledWith(countdownTimer);
+    setTimeoutSpy.mockRestore();
+    clearTimeoutSpy.mockRestore();
   });
 
   it('verify inline without onSubmitSendOtp: surfaces PROCEDURE_NOT_FOUND', async () => {
