@@ -2,6 +2,12 @@ import { expect, type Page } from '@playwright/test';
 
 export type VisualTheme = 'light' | 'dark';
 
+export const LANDING_SHOWCASE_READY_SELECTOR = '[data-slot="sign-up-card"]';
+
+type SnapshotRouteOptions = {
+  readySelector?: string;
+};
+
 export async function prepareVisualPage(page: Page, theme: VisualTheme) {
   await page.emulateMedia({ colorScheme: theme, reducedMotion: 'reduce' });
   await page.addInitScript((selectedTheme) => {
@@ -13,7 +19,12 @@ export async function prepareVisualPage(page: Page, theme: VisualTheme) {
   });
 }
 
-export async function snapshotRoute(page: Page, route: string, snapshot: string) {
+export async function snapshotRoute(
+  page: Page,
+  route: string,
+  snapshot: string,
+  { readySelector }: SnapshotRouteOptions = {}
+) {
   const response = await page.goto(route, { waitUntil: 'networkidle' });
   expect(response, `${route} should return an HTML document`).not.toBeNull();
   expect(response?.status(), `${route} should not snapshot an error page`).toBe(200);
@@ -30,6 +41,8 @@ export async function snapshotRoute(page: Page, route: string, snapshot: string)
       canvas { visibility: hidden !important; }
     `,
   });
+  await expect(page.locator('main')).toBeVisible();
+  if (readySelector) await expect(page.locator(readySelector).first()).toBeAttached();
   await page.evaluate(async () => {
     await document.fonts.ready;
     window.scrollTo(0, 0);
@@ -37,6 +50,5 @@ export async function snapshotRoute(page: Page, route: string, snapshot: string)
       requestAnimationFrame(() => requestAnimationFrame(() => resolve()));
     });
   });
-  await expect(page.locator('main')).toBeVisible();
   await expect(page).toHaveScreenshot(snapshot, { fullPage: false });
 }

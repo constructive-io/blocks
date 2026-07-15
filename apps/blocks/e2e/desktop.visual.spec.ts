@@ -1,6 +1,11 @@
 import { expect, test } from '@playwright/test';
 
-import { prepareVisualPage, snapshotRoute, type VisualTheme } from './visual-helpers';
+import {
+  LANDING_SHOWCASE_READY_SELECTOR,
+  prepareVisualPage,
+  snapshotRoute,
+  type VisualTheme,
+} from './visual-helpers';
 
 const routes = [
   ['home', '/blocks/'],
@@ -16,7 +21,9 @@ for (const theme of ['light', 'dark'] satisfies VisualTheme[]) {
     test.beforeEach(async ({ page }) => prepareVisualPage(page, theme));
     for (const [name, route] of routes) {
       test(`${name} remains visually stable`, async ({ page }) => {
-        await snapshotRoute(page, route, `${name}-${theme}.png`);
+        await snapshotRoute(page, route, `${name}-${theme}.png`, {
+          readySelector: name === 'home' ? LANDING_SHOWCASE_READY_SELECTOR : undefined,
+        });
       });
     }
   });
