@@ -1,0 +1,6 @@
+{
+  "namespace": "admin",
+  "mutations": ["createOrgInvite", "updateOrgInvite"],
+  "queries": [],
+  "models": ["orgInvites"]
+}

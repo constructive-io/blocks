@@ -1,0 +1,6 @@
+{
+  "namespace": "admin",
+  "mutations": ["updateOrgMembership", "deleteOrgMembership", "removeOrgMember", "transferOrgOwnership"],
+  "queries": [],
+  "models": ["orgMemberships"]
+}

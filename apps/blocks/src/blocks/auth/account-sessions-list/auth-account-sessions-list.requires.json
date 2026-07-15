@@ -1,0 +1,6 @@
+{
+  "namespace": "auth",
+  "mutations": ["revokeSession"],
+  "queries": [],
+  "models": []
+}

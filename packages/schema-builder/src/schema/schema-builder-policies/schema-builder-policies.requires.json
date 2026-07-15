@@ -1,0 +1,22 @@
+{
+  "requires": [
+    {
+      "namespace": "schema-builder",
+      "mutations": ["createField", "createTable", "createTableGrant", "deletePolicy", "updatePolicy"],
+      "queries": ["fields", "tables"],
+      "models": ["CreateTableInput"]
+    },
+    {
+      "namespace": "modules",
+      "mutations": ["createSecureTableProvision"],
+      "queries": [],
+      "models": []
+    },
+    {
+      "namespace": "admin",
+      "mutations": [],
+      "queries": ["appPermissions", "orgPermissions"],
+      "models": []
+    }
+  ]
+}

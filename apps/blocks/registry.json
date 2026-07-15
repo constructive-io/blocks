@@ -1,0 +1,2594 @@
+{
+  "$schema": "https://ui.shadcn.com/schema/registry.json",
+  "name": "constructive-blocks",
+  "homepage": "https://constructive-io.github.io/blocks",
+  "items": [
+    {
+      "name": "auth-errors",
+      "type": "registry:lib",
+      "title": "Auth Errors",
+      "description": "Error-code mapping and GraphQL/validation error parsing for auth blocks. Zero imports; foundation lib shared by every auth block.",
+      "categories": [
+        "blocks",
+        "foundation"
+      ],
+      "dependencies": [],
+      "registryDependencies": [],
+      "files": [
+        {
+          "path": "registry/constructive/blocks/lib/auth-errors.ts",
+          "target": "src/blocks/lib/auth-errors.ts",
+          "type": "registry:lib"
+        }
+      ]
+    },
+    {
+      "name": "auth-schemas",
+      "type": "registry:lib",
+      "title": "Auth Schemas",
+      "description": "Zod validation schemas for auth forms (Wave 0 ships the login subset). Foundation lib shared by auth blocks.",
+      "categories": [
+        "blocks",
+        "foundation"
+      ],
+      "dependencies": [
+        "zod"
+      ],
+      "registryDependencies": [],
+      "files": [
+        {
+          "path": "registry/constructive/blocks/lib/schemas.ts",
+          "target": "src/blocks/lib/schemas.ts",
+          "type": "registry:lib"
+        }
+      ]
+    },
+    {
+      "name": "auth-error-alert",
+      "type": "registry:component",
+      "title": "Auth Error Alert",
+      "description": "Inline animated error banner for auth forms. Collapses to zero height when there is no error so layout never jumps.",
+      "categories": [
+        "blocks",
+        "foundation"
+      ],
+      "dependencies": [
+        "lucide-react"
+      ],
+      "registryDependencies": [
+        "cn"
+      ],
+      "files": [
+        {
+          "path": "registry/constructive/blocks/primitives/auth-error-alert.tsx",
+          "target": "src/blocks/primitives/auth-error-alert.tsx",
+          "type": "registry:component"
+        }
+      ]
+    },
+    {
+      "name": "form-field",
+      "type": "registry:component",
+      "title": "Form Field",
+      "description": "Label + input + inline error wrapper bound to a TanStack Form field. Wraps @constructive-io/ui FormControl + Input.",
+      "categories": [
+        "blocks",
+        "foundation"
+      ],
+      "dependencies": [
+        "@constructive-io/ui"
+      ],
+      "registryDependencies": [],
+      "files": [
+        {
+          "path": "registry/constructive/blocks/primitives/form-field.tsx",
+          "target": "src/blocks/primitives/form-field.tsx",
+          "type": "registry:component"
+        }
+      ]
+    },
+    {
+      "name": "auth-loading-button",
+      "type": "registry:component",
+      "title": "Auth Loading Button",
+      "description": "Submit button that shows a spinner + loading label and self-disables while a request is in flight. Wraps @constructive-io/ui Button.",
+      "categories": [
+        "blocks",
+        "foundation"
+      ],
+      "dependencies": [
+        "lucide-react",
+        "@constructive-io/ui"
+      ],
+      "registryDependencies": [
+        "cn"
+      ],
+      "files": [
+        {
+          "path": "registry/constructive/blocks/primitives/auth-loading-button.tsx",
+          "target": "src/blocks/primitives/auth-loading-button.tsx",
+          "type": "registry:component"
+        }
+      ]
+    },
+    {
+      "name": "blocks-runtime",
+      "type": "registry:component",
+      "title": "Blocks Runtime",
+      "description": "The single wiring point for Constructive data blocks. Reuse-or-mount a shared QueryClient, configure each generated SDK namespace, and attach a per-request Bearer token. Mount once at the app root.",
+      "categories": [
+        "blocks",
+        "runtime"
+      ],
+      "docs": "## Setup\n\n`blocks-runtime` is the ONE wiring point for Constructive data blocks. Mount `<BlocksRuntime>` once at your app root; every data block declares it as a dependency.\n\n```tsx\nimport { BlocksRuntime } from '@/blocks/runtime/blocks-runtime';\nimport { tokenManager } from '@/lib/auth/token-manager';\n\n<BlocksRuntime namespaces={['auth', 'admin']} getToken={() => tokenManager.getAccessToken()}>\n  {children}\n</BlocksRuntime>\n```\n\n### Required env\n\nEach namespace reads `NEXT_PUBLIC_<NS>_GRAPHQL_ENDPOINT` (e.g. `NEXT_PUBLIC_AUTH_GRAPHQL_ENDPOINT`).\n\n### Generated SDKs\n\nEach namespace must have a generated SDK at `@/generated/<ns>` exporting `configure()`. Blocks import their hooks from there — the runtime never ships those types.\n\n### Adding a namespace\n\nExtend the `BlocksNamespace` union plus the `CONFIGURERS` and `ENDPOINTS` maps in this file — the single expected edit, since it is your app's wiring point, not a leaf block.",
+      "dependencies": [
+        "@tanstack/react-query"
+      ],
+      "registryDependencies": [],
+      "files": [
+        {
+          "path": "registry/constructive/blocks/runtime/blocks-runtime.tsx",
+          "target": "src/blocks/runtime/blocks-runtime.tsx",
+          "type": "registry:component"
+        }
+      ]
+    },
+    {
+      "name": "auth-sign-in-card",
+      "type": "registry:block",
+      "title": "Sign-in Card",
+      "description": "Email + password sign-in card bound to the host's generated useSignInMutation. Inline error mapping, MFA/unverified branches via onMessage, and an onSubmit override seam for non-Constructive backends.",
+      "categories": [
+        "blocks",
+        "authentication"
+      ],
+      "docs": "## Setup\n\n1. Mount `blocks-runtime` once at your app root (installed automatically as a dependency) and set `NEXT_PUBLIC_AUTH_GRAPHQL_ENDPOINT`.\n2. This block imports `useSignInMutation` from your generated `auth` SDK at `@/generated/auth`. Ensure that SDK is generated.\n\n```tsx\nimport { SignInCard } from '@/blocks/auth/sign-in-card/sign-in-card';\n\n<SignInCard onSuccess={(r) => router.push('/')} forgotPasswordHref=\"/forgot\" signUpHref=\"/register\" />\n```\n\nThe declared requirements ship to `.constructive/blocks/auth-sign-in-card.requires.json` for the SDK check tool.",
+      "dependencies": [
+        "@constructive-io/ui",
+        "@tanstack/react-form"
+      ],
+      "registryDependencies": [
+        "blocks-runtime",
+        "auth-errors",
+        "auth-schemas",
+        "auth-error-alert",
+        "form-field",
+        "auth-loading-button",
+        "cn"
+      ],
+      "files": [
+        {
+          "path": "registry/constructive/blocks/auth/sign-in-card/sign-in-card.tsx",
+          "target": "src/blocks/auth/sign-in-card/sign-in-card.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/auth/sign-in-card/messages.ts",
+          "target": "src/blocks/auth/sign-in-card/messages.ts",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/auth/sign-in-card/auth-sign-in-card.requires.json",
+          "target": "~/.constructive/blocks/auth-sign-in-card.requires.json",
+          "type": "registry:file"
+        }
+      ]
+    },
+    {
+      "name": "password-strength",
+      "type": "registry:lib",
+      "title": "Password Strength",
+      "description": "Lightweight, dependency-free password-strength estimator (0–4 score + label) for inline sign-up/reset UX. Zero imports; foundation lib shared by auth blocks.",
+      "categories": [
+        "blocks",
+        "foundation"
+      ],
+      "dependencies": [],
+      "registryDependencies": [],
+      "files": [
+        {
+          "path": "registry/constructive/blocks/lib/password-strength.ts",
+          "target": "src/blocks/lib/password-strength.ts",
+          "type": "registry:lib"
+        }
+      ]
+    },
+    {
+      "name": "user-avatar",
+      "type": "registry:block",
+      "title": "User Avatar",
+      "description": "Avatar with image and generated-initials fallback for a user. Presentational only — takes user fields as props; no data binding.",
+      "categories": [
+        "blocks",
+        "user"
+      ],
+      "dependencies": [
+        "@constructive-io/ui"
+      ],
+      "registryDependencies": [
+        "cn"
+      ],
+      "files": [
+        {
+          "path": "registry/constructive/blocks/user/user-avatar/user-avatar.tsx",
+          "target": "src/blocks/user/user-avatar/user-avatar.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/user/user-avatar/user-initials.ts",
+          "target": "src/blocks/user/user-avatar/user-initials.ts",
+          "type": "registry:component"
+        }
+      ]
+    },
+    {
+      "name": "auth-sign-out-button",
+      "type": "registry:block",
+      "title": "Sign-out Button",
+      "description": "Button bound to the host's generated useSignOutMutation. Clears cached queries on success; feedback via onSuccess/onError; onSubmit override seam for non-Constructive backends.",
+      "categories": [
+        "blocks",
+        "authentication"
+      ],
+      "dependencies": [
+        "@constructive-io/ui",
+        "@tanstack/react-query"
+      ],
+      "registryDependencies": [
+        "blocks-runtime",
+        "auth-errors",
+        "cn"
+      ],
+      "files": [
+        {
+          "path": "registry/constructive/blocks/auth/sign-out-button/sign-out-button.tsx",
+          "target": "src/blocks/auth/sign-out-button/sign-out-button.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/auth/sign-out-button/messages.ts",
+          "target": "src/blocks/auth/sign-out-button/messages.ts",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/auth/sign-out-button/auth-sign-out-button.requires.json",
+          "target": "~/.constructive/blocks/auth-sign-out-button.requires.json",
+          "type": "registry:file"
+        }
+      ]
+    },
+    {
+      "name": "auth-forgot-password-card",
+      "type": "registry:block",
+      "title": "Forgot-password Card",
+      "description": "Email-entry card bound to the host's generated useForgotPasswordMutation. Always shows a neutral confirmation (no account enumeration); inline error mapping; onSubmit override seam.",
+      "categories": [
+        "blocks",
+        "authentication"
+      ],
+      "dependencies": [
+        "@constructive-io/ui",
+        "@tanstack/react-form"
+      ],
+      "registryDependencies": [
+        "blocks-runtime",
+        "auth-errors",
+        "auth-schemas",
+        "auth-error-alert",
+        "form-field",
+        "auth-loading-button",
+        "cn"
+      ],
+      "files": [
+        {
+          "path": "registry/constructive/blocks/auth/forgot-password-card/forgot-password-card.tsx",
+          "target": "src/blocks/auth/forgot-password-card/forgot-password-card.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/auth/forgot-password-card/messages.ts",
+          "target": "src/blocks/auth/forgot-password-card/messages.ts",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/auth/forgot-password-card/auth-forgot-password-card.requires.json",
+          "target": "~/.constructive/blocks/auth-forgot-password-card.requires.json",
+          "type": "registry:file"
+        }
+      ]
+    },
+    {
+      "name": "auth-reset-password-card",
+      "type": "registry:block",
+      "title": "Reset-password Card",
+      "description": "New-password card bound to the host's generated useResetPasswordMutation. Reads token/roleId from props or URL, inline strength meter, expired/invalid/missing-token states; onSubmit override seam.",
+      "categories": [
+        "blocks",
+        "authentication"
+      ],
+      "dependencies": [
+        "@constructive-io/ui",
+        "@tanstack/react-form"
+      ],
+      "registryDependencies": [
+        "blocks-runtime",
+        "auth-errors",
+        "auth-schemas",
+        "password-strength",
+        "auth-error-alert",
+        "form-field",
+        "auth-loading-button",
+        "cn"
+      ],
+      "files": [
+        {
+          "path": "registry/constructive/blocks/auth/reset-password-card/reset-password-card.tsx",
+          "target": "src/blocks/auth/reset-password-card/reset-password-card.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/auth/reset-password-card/messages.ts",
+          "target": "src/blocks/auth/reset-password-card/messages.ts",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/auth/reset-password-card/auth-reset-password-card.requires.json",
+          "target": "~/.constructive/blocks/auth-reset-password-card.requires.json",
+          "type": "registry:file"
+        }
+      ]
+    },
+    {
+      "name": "auth-sign-up-card",
+      "type": "registry:block",
+      "title": "Sign-up Card",
+      "description": "Email + password registration card bound to the host's generated useSignUpMutation. Inline password-strength meter, confirm-match validation, inline error mapping; onSubmit override seam.",
+      "categories": [
+        "blocks",
+        "authentication"
+      ],
+      "dependencies": [
+        "@constructive-io/ui",
+        "@tanstack/react-form"
+      ],
+      "registryDependencies": [
+        "blocks-runtime",
+        "auth-errors",
+        "auth-schemas",
+        "password-strength",
+        "auth-error-alert",
+        "form-field",
+        "auth-loading-button",
+        "cn"
+      ],
+      "files": [
+        {
+          "path": "registry/constructive/blocks/auth/sign-up-card/sign-up-card.tsx",
+          "target": "src/blocks/auth/sign-up-card/sign-up-card.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/auth/sign-up-card/messages.ts",
+          "target": "src/blocks/auth/sign-up-card/messages.ts",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/auth/sign-up-card/auth-sign-up-card.requires.json",
+          "target": "~/.constructive/blocks/auth-sign-up-card.requires.json",
+          "type": "registry:file"
+        }
+      ]
+    },
+    {
+      "name": "auth-step-up-dialog",
+      "type": "registry:block",
+      "title": "Step-up Dialog",
+      "description": "Re-authentication dialog bound to the host's generated useRequireStepUpQuery + useVerifyPasswordMutation/useVerifyTotpMutation. Short-circuits when step-up is already satisfied; onSubmit override seam.",
+      "categories": [
+        "blocks",
+        "authentication"
+      ],
+      "dependencies": [
+        "@constructive-io/ui",
+        "@tanstack/react-form"
+      ],
+      "registryDependencies": [
+        "blocks-runtime",
+        "auth-errors",
+        "auth-error-alert",
+        "form-field",
+        "auth-loading-button",
+        "cn"
+      ],
+      "files": [
+        {
+          "path": "registry/constructive/blocks/auth/step-up-dialog/step-up-dialog.tsx",
+          "target": "src/blocks/auth/step-up-dialog/step-up-dialog.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/auth/step-up-dialog/messages.ts",
+          "target": "src/blocks/auth/step-up-dialog/messages.ts",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/auth/step-up-dialog/auth-step-up-dialog.requires.json",
+          "target": "~/.constructive/blocks/auth-step-up-dialog.requires.json",
+          "type": "registry:file"
+        }
+      ]
+    },
+    {
+      "name": "use-step-up",
+      "type": "registry:hook",
+      "title": "useStepUp",
+      "description": "Imperative step-up trigger: a provider + hook that mounts the step-up dialog on demand and resolves a Promise when the user verifies. Wraps auth-step-up-dialog.",
+      "categories": [
+        "blocks",
+        "authentication"
+      ],
+      "dependencies": [],
+      "registryDependencies": [
+        "auth-step-up-dialog"
+      ],
+      "files": [
+        {
+          "path": "registry/constructive/blocks/auth/use-step-up/use-step-up.ts",
+          "target": "src/blocks/auth/use-step-up/use-step-up.ts",
+          "type": "registry:hook"
+        },
+        {
+          "path": "registry/constructive/blocks/auth/use-step-up/step-up-provider.tsx",
+          "target": "src/blocks/auth/use-step-up/step-up-provider.tsx",
+          "type": "registry:component"
+        }
+      ]
+    },
+    {
+      "name": "auth-account-emails-list",
+      "type": "registry:block",
+      "title": "Account Emails List",
+      "description": "Manage a user's email addresses bound to the host's generated useEmailsQuery + create/update/delete/send-verification mutations. Add, verify, set-primary, and remove emails; onSubmit override seam.",
+      "categories": [
+        "blocks",
+        "authentication"
+      ],
+      "dependencies": [
+        "@constructive-io/ui",
+        "@tanstack/react-form"
+      ],
+      "registryDependencies": [
+        "blocks-runtime",
+        "auth-errors",
+        "auth-schemas",
+        "auth-error-alert",
+        "form-field",
+        "auth-loading-button",
+        "cn"
+      ],
+      "files": [
+        {
+          "path": "registry/constructive/blocks/auth/account-emails-list/account-emails-list.tsx",
+          "target": "src/blocks/auth/account-emails-list/account-emails-list.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/auth/account-emails-list/messages.ts",
+          "target": "src/blocks/auth/account-emails-list/messages.ts",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/auth/account-emails-list/auth-account-emails-list.requires.json",
+          "target": "~/.constructive/blocks/auth-account-emails-list.requires.json",
+          "type": "registry:file"
+        }
+      ]
+    },
+    {
+      "name": "auth-sign-in-page",
+      "type": "registry:block",
+      "title": "auth-sign-in-page",
+      "description": "Thin Next.js page wrapper that composes auth-sign-in-card into a centered full-viewport layout with router glue: reads ?redirect= from useSearchParams, validates same-origin with URL-parse guard, routes to MFA_PATH with challenge token on mfaRequired, delegates all data/form logic to SignInCard.",
+      "categories": [
+        "blocks",
+        "authentication"
+      ],
+      "dependencies": [],
+      "registryDependencies": [
+        "auth-sign-in-card",
+        "cn"
+      ],
+      "files": [
+        {
+          "path": "registry/constructive/blocks/auth/sign-in-page/sign-in-page.tsx",
+          "target": "src/blocks/auth/sign-in-page/sign-in-page.tsx",
+          "type": "registry:component"
+        }
+      ]
+    },
+    {
+      "name": "auth-sign-up-page",
+      "type": "registry:block",
+      "title": "auth-sign-up-page",
+      "description": "Thin Next.js 15 page composing auth-sign-up-card with centered layout and post-registration redirect logic.",
+      "categories": [
+        "blocks",
+        "authentication"
+      ],
+      "dependencies": [],
+      "registryDependencies": [
+        "auth-sign-up-card",
+        "cn"
+      ],
+      "files": [
+        {
+          "path": "registry/constructive/blocks/auth/sign-up-page/sign-up-page.tsx",
+          "target": "src/blocks/auth/sign-up-page/sign-up-page.tsx",
+          "type": "registry:component"
+        }
+      ]
+    },
+    {
+      "name": "auth-forgot-password-page",
+      "type": "registry:block",
+      "title": "Forgot Password Page",
+      "description": "Next.js 15 page composing auth-forgot-password-card inside a centered layout, pre-filling email from ?email= searchParam.",
+      "categories": [
+        "blocks",
+        "authentication"
+      ],
+      "dependencies": [],
+      "registryDependencies": [
+        "auth-forgot-password-card"
+      ],
+      "files": [
+        {
+          "path": "registry/constructive/blocks/auth/forgot-password-page/forgot-password-page.tsx",
+          "target": "src/blocks/auth/forgot-password-page/forgot-password-page.tsx",
+          "type": "registry:component"
+        }
+      ]
+    },
+    {
+      "name": "auth-reset-password-page",
+      "type": "registry:block",
+      "title": "Reset Password Page",
+      "description": "Thin Next.js 15 page wrapper for auth-reset-password-card: reads ?token= and ?role_id= from URL searchParams and passes them as props to the card, routes to sign-in on success.",
+      "categories": [
+        "blocks",
+        "authentication"
+      ],
+      "dependencies": [],
+      "registryDependencies": [
+        "auth-reset-password-card",
+        "cn"
+      ],
+      "files": [
+        {
+          "path": "registry/constructive/blocks/auth/reset-password-page/reset-password-page.tsx",
+          "target": "src/blocks/auth/reset-password-page/reset-password-page.tsx",
+          "type": "registry:component"
+        }
+      ]
+    },
+    {
+      "name": "auth-verify-email-page",
+      "type": "registry:block",
+      "title": "auth-verify-email-page (blocker fixes)",
+      "description": "Fixed two blockers and two minors in the auth-verify-email-page block. All 11 tests pass, zero TSC errors in the block's own files.",
+      "categories": [
+        "blocks",
+        "authentication"
+      ],
+      "dependencies": [
+        "@constructive-io/ui"
+      ],
+      "registryDependencies": [
+        "blocks-runtime",
+        "auth-errors",
+        "cn"
+      ],
+      "files": [
+        {
+          "path": "registry/constructive/blocks/auth/verify-email-page/verify-email-page.tsx",
+          "target": "src/blocks/auth/verify-email-page/verify-email-page.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/auth/verify-email-page/messages.ts",
+          "target": "src/blocks/auth/verify-email-page/messages.ts",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/auth/verify-email-page/auth-verify-email-page.requires.json",
+          "target": "~/.constructive/blocks/auth-verify-email-page.requires.json",
+          "type": "registry:file"
+        }
+      ]
+    },
+    {
+      "name": "auth-verify-email-banner",
+      "type": "registry:block",
+      "title": "auth-verify-email-banner",
+      "description": "Dismissible top-of-page banner for authenticated users whose primary email is not yet verified. Includes a resend verification email CTA backed by the host's generated useSendVerificationEmailMutation hook.",
+      "categories": [
+        "blocks",
+        "authentication"
+      ],
+      "dependencies": [
+        "@constructive-io/ui"
+      ],
+      "registryDependencies": [
+        "blocks-runtime",
+        "auth-errors",
+        "auth-error-alert",
+        "cn"
+      ],
+      "files": [
+        {
+          "path": "registry/constructive/blocks/auth/verify-email-banner/verify-email-banner.tsx",
+          "target": "src/blocks/auth/verify-email-banner/verify-email-banner.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/auth/verify-email-banner/messages.ts",
+          "target": "src/blocks/auth/verify-email-banner/messages.ts",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/auth/verify-email-banner/auth-verify-email-banner.requires.json",
+          "target": "~/.constructive/blocks/auth-verify-email-banner.requires.json",
+          "type": "registry:file"
+        }
+      ]
+    },
+    {
+      "name": "auth-change-password-form",
+      "type": "registry:block",
+      "title": "Change Password Form",
+      "description": "Authenticated inline form to update current password, with step-up (tier: medium) gate, password-strength meter, confirm mismatch guard, and full error mapping.",
+      "categories": [
+        "blocks",
+        "authentication"
+      ],
+      "dependencies": [
+        "@constructive-io/ui",
+        "@tanstack/react-form"
+      ],
+      "registryDependencies": [
+        "blocks-runtime",
+        "auth-errors",
+        "password-strength",
+        "auth-error-alert",
+        "form-field",
+        "auth-loading-button",
+        "use-step-up",
+        "cn"
+      ],
+      "files": [
+        {
+          "path": "registry/constructive/blocks/auth/change-password-form/change-password-form.tsx",
+          "target": "src/blocks/auth/change-password-form/change-password-form.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/auth/change-password-form/messages.ts",
+          "target": "src/blocks/auth/change-password-form/messages.ts",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/auth/change-password-form/auth-change-password-form.requires.json",
+          "target": "~/.constructive/blocks/auth-change-password-form.requires.json",
+          "type": "registry:file"
+        }
+      ]
+    },
+    {
+      "name": "auth-account-profile-card",
+      "type": "registry:block",
+      "title": "auth-account-profile-card",
+      "description": "Allows the signed-in user to update their display_name and profile_picture. Renders person or organization name fields based on user.type. Profile picture changes use an optimistic preview; the raw File is passed via userPatch.profilePictureUpload (the ORM-native upload field) rather than being embedded in an ImageJsonb.",
+      "categories": [
+        "blocks",
+        "authentication"
+      ],
+      "dependencies": [
+        "@constructive-io/ui",
+        "@tanstack/react-form"
+      ],
+      "registryDependencies": [
+        "blocks-runtime",
+        "auth-errors",
+        "auth-error-alert",
+        "form-field",
+        "auth-loading-button",
+        "user-avatar",
+        "cn"
+      ],
+      "files": [
+        {
+          "path": "registry/constructive/blocks/auth/account-profile-card/account-profile-card.tsx",
+          "target": "src/blocks/auth/account-profile-card/account-profile-card.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/auth/account-profile-card/messages.ts",
+          "target": "src/blocks/auth/account-profile-card/messages.ts",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/auth/account-profile-card/auth-account-profile-card.requires.json",
+          "target": "~/.constructive/blocks/auth-account-profile-card.requires.json",
+          "type": "registry:file"
+        }
+      ]
+    },
+    {
+      "name": "auth-account-sessions-list",
+      "type": "registry:block",
+      "title": "Account Sessions List",
+      "description": "Lists the signed-in user's active sessions (host-supplied via adapter seam) and provides per-session and bulk revoke actions, both gated behind step-up verification.",
+      "categories": [
+        "blocks",
+        "authentication"
+      ],
+      "dependencies": [
+        "@constructive-io/ui"
+      ],
+      "registryDependencies": [
+        "blocks-runtime",
+        "auth-errors",
+        "auth-error-alert",
+        "auth-loading-button",
+        "use-step-up",
+        "cn"
+      ],
+      "files": [
+        {
+          "path": "registry/constructive/blocks/auth/account-sessions-list/account-sessions-list.tsx",
+          "target": "src/blocks/auth/account-sessions-list/account-sessions-list.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/auth/account-sessions-list/messages.ts",
+          "target": "src/blocks/auth/account-sessions-list/messages.ts",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/auth/account-sessions-list/auth-account-sessions-list.requires.json",
+          "target": "~/.constructive/blocks/auth-account-sessions-list.requires.json",
+          "type": "registry:file"
+        }
+      ]
+    },
+    {
+      "name": "auth-account-connected-accounts",
+      "type": "registry:block",
+      "title": "auth-account-connected-accounts",
+      "description": "Settings card listing linked OAuth providers with disconnect (step-up gated) and connect-via-OAuth links.",
+      "categories": [
+        "blocks",
+        "authentication"
+      ],
+      "dependencies": [
+        "@constructive-io/ui"
+      ],
+      "registryDependencies": [
+        "blocks-runtime",
+        "auth-errors",
+        "auth-error-alert",
+        "auth-loading-button",
+        "use-step-up",
+        "cn"
+      ],
+      "files": [
+        {
+          "path": "registry/constructive/blocks/auth/account-connected-accounts/account-connected-accounts.tsx",
+          "target": "src/blocks/auth/account-connected-accounts/account-connected-accounts.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/auth/account-connected-accounts/messages.ts",
+          "target": "src/blocks/auth/account-connected-accounts/messages.ts",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/auth/account-connected-accounts/auth-account-connected-accounts.requires.json",
+          "target": "~/.constructive/blocks/auth-account-connected-accounts.requires.json",
+          "type": "registry:file"
+        }
+      ]
+    },
+    {
+      "name": "auth-passkey-management-list",
+      "type": "registry:block",
+      "title": "auth-passkey-management-list (blocker fixes)",
+      "description": "Fixed all 4 blockers and 3 worthwhile minors in the auth-passkey-management-list block. Step-up now fires unconditionally before both default and adapter delete paths; queryCredentials override is actually called; message keys renamed to spec; test asserts step-up in adapter path.",
+      "categories": [
+        "blocks",
+        "authentication"
+      ],
+      "dependencies": [
+        "@constructive-io/ui"
+      ],
+      "registryDependencies": [
+        "blocks-runtime",
+        "auth-errors",
+        "auth-error-alert",
+        "use-step-up",
+        "cn"
+      ],
+      "files": [
+        {
+          "path": "registry/constructive/blocks/auth/passkey-management-list/passkey-management-list.tsx",
+          "target": "src/blocks/auth/passkey-management-list/passkey-management-list.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/auth/passkey-management-list/messages.ts",
+          "target": "src/blocks/auth/passkey-management-list/messages.ts",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/auth/passkey-management-list/hooks/use-passkey-management.ts",
+          "target": "src/blocks/auth/passkey-management-list/hooks/use-passkey-management.ts",
+          "type": "registry:hook"
+        },
+        {
+          "path": "registry/constructive/blocks/auth/passkey-management-list/auth-passkey-management-list.requires.json",
+          "target": "~/.constructive/blocks/auth-passkey-management-list.requires.json",
+          "type": "registry:file"
+        }
+      ]
+    },
+    {
+      "name": "auth-api-key-created-modal",
+      "type": "registry:block",
+      "title": "auth-api-key-created-modal",
+      "description": "One-time display modal for a freshly-created raw API key. Enforces explicit acknowledgement before allowing dismiss. No data operations — purely presentational.",
+      "categories": [
+        "blocks",
+        "authentication"
+      ],
+      "dependencies": [
+        "@constructive-io/ui"
+      ],
+      "registryDependencies": [
+        "cn"
+      ],
+      "files": [
+        {
+          "path": "registry/constructive/blocks/auth/api-key-created-modal/api-key-created-modal.tsx",
+          "target": "src/blocks/auth/api-key-created-modal/api-key-created-modal.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/auth/api-key-created-modal/messages.ts",
+          "target": "src/blocks/auth/api-key-created-modal/messages.ts",
+          "type": "registry:component"
+        }
+      ]
+    },
+    {
+      "name": "auth-account-danger-card",
+      "type": "registry:block",
+      "title": "auth-account-danger-card",
+      "description": "Danger zone card that initiates the account-deletion flow with step-up auth gate and inline success/error states.",
+      "categories": [
+        "blocks",
+        "authentication"
+      ],
+      "dependencies": [
+        "@constructive-io/ui"
+      ],
+      "registryDependencies": [
+        "blocks-runtime",
+        "auth-errors",
+        "auth-error-alert",
+        "auth-loading-button",
+        "use-step-up",
+        "cn"
+      ],
+      "files": [
+        {
+          "path": "registry/constructive/blocks/auth/account-danger-card/account-danger-card.tsx",
+          "target": "src/blocks/auth/account-danger-card/account-danger-card.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/auth/account-danger-card/messages.ts",
+          "target": "src/blocks/auth/account-danger-card/messages.ts",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/auth/account-danger-card/auth-account-danger-card.requires.json",
+          "target": "~/.constructive/blocks/auth-account-danger-card.requires.json",
+          "type": "registry:file"
+        }
+      ]
+    },
+    {
+      "name": "auth-account-deletion-confirm-page",
+      "type": "registry:block",
+      "title": "auth-account-deletion-confirm-page",
+      "description": "Next.js page that handles /auth/delete-account?token=...&user_id=... email links. Calls confirmDeleteAccount on mount and renders three outcome states: processing (spinner), success (redirect after 2s), expired/invalid/error (inline CTA). Data path: useConfirmDeleteAccountMutation from @/generated/auth.",
+      "categories": [
+        "blocks",
+        "authentication"
+      ],
+      "dependencies": [
+        "@constructive-io/ui"
+      ],
+      "registryDependencies": [
+        "blocks-runtime",
+        "auth-errors",
+        "auth-error-alert",
+        "cn"
+      ],
+      "files": [
+        {
+          "path": "registry/constructive/blocks/auth/account-deletion-confirm-page/account-deletion-confirm-page.tsx",
+          "target": "src/blocks/auth/account-deletion-confirm-page/account-deletion-confirm-page.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/auth/account-deletion-confirm-page/messages.ts",
+          "target": "src/blocks/auth/account-deletion-confirm-page/messages.ts",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/auth/account-deletion-confirm-page/auth-account-deletion-confirm-page.requires.json",
+          "target": "~/.constructive/blocks/auth-account-deletion-confirm-page.requires.json",
+          "type": "registry:file"
+        }
+      ]
+    },
+    {
+      "name": "auth-api-key-create-dialog",
+      "type": "registry:block",
+      "title": "API Key Create Dialog",
+      "description": "Modal dialog form for creating a user-scoped API key, with high-severity step-up gating and one-time key handoff to auth-api-key-created-modal on success.",
+      "categories": [
+        "blocks",
+        "authentication"
+      ],
+      "dependencies": [
+        "@constructive-io/ui",
+        "@tanstack/react-form"
+      ],
+      "registryDependencies": [
+        "blocks-runtime",
+        "auth-errors",
+        "auth-error-alert",
+        "form-field",
+        "auth-loading-button",
+        "use-step-up",
+        "cn"
+      ],
+      "files": [
+        {
+          "path": "registry/constructive/blocks/auth/api-key-create-dialog/api-key-create-dialog.tsx",
+          "target": "src/blocks/auth/api-key-create-dialog/api-key-create-dialog.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/auth/api-key-create-dialog/messages.ts",
+          "target": "src/blocks/auth/api-key-create-dialog/messages.ts",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/auth/api-key-create-dialog/auth-api-key-create-dialog.requires.json",
+          "target": "~/.constructive/blocks/auth-api-key-create-dialog.requires.json",
+          "type": "registry:file"
+        }
+      ]
+    },
+    {
+      "name": "auth-account-security-card",
+      "type": "registry:block",
+      "title": "auth-account-security-card",
+      "description": "At-a-glance security posture summary card: password status, TOTP MFA status, and passkey count. Display-only with action callbacks. Supports query adapter for non-Constructive backends.",
+      "categories": [
+        "blocks",
+        "authentication"
+      ],
+      "dependencies": [
+        "@constructive-io/ui"
+      ],
+      "registryDependencies": [
+        "blocks-runtime",
+        "auth-errors",
+        "auth-error-alert",
+        "cn"
+      ],
+      "files": [
+        {
+          "path": "registry/constructive/blocks/auth/account-security-card/account-security-card.tsx",
+          "target": "src/blocks/auth/account-security-card/account-security-card.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/auth/account-security-card/messages.ts",
+          "target": "src/blocks/auth/account-security-card/messages.ts",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/auth/account-security-card/auth-account-security-card.requires.json",
+          "target": "~/.constructive/blocks/auth-account-security-card.requires.json",
+          "type": "registry:file"
+        }
+      ]
+    },
+    {
+      "name": "shell-sidebar",
+      "type": "registry:block",
+      "title": "ShellSidebar",
+      "description": "Collapsible application sidebar — primary nav rail with icon-only collapsed mode, localStorage persistence, keyboard shortcut toggle (Mod+B), permission-gated nav items, sub-item expansion, and render-prop slots for context-switcher and account-menu.",
+      "categories": [
+        "blocks",
+        "shell"
+      ],
+      "dependencies": [
+        "@constructive-io/ui"
+      ],
+      "registryDependencies": [
+        "cn"
+      ],
+      "files": [
+        {
+          "path": "registry/constructive/blocks/shell/sidebar/sidebar.tsx",
+          "target": "src/blocks/shell/sidebar/sidebar.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/shell/sidebar/messages.ts",
+          "target": "src/blocks/shell/sidebar/messages.ts",
+          "type": "registry:component"
+        }
+      ]
+    },
+    {
+      "name": "shell-header",
+      "type": "registry:block",
+      "title": "shell-header",
+      "description": "Top application bar providing logo slot, breadcrumbs slot, optional search input, command palette trigger (Cmd+K), account menu slot, and sidebar hamburger toggle (mobile only). Pure layout block — no data fetching.",
+      "categories": [
+        "blocks",
+        "shell"
+      ],
+      "dependencies": [
+        "@constructive-io/ui"
+      ],
+      "registryDependencies": [
+        "cn"
+      ],
+      "files": [
+        {
+          "path": "registry/constructive/blocks/shell/header/header.tsx",
+          "target": "src/blocks/shell/header/header.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/shell/header/messages.ts",
+          "target": "src/blocks/shell/header/messages.ts",
+          "type": "registry:component"
+        }
+      ]
+    },
+    {
+      "name": "shell-breadcrumbs",
+      "type": "registry:block",
+      "title": "Shell Breadcrumbs",
+      "description": "Route-based breadcrumb trail for the app shell. Parses usePathname() and maps path segments to human-readable labels via a consumer-provided resolveLabel function, with optional explicit segments override and ellipsis collapsing.",
+      "categories": [
+        "blocks",
+        "shell"
+      ],
+      "dependencies": [
+        "@constructive-io/ui"
+      ],
+      "registryDependencies": [
+        "cn"
+      ],
+      "files": [
+        {
+          "path": "registry/constructive/blocks/shell/breadcrumbs/breadcrumbs.tsx",
+          "target": "src/blocks/shell/breadcrumbs/breadcrumbs.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/shell/breadcrumbs/messages.ts",
+          "target": "src/blocks/shell/breadcrumbs/messages.ts",
+          "type": "registry:component"
+        }
+      ]
+    },
+    {
+      "name": "shell-command-palette",
+      "type": "registry:block",
+      "title": "Shell Command Palette",
+      "description": "Auth-aware Cmd+K command palette with provider-based command registration, built-in commands from useCurrentUserQuery, and async-safe onError routing.",
+      "categories": [
+        "blocks",
+        "shell"
+      ],
+      "dependencies": [
+        "@constructive-io/ui"
+      ],
+      "registryDependencies": [
+        "blocks-runtime",
+        "cn"
+      ],
+      "files": [
+        {
+          "path": "registry/constructive/blocks/shell/command-palette/command-palette.tsx",
+          "target": "src/blocks/shell/command-palette/command-palette.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/shell/command-palette/shell-command-palette-provider.tsx",
+          "target": "src/blocks/shell/command-palette/shell-command-palette-provider.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/shell/command-palette/use-command-palette.ts",
+          "target": "src/blocks/shell/command-palette/use-command-palette.ts",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/shell/command-palette/messages.ts",
+          "target": "src/blocks/shell/command-palette/messages.ts",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/shell/command-palette/shell-command-palette.requires.json",
+          "target": "~/.constructive/blocks/shell-command-palette.requires.json",
+          "type": "registry:file"
+        }
+      ]
+    },
+    {
+      "name": "shell-notifications",
+      "type": "registry:block",
+      "title": "shell-notifications",
+      "description": "Notification center popover block (bell icon + panel) for shell-header. Backend-pending data block with graceful degradation. Ships requires.json, use-notifications utility hook, and pure-layout component.",
+      "categories": [
+        "blocks",
+        "shell"
+      ],
+      "dependencies": [
+        "@constructive-io/ui"
+      ],
+      "registryDependencies": [
+        "cn"
+      ],
+      "files": [
+        {
+          "path": "registry/constructive/blocks/shell/notifications/notifications.tsx",
+          "target": "src/blocks/shell/notifications/notifications.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/shell/notifications/messages.ts",
+          "target": "src/blocks/shell/notifications/messages.ts",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/shell/notifications/hooks/use-notifications.ts",
+          "target": "src/blocks/shell/notifications/hooks/use-notifications.ts",
+          "type": "registry:hook"
+        },
+        {
+          "path": "registry/constructive/blocks/shell/notifications/shell-notifications.requires.json",
+          "target": "~/.constructive/blocks/shell-notifications.requires.json",
+          "type": "registry:file"
+        }
+      ]
+    },
+    {
+      "name": "shell-account-menu",
+      "type": "registry:block",
+      "title": "Shell Account Menu",
+      "description": "Dropdown showing current user avatar + display name as trigger, with Account settings link and Sign out action (delegated to auth-sign-out-button). Shell-block exception: navigates to signOutRedirectHref after sign-out.",
+      "categories": [
+        "blocks",
+        "shell"
+      ],
+      "dependencies": [
+        "@constructive-io/ui"
+      ],
+      "registryDependencies": [
+        "blocks-runtime",
+        "auth-sign-out-button",
+        "user-avatar",
+        "cn"
+      ],
+      "files": [
+        {
+          "path": "registry/constructive/blocks/shell/account-menu/account-menu.tsx",
+          "target": "src/blocks/shell/account-menu/account-menu.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/shell/account-menu/messages.ts",
+          "target": "src/blocks/shell/account-menu/messages.ts",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/shell/account-menu/shell-account-menu.requires.json",
+          "target": "~/.constructive/blocks/shell-account-menu.requires.json",
+          "type": "registry:file"
+        }
+      ]
+    },
+    {
+      "name": "auth-social-buttons",
+      "type": "registry:block",
+      "title": "auth-social-buttons",
+      "description": "Row of OAuth provider sign-in / sign-up buttons with DB query or static provider list, loading skeletons, error handling, and host callback seams.",
+      "categories": [
+        "blocks",
+        "authentication"
+      ],
+      "dependencies": [
+        "@constructive-io/ui"
+      ],
+      "registryDependencies": [
+        "blocks-runtime",
+        "auth-errors",
+        "auth-error-alert",
+        "cn"
+      ],
+      "files": [
+        {
+          "path": "registry/constructive/blocks/auth/social-buttons/social-buttons.tsx",
+          "target": "src/blocks/auth/social-buttons/social-buttons.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/auth/social-buttons/messages.ts",
+          "target": "src/blocks/auth/social-buttons/messages.ts",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/auth/social-buttons/auth-social-buttons.requires.json",
+          "target": "~/.constructive/blocks/auth-social-buttons.requires.json",
+          "type": "registry:file"
+        }
+      ]
+    },
+    {
+      "name": "auth-cross-origin-link",
+      "type": "registry:block",
+      "title": "Cross-Origin Link",
+      "description": "Generates a one-time cross-origin auth token via `requestCrossOriginToken` and navigates to the destination origin with the token appended as `?token=`.",
+      "categories": [
+        "blocks",
+        "authentication"
+      ],
+      "dependencies": [
+        "@constructive-io/ui"
+      ],
+      "registryDependencies": [
+        "blocks-runtime",
+        "auth-errors",
+        "auth-error-alert",
+        "auth-loading-button",
+        "cn"
+      ],
+      "files": [
+        {
+          "path": "registry/constructive/blocks/auth/cross-origin-link/cross-origin-link.tsx",
+          "target": "src/blocks/auth/cross-origin-link/cross-origin-link.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/auth/cross-origin-link/messages.ts",
+          "target": "src/blocks/auth/cross-origin-link/messages.ts",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/auth/cross-origin-link/auth-cross-origin-link.requires.json",
+          "target": "~/.constructive/blocks/auth-cross-origin-link.requires.json",
+          "type": "registry:file"
+        }
+      ]
+    },
+    {
+      "name": "auth-mfa-totp-challenge",
+      "type": "registry:block",
+      "title": "MFA TOTP Challenge",
+      "description": "6-digit TOTP code input card for MFA challenge step, with device trust checkbox, spec-compliant accessibility attributes, and normalized paste/input handling.",
+      "categories": [
+        "blocks",
+        "authentication"
+      ],
+      "dependencies": [
+        "@constructive-io/ui",
+        "@tanstack/react-form"
+      ],
+      "registryDependencies": [
+        "auth-errors",
+        "auth-error-alert",
+        "auth-loading-button",
+        "cn"
+      ],
+      "files": [
+        {
+          "path": "registry/constructive/blocks/auth/mfa-totp-challenge/mfa-totp-challenge.tsx",
+          "target": "src/blocks/auth/mfa-totp-challenge/mfa-totp-challenge.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/auth/mfa-totp-challenge/messages.ts",
+          "target": "src/blocks/auth/mfa-totp-challenge/messages.ts",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/auth/mfa-totp-challenge/auth-mfa-totp-challenge.requires.json",
+          "target": "~/.constructive/blocks/auth-mfa-totp-challenge.requires.json",
+          "type": "registry:file"
+        }
+      ]
+    },
+    {
+      "name": "auth-mfa-totp-enroll",
+      "type": "registry:block",
+      "title": "auth-mfa-totp-enroll",
+      "description": "Three-step TOTP enrollment block: QR setup → code verify → backup codes (delegated to [[auth-mfa-backup-codes-display]]). Backend-pending CASE (b): all three procedures undeployed; onSubmit/onConfirm/onGenerateCodes override seams are primary path.",
+      "categories": [
+        "blocks",
+        "authentication"
+      ],
+      "dependencies": [
+        "@constructive-io/ui",
+        "@tanstack/react-form"
+      ],
+      "registryDependencies": [
+        "auth-errors",
+        "auth-error-alert",
+        "form-field",
+        "auth-loading-button",
+        "auth-mfa-backup-codes-display",
+        "cn"
+      ],
+      "files": [
+        {
+          "path": "registry/constructive/blocks/auth/mfa-totp-enroll/mfa-totp-enroll.tsx",
+          "target": "src/blocks/auth/mfa-totp-enroll/mfa-totp-enroll.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/auth/mfa-totp-enroll/messages.ts",
+          "target": "src/blocks/auth/mfa-totp-enroll/messages.ts",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/auth/mfa-totp-enroll/auth-mfa-totp-enroll.requires.json",
+          "target": "~/.constructive/blocks/auth-mfa-totp-enroll.requires.json",
+          "type": "registry:file"
+        }
+      ]
+    },
+    {
+      "name": "auth-mfa-totp-disable-confirm",
+      "type": "registry:block",
+      "title": "MFA TOTP Disable Confirm",
+      "description": "Confirmation dialog for disabling TOTP; requires high-severity step-up before calling disable_totp.",
+      "categories": [
+        "blocks",
+        "authentication"
+      ],
+      "dependencies": [
+        "@constructive-io/ui"
+      ],
+      "registryDependencies": [
+        "auth-errors",
+        "auth-error-alert",
+        "auth-loading-button",
+        "use-step-up",
+        "cn"
+      ],
+      "files": [
+        {
+          "path": "registry/constructive/blocks/auth/mfa-totp-disable-confirm/mfa-totp-disable-confirm.tsx",
+          "target": "src/blocks/auth/mfa-totp-disable-confirm/mfa-totp-disable-confirm.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/auth/mfa-totp-disable-confirm/messages.ts",
+          "target": "src/blocks/auth/mfa-totp-disable-confirm/messages.ts",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/auth/mfa-totp-disable-confirm/auth-mfa-totp-disable-confirm.requires.json",
+          "target": "~/.constructive/blocks/auth-mfa-totp-disable-confirm.requires.json",
+          "type": "registry:file"
+        }
+      ]
+    },
+    {
+      "name": "auth-mfa-backup-codes-display",
+      "type": "registry:block",
+      "title": "MFA Backup Codes Display",
+      "description": "One-time display card for MFA backup codes — 2-column code grid, copy-all, download-as-txt, and an optional confirmation checkbox gate before the caller can proceed.",
+      "categories": [
+        "blocks",
+        "authentication"
+      ],
+      "dependencies": [
+        "@constructive-io/ui"
+      ],
+      "registryDependencies": [
+        "cn"
+      ],
+      "files": [
+        {
+          "path": "registry/constructive/blocks/auth/mfa-backup-codes-display/mfa-backup-codes-display.tsx",
+          "target": "src/blocks/auth/mfa-backup-codes-display/mfa-backup-codes-display.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/auth/mfa-backup-codes-display/messages.ts",
+          "target": "src/blocks/auth/mfa-backup-codes-display/messages.ts",
+          "type": "registry:component"
+        }
+      ]
+    },
+    {
+      "name": "auth-account-api-keys-list",
+      "type": "registry:block",
+      "title": "Account API Keys List",
+      "description": "Displays user API keys with revoke action and create-key composition; list rows supplied by the host adapter (no generated list hook — user_api_keys is private schema, no public Connection type).",
+      "categories": [
+        "blocks",
+        "authentication"
+      ],
+      "dependencies": [
+        "@constructive-io/ui"
+      ],
+      "registryDependencies": [
+        "blocks-runtime",
+        "auth-errors",
+        "auth-error-alert",
+        "auth-loading-button",
+        "auth-api-key-create-dialog",
+        "auth-api-key-created-modal",
+        "cn"
+      ],
+      "files": [
+        {
+          "path": "registry/constructive/blocks/auth/account-api-keys-list/account-api-keys-list.tsx",
+          "target": "src/blocks/auth/account-api-keys-list/account-api-keys-list.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/auth/account-api-keys-list/messages.ts",
+          "target": "src/blocks/auth/account-api-keys-list/messages.ts",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/auth/account-api-keys-list/auth-account-api-keys-list.requires.json",
+          "target": "~/.constructive/blocks/auth-account-api-keys-list.requires.json",
+          "type": "registry:file"
+        }
+      ]
+    },
+    {
+      "name": "auth-social-providers-grid",
+      "type": "registry:block",
+      "title": "auth-social-providers-grid",
+      "description": "Grid layout for OAuth providers with Last used badge, mode-aware labels, and localStorage persistence.",
+      "categories": [
+        "blocks",
+        "authentication"
+      ],
+      "dependencies": [
+        "@constructive-io/ui"
+      ],
+      "registryDependencies": [
+        "auth-social-buttons",
+        "cn"
+      ],
+      "files": [
+        {
+          "path": "registry/constructive/blocks/auth/social-providers-grid/social-providers-grid.tsx",
+          "target": "src/blocks/auth/social-providers-grid/social-providers-grid.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/auth/social-providers-grid/messages.ts",
+          "target": "src/blocks/auth/social-providers-grid/messages.ts",
+          "type": "registry:component"
+        }
+      ]
+    },
+    {
+      "name": "auth-mfa-totp-challenge-page",
+      "type": "registry:block",
+      "title": "auth-mfa-totp-challenge-page",
+      "description": "Next.js page mounted at /auth/mfa/totp. Reads ?token= and ?redirect= from useSearchParams, mounts MfaTotpChallenge, and routes on success. Shows error cards for missing-token and expired states.",
+      "categories": [
+        "blocks",
+        "authentication"
+      ],
+      "dependencies": [
+        "@constructive-io/ui"
+      ],
+      "registryDependencies": [
+        "auth-mfa-totp-challenge",
+        "cn"
+      ],
+      "files": [
+        {
+          "path": "registry/constructive/blocks/auth/mfa-totp-challenge-page/mfa-totp-challenge-page.tsx",
+          "target": "src/blocks/auth/mfa-totp-challenge-page/mfa-totp-challenge-page.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/auth/mfa-totp-challenge-page/messages.ts",
+          "target": "src/blocks/auth/mfa-totp-challenge-page/messages.ts",
+          "type": "registry:component"
+        }
+      ]
+    },
+    {
+      "name": "auth-mfa-backup-codes-regenerate",
+      "type": "registry:block",
+      "title": "MFA Backup Codes Regenerate",
+      "description": "Confirmation dialog that gates behind high-tier step-up, calls generate_backup_codes(), then hands off to auth-mfa-backup-codes-display for code presentation and confirmation.",
+      "categories": [
+        "blocks",
+        "authentication"
+      ],
+      "dependencies": [
+        "@constructive-io/ui"
+      ],
+      "registryDependencies": [
+        "auth-errors",
+        "auth-error-alert",
+        "auth-loading-button",
+        "use-step-up",
+        "auth-mfa-backup-codes-display",
+        "cn"
+      ],
+      "files": [
+        {
+          "path": "registry/constructive/blocks/auth/mfa-backup-codes-regenerate/mfa-backup-codes-regenerate.tsx",
+          "target": "src/blocks/auth/mfa-backup-codes-regenerate/mfa-backup-codes-regenerate.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/auth/mfa-backup-codes-regenerate/messages.ts",
+          "target": "src/blocks/auth/mfa-backup-codes-regenerate/messages.ts",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/auth/mfa-backup-codes-regenerate/auth-mfa-backup-codes-regenerate.requires.json",
+          "target": "~/.constructive/blocks/auth-mfa-backup-codes-regenerate.requires.json",
+          "type": "registry:file"
+        }
+      ]
+    },
+    {
+      "name": "auth-anonymous-sign-in-button",
+      "type": "registry:block",
+      "title": "Anonymous Sign-In Button",
+      "description": "Single-click guest session button that creates an anonymous session without credentials — for try-before-you-register flows.",
+      "categories": [
+        "blocks",
+        "authentication"
+      ],
+      "dependencies": [],
+      "registryDependencies": [
+        "auth-errors",
+        "auth-error-alert",
+        "auth-loading-button",
+        "cn"
+      ],
+      "files": [
+        {
+          "path": "registry/constructive/blocks/auth/anonymous-sign-in-button/anonymous-sign-in-button.tsx",
+          "target": "src/blocks/auth/anonymous-sign-in-button/anonymous-sign-in-button.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/auth/anonymous-sign-in-button/messages.ts",
+          "target": "src/blocks/auth/anonymous-sign-in-button/messages.ts",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/auth/anonymous-sign-in-button/auth-anonymous-sign-in-button.requires.json",
+          "target": "~/.constructive/blocks/auth-anonymous-sign-in-button.requires.json",
+          "type": "registry:file"
+        }
+      ]
+    },
+    {
+      "name": "auth-magic-link-request-card",
+      "type": "registry:block",
+      "title": "Magic Link Request Card",
+      "description": "Email-only form that initiates the magic-link sign-in flow; transitions to a neutral confirmation state within the card on success (no navigation, no account enumeration).",
+      "categories": [
+        "blocks",
+        "authentication"
+      ],
+      "dependencies": [
+        "@constructive-io/ui",
+        "@tanstack/react-form"
+      ],
+      "registryDependencies": [
+        "auth-errors",
+        "auth-schemas",
+        "auth-error-alert",
+        "form-field",
+        "auth-loading-button",
+        "cn"
+      ],
+      "files": [
+        {
+          "path": "registry/constructive/blocks/auth/magic-link-request-card/magic-link-request-card.tsx",
+          "target": "src/blocks/auth/magic-link-request-card/magic-link-request-card.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/auth/magic-link-request-card/messages.ts",
+          "target": "src/blocks/auth/magic-link-request-card/messages.ts",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/auth/magic-link-request-card/auth-magic-link-request-card.requires.json",
+          "target": "~/.constructive/blocks/auth-magic-link-request-card.requires.json",
+          "type": "registry:file"
+        }
+      ]
+    },
+    {
+      "name": "auth-magic-link-sent-page",
+      "type": "registry:block",
+      "title": "Magic Link Sent Page",
+      "description": "Post-submission confirmation page for the magic-link sign-in flow. Displays the target email, a resend CTA with 60-second cooldown, and navigation links back to the request form and sign-in page.",
+      "categories": [
+        "blocks",
+        "authentication"
+      ],
+      "dependencies": [
+        "@constructive-io/ui"
+      ],
+      "registryDependencies": [
+        "auth-errors",
+        "auth-error-alert",
+        "auth-loading-button",
+        "cn"
+      ],
+      "files": [
+        {
+          "path": "registry/constructive/blocks/auth/magic-link-sent-page/magic-link-sent-page.tsx",
+          "target": "src/blocks/auth/magic-link-sent-page/magic-link-sent-page.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/auth/magic-link-sent-page/messages.ts",
+          "target": "src/blocks/auth/magic-link-sent-page/messages.ts",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/auth/magic-link-sent-page/auth-magic-link-sent-page.requires.json",
+          "target": "~/.constructive/blocks/auth-magic-link-sent-page.requires.json",
+          "type": "registry:file"
+        }
+      ]
+    },
+    {
+      "name": "auth-magic-link-callback-page",
+      "type": "registry:block",
+      "title": "auth-magic-link-callback-page (blockers fixed)",
+      "description": "Magic-link callback page block with all reviewer blockers and worthwhile minors resolved.",
+      "categories": [
+        "blocks",
+        "authentication"
+      ],
+      "dependencies": [
+        "@constructive-io/ui"
+      ],
+      "registryDependencies": [
+        "auth-errors",
+        "cn"
+      ],
+      "files": [
+        {
+          "path": "registry/constructive/blocks/auth/magic-link-callback-page/magic-link-callback-page.tsx",
+          "target": "src/blocks/auth/magic-link-callback-page/magic-link-callback-page.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/auth/magic-link-callback-page/messages.ts",
+          "target": "src/blocks/auth/magic-link-callback-page/messages.ts",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/auth/magic-link-callback-page/auth-magic-link-callback-page.requires.json",
+          "target": "~/.constructive/blocks/auth-magic-link-callback-page.requires.json",
+          "type": "registry:file"
+        }
+      ]
+    },
+    {
+      "name": "auth-email-otp-request-card",
+      "type": "registry:block",
+      "title": "auth-email-otp-request-card",
+      "description": "Email-only form that sends a one-time passcode to the user's email. On success, transitions to a code-sent state — by default renders [[auth-email-otp-input]] inline (showOtpInputInline=true), or shows confirmation + resend with onSuccess for navigation (showOtpInputInline=false). BACKEND-PENDING (CASE b): send_email_otp not yet deployed; onSubmit override is the primary network path.",
+      "categories": [
+        "blocks",
+        "authentication"
+      ],
+      "dependencies": [
+        "@constructive-io/ui",
+        "@tanstack/react-form"
+      ],
+      "registryDependencies": [
+        "auth-errors",
+        "auth-schemas",
+        "auth-error-alert",
+        "form-field",
+        "auth-loading-button",
+        "cn"
+      ],
+      "files": [
+        {
+          "path": "registry/constructive/blocks/auth/email-otp-request-card/email-otp-request-card.tsx",
+          "target": "src/blocks/auth/email-otp-request-card/email-otp-request-card.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/auth/email-otp-request-card/messages.ts",
+          "target": "src/blocks/auth/email-otp-request-card/messages.ts",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/auth/email-otp-request-card/auth-email-otp-request-card.requires.json",
+          "target": "~/.constructive/blocks/auth-email-otp-request-card.requires.json",
+          "type": "registry:file"
+        }
+      ]
+    },
+    {
+      "name": "auth-email-otp-input",
+      "type": "registry:block",
+      "title": "Email OTP Input",
+      "description": "6-segment OTP code input with countdown timer, resend CTA, and attempt feedback for email OTP sign-in flows.",
+      "categories": [
+        "blocks",
+        "authentication"
+      ],
+      "dependencies": [
+        "@constructive-io/ui"
+      ],
+      "registryDependencies": [
+        "auth-errors",
+        "auth-error-alert",
+        "auth-loading-button",
+        "cn"
+      ],
+      "files": [
+        {
+          "path": "registry/constructive/blocks/auth/email-otp-input/email-otp-input.tsx",
+          "target": "src/blocks/auth/email-otp-input/email-otp-input.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/auth/email-otp-input/messages.ts",
+          "target": "src/blocks/auth/email-otp-input/messages.ts",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/auth/email-otp-input/auth-email-otp-input.requires.json",
+          "target": "~/.constructive/blocks/auth-email-otp-input.requires.json",
+          "type": "registry:file"
+        }
+      ]
+    },
+    {
+      "name": "auth-passkey-enroll",
+      "type": "registry:block",
+      "title": "auth-passkey-enroll",
+      "description": "WebAuthn passkey enrollment block — two-step begin/finish ceremony with injectable override seam.",
+      "categories": [
+        "blocks",
+        "authentication"
+      ],
+      "dependencies": [
+        "@constructive-io/ui",
+        "@tanstack/react-form"
+      ],
+      "registryDependencies": [
+        "auth-errors",
+        "auth-error-alert",
+        "form-field",
+        "auth-loading-button",
+        "cn"
+      ],
+      "files": [
+        {
+          "path": "registry/constructive/blocks/auth/passkey-enroll/passkey-enroll.tsx",
+          "target": "src/blocks/auth/passkey-enroll/passkey-enroll.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/auth/passkey-enroll/messages.ts",
+          "target": "src/blocks/auth/passkey-enroll/messages.ts",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/auth/passkey-enroll/hooks/use-passkey-enroll.ts",
+          "target": "src/blocks/auth/passkey-enroll/hooks/use-passkey-enroll.ts",
+          "type": "registry:hook"
+        },
+        {
+          "path": "registry/constructive/blocks/auth/passkey-enroll/auth-passkey-enroll.requires.json",
+          "target": "~/.constructive/blocks/auth-passkey-enroll.requires.json",
+          "type": "registry:file"
+        }
+      ]
+    },
+    {
+      "name": "auth-passkey-sign-in",
+      "type": "registry:block",
+      "title": "auth-passkey-sign-in",
+      "description": "WebAuthn assertion (sign-in) block with button and conditional UI (autofill picker) support. Orchestrates the begin/browser/finish ceremony via the shipped utility hook or a consumer-supplied onSubmit override.",
+      "categories": [
+        "blocks",
+        "authentication"
+      ],
+      "dependencies": [
+        "@constructive-io/ui"
+      ],
+      "registryDependencies": [
+        "auth-errors",
+        "auth-error-alert",
+        "cn"
+      ],
+      "files": [
+        {
+          "path": "registry/constructive/blocks/auth/passkey-sign-in/passkey-sign-in.tsx",
+          "target": "src/blocks/auth/passkey-sign-in/passkey-sign-in.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/auth/passkey-sign-in/messages.ts",
+          "target": "src/blocks/auth/passkey-sign-in/messages.ts",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/auth/passkey-sign-in/hooks/use-passkey-sign-in.ts",
+          "target": "src/blocks/auth/passkey-sign-in/hooks/use-passkey-sign-in.ts",
+          "type": "registry:hook"
+        },
+        {
+          "path": "registry/constructive/blocks/auth/passkey-sign-in/auth-passkey-sign-in.requires.json",
+          "target": "~/.constructive/blocks/auth-passkey-sign-in.requires.json",
+          "type": "registry:file"
+        }
+      ]
+    },
+    {
+      "name": "auth-account-phones-list",
+      "type": "registry:block",
+      "title": "auth-account-phones-list",
+      "description": "Phone number list block for authenticated accounts — add, verify (inline OTP), set-primary, delete.",
+      "categories": [
+        "blocks",
+        "authentication"
+      ],
+      "dependencies": [
+        "@constructive-io/ui",
+        "@tanstack/react-form"
+      ],
+      "registryDependencies": [
+        "blocks-runtime",
+        "auth-errors",
+        "auth-error-alert",
+        "form-field",
+        "auth-loading-button",
+        "cn"
+      ],
+      "files": [
+        {
+          "path": "registry/constructive/blocks/auth/account-phones-list/account-phones-list.tsx",
+          "target": "src/blocks/auth/account-phones-list/account-phones-list.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/auth/account-phones-list/messages.ts",
+          "target": "src/blocks/auth/account-phones-list/messages.ts",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/auth/account-phones-list/auth-account-phones-list.requires.json",
+          "target": "~/.constructive/blocks/auth-account-phones-list.requires.json",
+          "type": "registry:file"
+        }
+      ]
+    },
+    {
+      "name": "auth-invitation-acceptance-card",
+      "type": "registry:block",
+      "title": "auth-invitation-acceptance-card (blocker fixes)",
+      "description": "Fixed all three reviewer blockers: B2 (InviteAcceptResult type), B1 (conditional setAccepted guard + pending state), B3 (new tests for result:false / null paths).",
+      "categories": [
+        "blocks",
+        "authentication"
+      ],
+      "dependencies": [
+        "@constructive-io/ui"
+      ],
+      "registryDependencies": [
+        "blocks-runtime",
+        "auth-errors",
+        "auth-error-alert",
+        "auth-loading-button",
+        "user-avatar",
+        "cn"
+      ],
+      "files": [
+        {
+          "path": "registry/constructive/blocks/auth/invitation-acceptance-card/invitation-acceptance-card.tsx",
+          "target": "src/blocks/auth/invitation-acceptance-card/invitation-acceptance-card.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/auth/invitation-acceptance-card/messages.ts",
+          "target": "src/blocks/auth/invitation-acceptance-card/messages.ts",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/auth/invitation-acceptance-card/auth-invitation-acceptance-card.requires.json",
+          "target": "~/.constructive/blocks/auth-invitation-acceptance-card.requires.json",
+          "type": "registry:file"
+        }
+      ]
+    },
+    {
+      "name": "user-context-switcher",
+      "type": "registry:block",
+      "title": "User Context Switcher",
+      "description": "Dropdown allowing the signed-in user to switch the active 'acting as' context between their personal account and any orgs they are a member of. Demonstrates Constructive's unified User model.",
+      "categories": [
+        "blocks",
+        "user"
+      ],
+      "dependencies": [
+        "@constructive-io/ui"
+      ],
+      "registryDependencies": [
+        "blocks-runtime",
+        "auth-errors",
+        "user-avatar",
+        "cn"
+      ],
+      "files": [
+        {
+          "path": "registry/constructive/blocks/user/context-switcher/context-switcher.tsx",
+          "target": "src/blocks/user/context-switcher/context-switcher.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/user/context-switcher/messages.ts",
+          "target": "src/blocks/user/context-switcher/messages.ts",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/user/context-switcher/hooks/use-switch-context.ts",
+          "target": "src/blocks/user/context-switcher/hooks/use-switch-context.ts",
+          "type": "registry:hook"
+        },
+        {
+          "path": "registry/constructive/blocks/user/context-switcher/hooks/use-user-contexts.ts",
+          "target": "src/blocks/user/context-switcher/hooks/use-user-contexts.ts",
+          "type": "registry:hook"
+        },
+        {
+          "path": "registry/constructive/blocks/user/context-switcher/user-context-switcher.requires.json",
+          "target": "~/.constructive/blocks/user-context-switcher.requires.json",
+          "type": "registry:file"
+        }
+      ]
+    },
+    {
+      "name": "org-create-card",
+      "type": "registry:block",
+      "title": "Org Create Card",
+      "description": "Multi-step wizard to create a new organization (users row with type=2). Three steps: display name + slug with debounced availability check, optional logo upload, confirm summary + submit. Binds to useCreateUserMutation and useUsersQuery from @/generated/auth.",
+      "categories": [
+        "blocks",
+        "organization"
+      ],
+      "dependencies": [
+        "@constructive-io/ui",
+        "@tanstack/react-form"
+      ],
+      "registryDependencies": [
+        "blocks-runtime",
+        "auth-errors",
+        "auth-error-alert",
+        "form-field",
+        "auth-loading-button",
+        "cn"
+      ],
+      "files": [
+        {
+          "path": "registry/constructive/blocks/org/create-card/create-card.tsx",
+          "target": "src/blocks/org/create-card/create-card.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/org/create-card/messages.ts",
+          "target": "src/blocks/org/create-card/messages.ts",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/org/create-card/org-create-card.requires.json",
+          "target": "~/.constructive/blocks/org-create-card.requires.json",
+          "type": "registry:file"
+        }
+      ]
+    },
+    {
+      "name": "org-members-list",
+      "type": "registry:block",
+      "title": "Org Members List",
+      "description": "Paginated org member list with role chips, inline role-change selector, remove-member (gated by step-up medium/high based on admin status), and transfer-ownership (gated by step-up high). All sensitive actions require step-up before mutation fires.",
+      "categories": [
+        "blocks",
+        "organization"
+      ],
+      "dependencies": [
+        "@constructive-io/ui"
+      ],
+      "registryDependencies": [
+        "blocks-runtime",
+        "auth-errors",
+        "auth-error-alert",
+        "use-step-up",
+        "user-avatar",
+        "cn"
+      ],
+      "files": [
+        {
+          "path": "registry/constructive/blocks/org/members-list/members-list.tsx",
+          "target": "src/blocks/org/members-list/members-list.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/org/members-list/messages.ts",
+          "target": "src/blocks/org/members-list/messages.ts",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/org/members-list/org-members-list.requires.json",
+          "target": "~/.constructive/blocks/org-members-list.requires.json",
+          "type": "registry:file"
+        }
+      ]
+    },
+    {
+      "name": "org-invite-dialog",
+      "type": "registry:block",
+      "title": "OrgInviteDialog",
+      "description": "Dialog for inviting members to an org by email with optional role assignment. Shows pending invites list with resend and cancel actions. Resend = cancel + re-create (resendOrgInvite backend procedure pending).",
+      "categories": [
+        "blocks",
+        "organization"
+      ],
+      "dependencies": [
+        "@constructive-io/ui",
+        "@tanstack/react-form"
+      ],
+      "registryDependencies": [
+        "blocks-runtime",
+        "auth-errors",
+        "auth-error-alert",
+        "form-field",
+        "auth-loading-button",
+        "cn"
+      ],
+      "files": [
+        {
+          "path": "registry/constructive/blocks/org/invite-dialog/invite-dialog.tsx",
+          "target": "src/blocks/org/invite-dialog/invite-dialog.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/org/invite-dialog/messages.ts",
+          "target": "src/blocks/org/invite-dialog/messages.ts",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/org/invite-dialog/org-invite-dialog.requires.json",
+          "target": "~/.constructive/blocks/org-invite-dialog.requires.json",
+          "type": "registry:file"
+        }
+      ]
+    },
+    {
+      "name": "org-roles-editor",
+      "type": "registry:block",
+      "title": "Org Roles Editor",
+      "description": "Admin card for creating, editing, and deleting named org role profiles backed by the host's generated admin SDK hooks.",
+      "categories": [
+        "blocks",
+        "organization"
+      ],
+      "dependencies": [
+        "@constructive-io/ui",
+        "@tanstack/react-form"
+      ],
+      "registryDependencies": [
+        "blocks-runtime",
+        "auth-errors",
+        "auth-error-alert",
+        "form-field",
+        "auth-loading-button",
+        "cn"
+      ],
+      "files": [
+        {
+          "path": "registry/constructive/blocks/org/roles-editor/roles-editor.tsx",
+          "target": "src/blocks/org/roles-editor/roles-editor.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/org/roles-editor/messages.ts",
+          "target": "src/blocks/org/roles-editor/messages.ts",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/org/roles-editor/org-roles-editor.requires.json",
+          "target": "~/.constructive/blocks/org-roles-editor.requires.json",
+          "type": "registry:file"
+        }
+      ]
+    },
+    {
+      "name": "org-settings-form",
+      "type": "registry:block",
+      "title": "org-settings-form",
+      "description": "Org settings form with display name, URL slug, and danger-zone deletion (step-up gated).",
+      "categories": [
+        "blocks",
+        "organization"
+      ],
+      "dependencies": [
+        "@constructive-io/ui",
+        "@tanstack/react-form"
+      ],
+      "registryDependencies": [
+        "blocks-runtime",
+        "auth-errors",
+        "auth-error-alert",
+        "form-field",
+        "auth-loading-button",
+        "use-step-up",
+        "cn"
+      ],
+      "files": [
+        {
+          "path": "registry/constructive/blocks/org/settings-form/settings-form.tsx",
+          "target": "src/blocks/org/settings-form/settings-form.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/org/settings-form/messages.ts",
+          "target": "src/blocks/org/settings-form/messages.ts",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/org/settings-form/org-settings-form.requires.json",
+          "target": "~/.constructive/blocks/org-settings-form.requires.json",
+          "type": "registry:file"
+        }
+      ]
+    },
+    {
+      "name": "org-app-memberships",
+      "type": "registry:block",
+      "title": "OrgAppMemberships",
+      "description": "Admin block for managing an org's app-level memberships: approve, revoke (with step-up), and profile-update via a Select dropdown. Uses three generated admin SDK hooks (query + two mutations). Revoke is gated behind a confirmation dialog and step-up at tier 'medium'.",
+      "categories": [
+        "blocks",
+        "organization"
+      ],
+      "dependencies": [
+        "@constructive-io/ui"
+      ],
+      "registryDependencies": [
+        "blocks-runtime",
+        "auth-errors",
+        "auth-error-alert",
+        "use-step-up",
+        "cn"
+      ],
+      "files": [
+        {
+          "path": "registry/constructive/blocks/org/app-memberships/app-memberships.tsx",
+          "target": "src/blocks/org/app-memberships/app-memberships.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/org/app-memberships/messages.ts",
+          "target": "src/blocks/org/app-memberships/messages.ts",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/org/app-memberships/org-app-memberships.requires.json",
+          "target": "~/.constructive/blocks/org-app-memberships.requires.json",
+          "type": "registry:file"
+        }
+      ]
+    },
+    {
+      "name": "auth-invitation-acceptance-page",
+      "type": "registry:block",
+      "title": "auth-invitation-acceptance-page",
+      "description": "Next.js page wrapper for /invite route. Enforces auth gate via useCurrentUserQuery, redirects unauthenticated users to SIGN_IN_PATH with encoded return URL, shows loading skeleton during auth resolution, renders InvitationAcceptanceCard for signed-in users, handles accept/decline routing.",
+      "categories": [
+        "blocks",
+        "authentication"
+      ],
+      "dependencies": [],
+      "registryDependencies": [
+        "blocks-runtime",
+        "auth-invitation-acceptance-card"
+      ],
+      "files": [
+        {
+          "path": "registry/constructive/blocks/auth/invitation-acceptance-page/invitation-acceptance-page.tsx",
+          "target": "src/blocks/auth/invitation-acceptance-page/invitation-acceptance-page.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/auth/invitation-acceptance-page/auth-invitation-acceptance-page.requires.json",
+          "target": "~/.constructive/blocks/auth-invitation-acceptance-page.requires.json",
+          "type": "registry:file"
+        }
+      ]
+    },
+    {
+      "name": "auth-account-settings-page",
+      "type": "registry:block",
+      "title": "auth-account-settings-page",
+      "description": "Tabbed account settings page composing all account-settings section cards. Calls useCurrentUserQuery at mount, wraps inner content in Suspense per Next.js 15 requirements, and gates the API keys tab behind an allowApiKeys prop.",
+      "categories": [
+        "blocks",
+        "authentication"
+      ],
+      "dependencies": [
+        "@constructive-io/ui"
+      ],
+      "registryDependencies": [
+        "blocks-runtime",
+        "auth-account-api-keys-list",
+        "auth-account-connected-accounts",
+        "auth-account-danger-card",
+        "auth-account-emails-list",
+        "auth-account-phones-list",
+        "auth-account-profile-card",
+        "auth-account-security-card",
+        "auth-account-sessions-list",
+        "cn"
+      ],
+      "files": [
+        {
+          "path": "registry/constructive/blocks/auth/account-settings-page/account-settings-page.tsx",
+          "target": "src/blocks/auth/account-settings-page/account-settings-page.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/auth/account-settings-page/messages.ts",
+          "target": "src/blocks/auth/account-settings-page/messages.ts",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/auth/account-settings-page/auth-account-settings-page.requires.json",
+          "target": "~/.constructive/blocks/auth-account-settings-page.requires.json",
+          "type": "registry:file"
+        }
+      ]
+    },
+    {
+      "name": "auth-sso-setup-card",
+      "type": "registry:block",
+      "title": "auth-sso-setup-card",
+      "description": "SSO setup placeholder card (v2 stub) — presentational block with full i18n message catalog. No data binding.",
+      "categories": [
+        "blocks",
+        "authentication"
+      ],
+      "docs": "Renders a card describing OIDC/SAML SSO capability with a coming-soon notice. All user-visible labels are in the SsoSetupCardMessages catalog and overridable via the messages prop.",
+      "dependencies": [
+        "@constructive-io/ui"
+      ],
+      "registryDependencies": [
+        "cn"
+      ],
+      "files": [
+        {
+          "path": "registry/constructive/blocks/auth/sso-setup-card/sso-setup-card.tsx",
+          "target": "src/blocks/auth/sso-setup-card/sso-setup-card.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/auth/sso-setup-card/messages.ts",
+          "target": "src/blocks/auth/sso-setup-card/messages.ts",
+          "type": "registry:component"
+        }
+      ]
+    },
+    {
+      "name": "auth-sso-sign-in-card",
+      "type": "registry:block",
+      "title": "auth-sso-sign-in-card",
+      "description": "v2 stub: SSO-initiated sign-in card with email-domain lookup surface; backend procedures deferred (no @/generated import, no data binding).",
+      "categories": [
+        "blocks",
+        "authentication"
+      ],
+      "dependencies": [
+        "@constructive-io/ui",
+        "@tanstack/react-form"
+      ],
+      "registryDependencies": [
+        "auth-error-alert",
+        "form-field",
+        "auth-loading-button",
+        "cn"
+      ],
+      "files": [
+        {
+          "path": "registry/constructive/blocks/auth/sso-sign-in-card/sso-sign-in-card.tsx",
+          "target": "src/blocks/auth/sso-sign-in-card/sso-sign-in-card.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/auth/sso-sign-in-card/messages.ts",
+          "target": "src/blocks/auth/sso-sign-in-card/messages.ts",
+          "type": "registry:component"
+        }
+      ]
+    },
+    {
+      "name": "auth-domain-verification-step",
+      "type": "registry:block",
+      "title": "Auth Domain Verification Step",
+      "description": "DNS TXT-record verification UI stub for SSO domain ownership. Displays the TXT record name and value derived from props, with copy-to-clipboard per field, a manual \"Check now\" trigger, and a status badge. Backend polling is deferred (v2 SSO procedures not yet deployed).",
+      "categories": [
+        "blocks",
+        "authentication"
+      ],
+      "dependencies": [
+        "@constructive-io/ui"
+      ],
+      "registryDependencies": [
+        "cn"
+      ],
+      "files": [
+        {
+          "path": "registry/constructive/blocks/auth/domain-verification-step/domain-verification-step.tsx",
+          "target": "src/blocks/auth/domain-verification-step/domain-verification-step.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/auth/domain-verification-step/messages.ts",
+          "target": "src/blocks/auth/domain-verification-step/messages.ts",
+          "type": "registry:component"
+        }
+      ]
+    },
+    {
+      "name": "org-scim-token-generation-card",
+      "type": "registry:block",
+      "title": "Org SCIM Token Generation Card",
+      "description": "Presentational stub for SCIM bearer token generation — deferred until the SCIM backend (generate_scim_token / revoke_scim_token procedures + scim_providers table) ships in constructive-db.",
+      "categories": [
+        "blocks",
+        "organization"
+      ],
+      "dependencies": [
+        "@constructive-io/ui"
+      ],
+      "registryDependencies": [
+        "cn"
+      ],
+      "files": [
+        {
+          "path": "registry/constructive/blocks/org/scim-token-generation-card/scim-token-generation-card.tsx",
+          "target": "src/blocks/org/scim-token-generation-card/scim-token-generation-card.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/org/scim-token-generation-card/messages.ts",
+          "target": "src/blocks/org/scim-token-generation-card/messages.ts",
+          "type": "registry:component"
+        }
+      ]
+    },
+    {
+      "name": "org-scim-connections-list",
+      "type": "registry:block",
+      "title": "Org SCIM Connections List",
+      "description": "Backend-pending presentational stub that renders an informational empty state for SCIM provider connections. Full data block deferred until the scim_providers schema and revoke_scim_token procedure ship.",
+      "categories": [
+        "blocks",
+        "organization"
+      ],
+      "dependencies": [
+        "@constructive-io/ui"
+      ],
+      "registryDependencies": [
+        "cn"
+      ],
+      "files": [
+        {
+          "path": "registry/constructive/blocks/org/scim-connections-list/scim-connections-list.tsx",
+          "target": "src/blocks/org/scim-connections-list/scim-connections-list.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/org/scim-connections-list/messages.ts",
+          "target": "src/blocks/org/scim-connections-list/messages.ts",
+          "type": "registry:component"
+        }
+      ]
+    },
+    {
+      "name": "org-scim-setup-guide",
+      "type": "registry:block",
+      "title": "Org SCIM Setup Guide",
+      "description": "v2 stub: static SCIM 2.0 configuration guide card with provider selector (Okta, Azure AD, JumpCloud, Google Workspace, Generic), copyable endpoint URL, bearer token instructions, and attribute mapping table — no backend binding until scim_providers table ships.",
+      "categories": [
+        "blocks",
+        "organization"
+      ],
+      "dependencies": [
+        "@constructive-io/ui"
+      ],
+      "registryDependencies": [
+        "cn"
+      ],
+      "files": [
+        {
+          "path": "registry/constructive/blocks/org/scim-setup-guide/scim-setup-guide.tsx",
+          "target": "src/blocks/org/scim-setup-guide/scim-setup-guide.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/org/scim-setup-guide/messages.ts",
+          "target": "src/blocks/org/scim-setup-guide/messages.ts",
+          "type": "registry:component"
+        }
+      ]
+    },
+    {
+      "name": "chat",
+      "type": "registry:block",
+      "title": "Chat Widget",
+      "description": "AI chat widget with page context awareness, settings panel, and floating UI. Built on Vercel AI SDK.",
+      "categories": [
+        "block"
+      ],
+      "docs": "## Setup\n\n1. Add to your `globals.css`:\n```css\n@plugin \"@tailwindcss/typography\";\n@import '@constructive-io/ui/globals.css';\n```\n\n2. Add to your root `layout.tsx`:\n```tsx\nimport { ChatProvider, ChatWidget } from '@/components/chat';\nimport { PortalRoot } from '@/components/ui/portal';\n\n<ChatProvider>\n  {children}\n  <ChatWidget />\n</ChatProvider>\n<PortalRoot />\n```\n\nIncludes Next.js API routes at `src/app/api/chat/route.ts` and `src/app/api/chat/test/route.ts`. OpenAI-compatible egress defaults to `https://api.openai.com/v1`. To enable a custom or local provider, set an explicit server-side allowlist before startup, for example `CHAT_ALLOWED_PROVIDER_BASE_URLS=http://127.0.0.1:11434/v1,https://llm.example.com/openai`. Entries must be absolute HTTP(S) URLs without credentials, queries, or fragments; localhost resolves from the route server. Add authentication, authorization, and rate limiting around both POST routes before exposing them publicly, and do not log or persist provider keys in plaintext.",
+      "dependencies": [
+        "@constructive-io/ui",
+        "ai",
+        "@ai-sdk/react",
+        "@ai-sdk/anthropic",
+        "@ai-sdk/openai-compatible",
+        "marked",
+        "dompurify",
+        "motion",
+        "lucide-react",
+        "zod",
+        "@tailwindcss/typography"
+      ],
+      "registryDependencies": [
+        "button",
+        "input",
+        "label",
+        "select",
+        "cn"
+      ],
+      "files": [
+        {
+          "path": "registry/constructive/blocks/chat/index.ts",
+          "target": "src/components/chat/index.ts",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/chat/chat.types.ts",
+          "target": "src/components/chat/chat.types.ts",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/chat/dom-scraper.ts",
+          "target": "src/components/chat/dom-scraper.ts",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/chat/chat-context.tsx",
+          "target": "src/components/chat/chat-context.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/chat/chat-widget.tsx",
+          "target": "src/components/chat/chat-widget.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/chat/chat-panel.tsx",
+          "target": "src/components/chat/chat-panel.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/chat/chat-messages.tsx",
+          "target": "src/components/chat/chat-messages.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/chat/chat-message-content.tsx",
+          "target": "src/components/chat/chat-message-content.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/chat/chat-input.tsx",
+          "target": "src/components/chat/chat-input.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/chat/chat-fab.tsx",
+          "target": "src/components/chat/chat-fab.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/chat/chat-settings.tsx",
+          "target": "src/components/chat/chat-settings.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/chat/tool-registry.ts",
+          "target": "src/components/chat/tool-registry.ts",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/chat/tool-message.tsx",
+          "target": "src/components/chat/tool-message.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/chat/tool-status.tsx",
+          "target": "src/components/chat/tool-status.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/chat/tool-ui-config.ts",
+          "target": "src/components/chat/tool-ui-config.ts",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/chat/shimmer.tsx",
+          "target": "src/components/chat/shimmer.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/chat/api-route.ts",
+          "target": "src/app/api/chat/route.ts",
+          "type": "registry:lib"
+        },
+        {
+          "path": "registry/constructive/blocks/chat/api-test-route.ts",
+          "target": "src/app/api/chat/test/route.ts",
+          "type": "registry:lib"
+        }
+      ]
+    }
+  ]
+}

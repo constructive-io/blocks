@@ -1,0 +1,76 @@
+name: Pages
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch: {}
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: pnpm
+
+      - name: Configure GitHub Pages
+        uses: actions/configure-pages@v5
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Validate repository
+        run: pnpm check
+
+      - name: Build static Blocks site
+        run: pnpm build:pages
+
+      - name: Assemble Pages artifact
+        run: |
+          rm -rf _site
+          mkdir -p _site/r
+          cp -R apps/blocks/out/. _site/
+          cp apps/registry/public/r/*.json _site/r/
+          test -f _site/index.html
+          test -f _site/blocks/index.html
+          test -f _site/r/registry.json
+          test -f _site/r/chat.json
+          test -f _site/r/schema-builder.json
+          grep -q '/blocks/_next/' _site/index.html
+          ! grep -R 'github.io/dashboard' _site
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v4
+        with:
+          path: _site
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
+
+# npm publication is a maintainer-run local process and is intentionally absent.

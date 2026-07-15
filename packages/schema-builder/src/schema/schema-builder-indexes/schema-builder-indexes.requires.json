@@ -1,0 +1,10 @@
+{
+  "requires": [
+    {
+      "namespace": "schema-builder",
+      "mutations": ["createIndex", "deleteIndex", "updateIndex"],
+      "queries": [],
+      "models": []
+    }
+  ]
+}

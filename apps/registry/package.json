@@ -1,0 +1,14 @@
+{
+  "name": "@constructive-io/registry",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "smoke:install": "node scripts/smoke-install.mjs",
+    "clean": "rm -rf public/r registry"
+  },
+  "devDependencies": {
+    "shadcn": "^3.8.3"
+  }
+}

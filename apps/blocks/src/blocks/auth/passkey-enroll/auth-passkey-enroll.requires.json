@@ -1,0 +1,6 @@
+{
+  "namespace": "auth",
+  "mutations": ["passkeyBeginRegistration", "passkeyFinishRegistration"],
+  "queries": [],
+  "models": []
+}

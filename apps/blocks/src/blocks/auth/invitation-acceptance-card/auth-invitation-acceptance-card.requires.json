@@ -1,0 +1,6 @@
+{
+  "namespace": "admin",
+  "mutations": ["submitAppInviteCode", "submitOrgInviteCode"],
+  "queries": [],
+  "models": []
+}

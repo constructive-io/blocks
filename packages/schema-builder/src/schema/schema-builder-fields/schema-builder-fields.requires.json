@@ -1,0 +1,19 @@
+{
+  "requires": [
+    {
+      "namespace": "schema-builder",
+      "mutations": [
+        "createField",
+        "createPrimaryKeyConstraint",
+        "createUniqueConstraint",
+        "deleteField",
+        "deletePrimaryKeyConstraint",
+        "deleteUniqueConstraint",
+        "updateField",
+        "updatePrimaryKeyConstraint"
+      ],
+      "queries": [],
+      "models": []
+    }
+  ]
+}

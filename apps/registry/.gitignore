@@ -1,0 +1,8 @@
+# shadcn build output
+public/r/
+
+# Copied registry sources (build artifact)
+registry/
+
+# Generated combined registry.json (root-level only, not src/)
+/registry.json

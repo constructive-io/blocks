@@ -1,0 +1,1427 @@
+{
+  "$schema": "https://ui.shadcn.com/schema/registry.json",
+  "name": "constructive",
+  "homepage": "https://constructive-io.github.io/blocks/",
+  "items": [
+    {
+      "name": "constructive-theme",
+      "type": "registry:theme",
+      "title": "Constructive Theme",
+      "description": "Constructive design system theme — OKLCH colors, z-index layers, shadow utilities, and animations.",
+      "cssVars": {
+        "theme": {
+          "--color-background": "var(--background)",
+          "--color-foreground": "var(--foreground)",
+          "--color-card": "var(--card)",
+          "--color-card-foreground": "var(--card-foreground)",
+          "--color-popover": "var(--popover)",
+          "--color-popover-foreground": "var(--popover-foreground)",
+          "--color-primary": "var(--primary)",
+          "--color-primary-foreground": "var(--primary-foreground)",
+          "--color-secondary": "var(--secondary)",
+          "--color-secondary-foreground": "var(--secondary-foreground)",
+          "--color-muted": "var(--muted)",
+          "--color-muted-foreground": "var(--muted-foreground)",
+          "--color-accent": "var(--accent)",
+          "--color-accent-foreground": "var(--accent-foreground)",
+          "--color-destructive": "var(--destructive)",
+          "--color-destructive-foreground": "var(--destructive-foreground)",
+          "--color-border": "var(--border)",
+          "--color-input": "var(--input)",
+          "--color-ring": "var(--ring)",
+          "--color-chart-1": "var(--chart-1)",
+          "--color-chart-2": "var(--chart-2)",
+          "--color-chart-3": "var(--chart-3)",
+          "--color-chart-4": "var(--chart-4)",
+          "--color-chart-5": "var(--chart-5)",
+          "--color-sidebar": "var(--sidebar)",
+          "--color-sidebar-foreground": "var(--sidebar-foreground)",
+          "--color-sidebar-primary": "var(--sidebar-primary)",
+          "--color-sidebar-primary-foreground": "var(--sidebar-primary-foreground)",
+          "--color-sidebar-accent": "var(--sidebar-accent)",
+          "--color-sidebar-accent-foreground": "var(--sidebar-accent-foreground)",
+          "--color-sidebar-border": "var(--sidebar-border)",
+          "--color-sidebar-ring": "var(--sidebar-ring)",
+          "--color-info": "var(--info)",
+          "--color-info-foreground": "var(--info-foreground)",
+          "--color-success": "var(--success)",
+          "--color-success-foreground": "var(--success-foreground)",
+          "--color-warning": "var(--warning)",
+          "--color-warning-foreground": "var(--warning-foreground)",
+          "--font-sans": "var(--font-geist-sans)",
+          "--font-mono": "var(--font-geist-mono)",
+          "--radius-xs": "calc(var(--radius) - 6px)",
+          "--radius-sm": "calc(var(--radius) - 4px)",
+          "--radius-md": "var(--radius)",
+          "--radius-lg": "calc(var(--radius) + 2px)",
+          "--radius-xl": "calc(var(--radius) + 6px)",
+          "--radius-2xl": "calc(var(--radius) + 10px)"
+        },
+        "light": {
+          "background": "oklch(1 0 0)",
+          "foreground": "oklch(0.3211 0 0)",
+          "card": "oklch(1 0 0)",
+          "card-foreground": "oklch(0.3211 0 0)",
+          "popover": "oklch(1 0 0)",
+          "popover-foreground": "oklch(0.3211 0 0)",
+          "primary": "oklch(0.688 0.1754 245.6151)",
+          "primary-foreground": "oklch(0.979 0.021 166.113)",
+          "secondary": "oklch(0.967 0.001 286.375)",
+          "secondary-foreground": "oklch(0.21 0.006 285.885)",
+          "muted": "oklch(0.967 0.001 286.375)",
+          "muted-foreground": "oklch(0.552 0.016 285.938)",
+          "accent": "oklch(0.967 0.001 286.375)",
+          "accent-foreground": "oklch(0.21 0.006 285.885)",
+          "destructive": "oklch(0.55 0.2 25)",
+          "destructive-foreground": "oklch(0.985 0 0)",
+          "border": "oklch(0.92 0.004 286.32)",
+          "input": "oklch(0.871 0.006 286.286)",
+          "ring": "oklch(0.871 0.006 286.286)",
+          "chart-1": "oklch(0.646 0.222 41.116)",
+          "chart-2": "oklch(0.6 0.118 184.704)",
+          "chart-3": "oklch(0.398 0.07 227.392)",
+          "chart-4": "oklch(0.828 0.189 84.429)",
+          "chart-5": "oklch(0.769 0.188 70.08)",
+          "sidebar": "oklch(0.985 0 0)",
+          "sidebar-foreground": "oklch(0.37 0.013 285.805)",
+          "sidebar-primary": "oklch(0.985 0 0)",
+          "sidebar-primary-foreground": "oklch(0.21 0.006 285.885)",
+          "sidebar-accent": "oklch(0.967 0.001 286.375)",
+          "sidebar-accent-foreground": "oklch(0.21 0.006 285.885)",
+          "sidebar-border": "oklch(0.92 0.004 286.32)",
+          "sidebar-ring": "oklch(0.871 0.006 286.286)",
+          "radius": "0.5rem"
+        },
+        "dark": {
+          "background": "oklch(0.21 0.006 285.885)",
+          "foreground": "oklch(0.985 0 0)",
+          "card": "oklch(0.21 0.006 285.885)",
+          "card-foreground": "oklch(0.985 0 0)",
+          "popover": "oklch(0.21 0.006 285.885)",
+          "popover-foreground": "oklch(0.985 0 0)",
+          "primary": "oklch(0.688 0.1754 245.6151)",
+          "primary-foreground": "oklch(0.979 0.021 166.113)",
+          "secondary": "oklch(0.274 0.006 286.033)",
+          "secondary-foreground": "oklch(0.985 0 0)",
+          "muted": "oklch(0.244 0.006 285.97)",
+          "muted-foreground": "oklch(0.705 0.015 286.067)",
+          "accent": "oklch(0.244 0.006 285.97)",
+          "accent-foreground": "oklch(0.985 0 0)",
+          "destructive": "oklch(0.55 0.2 25)",
+          "destructive-foreground": "oklch(0.985 0 0)",
+          "border": "oklch(0.29 0.009 285.83)",
+          "input": "oklch(0.29 0.009 285.83)",
+          "ring": "oklch(0.442 0.017 285.786)",
+          "chart-1": "oklch(0.488 0.243 264.376)",
+          "chart-2": "oklch(0.696 0.17 162.48)",
+          "chart-3": "oklch(0.769 0.188 70.08)",
+          "chart-4": "oklch(0.627 0.265 303.9)",
+          "chart-5": "oklch(0.645 0.246 16.439)",
+          "sidebar": "oklch(0.244 0.006 285.97)",
+          "sidebar-foreground": "oklch(0.967 0.001 286.375)",
+          "sidebar-primary": "oklch(0.596 0.145 163.225)",
+          "sidebar-primary-foreground": "oklch(1 0 0)",
+          "sidebar-accent": "oklch(0.274 0.006 286.033)",
+          "sidebar-accent-foreground": "oklch(0.967 0.001 286.375)",
+          "sidebar-border": "oklch(0.274 0.006 286.033)",
+          "sidebar-ring": "oklch(0.442 0.017 285.786)",
+          "radius": "0.5rem"
+        }
+      },
+      "css": {
+        "@layer base": "* { @apply border-border/60 outline-ring/50; }\nbody { @apply bg-background text-foreground; position: relative; }\n#__next, [data-nextjs-root-layout] { isolation: isolate; }",
+        "@layer utilities": ".shadow-card { box-shadow: 0 1px 1px -0.5px rgba(35,35,35,0.08), 0 1px 2px -1px rgba(35,35,35,0.04), 0 2px 4px -1px rgba(35,35,35,0.03); }\n.dark .shadow-card { box-shadow: 0 1px 1px -0.5px rgba(0,0,0,0.25), 0 1px 2px -1px rgba(0,0,0,0.15), 0 2px 4px -1px rgba(0,0,0,0.10); }\n.shadow-card-lg { box-shadow: 0 1px 2px -1px rgba(35,35,35,0.08), 0 2px 4px -2px rgba(35,35,35,0.06), 0 4px 8px -2px rgba(35,35,35,0.04), 0 8px 16px -4px rgba(35,35,35,0.03); }\n.dark .shadow-card-lg { box-shadow: 0 1px 2px -1px rgba(0,0,0,0.30), 0 2px 4px -2px rgba(0,0,0,0.20), 0 4px 8px -2px rgba(0,0,0,0.15), 0 8px 16px -4px rgba(0,0,0,0.10); }\n.scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }\n.scrollbar-hide::-webkit-scrollbar { display: none; }\n.animate-shimmer { animation: shimmer 2s ease-in-out infinite; }",
+        "@keyframes pulse-glow": "0%, 100% { opacity: 0.3; transform: translate(-50%, -50%) scale(0.95); } 50% { opacity: 0.5; transform: translate(-50%, -50%) scale(1.05); }",
+        "@keyframes fade-scale-in": "from { opacity: 0; transform: scale(0.9); } to { opacity: 1; transform: scale(1); }",
+        "@keyframes scale-in": "from { opacity: 0; transform: scale(0.8); } to { opacity: 1; transform: scale(1); }",
+        "@keyframes bounce-soft": "0%, 100% { transform: translateY(0); } 50% { transform: translateY(-4px); }",
+        "@keyframes slide-up": "from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); }",
+        "@keyframes fade-in": "from { opacity: 0; } to { opacity: 1; }",
+        "@keyframes shimmer": "0% { background-position: -200% 0; } 100% { background-position: 200% 0; }",
+        "@keyframes shimmer-slide": "to { transform: translateX(100%); }"
+      },
+      "files": []
+    },
+    {
+      "name": "cn",
+      "type": "registry:lib",
+      "title": "cn utility",
+      "description": "Tailwind CSS class name merge utility using clsx and tailwind-merge.",
+      "categories": ["utility"],
+      "docs": "Import: `import { cn } from '@/lib/utils'`",
+      "dependencies": ["clsx", "tailwind-merge"],
+      "files": [
+        {
+          "path": "registry/constructive/lib/utils.ts",
+          "type": "registry:lib"
+        }
+      ]
+    },
+    {
+      "name": "slot",
+      "type": "registry:lib",
+      "title": "Slot utility",
+      "description": "Polymorphic component utilities for asChild pattern.",
+      "categories": ["utility"],
+      "docs": "Import: `import { Slot } from '@/lib/slot'`",
+      "files": [
+        {
+          "path": "registry/constructive/lib/slot.tsx",
+          "type": "registry:lib"
+        }
+      ]
+    },
+    {
+      "name": "use-controllable-state",
+      "type": "registry:hook",
+      "title": "useControllableState",
+      "description": "Hook for components with controlled/uncontrolled state.",
+      "categories": ["hook"],
+      "docs": "Import: `import { useControllableState } from '@/hooks/use-controllable-state'`",
+      "files": [
+        {
+          "path": "registry/constructive/hooks/use-controllable-state.ts",
+          "type": "registry:hook"
+        }
+      ]
+    },
+    {
+      "name": "use-debounce",
+      "type": "registry:hook",
+      "title": "useDebounce",
+      "description": "Hook for debouncing values.",
+      "categories": ["hook"],
+      "docs": "Import: `import { useDebounce } from '@/hooks/use-debounce'`",
+      "files": [
+        {
+          "path": "registry/constructive/hooks/use-debounce.ts",
+          "type": "registry:hook"
+        }
+      ]
+    },
+    {
+      "name": "use-mobile",
+      "type": "registry:hook",
+      "title": "useIsMobile",
+      "description": "Hook for detecting mobile viewport.",
+      "categories": ["hook"],
+      "docs": "Import: `import { useIsMobile } from '@/hooks/use-mobile'`",
+      "files": [
+        {
+          "path": "registry/constructive/hooks/use-mobile.ts",
+          "type": "registry:hook"
+        }
+      ]
+    },
+    {
+      "name": "motion-config",
+      "type": "registry:lib",
+      "title": "Motion Config",
+      "description": "Animation presets and spring configurations for motion library.",
+      "categories": ["animation"],
+      "docs": "Import: `import { motionConfig } from '@/lib/motion/motion-config'`",
+      "dependencies": ["motion"],
+      "files": [
+        {
+          "path": "registry/constructive/lib/motion/motion-config.ts",
+          "type": "registry:lib"
+        }
+      ]
+    },
+    {
+      "name": "button",
+      "type": "registry:ui",
+      "title": "Button",
+      "description": "A button component with multiple variants and sizes.",
+      "categories": ["primitive"],
+      "docs": "Import: `import { Button } from '@/components/ui/button'`",
+      "dependencies": ["class-variance-authority"],
+      "registryDependencies": ["cn", "slot"],
+      "files": [
+        {
+          "path": "registry/constructive/ui/button.tsx",
+          "type": "registry:ui"
+        }
+      ]
+    },
+    {
+      "name": "badge",
+      "type": "registry:ui",
+      "title": "Badge",
+      "description": "A badge component for status indicators and labels.",
+      "categories": ["primitive"],
+      "docs": "Import: `import { Badge } from '@/components/ui/badge'`",
+      "dependencies": ["class-variance-authority"],
+      "registryDependencies": ["cn"],
+      "files": [
+        {
+          "path": "registry/constructive/ui/badge.tsx",
+          "type": "registry:ui"
+        }
+      ]
+    },
+    {
+      "name": "label",
+      "type": "registry:ui",
+      "title": "Label",
+      "description": "A label component for form fields.",
+      "categories": ["primitive"],
+      "docs": "Import: `import { Label } from '@/components/ui/label'`",
+      "registryDependencies": ["cn"],
+      "files": [
+        {
+          "path": "registry/constructive/ui/label.tsx",
+          "type": "registry:ui"
+        }
+      ]
+    },
+    {
+      "name": "skeleton",
+      "type": "registry:ui",
+      "title": "Skeleton",
+      "description": "A skeleton loading placeholder component.",
+      "categories": ["primitive"],
+      "docs": "Import: `import { Skeleton } from '@/components/ui/skeleton'`",
+      "registryDependencies": ["cn"],
+      "files": [
+        {
+          "path": "registry/constructive/ui/skeleton.tsx",
+          "type": "registry:ui"
+        }
+      ]
+    },
+    {
+      "name": "card",
+      "type": "registry:ui",
+      "title": "Card",
+      "description": "A card component with header, content, and footer sections.",
+      "categories": ["primitive"],
+      "docs": "Import: `import { Card, CardHeader, CardContent, CardFooter } from '@/components/ui/card'`",
+      "dependencies": ["class-variance-authority"],
+      "registryDependencies": ["cn"],
+      "files": [
+        {
+          "path": "registry/constructive/ui/card.tsx",
+          "type": "registry:ui"
+        }
+      ]
+    },
+    {
+      "name": "separator",
+      "type": "registry:ui",
+      "title": "Separator",
+      "description": "A visual separator for dividing content.",
+      "categories": ["primitive"],
+      "docs": "Import: `import { Separator } from '@/components/ui/separator'`",
+      "dependencies": ["@base-ui/react"],
+      "registryDependencies": ["cn"],
+      "files": [
+        {
+          "path": "registry/constructive/ui/separator.tsx",
+          "type": "registry:ui"
+        }
+      ]
+    },
+    {
+      "name": "alert",
+      "type": "registry:ui",
+      "title": "Alert",
+      "description": "An alert component for displaying messages.",
+      "categories": ["primitive"],
+      "docs": "Import: `import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert'`",
+      "dependencies": ["class-variance-authority"],
+      "registryDependencies": ["cn"],
+      "files": [
+        {
+          "path": "registry/constructive/ui/alert.tsx",
+          "type": "registry:ui"
+        }
+      ]
+    },
+    {
+      "name": "input",
+      "type": "registry:ui",
+      "title": "Input",
+      "description": "A text input component built on Base UI.",
+      "categories": ["form"],
+      "docs": "Import: `import { Input } from '@/components/ui/input'`",
+      "dependencies": ["@base-ui/react"],
+      "registryDependencies": ["cn"],
+      "files": [
+        {
+          "path": "registry/constructive/ui/input.tsx",
+          "type": "registry:ui"
+        }
+      ]
+    },
+    {
+      "name": "textarea",
+      "type": "registry:ui",
+      "title": "Textarea",
+      "description": "A multiline text input component.",
+      "categories": ["form"],
+      "docs": "Import: `import { Textarea } from '@/components/ui/textarea'`",
+      "registryDependencies": ["cn"],
+      "files": [
+        {
+          "path": "registry/constructive/ui/textarea.tsx",
+          "type": "registry:ui"
+        }
+      ]
+    },
+    {
+      "name": "checkbox",
+      "type": "registry:ui",
+      "title": "Checkbox",
+      "description": "A checkbox component built on Base UI.",
+      "categories": ["form"],
+      "docs": "Import: `import { Checkbox } from '@/components/ui/checkbox'`",
+      "dependencies": ["@base-ui/react"],
+      "registryDependencies": ["cn"],
+      "files": [
+        {
+          "path": "registry/constructive/ui/checkbox.tsx",
+          "type": "registry:ui"
+        }
+      ]
+    },
+    {
+      "name": "checkbox-group",
+      "type": "registry:ui",
+      "title": "Checkbox Group",
+      "description": "A group wrapper for multiple checkboxes.",
+      "categories": ["form"],
+      "docs": "Import: `import { CheckboxGroup } from '@/components/ui/checkbox-group'`",
+      "dependencies": ["@base-ui/react"],
+      "registryDependencies": ["checkbox"],
+      "files": [
+        {
+          "path": "registry/constructive/ui/checkbox-group.tsx",
+          "type": "registry:ui"
+        }
+      ]
+    },
+    {
+      "name": "radio-group",
+      "type": "registry:ui",
+      "title": "Radio Group",
+      "description": "A radio group component built on Base UI.",
+      "categories": ["form"],
+      "docs": "Import: `import { RadioGroup } from '@/components/ui/radio-group'`",
+      "dependencies": ["@base-ui/react"],
+      "registryDependencies": ["cn"],
+      "files": [
+        {
+          "path": "registry/constructive/ui/radio-group.tsx",
+          "type": "registry:ui"
+        }
+      ]
+    },
+    {
+      "name": "switch",
+      "type": "registry:ui",
+      "title": "Switch",
+      "description": "A toggle switch component built on Base UI.",
+      "categories": ["form"],
+      "docs": "Import: `import { Switch } from '@/components/ui/switch'`",
+      "dependencies": ["@base-ui/react"],
+      "registryDependencies": ["cn"],
+      "files": [
+        {
+          "path": "registry/constructive/ui/switch.tsx",
+          "type": "registry:ui"
+        }
+      ]
+    },
+    {
+      "name": "progress",
+      "type": "registry:ui",
+      "title": "Progress",
+      "description": "A progress bar component built on Base UI.",
+      "categories": ["form"],
+      "docs": "Import: `import { Progress } from '@/components/ui/progress'`",
+      "dependencies": ["@base-ui/react"],
+      "registryDependencies": ["cn"],
+      "files": [
+        {
+          "path": "registry/constructive/ui/progress.tsx",
+          "type": "registry:ui"
+        }
+      ]
+    },
+    {
+      "name": "avatar",
+      "type": "registry:ui",
+      "title": "Avatar",
+      "description": "An avatar component with image and fallback support.",
+      "categories": ["data-display"],
+      "docs": "Import: `import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar'`",
+      "dependencies": ["@base-ui/react"],
+      "registryDependencies": ["cn"],
+      "files": [
+        {
+          "path": "registry/constructive/ui/avatar.tsx",
+          "type": "registry:ui"
+        }
+      ]
+    },
+    {
+      "name": "portal",
+      "type": "registry:ui",
+      "title": "Portal",
+      "description": "Portal management for overlay components with z-index layering.",
+      "categories": ["layout"],
+      "docs": "Import: `import { Portal } from '@/components/ui/portal'`",
+      "registryDependencies": [],
+      "files": [
+        {
+          "path": "registry/constructive/ui/portal.tsx",
+          "type": "registry:ui"
+        }
+      ]
+    },
+    {
+      "name": "scroll-area",
+      "type": "registry:ui",
+      "title": "Scroll Area",
+      "description": "A custom scrollable area component built on Base UI.",
+      "categories": ["layout"],
+      "docs": "Import: `import { ScrollArea } from '@/components/ui/scroll-area'`",
+      "dependencies": ["@base-ui/react"],
+      "registryDependencies": ["cn"],
+      "files": [
+        {
+          "path": "registry/constructive/ui/scroll-area.tsx",
+          "type": "registry:ui"
+        }
+      ]
+    },
+    {
+      "name": "select",
+      "type": "registry:ui",
+      "title": "Select",
+      "description": "A select/dropdown component built on Base UI.",
+      "categories": ["form"],
+      "docs": "Import: `import { Select } from '@/components/ui/select'`",
+      "dependencies": ["@base-ui/react", "lucide-react"],
+      "registryDependencies": ["cn", "portal"],
+      "files": [
+        {
+          "path": "registry/constructive/ui/select.tsx",
+          "type": "registry:ui"
+        }
+      ]
+    },
+    {
+      "name": "tooltip",
+      "type": "registry:ui",
+      "title": "Tooltip",
+      "description": "A tooltip component built on Base UI.",
+      "categories": ["overlay"],
+      "docs": "Import: `import { Tooltip } from '@/components/ui/tooltip'`",
+      "dependencies": ["@base-ui/react"],
+      "registryDependencies": ["cn", "slot", "portal"],
+      "files": [
+        {
+          "path": "registry/constructive/ui/tooltip.tsx",
+          "type": "registry:ui"
+        }
+      ]
+    },
+    {
+      "name": "popover",
+      "type": "registry:ui",
+      "title": "Popover",
+      "description": "A popover component built on Base UI.",
+      "categories": ["overlay"],
+      "docs": "Import: `import { Popover } from '@/components/ui/popover'`",
+      "dependencies": ["@base-ui/react"],
+      "registryDependencies": ["cn", "slot", "portal"],
+      "files": [
+        {
+          "path": "registry/constructive/ui/popover.tsx",
+          "type": "registry:ui"
+        }
+      ]
+    },
+    {
+      "name": "dialog",
+      "type": "registry:ui",
+      "title": "Dialog",
+      "description": "A modal dialog component built on Base UI.",
+      "categories": ["overlay"],
+      "docs": "Import: `import { Dialog } from '@/components/ui/dialog'`",
+      "dependencies": ["@base-ui/react", "lucide-react"],
+      "registryDependencies": ["cn", "slot", "portal", "button", "scroll-area"],
+      "files": [
+        {
+          "path": "registry/constructive/ui/dialog.tsx",
+          "type": "registry:ui"
+        }
+      ]
+    },
+    {
+      "name": "alert-dialog",
+      "type": "registry:ui",
+      "title": "Alert Dialog",
+      "description": "An alert dialog for confirmations built on Base UI.",
+      "categories": ["overlay"],
+      "docs": "Import: `import { AlertDialog } from '@/components/ui/alert-dialog'`",
+      "dependencies": ["@base-ui/react"],
+      "registryDependencies": ["cn", "slot", "portal", "button"],
+      "files": [
+        {
+          "path": "registry/constructive/ui/alert-dialog.tsx",
+          "type": "registry:ui"
+        }
+      ]
+    },
+    {
+      "name": "dropdown-menu",
+      "type": "registry:ui",
+      "title": "Dropdown Menu",
+      "description": "A dropdown menu component built on Base UI.",
+      "categories": ["overlay"],
+      "docs": "Import: `import { DropdownMenu } from '@/components/ui/dropdown-menu'`",
+      "dependencies": ["@base-ui/react", "lucide-react"],
+      "registryDependencies": ["cn", "slot", "portal"],
+      "files": [
+        {
+          "path": "registry/constructive/ui/dropdown-menu.tsx",
+          "type": "registry:ui"
+        }
+      ]
+    },
+    {
+      "name": "sheet",
+      "type": "registry:ui",
+      "title": "Sheet",
+      "description": "A slide-out panel component with animations.",
+      "categories": ["overlay"],
+      "docs": "Import: `import { Sheet } from '@/components/ui/sheet'`",
+      "dependencies": ["@base-ui/react", "class-variance-authority", "lucide-react", "motion"],
+      "registryDependencies": ["cn", "slot", "portal", "motion-config"],
+      "files": [
+        {
+          "path": "registry/constructive/ui/sheet.tsx",
+          "type": "registry:ui"
+        }
+      ]
+    },
+    {
+      "name": "drawer",
+      "type": "registry:ui",
+      "title": "Drawer",
+      "description": "A bottom drawer component using Vaul.",
+      "categories": ["overlay"],
+      "docs": "Import: `import { Drawer } from '@/components/ui/drawer'`",
+      "dependencies": ["vaul"],
+      "registryDependencies": ["cn", "portal"],
+      "files": [
+        {
+          "path": "registry/constructive/ui/drawer.tsx",
+          "type": "registry:ui"
+        }
+      ]
+    },
+    {
+      "name": "tabs",
+      "type": "registry:ui",
+      "title": "Tabs",
+      "description": "A tabs component built on Base UI.",
+      "categories": ["layout"],
+      "docs": "Import: `import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'`",
+      "dependencies": ["@base-ui/react"],
+      "registryDependencies": ["cn"],
+      "files": [
+        {
+          "path": "registry/constructive/ui/tabs.tsx",
+          "type": "registry:ui"
+        }
+      ]
+    },
+    {
+      "name": "collapsible",
+      "type": "registry:ui",
+      "title": "Collapsible",
+      "description": "A collapsible/accordion component built on Base UI.",
+      "categories": ["layout"],
+      "docs": "Import: `import { Collapsible } from '@/components/ui/collapsible'`",
+      "dependencies": ["@base-ui/react"],
+      "registryDependencies": ["cn"],
+      "files": [
+        {
+          "path": "registry/constructive/ui/collapsible.tsx",
+          "type": "registry:ui"
+        }
+      ]
+    },
+    {
+      "name": "resizable",
+      "type": "registry:ui",
+      "title": "Resizable",
+      "description": "Resizable panel layouts using react-resizable-panels.",
+      "categories": ["layout"],
+      "docs": "Import: `import { ResizablePanel, ResizablePanelGroup, ResizableHandle } from '@/components/ui/resizable'`",
+      "dependencies": ["react-resizable-panels"],
+      "registryDependencies": ["cn"],
+      "files": [
+        {
+          "path": "registry/constructive/ui/resizable.tsx",
+          "type": "registry:ui"
+        }
+      ]
+    },
+    {
+      "name": "table",
+      "type": "registry:ui",
+      "title": "Table",
+      "description": "A table component with header, body, and cell primitives.",
+      "categories": ["data-display"],
+      "docs": "Import: `import { Table, TableHeader, TableBody, TableRow, TableCell } from '@/components/ui/table'`",
+      "registryDependencies": ["cn"],
+      "files": [
+        {
+          "path": "registry/constructive/ui/table.tsx",
+          "type": "registry:ui"
+        }
+      ]
+    },
+    {
+      "name": "pagination",
+      "type": "registry:ui",
+      "title": "Pagination",
+      "description": "A pagination component with navigation controls.",
+      "categories": ["navigation"],
+      "docs": "Import: `import { Pagination } from '@/components/ui/pagination'`",
+      "dependencies": ["lucide-react"],
+      "registryDependencies": ["cn", "button"],
+      "files": [
+        {
+          "path": "registry/constructive/ui/pagination.tsx",
+          "type": "registry:ui"
+        }
+      ]
+    },
+    {
+      "name": "breadcrumb",
+      "type": "registry:ui",
+      "title": "Breadcrumb",
+      "description": "A breadcrumb navigation component.",
+      "categories": ["navigation"],
+      "docs": "Import: `import { Breadcrumb } from '@/components/ui/breadcrumb'`",
+      "dependencies": ["lucide-react"],
+      "registryDependencies": ["cn"],
+      "files": [
+        {
+          "path": "registry/constructive/ui/breadcrumb.tsx",
+          "type": "registry:ui"
+        }
+      ]
+    },
+    {
+      "name": "form",
+      "type": "registry:ui",
+      "title": "Form",
+      "description": "Form utilities with react-hook-form integration.",
+      "categories": ["form"],
+      "docs": "Import: `import { Form, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form'`",
+      "dependencies": ["react-hook-form"],
+      "registryDependencies": ["cn"],
+      "files": [
+        {
+          "path": "registry/constructive/ui/form.tsx",
+          "type": "registry:ui"
+        }
+      ]
+    },
+    {
+      "name": "form-control",
+      "type": "registry:ui",
+      "title": "Form Control",
+      "description": "A form control wrapper with label and error display.",
+      "categories": ["form"],
+      "docs": "Import: `import { FormControl } from '@/components/ui/form-control'`",
+      "registryDependencies": ["cn", "slot", "label"],
+      "files": [
+        {
+          "path": "registry/constructive/ui/form-control.tsx",
+          "type": "registry:ui"
+        }
+      ]
+    },
+    {
+      "name": "input-group",
+      "type": "registry:ui",
+      "title": "Input Group",
+      "description": "Input with addons and icons.",
+      "categories": ["form"],
+      "docs": "Import: `import { InputGroup } from '@/components/ui/input-group'`",
+      "dependencies": ["lucide-react"],
+      "registryDependencies": ["cn", "input"],
+      "files": [
+        {
+          "path": "registry/constructive/ui/input-group.tsx",
+          "type": "registry:ui"
+        }
+      ]
+    },
+    {
+      "name": "autocomplete",
+      "type": "registry:ui",
+      "title": "Autocomplete",
+      "description": "An autocomplete component built on Base UI.",
+      "categories": ["input"],
+      "docs": "Import: `import { Autocomplete } from '@/components/ui/autocomplete'`",
+      "dependencies": ["@base-ui/react", "lucide-react"],
+      "registryDependencies": ["cn", "portal", "input", "scroll-area"],
+      "files": [
+        {
+          "path": "registry/constructive/ui/autocomplete.tsx",
+          "type": "registry:ui"
+        }
+      ]
+    },
+    {
+      "name": "command",
+      "type": "registry:ui",
+      "title": "Command",
+      "description": "A command palette component.",
+      "categories": ["overlay"],
+      "docs": "Import: `import { Command } from '@/components/ui/command'`",
+      "dependencies": ["@base-ui/react", "lucide-react"],
+      "registryDependencies": ["cn", "slot", "portal", "autocomplete"],
+      "files": [
+        {
+          "path": "registry/constructive/ui/command.tsx",
+          "type": "registry:ui"
+        }
+      ]
+    },
+    {
+      "name": "combobox",
+      "type": "registry:ui",
+      "title": "Combobox",
+      "description": "A combobox component with search built on Base UI.",
+      "categories": ["input"],
+      "docs": "Import: `import { Combobox } from '@/components/ui/combobox'`",
+      "dependencies": ["@base-ui/react", "lucide-react"],
+      "registryDependencies": ["cn", "portal", "input", "scroll-area"],
+      "files": [
+        {
+          "path": "registry/constructive/ui/combobox.tsx",
+          "type": "registry:ui"
+        }
+      ]
+    },
+    {
+      "name": "multi-select",
+      "type": "registry:ui",
+      "title": "Multi Select",
+      "description": "A multi-select component with tags.",
+      "categories": ["input"],
+      "docs": "Import: `import { MultiSelect } from '@/components/ui/multi-select'`",
+      "dependencies": ["class-variance-authority", "lucide-react"],
+      "registryDependencies": ["cn", "badge", "command", "popover", "separator"],
+      "files": [
+        {
+          "path": "registry/constructive/ui/multi-select.tsx",
+          "type": "registry:ui"
+        }
+      ]
+    },
+    {
+      "name": "tags",
+      "type": "registry:ui",
+      "title": "Tags",
+      "description": "A tags input component with autocomplete.",
+      "categories": ["input"],
+      "docs": "Import: `import { Tags } from '@/components/ui/tags'`",
+      "dependencies": ["lucide-react"],
+      "registryDependencies": ["cn", "badge", "button", "command", "popover"],
+      "files": [
+        {
+          "path": "registry/constructive/ui/tags.tsx",
+          "type": "registry:ui"
+        }
+      ]
+    },
+    {
+      "name": "record-picker",
+      "type": "registry:ui",
+      "title": "Record Picker",
+      "description": "A record selection component with search and filtering.",
+      "categories": ["input"],
+      "docs": "Import: `import { RecordPicker } from '@/components/ui/record-picker'`",
+      "dependencies": ["@remixicon/react", "match-sorter"],
+      "registryDependencies": ["use-debounce", "checkbox", "input-group", "scroll-area"],
+      "files": [
+        {
+          "path": "registry/constructive/ui/record-picker.tsx",
+          "type": "registry:ui"
+        }
+      ]
+    },
+    {
+      "name": "stepper",
+      "type": "registry:ui",
+      "title": "Stepper",
+      "description": "A stepper component for multi-step workflows.",
+      "categories": ["navigation"],
+      "docs": "Import: `import { Stepper } from '@/components/ui/stepper'`",
+      "dependencies": ["lucide-react"],
+      "registryDependencies": ["cn"],
+      "files": [
+        {
+          "path": "registry/constructive/ui/stepper.tsx",
+          "type": "registry:ui"
+        }
+      ]
+    },
+    {
+      "name": "sidebar",
+      "type": "registry:ui",
+      "title": "Sidebar",
+      "description": "A responsive sidebar with collapsible state.",
+      "categories": ["navigation"],
+      "docs": "Import: `import { Sidebar, SidebarProvider, SidebarTrigger } from '@/components/ui/sidebar'`",
+      "dependencies": ["class-variance-authority", "lucide-react"],
+      "registryDependencies": ["cn", "slot", "use-mobile", "button", "input", "separator", "sheet", "skeleton", "tooltip"],
+      "files": [
+        {
+          "path": "registry/constructive/ui/sidebar.tsx",
+          "type": "registry:ui"
+        }
+      ]
+    },
+    {
+      "name": "calendar-rac",
+      "type": "registry:ui",
+      "title": "Calendar",
+      "description": "A calendar component using React Aria Components.",
+      "categories": ["input"],
+      "docs": "Import: `import { Calendar } from '@/components/ui/calendar-rac'`",
+      "dependencies": ["@internationalized/date", "react-aria-components"],
+      "registryDependencies": ["cn", "button"],
+      "files": [
+        {
+          "path": "registry/constructive/ui/calendar-rac.tsx",
+          "type": "registry:ui"
+        }
+      ]
+    },
+    {
+      "name": "json-input",
+      "type": "registry:ui",
+      "title": "JSON Input",
+      "description": "A JSON editor component using React Ace.",
+      "categories": ["input"],
+      "docs": "Import: `import { JsonInput } from '@/components/ui/json-input'`",
+      "dependencies": ["lucide-react", "react-ace", "ace-builds"],
+      "registryDependencies": ["cn", "button", "tooltip"],
+      "files": [
+        {
+          "path": "registry/constructive/ui/json-input.tsx",
+          "type": "registry:ui"
+        }
+      ]
+    },
+    {
+      "name": "sonner",
+      "type": "registry:ui",
+      "title": "Toaster",
+      "description": "Toast notifications using Sonner.",
+      "categories": ["block"],
+      "docs": "Import: `import { Toaster } from '@/components/ui/sonner'`",
+      "dependencies": ["sonner"],
+      "registryDependencies": [],
+      "files": [
+        {
+          "path": "registry/constructive/ui/sonner.tsx",
+          "type": "registry:ui"
+        }
+      ]
+    },
+    {
+      "name": "dock",
+      "type": "registry:ui",
+      "title": "Dock",
+      "description": "A macOS-style dock component.",
+      "categories": ["navigation"],
+      "docs": "Import: `import { Dock, DockIcon } from '@/components/ui/dock'`",
+      "dependencies": ["class-variance-authority", "motion"],
+      "registryDependencies": ["cn"],
+      "files": [
+        {
+          "path": "registry/constructive/ui/dock.tsx",
+          "type": "registry:ui"
+        }
+      ]
+    },
+    {
+      "name": "page-header",
+      "type": "registry:ui",
+      "title": "Page Header",
+      "description": "A simple page header component.",
+      "categories": ["navigation"],
+      "docs": "Import: `import { PageHeader } from '@/components/ui/page-header'`",
+      "registryDependencies": [],
+      "files": [
+        {
+          "path": "registry/constructive/ui/page-header.tsx",
+          "type": "registry:ui"
+        }
+      ]
+    },
+    {
+      "name": "flickering-grid",
+      "type": "registry:ui",
+      "title": "Flickering Grid",
+      "description": "An animated grid background effect.",
+      "categories": ["effect"],
+      "docs": "Import: `import { FlickeringGrid } from '@/components/ui/flickering-grid'`",
+      "registryDependencies": ["cn"],
+      "files": [
+        {
+          "path": "registry/constructive/ui/flickering-grid.tsx",
+          "type": "registry:ui"
+        }
+      ]
+    },
+    {
+      "name": "flow-zoom-panel",
+      "type": "registry:ui",
+      "title": "Flow Zoom Panel",
+      "description": "Zoom in/out and fit-view controls for React Flow canvases.",
+      "categories": ["layout"],
+      "docs": "Import: `import { FlowZoomPanel } from '@/components/ui/flow-zoom-panel'`",
+      "dependencies": ["@xyflow/react", "@remixicon/react"],
+      "registryDependencies": ["cn", "button"],
+      "files": [
+        {
+          "path": "registry/constructive/ui/flow-zoom-panel.tsx",
+          "type": "registry:ui"
+        }
+      ]
+    },
+    {
+      "name": "motion-grid",
+      "type": "registry:ui",
+      "title": "Motion Grid",
+      "description": "An animated grid with frame-based transitions.",
+      "categories": ["effect"],
+      "docs": "Import: `import { MotionGrid } from '@/components/ui/motion-grid'`",
+      "dependencies": ["motion"],
+      "registryDependencies": ["cn"],
+      "files": [
+        {
+          "path": "registry/constructive/ui/motion-grid.tsx",
+          "type": "registry:ui"
+        }
+      ]
+    },
+    {
+      "name": "progressive-blur",
+      "type": "registry:ui",
+      "title": "Progressive Blur",
+      "description": "A gradient blur overlay effect.",
+      "categories": ["effect"],
+      "docs": "Import: `import { ProgressiveBlur } from '@/components/ui/progressive-blur'`",
+      "registryDependencies": ["cn"],
+      "files": [
+        {
+          "path": "registry/constructive/ui/progressive-blur.tsx",
+          "type": "registry:ui"
+        }
+      ]
+    },
+    {
+      "name": "progressive-blur-scroll-container",
+      "type": "registry:ui",
+      "title": "Progressive Blur Scroll Container",
+      "description": "A scroll container with blur effects at edges.",
+      "categories": ["effect"],
+      "docs": "Import: `import { ProgressiveBlurScrollContainer } from '@/components/ui/progressive-blur-scroll-container'`",
+      "registryDependencies": ["cn", "progressive-blur"],
+      "files": [
+        {
+          "path": "registry/constructive/ui/progressive-blur-scroll-container.tsx",
+          "type": "registry:ui"
+        }
+      ]
+    },
+    {
+      "name": "responsive-diagram",
+      "type": "registry:ui",
+      "title": "Responsive Diagram",
+      "description": "A responsive diagram container with auto-scaling.",
+      "categories": ["effect"],
+      "docs": "Import: `import { ResponsiveDiagram } from '@/components/ui/responsive-diagram'`",
+      "registryDependencies": ["cn"],
+      "files": [
+        {
+          "path": "registry/constructive/ui/responsive-diagram.tsx",
+          "type": "registry:ui"
+        }
+      ]
+    },
+    {
+      "name": "unlink-button",
+      "type": "registry:ui",
+      "title": "Unlink Button",
+      "description": "A button for unlinking/removing records.",
+      "categories": ["action"],
+      "docs": "Import: `import { UnlinkButton } from '@/components/ui/unlink-button'`",
+      "dependencies": ["@remixicon/react"],
+      "registryDependencies": ["cn", "button"],
+      "files": [
+        {
+          "path": "registry/constructive/ui/unlink-button.tsx",
+          "type": "registry:ui"
+        }
+      ]
+    },
+    {
+      "name": "stack",
+      "type": "registry:block",
+      "title": "Stack Navigation",
+      "description": "iOS-style navigation stack with gestures and animations.",
+      "categories": ["block"],
+      "docs": "Import: `import { Stack, StackCard } from '@/components/stack'`",
+      "dependencies": ["motion", "@use-gesture/react", "lucide-react"],
+      "registryDependencies": ["cn"],
+      "files": [
+        {
+          "path": "registry/constructive/blocks/stack/index.ts",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/stack/stack-context.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/stack/stack-card.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/stack/stack-header.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/stack/stack-backdrop.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/stack/stack-viewport.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/stack/stack-animations.ts",
+          "type": "registry:lib"
+        },
+        {
+          "path": "registry/constructive/blocks/stack/stack-utils.ts",
+          "type": "registry:lib"
+        },
+        {
+          "path": "registry/constructive/blocks/stack/stack.types.ts",
+          "type": "registry:lib"
+        },
+        {
+          "path": "registry/constructive/blocks/stack/use-stack-gestures.ts",
+          "type": "registry:hook"
+        },
+        {
+          "path": "registry/constructive/blocks/stack/use-peek-gestures.ts",
+          "type": "registry:hook"
+        },
+        {
+          "path": "registry/constructive/blocks/stack/use-stack-responsive.ts",
+          "type": "registry:hook"
+        }
+      ]
+    },
+    {
+      "name": "toast",
+      "type": "registry:block",
+      "title": "Toast Notifications",
+      "description": "Styled toast notification functions using Sonner.",
+      "categories": ["block"],
+      "docs": "Import: `import { toastSuccess, toastError, toastWarning, toastInfo } from '@/components/toast'`",
+      "dependencies": ["sonner", "lucide-react"],
+      "registryDependencies": ["button"],
+      "files": [
+        {
+          "path": "registry/constructive/blocks/toast/index.ts",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/toast/toast-error.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/toast/toast-success.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/toast/toast-warning.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/toast/toast-info.tsx",
+          "type": "registry:component"
+        }
+      ]
+    },
+    {
+      "name": "org-chart",
+      "type": "registry:block",
+      "title": "Org Chart",
+      "description": "Interactive organizational chart with drag-to-reparent, zoom controls, and per-node actions. Built on React Flow (@xyflow/react).",
+      "categories": ["block"],
+      "docs": "Import: `import { OrgChart } from '@/components/org-chart'`",
+      "dependencies": ["@xyflow/react", "@remixicon/react", "lucide-react"],
+      "registryDependencies": ["cn", "button", "tooltip", "avatar", "badge", "dropdown-menu"],
+      "files": [
+        {
+          "path": "registry/constructive/blocks/org-chart/index.ts",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/org-chart/org-chart.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/org-chart/org-chart-context.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/org-chart/org-chart-node.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/org-chart/org-chart-edge.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/org-chart/org-chart-empty.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/org-chart/layout.ts",
+          "type": "registry:lib"
+        },
+        {
+          "path": "registry/constructive/blocks/org-chart/org-chart-utils.ts",
+          "type": "registry:lib"
+        },
+        {
+          "path": "registry/constructive/blocks/org-chart/org-chart.types.ts",
+          "type": "registry:lib"
+        }
+      ]
+    },
+    {
+      "name": "storage",
+      "type": "registry:block",
+      "title": "Storage Kit",
+      "description": "Shared foundation for the Storage UI kit: domain types, pure formatters, and the stateless leaf components (file-type icon, visibility/status badges, breadcrumb, object toolbar) the other storage blocks build on.",
+      "categories": ["block"],
+      "docs": "Import: `import { FileTypeIcon, VisibilityBadge, humanizeBytes } from '@/components/ui/storage'`",
+      "dependencies": ["lucide-react"],
+      "registryDependencies": ["cn", "badge", "breadcrumb", "button", "dropdown-menu", "input-group"],
+      "files": [
+        {
+          "path": "registry/constructive/blocks/storage/types.ts",
+          "type": "registry:component",
+          "target": "src/components/ui/storage/types.ts"
+        },
+        {
+          "path": "registry/constructive/blocks/storage/utils.ts",
+          "type": "registry:component",
+          "target": "src/components/ui/storage/utils.ts"
+        },
+        {
+          "path": "registry/constructive/blocks/storage/file-type-icon.tsx",
+          "type": "registry:component",
+          "target": "src/components/ui/storage/file-type-icon.tsx"
+        },
+        {
+          "path": "registry/constructive/blocks/storage/visibility-badge.tsx",
+          "type": "registry:component",
+          "target": "src/components/ui/storage/visibility-badge.tsx"
+        },
+        {
+          "path": "registry/constructive/blocks/storage/storage-breadcrumb.tsx",
+          "type": "registry:component",
+          "target": "src/components/ui/storage/storage-breadcrumb.tsx"
+        },
+        {
+          "path": "registry/constructive/blocks/storage/object-toolbar.tsx",
+          "type": "registry:component",
+          "target": "src/components/ui/storage/object-toolbar.tsx"
+        }
+      ]
+    },
+    {
+      "name": "storage-bucket-rail",
+      "type": "registry:block",
+      "title": "Storage Bucket Rail",
+      "description": "Vertical, scrollable list of buckets with visibility badges, object counts, and a pinned New bucket action. Stateless: selection is controlled.",
+      "categories": ["block"],
+      "docs": "Import: `import { BucketRail } from '@/components/ui/storage'`",
+      "dependencies": ["lucide-react"],
+      "registryDependencies": ["storage", "cn", "badge", "button", "scroll-area", "separator"],
+      "files": [
+        {
+          "path": "registry/constructive/blocks/storage/bucket-rail.tsx",
+          "type": "registry:component",
+          "target": "src/components/ui/storage/bucket-rail.tsx"
+        }
+      ]
+    },
+    {
+      "name": "storage-object-table",
+      "type": "registry:block",
+      "title": "Storage Object Table",
+      "description": "The object browser table: controlled sort and selection, per-row actions, a skeleton loading state, and an empty-body message.",
+      "categories": ["block"],
+      "docs": "Import: `import { ObjectTable } from '@/components/ui/storage'`",
+      "dependencies": ["lucide-react"],
+      "registryDependencies": ["storage", "cn", "button", "checkbox", "dropdown-menu", "skeleton", "table"],
+      "files": [
+        {
+          "path": "registry/constructive/blocks/storage/object-table.tsx",
+          "type": "registry:component",
+          "target": "src/components/ui/storage/object-table.tsx"
+        }
+      ]
+    },
+    {
+      "name": "storage-upload-dropzone",
+      "type": "registry:block",
+      "title": "Storage Upload Dropzone",
+      "description": "A presentational drag-and-drop target with a Browse button and an in-flight upload progress list. Upload behavior is delegated to the parent.",
+      "categories": ["block"],
+      "docs": "Import: `import { UploadDropzone } from '@/components/ui/storage'`",
+      "dependencies": ["lucide-react"],
+      "registryDependencies": ["storage", "cn", "button", "progress"],
+      "files": [
+        {
+          "path": "registry/constructive/blocks/storage/upload-dropzone.tsx",
+          "type": "registry:component",
+          "target": "src/components/ui/storage/upload-dropzone.tsx"
+        }
+      ]
+    },
+    {
+      "name": "storage-object-detail-sheet",
+      "type": "registry:block",
+      "title": "Storage Object Detail Sheet",
+      "description": "Right-side detail panel for a single object: image or file-type preview, a metadata list, inline rename, and primary actions with a confirmed delete.",
+      "categories": ["block"],
+      "docs": "Import: `import { ObjectDetailSheet } from '@/components/ui/storage'`",
+      "dependencies": ["lucide-react"],
+      "registryDependencies": ["storage", "cn", "alert-dialog", "button", "input", "separator", "skeleton", "sheet"],
+      "files": [
+        {
+          "path": "registry/constructive/blocks/storage/object-detail-sheet.tsx",
+          "type": "registry:component",
+          "target": "src/components/ui/storage/object-detail-sheet.tsx"
+        }
+      ]
+    },
+    {
+      "name": "storage-bucket-config-sheet",
+      "type": "registry:block",
+      "title": "Storage Bucket Config Sheet",
+      "description": "Create or edit a bucket via a right-side Sheet form: key, visibility, custom-key/MIME/size/origin controls, and a description, gated to the host schema's real columns.",
+      "categories": ["block"],
+      "docs": "Import: `import { BucketConfigSheet } from '@/components/ui/storage'`",
+      "dependencies": ["lucide-react"],
+      "registryDependencies": ["storage", "cn", "badge", "button", "input", "label", "radio-group", "switch", "textarea", "sheet"],
+      "files": [
+        {
+          "path": "registry/constructive/blocks/storage/bucket-config-sheet.tsx",
+          "type": "registry:component",
+          "target": "src/components/ui/storage/bucket-config-sheet.tsx"
+        }
+      ]
+    },
+    {
+      "name": "storage-empty-state",
+      "type": "registry:block",
+      "title": "Storage Empty State",
+      "description": "Centered empty/zero states for the storage surface — no buckets, not provisioned, empty bucket, or no access — each with an icon, copy, and a primary action.",
+      "categories": ["block"],
+      "docs": "Import: `import { StorageEmptyState } from '@/components/ui/storage'`",
+      "dependencies": ["lucide-react"],
+      "registryDependencies": ["cn", "button"],
+      "files": [
+        {
+          "path": "registry/constructive/blocks/storage/storage-empty-state.tsx",
+          "type": "registry:component",
+          "target": "src/components/ui/storage/storage-empty-state.tsx"
+        }
+      ]
+    },
+    {
+      "name": "storage-browser",
+      "type": "registry:block",
+      "title": "Storage Browser",
+      "description": "Master/detail page composition: a bucket rail on the left and an object browser on the right (header, toolbar, breadcrumb, table, and empty states). Composes the full storage kit.",
+      "categories": ["block"],
+      "docs": "Import: `import { StorageBrowser } from '@/components/ui/storage'`",
+      "registryDependencies": ["storage", "storage-bucket-rail", "storage-object-table", "storage-upload-dropzone", "storage-object-detail-sheet", "storage-bucket-config-sheet", "storage-empty-state", "cn", "separator"],
+      "files": [
+        {
+          "path": "registry/constructive/blocks/storage/storage-browser.tsx",
+          "type": "registry:component",
+          "target": "src/components/ui/storage/storage-browser.tsx"
+        }
+      ]
+    },
+    {
+      "name": "field",
+      "type": "registry:ui",
+      "title": "Field",
+      "description": "Form field wrapper with label, description, and error message. Works standalone without any form library.",
+      "categories": ["form"],
+      "docs": "Import: `import { Field, FieldRow } from '@/components/ui/field'`",
+      "registryDependencies": ["cn", "label"],
+      "files": [
+        {
+          "path": "registry/constructive/ui/field.tsx",
+          "type": "registry:ui"
+        }
+      ]
+    },
+    {
+      "name": "form-kit",
+      "type": "registry:ui",
+      "title": "Form Kit",
+      "description": "All form-related components: input, textarea, checkbox, radio, select, switch, progress, form controls.",
+      "categories": ["bundle"],
+      "registryDependencies": ["input", "textarea", "checkbox", "checkbox-group", "radio-group", "switch", "select", "progress", "form", "form-control", "input-group", "label"],
+      "files": []
+    },
+    {
+      "name": "overlay-kit",
+      "type": "registry:ui",
+      "title": "Overlay Kit",
+      "description": "All overlay components: dialog, sheet, drawer, popover, tooltip, dropdown menu, alert dialog.",
+      "categories": ["bundle"],
+      "registryDependencies": ["dialog", "sheet", "drawer", "popover", "tooltip", "dropdown-menu", "alert-dialog", "command"],
+      "files": []
+    },
+    {
+      "name": "layout-kit",
+      "type": "registry:ui",
+      "title": "Layout Kit",
+      "description": "Layout and navigation components: tabs, sidebar, collapsible, resizable panels, scroll area, breadcrumb, pagination.",
+      "categories": ["bundle"],
+      "registryDependencies": ["tabs", "sidebar", "collapsible", "resizable", "scroll-area", "breadcrumb", "pagination", "separator"],
+      "files": []
+    }
+  ]
+}

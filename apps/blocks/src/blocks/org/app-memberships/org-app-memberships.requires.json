@@ -1,0 +1,6 @@
+{
+  "namespace": "admin",
+  "mutations": ["updateAppMembership", "deleteAppMembership"],
+  "queries": ["appMemberships"],
+  "models": ["appMembership"]
+}

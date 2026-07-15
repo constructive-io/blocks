@@ -1,0 +1,1011 @@
+{
+  "$schema": "https://ui.shadcn.com/schema/registry.json",
+  "name": "constructive-schema-builder",
+  "homepage": "https://constructive-io.github.io/blocks",
+  "items": [
+    {
+      "name": "schema-builder-core",
+      "type": "registry:block",
+      "title": "Schema Builder — Core",
+      "description": "Shared core for the schema-builder block family: config provider, schema selectors + block-local store, GraphQL read hooks, the databases list UI, skeletons, and the diagram SVG substrate. A library the schema-builder area blocks build on — not mounted on its own.",
+      "categories": [
+        "blocks",
+        "schema"
+      ],
+      "docs": "## Setup\n\n1. Mount `blocks-runtime` once at your app root (installed automatically) with the namespaces this block uses, and set their endpoints:\n\n```tsx\n<BlocksRuntime\n  namespaces={['schema-builder', 'auth']}\n  getToken={() => tokenManager.getAccessToken()}\n>\n  {children}\n</BlocksRuntime>\n```\n\n- `NEXT_PUBLIC_SCHEMA_BUILDER_GRAPHQL_ENDPOINT`\n- `NEXT_PUBLIC_AUTH_GRAPHQL_ENDPOINT` (owner lookups)\n\n2. This block imports its hooks from your generated SDKs (`@/generated/schema-builder`, `@/generated/auth`). Ensure they are generated. The declared operations ship to `~/.constructive/blocks/schema-builder-core.requires.json` for the SDK-check tool.",
+      "dependencies": [
+        "@constructive-io/ui",
+        "@fluentui/react-context-selector",
+        "@pgsql/types",
+        "@remixicon/react",
+        "@tanstack/react-query",
+        "lucide-react",
+        "motion",
+        "node-type-registry",
+        "pg-ast",
+        "zustand"
+      ],
+      "registryDependencies": [
+        "blocks-runtime",
+        "cn"
+      ],
+      "files": [
+        {
+          "path": "registry/constructive/blocks/schema/schema-builder-core/app-config.ts",
+          "target": "src/blocks/schema/schema-builder-core/app-config.ts",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/schema/schema-builder-core/components/databases/index.tsx",
+          "target": "src/blocks/schema/schema-builder-core/components/databases/index.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/schema/schema-builder-core/components/policies/composite-policy-builder/types.ts",
+          "target": "src/blocks/schema/schema-builder-core/components/policies/composite-policy-builder/types.ts",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/schema/schema-builder-core/components/policies/condition-builder/types.ts",
+          "target": "src/blocks/schema/schema-builder-core/components/policies/condition-builder/types.ts",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/schema/schema-builder-core/components/policies/policy-config.ts",
+          "target": "src/blocks/schema/schema-builder-core/components/policies/policy-config.ts",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/schema/schema-builder-core/components/policies/policy-diagram/diagram-themes.ts",
+          "target": "src/blocks/schema/schema-builder-core/components/policies/policy-diagram/diagram-themes.ts",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/schema/schema-builder-core/components/policies/policy-diagram/svg-icons.ts",
+          "target": "src/blocks/schema/schema-builder-core/components/policies/policy-diagram/svg-icons.ts",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/schema/schema-builder-core/components/policies/policy-diagram/svg-primitives.tsx",
+          "target": "src/blocks/schema/schema-builder-core/components/policies/policy-diagram/svg-primitives.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/schema/schema-builder-core/components/policies/policy-types.ts",
+          "target": "src/blocks/schema/schema-builder-core/components/policies/policy-types.ts",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/schema/schema-builder-core/components/schemas/schema-state-display.tsx",
+          "target": "src/blocks/schema/schema-builder-core/components/schemas/schema-state-display.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/schema/schema-builder-core/components/shared/base-state-display.tsx",
+          "target": "src/blocks/schema/schema-builder-core/components/shared/base-state-display.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/schema/schema-builder-core/components/shared/empty-state-card.tsx",
+          "target": "src/blocks/schema/schema-builder-core/components/shared/empty-state-card.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/schema/schema-builder-core/components/skeletons/index.tsx",
+          "target": "src/blocks/schema/schema-builder-core/components/skeletons/index.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/schema/schema-builder-core/components/table-editor/delete-confirm-dialog.tsx",
+          "target": "src/blocks/schema/schema-builder-core/components/table-editor/delete-confirm-dialog.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/schema/schema-builder-core/context/block-config.tsx",
+          "target": "src/blocks/schema/schema-builder-core/context/block-config.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/schema/schema-builder-core/lib/constants/membership-types.ts",
+          "target": "src/blocks/schema/schema-builder-core/lib/constants/membership-types.ts",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/schema/schema-builder-core/lib/gql/auth-error-handler.tsx",
+          "target": "src/blocks/schema/schema-builder-core/lib/gql/auth-error-handler.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/schema/schema-builder-core/lib/gql/hooks/dashboard/dashboard-query-keys.ts",
+          "target": "src/blocks/schema/schema-builder-core/lib/gql/hooks/dashboard/dashboard-query-keys.ts",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/schema/schema-builder-core/lib/gql/hooks/schema-builder/database-shared-utils.ts",
+          "target": "src/blocks/schema/schema-builder-core/lib/gql/hooks/schema-builder/database-shared-utils.ts",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/schema/schema-builder-core/lib/gql/hooks/schema-builder/index.ts",
+          "target": "src/blocks/schema/schema-builder-core/lib/gql/hooks/schema-builder/index.ts",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/schema/schema-builder-core/lib/gql/hooks/schema-builder/modules/invalidate-database-entities.ts",
+          "target": "src/blocks/schema/schema-builder-core/lib/gql/hooks/schema-builder/modules/invalidate-database-entities.ts",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/schema/schema-builder-core/lib/gql/hooks/schema-builder/parse-list-field.ts",
+          "target": "src/blocks/schema/schema-builder-core/lib/gql/hooks/schema-builder/parse-list-field.ts",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/schema/schema-builder-core/lib/gql/hooks/schema-builder/policies/use-database-policies.ts",
+          "target": "src/blocks/schema/schema-builder-core/lib/gql/hooks/schema-builder/policies/use-database-policies.ts",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/schema/schema-builder-core/lib/gql/hooks/schema-builder/transformers/decimal-constraints.ts",
+          "target": "src/blocks/schema/schema-builder-core/lib/gql/hooks/schema-builder/transformers/decimal-constraints.ts",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/schema/schema-builder-core/lib/gql/hooks/schema-builder/transformers/field-constraints-mapper.ts",
+          "target": "src/blocks/schema/schema-builder-core/lib/gql/hooks/schema-builder/transformers/field-constraints-mapper.ts",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/schema/schema-builder-core/lib/gql/hooks/schema-builder/transformers/field-type-mapper.ts",
+          "target": "src/blocks/schema/schema-builder-core/lib/gql/hooks/schema-builder/transformers/field-type-mapper.ts",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/schema/schema-builder-core/lib/gql/hooks/schema-builder/transformers/transformers.ts",
+          "target": "src/blocks/schema/schema-builder-core/lib/gql/hooks/schema-builder/transformers/transformers.ts",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/schema/schema-builder-core/lib/gql/hooks/schema-builder/use-accessible-databases.ts",
+          "target": "src/blocks/schema/schema-builder-core/lib/gql/hooks/schema-builder/use-accessible-databases.ts",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/schema/schema-builder-core/lib/gql/hooks/schema-builder/use-database-constraints.ts",
+          "target": "src/blocks/schema/schema-builder-core/lib/gql/hooks/schema-builder/use-database-constraints.ts",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/schema/schema-builder-core/lib/gql/hooks/schema-builder/use-database-tables.ts",
+          "target": "src/blocks/schema/schema-builder-core/lib/gql/hooks/schema-builder/use-database-tables.ts",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/schema/schema-builder-core/lib/gql/hooks/schema-builder/use-schema-builder-selectors.ts",
+          "target": "src/blocks/schema/schema-builder-core/lib/gql/hooks/schema-builder/use-schema-builder-selectors.ts",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/schema/schema-builder-core/lib/gql/hooks/schema-builder/use-user-databases.ts",
+          "target": "src/blocks/schema/schema-builder-core/lib/gql/hooks/schema-builder/use-user-databases.ts",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/schema/schema-builder-core/lib/gql/type-mapping.ts",
+          "target": "src/blocks/schema/schema-builder-core/lib/gql/type-mapping.ts",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/schema/schema-builder-core/lib/keyboard-activation.ts",
+          "target": "src/blocks/schema/schema-builder-core/lib/keyboard-activation.ts",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/schema/schema-builder-core/lib/motion/motion-config.ts",
+          "target": "src/blocks/schema/schema-builder-core/lib/motion/motion-config.ts",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/schema/schema-builder-core/lib/policies/add-policies-to-table.ts",
+          "target": "src/blocks/schema/schema-builder-core/lib/policies/add-policies-to-table.ts",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/schema/schema-builder-core/lib/policies/ast-helpers.ts",
+          "target": "src/blocks/schema/schema-builder-core/lib/policies/ast-helpers.ts",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/schema/schema-builder-core/lib/policies/policy-type-utils.ts",
+          "target": "src/blocks/schema/schema-builder-core/lib/policies/policy-type-utils.ts",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/schema/schema-builder-core/lib/policies/provision-helpers.ts",
+          "target": "src/blocks/schema/schema-builder-core/lib/policies/provision-helpers.ts",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/schema/schema-builder-core/lib/policies/rls-parser.ts",
+          "target": "src/blocks/schema/schema-builder-core/lib/policies/rls-parser.ts",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/schema/schema-builder-core/lib/schema/common-constraint-registry.ts",
+          "target": "src/blocks/schema/schema-builder-core/lib/schema/common-constraint-registry.ts",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/schema/schema-builder-core/lib/schema/constraint-mapping.ts",
+          "target": "src/blocks/schema/schema-builder-core/lib/schema/constraint-mapping.ts",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/schema/schema-builder-core/lib/schema/field-type-registry.ts",
+          "target": "src/blocks/schema/schema-builder-core/lib/schema/field-type-registry.ts",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/schema/schema-builder-core/lib/schema/index.ts",
+          "target": "src/blocks/schema/schema-builder-core/lib/schema/index.ts",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/schema/schema-builder-core/lib/schema/schema-conversion.ts",
+          "target": "src/blocks/schema/schema-builder-core/lib/schema/schema-conversion.ts",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/schema/schema-builder-core/lib/schema/types.ts",
+          "target": "src/blocks/schema/schema-builder-core/lib/schema/types.ts",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/schema/schema-builder-core/lib/stack/card-widths.ts",
+          "target": "src/blocks/schema/schema-builder-core/lib/stack/card-widths.ts",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/schema/schema-builder-core/lib/types/cell-types.ts",
+          "target": "src/blocks/schema/schema-builder-core/lib/types/cell-types.ts",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/schema/schema-builder-core/lib/data/index.ts",
+          "target": "src/blocks/schema/schema-builder-core/lib/data/index.ts",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/schema/schema-builder-core/lib/data/mutation-input.ts",
+          "target": "src/blocks/schema/schema-builder-core/lib/data/mutation-input.ts",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/schema/schema-builder-core/lib/data/error-handler.ts",
+          "target": "src/blocks/schema/schema-builder-core/lib/data/error-handler.ts",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/schema/schema-builder-core/lib/data/policy-provisioning.ts",
+          "target": "src/blocks/schema/schema-builder-core/lib/data/policy-provisioning.ts",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/schema/schema-builder-core/schema-builder-core.requires.json",
+          "target": "~/.constructive/blocks/schema-builder-core.requires.json",
+          "type": "registry:file"
+        },
+        {
+          "path": "registry/constructive/blocks/schema/schema-builder-core/store/app-store.ts",
+          "target": "src/blocks/schema/schema-builder-core/store/app-store.ts",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/schema/schema-builder-core/store/preferences-slice.ts",
+          "target": "src/blocks/schema/schema-builder-core/store/preferences-slice.ts",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/schema/schema-builder-core/store/schema-slice.ts",
+          "target": "src/blocks/schema/schema-builder-core/store/schema-slice.ts",
+          "type": "registry:component"
+        }
+      ]
+    },
+    {
+      "name": "schema-builder-fields",
+      "type": "registry:block",
+      "title": "Schema Builder — Structure",
+      "description": "Structure tab for the schema-builder family: the table editor — add/edit/remove columns, types, defaults, nullability, and primary-key/unique constraints.",
+      "categories": [
+        "blocks",
+        "schema"
+      ],
+      "docs": "## Setup\n\n1. Mount `blocks-runtime` once at your app root (installed automatically) with the namespaces this block uses, and set their endpoints:\n\n```tsx\n<BlocksRuntime\n  namespaces={['schema-builder']}\n  getToken={() => tokenManager.getAccessToken()}\n>\n  {children}\n</BlocksRuntime>\n```\n\n- `NEXT_PUBLIC_SCHEMA_BUILDER_GRAPHQL_ENDPOINT`\n\n2. This block imports its hooks from your generated SDKs (`@/generated/schema-builder`). Ensure they are generated. The declared operations ship to `~/.constructive/blocks/schema-builder-fields.requires.json` for the SDK-check tool.",
+      "dependencies": [
+        "@constructive-io/ui",
+        "@dnd-kit/core",
+        "@dnd-kit/utilities",
+        "@remixicon/react",
+        "@tanstack/react-query",
+        "lucide-react",
+        "motion"
+      ],
+      "registryDependencies": [
+        "blocks-runtime",
+        "cn",
+        "schema-builder-core",
+        "schema-builder-tables"
+      ],
+      "files": [
+        {
+          "path": "registry/constructive/blocks/schema/schema-builder-fields/components/table-editor/add-field-card.tsx",
+          "target": "src/blocks/schema/schema-builder-fields/components/table-editor/add-field-card.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/schema/schema-builder-fields/components/table-editor/constraint-card.tsx",
+          "target": "src/blocks/schema/schema-builder-fields/components/table-editor/constraint-card.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/schema/schema-builder-fields/components/table-editor/constraint-controls.tsx",
+          "target": "src/blocks/schema/schema-builder-fields/components/table-editor/constraint-controls.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/schema/schema-builder-fields/components/table-editor/draggable-field-type-icon.tsx",
+          "target": "src/blocks/schema/schema-builder-fields/components/table-editor/draggable-field-type-icon.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/schema/schema-builder-fields/components/table-editor/draggable-field-type.tsx",
+          "target": "src/blocks/schema/schema-builder-fields/components/table-editor/draggable-field-type.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/schema/schema-builder-fields/components/table-editor/fields-list-view.tsx",
+          "target": "src/blocks/schema/schema-builder-fields/components/table-editor/fields-list-view.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/schema/schema-builder-fields/components/table-editor/fields-section.tsx",
+          "target": "src/blocks/schema/schema-builder-fields/components/table-editor/fields-section.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/schema/schema-builder-fields/components/table-editor/table-editor.tsx",
+          "target": "src/blocks/schema/schema-builder-fields/components/table-editor/table-editor.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/schema/schema-builder-fields/components/table-editor/types-library-rail.tsx",
+          "target": "src/blocks/schema/schema-builder-fields/components/table-editor/types-library-rail.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/schema/schema-builder-fields/components/table-editor/types-library.tsx",
+          "target": "src/blocks/schema/schema-builder-fields/components/table-editor/types-library.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/schema/schema-builder-fields/components/table-editor/use-field-dnd.ts",
+          "target": "src/blocks/schema/schema-builder-fields/components/table-editor/use-field-dnd.ts",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/schema/schema-builder-fields/components/table-editor/validation-rules-section.tsx",
+          "target": "src/blocks/schema/schema-builder-fields/components/table-editor/validation-rules-section.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/schema/schema-builder-fields/lib/gql/hooks/schema-builder/use-field-mutations.ts",
+          "target": "src/blocks/schema/schema-builder-fields/lib/gql/hooks/schema-builder/use-field-mutations.ts",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/schema/schema-builder-fields/schema-builder-fields.requires.json",
+          "target": "~/.constructive/blocks/schema-builder-fields.requires.json",
+          "type": "registry:file"
+        }
+      ]
+    },
+    {
+      "name": "schema-builder-relationships",
+      "type": "registry:block",
+      "title": "Schema Builder — Relationships",
+      "description": "Relationships tab for the schema-builder family: foreign keys between tables plus the relation-provision and secure-table flows backed by the modules SDK.",
+      "categories": [
+        "blocks",
+        "schema"
+      ],
+      "docs": "## Setup\n\n1. Mount `blocks-runtime` once at your app root (installed automatically) with the namespaces this block uses, and set their endpoints:\n\n```tsx\n<BlocksRuntime\n  namespaces={['schema-builder', 'modules']}\n  getToken={() => tokenManager.getAccessToken()}\n>\n  {children}\n</BlocksRuntime>\n```\n\n- `NEXT_PUBLIC_SCHEMA_BUILDER_GRAPHQL_ENDPOINT`\n- `NEXT_PUBLIC_MODULES_GRAPHQL_ENDPOINT`\n\n2. This block imports its hooks from your generated SDKs (`@/generated/schema-builder`, `@/generated/modules`). Ensure they are generated. The declared operations ship to `~/.constructive/blocks/schema-builder-relationships.requires.json` for the SDK-check tool.",
+      "dependencies": [
+        "@constructive-io/ui",
+        "@tanstack/react-query",
+        "lucide-react",
+        "next-themes",
+        "node-type-registry"
+      ],
+      "registryDependencies": [
+        "blocks-runtime",
+        "cn",
+        "schema-builder-core",
+        "schema-builder-policies"
+      ],
+      "files": [
+        {
+          "path": "registry/constructive/blocks/schema/schema-builder-relationships/components/table-editor/relationships/index.ts",
+          "target": "src/blocks/schema/schema-builder-relationships/components/table-editor/relationships/index.ts",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/schema/schema-builder-relationships/components/table-editor/relationships/relationship-card.tsx",
+          "target": "src/blocks/schema/schema-builder-relationships/components/table-editor/relationships/relationship-card.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/schema/schema-builder-relationships/components/table-editor/relationships/relationship-connectors.tsx",
+          "target": "src/blocks/schema/schema-builder-relationships/components/table-editor/relationships/relationship-connectors.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/schema/schema-builder-relationships/components/table-editor/relationships/relationship-diagram-themes.ts",
+          "target": "src/blocks/schema/schema-builder-relationships/components/table-editor/relationships/relationship-diagram-themes.ts",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/schema/schema-builder-relationships/components/table-editor/relationships/relationship-diagrams.tsx",
+          "target": "src/blocks/schema/schema-builder-relationships/components/table-editor/relationships/relationship-diagrams.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/schema/schema-builder-relationships/components/table-editor/relationships/relationship-empty-state.tsx",
+          "target": "src/blocks/schema/schema-builder-relationships/components/table-editor/relationships/relationship-empty-state.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/schema/schema-builder-relationships/components/table-editor/relationships/relationship-type-selector.tsx",
+          "target": "src/blocks/schema/schema-builder-relationships/components/table-editor/relationships/relationship-type-selector.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/schema/schema-builder-relationships/components/table-editor/relationships/relationship-utils.ts",
+          "target": "src/blocks/schema/schema-builder-relationships/components/table-editor/relationships/relationship-utils.ts",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/schema/schema-builder-relationships/components/table-editor/relationships/relationships-view.tsx",
+          "target": "src/blocks/schema/schema-builder-relationships/components/table-editor/relationships/relationships-view.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/schema/schema-builder-relationships/lib/gql/hooks/schema-builder/use-relation-provision.ts",
+          "target": "src/blocks/schema/schema-builder-relationships/lib/gql/hooks/schema-builder/use-relation-provision.ts",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/schema/schema-builder-relationships/lib/gql/hooks/schema-builder/use-relationship-mutations.ts",
+          "target": "src/blocks/schema/schema-builder-relationships/lib/gql/hooks/schema-builder/use-relationship-mutations.ts",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/schema/schema-builder-relationships/schema-builder-relationships.requires.json",
+          "target": "~/.constructive/blocks/schema-builder-relationships.requires.json",
+          "type": "registry:file"
+        }
+      ]
+    },
+    {
+      "name": "schema-builder-indexes",
+      "type": "registry:block",
+      "title": "Schema Builder — Indexes",
+      "description": "Indexes tab for the schema-builder family: create, edit, and drop a table's indexes.",
+      "categories": [
+        "blocks",
+        "schema"
+      ],
+      "docs": "## Setup\n\n1. Mount `blocks-runtime` once at your app root (installed automatically) with the namespaces this block uses, and set their endpoints:\n\n```tsx\n<BlocksRuntime\n  namespaces={['schema-builder']}\n  getToken={() => tokenManager.getAccessToken()}\n>\n  {children}\n</BlocksRuntime>\n```\n\n- `NEXT_PUBLIC_SCHEMA_BUILDER_GRAPHQL_ENDPOINT`\n\n2. This block imports its hooks from your generated SDKs (`@/generated/schema-builder`). Ensure they are generated. The declared operations ship to `~/.constructive/blocks/schema-builder-indexes.requires.json` for the SDK-check tool.",
+      "dependencies": [
+        "@constructive-io/ui",
+        "@tanstack/react-query",
+        "lucide-react"
+      ],
+      "registryDependencies": [
+        "blocks-runtime",
+        "cn",
+        "schema-builder-core"
+      ],
+      "files": [
+        {
+          "path": "registry/constructive/blocks/schema/schema-builder-indexes/components/table-editor/index-card.tsx",
+          "target": "src/blocks/schema/schema-builder-indexes/components/table-editor/index-card.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/schema/schema-builder-indexes/components/table-editor/index-diagram.tsx",
+          "target": "src/blocks/schema/schema-builder-indexes/components/table-editor/index-diagram.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/schema/schema-builder-indexes/components/table-editor/indexes/index-empty-state.tsx",
+          "target": "src/blocks/schema/schema-builder-indexes/components/table-editor/indexes/index-empty-state.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/schema/schema-builder-indexes/components/table-editor/indexes/index.ts",
+          "target": "src/blocks/schema/schema-builder-indexes/components/table-editor/indexes/index.ts",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/schema/schema-builder-indexes/components/table-editor/indexes/indexes-view.tsx",
+          "target": "src/blocks/schema/schema-builder-indexes/components/table-editor/indexes/indexes-view.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/schema/schema-builder-indexes/lib/gql/hooks/schema-builder/use-index-mutations.ts",
+          "target": "src/blocks/schema/schema-builder-indexes/lib/gql/hooks/schema-builder/use-index-mutations.ts",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/schema/schema-builder-indexes/schema-builder-indexes.requires.json",
+          "target": "~/.constructive/blocks/schema-builder-indexes.requires.json",
+          "type": "registry:file"
+        }
+      ]
+    },
+    {
+      "name": "schema-builder-policies",
+      "type": "registry:block",
+      "title": "Schema Builder — Policies",
+      "description": "Policies tab for the schema-builder family: row-level security policy editing, table grants, and the create-table-with-policies flow.",
+      "categories": [
+        "blocks",
+        "schema"
+      ],
+      "docs": "## Setup\n\n1. Mount `blocks-runtime` once at your app root (installed automatically) with the namespaces this block uses, and set their endpoints:\n\n```tsx\n<BlocksRuntime\n  namespaces={['schema-builder', 'modules', 'admin']}\n  getToken={() => tokenManager.getAccessToken()}\n>\n  {children}\n</BlocksRuntime>\n```\n\n- `NEXT_PUBLIC_SCHEMA_BUILDER_GRAPHQL_ENDPOINT`\n- `NEXT_PUBLIC_MODULES_GRAPHQL_ENDPOINT`\n- `NEXT_PUBLIC_ADMIN_GRAPHQL_ENDPOINT` (permission catalog for the Policies tab)\n\n2. This block imports its hooks from your generated SDKs (`@/generated/schema-builder`, `@/generated/modules`, `@/generated/admin`). Ensure they are generated. The declared operations ship to `~/.constructive/blocks/schema-builder-policies.requires.json` for the SDK-check tool.",
+      "dependencies": [
+        "@constructive-io/ui",
+        "@remixicon/react",
+        "@tanstack/react-query",
+        "lucide-react",
+        "next-themes"
+      ],
+      "registryDependencies": [
+        "blocks-runtime",
+        "cn",
+        "schema-builder-core"
+      ],
+      "files": [
+        {
+          "path": "registry/constructive/blocks/schema/schema-builder-policies/components/policies/composite-policy-builder/composite-condition-edit-card.tsx",
+          "target": "src/blocks/schema/schema-builder-policies/components/policies/composite-policy-builder/composite-condition-edit-card.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/schema/schema-builder-policies/components/policies/composite-policy-builder/composite-policy-builder.tsx",
+          "target": "src/blocks/schema/schema-builder-policies/components/policies/composite-policy-builder/composite-policy-builder.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/schema/schema-builder-policies/components/policies/composite-policy-builder/flat-condition-list.tsx",
+          "target": "src/blocks/schema/schema-builder-policies/components/policies/composite-policy-builder/flat-condition-list.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/schema/schema-builder-policies/components/policies/composite-policy-builder/index.ts",
+          "target": "src/blocks/schema/schema-builder-policies/components/policies/composite-policy-builder/index.ts",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/schema/schema-builder-policies/components/policies/multi-value-field-editor.tsx",
+          "target": "src/blocks/schema/schema-builder-policies/components/policies/multi-value-field-editor.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/schema/schema-builder-policies/components/policies/policy-config-card.tsx",
+          "target": "src/blocks/schema/schema-builder-policies/components/policies/policy-config-card.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/schema/schema-builder-policies/components/policies/policy-config-form/access-control-group.tsx",
+          "target": "src/blocks/schema/schema-builder-policies/components/policies/policy-config-form/access-control-group.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/schema/schema-builder-policies/components/policies/policy-config-form/advanced-section.tsx",
+          "target": "src/blocks/schema/schema-builder-policies/components/policies/policy-config-form/advanced-section.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/schema/schema-builder-policies/components/policies/policy-config-form/auto-generated-fields-info.tsx",
+          "target": "src/blocks/schema/schema-builder-policies/components/policies/policy-config-form/auto-generated-fields-info.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/schema/schema-builder-policies/components/policies/policy-config-form/dynamic-form-field.tsx",
+          "target": "src/blocks/schema/schema-builder-policies/components/policies/policy-config-form/dynamic-form-field.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/schema/schema-builder-policies/components/policies/policy-config-form/index.ts",
+          "target": "src/blocks/schema/schema-builder-policies/components/policies/policy-config-form/index.ts",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/schema/schema-builder-policies/components/policies/policy-config-form/policy-config-form.tsx",
+          "target": "src/blocks/schema/schema-builder-policies/components/policies/policy-config-form/policy-config-form.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/schema/schema-builder-policies/components/policies/policy-content.ts",
+          "target": "src/blocks/schema/schema-builder-policies/components/policies/policy-content.ts",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/schema/schema-builder-policies/components/policies/policy-diagram/diagram-adapters.tsx",
+          "target": "src/blocks/schema/schema-builder-policies/components/policies/policy-diagram/diagram-adapters.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/schema/schema-builder-policies/components/policies/policy-diagram/diagram-primitives.tsx",
+          "target": "src/blocks/schema/schema-builder-policies/components/policies/policy-diagram/diagram-primitives.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/schema/schema-builder-policies/components/policies/policy-diagram/diagrams.tsx",
+          "target": "src/blocks/schema/schema-builder-policies/components/policies/policy-diagram/diagrams.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/schema/schema-builder-policies/components/policies/policy-diagram/generated/authz-allow-all-dark.tsx",
+          "target": "src/blocks/schema/schema-builder-policies/components/policies/policy-diagram/generated/authz-allow-all-dark.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/schema/schema-builder-policies/components/policies/policy-diagram/generated/authz-allow-all-light.tsx",
+          "target": "src/blocks/schema/schema-builder-policies/components/policies/policy-diagram/generated/authz-allow-all-light.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/schema/schema-builder-policies/components/policies/policy-diagram/generated/authz-app-membership-dark.tsx",
+          "target": "src/blocks/schema/schema-builder-policies/components/policies/policy-diagram/generated/authz-app-membership-dark.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/schema/schema-builder-policies/components/policies/policy-diagram/generated/authz-app-membership-light.tsx",
+          "target": "src/blocks/schema/schema-builder-policies/components/policies/policy-diagram/generated/authz-app-membership-light.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/schema/schema-builder-policies/components/policies/policy-diagram/generated/authz-composite-dark.tsx",
+          "target": "src/blocks/schema/schema-builder-policies/components/policies/policy-diagram/generated/authz-composite-dark.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/schema/schema-builder-policies/components/policies/policy-diagram/generated/authz-composite-light.tsx",
+          "target": "src/blocks/schema/schema-builder-policies/components/policies/policy-diagram/generated/authz-composite-light.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/schema/schema-builder-policies/components/policies/policy-diagram/generated/authz-deny-all-dark.tsx",
+          "target": "src/blocks/schema/schema-builder-policies/components/policies/policy-diagram/generated/authz-deny-all-dark.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/schema/schema-builder-policies/components/policies/policy-diagram/generated/authz-deny-all-light.tsx",
+          "target": "src/blocks/schema/schema-builder-policies/components/policies/policy-diagram/generated/authz-deny-all-light.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/schema/schema-builder-policies/components/policies/policy-diagram/generated/authz-direct-owner-any-dark.tsx",
+          "target": "src/blocks/schema/schema-builder-policies/components/policies/policy-diagram/generated/authz-direct-owner-any-dark.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/schema/schema-builder-policies/components/policies/policy-diagram/generated/authz-direct-owner-any-light.tsx",
+          "target": "src/blocks/schema/schema-builder-policies/components/policies/policy-diagram/generated/authz-direct-owner-any-light.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/schema/schema-builder-policies/components/policies/policy-diagram/generated/authz-direct-owner-dark.tsx",
+          "target": "src/blocks/schema/schema-builder-policies/components/policies/policy-diagram/generated/authz-direct-owner-dark.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/schema/schema-builder-policies/components/policies/policy-diagram/generated/authz-direct-owner-light.tsx",
+          "target": "src/blocks/schema/schema-builder-policies/components/policies/policy-diagram/generated/authz-direct-owner-light.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/schema/schema-builder-policies/components/policies/policy-diagram/generated/authz-entity-membership-dark.tsx",
+          "target": "src/blocks/schema/schema-builder-policies/components/policies/policy-diagram/generated/authz-entity-membership-dark.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/schema/schema-builder-policies/components/policies/policy-diagram/generated/authz-entity-membership-light.tsx",
+          "target": "src/blocks/schema/schema-builder-policies/components/policies/policy-diagram/generated/authz-entity-membership-light.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/schema/schema-builder-policies/components/policies/policy-diagram/generated/authz-member-list-dark.tsx",
+          "target": "src/blocks/schema/schema-builder-policies/components/policies/policy-diagram/generated/authz-member-list-dark.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/schema/schema-builder-policies/components/policies/policy-diagram/generated/authz-member-list-light.tsx",
+          "target": "src/blocks/schema/schema-builder-policies/components/policies/policy-diagram/generated/authz-member-list-light.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/schema/schema-builder-policies/components/policies/policy-diagram/generated/authz-org-hierarchy-dark.tsx",
+          "target": "src/blocks/schema/schema-builder-policies/components/policies/policy-diagram/generated/authz-org-hierarchy-dark.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/schema/schema-builder-policies/components/policies/policy-diagram/generated/authz-org-hierarchy-light.tsx",
+          "target": "src/blocks/schema/schema-builder-policies/components/policies/policy-diagram/generated/authz-org-hierarchy-light.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/schema/schema-builder-policies/components/policies/policy-diagram/generated/authz-publishable-dark.tsx",
+          "target": "src/blocks/schema/schema-builder-policies/components/policies/policy-diagram/generated/authz-publishable-dark.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/schema/schema-builder-policies/components/policies/policy-diagram/generated/authz-publishable-light.tsx",
+          "target": "src/blocks/schema/schema-builder-policies/components/policies/policy-diagram/generated/authz-publishable-light.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/schema/schema-builder-policies/components/policies/policy-diagram/generated/authz-related-entity-membership-dark.tsx",
+          "target": "src/blocks/schema/schema-builder-policies/components/policies/policy-diagram/generated/authz-related-entity-membership-dark.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/schema/schema-builder-policies/components/policies/policy-diagram/generated/authz-related-entity-membership-light.tsx",
+          "target": "src/blocks/schema/schema-builder-policies/components/policies/policy-diagram/generated/authz-related-entity-membership-light.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/schema/schema-builder-policies/components/policies/policy-diagram/generated/authz-related-member-list-dark.tsx",
+          "target": "src/blocks/schema/schema-builder-policies/components/policies/policy-diagram/generated/authz-related-member-list-dark.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/schema/schema-builder-policies/components/policies/policy-diagram/generated/authz-related-member-list-light.tsx",
+          "target": "src/blocks/schema/schema-builder-policies/components/policies/policy-diagram/generated/authz-related-member-list-light.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/schema/schema-builder-policies/components/policies/policy-diagram/generated/authz-temporal-dark.tsx",
+          "target": "src/blocks/schema/schema-builder-policies/components/policies/policy-diagram/generated/authz-temporal-dark.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/schema/schema-builder-policies/components/policies/policy-diagram/generated/authz-temporal-light.tsx",
+          "target": "src/blocks/schema/schema-builder-policies/components/policies/policy-diagram/generated/authz-temporal-light.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/schema/schema-builder-policies/components/policies/policy-diagram/generated/index.ts",
+          "target": "src/blocks/schema/schema-builder-policies/components/policies/policy-diagram/generated/index.ts",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/schema/schema-builder-policies/components/policies/policy-diagram/index.ts",
+          "target": "src/blocks/schema/schema-builder-policies/components/policies/policy-diagram/index.ts",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/schema/schema-builder-policies/components/policies/policy-diagram/policy-diagram.tsx",
+          "target": "src/blocks/schema/schema-builder-policies/components/policies/policy-diagram/policy-diagram.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/schema/schema-builder-policies/components/policies/policy-hooks.ts",
+          "target": "src/blocks/schema/schema-builder-policies/components/policies/policy-hooks.ts",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/schema/schema-builder-policies/components/policies/policy-know-more-card.tsx",
+          "target": "src/blocks/schema/schema-builder-policies/components/policies/policy-know-more-card.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/schema/schema-builder-policies/components/policies/use-crud-policy-state.ts",
+          "target": "src/blocks/schema/schema-builder-policies/components/policies/use-crud-policy-state.ts",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/schema/schema-builder-policies/components/table-editor/policies/index.ts",
+          "target": "src/blocks/schema/schema-builder-policies/components/table-editor/policies/index.ts",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/schema/schema-builder-policies/components/table-editor/policies/policies-empty-state.tsx",
+          "target": "src/blocks/schema/schema-builder-policies/components/table-editor/policies/policies-empty-state.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/schema/schema-builder-policies/components/table-editor/policies/policies-view.tsx",
+          "target": "src/blocks/schema/schema-builder-policies/components/table-editor/policies/policies-view.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/schema/schema-builder-policies/components/table-editor/policies/policy-edit-card.tsx",
+          "target": "src/blocks/schema/schema-builder-policies/components/table-editor/policies/policy-edit-card.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/schema/schema-builder-policies/components/table-editor/policies/policy-operation-group.tsx",
+          "target": "src/blocks/schema/schema-builder-policies/components/table-editor/policies/policy-operation-group.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/schema/schema-builder-policies/components/table-editor/policies/policy-pill.tsx",
+          "target": "src/blocks/schema/schema-builder-policies/components/table-editor/policies/policy-pill.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/schema/schema-builder-policies/components/table-editor/policies/use-policy-edit-state.ts",
+          "target": "src/blocks/schema/schema-builder-policies/components/table-editor/policies/use-policy-edit-state.ts",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/schema/schema-builder-policies/components/tables/create-table-card.tsx",
+          "target": "src/blocks/schema/schema-builder-policies/components/tables/create-table-card.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/schema/schema-builder-policies/lib/gql/hooks/schema-builder/policies/use-create-policy-field.ts",
+          "target": "src/blocks/schema/schema-builder-policies/lib/gql/hooks/schema-builder/policies/use-create-policy-field.ts",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/schema/schema-builder-policies/lib/gql/hooks/schema-builder/policies/use-permissions.ts",
+          "target": "src/blocks/schema/schema-builder-policies/lib/gql/hooks/schema-builder/policies/use-permissions.ts",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/schema/schema-builder-policies/lib/gql/hooks/schema-builder/use-create-table.ts",
+          "target": "src/blocks/schema/schema-builder-policies/lib/gql/hooks/schema-builder/use-create-table.ts",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/schema/schema-builder-policies/lib/gql/hooks/schema-builder/use-table-grants.ts",
+          "target": "src/blocks/schema/schema-builder-policies/lib/gql/hooks/schema-builder/use-table-grants.ts",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/schema/schema-builder-policies/schema-builder-policies.requires.json",
+          "target": "~/.constructive/blocks/schema-builder-policies.requires.json",
+          "type": "registry:file"
+        }
+      ]
+    },
+    {
+      "name": "schema-builder-tables",
+      "type": "registry:block",
+      "title": "Schema Builder — Tables",
+      "description": "Tables sidebar for the schema-builder family: the schema/table navigation tree, table metadata, and table create/rename/delete entry points.",
+      "categories": [
+        "blocks",
+        "schema"
+      ],
+      "docs": "## Setup\n\n1. Mount `blocks-runtime` once at your app root (installed automatically) with the namespaces this block uses, and set their endpoints:\n\n```tsx\n<BlocksRuntime\n  namespaces={['schema-builder']}\n  getToken={() => tokenManager.getAccessToken()}\n>\n  {children}\n</BlocksRuntime>\n```\n\n- `NEXT_PUBLIC_SCHEMA_BUILDER_GRAPHQL_ENDPOINT`\n\n2. This block imports its hooks from your generated SDKs (`@/generated/schema-builder`). Ensure they are generated. The declared operations ship to `~/.constructive/blocks/schema-builder-tables.requires.json` for the SDK-check tool.",
+      "dependencies": [
+        "@constructive-io/ui",
+        "@remixicon/react",
+        "@tanstack/react-query",
+        "lucide-react",
+        "motion"
+      ],
+      "registryDependencies": [
+        "blocks-runtime",
+        "cn",
+        "schema-builder-core",
+        "schema-builder-policies"
+      ],
+      "files": [
+        {
+          "path": "registry/constructive/blocks/schema/schema-builder-tables/components/schemas/schema-builder-sidebar.tsx",
+          "target": "src/blocks/schema/schema-builder-tables/components/schemas/schema-builder-sidebar.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/schema/schema-builder-tables/components/table-editor/no-table-selected-view.tsx",
+          "target": "src/blocks/schema/schema-builder-tables/components/table-editor/no-table-selected-view.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/schema/schema-builder-tables/components/table-editor/table-metadata-section.tsx",
+          "target": "src/blocks/schema/schema-builder-tables/components/table-editor/table-metadata-section.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/schema/schema-builder-tables/components/tables/delete-table-dialog.tsx",
+          "target": "src/blocks/schema/schema-builder-tables/components/tables/delete-table-dialog.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/schema/schema-builder-tables/components/tables/index.ts",
+          "target": "src/blocks/schema/schema-builder-tables/components/tables/index.ts",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/schema/schema-builder-tables/components/tables/rename-table-card.tsx",
+          "target": "src/blocks/schema/schema-builder-tables/components/tables/rename-table-card.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/schema/schema-builder-tables/lib/gql/hooks/schema-builder/use-delete-table.ts",
+          "target": "src/blocks/schema/schema-builder-tables/lib/gql/hooks/schema-builder/use-delete-table.ts",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/schema/schema-builder-tables/lib/gql/hooks/schema-builder/use-update-table.ts",
+          "target": "src/blocks/schema/schema-builder-tables/lib/gql/hooks/schema-builder/use-update-table.ts",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/schema/schema-builder-tables/schema-builder-tables.requires.json",
+          "target": "~/.constructive/blocks/schema-builder-tables.requires.json",
+          "type": "registry:file"
+        }
+      ]
+    },
+    {
+      "name": "schema-builder",
+      "type": "registry:block",
+      "title": "Schema Builder",
+      "description": "Composer shell for the schema-builder family: wires the core library and the Structure, Relationships, Indexes, and Policies area blocks into one self-contained Postgres schema editor with card-stack navigation. No QueryClient or auth provider of its own.",
+      "categories": [
+        "blocks",
+        "schema"
+      ],
+      "docs": "## Setup\n\n1. Mount `blocks-runtime` once at your app root (installed automatically) with the namespaces this block uses, and set their endpoints:\n\n```tsx\n<BlocksRuntime\n  namespaces={['schema-builder', 'modules', 'auth', 'admin']}\n  getToken={() => tokenManager.getAccessToken()}\n>\n  {children}\n</BlocksRuntime>\n```\n\n- `NEXT_PUBLIC_SCHEMA_BUILDER_GRAPHQL_ENDPOINT`\n- `NEXT_PUBLIC_MODULES_GRAPHQL_ENDPOINT`\n- `NEXT_PUBLIC_AUTH_GRAPHQL_ENDPOINT` (owner lookups)\n- `NEXT_PUBLIC_ADMIN_GRAPHQL_ENDPOINT` (permission catalog for the Policies tab)\n\n2. This block imports its hooks from your generated SDKs (`@/generated/schema-builder`, `@/generated/modules`, `@/generated/auth`, `@/generated/admin`). Ensure they are generated. The declared operations ship to `~/.constructive/blocks/schema-builder.requires.json` for the SDK-check tool.",
+      "dependencies": [
+        "@constructive-io/ui",
+        "lucide-react"
+      ],
+      "registryDependencies": [
+        "blocks-runtime",
+        "cn",
+        "schema-builder-core",
+        "schema-builder-fields",
+        "schema-builder-indexes",
+        "schema-builder-policies",
+        "schema-builder-relationships",
+        "schema-builder-tables"
+      ],
+      "files": [
+        {
+          "path": "registry/constructive/blocks/schema/schema-builder/components/client-only.tsx",
+          "target": "src/blocks/schema/schema-builder/components/client-only.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/schema/schema-builder/components/schema-builder-header.tsx",
+          "target": "src/blocks/schema/schema-builder/components/schema-builder-header.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/schema/schema-builder/components/schemas/schemas-route.tsx",
+          "target": "src/blocks/schema/schema-builder/components/schemas/schemas-route.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/schema/schema-builder/schema-builder.requires.json",
+          "target": "~/.constructive/blocks/schema-builder.requires.json",
+          "type": "registry:file"
+        },
+        {
+          "path": "registry/constructive/blocks/schema/schema-builder/schema-builder-block.tsx",
+          "target": "src/blocks/schema/schema-builder/schema-builder-block.tsx",
+          "type": "registry:component"
+        }
+      ]
+    }
+  ]
+}

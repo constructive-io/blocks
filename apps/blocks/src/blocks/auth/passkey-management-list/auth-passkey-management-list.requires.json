@@ -1,0 +1,6 @@
+{
+  "namespace": "auth",
+  "mutations": ["updateWebauthnCredential", "deleteWebauthnCredential"],
+  "queries": [],
+  "models": ["webauthnCredentials"]
+}

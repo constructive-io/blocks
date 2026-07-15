@@ -1,0 +1,9 @@
+.next
+node_modules
+next-env.d.ts
+.source
+# build:registry output + temp transformed registry
+public/r/
+.registry-build.json
+playwright-report/
+test-results/
