@@ -45,7 +45,7 @@ export default function AuthGuidePage() {
         intro="Add the sign-in card, and make sure BlocksRuntime is mounted so the block can reach your endpoint. Here we only wire the host seams on top of it."
       >
         <InstallField url="@constructive/auth-sign-in-card" />
-        <p className="mt-3 text-caption text-muted-foreground">
+        <p className="text-pretty mt-3 text-caption text-muted-foreground">
           Runtime not mounted yet? See <DocLink href="/blocks/guides/adapter">Wire a GraphQL adapter</DocLink>. Full
           prop reference: <DocLink href="/blocks/auth/sign-in-card">sign-in-card</DocLink>.
         </p>
@@ -77,7 +77,7 @@ export default function SignInPage() {
   );
 }`}
         />
-        <p className="mt-3 text-caption text-muted-foreground">
+        <p className="text-pretty mt-3 text-caption text-muted-foreground">
           <InlineCode>saveSession</InlineCode> is your own token store — the same one{' '}
           <InlineCode>BlocksRuntime</InlineCode>’s <InlineCode>getToken</InlineCode> reads, so every later block request
           is authenticated.

@@ -1,11 +1,8 @@
 'use client';
 
 import { Check, CircleAlert, Loader2 } from 'lucide-react';
-import { motion } from 'motion/react';
 
 import { cn } from '@/lib/utils';
-
-import { Shimmer } from './shimmer';
 
 type ToolStatusVariant = 'loading' | 'done' | 'error';
 
@@ -27,16 +24,12 @@ export function ToolStatus({ variant, children, className }: ToolStatusProps) {
       )}
     >
       {variant === 'loading' && (
-        <motion.div animate={{ rotate: 360 }} transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}>
-          <Loader2 className='size-3 shrink-0 opacity-60' />
-        </motion.div>
+        <Loader2 className="size-3 shrink-0 opacity-60 motion-safe:animate-spin" />
       )}
       {variant === 'done' && <Check className='size-3 shrink-0 text-emerald-600 dark:text-emerald-400' />}
       {variant === 'error' && <CircleAlert className='size-3 shrink-0' />}
       {variant === 'loading' && typeof children === 'string' ? (
-        <Shimmer className='text-xs' duration={1.5}>
-          {children}
-        </Shimmer>
+        <span className="text-xs leading-snug text-muted-foreground">{children}</span>
       ) : (
         <span className='leading-snug'>{children}</span>
       )}

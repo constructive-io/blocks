@@ -249,7 +249,7 @@ function MagicLinkCallbackInner({
   return (
     <div
       data-slot="magic-link-callback-page"
-      className={cn('flex min-h-screen items-center justify-center px-4 py-12', className)}
+      className={cn('flex min-h-dvh items-center justify-center px-4 py-12', className)}
     >
       <div className="w-full max-w-sm">
       {pageState === 'loading' && (
@@ -376,7 +376,7 @@ export default function MagicLinkCallbackPage({
       fallback={
         <div
           data-slot="magic-link-callback-page"
-          className={cn('flex min-h-screen items-center justify-center px-4 py-12', className)}
+          className={cn('flex min-h-dvh items-center justify-center px-4 py-12', className)}
         >
           <div className="w-full max-w-sm">
             <Card aria-busy>

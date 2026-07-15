@@ -203,7 +203,7 @@ export function ApiKeyCreatedModal({
               aria-hidden="true"
             />
             <div className="space-y-0.5">
-              <p className="text-sm font-medium text-amber-800 dark:text-amber-200">
+              <p className="text-pretty text-sm font-medium text-amber-800 dark:text-amber-200">
                 {merged.warningHeading}
               </p>
               <p className="text-sm text-amber-700 dark:text-amber-300 text-pretty leading-snug">
@@ -214,7 +214,7 @@ export function ApiKeyCreatedModal({
 
           {/* Key display area */}
           <div className="space-y-1.5">
-            <p className="text-sm font-medium text-foreground">{merged.keyLabel}</p>
+            <p className="text-pretty text-sm font-medium text-foreground">{merged.keyLabel}</p>
             <div
               className={cn(
                 'relative flex items-center gap-2 rounded-md',
@@ -241,7 +241,7 @@ export function ApiKeyCreatedModal({
                   type="button"
                   variant="ghost"
                   size="sm"
-                  className="h-7 px-2 gap-1.5"
+                  className="min-h-11 gap-1.5 px-2 sm:min-h-10"
                   onClick={handleCopy}
                   aria-label={hasCopied ? merged.copiedButton : merged.copyButton}
                   data-testid="copy-button"
@@ -258,7 +258,7 @@ export function ApiKeyCreatedModal({
               </div>
             </div>
             {copyError && (
-              <p role="alert" aria-live="polite" className="text-destructive text-xs mt-1">
+              <p role="alert" aria-live="polite" className="text-pretty text-destructive text-xs mt-1">
                 {copyError}
               </p>
             )}

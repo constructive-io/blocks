@@ -224,7 +224,7 @@ export function ResetPasswordCard({
           <CardDescription>{merged.missingTokenMessage}</CardDescription>
         </CardHeader>
         <CardContent>
-          <Button variant="link" asChild className="text-primary hover:text-primary/80 hover:no-underline h-auto p-0 font-medium">
+          <Button variant="link" asChild className="text-primary hover:text-primary/80 hover:no-underline min-h-11 px-2 py-0 font-medium sm:min-h-10">
             <a href={forgotPasswordPath}>{merged.expiredTokenRestartLabel}</a>
           </Button>
         </CardContent>
@@ -241,7 +241,7 @@ export function ResetPasswordCard({
           <CardDescription>{merged.expiredTokenDescription}</CardDescription>
         </CardHeader>
         <CardContent>
-          <Button variant="link" asChild className="text-primary hover:text-primary/80 hover:no-underline h-auto p-0 font-medium">
+          <Button variant="link" asChild className="text-primary hover:text-primary/80 hover:no-underline min-h-11 px-2 py-0 font-medium sm:min-h-10">
             <a href={forgotPasswordPath}>{merged.expiredTokenRestartLabel}</a>
           </Button>
         </CardContent>
@@ -259,7 +259,7 @@ export function ResetPasswordCard({
         </CardHeader>
         {signInPath && (
           <CardContent>
-            <Button variant="link" asChild className="text-primary hover:text-primary/80 hover:no-underline h-auto p-0 font-medium">
+            <Button variant="link" asChild className="text-primary hover:text-primary/80 hover:no-underline min-h-11 px-2 py-0 font-medium sm:min-h-10">
               <a href={signInPath}>{merged.successSignInLabel}</a>
             </Button>
           </CardContent>
@@ -321,7 +321,7 @@ export function ResetPasswordCard({
                       className="h-1.5"
                       data-testid="password-strength-bar"
                     />
-                    <p className="text-muted-foreground text-xs" data-testid="password-strength-label">
+                    <p className="text-pretty text-muted-foreground text-xs" data-testid="password-strength-label">
                       {strengthLabelText}
                     </p>
                   </div>

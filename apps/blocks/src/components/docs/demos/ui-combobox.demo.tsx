@@ -43,7 +43,7 @@ export function BlockDemo() {
             </ComboboxList>
           </ComboboxPopup>
         </Combobox>
-        <p className="text-sm text-muted-foreground">
+        <p className="text-pretty text-sm text-muted-foreground">
           Region: <span className="font-medium text-foreground">{value?.label ?? 'none'}</span>
         </p>
       </div>

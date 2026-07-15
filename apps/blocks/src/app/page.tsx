@@ -20,18 +20,18 @@ import { publishedBlockCount, uiCount } from '@/lib/blocks';
 // SSR and hydration passes. The skeleton holds the section's size meanwhile.
 const GridMotionWall = dynamic(() => import('@/components/landing/grid-motion').then((m) => m.GridMotionWall), {
   ssr: false,
-  loading: () => <div aria-hidden className="h-full w-full motion-safe:animate-pulse" />,
+  loading: () => <div aria-hidden className="h-full w-full bg-surface-2" />,
 });
 
 export default function HomePage() {
   return (
     <div>
-      {/* Intro block. `mt-12 xl:mt-0` clears the floating mobile hamburger. */}
-      <div className="mx-auto mt-12 w-full max-w-[680px] px-6 pb-10 pt-20 sm:pt-28 xl:mt-0">
+      {/* Intro block. The shell's mobile header owns its top inset. */}
+      <div className="mx-auto w-full max-w-[680px] px-6 pb-10 pt-20 sm:pt-28">
         <div className="flex items-start justify-between gap-4">
           <div className="flex flex-col gap-2">
             <h1 className="text-h1 text-balance text-foreground max-sm:text-[1.375rem]">Constructive Blocks</h1>
-            <p className="text-[14px] text-muted-foreground">
+            <p className="text-pretty text-[14px] text-muted-foreground">
               Full-stack auth, org and admin blocks for the Constructive platform — install with shadcn.
             </p>
             <div className="mt-2 flex items-center gap-2">
@@ -68,7 +68,7 @@ export default function HomePage() {
 
       {/* Quiet footer — one line. */}
       <footer className="mx-auto w-full max-w-[1200px] px-6 pb-10 pt-6">
-        <p className="text-[12px] tabular-nums text-muted-foreground">
+        <p className="text-pretty text-[12px] tabular-nums text-muted-foreground">
           v0.1.0 <span aria-hidden>·</span> {publishedBlockCount} blocks <span aria-hidden>·</span> {uiCount} ui
           components <span aria-hidden>·</span>{' '}
           <a

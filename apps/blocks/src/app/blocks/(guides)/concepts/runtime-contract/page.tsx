@@ -76,7 +76,7 @@ export default function RuntimeContractPage() {
           />
         </div>
         <Prose>
-          <p className="mt-5">
+          <p className="text-pretty mt-5">
             This page is about <em>why</em> the contract is shaped this way, not how to install it — the{' '}
             <DocLink href="/blocks/getting-started">getting-started</DocLink> tutorial covers the actual setup,
             including the environment variables and the auth pieces a block can’t ship for you.

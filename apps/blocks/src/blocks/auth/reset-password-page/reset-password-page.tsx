@@ -62,7 +62,7 @@ export default function ResetPasswordPage({ className }: ResetPasswordPageProps)
   return (
     <main
       data-slot="reset-password-page"
-      className={cn('flex min-h-screen items-center justify-center p-4', className)}
+      className={cn('flex min-h-dvh items-center justify-center p-4', className)}
     >
       <Suspense>
         <ResetPasswordPageContent />

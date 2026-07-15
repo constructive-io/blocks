@@ -247,7 +247,6 @@ function StackCardInner({
 				height: '100dvh',
 				width: cardWidth,
 				zIndex,
-				willChange: 'transform',
 				// On mobile, allow vertical pan (scroll) but handle horizontal ourselves
 				// This prevents conflict with iOS Safari gestures while allowing content scroll
 				touchAction: isMobile ? 'pan-y pinch-zoom' : undefined,

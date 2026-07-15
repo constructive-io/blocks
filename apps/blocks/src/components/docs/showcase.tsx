@@ -112,12 +112,12 @@ export function BlockShowcase({ slug, onReset }: { slug: string; onReset?: (rese
     // Calm degrade (unmapped slug): one quiet card, one way forward.
     return (
       <div className="not-prose rounded-xl border border-border/60 bg-card p-6 shadow-surface-1">
-        <p className="text-[13px] text-muted-foreground">
+        <p className="text-pretty text-[13px] text-muted-foreground">
           No live preview is registered for <code className="font-mono text-foreground">{slug}</code>.
         </p>
         <Link
           href="/blocks"
-          className="mt-3 inline-flex items-center gap-1 text-[13px] text-primary outline-none transition-colors hover:text-primary/80 focus-visible:underline"
+          className="mt-3 inline-flex min-h-11 items-center gap-1 rounded-md text-[13px] text-primary outline-none transition-[color,scale] duration-150 ease-out hover:text-primary/80 motion-safe:active:scale-[0.96] motion-reduce:transition-none focus-visible:underline sm:min-h-10"
         >
           Browse the block registry
           <ChevronRight className="size-3.5" />

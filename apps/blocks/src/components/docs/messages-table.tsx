@@ -19,7 +19,7 @@ type MessagesObject = Record<string, unknown>;
 function KeyValueTable({ caption, keyHeader, rows }: { caption: string; keyHeader: string; rows: [string, string][] }) {
   return (
     <div className="flex flex-col gap-2">
-      <p className="font-mono text-[11px] text-muted-foreground">{caption}</p>
+      <p className="text-pretty font-mono text-[11px] text-muted-foreground">{caption}</p>
       <div className="w-full overflow-x-auto">
         <table className="w-full border-collapse text-[13px]">
           <thead>

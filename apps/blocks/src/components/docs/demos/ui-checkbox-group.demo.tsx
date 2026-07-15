@@ -22,8 +22,8 @@ export function BlockDemo() {
     <Demo>
       <div className="flex w-full max-w-sm flex-col gap-4">
         <div>
-          <h3 className="text-sm font-medium">Webhook events</h3>
-          <p className="text-sm text-muted-foreground">Choose which changes trigger a delivery.</p>
+          <h3 className="text-balance text-sm font-medium">Webhook events</h3>
+          <p className="text-pretty text-sm text-muted-foreground">Choose which changes trigger a delivery.</p>
         </div>
         <CheckboxGroup value={value} onValueChange={setValue}>
           {EVENTS.map((event) => (
@@ -33,7 +33,7 @@ export function BlockDemo() {
             </div>
           ))}
         </CheckboxGroup>
-        <p className="text-sm text-muted-foreground">
+        <p className="text-pretty text-sm text-muted-foreground">
           Subscribed: {value.length > 0 ? value.join(', ') : 'none'}
         </p>
       </div>

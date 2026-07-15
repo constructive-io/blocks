@@ -87,7 +87,7 @@ export default async function Page({ params }: PageProps) {
       ))}
 
       {page.builtWith?.length ? (
-        <p className="text-[13px] text-muted-foreground">
+        <p className="text-pretty text-[13px] text-muted-foreground">
           <span className="text-foreground/70">Built with</span> {page.builtWith.join(', ')}.
         </p>
       ) : null}

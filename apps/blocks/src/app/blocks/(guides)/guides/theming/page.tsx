@@ -56,7 +56,7 @@ export default function ThemingGuidePage() {
   /* dark-mode overrides */
 }`}
         />
-        <p className="mt-3 text-caption text-muted-foreground">
+        <p className="text-pretty mt-3 text-caption text-muted-foreground">
           New to the host setup? Start with <DocLink href="/blocks/getting-started">Getting started</DocLink>.
         </p>
       </DocSection>
@@ -79,7 +79,7 @@ export default function ThemingGuidePage() {
   --ring: oklch(0.70 0.18 17);
 }`}
         />
-        <p className="mt-3 text-caption text-muted-foreground">
+        <p className="text-pretty mt-3 text-caption text-muted-foreground">
           Constructive’s own accent is <InlineCode>oklch(0.688 0.175 245.6)</InlineCode> — swap in yours.
         </p>
       </DocSection>
@@ -101,7 +101,7 @@ export default function ThemingGuidePage() {
   --accent: oklch(0.27 0.01 264);
 }`}
         />
-        <p className="mt-3 text-caption text-muted-foreground">
+        <p className="text-pretty mt-3 text-caption text-muted-foreground">
           These are the standard shadcn token names; the same set exists under <InlineCode>:root</InlineCode> for light
           mode.
         </p>

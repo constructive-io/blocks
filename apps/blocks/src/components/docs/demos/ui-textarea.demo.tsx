@@ -16,7 +16,7 @@ export function BlockDemo() {
             rows={4}
             placeholder="What does this database power? Who should have access?"
           />
-          <p className="text-sm text-muted-foreground">Shown to members on the database overview.</p>
+          <p className="text-pretty text-sm text-muted-foreground">Shown to members on the database overview.</p>
         </div>
 
         <div className="grid gap-1.5">

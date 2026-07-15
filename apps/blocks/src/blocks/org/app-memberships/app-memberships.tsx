@@ -375,7 +375,7 @@ export function OrgAppMemberships({
                       onValueChange={(val) => handleProfileUpdate(membership, val)}
                       disabled={isUpdatePending || isRevokePending}
                     >
-                      <SelectTrigger id={`profile-select-${membership.id}`} className="h-7 text-xs flex-1">
+                      <SelectTrigger id={`profile-select-${membership.id}`} className="h-11 flex-1 text-xs sm:h-10">
                         <SelectValue placeholder={merged.profilePlaceholder} />
                       </SelectTrigger>
                       <SelectContent>
@@ -392,7 +392,7 @@ export function OrgAppMemberships({
             ))}
           </ul>
         ) : !isLoading ? (
-          <p className="text-sm text-muted-foreground text-center py-4">{merged.emptyState}</p>
+          <p className="text-pretty text-sm text-muted-foreground text-center py-4">{merged.emptyState}</p>
         ) : null}
       </CardContent>
 

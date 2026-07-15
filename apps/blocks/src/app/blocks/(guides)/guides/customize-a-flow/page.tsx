@@ -101,7 +101,7 @@ export default function SignInPage() {
   );
 }`}
         />
-        <p className="mt-3 text-caption text-muted-foreground">
+        <p className="text-pretty mt-3 text-caption text-muted-foreground">
           Need a related capability — social sign-in, password reset? Each is its own flow with its own backend; browse
           the others in the sidebar.
         </p>

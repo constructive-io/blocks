@@ -39,7 +39,7 @@ function DemoAvatar() {
   return (
     <button
       type="button"
-      className="rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+      className="inline-flex size-11 items-center justify-center rounded-full transition-transform duration-150 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring motion-safe:active:scale-[0.96] motion-reduce:transition-none sm:size-10"
       aria-label="Account menu"
     >
       <Avatar>
@@ -70,7 +70,7 @@ export function BlockDemo() {
           onCommandPaletteOpen={() => setPaletteHit(true)}
         />
         {paletteHit && (
-          <p className="px-4 py-2 text-xs text-muted-foreground border-t bg-muted/30">
+          <p className="border-t bg-muted/30 px-4 py-2 text-pretty text-xs text-muted-foreground">
             Command palette triggered — wire <code>onCommandPaletteOpen</code> to open your palette.
           </p>
         )}

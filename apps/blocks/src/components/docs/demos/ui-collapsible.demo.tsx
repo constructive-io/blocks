@@ -35,7 +35,7 @@ export function BlockDemo() {
               <CollapsibleIcon />
             </CollapsibleTrigger>
             <CollapsibleContent innerClassName="border-t px-4">
-              <p className="text-muted-foreground">{item.a}</p>
+              <p className="text-pretty text-muted-foreground">{item.a}</p>
             </CollapsibleContent>
           </Collapsible>
         ))}

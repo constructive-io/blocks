@@ -179,7 +179,7 @@ export default function GettingStartedPage() {
             namespaces, step-up, passkeys — see{' '}
             <DocLink href="/blocks/concepts/runtime-contract">the runtime contract</DocLink>.
           </p>
-          <p className="text-caption text-muted-foreground">
+          <p className="text-pretty text-caption text-muted-foreground">
             You can skip this explicit install — the runtime ships automatically with your first block in the next step.
           </p>
         </div>

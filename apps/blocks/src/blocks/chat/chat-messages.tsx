@@ -69,7 +69,7 @@ export function ChatMessages({ messages, isStreaming, onToolApproval, onToolOutp
               }`}
             >
               {isUser ? (
-                <p className='whitespace-pre-wrap'>{textContent}</p>
+                <p className='text-pretty whitespace-pre-wrap'>{textContent}</p>
               ) : (
                 <>
                   {message.parts.map((part, pi) => {

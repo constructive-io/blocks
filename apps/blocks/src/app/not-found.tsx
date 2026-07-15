@@ -31,7 +31,7 @@ export default function NotFound() {
         </SiteButton>
       </div>
 
-      <p className="font-mono text-[12px] text-muted-foreground">
+      <p className="text-pretty font-mono text-[12px] text-muted-foreground">
         HTTP 404 <span aria-hidden>·</span> Not Found
       </p>
     </div>

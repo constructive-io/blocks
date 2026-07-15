@@ -362,7 +362,7 @@ export function OrgRolesEditor({
         {editing === null && (
           <>
             {profiles.length === 0 ? (
-              <p className="text-muted-foreground text-sm" data-testid="empty-state">
+              <p className="text-pretty text-muted-foreground text-sm" data-testid="empty-state">
                 {merged.emptyState}
               </p>
             ) : (
@@ -512,10 +512,10 @@ export function OrgRolesEditor({
             className="rounded-md border bg-background p-4 shadow-sm space-y-3"
             data-testid="delete-confirm-dialog"
           >
-            <p id="delete-confirm-title" className="text-sm font-medium">
+            <p id="delete-confirm-title" className="text-pretty text-sm font-medium">
               {merged.deleteConfirmTitle}
             </p>
-            <p className="text-muted-foreground text-sm">{merged.deleteConfirmDescription}</p>
+            <p className="text-pretty text-muted-foreground text-sm">{merged.deleteConfirmDescription}</p>
 
             <AuthErrorAlert error={deleteError} />
 

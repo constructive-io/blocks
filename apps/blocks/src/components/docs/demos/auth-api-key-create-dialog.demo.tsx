@@ -19,7 +19,7 @@ export function BlockDemo() {
         Create API key
       </Button>
       {lastResult ? (
-        <p className="mt-4 text-sm text-muted-foreground">{lastResult}</p>
+        <p className="text-pretty mt-4 text-sm text-muted-foreground">{lastResult}</p>
       ) : null}
       <ApiKeyCreateDialog
         open={open}

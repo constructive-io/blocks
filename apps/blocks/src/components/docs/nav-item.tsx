@@ -33,9 +33,9 @@ export function NavItem({ href, title, active, isNew, isUpdated, indent, onNavig
       aria-current={active ? 'page' : undefined}
       onClick={onNavigate}
       className={cn(
-        'flex h-8 items-center rounded-lg text-[13px] text-muted-foreground outline-none',
+        'flex h-11 items-center rounded-lg text-[13px] text-muted-foreground outline-none sm:h-10',
         indent ? 'pl-6 pr-3' : 'px-3',
-        'transition-colors duration-[var(--dur-fast)]',
+        'transition-[color,background-color,scale] duration-150 ease-out motion-safe:active:scale-[0.96] motion-reduce:transition-none',
         'hover:bg-hover hover:text-foreground active:bg-active active:text-foreground focus-visible:ring-1 focus-visible:ring-ring',
         active && 'bg-active text-foreground',
       )}

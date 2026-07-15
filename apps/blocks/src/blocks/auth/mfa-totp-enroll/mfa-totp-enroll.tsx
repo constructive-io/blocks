@@ -309,15 +309,15 @@ export function MfaTotpEnroll({
                 <img
                   src={qrUrl}
                   alt="QR code for authenticator app setup"
-                  className="size-48 rounded-md border"
+                  className="size-48 rounded-md outline outline-1 -outline-offset-1 outline-black/10 dark:outline-white/10"
                 />
               </div>
 
               {manualKey && (
                 <div className="space-y-1.5">
-                  <p className="text-muted-foreground text-sm">{merged.qrInstructions}</p>
+                  <p className="text-pretty text-muted-foreground text-sm">{merged.qrInstructions}</p>
                   <div className="space-y-1">
-                    <p className="text-xs font-medium">{merged.manualEntryLabel}</p>
+                    <p className="text-pretty text-xs font-medium">{merged.manualEntryLabel}</p>
                     <code className="bg-muted block select-all rounded-md px-3 py-2 text-center font-mono text-sm tracking-widest">
                       {formatManualKey(manualKey)}
                     </code>

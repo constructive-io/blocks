@@ -147,7 +147,7 @@ export function AuthDomainVerificationStep({
         />
 
         {/* Propagation note */}
-        <p className="text-muted-foreground text-xs">{merged.propagationNote}</p>
+        <p className="text-pretty text-muted-foreground text-xs">{merged.propagationNote}</p>
 
         {/* Manual check trigger */}
         <Button
@@ -197,7 +197,7 @@ function TxtRecordField({
 }) {
   return (
     <div className="space-y-1">
-      <p className="text-sm font-medium">{label}</p>
+      <p className="text-pretty text-sm font-medium">{label}</p>
       <div className="bg-muted flex items-center gap-2 rounded-md px-3 py-2">
         <code className="text-muted-foreground min-w-0 flex-1 truncate text-xs">{value}</code>
         <Button

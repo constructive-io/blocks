@@ -31,7 +31,7 @@ export function Segmented<T extends string>({
   onChange: (v: T) => void;
 }) {
   return (
-    <div className="mb-5 inline-flex items-center gap-1 rounded-lg border border-border/60 p-1 text-[13px]">
+    <div className="mb-5 inline-flex items-center gap-1 rounded-[10px] border border-border/60 p-1 text-[13px]">
       <span className="px-2 font-medium text-muted-foreground">{label}</span>
       {options.map((o) => {
         const selected = value === o;
@@ -42,8 +42,8 @@ export function Segmented<T extends string>({
             aria-pressed={selected}
             onClick={() => onChange(o)}
             className={cn(
-              'h-7 rounded-lg px-3 text-[13px] capitalize outline-none',
-              'transition-[color,background-color] duration-[var(--dur-fast)] focus-visible:ring-1 focus-visible:ring-ring',
+              'h-11 rounded-lg px-3 text-[13px] capitalize outline-none sm:h-10',
+              'transition-[color,background-color,scale] duration-150 ease-out motion-safe:active:scale-[0.96] motion-reduce:transition-none focus-visible:ring-1 focus-visible:ring-ring',
               selected ? 'bg-active text-foreground' : 'text-muted-foreground hover:bg-hover hover:text-foreground',
             )}
           >

@@ -288,8 +288,10 @@ export function CompositePolicyBuilder({
 						type='button'
 						onClick={() => handleEditCondition(leaf.id, leaf.data)}
 						disabled={disabled}
-						className='text-muted-foreground/80 hover:text-foreground relative flex h-6 w-6 shrink-0 cursor-pointer
-							items-center justify-center transition-colors disabled:pointer-events-none disabled:opacity-50'
+						aria-label={`Configure ${policyType?.title ?? 'policy'} condition`}
+						className='text-muted-foreground/80 hover:text-foreground hover:bg-muted relative grid size-10 shrink-0 cursor-pointer
+							place-items-center rounded-lg transition-[background-color,color,scale] duration-150 ease-out motion-safe:active:scale-[0.96]
+							disabled:pointer-events-none disabled:opacity-50'
 					>
 						<Settings className='size-4' />
 						{needsConfig && <span className='absolute -top-0.5 -right-0.5 size-1.5 rounded-full bg-amber-400' />}

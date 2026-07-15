@@ -67,22 +67,30 @@ function PolicyTypeCard({ policyType, tableName, isSelected, onSelect, onKnowMor
 	};
 
 	return (
-		<button
-			type='button'
+		<div
 			data-testid={`policy-card-${policyType.name}`}
 			data-chat-component='policy-type-card'
 			data-chat-policy-type={policyType.name}
 			data-chat-policy-title={policyType.title}
 			data-chat-policy-description={policyType.description}
 			data-chat-selected={String(isSelected)}
-			onClick={onSelect}
 			className={cn(
-				'relative flex w-full flex-col gap-3 rounded-lg border p-4 text-left transition-all',
+				`relative flex w-full flex-col gap-3 rounded-lg border p-4 text-left
+				transition-[background-color,border-color,box-shadow,scale] duration-150 ease-out
+				motion-safe:has-[:active]:scale-[0.96]`,
 				isSelected
 					? 'border-primary bg-primary/5 ring-primary/20 ring-2'
 					: 'border-border/60 hover:border-border hover:bg-muted/50',
 			)}
 		>
+			<button
+				type='button'
+				onClick={onSelect}
+				aria-label={`Select ${policyType.title}`}
+				aria-pressed={isSelected}
+				className='absolute inset-0 z-0 rounded-[inherit] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring'
+			/>
+			<div className='pointer-events-none relative z-10 contents'>
 			{/* Diagram on top - fixed height for consistency */}
 			<div className='flex h-28 items-center justify-center'>
 				<ResponsiveDiagram className='h-full w-full [&>div]:border-0'>
@@ -96,23 +104,17 @@ function PolicyTypeCard({ policyType, tableName, isSelected, onSelect, onKnowMor
 
 				<div className='min-w-0 flex-1'>
 					<p className={cn('text-sm font-semibold', isSelected && 'text-primary')}>{policyType.title}</p>
-					<p className='text-muted-foreground mt-0.5 line-clamp-2 text-xs leading-relaxed'>{policyType.description}</p>
-					<span
-						role='button'
-						tabIndex={0}
+					<p className='text-muted-foreground mt-0.5 line-clamp-2 text-pretty text-xs leading-relaxed'>{policyType.description}</p>
+					<button
+						type='button'
 						data-testid={`policy-know-more-${policyType.name}`}
 						onClick={handleKnowMoreClick}
-						onKeyDown={(e) => {
-							if (e.key === 'Enter' || e.key === ' ') {
-								e.preventDefault();
-								handleKnowMoreClick(e as unknown as React.MouseEvent);
-							}
-						}}
-						className='text-primary hover:text-primary/80 mt-1 inline-flex cursor-pointer items-center gap-1 text-xs
-							font-medium'
+						className='text-primary hover:text-primary/80 pointer-events-auto relative z-20 mt-1 inline-flex min-h-10 cursor-pointer
+							items-center gap-1 rounded-lg pr-2 text-xs font-medium transition-[color,scale] duration-150 ease-out
+							motion-safe:active:scale-[0.96]'
 					>
 						Know More →
-					</span>
+					</button>
 				</div>
 
 				<div className='shrink-0'>
@@ -125,7 +127,8 @@ function PolicyTypeCard({ policyType, tableName, isSelected, onSelect, onKnowMor
 					)}
 				</div>
 			</div>
-		</button>
+			</div>
+		</div>
 	);
 }
 
@@ -135,7 +138,8 @@ function BlankTableCard({ isSelected, onSelect }: { isSelected: boolean; onSelec
 			type='button'
 			onClick={onSelect}
 			className={cn(
-				'relative flex w-full flex-col gap-3 rounded-lg border p-4 text-left transition-all',
+				`relative flex w-full flex-col gap-3 rounded-lg border p-4 text-left
+				transition-[background-color,border-color,box-shadow,scale] duration-150 ease-out motion-safe:active:scale-[0.96]`,
 				isSelected
 					? 'border-primary bg-primary/5 ring-primary/20 ring-2'
 					: 'border-border/60 hover:border-border hover:bg-muted/30 border-dashed',
@@ -164,7 +168,7 @@ function BlankTableCard({ isSelected, onSelect }: { isSelected: boolean; onSelec
 
 				<div className='min-w-0 flex-1'>
 					<p className={cn('text-sm font-semibold', isSelected && 'text-primary')}>Custom Table (Blank)</p>
-					<p className='text-muted-foreground mt-0.5 text-xs leading-relaxed'>
+					<p className='text-muted-foreground mt-0.5 text-pretty text-xs leading-relaxed'>
 						No fields or RLS policies will be pre-created.
 					</p>
 				</div>

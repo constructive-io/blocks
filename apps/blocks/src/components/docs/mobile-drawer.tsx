@@ -22,9 +22,9 @@ export function MobileDrawer({ open, onOpenChange }: MobileDrawerProps) {
   return (
     <Dialog.Root open={open} onOpenChange={onOpenChange}>
       <Dialog.Portal>
-        <Dialog.Backdrop className="fixed inset-0 z-40 bg-black/40 transition-opacity duration-[var(--dur-slow)] ease-[var(--ease-out)] data-starting-style:opacity-0 data-ending-style:opacity-0 motion-reduce:transition-none" />
+        <Dialog.Backdrop className="fixed inset-0 z-40 bg-black/40 transition-opacity duration-200 ease-[var(--ease-out)] data-starting-style:opacity-0 data-ending-style:opacity-0 motion-reduce:transition-none" />
         <Dialog.Popup
-          className="fixed inset-y-0 left-0 z-50 flex w-[min(20rem,86vw)] flex-col bg-background shadow-surface-6 outline-none transition-transform duration-[var(--dur-slow)] ease-[var(--ease-drawer)] data-starting-style:-translate-x-full data-ending-style:-translate-x-full motion-reduce:transition-none"
+          className="fixed inset-y-0 left-0 z-50 flex w-[min(20rem,86vw)] flex-col bg-background shadow-surface-6 outline-none transition-transform duration-200 ease-[var(--ease-drawer)] data-starting-style:-translate-x-full data-ending-style:-translate-x-full motion-reduce:transition-none"
           style={{ paddingTop: 'env(safe-area-inset-top)', paddingBottom: 'env(safe-area-inset-bottom)' }}
         >
           <Dialog.Title className="sr-only">Registry navigation</Dialog.Title>
@@ -34,7 +34,7 @@ export function MobileDrawer({ open, onOpenChange }: MobileDrawerProps) {
 
           <div className="border-t border-border/60 p-4">
             <div className="flex items-center justify-between pb-1 pl-1">
-              <h2 className="text-[16px] font-semibold leading-none text-foreground">Make it yours</h2>
+              <h2 className="text-[16px] font-semibold leading-none text-balance text-foreground">Make it yours</h2>
               <GitHubChip />
             </div>
             <SettingsRows />

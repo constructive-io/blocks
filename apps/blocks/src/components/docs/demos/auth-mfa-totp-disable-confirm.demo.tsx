@@ -20,7 +20,7 @@ export function BlockDemo() {
         <Button variant="destructive" onClick={() => setOpen(true)}>
           Disable two-factor authentication
         </Button>
-        {status ? <p className="mt-4 text-sm text-muted-foreground">{status}</p> : null}
+        {status ? <p className="text-pretty mt-4 text-sm text-muted-foreground">{status}</p> : null}
         <MfaTotpDisableConfirm
           open={open}
           onOpenChange={setOpen}

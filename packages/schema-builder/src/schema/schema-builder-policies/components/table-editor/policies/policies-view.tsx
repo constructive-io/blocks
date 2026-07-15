@@ -25,7 +25,7 @@ function NoTableSelectedState() {
 			<div className='bg-muted/50 mb-4 flex h-16 w-16 items-center justify-center rounded-full'>
 				<Table2 className='text-muted-foreground h-8 w-8' />
 			</div>
-			<h3 className='mb-1 text-lg font-semibold'>No table selected</h3>
+			<h3 className='mb-1 text-balance text-lg font-semibold'>No table selected</h3>
 			<p className='text-muted-foreground max-w-sm text-center text-sm'>
 				Select a table from the sidebar to view and manage its security policies.
 			</p>
@@ -135,7 +135,7 @@ export function PoliciesView() {
 				<div className='mx-auto w-full max-w-4xl space-y-6'>
 					{/* Header */}
 					<div>
-						<h2 className='text-xl font-semibold tracking-tight'>Policies</h2>
+						<h2 className='text-balance text-xl font-semibold tracking-tight'>Policies</h2>
 						<p className='text-muted-foreground mt-1 text-sm'>
 							{currentTablePolicies.length} polic{currentTablePolicies.length !== 1 ? 'ies' : 'y'} protecting{' '}
 							<code className='bg-muted rounded px-1.5 py-0.5 font-mono text-xs'>{currentTable.name}</code>

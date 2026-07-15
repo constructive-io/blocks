@@ -17,7 +17,7 @@ export function BlockDemo() {
     <Demo>
       <Segmented label="Variant" value={type} options={['password', 'mfa'] as const} onChange={setType} />
       <Button onClick={() => setOpen(true)}>Verify identity</Button>
-      {last ? <p className="mt-4 text-sm text-muted-foreground">Last result: {last}</p> : null}
+      {last ? <p className="text-pretty mt-4 text-sm text-muted-foreground">Last result: {last}</p> : null}
       <StepUpDialog
         open={open}
         type={type}

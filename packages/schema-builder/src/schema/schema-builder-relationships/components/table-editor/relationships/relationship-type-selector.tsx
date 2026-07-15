@@ -99,7 +99,8 @@ export function RelationshipTypeSelector({ value, onChange, disabled }: Relation
 							onClick={() => onChange(option.type)}
 							disabled={disabled}
 							className={cn(
-								'border-border relative flex items-center gap-2 rounded-lg border px-3 py-2.5 text-left transition-all',
+								`border-border relative flex min-h-10 items-center gap-2 rounded-lg border px-3 py-2.5 text-left
+								transition-[background-color,border-color,box-shadow,scale] duration-150 ease-out motion-safe:active:scale-[0.96]`,
 								!isSelected && 'disabled:pointer-events-none disabled:opacity-70',
 							isSelected && 'disabled:pointer-events-none',
 								isSelected
@@ -119,7 +120,7 @@ export function RelationshipTypeSelector({ value, onChange, disabled }: Relation
 								<Icon className={cn('h-4 w-4', option.colors.iconText, option.iconClassName)} />
 							</div>
 							<div className='min-w-0 flex-1 pr-4'>
-								<h3 className='text-xs leading-tight font-semibold'>{option.title}</h3>
+								<h3 className='text-balance text-xs leading-tight font-semibold'>{option.title}</h3>
 								<p className={cn('text-muted-foreground text-[10px]', isSelected && option.colors.iconText)}>
 									{option.subtitle}
 								</p>

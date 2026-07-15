@@ -389,7 +389,7 @@ export function EmailOtpInput({
         <AuthErrorAlert error={error} />
 
         {resendSuccess && (
-          <p aria-live="polite" className="text-sm text-center text-muted-foreground">
+          <p aria-live="polite" className="text-pretty text-sm text-center text-muted-foreground">
             {merged.resendSuccess}
           </p>
         )}

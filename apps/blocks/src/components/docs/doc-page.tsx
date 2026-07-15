@@ -43,7 +43,7 @@ export interface DocPageProps {
 
 export function DocPage({ title, description, installUrl, prev, next, children }: DocPageProps) {
   return (
-    <article className="flex flex-col gap-8">
+    <article className="flex min-w-0 max-w-full flex-col gap-8">
       <header className="flex items-start justify-between gap-4">
         <div className="min-w-0">
           <h1 className="text-h1 text-balance text-foreground max-sm:text-[1.375rem]">{title}</h1>
@@ -55,7 +55,7 @@ export function DocPage({ title, description, installUrl, prev, next, children }
       {installUrl ? (
         <DocSection title="Installation">
           <InstallField url={installUrl} />
-          <p className="text-[12px] text-muted-foreground">
+          <p className="text-pretty text-[12px] text-muted-foreground">
             First install? Complete the one-time{' '}
             <Link
               href="/blocks/getting-started"

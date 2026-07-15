@@ -32,8 +32,8 @@ export const spring = {
   },
   slow: {
     type: 'spring' as const,
-    duration: 0.24,
-    bounce: 0.12,
+    duration: 0.2,
+    bounce: 0,
     exit: { duration: 0.16 },
   },
 } as const;

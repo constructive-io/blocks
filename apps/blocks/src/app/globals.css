@@ -171,7 +171,7 @@
   --ease-drawer: cubic-bezier(0.32, 0.72, 0, 1); /* drawers / sheets */
   --dur-fast: 80ms; /* hover, color, weight, focus */
   --dur: 160ms; /* indicators, small travel */
-  --dur-slow: 240ms; /* panels, dialogs */
+  --dur-slow: 200ms; /* panels, dialogs */
 
   /* ── Surfaces (8-level ladder) — LIGHT (DESIGN.md §1.1) ──
      Canvas #FAFAFA; the ladder compresses to flat white; shadow does the work.
@@ -435,7 +435,7 @@ html {
    snapping via `display`, these classes fade them: `display` is animated with
    `allow-discrete` so the element stays visible across the none↔shown flip,
    while opacity tweens. Durations mirror the `spring.slow` motion token —
-   appear in 0.24s, disappear in 0.16s. The `@starting-style` gives the appear
+   appear in 0.2s, disappear in 0.16s. The `@starting-style` gives the appear
    transition a starting opacity — required for an element to animate out of
    `display:none`. Because the panel's space is already reserved at that width,
    the appear is a pure opacity fade with no layout shift. Browsers without
@@ -460,8 +460,8 @@ html {
   .xl-fade-block {
     opacity: 1;
     transition:
-      opacity 0.24s ease-out,
-      display 0.24s allow-discrete;
+      opacity 0.2s ease-out,
+      display 0.2s allow-discrete;
   }
   @starting-style {
     .xl-fade-flex,

@@ -1,7 +1,7 @@
 'use client';
 
 import { useId } from 'react';
-import { motion } from 'motion/react';
+import { AnimatePresence, motion } from 'motion/react';
 import { ArrowRight, ArrowLeft, ArrowLeftRight, GitBranch } from 'lucide-react';
 
 import { cn } from '../../lib/utils';
@@ -78,7 +78,9 @@ export function RelationshipTypeSelector({
 
   return (
     <div className={cn('space-y-2', className)}>
-      <label className="text-sm font-medium">Relationship Type</label>
+      <label id={`${groupId}-label`} className="text-sm font-medium">
+        Relationship Type
+      </label>
       <div
         role="radiogroup"
         aria-labelledby={`${groupId}-label`}
@@ -104,7 +106,7 @@ export function RelationshipTypeSelector({
                   ? 'border-primary bg-primary/5'
                   : 'border-border hover:border-muted-foreground/30 hover:bg-muted/30'
               )}
-              whileTap={{ scale: disabled ? 1 : 0.99 }}
+              whileTap={{ scale: disabled ? 1 : 0.96 }}
             >
               {/* Radio Circle */}
               <div
@@ -115,13 +117,18 @@ export function RelationshipTypeSelector({
                     : 'border-muted-foreground/40'
                 )}
               >
-                {isSelected && (
-                  <motion.div
-                    initial={{ scale: 0 }}
-                    animate={{ scale: 1 }}
-                    className="h-1.5 w-1.5 rounded-full bg-primary-foreground"
-                  />
-                )}
+                <AnimatePresence initial={false}>
+                  {isSelected ? (
+                    <motion.div
+                      key="selected"
+                      initial={{ opacity: 0, scale: 0.25, filter: 'blur(4px)' }}
+                      animate={{ opacity: 1, scale: 1, filter: 'blur(0px)' }}
+                      exit={{ opacity: 0, scale: 0.25, filter: 'blur(4px)' }}
+                      transition={{ type: 'spring', duration: 0.3, bounce: 0 }}
+                      className="size-1.5 rounded-full bg-primary-foreground"
+                    />
+                  ) : null}
+                </AnimatePresence>
               </div>
 
               {/* Content */}

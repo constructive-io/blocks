@@ -16,7 +16,7 @@ export function BlockDemo() {
       {dismissed ? (
         <button
           type="button"
-          className="text-xs text-muted-foreground underline underline-offset-4"
+          className="inline-flex min-h-11 items-center rounded-md px-2 text-xs text-muted-foreground underline underline-offset-4 transition-[color,scale] duration-150 ease-out hover:text-foreground motion-safe:active:scale-[0.96] motion-reduce:transition-none sm:min-h-10"
           onClick={() => setDismissed(false)}
         >
           Restore banner

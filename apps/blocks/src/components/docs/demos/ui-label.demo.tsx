@@ -20,7 +20,7 @@ export function BlockDemo() {
             Billing email <span className="text-destructive">*</span>
           </Label>
           <Input id="api-email" type="email" placeholder="billing@acme.com" />
-          <p className="text-sm text-muted-foreground">Receipts and usage alerts are sent here.</p>
+          <p className="text-pretty text-sm text-muted-foreground">Receipts and usage alerts are sent here.</p>
         </div>
 
         <div className="flex items-center gap-2">

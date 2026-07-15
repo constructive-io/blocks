@@ -619,7 +619,7 @@ function SheetContent({
 	}, [isOpen, sheetsAbove, isTargetInsideSheet, isTargetInsidePopup, close]);
 
 	return (
-		<AnimatePresence>
+		<AnimatePresence initial={false}>
 			{isOpen && (
 				<SheetPortal data-slot='sheet-portal'>
 					{/* Only show overlay for the first (bottom-most) sheet in stack */}
@@ -632,7 +632,7 @@ function SheetContent({
 							animate={{ opacity: 1 }}
 							exit={{ opacity: 0 }}
 							transition={{ duration: durations.fast, ease: 'easeOut' }}
-							style={{ willChange: 'opacity', zIndex: 'var(--z-layer-modal-backdrop)' }}
+							style={{ zIndex: 'var(--z-layer-modal-backdrop)' }}
 						/>
 					)}
 					<SheetPrimitive.Popup
@@ -656,10 +656,7 @@ function SheetContent({
 								animate='animate'
 								exit='exit'
 								transition={transition}
-								style={{
-									zIndex,
-									willChange: 'transform',
-								}}
+								style={{ zIndex }}
 								className={cn(sheetVariants({ side: resolvedSide }), className)}
 							/>
 						}

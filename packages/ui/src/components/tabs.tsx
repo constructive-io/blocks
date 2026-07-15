@@ -28,8 +28,8 @@ function TabsTrigger({ className, ...props }: React.ComponentProps<typeof TabsPr
 			data-slot="tabs-trigger"
 			className={cn(
 				`hover:text-muted-foreground data-[active]:bg-background data-[active]:text-foreground
-				focus-visible:border-ring focus-visible:ring-ring/50 inline-flex items-center justify-center rounded-sm px-3
-				py-1.5 text-sm font-medium whitespace-nowrap transition-all outline-none focus-visible:ring-[3px]
+					focus-visible:border-ring focus-visible:ring-ring/50 inline-flex min-h-10 min-w-10 items-center justify-center rounded-[calc(var(--radius-md)-2px)] px-3
+					text-sm font-medium whitespace-nowrap transition-[color,background-color,box-shadow] outline-none pointer-coarse:min-h-11 focus-visible:ring-[3px]
 				data-[disabled]:pointer-events-none data-[disabled]:opacity-50 data-[active]:shadow-xs [&_svg]:shrink-0`,
 				className,
 			)}

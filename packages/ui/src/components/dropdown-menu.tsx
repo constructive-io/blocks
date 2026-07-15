@@ -186,7 +186,10 @@ function DropdownMenuCheckboxItem({
 			{...props}
 		>
 			<span className='pointer-events-none absolute left-2 flex size-3.5 items-center justify-center'>
-				<MenuPrimitive.CheckboxItemIndicator>
+					<MenuPrimitive.CheckboxItemIndicator
+						keepMounted
+						className='transition-[opacity,scale,filter] duration-300 ease-[cubic-bezier(0.2,0,0,1)] data-unchecked:scale-[0.25] data-unchecked:opacity-0 data-unchecked:blur-[4px] motion-reduce:transition-none'
+					>
 					<CheckIcon size={16} />
 				</MenuPrimitive.CheckboxItemIndicator>
 			</span>
@@ -216,7 +219,10 @@ function DropdownMenuRadioItem({
 			{...props}
 		>
 			<span className='pointer-events-none absolute left-2 flex size-3.5 items-center justify-center'>
-				<MenuPrimitive.RadioItemIndicator>
+					<MenuPrimitive.RadioItemIndicator
+						keepMounted
+						className='transition-[opacity,scale,filter] duration-300 ease-[cubic-bezier(0.2,0,0,1)] data-unchecked:scale-[0.25] data-unchecked:opacity-0 data-unchecked:blur-[4px] motion-reduce:transition-none'
+					>
 					<CircleIcon className='size-2 fill-current' />
 				</MenuPrimitive.RadioItemIndicator>
 			</span>

@@ -64,7 +64,7 @@ export function SsoSetupCard({ orgId: _orgId, messages: messageOverrides, classN
         </div>
 
         <div className="space-y-2">
-          <p className="text-muted-foreground text-xs font-medium uppercase tracking-wide">
+          <p className="text-pretty text-muted-foreground text-xs font-medium uppercase tracking-wide">
             {merged.protocolsSectionLabel}
           </p>
           <ul className="space-y-1 list-none" aria-label={merged.protocolsAriaLabel}>

@@ -54,7 +54,7 @@ beforeEach(() => {
   gsapHarness.fromTo.mockImplementation(() => {
     const kill = vi.fn();
     gsapHarness.marqueeKills.push(kill);
-    return { kill };
+    return { kill, pause: vi.fn(), play: vi.fn() };
   });
   gsapHarness.quickTo.mockImplementation(() => {
     const setTarget = vi.fn();

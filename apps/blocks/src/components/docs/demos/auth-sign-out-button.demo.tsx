@@ -21,7 +21,7 @@ export function BlockDemo() {
         onSuccess={() => setStatus('Signed out — query cache cleared')}
         onError={() => setStatus('Sign-out failed')}
       />
-      {status ? <p className="mt-4 text-sm text-muted-foreground">{status}</p> : null}
+      {status ? <p className="text-pretty mt-4 text-sm text-muted-foreground">{status}</p> : null}
     </Demo>
   );
 }

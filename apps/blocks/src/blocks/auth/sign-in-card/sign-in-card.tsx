@@ -302,7 +302,7 @@ export function SignInCard({
                 <Button
                   variant="link"
                   asChild
-                  className="text-muted-foreground hover:text-foreground h-auto p-0 text-sm"
+                  className="text-muted-foreground hover:text-foreground min-h-11 px-2 py-0 text-sm sm:min-h-10"
                 >
                   <a href={forgotPasswordHref}>{merged.forgotPasswordLabel}</a>
                 </Button>
@@ -314,9 +314,9 @@ export function SignInCard({
 
       {signUpHref && (
         <CardFooter className="border-border/40 justify-center border-t pt-5">
-          <p className="text-muted-foreground text-center text-sm">
+          <p className="text-pretty text-muted-foreground text-center text-sm">
             {merged.signUpPrompt}{' '}
-            <Button variant="link" asChild className="text-primary hover:text-primary/80 h-auto p-0 font-medium">
+            <Button variant="link" asChild className="text-primary hover:text-primary/80 min-h-11 px-2 py-0 font-medium sm:min-h-10">
               <a href={signUpHref}>{merged.signUpLabel}</a>
             </Button>
           </p>

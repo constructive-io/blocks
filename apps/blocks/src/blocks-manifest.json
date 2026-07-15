@@ -5,7 +5,7 @@
     "registry": "registry.json",
     "uiRegistry": "packages/ui/registry.json",
     "schemaRegistry": "packages/schema-builder/registry.json",
-    "hash": "2a07a1c2fdaf156b25aa9ee33ce079c6a946681941f72bd74c4db2447885786a"
+    "hash": "5bd94ad37b68b1a7fd779a3185ad8d68acd4b60fe98cd46129e1520d1284c9fe"
   },
   "counts": {
     "total": 76,

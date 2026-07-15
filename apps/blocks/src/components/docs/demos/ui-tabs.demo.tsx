@@ -15,22 +15,22 @@ export function BlockDemo() {
         </TabsList>
         <TabsContent value="overview" className="mt-4">
           <div className="rounded-lg border bg-background p-4 text-sm">
-            <p className="font-medium">production-db</p>
-            <p className="mt-1 text-muted-foreground">
+            <p className="text-pretty font-medium">production-db</p>
+            <p className="text-pretty mt-1 text-muted-foreground">
               PostgreSQL 17 · us-east-1 · 12 tables, 4 schemas.
             </p>
           </div>
         </TabsContent>
         <TabsContent value="usage" className="mt-4">
           <div className="rounded-lg border bg-background p-4 text-sm">
-            <p className="font-medium">This month</p>
-            <p className="mt-1 text-muted-foreground">1.2M rows read · 84K rows written · 38 active keys.</p>
+            <p className="text-pretty font-medium">This month</p>
+            <p className="text-pretty mt-1 text-muted-foreground">1.2M rows read · 84K rows written · 38 active keys.</p>
           </div>
         </TabsContent>
         <TabsContent value="settings" className="mt-4">
           <div className="rounded-lg border bg-background p-4 text-sm">
-            <p className="font-medium">Access</p>
-            <p className="mt-1 text-muted-foreground">Row-level security on · 3 roles · public reads disabled.</p>
+            <p className="text-pretty font-medium">Access</p>
+            <p className="text-pretty mt-1 text-muted-foreground">Row-level security on · 3 roles · public reads disabled.</p>
           </div>
         </TabsContent>
       </Tabs>

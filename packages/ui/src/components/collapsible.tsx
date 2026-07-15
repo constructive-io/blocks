@@ -99,8 +99,8 @@ type CollapsiblePanelProps = CollapsiblePrimitive.Panel.Props & {
 
 /**
  * CollapsiblePanel
- * Animated container for collapsible content.
- * Uses CSS height transitions with Base UI's data attributes.
+ * Compositor-animated reveal for collapsible content.
+ * Geometry snaps to its measured height while opacity/translation carry the state change.
  */
 const CollapsiblePanel = React.forwardRef<HTMLDivElement, CollapsiblePanelProps>(
   ({ className, innerClassName, children, ...props }, ref) => {
@@ -110,8 +110,8 @@ const CollapsiblePanel = React.forwardRef<HTMLDivElement, CollapsiblePanelProps>
         data-slot="collapsible-panel"
         className={cn(
           "h-[var(--collapsible-panel-height)] overflow-hidden text-sm",
-          "transition-[height] duration-200 ease-out",
-          "data-[ending-style]:h-0 data-[starting-style]:h-0",
+          "origin-top transition-[opacity,transform] duration-200 ease-out motion-reduce:transition-none",
+          "data-[ending-style]:translate-y-1 data-[ending-style]:opacity-0 data-[starting-style]:translate-y-1 data-[starting-style]:opacity-0",
           className
         )}
         {...props}

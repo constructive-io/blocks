@@ -153,8 +153,8 @@ export function MfaTotpDisableConfirm({
         <div className="px-6 pb-2 space-y-3">
           {/* Prominent security warning — both texts visible simultaneously per spec */}
           <div className="rounded-md border border-destructive/30 bg-destructive/8 px-3 py-2.5 space-y-1.5">
-            <p className="text-sm text-destructive font-medium">{merged.warningText}</p>
-            <p className="text-sm text-destructive/80">{merged.backupCodesWarning}</p>
+            <p className="text-pretty text-sm text-destructive font-medium">{merged.warningText}</p>
+            <p className="text-pretty text-sm text-destructive/80">{merged.backupCodesWarning}</p>
           </div>
 
           {/* Async error alert (aria-live="polite" is inside AuthErrorAlert) */}

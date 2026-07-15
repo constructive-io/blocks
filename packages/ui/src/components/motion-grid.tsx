@@ -1,7 +1,7 @@
 'use client';
 
 import * as React from 'react';
-import { motion, type HTMLMotionProps } from 'motion/react';
+import { motion, type HTMLMotionProps, useReducedMotion } from 'motion/react';
 
 import { easings } from '../lib/motion/motion-config';
 import { cn } from '../lib/utils';
@@ -37,12 +37,17 @@ const MotionGrid = ({
 	const frames = useLoadingFrames(cols, rows);
 	const [index, setIndex] = React.useState(0);
 	const intervalRef = React.useRef<NodeJS.Timeout | null>(null);
+	const prefersReducedMotion = useReducedMotion();
+	const shouldAnimate = animate && !prefersReducedMotion;
 
 	React.useEffect(() => {
-		if (!animate || frames.length === 0) return;
+		if (!shouldAnimate || frames.length === 0) {
+			setIndex(0);
+			return;
+		}
 		intervalRef.current = setInterval(() => setIndex((i) => (i + 1) % frames.length), duration);
 		return () => clearInterval(intervalRef.current!);
-	}, [frames.length, duration, animate]);
+	}, [frames.length, duration, shouldAnimate]);
 
 	const active = new Set<number>(frames[index]?.map(([x, y]) => y * cols + x) ?? []);
 
@@ -68,7 +73,7 @@ const MotionGrid = ({
 					)}
 					{...cellProps}
 					// Convert ms to seconds for motion library
-					transition={{ duration: duration / 1000, ease: easings.easeInOut }}
+					transition={prefersReducedMotion ? { duration: 0 } : { duration: duration / 1000, ease: easings.easeInOut }}
 				/>
 			))}
 		</div>

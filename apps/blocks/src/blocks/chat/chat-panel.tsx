@@ -52,8 +52,8 @@ export function ChatPanel({ variant = 'floating', className }: ChatPanelProps) {
                 <button
                   type='button'
                   onClick={clearMessages}
-                  title='Clear messages'
-                  className='text-muted-foreground hover:text-foreground cursor-pointer rounded-xs p-1 transition-colors'
+                  aria-label='Clear messages'
+                  className='text-muted-foreground hover:text-foreground inline-flex size-11 cursor-pointer items-center justify-center rounded-md transition-[color,scale] duration-150 ease-out motion-safe:active:scale-[0.96] motion-reduce:transition-none sm:size-10'
                 >
                   <Trash2 className='h-4 w-4' />
                 </button>
@@ -61,8 +61,8 @@ export function ChatPanel({ variant = 'floating', className }: ChatPanelProps) {
               <button
                 type='button'
                 onClick={() => setShowSettings(true)}
-                title='Settings'
-                className='text-muted-foreground hover:text-foreground cursor-pointer rounded-xs p-1 transition-colors'
+                aria-label='Open chat settings'
+                className='text-muted-foreground hover:text-foreground inline-flex size-11 cursor-pointer items-center justify-center rounded-md transition-[color,scale] duration-150 ease-out motion-safe:active:scale-[0.96] motion-reduce:transition-none sm:size-10'
               >
                 <Settings className='h-4 w-4' />
               </button>
@@ -70,8 +70,8 @@ export function ChatPanel({ variant = 'floating', className }: ChatPanelProps) {
                 <button
                   type='button'
                   onClick={() => setIsOpen(false)}
-                  title='Collapse'
-                  className='text-muted-foreground hover:text-foreground cursor-pointer rounded-xs p-1 transition-colors'
+                  aria-label='Collapse chat'
+                  className='text-muted-foreground hover:text-foreground inline-flex size-11 cursor-pointer items-center justify-center rounded-md transition-[color,scale] duration-150 ease-out motion-safe:active:scale-[0.96] motion-reduce:transition-none sm:size-10'
                 >
                   <ChevronDown className='h-4 w-4' />
                 </button>
@@ -86,8 +86,8 @@ export function ChatPanel({ variant = 'floating', className }: ChatPanelProps) {
                 <Bot className='text-muted-foreground h-5 w-5' />
               </div>
               <div className='text-center'>
-                <p className='text-sm font-medium'>How can I help?</p>
-                <p className='text-muted-foreground mt-1 text-xs'>{subtitle}</p>
+                <p className='text-pretty text-sm font-medium'>How can I help?</p>
+                <p className='text-muted-foreground mt-1 text-pretty text-xs'>{subtitle}</p>
               </div>
               {suggestions.length > 0 && (
                 <div className='flex w-full flex-col gap-2'>
@@ -96,7 +96,7 @@ export function ChatPanel({ variant = 'floating', className }: ChatPanelProps) {
                       key={s}
                       type='button'
                       onClick={() => sendMessage(s)}
-                      className='bg-muted hover:bg-muted/80 cursor-pointer rounded-md px-3 py-2 text-left text-xs transition-colors'
+                      className='bg-muted hover:bg-muted/80 min-h-11 cursor-pointer rounded-md px-3 py-2 text-left text-pretty text-xs transition-[background-color,scale] duration-150 ease-out motion-safe:active:scale-[0.96] motion-reduce:transition-none sm:min-h-10'
                     >
                       {s}
                     </button>
@@ -116,7 +116,7 @@ export function ChatPanel({ variant = 'floating', className }: ChatPanelProps) {
           {/* Error */}
           {error && (
             <div className='border-t px-4 py-2'>
-              <p className='text-destructive text-xs'>{error}</p>
+              <p className='text-destructive text-pretty text-xs'>{error}</p>
             </div>
           )}
 
@@ -134,8 +134,8 @@ export function ChatPanel({ variant = 'floating', className }: ChatPanelProps) {
       <div className={cn('flex h-full flex-col', className)}>
         <div
           className={cn(
-            'flex min-h-0 flex-1 flex-col overflow-hidden rounded-lg border bg-white/60 shadow-xs backdrop-blur-lg',
-            'dark:bg-white/5 [&_button]:cursor-pointer',
+            'bg-card flex min-h-0 flex-1 flex-col overflow-hidden rounded-lg border shadow-xs',
+            '[&_button]:cursor-pointer',
           )}
         >
           {panelContent}
@@ -147,15 +147,18 @@ export function ChatPanel({ variant = 'floating', className }: ChatPanelProps) {
   return (
     <motion.div
       id='chat-panel'
-      initial={{ y: 20, opacity: 0 }}
+      initial={{ y: 12, opacity: 0 }}
       animate={{ y: 0, opacity: 1 }}
-      exit={{ y: 20, opacity: 0 }}
+      exit={{ y: 12, opacity: 0 }}
       transition={{ type: 'spring', stiffness: 400, damping: 30 }}
       className={cn(
-        'bg-card fixed bottom-20 right-4 z-[500] flex w-[400px] max-w-[calc(100vw-2rem)] flex-col overflow-hidden rounded-lg border shadow-lg [&_button]:cursor-pointer',
+        'bg-card fixed z-40 flex w-[400px] max-w-[calc(100vw-2rem-env(safe-area-inset-left)-env(safe-area-inset-right))] flex-col overflow-hidden rounded-lg border shadow-lg [right:calc(1rem+env(safe-area-inset-right))] [bottom:calc(5rem+env(safe-area-inset-bottom))] [&_button]:cursor-pointer',
         className,
       )}
-      style={{ maxHeight: '600px' }}
+      style={{
+        maxHeight:
+          'min(600px, calc(100dvh - 7rem - env(safe-area-inset-top) - env(safe-area-inset-bottom)))',
+      }}
     >
       {panelContent}
     </motion.div>

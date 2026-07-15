@@ -23,7 +23,7 @@ export function BlockDemo() {
   if (signedOut) {
     return (
       <Demo>
-        <p className="text-sm text-muted-foreground">
+        <p className="text-pretty text-sm text-muted-foreground">
           Signed out — reset the preview to reload.
         </p>
       </Demo>

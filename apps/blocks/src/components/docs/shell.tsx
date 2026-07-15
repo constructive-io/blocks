@@ -9,7 +9,7 @@ import { useThemeHotkey } from '@/components/landing/theme-toggle';
 
 import { MobileDrawer } from './mobile-drawer';
 import { RightPanel } from './right-panel';
-import { Sidebar } from './sidebar';
+import { Sidebar, SidebarBrand } from './sidebar';
 import { SiteButton } from './site-button';
 import { usePagerKeys } from './use-pager-keys';
 
@@ -32,34 +32,35 @@ export function Shell({ children }: { children: React.ReactNode }) {
 
   return (
     <MotionConfig reducedMotion="user">
-      <div className="isolate flex min-h-screen">
+      <div className="isolate flex min-h-dvh">
         <Baseplate />
 
         {/* First focusable element — hidden until keyboard focus, then revealed
             top-left as a chip that jumps focus past the chrome to the content. */}
         <a
           href="#main"
-          className="sr-only z-[60] rounded-lg border border-border bg-surface-3 px-3 py-1.5 text-[13px] font-medium text-foreground shadow-surface-5 outline-none focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:ring-1 focus:ring-ring"
+          className="sr-only z-50 rounded-lg border border-border bg-surface-3 px-3 py-1.5 text-[13px] font-medium text-foreground shadow-surface-5 outline-none focus:not-sr-only focus:fixed focus:[left:calc(1rem+env(safe-area-inset-left))] focus:[top:calc(1rem+env(safe-area-inset-top))] focus:ring-1 focus:ring-ring"
         >
           Skip to content
         </a>
 
         <Sidebar />
 
-        {/* Floating hamburger — mobile only; opens the drawer. */}
-        <SiteButton
-          variant="ghost"
-          size="icon"
-          aria-label="Open navigation"
-          onClick={() => setDrawerOpen(true)}
-          className="fixed left-4 top-4 z-50 xl:hidden"
-        >
-          <Menu />
-        </SiteButton>
+        {/* Dedicated mobile header — keeps navigation clear of scrolled prose. */}
+        <div className="fixed inset-x-0 top-0 z-40 flex h-[calc(3.75rem+env(safe-area-inset-top))] items-end gap-2 bg-background pb-2 pt-[calc(0.5rem+env(safe-area-inset-top))] shadow-surface-2 [padding-left:calc(0.75rem+env(safe-area-inset-left))] [padding-right:calc(0.75rem+env(safe-area-inset-right))] xl:hidden">
+          <SiteButton variant="ghost" size="icon" aria-label="Open navigation" onClick={() => setDrawerOpen(true)}>
+            <Menu />
+          </SiteButton>
+          <SidebarBrand />
+        </div>
 
         <MobileDrawer open={drawerOpen} onOpenChange={setDrawerOpen} />
 
-        <main id="main" tabIndex={-1} className="min-w-0 flex-1 outline-none">
+        <main
+          id="main"
+          tabIndex={-1}
+          className="min-w-0 max-w-full flex-1 pt-[calc(3.75rem+env(safe-area-inset-top))] outline-none xl:pt-0"
+        >
           {children}
         </main>
 

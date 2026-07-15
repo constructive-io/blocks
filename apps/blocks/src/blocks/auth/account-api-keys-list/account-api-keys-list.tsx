@@ -246,7 +246,7 @@ export function AccountApiKeysList({
           </Button>
         </div>
         {isMaxReached && (
-          <p className="text-muted-foreground text-xs mt-1" role="note">
+          <p className="text-pretty text-muted-foreground text-xs mt-1" role="note">
             {merged.maxKeysReached}
           </p>
         )}
@@ -256,7 +256,7 @@ export function AccountApiKeysList({
         <AuthErrorAlert error={error} />
 
         {keys.length === 0 ? (
-          <p className="text-muted-foreground text-sm">{merged.noKeysDescription}</p>
+          <p className="text-pretty text-muted-foreground text-sm">{merged.noKeysDescription}</p>
         ) : (
           <ul role="list" className="space-y-0 list-none">
             {keys.map((key, idx) => {

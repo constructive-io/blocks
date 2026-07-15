@@ -27,7 +27,7 @@ function UseStepUpDemo() {
       <Button variant="destructive" onClick={run}>
         Delete account
       </Button>
-      {last ? <p className="mt-4 text-sm text-muted-foreground">stepUp(): {last}</p> : null}
+      {last ? <p className="text-pretty mt-4 text-sm text-muted-foreground">stepUp(): {last}</p> : null}
     </Demo>
   );
 }

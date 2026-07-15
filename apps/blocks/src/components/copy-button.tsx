@@ -13,6 +13,7 @@
 
 import { useState } from 'react';
 import { Check, Copy } from 'lucide-react';
+import { AnimatePresence, motion } from 'motion/react';
 
 import { cn } from '@/lib/utils';
 
@@ -33,29 +34,24 @@ export function CopyButton({ value, className }: { value: string; className?: st
         }
       }}
       className={cn(
-        'group inline-flex size-7 shrink-0 items-center justify-center rounded-lg text-muted-foreground outline-none cursor-pointer',
-        'transition-[color,background-color] duration-[var(--dur-fast)] hover:bg-hover hover:text-foreground',
+        'group inline-flex size-11 shrink-0 items-center justify-center rounded-lg text-muted-foreground outline-none cursor-pointer sm:size-10',
+        'transition-[color,background-color,scale] duration-150 ease-out hover:bg-hover hover:text-foreground motion-safe:active:scale-[0.96] motion-reduce:transition-none',
         'focus-visible:ring-1 focus-visible:ring-ring',
         className,
       )}
     >
-      {/* Stacked icons — cross-fade + scale so copy morphs into check in place. */}
-      <span className="relative inline-flex size-3.5 items-center justify-center transition-transform duration-[var(--dur-fast)] [&_svg]:absolute [&_svg]:size-3.5 motion-safe:group-active:scale-90">
-        <Copy
-          aria-hidden
-          className={cn(
-            'transition-[opacity,scale] duration-[var(--dur-fast)] ease-[var(--ease-out)] motion-reduce:transition-none',
-            copied ? 'scale-50 opacity-0' : 'scale-100 opacity-100',
-          )}
-        />
-        <Check
-          aria-hidden
-          className={cn(
-            'transition-[opacity,scale] duration-[var(--dur-fast)] ease-[var(--ease-out)] motion-reduce:transition-none',
-            copied ? 'scale-100 opacity-100' : 'scale-50 opacity-0',
-          )}
-        />
-      </span>
+      <AnimatePresence mode="popLayout" initial={false}>
+        <motion.span
+          key={copied ? 'copied' : 'copy'}
+          initial={{ opacity: 0, scale: 0.25, filter: 'blur(4px)' }}
+          animate={{ opacity: 1, scale: 1, filter: 'blur(0px)' }}
+          exit={{ opacity: 0, scale: 0.25, filter: 'blur(4px)' }}
+          transition={{ type: 'spring', duration: 0.3, bounce: 0 }}
+          className="inline-flex size-3.5 items-center justify-center"
+        >
+          {copied ? <Check aria-hidden className="size-3.5" /> : <Copy aria-hidden className="size-3.5" />}
+        </motion.span>
+      </AnimatePresence>
       {/* Announce the copy to assistive tech — the icon swap alone is silent.
           role="status" implies aria-live="polite"; the region must exist before
           its text changes, so it's always rendered (empty when idle). */}

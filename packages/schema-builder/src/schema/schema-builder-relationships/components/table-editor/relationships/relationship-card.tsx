@@ -636,7 +636,9 @@ export const RelationshipCard: CardComponent<RelationshipCardProps> = ({
 							<button
 								type='button'
 								onClick={() => setShowAdvanced(!showAdvanced)}
-								className='flex w-full items-center gap-2 px-4 py-3 text-left text-sm font-medium'
+								className='flex min-h-10 w-full items-center gap-2 rounded-lg px-4 py-3 text-left text-sm font-medium
+									transition-[background-color,scale] duration-150 ease-out hover:bg-muted/40 motion-safe:active:scale-[0.96]'
+								aria-expanded={showAdvanced}
 							>
 								<ChevronRight
 									className={cn('text-muted-foreground h-4 w-4 transition-transform', showAdvanced && 'rotate-90')}

@@ -94,7 +94,11 @@ export default function SignInPage({ className }: { className?: string }) {
       {BRAND_LOGO_SRC && (
         <div className="mb-8 flex justify-center">
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={BRAND_LOGO_SRC} alt="Brand logo" className="h-8 w-auto" />
+          <img
+            src={BRAND_LOGO_SRC}
+            alt="Brand logo"
+            className="h-8 w-auto outline outline-1 -outline-offset-1 outline-black/10 dark:outline-white/10"
+          />
         </div>
       )}
 

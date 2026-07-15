@@ -35,7 +35,7 @@ export default function ForgotPasswordPage() {
   const email = searchParams.get('email') ?? undefined;
 
   return (
-    <main data-slot="forgot-password-page" className="flex min-h-screen items-center justify-center px-4 py-12">
+    <main data-slot="forgot-password-page" className="flex min-h-dvh items-center justify-center px-4 py-12">
       <ForgotPasswordCard
         defaultEmail={email}
         signInHref={SIGN_IN_PATH}

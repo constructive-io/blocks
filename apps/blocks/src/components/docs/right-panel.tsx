@@ -90,7 +90,7 @@ function PmControl() {
       aria-label="Package manager"
       value={pm}
       onChange={(e) => setPm(e.target.value as PackageManager)}
-      className="h-7 cursor-pointer rounded-lg bg-transparent px-2 text-[13px] text-foreground outline-none transition-colors duration-[var(--dur-fast)] hover:bg-hover active:bg-active focus-visible:ring-1 focus-visible:ring-ring"
+      className="h-11 cursor-pointer rounded-lg bg-transparent px-2 text-[13px] text-foreground outline-none transition-[color,background-color,scale] duration-150 ease-out hover:bg-hover active:bg-active motion-safe:active:scale-[0.96] motion-reduce:transition-none focus-visible:ring-1 focus-visible:ring-ring sm:h-10"
     >
       {PACKAGE_MANAGERS.map((p) => (
         <option key={p} value={p}>
@@ -123,13 +123,13 @@ export function RightPanel() {
   return (
     <aside className="xl-fade-block sticky top-4 mr-4 mt-4 w-64 shrink-0 self-start rounded-xl bg-muted p-4">
       <div className="flex items-center justify-between pb-2 pl-1 pt-2">
-        <h2 className="text-[16px] font-semibold leading-none text-foreground">Make it yours</h2>
+        <h2 className="text-balance text-[16px] font-semibold leading-none text-foreground">Make it yours</h2>
         <GitHubChip />
       </div>
       <SettingsRows />
       <div className="flex items-center gap-2 pt-2">
         <RegistryMark size={18} className="shrink-0" />
-        <p className="text-[13px] text-muted-foreground">
+        <p className="text-pretty text-[13px] text-muted-foreground">
           Built by{' '}
           <a
             href={GITHUB_ORG_URL}

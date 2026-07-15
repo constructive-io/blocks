@@ -260,7 +260,7 @@ export function UserContextSwitcher({
         {orgContexts.length === 0 && showCreateOrgLink && (
           <>
             <DropdownMenuSeparator />
-            <p className="px-2 py-1.5 text-xs text-muted-foreground">{merged.noOrgsHint}</p>
+            <p className="text-pretty px-2 py-1.5 text-xs text-muted-foreground">{merged.noOrgsHint}</p>
           </>
         )}
 

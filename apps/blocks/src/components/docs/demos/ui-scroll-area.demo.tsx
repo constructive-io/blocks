@@ -12,7 +12,7 @@ export function BlockDemo() {
       <div className="w-full max-w-xs">
         <ScrollArea scrollFade className="h-72 w-full rounded-md border bg-background">
           <div className="p-4">
-            <h4 className="mb-3 text-sm font-medium leading-none">Releases</h4>
+            <h4 className="mb-3 text-balance text-sm font-medium leading-none">Releases</h4>
             {TAGS.map((tag) => (
               <div key={tag} className="border-b py-2 text-sm last:border-0">
                 production-db <span className="text-muted-foreground">· {tag}</span>

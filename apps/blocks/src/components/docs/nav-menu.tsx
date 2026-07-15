@@ -149,7 +149,7 @@ const NavMenu = forwardRef<HTMLElement, NavMenuProps>(({ children, activeSlug, c
         {...props}
       >
         {/* Active route background */}
-        <AnimatePresence>
+        <AnimatePresence initial={false}>
           {activeRouteRect && (
             <motion.div
               className="pointer-events-none absolute left-0 top-0 rounded-lg bg-active"
@@ -167,7 +167,7 @@ const NavMenu = forwardRef<HTMLElement, NavMenuProps>(({ children, activeSlug, c
         </AnimatePresence>
 
         {/* Hover background */}
-        <AnimatePresence>
+        <AnimatePresence initial={false}>
           {activeRect && (
             <motion.div
               key={session}
@@ -190,7 +190,7 @@ const NavMenu = forwardRef<HTMLElement, NavMenuProps>(({ children, activeSlug, c
         </AnimatePresence>
 
         {/* Focus ring */}
-        <AnimatePresence>
+        <AnimatePresence initial={false}>
           {focusRect && (
             <motion.div
               className="pointer-events-none absolute left-0 top-0 z-20 rounded-[10px] border border-[color:var(--ring)]"
@@ -260,7 +260,10 @@ const NavMenuItem = forwardRef<HTMLAnchorElement, NavMenuItemProps>(
         data-nav-index={index}
         tabIndex={tabIdx}
         aria-current={isActiveRoute ? 'page' : undefined}
-        className={cn('relative z-10 flex h-8 cursor-pointer items-center rounded-lg px-3 outline-none', className)}
+        className={cn(
+          'relative z-10 flex h-11 cursor-pointer items-center rounded-lg px-3 outline-none transition-transform duration-150 ease-out motion-safe:active:scale-[0.96] motion-reduce:transition-none sm:h-10',
+          className,
+        )}
         {...props}
       >
         {Icon && (

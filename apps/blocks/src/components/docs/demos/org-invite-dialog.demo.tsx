@@ -19,7 +19,7 @@ export function BlockDemo() {
         Invite member
       </Button>
       {lastResult ? (
-        <p className="mt-4 text-sm text-muted-foreground">{lastResult}</p>
+        <p className="text-pretty mt-4 text-sm text-muted-foreground">{lastResult}</p>
       ) : null}
       <InviteDialog
         orgId="org_demo_01"

@@ -33,7 +33,7 @@ export default function IntroductionPage() {
     <DocPage title={TITLE} description={DESCRIPTION} prev={prev} next={next}>
       <section className="flex flex-col gap-6">
         <div className="flex flex-col gap-2">
-          <h3 className="text-[16px] leading-none font-semibold text-foreground">Copy-in, data path wired</h3>
+          <h3 className="text-balance text-[16px] leading-none font-semibold text-foreground">Copy-in, data path wired</h3>
           <p className={proseCls}>
             Constructive Blocks are copy-in React components with their data path already wired. Every data block calls a
             generated React-Query hook from your application’s <InlineCode>@/generated/&lt;namespace&gt;</InlineCode> SDK
@@ -43,7 +43,7 @@ export default function IntroductionPage() {
         </div>
 
         <div className="flex flex-col gap-2">
-          <h3 className="text-[16px] leading-none font-semibold text-foreground">One runtime, one wiring point</h3>
+          <h3 className="text-balance text-[16px] leading-none font-semibold text-foreground">One runtime, one wiring point</h3>
           <p className={proseCls}>
             One small runtime — <InlineCode>BlocksRuntime</InlineCode> — is the single wiring point: it configures each
             namespace’s SDK and shares one <InlineCode>QueryClient</InlineCode>, so blocks never mount providers or read
@@ -52,7 +52,7 @@ export default function IntroductionPage() {
         </div>
 
         <div className="flex flex-col gap-2">
-          <h3 className="text-[16px] leading-none font-semibold text-foreground">Built on the UI foundation</h3>
+          <h3 className="text-balance text-[16px] leading-none font-semibold text-foreground">Built on the UI foundation</h3>
           <p className={proseCls}>
             Every block is built from the same <DocLink href="/blocks/ui/button">UI foundation</DocLink>,{' '}
             <InlineCode>@constructive-io/ui</InlineCode>, which ships in this registry too — use it as a package or copy
@@ -61,7 +61,7 @@ export default function IntroductionPage() {
         </div>
 
         <div className="flex flex-col gap-2">
-          <h3 className="text-[16px] leading-none font-semibold text-foreground">Honest about what’s live</h3>
+          <h3 className="text-balance text-[16px] leading-none font-semibold text-foreground">Honest about what’s live</h3>
           <p className={proseCls}>
             Each block states its backend availability, from <em className="text-foreground not-italic">Ready</em> to{' '}
             <em className="text-foreground not-italic">Planned</em>, so you always know what is live.
@@ -87,7 +87,7 @@ export default function IntroductionPage() {
               <InstallField url="@constructive/auth-sign-in-card" align="left" className="w-fit" />
             </div>
           </div>
-          <p className="text-caption text-muted-foreground">
+          <p className="text-caption text-pretty text-muted-foreground">
             Its whole graph — the runtime, the UI foundation, shared utilities — resolves automatically. Want the
             reasoning first? Read <DocLink href="/blocks/concepts/why-blocks">Why blocks</DocLink>. Building a whole
             capability? Start from a <DocLink href="/blocks/flows/authentication/email-password">flow</DocLink> — the

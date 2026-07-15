@@ -287,7 +287,7 @@ export function SignUpCard({
                       aria-label="Password strength"
                       data-testid="password-strength-bar"
                     />
-                    <p className="text-muted-foreground text-xs" data-testid="password-strength-label">
+                    <p className="text-pretty text-muted-foreground text-xs" data-testid="password-strength-label">
                       {strengthLabel}
                     </p>
                   </div>
@@ -353,9 +353,9 @@ export function SignUpCard({
 
       {signInHref && (
         <CardFooter className="border-border/40 justify-center border-t pt-5">
-          <p className="text-muted-foreground text-center text-sm">
+          <p className="text-pretty text-muted-foreground text-center text-sm">
             {merged.signInPrompt}{' '}
-            <Button variant="link" asChild className="text-primary hover:text-primary/80 h-auto p-0 font-medium">
+            <Button variant="link" asChild className="text-primary hover:text-primary/80 min-h-11 px-2 py-0 font-medium sm:min-h-10">
               <a href={signInHref}>{merged.signInLabel}</a>
             </Button>
           </p>

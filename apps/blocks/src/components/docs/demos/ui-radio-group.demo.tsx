@@ -15,7 +15,7 @@ export function BlockDemo() {
   return (
     <Demo>
       <div className="flex w-full max-w-sm flex-col gap-4">
-        <h3 className="text-sm font-medium">Choose a plan</h3>
+        <h3 className="text-balance text-sm font-medium">Choose a plan</h3>
         <RadioGroup defaultValue="pro">
           {PLANS.map((plan) => (
             <div key={plan.value} className="flex items-center gap-3 rounded-lg border p-3">

@@ -34,7 +34,7 @@ const chipClass = 'rounded-lg bg-muted px-1.5 py-0.5 font-mono text-[12px] text-
 function OpGroup({ label, items }: { label: string; items: string[] }) {
   return (
     <div>
-      <p className="text-[11px] font-medium text-muted-foreground">{label}</p>
+      <p className="text-pretty text-[11px] font-medium text-muted-foreground">{label}</p>
       <ul className="mt-2 flex flex-wrap gap-1.5">
         {items.map((it) => (
           <li key={it}>

@@ -50,7 +50,7 @@ export default function SingleComponentGuidePage() {
   }
 }`}
         />
-        <p className="mt-3 text-caption text-muted-foreground">
+        <p className="text-pretty mt-3 text-caption text-muted-foreground">
           Already done the host setup? Then this is already in place — see{' '}
           <DocLink href="/blocks/getting-started">Getting started</DocLink>.
         </p>
@@ -76,7 +76,7 @@ export default function Page() {
   return <Button>Create database</Button>;
 }`}
         />
-        <p className="mt-3 text-caption text-muted-foreground">
+        <p className="text-pretty mt-3 text-caption text-muted-foreground">
           Blocks keep importing the package form (<InlineCode>@constructive-io/ui/button</InlineCode>); the two ways to
           consume coexist.
         </p>

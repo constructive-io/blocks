@@ -44,8 +44,8 @@ export function BlockDemo() {
                       <AvatarFallback className="text-xs">{m.initials}</AvatarFallback>
                     </Avatar>
                     <div className="min-w-0">
-                      <p className="font-medium">{m.name}</p>
-                      <p className="text-xs text-muted-foreground">{m.email}</p>
+                      <p className="text-pretty font-medium">{m.name}</p>
+                      <p className="text-pretty text-xs text-muted-foreground">{m.email}</p>
                     </div>
                   </div>
                 </TableCell>

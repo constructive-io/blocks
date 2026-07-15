@@ -106,7 +106,7 @@ export function RelationshipDiagram({
         <ConnectionArrow hasTarget={hasTarget} />
 
         {/* Target Side */}
-        <AnimatePresence mode="wait">
+        <AnimatePresence initial={false} mode="wait">
           {hasTarget ? (
             <motion.div
               key={targetTable}
@@ -218,7 +218,7 @@ function RecordStack({ tableName, count, position, fieldName }: RecordStackProps
       <span className="text-sm font-medium">{tableName}</span>
 
       {/* Field indicator */}
-      <AnimatePresence mode="wait">
+      <AnimatePresence initial={false} mode="wait">
         {fieldName ? (
           <motion.span
             key={fieldName}

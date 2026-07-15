@@ -147,6 +147,6 @@ Forwarded from child blocks ([[user-context-switcher]], [[shell-account-menu]]).
 ## Implementation notes (for the author)
 
 - Canonical source: `blocks/apps/blocks/src/blocks/shell/sidebar/`
-- Collapse animation: CSS `transition-all` on `width`. Icon-only width: 64px. Expanded width: 240px.
+- Collapse behavior: the width switches directly between the 64px icon rail and the 240px expanded sidebar, avoiding layout animation.
 - Nav item with children: renders an `<Accordion>` (or CSS-only expand on hover when collapsed).
 - Storybook stories: expanded, collapsed, with badge, with sub-items, mobile drawer open, loading context (skeleton context switcher).

@@ -231,7 +231,7 @@ export function PasskeySignIn({
       <Button
         type="button"
         variant="outline"
-        className={cn('gap-2', isIconOnly ? 'size-9 p-0' : 'w-full')}
+        className={cn('gap-2', isIconOnly ? 'size-11 p-0 sm:size-10' : 'w-full')}
         aria-busy={isPending}
         aria-label={isIconOnly ? label : undefined}
         disabled={isPending}

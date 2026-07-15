@@ -44,7 +44,7 @@ function TypesLibraryHeader({ isExpanded, onToggle }: TypesLibraryHeaderProps) {
 	return (
 		<div className='flex items-center justify-between border-b px-3 py-2'>
 			<div className='flex items-center gap-2'>
-				<h3 className='text-sm font-medium'>Types Library</h3>
+				<h3 className='text-balance text-sm font-medium'>Types Library</h3>
 				<span className='text-muted-foreground bg-muted rounded-md px-1.5 py-0.5 text-xs tabular-nums'>
 					{totalTypesCount}
 				</span>
@@ -177,7 +177,7 @@ export function TableEditor() {
 
 				{/* Drag Overlay */}
 				<DragOverlay dropAnimation={DEFAULT_DROP_ANIMATION}>
-					<AnimatePresence>
+					<AnimatePresence initial={false}>
 						{activeId && draggedType && (
 							<motion.div
 								key={activeId}

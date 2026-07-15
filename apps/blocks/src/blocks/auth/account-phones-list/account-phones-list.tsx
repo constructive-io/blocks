@@ -928,7 +928,7 @@ export function AccountPhonesList({
           {addStep === 2 && (
             <div className="px-6 pb-2 space-y-4">
               {pendingPhone && (
-                <p className="text-sm text-muted-foreground">
+                <p className="text-pretty text-sm text-muted-foreground">
                   {merged.phoneAddedMessage}
                 </p>
               )}

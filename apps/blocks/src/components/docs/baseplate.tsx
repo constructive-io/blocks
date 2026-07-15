@@ -4,6 +4,7 @@ import { GrainGradient } from '@paper-design/shaders-react';
 import { useReducedMotion } from 'motion/react';
 import { usePathname } from 'next/navigation';
 import { useTheme } from 'next-themes';
+import { useEffect, useState } from 'react';
 
 /**
  * Baseplate — the landing atmosphere layer (DESIGN.md §11).
@@ -31,13 +32,29 @@ const AURORA = {
   light: { back: '#FAFAFA', colors: ['#0076C8', '#4FA8E8'], opacity: 0.2 },
 } as const;
 
+function supportsWebGL() {
+  try {
+    const canvas = document.createElement('canvas');
+    return Boolean(canvas.getContext('webgl2') ?? canvas.getContext('webgl'));
+  } catch {
+    return false;
+  }
+}
+
 export function Baseplate() {
   const { resolvedTheme } = useTheme();
   const reducedMotion = useReducedMotion();
   const isLanding = usePathname() === '/';
+  const [canRenderShader, setCanRenderShader] = useState(false);
+
+  useEffect(() => {
+    if (!isLanding) return;
+    setCanRenderShader(supportsWebGL());
+  }, [isLanding]);
 
   if (!isLanding) return null;
   if (resolvedTheme !== 'dark' && resolvedTheme !== 'light') return null;
+  if (!canRenderShader) return null;
   const t = AURORA[resolvedTheme];
 
   return (

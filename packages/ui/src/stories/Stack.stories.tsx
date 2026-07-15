@@ -569,7 +569,7 @@ function SchemaBuilderDemo() {
   const stack = useCardStack();
 
   return (
-    <div className="min-h-screen bg-muted/30">
+    <div className="min-h-dvh bg-muted/30">
       <header className="border-b bg-background">
         <div className="container flex h-14 items-center justify-between px-4">
           <div className="flex items-center gap-4">
@@ -1628,8 +1628,8 @@ const DeepNavigationCard: CardComponent<DeepNavigationCardProps> = ({ level, max
         </div>
         <div className="h-2 bg-muted rounded-full overflow-hidden">
           <div
-            className="h-full bg-primary transition-all duration-500"
-            style={{ width: `${progress}%` }}
+            className="h-full origin-left bg-primary transition-transform duration-200 motion-reduce:transition-none"
+            style={{ transform: `scaleX(${progress / 100})` }}
           />
         </div>
       </div>
@@ -1678,7 +1678,7 @@ function StressTestDemo() {
   const stack = useCardStack();
 
   return (
-    <div className="min-h-screen bg-muted/30 p-8">
+    <div className="min-h-dvh bg-muted/30 p-8">
       <div className="max-w-4xl mx-auto space-y-8">
         <div className="text-center">
           <h1 className="text-3xl font-bold mb-2">Stack Stress Test</h1>
@@ -1956,7 +1956,7 @@ function RelationshipBuilderDemo() {
   const stack = useCardStack();
 
   return (
-    <div className="min-h-screen bg-muted/30">
+    <div className="min-h-dvh bg-muted/30">
       <header className="border-b bg-background">
         <div className="container flex h-14 items-center justify-between px-4">
           <div className="flex items-center gap-4">

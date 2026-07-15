@@ -72,7 +72,7 @@ export function BlockDemo() {
   return (
     <Demo>
       <div className="flex flex-col items-center gap-3">
-        <p className="text-muted-foreground text-xs">Click the bell to open the notification panel.</p>
+        <p className="text-pretty text-muted-foreground text-xs">Click the bell to open the notification panel.</p>
         <ShellNotifications
           items={items}
           allNotificationsHref="#"

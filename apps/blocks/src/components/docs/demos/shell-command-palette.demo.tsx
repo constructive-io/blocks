@@ -66,7 +66,7 @@ export function BlockDemo() {
         </kbd>
       </Button>
       {lastAction ? (
-        <p className="mt-4 text-sm text-muted-foreground">
+        <p className="text-pretty mt-4 text-sm text-muted-foreground">
           Selected: <span className="font-medium text-foreground">{lastAction}</span>
         </p>
       ) : null}

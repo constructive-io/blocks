@@ -40,9 +40,10 @@ export function PolicyPill({ policy, onClick }: PolicyPillProps) {
 			type='button'
 			onClick={onClick}
 			className={cn(
-				'group inline-flex items-center gap-1 rounded-full px-2.5 py-1',
+				'group inline-flex min-h-10 items-center gap-1 rounded-full px-3 py-1',
 				'border text-xs font-semibold',
-				'cursor-pointer transition-all',
+				`cursor-pointer transition-[scale,box-shadow] duration-150 ease-out
+				motion-safe:active:scale-[0.96]`,
 				'hover:scale-[1.02] hover:shadow-sm',
 				'focus-visible:ring-ring focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none',
 				isDisabled && 'opacity-60',

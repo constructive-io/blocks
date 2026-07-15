@@ -35,7 +35,7 @@ export function BlockDemo() {
     <Demo>
       <Toaster />
       <div className="flex flex-col items-center gap-4">
-        <p className="text-sm text-muted-foreground">Four styled helpers — one per severity.</p>
+        <p className="text-pretty text-sm text-muted-foreground">Four styled helpers — one per severity.</p>
         <div className="grid grid-cols-2 gap-2">
           {VARIANTS.map((v) => (
             <Button key={v.key} size="sm" variant="outline" onClick={v.fire}>

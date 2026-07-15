@@ -54,7 +54,7 @@ export default function AdapterGuidePage() {
   }
 }`}
         />
-        <p className="mt-3 text-caption text-muted-foreground">
+        <p className="text-pretty mt-3 text-caption text-muted-foreground">
           Full host checklist: <DocLink href="/blocks/getting-started">Getting started</DocLink>.
         </p>
       </DocSection>

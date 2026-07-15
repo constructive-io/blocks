@@ -120,11 +120,11 @@ export default function DesignAndMotionPage() {
 /* "Bigger thing moves, slower spring" — three tiers, nothing in between. */
 --dur-fast: 120ms;  /* hover, focus, taps */
 --dur:      160ms;  /* dropdowns, tabs, accordion */
---dur-slow: 240ms;  /* dialogs, drawers, stepped flows */`}
+--dur-slow: 200ms;  /* dialogs, drawers, stepped flows */`}
           />
         </div>
         <Prose>
-          <p className="mt-5">
+          <p className="text-pretty mt-5">
             Calm isn’t the absence of design — it’s the discipline of it. The same restraint shapes the blocks you
             install: they inherit these tokens, so a surface dropped into your app reads the way the rest of it does.
             Retune those tokens for your brand and every block follows — that recipe is{' '}

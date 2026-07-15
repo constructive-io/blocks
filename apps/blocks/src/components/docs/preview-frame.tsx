@@ -45,8 +45,8 @@ function PreviewErrorFallback() {
       role="alert"
       className="flex min-h-40 w-full flex-col items-center justify-center rounded-lg border border-border/60 bg-card p-6 text-center"
     >
-      <p className="text-sm font-medium text-foreground">Preview unavailable</p>
-      <p className="mt-1 max-w-sm text-sm text-muted-foreground">
+      <p className="text-pretty text-sm font-medium text-foreground">Preview unavailable</p>
+      <p className="text-pretty mt-1 max-w-sm text-sm text-muted-foreground">
         This live preview could not be displayed. Use Reset to try again.
       </p>
     </div>

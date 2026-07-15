@@ -118,14 +118,14 @@ export function SidebarNav({ className, onNavigate }: SidebarNavProps) {
             placeholder="Filter…"
             autoComplete="off"
             spellCheck={false}
-            className="h-8 w-full rounded-lg border border-border/60 bg-transparent pl-8 pr-8 text-[13px] text-foreground outline-none transition-colors duration-[var(--dur-fast)] placeholder:text-muted-foreground/75 hover:bg-hover focus-visible:bg-hover focus-visible:ring-1 focus-visible:ring-ring"
+            className="h-11 w-full rounded-lg border border-border/60 bg-transparent pl-8 pr-12 text-[13px] text-foreground outline-none transition-colors duration-[var(--dur-fast)] placeholder:text-muted-foreground/75 hover:bg-hover focus-visible:bg-hover focus-visible:ring-1 focus-visible:ring-ring sm:h-10"
           />
           {query ? (
             <button
               type="button"
               onClick={() => setQuery('')}
               aria-label="Clear filter"
-              className="absolute right-1.5 top-1/2 grid size-5 -translate-y-1/2 place-items-center rounded-lg text-muted-foreground outline-none transition-colors duration-[var(--dur-fast)] hover:text-foreground focus-visible:ring-1 focus-visible:ring-ring [&_svg]:transition-transform [&_svg]:duration-[var(--dur-fast)] motion-safe:active:[&_svg]:scale-90"
+              className="absolute right-0 top-1/2 grid size-11 -translate-y-1/2 place-items-center rounded-lg text-muted-foreground outline-none transition-[color,scale] duration-150 ease-out hover:text-foreground motion-safe:active:scale-[0.96] motion-reduce:transition-none focus-visible:ring-1 focus-visible:ring-ring sm:size-10"
             >
               <X className="size-3.5" />
             </button>
@@ -134,7 +134,7 @@ export function SidebarNav({ className, onNavigate }: SidebarNavProps) {
       </div>
 
       {groups.length === 0 ? (
-        <p className="px-3 py-6 text-[13px] text-muted-foreground">No matches</p>
+        <p className="text-pretty px-3 py-6 text-[13px] text-muted-foreground">No matches</p>
       ) : (
         <div className="scroll-fade -mx-1 flex min-h-0 flex-1 flex-col overflow-y-auto px-1 pb-4">
           {groups.map((group, i) => (
@@ -164,7 +164,7 @@ export function SidebarNav({ className, onNavigate }: SidebarNavProps) {
                           if (hasQuery) return;
                           setOpenOverrides((prev) => ({ ...prev, [subgroup.id]: !open }));
                         }}
-                        className="flex w-full items-center gap-1 rounded-lg py-1 pl-1 pr-3 text-left text-[12px] text-muted-foreground/75 outline-none transition-colors duration-[var(--dur-fast)] hover:text-foreground active:bg-active active:text-foreground focus-visible:ring-1 focus-visible:ring-ring"
+                        className="flex min-h-11 w-full items-center gap-1 rounded-lg py-1 pl-1 pr-3 text-left text-[12px] text-muted-foreground/75 outline-none transition-[color,background-color,scale] duration-150 ease-out hover:text-foreground active:bg-active active:text-foreground motion-safe:active:scale-[0.96] motion-reduce:transition-none focus-visible:ring-1 focus-visible:ring-ring sm:min-h-10"
                       >
                         <ChevronRight
                           aria-hidden

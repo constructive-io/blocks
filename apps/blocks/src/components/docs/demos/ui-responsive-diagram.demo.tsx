@@ -7,8 +7,8 @@ import { Demo } from '@/components/docs/showcase-kit';
 function Node({ title, subtitle }: { title: string; subtitle: string }) {
   return (
     <div className="w-44 shrink-0 rounded-lg border bg-background px-4 py-3 text-center shadow-sm">
-      <p className="text-sm font-medium">{title}</p>
-      <p className="mt-0.5 text-xs text-muted-foreground">{subtitle}</p>
+      <p className="text-pretty text-sm font-medium">{title}</p>
+      <p className="text-pretty mt-0.5 text-xs text-muted-foreground">{subtitle}</p>
     </div>
   );
 }

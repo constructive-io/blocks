@@ -8,5 +8,5 @@ import type { ReactNode } from 'react';
  * hamburger; the shell owns the skip-link and `#main` target.
  */
 export default function BlocksLayout({ children }: { children: ReactNode }) {
-  return <div className="mx-auto mt-12 w-full max-w-[760px] px-6 py-20 sm:py-28 xl:mt-0">{children}</div>;
+  return <div className="mx-auto w-full max-w-[760px] px-6 py-20 sm:py-28">{children}</div>;
 }

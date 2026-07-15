@@ -63,7 +63,7 @@ export function BlockDemo() {
         {state === 'expired' && (
           <Card className="w-full max-w-sm mx-auto" role="alert">
             <CardHeader>
-              <h1 className="leading-none font-semibold tracking-tight">Session expired</h1>
+              <h1 className="text-balance leading-none font-semibold tracking-tight">Session expired</h1>
               <CardDescription>
                 Your sign-in session has expired. Please sign in again to get a new verification link.
               </CardDescription>
@@ -79,7 +79,7 @@ export function BlockDemo() {
         {state === 'missing-token' && (
           <Card className="w-full max-w-sm mx-auto" role="alert">
             <CardHeader>
-              <h1 className="leading-none font-semibold tracking-tight">Invalid link</h1>
+              <h1 className="text-balance leading-none font-semibold tracking-tight">Invalid link</h1>
               <CardDescription>
                 This sign-in link is missing required parameters. Please sign in again.
               </CardDescription>

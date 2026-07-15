@@ -42,6 +42,7 @@ const REGISTRY: Record<string, ComponentType> = { ...UI_DEMOS, ...DEMOS };
 const LOOP_DURATIONS = [64, 78, 58, 72];
 
 export function GridMotionWall() {
+  const rootRef = useRef<HTMLElement | null>(null);
   const rowRefs = useRef<(HTMLDivElement | null)[]>([]);
   const trackRefs = useRef<(HTMLDivElement | null)[]>([]);
   const reducedMotion = useReducedMotion();
@@ -71,6 +72,7 @@ export function GridMotionWall() {
         }
       );
     });
+    marquees.forEach((tween) => tween?.pause());
 
     // Layer 2 — pointer inertia on the row wrappers (React Bits signature).
     const maxMoveAmount = 160;
@@ -97,13 +99,49 @@ export function GridMotionWall() {
       });
     };
 
-    const handleMouseMove = (event: MouseEvent) => updateTarget(event.clientX);
+    let isIntersecting = false;
+    const setAnimationActive = (active: boolean) => {
+      marquees.forEach((tween) => (active ? tween?.play() : tween?.pause()));
+      [...rows, ...tracks].forEach((element) => {
+        if (!element) return;
+        if (active) element.style.willChange = 'transform';
+        else element.style.removeProperty('will-change');
+      });
+    };
+    const syncAnimation = () => setAnimationActive(isIntersecting && !document.hidden);
+    const handleMouseMove = (event: MouseEvent) => {
+      if (!isIntersecting || document.hidden) return;
+      updateTarget(event.clientX);
+    };
+    const handleVisibilityChange = () => syncAnimation();
+
+    const observer =
+      typeof IntersectionObserver === 'undefined'
+        ? null
+        : new IntersectionObserver(([entry]) => {
+            isIntersecting = entry?.isIntersecting ?? false;
+            syncAnimation();
+          }, { rootMargin: '160px' });
+
+    if (observer && rootRef.current) observer.observe(rootRef.current);
+    else {
+      isIntersecting = true;
+      syncAnimation();
+    }
 
     updateTarget(window.innerWidth / 2);
     window.addEventListener('mousemove', handleMouseMove);
+    document.addEventListener('visibilitychange', handleVisibilityChange);
     return () => {
+      observer?.disconnect();
       window.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
       marquees.forEach((tween) => tween?.kill());
+      [...rows, ...tracks].forEach((element) => {
+        if (!element) return;
+        element.style.removeProperty('transform');
+        element.style.removeProperty('will-change');
+      });
       rows.forEach((row) => row && gsap.killTweensOf(row));
     };
   }, [reducedMotion]);
@@ -111,6 +149,7 @@ export function GridMotionWall() {
   return (
     <PreviewProvider>
       <section
+        ref={rootRef}
         aria-hidden
         {...{ inert: true }}
         className="relative flex h-full w-full items-center justify-center overflow-hidden"
@@ -125,7 +164,7 @@ export function GridMotionWall() {
               ref={(el) => {
                 rowRefs.current[rowIndex] = el;
               }}
-              className="min-h-0 flex-1 motion-safe:will-change-transform"
+              className="min-h-0 flex-1"
             >
               {/* The marquee track — two copies of the row, translated by one
                   copy per loop. `w-max` so the copies set the track width. */}
@@ -133,7 +172,7 @@ export function GridMotionWall() {
                 ref={(el) => {
                   trackRefs.current[rowIndex] = el;
                 }}
-                className="flex h-full w-max motion-safe:will-change-transform"
+                className="flex h-full w-max"
               >
                 {[0, 1].map((copy) => (
                   <div key={copy} className="flex h-full" aria-hidden={copy === 1}>
@@ -163,15 +202,14 @@ export function GridMotionWall() {
           ))}
         </div>
 
-        {/* Depth layers — tiles dissolve into the slab floor at every edge
-            (no hard clipping), then a soft inner vignette seats the whole
-            field below the slab's rim. Sits above the tiles, below nothing
-            interactive (the wall is inert). */}
+        {/* Depth layers — solid surface color is revealed through gradient
+            masks, so the tiles dissolve without a decorative color gradient.
+            A soft inner vignette seats the field below the slab's rim. */}
         <div aria-hidden className="pointer-events-none absolute inset-0">
-          <div className="absolute inset-x-0 top-0 h-28 bg-gradient-to-b from-surface-2 to-transparent" />
-          <div className="absolute inset-x-0 bottom-0 h-28 bg-gradient-to-t from-surface-2 to-transparent" />
-          <div className="absolute inset-y-0 left-0 w-24 bg-gradient-to-r from-surface-2 to-transparent" />
-          <div className="absolute inset-y-0 right-0 w-24 bg-gradient-to-l from-surface-2 to-transparent" />
+          <div className="absolute inset-x-0 top-0 h-28 bg-surface-2 [mask-image:linear-gradient(to_bottom,black,transparent)]" />
+          <div className="absolute inset-x-0 bottom-0 h-28 bg-surface-2 [mask-image:linear-gradient(to_top,black,transparent)]" />
+          <div className="absolute inset-y-0 left-0 w-24 bg-surface-2 [mask-image:linear-gradient(to_right,black,transparent)]" />
+          <div className="absolute inset-y-0 right-0 w-24 bg-surface-2 [mask-image:linear-gradient(to_left,black,transparent)]" />
           <div className="absolute inset-0 shadow-[inset_0_1px_0_rgb(255_255_255/0.04),inset_0_0_80px_rgb(0_0_0/0.18)] dark:shadow-[inset_0_1px_0_rgb(255_255_255/0.05),inset_0_0_110px_rgb(0_0_0/0.45)]" />
         </div>
       </section>

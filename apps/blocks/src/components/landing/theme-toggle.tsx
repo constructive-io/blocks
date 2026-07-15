@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { Monitor, Moon, Sun } from 'lucide-react';
+import { AnimatePresence, motion } from 'motion/react';
 import { useTheme } from 'next-themes';
 
 import { Button } from '@constructive-io/ui/button';
@@ -32,7 +33,18 @@ export function ThemeToggle() {
       aria-label={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
       onClick={() => setTheme(isDark ? 'light' : 'dark')}
     >
-      {isDark ? <Sun className="size-4" /> : <Moon className="size-4" />}
+      <AnimatePresence mode="popLayout" initial={false}>
+        <motion.span
+          key={isDark ? 'light' : 'dark'}
+          initial={{ opacity: 0, scale: 0.25, filter: 'blur(4px)' }}
+          animate={{ opacity: 1, scale: 1, filter: 'blur(0px)' }}
+          exit={{ opacity: 0, scale: 0.25, filter: 'blur(4px)' }}
+          transition={{ type: 'spring', duration: 0.3, bounce: 0 }}
+          className="inline-flex items-center justify-center"
+        >
+          {isDark ? <Sun className="size-4" /> : <Moon className="size-4" />}
+        </motion.span>
+      </AnimatePresence>
     </Button>
   );
 }
@@ -65,7 +77,7 @@ export function ThemeControl() {
       role="group"
       aria-label="Theme"
       title="Cycle theme — T"
-      className="inline-flex items-center gap-0.5 rounded-lg bg-hover p-0.5"
+      className="inline-flex items-center gap-0.5 rounded-[8px] bg-hover p-0.5"
     >
       {THEME_OPTIONS.map(({ value, label, Icon }) => {
         const on = active === value;
@@ -77,8 +89,8 @@ export function ThemeControl() {
             aria-label={label}
             onClick={() => setTheme(value)}
             className={cn(
-              'grid size-6 place-items-center rounded-[6px] outline-none transition-[color,background-color] duration-[var(--dur-fast)] focus-visible:ring-1 focus-visible:ring-ring',
-              '[&_svg]:transition-[stroke-width,scale] [&_svg]:duration-[var(--dur-fast)] motion-safe:active:[&_svg]:scale-90',
+              'grid size-11 place-items-center rounded-[6px] outline-none transition-[color,background-color,scale] duration-150 ease-out motion-safe:active:scale-[0.96] motion-reduce:transition-none sm:size-10 focus-visible:ring-1 focus-visible:ring-ring',
+              '[&_svg]:transition-[stroke-width] [&_svg]:duration-[var(--dur-fast)]',
               on ? 'bg-active text-foreground [&_svg]:[stroke-width:2]' : 'text-muted-foreground hover:text-foreground',
             )}
           >

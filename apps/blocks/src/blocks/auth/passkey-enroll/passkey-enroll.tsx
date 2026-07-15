@@ -179,7 +179,7 @@ export function PasskeyEnroll({
       <p
         role="status"
         aria-live="polite"
-        className="text-muted-foreground text-sm"
+        className="text-pretty text-muted-foreground text-sm"
       >
         {merged.unsupportedBrowser}
       </p>
@@ -229,10 +229,10 @@ export function PasskeyEnroll({
           </form.Field>
 
           {!isPending && (
-            <p className="text-muted-foreground text-xs">{merged.credentialNameHint}</p>
+            <p className="text-pretty text-muted-foreground text-xs">{merged.credentialNameHint}</p>
           )}
           {isPending && (
-            <p aria-live="polite" className="text-muted-foreground text-xs italic">
+            <p aria-live="polite" className="text-pretty text-muted-foreground text-xs italic">
               {merged.browserPromptHint}
             </p>
           )}

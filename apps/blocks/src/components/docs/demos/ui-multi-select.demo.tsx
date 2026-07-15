@@ -28,7 +28,7 @@ export function BlockDemo() {
           placeholder="Assign roles"
           maxCount={3}
         />
-        <p className="text-sm text-muted-foreground">
+        <p className="text-pretty text-sm text-muted-foreground">
           {selected.length} role{selected.length === 1 ? '' : 's'} selected
         </p>
       </div>

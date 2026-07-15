@@ -5,7 +5,6 @@ import { AnimatePresence, motion } from 'motion/react';
 import { Check, Copy } from 'lucide-react';
 
 import { cn } from '@/lib/utils';
-import { spring } from '@/lib/motion/springs';
 import { installCommand, usePm } from '@/lib/pm-context';
 
 /**
@@ -93,10 +92,10 @@ export function InstallField({ url, command, align = 'right', className }: Insta
         {copied ? (
           <motion.span
             key="check"
-            initial={{ opacity: 0, scale: 0.6 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 0.8 }}
-            transition={spring.fast}
+            initial={{ opacity: 0, scale: 0.25, filter: 'blur(4px)' }}
+            animate={{ opacity: 1, scale: 1, filter: 'blur(0px)' }}
+            exit={{ opacity: 0, scale: 0.25, filter: 'blur(4px)' }}
+            transition={{ type: 'spring', duration: 0.3, bounce: 0 }}
             className="flex items-center justify-center"
           >
             <Check
@@ -108,10 +107,10 @@ export function InstallField({ url, command, align = 'right', className }: Insta
         ) : (
           <motion.span
             key="copy"
-            initial={{ opacity: 0, scale: 0.8 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 0.8 }}
-            transition={spring.fast}
+            initial={{ opacity: 0, scale: 0.25, filter: 'blur(4px)' }}
+            animate={{ opacity: 1, scale: 1, filter: 'blur(0px)' }}
+            exit={{ opacity: 0, scale: 0.25, filter: 'blur(4px)' }}
+            transition={{ type: 'spring', duration: 0.3, bounce: 0 }}
             className="flex items-center justify-center"
           >
             <Copy
@@ -131,7 +130,7 @@ export function InstallField({ url, command, align = 'right', className }: Insta
       onClick={handleCopy}
       aria-label={copied ? 'Copied' : 'Copy install command'}
       className={cn(
-        'group flex w-full cursor-pointer items-center rounded-lg outline-none transition-all duration-[var(--dur-fast)] focus-visible:ring-1 focus-visible:ring-ring',
+        'group flex min-h-11 min-w-0 max-w-full w-full cursor-pointer items-center overflow-hidden rounded-lg outline-none transition-transform duration-150 ease-out motion-safe:active:scale-[0.96] motion-reduce:transition-none sm:min-h-10 focus-visible:ring-1 focus-visible:ring-ring',
         className
       )}
     >

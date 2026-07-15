@@ -24,7 +24,7 @@ export function BlockDemo() {
             <span>Importing seed.csv</span>
             <span className="text-muted-foreground">{value}%</span>
           </div>
-          <Progress value={value} className="transition-all duration-500" />
+          <Progress value={value} />
         </div>
 
         <div className="flex flex-col gap-3">

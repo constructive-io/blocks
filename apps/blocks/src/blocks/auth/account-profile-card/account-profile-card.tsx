@@ -406,7 +406,7 @@ export function AccountProfileCard({
           </div>
 
           <div className="flex flex-col gap-1.5">
-            <p className="text-muted-foreground text-xs">{merged.profilePictureHint}</p>
+            <p className="text-pretty text-muted-foreground text-xs">{merged.profilePictureHint}</p>
             <div className="flex gap-2">
               <Button
                 type="button"

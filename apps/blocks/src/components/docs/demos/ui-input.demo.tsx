@@ -17,7 +17,7 @@ export function BlockDemo() {
         <div className="grid gap-1.5">
           <Label htmlFor="in-email">Email</Label>
           <Input id="in-email" type="email" aria-invalid placeholder="name@example.com" />
-          <p className="text-sm text-destructive">Enter a valid email address.</p>
+          <p className="text-pretty text-sm text-destructive">Enter a valid email address.</p>
         </div>
 
         <div className="grid gap-1.5">

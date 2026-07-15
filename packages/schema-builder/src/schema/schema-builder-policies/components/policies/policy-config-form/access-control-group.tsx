@@ -29,7 +29,7 @@ export function AccessControlGroup({ fields, values, onChange, disabled }: Acces
 		<div data-chat-component='access-control-group' className='rounded-lg border'>
 			{/* Header */}
 			<div className='px-4 pt-4 pb-3'>
-				<h4 className='text-sm font-semibold'>Who can access this?</h4>
+				<h4 className='text-balance text-sm font-semibold'>Who can access this?</h4>
 				<p className='text-muted-foreground text-xs'>
 					Limit access to certain members. Choose which types of members can access.
 				</p>

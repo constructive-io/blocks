@@ -208,7 +208,7 @@ export function DefaultPageHeader({ title, description }: DefaultPageHeaderProps
 	return (
 		<div className='flex flex-col gap-5 sm:flex-row sm:items-start sm:justify-between'>
 			<div className='space-y-2'>
-				<h1 className='text-foreground text-2xl font-bold tracking-tight md:text-3xl'>{title}</h1>
+				<h1 className='text-foreground text-balance text-2xl font-bold tracking-tight md:text-3xl'>{title}</h1>
 				<p className='text-muted-foreground max-w-2xl text-sm leading-relaxed sm:text-base'>{description}</p>
 			</div>
 		</div>

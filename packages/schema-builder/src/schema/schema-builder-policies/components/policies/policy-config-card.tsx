@@ -80,7 +80,7 @@ export function PolicyConfigContent({
 						<PolicyIcon className='text-primary size-5' />
 					</div>
 					<div className='min-w-0 flex-1'>
-						<h3 className='font-semibold'>{policyType.title}</h3>
+						<h3 className='text-balance font-semibold'>{policyType.title}</h3>
 						<p className='text-muted-foreground text-sm'>{policyType.description}</p>
 					</div>
 				</div>

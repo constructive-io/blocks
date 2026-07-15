@@ -240,7 +240,7 @@ export function AuthSsoSignInCard({
           <Button
             variant="link"
             asChild
-            className="text-muted-foreground hover:text-foreground h-auto p-0 text-sm"
+            className="text-muted-foreground hover:text-foreground min-h-11 px-2 py-0 text-sm sm:min-h-10"
           >
             <a href={signInHref}>{merged.backLabel}</a>
           </Button>

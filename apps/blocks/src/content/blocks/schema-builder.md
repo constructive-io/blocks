@@ -57,7 +57,7 @@ export type SchemaBuilderProps = {
 ```tsx
 import { SchemaBuilder } from '@/blocks/schema/schema-builder/schema-builder-block';
 
-<div className="h-screen">
+<div className="h-dvh">
   <SchemaBuilder databaseId={databaseId} orgId={orgId} />
 </div>
 ```

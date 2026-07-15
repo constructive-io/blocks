@@ -69,7 +69,7 @@ const data = await signIn.mutateAsync({ input: { email, password } });
           />
         </div>
         <Prose>
-          <p className="mt-5">
+          <p className="text-pretty mt-5">
             The result is a leaf that already does the full job. The{' '}
             <DocLink href="/blocks/auth/sign-in-card">sign-in card</DocLink> validates input, maps the server’s error
             codes to copy you can override, branches on unverified and MFA-required states, and renders the loading and

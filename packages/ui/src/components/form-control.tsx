@@ -41,12 +41,10 @@ function FormControl({ children, label, id, layout = 'stacked', error, className
           className={cn(
             'relative',
             // Float label when focused
-            'has-[input:focus-visible]:[&_[data-slot=form-control-label]]:top-2',
             'has-[input:focus-visible]:[&_[data-slot=form-control-label]]:translate-y-0',
             'has-[input:focus-visible]:[&_[data-slot=form-control-label]]:scale-[0.7]',
             'has-[input:focus-visible]:[&_[data-slot=form-control-label]]:text-primary/80',
             // Float label when there's a value
-            'has-[input:not(:placeholder-shown)]:[&_[data-slot=form-control-label]]:top-2',
             'has-[input:not(:placeholder-shown)]:[&_[data-slot=form-control-label]]:translate-y-0',
             'has-[input:not(:placeholder-shown)]:[&_[data-slot=form-control-label]]:scale-[0.7]',
             // Error
@@ -65,11 +63,11 @@ function FormControl({ children, label, id, layout = 'stacked', error, className
             data-slot="form-control-label"
             className={cn(
               // Base: centered when empty
-              'pointer-events-none absolute start-3 top-1/2 -translate-y-1/2',
+              'pointer-events-none absolute start-3 top-2 translate-y-[0.45rem]',
               // Small, subtle typography
               'origin-left text-[13px] leading-none font-normal text-muted-foreground/60 select-none',
               // Snappy transition
-              'transition-[top,transform,color] duration-200 ease-out',
+              'transition-[transform,color] duration-200 ease-out motion-reduce:transition-none',
               // Error state
               error && 'text-destructive',
             )}

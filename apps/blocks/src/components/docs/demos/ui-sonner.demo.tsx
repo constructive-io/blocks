@@ -12,7 +12,7 @@ export function BlockDemo() {
       {/* The Toaster host is mounted once; toasts fire into it from anywhere. */}
       <Toaster />
       <div className="flex flex-col items-center gap-4">
-        <p className="max-w-xs text-center text-sm text-muted-foreground">
+        <p className="text-pretty max-w-xs text-center text-sm text-muted-foreground">
           Mount one <code>Toaster</code> near your app root. Trigger a toast and it appears in the corner.
         </p>
         <div className="flex gap-2">

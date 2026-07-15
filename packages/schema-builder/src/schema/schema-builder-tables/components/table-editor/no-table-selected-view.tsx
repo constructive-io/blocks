@@ -43,7 +43,7 @@ export function NoTableSelectedView({ className }: NoTableSelectedViewProps) {
 					<div className='bg-muted mx-auto mb-6 flex h-16 w-16 items-center justify-center rounded-full'>
 						<Table2 className='text-muted-foreground h-8 w-8' />
 					</div>
-					<h3 className='mb-2 text-lg font-medium'>No Table Selected</h3>
+					<h3 className='mb-2 text-balance text-lg font-medium'>No Table Selected</h3>
 					<p className='text-muted-foreground mb-6 max-w-md text-sm'>
 						Select a table from the sidebar to start editing its structure.
 					</p>

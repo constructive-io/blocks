@@ -34,11 +34,12 @@
  * Docs harness only — never imported by block source.
  */
 
-import { useCallback, useState, type ReactNode } from 'react';
+import { useCallback, useId, useState, type ReactNode } from 'react';
 import { Dialog } from '@base-ui/react/dialog';
 import { Tabs } from '@base-ui/react/tabs';
 import dynamic from 'next/dynamic';
 import { Maximize2, Monitor, RotateCcw, Smartphone, Tablet, X } from 'lucide-react';
+import { LayoutGroup, motion, useReducedMotion } from 'motion/react';
 
 import { Skeleton } from '@constructive-io/ui/skeleton';
 
@@ -79,13 +80,31 @@ const BlockShowcase = dynamic(() => import('./showcase').then((m) => m.BlockShow
 });
 
 /** A single tab — transparent, with the ghost-span weight-shift label (§3.1). */
-function PreviewTab({ value, label, active }: { value: string; label: string; active: boolean }) {
+function PreviewTab({
+  value,
+  label,
+  active,
+  indicatorTransition,
+}: {
+  value: string;
+  label: string;
+  active: boolean;
+  indicatorTransition: { duration: number } | { type: 'spring'; duration: number; bounce: number };
+}) {
   return (
     <Tabs.Tab
       value={value}
-      className="relative z-10 flex h-8 cursor-pointer items-center rounded-lg bg-transparent px-3 outline-none focus-visible:ring-1 focus-visible:ring-ring"
+      className="relative z-10 flex h-11 cursor-pointer items-center rounded-lg bg-transparent px-3 outline-none transition-transform duration-150 ease-out motion-safe:active:scale-[0.96] motion-reduce:transition-none sm:h-10 focus-visible:ring-1 focus-visible:ring-ring"
     >
-      <span className="inline-grid whitespace-nowrap text-[13px]">
+      {active ? (
+        <motion.span
+          layoutId="preview-tab-indicator"
+          initial={false}
+          transition={indicatorTransition}
+          className="pointer-events-none absolute inset-0 z-0 rounded-lg bg-active"
+        />
+      ) : null}
+      <span className="relative z-10 inline-grid whitespace-nowrap text-[13px]">
         <span
           aria-hidden
           className="col-start-1 row-start-1 invisible"
@@ -164,8 +183,8 @@ function FullscreenPreview({ slug, open, onOpenChange }: { slug: string; open: b
   return (
     <Dialog.Root open={open} onOpenChange={onOpenChange}>
       <Dialog.Portal>
-        <Dialog.Backdrop className="fixed inset-0 z-40 bg-black/40 transition-opacity duration-[var(--dur-slow)] ease-[var(--ease-out)] data-starting-style:opacity-0 data-ending-style:opacity-0 motion-reduce:transition-none" />
-        <Dialog.Popup className="fixed inset-3 z-50 flex flex-col overflow-hidden rounded-xl border border-border/60 bg-background shadow-surface-8 outline-none transition-[scale,opacity] duration-[var(--dur-slow)] ease-[var(--ease-out)] data-starting-style:scale-[0.98] data-starting-style:opacity-0 data-ending-style:scale-[0.98] data-ending-style:opacity-0 motion-reduce:transition-none sm:inset-6">
+        <Dialog.Backdrop className="fixed inset-0 z-40 bg-black/40 transition-opacity duration-200 ease-[var(--ease-out)] data-starting-style:opacity-0 data-ending-style:opacity-0 motion-reduce:transition-none" />
+        <Dialog.Popup className="fixed z-50 flex flex-col overflow-hidden rounded-xl border border-border/60 bg-background shadow-surface-8 outline-none transition-[scale,opacity] duration-200 ease-[var(--ease-out)] [top:max(0.75rem,env(safe-area-inset-top))] [right:max(0.75rem,env(safe-area-inset-right))] [bottom:max(0.75rem,env(safe-area-inset-bottom))] [left:max(0.75rem,env(safe-area-inset-left))] data-starting-style:scale-[0.98] data-starting-style:opacity-0 data-ending-style:scale-[0.98] data-ending-style:opacity-0 motion-reduce:transition-none sm:[top:max(1.5rem,env(safe-area-inset-top))] sm:[right:max(1.5rem,env(safe-area-inset-right))] sm:[bottom:max(1.5rem,env(safe-area-inset-bottom))] sm:[left:max(1.5rem,env(safe-area-inset-left))]">
           <Dialog.Title className="sr-only">Fullscreen preview</Dialog.Title>
           <Dialog.Description className="sr-only">
             The live preview at full viewport width. Press Escape to close.
@@ -182,7 +201,7 @@ function FullscreenPreview({ slug, open, onOpenChange }: { slug: string; open: b
             </span>
 
             {/* Viewport switcher — the ThemeControl segmented pattern. */}
-            <div role="group" aria-label="Preview viewport" className="inline-flex items-center gap-0.5 rounded-lg bg-hover p-0.5">
+            <div role="group" aria-label="Preview viewport" className="inline-flex items-center gap-0.5 rounded-[8px] bg-hover p-0.5">
               {VIEWPORTS.map(({ id, label, Icon }) => {
                 const on = viewportId === id;
                 return (
@@ -193,8 +212,8 @@ function FullscreenPreview({ slug, open, onOpenChange }: { slug: string; open: b
                     aria-label={label}
                     onClick={() => setViewportId(id)}
                     className={cn(
-                      'grid size-7 place-items-center rounded-[6px] outline-none transition-[color,background-color] duration-[var(--dur-fast)] focus-visible:ring-1 focus-visible:ring-ring',
-                      '[&_svg]:transition-[stroke-width,scale] [&_svg]:duration-[var(--dur-fast)] motion-safe:active:[&_svg]:scale-90',
+                      'grid size-11 place-items-center rounded-[6px] outline-none transition-[color,background-color,scale] duration-150 ease-out motion-safe:active:scale-[0.96] motion-reduce:transition-none sm:size-10 focus-visible:ring-1 focus-visible:ring-ring',
+                      '[&_svg]:transition-[stroke-width] [&_svg]:duration-[var(--dur-fast)]',
                       on ? 'bg-active text-foreground [&_svg]:[stroke-width:2]' : 'text-muted-foreground hover:text-foreground',
                     )}
                   >
@@ -257,6 +276,11 @@ export function ComponentPreview({ showcaseSlug, codeHtml, rawCode, codeLang, cl
   // Controlled so the ghost-span labels know which tab is active (Base UI's
   // internal state is opaque). Deterministic initial value → hydration-safe.
   const [tab, setTab] = useState('preview');
+  const indicatorGroupId = useId();
+  const reducedMotion = useReducedMotion();
+  const indicatorTransition = reducedMotion
+    ? { duration: 0 }
+    : { type: 'spring' as const, duration: 0.3, bounce: 0 };
 
   // The reset fn published up from <PreviewFrame> (null until the preview mounts).
   const [reset, setReset] = useState<(() => void) | null>(null);
@@ -307,20 +331,27 @@ export function ComponentPreview({ showcaseSlug, codeHtml, rawCode, codeLang, cl
   return (
     <Tabs.Root value={tab} onValueChange={(value) => setTab(value as string)} className={cn(cardCls, className)}>
       <div className="flex min-h-[52px] items-center gap-0 px-3 pt-3">
-        <Tabs.List
-          aria-label="Preview or code"
-          // -mx-1 px-1 / -my-1 py-1 give the tab focus rings room to draw
-          // without the outer card clipping them.
-          className="relative -mx-1 -my-1 flex items-center gap-0.5 px-1 py-1"
-        >
-          <PreviewTab value="preview" label="Preview" active={tab === 'preview'} />
-          <PreviewTab value="code" label="Code" active={tab === 'code'} />
-          {/* Sliding pill — transform + width animate so it glides AND resizes. */}
-          <Tabs.Indicator
-            renderBeforeHydration
-            className="absolute inset-y-1 left-0 z-0 rounded-lg bg-active [width:var(--active-tab-width)] [transform:translateX(var(--active-tab-left))] transition-[transform,width] duration-[var(--dur)] ease-[var(--ease-out)] motion-reduce:transition-none"
-          />
-        </Tabs.List>
+        <LayoutGroup id={indicatorGroupId}>
+          <Tabs.List
+            aria-label="Preview or code"
+            // -mx-1 px-1 / -my-1 py-1 give the tab focus rings room to draw
+            // without the outer card clipping them.
+            className="relative -mx-1 -my-1 flex items-center gap-0.5 px-1 py-1"
+          >
+            <PreviewTab
+              value="preview"
+              label="Preview"
+              active={tab === 'preview'}
+              indicatorTransition={indicatorTransition}
+            />
+            <PreviewTab
+              value="code"
+              label="Code"
+              active={tab === 'code'}
+              indicatorTransition={indicatorTransition}
+            />
+          </Tabs.List>
+        </LayoutGroup>
         {headerActions}
       </div>
 

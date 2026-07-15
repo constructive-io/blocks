@@ -196,7 +196,7 @@ export const PolicyEditCard: CardComponent<PolicyEditCardProps> = ({ policy, tab
 							</div>
 							<div className='min-w-0 flex-1'>
 								<div className='flex items-center gap-2'>
-									<h3 className='font-semibold'>{policyType.title}</h3>
+									<h3 className='text-balance font-semibold'>{policyType.title}</h3>
 									<span
 										className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium
 											${privilegeConfig.bg} ${privilegeConfig.text}`}

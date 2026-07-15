@@ -150,7 +150,7 @@ export function VerifyEmailBanner({
         <MailIcon className="mt-0.5 size-4 shrink-0 text-amber-600 dark:text-amber-400" aria-hidden="true" />
 
         <div className="flex-1 space-y-2">
-          <p className="text-sm leading-snug">{merged.text}</p>
+          <p className="text-pretty text-sm leading-snug">{merged.text}</p>
 
           {inlineError && (
             <AuthErrorAlert error={inlineError} />
@@ -159,7 +159,7 @@ export function VerifyEmailBanner({
           {resendSuccess && (
             <p
               aria-live="polite"
-              className="flex items-center gap-1.5 text-sm font-medium text-green-700 dark:text-green-400"
+              className="text-pretty flex items-center gap-1.5 text-sm font-medium text-green-700 dark:text-green-400"
             >
               <CheckCircleIcon className="size-3.5 shrink-0" aria-hidden="true" />
               {merged.resendSuccess}
@@ -170,7 +170,7 @@ export function VerifyEmailBanner({
             <Button
               variant="link"
               size="sm"
-              className="h-auto p-0 text-sm font-medium text-amber-700 hover:text-amber-900 hover:no-underline dark:text-amber-400 dark:hover:text-amber-200"
+              className="min-h-11 px-2 py-0 text-sm font-medium text-amber-700 hover:text-amber-900 hover:no-underline dark:text-amber-400 dark:hover:text-amber-200 sm:min-h-10"
               disabled={isPending}
               aria-busy={isPending}
               onClick={handleResend}
@@ -185,7 +185,7 @@ export function VerifyEmailBanner({
           type="button"
           aria-label={merged.dismissLabel}
           onClick={handleDismiss}
-          className="rounded p-0.5 text-amber-600 transition-colors hover:bg-amber-100 hover:text-amber-900 dark:text-amber-400 dark:hover:bg-amber-900/30 dark:hover:text-amber-200"
+          className="inline-flex size-11 shrink-0 items-center justify-center rounded-md text-amber-600 transition-[color,background-color,scale] duration-150 ease-out hover:bg-amber-100 hover:text-amber-900 motion-safe:active:scale-[0.96] motion-reduce:transition-none dark:text-amber-400 dark:hover:bg-amber-900/30 dark:hover:text-amber-200 sm:size-10"
           data-testid="dismiss-button"
         >
           <XIcon className="size-4" aria-hidden="true" />

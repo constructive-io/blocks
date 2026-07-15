@@ -34,7 +34,7 @@ export function BlockDemo() {
           setStatus(`Error (${err.code}): ${err.message}`);
         }}
       />
-      {status ? <p className="mt-4 text-xs text-muted-foreground">{status}</p> : null}
+      {status ? <p className="text-pretty mt-4 text-xs text-muted-foreground">{status}</p> : null}
     </Demo>
   );
 }

@@ -21,7 +21,7 @@ export function SidebarBrand({ onNavigate }: { onNavigate?: () => void }) {
       href="/"
       onClick={onNavigate}
       aria-label="Constructive Blocks — home"
-      className="inline-flex items-center gap-2 self-start rounded-lg pl-1 outline-none focus-visible:ring-1 focus-visible:ring-ring"
+      className="inline-flex min-h-11 items-center gap-2 self-start rounded-lg px-1 outline-none transition-transform duration-150 ease-out motion-safe:active:scale-[0.96] motion-reduce:transition-none focus-visible:ring-1 focus-visible:ring-ring sm:min-h-10"
     >
       <RegistryMark size={22} className="shrink-0" />
       <span className="text-[13px] font-medium text-foreground">Constructive Blocks</span>
@@ -63,7 +63,7 @@ export function Sidebar({ mobile, onNavigate }: SidebarProps) {
     <aside
       className={cn(
         'flex-col gap-4 p-4',
-        mobile ? 'flex min-h-0 w-full flex-1' : 'xl-fade-flex sticky top-0 h-screen w-60 shrink-0',
+        mobile ? 'flex min-h-0 w-full flex-1' : 'xl-fade-flex sticky top-0 h-dvh w-60 shrink-0',
       )}
     >
       <SidebarBrand onNavigate={onNavigate} />

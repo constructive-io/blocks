@@ -71,7 +71,8 @@ export function ConstraintCard({ type, selected, disabled, disabledReason, onTog
 	return (
 		<div
 			className={cn(
-				'flex items-center justify-between gap-4 rounded-lg border p-4 transition-all',
+				`flex items-center justify-between gap-4 rounded-lg border p-4 transition-[background-color,border-color,box-shadow,scale]
+				duration-150 ease-out motion-safe:active:scale-[0.96]`,
 				disabled
 					? 'cursor-not-allowed opacity-50'
 					: 'cursor-pointer hover:border-border',
