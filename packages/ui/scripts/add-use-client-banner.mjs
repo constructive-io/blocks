@@ -1,4 +1,4 @@
-import { readdir, readFile, stat, writeFile } from 'node:fs/promises';
+import { readdir, readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import process from 'node:process';
 
@@ -17,16 +17,15 @@ async function addBannerToFile(filePath) {
 }
 
 async function walk(dir) {
-	const entries = await readdir(dir);
+	const entries = await readdir(dir, { withFileTypes: true });
 	await Promise.all(
 		entries.map(async (entry) => {
-			const fullPath = path.join(dir, entry);
-			const s = await stat(fullPath);
-			if (s.isDirectory()) {
+			const fullPath = path.join(dir, entry.name);
+			if (entry.isDirectory()) {
 				await walk(fullPath);
 				return;
 			}
-			if (entry.endsWith('.js') || entry.endsWith('.cjs')) {
+			if (entry.isFile() && (entry.name.endsWith('.js') || entry.name.endsWith('.cjs'))) {
 				await addBannerToFile(fullPath);
 			}
 		}),
