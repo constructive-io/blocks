@@ -17,6 +17,7 @@ type SmokeCase = {
 	name: string;
 	customAliases?: boolean;
 	generatedFixtures?: boolean;
+	noRequirementsSidecar?: boolean;
 	expected: string[];
 	items?: string[];
 };
@@ -73,6 +74,71 @@ const cases: SmokeCase[] = [
 		expected: [
 			'src/blocks/auth/sign-in-card/sign-in-card.tsx',
 			'.constructive/blocks/auth-sign-in-card.requires.json',
+		],
+	},
+	{
+		name: 'billing-usage-overview',
+		noRequirementsSidecar: true,
+		expected: [
+			'src/blocks/billing/billing-contracts/billing-contracts.ts',
+			'src/blocks/billing/billing-ui/billing-ui.tsx',
+			'src/blocks/billing/billing-usage-overview/billing-usage-overview.tsx',
+			'src/blocks/billing/billing-usage-overview/messages.ts',
+		],
+	},
+	{
+		name: 'billing-credits-card',
+		noRequirementsSidecar: true,
+		expected: [
+			'src/blocks/billing/billing-contracts/billing-contracts.ts',
+			'src/blocks/billing/billing-ui/billing-ui.tsx',
+			'src/blocks/billing/billing-credits-card/billing-credits-card.tsx',
+			'src/blocks/billing/billing-credits-card/messages.ts',
+		],
+	},
+	{
+		name: 'billing-settings-page',
+		customAliases: true,
+		noRequirementsSidecar: true,
+		expected: [
+			'src/blocks/billing/billing-settings-page/billing-settings-page.tsx',
+			'src/blocks/billing/billing-settings-page/messages.ts',
+			'src/blocks/billing/billing-activity-table/billing-activity-table.tsx',
+			'src/blocks/billing/billing-activity-table/messages.ts',
+			'src/blocks/billing/billing-contracts/billing-contracts.ts',
+			'src/blocks/billing/billing-ui/billing-ui.tsx',
+			'src/blocks/billing/billing-credits-card/billing-credits-card.tsx',
+			'src/blocks/billing/billing-credits-card/messages.ts',
+			'src/blocks/billing/billing-entitlements-list/billing-entitlements-list.tsx',
+			'src/blocks/billing/billing-entitlements-list/messages.ts',
+			'src/blocks/billing/billing-pricing-table/billing-pricing-table.tsx',
+			'src/blocks/billing/billing-pricing-table/messages.ts',
+			'src/blocks/billing/billing-subscription-card/billing-subscription-card.tsx',
+			'src/blocks/billing/billing-subscription-card/messages.ts',
+			'src/blocks/billing/billing-usage-history/billing-usage-history.tsx',
+			'src/blocks/billing/billing-usage-history/messages.ts',
+			'src/blocks/billing/billing-usage-overview/billing-usage-overview.tsx',
+			'src/blocks/billing/billing-usage-overview/messages.ts',
+			'src/design-system/primitives/alert.tsx',
+			'src/design-system/primitives/badge.tsx',
+			'src/design-system/primitives/button.tsx',
+			'src/design-system/primitives/card.tsx',
+			'src/design-system/primitives/field.tsx',
+			'src/design-system/primitives/label.tsx',
+			'src/design-system/primitives/pagination.tsx',
+			'src/design-system/primitives/portal.tsx',
+			'src/design-system/primitives/progress.tsx',
+			'src/design-system/primitives/select.tsx',
+			'src/design-system/primitives/separator.tsx',
+			'src/design-system/primitives/sheet.tsx',
+			'src/design-system/primitives/skeleton.tsx',
+			'src/design-system/primitives/table.tsx',
+			'src/design-system/primitives/tabs.tsx',
+			'src/design-system/primitives/tooltip.tsx',
+			'src/react/use-controllable-state.ts',
+			'src/shared/motion/motion-config.ts',
+			'src/shared/slot.tsx',
+			'src/shared/utils.ts',
 		],
 	},
 	{
@@ -140,7 +206,7 @@ function prepareConsumer(root: string, origin: string, testCase: SmokeCase): voi
 	write(root, 'pnpm-lock.yaml', 'lockfileVersion: 9.0\n');
 
 	const pathAliases = testCase.customAliases
-		? { '~/*': ['./src/*'], '@/*': ['./src/*'] }
+		? { '~/*': ['./src/*'] }
 		: { '@/*': ['./src/*'] };
 	write(
 		root,
@@ -283,6 +349,18 @@ function assertInstalled(root: string, testCase: SmokeCase): void {
 	}
 	if (fs.existsSync(path.join(root, 'src', '.constructive'))) {
 		throw new Error(`@constructive/${testCase.name} installed requirements under src/.constructive.`);
+	}
+	if (testCase.noRequirementsSidecar) {
+		const requirementsFiles = walk(path.join(root, '.constructive')).filter((file) =>
+			file.endsWith('.requires.json'),
+		);
+		if (requirementsFiles.length > 0) {
+			throw new Error(
+				`@constructive/${testCase.name} unexpectedly installed requirements sidecars: ${requirementsFiles
+					.map((file) => path.relative(root, file))
+					.join(', ')}.`,
+			);
+		}
 	}
 
 	const inspectedFiles = [

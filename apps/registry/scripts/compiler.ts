@@ -278,6 +278,12 @@ export function deriveOwnedRegistryDependencies(
 			const importedModule = normalizeImportedModule(value, file.target);
 			if (!importedModule) continue;
 			const owner = ownership.get(importedModule) ?? ownership.get(`${importedModule}/index`);
+			if (
+				!owner &&
+				(value.startsWith('./') || value.startsWith('../') || value.startsWith('@/blocks/'))
+			) {
+				throw new Error(`${filePath} imports unowned registry module '${value}'.`);
+			}
 			if (owner && owner !== item.name) dependencies.add(owner);
 		}
 	}

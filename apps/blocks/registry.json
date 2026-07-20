@@ -2488,6 +2488,261 @@
           "type": "registry:lib"
         }
       ]
+    },
+    {
+      "name": "billing-contracts",
+      "type": "registry:lib",
+      "title": "Billing Contracts",
+      "description": "Provider-neutral billing DTOs, arbitrary-precision formatters, open-status presentation maps, and explicit resource states shared by every customer billing block.",
+      "categories": [
+        "blocks",
+        "billing"
+      ],
+      "docs": "## Usage\n\nInstall this item when building a custom billing composition. It defines the shared resource states, account references, money values, allowances, plans, subscriptions, usage, credits, activity, messages, and formatting options used by the billing blocks.\n\n```ts\nimport type { BillingPlan, BillingResource } from '@/blocks/billing/billing-contracts/billing-contracts';\n\nconst plans: BillingResource<BillingPlan[]> = {\n  status: 'ready',\n  quality: 'authoritative',\n  asOf: '2026-07-20T12:00:00.000Z',\n  data: [{\n    id: 'growth',\n    name: 'Growth',\n    prices: [{\n      kind: 'fixed',\n      id: 'growth-monthly',\n      interval: 'month',\n      money: { amountMinor: '4900', currency: 'USD' }\n    }]\n  }]\n};\n```\n\nKeep quantities, limits, deltas, and minor-unit money as decimal strings so large values retain their precision. Supply an explicit locale and time zone to the formatters, keep each record's currency, and use the explicit contact-sales, unlimited, uninitialized, and unknown variants when they apply.",
+      "dependencies": [],
+      "registryDependencies": [],
+      "files": [
+        {
+          "path": "registry/constructive/blocks/billing/billing-contracts/billing-contracts.ts",
+          "target": "src/blocks/billing/billing-contracts/billing-contracts.ts",
+          "type": "registry:lib"
+        }
+      ]
+    },
+    {
+      "name": "billing-ui",
+      "type": "registry:lib",
+      "title": "Billing UI Helpers",
+      "description": "Shared formatting and presentation helpers used by the customer billing blocks.",
+      "categories": [
+        "blocks",
+        "billing"
+      ],
+      "dependencies": [],
+      "registryDependencies": [],
+      "files": [
+        {
+          "path": "registry/constructive/blocks/billing/billing-ui/billing-ui.tsx",
+          "target": "src/blocks/billing/billing-ui/billing-ui.tsx",
+          "type": "registry:lib"
+        }
+      ]
+    },
+    {
+      "name": "billing-pricing-table",
+      "type": "registry:block",
+      "title": "Billing Pricing Table",
+      "description": "Responsive plan comparison with controlled interval selection, fixed and contact-sales pricing, current and featured states, and optional actions.",
+      "categories": [
+        "blocks",
+        "billing"
+      ],
+      "docs": "## Usage\n\nPass a plan resource, account context, formatting options, a controlled billing interval, and the actions you want to show.\n\n```tsx\nimport { BillingPricingTable } from '@/blocks/billing/billing-pricing-table/billing-pricing-table';\n\n<BillingPricingTable\n  resource={{ status: 'ready', quality: 'authoritative', data: plans }}\n  account={{ entityId: 'org_123', kind: 'organization', label: 'Northstar Labs' }}\n  formatOptions={{ locale: 'en-US', timeZone: 'UTC' }}\n  interval=\"month\"\n  onIntervalChange={setInterval}\n  onSelectPlan={({ planId, priceId, account }) => openPlanSelection({ planId, priceId, account })}\n  onContactSales={({ planId, account }) => openSalesRequest({ planId, account })}\n/>\n```\n\nFixed prices use minor-unit decimal strings and the currency on each record. Use `BillingPrice.kind = 'contact_sales'` for custom pricing. Missing callbacks remove their actions, rejected promises appear next to the action, and resolved promises leave the selected plan state under your control.",
+      "dependencies": [
+        "lucide-react"
+      ],
+      "registryDependencies": [],
+      "files": [
+        {
+          "path": "registry/constructive/blocks/billing/billing-pricing-table/billing-pricing-table.tsx",
+          "target": "src/blocks/billing/billing-pricing-table/billing-pricing-table.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/billing/billing-pricing-table/messages.ts",
+          "target": "src/blocks/billing/billing-pricing-table/messages.ts",
+          "type": "registry:component"
+        }
+      ]
+    },
+    {
+      "name": "billing-subscription-card",
+      "type": "registry:block",
+      "title": "Billing Subscription Card",
+      "description": "Current-plan summary with independent subscription, provider, and payment status plus exact lifecycle dates and optional actions.",
+      "categories": [
+        "blocks",
+        "billing"
+      ],
+      "docs": "## Usage\n\nPass the current plan together with any payment and provider states you want to show. Add only the actions that make sense in your billing flow.\n\n```tsx\nimport { BillingSubscriptionCard } from '@/blocks/billing/billing-subscription-card/billing-subscription-card';\n\n<BillingSubscriptionCard\n  resource={{\n    status: 'ready',\n    data: {\n      id: 'sub_123',\n      planId: 'growth',\n      planName: 'Growth',\n      status: 'active',\n      renewsAt: '2026-08-01T00:00:00.000Z',\n      paymentStatus: 'current',\n      provider: { label: 'Connected billing provider', status: 'active' }\n    }\n  }}\n  account={{ entityId: 'org_123', kind: 'organization' }}\n  formatOptions={{ locale: 'en-US', timeZone: 'UTC' }}\n  onManageSubscription={({ subscriptionId, account }) => openSubscriptionSettings(subscriptionId, account)}\n/>\n```\n\nOnly `renewsAt` is labelled “Renews”; `endsAt` is always labelled “Ends.” Status strings are open, unknown values render neutrally, and missing callbacks hide their controls.",
+      "dependencies": [
+        "lucide-react"
+      ],
+      "registryDependencies": [],
+      "files": [
+        {
+          "path": "registry/constructive/blocks/billing/billing-subscription-card/billing-subscription-card.tsx",
+          "target": "src/blocks/billing/billing-subscription-card/billing-subscription-card.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/billing/billing-subscription-card/messages.ts",
+          "target": "src/blocks/billing/billing-subscription-card/messages.ts",
+          "type": "registry:component"
+        }
+      ]
+    },
+    {
+      "name": "billing-entitlements-list",
+      "type": "registry:block",
+      "title": "Billing Entitlements List",
+      "description": "Structured display of plan feature flags, caps, discrete quotas, meter allowances, and neutral unknown values.",
+      "categories": [
+        "blocks",
+        "billing"
+      ],
+      "docs": "## Usage\n\nPass each entitlement with a semantic kind so features, caps, quotas, and metered allowances keep their distinct meaning.\n\n```tsx\nimport { BillingEntitlementsList } from '@/blocks/billing/billing-entitlements-list/billing-entitlements-list';\n\n<BillingEntitlementsList\n  resource={{\n    status: 'ready',\n    data: [\n      { id: 'sso', kind: 'feature', label: 'Single sign-on', enabled: true },\n      { id: 'projects', kind: 'cap', label: 'Projects', value: '25' },\n      { id: 'queries', kind: 'meter', meterSlug: 'query_time', label: 'Query time', unit: 'seconds', allowance: { kind: 'limited', limit: '1000000' } }\n    ]\n  }}\n  account={{ entityId: 'org_123', kind: 'organization' }}\n  formatOptions={{ locale: 'en-US', timeZone: 'UTC' }}\n/>\n```\n\nUse explicit `unlimited`, `uninitialized`, and `unknown` variants. Unknown values stay visible with a neutral presentation, and message overrides let you adapt the labels without changing the data model.",
+      "dependencies": [
+        "lucide-react"
+      ],
+      "registryDependencies": [],
+      "files": [
+        {
+          "path": "registry/constructive/blocks/billing/billing-entitlements-list/billing-entitlements-list.tsx",
+          "target": "src/blocks/billing/billing-entitlements-list/billing-entitlements-list.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/billing/billing-entitlements-list/messages.ts",
+          "target": "src/blocks/billing/billing-entitlements-list/messages.ts",
+          "type": "registry:component"
+        }
+      ]
+    },
+    {
+      "name": "billing-usage-overview",
+      "type": "registry:block",
+      "title": "Billing Usage Overview",
+      "description": "Current-period usage with quota, boolean, unlimited, uninitialized, exhausted, overage, category-pool, and universal-pool states.",
+      "categories": [
+        "blocks",
+        "billing"
+      ],
+      "docs": "## Usage\n\nPass a current-period usage snapshot and nest child meters beneath category or universal pools when credits are shared.\n\n```tsx\nimport { BillingUsageOverview } from '@/blocks/billing/billing-usage-overview/billing-usage-overview';\n\n<BillingUsageOverview\n  resource={{ status: 'ready', quality: 'authoritative', data: usageSnapshot }}\n  account={{ entityId: 'org_123', kind: 'organization' }}\n  formatOptions={{ locale: 'en-US', timeZone: 'UTC' }}\n  onViewHistory={(meterSlug) => openUsageHistory(meterSlug)}\n  onBuyCredits={(meterSlug) => openCreditPurchase(meterSlug)}\n/>\n```\n\nCategory and universal pools stay nested so their application order remains clear. Progress caps visually at 100 percent while text and accessible values preserve the actual used, allowance, and overage values. Actions disappear when their callbacks are absent.",
+      "dependencies": [
+        "lucide-react",
+        "motion"
+      ],
+      "registryDependencies": [],
+      "files": [
+        {
+          "path": "registry/constructive/blocks/billing/billing-usage-overview/billing-usage-overview.tsx",
+          "target": "src/blocks/billing/billing-usage-overview/billing-usage-overview.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/billing/billing-usage-overview/messages.ts",
+          "target": "src/blocks/billing/billing-usage-overview/messages.ts",
+          "type": "registry:component"
+        }
+      ]
+    },
+    {
+      "name": "billing-credits-card",
+      "type": "registry:block",
+      "title": "Billing Credits Card",
+      "description": "Available credits grouped by compatible meter and unit with permanent, period, rollover, expiring, and unknown lot semantics.",
+      "categories": [
+        "blocks",
+        "billing"
+      ],
+      "docs": "## Usage\n\nPass available balances and their credit lots while keeping each meter and unit independent.\n\n```tsx\nimport { BillingCreditsCard } from '@/blocks/billing/billing-credits-card/billing-credits-card';\n\n<BillingCreditsCard\n  resource={{\n    status: 'ready',\n    data: [{\n      meterSlug: 'query_time',\n      label: 'Query time',\n      unit: 'seconds',\n      available: '7200',\n      lots: [{ id: 'lot_1', kind: 'rollover', amount: '3600', remaining: '1800', expiresAt: '2026-08-01T00:00:00.000Z' }]\n    }]\n  }}\n  account={{ entityId: 'org_123', kind: 'organization' }}\n  formatOptions={{ locale: 'en-US', timeZone: 'UTC' }}\n/>\n```\n\nKeep incompatible meters and units in separate balance groups. Credit lots show the current grant makeup, while `billing-activity-table` provides a chronological view of grants, usage, adjustments, rollover, and expiration.",
+      "dependencies": [
+        "lucide-react",
+        "motion"
+      ],
+      "registryDependencies": [],
+      "files": [
+        {
+          "path": "registry/constructive/blocks/billing/billing-credits-card/billing-credits-card.tsx",
+          "target": "src/blocks/billing/billing-credits-card/billing-credits-card.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/billing/billing-credits-card/messages.ts",
+          "target": "src/blocks/billing/billing-credits-card/messages.ts",
+          "type": "registry:component"
+        }
+      ]
+    },
+    {
+      "name": "billing-usage-history",
+      "type": "registry:block",
+      "title": "Billing Usage History",
+      "description": "Accessible, table-first period history with controlled meter, period, and pagination filters plus explicit quality labels.",
+      "categories": [
+        "blocks",
+        "billing"
+      ],
+      "docs": "## Usage\n\nPass a page of usage periods and control the meter, period, and pagination values when you provide their callbacks.\n\n```tsx\nimport { BillingUsageHistory } from '@/blocks/billing/billing-usage-history/billing-usage-history';\n\n<BillingUsageHistory\n  resource={{ status: 'ready', quality: 'estimated', data: usagePage }}\n  account={{ entityId: 'org_123', kind: 'organization' }}\n  formatOptions={{ locale: 'en-US', timeZone: 'UTC' }}\n  meterSlug=\"query_time\"\n  period=\"last-6-months\"\n  meterOptions={meterOptions}\n  periodOptions={periodOptions}\n  onMeterChange={setMeterSlug}\n  onPeriodChange={setPeriod}\n  onPageChange={setPage}\n/>\n```\n\nCredits and overage columns appear only when their values are marked as confirmed. Quality labels remain visible on each period, and the table keeps pagination and filter changes under your control.",
+      "dependencies": [
+        "lucide-react"
+      ],
+      "registryDependencies": [],
+      "files": [
+        {
+          "path": "registry/constructive/blocks/billing/billing-usage-history/billing-usage-history.tsx",
+          "target": "src/blocks/billing/billing-usage-history/billing-usage-history.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/billing/billing-usage-history/messages.ts",
+          "target": "src/blocks/billing/billing-usage-history/messages.ts",
+          "type": "registry:component"
+        }
+      ]
+    },
+    {
+      "name": "billing-activity-table",
+      "type": "registry:block",
+      "title": "Billing Activity Table",
+      "description": "Paginated ledger activity with controlled filters, semantic class/type presentation, and a titled metadata detail sheet.",
+      "categories": [
+        "blocks",
+        "billing"
+      ],
+      "docs": "## Usage\n\nPass ledger class and entry type with each activity entry so labels and badge tones describe the event itself.\n\n```tsx\nimport { BillingActivityTable } from '@/blocks/billing/billing-activity-table/billing-activity-table';\n\n<BillingActivityTable\n  resource={{ status: 'ready', quality: 'authoritative', data: activityPage }}\n  account={{ entityId: 'org_123', kind: 'organization' }}\n  formatOptions={{ locale: 'en-US', timeZone: 'UTC' }}\n  meterOptions={meterOptions}\n  entryTypeOptions={entryTypeOptions}\n  onMeterChange={setMeterSlug}\n  onEntryTypeChange={setEntryType}\n  onPageChange={setPage}\n/>\n```\n\nA positive delta can represent consumption and a negative delta can represent release or reset, so presentation derives from `ledgerClass` and `entryType` rather than the sign. Unknown values remain neutral, and JSON-safe metadata opens in a titled detail sheet.",
+      "dependencies": [],
+      "registryDependencies": [],
+      "files": [
+        {
+          "path": "registry/constructive/blocks/billing/billing-activity-table/billing-activity-table.tsx",
+          "target": "src/blocks/billing/billing-activity-table/billing-activity-table.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/billing/billing-activity-table/messages.ts",
+          "target": "src/blocks/billing/billing-activity-table/messages.ts",
+          "type": "registry:component"
+        }
+      ]
+    },
+    {
+      "name": "billing-settings-page",
+      "type": "registry:block",
+      "title": "Billing Settings Page",
+      "description": "Router-neutral Overview, Usage, and Plans composition that keeps subscription, usage, credits, entitlements, history, activity, and pricing failures isolated.",
+      "categories": [
+        "blocks",
+        "billing"
+      ],
+      "docs": "## Usage\n\nPass one account together with independent resources and actions. Use `section` and `onSectionChange` to synchronize navigation, or `defaultSection` for local state. The page renders its own heading by default; set `showHeader={false}` when the surrounding document already provides it.\n\n```tsx\nimport { BillingSettingsPage } from '@/blocks/billing/billing-settings-page/billing-settings-page';\n\n<BillingSettingsPage\n  account={{ entityId: 'org_123', kind: 'organization', label: 'Northstar Labs' }}\n  resources={{ plans, subscription, entitlements, usage, credits, usageHistory, activity }}\n  actions={{\n    onSelectPlan: openPlanSelection,\n    onManageSubscription: openSubscriptionSettings,\n    onViewHistory: openMeterHistory,\n    onBuyCredits: openCreditPurchase\n  }}\n  formatOptions={{ locale: 'en-US', timeZone: 'UTC' }}\n  section={section}\n  onSectionChange={setSection}\n/>\n```\n\nEach resource renders its own loading, empty, error, ready, and quality state, so one unavailable section never replaces the whole page. Controlled filters and actions are forwarded to their matching leaf blocks.",
+      "dependencies": [
+        "lucide-react"
+      ],
+      "registryDependencies": [],
+      "files": [
+        {
+          "path": "registry/constructive/blocks/billing/billing-settings-page/billing-settings-page.tsx",
+          "target": "src/blocks/billing/billing-settings-page/billing-settings-page.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/billing/billing-settings-page/messages.ts",
+          "target": "src/blocks/billing/billing-settings-page/messages.ts",
+          "type": "registry:component"
+        }
+      ]
     }
   ]
 }

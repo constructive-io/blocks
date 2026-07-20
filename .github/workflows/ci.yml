@@ -18,7 +18,7 @@ permissions:
   contents: read
 
 jobs:
-  validate:
+  registry:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
@@ -39,24 +39,8 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Validate packages, Blocks, and registry
-        run: pnpm check
-
-      - name: Install Playwright Chromium
-        run: pnpm --filter blocks exec playwright install --with-deps chromium
-
-      - name: Run visual regression suite
-        run: pnpm --filter blocks test:visual
-
-      - name: Upload visual failure artifacts
-        if: failure()
-        uses: actions/upload-artifact@v7
-        with:
-          name: playwright-results
-          path: |
-            apps/blocks/playwright-report
-            apps/blocks/test-results
-          if-no-files-found: ignore
+      - name: Build shadcn registry
+        run: pnpm build:registry
 
   pages:
     runs-on: ubuntu-latest
@@ -79,8 +63,8 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Build and verify Pages artifact
+      - name: Build Pages artifact
         run: pnpm build:pages
 
-# npm releases are intentionally manual. This workflow only validates package
-# tags; it contains no registry token, trusted-publishing step, or publish job.
+# npm releases are intentionally manual. Package tags build the registry and
+# Pages artifact only; this workflow contains no publish credentials or job.
