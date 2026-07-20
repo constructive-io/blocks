@@ -77,7 +77,28 @@ const cases: SmokeCase[] = [
 		],
 	},
 	{
+		name: 'billing-usage-overview',
+		noRequirementsSidecar: true,
+		expected: [
+			'src/blocks/billing/billing-contracts/billing-contracts.ts',
+			'src/blocks/billing/billing-ui/billing-ui.tsx',
+			'src/blocks/billing/billing-usage-overview/billing-usage-overview.tsx',
+			'src/blocks/billing/billing-usage-overview/messages.ts',
+		],
+	},
+	{
+		name: 'billing-credits-card',
+		noRequirementsSidecar: true,
+		expected: [
+			'src/blocks/billing/billing-contracts/billing-contracts.ts',
+			'src/blocks/billing/billing-ui/billing-ui.tsx',
+			'src/blocks/billing/billing-credits-card/billing-credits-card.tsx',
+			'src/blocks/billing/billing-credits-card/messages.ts',
+		],
+	},
+	{
 		name: 'billing-settings-page',
+		customAliases: true,
 		noRequirementsSidecar: true,
 		expected: [
 			'src/blocks/billing/billing-settings-page/billing-settings-page.tsx',
@@ -85,6 +106,7 @@ const cases: SmokeCase[] = [
 			'src/blocks/billing/billing-activity-table/billing-activity-table.tsx',
 			'src/blocks/billing/billing-activity-table/messages.ts',
 			'src/blocks/billing/billing-contracts/billing-contracts.ts',
+			'src/blocks/billing/billing-ui/billing-ui.tsx',
 			'src/blocks/billing/billing-credits-card/billing-credits-card.tsx',
 			'src/blocks/billing/billing-credits-card/messages.ts',
 			'src/blocks/billing/billing-entitlements-list/billing-entitlements-list.tsx',
@@ -97,26 +119,26 @@ const cases: SmokeCase[] = [
 			'src/blocks/billing/billing-usage-history/messages.ts',
 			'src/blocks/billing/billing-usage-overview/billing-usage-overview.tsx',
 			'src/blocks/billing/billing-usage-overview/messages.ts',
-			'src/components/ui/alert.tsx',
-			'src/components/ui/badge.tsx',
-			'src/components/ui/button.tsx',
-			'src/components/ui/card.tsx',
-			'src/components/ui/field.tsx',
-			'src/components/ui/label.tsx',
-			'src/components/ui/pagination.tsx',
-			'src/components/ui/portal.tsx',
-			'src/components/ui/progress.tsx',
-			'src/components/ui/select.tsx',
-			'src/components/ui/separator.tsx',
-			'src/components/ui/sheet.tsx',
-			'src/components/ui/skeleton.tsx',
-			'src/components/ui/table.tsx',
-			'src/components/ui/tabs.tsx',
-			'src/components/ui/tooltip.tsx',
-			'src/hooks/use-controllable-state.ts',
-			'src/lib/motion/motion-config.ts',
-			'src/lib/slot.tsx',
-			'src/lib/utils.ts',
+			'src/design-system/primitives/alert.tsx',
+			'src/design-system/primitives/badge.tsx',
+			'src/design-system/primitives/button.tsx',
+			'src/design-system/primitives/card.tsx',
+			'src/design-system/primitives/field.tsx',
+			'src/design-system/primitives/label.tsx',
+			'src/design-system/primitives/pagination.tsx',
+			'src/design-system/primitives/portal.tsx',
+			'src/design-system/primitives/progress.tsx',
+			'src/design-system/primitives/select.tsx',
+			'src/design-system/primitives/separator.tsx',
+			'src/design-system/primitives/sheet.tsx',
+			'src/design-system/primitives/skeleton.tsx',
+			'src/design-system/primitives/table.tsx',
+			'src/design-system/primitives/tabs.tsx',
+			'src/design-system/primitives/tooltip.tsx',
+			'src/react/use-controllable-state.ts',
+			'src/shared/motion/motion-config.ts',
+			'src/shared/slot.tsx',
+			'src/shared/utils.ts',
 		],
 	},
 	{
@@ -184,7 +206,7 @@ function prepareConsumer(root: string, origin: string, testCase: SmokeCase): voi
 	write(root, 'pnpm-lock.yaml', 'lockfileVersion: 9.0\n');
 
 	const pathAliases = testCase.customAliases
-		? { '~/*': ['./src/*'], '@/*': ['./src/*'] }
+		? { '~/*': ['./src/*'] }
 		: { '@/*': ['./src/*'] };
 	write(
 		root,

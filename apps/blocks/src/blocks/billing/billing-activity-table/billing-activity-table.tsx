@@ -1,6 +1,6 @@
 'use client';
 
-import { useId, useRef, useState } from 'react';
+import { useEffect, useId, useRef, useState } from 'react';
 
 import { Alert, AlertDescription, AlertTitle } from '@constructive-io/ui/alert';
 import { Badge } from '@constructive-io/ui/badge';
@@ -62,14 +62,14 @@ import {
   type BillingPage,
   type BillingQuality,
   type BillingResource
-} from '@/blocks/billing/billing-contracts/billing-contracts';
+} from '../billing-contracts/billing-contracts';
 import {
   BillingQualityBadge,
   BillingQuantity,
   BillingToolbar,
   billingNumericClassName,
   billingTableContainerClassName
-} from '@/blocks/billing/billing-ui/billing-ui';
+} from '../billing-ui/billing-ui';
 import { cn } from '@/lib/utils';
 
 import {
@@ -103,6 +103,12 @@ export type BillingActivityTableProps = {
 type InteractionError = {
   scope: 'filters' | 'pagination' | 'retry';
   error: BillingError;
+};
+
+type SelectedActivityEntry = {
+  accountEntityId: string;
+  accountKind: BillingAccountRef['kind'];
+  entryId: string;
 };
 
 function mergeMessages(
@@ -604,7 +610,22 @@ export function BillingActivityTable({
   const [retryPending, setRetryPending] = useState(false);
   const [pendingControl, setPendingControl] = useState<string | null>(null);
   const [interactionError, setInteractionError] = useState<InteractionError | null>(null);
-  const [selectedEntry, setSelectedEntry] = useState<BillingActivityEntry | null>(null);
+  const [selectedEntryRef, setSelectedEntryRef] =
+    useState<SelectedActivityEntry | null>(null);
+  const selectedEntry =
+    resource.status === 'ready' &&
+    selectedEntryRef?.accountEntityId === account.entityId &&
+    selectedEntryRef.accountKind === account.kind
+      ? (resource.data.items.find(
+          (entry) => entry.id === selectedEntryRef.entryId
+        ) ?? null)
+      : null;
+
+  useEffect(() => {
+    if (selectedEntryRef && !selectedEntry) {
+      setSelectedEntryRef(null);
+    }
+  }, [selectedEntry, selectedEntryRef]);
 
   function reportInteractionError(
     scope: InteractionError['scope'],
@@ -919,7 +940,13 @@ export function BillingActivityTable({
                             size="lg"
                             variant="outline"
                             aria-label={`${messages.detailsButton}: ${presentation.label}`}
-                            onClick={() => setSelectedEntry(entry)}
+                            onClick={() =>
+                              setSelectedEntryRef({
+                                accountEntityId: account.entityId,
+                                accountKind: account.kind,
+                                entryId: entry.id
+                              })
+                            }
                           >
                             {messages.detailsButton}
                           </Button>
@@ -973,7 +1000,7 @@ export function BillingActivityTable({
         entry={selectedEntry}
         open={selectedEntry !== null}
         onOpenChange={(open) => {
-          if (!open) setSelectedEntry(null);
+          if (!open) setSelectedEntryRef(null);
         }}
         formatOptions={formatOptions}
         messages={messages}

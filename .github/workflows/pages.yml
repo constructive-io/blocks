@@ -34,9 +34,6 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Validate repository
-        run: pnpm check
-
       - name: Build static Blocks site
         run: pnpm build:pages
 

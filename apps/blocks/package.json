@@ -21,8 +21,7 @@
     "scripts:typecheck": "tsc --noEmit -p tsconfig.scripts.json",
     "test": "vitest run",
     "test:watch": "vitest --watch",
-    "test:visual": "playwright test",
-    "test:visual:update": "playwright test --update-snapshots=all"
+    "test:e2e": "playwright test"
   },
   "postcss": {
     "plugins": {

@@ -187,6 +187,29 @@ test('derives exact cross-item edges from aliases and relative imports', () => {
 	);
 });
 
+test('rejects unowned relative and blocks-alias modules', () => {
+	const consumer: RegistryItem = {
+		name: 'consumer',
+		type: 'registry:block',
+		files: [
+			{ path: 'registry/consumer.tsx', target: 'src/blocks/example/consumer.tsx', type: 'registry:component' },
+		],
+	};
+	const ownership = createRegistryModuleOwnership([consumer]);
+
+	for (const specifier of ['../missing/helper', '@/blocks/missing/helper']) {
+		assert.throws(
+			() =>
+				deriveOwnedRegistryDependencies(
+					consumer,
+					new Map([['registry/consumer.tsx', `import '${specifier}';`]]),
+					ownership,
+				),
+			/unowned registry module/,
+		);
+	}
+});
+
 test('rejects missing and stale internal edges while allowing reviewed dependency-only edges', () => {
 	const ownItemNames = new Set([
 		'consumer',
@@ -271,15 +294,15 @@ test('rejects duplicate item names and install targets', () => {
 	);
 });
 
-test('source manifests preserve 166 items, 54 root sidecars, and no UI package dependency', () => {
+test('source manifests preserve 167 items, 54 root sidecars, and no UI package dependency', () => {
 	const manifests = [
 		'packages/ui/registry.json',
 		'packages/schema-builder/registry.json',
 		'apps/blocks/registry.json',
 	].map((relativePath) => JSON.parse(fs.readFileSync(path.join(repositoryRoot, relativePath), 'utf8')) as Registry);
 	const items = manifests.flatMap((manifest) => manifest.items);
-	assert.equal(items.length, 166);
-	assert.equal(new Set(items.map((item) => item.name)).size, 166);
+	assert.equal(items.length, 167);
+	assert.equal(new Set(items.map((item) => item.name)).size, 167);
 	for (const item of items) {
 		assert.equal((item.dependencies ?? []).includes('@constructive-io/ui'), false, item.name);
 	}
@@ -293,4 +316,10 @@ test('source manifests preserve 166 items, 54 root sidecars, and no UI package d
 	for (const target of sidecarTargets) {
 		assert.match(target, /^~\/\.constructive\/blocks\/[a-z0-9-]+\.requires\.json$/);
 	}
+
+	const itemByName = new Map(items.map((item) => [item.name, item]));
+	assert.deepEqual(itemByName.get('billing-usage-overview')?.dependencies, ['lucide-react', 'motion']);
+	assert.deepEqual(itemByName.get('billing-credits-card')?.dependencies, ['lucide-react', 'motion']);
+	assert.deepEqual(itemByName.get('billing-settings-page')?.dependencies, ['lucide-react']);
+	assert.deepEqual(itemByName.get('billing-activity-table')?.dependencies, []);
 });

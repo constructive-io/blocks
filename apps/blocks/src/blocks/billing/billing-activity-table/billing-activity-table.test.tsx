@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { act, fireEvent, render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 
 import type {
@@ -19,6 +19,7 @@ const formatOptions = { locale: 'en-US', timeZone: 'UTC' } as const;
 
 const page: BillingPage<BillingActivityEntry> = {
   page: 1,
+  pageSize: 1,
   items: [
     {
       id: 'evt_1',
@@ -94,5 +95,119 @@ describe('BillingActivityTable props contract', () => {
     );
     expect(screen.getByRole('combobox')).toBeInTheDocument();
   });
-});
 
+  it('closes metadata when the account and resource change', () => {
+    const firstAccountReady: BillingResource<
+      BillingPage<BillingActivityEntry>
+    > = {
+      status: 'ready',
+      data: {
+        ...page,
+        items: [
+          {
+            ...page.items[0],
+            metadata: { accountMarker: 'first-account-only' }
+          }
+        ]
+      }
+    };
+    const secondAccount: BillingAccountRef = {
+      entityId: 'org_2',
+      kind: 'organization'
+    };
+    const secondAccountReady: BillingResource<
+      BillingPage<BillingActivityEntry>
+    > = {
+      status: 'ready',
+      data: {
+        ...page,
+        items: [
+          {
+            ...page.items[0],
+            id: 'evt_2',
+            metadata: { accountMarker: 'second-account-only' }
+          }
+        ]
+      }
+    };
+    const { rerender } = render(
+      <BillingActivityTable
+        resource={firstAccountReady}
+        account={account}
+        formatOptions={formatOptions}
+      />
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: /view metadata/i }));
+    expect(screen.getByText(/first-account-only/)).toBeInTheDocument();
+
+    rerender(
+      <BillingActivityTable
+        resource={secondAccountReady}
+        account={secondAccount}
+        formatOptions={formatOptions}
+      />
+    );
+
+    expect(screen.queryByText(/first-account-only/)).not.toBeInTheDocument();
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+
+    rerender(
+      <BillingActivityTable
+        resource={firstAccountReady}
+        account={account}
+        formatOptions={formatOptions}
+      />
+    );
+
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+  });
+
+  it('locks pagination while pending and reports a rejected page change', async () => {
+    let rejectPageChange: (reason: Error) => void = () => undefined;
+    const onPageChange = vi.fn(
+      () =>
+        new Promise<void>((_resolve, reject) => {
+          rejectPageChange = reject;
+        })
+    );
+    const onError = vi.fn();
+    const onMessage = vi.fn();
+    render(
+      <BillingActivityTable
+        resource={{
+          status: 'ready',
+          data: { ...page, hasNextPage: true, totalPages: 2 }
+        }}
+        account={account}
+        formatOptions={formatOptions}
+        onPageChange={onPageChange}
+        onError={onError}
+        onMessage={onMessage}
+      />
+    );
+
+    const nextPageButton = screen.getByRole('button', { name: 'Next' });
+    fireEvent.click(nextPageButton);
+    fireEvent.click(nextPageButton);
+
+    expect(onPageChange).toHaveBeenCalledTimes(1);
+    expect(onPageChange).toHaveBeenCalledWith(2);
+    expect(nextPageButton).toBeDisabled();
+
+    await act(async () => {
+      rejectPageChange(new Error('Page change failed'));
+    });
+
+    expect(screen.getByText('Page change failed')).toBeInTheDocument();
+    expect(onError).toHaveBeenCalledWith(
+      expect.objectContaining({ message: 'Page change failed' })
+    );
+    expect(onMessage).toHaveBeenCalledWith({
+      kind: 'error',
+      key: 'billingActivity.pagination.error',
+      message: 'Page change failed'
+    });
+    expect(nextPageButton).toBeEnabled();
+  });
+});

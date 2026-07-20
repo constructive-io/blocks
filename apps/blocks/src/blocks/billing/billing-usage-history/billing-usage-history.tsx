@@ -61,14 +61,14 @@ import {
   type BillingQuality,
   type BillingResource,
   type BillingUsagePeriod
-} from '@/blocks/billing/billing-contracts/billing-contracts';
+} from '../billing-contracts/billing-contracts';
 import {
   BillingQualityBadge,
   BillingQuantity,
   BillingToolbar,
   billingNumericClassName,
   billingTableContainerClassName
-} from '@/blocks/billing/billing-ui/billing-ui';
+} from '../billing-ui/billing-ui';
 
 import {
   defaultBillingUsageHistoryMessages,

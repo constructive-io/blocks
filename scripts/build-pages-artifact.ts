@@ -127,8 +127,8 @@ await Promise.all([
 ]);
 
 const registry = JSON.parse(await readFile(path.join(artifactRegistry, 'registry.json'), 'utf8')) as Registry;
-if (registry.items.length !== 166) {
-  throw new Error(`Pages registry contains ${registry.items.length} items; expected 166.`);
+if (registry.items.length !== 167) {
+  throw new Error(`Pages registry contains ${registry.items.length} items; expected 167.`);
 }
 const expectedRegistryFiles = new Set([
   'registry.json',

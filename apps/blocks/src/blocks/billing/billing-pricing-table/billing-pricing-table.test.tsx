@@ -1,4 +1,5 @@
-import { render, screen } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 
 import type {
@@ -35,6 +36,16 @@ const ready: BillingResource<BillingPlan[]> = {
   status: 'ready',
   data: plans
 };
+
+function deferred() {
+  let resolve!: () => void;
+  let reject!: (reason?: unknown) => void;
+  const promise = new Promise<void>((resolvePromise, rejectPromise) => {
+    resolve = resolvePromise;
+    reject = rejectPromise;
+  });
+  return { promise, reject, resolve };
+}
 
 describe('BillingPricingTable props contract', () => {
   it('mounts required props and surfaces plan data', () => {
@@ -92,5 +103,86 @@ describe('BillingPricingTable props contract', () => {
     expect(
       screen.getByRole('button', { name: /select plan/i })
     ).toBeInTheDocument();
+  });
+
+  it('forwards plan selection, blocks duplicates, and surfaces rejected actions', async () => {
+    const user = userEvent.setup();
+    const pending = deferred();
+    const onSelectPlan = vi.fn(() => pending.promise);
+    const onError = vi.fn();
+    const onMessage = vi.fn();
+
+    render(
+      <BillingPricingTable
+        resource={ready}
+        account={account}
+        formatOptions={formatOptions}
+        onSelectPlan={onSelectPlan}
+        onError={onError}
+        onMessage={onMessage}
+      />
+    );
+
+    const select = screen.getByRole('button', { name: 'Select plan' });
+    await user.click(select);
+    fireEvent.click(select);
+
+    expect(onSelectPlan).toHaveBeenCalledTimes(1);
+    expect(onSelectPlan).toHaveBeenCalledWith({
+      planId: 'growth',
+      priceId: 'growth-month',
+      account
+    });
+    expect(screen.getByRole('button', { name: 'Selecting…' })).toBeDisabled();
+
+    await act(async () => {
+      pending.reject(new Error('Selection failed'));
+    });
+
+    await waitFor(() =>
+      expect(screen.getByText('Selection failed')).toBeInTheDocument()
+    );
+    expect(onError).toHaveBeenCalledWith({ message: 'Selection failed' });
+    expect(onMessage).toHaveBeenCalledWith({
+      kind: 'error',
+      key: 'billingPricingTable.selectPlan.error',
+      message: 'Selection failed'
+    });
+  });
+
+  it('forwards contact-sales selections without inventing a price id', async () => {
+    const user = userEvent.setup();
+    const onContactSales = vi.fn();
+    const contactSales: BillingResource<BillingPlan[]> = {
+      status: 'ready',
+      data: [
+        {
+          id: 'enterprise',
+          name: 'Enterprise',
+          prices: [
+            {
+              kind: 'contact_sales',
+              id: 'enterprise-sales',
+              interval: 'month'
+            }
+          ]
+        }
+      ]
+    };
+
+    render(
+      <BillingPricingTable
+        resource={contactSales}
+        account={account}
+        formatOptions={formatOptions}
+        onContactSales={onContactSales}
+      />
+    );
+
+    await user.click(screen.getByRole('button', { name: 'Contact sales' }));
+    expect(onContactSales).toHaveBeenCalledWith({
+      planId: 'enterprise',
+      account
+    });
   });
 });

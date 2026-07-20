@@ -509,7 +509,7 @@ test('billing settings tabs follow keyboard conventions and partial failures rem
 
   await usage.click();
   const history = settings.locator('[data-slot="billing-usage-history"]');
-  await expect(history.getByText('Data quality: Estimated')).toBeVisible();
+  await expect(history.getByLabel('Data quality: Estimated')).toBeVisible();
   const loadingActivity = settings.locator(
     '[data-slot="billing-activity-table"]',
   );

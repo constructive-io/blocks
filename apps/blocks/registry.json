@@ -2510,6 +2510,25 @@
       ]
     },
     {
+      "name": "billing-ui",
+      "type": "registry:lib",
+      "title": "Billing UI Helpers",
+      "description": "Shared formatting and presentation helpers used by the customer billing blocks.",
+      "categories": [
+        "blocks",
+        "billing"
+      ],
+      "dependencies": [],
+      "registryDependencies": [],
+      "files": [
+        {
+          "path": "registry/constructive/blocks/billing/billing-ui/billing-ui.tsx",
+          "target": "src/blocks/billing/billing-ui/billing-ui.tsx",
+          "type": "registry:lib"
+        }
+      ]
+    },
+    {
       "name": "billing-pricing-table",
       "type": "registry:block",
       "title": "Billing Pricing Table",
@@ -2601,7 +2620,8 @@
       ],
       "docs": "## Usage\n\nPass a current-period usage snapshot and nest child meters beneath category or universal pools when credits are shared.\n\n```tsx\nimport { BillingUsageOverview } from '@/blocks/billing/billing-usage-overview/billing-usage-overview';\n\n<BillingUsageOverview\n  resource={{ status: 'ready', quality: 'authoritative', data: usageSnapshot }}\n  account={{ entityId: 'org_123', kind: 'organization' }}\n  formatOptions={{ locale: 'en-US', timeZone: 'UTC' }}\n  onViewHistory={(meterSlug) => openUsageHistory(meterSlug)}\n  onBuyCredits={(meterSlug) => openCreditPurchase(meterSlug)}\n/>\n```\n\nCategory and universal pools stay nested so their application order remains clear. Progress caps visually at 100 percent while text and accessible values preserve the actual used, allowance, and overage values. Actions disappear when their callbacks are absent.",
       "dependencies": [
-        "lucide-react"
+        "lucide-react",
+        "motion"
       ],
       "registryDependencies": [],
       "files": [
@@ -2628,7 +2648,8 @@
       ],
       "docs": "## Usage\n\nPass available balances and their credit lots while keeping each meter and unit independent.\n\n```tsx\nimport { BillingCreditsCard } from '@/blocks/billing/billing-credits-card/billing-credits-card';\n\n<BillingCreditsCard\n  resource={{\n    status: 'ready',\n    data: [{\n      meterSlug: 'query_time',\n      label: 'Query time',\n      unit: 'seconds',\n      available: '7200',\n      lots: [{ id: 'lot_1', kind: 'rollover', amount: '3600', remaining: '1800', expiresAt: '2026-08-01T00:00:00.000Z' }]\n    }]\n  }}\n  account={{ entityId: 'org_123', kind: 'organization' }}\n  formatOptions={{ locale: 'en-US', timeZone: 'UTC' }}\n/>\n```\n\nKeep incompatible meters and units in separate balance groups. Credit lots show the current grant makeup, while `billing-activity-table` provides a chronological view of grants, usage, adjustments, rollover, and expiration.",
       "dependencies": [
-        "lucide-react"
+        "lucide-react",
+        "motion"
       ],
       "registryDependencies": [],
       "files": [
@@ -2681,9 +2702,7 @@
         "billing"
       ],
       "docs": "## Usage\n\nPass ledger class and entry type with each activity entry so labels and badge tones describe the event itself.\n\n```tsx\nimport { BillingActivityTable } from '@/blocks/billing/billing-activity-table/billing-activity-table';\n\n<BillingActivityTable\n  resource={{ status: 'ready', quality: 'authoritative', data: activityPage }}\n  account={{ entityId: 'org_123', kind: 'organization' }}\n  formatOptions={{ locale: 'en-US', timeZone: 'UTC' }}\n  meterOptions={meterOptions}\n  entryTypeOptions={entryTypeOptions}\n  onMeterChange={setMeterSlug}\n  onEntryTypeChange={setEntryType}\n  onPageChange={setPage}\n/>\n```\n\nA positive delta can represent consumption and a negative delta can represent release or reset, so presentation derives from `ledgerClass` and `entryType` rather than the sign. Unknown values remain neutral, and JSON-safe metadata opens in a titled detail sheet.",
-      "dependencies": [
-        "lucide-react"
-      ],
+      "dependencies": [],
       "registryDependencies": [],
       "files": [
         {
@@ -2708,7 +2727,9 @@
         "billing"
       ],
       "docs": "## Usage\n\nPass one account together with independent resources and actions. Use `section` and `onSectionChange` to synchronize navigation, or `defaultSection` for local state. The page renders its own heading by default; set `showHeader={false}` when the surrounding document already provides it.\n\n```tsx\nimport { BillingSettingsPage } from '@/blocks/billing/billing-settings-page/billing-settings-page';\n\n<BillingSettingsPage\n  account={{ entityId: 'org_123', kind: 'organization', label: 'Northstar Labs' }}\n  resources={{ plans, subscription, entitlements, usage, credits, usageHistory, activity }}\n  actions={{\n    onSelectPlan: openPlanSelection,\n    onManageSubscription: openSubscriptionSettings,\n    onViewHistory: openMeterHistory,\n    onBuyCredits: openCreditPurchase\n  }}\n  formatOptions={{ locale: 'en-US', timeZone: 'UTC' }}\n  section={section}\n  onSectionChange={setSection}\n/>\n```\n\nEach resource renders its own loading, empty, error, ready, and quality state, so one unavailable section never replaces the whole page. Controlled filters and actions are forwarded to their matching leaf blocks.",
-      "dependencies": [],
+      "dependencies": [
+        "lucide-react"
+      ],
       "registryDependencies": [],
       "files": [
         {

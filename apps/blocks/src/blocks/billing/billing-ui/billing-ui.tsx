@@ -18,7 +18,7 @@ import {
   type BillingFormatOptions,
   type BillingMoney,
   type BillingQuality
-} from '@/blocks/billing/billing-contracts/billing-contracts';
+} from '../billing-contracts/billing-contracts';
 
 /** Classes for any long decimal / money string that must not clip. */
 export const billingNumericClassName =

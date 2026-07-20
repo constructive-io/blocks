@@ -35,12 +35,12 @@ import {
   type BillingResource,
   type BillingStatusPresentation,
   type BillingSubscription
-} from '@/blocks/billing/billing-contracts/billing-contracts';
+} from '../billing-contracts/billing-contracts';
 import {
   BillingMetaItem,
   BillingMoneyText,
   BillingQualityBadge
-} from '@/blocks/billing/billing-ui/billing-ui';
+} from '../billing-ui/billing-ui';
 
 import {
   defaultBillingSubscriptionCardMessages,

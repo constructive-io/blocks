@@ -42,6 +42,18 @@ describe('billing-contracts helpers', () => {
         formatOptions
       )
     ).toBe('$49.00');
+    expect(
+      formatBillingMoney(
+        { amountMinor: '4900', currency: 'JPY' },
+        formatOptions
+      )
+    ).toBe('¥4,900');
+    expect(
+      formatBillingMoney(
+        { amountMinor: '4900', currency: 'not-a-currency' },
+        formatOptions
+      )
+    ).toBe('not-a-currency 4,900');
   });
 
   it('formats dates with the supplied locale and time zone', () => {
@@ -68,5 +80,14 @@ describe('billing-contracts helpers', () => {
       resolveBillingStatus('active', billingSubscriptionStatusPresentations)
         .label
     ).toBeTruthy();
+    expect(
+      resolveBillingStatus(
+        'provider_specific_future_state',
+        billingSubscriptionStatusPresentations
+      )
+    ).toEqual({
+      label: 'Provider specific future state',
+      tone: 'outline'
+    });
   });
 });

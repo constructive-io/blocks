@@ -47,12 +47,12 @@ import {
   type BillingMessageEvent,
   type BillingQuality,
   type BillingResource
-} from '@/blocks/billing/billing-contracts/billing-contracts';
+} from '../billing-contracts/billing-contracts';
 import {
   BillingQualityBadge,
   BillingQuantity,
   billingNumericClassName
-} from '@/blocks/billing/billing-ui/billing-ui';
+} from '../billing-ui/billing-ui';
 import { cn } from '@/lib/utils';
 
 import {
@@ -355,6 +355,11 @@ function CreditLotRow({
               'focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background'
             )}
             tabIndex={0}
+            role="progressbar"
+            aria-valuemin={0}
+            aria-valuemax={100}
+            aria-valuenow={remainingProgress.visualPercent}
+            aria-valuetext={progressAriaText}
             aria-label={`${title} ${messages.percentRemainingLabel}`}
           >
             <Progress
@@ -363,7 +368,6 @@ function CreditLotRow({
               aria-hidden="true"
               data-visual-percent={remainingProgress.visualPercent}
             />
-            <span className="sr-only">{progressAriaText}</span>
           </div>
         </TooltipTrigger>
         <TooltipContent

@@ -1,4 +1,5 @@
 import { render, screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { describe, expect, it } from 'vitest';
 
 import type {
@@ -70,5 +71,37 @@ describe('BillingCreditsCard props contract', () => {
     expect(
       container.querySelector('[data-slot="billing-credits-card"]')
     ).toBeTruthy();
+  });
+
+  it('exposes one focusable progressbar with true remaining-credit values', async () => {
+    const user = userEvent.setup();
+    const { container } = render(
+      <BillingCreditsCard
+        resource={ready}
+        account={account}
+        formatOptions={formatOptions}
+      />
+    );
+
+    await user.click(
+      screen.getByRole('button', { name: 'Query time: Show grants (1)' })
+    );
+
+    const progressbar = screen.getByRole('progressbar', {
+      name: 'Permanent remaining'
+    });
+
+    expect(progressbar).toHaveAttribute('tabindex', '0');
+    expect(progressbar).toHaveAttribute('aria-valuemin', '0');
+    expect(progressbar).toHaveAttribute('aria-valuemax', '100');
+    expect(progressbar).toHaveAttribute('aria-valuenow', '50');
+    expect(progressbar).toHaveAttribute(
+      'aria-valuetext',
+      'Exact values: 3600 / 7200; 50% remaining'
+    );
+    expect(
+      container.querySelector('[data-visual-percent="50"]')
+    ).toHaveAttribute('aria-hidden', 'true');
+    expect(screen.getAllByRole('progressbar')).toHaveLength(1);
   });
 });

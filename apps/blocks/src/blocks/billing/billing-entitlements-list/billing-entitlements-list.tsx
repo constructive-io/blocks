@@ -41,11 +41,11 @@ import {
   type BillingMessageEvent,
   type BillingQuality,
   type BillingResource
-} from '@/blocks/billing/billing-contracts/billing-contracts';
+} from '../billing-contracts/billing-contracts';
 import {
   BillingQualityBadge,
   billingNumericClassName
-} from '@/blocks/billing/billing-ui/billing-ui';
+} from '../billing-ui/billing-ui';
 
 import {
   defaultBillingEntitlementsListMessages,

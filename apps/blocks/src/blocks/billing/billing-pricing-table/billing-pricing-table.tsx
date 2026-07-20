@@ -40,12 +40,12 @@ import {
   type BillingPlan,
   type BillingPrice,
   type BillingResource
-} from '@/blocks/billing/billing-contracts/billing-contracts';
+} from '../billing-contracts/billing-contracts';
 import {
   BillingMoneyText,
   BillingQualityBadge,
   billingNumericClassName
-} from '@/blocks/billing/billing-ui/billing-ui';
+} from '../billing-ui/billing-ui';
 
 import {
   defaultBillingPricingTableMessages,

@@ -34,7 +34,7 @@ import {
 import {
   BillingActivityTable,
   type BillingActivityTableProps
-} from '@/blocks/billing/billing-activity-table/billing-activity-table';
+} from '../billing-activity-table/billing-activity-table';
 import {
   formatBillingDate,
   normalizeBillingError,
@@ -51,25 +51,25 @@ import {
   type BillingSubscription,
   type BillingUsagePeriod,
   type BillingUsageSnapshot
-} from '@/blocks/billing/billing-contracts/billing-contracts';
-import { BillingCreditsCard } from '@/blocks/billing/billing-credits-card/billing-credits-card';
-import { BillingEntitlementsList } from '@/blocks/billing/billing-entitlements-list/billing-entitlements-list';
+} from '../billing-contracts/billing-contracts';
+import { BillingCreditsCard } from '../billing-credits-card/billing-credits-card';
+import { BillingEntitlementsList } from '../billing-entitlements-list/billing-entitlements-list';
 import {
   BillingPricingTable,
   type BillingPricingTableProps
-} from '@/blocks/billing/billing-pricing-table/billing-pricing-table';
+} from '../billing-pricing-table/billing-pricing-table';
 import {
   BillingSubscriptionCard,
   type BillingSubscriptionCardProps
-} from '@/blocks/billing/billing-subscription-card/billing-subscription-card';
+} from '../billing-subscription-card/billing-subscription-card';
 import {
   BillingUsageHistory,
   type BillingUsageHistoryProps
-} from '@/blocks/billing/billing-usage-history/billing-usage-history';
+} from '../billing-usage-history/billing-usage-history';
 import {
   BillingUsageOverview,
   type BillingUsageOverviewProps
-} from '@/blocks/billing/billing-usage-overview/billing-usage-overview';
+} from '../billing-usage-overview/billing-usage-overview';
 import { cn } from '@/lib/utils';
 
 import {
@@ -195,7 +195,39 @@ function mergeMessages(
   };
 }
 
-/** Prefer the freshest ready snapshot across composed resources. */
+const ISO_TIMESTAMP_PATTERN =
+  /^(\d{4})-(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])T(?:[01]\d|2[0-3]):[0-5]\d:[0-5]\d(?:\.\d+)?(?:Z|[+-](?:[01]\d|2[0-3]):[0-5]\d)$/u;
+
+function parseIsoTimestamp(value: string): number | undefined {
+  const match = ISO_TIMESTAMP_PATTERN.exec(value);
+  if (!match) return undefined;
+
+  const year = Number(match[1]);
+  const month = Number(match[2]);
+  const day = Number(match[3]);
+  const isLeapYear = year % 4 === 0 && (year % 100 !== 0 || year % 400 === 0);
+  const daysInMonth = [
+    31,
+    isLeapYear ? 29 : 28,
+    31,
+    30,
+    31,
+    30,
+    31,
+    31,
+    30,
+    31,
+    30,
+    31
+  ];
+
+  if (day > daysInMonth[month - 1]) return undefined;
+
+  const timestamp = Date.parse(value);
+  return Number.isFinite(timestamp) ? timestamp : undefined;
+}
+
+/** Prefer the freshest valid ready snapshot across composed resources. */
 function pickAsOf(resources: BillingSettingsResources): string | undefined {
   const candidates = [
     resources.usage,
@@ -206,10 +238,21 @@ function pickAsOf(resources: BillingSettingsResources): string | undefined {
     resources.usageHistory,
     resources.activity
   ];
+
+  let selected: { value: string; timestamp: number } | undefined;
   for (const resource of candidates) {
-    if (resource.status === 'ready' && resource.asOf) return resource.asOf;
+    if (resource.status !== 'ready' || !resource.asOf) continue;
+
+    const timestamp = parseIsoTimestamp(resource.asOf);
+    if (timestamp === undefined) continue;
+
+    // Candidate order is the deterministic tie-breaker for equal instants.
+    if (!selected || timestamp > selected.timestamp) {
+      selected = { value: resource.asOf, timestamp };
+    }
   }
-  return undefined;
+
+  return selected?.value;
 }
 
 /**
@@ -379,7 +422,11 @@ export function BillingSettingsPage({
 
         {sectionError ? (
           <Alert variant="destructive">
-            <AlertTitle className="text-balance">
+            <AlertTitle
+              className="text-balance"
+              role="heading"
+              aria-level={2}
+            >
               {messages.sectionErrorTitle}
             </AlertTitle>
             <AlertDescription>{sectionError}</AlertDescription>

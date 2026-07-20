@@ -14,11 +14,11 @@ type RegistryItem = {
 };
 type Registry = { items: RegistryItem[] };
 
-const expectedItemCount = 166;
+const expectedItemCount = 167;
 // Reviewed catalog snapshot: item names and item types are the stable public
 // surface. Generated dependency closure and target invariants are checked below
 // instead of being hidden inside an opaque full-manifest hash.
-const expectedCatalogHash = 'b33529b57ae7273fec5728c427d6a605d07b928b54444a15505f08fe7b8a08e3';
+const expectedCatalogHash = '75b0ec25c4e79e244032997f53de0d0044d2520606fd21d324dc03787401a395';
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const registryPath = path.join(root, 'apps', 'registry', 'registry.json');
 const registry = JSON.parse(await readFile(registryPath, 'utf8')) as Registry;

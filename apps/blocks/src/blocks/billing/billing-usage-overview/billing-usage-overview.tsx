@@ -49,12 +49,12 @@ import {
   type BillingQuality,
   type BillingResource,
   type BillingUsageSnapshot
-} from '@/blocks/billing/billing-contracts/billing-contracts';
+} from '../billing-contracts/billing-contracts';
 import {
   BillingQualityBadge,
   BillingQuantity,
   billingNumericClassName
-} from '@/blocks/billing/billing-ui/billing-ui';
+} from '../billing-ui/billing-ui';
 import { cn } from '@/lib/utils';
 
 import {
@@ -474,6 +474,11 @@ function MeterFigure({
                 'focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background'
               )}
               tabIndex={0}
+              role="progressbar"
+              aria-valuemin={0}
+              aria-valuemax={100}
+              aria-valuenow={progress.visualPercent}
+              aria-valuetext={progressAriaText}
               aria-label={`${meter.label} ${messages.percentUsedLabel}`}
             >
               <Progress
@@ -482,7 +487,6 @@ function MeterFigure({
                 aria-hidden="true"
                 data-visual-percent={progress.visualPercent}
               />
-              <span className="sr-only">{progressAriaText}</span>
             </div>
           </TooltipTrigger>
           <TooltipContent

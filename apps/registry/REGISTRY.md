@@ -10,7 +10,7 @@ this repository:
   widget distributed as source through shadcn.
 
 The aggregator rejects duplicate item names, duplicate install targets, missing
-source files, and any combined item count other than 166.
+source files, and any combined item count other than 167.
 
 ## Configure and install
 
@@ -39,8 +39,9 @@ primitives and theme into the consumer; `@constructive-io/ui` is not an npm
 prerequisite.
 
 The billing family uses shared typed resources and callback-driven actions.
-Installing `billing-settings-page` pulls in all seven customer-facing leaves
-plus `billing-contracts`, so the complete composition arrives with one command.
+Installing `billing-settings-page` pulls in all seven customer-facing leaves,
+the shared contracts, and their presentation helpers, so the complete
+composition arrives with one command.
 
 After configuring the `@constructive` namespace above, a root item may also be
 installed directly by URL. The namespace configuration remains required so
