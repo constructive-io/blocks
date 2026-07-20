@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { ArrowUpRight, MoreHorizontal, TrendingUp } from 'lucide-react';
 
 import { Badge } from '@constructive-io/ui/badge';
@@ -78,7 +79,7 @@ export function CardVariantsDemo() {
 export function InteractiveCardDemo() {
   return (
     <Demo>
-      <a
+      <Link
         href="/blocks/ui/card"
         className="block w-full max-w-sm rounded-xl outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
       >
@@ -91,7 +92,7 @@ export function InteractiveCardDemo() {
             <CardDescription>Inspect database health, queries, and recent deployments.</CardDescription>
           </CardHeader>
         </Card>
-      </a>
+      </Link>
     </Demo>
   );
 }

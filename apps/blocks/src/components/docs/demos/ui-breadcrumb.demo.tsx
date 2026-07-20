@@ -1,5 +1,7 @@
 'use client';
 
+import Link from 'next/link';
+
 import {
   Breadcrumb,
   BreadcrumbEllipsis,
@@ -19,11 +21,15 @@ export function BasicBreadcrumbDemo() {
         <Breadcrumb aria-label="Component location">
           <BreadcrumbList>
             <BreadcrumbItem>
-              <BreadcrumbLink href="/">Constructive</BreadcrumbLink>
+              <BreadcrumbLink asChild>
+                <Link href="/">Constructive</Link>
+              </BreadcrumbLink>
             </BreadcrumbItem>
             <BreadcrumbSeparator />
             <BreadcrumbItem>
-              <BreadcrumbLink href="/blocks">Components</BreadcrumbLink>
+              <BreadcrumbLink asChild>
+                <Link href="/blocks">Components</Link>
+              </BreadcrumbLink>
             </BreadcrumbItem>
             <BreadcrumbSeparator />
             <BreadcrumbItem>
@@ -43,7 +49,9 @@ export function CollapsedBreadcrumbDemo() {
         <Breadcrumb aria-label="Collapsed component location">
           <BreadcrumbList>
             <BreadcrumbItem>
-              <BreadcrumbLink href="/">Constructive</BreadcrumbLink>
+              <BreadcrumbLink asChild>
+                <Link href="/">Constructive</Link>
+              </BreadcrumbLink>
             </BreadcrumbItem>
             <BreadcrumbSeparator />
             <BreadcrumbItem>
@@ -51,7 +59,9 @@ export function CollapsedBreadcrumbDemo() {
             </BreadcrumbItem>
             <BreadcrumbSeparator />
             <BreadcrumbItem>
-              <BreadcrumbLink href="/blocks">Components</BreadcrumbLink>
+              <BreadcrumbLink asChild>
+                <Link href="/blocks">Components</Link>
+              </BreadcrumbLink>
             </BreadcrumbItem>
             <BreadcrumbSeparator />
             <BreadcrumbItem>
@@ -71,11 +81,15 @@ export function CustomSeparatorBreadcrumbDemo() {
         <Breadcrumb aria-label="Settings location">
           <BreadcrumbList>
             <BreadcrumbItem>
-              <BreadcrumbLink href="/">Constructive</BreadcrumbLink>
+              <BreadcrumbLink asChild>
+                <Link href="/">Constructive</Link>
+              </BreadcrumbLink>
             </BreadcrumbItem>
             <BreadcrumbSeparator>/</BreadcrumbSeparator>
             <BreadcrumbItem>
-              <BreadcrumbLink href="/blocks">Components</BreadcrumbLink>
+              <BreadcrumbLink asChild>
+                <Link href="/blocks">Components</Link>
+              </BreadcrumbLink>
             </BreadcrumbItem>
             <BreadcrumbSeparator>/</BreadcrumbSeparator>
             <BreadcrumbItem>

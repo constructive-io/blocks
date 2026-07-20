@@ -14,6 +14,14 @@ const expectedNodeMajor = '24';
 const expectedNodeEngine = '>=24.0.0';
 const expectedPnpmVersion = '10.28.0';
 const expectedUiNodeEngine = '>=18.0.0';
+const expectedActionVersions = new Map([
+  ['actions/checkout', 'v7'],
+  ['actions/setup-node', 'v7'],
+  ['actions/upload-artifact', 'v7'],
+  ['actions/upload-pages-artifact', 'v5'],
+  ['actions/deploy-pages', 'v5'],
+  ['pnpm/action-setup', 'v6']
+]);
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const execFileAsync = promisify(execFile);
 const failures: string[] = [];
@@ -81,7 +89,34 @@ for (const [relativePath, contents] of [
   ['.github/workflows/pages.yml', pagesWorkflow]
 ] as const) {
   const pins = [...contents.matchAll(/node-version:\s*['"]?([^'"\s#]+)['"]?/g)].map((match) => match[1]);
-  expectEqual(`${relativePath} Node.js pins`, JSON.stringify(pins), JSON.stringify([expectedNodeMajor]));
+  if (pins.length === 0 || pins.some((pin) => pin !== expectedNodeMajor)) {
+    failures.push(
+      `${relativePath} Node.js pins: expected only ${expectedNodeMajor}, received ${JSON.stringify(pins)}`
+    );
+  }
+}
+
+const actionUses = new Map<string, Set<string>>();
+for (const contents of [ciWorkflow, pagesWorkflow]) {
+  for (const match of contents.matchAll(/\buses:\s*([^\s@]+)@([^\s#]+)/g)) {
+    const [, action, version] = match;
+    if (!action || !version) continue;
+    const versions = actionUses.get(action) ?? new Set<string>();
+    versions.add(version);
+    actionUses.set(action, versions);
+  }
+}
+for (const [action, expectedVersion] of expectedActionVersions) {
+  const actualVersions = actionUses.get(action);
+  if (!actualVersions) {
+    failures.push(`GitHub Actions: missing ${action}@${expectedVersion}`);
+    continue;
+  }
+  expectEqual(
+    `GitHub Actions ${action} versions`,
+    JSON.stringify([...actualVersions]),
+    JSON.stringify([expectedVersion])
+  );
 }
 
 const runtimeInstruction = `Node ${expectedNodeMajor} LTS and pnpm ${expectedPnpmVersion}`;
