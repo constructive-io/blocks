@@ -8,12 +8,129 @@ html {
 
 body {
   text-rendering: optimizeLegibility;
+  font-family: var(--font-sans-loaded, var(--font-sans));
 }
 
 ::selection {
-  background: color-mix(in oklch, var(--primary) 20%, transparent);
+  background: color-mix(in oklch, var(--primary) 22%, transparent);
 }
 
 pre {
   scrollbar-width: thin;
+}
+
+/* Site frame: sidebar-floor + vertical container guides (coss-inspired) */
+.site-frame {
+  --site-header-height: 3.5rem;
+  --site-max: 72rem; /* max-w-6xl */
+  position: relative;
+  isolation: isolate;
+  min-height: 100dvh;
+  background: var(--background);
+}
+
+.site-frame::before,
+.site-frame::after {
+  content: '';
+  pointer-events: none;
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  z-index: 40;
+  width: 1px;
+  background: color-mix(in oklch, var(--border) 70%, transparent);
+  display: none;
+}
+
+@media (min-width: 1280px) {
+  .site-frame::before,
+  .site-frame::after {
+    display: block;
+  }
+
+  .site-frame::before {
+    left: max(0px, calc(50% - (var(--site-max) / 2)));
+  }
+
+  .site-frame::after {
+    right: max(0px, calc(50% - (var(--site-max) / 2)));
+  }
+}
+
+.site-container {
+  margin-inline: auto;
+  width: 100%;
+  max-width: var(--site-max);
+  padding-inline: 1.5rem;
+}
+
+@media (min-width: 640px) {
+  .site-container {
+    padding-inline: 2rem;
+  }
+}
+
+/* Hairline rule with corner rivets */
+.site-rule {
+  position: relative;
+  border-top: 1px solid color-mix(in oklch, var(--border) 70%, transparent);
+}
+
+.site-rule::before,
+.site-rule::after {
+  content: '';
+  pointer-events: none;
+  position: absolute;
+  top: -3.5px;
+  z-index: 1;
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 2px;
+  border: 1px solid var(--border);
+  background: var(--background);
+  box-shadow: 0 1px 1px color-mix(in oklch, black 4%, transparent);
+  display: none;
+}
+
+@media (min-width: 1280px) {
+  .site-rule::before,
+  .site-rule::after {
+    display: block;
+  }
+
+  .site-rule::before {
+    left: max(0px, calc(50% - (var(--site-max) / 2) - 0.7rem));
+  }
+
+  .site-rule::after {
+    right: max(0px, calc(50% - (var(--site-max) / 2) - 0.7rem));
+  }
+}
+
+/*
+ * Catalog card ghost frame.
+ * Inner card: rounded-xl (12px). Ghost inset: 5px.
+ * Concentric: outerRadius = 12 + 5 = 17px.
+ */
+.catalog-frame {
+  position: relative;
+}
+
+.catalog-frame::after {
+  content: '';
+  pointer-events: none;
+  position: absolute;
+  inset: -5px;
+  z-index: -1;
+  border-radius: 17px;
+  border: 1px solid color-mix(in oklch, var(--border) 55%, transparent);
+  opacity: 0;
+  transition-property: opacity;
+  transition-duration: 150ms;
+  transition-timing-function: ease-out;
+}
+
+.catalog-frame:hover::after,
+.catalog-frame:focus-within::after {
+  opacity: 1;
 }
