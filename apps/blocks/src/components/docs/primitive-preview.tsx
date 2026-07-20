@@ -3,17 +3,19 @@
 import type { BasePrimitiveName } from '@/lib/base-primitives';
 import { cn } from '@/lib/utils';
 
-import { UI_DEMOS } from './showcase-ui';
+import { getUiDemo } from './showcase-ui';
 
 export function PrimitivePreview({
   name,
+  demo = 'BlockDemo',
   framed = true,
 }: {
   name: BasePrimitiveName;
+  demo?: string;
   /** When false, used inside an existing registry-block stage. */
   framed?: boolean;
 }) {
-  const Demo = UI_DEMOS[name];
+  const Demo = getUiDemo(name, demo);
 
   if (!framed) {
     return (

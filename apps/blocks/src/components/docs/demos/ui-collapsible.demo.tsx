@@ -1,5 +1,7 @@
 'use client';
 
+import { useState } from 'react';
+
 import {
   Collapsible,
   CollapsibleContent,
@@ -9,37 +11,64 @@ import {
 
 import { Demo } from '@/components/docs/showcase-kit';
 
-const FAQ = [
-  {
-    q: 'How is row-level security enforced?',
-    a: 'Every table ships with RLS policies derived from your access rules, so reads and writes are scoped per actor at the database level.',
-  },
-  {
-    q: 'Can I bring my own auth?',
-    a: 'Yes. The auth flows are optional building blocks — wire them up, or call the GraphQL API with your own tokens.',
-  },
-  {
-    q: 'Where does my data live?',
-    a: 'In your own PostgreSQL database. Constructive generates the schema, policies, and API on top of it.',
-  },
-];
+const SECURITY_ANSWER =
+  'Every table ships with row-level security policies derived from your access rules.';
 
-export function BlockDemo() {
+export function BasicCollapsibleDemo() {
   return (
     <Demo>
-      <div className="w-full max-w-lg divide-y rounded-lg border bg-background">
-        {FAQ.map((item) => (
-          <Collapsible key={item.q}>
-            <CollapsibleTrigger className="px-4 py-3 hover:bg-accent/50">
-              <span>{item.q}</span>
-              <CollapsibleIcon />
-            </CollapsibleTrigger>
-            <CollapsibleContent innerClassName="border-t px-4">
-              <p className="text-pretty text-muted-foreground">{item.a}</p>
-            </CollapsibleContent>
-          </Collapsible>
-        ))}
+      <Collapsible className="w-full max-w-lg rounded-lg border bg-background">
+        <CollapsibleTrigger className="px-4 py-3 hover:bg-accent/50">
+          <span>How is row-level security enforced?</span>
+          <CollapsibleIcon aria-hidden="true" />
+        </CollapsibleTrigger>
+        <CollapsibleContent innerClassName="border-t px-4">
+          <p className="text-pretty text-muted-foreground">{SECURITY_ANSWER}</p>
+        </CollapsibleContent>
+      </Collapsible>
+    </Demo>
+  );
+}
+
+export function ControlledCollapsibleDemo() {
+  const [open, setOpen] = useState(false);
+
+  return (
+    <Demo>
+      <div className="flex w-full max-w-lg flex-col gap-3">
+        <Collapsible open={open} onOpenChange={setOpen} className="rounded-lg border bg-background">
+          <CollapsibleTrigger className="px-4 py-3 hover:bg-accent/50">
+            <span>{open ? 'Hide security details' : 'Show security details'}</span>
+            <CollapsibleIcon aria-hidden="true" />
+          </CollapsibleTrigger>
+          <CollapsibleContent innerClassName="border-t px-4">
+            <p className="text-pretty text-sm text-muted-foreground">{SECURITY_ANSWER}</p>
+          </CollapsibleContent>
+        </Collapsible>
+        <p className="text-pretty text-sm text-muted-foreground">Panel is {open ? 'open' : 'closed'}.</p>
       </div>
     </Demo>
   );
+}
+
+export function DefaultOpenCollapsibleDemo() {
+  return (
+    <Demo>
+      <Collapsible defaultOpen className="w-full max-w-lg rounded-lg border bg-background">
+        <CollapsibleTrigger className="px-4 py-3 hover:bg-accent/50">
+          <span>Database location</span>
+          <CollapsibleIcon aria-hidden="true" />
+        </CollapsibleTrigger>
+        <CollapsibleContent innerClassName="border-t px-4">
+          <p className="text-pretty text-muted-foreground">
+            Your data remains in your PostgreSQL database and chosen deployment region.
+          </p>
+        </CollapsibleContent>
+      </Collapsible>
+    </Demo>
+  );
+}
+
+export function BlockDemo() {
+  return <BasicCollapsibleDemo />;
 }

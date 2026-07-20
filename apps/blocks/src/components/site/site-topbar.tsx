@@ -55,7 +55,7 @@ export function SiteTopbar({ onMenuClick }: SiteTopbarProps) {
           type="button"
           variant="outline"
           size="icon"
-          className="size-9 shrink-0 md:hidden"
+          className="size-9 shrink-0 min-[861px]:hidden"
           aria-label="Open navigation"
           onClick={onMenuClick}
         >

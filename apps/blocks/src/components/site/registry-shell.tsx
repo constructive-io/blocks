@@ -28,7 +28,7 @@ export function RegistryShell({ children }: { children: ReactNode }) {
       {mobileOpen ? (
         <button
           type="button"
-          className="registry-side-backdrop md:hidden"
+          className="registry-side-backdrop min-[861px]:hidden"
           aria-label="Close navigation"
           onClick={() => setMobileOpen(false)}
         />

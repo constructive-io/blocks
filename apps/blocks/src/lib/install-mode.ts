@@ -54,6 +54,7 @@ export function packageCommands(options?: {
 export function registryCommands(options?: {
   item?: string;
   includeConfig?: boolean;
+  importLine?: string;
 }): InstallCommand[] {
   const commands: InstallCommand[] = [];
   if (options?.includeConfig) {
@@ -68,5 +69,8 @@ export function registryCommands(options?: {
     code: registryAdd(options?.item ?? 'button'),
     shell: true,
   });
+  if (options?.importLine) {
+    commands.push({ label: 'import', code: options.importLine, shell: false });
+  }
   return commands;
 }

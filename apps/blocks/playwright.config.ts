@@ -24,6 +24,16 @@ export default defineConfig({
       use: { viewport: { width: 390, height: 844 } },
       testMatch: /mobile\.visual\.spec\.ts/,
     },
+    {
+      name: 'interaction-chromium',
+      use: { ...devices['Desktop Chrome'], viewport: { width: 1440, height: 1000 } },
+      testMatch: /docs\.interaction\.spec\.ts/,
+    },
+    {
+      name: 'interaction-mobile-chromium',
+      use: { ...devices['iPhone 13'] },
+      testMatch: /mobile\.interaction\.spec\.ts/,
+    },
   ],
   webServer: {
     command: 'pnpm build:pages && tsx e2e/static-server.ts',

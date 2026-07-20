@@ -2,6 +2,7 @@
 
 import {
   Breadcrumb,
+  BreadcrumbEllipsis,
   BreadcrumbItem,
   BreadcrumbLink,
   BreadcrumbList,
@@ -11,26 +12,82 @@ import {
 
 import { Demo } from '@/components/docs/showcase-kit';
 
-export function BlockDemo() {
+export function BasicBreadcrumbDemo() {
   return (
     <Demo>
       <div className="w-full max-w-lg rounded-lg border bg-background p-4">
-        <Breadcrumb>
+        <Breadcrumb aria-label="Component location">
           <BreadcrumbList>
             <BreadcrumbItem>
-              <BreadcrumbLink href="#">Acme Corp</BreadcrumbLink>
+              <BreadcrumbLink href="/">Constructive</BreadcrumbLink>
             </BreadcrumbItem>
             <BreadcrumbSeparator />
             <BreadcrumbItem>
-              <BreadcrumbLink href="#">Databases</BreadcrumbLink>
+              <BreadcrumbLink href="/blocks">Components</BreadcrumbLink>
             </BreadcrumbItem>
             <BreadcrumbSeparator />
             <BreadcrumbItem>
-              <BreadcrumbPage>production-db</BreadcrumbPage>
+              <BreadcrumbPage>Breadcrumb</BreadcrumbPage>
             </BreadcrumbItem>
           </BreadcrumbList>
         </Breadcrumb>
       </div>
     </Demo>
   );
+}
+
+export function CollapsedBreadcrumbDemo() {
+  return (
+    <Demo>
+      <div className="w-full max-w-lg rounded-lg border bg-background p-4">
+        <Breadcrumb aria-label="Collapsed component location">
+          <BreadcrumbList>
+            <BreadcrumbItem>
+              <BreadcrumbLink href="/">Constructive</BreadcrumbLink>
+            </BreadcrumbItem>
+            <BreadcrumbSeparator />
+            <BreadcrumbItem>
+              <BreadcrumbEllipsis />
+            </BreadcrumbItem>
+            <BreadcrumbSeparator />
+            <BreadcrumbItem>
+              <BreadcrumbLink href="/blocks">Components</BreadcrumbLink>
+            </BreadcrumbItem>
+            <BreadcrumbSeparator />
+            <BreadcrumbItem>
+              <BreadcrumbPage>Breadcrumb</BreadcrumbPage>
+            </BreadcrumbItem>
+          </BreadcrumbList>
+        </Breadcrumb>
+      </div>
+    </Demo>
+  );
+}
+
+export function CustomSeparatorBreadcrumbDemo() {
+  return (
+    <Demo>
+      <div className="w-full max-w-lg rounded-lg border bg-background p-4">
+        <Breadcrumb aria-label="Settings location">
+          <BreadcrumbList>
+            <BreadcrumbItem>
+              <BreadcrumbLink href="/">Constructive</BreadcrumbLink>
+            </BreadcrumbItem>
+            <BreadcrumbSeparator>/</BreadcrumbSeparator>
+            <BreadcrumbItem>
+              <BreadcrumbLink href="/blocks">Components</BreadcrumbLink>
+            </BreadcrumbItem>
+            <BreadcrumbSeparator>/</BreadcrumbSeparator>
+            <BreadcrumbItem>
+              <BreadcrumbPage>Breadcrumb</BreadcrumbPage>
+            </BreadcrumbItem>
+          </BreadcrumbList>
+        </Breadcrumb>
+      </div>
+    </Demo>
+  );
+}
+
+export function BlockDemo() {
+  return <BasicBreadcrumbDemo />;
 }

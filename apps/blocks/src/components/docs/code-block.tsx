@@ -1,8 +1,9 @@
 'use client';
 
-import { useState } from 'react';
+import { useMemo, useState, type CSSProperties } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
 import { Check, Copy } from 'lucide-react';
+import { highlight } from 'sugar-high';
 
 import { Button } from '@constructive-io/ui/button';
 
@@ -12,12 +13,28 @@ type CodeBlockProps = {
   children: string;
   className?: string;
   label?: string;
+  language?: 'tsx';
 };
 
 const iconTransition = { type: 'spring' as const, duration: 0.3, bounce: 0 };
+const highlightTheme = {
+  '--sh-class': 'var(--primary)',
+  '--sh-identifier': 'var(--foreground)',
+  '--sh-sign': 'var(--muted-foreground)',
+  '--sh-property': 'var(--info-foreground)',
+  '--sh-entity': 'var(--warning-foreground)',
+  '--sh-jsxliterals': 'var(--primary)',
+  '--sh-string': 'var(--success-foreground)',
+  '--sh-keyword': 'var(--primary)',
+  '--sh-comment': 'var(--muted-foreground)',
+} as CSSProperties;
 
-export function CodeBlock({ children, className, label }: CodeBlockProps) {
+export function CodeBlock({ children, className, label, language }: CodeBlockProps) {
   const [copied, setCopied] = useState(false);
+  const highlighted = useMemo(
+    () => (language === 'tsx' ? highlight(children) : undefined),
+    [children, language],
+  );
 
   async function onCopy() {
     try {
@@ -57,6 +74,7 @@ export function CodeBlock({ children, className, label }: CodeBlockProps) {
 
   return (
     <div
+      data-slot="code-block"
       className={cn(
         'relative min-w-0 max-w-full overflow-hidden rounded-xl border border-border bg-muted/40 shadow-sm',
         className,
@@ -65,18 +83,42 @@ export function CodeBlock({ children, className, label }: CodeBlockProps) {
       {label ? (
         <div className="flex items-center justify-between gap-2 border-b border-border px-3 py-1.5">
           <span className="min-w-0 truncate text-xs font-medium text-muted-foreground">{label}</span>
-          {copyButton}
+          <div className="flex shrink-0 items-center gap-1">
+            {language ? (
+              <span className="px-1 text-[10px] font-medium uppercase tracking-[0.12em] text-muted-foreground">
+                {language}
+              </span>
+            ) : null}
+            {copyButton}
+          </div>
         </div>
       ) : (
-        <div className="absolute right-1.5 top-1.5 z-10">{copyButton}</div>
+        <div className="absolute right-1.5 top-1.5 z-10 flex items-center gap-1 rounded-md bg-muted/80 pl-1 backdrop-blur-sm">
+          {language ? (
+            <span className="text-[10px] font-medium uppercase tracking-[0.12em] text-muted-foreground">
+              {language}
+            </span>
+          ) : null}
+          {copyButton}
+        </div>
       )}
       <pre
         className={cn(
-          'overflow-x-auto p-3 font-mono text-[12.5px] leading-6 tabular-nums',
-          !label && 'pr-12',
+          'overflow-x-auto p-3 font-mono text-[12.5px] leading-5 tabular-nums',
+          !label && 'pr-20',
         )}
       >
-        <code className="whitespace-pre">{children}</code>
+        {highlighted ? (
+          <code
+            className="code-highlight whitespace-pre"
+            data-slot="code-block-code"
+            data-language={language}
+            style={highlightTheme}
+            dangerouslySetInnerHTML={{ __html: highlighted }}
+          />
+        ) : (
+          <code className="whitespace-pre" data-slot="code-block-code">{children}</code>
+        )}
       </pre>
     </div>
   );

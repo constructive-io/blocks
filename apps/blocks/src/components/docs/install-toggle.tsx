@@ -1,61 +1,16 @@
 'use client';
 
-import { useCallback, useEffect, useId, useState } from 'react';
+import { useEffect, useId, useState } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
 import { Check, Copy } from 'lucide-react';
 
 import { Button } from '@constructive-io/ui/button';
 
-import {
-  INSTALL_MODE_EVENT,
-  INSTALL_MODE_KEY,
-  isInstallMode,
-  type InstallCommand,
-  type InstallMode,
-} from '@/lib/install-mode';
+import { useInstallMode } from '@/hooks/use-install-mode';
+import { type InstallCommand, type InstallMode } from '@/lib/install-mode';
 import { cn } from '@/lib/utils';
 
 const iconTransition = { type: 'spring' as const, duration: 0.3, bounce: 0 };
-
-function useInstallMode(): [InstallMode, (mode: InstallMode) => void] {
-  const [mode, setModeState] = useState<InstallMode>('npm');
-
-  useEffect(() => {
-    try {
-      const stored = localStorage.getItem(INSTALL_MODE_KEY);
-      if (isInstallMode(stored)) setModeState(stored);
-    } catch {
-      /* ignore */
-    }
-
-    function onStorage(e: StorageEvent) {
-      if (e.key === INSTALL_MODE_KEY && isInstallMode(e.newValue)) setModeState(e.newValue);
-    }
-    function onCustom(e: Event) {
-      const detail = (e as CustomEvent<InstallMode>).detail;
-      if (isInstallMode(detail)) setModeState(detail);
-    }
-
-    window.addEventListener('storage', onStorage);
-    window.addEventListener(INSTALL_MODE_EVENT, onCustom);
-    return () => {
-      window.removeEventListener('storage', onStorage);
-      window.removeEventListener(INSTALL_MODE_EVENT, onCustom);
-    };
-  }, []);
-
-  const setMode = useCallback((next: InstallMode) => {
-    setModeState(next);
-    try {
-      localStorage.setItem(INSTALL_MODE_KEY, next);
-    } catch {
-      /* ignore */
-    }
-    window.dispatchEvent(new CustomEvent(INSTALL_MODE_EVENT, { detail: next }));
-  }, []);
-
-  return [mode, setMode];
-}
 
 /** Flatten active commands into one clipboard payload */
 function formatCommandsForClipboard(commands: InstallCommand[]): string {
@@ -140,15 +95,33 @@ export function InstallToggle({ npm, registry, descriptions, className }: Instal
           >
             {MODES.map((item) => {
               const active = mode === item.id;
+              const index = MODES.indexOf(item);
               return (
                 <button
                   key={item.id}
                   type="button"
                   role="tab"
                   id={`${groupId}-${item.id}`}
+                  aria-controls={`${groupId}-panel`}
                   aria-selected={active}
                   tabIndex={active ? 0 : -1}
                   onClick={() => setMode(item.id)}
+                  onKeyDown={(event) => {
+                    let nextIndex: number | undefined;
+                    if (event.key === 'ArrowRight') nextIndex = (index + 1) % MODES.length;
+                    if (event.key === 'ArrowLeft') nextIndex = (index - 1 + MODES.length) % MODES.length;
+                    if (event.key === 'Home') nextIndex = 0;
+                    if (event.key === 'End') nextIndex = MODES.length - 1;
+                    if (nextIndex === undefined) return;
+                    event.preventDefault();
+                    const nextMode = MODES[nextIndex]?.id;
+                    if (!nextMode) return;
+                    setMode(nextMode);
+                    event.currentTarget.parentElement
+                      ?.querySelectorAll<HTMLButtonElement>('[role="tab"]')
+                      .item(nextIndex)
+                      .focus();
+                  }}
                   className={cn(
                     'rounded-md px-2.5 py-1.5 text-[12.5px] font-medium outline-none transition-[background-color,color,box-shadow] duration-150 ease-out',
                     'focus-visible:ring-2 focus-visible:ring-ring',
@@ -203,6 +176,7 @@ export function InstallToggle({ npm, registry, descriptions, className }: Instal
         ) : null}
 
         <div
+          id={`${groupId}-panel`}
           role="tabpanel"
           aria-labelledby={`${groupId}-${mode}`}
           className="min-w-0 bg-muted/30"

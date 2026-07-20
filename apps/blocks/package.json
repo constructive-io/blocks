@@ -3,8 +3,8 @@
   "version": "0.0.0",
   "private": true,
   "scripts": {
-    "gen": "tsx scripts/check-docs.ts",
-    "gen:check": "tsx scripts/check-docs.ts",
+    "gen": "tsx scripts/generate-ui-demo-source.ts && tsx scripts/check-docs.ts",
+    "gen:check": "tsx scripts/generate-ui-demo-source.ts --check && tsx scripts/check-docs.ts",
     "fixtures:refresh": "tsx scripts/refresh-sdk-fixtures.ts",
     "fixtures:check": "tsx scripts/check-sdk-fixtures.ts",
     "build:registry": "pnpm --filter @constructive-io/registry build",
@@ -51,6 +51,7 @@
     "next-themes": "^0.4.6",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
+    "sugar-high": "1.2.0",
     "tailwind-merge": "^3.3.0",
     "zod": "^4.4.3"
   },
