@@ -21,10 +21,9 @@
  *     toast/notifications/captcha — v1 mirrors admin).
  *   • Notification seam: `onSuccess` / `onError` / `onMessage` always fire.
  *
- * UI primitives come from `@constructive-io/ui` via direct subpath imports
- * (consumed, never vendored). Form primitives (`FormField`, `AuthErrorAlert`,
- * `AuthLoadingButton`) and libs (`auth-errors`, `schemas`) are foundation
- * registry items installed alongside this block.
+ * UI primitives, form primitives (`FormField`, `AuthErrorAlert`,
+ * `AuthLoadingButton`), and libs (`auth-errors`, `schemas`) are installed as
+ * source alongside this block.
  */
 
 import { useEffect, useRef, useState } from 'react';

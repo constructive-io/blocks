@@ -14,7 +14,7 @@
  *   • `onSubmit` is REQUIRED (no default mutation path until the proc ships).
  *   • When the backend deploys and codegen regenerates, the host replaces the
  *     `onSubmit` prop with the generated hook binding.
- *   • requires.json names `generateBackupCodes` so `check-sdk.mjs` fails clearly.
+ *   • requires.json names `generateBackupCodes` so `check-sdk-fixtures.ts` fails clearly.
  *   • messages.errors.PROCEDURE_NOT_FOUND is present for when the proc first lands.
  *
  * Flow:

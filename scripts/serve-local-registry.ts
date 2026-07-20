@@ -1,5 +1,5 @@
 import { createHash } from 'node:crypto';
-import { createServer } from 'node:http';
+import { createServer, type IncomingMessage, type ServerResponse } from 'node:http';
 import { readFile } from 'node:fs/promises';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -9,10 +9,27 @@ const host = process.env.LOCAL_NPM_REGISTRY_HOST ?? '127.0.0.1';
 const port = Number(process.env.LOCAL_NPM_REGISTRY_PORT ?? 4873);
 const artifacts = join(root, '.artifacts', 'npm');
 const packageDirectories = ['packages/ui', 'packages/schema-builder'];
-const packages = new Map();
+interface PackageManifest {
+  name: string;
+  version: string;
+  [key: string]: unknown;
+}
+
+interface LocalPackage {
+  manifest: PackageManifest;
+  tarball: Buffer;
+  tarballName: string;
+  registryTarballPath: string;
+  integrity: string;
+  shasum: string;
+}
+
+const packages = new Map<string, LocalPackage>();
 
 for (const packageDirectory of packageDirectories) {
-  const manifest = JSON.parse(await readFile(join(root, packageDirectory, 'package.json'), 'utf8'));
+  const manifest = JSON.parse(
+    await readFile(join(root, packageDirectory, 'package.json'), 'utf8'),
+  ) as PackageManifest;
   const tarballName = `${manifest.name.slice(1).replace('/', '-')}-${manifest.version}.tgz`;
   const tarballPath = join(artifacts, tarballName);
   const tarball = await readFile(tarballPath);
@@ -30,7 +47,7 @@ for (const packageDirectory of packageDirectories) {
   });
 }
 
-function sendJson(response, status, value) {
+function sendJson(response: ServerResponse, status: number, value: unknown): void {
   const body = Buffer.from(`${JSON.stringify(value)}\n`);
   response.writeHead(status, {
     'content-length': body.length,
@@ -40,12 +57,12 @@ function sendJson(response, status, value) {
   response.end(body);
 }
 
-async function proxy(request, response) {
+async function proxy(request: IncomingMessage, response: ServerResponse): Promise<void> {
   const upstream = await fetch(`https://registry.npmjs.org${request.url}`, {
     headers: { accept: request.headers.accept ?? 'application/json' }
   });
   const body = Buffer.from(await upstream.arrayBuffer());
-  const headers = {};
+  const headers: Record<string, string | number> = {};
   for (const name of ['cache-control', 'content-type', 'etag', 'last-modified', 'vary']) {
     const value = upstream.headers.get(name);
     if (value) headers[name] = value;

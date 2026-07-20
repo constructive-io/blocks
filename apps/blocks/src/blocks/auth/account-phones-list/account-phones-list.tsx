@@ -17,7 +17,7 @@
  * SDK. The add/verify flow therefore uses `onSubmitSendOtp` / `onSubmitVerifyOtp`
  * as the primary (required) seams for those two operations. Hosts wire the
  * generated bindings once they regenerate the SDK after deployment.
- * `requires.json` names both pending ops so `check-sdk.mjs` fails clearly.
+ * `requires.json` names both pending ops so `check-sdk-fixtures.ts` fails clearly.
  *
  * Binding doctrine:
  *   • All list/CRUD data via generated hooks from `@/generated/auth`. NO fetch,

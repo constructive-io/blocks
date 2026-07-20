@@ -18,7 +18,7 @@
  *     generated binding after running `cnc codegen --api-names auth ...`.
  *   • The stub default path throws a typed PROCEDURE_NOT_FOUND error so the
  *     block behaves gracefully (shows the error message) if mounted without the override.
- *   • `requires.json` names the pending op so `check-sdk.mjs` fails clearly.
+ *   • `requires.json` names the pending op so `check-sdk-fixtures.ts` fails clearly.
  *   • `PROCEDURE_NOT_FOUND` is in `messages.errors`.
  *
  * When the backend ships and the host regenerates the SDK, replace the stub

@@ -14,7 +14,7 @@
  *   • `onSubmit` is REQUIRED (no default mutation path).
  *   • When the backend deploys and codegen regenerates, the host replaces the
  *     `onSubmit` prop with the generated hook.
- *   • requires.json names `disableTotp` so `check-sdk.mjs` fails clearly.
+ *   • requires.json names `disableTotp` so `check-sdk-fixtures.ts` fails clearly.
  *   • messages.errors.PROCEDURE_NOT_FOUND is present for when the proc first lands.
  *
  * Binding doctrine: sdk-binding-contract.md §5–§7, MASTER-PROMPT §5.

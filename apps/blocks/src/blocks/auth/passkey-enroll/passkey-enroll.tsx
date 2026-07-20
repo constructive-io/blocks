@@ -15,7 +15,7 @@
  * `usePasskeyFinishRegistrationMutation`) exist in @/generated/auth. The block
  * compiles without those imports. The `onSubmit` override seam is the primary
  * integration path; the host wires the ceremony after regenerating the SDK.
- * `requires.json` names the pending ops so `check-sdk.mjs` fails clearly.
+ * `requires.json` names the pending ops so `check-sdk-fixtures.ts` fails clearly.
  *
  * This block imports NO @/generated/auth hook because the ceremony procs are
  * undeployed (CASE b). It does NOT import @constructive-io/data either.

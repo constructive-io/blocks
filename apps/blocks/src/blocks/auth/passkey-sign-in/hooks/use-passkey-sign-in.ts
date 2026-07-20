@@ -13,7 +13,7 @@
  * `usePasskeyFinishSignInMutation` (CASE b in sdk-binding-contract.md §10).
  * This hook is the primary path until those procedures ship and codegen
  * produces the hooks. The `requires.json` names the pending ops so
- * check-sdk.mjs will fail clearly until they are deployed.
+ * check-sdk-fixtures.ts will fail clearly until they are deployed.
  *
  * The host provides endpoint URLs via the `beginEndpoint` / `finishEndpoint`
  * props on `PasskeySignIn`; no URL is hardcoded here.

@@ -17,7 +17,7 @@
  * Instead, the `onSubmit` override seam is the PRIMARY (required) path for the
  * default ceremony. The host wires the generated SDK binding after regenerating
  * the SDK once the procedures are deployed (see requires.json for the pending op
- * names; `check-sdk.mjs` will fail clearly until they land).
+ * names; `check-sdk-fixtures.ts` will fail clearly until they land).
  *
  * Ceremony mechanics: begin endpoint → @simplewebauthn/browser → finish endpoint.
  * The utility hook `use-passkey-sign-in.ts` is shipped by this block.
