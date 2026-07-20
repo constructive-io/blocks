@@ -118,6 +118,23 @@ function ControlledHarness({ onOpenChange }: { onOpenChange: (open: boolean) => 
 	);
 }
 
+function ControlledAuthorityHarness({
+	open,
+	onOpenChange,
+}: {
+	open: boolean;
+	onOpenChange: (open: boolean) => void;
+}) {
+	return (
+		<SheetStackProvider>
+			<StackProbe />
+			<Sheet open={open} onOpenChange={onOpenChange} sheetId="authoritative">
+				<SheetProbe name="authoritative" />
+			</Sheet>
+		</SheetStackProvider>
+	);
+}
+
 function stackIds(container: ParentNode) {
 	return container.querySelector('[data-sheet-stack]')?.textContent ?? '';
 }
@@ -275,6 +292,33 @@ describe('Sheet stack interactions', () => {
 		});
 
 		expect(currentCallback).toHaveBeenLastCalledWith(false);
+		expect(stackIds(container)).toBe('');
+	});
+
+	it('keeps the controlled prop authoritative until its owner updates it', async () => {
+		const onOpenChange = vi.fn();
+		const container = document.createElement('div');
+		document.body.appendChild(container);
+		const root = createRoot(container);
+		activeRoots.add(root);
+
+		await act(async () => {
+			root.render(<ControlledAuthorityHarness open onOpenChange={onOpenChange} />);
+		});
+		expect(sheetProbe(container, 'authoritative').getAttribute('data-open')).toBe('true');
+		expect(stackIds(container)).toBe('authoritative');
+
+		await act(async () => {
+			container.querySelector<HTMLElement>('[data-close-sheet="authoritative"]')?.click();
+		});
+		expect(onOpenChange).toHaveBeenLastCalledWith(false);
+		expect(sheetProbe(container, 'authoritative').getAttribute('data-open')).toBe('true');
+		expect(stackIds(container)).toBe('authoritative');
+
+		await act(async () => {
+			root.render(<ControlledAuthorityHarness open={false} onOpenChange={onOpenChange} />);
+		});
+		expect(sheetProbe(container, 'authoritative').getAttribute('data-open')).toBe('false');
 		expect(stackIds(container)).toBe('');
 	});
 });

@@ -647,6 +647,7 @@
     "check:package": "tsx scripts/check-package-parity.ts",
     "dev": "tsup --watch",
     "lint:types": "tsc --noEmit",
+    "test": "vitest run",
     "clean": "rm -rf dist registry/constructive",
     "sb": "storybook dev -p 6007",
     "build-sb": "storybook build"
@@ -701,6 +702,7 @@
     "@xyflow/react": "^12.10.0",
     "ace-builds": "^1.43.5",
     "cmdk": "^1.1.1",
+    "jsdom": "^26.1.0",
     "lucide-react": "^0.525.0",
     "match-sorter": "^8.2.0",
     "motion": "^12.18.1",
@@ -717,6 +719,7 @@
     "typescript": "^5.9.3",
     "vaul": "^1.1.2",
     "vite": "^7.3.0",
+    "vitest": "^3.2.4",
     "zod": "^4.3.4"
   },
   "engines": {

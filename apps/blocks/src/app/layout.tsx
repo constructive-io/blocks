@@ -2,6 +2,8 @@ import type { Metadata } from 'next';
 import { Open_Sans } from 'next/font/google';
 import type { ReactNode } from 'react';
 
+import { PortalRoot } from '@constructive-io/ui/portal';
+
 import { RegistryShell } from '@/components/site/registry-shell';
 import { ThemeProvider } from '@/components/site/theme-provider';
 import { OG_IMAGE, SITE_NAME, SITE_ORIGIN, withBase } from '@/lib/site';
@@ -49,6 +51,9 @@ export default function RootLayout({ children }: Readonly<{ children: ReactNode 
           <RegistryShell>
             <main id="main-content">{children}</main>
           </RegistryShell>
+          {/* Optional shared host keeps docs overlays within one predictable layer.
+              Package and registry consumers fall back to the nearest portal or body. */}
+          <PortalRoot />
         </ThemeProvider>
       </body>
     </html>

@@ -58,9 +58,9 @@ generated sources plus the verbatim app block sources into an ignored staging
 directory, merges all manifests, namespaces internal dependencies, and runs
 `shadcn build` into `apps/registry/public/r`.
 
-The smoke command performs package-free isolated installs of a primitive, an
-overlay, a custom-alias stack, an auth block, a schema-builder leaf, and the
-complete schema-builder. Every fixture typechecks and compiles its Tailwind CSS;
+The smoke command performs package-free isolated installs of a primitive, the
+full overlay set with default and custom UI aliases, a custom-alias stack, an
+auth block, a schema-builder leaf, and the complete schema-builder. Every fixture typechecks and compiles its Tailwind CSS;
 the command rejects any installed `@constructive-io/ui` or `tw-animate-css`
 reference.
 

@@ -4,9 +4,10 @@ import * as React from 'react';
 import { Menu as MenuPrimitive } from '@base-ui/react/menu';
 import { CheckIcon, ChevronRightIcon, CircleIcon } from 'lucide-react';
 
-import { useFloatingOverlayPortalProps } from './portal';
-import { mergePropsWithRef } from '../lib/slot';
+import { useFloatingOverlayPortalProps } from '@constructive-io/ui/portal';
 import { cn } from '../lib/utils';
+
+const DropdownMenuGroupContext = React.createContext(false);
 
 function DropdownMenu({ ...props }: React.ComponentProps<typeof MenuPrimitive.Root>) {
 	return <MenuPrimitive.Root data-slot="dropdown-menu" {...props} />;
@@ -17,33 +18,22 @@ function DropdownMenuPortal({ ...props }: React.ComponentProps<typeof MenuPrimit
 	return <MenuPrimitive.Portal data-slot="dropdown-menu-portal" container={container} {...props} />;
 }
 
-type DropdownMenuTriggerProps = Omit<React.ComponentProps<typeof MenuPrimitive.Trigger>, 'render' | 'nativeButton'> & {
+type DropdownMenuTriggerProps = React.ComponentProps<typeof MenuPrimitive.Trigger> & {
 	/** When true, merges props onto the child element instead of rendering a button */
 	asChild?: boolean;
-	/** Whether the child renders a native button. Defaults to true when asChild is used. */
-	nativeButton?: boolean;
 };
 
-function DropdownMenuTrigger({ asChild, nativeButton, children, ...props }: DropdownMenuTriggerProps) {
-	if (asChild && React.isValidElement(children)) {
-		return (
-			<MenuPrimitive.Trigger
-				data-slot="dropdown-menu-trigger"
-				nativeButton={nativeButton ?? true}
-				{...props}
-			render={(triggerProps) => {
-				const { nativeButton: _, ...rest } = triggerProps as Record<string, unknown>;
-				return React.cloneElement(
-					children as React.ReactElement<Record<string, unknown>>,
-					mergePropsWithRef(rest, children as React.ReactElement),
-				);
-			}}
-			/>
-		);
-	}
+function DropdownMenuTrigger({ asChild, children, render, nativeButton, ...props }: DropdownMenuTriggerProps) {
+	const childRender = render === undefined && asChild && React.isValidElement(children) ? children : undefined;
+
 	return (
-		<MenuPrimitive.Trigger data-slot="dropdown-menu-trigger" nativeButton={nativeButton} {...props}>
-			{children}
+		<MenuPrimitive.Trigger
+			data-slot="dropdown-menu-trigger"
+			nativeButton={nativeButton ?? (childRender ? true : undefined)}
+			render={render ?? childRender}
+			{...props}
+		>
+			{childRender ? undefined : children}
 		</MenuPrimitive.Trigger>
 	);
 }
@@ -98,10 +88,14 @@ function DropdownMenuContent({
 }
 
 function DropdownMenuGroup({ ...props }: React.ComponentProps<typeof MenuPrimitive.Group>) {
-	return <MenuPrimitive.Group data-slot="dropdown-menu-group" {...props} />;
+	return (
+		<DropdownMenuGroupContext.Provider value={true}>
+			<MenuPrimitive.Group data-slot="dropdown-menu-group" {...props} />
+		</DropdownMenuGroupContext.Provider>
+	);
 }
 
-type DropdownMenuItemProps = Omit<React.ComponentProps<typeof MenuPrimitive.Item>, 'render'> & {
+type DropdownMenuItemProps = React.ComponentProps<typeof MenuPrimitive.Item> & {
 	inset?: boolean;
 	variant?: 'default' | 'destructive';
 	/** When true, merges props onto the child element instead of rendering a div */
@@ -114,9 +108,10 @@ function DropdownMenuItem({
 	variant = 'default',
 	asChild,
 	children,
-	onClick,
+	render,
 	...props
 }: DropdownMenuItemProps) {
+	const childRender = render === undefined && asChild && React.isValidElement(children) ? children : undefined;
 	const itemClassName = cn(
 		`data-[highlighted]:bg-accent data-[highlighted]:text-accent-foreground data-[variant=destructive]:text-destructive
 		data-[variant=destructive]:data-[highlighted]:bg-destructive/10 dark:data-[variant=destructive]:data-[highlighted]:bg-destructive/40
@@ -127,45 +122,17 @@ function DropdownMenuItem({
 		className,
 	);
 
-	// Use render prop for both cases to ensure onClick is properly handled
-	// Base UI Menu.Item may not forward onClick to the element directly
-	if (asChild && React.isValidElement(children)) {
-		return (
-			<MenuPrimitive.Item
-				data-slot="dropdown-menu-item"
-				data-inset={inset}
-				data-variant={variant}
-				{...props}
-				onClick={onClick}
-				render={(itemProps) => {
-					const childProps = children.props as Record<string, unknown>;
-					return React.cloneElement(children as React.ReactElement<Record<string, unknown>>, {
-						...itemProps,
-						className: cn(itemClassName, childProps.className as string | undefined),
-					});
-				}}
-			/>
-		);
-	}
-
 	return (
 		<MenuPrimitive.Item
 			data-slot="dropdown-menu-item"
 			data-inset={inset}
-		data-variant={variant}
-		{...props}
-		onClick={onClick}
-		render={(itemProps) => {
-			return (
-				<div
-					{...itemProps}
-					className={cn(itemClassName, itemProps.className)}
-				>
-						{children}
-					</div>
-				);
-			}}
-		/>
+			data-variant={variant}
+			className={itemClassName}
+			render={render ?? childRender}
+			{...props}
+		>
+			{childRender ? undefined : children}
+		</MenuPrimitive.Item>
 	);
 }
 
@@ -233,20 +200,32 @@ function DropdownMenuRadioItem({
 	);
 }
 
+/**
+ * Uses Base UI's semantic GroupLabel inside DropdownMenuGroup. The standalone
+ * div fallback preserves compatibility with earlier Constructive menu markup,
+ * where labels were allowed directly inside DropdownMenuContent.
+ */
 function DropdownMenuLabel({
 	className,
 	inset,
 	...props
-}: React.ComponentProps<typeof MenuPrimitive.GroupLabel> & {
+}: React.ComponentProps<'div'> & {
 	inset?: boolean;
 }) {
+	const isGrouped = React.useContext(DropdownMenuGroupContext);
+	const labelProps = {
+		'data-slot': 'dropdown-menu-label',
+		'data-inset': inset,
+		className: cn('text-muted-foreground px-2 py-1.5 text-xs font-medium data-[inset]:pl-8', className),
+		...props,
+	};
+
+	if (isGrouped) {
+		return <MenuPrimitive.GroupLabel {...labelProps} />;
+	}
+
 	return (
-		<MenuPrimitive.GroupLabel
-			data-slot="dropdown-menu-label"
-			data-inset={inset}
-			className={cn('text-muted-foreground px-2 py-1.5 text-xs font-medium data-[inset]:pl-8', className)}
-			{...props}
-		/>
+		<div {...labelProps} />
 	);
 }
 

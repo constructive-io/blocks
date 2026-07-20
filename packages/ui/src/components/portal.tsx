@@ -36,6 +36,8 @@ interface PortalContextValue {
 	floatingPortalStrategy: FloatingPortalStrategy;
 	/** Z-index mode for floating overlays */
 	floatingZIndex: FloatingZIndex;
+	/** Explicit host for floating overlays when the modal primitive is not Base UI. */
+	floatingContainer?: HTMLElement;
 }
 
 // ============================================================================
@@ -80,10 +82,12 @@ export function ModalPortalScope({
 	children,
 	floatingPortalStrategy = 'nested',
 	floatingZIndex = 'default',
+	floatingContainer,
 }: {
 	children: React.ReactNode;
 	floatingPortalStrategy?: FloatingPortalStrategy;
 	floatingZIndex?: FloatingZIndex;
+	floatingContainer?: HTMLElement | null;
 }) {
 	const parentContext = React.useContext(PortalContext);
 
@@ -96,8 +100,9 @@ export function ModalPortalScope({
 			depth,
 			floatingPortalStrategy,
 			floatingZIndex,
+			floatingContainer: floatingContainer ?? undefined,
 		}),
-		[depth, floatingPortalStrategy, floatingZIndex],
+		[depth, floatingContainer, floatingPortalStrategy, floatingZIndex],
 	);
 
 	return <PortalContext.Provider value={value}>{children}</PortalContext.Provider>;
@@ -119,18 +124,27 @@ export function useInModalOverlay(): boolean {
 	return React.useContext(PortalContext).layer === 'modal';
 }
 
+function getPortalRootElement(): HTMLElement | null {
+	if (typeof document === 'undefined') return null;
+	return document.getElementById(PORTAL_ROOT_ID);
+}
+
 /**
  * Get the root portal container element.
  * Used by modal components (Dialog, Sheet, etc.) to render their portals.
  *
- * @returns The root portal container, or null during SSR/before mount
+ * Reads `#portal-root` synchronously on the client so mount-on-open overlays
+ * (menus, selects, popovers, tooltips) get a real container on their first
+ * paint. A null→element handoff after layout effect is too late for Base UI
+ * portals that only mount while open — they stay empty forever.
+ *
+ * @returns The root portal container, or null during SSR / when unmounted
  */
 export function useRootPortalContainer(): HTMLElement | null {
-	const [container, setContainer] = React.useState<HTMLElement | null>(null);
+	const [container, setContainer] = React.useState<HTMLElement | null>(getPortalRootElement);
 
 	React.useLayoutEffect(() => {
-		const el = document.getElementById(PORTAL_ROOT_ID);
-		setContainer(el);
+		setContainer(getPortalRootElement());
 	}, []);
 
 	return container;
@@ -142,15 +156,19 @@ export function useRootPortalContainer(): HTMLElement | null {
  * - When `floatingPortalStrategy` is 'nested', Base UI will automatically portal
  *   into the nearest Base UI portal node (so dialog "inert" behavior includes it).
  * - When it's 'root', we portal into #portal-root.
+ * - When the root is not ready yet, pass `undefined` (not `null`) so Base UI
+ *   falls back to `document.body` instead of rendering into a dead portal.
  */
 export function useFloatingOverlayPortalProps(): {
-	container?: HTMLElement | null;
+	container?: HTMLElement;
 	zIndexClass: string;
 } {
 	const rootContainer = useRootPortalContainer();
-	const { floatingPortalStrategy, floatingZIndex } = React.useContext(PortalContext);
+	const { floatingContainer, floatingPortalStrategy, floatingZIndex } = React.useContext(PortalContext);
 
-	const container = floatingPortalStrategy === 'nested' ? undefined : (rootContainer ?? null);
+	const container =
+		floatingContainer ??
+		(floatingPortalStrategy === 'nested' ? undefined : (rootContainer ?? undefined));
 	const zIndexClass =
 		floatingZIndex === 'elevated'
 			? 'z-[var(--z-layer-floating-elevated)]'

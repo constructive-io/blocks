@@ -7,7 +7,7 @@ import { createPortal } from 'react-dom';
 
 import { cn } from '../../lib/utils';
 
-import { PORTAL_ROOT_ID, useRootPortalContainer } from '../portal';
+import { PORTAL_ROOT_ID, useRootPortalContainer } from '@constructive-io/ui/portal';
 
 import { StackBackdrop } from './stack-backdrop';
 import { StackCard } from './stack-card';

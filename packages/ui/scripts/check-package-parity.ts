@@ -1,4 +1,4 @@
-import { access, readFile } from 'node:fs/promises';
+import { access, readFile, readdir } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -25,10 +25,24 @@ interface RegistryManifest {
 }
 
 const packageRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+const portalSpecifier = '@constructive-io/ui/portal';
+
+async function sourceFiles(root: string): Promise<string[]> {
+	const entries = await readdir(root, { withFileTypes: true });
+	const files = await Promise.all(
+		entries.map(async (entry) => {
+			const target = path.join(root, entry.name);
+			if (entry.isDirectory()) return sourceFiles(target);
+			return /\.[cm]?[jt]sx?$/.test(entry.name) ? [target] : [];
+		}),
+	);
+	return files.flat();
+}
 
 function normalizeComponentModule(modulePath: string): string {
 	return modulePath
 		.replace(/^\.\/components\//, '')
+		.replace(/^@constructive-io\/ui\//, '')
 		.replace(/^src\/components\//, '')
 		.replace(/\.[cm]?[jt]sx?$/, '')
 		.replace(/\/index$/, '');
@@ -59,7 +73,10 @@ function collectRootComponentModules(source: string): string[] {
 		if (!ts.isExportDeclaration(statement) || !statement.moduleSpecifier || !ts.isStringLiteral(statement.moduleSpecifier)) {
 			continue;
 		}
-		if (statement.moduleSpecifier.text.startsWith('./components/')) {
+		if (
+			statement.moduleSpecifier.text.startsWith('./components/') ||
+			statement.moduleSpecifier.text.startsWith('@constructive-io/ui/')
+		) {
 			modules.push(normalizeComponentModule(statement.moduleSpecifier.text));
 		}
 	}
@@ -120,6 +137,40 @@ const failures = [
 
 if (manifest.dependencies?.['tw-animate-css']) failures.push('tw-animate-css must not be a UI runtime dependency');
 if (globalsSource.includes('tw-animate-css')) failures.push('globals.css must not import tw-animate-css');
+
+for (const sourcePath of await sourceFiles(path.join(packageRoot, 'src'))) {
+	if (sourcePath.endsWith(`${path.sep}components${path.sep}portal.tsx`)) continue;
+	const source = await readFile(sourcePath, 'utf8');
+	if (/from\s+['"](?:\.\.?\/)+portal['"]/.test(source)) {
+		failures.push(`${path.relative(packageRoot, sourcePath)} must import the shared ${portalSpecifier} runtime`);
+	}
+}
+
+const portalConsumerOutputs = [
+	'index',
+	'components/alert-dialog',
+	'components/autocomplete',
+	'components/combobox',
+	'components/command',
+	'components/dialog',
+	'components/drawer',
+	'components/dropdown-menu',
+	'components/popover',
+	'components/select',
+	'components/sheet',
+	'components/stack/index',
+	'components/tooltip',
+] as const;
+
+for (const output of portalConsumerOutputs) {
+	for (const extension of ['js', 'cjs'] as const) {
+		const outputPath = path.join(packageRoot, 'dist', `${output}.${extension}`);
+		const builtSource = await readFile(outputPath, 'utf8');
+		if (!builtSource.includes(portalSpecifier)) {
+			failures.push(`${path.relative(packageRoot, outputPath)} embeds or omits the shared portal runtime`);
+		}
+	}
+}
 
 for (const moduleName of packageModules) {
 	const target = manifest.exports[`./${moduleName}`];

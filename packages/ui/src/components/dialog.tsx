@@ -3,16 +3,16 @@
 import * as React from "react";
 import { Dialog as DialogPrimitive } from "@base-ui/react/dialog";
 import { XIcon } from "lucide-react";
-import { ModalPortalScope, useRootPortalContainer } from "./portal";
-import { mergePropsWithRef } from "../lib/slot";
+import { ModalPortalScope, useRootPortalContainer } from "@constructive-io/ui/portal";
 import { cn } from "../lib/utils";
 import { Button } from "./button";
 import { ScrollArea } from "./scroll-area";
 
 const Dialog = DialogPrimitive.Root;
 
-function DialogPortal({ keepMounted = true, ...props }: DialogPrimitive.Portal.Props) {
-  const container = useRootPortalContainer();
+function DialogPortal({ container: containerProp, ...props }: DialogPrimitive.Portal.Props) {
+  const rootContainer = useRootPortalContainer();
+  const container = containerProp === undefined ? (rootContainer ?? undefined) : containerProp;
 
   const style = {
     ...(props.style ?? {}),
@@ -21,73 +21,45 @@ function DialogPortal({ keepMounted = true, ...props }: DialogPrimitive.Portal.P
     ['--z-layer-floating' as any]: 'var(--z-layer-floating-elevated)',
   } satisfies React.CSSProperties;
 
-  return <DialogPrimitive.Portal keepMounted={keepMounted} container={container} {...props} style={style} />;
+  return <DialogPrimitive.Portal container={container} {...props} style={style} />;
 }
 
-type DialogTriggerProps = Omit<
-  React.ComponentProps<typeof DialogPrimitive.Trigger>,
-  "render" | "nativeButton"
-> & {
+type DialogTriggerProps = React.ComponentProps<typeof DialogPrimitive.Trigger> & {
   /** When true, merges props onto the child element instead of rendering a button */
   asChild?: boolean;
-  /** Whether the child renders a native button. Defaults to true when asChild is used. */
-  nativeButton?: boolean;
 };
 
-function DialogTrigger({ asChild, nativeButton, children, ...props }: DialogTriggerProps) {
-  if (asChild && React.isValidElement(children)) {
-    return (
-      <DialogPrimitive.Trigger
-        data-slot="dialog-trigger"
-        nativeButton={nativeButton ?? true}
-        {...props}
-        render={(triggerProps) => {
-          const { nativeButton: _, ...rest } = triggerProps as Record<string, unknown>;
-          return React.cloneElement(
-            children as React.ReactElement<Record<string, unknown>>,
-            mergePropsWithRef(rest, children as React.ReactElement),
-          );
-        }}
-      />
-    );
-  }
+function DialogTrigger({ asChild, children, render, nativeButton, ...props }: DialogTriggerProps) {
+  const childRender = render === undefined && asChild && React.isValidElement(children) ? children : undefined;
+
   return (
-    <DialogPrimitive.Trigger data-slot="dialog-trigger" nativeButton={nativeButton} {...props}>
-      {children}
+    <DialogPrimitive.Trigger
+      data-slot="dialog-trigger"
+      nativeButton={nativeButton ?? (childRender ? true : undefined)}
+      render={render ?? childRender}
+      {...props}
+    >
+      {childRender ? undefined : children}
     </DialogPrimitive.Trigger>
   );
 }
 
-type DialogCloseProps = Omit<
-  React.ComponentProps<typeof DialogPrimitive.Close>,
-  "render" | "nativeButton"
-> & {
+type DialogCloseProps = React.ComponentProps<typeof DialogPrimitive.Close> & {
   /** When true, merges props onto the child element instead of rendering a button */
   asChild?: boolean;
-  /** Whether the child renders a native button. Defaults to true when asChild is used. */
-  nativeButton?: boolean;
 };
 
-function DialogClose({ asChild, nativeButton, children, ...props }: DialogCloseProps) {
-  if (asChild && React.isValidElement(children)) {
-    return (
-      <DialogPrimitive.Close
-        data-slot="dialog-close"
-        nativeButton={nativeButton ?? true}
-        {...props}
-        render={(closeProps) => {
-          const { nativeButton: _, ...rest } = closeProps as Record<string, unknown>;
-          return React.cloneElement(
-            children as React.ReactElement<Record<string, unknown>>,
-            mergePropsWithRef(rest, children as React.ReactElement),
-          );
-        }}
-      />
-    );
-  }
+function DialogClose({ asChild, children, render, nativeButton, ...props }: DialogCloseProps) {
+  const childRender = render === undefined && asChild && React.isValidElement(children) ? children : undefined;
+
   return (
-    <DialogPrimitive.Close data-slot="dialog-close" nativeButton={nativeButton} {...props}>
-      {children}
+    <DialogPrimitive.Close
+      data-slot="dialog-close"
+      nativeButton={nativeButton ?? (childRender ? true : undefined)}
+      render={render ?? childRender}
+      {...props}
+    >
+      {childRender ? undefined : children}
     </DialogPrimitive.Close>
   );
 }

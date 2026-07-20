@@ -67,7 +67,15 @@ export { Field, FieldRow, type FieldProps, type FieldRowProps } from './componen
 
 // Overlay components
 export { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from './components/tooltip';
-export { Popover, PopoverTrigger, PopoverContent, PopoverAnchor } from './components/popover';
+export {
+	Popover,
+	PopoverTrigger,
+	PopoverContent,
+	PopoverAnchor,
+	PopoverClose,
+	PopoverTitle,
+	PopoverDescription,
+} from './components/popover';
 export {
 	Dialog,
 	DialogPortal,
@@ -284,7 +292,7 @@ export {
 	type OverlayLayer,
 	type FloatingPortalStrategy,
 	type FloatingZIndex,
-} from './components/portal';
+} from '@constructive-io/ui/portal';
 export { UnlinkButton } from './components/unlink-button';
 
 // Complex subsystems

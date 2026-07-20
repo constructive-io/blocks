@@ -7,8 +7,15 @@ import { resolve } from 'path';
 export default defineConfig({
   plugins: [react()],
   resolve: {
-    alias: {
-      '@constructive-io/ui': resolve(__dirname, './src'),
-    },
+    alias: [
+      {
+        find: /^@constructive-io\/ui\/portal$/,
+        replacement: resolve(__dirname, './src/components/portal.tsx'),
+      },
+      {
+        find: '@constructive-io/ui',
+        replacement: resolve(__dirname, './src'),
+      },
+    ],
   },
 });

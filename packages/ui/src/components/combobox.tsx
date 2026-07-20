@@ -5,7 +5,7 @@ import { ChevronsUpDownIcon, XIcon } from "lucide-react";
 import * as React from "react";
 
 import { cn } from "../lib/utils";
-import { useFloatingOverlayPortalProps } from "./portal";
+import { useFloatingOverlayPortalProps } from "@constructive-io/ui/portal";
 import { Input } from "./input";
 import { ScrollArea } from "./scroll-area";
 

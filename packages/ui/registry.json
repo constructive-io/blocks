@@ -590,7 +590,7 @@
       "categories": ["overlay"],
       "docs": "Import: `import { Popover } from '@/components/ui/popover'`",
       "dependencies": ["@base-ui/react"],
-      "registryDependencies": ["cn", "slot", "portal"],
+      "registryDependencies": ["cn", "portal"],
       "files": [
         {
           "path": "registry/constructive/ui/popover.tsx",
@@ -606,7 +606,7 @@
       "categories": ["overlay"],
       "docs": "Import: `import { Dialog } from '@/components/ui/dialog'`",
       "dependencies": ["@base-ui/react", "lucide-react"],
-      "registryDependencies": ["cn", "slot", "portal", "button", "scroll-area"],
+      "registryDependencies": ["cn", "portal", "button", "scroll-area"],
       "files": [
         {
           "path": "registry/constructive/ui/dialog.tsx",
@@ -622,7 +622,7 @@
       "categories": ["overlay"],
       "docs": "Import: `import { AlertDialog } from '@/components/ui/alert-dialog'`",
       "dependencies": ["@base-ui/react"],
-      "registryDependencies": ["cn", "slot", "portal", "button"],
+      "registryDependencies": ["cn", "portal", "button"],
       "files": [
         {
           "path": "registry/constructive/ui/alert-dialog.tsx",
@@ -638,7 +638,7 @@
       "categories": ["overlay"],
       "docs": "Import: `import { DropdownMenu } from '@/components/ui/dropdown-menu'`",
       "dependencies": ["@base-ui/react", "lucide-react"],
-      "registryDependencies": ["cn", "slot", "portal"],
+      "registryDependencies": ["cn", "portal"],
       "files": [
         {
           "path": "registry/constructive/ui/dropdown-menu.tsx",
@@ -654,7 +654,7 @@
       "categories": ["overlay"],
       "docs": "Import: `import { Sheet } from '@/components/ui/sheet'`",
       "dependencies": ["@base-ui/react", "class-variance-authority", "lucide-react", "motion"],
-      "registryDependencies": ["cn", "slot", "portal", "motion-config"],
+      "registryDependencies": ["cn", "portal", "motion-config"],
       "files": [
         {
           "path": "registry/constructive/ui/sheet.tsx",

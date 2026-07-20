@@ -81,6 +81,7 @@ await writeFile(
         '@tailwindcss/postcss': '^4.1.0',
         '@types/react': '^19.0.0',
         '@types/react-dom': '^19.0.0',
+        jsdom: '^26.1.0',
         postcss: '^8.5.0',
         tsx: '4.23.1',
         typescript: '^5.9.0'
@@ -173,6 +174,187 @@ for (const specifier of specifiers) assert.ok(await import(specifier), \`Empty E
 console.log(\`ESM runtime exports resolved (\${specifiers.length} JavaScript entries).\`);
 `
 );
+await writeFile(
+  path.join(consumer, 'check-portal-context.ts'),
+  `import assert from 'node:assert/strict';
+import { JSDOM } from 'jsdom';
+
+const dom = new JSDOM('<!doctype html><html><body></body></html>', { url: 'http://localhost' });
+const window = dom.window;
+for (const [name, value] of Object.entries({
+  window,
+  document: window.document,
+  navigator: window.navigator,
+  HTMLElement: window.HTMLElement,
+  Element: window.Element,
+  Node: window.Node,
+  Event: window.Event,
+  CustomEvent: window.CustomEvent,
+  MutationObserver: window.MutationObserver,
+  getComputedStyle: window.getComputedStyle.bind(window),
+  requestAnimationFrame: (callback: FrameRequestCallback) => setTimeout(() => callback(Date.now()), 0),
+  cancelAnimationFrame: (handle: number) => clearTimeout(handle),
+})) {
+  Object.defineProperty(globalThis, name, { configurable: true, writable: true, value });
+}
+Object.defineProperty(globalThis, 'IS_REACT_ACT_ENVIRONMENT', {
+  configurable: true,
+  writable: true,
+  value: true,
+});
+window.matchMedia = (query: string) => ({
+  matches: false,
+  media: query,
+  onchange: null,
+  addEventListener() {},
+  removeEventListener() {},
+  addListener() {},
+  removeListener() {},
+  dispatchEvent: () => false,
+});
+window.requestAnimationFrame = (callback: FrameRequestCallback) => setTimeout(() => callback(Date.now()), 0);
+window.cancelAnimationFrame = (handle: number) => clearTimeout(handle);
+if (!window.Element.prototype.getAnimations) window.Element.prototype.getAnimations = () => [];
+
+const React = await import('react');
+const { createRoot } = await import('react-dom/client');
+const { Drawer, DrawerContent, DrawerTitle } = await import('@constructive-io/ui/drawer');
+const { Popover, PopoverContent, PopoverTitle, PopoverTrigger } = await import('@constructive-io/ui/popover');
+
+const container = document.createElement('div');
+document.body.appendChild(container);
+const root = createRoot(container);
+
+await React.act(async () => {
+  root.render(
+    React.createElement(
+      Drawer,
+      { defaultOpen: true },
+      React.createElement(
+        DrawerContent,
+        null,
+        React.createElement(DrawerTitle, null, 'Packed drawer'),
+        React.createElement(
+          Popover,
+          { defaultOpen: true },
+          React.createElement(PopoverTrigger, null, 'Details'),
+          React.createElement(
+            PopoverContent,
+            null,
+            React.createElement(PopoverTitle, null, 'Packed popover'),
+          ),
+        ),
+      ),
+    ),
+  );
+  await new Promise((resolve) => setTimeout(resolve, 0));
+});
+
+const host = document.querySelector<HTMLElement>('[data-slot="drawer-floating-portal"]');
+const popup = document.querySelector<HTMLElement>('[data-slot="popover-content"]');
+assert.ok(host, 'Drawer did not render its floating portal host');
+assert.ok(popup, 'Popover did not render from the ESM subpath');
+assert.equal(host.contains(popup), true, 'ESM subpaths did not share the portal context');
+
+await React.act(async () => root.unmount());
+dom.window.close();
+console.log('ESM overlay subpaths shared the packed portal context.');
+`
+);
+await writeFile(
+  path.join(consumer, 'check-portal-context.cts'),
+  `const assert = require('node:assert/strict');
+const { JSDOM } = require('jsdom');
+
+async function main() {
+  const dom = new JSDOM('<!doctype html><html><body></body></html>', { url: 'http://localhost' });
+  const window = dom.window;
+  for (const [name, value] of Object.entries({
+    window,
+    document: window.document,
+    navigator: window.navigator,
+    HTMLElement: window.HTMLElement,
+    Element: window.Element,
+    Node: window.Node,
+    Event: window.Event,
+    CustomEvent: window.CustomEvent,
+    MutationObserver: window.MutationObserver,
+    getComputedStyle: window.getComputedStyle.bind(window),
+    requestAnimationFrame: (callback: FrameRequestCallback) => setTimeout(() => callback(Date.now()), 0),
+    cancelAnimationFrame: (handle: number) => clearTimeout(handle),
+  })) {
+    Object.defineProperty(globalThis, name, { configurable: true, writable: true, value });
+  }
+  Object.defineProperty(globalThis, 'IS_REACT_ACT_ENVIRONMENT', {
+    configurable: true,
+    writable: true,
+    value: true,
+  });
+  window.matchMedia = (query: string) => ({
+    matches: false,
+    media: query,
+    onchange: null,
+    addEventListener() {},
+    removeEventListener() {},
+    addListener() {},
+    removeListener() {},
+    dispatchEvent: () => false,
+  });
+  window.requestAnimationFrame = (callback: FrameRequestCallback) => setTimeout(() => callback(Date.now()), 0);
+  window.cancelAnimationFrame = (handle: number) => clearTimeout(handle);
+  if (!window.Element.prototype.getAnimations) window.Element.prototype.getAnimations = () => [];
+
+  const React = require('react');
+  const { createRoot } = require('react-dom/client');
+  const { Drawer, DrawerContent, DrawerTitle } = require('@constructive-io/ui/drawer');
+  const { Popover, PopoverContent, PopoverTitle, PopoverTrigger } = require('@constructive-io/ui/popover');
+
+  const container = document.createElement('div');
+  document.body.appendChild(container);
+  const root = createRoot(container);
+
+  await React.act(async () => {
+    root.render(
+      React.createElement(
+        Drawer,
+        { defaultOpen: true },
+        React.createElement(
+          DrawerContent,
+          null,
+          React.createElement(DrawerTitle, null, 'Packed drawer'),
+          React.createElement(
+            Popover,
+            { defaultOpen: true },
+            React.createElement(PopoverTrigger, null, 'Details'),
+            React.createElement(
+              PopoverContent,
+              null,
+              React.createElement(PopoverTitle, null, 'Packed popover'),
+            ),
+          ),
+        ),
+      ),
+    );
+    await new Promise((resolve) => setTimeout(resolve, 0));
+  });
+
+  const host = document.querySelector('[data-slot="drawer-floating-portal"]');
+  const popup = document.querySelector('[data-slot="popover-content"]');
+  assert.ok(host, 'Drawer did not render its floating portal host');
+  assert.ok(popup, 'Popover did not render from the CJS subpath');
+  assert.equal(host.contains(popup), true, 'CJS subpaths did not share the portal context');
+
+  await React.act(async () => root.unmount());
+  dom.window.close();
+  console.log('CJS overlay subpaths shared the packed portal context.');
+}
+
+main().catch((error) => {
+  console.error(error);
+  process.exitCode = 1;
+});
+`
+);
 
 await run('pnpm', ['install', '--ignore-workspace', '--frozen-lockfile=false']);
 await Promise.all([
@@ -183,5 +365,7 @@ await run('pnpm', ['exec', 'tsc', '-p', 'tsconfig.json']);
 await run('pnpm', ['exec', 'tsx', 'check-css.ts']);
 await run('pnpm', ['exec', 'tsx', 'check.ts']);
 await run('pnpm', ['exec', 'tsx', 'check.cts']);
+await run('pnpm', ['exec', 'tsx', 'check-portal-context.ts']);
+await run('pnpm', ['exec', 'tsx', 'check-portal-context.cts']);
 
 console.log('Packed-package clean consumer passed.');

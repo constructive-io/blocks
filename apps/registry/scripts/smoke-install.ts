@@ -18,7 +18,19 @@ type SmokeCase = {
 	customAliases?: boolean;
 	generatedFixtures?: boolean;
 	expected: string[];
+	items?: string[];
 };
+
+const overlayItems = [
+	'alert-dialog',
+	'dialog',
+	'drawer',
+	'dropdown-menu',
+	'popover',
+	'select',
+	'sheet',
+	'tooltip',
+] as const;
 
 const cases: SmokeCase[] = [
 	{
@@ -26,8 +38,21 @@ const cases: SmokeCase[] = [
 		expected: ['src/components/ui/button.tsx'],
 	},
 	{
-		name: 'dialog',
-		expected: ['src/components/ui/dialog.tsx', 'src/components/ui/portal.tsx'],
+		name: 'overlays-default',
+		items: [...overlayItems],
+		expected: [
+			...overlayItems.map((item) => `src/components/ui/${item}.tsx`),
+			'src/components/ui/portal.tsx',
+		],
+	},
+	{
+		name: 'overlays-custom',
+		customAliases: true,
+		items: [...overlayItems],
+		expected: [
+			...overlayItems.map((item) => `src/design-system/primitives/${item}.tsx`),
+			'src/design-system/primitives/portal.tsx',
+		],
 	},
 	{
 		name: 'stack',
@@ -183,7 +208,10 @@ function prepareConsumer(root: string, origin: string, testCase: SmokeCase): voi
 	);
 
 	if (testCase.generatedFixtures) {
-		fs.cpSync(generatedFixtureRoot, path.join(root, 'src', 'generated'), { recursive: true });
+		fs.cpSync(generatedFixtureRoot, path.join(root, 'src', 'generated'), {
+			recursive: true,
+			filter: (source) => path.basename(source) !== 'ui-demo-source.ts',
+		});
 	}
 }
 
@@ -201,12 +229,12 @@ async function run(
 	if (exitCode !== 0) throw new Error(`${description} exited with code ${exitCode}.`);
 }
 
-async function install(root: string, itemName: string): Promise<void> {
+async function install(root: string, itemNames: readonly string[]): Promise<void> {
 	await run(
 		'pnpm',
-		['exec', 'shadcn', 'add', `@constructive/${itemName}`, '--cwd', root, '--yes'],
+		['exec', 'shadcn', 'add', ...itemNames.map((itemName) => `@constructive/${itemName}`), '--cwd', root, '--yes'],
 		appDirectory,
-		`shadcn add @constructive/${itemName}`,
+		`shadcn add ${itemNames.map((itemName) => `@constructive/${itemName}`).join(' ')}`,
 	);
 }
 
@@ -297,12 +325,13 @@ const origin = `http://127.0.0.1:${address.port}`;
 try {
 	for (const testCase of selectedCases) {
 		const root = path.join(temporaryRoot, testCase.name);
+		const itemNames = testCase.items ?? [testCase.name];
 		prepareConsumer(root, origin, testCase);
-		await install(root, testCase.name);
+		await install(root, itemNames);
 		assertInstalled(root, testCase);
 		await typecheck(root, testCase.name);
 		await compileTailwind(root, testCase.name);
-		console.log(`Clean package-free install passed: @constructive/${testCase.name}.`);
+		console.log(`Clean package-free install passed: ${itemNames.map((itemName) => `@constructive/${itemName}`).join(', ')}.`);
 	}
 } finally {
 	await new Promise<void>((resolve) => server.close(() => resolve()));

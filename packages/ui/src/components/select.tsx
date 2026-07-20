@@ -8,7 +8,7 @@ import {
   ChevronUpIcon,
 } from "lucide-react";
 
-import { useFloatingOverlayPortalProps } from "./portal";
+import { useFloatingOverlayPortalProps } from "@constructive-io/ui/portal";
 import { cn } from "../lib/utils";
 
 type SelectProps = Omit<SelectPrimitive.Root.Props<string>, "onValueChange"> & {

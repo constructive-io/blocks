@@ -3,7 +3,7 @@
 import { Command as CommandPrimitive } from "cmdk";
 import { SearchIcon } from "lucide-react";
 import * as React from "react";
-import { ModalPortalScope, useRootPortalContainer } from "./portal";
+import { ModalPortalScope, useRootPortalContainer } from "@constructive-io/ui/portal";
 import { cn } from "../lib/utils";
 
 function CommandDialog({

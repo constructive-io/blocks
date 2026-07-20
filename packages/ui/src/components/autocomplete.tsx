@@ -3,7 +3,7 @@
 import { Autocomplete as AutocompletePrimitive } from "@base-ui/react/autocomplete";
 import { ChevronsUpDownIcon, XIcon } from "lucide-react";
 
-import { useFloatingOverlayPortalProps } from "./portal";
+import { useFloatingOverlayPortalProps } from "@constructive-io/ui/portal";
 import { cn } from "../lib/utils";
 import { Input } from "./input";
 import { ScrollArea } from "./scroll-area";

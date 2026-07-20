@@ -3,7 +3,7 @@
 import * as React from 'react';
 import { Tooltip as TooltipPrimitive } from '@base-ui/react/tooltip';
 
-import { useFloatingOverlayPortalProps } from './portal';
+import { useFloatingOverlayPortalProps } from '@constructive-io/ui/portal';
 import { cn } from '../lib/utils';
 
 type TooltipProviderProps = React.ComponentProps<typeof TooltipPrimitive.Provider> & {
@@ -24,26 +24,23 @@ function Tooltip({ delayDuration: _delayDuration, ...props }: TooltipProps) {
 	return <TooltipPrimitive.Root data-slot="tooltip" {...props} />;
 }
 
-type TooltipTriggerProps = Omit<React.ComponentProps<typeof TooltipPrimitive.Trigger>, 'render'> & {
+type TooltipTriggerProps = React.ComponentProps<typeof TooltipPrimitive.Trigger> & {
 	delay?: number;
 	/** When true, merges props onto the child element instead of rendering a button */
 	asChild?: boolean;
 };
 
-function TooltipTrigger({ delay = 0, asChild, children, ...props }: TooltipTriggerProps) {
-	if (asChild) {
-		return (
-			<TooltipPrimitive.Trigger
-				data-slot="tooltip-trigger"
-				delay={delay}
-				{...props}
-				render={children as React.ReactElement}
-			/>
-		);
-	}
+function TooltipTrigger({ delay = 0, asChild, children, render, ...props }: TooltipTriggerProps) {
+	const childRender = render === undefined && asChild && React.isValidElement(children) ? children : undefined;
+
 	return (
-		<TooltipPrimitive.Trigger data-slot="tooltip-trigger" delay={delay} {...props}>
-			{children}
+		<TooltipPrimitive.Trigger
+			data-slot="tooltip-trigger"
+			delay={delay}
+			render={render ?? childRender}
+			{...props}
+		>
+			{childRender ? undefined : children}
 		</TooltipPrimitive.Trigger>
 	);
 }
@@ -82,6 +79,7 @@ function TooltipContent({
 						className,
 					)}
 					{...props}
+					role="tooltip"
 				>
 					{children}
 					{showArrow && (
