@@ -165,6 +165,9 @@ export function SiteSidebar({ open, onNavigate, className }: SiteSidebarProps) {
           onToggle={() => setFoundationsOpen((v) => !v)}
         >
           <div className="flex flex-col gap-0.5">
+            <NavLink href="/" active={pathname === '/'} onNavigate={onNavigate}>
+              Overview
+            </NavLink>
             <NavLink href="/blocks" active={pathname === '/blocks'} onNavigate={onNavigate}>
               Setup
             </NavLink>
@@ -174,9 +177,6 @@ export function SiteSidebar({ open, onNavigate, className }: SiteSidebarProps) {
               onNavigate={onNavigate}
             >
               Styling
-            </NavLink>
-            <NavLink href="/" active={pathname === '/'} onNavigate={onNavigate}>
-              Overview
             </NavLink>
           </div>
         </NavSection>
@@ -204,10 +204,9 @@ export function SiteSidebar({ open, onNavigate, className }: SiteSidebarProps) {
         </div>
       </nav>
 
-      <div className="flex items-center gap-2 border-t border-sidebar-border px-4 py-3 text-[11.5px] text-muted-foreground">
-        <span className="inline-block size-[7px] rounded-full bg-success" aria-hidden />
-        {BASE_PRIMITIVES.length} base primitives · @constructive
-      </div>
+      <footer className="px-4 pb-4 pt-2 text-[11.5px] text-muted-foreground">
+        Built by <span className="font-medium text-sidebar-foreground">Constructive</span>
+      </footer>
     </aside>
   );
 }

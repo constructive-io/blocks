@@ -8,7 +8,7 @@ import { Check, Menu, Terminal } from 'lucide-react';
 import { Button } from '@constructive-io/ui/button';
 
 import { ThemeToggle } from '@/components/site/theme-toggle';
-import { getBasePrimitive } from '@/lib/base-primitives';
+import { getBasePrimitive, registryInstall } from '@/lib/base-primitives';
 
 function normalizePath(path: string) {
   if (path.length > 1 && path.endsWith('/')) return path.slice(0, -1);
@@ -27,7 +27,20 @@ function crumbFor(path: string): string {
   return 'Registry';
 }
 
-const CLI = 'pnpm dlx shadcn@4.13.1 add @constructive/button';
+function installActionFor(path: string) {
+  const normalizedPath = normalizePath(path);
+  if (!normalizedPath.startsWith('/blocks/ui/')) return null;
+
+  const name = normalizedPath.slice('/blocks/ui/'.length);
+  const primitive = getBasePrimitive(name);
+  if (!primitive) return null;
+
+  return {
+    command: registryInstall(primitive),
+    label: `shadcn add @constructive/${primitive.name}`,
+    title: primitive.title,
+  };
+}
 
 type SiteTopbarProps = {
   onMenuClick?: () => void;
@@ -36,15 +49,22 @@ type SiteTopbarProps = {
 export function SiteTopbar({ onMenuClick }: SiteTopbarProps) {
   const pathname = usePathname() ?? '';
   const crumb = crumbFor(pathname);
-  const [copied, setCopied] = useState(false);
+  const installAction = installActionFor(pathname);
+  const [copiedCommand, setCopiedCommand] = useState<string | null>(null);
+  const copied = installAction?.command === copiedCommand;
 
   async function copyCli() {
+    if (!installAction) return;
+
+    const { command } = installAction;
     try {
-      await navigator.clipboard.writeText(CLI);
-      setCopied(true);
-      window.setTimeout(() => setCopied(false), 1600);
+      await navigator.clipboard.writeText(command);
+      setCopiedCommand(command);
+      window.setTimeout(() => {
+        setCopiedCommand((current) => (current === command ? null : current));
+      }, 1600);
     } catch {
-      setCopied(false);
+      setCopiedCommand((current) => (current === command ? null : current));
     }
   }
 
@@ -59,7 +79,7 @@ export function SiteTopbar({ onMenuClick }: SiteTopbarProps) {
           aria-label="Open navigation"
           onClick={onMenuClick}
         >
-          <Menu className="size-4" />
+          <Menu aria-hidden />
         </Button>
 
         <nav
@@ -80,20 +100,28 @@ export function SiteTopbar({ onMenuClick }: SiteTopbarProps) {
 
         <ThemeToggle />
 
-        <Button
-          type="button"
-          variant="secondary"
-          size="sm"
-          className="hidden sm:inline-flex"
-          onClick={copyCli}
-        >
-          {copied ? (
-            <Check className="size-3.5 text-emerald-500" />
-          ) : (
-            <Terminal className="size-3.5" />
-          )}
-          <span className="font-mono text-xs">{copied ? 'Copied' : 'npx shadcn add'}</span>
-        </Button>
+        {installAction ? (
+          <Button
+            type="button"
+            variant="secondary"
+            size="sm"
+            className="hidden sm:inline-flex"
+            onClick={copyCli}
+            aria-label={
+              copied
+                ? `${installAction.title} install command copied`
+                : `Copy ${installAction.title} install command`
+            }
+            title={installAction.command}
+          >
+            {copied ? (
+              <Check data-icon="inline-start" className="text-emerald-500" />
+            ) : (
+              <Terminal data-icon="inline-start" />
+            )}
+            <span className="font-mono text-xs">{copied ? 'Copied' : installAction.label}</span>
+          </Button>
+        ) : null}
 
         <Button asChild size="sm">
           <Link href="/blocks">Setup</Link>
