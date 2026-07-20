@@ -7,10 +7,11 @@ import { ChevronRight } from 'lucide-react';
 
 import { ConstructiveMark } from '@/components/brand/constructive-mark';
 import { BASE_PRIMITIVES } from '@/lib/base-primitives';
+import { BILLING_BLOCKS } from '@/lib/billing-blocks';
 import { cn } from '@/lib/utils';
 
 const NAV_LINK =
-  'flex min-h-9 items-center rounded-[var(--radius)] px-2.5 py-1.5 text-[13px] text-sidebar-foreground outline-none transition-[background-color,color] duration-150 ease-out hover:bg-sidebar-accent hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring';
+  'flex min-h-10 items-center rounded-[var(--radius)] px-2.5 py-1.5 text-[13px] text-sidebar-foreground outline-none transition-[background-color,color] duration-150 ease-out pointer-coarse:min-h-11 hover:bg-sidebar-accent hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring';
 
 function normalizePath(path: string) {
   if (path.length > 1 && path.endsWith('/')) return path.slice(0, -1);
@@ -65,7 +66,7 @@ function NavSection({
         aria-controls={panelId}
         onClick={onToggle}
         className={cn(
-          'group flex w-full min-h-8 items-center gap-1.5 rounded-[var(--radius)] px-2.5 py-1.5',
+          'group flex min-h-10 w-full items-center gap-1.5 rounded-[var(--radius)] px-2.5 py-1.5 pointer-coarse:min-h-11',
           'text-left text-[10.5px] font-medium uppercase tracking-[0.12em] text-muted-foreground',
           'outline-none transition-[background-color,color] duration-150 ease-out',
           'hover:bg-sidebar-accent/70 hover:text-foreground',
@@ -114,21 +115,29 @@ type SiteSidebarProps = {
 export function SiteSidebar({ open, onNavigate, className }: SiteSidebarProps) {
   const pathname = normalizePath(usePathname() ?? '');
   const onComponents = pathname.startsWith('/blocks/ui/');
+  const onBilling =
+    pathname === '/blocks/billing' || pathname.startsWith('/blocks/billing/');
   const onFoundations =
     pathname === '/' || pathname === '/blocks' || pathname === '/blocks/styling';
 
   const [foundationsOpen, setFoundationsOpen] = useState(true);
+  const [billingOpen, setBillingOpen] = useState(onBilling);
   const [componentsOpen, setComponentsOpen] = useState(true);
 
   // Expand the section that owns the active route so deep links stay visible
   useEffect(() => {
     if (onComponents) setComponentsOpen(true);
+    if (onBilling) setBillingOpen(true);
     if (onFoundations) setFoundationsOpen(true);
-  }, [onComponents, onFoundations]);
+  }, [onBilling, onComponents, onFoundations]);
 
   const componentLinks = BASE_PRIMITIVES.map((p) => ({
     href: `/blocks/ui/${p.name}`,
     label: p.title,
+  }));
+  const billingLinks = BILLING_BLOCKS.map((block) => ({
+    href: `/blocks/billing/${block.name}`,
+    label: block.title
   }));
 
   return (
@@ -139,7 +148,7 @@ export function SiteSidebar({ open, onNavigate, className }: SiteSidebarProps) {
       <div className="registry-side-brand">
         <Link
           href="/"
-          className="flex min-h-10 min-w-0 items-center gap-2.5 outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          className="flex min-h-10 min-w-0 items-center gap-2.5 outline-none pointer-coarse:min-h-11 focus-visible:ring-2 focus-visible:ring-ring"
           onClick={onNavigate}
           aria-label="Constructive Blocks home"
         >
@@ -180,6 +189,38 @@ export function SiteSidebar({ open, onNavigate, className }: SiteSidebarProps) {
             </NavLink>
           </div>
         </NavSection>
+
+        <div className="mt-3">
+          <NavSection
+            title="Billing"
+            open={billingOpen}
+            onToggle={() => setBillingOpen((value) => !value)}
+            count={billingLinks.length}
+          >
+            <ul className="flex flex-col gap-0.5">
+              <li>
+                <NavLink
+                  href="/blocks/billing"
+                  active={pathname === '/blocks/billing'}
+                  onNavigate={onNavigate}
+                >
+                  Overview
+                </NavLink>
+              </li>
+              {billingLinks.map(({ href, label }) => (
+                <li key={href}>
+                  <NavLink
+                    href={href}
+                    active={pathname === href}
+                    onNavigate={onNavigate}
+                  >
+                    {label}
+                  </NavLink>
+                </li>
+              ))}
+            </ul>
+          </NavSection>
+        </div>
 
         <div className="mt-3">
           <NavSection

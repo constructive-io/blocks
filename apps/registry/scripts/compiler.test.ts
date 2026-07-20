@@ -271,15 +271,15 @@ test('rejects duplicate item names and install targets', () => {
 	);
 });
 
-test('source manifests preserve 157 items, 54 root sidecars, and no UI package dependency', () => {
+test('source manifests preserve 166 items, 54 root sidecars, and no UI package dependency', () => {
 	const manifests = [
 		'packages/ui/registry.json',
 		'packages/schema-builder/registry.json',
 		'apps/blocks/registry.json',
 	].map((relativePath) => JSON.parse(fs.readFileSync(path.join(repositoryRoot, relativePath), 'utf8')) as Registry);
 	const items = manifests.flatMap((manifest) => manifest.items);
-	assert.equal(items.length, 157);
-	assert.equal(new Set(items.map((item) => item.name)).size, 157);
+	assert.equal(items.length, 166);
+	assert.equal(new Set(items.map((item) => item.name)).size, 166);
 	for (const item of items) {
 		assert.equal((item.dependencies ?? []).includes('@constructive-io/ui'), false, item.name);
 	}

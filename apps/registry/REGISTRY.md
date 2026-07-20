@@ -10,7 +10,7 @@ this repository:
   widget distributed as source through shadcn.
 
 The aggregator rejects duplicate item names, duplicate install targets, missing
-source files, and any combined item count other than 157.
+source files, and any combined item count other than 166.
 
 ## Configure and install
 
@@ -29,6 +29,7 @@ Then install any item by name:
 ```bash
 pnpm dlx shadcn@4.13.1 add @constructive/button
 pnpm dlx shadcn@4.13.1 add @constructive/auth-sign-in-card
+pnpm dlx shadcn@4.13.1 add @constructive/billing-settings-page
 pnpm dlx shadcn@4.13.1 add @constructive/chat
 pnpm dlx shadcn@4.13.1 add @constructive/schema-builder
 ```
@@ -36,6 +37,10 @@ pnpm dlx shadcn@4.13.1 add @constructive/schema-builder
 The registry requires shadcn 4.13.1 or newer. Registry installs copy the UI
 primitives and theme into the consumer; `@constructive-io/ui` is not an npm
 prerequisite.
+
+The billing family uses shared typed resources and callback-driven actions.
+Installing `billing-settings-page` pulls in all seven customer-facing leaves
+plus `billing-contracts`, so the complete composition arrives with one command.
 
 After configuring the `@constructive` namespace above, a root item may also be
 installed directly by URL. The namespace configuration remains required so
@@ -60,7 +65,9 @@ directory, merges all manifests, namespaces internal dependencies, and runs
 
 The smoke command performs package-free isolated installs of a primitive, the
 full overlay set with default and custom UI aliases, a custom-alias stack, an
-auth block, a schema-builder leaf, and the complete schema-builder. Every fixture typechecks and compiles its Tailwind CSS;
+auth block, the complete billing settings composition, a schema-builder leaf,
+and the complete schema-builder. Every fixture typechecks and compiles its
+Tailwind CSS;
 the command rejects any installed `@constructive-io/ui` or `tw-animate-css`
 reference.
 

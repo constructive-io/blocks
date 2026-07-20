@@ -3,6 +3,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { BASE_PRIMITIVES } from '../apps/blocks/src/lib/base-primitives.ts';
+import { BILLING_BLOCKS } from '../apps/blocks/src/lib/billing-blocks.ts';
 
 type Registry = {
   items: Array<{ name: string }>;
@@ -23,6 +24,8 @@ const pageRoutes = [
   '/blocks',
   '/blocks/styling',
   ...BASE_PRIMITIVES.map(({ name }) => `/blocks/ui/${name}`),
+  '/blocks/billing',
+  ...BILLING_BLOCKS.map(({ name }) => `/blocks/billing/${name}`),
 ];
 
 function routeOutputPath(route: string): string {
@@ -124,8 +127,8 @@ await Promise.all([
 ]);
 
 const registry = JSON.parse(await readFile(path.join(artifactRegistry, 'registry.json'), 'utf8')) as Registry;
-if (registry.items.length !== 157) {
-  throw new Error(`Pages registry contains ${registry.items.length} items; expected 157.`);
+if (registry.items.length !== 166) {
+  throw new Error(`Pages registry contains ${registry.items.length} items; expected 166.`);
 }
 const expectedRegistryFiles = new Set([
   'registry.json',

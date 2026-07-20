@@ -7,6 +7,7 @@ export default defineConfig({
   retries: process.env.CI ? 2 : 0,
   workers: process.env.CI ? 2 : undefined,
   reporter: process.env.CI ? 'github' : 'list',
+  preserveOutput: 'never',
   use: {
     baseURL: 'http://127.0.0.1:4173',
     colorScheme: 'dark',
