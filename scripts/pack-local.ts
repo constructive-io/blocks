@@ -7,9 +7,10 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const destination = path.join(root, '.artifacts', 'npm');
 const packages = ['@constructive-io/ui', '@constructive-io/schema-builder'];
 
-function run(command, args) {
+function run(command: string, args: string[]): Promise<void> {
   return new Promise((resolve, reject) => {
     const child = spawn(command, args, { cwd: root, stdio: 'inherit' });
+    child.on('error', reject);
     child.on('exit', (code) => {
       if (code === 0) resolve();
       else reject(new Error(`${command} ${args.join(' ')} exited with ${code}`));

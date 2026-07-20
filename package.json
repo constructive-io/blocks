@@ -2,6 +2,7 @@
   "name": "@constructive-io/blocks-root",
   "version": "0.0.0",
   "private": true,
+  "type": "module",
   "packageManager": "pnpm@10.28.0",
   "engines": {
     "node": ">=22.0.0",
@@ -16,18 +17,21 @@
     "dev": "pnpm --filter blocks dev",
     "test": "lerna run test",
     "lint:types": "lerna run lint:types",
-    "check": "pnpm check:public && pnpm build:packages && pnpm --filter blocks gen:check && pnpm --filter blocks check:flows && pnpm --filter blocks check:selections && pnpm lint:types && pnpm test && pnpm build:storybook && pnpm build:registry && pnpm check:registry-contract && pnpm --filter @constructive-io/registry smoke:install && pnpm pack:check",
-    "check:public": "node scripts/check-public-surface.mjs",
-    "check:registry-contract": "node scripts/check-registry-contract.mjs",
-    "pack:local": "node scripts/pack-local.mjs",
-    "pack:check": "pnpm pack:local && node scripts/check-packed-packages.mjs",
-    "local:registry": "node scripts/serve-local-registry.mjs",
+    "lint:scripts": "tsc --noEmit -p tsconfig.scripts.json",
+    "check": "pnpm check:public && pnpm lint:scripts && pnpm build:packages && pnpm --filter blocks gen:check && pnpm --filter blocks check:flows && pnpm --filter blocks check:selections && pnpm lint:types && pnpm test && pnpm build:storybook && pnpm build:registry && pnpm check:registry-contract && pnpm --filter @constructive-io/registry smoke:install && pnpm pack:check",
+    "check:public": "tsx scripts/check-public-surface.ts",
+    "check:registry-contract": "tsx scripts/check-registry-contract.ts",
+    "pack:local": "tsx scripts/pack-local.ts",
+    "pack:check": "pnpm pack:local && tsx scripts/check-packed-packages.ts",
+    "local:registry": "tsx scripts/serve-local-registry.ts",
     "release:version": "lerna version --conventional-commits --no-push",
     "clean": "lerna run clean --if-present",
     "bootstrap": "pnpm install"
   },
   "devDependencies": {
+    "@types/node": "^24.10.1",
     "lerna": "^8.2.4",
+    "tsx": "4.23.1",
     "typescript": "^5.9.3"
   }
 }

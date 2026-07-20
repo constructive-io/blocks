@@ -8,9 +8,18 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const artifacts = path.join(root, '.artifacts', 'npm');
 const consumer = path.join(tmpdir(), 'constructive-blocks-package-consumer');
 
-function run(command, args, cwd = consumer) {
-  return new Promise((resolve, reject) => {
+interface PackageManifest {
+  name: string;
+  version: string;
+  dependencies?: Record<string, string>;
+  peerDependencies?: Record<string, string>;
+  exports: Record<string, unknown>;
+}
+
+function run(command: string, args: string[], cwd = consumer): Promise<void> {
+  return new Promise<void>((resolve, reject) => {
     const child = spawn(command, args, { cwd, stdio: 'inherit' });
+    child.on('error', reject);
     child.on('exit', (code) => {
       if (code === 0) resolve();
       else reject(new Error(`${command} ${args.join(' ')} exited with ${code}`));
@@ -18,11 +27,11 @@ function run(command, args, cwd = consumer) {
   });
 }
 
-async function packageManifest(relativePackageJson) {
-  return JSON.parse(await readFile(path.join(root, relativePackageJson), 'utf8'));
+async function packageManifest(relativePackageJson: string): Promise<PackageManifest> {
+  return JSON.parse(await readFile(path.join(root, relativePackageJson), 'utf8')) as PackageManifest;
 }
 
-function runtimeExportSpecifiers(manifest) {
+function runtimeExportSpecifiers(manifest: PackageManifest): string[] {
   return Object.entries(manifest.exports)
     .filter(([subpath, target]) => subpath !== './package.json' && typeof target === 'object')
     .map(([subpath]) => subpath === '.' ? manifest.name : `${manifest.name}/${subpath.slice(2)}`);
@@ -33,8 +42,8 @@ const schemaBuilderManifest = await packageManifest('packages/schema-builder/pac
 if (!uiManifest.peerDependencies?.tailwindcss) {
   throw new Error('@constructive-io/ui must declare Tailwind CSS as a peer');
 }
-if (!uiManifest.dependencies?.['tw-animate-css']) {
-  throw new Error('@constructive-io/ui must ship its tw-animate-css stylesheet dependency');
+if (uiManifest.dependencies?.['tw-animate-css']) {
+  throw new Error('@constructive-io/ui must not ship tw-animate-css');
 }
 const uiVersion = uiManifest.version;
 const schemaBuilderVersion = schemaBuilderManifest.version;
@@ -73,6 +82,7 @@ await writeFile(
         '@types/react': '^19.0.0',
         '@types/react-dom': '^19.0.0',
         postcss: '^8.5.0',
+        tsx: '4.23.1',
         typescript: '^5.9.0'
       }
     },
@@ -104,6 +114,7 @@ await writeFile(
   path.join(consumer, 'consumer.tsx'),
   `import * as UI from '@constructive-io/ui';
 import { Button } from '@constructive-io/ui/button';
+import { FlowZoomPanel } from '@constructive-io/ui/flow-zoom-panel';
 import { SchemaBuilder, DEFAULT_SCHEMA_BUILDER_PREFERENCES } from '@constructive-io/schema-builder';
 import * as Core from '@constructive-io/schema-builder/core';
 import * as Fields from '@constructive-io/schema-builder/fields';
@@ -113,7 +124,7 @@ import * as Policies from '@constructive-io/schema-builder/policies';
 import * as Tables from '@constructive-io/schema-builder/tables';
 
 const element = <Button>Package consumer</Button>;
-const publicSurface = [UI, SchemaBuilder, DEFAULT_SCHEMA_BUILDER_PREFERENCES, Core, Fields, Relationships, Indexes, Policies, Tables];
+const publicSurface = [UI, FlowZoomPanel, SchemaBuilder, DEFAULT_SCHEMA_BUILDER_PREFERENCES, Core, Fields, Relationships, Indexes, Policies, Tables];
 void element;
 void publicSurface;
 `
@@ -125,7 +136,7 @@ await writeFile(
 `
 );
 await writeFile(
-  path.join(consumer, 'check-css.mjs'),
+  path.join(consumer, 'check-css.ts'),
   `import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import postcss from 'postcss';
@@ -133,6 +144,8 @@ import tailwindcss from '@tailwindcss/postcss';
 
 const from = new URL('./styles.css', import.meta.url);
 const source = await readFile(from, 'utf8');
+const installedGlobals = await readFile(new URL('./node_modules/@constructive-io/ui/src/styles/globals.css', import.meta.url), 'utf8');
+assert.doesNotMatch(installedGlobals, /tw-animate-css/);
 const result = await postcss([tailwindcss()]).process(source, { from: from.pathname });
 assert.match(result.css, /--background:/);
 assert.match(result.css, /\\.react-flow/);
@@ -140,11 +153,12 @@ console.log('Published stylesheets processed with Tailwind CSS.');
 `
 );
 await writeFile(
-  path.join(consumer, 'check.cjs'),
+  path.join(consumer, 'check.cts'),
   `const assert = require('node:assert/strict');
 const specifiers = ${JSON.stringify(runtimeSpecifiers)};
 for (const specifier of specifiers) assert.ok(require(specifier), \`Empty CJS export: \${specifier}\`);
 assert.ok(require('@constructive-io/ui').Button);
+assert.ok(require('@constructive-io/ui/flow-zoom-panel').FlowZoomPanel);
 assert.ok(require('@constructive-io/schema-builder').SchemaBuilder);
 assert.ok(require.resolve('@constructive-io/ui/globals.css'));
 assert.ok(require.resolve('@constructive-io/schema-builder/styles.css'));
@@ -152,7 +166,7 @@ console.log(\`CJS runtime and stylesheet exports resolved (\${specifiers.length}
 `
 );
 await writeFile(
-  path.join(consumer, 'check.mjs'),
+  path.join(consumer, 'check.ts'),
   `import assert from 'node:assert/strict';
 const specifiers = ${JSON.stringify(runtimeSpecifiers)};
 for (const specifier of specifiers) assert.ok(await import(specifier), \`Empty ESM export: \${specifier}\`);
@@ -166,8 +180,8 @@ await Promise.all([
   access(path.join(consumer, 'node_modules', '@constructive-io', 'schema-builder', 'LICENSE'))
 ]);
 await run('pnpm', ['exec', 'tsc', '-p', 'tsconfig.json']);
-await run('node', ['check-css.mjs']);
-await run('node', ['check.mjs']);
-await run('node', ['check.cjs']);
+await run('pnpm', ['exec', 'tsx', 'check-css.ts']);
+await run('pnpm', ['exec', 'tsx', 'check.ts']);
+await run('pnpm', ['exec', 'tsx', 'check.cts']);
 
 console.log('Packed-package clean consumer passed.');

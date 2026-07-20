@@ -7,6 +7,7 @@ const skippedDirectories = new Set([
   '.git',
   '.next',
   '.artifacts',
+  '.context',
   'coverage',
   'dist',
   'node_modules',
@@ -34,7 +35,7 @@ const currentReferenceForbidden = [
   { label: 'old monorepo source path', pattern: /\bdashboard\/(?:apps|packages)\// }
 ];
 
-async function* walk(directory) {
+async function* walk(directory: string): AsyncGenerator<string> {
   for (const entry of await readdir(directory, { withFileTypes: true })) {
     if (entry.name === '.DS_Store') continue;
     const absolute = path.join(directory, entry.name);
@@ -46,9 +47,12 @@ async function* walk(directory) {
   }
 }
 
-const failures = [];
+const failures: string[] = [];
 for await (const absolute of walk(root)) {
   const relative = path.relative(root, absolute);
+  if (relative.endsWith('.mjs')) {
+    failures.push(`${relative}: first-party .mjs script (use .ts)`);
+  }
   const contents = await readFile(absolute, 'utf8');
   const checks = historicalFiles.has(relative)
     ? alwaysForbidden
