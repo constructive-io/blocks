@@ -38,6 +38,10 @@ const cases: SmokeCase[] = [
 		expected: ['src/components/ui/button.tsx'],
 	},
 	{
+		name: 'resizable',
+		expected: ['src/components/ui/resizable.tsx'],
+	},
+	{
 		name: 'overlays-default',
 		items: [...overlayItems],
 		expected: [
@@ -248,7 +252,8 @@ async function compileTailwind(root: string, itemName: string): Promise<void> {
 		"const postcss = require('postcss')",
 		"const tailwind = require('@tailwindcss/postcss')",
 		"const css = fs.readFileSync('src/app/globals.css', 'utf8')",
-		"postcss([tailwind()]).process(css, { from: 'src/app/globals.css' }).then(() => undefined)",
+		"const expected = ['.shadow-card-lg', '.scrollbar-hide', '.animate-shimmer', '@keyframes shimmer', '@media (prefers-reduced-motion: reduce)']",
+		"postcss([tailwind()]).process(css, { from: 'src/app/globals.css' }).then((result) => { for (const fragment of expected) { if (!result.css.includes(fragment)) throw new Error('Compiled Tailwind CSS is missing ' + fragment) } }).catch((error) => { console.error(error); process.exitCode = 1 })",
 	].join(';');
 	await run('node', ['-e', program], root, `${itemName} Tailwind compilation`);
 }
@@ -303,6 +308,21 @@ function assertInstalled(root: string, testCase: SmokeCase): void {
 	const css = fs.readFileSync(path.join(root, 'src/app/globals.css'), 'utf8');
 	if (!css.includes('--background')) {
 		throw new Error(`@constructive/${testCase.name} did not install Constructive theme variables.`);
+	}
+	for (const fragment of [
+		'@layer base {',
+		'@layer utilities {',
+		'@keyframes shimmer {',
+		'.shadow-card-lg {',
+		'.scrollbar-hide {',
+		'@media (prefers-reduced-motion: reduce) {',
+	]) {
+		if (!css.includes(fragment)) {
+			throw new Error(`@constructive/${testCase.name} installed an incomplete theme missing ${fragment}.`);
+		}
+	}
+	if (/@(?:layer\s+(?:base|utilities)|keyframes\s+[\w-]+)\s*;/.test(css)) {
+		throw new Error(`@constructive/${testCase.name} installed an empty theme at-rule.`);
 	}
 }
 

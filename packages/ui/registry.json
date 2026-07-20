@@ -179,20 +179,162 @@
         }
       },
       "css": {
-        "@layer base": "* { @apply border-border/60 outline-ring/50; }\nbody { @apply bg-background font-sans text-foreground antialiased; position: relative; }\n#__next, [data-nextjs-root-layout] { isolation: isolate; }\n@media (prefers-reduced-motion: reduce) {\n  *, *::before, *::after {\n    scroll-behavior: auto !important;\n    animation-duration: 0.01ms !important;\n    animation-iteration-count: 1 !important;\n    transition-duration: 0.01ms !important;\n  }\n}",
-        "@layer utilities": ".shadow-card {\n  box-shadow: var(--shadow-border);\n}\n\n.shadow-card-lg {\n  box-shadow: var(--shadow-border-hover);\n}\n\n.scrollbar-hide {\n  -ms-overflow-style: none; scrollbar-width: none;\n}\n\n.scrollbar-hide::-webkit-scrollbar {\n  display: none;\n}\n\n.scrollbar-neutral-thin {\n  scrollbar-width: thin; scrollbar-color: color-mix(in oklab, var(--muted-foreground) 30%, transparent) transparent;\n}\n\n.scrollbar-neutral-thin::-webkit-scrollbar {\n  height: 6px; width: 6px;\n}\n\n.scrollbar-neutral-thin::-webkit-scrollbar-track {\n  background: transparent;\n}\n\n.scrollbar-neutral-thin::-webkit-scrollbar-thumb {\n  background-color: color-mix(in oklab, var(--muted-foreground) 30%, transparent); border-radius: 3px;\n}\n\n.scrollbar-neutral-thin::-webkit-scrollbar-thumb:hover {\n  background-color: color-mix(in oklab, var(--muted-foreground) 50%, transparent);\n}\n\n.animate-shimmer {\n  animation: shimmer 2s ease-in-out infinite;\n}",
-        "@keyframes pulse-glow": "0%, 100% { opacity: 0.3; transform: translate(-50%, -50%) scale(0.95); } 50% { opacity: 0.5; transform: translate(-50%, -50%) scale(1.05); }",
-        "@keyframes fade-scale-in": "from { opacity: 0; transform: scale(0.9); } to { opacity: 1; transform: scale(1); }",
-        "@keyframes scale-in": "from { opacity: 0; transform: scale(0.8); } to { opacity: 1; transform: scale(1); }",
-        "@keyframes bounce-soft": "0%, 100% { transform: translateY(0); } 50% { transform: translateY(-4px); }",
-        "@keyframes slide-up": "from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); }",
-        "@keyframes fade-in": "from { opacity: 0; } to { opacity: 1; }",
-        "@keyframes fade-out": "from { opacity: 1; } to { opacity: 0; }",
-        "@keyframes command-in": "from { opacity: 0; scale: 0.98; } to { opacity: 1; scale: 1; }",
-        "@keyframes command-out": "from { opacity: 1; scale: 1; } to { opacity: 0; scale: 0.98; }",
-        "@keyframes shimmer": "0% { background-position: -200% 0; } 100% { background-position: 200% 0; }",
-        "@keyframes shimmer-slide": "to { transform: translateX(100%); }",
-        "[data-slot=\"portal-root\"] > *": "pointer-events: auto;"
+        "@layer base": {
+          "*": {
+            "@apply border-border/60 outline-ring/50": {}
+          },
+          "body": {
+            "@apply bg-background font-sans text-foreground antialiased": {},
+            "position": "relative"
+          },
+          "#__next, [data-nextjs-root-layout]": {
+            "isolation": "isolate"
+          },
+          "@media (prefers-reduced-motion: reduce)": {
+            "*, *::before, *::after": {
+              "scroll-behavior": "auto !important",
+              "animation-duration": "0.01ms !important",
+              "animation-iteration-count": "1 !important",
+              "transition-duration": "0.01ms !important"
+            }
+          }
+        },
+        "@layer utilities": {
+          ".shadow-card": {
+            "box-shadow": "var(--shadow-border)"
+          },
+          ".shadow-card-lg": {
+            "box-shadow": "var(--shadow-border-hover)"
+          },
+          ".scrollbar-hide": {
+            "-ms-overflow-style": "none",
+            "scrollbar-width": "none"
+          },
+          ".scrollbar-hide::-webkit-scrollbar": {
+            "display": "none"
+          },
+          ".scrollbar-neutral-thin": {
+            "scrollbar-width": "thin",
+            "scrollbar-color": "color-mix(in oklab, var(--muted-foreground) 30%, transparent) transparent"
+          },
+          ".scrollbar-neutral-thin::-webkit-scrollbar": {
+            "height": "6px",
+            "width": "6px"
+          },
+          ".scrollbar-neutral-thin::-webkit-scrollbar-track": {
+            "background": "transparent"
+          },
+          ".scrollbar-neutral-thin::-webkit-scrollbar-thumb": {
+            "background-color": "color-mix(in oklab, var(--muted-foreground) 30%, transparent)",
+            "border-radius": "3px"
+          },
+          ".scrollbar-neutral-thin::-webkit-scrollbar-thumb:hover": {
+            "background-color": "color-mix(in oklab, var(--muted-foreground) 50%, transparent)"
+          },
+          ".animate-shimmer": {
+            "animation": "shimmer 2s ease-in-out infinite"
+          }
+        },
+        "@keyframes pulse-glow": {
+          "0%, 100%": {
+            "opacity": "0.3",
+            "transform": "translate(-50%, -50%) scale(0.95)"
+          },
+          "50%": {
+            "opacity": "0.5",
+            "transform": "translate(-50%, -50%) scale(1.05)"
+          }
+        },
+        "@keyframes fade-scale-in": {
+          "from": {
+            "opacity": "0",
+            "transform": "scale(0.9)"
+          },
+          "to": {
+            "opacity": "1",
+            "transform": "scale(1)"
+          }
+        },
+        "@keyframes scale-in": {
+          "from": {
+            "opacity": "0",
+            "transform": "scale(0.8)"
+          },
+          "to": {
+            "opacity": "1",
+            "transform": "scale(1)"
+          }
+        },
+        "@keyframes bounce-soft": {
+          "0%, 100%": {
+            "transform": "translateY(0)"
+          },
+          "50%": {
+            "transform": "translateY(-4px)"
+          }
+        },
+        "@keyframes slide-up": {
+          "from": {
+            "opacity": "0",
+            "transform": "translateY(20px)"
+          },
+          "to": {
+            "opacity": "1",
+            "transform": "translateY(0)"
+          }
+        },
+        "@keyframes fade-in": {
+          "from": {
+            "opacity": "0"
+          },
+          "to": {
+            "opacity": "1"
+          }
+        },
+        "@keyframes fade-out": {
+          "from": {
+            "opacity": "1"
+          },
+          "to": {
+            "opacity": "0"
+          }
+        },
+        "@keyframes command-in": {
+          "from": {
+            "opacity": "0",
+            "scale": "0.98"
+          },
+          "to": {
+            "opacity": "1",
+            "scale": "1"
+          }
+        },
+        "@keyframes command-out": {
+          "from": {
+            "opacity": "1",
+            "scale": "1"
+          },
+          "to": {
+            "opacity": "0",
+            "scale": "0.98"
+          }
+        },
+        "@keyframes shimmer": {
+          "0%": {
+            "background-position": "-200% 0"
+          },
+          "100%": {
+            "background-position": "200% 0"
+          }
+        },
+        "@keyframes shimmer-slide": {
+          "to": {
+            "transform": "translateX(100%)"
+          }
+        },
+        "[data-slot=\"portal-root\"] > *": {
+          "pointer-events": "auto"
+        }
       },
       "files": []
     },
@@ -717,7 +859,7 @@
       "description": "Resizable panel layouts using react-resizable-panels.",
       "categories": ["layout"],
       "docs": "Import: `import { ResizablePanel, ResizablePanelGroup, ResizableHandle } from '@/components/ui/resizable'`",
-      "dependencies": ["react-resizable-panels"],
+      "dependencies": ["lucide-react", "react-resizable-panels@^3.0.0"],
       "registryDependencies": ["cn"],
       "files": [
         {

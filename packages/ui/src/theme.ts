@@ -1,4 +1,7 @@
 export type ThemeTokenMap = Readonly<Record<string, string>>;
+export interface ThemeCssObject {
+	readonly [name: string]: string | ThemeCssObject;
+}
 
 export interface ConstructiveThemeDefinition {
 	npmImports: readonly string[];
@@ -8,10 +11,10 @@ export interface ConstructiveThemeDefinition {
 	dark: ThemeTokenMap;
 	tailwind: ThemeTokenMap;
 	zIndex: ThemeTokenMap;
-	baseCss: string;
-	utilities: Readonly<Record<string, string>>;
-	keyframes: Readonly<Record<string, string>>;
-	globalCss: Readonly<Record<string, string>>;
+	baseCss: ThemeCssObject;
+	utilities: ThemeCssObject;
+	keyframes: Readonly<Record<string, ThemeCssObject>>;
+	globalCss: ThemeCssObject;
 }
 
 const sharedTypographyAndShape = {
@@ -186,48 +189,118 @@ export const constructiveTheme = {
 		'z-layer-floating-elevated': '3000',
 		'z-layer-toast': '4000',
 	},
-	baseCss: `* { @apply border-border/60 outline-ring/50; }
-body { @apply bg-background font-sans text-foreground antialiased; position: relative; }
-#__next, [data-nextjs-root-layout] { isolation: isolate; }
-@media (prefers-reduced-motion: reduce) {
-  *, *::before, *::after {
-    scroll-behavior: auto !important;
-    animation-duration: 0.01ms !important;
-    animation-iteration-count: 1 !important;
-    transition-duration: 0.01ms !important;
-  }
-}`,
+	baseCss: {
+		'*': {
+			'@apply border-border/60 outline-ring/50': {},
+		},
+		body: {
+			'@apply bg-background font-sans text-foreground antialiased': {},
+			position: 'relative',
+		},
+		'#__next, [data-nextjs-root-layout]': {
+			isolation: 'isolate',
+		},
+		'@media (prefers-reduced-motion: reduce)': {
+			'*, *::before, *::after': {
+				'scroll-behavior': 'auto !important',
+				'animation-duration': '0.01ms !important',
+				'animation-iteration-count': '1 !important',
+				'transition-duration': '0.01ms !important',
+			},
+		},
+	},
 	utilities: {
-		'.shadow-card': 'box-shadow: var(--shadow-border);',
-		'.shadow-card-lg': 'box-shadow: var(--shadow-border-hover);',
-		'.scrollbar-hide': '-ms-overflow-style: none; scrollbar-width: none;',
-		'.scrollbar-hide::-webkit-scrollbar': 'display: none;',
-		'.scrollbar-neutral-thin':
-			'scrollbar-width: thin; scrollbar-color: color-mix(in oklab, var(--muted-foreground) 30%, transparent) transparent;',
-		'.scrollbar-neutral-thin::-webkit-scrollbar': 'height: 6px; width: 6px;',
-		'.scrollbar-neutral-thin::-webkit-scrollbar-track': 'background: transparent;',
-		'.scrollbar-neutral-thin::-webkit-scrollbar-thumb':
-			'background-color: color-mix(in oklab, var(--muted-foreground) 30%, transparent); border-radius: 3px;',
-		'.scrollbar-neutral-thin::-webkit-scrollbar-thumb:hover':
-			'background-color: color-mix(in oklab, var(--muted-foreground) 50%, transparent);',
-		'.animate-shimmer': 'animation: shimmer 2s ease-in-out infinite;',
+		'.shadow-card': {
+			'box-shadow': 'var(--shadow-border)',
+		},
+		'.shadow-card-lg': {
+			'box-shadow': 'var(--shadow-border-hover)',
+		},
+		'.scrollbar-hide': {
+			'-ms-overflow-style': 'none',
+			'scrollbar-width': 'none',
+		},
+		'.scrollbar-hide::-webkit-scrollbar': {
+			display: 'none',
+		},
+		'.scrollbar-neutral-thin': {
+			'scrollbar-width': 'thin',
+			'scrollbar-color':
+				'color-mix(in oklab, var(--muted-foreground) 30%, transparent) transparent',
+		},
+		'.scrollbar-neutral-thin::-webkit-scrollbar': {
+			height: '6px',
+			width: '6px',
+		},
+		'.scrollbar-neutral-thin::-webkit-scrollbar-track': {
+			background: 'transparent',
+		},
+		'.scrollbar-neutral-thin::-webkit-scrollbar-thumb': {
+			'background-color': 'color-mix(in oklab, var(--muted-foreground) 30%, transparent)',
+			'border-radius': '3px',
+		},
+		'.scrollbar-neutral-thin::-webkit-scrollbar-thumb:hover': {
+			'background-color': 'color-mix(in oklab, var(--muted-foreground) 50%, transparent)',
+		},
+		'.animate-shimmer': {
+			animation: 'shimmer 2s ease-in-out infinite',
+		},
 	},
 	keyframes: {
-		'pulse-glow':
-			'0%, 100% { opacity: 0.3; transform: translate(-50%, -50%) scale(0.95); } 50% { opacity: 0.5; transform: translate(-50%, -50%) scale(1.05); }',
-		'fade-scale-in': 'from { opacity: 0; transform: scale(0.9); } to { opacity: 1; transform: scale(1); }',
-		'scale-in': 'from { opacity: 0; transform: scale(0.8); } to { opacity: 1; transform: scale(1); }',
-		'bounce-soft': '0%, 100% { transform: translateY(0); } 50% { transform: translateY(-4px); }',
-		'slide-up': 'from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); }',
-		'fade-in': 'from { opacity: 0; } to { opacity: 1; }',
-		'fade-out': 'from { opacity: 1; } to { opacity: 0; }',
-		'command-in': 'from { opacity: 0; scale: 0.98; } to { opacity: 1; scale: 1; }',
-		'command-out': 'from { opacity: 1; scale: 1; } to { opacity: 0; scale: 0.98; }',
-		shimmer: '0% { background-position: -200% 0; } 100% { background-position: 200% 0; }',
-		'shimmer-slide': 'to { transform: translateX(100%); }',
+		'pulse-glow': {
+			'0%, 100%': {
+				opacity: '0.3',
+				transform: 'translate(-50%, -50%) scale(0.95)',
+			},
+			'50%': {
+				opacity: '0.5',
+				transform: 'translate(-50%, -50%) scale(1.05)',
+			},
+		},
+		'fade-scale-in': {
+			from: { opacity: '0', transform: 'scale(0.9)' },
+			to: { opacity: '1', transform: 'scale(1)' },
+		},
+		'scale-in': {
+			from: { opacity: '0', transform: 'scale(0.8)' },
+			to: { opacity: '1', transform: 'scale(1)' },
+		},
+		'bounce-soft': {
+			'0%, 100%': { transform: 'translateY(0)' },
+			'50%': { transform: 'translateY(-4px)' },
+		},
+		'slide-up': {
+			from: { opacity: '0', transform: 'translateY(20px)' },
+			to: { opacity: '1', transform: 'translateY(0)' },
+		},
+		'fade-in': {
+			from: { opacity: '0' },
+			to: { opacity: '1' },
+		},
+		'fade-out': {
+			from: { opacity: '1' },
+			to: { opacity: '0' },
+		},
+		'command-in': {
+			from: { opacity: '0', scale: '0.98' },
+			to: { opacity: '1', scale: '1' },
+		},
+		'command-out': {
+			from: { opacity: '1', scale: '1' },
+			to: { opacity: '0', scale: '0.98' },
+		},
+		shimmer: {
+			'0%': { 'background-position': '-200% 0' },
+			'100%': { 'background-position': '200% 0' },
+		},
+		'shimmer-slide': {
+			to: { transform: 'translateX(100%)' },
+		},
 	},
 	globalCss: {
-		'[data-slot="portal-root"] > *': 'pointer-events: auto;',
+		'[data-slot="portal-root"] > *': {
+			'pointer-events': 'auto',
+		},
 	},
 } as const satisfies ConstructiveThemeDefinition;
 
