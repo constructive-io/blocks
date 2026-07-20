@@ -3,9 +3,8 @@
  *
  * Submit button that shows a spinner + "loading" label and self-disables while
  * a request is in flight. Ported verbatim from the admin app
- * (`components/auth/auth-loading-button.tsx`). Wraps `@constructive-io/ui`
- * Button (consumed, never vendored); `cn` resolves from the consumer's shadcn
- * `@/lib/utils`.
+ * (`components/auth/auth-loading-button.tsx`). Composes the source-installed
+ * Button primitive; `cn` resolves from the consumer's shadcn `@/lib/utils`.
  */
 
 import { ComponentProps } from 'react';

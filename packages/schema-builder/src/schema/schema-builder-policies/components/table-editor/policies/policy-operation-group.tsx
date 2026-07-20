@@ -93,7 +93,7 @@ export function PolicyOperationGroup({
 						</div>
 
 						{/* Title */}
-						<h3 className='min-w-0 flex-1 text-sm font-semibold'>{OPERATION_DISPLAY_NAMES[operation]}</h3>
+						<h3 className='min-w-0 flex-1 text-balance text-sm font-semibold'>{OPERATION_DISPLAY_NAMES[operation]}</h3>
 
 						{/* Add Button + Chevron */}
 						<div className='flex shrink-0 items-center gap-2'>
@@ -106,8 +106,8 @@ export function PolicyOperationGroup({
 									<button
 										type='button'
 										aria-label={isOpen ? 'Collapse policies' : 'Expand policies'}
-										className='text-muted-foreground hover:text-foreground hover:bg-muted/60 flex size-8 items-center
-											justify-center rounded-md transition-colors focus-visible:outline-none'
+										className='text-muted-foreground hover:text-foreground hover:bg-muted/60 grid size-10 place-items-center rounded-lg
+											transition-[background-color,color,scale] duration-150 ease-out motion-safe:active:scale-[0.96] focus-visible:outline-none'
 									>
 										<ChevronDown className={cn('size-4 transition-transform duration-200', isOpen && 'rotate-180')} />
 									</button>
@@ -155,7 +155,7 @@ export function PolicyOperationGroup({
 										key={policy.id}
 										className={cn(
 											'group/diagram flex w-full items-stretch rounded-lg border text-left',
-											'transition-all duration-150',
+											'transition-[border-color,box-shadow,opacity] duration-150 ease-out',
 											'hover:shadow-sm',
 											`focus-visible:ring-ring focus-visible:ring-2 focus-visible:ring-offset-2
 											focus-visible:outline-none`,
@@ -194,9 +194,11 @@ export function PolicyOperationGroup({
 													</span>
 												</div>
 												<button
+													type='button'
 													onClick={() => onPolicyClick(policy)}
-													className='flex shrink-0 cursor-pointer items-center gap-1 rounded-full px-2 py-0.5
-														text-xs font-medium opacity-0 transition-opacity group-hover/diagram:opacity-100'
+													className='flex min-h-10 shrink-0 cursor-pointer items-center gap-1 rounded-full px-3 text-xs font-medium opacity-100
+														transition-[opacity,scale] duration-150 ease-out motion-safe:active:scale-[0.96] sm:opacity-0
+														pointer-coarse:opacity-100 group-hover/diagram:opacity-100 focus-visible:opacity-100'
 													style={{ color: theme.primary }}
 												>
 													<Pencil className='size-3' />

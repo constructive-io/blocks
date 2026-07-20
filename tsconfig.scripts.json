@@ -1,0 +1,27 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "composite": false,
+    "declaration": false,
+    "declarationMap": false,
+    "incremental": false,
+    "jsx": "react-jsx",
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "noEmit": true,
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["apps/blocks/src/*"]
+    },
+    "resolveJsonModule": true,
+    "sourceMap": false,
+    "types": ["node"],
+    "allowImportingTsExtensions": true
+  },
+  "include": [
+    "scripts/**/*.ts",
+    "apps/*/scripts/**/*.ts",
+    "apps/blocks/e2e/**/*.ts",
+    "packages/*/scripts/**/*.ts"
+  ]
+}

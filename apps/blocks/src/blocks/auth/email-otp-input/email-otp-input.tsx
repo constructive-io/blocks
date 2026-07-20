@@ -19,7 +19,7 @@
  *   • `onResend` is similarly the primary resend path until `send_email_otp` ships.
  *   • Stub default paths throw typed PROCEDURE_NOT_FOUND errors so the block
  *     behaves gracefully (shows the error message) if mounted without an override.
- *   • `requires.json` names the pending ops so `check-sdk.mjs` fails clearly.
+ *   • `requires.json` names the pending ops so `check-sdk-fixtures.ts` fails clearly.
  *   • `PROCEDURE_NOT_FOUND` is in `messages.errors`.
  *
  * When the backend ships and the host regenerates the SDK, replace the stubs with:
@@ -389,7 +389,7 @@ export function EmailOtpInput({
         <AuthErrorAlert error={error} />
 
         {resendSuccess && (
-          <p aria-live="polite" className="text-sm text-center text-muted-foreground">
+          <p aria-live="polite" className="text-pretty text-sm text-center text-muted-foreground">
             {merged.resendSuccess}
           </p>
         )}

@@ -202,7 +202,7 @@ export function ForgotPasswordCard({
             <Button
               variant="link"
               asChild
-              className="text-muted-foreground hover:text-foreground hover:no-underline h-auto p-0 text-sm"
+              className="text-muted-foreground hover:text-foreground hover:no-underline min-h-11 px-2 py-0 text-sm sm:min-h-10"
             >
               <a href={signInHref}>{merged.backToSignInLabel}</a>
             </Button>
@@ -271,7 +271,7 @@ export function ForgotPasswordCard({
           <Button
             variant="link"
             asChild
-            className="text-muted-foreground hover:text-foreground hover:no-underline h-auto p-0 text-sm"
+            className="text-muted-foreground hover:text-foreground hover:no-underline min-h-11 px-2 py-0 text-sm sm:min-h-10"
           >
             <a href={signInHref}>{merged.backToSignInLabel}</a>
           </Button>

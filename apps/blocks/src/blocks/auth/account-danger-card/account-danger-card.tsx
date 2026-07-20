@@ -170,8 +170,8 @@ export function AccountDangerCard({
 
         {emailSent ? (
           <div role="status" className="rounded-md bg-muted px-4 py-3 text-sm">
-            <p className="font-medium">{merged.emailSentTitle}</p>
-            <p className="text-muted-foreground mt-1">{merged.emailSentDescription}</p>
+            <p className="text-pretty font-medium">{merged.emailSentTitle}</p>
+            <p className="text-pretty text-muted-foreground mt-1">{merged.emailSentDescription}</p>
           </div>
         ) : (
           <Button
@@ -195,7 +195,7 @@ export function AccountDangerCard({
             <DialogDescription>{merged.confirmDialogDescription}</DialogDescription>
           </DialogHeader>
 
-          <p className="text-sm text-muted-foreground">{merged.confirmDialogBody}</p>
+          <p className="text-pretty text-sm text-muted-foreground">{merged.confirmDialogBody}</p>
 
           <DialogFooter className="flex-col gap-2 sm:flex-row">
             <Button

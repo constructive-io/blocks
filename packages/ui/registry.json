@@ -12,50 +12,50 @@
         "theme": {
           "--color-background": "var(--background)",
           "--color-foreground": "var(--foreground)",
-          "--color-card": "var(--card)",
-          "--color-card-foreground": "var(--card-foreground)",
-          "--color-popover": "var(--popover)",
-          "--color-popover-foreground": "var(--popover-foreground)",
-          "--color-primary": "var(--primary)",
-          "--color-primary-foreground": "var(--primary-foreground)",
-          "--color-secondary": "var(--secondary)",
-          "--color-secondary-foreground": "var(--secondary-foreground)",
-          "--color-muted": "var(--muted)",
-          "--color-muted-foreground": "var(--muted-foreground)",
-          "--color-accent": "var(--accent)",
-          "--color-accent-foreground": "var(--accent-foreground)",
-          "--color-destructive": "var(--destructive)",
-          "--color-destructive-foreground": "var(--destructive-foreground)",
-          "--color-border": "var(--border)",
-          "--color-input": "var(--input)",
-          "--color-ring": "var(--ring)",
-          "--color-chart-1": "var(--chart-1)",
-          "--color-chart-2": "var(--chart-2)",
-          "--color-chart-3": "var(--chart-3)",
-          "--color-chart-4": "var(--chart-4)",
-          "--color-chart-5": "var(--chart-5)",
-          "--color-sidebar": "var(--sidebar)",
-          "--color-sidebar-foreground": "var(--sidebar-foreground)",
-          "--color-sidebar-primary": "var(--sidebar-primary)",
-          "--color-sidebar-primary-foreground": "var(--sidebar-primary-foreground)",
-          "--color-sidebar-accent": "var(--sidebar-accent)",
-          "--color-sidebar-accent-foreground": "var(--sidebar-accent-foreground)",
-          "--color-sidebar-border": "var(--sidebar-border)",
+          "--font-sans": "var(--font-geist-sans, \"Open Sans\", ui-sans-serif, system-ui, sans-serif)",
+          "--font-mono": "var(--font-geist-mono, Menlo, Monaco, Consolas, \"Liberation Mono\", monospace)",
           "--color-sidebar-ring": "var(--sidebar-ring)",
-          "--color-info": "var(--info)",
-          "--color-info-foreground": "var(--info-foreground)",
-          "--color-success": "var(--success)",
-          "--color-success-foreground": "var(--success-foreground)",
-          "--color-warning": "var(--warning)",
-          "--color-warning-foreground": "var(--warning-foreground)",
-          "--font-sans": "var(--font-geist-sans)",
-          "--font-mono": "var(--font-geist-mono)",
+          "--color-sidebar-border": "var(--sidebar-border)",
+          "--color-sidebar-accent-foreground": "var(--sidebar-accent-foreground)",
+          "--color-sidebar-accent": "var(--sidebar-accent)",
+          "--color-sidebar-primary-foreground": "var(--sidebar-primary-foreground)",
+          "--color-sidebar-primary": "var(--sidebar-primary)",
+          "--color-sidebar-foreground": "var(--sidebar-foreground)",
+          "--color-sidebar": "var(--sidebar)",
+          "--color-chart-5": "var(--chart-5)",
+          "--color-chart-4": "var(--chart-4)",
+          "--color-chart-3": "var(--chart-3)",
+          "--color-chart-2": "var(--chart-2)",
+          "--color-chart-1": "var(--chart-1)",
+          "--color-ring": "var(--ring)",
+          "--color-input": "var(--input)",
+          "--color-border": "var(--border)",
+          "--color-destructive": "var(--destructive)",
+          "--color-accent-foreground": "var(--accent-foreground)",
+          "--color-accent": "var(--accent)",
+          "--color-muted-foreground": "var(--muted-foreground)",
+          "--color-muted": "var(--muted)",
+          "--color-secondary-foreground": "var(--secondary-foreground)",
+          "--color-secondary": "var(--secondary)",
+          "--color-primary-foreground": "var(--primary-foreground)",
+          "--color-primary": "var(--primary)",
+          "--color-popover-foreground": "var(--popover-foreground)",
+          "--color-popover": "var(--popover)",
+          "--color-card-foreground": "var(--card-foreground)",
+          "--color-card": "var(--card)",
           "--radius-xs": "calc(var(--radius) - 6px)",
           "--radius-sm": "calc(var(--radius) - 4px)",
           "--radius-md": "var(--radius)",
           "--radius-lg": "calc(var(--radius) + 2px)",
           "--radius-xl": "calc(var(--radius) + 6px)",
-          "--radius-2xl": "calc(var(--radius) + 10px)"
+          "--radius-2xl": "calc(var(--radius) + 10px)",
+          "--color-warning-foreground": "var(--warning-foreground)",
+          "--color-warning": "var(--warning)",
+          "--color-success-foreground": "var(--success-foreground)",
+          "--color-success": "var(--success)",
+          "--color-info-foreground": "var(--info-foreground)",
+          "--color-info": "var(--info)",
+          "--color-destructive-foreground": "var(--destructive-foreground)"
         },
         "light": {
           "background": "oklch(1 0 0)",
@@ -75,7 +75,7 @@
           "destructive": "oklch(0.55 0.2 25)",
           "destructive-foreground": "oklch(0.985 0 0)",
           "border": "oklch(0.92 0.004 286.32)",
-          "input": "oklch(0.871 0.006 286.286)",
+          "input": "oklch(0.93 0.004 286.32)",
           "ring": "oklch(0.871 0.006 286.286)",
           "chart-1": "oklch(0.646 0.222 41.116)",
           "chart-2": "oklch(0.6 0.118 184.704)",
@@ -90,7 +90,32 @@
           "sidebar-accent-foreground": "oklch(0.21 0.006 285.885)",
           "sidebar-border": "oklch(0.92 0.004 286.32)",
           "sidebar-ring": "oklch(0.871 0.006 286.286)",
-          "radius": "0.5rem"
+          "info": "var(--color-blue-500)",
+          "info-foreground": "var(--color-blue-700)",
+          "success": "var(--color-emerald-500)",
+          "success-foreground": "var(--color-emerald-700)",
+          "warning": "var(--color-amber-500)",
+          "warning-foreground": "var(--color-amber-700)",
+          "font-sans": "Open Sans, sans-serif",
+          "font-serif": "Georgia, serif",
+          "font-mono": "Menlo, monospace",
+          "radius": "0.5rem",
+          "shadow-border": "0 0 0 1px oklch(0 0 0 / 0.06), 0 1px 1px -0.5px rgb(35 35 35 / 0.08), 0 1px 2px -1px rgb(35 35 35 / 0.04), 0 2px 4px -1px rgb(35 35 35 / 0.03)",
+          "shadow-border-hover": "0 0 0 1px oklch(0 0 0 / 0.08), 0 1px 2px -1px rgb(35 35 35 / 0.08), 0 2px 4px -2px rgb(35 35 35 / 0.06), 0 4px 8px -2px rgb(35 35 35 / 0.04), 0 8px 16px -4px rgb(35 35 35 / 0.03)",
+          "shadow-2xs": "0px 2px 0px 0px hsl(202.8169 89.1213% 53.1373% / 0)",
+          "shadow-xs": "0px 2px 0px 0px hsl(202.8169 89.1213% 53.1373% / 0)",
+          "shadow-sm": "0px 2px 0px 0px hsl(202.8169 89.1213% 53.1373% / 0), 0px 1px 2px -1px hsl(202.8169 89.1213% 53.1373% / 0)",
+          "shadow": "0px 2px 0px 0px hsl(202.8169 89.1213% 53.1373% / 0), 0px 1px 2px -1px hsl(202.8169 89.1213% 53.1373% / 0)",
+          "shadow-md": "0px 2px 0px 0px hsl(202.8169 89.1213% 53.1373% / 0), 0px 2px 4px -1px hsl(202.8169 89.1213% 53.1373% / 0)",
+          "shadow-lg": "0px 2px 0px 0px hsl(202.8169 89.1213% 53.1373% / 0), 0px 4px 6px -1px hsl(202.8169 89.1213% 53.1373% / 0)",
+          "shadow-xl": "0px 2px 0px 0px hsl(202.8169 89.1213% 53.1373% / 0), 0px 8px 10px -1px hsl(202.8169 89.1213% 53.1373% / 0)",
+          "shadow-2xl": "0px 2px 0px 0px hsl(202.8169 89.1213% 53.1373% / 0)",
+          "z-layer-portal-root": "9999",
+          "z-layer-floating": "1000",
+          "z-layer-modal-backdrop": "2000",
+          "z-layer-modal-content": "2001",
+          "z-layer-floating-elevated": "3000",
+          "z-layer-toast": "4000"
         },
         "dark": {
           "background": "oklch(0.21 0.006 285.885)",
@@ -125,20 +150,191 @@
           "sidebar-accent-foreground": "oklch(0.967 0.001 286.375)",
           "sidebar-border": "oklch(0.274 0.006 286.033)",
           "sidebar-ring": "oklch(0.442 0.017 285.786)",
-          "radius": "0.5rem"
+          "info": "var(--color-blue-500)",
+          "info-foreground": "var(--color-blue-400)",
+          "success": "var(--color-emerald-500)",
+          "success-foreground": "var(--color-emerald-400)",
+          "warning": "var(--color-amber-500)",
+          "warning-foreground": "var(--color-amber-400)",
+          "font-sans": "Open Sans, sans-serif",
+          "font-serif": "Georgia, serif",
+          "font-mono": "Menlo, monospace",
+          "radius": "0.5rem",
+          "shadow-border": "0 0 0 1px oklch(1 0 0 / 0.08), 0 1px 1px -0.5px rgb(0 0 0 / 0.25), 0 1px 2px -1px rgb(0 0 0 / 0.15), 0 2px 4px -1px rgb(0 0 0 / 0.10)",
+          "shadow-border-hover": "0 0 0 1px oklch(1 0 0 / 0.13), 0 1px 2px -1px rgb(0 0 0 / 0.30), 0 2px 4px -2px rgb(0 0 0 / 0.20), 0 4px 8px -2px rgb(0 0 0 / 0.15), 0 8px 16px -4px rgb(0 0 0 / 0.10)",
+          "shadow-2xs": "0px 2px 0px 0px hsl(202.8169 89.1213% 53.1373% / 0)",
+          "shadow-xs": "0px 2px 0px 0px hsl(202.8169 89.1213% 53.1373% / 0)",
+          "shadow-sm": "0px 2px 0px 0px hsl(202.8169 89.1213% 53.1373% / 0), 0px 1px 2px -1px hsl(202.8169 89.1213% 53.1373% / 0)",
+          "shadow": "0px 2px 0px 0px hsl(202.8169 89.1213% 53.1373% / 0), 0px 1px 2px -1px hsl(202.8169 89.1213% 53.1373% / 0)",
+          "shadow-md": "0px 2px 0px 0px hsl(202.8169 89.1213% 53.1373% / 0), 0px 2px 4px -1px hsl(202.8169 89.1213% 53.1373% / 0)",
+          "shadow-lg": "0px 2px 0px 0px hsl(202.8169 89.1213% 53.1373% / 0), 0px 4px 6px -1px hsl(202.8169 89.1213% 53.1373% / 0)",
+          "shadow-xl": "0px 2px 0px 0px hsl(202.8169 89.1213% 53.1373% / 0), 0px 8px 10px -1px hsl(202.8169 89.1213% 53.1373% / 0)",
+          "shadow-2xl": "0px 2px 0px 0px hsl(202.8169 89.1213% 53.1373% / 0)",
+          "z-layer-portal-root": "9999",
+          "z-layer-floating": "1000",
+          "z-layer-modal-backdrop": "2000",
+          "z-layer-modal-content": "2001",
+          "z-layer-floating-elevated": "3000",
+          "z-layer-toast": "4000"
         }
       },
       "css": {
-        "@layer base": "* { @apply border-border/60 outline-ring/50; }\nbody { @apply bg-background text-foreground; position: relative; }\n#__next, [data-nextjs-root-layout] { isolation: isolate; }",
-        "@layer utilities": ".shadow-card { box-shadow: 0 1px 1px -0.5px rgba(35,35,35,0.08), 0 1px 2px -1px rgba(35,35,35,0.04), 0 2px 4px -1px rgba(35,35,35,0.03); }\n.dark .shadow-card { box-shadow: 0 1px 1px -0.5px rgba(0,0,0,0.25), 0 1px 2px -1px rgba(0,0,0,0.15), 0 2px 4px -1px rgba(0,0,0,0.10); }\n.shadow-card-lg { box-shadow: 0 1px 2px -1px rgba(35,35,35,0.08), 0 2px 4px -2px rgba(35,35,35,0.06), 0 4px 8px -2px rgba(35,35,35,0.04), 0 8px 16px -4px rgba(35,35,35,0.03); }\n.dark .shadow-card-lg { box-shadow: 0 1px 2px -1px rgba(0,0,0,0.30), 0 2px 4px -2px rgba(0,0,0,0.20), 0 4px 8px -2px rgba(0,0,0,0.15), 0 8px 16px -4px rgba(0,0,0,0.10); }\n.scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }\n.scrollbar-hide::-webkit-scrollbar { display: none; }\n.animate-shimmer { animation: shimmer 2s ease-in-out infinite; }",
-        "@keyframes pulse-glow": "0%, 100% { opacity: 0.3; transform: translate(-50%, -50%) scale(0.95); } 50% { opacity: 0.5; transform: translate(-50%, -50%) scale(1.05); }",
-        "@keyframes fade-scale-in": "from { opacity: 0; transform: scale(0.9); } to { opacity: 1; transform: scale(1); }",
-        "@keyframes scale-in": "from { opacity: 0; transform: scale(0.8); } to { opacity: 1; transform: scale(1); }",
-        "@keyframes bounce-soft": "0%, 100% { transform: translateY(0); } 50% { transform: translateY(-4px); }",
-        "@keyframes slide-up": "from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); }",
-        "@keyframes fade-in": "from { opacity: 0; } to { opacity: 1; }",
-        "@keyframes shimmer": "0% { background-position: -200% 0; } 100% { background-position: 200% 0; }",
-        "@keyframes shimmer-slide": "to { transform: translateX(100%); }"
+        "@layer base": {
+          "*": {
+            "@apply border-border/60 outline-ring/50": {}
+          },
+          "body": {
+            "@apply bg-background font-sans text-foreground antialiased": {},
+            "position": "relative"
+          },
+          "#__next, [data-nextjs-root-layout]": {
+            "isolation": "isolate"
+          },
+          "@media (prefers-reduced-motion: reduce)": {
+            "*, *::before, *::after": {
+              "scroll-behavior": "auto !important",
+              "animation-duration": "0.01ms !important",
+              "animation-iteration-count": "1 !important",
+              "transition-duration": "0.01ms !important"
+            }
+          }
+        },
+        "@layer utilities": {
+          ".shadow-card": {
+            "box-shadow": "var(--shadow-border)"
+          },
+          ".shadow-card-lg": {
+            "box-shadow": "var(--shadow-border-hover)"
+          },
+          ".scrollbar-hide": {
+            "-ms-overflow-style": "none",
+            "scrollbar-width": "none"
+          },
+          ".scrollbar-hide::-webkit-scrollbar": {
+            "display": "none"
+          },
+          ".scrollbar-neutral-thin": {
+            "scrollbar-width": "thin",
+            "scrollbar-color": "color-mix(in oklab, var(--muted-foreground) 30%, transparent) transparent"
+          },
+          ".scrollbar-neutral-thin::-webkit-scrollbar": {
+            "height": "6px",
+            "width": "6px"
+          },
+          ".scrollbar-neutral-thin::-webkit-scrollbar-track": {
+            "background": "transparent"
+          },
+          ".scrollbar-neutral-thin::-webkit-scrollbar-thumb": {
+            "background-color": "color-mix(in oklab, var(--muted-foreground) 30%, transparent)",
+            "border-radius": "3px"
+          },
+          ".scrollbar-neutral-thin::-webkit-scrollbar-thumb:hover": {
+            "background-color": "color-mix(in oklab, var(--muted-foreground) 50%, transparent)"
+          },
+          ".animate-shimmer": {
+            "animation": "shimmer 2s ease-in-out infinite"
+          }
+        },
+        "@keyframes pulse-glow": {
+          "0%, 100%": {
+            "opacity": "0.3",
+            "transform": "translate(-50%, -50%) scale(0.95)"
+          },
+          "50%": {
+            "opacity": "0.5",
+            "transform": "translate(-50%, -50%) scale(1.05)"
+          }
+        },
+        "@keyframes fade-scale-in": {
+          "from": {
+            "opacity": "0",
+            "transform": "scale(0.9)"
+          },
+          "to": {
+            "opacity": "1",
+            "transform": "scale(1)"
+          }
+        },
+        "@keyframes scale-in": {
+          "from": {
+            "opacity": "0",
+            "transform": "scale(0.8)"
+          },
+          "to": {
+            "opacity": "1",
+            "transform": "scale(1)"
+          }
+        },
+        "@keyframes bounce-soft": {
+          "0%, 100%": {
+            "transform": "translateY(0)"
+          },
+          "50%": {
+            "transform": "translateY(-4px)"
+          }
+        },
+        "@keyframes slide-up": {
+          "from": {
+            "opacity": "0",
+            "transform": "translateY(20px)"
+          },
+          "to": {
+            "opacity": "1",
+            "transform": "translateY(0)"
+          }
+        },
+        "@keyframes fade-in": {
+          "from": {
+            "opacity": "0"
+          },
+          "to": {
+            "opacity": "1"
+          }
+        },
+        "@keyframes fade-out": {
+          "from": {
+            "opacity": "1"
+          },
+          "to": {
+            "opacity": "0"
+          }
+        },
+        "@keyframes command-in": {
+          "from": {
+            "opacity": "0",
+            "scale": "0.98"
+          },
+          "to": {
+            "opacity": "1",
+            "scale": "1"
+          }
+        },
+        "@keyframes command-out": {
+          "from": {
+            "opacity": "1",
+            "scale": "1"
+          },
+          "to": {
+            "opacity": "0",
+            "scale": "0.98"
+          }
+        },
+        "@keyframes shimmer": {
+          "0%": {
+            "background-position": "-200% 0"
+          },
+          "100%": {
+            "background-position": "200% 0"
+          }
+        },
+        "@keyframes shimmer-slide": {
+          "to": {
+            "transform": "translateX(100%)"
+          }
+        },
+        "[data-slot=\"portal-root\"] > *": {
+          "pointer-events": "auto"
+        }
       },
       "files": []
     },
@@ -520,7 +716,7 @@
       "categories": ["overlay"],
       "docs": "Import: `import { Tooltip } from '@/components/ui/tooltip'`",
       "dependencies": ["@base-ui/react"],
-      "registryDependencies": ["cn", "slot", "portal"],
+      "registryDependencies": ["cn", "portal"],
       "files": [
         {
           "path": "registry/constructive/ui/tooltip.tsx",
@@ -536,7 +732,7 @@
       "categories": ["overlay"],
       "docs": "Import: `import { Popover } from '@/components/ui/popover'`",
       "dependencies": ["@base-ui/react"],
-      "registryDependencies": ["cn", "slot", "portal"],
+      "registryDependencies": ["cn", "portal"],
       "files": [
         {
           "path": "registry/constructive/ui/popover.tsx",
@@ -552,7 +748,7 @@
       "categories": ["overlay"],
       "docs": "Import: `import { Dialog } from '@/components/ui/dialog'`",
       "dependencies": ["@base-ui/react", "lucide-react"],
-      "registryDependencies": ["cn", "slot", "portal", "button", "scroll-area"],
+      "registryDependencies": ["cn", "portal", "button", "scroll-area"],
       "files": [
         {
           "path": "registry/constructive/ui/dialog.tsx",
@@ -568,7 +764,7 @@
       "categories": ["overlay"],
       "docs": "Import: `import { AlertDialog } from '@/components/ui/alert-dialog'`",
       "dependencies": ["@base-ui/react"],
-      "registryDependencies": ["cn", "slot", "portal", "button"],
+      "registryDependencies": ["cn", "portal", "button"],
       "files": [
         {
           "path": "registry/constructive/ui/alert-dialog.tsx",
@@ -584,7 +780,7 @@
       "categories": ["overlay"],
       "docs": "Import: `import { DropdownMenu } from '@/components/ui/dropdown-menu'`",
       "dependencies": ["@base-ui/react", "lucide-react"],
-      "registryDependencies": ["cn", "slot", "portal"],
+      "registryDependencies": ["cn", "portal"],
       "files": [
         {
           "path": "registry/constructive/ui/dropdown-menu.tsx",
@@ -600,7 +796,7 @@
       "categories": ["overlay"],
       "docs": "Import: `import { Sheet } from '@/components/ui/sheet'`",
       "dependencies": ["@base-ui/react", "class-variance-authority", "lucide-react", "motion"],
-      "registryDependencies": ["cn", "slot", "portal", "motion-config"],
+      "registryDependencies": ["cn", "portal", "motion-config"],
       "files": [
         {
           "path": "registry/constructive/ui/sheet.tsx",
@@ -663,7 +859,7 @@
       "description": "Resizable panel layouts using react-resizable-panels.",
       "categories": ["layout"],
       "docs": "Import: `import { ResizablePanel, ResizablePanelGroup, ResizableHandle } from '@/components/ui/resizable'`",
-      "dependencies": ["react-resizable-panels"],
+      "dependencies": ["lucide-react", "react-resizable-panels@^3.0.0"],
       "registryDependencies": ["cn"],
       "files": [
         {
@@ -790,7 +986,7 @@
       "categories": ["overlay"],
       "docs": "Import: `import { Command } from '@/components/ui/command'`",
       "dependencies": ["@base-ui/react", "lucide-react"],
-      "registryDependencies": ["cn", "slot", "portal", "autocomplete"],
+      "registryDependencies": ["cn", "portal"],
       "files": [
         {
           "path": "registry/constructive/ui/command.tsx",
@@ -822,7 +1018,7 @@
       "categories": ["input"],
       "docs": "Import: `import { MultiSelect } from '@/components/ui/multi-select'`",
       "dependencies": ["class-variance-authority", "lucide-react"],
-      "registryDependencies": ["cn", "badge", "command", "popover", "separator"],
+      "registryDependencies": ["cn", "badge", "popover", "separator"],
       "files": [
         {
           "path": "registry/constructive/ui/multi-select.tsx",
@@ -902,7 +1098,7 @@
       "categories": ["input"],
       "docs": "Import: `import { Calendar } from '@/components/ui/calendar-rac'`",
       "dependencies": ["@internationalized/date", "react-aria-components"],
-      "registryDependencies": ["cn", "button"],
+      "registryDependencies": ["cn"],
       "files": [
         {
           "path": "registry/constructive/ui/calendar-rac.tsx",
@@ -1087,7 +1283,7 @@
       "title": "Stack Navigation",
       "description": "iOS-style navigation stack with gestures and animations.",
       "categories": ["block"],
-      "docs": "Import: `import { Stack, StackCard } from '@/components/stack'`",
+      "docs": "Import: `import { Stack, StackCard } from '@/components/ui/stack'`",
       "dependencies": ["motion", "@use-gesture/react", "lucide-react"],
       "registryDependencies": ["cn"],
       "files": [
@@ -1113,6 +1309,10 @@
         },
         {
           "path": "registry/constructive/blocks/stack/stack-viewport.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/stack/deferred-card-content.tsx",
           "type": "registry:component"
         },
         {
@@ -1147,7 +1347,7 @@
       "title": "Toast Notifications",
       "description": "Styled toast notification functions using Sonner.",
       "categories": ["block"],
-      "docs": "Import: `import { toastSuccess, toastError, toastWarning, toastInfo } from '@/components/toast'`",
+      "docs": "Import: `import { toastSuccess, toastError, toastWarning, toastInfo } from '@/components/ui/toast'`",
       "dependencies": ["sonner", "lucide-react"],
       "registryDependencies": ["button"],
       "files": [
@@ -1179,7 +1379,7 @@
       "title": "Org Chart",
       "description": "Interactive organizational chart with drag-to-reparent, zoom controls, and per-node actions. Built on React Flow (@xyflow/react).",
       "categories": ["block"],
-      "docs": "Import: `import { OrgChart } from '@/components/org-chart'`",
+      "docs": "Import: `import { OrgChart } from '@/components/ui/org-chart'`",
       "dependencies": ["@xyflow/react", "@remixicon/react", "lucide-react"],
       "registryDependencies": ["cn", "button", "tooltip", "avatar", "badge", "dropdown-menu"],
       "files": [
@@ -1288,7 +1488,7 @@
       "categories": ["block"],
       "docs": "Import: `import { ObjectTable } from '@/components/ui/storage'`",
       "dependencies": ["lucide-react"],
-      "registryDependencies": ["storage", "cn", "button", "checkbox", "dropdown-menu", "skeleton", "table"],
+      "registryDependencies": ["storage", "button", "checkbox", "dropdown-menu", "skeleton", "table"],
       "files": [
         {
           "path": "registry/constructive/blocks/storage/object-table.tsx",

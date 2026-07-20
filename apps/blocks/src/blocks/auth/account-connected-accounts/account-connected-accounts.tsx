@@ -305,7 +305,7 @@ export function AccountConnectedAccounts({
           )}
 
           {isEmpty ? (
-            <p className="px-6 pb-4 text-sm text-muted-foreground" data-testid="no-providers-message">
+            <p className="text-pretty px-6 pb-4 text-sm text-muted-foreground" data-testid="no-providers-message">
               {merged.noProvidersMessage}
             </p>
           ) : (

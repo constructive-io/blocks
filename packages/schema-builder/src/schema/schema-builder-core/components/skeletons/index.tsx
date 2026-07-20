@@ -9,7 +9,7 @@ export function Skeleton({ className }: { className?: string }) {
 }
 
 export function ContentFadeIn({ children, className }: { children: ReactNode; className?: string }) {
-	return <div className={cn('animate-in fade-in duration-300', className)}>{children}</div>;
+	return <div className={cn('animate-[fade-in_300ms_ease-out] motion-reduce:animate-none', className)}>{children}</div>;
 }
 
 /** Renders children only after a short delay, to avoid flashing skeletons on fast loads. */

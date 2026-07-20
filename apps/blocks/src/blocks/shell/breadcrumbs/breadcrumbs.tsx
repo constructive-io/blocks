@@ -232,7 +232,7 @@ export function ShellBreadcrumbs({
                     <button
                       type="button"
                       aria-label={merged.ellipsisAriaLabel}
-                      className="inline-flex items-center justify-center"
+                      className="inline-flex size-11 items-center justify-center rounded-md transition-[background-color,color,scale] duration-150 ease-out hover:bg-accent hover:text-accent-foreground motion-safe:active:scale-[0.96] motion-reduce:transition-none sm:size-10"
                       onClick={() => setEllipsisExpanded(true)}
                       onKeyDown={(e) => {
                         if (e.key === 'Enter' || e.key === ' ') {

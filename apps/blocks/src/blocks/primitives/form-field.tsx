@@ -5,7 +5,7 @@
  * verbatim from the admin app (`components/auth/form-field.tsx`). The `field`
  * prop is the render-prop API from `@tanstack/react-form`'s `<form.Field>`; it
  * is typed `any` to avoid coupling this primitive to a specific form generic.
- * Wraps `@constructive-io/ui` FormControl + Input (consumed, never vendored).
+ * Composes the source-installed FormControl and Input primitives.
  */
 
 import type { RefObject } from 'react';

@@ -40,7 +40,7 @@ export default defineConfig({
   splitting: false,
   treeshake: true,
   external,
-  onSuccess: 'node scripts/add-use-client-banner.mjs',
+  onSuccess: 'tsx scripts/add-use-client-banner.ts',
   esbuildOptions(options) {
     options.sourcesContent = false;
   },

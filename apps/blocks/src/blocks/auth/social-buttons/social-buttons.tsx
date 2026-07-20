@@ -350,7 +350,7 @@ export function AuthSocialButtons({
           ))}
         </div>
       ) : providerList.length === 0 && !isLoading ? (
-        <p className="text-muted-foreground text-center text-sm py-2">{merged.noProvidersMessage}</p>
+        <p className="text-pretty text-muted-foreground text-center text-sm py-2">{merged.noProvidersMessage}</p>
       ) : (
         <div
           className={cn(

@@ -3,7 +3,7 @@
 import { Command as CommandPrimitive } from "cmdk";
 import { SearchIcon } from "lucide-react";
 import * as React from "react";
-import { ModalPortalScope, useRootPortalContainer } from "./portal";
+import { ModalPortalScope, useRootPortalContainer } from "@constructive-io/ui/portal";
 import { cn } from "../lib/utils";
 
 function CommandDialog({
@@ -17,10 +17,10 @@ function CommandDialog({
     <CommandPrimitive.Dialog
       container={container ?? undefined}
       overlayClassName={cn(
-        "fixed inset-0 z-[var(--z-layer-toast)] bg-black/32 backdrop-blur-sm transition-all duration-200 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0",
+		"fixed inset-0 z-[var(--z-layer-toast)] bg-black/32 backdrop-blur-sm data-[state=open]:animate-[fade-in_200ms_ease-out] data-[state=closed]:animate-[fade-out_150ms_ease-in] motion-reduce:animate-none",
       )}
       contentClassName={cn(
-        "fixed left-1/2 top-[max(--spacing(4),4vh)] sm:top-[10vh] z-[var(--z-layer-toast)] -translate-x-1/2 flex max-h-100 min-h-0 w-full min-w-0 max-w-xl flex-col rounded-2xl border bg-popover bg-clip-padding text-popover-foreground shadow-lg data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-98 data-[state=open]:zoom-in-98 before:pointer-events-none before:absolute before:inset-0 before:rounded-[calc(var(--radius-2xl)-1px)] before:bg-muted/50 before:shadow-[0_1px_--theme(--color-black/4%)] **:data-[slot=scroll-area-viewport]:data-has-overflow-y:pe-1 dark:bg-clip-border dark:before:shadow-[0_-1px_--theme(--color-white/8%)]",
+        "fixed left-1/2 top-[max(--spacing(4),4vh)] sm:top-[10vh] z-[var(--z-layer-toast)] -translate-x-1/2 flex max-h-100 min-h-0 w-full min-w-0 max-w-xl flex-col rounded-2xl border bg-popover bg-clip-padding text-popover-foreground shadow-lg data-[state=open]:animate-[command-in_200ms_ease-out] data-[state=closed]:animate-[command-out_150ms_ease-in] motion-reduce:animate-none before:pointer-events-none before:absolute before:inset-0 before:rounded-[calc(var(--radius-2xl)-1px)] before:bg-muted/50 before:shadow-[0_1px_--theme(--color-black/4%)] **:data-[slot=scroll-area-viewport]:data-has-overflow-y:pe-1 dark:bg-clip-border dark:before:shadow-[0_-1px_--theme(--color-white/8%)]",
         className,
       )}
       loop

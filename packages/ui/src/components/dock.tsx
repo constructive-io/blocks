@@ -2,7 +2,15 @@
 
 import React, { PropsWithChildren, useRef } from 'react';
 import { cva, type VariantProps } from 'class-variance-authority';
-import { motion, MotionProps, MotionValue, useMotionValue, useSpring, useTransform } from 'motion/react';
+import {
+	motion,
+	MotionProps,
+	MotionValue,
+	useMotionValue,
+	useReducedMotion,
+	useSpring,
+	useTransform,
+} from 'motion/react';
 
 import { springs } from '../lib/motion/motion-config';
 import { cn } from '../lib/utils';
@@ -22,7 +30,7 @@ const DEFAULT_DISTANCE = 140;
 
 const dockVariants = cva(
 	// Solid themed surface (no glass/blur)
-	'mx-auto mt-8 flex h-[58px] w-max items-center justify-center gap-2 rounded-2xl border bg-card p-2 shadow',
+	'mx-auto mt-8 flex h-[58px] w-max items-center justify-center gap-2 rounded-2xl bg-card p-2 shadow-card',
 );
 
 const Dock = React.forwardRef<HTMLDivElement, DockProps>(
@@ -39,6 +47,7 @@ const Dock = React.forwardRef<HTMLDivElement, DockProps>(
 		ref,
 	) => {
 		const mouseX = useMotionValue(Infinity);
+		const prefersReducedMotion = useReducedMotion();
 
 		const renderChildren = () => {
 			return React.Children.map(children, (child) => {
@@ -58,8 +67,8 @@ const Dock = React.forwardRef<HTMLDivElement, DockProps>(
 		return (
 			<motion.div
 				ref={ref}
-				onMouseMove={(e) => mouseX.set(e.pageX)}
-				onMouseLeave={() => mouseX.set(Infinity)}
+				onMouseMove={prefersReducedMotion ? undefined : (event) => mouseX.set(event.pageX)}
+				onMouseLeave={prefersReducedMotion ? undefined : () => mouseX.set(Infinity)}
 				{...props}
 				className={cn(dockVariants({ className }), {
 					'items-start': direction === 'top',
@@ -95,6 +104,7 @@ const DockIcon = ({
 	...props
 }: DockIconProps) => {
 	const ref = useRef<HTMLDivElement>(null);
+	const prefersReducedMotion = useReducedMotion();
 	const padding = Math.max(6, size * 0.2);
 	const defaultMouseX = useMotionValue(Infinity);
 
@@ -114,7 +124,7 @@ const DockIcon = ({
 	return (
 		<motion.div
 			ref={ref}
-			style={{ width: scaleSize, height: scaleSize, padding }}
+			style={{ width: prefersReducedMotion ? size : scaleSize, height: prefersReducedMotion ? size : scaleSize, padding }}
 			className={cn(
 				// Solid hover target with theme-aware colors
 				'flex aspect-square cursor-pointer items-center justify-center rounded-full bg-transparent',

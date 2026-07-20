@@ -27,7 +27,7 @@ function OrgChartNodeComponent({ id, data }: NodeProps<OrgChartNode>) {
 		<div
 			style={{ width: NODE_WIDTH }}
 			className={cn(
-				'bg-card dark:bg-muted relative rounded-xl border shadow-sm transition-all',
+				'bg-card dark:bg-muted relative rounded-xl border shadow-sm transition-[border-color,box-shadow,scale] duration-200 motion-reduce:transition-none',
 				'border-border/60',
 				isSelected && 'ring-primary ring-2 ring-offset-2 dark:ring-offset-zinc-900',
 				isDropTarget && 'ring-primary/50 border-primary scale-105 ring-2',

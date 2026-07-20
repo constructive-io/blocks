@@ -17,7 +17,7 @@
  *   • The stub default path throws a typed PROCEDURE_NOT_FOUND error so the
  *     block behaves gracefully (shows the error message) if accidentally mounted
  *     without the override.
- *   • `requires.json` names the pending op so `check-sdk.mjs` fails clearly.
+ *   • `requires.json` names the pending op so `check-sdk-fixtures.ts` fails clearly.
  *   • `PROCEDURE_NOT_FOUND` is in `messages.errors`.
  *
  * When the backend ships and the host regenerates the SDK, replace the stub
@@ -290,7 +290,7 @@ export function EmailOtpRequestCard({
             <Button
               variant="link"
               asChild
-              className="text-muted-foreground hover:text-foreground hover:no-underline h-auto p-0 text-sm"
+              className="text-muted-foreground hover:text-foreground hover:no-underline min-h-11 px-2 py-0 text-sm sm:min-h-10"
             >
               <a href={signInHref}>← Back to sign in</a>
             </Button>
@@ -363,7 +363,7 @@ export function EmailOtpRequestCard({
           <Button
             variant="link"
             asChild
-            className="text-muted-foreground hover:text-foreground hover:no-underline h-auto p-0 text-sm"
+            className="text-muted-foreground hover:text-foreground hover:no-underline min-h-11 px-2 py-0 text-sm sm:min-h-10"
           >
             <a href={signInHref}>← Back to sign in</a>
           </Button>

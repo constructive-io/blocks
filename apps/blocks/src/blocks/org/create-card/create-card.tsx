@@ -328,7 +328,7 @@ export function OrgCreateCard({
           step1Form.handleSubmit();
         }}
       >
-        <h2 className="text-sm font-semibold text-foreground">{merged.step1Title}</h2>
+        <h2 className="text-balance text-sm font-semibold text-foreground">{merged.step1Title}</h2>
 
         <step1Form.Field
           name="displayName"
@@ -387,7 +387,7 @@ export function OrgCreateCard({
                 placeholder={merged.slugPlaceholder}
                 testId="org-username"
               />
-              <p className="text-xs text-muted-foreground">{merged.slugHint}</p>
+              <p className="text-pretty text-xs text-muted-foreground">{merged.slugHint}</p>
               {step1Values.username.length >= 2 && (
                 <div aria-live="polite" className="text-xs font-medium">
                   {slugCheck.isLoading && (
@@ -422,7 +422,7 @@ export function OrgCreateCard({
   function renderStep2() {
     return (
       <div className="space-y-4">
-        <h2 className="text-sm font-semibold text-foreground">{merged.step2Title}</h2>
+        <h2 className="text-balance text-sm font-semibold text-foreground">{merged.step2Title}</h2>
 
         <div className="flex items-start gap-4">
           <Avatar className="size-16 rounded-lg">
@@ -446,9 +446,9 @@ export function OrgCreateCard({
               onChange={(e) => handleLogoChange(e.target.files?.[0] ?? null)}
               data-testid="org-logo-input"
             />
-            <p className="text-xs text-muted-foreground">{merged.logoHint}</p>
+            <p className="text-pretty text-xs text-muted-foreground">{merged.logoHint}</p>
             {logoError && (
-              <p className="text-xs text-destructive" aria-live="polite">
+              <p className="text-pretty text-xs text-destructive" aria-live="polite">
                 {logoError}
               </p>
             )}
@@ -490,7 +490,7 @@ export function OrgCreateCard({
     const prevStep = showLogoStep ? (2 as 1 | 2 | 3) : (1 as 1 | 2 | 3);
     return (
       <div className="space-y-4">
-        <h2 className="text-sm font-semibold text-foreground">{merged.step3Title}</h2>
+        <h2 className="text-balance text-sm font-semibold text-foreground">{merged.step3Title}</h2>
 
         <div className="rounded-md border bg-muted/30 p-4 space-y-3">
           <div className="flex items-center gap-3">
@@ -503,8 +503,8 @@ export function OrgCreateCard({
               </AvatarFallback>
             </Avatar>
             <div>
-              <p className="text-sm font-medium">{step1Values.displayName}</p>
-              <p className="text-xs text-muted-foreground">@{step1Values.username}</p>
+              <p className="text-pretty text-sm font-medium">{step1Values.displayName}</p>
+              <p className="text-pretty text-xs text-muted-foreground">@{step1Values.username}</p>
             </div>
           </div>
           <dl className="space-y-1.5 text-sm">
@@ -554,7 +554,7 @@ export function OrgCreateCard({
       </CardContent>
 
       <CardFooter className="border-border/40 border-t pt-4">
-        <p className="text-muted-foreground text-xs">
+        <p className="text-pretty text-muted-foreground text-xs">
           Step {displayStep} of {totalSteps}
         </p>
       </CardFooter>

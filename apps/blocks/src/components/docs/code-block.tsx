@@ -1,41 +1,125 @@
-/**
- * CodeBlock — the standalone, server-highlighted code snippet primitive.
- *
- * The thin building block for hand-authored guide pages (tutorial / how-to /
- * concept): pass a raw `code` string and it highlights it on the SERVER with
- * Shiki (`@/lib/highlight`, dual `github-light`/`github-dark` via per-token CSS
- * variables), then hands the HTML to the shared <CodeSurface> for the calm frame,
- * header, and copy control. No client Shiki ships and there's no highlight flash;
- * the active palette is picked by the `.dark` scope at render time, so it tracks
- * the theme for free (static-export friendly).
- *
- * It is the snippet-only sibling of <ComponentPreview>'s Code tab: both render the
- * same <CodeSurface>, but ComponentPreview is a client component so its page
- * highlights upstream and passes the HTML down, whereas CodeBlock owns its own
- * `await highlight(...)` so a guide author can drop
- * `<CodeBlock code={…} filename="app/page.tsx" />` straight into a server page
- * with no plumbing.
- *
- * Async Server Component (no `'use client'`) — `await`-rendered by its parent.
- * Docs harness only — never imported by block source.
- */
+'use client';
 
-import { CodeSurface } from '@/components/docs/code-surface';
-import { highlight } from '@/lib/highlight';
+import { useMemo, useState, type CSSProperties } from 'react';
+import { AnimatePresence, motion } from 'motion/react';
+import { Check, Copy } from 'lucide-react';
+import { highlight } from 'sugar-high';
 
-export interface CodeBlockProps {
-  /** Raw source — highlighted for display and used verbatim by the copy control. */
-  code: string;
-  /** Shiki language (`tsx` | `ts` | `bash` | `json` | `css`). Unknown → `tsx`. */
-  lang?: string;
-  /** Optional filename shown in the header (implies the language). */
-  filename?: string;
+import { Button } from '@constructive-io/ui/button';
+
+import { cn } from '@/lib/utils';
+
+type CodeBlockProps = {
+  children: string;
   className?: string;
-}
+  label?: string;
+  language?: 'tsx';
+};
 
-export async function CodeBlock({ code, lang = 'tsx', filename, className }: CodeBlockProps) {
-  const codeHtml = await highlight(code, lang);
-  return <CodeSurface codeHtml={codeHtml} copyValue={code} label={filename ?? lang} className={className} />;
-}
+const iconTransition = { type: 'spring' as const, duration: 0.3, bounce: 0 };
+const highlightTheme = {
+  '--sh-class': 'var(--primary)',
+  '--sh-identifier': 'var(--foreground)',
+  '--sh-sign': 'var(--muted-foreground)',
+  '--sh-property': 'var(--info-foreground)',
+  '--sh-entity': 'var(--warning-foreground)',
+  '--sh-jsxliterals': 'var(--primary)',
+  '--sh-string': 'var(--success-foreground)',
+  '--sh-keyword': 'var(--primary)',
+  '--sh-comment': 'var(--muted-foreground)',
+} as CSSProperties;
 
-export default CodeBlock;
+export function CodeBlock({ children, className, label, language }: CodeBlockProps) {
+  const [copied, setCopied] = useState(false);
+  const highlighted = useMemo(
+    () => (language === 'tsx' ? highlight(children) : undefined),
+    [children, language],
+  );
+
+  async function onCopy() {
+    try {
+      await navigator.clipboard.writeText(children);
+      setCopied(true);
+      window.setTimeout(() => setCopied(false), 1600);
+    } catch {
+      setCopied(false);
+    }
+  }
+
+  const copyButton = (
+    <Button
+      type="button"
+      variant="ghost"
+      size="icon"
+      className="size-8 shrink-0"
+      onClick={onCopy}
+      aria-label={copied ? 'Copied' : 'Copy code'}
+    >
+      <span className="relative size-4">
+        <AnimatePresence mode="wait" initial={false}>
+          <motion.span
+            key={copied ? 'check' : 'copy'}
+            initial={{ opacity: 0, scale: 0.25, filter: 'blur(4px)' }}
+            animate={{ opacity: 1, scale: 1, filter: 'blur(0px)' }}
+            exit={{ opacity: 0, scale: 0.25, filter: 'blur(4px)' }}
+            transition={iconTransition}
+            className="absolute inset-0 flex items-center justify-center"
+          >
+            {copied ? <Check className="size-4 text-emerald-500" /> : <Copy className="size-4" />}
+          </motion.span>
+        </AnimatePresence>
+      </span>
+    </Button>
+  );
+
+  return (
+    <div
+      data-slot="code-block"
+      className={cn(
+        'relative min-w-0 max-w-full overflow-hidden rounded-xl border border-border bg-muted/40 shadow-sm',
+        className,
+      )}
+    >
+      {label ? (
+        <div className="flex items-center justify-between gap-2 border-b border-border px-3 py-1.5">
+          <span className="min-w-0 truncate text-xs font-medium text-muted-foreground">{label}</span>
+          <div className="flex shrink-0 items-center gap-1">
+            {language ? (
+              <span className="px-1 text-[10px] font-medium uppercase tracking-[0.12em] text-muted-foreground">
+                {language}
+              </span>
+            ) : null}
+            {copyButton}
+          </div>
+        </div>
+      ) : (
+        <div className="absolute right-1.5 top-1.5 z-10 flex items-center gap-1 rounded-md bg-muted/80 pl-1 backdrop-blur-sm">
+          {language ? (
+            <span className="text-[10px] font-medium uppercase tracking-[0.12em] text-muted-foreground">
+              {language}
+            </span>
+          ) : null}
+          {copyButton}
+        </div>
+      )}
+      <pre
+        className={cn(
+          'overflow-x-auto p-3 font-mono text-[12.5px] leading-5 tabular-nums',
+          !label && 'pr-20',
+        )}
+      >
+        {highlighted ? (
+          <code
+            className="code-highlight whitespace-pre"
+            data-slot="code-block-code"
+            data-language={language}
+            style={highlightTheme}
+            dangerouslySetInnerHTML={{ __html: highlighted }}
+          />
+        ) : (
+          <code className="whitespace-pre" data-slot="code-block-code">{children}</code>
+        )}
+      </pre>
+    </div>
+  );
+}

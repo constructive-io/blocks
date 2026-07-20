@@ -7,8 +7,8 @@ import { X } from 'lucide-react';
 import { AnimatePresence, motion, type HTMLMotionProps, type Transition } from 'motion/react';
 
 import { durations, easings } from '../lib/motion/motion-config';
-import { ModalPortalScope, useRootPortalContainer } from './portal';
-import { mergePropsWithRef } from '../lib/slot';
+import { useControllableState } from '../lib/use-controllable-state';
+import { ModalPortalScope, useRootPortalContainer } from '@constructive-io/ui/portal';
 import { cn } from '../lib/utils';
 
 // ============================================================================
@@ -57,13 +57,6 @@ function SheetStackProvider({ children, stackMode = 'cascade' }: SheetStackProvi
 	const [sheets, setSheets] = React.useState<SheetInfo[]>([]);
 	const [sheetSizes, setSheetSizes] = React.useState<Record<string, SheetSize | undefined>>({});
 
-	// Keep event handlers on the latest committed stack without mutating refs during render.
-	// Render-time stack calculations use `sheets` directly below so they never lag a commit.
-	const sheetsRef = React.useRef(sheets);
-	React.useEffect(() => {
-		sheetsRef.current = sheets;
-	}, [sheets]);
-
 	// Register sheet - insert sorted by depth (lower depth = earlier in array)
 	// This ensures sheets are ordered correctly regardless of registration timing
 	const registerSheet = React.useCallback((info: SheetInfo) => {
@@ -109,23 +102,6 @@ function SheetStackProvider({ children, stackMode = 'cascade' }: SheetStackProvi
 		// Sheets after this index have higher depth (are on top)
 		return sheets.length - index - 1;
 	}, [sheets]);
-
-	// Global escape key handler - only close the topmost sheet (highest depth)
-	React.useEffect(() => {
-		const handleGlobalEscape = (event: KeyboardEvent) => {
-			const currentSheets = sheetsRef.current;
-			if (event.key === 'Escape' && currentSheets.length > 0) {
-				event.preventDefault();
-				event.stopPropagation();
-				// Close the topmost sheet (last in sorted array = highest depth)
-				const topSheet = currentSheets[currentSheets.length - 1];
-				topSheet?.close();
-			}
-		};
-
-		document.addEventListener('keydown', handleGlobalEscape, true);
-		return () => document.removeEventListener('keydown', handleGlobalEscape, true);
-	}, []);
 
 	// Memoize value - callbacks are stable, only sheets changes
 	const value = React.useMemo(
@@ -198,8 +174,20 @@ type SheetProps = Omit<React.ComponentProps<typeof SheetPrimitive.Root>, 'onOpen
 	onOpenChange?: (open: boolean) => void;
 };
 
-function Sheet({ children, sheetId: providedId, ...props }: SheetProps) {
-	const [isOpen, setIsOpen] = React.useState(props?.open ?? props?.defaultOpen ?? false);
+function Sheet({
+	children,
+	sheetId: providedId,
+	open: openProp,
+	defaultOpen = false,
+	onOpenChange,
+	modal,
+	...props
+}: SheetProps) {
+	const [isOpen, setIsOpen] = useControllableState({
+		prop: openProp,
+		defaultProp: defaultOpen,
+		onChange: onOpenChange,
+	});
 	const sheetStack = useSheetStack();
 	const nesting = useSheetNesting();
 	const generatedId = React.useId();
@@ -208,17 +196,9 @@ function Sheet({ children, sheetId: providedId, ...props }: SheetProps) {
 	// Depth is determined by nesting level in React tree
 	const depth = nesting.level;
 
-	// Use ref for onOpenChange to keep close callback stable
-	const onOpenChangeRef = React.useRef(props.onOpenChange);
-	React.useEffect(() => {
-		onOpenChangeRef.current = props.onOpenChange;
-	}, [props.onOpenChange]);
-
-	// Stable close callback using ref
 	const close = React.useCallback(() => {
 		setIsOpen(false);
-		onOpenChangeRef.current?.(false);
-	}, []);
+	}, [setIsOpen]);
 
 	const registerSheet = sheetStack?.registerSheet;
 	const unregisterSheet = sheetStack?.unregisterSheet;
@@ -236,16 +216,10 @@ function Sheet({ children, sheetId: providedId, ...props }: SheetProps) {
 		}
 	}, [isOpen, sheetId, depth, close, registerSheet, unregisterSheet]);
 
-	// Sync controlled state
-	React.useEffect(() => {
-		if (props?.open !== undefined) setIsOpen(props.open);
-	}, [props?.open]);
-
-	// Stable handleOpenChange using ref - Base UI passes (open, eventDetails)
+	// Base UI owns dismissal details; this adapter preserves the package's boolean callback.
 	const handleOpenChange = React.useCallback((open: boolean, _eventDetails: DialogChangeEventDetails) => {
 		setIsOpen(open);
-		onOpenChangeRef.current?.(open);
-	}, []);
+	}, [setIsOpen]);
 
 	// Calculate sheets above and whether this is the top sheet
 	const sheetsAbove = sheetStack?.getSheetsAbove(sheetId) ?? 0;
@@ -261,7 +235,7 @@ function Sheet({ children, sheetId: providedId, ...props }: SheetProps) {
 					data-slot="sheet"
 					{...props}
 					open={isOpen}
-					modal={isNested ? false : props.modal}
+					modal={isNested ? false : modal}
 					onOpenChange={handleOpenChange}
 				>
 					{children}
@@ -271,64 +245,42 @@ function Sheet({ children, sheetId: providedId, ...props }: SheetProps) {
 	);
 }
 
-type SheetTriggerProps = Omit<React.ComponentProps<typeof SheetPrimitive.Trigger>, 'render' | 'nativeButton'> & {
+type SheetTriggerProps = React.ComponentProps<typeof SheetPrimitive.Trigger> & {
 	/** When true, merges props onto the child element instead of rendering a button */
 	asChild?: boolean;
-	/** Whether the child renders a native button. Defaults to true when asChild is used. */
-	nativeButton?: boolean;
 };
 
-function SheetTrigger({ asChild, nativeButton, children, ...props }: SheetTriggerProps) {
-	if (asChild && React.isValidElement(children)) {
-		return (
-			<SheetPrimitive.Trigger
-				data-slot="sheet-trigger"
-				nativeButton={nativeButton ?? true}
-				{...props}
-				render={(triggerProps) => {
-					const { nativeButton: _, ...rest } = triggerProps as Record<string, unknown>;
-					return React.cloneElement(
-						children as React.ReactElement<Record<string, unknown>>,
-						mergePropsWithRef(rest, children as React.ReactElement),
-					);
-				}}
-			/>
-		);
-	}
+function SheetTrigger({ asChild, children, render, nativeButton, ...props }: SheetTriggerProps) {
+	const childRender = render === undefined && asChild && React.isValidElement(children) ? children : undefined;
+
 	return (
-		<SheetPrimitive.Trigger data-slot="sheet-trigger" nativeButton={nativeButton} {...props}>
-			{children}
+		<SheetPrimitive.Trigger
+			data-slot="sheet-trigger"
+			nativeButton={nativeButton ?? (childRender ? true : undefined)}
+			render={render ?? childRender}
+			{...props}
+		>
+			{childRender ? undefined : children}
 		</SheetPrimitive.Trigger>
 	);
 }
 
-type SheetCloseProps = Omit<React.ComponentProps<typeof SheetPrimitive.Close>, 'render' | 'nativeButton'> & {
+type SheetCloseProps = React.ComponentProps<typeof SheetPrimitive.Close> & {
 	/** When true, merges props onto the child element instead of rendering a button */
 	asChild?: boolean;
-	/** Whether the child renders a native button. Defaults to true when asChild is used. */
-	nativeButton?: boolean;
 };
 
-function SheetClose({ asChild, nativeButton, children, ...props }: SheetCloseProps) {
-	if (asChild && React.isValidElement(children)) {
-		return (
-			<SheetPrimitive.Close
-				data-slot="sheet-close"
-				nativeButton={nativeButton ?? true}
-				{...props}
-				render={(closeProps) => {
-					const { nativeButton: _, ...rest } = closeProps as Record<string, unknown>;
-					return React.cloneElement(
-						children as React.ReactElement<Record<string, unknown>>,
-						mergePropsWithRef(rest, children as React.ReactElement),
-					);
-				}}
-			/>
-		);
-	}
+function SheetClose({ asChild, children, render, nativeButton, ...props }: SheetCloseProps) {
+	const childRender = render === undefined && asChild && React.isValidElement(children) ? children : undefined;
+
 	return (
-		<SheetPrimitive.Close data-slot="sheet-close" nativeButton={nativeButton} {...props}>
-			{children}
+		<SheetPrimitive.Close
+			data-slot="sheet-close"
+			nativeButton={nativeButton ?? (childRender ? true : undefined)}
+			render={render ?? childRender}
+			{...props}
+		>
+			{childRender ? undefined : children}
 		</SheetPrimitive.Close>
 	);
 }
@@ -338,8 +290,9 @@ type SheetPortalProps = React.ComponentProps<typeof SheetPrimitive.Portal> & {
 	forceMount?: boolean;
 };
 
-function SheetPortal({ forceMount: _forceMount, ...props }: SheetPortalProps) {
-	const container = useRootPortalContainer();
+function SheetPortal({ forceMount: _forceMount, container: containerProp, ...props }: SheetPortalProps) {
+	const rootContainer = useRootPortalContainer();
+	const container = containerProp === undefined ? (rootContainer ?? undefined) : containerProp;
 
 	const style = {
 		...(props.style ?? {}),
@@ -511,7 +464,7 @@ function SheetContent({
 	onFocusOutside: _onFocusOutside,
 	...props
 }: SheetContentProps) {
-	const { isOpen, depth, sheetId, close } = useSheet();
+	const { isOpen, depth, sheetId } = useSheet();
 	const sheetStack = useSheetStack();
 
 	// Calculate sheetsAbove directly from stack to ensure it's always current
@@ -576,63 +529,25 @@ function SheetContent({
 		ease: easings.physicalExit,
 	};
 
-	// Helper to check if an event target is inside any sheet content
-	const isTargetInsideSheet = React.useCallback((target: EventTarget | null) => {
-		if (!target || !(target instanceof HTMLElement)) return false;
-		return !!target.closest('[data-slot="sheet-content"]');
-	}, []);
-
-	// Helper to allow interactions with portaled popups (select/dropdown/popover/tooltip)
-	// These render outside the sheet DOM, but are still conceptually part of the sheet UI.
-	const isTargetInsidePopup = React.useCallback((target: EventTarget | null) => {
-		if (!target || !(target instanceof HTMLElement)) return false;
-		return !!target.closest(
-			[
-				'[data-slot="select-popup"]',
-				'[data-slot="autocomplete-popup"]',
-				'[data-slot="dropdown-menu-content"]',
-				'[data-slot="dropdown-menu-sub-content"]',
-				'[data-slot="popover-content"]',
-				'[data-slot="tooltip-content"]',
-			].join(', '),
-		);
-	}, []);
-
-	// Custom click-outside handler since Base UI doesn't have fine-grained event callbacks
-	React.useEffect(() => {
-		if (!isOpen) return;
-
-		const handlePointerDown = (event: PointerEvent) => {
-			// Ignore if there are sheets above this one
-			if (sheetsAbove > 0) return;
-
-			const target = event.target;
-			if (isTargetInsideSheet(target) || isTargetInsidePopup(target)) return;
-
-			// Close this sheet when clicking outside
-			close();
-		};
-
-		// Use capture phase to handle before other handlers
-		document.addEventListener('pointerdown', handlePointerDown);
-		return () => document.removeEventListener('pointerdown', handlePointerDown);
-	}, [isOpen, sheetsAbove, isTargetInsideSheet, isTargetInsidePopup, close]);
-
 	return (
-		<AnimatePresence>
+		<AnimatePresence initial={false}>
 			{isOpen && (
 				<SheetPortal data-slot='sheet-portal'>
 					{/* Only show overlay for the first (bottom-most) sheet in stack */}
 					{overlay && depth === 0 && (
-						<motion.div
-							key='sheet-overlay'
+						<SheetPrimitive.Backdrop
 							data-slot="sheet-overlay"
-							className='fixed inset-0 bg-black/80'
-							initial={{ opacity: 0 }}
-							animate={{ opacity: 1 }}
-							exit={{ opacity: 0 }}
-							transition={{ duration: durations.fast, ease: 'easeOut' }}
-							style={{ willChange: 'opacity', zIndex: 'var(--z-layer-modal-backdrop)' }}
+							render={
+								<motion.div
+									key='sheet-overlay'
+									className='fixed inset-0 bg-black/80'
+									initial={{ opacity: 0 }}
+									animate={{ opacity: 1 }}
+									exit={{ opacity: 0 }}
+									transition={{ duration: durations.fast, ease: 'easeOut' }}
+									style={{ zIndex: 'var(--z-layer-modal-backdrop)' }}
+								/>
+							}
 						/>
 					)}
 					<SheetPrimitive.Popup
@@ -656,10 +571,7 @@ function SheetContent({
 								animate='animate'
 								exit='exit'
 								transition={transition}
-								style={{
-									zIndex,
-									willChange: 'transform',
-								}}
+								style={{ zIndex }}
 								className={cn(sheetVariants({ side: resolvedSide }), className)}
 							/>
 						}

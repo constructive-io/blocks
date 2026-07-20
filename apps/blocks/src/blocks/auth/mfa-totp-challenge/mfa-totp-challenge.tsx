@@ -279,7 +279,7 @@ export function MfaTotpChallenge({
                       {merged.trustDeviceLabel}
                     </label>
                   </div>
-                  <p className="text-muted-foreground text-xs pl-6">{merged.trustDeviceHint}</p>
+                  <p className="pl-6 text-pretty text-xs text-muted-foreground">{merged.trustDeviceHint}</p>
                 </div>
               )}
             </form.Field>
@@ -302,7 +302,10 @@ export function MfaTotpChallenge({
           message key is in the catalog now to avoid a breaking change later. */}
       {false && (
         <CardFooter className="border-border/40 justify-center border-t pt-4">
-          <button type="button" className="text-muted-foreground hover:text-foreground text-sm">
+          <button
+            type="button"
+            className="inline-flex min-h-11 items-center rounded-md px-2 text-sm text-muted-foreground transition-[color,scale] duration-150 ease-out hover:text-foreground motion-safe:active:scale-[0.96] motion-reduce:transition-none sm:min-h-10"
+          >
             {merged.backupCodeLink}
           </button>
         </CardFooter>

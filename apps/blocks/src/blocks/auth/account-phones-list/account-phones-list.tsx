@@ -17,7 +17,7 @@
  * SDK. The add/verify flow therefore uses `onSubmitSendOtp` / `onSubmitVerifyOtp`
  * as the primary (required) seams for those two operations. Hosts wire the
  * generated bindings once they regenerate the SDK after deployment.
- * `requires.json` names both pending ops so `check-sdk.mjs` fails clearly.
+ * `requires.json` names both pending ops so `check-sdk-fixtures.ts` fails clearly.
  *
  * Binding doctrine:
  *   • All list/CRUD data via generated hooks from `@/generated/auth`. NO fetch,
@@ -928,7 +928,7 @@ export function AccountPhonesList({
           {addStep === 2 && (
             <div className="px-6 pb-2 space-y-4">
               {pendingPhone && (
-                <p className="text-sm text-muted-foreground">
+                <p className="text-pretty text-sm text-muted-foreground">
                   {merged.phoneAddedMessage}
                 </p>
               )}

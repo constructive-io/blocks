@@ -45,7 +45,7 @@ function ConstraintIndicator({ type, label }: { type: 'pk' | 'unique' | 'nullabl
 			className={cn(
 				`inline-flex items-center gap-1 rounded-md border px-1.5 py-0.5 text-[10px] font-semibold tracking-wide
 				uppercase`,
-				'transition-all duration-200',
+				'transition-[background-color,border-color,color] duration-150 ease-out',
 				styles[type],
 			)}
 		>
@@ -147,7 +147,7 @@ export function FieldsListView({
 							className={cn(
 								`group grid grid-cols-[40px_minmax(0,1.2fr)_minmax(0,1fr)_minmax(0,1fr)_minmax(0,1.2fr)] gap-3 px-3
 								py-2.5`,
-								'cursor-pointer transition-all duration-200 ease-out',
+								'cursor-pointer transition-colors duration-150 ease-out',
 								'hover:bg-muted/40',
 								isSelected && 'bg-primary/5',
 							)}
@@ -192,7 +192,7 @@ export function FieldsListView({
 										'inline-flex items-center gap-1.5 rounded-md px-2 py-1',
 										'bg-muted/60 group-hover:bg-muted/80',
 										'border-border/40 border',
-										'transition-all duration-200',
+										'transition-[background-color,border-color] duration-150 ease-out',
 									)}
 								>
 									{fieldTypeInfo?.icon && (

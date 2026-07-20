@@ -1,618 +1,537 @@
-/*
- * Base design system (Tailwind v4 + tokens + UI component scanning) is imported
- * from @constructive-io/ui — the same source the registry is built from.
- */
 @import '@constructive-io/ui/globals.css';
-@import '@constructive-io/schema-builder/styles.css';
 
-/* Scan this app's own source for class detection. */
-@source "../";
+@source '../';
 
-/* ============================================================================
-   FLUID-FUNCTIONALISM TOKEN SYSTEM — pure-neutral rewrite (DESIGN.md §1).
-   Pure-neutral hex surface ladders (no cool-charcoal tint), FF shadow ladders,
-   overlay hover/active tokens, retuned motion. 13px workhorse type. The
-   app-level :root/.dark override lands AFTER `@import '@constructive-io/ui'`, so
-   it retheme the whole docs app AND every live block preview without touching
-   packages/ui. See docs/redesign/DESIGN.md.
-   ============================================================================ */
-
-/*
- * Long-form prose. The fumadocs preset used to load this plugin; it's gone now,
- * so markdown.tsx (which relies on `prose-*` variants + the `not-prose` escape
- * hatch the live previews use) needs it re-wired here. Colors are pinned to
- * semantic tokens by the .prose bridge below, so no dark: overrides are needed.
- */
-@plugin "@tailwindcss/typography";
-
-/* --- Type scale (DESIGN.md §1.7) ------------------------------------------
-   13px is the workhorse (nav, body, descriptions, tables, inputs, tabs). These
-   register `text-h1 … text-badge` utilities carrying size + line-height + weight
-   + tracking in one class. Headings set `leading-none` and rely on flex gap for
-   rhythm (FF pattern); body reads at 14px/relaxed. h1 is 28px desktop; on small
-   screens pair it with `max-sm:text-[1.375rem]` (22px). Per baseline-ui,
-   headings add `text-balance`, prose adds `text-pretty`, tabular contexts add
-   `tabular-nums` (the .prose block wires these where they're global). */
-@theme {
-  --text-h1: 1.75rem; /* 28px — page title */
-  --text-h1--line-height: 1; /* leading-none (FF) */
-  --text-h1--font-weight: 600;
-  --text-h1--letter-spacing: -0.02em;
-
-  --text-h2: 1rem; /* 16px — section heading */
-  --text-h2--line-height: 1; /* leading-none (FF) */
-  --text-h2--font-weight: 600;
-  --text-h2--letter-spacing: -0.01em;
-
-  --text-sub: 0.9375rem; /* 15px — subheads / lead */
-  --text-sub--line-height: 1.5;
-
-  --text-body: 0.875rem; /* 14px — guide / introduction prose */
-  --text-body--line-height: 1.625; /* leading-relaxed (FF) */
-
-  --text-workhorse: 0.8125rem; /* 13px — THE dominant size */
-  --text-workhorse--line-height: 1.5;
-
-  --text-caption: 0.75rem; /* 12px — captions */
-  --text-caption--line-height: 1.4;
-
-  --text-badge: 0.6875rem; /* 11px — count / status badges */
-  --text-badge--line-height: 1;
-  --text-badge--letter-spacing: 0.01em;
-}
-
-/* --- Surface + shadow + overlay elevation ladder (DESIGN.md §1.1/1.3/1.4) ---
-   Elevation reads via SHADOW, not borders or color. `--color-surface-*` map the
-   theme-scoped `--surface-*` raw vars (defined per theme in the :root/.dark
-   override block below) → `bg-surface-1…8`. `--shadow-surface-*` map the paired
-   FF `--shadow-*` recipes → `shadow-surface-1…8`. `--color-hover`/`--color-active`
-   expose the surface-relative interaction overlays as `bg-hover`/`bg-active`.
-   `inline` so each value resolves against the active theme scope. */
-@theme inline {
-  --color-surface-1: var(--surface-1);
-  --color-surface-2: var(--surface-2);
-  --color-surface-3: var(--surface-3);
-  --color-surface-4: var(--surface-4);
-  --color-surface-5: var(--surface-5);
-  --color-surface-6: var(--surface-6);
-  --color-surface-7: var(--surface-7);
-  --color-surface-8: var(--surface-8);
-
-  --shadow-surface-1: var(--shadow-1);
-  --shadow-surface-2: var(--shadow-2);
-  --shadow-surface-3: var(--shadow-3);
-  --shadow-surface-4: var(--shadow-4);
-  --shadow-surface-5: var(--shadow-5);
-  --shadow-surface-6: var(--shadow-6);
-  --shadow-surface-7: var(--shadow-7);
-  --shadow-surface-8: var(--shadow-8);
-
-  /* Interaction overlays — bg-hover (pointer-over) / bg-active (current/pressed).
-     Work at any elevation because they're translucent overlays, not fixed grays. */
-  --color-hover: var(--hover);
-  --color-active: var(--active);
-}
-
-/* Template-literal safety: the Shell/Components stages set elevation with
-   `bg-surface-${n}` / `shadow-surface-${n}`, which Tailwind's scanner can't see.
-   Force-generate the full ladder so those classes always exist (the in-CSS
-   equivalent of the reference's static utility map). */
-@source inline("bg-surface-{1..8}");
-@source inline("shadow-surface-{1..8}");
-
-/*
- * Prose token bridge — pins every --tw-prose-* variable to the app's semantic
- * design tokens so markdown content (.prose) stays legible in both light and
- * dark modes without per-theme dark: overrides.
- */
-.prose {
-  --tw-prose-body: var(--foreground);
-  --tw-prose-headings: var(--foreground);
-  --tw-prose-lead: var(--muted-foreground);
-  --tw-prose-bold: var(--foreground);
-  --tw-prose-links: var(--primary);
-  --tw-prose-code: var(--foreground);
-  --tw-prose-pre-code: var(--foreground);
-  --tw-prose-pre-bg: var(--muted);
-  --tw-prose-quotes: var(--foreground);
-  --tw-prose-quote-borders: var(--border);
-  --tw-prose-hr: var(--border);
-  --tw-prose-bullets: var(--muted-foreground);
-  --tw-prose-counters: var(--muted-foreground);
-  --tw-prose-captions: var(--muted-foreground);
-  --tw-prose-th-borders: var(--border);
-  --tw-prose-td-borders: var(--border);
-}
-
-/* Calm text-wrap wiring for doc prose: balance headings, pretty body. Guarded
-   with `:not(.not-prose *)` so it never reaches the live block previews (which
-   opt out via `.not-prose` and must wrap exactly as in a consumer app). Chrome
-   outside .prose uses the `text-balance` / `text-pretty` utilities directly. */
-.prose :is(h1, h2, h3, h4):not(.not-prose *) {
-  text-wrap: balance;
-}
-.prose :is(p, li):not(.not-prose *) {
-  text-wrap: pretty;
-}
-
-/*
- * Display utility — applied to large H1/H2 headlines in the registry language.
- * Repointed to the Geist sans variable (wired via next/font in layout.tsx); the
- * mockup renders display headings in Geist at 560 weight with -0.03em tracking.
- * Apply as `className="font-display"` on the element; pair with `tracking-tight`
- * and a heavy weight (`font-medium`/`font-semibold`). Falls back to a system
- * sans stack if the variable font hasn't loaded.
- */
-.font-display {
-  font-family: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
-  letter-spacing: -0.03em;
-}
-
-/* ============================================================================
-   APP-LEVEL TOKEN OVERRIDE — Fluid-Functionalism pure-neutral (DESIGN.md §1).
-
-   These set the SAME raw token names the UI package's `@theme inline` already
-   maps, and land AFTER `@import '@constructive-io/ui/globals.css'`, so they
-   retheme the whole docs app AND every live block preview WITHOUT touching
-   packages/ui. `:root` = LIGHT (canvas #FAFAFA); `.dark` is defined after so it
-   wins whenever next-themes puts `.dark` on <html> (default theme is dark).
-   Pure-neutral hex ladders (no cool-charcoal tint), one Constructive-blue
-   accent, hairline borders, 6px radius. See DESIGN.md §1.1–1.8.
-   ============================================================================ */
-:root {
-  /* ── Radius ── the ui package derives rounded-md/lg/xl from this knob. */
-  --radius: 0.375rem; /* 6px */
-
-  /* ── Motion (DESIGN.md §1.8) ──
-     Chrome micro-transitions run at `duration-[var(--dur-fast)]`; ease-out is
-     the JS reveal curve (unified — the second `--ease-in-out` curve is retired).
-     Never `ease-in` on UI. The reduced-motion net (end of file) clamps these. */
-  --ease-out: cubic-bezier(0.16, 1, 0.3, 1); /* enter / exit */
-  --ease-drawer: cubic-bezier(0.32, 0.72, 0, 1); /* drawers / sheets */
-  --dur-fast: 80ms; /* hover, color, weight, focus */
-  --dur: 160ms; /* indicators, small travel */
-  --dur-slow: 240ms; /* panels, dialogs */
-
-  /* ── Surfaces (8-level ladder) — LIGHT (DESIGN.md §1.1) ──
-     Canvas #FAFAFA; the ladder compresses to flat white; shadow does the work.
-     Each surface pairs 1:1 with a shadow recipe (--shadow-1 .. --shadow-8). */
-  --surface-1: #FAFAFA;
-  --surface-2: #FCFCFC;
-  --surface-3: #FFFFFF;
-  --surface-4: #FFFFFF;
-  --surface-5: #FFFFFF;
-  --surface-6: #FFFFFF;
-  --surface-7: #FFFFFF;
-  --surface-8: #FFFFFF;
-
-  /* Shadows — additive layers, halving offsets (1/3/6/12/24/48/96 px). Recipe FF verbatim. */
-  --shadow-color: rgb(0 0 0 / 0.11); /* alpha 0.06→0.08 (2026-07-03) → 0.11 (2026-07-06 light-contrast retune) — on the flat-white ladder the 1px ring in --shadow-1 IS the card edge (canvas↔card is only WCAG 1.04), so this alpha is the card-separation lever */
-  --shadow-1: 0 0 0 1px var(--shadow-color);
-  --shadow-2: 0 0 0 1px var(--shadow-color), 0 1px 1px -0.5px var(--shadow-color);
-  --shadow-3: 0 0 0 1px var(--shadow-color), 0 1px 1px -0.5px var(--shadow-color), 0 3px 3px -1.5px var(--shadow-color);
-  --shadow-4: 0 0 0 1px var(--shadow-color), 0 1px 1px -0.5px var(--shadow-color), 0 3px 3px -1.5px var(--shadow-color), 0 6px 6px -3px var(--shadow-color);
-  --shadow-5: 0 0 0 1px var(--shadow-color), 0 1px 1px -0.5px var(--shadow-color), 0 3px 3px -1.5px var(--shadow-color), 0 6px 6px -3px var(--shadow-color), 0 12px 12px -6px var(--shadow-color);
-  --shadow-6: 0 0 0 1px var(--shadow-color), 0 1px 1px -0.5px var(--shadow-color), 0 3px 3px -1.5px var(--shadow-color), 0 6px 6px -3px var(--shadow-color), 0 12px 12px -6px var(--shadow-color), 0 24px 24px -12px var(--shadow-color);
-  --shadow-7: 0 0 0 1px var(--shadow-color), 0 1px 1px -0.5px var(--shadow-color), 0 3px 3px -1.5px var(--shadow-color), 0 6px 6px -3px var(--shadow-color), 0 12px 12px -6px var(--shadow-color), 0 24px 24px -12px var(--shadow-color), 0 48px 48px -24px var(--shadow-color);
-  --shadow-8: 0 0 0 1px var(--shadow-color), 0 1px 1px -0.5px var(--shadow-color), 0 3px 3px -1.5px var(--shadow-color), 0 6px 6px -3px var(--shadow-color), 0 12px 12px -6px var(--shadow-color), 0 24px 24px -12px var(--shadow-color), 0 48px 48px -24px var(--shadow-color), 0 96px 96px -48px var(--shadow-color);
-
-  /* ── Canvas + semantic surfaces (DESIGN.md §1.1) ── */
-  --background: var(--surface-1);
-  --foreground: #171717;
-  --card: var(--surface-3);
-  --card-foreground: #171717;
-  --popover: var(--surface-5);
-  --popover-foreground: #171717;
-  /* `muted` decouples from surface-2 — the light ladder is so compressed that
-     bg-muted must be a real gray to read at all (FF rationale). Darkened one
-     step 2026-07-03 for canvas separation (8-bit delta 6→11). */
-  --muted: #EFEFEF;
-  --muted-foreground: #4F4F4F; /* 7.85:1 canvas / 8.19:1 card / 7.12:1 muted — #737373(~4.5, 2026-07-03) → #5F5F5F(~6) → #4F4F4F (2026-07-06 light-contrast retune): clears the ≥7 secondary target on every surface (#5F5F5F was ~5.5–6.4, still read washed out). Parallels dark's #A3A3A3 (7.1/6.1/6.6) but a touch stronger — dark text on white needs more to read as solid */
-  --accent: #EBEBEB; /* solid tint for chips / menu-hover fills; raised one step so it sits below --muted in the fill ladder */
-  --accent-foreground: #171717;
-  --secondary: #E5E5E5; /* FF secondary-button fill */
-  --secondary-foreground: #171717;
-  --selected: #D4D4D4;
-
-  /* ── Borders (DESIGN.md §1.2) — hairlines only; chrome renders /60–/40. Mix
-     strengths raised for contrast: border 12→17→22, strong 22→30→34, input
-     16→18→24 (2026-07-03, then 2026-07-06 light-contrast retune). On flat white a
-     /40 divider at 6.8% fell under the 8% floor, so the LIGHT ladder was raised
-     independently of dark: resting card hairline /60 = 13.2% effective (was 10.2%),
-     internal /40 divider = 8.8% (was 6.8%, now clears the 8% floor). Light-only —
-     .dark re-declares these at the original 17/30/18 (near-black canvas needs less). ── */
-  --border: color-mix(in oklab, var(--foreground) 22%, transparent);
-  --border-strong: color-mix(in oklab, var(--foreground) 34%, transparent);
-  --input: color-mix(in oklab, var(--foreground) 24%, transparent);
-
-  /* ── Accent + status (DESIGN.md §1.5) ──
-     Constructive blue is the single accent. Status colors appear only as
-     full-strength dots or 15% washes with foreground text (never saturated
-     fills). The *-foreground pairs stay legible on those tints (see comments). */
-  --primary: oklch(0.55 0.16 245.6);
-  --primary-foreground: #FFFFFF;
-  --ring: var(--primary);
-  --destructive: #EF4444;
-  --destructive-light: #FEF2F2;
-  --destructive-foreground: oklch(0.985 0 0);
-  --success: #22C55E;
-  /* Deep emerald, NOT near-white: badges paint text-success-foreground on a faint
-     tint over the near-white canvas, so the foreground must be a saturated dark
-     green to read. A near-white value here washes "Ready"/"Verified" out. */
-  --success-foreground: oklch(0.45 0.11 158);
-  --warning: #F59E0B;
-  --warning-foreground: oklch(0.28 0.04 78);
-  --info: var(--primary);
-
-  /* ── Interaction overlays (DESIGN.md §1.4) ──
-     --overlay is the tint direction (black on light surfaces). Decoupled from
-     --foreground so a forced-theme scope gets the correct overlay direction. */
-  --overlay: 0 0 0;
-  --hover: rgb(var(--overlay) / 0.08); /* 0.04→0.06→0.08 (2026-07-06) — hover fill #E6E6E6 (Δ20 over the #FAFAFA canvas) now reads on white */
-  --active: rgb(var(--overlay) / 0.14); /* 0.07→0.10→0.14 (2026-07-06) — active fill #D7D7D7 (Δ35 over canvas, Δ15 over hover); strongest overlay that stays lighter than the solid --selected #D4D4D4, so the fill ladder holds */
-
-  /* ── Charts — colorful data-viz series (kept; chrome is neutral, data is not). ── */
-  --chart-1: oklch(0.55 0.16 248);
-  --chart-2: oklch(0.6 0.13 158);
-  --chart-3: oklch(0.7 0.14 78);
-  --chart-4: oklch(0.6 0.2 16);
-  --chart-5: oklch(0.6 0.16 300);
-
-  /* ── Sidebar — neutral aliases onto the pure-neutral system. ── */
-  --sidebar: var(--surface-1);
-  --sidebar-foreground: var(--muted-foreground);
-  --sidebar-primary: var(--primary);
-  --sidebar-primary-foreground: var(--primary-foreground);
-  --sidebar-accent: var(--accent);
-  --sidebar-accent-foreground: var(--accent-foreground);
-  --sidebar-border: var(--border);
-  --sidebar-ring: var(--ring);
-
-  color-scheme: light;
-}
-
-/* DARK — primary theme. Defined AFTER :root so it wins whenever .dark is on
-   <html> (next-themes default theme is 'dark'). Additive white over #171717. */
-.dark {
-  /* ── Surfaces (8-level ladder) — DARK (DESIGN.md §1.1) — exact FF ladder. ── */
-  --surface-1: #171717;
-  --surface-2: #1E1E1E;
-  --surface-3: #252525;
-  --surface-4: #2C2C2C;
-  --surface-5: #333333;
-  --surface-6: #3A3A3A;
-  --surface-7: #414141;
-  --surface-8: #484848;
-
-  /* Dark shadow recipe — inset highlight + inset ring + 1px black ring + stacked
-     drops. FF verbatim. */
-  --dm-hi-base: rgba(255,255,255,0.01);
-  --dm-hi-mid: rgba(255,255,255,0.02);
-  --dm-hi-high: rgba(255,255,255,0.04);
-  --dm-hi-peak: rgba(255,255,255,0.06);
-  --dm-ring-base: rgba(255,255,255,0.02);
-  --dm-ring-mid: rgba(255,255,255,0.04);
-  --dm-ring-high: rgba(255,255,255,0.06);
-  --dm-drop: rgba(0,0,0,0.18);
-
-  --shadow-1: inset 0 0 0 1px var(--dm-ring-base);
-  --shadow-2: inset 0 1px 0 0 var(--dm-hi-base), inset 0 0 0 1px var(--dm-ring-base), 0 1px 1px -0.5px var(--dm-drop);
-  --shadow-3: inset 0 1px 0 0 var(--dm-hi-mid), inset 0 0 0 1px var(--dm-ring-base), 0 0 0 1px rgba(0,0,0,0.12), 0 1px 1px -0.5px var(--dm-drop), 0 3px 3px -1.5px var(--dm-drop);
-  --shadow-4: inset 0 1px 0 0 var(--dm-hi-mid), inset 0 0 0 1px var(--dm-ring-mid), 0 0 0 1px rgba(0,0,0,0.14), 0 1px 1px -0.5px var(--dm-drop), 0 3px 3px -1.5px var(--dm-drop), 0 6px 6px -3px var(--dm-drop);
-  --shadow-5: inset 0 1px 0 0 var(--dm-hi-high), inset 0 0 0 1px var(--dm-ring-mid), 0 0 0 1px rgba(0,0,0,0.16), 0 1px 1px -0.5px var(--dm-drop), 0 3px 3px -1.5px var(--dm-drop), 0 6px 6px -3px var(--dm-drop), 0 12px 12px -6px var(--dm-drop);
-  --shadow-6: inset 0 1px 0 0 var(--dm-hi-high), inset 0 0 0 1px var(--dm-ring-high), 0 0 0 1px rgba(0,0,0,0.18), 0 1px 1px -0.5px var(--dm-drop), 0 3px 3px -1.5px var(--dm-drop), 0 6px 6px -3px var(--dm-drop), 0 12px 12px -6px var(--dm-drop), 0 24px 24px -12px var(--dm-drop);
-  --shadow-7: inset 0 1px 0 0 var(--dm-hi-peak), inset 0 0 0 1px var(--dm-ring-high), 0 0 0 1px rgba(0,0,0,0.20), 0 1px 1px -0.5px var(--dm-drop), 0 3px 3px -1.5px var(--dm-drop), 0 6px 6px -3px var(--dm-drop), 0 12px 12px -6px var(--dm-drop), 0 24px 24px -12px var(--dm-drop), 0 48px 48px -24px var(--dm-drop);
-  --shadow-8: inset 0 1px 0 0 var(--dm-hi-peak), inset 0 0 0 1px var(--dm-ring-high), 0 0 0 1px rgba(0,0,0,0.22), 0 1px 1px -0.5px var(--dm-drop), 0 3px 3px -1.5px var(--dm-drop), 0 6px 6px -3px var(--dm-drop), 0 12px 12px -6px var(--dm-drop), 0 24px 24px -12px var(--dm-drop), 0 48px 48px -24px var(--dm-drop), 0 96px 96px -48px var(--dm-drop);
-
-  /* ── Canvas + semantic surfaces (DESIGN.md §1.1) ── */
-  --background: var(--surface-1);
-  --foreground: #F5F5F5;
-  --card: var(--surface-3);
-  --card-foreground: #F5F5F5;
-  --popover: var(--surface-5);
-  --popover-foreground: #F5F5F5;
-  --muted: var(--surface-2);
-  --muted-foreground: #A3A3A3;
-  --accent: #333333;
-  --accent-foreground: #F5F5F5;
-  --secondary: #525252;
-  --secondary-foreground: #F5F5F5;
-  --selected: #525252;
-
-  /* ── Borders (DESIGN.md §1.2) — re-declared so color-mix recomputes against the
-     dark --foreground above (a nested forced-dark scope needs the dark hairline).
-     Dark keeps the original 17/30/18 strengths (additive-white ring shadows +
-     lighter surfaces already separate cards); LIGHT diverged to 22/34/24 in the
-     2026-07-06 retune because flat-white hairlines need more to read. ── */
-  --border: color-mix(in oklab, var(--foreground) 17%, transparent);
-  --border-strong: color-mix(in oklab, var(--foreground) 30%, transparent);
-  --input: color-mix(in oklab, var(--foreground) 18%, transparent);
-
-  /* ── Accent + status (DESIGN.md §1.5) ── */
-  --primary: oklch(0.688 0.175 245.6);
-  --primary-foreground: oklch(0.985 0 0);
-  --ring: var(--primary);
-  --destructive: #F87171;
-  --destructive-light: #450A0A;
-  --destructive-foreground: oklch(0.985 0 0);
-  --success: #22C55E;
-  --success-foreground: oklch(0.985 0 0);
-  --warning: #F59E0B;
-  /* Bright warm near-white: badges paint text-warning-foreground on a faint tint
-     over the near-black canvas, so the foreground must be the bright side. */
-  --warning-foreground: oklch(0.93 0.05 80);
-  --info: var(--primary);
-
-  /* ── Interaction overlays (DESIGN.md §1.4) — white tint over dark surfaces. ── */
-  --overlay: 255 255 255;
-  --hover: rgb(var(--overlay) / 0.08); /* was 0.06 — widens the hover↔active gap */
-  --active: rgb(var(--overlay) / 0.13); /* was 0.10 — clearer active affordance in the default (dark) theme */
-
-  /* ── Charts — dark-tuned colorful series. ── */
-  --chart-1: oklch(0.62 0.155 248);
-  --chart-2: oklch(0.7 0.13 158);
-  --chart-3: oklch(0.78 0.13 78);
-  --chart-4: oklch(0.66 0.2 16);
-  --chart-5: oklch(0.7 0.16 300);
-
-  /* ── Sidebar — neutral aliases onto the pure-neutral system. ── */
-  --sidebar: var(--surface-1);
-  --sidebar-foreground: var(--muted-foreground);
-  --sidebar-primary: var(--primary);
-  --sidebar-primary-foreground: var(--primary-foreground);
-  --sidebar-accent: var(--accent);
-  --sidebar-accent-foreground: var(--accent-foreground);
-  --sidebar-border: var(--border);
-  --sidebar-ring: var(--ring);
-
-  color-scheme: dark;
-}
-
-/* ============================================================================
-   Utilities ported from FF `app/globals.css` (DESIGN.md §1.9). Theme-agnostic
-   except the bento dark variant, which uses the class-based `.dark` selector to
-   match this app's next-themes strategy (no prefers-color-scheme dependency).
-   ============================================================================ */
-
-/* No explicit overflow here: scrollbar-gutter applies to the viewport when set
-   on the root, and an explicit `overflow-y: auto` would stop dialog scroll locks
-   (`body { overflow: hidden }`) from propagating to the viewport — body would
-   become a clip container instead, which breaks position: sticky for the sidebar
-   and right panel (they snap to the document top the moment a dialog opens). */
 html {
-  scrollbar-gutter: stable;
+  scroll-padding-top: 4.5rem;
 }
 
-/* Native scrollbar theme — matches the ScrollArea thumb language (narrow,
-   low-contrast, darkens on hover) so surfaces that fall back to native
-   scrollbars (the docs sidebar, the root page, touch-device viewports) stay
-   consistent with the custom scrollbar. Only on fine pointers; touch devices
-   keep their overlay momentum bars. color-mix on --foreground adapts to dark
-   mode automatically. `.scrollbar-hide` still wins (higher specificity). */
-@media (pointer: fine) {
-  * {
-    scrollbar-width: thin;
-    scrollbar-color: color-mix(in oklab, var(--foreground), transparent 75%) transparent;
-  }
+body {
+  text-rendering: optimizeLegibility;
+  font-family: var(--font-sans-loaded, var(--font-sans));
+  letter-spacing: -0.01em;
+}
 
-  ::-webkit-scrollbar {
-    width: 10px;
-    height: 10px;
-  }
+::selection {
+  background: color-mix(in oklch, var(--primary) 35%, transparent);
+}
 
-  ::-webkit-scrollbar-track,
-  ::-webkit-scrollbar-corner {
-    background: transparent;
-  }
+pre {
+  scrollbar-width: thin;
+}
 
-  ::-webkit-scrollbar-thumb {
-    /* 3px transparent border + content-box clip leaves a ~4px visible thumb
-       inside the 10px hit area, mirroring the custom thumb's resting width. */
-    background-color: color-mix(in oklab, var(--foreground), transparent 75%);
-    border: 3px solid transparent;
-    background-clip: content-box;
-    border-radius: 9999px;
-  }
+/* ---- registry shell (blocks-design layout) ---- */
+/*
+  Shared gutters keep topbar breadcrumbs and page content on one left edge.
+  Sidebar brand row height matches the topbar so the split reads as one band.
+*/
+.registry-app {
+  --registry-gutter-x: 1.25rem;
+  --registry-topbar-h: 3.5rem;
+  min-height: 100dvh;
+  display: grid;
+  grid-template-columns: 252px minmax(0, 1fr);
+}
 
-  ::-webkit-scrollbar-thumb:hover {
-    background-color: color-mix(in oklab, var(--foreground), transparent 55%);
+@media (min-width: 640px) {
+  .registry-app {
+    --registry-gutter-x: 1.75rem;
   }
 }
 
-.scrollbar-hide {
-  -ms-overflow-style: none;
-  scrollbar-width: none;
+@media (min-width: 1024px) {
+  .registry-app {
+    --registry-gutter-x: 2rem;
+  }
 }
 
-.scrollbar-hide::-webkit-scrollbar {
-  display: none;
+.registry-side {
+  position: sticky;
+  top: 0;
+  align-self: start;
+  height: 100dvh;
+  background: var(--sidebar);
+  border-right: 1px solid var(--sidebar-border);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
 }
 
-/* ---------------------------------------------------------------------------
-   Responsive side-panel cross-fade (DESIGN.md §1.9)
-   ---------------------------------------------------------------------------
-   The left sidebar and right panel switch in/out at xl (1280px). Rather than
-   snapping via `display`, these classes fade them: `display` is animated with
-   `allow-discrete` so the element stays visible across the none↔shown flip,
-   while opacity tweens. Durations mirror the `spring.slow` motion token —
-   appear in 0.24s, disappear in 0.16s. The `@starting-style` gives the appear
-   transition a starting opacity — required for an element to animate out of
-   `display:none`. Because the panel's space is already reserved at that width,
-   the appear is a pure opacity fade with no layout shift. Browsers without
-   `transition-behavior` degrade gracefully to the old instant switch. */
-.xl-fade-flex,
-.xl-fade-block {
-  display: none;
-  opacity: 0;
-  transition:
-    opacity 0.16s ease-out,
-    display 0.16s allow-discrete;
+.registry-side-brand {
+  height: var(--registry-topbar-h);
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+  padding: 0 1.125rem;
+  border-bottom: 1px solid var(--sidebar-border);
+}
+
+.registry-main {
+  --registry-content-max: 72rem; /* 1152px — balanced column within the main pane */
+  min-width: 0;
+  max-width: 100%;
+  display: flex;
+  flex-direction: column;
+  min-height: 100dvh;
+  overflow-x: clip;
+}
+
+.registry-topbar {
+  position: sticky;
+  top: 0;
+  z-index: 40;
+  height: var(--registry-topbar-h);
+  border-bottom: 1px solid var(--border);
+  background: color-mix(in oklch, var(--background) 82%, transparent);
+  backdrop-filter: blur(12px);
+}
+
+/* Shared centered rail: topbar actions + page body share the same axis */
+.registry-topbar-inner,
+.registry-content {
+  width: 100%;
+  max-width: var(--registry-content-max);
+  margin-inline: auto;
+  box-sizing: border-box;
+}
+
+.registry-topbar-inner {
+  height: 100%;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0 var(--registry-gutter-x);
+}
+
+.registry-content {
+  flex: 1;
+}
+
+/* hero */
+.registry-hero {
+  position: relative;
+  overflow: hidden;
+  padding: 2.75rem var(--registry-gutter-x) 2.5rem;
+  border-bottom: 1px solid var(--border);
+}
+
+@media (min-width: 640px) {
+  .registry-hero {
+    padding-top: 3.5rem;
+    padding-bottom: 3rem;
+  }
+}
+
+@media (min-width: 1024px) {
+  .registry-hero {
+    padding-top: 3.75rem;
+    padding-bottom: 3.25rem;
+  }
+}
+
+.registry-hero::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0.6;
+  background-image: radial-gradient(
+    color-mix(in oklch, var(--muted-foreground) 22%, transparent) 1px,
+    transparent 1px
+  );
+  background-size: 22px 22px;
+  mask-image: radial-gradient(120% 90% at 70% 30%, #000 30%, transparent 78%);
+}
+
+.registry-hero::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: radial-gradient(
+    70% 110% at 78% 8%,
+    color-mix(in oklch, var(--primary) 20%, transparent),
+    transparent 58%
+  );
+}
+
+.registry-hero-grid {
+  position: relative;
+  z-index: 2;
+  display: grid;
+  gap: 2rem;
+  align-items: center;
 }
 
 @media (min-width: 1280px) {
-  .xl-fade-flex {
-    display: flex;
-  }
-  .xl-fade-block {
-    display: block;
-  }
-  .xl-fade-flex,
-  .xl-fade-block {
-    opacity: 1;
-    transition:
-      opacity 0.24s ease-out,
-      display 0.24s allow-discrete;
-  }
-  @starting-style {
-    .xl-fade-flex,
-    .xl-fade-block {
-      opacity: 0;
-    }
+  .registry-hero-grid {
+    grid-template-columns: minmax(0, 1fr) 460px;
+    gap: 2rem;
   }
 }
 
+.registry-page {
+  /* Top pad balances topbar → content without overshooting the sidebar density */
+  padding: 2rem var(--registry-gutter-x) 5rem;
+}
+
+@media (min-width: 640px) {
+  .registry-page {
+    padding-top: 2.25rem;
+  }
+}
+
+@media (min-width: 1024px) {
+  .registry-page {
+    padding-bottom: 7.5rem;
+  }
+}
+
+/* Collapsible sidebar sections (grid 0fr/1fr = interruptible height) */
+.registry-nav-panel {
+  display: grid;
+  grid-template-rows: 0fr;
+  transition: grid-template-rows 220ms cubic-bezier(0.2, 0, 0, 1);
+}
+
+.registry-nav-panel[data-open='true'] {
+  grid-template-rows: 1fr;
+}
+
+.registry-nav-panel-inner {
+  min-height: 0;
+  overflow: hidden;
+}
+
 @media (prefers-reduced-motion: reduce) {
-  .xl-fade-flex,
-  .xl-fade-block {
+  .registry-nav-panel {
     transition: none;
   }
 }
 
-/* ---------------------------------------------------------------------------
-   scroll-fade (DESIGN.md §1.9) — vendored equivalent of shadcn's scroll-fade
-   utility. A mask-image dissolves the content toward the edges that have more to
-   scroll. CSS scroll-driven animations make it scroll-aware: the true start/end
-   edge stays crisp until you scroll past it. Browsers without scroll-driven
-   animations fall back to a static fade on both edges. Apply to a scroll
-   container, or to a ScrollArea via `viewportClassName`.
---------------------------------------------------------------------------- */
-@property --sf-start {
-  syntax: "<number>";
-  inherits: false;
-  initial-value: 1;
-}
-@property --sf-end {
-  syntax: "<number>";
-  inherits: false;
-  initial-value: 1;
+/* preview block frame — layout only; colors from package tokens */
+.registry-block {
+  min-width: 0;
+  border: 1px solid var(--border);
+  border-radius: calc(var(--radius) + 6px);
+  background: var(--card);
+  overflow: hidden;
+  box-shadow: var(--shadow-sm);
 }
 
-@keyframes sf-reveal-start {
-  from {
-    --sf-start: 1;
-  }
-  to {
-    --sf-start: 0;
-  }
+.registry-block + .registry-block {
+  margin-top: 1.125rem;
 }
-@keyframes sf-reveal-end {
-  from {
-    --sf-end: 0;
+
+.registry-block-bar {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  padding: 0.7rem 1rem;
+  border-bottom: 1px solid var(--border);
+  background: color-mix(in oklch, var(--muted) 40%, transparent);
+  font-size: 0.8125rem;
+  font-weight: 500;
+}
+
+/*
+  Preview / catalog canvas — flat, pattern-free.
+  Content is the focus; stage only separates chrome (bar) from body.
+*/
+.registry-block-stage {
+  min-width: 0;
+  padding: 2rem 1.5rem;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.875rem;
+  align-items: center;
+  background: var(--background);
+}
+
+.registry-block-stage-col {
+  flex-direction: column;
+  align-items: stretch;
+}
+
+.registry-eyebrow {
+  font-size: 0.6875rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--muted-foreground);
+  font-weight: 500;
+}
+
+.registry-display {
+  font-size: clamp(1.75rem, 4vw, 2.75rem);
+  line-height: 1.05;
+  letter-spacing: -0.03em;
+  font-weight: 600;
+}
+
+.registry-display em {
+  color: var(--primary);
+  font-style: normal;
+}
+
+/* Source ownership note */
+.hero-source-note {
+  display: flex;
+  max-width: 30rem;
+  align-items: center;
+  gap: 0.875rem;
+}
+
+.hero-source-mark {
+  width: 2.75rem;
+  height: 2.75rem;
+  flex: 0 0 auto;
+  overflow: visible;
+  color: var(--primary);
+  transform-origin: center;
+  transition-property: transform;
+  transition-duration: 180ms;
+  transition-timing-function: ease-out;
+}
+
+.hero-source-fold {
+  opacity: 0.5;
+  transition-property: opacity;
+  transition-duration: 180ms;
+  transition-timing-function: ease-out;
+}
+
+.hero-source-node {
+  opacity: 0;
+  filter: blur(4px);
+  transform: scale(0.25);
+  transform-box: fill-box;
+  transform-origin: center;
+  transition-property: transform, opacity, filter;
+  transition-duration: 180ms;
+  transition-timing-function: ease-out;
+}
+
+.hero-source-title,
+.hero-source-copy {
+  display: block;
+}
+
+.hero-source-title {
+  font-size: 0.875rem;
+  line-height: 1.25rem;
+  font-weight: 600;
+  color: var(--foreground);
+}
+
+.hero-source-copy {
+  margin-top: 0.125rem;
+  font-size: 0.75rem;
+  line-height: 1.125rem;
+  color: var(--muted-foreground);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .hero-source-note:hover .hero-source-mark {
+    transform: translateY(-3px) rotate(-4deg) scale(1.04);
   }
-  to {
-    --sf-end: 1;
+
+  .hero-source-note:hover .hero-source-fold {
+    opacity: 0.9;
+  }
+
+  .hero-source-note:hover .hero-source-node {
+    opacity: 1;
+    filter: blur(0);
+    transform: scale(1);
   }
 }
 
-.scroll-fade,
-.scroll-fade-x {
-  --scroll-fade-size: 48px;
-}
-
-/* Static fallback: fade both edges. */
-.scroll-fade {
-  -webkit-mask-image: linear-gradient(
-    to bottom,
-    transparent 0,
-    #000 var(--scroll-fade-size),
-    #000 calc(100% - var(--scroll-fade-size)),
-    transparent 100%
-  );
-  mask-image: linear-gradient(
-    to bottom,
-    transparent 0,
-    #000 var(--scroll-fade-size),
-    #000 calc(100% - var(--scroll-fade-size)),
-    transparent 100%
-  );
-}
-.scroll-fade-x {
-  -webkit-mask-image: linear-gradient(
-    to right,
-    transparent 0,
-    #000 var(--scroll-fade-size),
-    #000 calc(100% - var(--scroll-fade-size)),
-    transparent 100%
-  );
-  mask-image: linear-gradient(
-    to right,
-    transparent 0,
-    #000 var(--scroll-fade-size),
-    #000 calc(100% - var(--scroll-fade-size)),
-    transparent 100%
-  );
-}
-
-/* Scroll-aware: the start/end edge stays solid until there's content past it. */
-@supports (animation-timeline: scroll()) {
-  .scroll-fade {
-    mask-image: linear-gradient(
-      to bottom,
-      rgba(0, 0, 0, var(--sf-start)) 0,
-      #000 var(--scroll-fade-size),
-      #000 calc(100% - var(--scroll-fade-size)),
-      rgba(0, 0, 0, var(--sf-end)) 100%
-    );
-    -webkit-mask-image: linear-gradient(
-      to bottom,
-      rgba(0, 0, 0, var(--sf-start)) 0,
-      #000 var(--scroll-fade-size),
-      #000 calc(100% - var(--scroll-fade-size)),
-      rgba(0, 0, 0, var(--sf-end)) 100%
-    );
-    animation: sf-reveal-start both linear, sf-reveal-end both linear;
-    animation-timeline: scroll(self), scroll(self);
-    animation-range-start: 0, calc(100% - var(--scroll-fade-size));
-    animation-range-end: var(--scroll-fade-size), 100%;
-  }
-  .scroll-fade-x {
-    mask-image: linear-gradient(
-      to right,
-      rgba(0, 0, 0, var(--sf-start)) 0,
-      #000 var(--scroll-fade-size),
-      #000 calc(100% - var(--scroll-fade-size)),
-      rgba(0, 0, 0, var(--sf-end)) 100%
-    );
-    -webkit-mask-image: linear-gradient(
-      to right,
-      rgba(0, 0, 0, var(--sf-start)) 0,
-      #000 var(--scroll-fade-size),
-      #000 calc(100% - var(--scroll-fade-size)),
-      rgba(0, 0, 0, var(--sf-end)) 100%
-    );
-    animation: sf-reveal-start both linear, sf-reveal-end both linear;
-    animation-timeline: scroll(self inline), scroll(self inline);
-    animation-range-start: 0, calc(100% - var(--scroll-fade-size));
-    animation-range-end: var(--scroll-fade-size), 100%;
-  }
-}
-
-/* ---------------------------------------------------------------------------
-   Global reduced-motion safety net. Honors prefers-reduced-motion at the
-   document level — but fewer/gentler, NOT zero. It keeps opacity / color /
-   elevation fades at their authored (short) durations and drops only MOVEMENT:
-   keyframe animations are clamped near-instant, and transitions are restricted
-   to non-transform properties so a transform change snaps with no in-between
-   motion. This is the app-wide backstop; component motion (motion lib)
-   additionally uses reducedMotion="user".
---------------------------------------------------------------------------- */
 @media (prefers-reduced-motion: reduce) {
-  *,
-  ::before,
-  ::after {
-    animation-duration: 0.01ms !important;
-    animation-iteration-count: 1 !important;
-    transition-property: opacity, color, background-color, border-color, box-shadow, fill, stroke !important;
-    scroll-behavior: auto !important;
+  .hero-source-mark,
+  .hero-source-fold,
+  .hero-source-node {
+    transition: none;
+  }
+
+  .hero-source-note:hover .hero-source-mark {
+    transform: none;
+  }
+}
+
+/* floating iso stack */
+.hero-visual {
+  position: relative;
+  height: 300px;
+  perspective: 1400px;
+  perspective-origin: 60% 40%;
+}
+
+@media (min-width: 1280px) {
+  .hero-visual {
+    height: 380px;
+  }
+}
+
+.hero-visual .mark-glow {
+  position: absolute;
+  right: 2%;
+  top: 50%;
+  width: 200px;
+  transform: translateY(-50%);
+  opacity: 0.14;
+  filter: drop-shadow(0 0 60px color-mix(in oklch, var(--primary) 80%, transparent));
+  pointer-events: none;
+}
+
+@media (min-width: 1280px) {
+  .hero-visual .mark-glow {
+    width: 230px;
+  }
+}
+
+.hero-iso {
+  position: absolute;
+  inset: 0;
+  transform-style: preserve-3d;
+  transform: rotateX(6deg) rotateY(-22deg);
+}
+
+.hero-blk {
+  position: absolute;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  box-shadow: var(--shadow-lg);
+  overflow: hidden;
+  animation: hero-blk-float 7s ease-in-out infinite;
+}
+
+.hero-blk::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 14px;
+  pointer-events: none;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06);
+}
+
+.hero-blk-head {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.55rem 0.75rem;
+  border-bottom: 1px solid var(--border);
+  background: color-mix(in oklch, var(--muted) 50%, transparent);
+  font-size: 0.6875rem;
+  color: var(--muted-foreground);
+}
+
+.hero-blk-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 99px;
+  background: var(--border);
+}
+
+.hero-blk-dot-on {
+  background: var(--primary);
+}
+
+.hero-blk-body {
+  padding: 0.875rem;
+}
+
+.hero-blk-code {
+  left: 36px;
+  top: 36px;
+  width: min(300px, 72vw);
+  animation-delay: 0s;
+}
+
+.hero-blk-ui {
+  left: 96px;
+  top: 150px;
+  width: min(280px, 68vw);
+  transform: translateZ(60px);
+  animation-delay: -2.3s;
+}
+
+.hero-blk-chip {
+  left: 8px;
+  top: 232px;
+  width: min(220px, 60vw);
+  transform: translateZ(110px);
+  animation-delay: -4.6s;
+}
+
+.hero-float-pill {
+  position: absolute;
+  z-index: 3;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.4rem 0.7rem;
+  border-radius: 99px;
+  background: var(--popover);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow-lg);
+  font-size: 0.75rem;
+  font-weight: 500;
+  animation: hero-blk-float 6s ease-in-out infinite;
+}
+
+.hero-float-pill-1 {
+  top: 6px;
+  right: 12px;
+  color: var(--success);
+  animation-delay: -1s;
+}
+
+.hero-float-pill-2 {
+  bottom: 14px;
+  right: 28px;
+  animation-delay: -3.5s;
+}
+
+@keyframes hero-blk-float {
+  0%,
+  100% {
+    translate: 0 0;
+  }
+  50% {
+    translate: 0 -9px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hero-blk,
+  .hero-float-pill {
+    animation: none;
+  }
+}
+
+@media (max-width: 860px) {
+  .registry-app {
+    grid-template-columns: 1fr;
+  }
+
+  .registry-side {
+    display: none;
+  }
+
+  .registry-side-open {
+    display: flex;
+    position: fixed;
+    inset: 0 auto 0 0;
+    width: min(280px, 88vw);
+    z-index: 60;
+    box-shadow: var(--shadow-lg);
+  }
+
+  .registry-side-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 50;
+    background: oklch(0 0 0 / 0.45);
   }
 }

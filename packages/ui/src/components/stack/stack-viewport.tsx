@@ -7,7 +7,7 @@ import { createPortal } from 'react-dom';
 
 import { cn } from '../../lib/utils';
 
-import { PORTAL_ROOT_ID, useRootPortalContainer } from '../portal';
+import { PORTAL_ROOT_ID, useRootPortalContainer } from '@constructive-io/ui/portal';
 
 import { StackBackdrop } from './stack-backdrop';
 import { StackCard } from './stack-card';
@@ -268,7 +268,7 @@ export function CardStackViewport({
 
 	const content = (
 		<div data-slot="stack-viewport" className={cn('pointer-events-none fixed inset-0', className)}>
-			<AnimatePresence mode="popLayout" onExitComplete={handleExitComplete}>
+			<AnimatePresence initial={false} mode="popLayout" onExitComplete={handleExitComplete}>
 				{/* Backdrop - only when cards exist and first card wants it */}
 				{shouldShowBackdrop && hasCards && renderBackdropNode(resolvedBackdrop.config)}
 

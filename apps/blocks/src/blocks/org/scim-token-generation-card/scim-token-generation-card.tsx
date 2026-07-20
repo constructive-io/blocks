@@ -22,7 +22,7 @@
  * and will ship org-scim-token-generation-card.requires.json:
  *   { "namespace": "admin", "mutations": ["generateScimToken", "revokeScimToken"], ... }
  *
- * UI primitives from @constructive-io/ui (consumer-final, never vendored).
+ * UI primitives are installed as source alongside this block.
  */
 
 import { useState } from 'react';

@@ -698,8 +698,9 @@ export const MultiSelect = React.forwardRef<MultiSelectRef, MultiSelectProps>(
 							} options selected. ${placeholder}`}
 							className={cn(
 								`border-input/70 focus-visible:border-primary/60 focus-visible:ring-primary/20 flex items-center
-								justify-between rounded-md border bg-transparent pr-1 pl-2 shadow-xs transition-[color,box-shadow]
-								outline-none focus-visible:ring-[3px] active:scale-100 disabled:pointer-events-none disabled:opacity-50`,
+									justify-between rounded-md border bg-transparent pr-1 pl-2 shadow-xs transition-[color,box-shadow,scale]
+									duration-150 ease-out outline-none focus-visible:ring-[3px] motion-safe:active:not-disabled:scale-[0.96]
+									motion-reduce:transition-[color,box-shadow] disabled:pointer-events-none disabled:opacity-50`,
 								singleLine ? 'h-8 min-h-8 py-0.5 text-xs' : 'h-auto min-h-10 py-2 text-sm',
 								autoSize && 'w-auto',
 								!autoSize && 'w-full',

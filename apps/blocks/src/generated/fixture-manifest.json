@@ -1,5 +1,5 @@
 {
-  "generatedBy": "apps/blocks/scripts/refresh-sdk-fixtures.mjs",
+  "generatedBy": "apps/blocks/scripts/refresh-sdk-fixtures.ts",
   "generatedAt": null,
   "imports": {
     "auth": {

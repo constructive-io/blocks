@@ -70,14 +70,12 @@
       "name": "form-field",
       "type": "registry:component",
       "title": "Form Field",
-      "description": "Label + input + inline error wrapper bound to a TanStack Form field. Wraps @constructive-io/ui FormControl + Input.",
+      "description": "Label + input + inline error wrapper bound to a TanStack Form field. Composes source-installed FormControl and Input primitives.",
       "categories": [
         "blocks",
         "foundation"
       ],
-      "dependencies": [
-        "@constructive-io/ui"
-      ],
+      "dependencies": [],
       "registryDependencies": [],
       "files": [
         {
@@ -91,14 +89,13 @@
       "name": "auth-loading-button",
       "type": "registry:component",
       "title": "Auth Loading Button",
-      "description": "Submit button that shows a spinner + loading label and self-disables while a request is in flight. Wraps @constructive-io/ui Button.",
+      "description": "Submit button that shows a spinner + loading label and self-disables while a request is in flight. Composes the source-installed Button primitive.",
       "categories": [
         "blocks",
         "foundation"
       ],
       "dependencies": [
-        "lucide-react",
-        "@constructive-io/ui"
+        "lucide-react"
       ],
       "registryDependencies": [
         "cn"
@@ -144,7 +141,6 @@
       ],
       "docs": "## Setup\n\n1. Mount `blocks-runtime` once at your app root (installed automatically as a dependency) and set `NEXT_PUBLIC_AUTH_GRAPHQL_ENDPOINT`.\n2. This block imports `useSignInMutation` from your generated `auth` SDK at `@/generated/auth`. Ensure that SDK is generated.\n\n```tsx\nimport { SignInCard } from '@/blocks/auth/sign-in-card/sign-in-card';\n\n<SignInCard onSuccess={(r) => router.push('/')} forgotPasswordHref=\"/forgot\" signUpHref=\"/register\" />\n```\n\nThe declared requirements ship to `.constructive/blocks/auth-sign-in-card.requires.json` for the SDK check tool.",
       "dependencies": [
-        "@constructive-io/ui",
         "@tanstack/react-form"
       ],
       "registryDependencies": [
@@ -202,9 +198,7 @@
         "blocks",
         "user"
       ],
-      "dependencies": [
-        "@constructive-io/ui"
-      ],
+      "dependencies": [],
       "registryDependencies": [
         "cn"
       ],
@@ -231,7 +225,6 @@
         "authentication"
       ],
       "dependencies": [
-        "@constructive-io/ui",
         "@tanstack/react-query"
       ],
       "registryDependencies": [
@@ -267,7 +260,6 @@
         "authentication"
       ],
       "dependencies": [
-        "@constructive-io/ui",
         "@tanstack/react-form"
       ],
       "registryDependencies": [
@@ -307,7 +299,6 @@
         "authentication"
       ],
       "dependencies": [
-        "@constructive-io/ui",
         "@tanstack/react-form"
       ],
       "registryDependencies": [
@@ -348,7 +339,6 @@
         "authentication"
       ],
       "dependencies": [
-        "@constructive-io/ui",
         "@tanstack/react-form"
       ],
       "registryDependencies": [
@@ -389,7 +379,6 @@
         "authentication"
       ],
       "dependencies": [
-        "@constructive-io/ui",
         "@tanstack/react-form"
       ],
       "registryDependencies": [
@@ -454,7 +443,6 @@
         "authentication"
       ],
       "dependencies": [
-        "@constructive-io/ui",
         "@tanstack/react-form"
       ],
       "registryDependencies": [
@@ -580,9 +568,7 @@
         "blocks",
         "authentication"
       ],
-      "dependencies": [
-        "@constructive-io/ui"
-      ],
+      "dependencies": [],
       "registryDependencies": [
         "blocks-runtime",
         "auth-errors",
@@ -615,9 +601,7 @@
         "blocks",
         "authentication"
       ],
-      "dependencies": [
-        "@constructive-io/ui"
-      ],
+      "dependencies": [],
       "registryDependencies": [
         "blocks-runtime",
         "auth-errors",
@@ -652,7 +636,6 @@
         "authentication"
       ],
       "dependencies": [
-        "@constructive-io/ui",
         "@tanstack/react-form"
       ],
       "registryDependencies": [
@@ -693,7 +676,6 @@
         "authentication"
       ],
       "dependencies": [
-        "@constructive-io/ui",
         "@tanstack/react-form"
       ],
       "registryDependencies": [
@@ -732,9 +714,7 @@
         "blocks",
         "authentication"
       ],
-      "dependencies": [
-        "@constructive-io/ui"
-      ],
+      "dependencies": [],
       "registryDependencies": [
         "blocks-runtime",
         "auth-errors",
@@ -770,9 +750,7 @@
         "blocks",
         "authentication"
       ],
-      "dependencies": [
-        "@constructive-io/ui"
-      ],
+      "dependencies": [],
       "registryDependencies": [
         "blocks-runtime",
         "auth-errors",
@@ -808,9 +786,7 @@
         "blocks",
         "authentication"
       ],
-      "dependencies": [
-        "@constructive-io/ui"
-      ],
+      "dependencies": [],
       "registryDependencies": [
         "blocks-runtime",
         "auth-errors",
@@ -850,9 +826,7 @@
         "blocks",
         "authentication"
       ],
-      "dependencies": [
-        "@constructive-io/ui"
-      ],
+      "dependencies": [],
       "registryDependencies": [
         "cn"
       ],
@@ -878,9 +852,7 @@
         "blocks",
         "authentication"
       ],
-      "dependencies": [
-        "@constructive-io/ui"
-      ],
+      "dependencies": [],
       "registryDependencies": [
         "blocks-runtime",
         "auth-errors",
@@ -916,9 +888,7 @@
         "blocks",
         "authentication"
       ],
-      "dependencies": [
-        "@constructive-io/ui"
-      ],
+      "dependencies": [],
       "registryDependencies": [
         "blocks-runtime",
         "auth-errors",
@@ -953,7 +923,6 @@
         "authentication"
       ],
       "dependencies": [
-        "@constructive-io/ui",
         "@tanstack/react-form"
       ],
       "registryDependencies": [
@@ -992,9 +961,7 @@
         "blocks",
         "authentication"
       ],
-      "dependencies": [
-        "@constructive-io/ui"
-      ],
+      "dependencies": [],
       "registryDependencies": [
         "blocks-runtime",
         "auth-errors",
@@ -1028,9 +995,7 @@
         "blocks",
         "shell"
       ],
-      "dependencies": [
-        "@constructive-io/ui"
-      ],
+      "dependencies": [],
       "registryDependencies": [
         "cn"
       ],
@@ -1056,9 +1021,7 @@
         "blocks",
         "shell"
       ],
-      "dependencies": [
-        "@constructive-io/ui"
-      ],
+      "dependencies": [],
       "registryDependencies": [
         "cn"
       ],
@@ -1084,9 +1047,7 @@
         "blocks",
         "shell"
       ],
-      "dependencies": [
-        "@constructive-io/ui"
-      ],
+      "dependencies": [],
       "registryDependencies": [
         "cn"
       ],
@@ -1112,9 +1073,7 @@
         "blocks",
         "shell"
       ],
-      "dependencies": [
-        "@constructive-io/ui"
-      ],
+      "dependencies": [],
       "registryDependencies": [
         "blocks-runtime",
         "cn"
@@ -1156,9 +1115,7 @@
         "blocks",
         "shell"
       ],
-      "dependencies": [
-        "@constructive-io/ui"
-      ],
+      "dependencies": [],
       "registryDependencies": [
         "cn"
       ],
@@ -1194,9 +1151,7 @@
         "blocks",
         "shell"
       ],
-      "dependencies": [
-        "@constructive-io/ui"
-      ],
+      "dependencies": [],
       "registryDependencies": [
         "blocks-runtime",
         "auth-sign-out-button",
@@ -1230,9 +1185,7 @@
         "blocks",
         "authentication"
       ],
-      "dependencies": [
-        "@constructive-io/ui"
-      ],
+      "dependencies": [],
       "registryDependencies": [
         "blocks-runtime",
         "auth-errors",
@@ -1266,9 +1219,7 @@
         "blocks",
         "authentication"
       ],
-      "dependencies": [
-        "@constructive-io/ui"
-      ],
+      "dependencies": [],
       "registryDependencies": [
         "blocks-runtime",
         "auth-errors",
@@ -1304,7 +1255,6 @@
         "authentication"
       ],
       "dependencies": [
-        "@constructive-io/ui",
         "@tanstack/react-form"
       ],
       "registryDependencies": [
@@ -1341,7 +1291,6 @@
         "authentication"
       ],
       "dependencies": [
-        "@constructive-io/ui",
         "@tanstack/react-form"
       ],
       "registryDependencies": [
@@ -1379,9 +1328,7 @@
         "blocks",
         "authentication"
       ],
-      "dependencies": [
-        "@constructive-io/ui"
-      ],
+      "dependencies": [],
       "registryDependencies": [
         "auth-errors",
         "auth-error-alert",
@@ -1416,9 +1363,7 @@
         "blocks",
         "authentication"
       ],
-      "dependencies": [
-        "@constructive-io/ui"
-      ],
+      "dependencies": [],
       "registryDependencies": [
         "cn"
       ],
@@ -1444,9 +1389,7 @@
         "blocks",
         "authentication"
       ],
-      "dependencies": [
-        "@constructive-io/ui"
-      ],
+      "dependencies": [],
       "registryDependencies": [
         "blocks-runtime",
         "auth-errors",
@@ -1483,9 +1426,7 @@
         "blocks",
         "authentication"
       ],
-      "dependencies": [
-        "@constructive-io/ui"
-      ],
+      "dependencies": [],
       "registryDependencies": [
         "auth-social-buttons",
         "cn"
@@ -1512,9 +1453,7 @@
         "blocks",
         "authentication"
       ],
-      "dependencies": [
-        "@constructive-io/ui"
-      ],
+      "dependencies": [],
       "registryDependencies": [
         "auth-mfa-totp-challenge",
         "cn"
@@ -1541,9 +1480,7 @@
         "blocks",
         "authentication"
       ],
-      "dependencies": [
-        "@constructive-io/ui"
-      ],
+      "dependencies": [],
       "registryDependencies": [
         "auth-errors",
         "auth-error-alert",
@@ -1614,7 +1551,6 @@
         "authentication"
       ],
       "dependencies": [
-        "@constructive-io/ui",
         "@tanstack/react-form"
       ],
       "registryDependencies": [
@@ -1652,9 +1588,7 @@
         "blocks",
         "authentication"
       ],
-      "dependencies": [
-        "@constructive-io/ui"
-      ],
+      "dependencies": [],
       "registryDependencies": [
         "auth-errors",
         "auth-error-alert",
@@ -1688,9 +1622,7 @@
         "blocks",
         "authentication"
       ],
-      "dependencies": [
-        "@constructive-io/ui"
-      ],
+      "dependencies": [],
       "registryDependencies": [
         "auth-errors",
         "cn"
@@ -1723,7 +1655,6 @@
         "authentication"
       ],
       "dependencies": [
-        "@constructive-io/ui",
         "@tanstack/react-form"
       ],
       "registryDependencies": [
@@ -1761,9 +1692,7 @@
         "blocks",
         "authentication"
       ],
-      "dependencies": [
-        "@constructive-io/ui"
-      ],
+      "dependencies": [],
       "registryDependencies": [
         "auth-errors",
         "auth-error-alert",
@@ -1798,7 +1727,6 @@
         "authentication"
       ],
       "dependencies": [
-        "@constructive-io/ui",
         "@tanstack/react-form"
       ],
       "registryDependencies": [
@@ -1840,9 +1768,7 @@
         "blocks",
         "authentication"
       ],
-      "dependencies": [
-        "@constructive-io/ui"
-      ],
+      "dependencies": [],
       "registryDependencies": [
         "auth-errors",
         "auth-error-alert",
@@ -1881,7 +1807,6 @@
         "authentication"
       ],
       "dependencies": [
-        "@constructive-io/ui",
         "@tanstack/react-form"
       ],
       "registryDependencies": [
@@ -1919,9 +1844,7 @@
         "blocks",
         "authentication"
       ],
-      "dependencies": [
-        "@constructive-io/ui"
-      ],
+      "dependencies": [],
       "registryDependencies": [
         "blocks-runtime",
         "auth-errors",
@@ -1957,9 +1880,7 @@
         "blocks",
         "user"
       ],
-      "dependencies": [
-        "@constructive-io/ui"
-      ],
+      "dependencies": [],
       "registryDependencies": [
         "blocks-runtime",
         "auth-errors",
@@ -2004,7 +1925,6 @@
         "organization"
       ],
       "dependencies": [
-        "@constructive-io/ui",
         "@tanstack/react-form"
       ],
       "registryDependencies": [
@@ -2042,9 +1962,7 @@
         "blocks",
         "organization"
       ],
-      "dependencies": [
-        "@constructive-io/ui"
-      ],
+      "dependencies": [],
       "registryDependencies": [
         "blocks-runtime",
         "auth-errors",
@@ -2081,7 +1999,6 @@
         "organization"
       ],
       "dependencies": [
-        "@constructive-io/ui",
         "@tanstack/react-form"
       ],
       "registryDependencies": [
@@ -2120,7 +2037,6 @@
         "organization"
       ],
       "dependencies": [
-        "@constructive-io/ui",
         "@tanstack/react-form"
       ],
       "registryDependencies": [
@@ -2159,7 +2075,6 @@
         "organization"
       ],
       "dependencies": [
-        "@constructive-io/ui",
         "@tanstack/react-form"
       ],
       "registryDependencies": [
@@ -2198,9 +2113,7 @@
         "blocks",
         "organization"
       ],
-      "dependencies": [
-        "@constructive-io/ui"
-      ],
+      "dependencies": [],
       "registryDependencies": [
         "blocks-runtime",
         "auth-errors",
@@ -2262,9 +2175,7 @@
         "blocks",
         "authentication"
       ],
-      "dependencies": [
-        "@constructive-io/ui"
-      ],
+      "dependencies": [],
       "registryDependencies": [
         "blocks-runtime",
         "auth-account-api-keys-list",
@@ -2305,9 +2216,7 @@
         "authentication"
       ],
       "docs": "Renders a card describing OIDC/SAML SSO capability with a coming-soon notice. All user-visible labels are in the SsoSetupCardMessages catalog and overridable via the messages prop.",
-      "dependencies": [
-        "@constructive-io/ui"
-      ],
+      "dependencies": [],
       "registryDependencies": [
         "cn"
       ],
@@ -2334,7 +2243,6 @@
         "authentication"
       ],
       "dependencies": [
-        "@constructive-io/ui",
         "@tanstack/react-form"
       ],
       "registryDependencies": [
@@ -2365,9 +2273,7 @@
         "blocks",
         "authentication"
       ],
-      "dependencies": [
-        "@constructive-io/ui"
-      ],
+      "dependencies": [],
       "registryDependencies": [
         "cn"
       ],
@@ -2393,9 +2299,7 @@
         "blocks",
         "organization"
       ],
-      "dependencies": [
-        "@constructive-io/ui"
-      ],
+      "dependencies": [],
       "registryDependencies": [
         "cn"
       ],
@@ -2421,9 +2325,7 @@
         "blocks",
         "organization"
       ],
-      "dependencies": [
-        "@constructive-io/ui"
-      ],
+      "dependencies": [],
       "registryDependencies": [
         "cn"
       ],
@@ -2449,9 +2351,7 @@
         "blocks",
         "organization"
       ],
-      "dependencies": [
-        "@constructive-io/ui"
-      ],
+      "dependencies": [],
       "registryDependencies": [
         "cn"
       ],
@@ -2476,9 +2376,8 @@
       "categories": [
         "block"
       ],
-      "docs": "## Setup\n\n1. Add to your `globals.css`:\n```css\n@plugin \"@tailwindcss/typography\";\n@import '@constructive-io/ui/globals.css';\n```\n\n2. Add to your root `layout.tsx`:\n```tsx\nimport { ChatProvider, ChatWidget } from '@/components/chat';\nimport { PortalRoot } from '@/components/ui/portal';\n\n<ChatProvider>\n  {children}\n  <ChatWidget />\n</ChatProvider>\n<PortalRoot />\n```\n\nIncludes Next.js API routes at `src/app/api/chat/route.ts` and `src/app/api/chat/test/route.ts`. OpenAI-compatible egress defaults to `https://api.openai.com/v1`. To enable a custom or local provider, set an explicit server-side allowlist before startup, for example `CHAT_ALLOWED_PROVIDER_BASE_URLS=http://127.0.0.1:11434/v1,https://llm.example.com/openai`. Entries must be absolute HTTP(S) URLs without credentials, queries, or fragments; localhost resolves from the route server. Add authentication, authorization, and rate limiting around both POST routes before exposing them publicly, and do not log or persist provider keys in plaintext.",
+      "docs": "## Setup\n\n1. Add the typography plugin to your `globals.css` (the Constructive theme is installed automatically):\n```css\n@plugin \"@tailwindcss/typography\";\n```\n\n2. Add to your root `layout.tsx`:\n```tsx\nimport { ChatProvider, ChatWidget } from '@/components/chat';\nimport { PortalRoot } from '@/components/ui/portal';\n\n<ChatProvider>\n  {children}\n  <ChatWidget />\n</ChatProvider>\n<PortalRoot />\n```\n\nIncludes Next.js API routes at `src/app/api/chat/route.ts` and `src/app/api/chat/test/route.ts`. OpenAI-compatible egress defaults to `https://api.openai.com/v1`. To enable a custom or local provider, set an explicit server-side allowlist before startup, for example `CHAT_ALLOWED_PROVIDER_BASE_URLS=http://127.0.0.1:11434/v1,https://llm.example.com/openai`. Entries must be absolute HTTP(S) URLs without credentials, queries, or fragments; localhost resolves from the route server. Add authentication, authorization, and rate limiting around both POST routes before exposing them publicly, and do not log or persist provider keys in plaintext.",
       "dependencies": [
-        "@constructive-io/ui",
         "ai",
         "@ai-sdk/react",
         "@ai-sdk/anthropic",

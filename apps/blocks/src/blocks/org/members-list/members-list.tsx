@@ -375,7 +375,7 @@ export function MembersList({
         )}
 
         {!queryResult.isLoading && queryResult.members.length === 0 && (
-          <p className="text-muted-foreground py-4 text-center text-sm">{merged.emptyState}</p>
+          <p className="text-pretty text-muted-foreground py-4 text-center text-sm">{merged.emptyState}</p>
         )}
 
         {!queryResult.isLoading && queryResult.members.length > 0 && (
@@ -414,7 +414,7 @@ export function MembersList({
                     onValueChange={(val) => doRoleChange(member, val === '' ? null : val)}
                     disabled={actionPending || defaultUpdateMutation.isPending}
                   >
-                    <SelectTrigger className="h-7 w-28 text-xs">
+                    <SelectTrigger className="h-11 w-28 text-xs sm:h-10">
                       <SelectValue placeholder={merged.roleMember} />
                     </SelectTrigger>
                     <SelectContent>

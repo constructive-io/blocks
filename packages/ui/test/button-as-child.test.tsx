@@ -117,4 +117,38 @@ describe('Button asChild', () => {
 		);
 		expect(view.container.querySelector('button')?.getAttribute('type')).toBe('submit');
 	});
+
+	it('adds tactile press and actual desktop/coarse-pointer target sizing by default', async () => {
+		const view = createTestRoot();
+		await view.render(<Button>Save</Button>);
+
+		const button = view.container.querySelector<HTMLButtonElement>('button');
+		expect(button).not.toBeNull();
+		expect(button!.className).toContain('motion-safe:active:not-disabled:scale-[0.96]');
+		expect(button!.className).toContain('h-10');
+		expect(button!.className).toContain('min-w-10');
+		expect(button!.className).toContain('pointer-coarse:min-h-11');
+		expect(button!.className).toContain('pointer-coarse:min-w-11');
+	});
+
+	it('keeps compact icon controls non-intercepting around neighboring targets', async () => {
+		const view = createTestRoot();
+		await view.render(<Button size="icon-sm" aria-label="Compact action" />);
+
+		const button = view.container.querySelector<HTMLButtonElement>('button');
+		expect(button).not.toBeNull();
+		expect(button!.className).toContain('size-8');
+		expect(button!.className).toContain('pointer-coarse:after:size-11');
+		expect(button!.className).toContain('pointer-coarse:after:pointer-events-none');
+	});
+
+	it('removes tactile press scaling when static without leaking the prop', async () => {
+		const view = createTestRoot();
+		await view.render(<Button static>Save without motion</Button>);
+
+		const button = view.container.querySelector<HTMLButtonElement>('button');
+		expect(button).not.toBeNull();
+		expect(button!.className).not.toContain('motion-safe:active:not-disabled:scale-[0.96]');
+		expect(button!.hasAttribute('static')).toBe(false);
+	});
 });

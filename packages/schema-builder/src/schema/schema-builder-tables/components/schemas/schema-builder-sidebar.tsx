@@ -539,8 +539,8 @@ function TableItem({ table, isSelected, onSelect, onDelete }: TableItemProps) {
 			role='button'
 			tabIndex={0}
 			className={cn(
-				`group relative my-1 flex h-8 cursor-pointer items-center justify-between rounded-lg px-2 transition-all
-				duration-200`,
+				`group relative my-1 flex min-h-10 cursor-pointer items-center justify-between rounded-lg px-2
+				transition-[background-color,color,box-shadow,scale] duration-150 ease-out motion-safe:active:scale-[0.96]`,
 				isSelected
 					? 'bg-primary/10 text-foreground ring-primary/30 dark:bg-primary/15 dark:ring-primary/40 ring-1'
 					: 'text-muted-foreground hover:text-foreground',
@@ -560,7 +560,8 @@ function TableItem({ table, isSelected, onSelect, onDelete }: TableItemProps) {
 						size='sm'
 						aria-label={`Actions for ${table.name}`}
 						className={cn(
-							'h-5 w-5 rounded p-0 transition-all',
+							`size-8 rounded-md p-0 transition-[background-color,opacity,scale] duration-150 ease-out
+							motion-safe:active:scale-[0.96]`,
 							'opacity-0 group-hover:opacity-100',
 							'hover:bg-muted-foreground/10',
 							isMenuOpen && 'bg-muted-foreground/10 opacity-100',

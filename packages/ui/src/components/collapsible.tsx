@@ -25,10 +25,7 @@ function Collapsible({
 /**
  * CollapsibleTrigger Props
  */
-type CollapsibleTriggerProps = Omit<
-  CollapsiblePrimitive.Trigger.Props,
-  "render" | "nativeButton"
-> & {
+type CollapsibleTriggerProps = CollapsiblePrimitive.Trigger.Props & {
   /** When true, merges props onto the child element instead of rendering a button */
   asChild?: boolean;
   /** Whether the child renders a native button. Defaults to true when asChild is used. */
@@ -43,7 +40,7 @@ type CollapsibleTriggerProps = Omit<
 const CollapsibleTrigger = React.forwardRef<
   HTMLButtonElement,
   CollapsibleTriggerProps
->(({ className, asChild, nativeButton, children, ...props }, ref) => {
+>(({ className, asChild, nativeButton, children, render, ...props }, ref) => {
   const triggerClassName = cn(
     "group/trigger flex w-full cursor-pointer items-center justify-between text-sm font-medium outline-none transition-colors",
     "focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 focus-visible:ring-offset-background",
@@ -53,37 +50,18 @@ const CollapsibleTrigger = React.forwardRef<
     className
   );
 
-  if (asChild && React.isValidElement(children)) {
-    return (
-      <CollapsiblePrimitive.Trigger
-        ref={ref}
-        data-slot="collapsible-trigger"
-        nativeButton={nativeButton ?? true}
-        {...props}
-        render={(triggerProps) => {
-          const { nativeButton: _, ...rest } = triggerProps as Record<string, unknown>;
-          const childProps = children.props as Record<string, unknown>;
-          return React.cloneElement(
-            children as React.ReactElement<Record<string, unknown>>,
-            {
-              ...rest,
-              className: cn(triggerClassName, childProps.className as string),
-            }
-          );
-        }}
-      />
-    );
-  }
+  const childRender = render === undefined && asChild && React.isValidElement(children) ? children : undefined;
 
   return (
     <CollapsiblePrimitive.Trigger
       ref={ref}
       data-slot="collapsible-trigger"
-      nativeButton={nativeButton}
+      nativeButton={nativeButton ?? (childRender ? true : undefined)}
       className={triggerClassName}
+      render={render ?? childRender}
       {...props}
     >
-      {children}
+      {childRender ? undefined : children}
     </CollapsiblePrimitive.Trigger>
   );
 });
@@ -99,8 +77,8 @@ type CollapsiblePanelProps = CollapsiblePrimitive.Panel.Props & {
 
 /**
  * CollapsiblePanel
- * Animated container for collapsible content.
- * Uses CSS height transitions with Base UI's data attributes.
+ * Compositor-animated reveal for collapsible content.
+ * Geometry snaps to its measured height while opacity/translation carry the state change.
  */
 const CollapsiblePanel = React.forwardRef<HTMLDivElement, CollapsiblePanelProps>(
   ({ className, innerClassName, children, ...props }, ref) => {
@@ -110,8 +88,8 @@ const CollapsiblePanel = React.forwardRef<HTMLDivElement, CollapsiblePanelProps>
         data-slot="collapsible-panel"
         className={cn(
           "h-[var(--collapsible-panel-height)] overflow-hidden text-sm",
-          "transition-[height] duration-200 ease-out",
-          "data-[ending-style]:h-0 data-[starting-style]:h-0",
+          "origin-top transition-[opacity,transform] duration-200 ease-out motion-reduce:transition-none",
+          "data-[ending-style]:translate-y-1 data-[ending-style]:opacity-0 data-[starting-style]:translate-y-1 data-[starting-style]:opacity-0",
           className
         )}
         {...props}

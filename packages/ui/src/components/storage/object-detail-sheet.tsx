@@ -101,7 +101,11 @@ function ObjectDetailBody({
         {isImageType && isPreviewLoading ? (
           <Skeleton className="size-40 rounded-md" />
         ) : isImage ? (
-          <img src={object.downloadUrl ?? undefined} alt={displayName} className="size-40 rounded-md object-cover" />
+          <img
+            src={object.downloadUrl ?? undefined}
+            alt={displayName}
+            className="size-40 rounded-md object-cover outline outline-1 -outline-offset-1 outline-black/10 dark:outline-white/10"
+          />
         ) : (
           <div className="flex size-40 items-center justify-center rounded-md bg-background">
             <FileTypeIcon mimeType={object.mimeType} className="size-16 text-muted-foreground" />

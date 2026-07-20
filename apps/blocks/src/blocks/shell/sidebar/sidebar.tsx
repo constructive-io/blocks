@@ -201,8 +201,8 @@ function NavItem({ item, collapsed, isActive, pathname }: NavItemProps) {
   );
 
   const baseClasses = cn(
-    'group flex w-full items-center gap-2.5 rounded-md px-2 py-1.5',
-    'transition-colors duration-150',
+    'group flex min-h-11 w-full items-center gap-2.5 rounded-md px-2 py-1.5 sm:min-h-10',
+    'transition-[background-color,color,scale] duration-150 ease-out motion-safe:active:scale-[0.96] motion-reduce:transition-none',
     isActive
       ? 'bg-accent text-accent-foreground font-medium'
       : 'text-muted-foreground hover:bg-accent/50 hover:text-accent-foreground',
@@ -326,7 +326,7 @@ function CollapseToggle({ collapsed, onToggle, collapseTooltip, expandTooltip, c
             aria-expanded={!collapsed}
             aria-label={tooltip}
             onClick={onToggle}
-            className="size-7 text-muted-foreground hover:text-foreground"
+            className="size-11 text-muted-foreground hover:text-foreground sm:size-10"
             data-testid="sidebar-collapse-toggle"
           >
             {collapsed ? (
@@ -461,7 +461,6 @@ export function ShellSidebar({
       className={cn(
         'relative flex flex-col h-full',
         'border-r border-border/60 bg-background',
-        'transition-all duration-200 ease-in-out',
         'overflow-hidden',
         className
       )}

@@ -133,7 +133,7 @@ export default function MfaTotpChallengePage({
       >
         <Card className="w-full max-w-sm mx-auto" role="alert">
           <CardHeader>
-            <h1 className="leading-none font-semibold tracking-tight">{merged.missingTokenTitle}</h1>
+            <h1 className="text-balance leading-none font-semibold tracking-tight">{merged.missingTokenTitle}</h1>
             <CardDescription>{merged.missingTokenDescription}</CardDescription>
           </CardHeader>
           <CardContent>
@@ -154,7 +154,7 @@ export default function MfaTotpChallengePage({
       >
         <Card className="w-full max-w-sm mx-auto" role="alert">
           <CardHeader>
-            <h1 className="leading-none font-semibold tracking-tight">{merged.expiredTokenTitle}</h1>
+            <h1 className="text-balance leading-none font-semibold tracking-tight">{merged.expiredTokenTitle}</h1>
             <CardDescription>{merged.expiredTokenDescription}</CardDescription>
           </CardHeader>
           <CardContent>

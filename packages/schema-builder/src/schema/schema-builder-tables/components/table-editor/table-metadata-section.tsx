@@ -90,7 +90,7 @@ function TableMetadataEditable({ currentTable }: { currentTable: { id: string; n
 
 	return (
 		<div className='flex flex-wrap items-center justify-between gap-3'>
-			<h2 className='text-foreground text-lg font-semibold tracking-tight'>Edit Table</h2>
+			<h2 className='text-foreground text-balance text-lg font-semibold tracking-tight'>Edit Table</h2>
 			<form onSubmit={handleFormSubmit} className='flex min-w-0 items-center gap-2'>
 				<label className='sr-only' htmlFor='table-name'>
 					Table name

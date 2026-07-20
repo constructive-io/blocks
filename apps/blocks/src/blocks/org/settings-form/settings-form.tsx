@@ -388,14 +388,14 @@ export function OrgSettingsForm({
                     placeholder={merged.slugPlaceholder}
                     type="text"
                   />
-                  <p className="text-muted-foreground text-xs">{merged.slugHint}</p>
+                  <p className="text-pretty text-muted-foreground text-xs">{merged.slugHint}</p>
                   {/* Warn when slug has been changed from its original value */}
                   {originalSlug &&
                     field.state.value &&
                     field.state.value !== originalSlug && (
                       <p
                         aria-live="polite"
-                        className="text-yellow-600 text-xs"
+                        className="text-pretty text-yellow-600 text-xs"
                       >
                         {merged.slugChangeWarning}
                       </p>
@@ -421,7 +421,7 @@ export function OrgSettingsForm({
           <Separator />
 
           <div className="space-y-3">
-            <h3 className="text-sm font-semibold text-destructive">{merged.dangerZoneTitle}</h3>
+            <h3 className="text-balance text-sm font-semibold text-destructive">{merged.dangerZoneTitle}</h3>
             <Button
               variant="destructive"
               size="sm"

@@ -1,8 +1,25 @@
 'use client';
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-
 import { cn } from '../lib/utils';
+
+const REDUCED_MOTION_QUERY = '(prefers-reduced-motion: reduce)';
+
+function subscribeToReducedMotion(onStoreChange: () => void) {
+	if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') {
+		return () => undefined;
+	}
+
+	const mediaQuery = window.matchMedia(REDUCED_MOTION_QUERY);
+	mediaQuery.addEventListener('change', onStoreChange);
+	return () => mediaQuery.removeEventListener('change', onStoreChange);
+}
+
+function getReducedMotionSnapshot() {
+	return typeof window === 'undefined' || typeof window.matchMedia !== 'function'
+		? true
+		: window.matchMedia(REDUCED_MOTION_QUERY).matches;
+}
 
 interface FlickeringGridProps extends React.HTMLAttributes<HTMLDivElement> {
 	squareSize?: number;
@@ -30,6 +47,11 @@ export const FlickeringGrid: React.FC<FlickeringGridProps> = ({
 	const containerRef = useRef<HTMLDivElement>(null);
 	const [isInView, setIsInView] = useState(false);
 	const [canvasSize, setCanvasSize] = useState({ width: 0, height: 0 });
+	const prefersReducedMotion = React.useSyncExternalStore(
+		subscribeToReducedMotion,
+		getReducedMotionSnapshot,
+		() => true,
+	);
 
 	const memoizedColor = useMemo(() => {
 		const toRGBA = (color: string) => {
@@ -125,6 +147,7 @@ export const FlickeringGrid: React.FC<FlickeringGridProps> = ({
 			const newHeight = height || container.clientHeight;
 			setCanvasSize({ width: newWidth, height: newHeight });
 			gridParams = setupCanvas(canvas, newWidth, newHeight);
+			drawGrid(ctx, canvas.width, canvas.height, gridParams.cols, gridParams.rows, gridParams.squares, gridParams.dpr);
 		};
 
 		updateCanvasSize();
@@ -146,6 +169,11 @@ export const FlickeringGrid: React.FC<FlickeringGridProps> = ({
 		});
 
 		resizeObserver.observe(container);
+		if (prefersReducedMotion) {
+			return () => {
+				resizeObserver.disconnect();
+			};
+		}
 
 		const intersectionObserver = new IntersectionObserver(
 			([entry]) => {
@@ -165,7 +193,7 @@ export const FlickeringGrid: React.FC<FlickeringGridProps> = ({
 			resizeObserver.disconnect();
 			intersectionObserver.disconnect();
 		};
-	}, [setupCanvas, updateSquares, drawGrid, width, height, isInView]);
+	}, [setupCanvas, updateSquares, drawGrid, width, height, isInView, prefersReducedMotion]);
 
 	return (
 		<div ref={containerRef} className={cn(`h-full w-full ${className}`)} {...props}>

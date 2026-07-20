@@ -66,10 +66,10 @@ export interface OperationStyle {
 }
 
 export const OPERATION_STYLES: Record<CrudOperation, OperationStyle> = {
-	create: { bgClass: 'bg-gradient-to-r from-emerald-500/15 to-emerald-400/10 ring-1 ring-emerald-500/30', textClass: 'text-emerald-600 dark:text-emerald-400', iconName: 'Plus' },
-	read: { bgClass: 'bg-gradient-to-r from-sky-500/15 to-sky-400/10 ring-1 ring-sky-500/30', textClass: 'text-sky-600 dark:text-sky-400', iconName: 'Search' },
-	update: { bgClass: 'bg-gradient-to-r from-amber-500/15 to-amber-400/10 ring-1 ring-amber-500/30', textClass: 'text-amber-600 dark:text-amber-400', iconName: 'Pencil' },
-	delete: { bgClass: 'bg-gradient-to-r from-rose-500/15 to-rose-400/10 ring-1 ring-rose-500/30', textClass: 'text-rose-600 dark:text-rose-400', iconName: 'Trash2' },
+	create: { bgClass: 'bg-emerald-500/10 ring-1 ring-emerald-500/30', textClass: 'text-emerald-600 dark:text-emerald-400', iconName: 'Plus' },
+	read: { bgClass: 'bg-sky-500/10 ring-1 ring-sky-500/30', textClass: 'text-sky-600 dark:text-sky-400', iconName: 'Search' },
+	update: { bgClass: 'bg-amber-500/10 ring-1 ring-amber-500/30', textClass: 'text-amber-600 dark:text-amber-400', iconName: 'Pencil' },
+	delete: { bgClass: 'bg-rose-500/10 ring-1 ring-rose-500/30', textClass: 'text-rose-600 dark:text-rose-400', iconName: 'Trash2' },
 };
 
 /**

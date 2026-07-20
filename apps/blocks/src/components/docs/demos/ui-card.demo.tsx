@@ -1,6 +1,7 @@
 'use client';
 
-import { MoreHorizontal, TrendingUp } from 'lucide-react';
+import Link from 'next/link';
+import { ArrowUpRight, MoreHorizontal, TrendingUp } from 'lucide-react';
 
 import { Badge } from '@constructive-io/ui/badge';
 import { Button } from '@constructive-io/ui/button';
@@ -16,12 +17,14 @@ import {
 
 import { Demo } from '@/components/docs/showcase-kit';
 
-export function BlockDemo() {
+export function BasicCardDemo() {
   return (
     <Demo>
       <Card className="w-full max-w-sm">
         <CardHeader>
-          <CardTitle>production-db</CardTitle>
+          <CardTitle>
+            <h3>production-db</h3>
+          </CardTitle>
           <CardDescription>PostgreSQL 17 · us-east-1</CardDescription>
           <CardAction>
             <Button variant="ghost" size="icon" aria-label="Database options">
@@ -52,4 +55,48 @@ export function BlockDemo() {
       </Card>
     </Demo>
   );
+}
+
+export function CardVariantsDemo() {
+  return (
+    <Demo>
+      <div className="grid w-full max-w-2xl gap-4 sm:grid-cols-2">
+        {(['default', 'elevated', 'flat', 'ghost'] as const).map((variant) => (
+          <Card key={variant} variant={variant} className="gap-3 py-4">
+            <CardHeader className="px-4">
+              <CardTitle>
+                <h3 className="capitalize">{variant}</h3>
+              </CardTitle>
+              <CardDescription>Card surface using the {variant} variant.</CardDescription>
+            </CardHeader>
+          </Card>
+        ))}
+      </div>
+    </Demo>
+  );
+}
+
+export function InteractiveCardDemo() {
+  return (
+    <Demo>
+      <Link
+        href="/blocks/ui/card"
+        className="block w-full max-w-sm rounded-xl outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+      >
+        <Card variant="interactive">
+          <CardHeader>
+            <CardTitle className="flex items-center justify-between gap-3">
+              <h3>Open production</h3>
+              <ArrowUpRight className="size-4" aria-hidden="true" />
+            </CardTitle>
+            <CardDescription>Inspect database health, queries, and recent deployments.</CardDescription>
+          </CardHeader>
+        </Card>
+      </Link>
+    </Demo>
+  );
+}
+
+export function BlockDemo() {
+  return <BasicCardDemo />;
 }

@@ -112,7 +112,7 @@ const meta: Meta<typeof ShellSidebar> = {
   decorators: [
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     (Story: any) => (
-      <div className="h-screen flex">
+      <div className="flex h-dvh">
         <Story />
         <div className="flex-1 p-6 bg-background">
           <p className="text-muted-foreground text-sm">Main content area</p>
@@ -189,7 +189,7 @@ export const MobileDrawerOpen: Story = {
   decorators: [
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     (Story: any) => (
-      <div className="relative h-screen bg-background">
+      <div className="relative h-dvh bg-background">
         {/* Backdrop */}
         <div className="fixed inset-0 bg-black/40 z-10" />
         {/* Drawer panel */}

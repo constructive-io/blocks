@@ -176,9 +176,9 @@ function ToolApprovalCard({
           type='button'
           onClick={onApprove}
           className={cn(
-            'mr-2 inline-flex items-center gap-1 rounded-sm px-2.5 py-1 text-xs font-medium',
+            'mr-2 inline-flex min-h-11 items-center gap-1 rounded-sm px-2.5 py-1 text-xs font-medium sm:min-h-10',
             'bg-primary text-primary-foreground',
-            'transition-all hover:opacity-90 active:scale-[0.98]',
+            'transition-[opacity,scale] duration-150 ease-out hover:opacity-90 motion-safe:active:scale-[0.96] motion-reduce:transition-none',
           )}
         >
           <Check className='size-3' />
@@ -188,9 +188,9 @@ function ToolApprovalCard({
           type='button'
           onClick={onReject}
           className={cn(
-            'inline-flex items-center gap-1 rounded-sm px-1.5 py-1 text-xs font-medium',
+            'inline-flex min-h-11 items-center gap-1 rounded-sm px-1.5 py-1 text-xs font-medium sm:min-h-10',
             'text-muted-foreground hover:text-foreground',
-            'transition-all active:scale-[0.98]',
+            'transition-[color,scale] duration-150 ease-out motion-safe:active:scale-[0.96] motion-reduce:transition-none',
           )}
         >
           <X className='size-3' />
@@ -228,7 +228,7 @@ function ExpandableError({ label, error }: { label: string; error?: string }) {
       <button
         type='button'
         onClick={() => setOpen((v) => !v)}
-        className='text-destructive flex items-center gap-2 py-0.5 text-xs'
+        className='text-destructive flex min-h-11 items-center gap-2 rounded-md py-0.5 text-xs transition-transform duration-150 ease-out motion-safe:active:scale-[0.96] motion-reduce:transition-none sm:min-h-10'
       >
         <CircleAlert className='size-3 shrink-0' />
         <span>{label}</span>

@@ -18,7 +18,8 @@
     "outDir": "dist",
     "rootDir": "src",
     "paths": {
-      "@/*": ["./src/*"]
+      "@/*": ["./src/*"],
+      "@constructive-io/ui/portal": ["./src/components/portal.tsx"]
     }
   },
   "include": ["src/**/*"],

@@ -3,42 +3,50 @@
 import * as React from 'react';
 import { Popover as PopoverPrimitive } from '@base-ui/react/popover';
 
-import { useFloatingOverlayPortalProps } from './portal';
-import { mergePropsWithRef } from '../lib/slot';
+import { useFloatingOverlayPortalProps } from '@constructive-io/ui/portal';
 import { cn } from '../lib/utils';
 
 function Popover({ ...props }: React.ComponentProps<typeof PopoverPrimitive.Root>) {
 	return <PopoverPrimitive.Root data-slot="popover" {...props} />;
 }
 
-type PopoverTriggerProps = Omit<React.ComponentProps<typeof PopoverPrimitive.Trigger>, 'render' | 'nativeButton'> & {
+type PopoverTriggerProps = React.ComponentProps<typeof PopoverPrimitive.Trigger> & {
 	/** When true, merges props onto the child element instead of rendering a button */
 	asChild?: boolean;
-	/** Whether the child renders a native button. Defaults to true when asChild is used. */
-	nativeButton?: boolean;
 };
 
-function PopoverTrigger({ asChild, nativeButton, children, ...props }: PopoverTriggerProps) {
-	if (asChild && React.isValidElement(children)) {
-		return (
-			<PopoverPrimitive.Trigger
-				data-slot="popover-trigger"
-				nativeButton={nativeButton ?? true}
-				{...props}
-			render={(triggerProps) => {
-				const { nativeButton: _, ...rest } = triggerProps as Record<string, unknown>;
-				return React.cloneElement(
-					children as React.ReactElement<Record<string, unknown>>,
-					mergePropsWithRef(rest, children as React.ReactElement),
-				);
-			}}
-			/>
-		);
-	}
+function PopoverTrigger({ asChild, children, render, nativeButton, ...props }: PopoverTriggerProps) {
+	const childRender = render === undefined && asChild && React.isValidElement(children) ? children : undefined;
+
 	return (
-		<PopoverPrimitive.Trigger data-slot="popover-trigger" nativeButton={nativeButton} {...props}>
-			{children}
+		<PopoverPrimitive.Trigger
+			data-slot="popover-trigger"
+			nativeButton={nativeButton ?? (childRender ? true : undefined)}
+			render={render ?? childRender}
+			{...props}
+		>
+			{childRender ? undefined : children}
 		</PopoverPrimitive.Trigger>
+	);
+}
+
+type PopoverCloseProps = React.ComponentProps<typeof PopoverPrimitive.Close> & {
+	/** When true, merges props onto the child element instead of rendering a button */
+	asChild?: boolean;
+};
+
+function PopoverClose({ asChild, children, render, nativeButton, ...props }: PopoverCloseProps) {
+	const childRender = render === undefined && asChild && React.isValidElement(children) ? children : undefined;
+
+	return (
+		<PopoverPrimitive.Close
+			data-slot="popover-close"
+			nativeButton={nativeButton ?? (childRender ? true : undefined)}
+			render={render ?? childRender}
+			{...props}
+		>
+			{childRender ? undefined : children}
+		</PopoverPrimitive.Close>
 	);
 }
 
@@ -83,11 +91,13 @@ function PopoverContent({
 				<PopoverPrimitive.Popup
 					data-slot="popover-content"
 					className={cn(
-						`bg-popover text-popover-foreground data-[open]:animate-in data-[closed]:animate-out
-						data-[closed]:fade-out-0 data-[open]:fade-in-0 data-[closed]:zoom-out-95
-						data-[open]:zoom-in-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2
-						data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 w-72 rounded-md border p-4
-						shadow-md outline-hidden`,
+						`bg-popover text-popover-foreground origin-(--transform-origin) w-72 rounded-md border p-4 shadow-md outline-hidden
+						transition-[scale,opacity,translate] duration-150 ease-out data-starting-style:scale-95
+						data-ending-style:scale-95 data-starting-style:opacity-0 data-ending-style:opacity-0
+						data-[side=bottom]:data-starting-style:-translate-y-2
+						data-[side=left]:data-starting-style:translate-x-2
+						data-[side=right]:data-starting-style:-translate-x-2
+						data-[side=top]:data-starting-style:translate-y-2 motion-reduce:transition-none`,
 						className,
 					)}
 					{...props}
@@ -111,4 +121,32 @@ function PopoverAnchor({ ...props }: React.HTMLAttributes<HTMLDivElement>) {
 	return <div data-slot="popover-anchor" {...props} />;
 }
 
-export { Popover, PopoverAnchor, PopoverContent, PopoverTrigger };
+function PopoverTitle({ className, ...props }: React.ComponentProps<typeof PopoverPrimitive.Title>) {
+	return (
+		<PopoverPrimitive.Title
+			data-slot="popover-title"
+			className={cn('font-medium leading-none', className)}
+			{...props}
+		/>
+	);
+}
+
+function PopoverDescription({ className, ...props }: React.ComponentProps<typeof PopoverPrimitive.Description>) {
+	return (
+		<PopoverPrimitive.Description
+			data-slot="popover-description"
+			className={cn('text-muted-foreground text-sm', className)}
+			{...props}
+		/>
+	);
+}
+
+export {
+	Popover,
+	PopoverAnchor,
+	PopoverClose,
+	PopoverContent,
+	PopoverDescription,
+	PopoverTitle,
+	PopoverTrigger,
+};

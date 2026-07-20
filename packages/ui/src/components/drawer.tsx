@@ -3,7 +3,7 @@
 import * as React from 'react';
 import { Drawer as DrawerPrimitive } from 'vaul';
 
-import { ModalPortalScope, useRootPortalContainer } from './portal';
+import { ModalPortalScope, useRootPortalContainer } from '@constructive-io/ui/portal';
 import { cn } from '../lib/utils';
 
 function Drawer({ ...props }: React.ComponentProps<typeof DrawerPrimitive.Root>) {
@@ -14,8 +14,9 @@ function DrawerTrigger({ ...props }: React.ComponentProps<typeof DrawerPrimitive
 	return <DrawerPrimitive.Trigger data-slot="drawer-trigger" {...props} />;
 }
 
-function DrawerPortal({ ...props }: React.ComponentProps<typeof DrawerPrimitive.Portal>) {
-	const container = useRootPortalContainer();
+function DrawerPortal({ container: containerProp, ...props }: React.ComponentProps<typeof DrawerPrimitive.Portal>) {
+	const rootContainer = useRootPortalContainer();
+	const container = containerProp === undefined ? (rootContainer ?? undefined) : containerProp;
 	return <DrawerPrimitive.Portal data-slot="drawer-portal" container={container} {...props} />;
 }
 
@@ -28,8 +29,9 @@ function DrawerOverlay({ className, ...props }: React.ComponentProps<typeof Draw
 		<DrawerPrimitive.Overlay
 			data-slot="drawer-overlay"
 			className={cn(
-				`data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0
-				data-[state=open]:fade-in-0 fixed inset-0 z-[var(--z-layer-modal-backdrop)] bg-black/50`,
+				`fixed inset-0 z-[var(--z-layer-modal-backdrop)] bg-black/50
+				data-[state=open]:animate-[fade-in_200ms_ease-out] data-[state=closed]:animate-[fade-out_150ms_ease-in]
+				motion-reduce:animate-none`,
 				className,
 			)}
 			{...props}
@@ -38,6 +40,8 @@ function DrawerOverlay({ className, ...props }: React.ComponentProps<typeof Draw
 }
 
 function DrawerContent({ className, children, ...props }: React.ComponentProps<typeof DrawerPrimitive.Content>) {
+	const [floatingContainer, setFloatingContainer] = React.useState<HTMLDivElement | null>(null);
+
 	return (
 		<DrawerPortal>
 			<DrawerOverlay />
@@ -64,9 +68,11 @@ function DrawerContent({ className, children, ...props }: React.ComponentProps<t
 					className='bg-muted mx-auto mt-4 hidden h-2 w-[100px] shrink-0 rounded-full
 						group-data-[vaul-drawer-direction=bottom]/drawer-content:block'
 				/>
-				<ModalPortalScope floatingPortalStrategy='root' floatingZIndex='elevated'>
-					{children}
-				</ModalPortalScope>
+				<div ref={setFloatingContainer} data-slot='drawer-floating-portal' className='contents'>
+					<ModalPortalScope floatingContainer={floatingContainer} floatingZIndex='elevated'>
+						{children}
+					</ModalPortalScope>
+				</div>
 			</DrawerPrimitive.Content>
 		</DrawerPortal>
 	);

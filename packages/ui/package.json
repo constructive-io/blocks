@@ -520,6 +520,16 @@
         "default": "./dist/components/flickering-grid.cjs"
       }
     },
+    "./flow-zoom-panel": {
+      "import": {
+        "types": "./dist/components/flow-zoom-panel.d.ts",
+        "default": "./dist/components/flow-zoom-panel.js"
+      },
+      "require": {
+        "types": "./dist/components/flow-zoom-panel.d.cts",
+        "default": "./dist/components/flow-zoom-panel.cjs"
+      }
+    },
     "./motion-grid": {
       "import": {
         "types": "./dist/components/motion-grid.d.ts",
@@ -629,10 +639,15 @@
     "src/styles"
   ],
   "scripts": {
-    "build": "tsup",
-    "build:registry": "node scripts/build-registry.mjs",
+    "build": "pnpm theme:check && tsup && pnpm check:package",
+    "prepack": "pnpm build",
+    "build:registry": "pnpm theme:check && tsx scripts/build-registry.ts",
+    "theme:generate": "tsx scripts/generate-theme.ts",
+    "theme:check": "tsx scripts/generate-theme.ts --check",
+    "check:package": "tsx scripts/check-package-parity.ts",
     "dev": "tsup --watch",
     "lint:types": "tsc --noEmit",
+    "test": "vitest run",
     "clean": "rm -rf dist registry/constructive",
     "sb": "storybook dev -p 6007",
     "build-sb": "storybook build"
@@ -640,8 +655,7 @@
   "dependencies": {
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
-    "tailwind-merge": "^3.4.0",
-    "tw-animate-css": "^1.4.0"
+    "tailwind-merge": "^3.4.0"
   },
   "peerDependencies": {
     "@base-ui/react": "^1.0.0",
@@ -688,6 +702,7 @@
     "@xyflow/react": "^12.10.0",
     "ace-builds": "^1.43.5",
     "cmdk": "^1.1.1",
+    "jsdom": "^26.1.0",
     "lucide-react": "^0.525.0",
     "match-sorter": "^8.2.0",
     "motion": "^12.18.1",
@@ -704,6 +719,7 @@
     "typescript": "^5.9.3",
     "vaul": "^1.1.2",
     "vite": "^7.3.0",
+    "vitest": "^3.2.4",
     "zod": "^4.3.4"
   },
   "engines": {

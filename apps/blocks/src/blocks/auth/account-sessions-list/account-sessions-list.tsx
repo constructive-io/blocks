@@ -321,7 +321,7 @@ export function AccountSessionsList({
         <AuthErrorAlert error={error} />
 
         {sessions.length === 0 ? (
-          <p className="text-muted-foreground text-sm">{merged.noSessionsDescription}</p>
+          <p className="text-pretty text-muted-foreground text-sm">{merged.noSessionsDescription}</p>
         ) : (
           <ul role="list" className="space-y-0 list-none">
             {sessions.map((session, idx) => {

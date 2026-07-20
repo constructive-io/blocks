@@ -43,7 +43,7 @@ export function EmptyStateCard({
 						<Icon className='text-primary h-10 w-10' />
 					</div>
 
-					<h2 className='mb-2 text-xl font-semibold'>{title}</h2>
+					<h2 className='mb-2 text-balance text-xl font-semibold'>{title}</h2>
 
 					<p className='text-muted-foreground mb-6 max-w-lg text-sm'>{description}</p>
 
@@ -66,7 +66,7 @@ export function EmptyStateCard({
 									<feature.icon className='text-muted-foreground h-5 w-5' />
 								</div>
 								<div>
-									<h3 className='mb-0.5 text-sm font-medium @sm:mb-1'>{feature.title}</h3>
+									<h3 className='mb-0.5 text-balance text-sm font-medium @sm:mb-1'>{feature.title}</h3>
 									<p className='text-muted-foreground text-xs'>{feature.description}</p>
 								</div>
 							</div>

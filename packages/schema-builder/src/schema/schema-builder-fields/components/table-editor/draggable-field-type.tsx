@@ -44,7 +44,7 @@ export const DraggableFieldType = memo(function DraggableFieldType({ typeInfo, i
 			{...attributes}
 			className={cn(
 				`group hover:bg-accent flex cursor-grab items-center gap-3 rounded-lg border border-transparent px-2.5 py-2
-				transition-all active:cursor-grabbing`,
+				transition-[background-color,border-color,box-shadow,opacity] duration-150 ease-out active:cursor-grabbing`,
 				'touch-none select-none',
 				'hover:border-border/60 hover:shadow-sm',
 				{

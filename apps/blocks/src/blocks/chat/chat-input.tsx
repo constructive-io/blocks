@@ -78,7 +78,7 @@ export function ChatInput({ onSend, onStop, isStreaming, disabled, placeholder =
               type='button'
               onClick={onStop}
               aria-label='Stop generating response'
-              className='text-muted-foreground/50 hover:text-muted-foreground shrink-0 cursor-pointer rounded-sm p-1 transition-colors'
+              className='text-muted-foreground/50 hover:text-muted-foreground inline-flex size-11 shrink-0 cursor-pointer items-center justify-center rounded-md transition-[color,scale] duration-150 ease-out motion-safe:active:scale-[0.96] motion-reduce:transition-none sm:size-10'
             >
               <Square className='h-3.5 w-3.5 fill-current' />
             </button>
@@ -88,7 +88,7 @@ export function ChatInput({ onSend, onStop, isStreaming, disabled, placeholder =
               onClick={handleSend}
               aria-label='Send message'
               disabled={disabled}
-              className='text-muted-foreground hover:text-foreground shrink-0 cursor-pointer rounded-sm p-1 transition-colors disabled:opacity-40'
+              className='text-muted-foreground hover:text-foreground inline-flex size-11 shrink-0 cursor-pointer items-center justify-center rounded-md transition-[color,scale] duration-150 ease-out motion-safe:active:scale-[0.96] motion-reduce:transition-none disabled:opacity-40 sm:size-10'
             >
               <SendHorizontal className='h-4 w-4' />
             </button>

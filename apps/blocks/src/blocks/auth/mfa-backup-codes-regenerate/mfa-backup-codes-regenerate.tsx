@@ -14,7 +14,7 @@
  *   • `onSubmit` is REQUIRED (no default mutation path until the proc ships).
  *   • When the backend deploys and codegen regenerates, the host replaces the
  *     `onSubmit` prop with the generated hook binding.
- *   • requires.json names `generateBackupCodes` so `check-sdk.mjs` fails clearly.
+ *   • requires.json names `generateBackupCodes` so `check-sdk-fixtures.ts` fails clearly.
  *   • messages.errors.PROCEDURE_NOT_FOUND is present for when the proc first lands.
  *
  * Flow:
@@ -213,7 +213,7 @@ export function MfaBackupCodesRegenerate({
             <div className="px-6 pb-2 space-y-3">
               {/* Prominent warning — old codes invalidated immediately */}
               <div className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2.5">
-                <p className="text-sm text-amber-800 font-medium">{merged.warningText}</p>
+                <p className="text-pretty text-sm text-amber-800 font-medium">{merged.warningText}</p>
               </div>
 
               {/* Async error alert (aria-live="polite" is inside AuthErrorAlert) */}

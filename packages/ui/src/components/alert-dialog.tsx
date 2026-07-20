@@ -3,8 +3,7 @@
 import * as React from 'react';
 import { AlertDialog as AlertDialogPrimitive } from '@base-ui/react/alert-dialog';
 
-import { ModalPortalScope, useRootPortalContainer } from './portal';
-import { mergePropsWithRef } from '../lib/slot';
+import { ModalPortalScope, useRootPortalContainer } from '@constructive-io/ui/portal';
 import { cn } from '../lib/utils';
 import { buttonVariants } from './button';
 
@@ -12,39 +11,32 @@ function AlertDialog({ ...props }: React.ComponentProps<typeof AlertDialogPrimit
 	return <AlertDialogPrimitive.Root data-slot="alert-dialog" {...props} />;
 }
 
-type AlertDialogTriggerProps = Omit<React.ComponentProps<typeof AlertDialogPrimitive.Trigger>, 'render' | 'nativeButton'> & {
+type AlertDialogTriggerProps = React.ComponentProps<typeof AlertDialogPrimitive.Trigger> & {
 	/** When true, merges props onto the child element instead of rendering a button */
 	asChild?: boolean;
-	/** Whether the child renders a native button. Defaults to true when asChild is used. */
-	nativeButton?: boolean;
 };
 
-function AlertDialogTrigger({ asChild, nativeButton, children, ...props }: AlertDialogTriggerProps) {
-	if (asChild && React.isValidElement(children)) {
-		return (
-			<AlertDialogPrimitive.Trigger
-				data-slot="alert-dialog-trigger"
-				nativeButton={nativeButton ?? true}
-				{...props}
-				render={(triggerProps) => {
-					const { nativeButton: _, ...rest } = triggerProps as Record<string, unknown>;
-					return React.cloneElement(
-						children as React.ReactElement<Record<string, unknown>>,
-						mergePropsWithRef(rest, children as React.ReactElement),
-					);
-				}}
-			/>
-		);
-	}
+function AlertDialogTrigger({ asChild, children, render, nativeButton, ...props }: AlertDialogTriggerProps) {
+	const childRender = render === undefined && asChild && React.isValidElement(children) ? children : undefined;
+
 	return (
-		<AlertDialogPrimitive.Trigger data-slot="alert-dialog-trigger" nativeButton={nativeButton} {...props}>
-			{children}
+		<AlertDialogPrimitive.Trigger
+			data-slot="alert-dialog-trigger"
+			nativeButton={nativeButton ?? (childRender ? true : undefined)}
+			render={render ?? childRender}
+			{...props}
+		>
+			{childRender ? undefined : children}
 		</AlertDialogPrimitive.Trigger>
 	);
 }
 
-function AlertDialogPortal({ keepMounted = true, ...props }: React.ComponentProps<typeof AlertDialogPrimitive.Portal>) {
-	const container = useRootPortalContainer();
+function AlertDialogPortal({
+	container: containerProp,
+	...props
+}: React.ComponentProps<typeof AlertDialogPrimitive.Portal>) {
+	const rootContainer = useRootPortalContainer();
+	const container = containerProp === undefined ? (rootContainer ?? undefined) : containerProp;
 
 	const style = {
 		...(props.style ?? {}),
@@ -54,7 +46,6 @@ function AlertDialogPortal({ keepMounted = true, ...props }: React.ComponentProp
 	return (
 		<AlertDialogPrimitive.Portal
 			data-slot="alert-dialog-portal"
-			keepMounted={keepMounted}
 			container={container}
 			{...props}
 			style={style}
@@ -146,13 +137,31 @@ function AlertDialogDescription({
  * AlertDialogAction - A button that performs the primary action and closes the dialog.
  * Wraps AlertDialogPrimitive.Close with primary button styling.
  */
-function AlertDialogAction({ className, ...props }: React.ComponentProps<typeof AlertDialogPrimitive.Close>) {
+type AlertDialogCloseProps = React.ComponentProps<typeof AlertDialogPrimitive.Close> & {
+	/** When true, merges props onto the child element instead of rendering a button */
+	asChild?: boolean;
+};
+
+function AlertDialogAction({
+	asChild,
+	children,
+	render,
+	nativeButton,
+	className,
+	...props
+}: AlertDialogCloseProps) {
+	const childRender = render === undefined && asChild && React.isValidElement(children) ? children : undefined;
+
 	return (
 		<AlertDialogPrimitive.Close
 			data-slot="alert-dialog-action"
 			className={cn(buttonVariants(), className)}
+			nativeButton={nativeButton ?? (childRender ? true : undefined)}
+			render={render ?? childRender}
 			{...props}
-		/>
+		>
+			{childRender ? undefined : children}
+		</AlertDialogPrimitive.Close>
 	);
 }
 
@@ -160,13 +169,26 @@ function AlertDialogAction({ className, ...props }: React.ComponentProps<typeof 
  * AlertDialogCancel - A button that cancels the action and closes the dialog.
  * Wraps AlertDialogPrimitive.Close with outline button styling.
  */
-function AlertDialogCancel({ className, ...props }: React.ComponentProps<typeof AlertDialogPrimitive.Close>) {
+function AlertDialogCancel({
+	asChild,
+	children,
+	render,
+	nativeButton,
+	className,
+	...props
+}: AlertDialogCloseProps) {
+	const childRender = render === undefined && asChild && React.isValidElement(children) ? children : undefined;
+
 	return (
 		<AlertDialogPrimitive.Close
 			data-slot="alert-dialog-cancel"
 			className={cn(buttonVariants({ variant: 'outline' }), className)}
+			nativeButton={nativeButton ?? (childRender ? true : undefined)}
+			render={render ?? childRender}
 			{...props}
-		/>
+		>
+			{childRender ? undefined : children}
+		</AlertDialogPrimitive.Close>
 	);
 }
 

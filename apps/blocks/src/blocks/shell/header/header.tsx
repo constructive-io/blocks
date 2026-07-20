@@ -200,7 +200,7 @@ export function ShellHeader({
         {showCommandPalette && (
           <Button
             variant="outline"
-            className="text-muted-foreground hidden h-8 gap-2 px-3 text-sm sm:flex"
+            className="text-muted-foreground hidden h-10 gap-2 px-3 text-sm sm:flex"
             aria-label={merged.commandPaletteAriaLabel}
             aria-keyshortcuts="Meta+k"
             onClick={onCommandPaletteOpen}

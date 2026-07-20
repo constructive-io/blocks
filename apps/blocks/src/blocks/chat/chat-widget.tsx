@@ -33,10 +33,10 @@ export function ChatWidget({ fabClassName, panelClassName }: ChatWidgetProps) {
 
   return (
     <>
-      <AnimatePresence>
+      <AnimatePresence initial={false}>
         <ChatFab key='fab' isOpen={isOpen} onClick={toggle} className={fabClassName} />
       </AnimatePresence>
-      <AnimatePresence>
+      <AnimatePresence initial={false}>
         {isOpen && <ChatPanel key='panel' variant='floating' className={panelClassName} />}
       </AnimatePresence>
     </>

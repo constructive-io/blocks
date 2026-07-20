@@ -44,9 +44,11 @@ export function DraggableFieldTypeIcon({ typeInfo, isDragging = false, className
 					style={style}
 					{...listeners}
 					{...attributes}
+					aria-label={`Drag ${typeInfo.label} field type`}
 					className={cn(
 						// Uniform square buttons - fixed aspect ratio for clean grid
-						'group bg-background hover:bg-accent relative aspect-square w-8 cursor-grab rounded-md border transition-all active:cursor-grabbing',
+						`group bg-background hover:bg-accent relative aspect-square w-10 cursor-grab rounded-lg border
+						transition-[background-color,border-color,box-shadow,opacity] duration-150 ease-out active:cursor-grabbing`,
             'flex items-center justify-center',
 						'touch-none select-none',
 						{

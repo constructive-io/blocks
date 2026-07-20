@@ -5,7 +5,7 @@ component documentation, and published React packages.
 
 ## Workspaces
 
-- `apps/blocks` — documentation, demos, flows, and canonical block source.
+- `apps/blocks` — primitive documentation and canonical block source.
 - `apps/registry` — private builder for the `@constructive` shadcn registry.
 - `packages/ui` — the `@constructive-io/ui` npm package and UI registry source.
 - `packages/schema-builder` — the shared schema-builder npm package and registry source.
@@ -13,6 +13,20 @@ component documentation, and published React packages.
 The documentation site is published at
 <https://constructive-io.github.io/blocks/>. Registry JSON is served from
 `https://constructive-io.github.io/blocks/r/{name}.json`.
+
+The npm and registry distributions are independent. After mapping the
+`@constructive` namespace in `components.json`, either surface can be used on
+its own:
+
+```bash
+pnpm add @constructive-io/ui
+pnpm dlx shadcn@4.13.1 add @constructive/button
+```
+
+The package exposes its Tailwind foundation at
+`@constructive-io/ui/globals.css`. Registry installs copy the required UI
+source and Constructive theme into the consumer and do not install the npm
+package. Registry consumers require shadcn CLI 4.13.1 or newer.
 
 ## Development
 
@@ -22,6 +36,9 @@ pnpm check
 pnpm build:pages
 pnpm pack:local
 ```
+
+Development and release verification use Node 24 LTS and pnpm 10.28.0. All
+first-party executable tooling is TypeScript and runs through `tsx`.
 
 `pnpm pack:local` builds the public packages and writes publishable tarballs to
 the ignored `.artifacts/npm` directory. Consume those tarballs from downstream

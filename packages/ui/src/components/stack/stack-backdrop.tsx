@@ -46,10 +46,7 @@ export function StackBackdrop({ className, onClick, config: backdropConfig }: St
 			animate="animate"
 			exit="exit"
 			onClick={handleClick}
-			style={{
-				zIndex: config.zIndexBase - 1,
-				willChange: 'opacity',
-			}}
+			style={{ zIndex: config.zIndexBase - 1 }}
 			className={cn(
 				'fixed inset-0',
 				'cursor-pointer',

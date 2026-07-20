@@ -302,7 +302,7 @@ export default function AccountSettingsPage({
         {merged.skipToContentLabel}
       </a>
 
-      <h1 className="mb-6 text-2xl font-semibold tracking-tight">{merged.pageTitle}</h1>
+      <h1 className="mb-6 text-balance text-2xl font-semibold tracking-tight">{merged.pageTitle}</h1>
 
       {currentUserLoading ? (
         <div

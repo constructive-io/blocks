@@ -373,9 +373,9 @@ export function InviteDialog({
               {/* Pending invites list */}
               {!pendingInvites.isLoading && (
                 <div className="space-y-3">
-                  <p className="text-sm font-medium">{merged.pendingInvitesTitle}</p>
+                  <p className="text-pretty text-sm font-medium">{merged.pendingInvitesTitle}</p>
                   {nodes.length === 0 ? (
-                    <p className="text-muted-foreground text-sm">{merged.pendingInvitesEmpty}</p>
+                    <p className="text-pretty text-muted-foreground text-sm">{merged.pendingInvitesEmpty}</p>
                   ) : (
                     <ul role="list" className="space-y-2 list-none">
                       {nodes.map((invite) => {
@@ -394,7 +394,7 @@ export function InviteDialog({
                           >
                             <div className="min-w-0 flex-1">
                               <p className="truncate font-medium">{invite.email}</p>
-                              <p className="text-muted-foreground text-xs">
+                              <p className="text-pretty text-muted-foreground text-xs">
                                 {interpolate(merged.expiresIn, { days: daysLeft })}
                               </p>
                             </div>
@@ -408,7 +408,7 @@ export function InviteDialog({
                                 onClick={() => handleResendInvite(invite)}
                                 disabled={updateInvite.isPending || createInvite.isPending}
                                 aria-label={`Resend invitation to ${invite.email}`}
-                                className="h-7 px-2 text-xs"
+                                className="min-h-11 px-2 text-xs sm:min-h-10"
                               >
                                 {merged.resendButton}
                               </Button>
@@ -418,7 +418,7 @@ export function InviteDialog({
                                 onClick={() => setConfirmCancelId(invite.id)}
                                 disabled={updateInvite.isPending}
                                 aria-label={`Cancel invitation to ${invite.email}`}
-                                className="text-destructive hover:text-destructive h-7 px-2 text-xs"
+                                className="text-destructive hover:text-destructive min-h-11 px-2 text-xs sm:min-h-10"
                               >
                                 {merged.cancelInviteButton}
                               </Button>

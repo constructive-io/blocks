@@ -5,7 +5,7 @@ import { ChevronsUpDownIcon, XIcon } from "lucide-react";
 import * as React from "react";
 
 import { cn } from "../lib/utils";
-import { useFloatingOverlayPortalProps } from "./portal";
+import { useFloatingOverlayPortalProps } from "@constructive-io/ui/portal";
 import { Input } from "./input";
 import { ScrollArea } from "./scroll-area";
 
@@ -183,7 +183,15 @@ function ComboboxItem({
       data-slot="combobox-item"
       {...props}
     >
-      <ComboboxPrimitive.ItemIndicator className="col-start-1">
+		<ComboboxPrimitive.ItemIndicator
+			keepMounted
+			className={(state) =>
+				cn(
+					'col-start-1 transition-[opacity,scale,filter] duration-300 ease-[cubic-bezier(0.2,0,0,1)] motion-reduce:transition-none',
+					state.selected ? 'scale-100 opacity-100 blur-0' : 'scale-[0.25] opacity-0 blur-[4px]',
+				)
+			}
+		>
         <svg
           fill="none"
           height="24"

@@ -49,7 +49,7 @@ function NoTableSelectedState() {
 			<div className='bg-muted/50 mb-4 flex h-16 w-16 items-center justify-center rounded-full'>
 				<Table2 className='text-muted-foreground h-8 w-8' />
 			</div>
-			<h3 className='mb-1 text-lg font-semibold'>No table selected</h3>
+			<h3 className='mb-1 text-balance text-lg font-semibold'>No table selected</h3>
 			<p className='text-muted-foreground max-w-sm text-center text-sm'>
 				Select a table from the sidebar to view and manage its indexes.
 			</p>
@@ -124,7 +124,7 @@ export function IndexesView() {
 						{/* Header */}
 						<div className='flex items-center justify-between'>
 							<div>
-								<h2 className='text-xl font-semibold tracking-tight'>Indexes</h2>
+								<h2 className='text-balance text-xl font-semibold tracking-tight'>Indexes</h2>
 								<p className='text-muted-foreground mt-1 text-sm'>
 									{indexes.length} index{indexes.length !== 1 ? 'es' : ''} on{' '}
 									<code className='bg-muted rounded px-1.5 py-0.5 font-mono text-xs'>{currentTable.name}</code>
@@ -151,7 +151,8 @@ export function IndexesView() {
 										handleActivationKeyDown(event, () => handleOpenEdit(index));
 									}}
 									className={cn(
-										'group relative cursor-pointer rounded-xl border p-4 transition-all duration-200',
+										`group relative cursor-pointer rounded-xl border p-4 transition-[background-color,border-color,box-shadow,scale]
+										duration-150 ease-out motion-safe:active:scale-[0.96]`,
 										'border-border/60 hover:border-border/80 hover:bg-muted/30',
 									)}
 								>

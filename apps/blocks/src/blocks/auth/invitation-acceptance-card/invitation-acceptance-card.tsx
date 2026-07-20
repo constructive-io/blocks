@@ -241,7 +241,7 @@ export function InvitationAcceptanceCard({
         </CardHeader>
         {kind === 'org' && (
           <CardContent>
-            <p className="text-muted-foreground text-sm">{merged.orgSuccessSwitchHint}</p>
+            <p className="text-pretty text-muted-foreground text-sm">{merged.orgSuccessSwitchHint}</p>
           </CardContent>
         )}
       </Card>
@@ -295,9 +295,9 @@ export function InvitationAcceptanceCard({
               <div className="flex items-center gap-3">
                 <UserAvatar user={org} size="lg" alt={`${org.displayName} organization`} />
                 <div>
-                  <p className="text-sm font-medium">{org.displayName}</p>
+                  <p className="text-pretty text-sm font-medium">{org.displayName}</p>
                   {org.username && (
-                    <p className="text-muted-foreground text-xs">@{org.username}</p>
+                    <p className="text-pretty text-muted-foreground text-xs">@{org.username}</p>
                   )}
                 </div>
               </div>
@@ -308,7 +308,7 @@ export function InvitationAcceptanceCard({
             {inviter && (
               <div className="flex items-center gap-2.5">
                 <UserAvatar user={inviter} size="sm" alt={`${inviter.displayName} inviter`} />
-                <p className="text-muted-foreground text-sm">
+                <p className="text-pretty text-muted-foreground text-sm">
                   <span className="font-medium">{merged.orgInviteFrom}:</span>{' '}
                   {inviter.displayName}
                 </p>
@@ -317,7 +317,7 @@ export function InvitationAcceptanceCard({
 
             {role && (
               <div className="flex items-center gap-2">
-                <p className="text-muted-foreground text-sm font-medium">{merged.orgInviteRole}:</p>
+                <p className="text-pretty text-muted-foreground text-sm font-medium">{merged.orgInviteRole}:</p>
                 <Badge variant="secondary">{role}</Badge>
               </div>
             )}

@@ -106,7 +106,8 @@ export function ChatSettings({
         <button
           type='button'
           onClick={onBack}
-          className='text-muted-foreground hover:text-foreground cursor-pointer rounded-xs p-1 transition-colors'
+          aria-label='Back to chat'
+          className='text-muted-foreground hover:text-foreground inline-flex size-11 cursor-pointer items-center justify-center rounded-md transition-[color,scale] duration-150 ease-out motion-safe:active:scale-[0.96] motion-reduce:transition-none sm:size-10'
         >
           <ArrowLeft className='h-4 w-4' />
         </button>
@@ -114,7 +115,7 @@ export function ChatSettings({
       </div>
 
       <div className='flex flex-col gap-5 p-4'>
-        <p className='text-muted-foreground text-xs font-medium uppercase tracking-wider'>Chat Model</p>
+        <p className='text-pretty text-muted-foreground text-xs font-medium uppercase tracking-wider'>Chat Model</p>
 
         <div className='flex flex-col gap-2'>
           <Label>Provider</Label>
@@ -145,13 +146,14 @@ export function ChatSettings({
               value={settings.apiKey}
               onChange={(e) => updateConfig({ apiKey: (e.target as HTMLInputElement).value })}
               placeholder={settings.provider === 'anthropic' ? 'sk-ant-...' : 'sk-... (optional)'}
-              className='pr-7 font-mono'
+              className='h-11 pr-12 font-mono sm:h-10'
               autoComplete='off'
             />
             <button
               type='button'
               onClick={() => setShowKey((v) => !v)}
-              className='text-muted-foreground hover:text-foreground absolute top-1/2 right-2.5 z-10 -translate-y-1/2 cursor-pointer p-0.5'
+              aria-label={showKey ? 'Hide chat API key' : 'Show chat API key'}
+              className='text-muted-foreground hover:text-foreground absolute top-1/2 right-0 z-10 inline-flex size-11 -translate-y-1/2 cursor-pointer items-center justify-center rounded-md transition-[color,scale] duration-150 ease-out motion-safe:active:scale-[0.96] motion-reduce:transition-none sm:size-10'
             >
               {showKey ? <EyeOff className='h-4 w-4' /> : <Eye className='h-4 w-4' />}
             </button>
@@ -168,7 +170,7 @@ export function ChatSettings({
               placeholder={PROVIDER_PRESETS['openai-compat'].baseUrl}
               className='font-mono'
             />
-            <p className='text-muted-foreground text-xs'>OpenAI, Ollama, or any compatible API</p>
+            <p className='text-muted-foreground text-pretty text-xs'>OpenAI, Ollama, or any compatible API</p>
           </div>
         )}
 
@@ -214,7 +216,7 @@ export function ChatSettings({
 
         {/* Embeddings Model */}
         <div className='border-t pt-5'>
-          <p className='text-muted-foreground text-xs font-medium uppercase tracking-wider'>Embeddings Model</p>
+          <p className='text-pretty text-muted-foreground text-xs font-medium uppercase tracking-wider'>Embeddings Model</p>
         </div>
 
         <div className='flex flex-col gap-2'>
@@ -249,13 +251,14 @@ export function ChatSettings({
               value={embeddingsSettings.apiKey}
               onChange={(e) => onEmbeddingsSettingsChange({ apiKey: (e.target as HTMLInputElement).value })}
               placeholder={embeddingsSettings.provider === 'openai' ? 'sk-...' : 'sk-... (optional)'}
-              className='pr-7 font-mono'
+              className='h-11 pr-12 font-mono sm:h-10'
               autoComplete='off'
             />
             <button
               type='button'
               onClick={() => setShowEmbeddingsKey((v) => !v)}
-              className='text-muted-foreground hover:text-foreground absolute top-1/2 right-2.5 z-10 -translate-y-1/2 cursor-pointer p-0.5'
+              aria-label={showEmbeddingsKey ? 'Hide embeddings API key' : 'Show embeddings API key'}
+              className='text-muted-foreground hover:text-foreground absolute top-1/2 right-0 z-10 inline-flex size-11 -translate-y-1/2 cursor-pointer items-center justify-center rounded-md transition-[color,scale] duration-150 ease-out motion-safe:active:scale-[0.96] motion-reduce:transition-none sm:size-10'
             >
               {showEmbeddingsKey ? <EyeOff className='h-4 w-4' /> : <Eye className='h-4 w-4' />}
             </button>
@@ -272,7 +275,7 @@ export function ChatSettings({
               placeholder={EMBEDDINGS_PROVIDER_PRESETS['openai-compat'].baseUrl}
               className='font-mono'
             />
-            <p className='text-muted-foreground text-xs'>Ollama or any OpenAI-compatible embeddings API</p>
+            <p className='text-muted-foreground text-pretty text-xs'>Ollama or any OpenAI-compatible embeddings API</p>
           </div>
         )}
 
@@ -298,7 +301,7 @@ export function ChatSettings({
             placeholder={String(EMBEDDINGS_PROVIDER_PRESETS[embeddingsSettings.provider]?.dimensions)}
             className='font-mono'
           />
-          <p className='text-muted-foreground text-xs'>
+          <p className='text-pretty text-muted-foreground text-xs'>
             Vector size for storage (e.g. 1536 for OpenAI, 768 for nomic-embed-text)
           </p>
         </div>

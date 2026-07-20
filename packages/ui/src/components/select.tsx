@@ -8,7 +8,7 @@ import {
   ChevronUpIcon,
 } from "lucide-react";
 
-import { useFloatingOverlayPortalProps } from "./portal";
+import { useFloatingOverlayPortalProps } from "@constructive-io/ui/portal";
 import { cn } from "../lib/utils";
 
 type SelectProps = Omit<SelectPrimitive.Root.Props<string>, "onValueChange"> & {
@@ -109,7 +109,7 @@ function SelectPopup({
         sideOffset={sideOffset}
       >
         <SelectPrimitive.Popup
-          className="origin-(--transform-origin) transition-[scale,opacity] has-data-[side=none]:scale-100 has-data-starting-style:scale-98 has-data-starting-style:opacity-0 has-data-[side=none]:transition-none"
+          className="origin-(--transform-origin) scale-100 opacity-100 transition-[scale,opacity] duration-150 data-[side=none]:transition-none data-starting-style:scale-98 data-ending-style:scale-98 data-starting-style:opacity-0 data-ending-style:opacity-0 motion-reduce:transition-none"
           data-slot="select-popup"
           {...props}
         >
@@ -156,7 +156,15 @@ function SelectItem({
       data-slot="select-item"
       {...props}
     >
-      <SelectPrimitive.ItemIndicator className="col-start-1">
+		<SelectPrimitive.ItemIndicator
+			keepMounted
+			className={(state) =>
+				cn(
+					'col-start-1 transition-[opacity,scale,filter] duration-300 ease-[cubic-bezier(0.2,0,0,1)] motion-reduce:transition-none',
+					state.selected ? 'scale-100 opacity-100 blur-0' : 'scale-[0.25] opacity-0 blur-[4px]',
+				)
+			}
+		>
         <svg
           fill="none"
           height="24"
@@ -231,7 +239,15 @@ function SelectRichItem({
       data-slot="select-rich-item"
       {...props}
     >
-      <SelectPrimitive.ItemIndicator className="col-start-1 self-start mt-0.5">
+		<SelectPrimitive.ItemIndicator
+			keepMounted
+			className={(state) =>
+				cn(
+					'col-start-1 mt-0.5 self-start transition-[opacity,scale,filter] duration-300 ease-[cubic-bezier(0.2,0,0,1)] motion-reduce:transition-none',
+					state.selected ? 'scale-100 opacity-100 blur-0' : 'scale-[0.25] opacity-0 blur-[4px]',
+				)
+			}
+		>
         <svg
           fill="none"
           height="24"
@@ -281,7 +297,15 @@ function SelectFieldItem({
       data-slot="select-field-item"
       {...props}
     >
-      <SelectPrimitive.ItemIndicator className="col-start-1">
+		<SelectPrimitive.ItemIndicator
+			keepMounted
+			className={(state) =>
+				cn(
+					'col-start-1 transition-[opacity,scale,filter] duration-300 ease-[cubic-bezier(0.2,0,0,1)] motion-reduce:transition-none',
+					state.selected ? 'scale-100 opacity-100 blur-0' : 'scale-[0.25] opacity-0 blur-[4px]',
+				)
+			}
+		>
         <svg
           fill="none"
           height="24"

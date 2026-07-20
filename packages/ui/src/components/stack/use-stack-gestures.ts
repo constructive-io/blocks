@@ -33,13 +33,15 @@ export type UseStackGesturesOptions = GestureConfig & {
 	onDismiss: () => void;
 };
 
+export type StackGestureBind = () => object;
+
 export type UseStackGesturesResult = {
 	/** Current drag X offset */
 	dragX: number;
 	/** Whether currently dragging */
 	isDragging: boolean;
 	/** Bind function to attach to the draggable element */
-	bind: ReturnType<typeof useDrag>;
+	bind: StackGestureBind;
 };
 
 // =============================================================================

@@ -212,7 +212,7 @@ export function FieldsSection({ onAddFieldRef }: FieldsSectionProps = {}) {
 		>
 			{/* Section Header */}
 			<div className='flex items-center justify-between'>
-				<h3 className='text-sm font-medium'>Fields</h3>
+				<h3 className='text-balance text-sm font-medium'>Fields</h3>
 				{selectedFieldIds.size > 0 && (
 					<Button
 						variant='outline'
@@ -252,7 +252,7 @@ export function FieldsSection({ onAddFieldRef }: FieldsSectionProps = {}) {
 					className={cn(
 						'flex items-center justify-center gap-3 border-t border-dashed p-4',
 						'border-border/40 bg-muted/20',
-						'transition-all duration-200',
+						'transition-[background-color,border-color] duration-150 ease-out',
 						isOverDropZone && 'border-primary/50 bg-primary/5',
 					)}
 				>
@@ -262,7 +262,7 @@ export function FieldsSection({ onAddFieldRef }: FieldsSectionProps = {}) {
 						className={cn(
 							'gap-1.5 px-3 text-xs font-medium',
 							'hover:bg-primary/10 hover:text-primary hover:border-primary/30',
-							'transition-all duration-200',
+							'transition-[background-color,border-color,color,scale] duration-150 ease-out motion-safe:active:scale-[0.96]',
 						)}
 						onClick={handleAddField}
 					>

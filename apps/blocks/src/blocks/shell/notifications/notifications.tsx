@@ -180,7 +180,7 @@ export function ShellNotifications({
           <Button
             variant="ghost"
             size="sm"
-            className="text-muted-foreground hover:text-foreground h-auto gap-1 px-1.5 py-1 text-xs"
+            className="text-muted-foreground hover:text-foreground min-h-11 gap-1 px-2 py-1 text-xs sm:min-h-10"
             onClick={() => onMarkAllRead?.()}
             data-testid="mark-all-read"
             disabled={!hasUnread}
@@ -196,7 +196,7 @@ export function ShellNotifications({
         <ScrollArea className="max-h-[22rem]">
           {visible.length === 0 ? (
             <p
-              className="text-muted-foreground px-4 py-6 text-center text-sm"
+              className="text-pretty text-muted-foreground px-4 py-6 text-center text-sm"
               data-testid="empty-state"
             >
               {merged.emptyState}
@@ -277,7 +277,7 @@ function NotificationItem({ item, messages, onMarkRead, onDismiss }: Notificatio
             <p className="text-muted-foreground mt-0.5 line-clamp-2 text-xs">{item.body}</p>
           )}
 
-          <p className="text-muted-foreground mt-1 text-xs">{timeLabel}</p>
+          <p className="text-pretty text-muted-foreground mt-1 text-xs">{timeLabel}</p>
         </div>
 
         {/* Action buttons — shown on hover / for unread items */}
@@ -286,7 +286,7 @@ function NotificationItem({ item, messages, onMarkRead, onDismiss }: Notificatio
             <Button
               variant="ghost"
               size="icon"
-              className="size-6"
+              className="size-11 sm:size-10"
               aria-label={messages.markReadButton}
               data-testid={`mark-read-${item.id}`}
               onClick={() => onMarkRead(item.id)}
@@ -298,7 +298,7 @@ function NotificationItem({ item, messages, onMarkRead, onDismiss }: Notificatio
             <Button
               variant="ghost"
               size="icon"
-              className="size-6"
+              className="size-11 sm:size-10"
               aria-label={messages.dismissButton}
               data-testid={`dismiss-${item.id}`}
               onClick={() => onDismiss(item.id)}

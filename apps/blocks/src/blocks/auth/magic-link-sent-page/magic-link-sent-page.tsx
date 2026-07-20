@@ -18,7 +18,7 @@
  *     generated binding after running `cnc codegen --api-names auth ...`.
  *   • The stub default path throws a typed PROCEDURE_NOT_FOUND error so the
  *     block behaves gracefully (shows the error message) if mounted without the override.
- *   • `requires.json` names the pending op so `check-sdk.mjs` fails clearly.
+ *   • `requires.json` names the pending op so `check-sdk-fixtures.ts` fails clearly.
  *   • `PROCEDURE_NOT_FOUND` is in `messages.errors`.
  *
  * When the backend ships and the host regenerates the SDK, replace the stub
@@ -241,7 +241,7 @@ export default function MagicLinkSentPage({
           <AuthErrorAlert error={error} />
 
           {resendSuccess && (
-            <p aria-live="polite" className="text-sm text-center text-muted-foreground">
+            <p aria-live="polite" className="text-pretty text-sm text-center text-muted-foreground">
               {merged.resendSuccess}
             </p>
           )}
@@ -263,7 +263,7 @@ export default function MagicLinkSentPage({
             <Button
               variant="link"
               asChild
-              className="text-muted-foreground hover:text-foreground h-auto p-0 text-sm"
+              className="text-muted-foreground hover:text-foreground min-h-11 px-2 py-0 text-sm sm:min-h-10"
               data-testid="different-email-link"
             >
               <a href={MAGIC_LINK_REQUEST_PATH}>{merged.differentEmailLink}</a>
@@ -275,7 +275,7 @@ export default function MagicLinkSentPage({
           <Button
             variant="link"
             asChild
-            className="text-muted-foreground hover:text-foreground h-auto p-0 text-sm"
+            className="text-muted-foreground hover:text-foreground min-h-11 px-2 py-0 text-sm sm:min-h-10"
             data-testid="sign-in-link"
           >
             <a href={SIGN_IN_PATH}>{merged.signInLink}</a>

@@ -117,7 +117,7 @@ export function MfaBackupCodesDisplay({
           <Badge variant="outline" className="shrink-0 text-amber-700 border-amber-300 bg-amber-100 text-xs">
             Warning
           </Badge>
-          <p className="text-amber-800 text-sm leading-snug">{merged.warningText}</p>
+          <p className="text-pretty text-amber-800 text-sm leading-snug">{merged.warningText}</p>
         </div>
 
         {/* Code grid — 2 columns, 1 on mobile */}

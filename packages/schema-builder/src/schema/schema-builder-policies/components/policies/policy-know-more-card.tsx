@@ -36,7 +36,7 @@ export const PolicyKnowMoreCard: CardComponent<PolicyKnowMoreCardProps> = ({ pol
 							<Icon className='text-primary h-5 w-5' />
 						</div>
 						<div className='min-w-0 flex-1'>
-							<h2 className='text-base font-semibold'>{policyType.title}</h2>
+							<h2 className='text-balance text-base font-semibold'>{policyType.title}</h2>
 							<p className='text-muted-foreground text-sm'>{policyType.description}</p>
 						</div>
 						<div className='shrink-0'>
@@ -73,7 +73,7 @@ export const PolicyKnowMoreCard: CardComponent<PolicyKnowMoreCardProps> = ({ pol
 							<div className='rounded-xl border p-4'>
 								<div className='mb-3 flex items-center gap-2'>
 									<Shield className='h-4 w-4 text-green-500' />
-									<h4 className='text-sm font-semibold'>Security Superpowers</h4>
+									<h4 className='text-balance text-sm font-semibold'>Security Superpowers</h4>
 								</div>
 								<ul className='space-y-2'>
 									{content.securityFeatures.map((feature) => (
@@ -89,7 +89,7 @@ export const PolicyKnowMoreCard: CardComponent<PolicyKnowMoreCardProps> = ({ pol
 							<div className='rounded-xl border p-4'>
 								<div className='mb-3 flex items-center gap-2'>
 									<Rocket className='h-4 w-4 text-purple-500' />
-									<h4 className='text-sm font-semibold'>Perfect For Building</h4>
+									<h4 className='text-balance text-sm font-semibold'>Perfect For Building</h4>
 								</div>
 								<ul className='space-y-2'>
 									{content.useCases.map((useCase) => (

@@ -139,15 +139,15 @@ function CredentialRow({ credential, merged, onRenameStart, onDeleteRequest }: C
         </div>
 
         {credential.transports.length > 0 && (
-          <p className="text-muted-foreground text-xs">
+          <p className="text-pretty text-muted-foreground text-xs">
             {merged.transportsLabel}: {credential.transports.map(transportLabel).join(', ')}
           </p>
         )}
 
-        <p className="text-muted-foreground text-xs">
+        <p className="text-pretty text-muted-foreground text-xs">
           {merged.createdAtLabel}: {created ?? '—'}
         </p>
-        <p className="text-muted-foreground text-xs">
+        <p className="text-pretty text-muted-foreground text-xs">
           {lastUsed ? `${merged.lastUsedLabel}: ${lastUsed}` : merged.lastUsedNever}
         </p>
       </div>
@@ -339,14 +339,14 @@ export function PasskeyManagementList({
         <AuthErrorAlert error={listError} />
 
         {isLoading && (
-          <p className="text-muted-foreground text-sm" aria-live="polite">
+          <p className="text-pretty text-muted-foreground text-sm" aria-live="polite">
             Loading…
           </p>
         )}
 
         {!isLoading && credentials.length === 0 && (
           <div className="space-y-2">
-            <p className="text-muted-foreground text-sm">{merged.emptyState}</p>
+            <p className="text-pretty text-muted-foreground text-sm">{merged.emptyState}</p>
             <Button variant="outline" size="sm" data-testid="add-passkey-btn">
               {merged.addPasskeyButton}
             </Button>

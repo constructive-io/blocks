@@ -95,8 +95,8 @@ export function OrgScimConnectionsList({
           <Badge variant="secondary" className="text-xs">
             {merged.backendPendingLabel}
           </Badge>
-          <p className="text-muted-foreground text-sm font-medium">{merged.emptyTitle}</p>
-          <p className="text-muted-foreground/80 max-w-xs text-xs">{merged.emptyDescription}</p>
+          <p className="text-pretty text-muted-foreground text-sm font-medium">{merged.emptyTitle}</p>
+          <p className="text-pretty text-muted-foreground/80 max-w-xs text-xs">{merged.emptyDescription}</p>
         </div>
       </CardContent>
     </Card>

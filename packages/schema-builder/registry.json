@@ -14,7 +14,6 @@
       ],
       "docs": "## Setup\n\n1. Mount `blocks-runtime` once at your app root (installed automatically) with the namespaces this block uses, and set their endpoints:\n\n```tsx\n<BlocksRuntime\n  namespaces={['schema-builder', 'auth']}\n  getToken={() => tokenManager.getAccessToken()}\n>\n  {children}\n</BlocksRuntime>\n```\n\n- `NEXT_PUBLIC_SCHEMA_BUILDER_GRAPHQL_ENDPOINT`\n- `NEXT_PUBLIC_AUTH_GRAPHQL_ENDPOINT` (owner lookups)\n\n2. This block imports its hooks from your generated SDKs (`@/generated/schema-builder`, `@/generated/auth`). Ensure they are generated. The declared operations ship to `~/.constructive/blocks/schema-builder-core.requires.json` for the SDK-check tool.",
       "dependencies": [
-        "@constructive-io/ui",
         "@fluentui/react-context-selector",
         "@pgsql/types",
         "@remixicon/react",
@@ -323,7 +322,6 @@
       ],
       "docs": "## Setup\n\n1. Mount `blocks-runtime` once at your app root (installed automatically) with the namespaces this block uses, and set their endpoints:\n\n```tsx\n<BlocksRuntime\n  namespaces={['schema-builder']}\n  getToken={() => tokenManager.getAccessToken()}\n>\n  {children}\n</BlocksRuntime>\n```\n\n- `NEXT_PUBLIC_SCHEMA_BUILDER_GRAPHQL_ENDPOINT`\n\n2. This block imports its hooks from your generated SDKs (`@/generated/schema-builder`). Ensure they are generated. The declared operations ship to `~/.constructive/blocks/schema-builder-fields.requires.json` for the SDK-check tool.",
       "dependencies": [
-        "@constructive-io/ui",
         "@dnd-kit/core",
         "@dnd-kit/utilities",
         "@remixicon/react",
@@ -421,10 +419,8 @@
       ],
       "docs": "## Setup\n\n1. Mount `blocks-runtime` once at your app root (installed automatically) with the namespaces this block uses, and set their endpoints:\n\n```tsx\n<BlocksRuntime\n  namespaces={['schema-builder', 'modules']}\n  getToken={() => tokenManager.getAccessToken()}\n>\n  {children}\n</BlocksRuntime>\n```\n\n- `NEXT_PUBLIC_SCHEMA_BUILDER_GRAPHQL_ENDPOINT`\n- `NEXT_PUBLIC_MODULES_GRAPHQL_ENDPOINT`\n\n2. This block imports its hooks from your generated SDKs (`@/generated/schema-builder`, `@/generated/modules`). Ensure they are generated. The declared operations ship to `~/.constructive/blocks/schema-builder-relationships.requires.json` for the SDK-check tool.",
       "dependencies": [
-        "@constructive-io/ui",
         "@tanstack/react-query",
         "lucide-react",
-        "next-themes",
         "node-type-registry"
       ],
       "registryDependencies": [
@@ -507,7 +503,6 @@
       ],
       "docs": "## Setup\n\n1. Mount `blocks-runtime` once at your app root (installed automatically) with the namespaces this block uses, and set their endpoints:\n\n```tsx\n<BlocksRuntime\n  namespaces={['schema-builder']}\n  getToken={() => tokenManager.getAccessToken()}\n>\n  {children}\n</BlocksRuntime>\n```\n\n- `NEXT_PUBLIC_SCHEMA_BUILDER_GRAPHQL_ENDPOINT`\n\n2. This block imports its hooks from your generated SDKs (`@/generated/schema-builder`). Ensure they are generated. The declared operations ship to `~/.constructive/blocks/schema-builder-indexes.requires.json` for the SDK-check tool.",
       "dependencies": [
-        "@constructive-io/ui",
         "@tanstack/react-query",
         "lucide-react"
       ],
@@ -565,11 +560,9 @@
       ],
       "docs": "## Setup\n\n1. Mount `blocks-runtime` once at your app root (installed automatically) with the namespaces this block uses, and set their endpoints:\n\n```tsx\n<BlocksRuntime\n  namespaces={['schema-builder', 'modules', 'admin']}\n  getToken={() => tokenManager.getAccessToken()}\n>\n  {children}\n</BlocksRuntime>\n```\n\n- `NEXT_PUBLIC_SCHEMA_BUILDER_GRAPHQL_ENDPOINT`\n- `NEXT_PUBLIC_MODULES_GRAPHQL_ENDPOINT`\n- `NEXT_PUBLIC_ADMIN_GRAPHQL_ENDPOINT` (permission catalog for the Policies tab)\n\n2. This block imports its hooks from your generated SDKs (`@/generated/schema-builder`, `@/generated/modules`, `@/generated/admin`). Ensure they are generated. The declared operations ship to `~/.constructive/blocks/schema-builder-policies.requires.json` for the SDK-check tool.",
       "dependencies": [
-        "@constructive-io/ui",
         "@remixicon/react",
         "@tanstack/react-query",
-        "lucide-react",
-        "next-themes"
+        "lucide-react"
       ],
       "registryDependencies": [
         "blocks-runtime",
@@ -895,7 +888,6 @@
       ],
       "docs": "## Setup\n\n1. Mount `blocks-runtime` once at your app root (installed automatically) with the namespaces this block uses, and set their endpoints:\n\n```tsx\n<BlocksRuntime\n  namespaces={['schema-builder']}\n  getToken={() => tokenManager.getAccessToken()}\n>\n  {children}\n</BlocksRuntime>\n```\n\n- `NEXT_PUBLIC_SCHEMA_BUILDER_GRAPHQL_ENDPOINT`\n\n2. This block imports its hooks from your generated SDKs (`@/generated/schema-builder`). Ensure they are generated. The declared operations ship to `~/.constructive/blocks/schema-builder-tables.requires.json` for the SDK-check tool.",
       "dependencies": [
-        "@constructive-io/ui",
         "@remixicon/react",
         "@tanstack/react-query",
         "lucide-react",
@@ -966,12 +958,10 @@
       ],
       "docs": "## Setup\n\n1. Mount `blocks-runtime` once at your app root (installed automatically) with the namespaces this block uses, and set their endpoints:\n\n```tsx\n<BlocksRuntime\n  namespaces={['schema-builder', 'modules', 'auth', 'admin']}\n  getToken={() => tokenManager.getAccessToken()}\n>\n  {children}\n</BlocksRuntime>\n```\n\n- `NEXT_PUBLIC_SCHEMA_BUILDER_GRAPHQL_ENDPOINT`\n- `NEXT_PUBLIC_MODULES_GRAPHQL_ENDPOINT`\n- `NEXT_PUBLIC_AUTH_GRAPHQL_ENDPOINT` (owner lookups)\n- `NEXT_PUBLIC_ADMIN_GRAPHQL_ENDPOINT` (permission catalog for the Policies tab)\n\n2. This block imports its hooks from your generated SDKs (`@/generated/schema-builder`, `@/generated/modules`, `@/generated/auth`, `@/generated/admin`). Ensure they are generated. The declared operations ship to `~/.constructive/blocks/schema-builder.requires.json` for the SDK-check tool.",
       "dependencies": [
-        "@constructive-io/ui",
         "lucide-react"
       ],
       "registryDependencies": [
         "blocks-runtime",
-        "cn",
         "schema-builder-core",
         "schema-builder-fields",
         "schema-builder-indexes",

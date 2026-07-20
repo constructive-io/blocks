@@ -135,7 +135,11 @@ export default function InvitationAcceptancePage({ messages: messageOverrides, c
       {BRAND_LOGO_SRC && (
         <div className="mb-8 flex justify-center">
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={BRAND_LOGO_SRC} alt="Brand logo" className="h-8 w-auto" />
+          <img
+            src={BRAND_LOGO_SRC}
+            alt="Brand logo"
+            className="h-8 w-auto outline outline-1 -outline-offset-1 outline-black/10 dark:outline-white/10"
+          />
         </div>
       )}
 
@@ -158,8 +162,8 @@ export default function InvitationAcceptancePage({ messages: messageOverrides, c
         <>
           {!token ? (
             <div className="w-full max-w-sm mx-auto text-center space-y-2">
-              <h1 className="text-lg font-semibold">{merged.missingTokenTitle}</h1>
-              <p className="text-muted-foreground text-sm">{merged.missingTokenDescription}</p>
+              <h1 className="text-balance text-lg font-semibold">{merged.missingTokenTitle}</h1>
+              <p className="text-muted-foreground text-pretty text-sm">{merged.missingTokenDescription}</p>
               <a href={SIGN_IN_PATH} className="text-sm font-medium text-primary hover:text-primary/80 transition-colors">
                 Go to sign in
               </a>

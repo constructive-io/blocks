@@ -151,7 +151,7 @@ function CopyableCode({
         type="button"
         variant="outline"
         size="sm"
-        className="h-7 shrink-0 text-xs"
+        className="min-h-11 shrink-0 text-xs sm:min-h-10"
         onClick={handleCopy}
         data-testid="copy-button"
       >
@@ -207,7 +207,7 @@ export function OrgScimSetupGuide({
 
         {/* Provider selector */}
         <div className="space-y-2">
-          <p className="text-muted-foreground text-xs font-medium uppercase tracking-wide">
+          <p className="text-pretty text-muted-foreground text-xs font-medium uppercase tracking-wide">
             {merged.providerLabel}
           </p>
           <div className="flex flex-wrap gap-2" role="group" aria-label={merged.providerLabel}>
@@ -217,7 +217,7 @@ export function OrgScimSetupGuide({
                 type="button"
                 variant={activeProvider === p.value ? 'default' : 'outline'}
                 size="sm"
-                className="h-7 text-xs"
+                className="min-h-11 text-xs sm:min-h-10"
                 onClick={() => setActiveProvider(p.value)}
                 data-testid={`provider-${p.value}`}
               >
@@ -229,8 +229,8 @@ export function OrgScimSetupGuide({
 
         {/* SCIM Endpoint */}
         <div className="space-y-2">
-          <h3 className="text-sm font-semibold">{merged.sectionEndpointTitle}</h3>
-          <p className="text-muted-foreground text-sm">{merged.sectionEndpointDescription}</p>
+          <h3 className="text-balance text-sm font-semibold">{merged.sectionEndpointTitle}</h3>
+          <p className="text-pretty text-muted-foreground text-sm">{merged.sectionEndpointDescription}</p>
           <CopyableCode
             value={scimEndpoint}
             copyLabel={merged.copyButtonLabel}
@@ -241,14 +241,14 @@ export function OrgScimSetupGuide({
 
         {/* Bearer Token */}
         <div className="space-y-2">
-          <h3 className="text-sm font-semibold">{merged.sectionTokenTitle}</h3>
-          <p className="text-muted-foreground text-sm">{merged.sectionTokenDescription}</p>
+          <h3 className="text-balance text-sm font-semibold">{merged.sectionTokenTitle}</h3>
+          <p className="text-pretty text-muted-foreground text-sm">{merged.sectionTokenDescription}</p>
         </div>
 
         {/* Attribute mappings */}
         <div className="space-y-2">
-          <h3 className="text-sm font-semibold">{merged.sectionAttributesTitle}</h3>
-          <p className="text-muted-foreground text-sm">{merged.sectionAttributesDescription}</p>
+          <h3 className="text-balance text-sm font-semibold">{merged.sectionAttributesTitle}</h3>
+          <p className="text-pretty text-muted-foreground text-sm">{merged.sectionAttributesDescription}</p>
           <div className="overflow-x-auto rounded-md border text-sm">
             <table className="w-full text-left" data-testid="attribute-mappings-table">
               <thead className="bg-muted/60">
@@ -270,7 +270,7 @@ export function OrgScimSetupGuide({
         </div>
 
         {/* External docs link */}
-        <p className="text-muted-foreground text-sm">
+        <p className="text-pretty text-muted-foreground text-sm">
           For step-by-step instructions, see the{' '}
           <a
             href={providerDoc.href}

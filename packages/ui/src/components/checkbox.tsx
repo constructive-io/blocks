@@ -12,18 +12,31 @@ const Checkbox = React.forwardRef<HTMLButtonElement, CheckboxProps>(({ className
 		<CheckboxPrimitive.Root
 			ref={ref}
 			className={cn(
-				'relative inline-flex size-4.5 shrink-0 items-center justify-center rounded-[4px] border border-input bg-background bg-clip-padding outline-none ring-ring transition-shadow before:pointer-events-none before:absolute before:inset-0 before:rounded-[3px] not-data-disabled:not-data-checked:not-aria-invalid:before:shadow-[0_1px_--theme(--color-black/4%)] focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:ring-offset-background aria-invalid:border-destructive/36 focus-visible:aria-invalid:border-destructive/64 focus-visible:aria-invalid:ring-destructive/48 data-disabled:opacity-64 sm:size-4 dark:not-data-checked:bg-input/32 dark:bg-clip-border dark:aria-invalid:ring-destructive/24 dark:not-data-disabled:not-data-checked:not-aria-invalid:before:shadow-[0_-1px_--theme(--color-white/8%)] [[data-disabled],[data-checked],[aria-invalid]]:shadow-none',
+				'relative inline-flex size-10 shrink-0 items-center justify-center outline-none transition-transform duration-150 ease-out motion-safe:active:not-data-disabled:scale-[0.96] motion-reduce:transition-none pointer-coarse:size-11 data-disabled:cursor-not-allowed data-disabled:opacity-64 aria-invalid:[&_[data-slot=checkbox-control]]:border-destructive/36 focus-visible:[&_[data-slot=checkbox-control]]:ring-2 focus-visible:[&_[data-slot=checkbox-control]]:ring-ring focus-visible:[&_[data-slot=checkbox-control]]:ring-offset-1 focus-visible:[&_[data-slot=checkbox-control]]:ring-offset-background focus-visible:aria-invalid:[&_[data-slot=checkbox-control]]:border-destructive/64 focus-visible:aria-invalid:[&_[data-slot=checkbox-control]]:ring-destructive/48 dark:aria-invalid:[&_[data-slot=checkbox-control]]:ring-destructive/24',
 				className,
 			)}
 			data-slot="checkbox"
 			{...props}
 		>
+			<span
+				aria-hidden="true"
+				className="pointer-events-none absolute size-4.5 rounded-[4px] border border-input bg-background bg-clip-padding shadow-[0_1px_--theme(--color-black/4%)] sm:size-4 dark:bg-input/32 dark:bg-clip-border dark:shadow-[0_-1px_--theme(--color-white/8%)]"
+				data-slot="checkbox-control"
+			/>
 			<CheckboxPrimitive.Indicator
-				className="-inset-px absolute flex items-center justify-center rounded-[4px] text-primary-foreground data-unchecked:hidden data-checked:bg-primary data-indeterminate:text-foreground"
+				keepMounted
+				className="absolute flex size-4.5 items-center justify-center rounded-[4px] text-primary-foreground transition-[opacity,scale,filter] duration-300 ease-[cubic-bezier(0.2,0,0,1)] data-unchecked:scale-[0.25] data-unchecked:opacity-0 data-unchecked:blur-[4px] data-checked:bg-primary data-indeterminate:text-foreground motion-reduce:transition-none sm:size-4"
 				data-slot="checkbox-indicator"
 				render={(props, state) => (
 					<span {...props}>
-						{state.indeterminate ? (
+						<span
+							className={cn(
+								'absolute inset-0 flex items-center justify-center transition-[opacity,scale,filter] duration-300 ease-[cubic-bezier(0.2,0,0,1)] motion-reduce:transition-none',
+								state.indeterminate
+									? 'scale-100 opacity-100 blur-0'
+									: 'scale-[0.25] opacity-0 blur-[4px]',
+							)}
+						>
 							<svg
 								className="size-3.5 sm:size-3"
 								fill="none"
@@ -38,7 +51,15 @@ const Checkbox = React.forwardRef<HTMLButtonElement, CheckboxProps>(({ className
 							>
 								<path d="M5.252 12h13.496" />
 							</svg>
-						) : (
+						</span>
+						<span
+							className={cn(
+								'absolute inset-0 flex items-center justify-center transition-[opacity,scale,filter] duration-300 ease-[cubic-bezier(0.2,0,0,1)] motion-reduce:transition-none',
+								state.indeterminate
+									? 'scale-[0.25] opacity-0 blur-[4px]'
+									: 'scale-100 opacity-100 blur-0',
+							)}
+						>
 							<svg
 								className="size-3.5 sm:size-3"
 								fill="none"
@@ -53,7 +74,7 @@ const Checkbox = React.forwardRef<HTMLButtonElement, CheckboxProps>(({ className
 							>
 								<path d="M5.252 12.7 10.2 18.63 18.748 5.37" />
 							</svg>
-						)}
+						</span>
 					</span>
 				)}
 			/>

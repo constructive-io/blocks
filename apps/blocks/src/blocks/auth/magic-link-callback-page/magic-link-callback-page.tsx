@@ -14,7 +14,7 @@
  *   time this block was authored. The import is therefore OMITTED so that
  *   `tsc --noEmit` passes. The `onSubmit` override is the primary/required path;
  *   the host wires the generated binding after regenerating the SDK once the proc
- *   ships. `requires.json` names `signInMagicLink` so `check-sdk.mjs` will fail
+ *   ships. `requires.json` names `signInMagicLink` so `check-sdk-fixtures.ts` will fail
  *   with a precise message until the host SDK exports it.
  *
  * DATA PATH (after proc ships):
@@ -249,7 +249,7 @@ function MagicLinkCallbackInner({
   return (
     <div
       data-slot="magic-link-callback-page"
-      className={cn('flex min-h-screen items-center justify-center px-4 py-12', className)}
+      className={cn('flex min-h-dvh items-center justify-center px-4 py-12', className)}
     >
       <div className="w-full max-w-sm">
       {pageState === 'loading' && (
@@ -376,7 +376,7 @@ export default function MagicLinkCallbackPage({
       fallback={
         <div
           data-slot="magic-link-callback-page"
-          className={cn('flex min-h-screen items-center justify-center px-4 py-12', className)}
+          className={cn('flex min-h-dvh items-center justify-center px-4 py-12', className)}
         >
           <div className="w-full max-w-sm">
             <Card aria-busy>

@@ -88,7 +88,7 @@ export const Animated: Story = {
 					<span>Loading...</span>
 					<span>{progress}%</span>
 				</div>
-				<Progress value={progress} className='transition-all duration-500' />
+				<Progress value={progress} />
 			</div>
 		);
 	},

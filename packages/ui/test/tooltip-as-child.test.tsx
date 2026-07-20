@@ -31,6 +31,47 @@ afterEach(async () => {
 });
 
 describe('TooltipTrigger asChild', () => {
+	it('supports the preferred Base UI render prop', async () => {
+		const parentClick = vi.fn();
+		const childClick = vi.fn((event: React.MouseEvent<HTMLAnchorElement>) => event.preventDefault());
+		const triggerRef = React.createRef<HTMLElement>();
+		const childRef = React.createRef<HTMLAnchorElement>();
+		const view = createTestRoot();
+
+		await view.render(
+			<TooltipProvider>
+				<Tooltip>
+					<TooltipTrigger
+						ref={triggerRef}
+						className="trigger-class"
+						onClick={parentClick}
+						render={
+							<a
+								ref={childRef}
+								href="/blocks/getting-started"
+								className="child-class"
+								onClick={childClick}
+							/>
+						}
+					>
+						Getting started
+					</TooltipTrigger>
+				</Tooltip>
+			</TooltipProvider>,
+		);
+
+		const link = view.container.querySelector<HTMLAnchorElement>('a');
+		expect(link?.textContent).toBe('Getting started');
+		expect(link?.classList.contains('trigger-class')).toBe(true);
+		expect(link?.classList.contains('child-class')).toBe(true);
+		expect(triggerRef.current).toBe(link);
+		expect(childRef.current).toBe(link);
+
+		await act(async () => link?.click());
+		expect(childClick).toHaveBeenCalledOnce();
+		expect(parentClick).toHaveBeenCalledOnce();
+	});
+
 	it('composes trigger and child props, handlers, classes, and refs onto the child element', async () => {
 		const parentClick = vi.fn();
 		const childClick = vi.fn((event: React.MouseEvent<HTMLAnchorElement>) => event.preventDefault());

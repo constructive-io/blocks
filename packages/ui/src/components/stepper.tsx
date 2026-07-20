@@ -27,6 +27,11 @@ type StepState = 'active' | 'completed' | 'inactive' | 'loading';
 const StepperContext = createContext<StepperContextValue | undefined>(undefined);
 const StepItemContext = createContext<StepItemContextValue | undefined>(undefined);
 
+const iconSwapClass =
+	'transition-[opacity,scale,filter] duration-300 ease-[cubic-bezier(0.2,0,0,1)] motion-reduce:transition-none';
+const iconSwapVisible = 'scale-100 opacity-100 blur-0';
+const iconSwapHidden = 'scale-[0.25] opacity-0 blur-[4px]';
+
 const useStepper = () => {
 	const context = useContext(StepperContext);
 	if (!context) {
@@ -140,16 +145,19 @@ function StepperItem({
 // StepperTrigger
 interface StepperTriggerProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
 	asChild?: boolean;
+	/** Disables hover and press scaling when motion would distract. */
+	static?: boolean;
 }
 
-function StepperTrigger({ asChild = false, className, children, ...props }: StepperTriggerProps) {
+function StepperTrigger({ asChild = false, static: isStatic, className, children, ...props }: StepperTriggerProps) {
 	const { setActiveStep } = useStepper();
 	const { step, isDisabled } = useStepItem();
 
 	const triggerClassName = cn(
-		`focus-visible:border-ring focus-visible:ring-ring/50 inline-flex items-center gap-3 rounded-full transition-all
-		duration-200 ease-out outline-none hover:scale-105 focus-visible:z-10 focus-visible:ring-[3px] active:scale-95
+		`focus-visible:border-ring focus-visible:ring-ring/50 inline-flex items-center gap-3 rounded-full transition-transform
+		duration-150 ease-out outline-none focus-visible:z-10 focus-visible:ring-[3px]
 		disabled:pointer-events-none disabled:opacity-50`,
+		!isStatic && 'motion-safe:hover:scale-105 motion-safe:active:not-disabled:scale-[0.96]',
 		className,
 	);
 
@@ -187,14 +195,16 @@ interface StepperIndicatorProps extends React.HTMLAttributes<HTMLDivElement> {
 
 function StepperIndicator({ asChild = false, className, children, ...props }: StepperIndicatorProps) {
 	const { state, step, isLoading } = useStepItem();
+	const showNumber = !isLoading && state !== 'completed';
+	const showCheck = !isLoading && state === 'completed';
 
 	return (
 		<span
 			data-slot="stepper-indicator"
 			className={cn(
 				`bg-muted text-muted-foreground data-[state=active]:bg-primary data-[state=completed]:bg-primary
-				data-[state=active]:text-primary-foreground data-[state=completed]:text-primary-foreground relative flex size-6
-				shrink-0 items-center justify-center rounded-full text-xs font-medium transition-all duration-300 ease-out`,
+					data-[state=active]:text-primary-foreground data-[state=completed]:text-primary-foreground relative flex size-6
+					shrink-0 items-center justify-center rounded-full text-xs font-medium transition-[color,background-color] duration-200 ease-out`,
 				className,
 			)}
 			data-state={state}
@@ -204,24 +214,21 @@ function StepperIndicator({ asChild = false, className, children, ...props }: St
 				children
 			) : (
 				<>
-					<span
-						className='transition-all duration-200 ease-out group-data-loading/step:scale-75
-							group-data-loading/step:opacity-0 group-data-loading/step:transition-none
-							group-data-[state=completed]/step:scale-75 group-data-[state=completed]/step:opacity-0'
-					>
+					<span className={cn('absolute', iconSwapClass, showNumber ? iconSwapVisible : iconSwapHidden)}>
 						{step}
 					</span>
 					<CheckIcon
-						className='absolute scale-75 opacity-0 transition-all duration-200 ease-out
-							group-data-[state=completed]/step:scale-100 group-data-[state=completed]/step:opacity-100'
+						className={cn('absolute', iconSwapClass, showCheck ? iconSwapVisible : iconSwapHidden)}
 						size={16}
 						aria-hidden='true'
 					/>
-					{isLoading && (
-						<span className='absolute transition-all duration-200 ease-out'>
-							<LoaderCircleIcon className='animate-spin' size={14} aria-hidden='true' />
-						</span>
-					)}
+					<span className={cn('absolute', iconSwapClass, isLoading ? iconSwapVisible : iconSwapHidden)}>
+						<LoaderCircleIcon
+							className={cn(isLoading && 'motion-safe:animate-spin')}
+							size={14}
+							aria-hidden='true'
+						/>
+					</span>
 				</>
 			)}
 		</span>
@@ -256,7 +263,7 @@ function StepperSeparator({ className, ...props }: React.HTMLAttributes<HTMLDivE
 		<div
 			data-slot="stepper-separator"
 			className={cn(
-				`bg-muted group-data-[state=completed]/step:bg-primary m-0.5 transition-all duration-500 ease-out
+				`bg-muted group-data-[state=completed]/step:bg-primary m-0.5 transition-colors duration-200 ease-out
 				group-data-[orientation=horizontal]/stepper:h-0.5 group-data-[orientation=horizontal]/stepper:w-full
 				group-data-[orientation=horizontal]/stepper:flex-1 group-data-[orientation=vertical]/stepper:h-12
 				group-data-[orientation=vertical]/stepper:w-0.5`,

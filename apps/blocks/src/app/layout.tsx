@@ -1,36 +1,28 @@
 import type { Metadata } from 'next';
-import { Geist, Geist_Mono } from 'next/font/google';
+import { Open_Sans } from 'next/font/google';
+import type { ReactNode } from 'react';
 
-import { Providers } from './providers';
-import { Shell } from '@/components/docs/shell';
+import { PortalRoot } from '@constructive-io/ui/portal';
+
+import { RegistryShell } from '@/components/site/registry-shell';
+import { ThemeProvider } from '@/components/site/theme-provider';
 import { OG_IMAGE, SITE_NAME, SITE_ORIGIN, withBase } from '@/lib/site';
+
 import './globals.css';
 
-// The UI theme maps Tailwind's font utilities onto `--font-geist-sans` /
-// `--font-geist-mono`. We feed Geist (UI + display) and Geist Mono (figures /
-// code, tabular-nums) into those variables here — both are applied on <html>.
-const geistSans = Geist({
+const openSans = Open_Sans({
   subsets: ['latin'],
-  variable: '--font-geist-sans',
+  variable: '--font-sans-loaded',
   display: 'swap',
 });
 
-const geistMono = Geist_Mono({
-  subsets: ['latin'],
-  variable: '--font-geist-mono',
-  display: 'swap',
-});
-
-const SITE_TITLE = 'Constructive Blocks — full-stack auth, org, and app-shell React blocks';
+const SITE_TITLE = 'Constructive Blocks';
 const SITE_DESCRIPTION =
-  'A shadcn registry of auth, organization, user, and app-shell blocks for the Constructive platform. Each block binds to your application’s generated SDK.';
+  'A shadcn-compatible registry of Constructive UI primitives — npm or source install.';
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_ORIGIN),
-  title: {
-    default: SITE_TITLE,
-    template: '%s — Constructive Blocks',
-  },
+  title: { default: SITE_TITLE, template: `%s — ${SITE_NAME}` },
   description: SITE_DESCRIPTION,
   alternates: { canonical: withBase('/') },
   openGraph: {
@@ -42,26 +34,27 @@ export const metadata: Metadata = {
     description: SITE_DESCRIPTION,
     images: [OG_IMAGE],
   },
-  // The card image is declared explicitly (site.ts OG_IMAGE → the
-  // /opengraph-image.png route), NOT via the opengraph-image file convention:
-  // the convention's auto-injected URL omits the deploy basePath and 404s on
-  // GitHub Pages.
   twitter: { card: 'summary_large_image', images: [OG_IMAGE] },
 };
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default function RootLayout({ children }: Readonly<{ children: ReactNode }>) {
   return (
-    <html
-      lang="en"
-      className={`${geistSans.variable} ${geistMono.variable}`}
-      suppressHydrationWarning
-    >
-      <body className="min-h-screen bg-background font-sans text-foreground antialiased">
-        {/* Theme + package-manager context, then the global 3-column shell that
-            every route (including the landing) renders inside. */}
-        <Providers>
-          <Shell>{children}</Shell>
-        </Providers>
+    <html lang="en" suppressHydrationWarning className={openSans.variable}>
+      <body className="min-h-dvh bg-background font-sans text-foreground antialiased">
+        <ThemeProvider>
+          <a
+            href="#main-content"
+            className="sr-only fixed left-4 top-4 z-[var(--z-layer-toast)] rounded-md bg-background px-3 py-2 text-sm focus:fixed focus:not-sr-only focus-visible:ring-2 focus-visible:ring-ring"
+          >
+            Skip to content
+          </a>
+          <RegistryShell>
+            <main id="main-content">{children}</main>
+          </RegistryShell>
+          {/* Optional shared host keeps docs overlays within one predictable layer.
+              Package and registry consumers fall back to the nearest portal or body. */}
+          <PortalRoot />
+        </ThemeProvider>
       </body>
     </html>
   );

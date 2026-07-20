@@ -6,7 +6,18 @@ import { Badge } from '@constructive-io/ui/badge';
 
 import { Demo } from '@/components/docs/showcase-kit';
 
-export function BlockDemo() {
+export function BasicBadgeDemo() {
+  return (
+    <Demo>
+      <Badge variant="success">
+        <Check aria-hidden="true" />
+        Active
+      </Badge>
+    </Demo>
+  );
+}
+
+export function BadgeVariantsDemo() {
   return (
     <Demo>
       <div className="flex w-full max-w-md flex-col gap-5">
@@ -26,7 +37,7 @@ export function BlockDemo() {
 
         <div className="flex flex-wrap items-center gap-2">
           <Badge variant="success">
-            <Check />
+            <Check aria-hidden="true" />
             Verified
           </Badge>
           <Badge variant="secondary">12 members</Badge>
@@ -35,4 +46,26 @@ export function BlockDemo() {
       </div>
     </Demo>
   );
+}
+
+export function BadgeSizesDemo() {
+  return (
+    <Demo>
+      <div className="flex flex-wrap items-center gap-2">
+        <Badge size="sm" variant="secondary">
+          Small
+        </Badge>
+        <Badge size="default" variant="secondary">
+          Default
+        </Badge>
+        <Badge size="lg" variant="secondary">
+          Large
+        </Badge>
+      </div>
+    </Demo>
+  );
+}
+
+export function BlockDemo() {
+  return <BadgeVariantsDemo />;
 }

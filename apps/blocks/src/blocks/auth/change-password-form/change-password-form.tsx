@@ -216,7 +216,7 @@ export function ChangePasswordForm({
       data-slot="change-password-form"
       className={cn('w-full max-w-sm mx-auto', className)}
     >
-      <h2 className="text-lg font-semibold mb-4">{merged.title}</h2>
+      <h2 className="mb-4 text-balance text-lg font-semibold">{merged.title}</h2>
 
       <AuthErrorAlert error={error} />
 
@@ -279,7 +279,7 @@ export function ChangePasswordForm({
                     value={strengthPct}
                     className={cn('h-1.5', strengthColorClass(strength.label))}
                   />
-                  <p className="text-xs text-muted-foreground">{strengthLabel(merged, strength.label)}</p>
+                  <p className="text-pretty text-xs text-muted-foreground">{strengthLabel(merged, strength.label)}</p>
                 </div>
               )}
             </div>

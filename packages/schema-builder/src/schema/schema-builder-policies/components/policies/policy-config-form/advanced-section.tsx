@@ -20,7 +20,9 @@ export function AdvancedSection({ children, defaultOpen = false }: AdvancedSecti
 		<div className='mt-6 border-t pt-4'>
 			<button
 				type='button'
-				className='text-muted-foreground hover:text-foreground flex items-center gap-2 text-sm font-medium'
+				className='text-muted-foreground hover:text-foreground flex min-h-10 items-center gap-2 rounded-lg px-2 text-sm font-medium
+					transition-[color,scale] duration-150 ease-out motion-safe:active:scale-[0.96]'
+				aria-expanded={isOpen}
 				onClick={() => setIsOpen(!isOpen)}
 			>
 				<ChevronRight className={cn('h-4 w-4 transition-transform', isOpen && 'rotate-90')} />
