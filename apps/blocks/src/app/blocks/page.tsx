@@ -1,10 +1,9 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 
-import { CodeBlock } from '@/components/docs/code-block';
-import { PageHeader } from '@/components/docs/page-header';
-import { Button } from '@constructive-io/ui/button';
+import { InstallToggle } from '@/components/docs/install-toggle';
 import { BASE_PRIMITIVES } from '@/lib/base-primitives';
+import { packageCommands, registryCommands } from '@/lib/install-mode';
 import { OG_IMAGE, withBase } from '@/lib/site';
 
 const TITLE = 'Setup';
@@ -12,66 +11,65 @@ const DESCRIPTION = 'Choose npm package distribution or source installation thro
 
 export default function SetupPage() {
   return (
-    <div className="site-container pb-16 sm:pb-24">
-      <PageHeader title="Install the foundation your way" description={DESCRIPTION}>
-        <Button asChild size="sm" variant="outline">
-          <Link href="/">Browse components</Link>
-        </Button>
-      </PageHeader>
+    <div className="registry-page">
+      <header className="mb-8 max-w-2xl">
+        <p className="registry-eyebrow">Foundations</p>
+        <h1 className="mt-2 text-[22px] font-semibold tracking-tight sm:text-[1.75rem]">
+          Install the foundation your way
+        </h1>
+        <p className="mt-2 text-pretty text-sm leading-7 text-muted-foreground sm:text-[15px]">
+          {DESCRIPTION}
+        </p>
+      </header>
 
-      <div className="grid gap-4 lg:grid-cols-2 lg:gap-5">
-        <section className="flex flex-col gap-4 rounded-xl border border-border/50 bg-card p-5 shadow-card sm:p-6">
-          <div>
-            <h2 className="text-base font-semibold">npm package</h2>
-            <p className="mt-1.5 text-pretty text-sm leading-6 text-muted-foreground">
-              Use stable package exports when updates should follow your package manager.
-            </p>
+      <InstallToggle
+        npm={packageCommands({
+          globals: true,
+          importLine: `import { Button } from '@constructive-io/ui/button';`,
+        })}
+        registry={registryCommands({ item: 'button', includeConfig: true })}
+        descriptions={{
+          npm: 'Stable package exports — updates follow your package manager.',
+          registry:
+            'Copy source into your project. Theme and dependencies install with the component. Requires shadcn CLI 4.13.1 or newer.',
+        }}
+      />
+
+      <section className="mt-12" aria-labelledby="primitive-catalog">
+        <div className="mb-4">
+          <h2 id="primitive-catalog" className="text-lg font-semibold tracking-tight">
+            Base primitives
+          </h2>
+          <p className="mt-1 text-sm text-muted-foreground">
+            {BASE_PRIMITIVES.length} components · each page shows npm and registry install paths.
+          </p>
+        </div>
+        <div className="registry-block min-w-0">
+          <div className="registry-block-bar">
+            <span>Index</span>
+            <span className="min-w-0 flex-1" />
+            <span className="shrink-0 font-mono text-xs font-normal text-muted-foreground">
+              {BASE_PRIMITIVES.length}
+            </span>
           </div>
-          <CodeBlock label="Install">pnpm add @constructive-io/ui</CodeBlock>
-          <CodeBlock label="globals.css">{`/* app/globals.css */\n@import '@constructive-io/ui/globals.css';`}</CodeBlock>
-          <CodeBlock label="Import">{`import { Button } from '@constructive-io/ui/button';`}</CodeBlock>
-        </section>
-
-        <section className="flex flex-col gap-4 rounded-xl border border-border/50 bg-card p-5 shadow-card sm:p-6">
-          <div>
-            <h2 className="text-base font-semibold">shadcn registry</h2>
-            <p className="mt-1.5 text-pretty text-sm leading-6 text-muted-foreground">
-              Copy source into your project. The component graph and Constructive theme install automatically — the npm
-              package is not a prerequisite.
-            </p>
-          </div>
-          <CodeBlock label="components.json">{`// components.json\n{\n  "registries": {\n    "@constructive": "https://constructive-io.github.io/blocks/r/{name}.json"\n  }\n}`}</CodeBlock>
-          <CodeBlock label="Add component">pnpm dlx shadcn@4.13.1 add @constructive/button</CodeBlock>
-          <p className="text-xs leading-5 text-muted-foreground">Requires shadcn CLI 4.13.1 or newer.</p>
-        </section>
-      </div>
-
-      <section className="mt-14" aria-labelledby="primitive-catalog">
-        <div className="mb-5 flex items-end justify-between gap-4">
-          <div>
-            <h2 id="primitive-catalog" className="text-lg font-semibold tracking-tight">
-              Base primitives
-            </h2>
-            <p className="mt-1 text-sm text-muted-foreground">
-              {BASE_PRIMITIVES.length} components · each page shows npm and registry install paths.
-            </p>
+          <div className="registry-block-stage registry-block-stage-col !p-3">
+            <ul className="grid gap-1.5 sm:grid-cols-2 lg:grid-cols-3">
+              {BASE_PRIMITIVES.map((primitive) => (
+                <li key={primitive.name} className="min-w-0">
+                  <Link
+                    href={`/blocks/ui/${primitive.name}`}
+                    className="flex min-h-14 flex-col rounded-lg border border-border bg-card px-3 py-2.5 outline-none transition-[background-color,border-color] duration-150 ease-out hover:bg-accent/50 focus-visible:ring-2 focus-visible:ring-ring"
+                  >
+                    <span className="text-sm font-medium">{primitive.title}</span>
+                    <span className="mt-0.5 line-clamp-2 text-pretty text-xs leading-5 text-muted-foreground">
+                      {primitive.description}
+                    </span>
+                  </Link>
+                </li>
+              ))}
+            </ul>
           </div>
         </div>
-        <ul className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
-          {BASE_PRIMITIVES.map((primitive) => (
-            <li key={primitive.name}>
-              <Link
-                href={`/blocks/ui/${primitive.name}`}
-                className="flex h-full min-h-16 flex-col rounded-lg border border-border/50 bg-card px-4 py-3 shadow-card outline-none transition-[background-color,border-color,box-shadow] duration-150 ease-out hover:border-border/80 hover:bg-muted/40 hover:shadow-card-lg focus-visible:ring-2 focus-visible:ring-ring"
-              >
-                <span className="text-sm font-medium text-foreground">{primitive.title}</span>
-                <span className="mt-0.5 line-clamp-2 text-pretty text-sm leading-5 text-muted-foreground">
-                  {primitive.description}
-                </span>
-              </Link>
-            </li>
-          ))}
-        </ul>
       </section>
     </div>
   );

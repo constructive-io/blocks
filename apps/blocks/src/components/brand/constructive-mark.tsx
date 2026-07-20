@@ -2,7 +2,10 @@ import type { SVGProps } from 'react';
 
 import { cn } from '@/lib/utils';
 
-/** Constructive lattice mark — theme-adaptive via currentColor. */
+/**
+ * Constructive lattice mark — theme-adaptive via currentColor.
+ * ViewBox is tall (logo geometry); default size keeps optical weight near text-sm/base.
+ */
 export function ConstructiveMark({ className, ...props }: SVGProps<SVGSVGElement>) {
   return (
     <svg
@@ -10,7 +13,7 @@ export function ConstructiveMark({ className, ...props }: SVGProps<SVGSVGElement
       fill="none"
       xmlns="http://www.w3.org/2000/svg"
       aria-hidden
-      className={cn('size-5 shrink-0', className)}
+      className={cn('size-6 shrink-0', className)}
       {...props}
     >
       <path

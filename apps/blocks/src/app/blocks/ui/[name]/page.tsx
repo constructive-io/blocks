@@ -2,15 +2,15 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 
-import { CodeBlock } from '@/components/docs/code-block';
+import { InstallToggle } from '@/components/docs/install-toggle';
 import { PrimitivePreview } from '@/components/docs/primitive-preview';
 import {
   BASE_PRIMITIVES,
   getBasePrimitive,
   packageImport,
-  registryInstall,
   type BasePrimitive,
 } from '@/lib/base-primitives';
+import { packageCommands, registryCommands } from '@/lib/install-mode';
 import { OG_IMAGE, withBase } from '@/lib/site';
 
 type PageProps = { params: Promise<{ name: string }> };
@@ -39,49 +39,40 @@ export default async function PrimitivePage({ params }: PageProps) {
   const next = index < BASE_PRIMITIVES.length - 1 ? BASE_PRIMITIVES[index + 1] : undefined;
 
   return (
-    <article className="site-container pb-16 sm:pb-24">
-      <header className="max-w-2xl py-10 sm:py-12">
-        <Link
-          href="/"
-          className="text-sm text-muted-foreground outline-none transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring"
-        >
-          Components
-        </Link>
-        <h1 className="mt-3 text-balance text-[1.75rem] font-semibold tracking-tight sm:text-[2rem]">
-          {primitive.title}
-        </h1>
-        <p className="mt-3 text-pretty text-[15px] leading-7 text-muted-foreground">{primitive.description}</p>
+    <article className="registry-page">
+      <header className="mb-6 max-w-2xl">
+        <p className="registry-eyebrow">Components</p>
+        <h1 className="mt-2 text-[22px] font-semibold tracking-tight sm:text-[1.75rem]">{primitive.title}</h1>
+        <p className="mt-2 text-pretty text-sm leading-7 text-muted-foreground sm:text-[15px]">
+          {primitive.description}
+        </p>
       </header>
 
-      <section aria-labelledby="preview-heading">
-        <h2 id="preview-heading" className="sr-only">
-          Preview
-        </h2>
-        <PrimitivePreview name={primitive.name} />
-      </section>
-
-      <div className="mt-10 grid gap-4 lg:grid-cols-2 lg:gap-5">
-        <section className="flex flex-col gap-3 rounded-xl border border-border/50 bg-card p-5 shadow-card">
-          <div>
-            <h2 className="text-sm font-semibold">npm package</h2>
-            <p className="mt-1 text-pretty text-sm text-muted-foreground">Import the versioned package subpath.</p>
-          </div>
-          <CodeBlock label="Install">pnpm add @constructive-io/ui</CodeBlock>
-          <CodeBlock label="Import">{packageImport(primitive)}</CodeBlock>
-        </section>
-
-        <section className="flex flex-col gap-3 rounded-xl border border-border/50 bg-card p-5 shadow-card">
-          <div>
-            <h2 className="text-sm font-semibold">shadcn registry</h2>
-            <p className="mt-1 text-pretty text-sm text-muted-foreground">
-              Install editable source without adding the npm package first.
-            </p>
-          </div>
-          <CodeBlock label="Add component">{registryInstall(primitive)}</CodeBlock>
-        </section>
+      <div className="registry-block">
+        <div className="registry-block-bar">
+          <span>
+            Preview <span className="font-mono text-xs font-normal text-muted-foreground">· live</span>
+          </span>
+          <span className="flex-1" />
+          <span className="font-mono text-xs font-normal text-muted-foreground">@constructive/{primitive.name}</span>
+        </div>
+        <div className="registry-block-stage center min-h-64 justify-center !p-8 sm:!p-10">
+          <PrimitivePreview name={primitive.name} framed={false} />
+        </div>
       </div>
 
-      <nav aria-label="Primitive pagination" className="mt-14 grid grid-cols-2 gap-6 border-t border-border/60 pt-6">
+      <div className="mt-5 min-w-0">
+        <InstallToggle
+          npm={packageCommands({ importLine: packageImport(primitive) })}
+          registry={registryCommands({ item: primitive.name })}
+          descriptions={{
+            npm: 'Install the package once, then import this primitive from the package export.',
+            registry: 'Copy this component’s source into your project via the shadcn CLI.',
+          }}
+        />
+      </div>
+
+      <nav aria-label="Primitive pagination" className="mt-12 grid grid-cols-2 gap-6 border-t border-border pt-6">
         <NeighborLink primitive={previous} direction="Previous" />
         <div className="text-right">
           <NeighborLink primitive={next} direction="Next" />

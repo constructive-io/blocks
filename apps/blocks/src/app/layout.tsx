@@ -2,8 +2,7 @@ import type { Metadata } from 'next';
 import { Open_Sans } from 'next/font/google';
 import type { ReactNode } from 'react';
 
-import { SiteFooter } from '@/components/site/site-footer';
-import { SiteHeader } from '@/components/site/site-header';
+import { RegistryShell } from '@/components/site/registry-shell';
 import { ThemeProvider } from '@/components/site/theme-provider';
 import { OG_IMAGE, SITE_NAME, SITE_ORIGIN, withBase } from '@/lib/site';
 
@@ -15,9 +14,9 @@ const openSans = Open_Sans({
   display: 'swap',
 });
 
-const SITE_TITLE = 'Constructive UI';
+const SITE_TITLE = 'Constructive Blocks';
 const SITE_DESCRIPTION =
-  'Base React primitives for Constructive products — install via npm or the shadcn CLI registry.';
+  'A shadcn-compatible registry of Constructive UI primitives — npm or source install.';
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_ORIGIN),
@@ -41,19 +40,15 @@ export default function RootLayout({ children }: Readonly<{ children: ReactNode 
     <html lang="en" suppressHydrationWarning className={openSans.variable}>
       <body className="min-h-dvh bg-background font-sans text-foreground antialiased">
         <ThemeProvider>
-          <div className="site-frame flex min-h-dvh flex-col">
-            <a
-              href="#main-content"
-              className="sr-only fixed left-4 top-4 z-[var(--z-layer-toast)] rounded-md bg-background px-3 py-2 text-sm focus:fixed focus:not-sr-only focus-visible:ring-2 focus-visible:ring-ring"
-            >
-              Skip to content
-            </a>
-            <SiteHeader />
-            <main id="main-content" className="flex-1">
-              {children}
-            </main>
-            <SiteFooter />
-          </div>
+          <a
+            href="#main-content"
+            className="sr-only fixed left-4 top-4 z-[var(--z-layer-toast)] rounded-md bg-background px-3 py-2 text-sm focus:fixed focus:not-sr-only focus-visible:ring-2 focus-visible:ring-ring"
+          >
+            Skip to content
+          </a>
+          <RegistryShell>
+            <main id="main-content">{children}</main>
+          </RegistryShell>
         </ThemeProvider>
       </body>
     </html>
