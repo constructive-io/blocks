@@ -2,14 +2,13 @@
 
 import Link from 'next/link';
 import { useState } from 'react';
-import Image from 'next/image';
 import { Check, CircleCheck, Copy, Download, Package } from 'lucide-react';
 
 import { Badge } from '@constructive-io/ui/badge';
 import { Button } from '@constructive-io/ui/button';
 import { Switch } from '@constructive-io/ui/switch';
 
-import { BASE_PRIMITIVES } from '@/lib/base-primitives';
+import { ConstructiveMark } from '@/components/brand/constructive-mark';
 
 const REGISTRY_SNIPPET = `{
   "registries": {
@@ -34,65 +33,59 @@ export function RegistryHero() {
     <section className="registry-hero">
       <div className="registry-hero-grid">
         <div className="max-w-[600px]">
-          <p className="registry-eyebrow">Component registry · dark-first</p>
-          <h1 className="registry-display mt-4">
-            Blocks that work <em>across</em>
+          <p className="registry-eyebrow">Constructive Blocks</p>
+          <h1 className="registry-display mt-4 text-balance">
+            Build the product
             <br />
-            your whole product.
+            <em>on Constructive.</em>
           </h1>
-          <p className="mt-4 max-w-[56ch] text-[15px] leading-7 text-muted-foreground sm:text-base">
-            A shadcn-compatible registry tuned to a near-black canvas — hairline borders, a single confident accent, and
-            tight, deliberate radii. Drop the tokens in, install a block, ship.
+          <p className="mt-4 max-w-[58ch] text-pretty text-[15px] leading-7 text-muted-foreground sm:text-base">
+            Editable UI primitives and workflows for auth, organizations, app shells, and schema management.
           </p>
           <div className="mt-6 flex flex-wrap gap-2.5">
             <Button asChild size="lg">
               <Link href="/blocks">
                 <Download className="size-4" />
-                Install registry
+                Browse components
               </Link>
             </Button>
             <Button type="button" size="lg" variant="outline" onClick={copyConfig}>
               {copied ? <Check className="size-4" /> : <Copy className="size-4" />}
-              {copied ? 'Copied' : 'Copy config'}
+              {copied ? 'Copied' : 'Copy registry config'}
             </Button>
           </div>
-          <div className="mt-8 flex flex-wrap gap-x-6 gap-y-4 sm:gap-x-8">
-            <div className="flex flex-col gap-0.5">
-              <span className="font-mono text-xl font-semibold tracking-tight">{BASE_PRIMITIVES.length}</span>
-              <span className="text-xs text-muted-foreground">components</span>
-            </div>
-            <div className="flex flex-col gap-0.5">
-              <span className="font-mono text-xl font-semibold tracking-tight">2</span>
-              <span className="text-xs text-muted-foreground">themes</span>
-            </div>
-            <div className="flex flex-col gap-0.5">
-              <span className="font-mono text-xl font-semibold tracking-tight">OKLCH</span>
-              <span className="text-xs text-muted-foreground">color space</span>
-            </div>
-            <div className="flex flex-col gap-0.5">
-              <span className="font-mono text-xl font-semibold tracking-tight">A11y</span>
-              <span className="text-xs text-muted-foreground">focus rings</span>
-            </div>
+          <div className="hero-source-note mt-8">
+            <svg
+              aria-hidden="true"
+              className="hero-source-mark"
+              viewBox="0 0 48 48"
+              fill="none"
+              stroke="currentColor"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth="2"
+              focusable="false"
+            >
+              <path d="M43 15 24 5 5 15v18l19 10 19-10V15Z" />
+              <path className="hero-source-fold" d="m5 15 19 10 19-10M24 25v18" />
+              <circle className="hero-source-node" cx="24" cy="25" r="2.25" fill="currentColor" stroke="none" />
+            </svg>
+            <p className="min-w-0 text-pretty">
+              <span className="hero-source-title">Every block becomes your code.</span>
+              <span className="hero-source-copy">Copy only what you need, then shape it into your product.</span>
+            </p>
           </div>
         </div>
 
-        <div className="hero-visual hidden sm:block" aria-hidden>
-          <Image
-            src="/constructive.svg"
-            alt=""
-            width={230}
-            height={360}
-            className="mark-glow h-auto w-[min(230px,45%)]"
-            unoptimized
-            priority
-          />
+        <div className="hero-visual hidden sm:block" aria-hidden="true" inert>
+          <ConstructiveMark className="mark-glow h-auto w-[min(230px,45%)] text-primary" />
           <div className="hero-float-pill hero-float-pill-1">
             <CircleCheck className="size-3.5" />
             Block added
           </div>
           <div className="hero-float-pill hero-float-pill-2">
             <Package className="size-3.5 text-primary" />
-            0 extra deps
+            Source copied
           </div>
           <div className="hero-iso">
             <div className="hero-blk hero-blk-code">
@@ -133,10 +126,10 @@ export function RegistryHero() {
             </div>
             <div className="hero-blk hero-blk-chip">
               <div className="hero-blk-body flex items-center gap-3 py-1">
-                <Switch defaultChecked aria-label="Auto-sync" />
+                <Switch defaultChecked aria-label="Theme included" />
                 <div className="min-w-0 flex-1">
-                  <div className="text-[12.5px] font-medium">Auto-sync</div>
-                  <div className="text-[11px] text-muted-foreground">tokens · live</div>
+                  <div className="text-[12.5px] font-medium">Theme</div>
+                  <div className="text-[11px] text-muted-foreground">tokens · keyframes</div>
                 </div>
                 <div className="flex">
                   <span className="inline-flex size-[26px] items-center justify-center rounded-full border border-border bg-secondary text-[10px] font-semibold">

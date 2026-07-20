@@ -163,7 +163,7 @@ pre {
   align-items: center;
 }
 
-@media (min-width: 1080px) {
+@media (min-width: 1280px) {
   .registry-hero-grid {
     grid-template-columns: minmax(0, 1fr) 460px;
     gap: 2rem;
@@ -273,6 +273,91 @@ pre {
   font-style: normal;
 }
 
+/* Source ownership note */
+.hero-source-note {
+  display: flex;
+  max-width: 30rem;
+  align-items: center;
+  gap: 0.875rem;
+}
+
+.hero-source-mark {
+  width: 2.75rem;
+  height: 2.75rem;
+  flex: 0 0 auto;
+  overflow: visible;
+  color: var(--primary);
+  transform-origin: center;
+  transition-property: transform;
+  transition-duration: 180ms;
+  transition-timing-function: ease-out;
+}
+
+.hero-source-fold {
+  opacity: 0.5;
+  transition-property: opacity;
+  transition-duration: 180ms;
+  transition-timing-function: ease-out;
+}
+
+.hero-source-node {
+  opacity: 0;
+  filter: blur(4px);
+  transform: scale(0.25);
+  transform-box: fill-box;
+  transform-origin: center;
+  transition-property: transform, opacity, filter;
+  transition-duration: 180ms;
+  transition-timing-function: ease-out;
+}
+
+.hero-source-title,
+.hero-source-copy {
+  display: block;
+}
+
+.hero-source-title {
+  font-size: 0.875rem;
+  line-height: 1.25rem;
+  font-weight: 600;
+  color: var(--foreground);
+}
+
+.hero-source-copy {
+  margin-top: 0.125rem;
+  font-size: 0.75rem;
+  line-height: 1.125rem;
+  color: var(--muted-foreground);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .hero-source-note:hover .hero-source-mark {
+    transform: translateY(-3px) rotate(-4deg) scale(1.04);
+  }
+
+  .hero-source-note:hover .hero-source-fold {
+    opacity: 0.9;
+  }
+
+  .hero-source-note:hover .hero-source-node {
+    opacity: 1;
+    filter: blur(0);
+    transform: scale(1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hero-source-mark,
+  .hero-source-fold,
+  .hero-source-node {
+    transition: none;
+  }
+
+  .hero-source-note:hover .hero-source-mark {
+    transform: none;
+  }
+}
+
 /* floating iso stack */
 .hero-visual {
   position: relative;
@@ -281,7 +366,7 @@ pre {
   perspective-origin: 60% 40%;
 }
 
-@media (min-width: 1080px) {
+@media (min-width: 1280px) {
   .hero-visual {
     height: 380px;
   }
@@ -298,7 +383,7 @@ pre {
   pointer-events: none;
 }
 
-@media (min-width: 1080px) {
+@media (min-width: 1280px) {
   .hero-visual .mark-glow {
     width: 230px;
   }
