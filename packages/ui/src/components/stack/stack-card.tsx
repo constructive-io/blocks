@@ -12,6 +12,7 @@ import { StackHeader } from './stack-header';
 import type { AnimationConfig, CardSpec, CardStackApi, GestureConfig, PeekGestureConfig } from './stack.types';
 import { getCardZIndex, getResponsiveCardOffset, normalizeWidth } from './stack-utils';
 import { usePeekGestures } from './use-peek-gestures';
+import type { StackGestureBind } from './use-stack-gestures';
 
 /** Default hover expansion in pixels */
 const DEFAULT_HOVER_EXPANSION = 48;
@@ -42,7 +43,7 @@ export type StackCardProps = {
 	/** Drag state from gesture hook (for top card swipe-to-dismiss) */
 	dragX?: number;
 	/** Gesture bind from @use-gesture/react */
-	gestureBind?: ReturnType<typeof import('@use-gesture/react').useDrag>;
+	gestureBind?: StackGestureBind;
 	/** Whether this card's peek zone is hovered (viewport-coordinated) */
 	isPeekHovered?: boolean;
 	/** Callback when peek hover starts */

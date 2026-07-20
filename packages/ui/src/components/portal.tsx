@@ -169,7 +169,7 @@ export function useFloatingOverlayPortalProps(): {
  *
  * Usage in layout.tsx:
  * ```tsx
- * import { PortalRoot } from '@constructive-io/ui/portal';
+ * import { PortalRoot } from '@/components/ui/portal';
  *
  * export default function RootLayout({ children }) {
  *   return (

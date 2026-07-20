@@ -16,7 +16,7 @@ export default defineConfig([
     dts: true,
     sourcemap: true,
     clean: true,
-    onSuccess: 'node scripts/add-use-client-banner.mjs',
+    onSuccess: 'tsx scripts/add-use-client-banner.ts',
     external: [
       'react',
       'react-dom',
@@ -92,6 +92,7 @@ export default defineConfig([
       'components/dock': 'src/components/dock.tsx',
       'components/page-header': 'src/components/page-header.tsx',
       'components/flickering-grid': 'src/components/flickering-grid.tsx',
+      'components/flow-zoom-panel': 'src/components/flow-zoom-panel.tsx',
       'components/motion-grid': 'src/components/motion-grid.tsx',
       'components/progressive-blur': 'src/components/progressive-blur.tsx',
       'components/progressive-blur-scroll-container': 'src/components/progressive-blur-scroll-container.tsx',
@@ -129,6 +130,6 @@ export default defineConfig([
     ],
     treeshake: true,
     splitting: false,
-    onSuccess: 'node scripts/add-use-client-banner.mjs',
+    onSuccess: 'tsx scripts/add-use-client-banner.ts',
   },
 ]);
