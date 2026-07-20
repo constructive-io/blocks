@@ -1,36 +1,17 @@
 import type { Metadata } from 'next';
-import { Geist, Geist_Mono } from 'next/font/google';
+import Link from 'next/link';
+import type { ReactNode } from 'react';
 
-import { Providers } from './providers';
-import { Shell } from '@/components/docs/shell';
 import { OG_IMAGE, SITE_NAME, SITE_ORIGIN, withBase } from '@/lib/site';
+
 import './globals.css';
 
-// The UI theme maps Tailwind's font utilities onto `--font-geist-sans` /
-// `--font-geist-mono`. We feed Geist (UI + display) and Geist Mono (figures /
-// code, tabular-nums) into those variables here — both are applied on <html>.
-const geistSans = Geist({
-  subsets: ['latin'],
-  variable: '--font-geist-sans',
-  display: 'swap',
-});
-
-const geistMono = Geist_Mono({
-  subsets: ['latin'],
-  variable: '--font-geist-mono',
-  display: 'swap',
-});
-
-const SITE_TITLE = 'Constructive Blocks — full-stack auth, org, and app-shell React blocks';
-const SITE_DESCRIPTION =
-  'A shadcn registry of auth, organization, user, and app-shell blocks for the Constructive platform. Each block binds to your application’s generated SDK.';
+const SITE_TITLE = 'Constructive UI';
+const SITE_DESCRIPTION = 'Base React primitives distributed through npm and the shadcn CLI.';
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_ORIGIN),
-  title: {
-    default: SITE_TITLE,
-    template: '%s — Constructive Blocks',
-  },
+  title: { default: SITE_TITLE, template: `%s — ${SITE_NAME}` },
   description: SITE_DESCRIPTION,
   alternates: { canonical: withBase('/') },
   openGraph: {
@@ -42,26 +23,38 @@ export const metadata: Metadata = {
     description: SITE_DESCRIPTION,
     images: [OG_IMAGE],
   },
-  // The card image is declared explicitly (site.ts OG_IMAGE → the
-  // /opengraph-image.png route), NOT via the opengraph-image file convention:
-  // the convention's auto-injected URL omits the deploy basePath and 404s on
-  // GitHub Pages.
   twitter: { card: 'summary_large_image', images: [OG_IMAGE] },
 };
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default function RootLayout({ children }: Readonly<{ children: ReactNode }>) {
   return (
-    <html
-      lang="en"
-      className={`${geistSans.variable} ${geistMono.variable}`}
-      suppressHydrationWarning
-    >
+    <html lang="en">
       <body className="min-h-dvh bg-background font-sans text-foreground antialiased">
-        {/* Theme + package-manager context, then the global 3-column shell that
-            every route (including the landing) renders inside. */}
-        <Providers>
-          <Shell>{children}</Shell>
-        </Providers>
+        <a
+          href="#main-content"
+          className="sr-only fixed left-4 top-4 z-[var(--z-layer-toast)] rounded-md bg-background px-3 py-2 text-sm focus:fixed focus:not-sr-only focus-visible:ring-2 focus-visible:ring-ring"
+        >
+          Skip to content
+        </a>
+        <header className="border-b bg-background">
+          <div className="mx-auto flex h-16 w-full max-w-6xl items-center justify-between px-6 sm:px-8">
+            <Link href="/" className="font-semibold outline-none focus-visible:ring-2 focus-visible:ring-ring">
+              Constructive UI
+            </Link>
+            <nav aria-label="Primary" className="flex items-center gap-5 text-sm text-muted-foreground">
+              <Link href="/blocks" className="outline-none hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring">
+                Setup
+              </Link>
+              <Link
+                href="/blocks/ui/button"
+                className="outline-none hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring"
+              >
+                Primitives
+              </Link>
+            </nav>
+          </div>
+        </header>
+        <main id="main-content">{children}</main>
       </body>
     </html>
   );

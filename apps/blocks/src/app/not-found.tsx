@@ -1,39 +1,16 @@
-import { ArrowRight, LayoutGrid } from 'lucide-react';
+import Link from 'next/link';
 
-import { proseCls } from '@/components/docs/prose';
-import { SiteButton } from '@/components/docs/site-button';
-import { cn } from '@/lib/utils';
+import { Button } from '@constructive-io/ui/button';
 
-/**
- * 404 — rendered inside the global Shell (root layout wraps every route), so the
- * sidebar brand and right panel are already present. This is just the centered
- * content message on the redesign primitives (DESIGN.md §4.4 / §8): no eyebrow,
- * no topbar/backdrop, 22-28px title + 14px prose, SiteButton actions.
- */
 export default function NotFound() {
   return (
-    <div className="mx-auto flex min-h-[80vh] w-full max-w-[760px] flex-col items-center justify-center gap-6 px-6 py-20 text-center">
-      <div className="flex flex-col items-center gap-3">
-        <h1 className="text-h1 text-balance text-foreground max-sm:text-[1.375rem]">Block not found</h1>
-        <p className={cn(proseCls, 'max-w-[46ch]')}>
-          That block isn&apos;t in the catalog. It may have been renamed, removed, or the URL is incorrect.
-        </p>
-      </div>
-
-      <div className="flex flex-wrap items-center justify-center gap-2">
-        <SiteButton href="/blocks" variant="primary" size="md">
-          <LayoutGrid />
-          Browse the catalog
-        </SiteButton>
-        <SiteButton href="/" variant="tertiary" size="md">
-          Home
-          <ArrowRight />
-        </SiteButton>
-      </div>
-
-      <p className="text-pretty font-mono text-[12px] text-muted-foreground">
-        HTTP 404 <span aria-hidden>·</span> Not Found
-      </p>
+    <div className="mx-auto flex min-h-[calc(100dvh-4rem)] w-full max-w-xl flex-col justify-center px-6 py-20 text-center">
+      <p className="text-sm font-medium text-muted-foreground">404</p>
+      <h1 className="mt-3 text-balance text-3xl font-semibold">Page not found</h1>
+      <p className="mt-4 text-pretty leading-7 text-muted-foreground">The requested documentation page is not part of the base primitive catalog.</p>
+      <Button asChild className="mx-auto mt-8">
+        <Link href="/blocks">Browse primitives</Link>
+      </Button>
     </div>
   );
 }

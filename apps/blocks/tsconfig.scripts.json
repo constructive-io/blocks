@@ -1,0 +1,14 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "allowJs": false,
+    "incremental": false,
+    "isolatedModules": false,
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "noImplicitAny": false,
+    "types": ["node"]
+  },
+  "include": ["scripts/**/*.ts", "e2e/static-server.ts"],
+  "exclude": ["node_modules"]
+}

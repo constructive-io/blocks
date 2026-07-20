@@ -13,10 +13,9 @@ const nextConfig: NextConfig = {
         images: { unoptimized: true }
       }
     : {}),
-  // Transpile both public workspace packages while developing from source.
-  transpilePackages: ['@constructive-io/ui', '@constructive-io/schema-builder'],
+  transpilePackages: ['@constructive-io/ui'],
   experimental: {
-    optimizePackageImports: ['@base-ui/react', '@constructive-io/ui', '@constructive-io/schema-builder', 'lucide-react'],
+    optimizePackageImports: ['@base-ui/react', '@constructive-io/ui', 'lucide-react'],
   },
   turbopack: {
     root: path.join(__dirname, '..', '..'),

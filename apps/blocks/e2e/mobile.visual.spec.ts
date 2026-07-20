@@ -1,19 +1,11 @@
-import { test } from '@playwright/test';
+import { expect, test } from '@playwright/test';
 
-import { LANDING_SHOWCASE_READY_SELECTOR, prepareVisualPage, snapshotRoute } from './visual-helpers';
+test('the base primitive catalog remains usable at a mobile viewport', async ({ page }) => {
+  await page.goto('/blocks/blocks/', { waitUntil: 'networkidle' });
+  await expect(page.getByRole('heading', { level: 1, name: 'Install the foundation your way' })).toBeVisible();
+  await expect(page.locator('#primitive-catalog + p + ul a[href^="/blocks/blocks/ui/"]')).toHaveCount(29);
 
-const routes = [
-  ['home', '/blocks/'],
-  ['auth-sign-in', '/blocks/blocks/auth/sign-in-card'],
-  ['schema-builder', '/blocks/blocks/schema/builder'],
-] as const;
-
-test.beforeEach(async ({ page }) => prepareVisualPage(page, 'light'));
-
-for (const [name, route] of routes) {
-  test(`${name} remains visually stable`, async ({ page }) => {
-    await snapshotRoute(page, route, `${name}-mobile-light.png`, {
-      readySelector: name === 'home' ? LANDING_SHOWCASE_READY_SELECTOR : undefined,
-    });
-  });
-}
+  await page.getByRole('link', { name: /Tooltip/ }).click();
+  await expect(page).toHaveURL(/\/blocks\/blocks\/ui\/tooltip\/$/);
+  await expect(page.getByRole('heading', { level: 1, name: 'Tooltip' })).toBeVisible();
+});
