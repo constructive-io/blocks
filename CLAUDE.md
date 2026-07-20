@@ -27,4 +27,4 @@ pnpm build:storybook
 pnpm pack:local
 ```
 
-Use Node 22 and pnpm 10.28.0.
+Use Node 24 LTS and pnpm 10.28.0.

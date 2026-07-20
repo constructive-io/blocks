@@ -37,7 +37,7 @@ pnpm build:pages
 pnpm pack:local
 ```
 
-Development and release verification use Node 22 and pnpm 10.28.0. All
+Development and release verification use Node 24 LTS and pnpm 10.28.0. All
 first-party executable tooling is TypeScript and runs through `tsx`.
 
 `pnpm pack:local` builds the public packages and writes publishable tarballs to

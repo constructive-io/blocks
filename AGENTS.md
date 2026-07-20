@@ -16,5 +16,5 @@ This public monorepo owns the Constructive Blocks documentation, the
 
 ## Verification
 
-Use Node 22 and pnpm 10.28.0, then run `pnpm check`, `pnpm build:pages`, and
+Use Node 24 LTS and pnpm 10.28.0, then run `pnpm check`, `pnpm build:pages`, and
 `pnpm pack:local` before release-related changes.
