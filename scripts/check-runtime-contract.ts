@@ -17,7 +17,6 @@ const expectedUiNodeEngine = '>=18.0.0';
 const expectedActionVersions = new Map([
   ['actions/checkout', 'v7'],
   ['actions/setup-node', 'v7'],
-  ['actions/upload-artifact', 'v7'],
   ['actions/upload-pages-artifact', 'v5'],
   ['actions/deploy-pages', 'v5'],
   ['pnpm/action-setup', 'v6']

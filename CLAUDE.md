@@ -22,6 +22,7 @@ This public monorepo owns the Constructive Blocks documentation, the
 
 ```bash
 pnpm check
+pnpm check:full
 pnpm build:pages
 pnpm build:storybook
 pnpm pack:local
