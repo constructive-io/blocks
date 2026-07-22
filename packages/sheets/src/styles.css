@@ -1,0 +1,6 @@
+/*
+ * Tailwind CSS v4 source contract for the published Sheets package.
+ * Import this file after Tailwind so utilities used by the compiled package
+ * are generated without scanning package source that is not shipped to npm.
+ */
+@source "./**/*.{js,cjs}";
