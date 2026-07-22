@@ -934,6 +934,48 @@ describe('Constructive users adapter RLS contract', () => {
 });
 
 describe('Constructive organizations adapter RLS contract', () => {
+  it('creates an organization through the trigger-backed type-2 user contract', async () => {
+    const calls: GraphQLCall[] = [];
+    const adapter = createConstructiveOrganizationsAdapter({
+      store: createConsoleKitStore('organizations'),
+      discovery: discovery({
+        admin: snapshot({
+          endpoint: 'admin',
+          queries: ['orgMemberships'],
+          types: [objectType('OrgMembership', ['id', 'actorId', 'entityId'])]
+        }),
+        auth: snapshot({
+          endpoint: 'auth',
+          queries: ['users'],
+          mutations: { createUser: 'CreateUserInput' },
+          types: [
+            inputType('CreateUserInput', { user: 'UserInput' }),
+            inputType('UserInput', { displayName: 'String', type: 'Int' })
+          ]
+        })
+      })
+    });
+    const loaded = await adapter.load(runtime((call) => {
+      calls.push(call);
+      if (call.document.includes('ConsoleKitOrganizationMemberships')) {
+        return { orgMemberships: { nodes: [] } };
+      }
+      if (call.document.includes('ConsoleKitOrganizationUsers')) {
+        return { users: { nodes: [] } };
+      }
+      return { createUser: { user: { id: 'org-1' } } };
+    }), new AbortController().signal);
+
+    expect(loaded.resource).toEqual({ status: 'empty' });
+    expect(loaded.policy?.createOrganization).toBe(true);
+    await loaded.actions?.createOrganization?.({ name: 'Acme' });
+    expect(calls.find((call) => call.document.includes('ConsoleKitCreateOrganization')))
+      .toMatchObject({
+        endpoint: 'auth',
+        variables: { input: { user: { displayName: 'Acme', type: 2 } } }
+      });
+  });
+
   it('keeps an ordinary member read-only and preserves the owner fallback', async () => {
     const calls: GraphQLCall[] = [];
     const adminSchema = snapshot({

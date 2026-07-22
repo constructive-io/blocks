@@ -25,6 +25,9 @@ persisted CRUD, direct-owner RLS isolation, and a composite `post_tags`
 primary key. It also executes the full preset's seven-connection billing read,
 asserts that the stock seed intentionally returns zero billing rows, and proves
 that Console Kit renders its billing empty states without an error. The suite
+creates an organization through the same type-2 user contract used by
+Dashboard, observes its trigger-created owner membership, and creates and
+cancels roleless application and organization invitations through the UI. It
 verifies the versioned `_meta` query before loading data-backed features and
 drives sign-up and an explicit verification send through Console Kit before delivering
 the email through the job worker, generated function, SMTP, and Mailpit. The
@@ -36,10 +39,12 @@ deletes the source Mailpit message, so the token is not written to the tenant
 manifest, Next request logs, retained test artifacts, or retained proof mailbox.
 This establishes fresh-credential handling; it does not establish expiry or
 replay rejection, which remain backend gaps below.
-The email proof creates one site-domain row through the official control-plane
-mutation because the stock seed omits it; the row belongs to the proof tenant
-and is removed by tenant cleanup. Proof credentials stay in mode-0600 sidecars
-and are never embedded in the secret-free tenant manifest or rendered page.
+Hub wraps the email proof with one site-domain row created through its
+loopback-only private meta endpoint because this tenant has no site-bound
+domain. Hub deletes the row after Playwright, with tenant cleanup as the
+interruption fallback; neither Console Kit nor the browser suite uses operator
+credentials. Proof credentials stay in mode-0600 sidecars and are never
+embedded in the secret-free tenant manifest or rendered page.
 
 Membership controls derive delegated authority from the membership's effective
 permission mask and the named permission catalog; a visible mutation root does
@@ -53,6 +58,10 @@ incompatible mask width falls back to strict filtering. Owners and
 administrators retain their backend role fallback while active, while
 delegated sessions only receive assignable profiles. Invitations without a
 profile remain available whenever `create_invites` is granted.
+Organization creation is enabled only when introspection proves that
+`createUser.user` accepts both `displayName` and `type`; the adapter fixes
+`type` to `2`, and the backend user-insert trigger creates the current actor's
+owner membership in the same transaction.
 
 Hardened auth tenants can enable `require_csrf_for_auth`. Console Kit accepts
 an async `csrfTokenProvider` which must ask a trusted host endpoint to create a
@@ -110,12 +119,15 @@ returned by `getAccessToken` or written back to browser storage.
   an API name. The semantic `storage` endpoint currently resolves to the object
   service and exposes neither table, so Console Kit correctly marks Storage
   unavailable. Route the storage schema explicitly before claiming this pack.
-- Stock tenant provisioning creates site theme and legal-terms metadata but no
-  site-domain row, and sign-up does not enqueue verification automatically.
-  `sendVerificationEmail` therefore fails later in the worker until a domain
-  is configured. The live proof adds that reversible prerequisite explicitly;
-  an untouched seeded tenant still does not have working email delivery. The
-  stock local SMTP configuration also emits
+- Stock tenant provisioning creates site theme and legal-terms metadata and
+  attempts to insert the shared `app.localhost` site domain with
+  `ON CONFLICT DO NOTHING`. After the first local tenant claims that route,
+  later tenants retain only API-bound domains with no `site_id`, so
+  `sendVerificationEmail` fails in the worker until a unique site domain is
+  configured. Sign-up also does not enqueue verification automatically. The
+  live proof adds and removes that reversible prerequisite explicitly and pins
+  its IPv4-only Mailpit connection to `127.0.0.1`; an untouched later tenant
+  still does not have working email delivery. The generated local link is
   `https://localhost/verify-email` without the Blocks development port, so the
   proof establishes delivery and token consumption through its integration
   adapter but does not claim that this generated local link is directly

@@ -18,9 +18,7 @@ import {
   loadSchema,
   rawGraphQL,
   signIn,
-  signInAt,
   signOut,
-  signOutAt,
   signUp,
   updateRequest,
   updateRow,
@@ -59,33 +57,23 @@ const BILLING_READ = /* GraphQL */ `
   }
 `;
 
-const SITE_QUERY = /* GraphQL */ `
-  query ConsoleKitVerificationSite($databaseId: UUID!) {
-    sites(first: 1, where: { databaseId: { equalTo: $databaseId } }) {
-      nodes {
-        id
-        title
-        siteModules(where: { name: { equalTo: "legal_terms_module" } }) {
-          nodes { data }
-        }
-      }
-    }
-  }
-`;
-
-const CREATE_SITE_DOMAIN = /* GraphQL */ `
-  mutation ConsoleKitVerificationSiteDomain($input: CreateDomainInput!) {
-    createDomain(input: $input) {
-      domain { id databaseId siteId subdomain domain }
-    }
-  }
-`;
-
 const EMAIL_VERIFICATION_READ = /* GraphQL */ `
   query ConsoleKitEmailVerificationRead {
     emails(first: 50) {
       nodes { id email isPrimary isVerified }
     }
+  }
+`;
+
+const ORGANIZATION_USERS_READ = /* GraphQL */ `
+  query ConsoleKitProofOrganizationUsers {
+    users(first: 500) { nodes { id displayName type } }
+  }
+`;
+
+const DELETE_ORGANIZATION_USER = /* GraphQL */ `
+  mutation ConsoleKitProofDeleteOrganization($input: DeleteUserInput!) {
+    deleteUser(input: $input) { user { id } }
   }
 `;
 
@@ -127,8 +115,7 @@ type MailpitMessage = Readonly<{
 }>;
 
 async function waitForVerificationMessage(
-  recipient: string,
-  subject: string
+  recipient: string
 ): Promise<MailpitMessage & { ID: string }> {
   const deadline = Date.now() + 60_000;
   while (Date.now() < deadline) {
@@ -136,7 +123,7 @@ async function waitForVerificationMessage(
     if (!response.ok) throw new Error(`Mailpit returned HTTP ${response.status}.`);
     const payload = await response.json() as { messages?: readonly MailpitMessage[] };
     const message = payload.messages?.find((candidate) =>
-      candidate.Subject === subject &&
+      candidate.Subject?.endsWith(' Email Verification') &&
       candidate.To?.some((address) => address.Address === recipient)
     );
     if (message?.ID) return message as MailpitMessage & { ID: string };
@@ -151,14 +138,11 @@ type VerificationLinkParameters = Readonly<{
 }>;
 
 async function readVerificationLinkParameters(
-  recipient: string,
-  siteNick: string
+  recipient: string
 ): Promise<VerificationLinkParameters> {
-  const message = await waitForVerificationMessage(
-    recipient,
-    `${siteNick} Email Verification`
-  );
+  const message = await waitForVerificationMessage(recipient);
   expect(message.From?.Address).toBe('noreply@test.constructive.io');
+  expect(message.Subject).toMatch(/\S+ Email Verification$/u);
 
   try {
     const response = await fetch(
@@ -412,88 +396,22 @@ test('signs up, sends, and consumes fresh email verification through Console Kit
   page
 }) => {
   const tenant = proof.tenant('auth:hardened');
-  const ownerCredentials = proof.credentials(tenant);
   const verificationCredentials = {
     email: `console-kit-verify-${randomUUID()}@example.test`,
     password: `ConsoleKit-${randomUUID()}-Aa1!`
   };
-  let controlSession: LiveSession | null = null;
   let verificationCheckSession: LiveSession | null = null;
   let invalidVerificationContext: BrowserContext | null = null;
   let verificationContext: BrowserContext | null = null;
 
   try {
-    controlSession = await signInAt(proof.controlEndpoint, ownerCredentials);
-    const siteData = await graphQL<Record<string, unknown>>(
-      proof.controlEndpoint,
-      SITE_QUERY,
-      { databaseId: tenant.manifest.databaseId },
-      controlSession.token
-    );
-    const siteConnection = siteData.sites;
-    const siteNodes = siteConnection && typeof siteConnection === 'object' && !Array.isArray(siteConnection)
-      ? (siteConnection as { nodes?: unknown }).nodes
-      : null;
-    const site = Array.isArray(siteNodes) && siteNodes[0] && typeof siteNodes[0] === 'object'
-      ? siteNodes[0] as Record<string, unknown>
-      : null;
-    if (typeof site?.id !== 'string' || typeof site.title !== 'string' || !site.title) {
-      throw new Error('The tenant has no site metadata for verification email delivery.');
-    }
-    const siteModules = site.siteModules;
-    const moduleNodes = siteModules && typeof siteModules === 'object' && !Array.isArray(siteModules)
-      ? (siteModules as { nodes?: unknown }).nodes
-      : null;
-    const legalTerms = Array.isArray(moduleNodes) && moduleNodes[0] &&
-      typeof moduleNodes[0] === 'object'
-      ? (moduleNodes[0] as Record<string, unknown>).data
-      : null;
-    const company = legalTerms && typeof legalTerms === 'object' && !Array.isArray(legalTerms)
-      ? (legalTerms as Record<string, unknown>).company
-      : null;
-    const siteNick = company && typeof company === 'object' && !Array.isArray(company)
-      ? (company as Record<string, unknown>).nick
-      : null;
-    if (typeof siteNick !== 'string' || !siteNick) {
-      throw new Error('The tenant legal-terms module has no company nickname.');
-    }
-
-    const proofSubdomain = `${tenant.manifest.database.subdomain}-mail-${randomUUID().slice(0, 8)}`;
-    const domainData = await graphQL<Record<string, unknown>>(
-      proof.controlEndpoint,
-      CREATE_SITE_DOMAIN,
-      {
-        input: {
-          domain: {
-            databaseId: tenant.manifest.databaseId,
-            siteId: site.id,
-            subdomain: proofSubdomain,
-            domain: tenant.manifest.database.domain
-          }
-        }
-      },
-      controlSession.token
-    );
-    const createDomain = domainData.createDomain;
-    const domain = createDomain && typeof createDomain === 'object' && !Array.isArray(createDomain)
-      ? (createDomain as Record<string, unknown>).domain
-      : null;
-    if (!domain || typeof domain !== 'object' || Array.isArray(domain)) {
-      throw new Error('The proof could not provision the reversible verification site domain.');
-    }
-    expect((domain as Record<string, unknown>).databaseId).toBe(tenant.manifest.databaseId);
-    expect((domain as Record<string, unknown>).siteId).toBe(site.id);
-
     await visitProof(page);
     await signUpThroughUi(page, tenant, verificationCredentials);
     await expect(page.getByText('Unverified', { exact: true })).toBeVisible();
     await page.getByRole('button', { name: 'Send verification email', exact: true }).click();
     await expect(page.getByRole('status')).toHaveText('Verification email sent.');
 
-    const verification = await readVerificationLinkParameters(
-      verificationCredentials.email,
-      siteNick
-    );
+    const verification = await readVerificationLinkParameters(verificationCredentials.email);
     await signOutThroughUi(page);
 
     invalidVerificationContext = await browser.newContext({ serviceWorkers: 'block' });
@@ -575,9 +493,6 @@ test('signs up, sends, and consumes fresh email verification through Console Kit
       verificationCheckSession
         ? signOut(tenant, verificationCheckSession.token)
         : Promise.resolve(),
-      controlSession
-        ? signOutAt(proof.controlEndpoint, controlSession.token)
-        : Promise.resolve(),
       invalidVerificationContext?.close() ?? Promise.resolve(),
       verificationContext?.close() ?? Promise.resolve()
     ]);
@@ -624,45 +539,104 @@ test('loads membership views and creates and cancels roleless app and organizati
   const tenant = proof.tenant('full');
   const appInviteEmail = `console-kit-app-invite-${randomUUID()}@example.test`;
   const organizationInviteEmail = `console-kit-org-invite-${randomUUID()}@example.test`;
+  const organizationName = `Console Kit Proof ${randomUUID().slice(0, 8)}`;
+  const cleanupSession = await signIn(tenant, proof.credentials(tenant));
+  let organizationId: string | null = null;
 
-  await visitProof(page);
-  await signInThroughUi(page, tenant, proof.credentials(tenant));
+  try {
+    await visitProof(page);
+    await signInThroughUi(page, tenant, proof.credentials(tenant));
 
-  await openFeature(page, 'Users');
-  await expect(page.getByRole('heading', { level: 1, name: 'Users' })).toBeVisible();
-  await page.getByRole('button', { name: 'Invite member' }).click();
-  const appInviteDialog = page.getByRole('dialog', { name: 'Invite an app member' });
-  await expect(appInviteDialog.getByRole('combobox', { name: 'Role' })).toContainText('No role');
-  await appInviteDialog.getByRole('textbox', { name: 'Email address' }).fill(appInviteEmail);
-  await appInviteDialog.getByRole('button', { name: 'Send invitation' }).click();
-  await expect(appInviteDialog).toBeHidden();
-  await page.getByRole('tab', { name: /Invitations/u }).click();
-  await expect(page.getByText(appInviteEmail, { exact: true })).toBeVisible();
-  const appInviteRow = page.getByRole('row').filter({ hasText: appInviteEmail });
-  await appInviteRow.getByRole('button', { name: 'Cancel', exact: true }).click();
-  await expect(page.getByText(appInviteEmail, { exact: true })).toHaveCount(0);
+    await openFeature(page, 'Users');
+    await expect(page.getByRole('heading', { level: 1, name: 'Users' })).toBeVisible();
+    await page.getByRole('button', { name: 'Invite member' }).click();
+    const appInviteDialog = page.getByRole('dialog', { name: 'Invite an app member' });
+    await expect(appInviteDialog.getByRole('combobox', { name: 'Role' })).toHaveCount(0);
+    await appInviteDialog.getByRole('textbox', { name: 'Email address' }).fill(appInviteEmail);
+    await appInviteDialog.getByRole('button', { name: 'Send invitation' }).click();
+    await expect(appInviteDialog).toBeHidden();
+    await page.getByRole('tab', { name: /Invitations/u }).click();
+    await expect(page.getByText(appInviteEmail, { exact: true })).toBeVisible();
+    const appInviteRow = page.getByRole('row').filter({ hasText: appInviteEmail });
+    await appInviteRow.getByRole('button', { name: 'Cancel', exact: true }).click();
+    await expect(page.getByText(appInviteEmail, { exact: true })).toHaveCount(0);
 
-  await openFeature(page, 'Organizations');
-  await expect(page.getByRole('heading', { level: 1, name: 'Organizations' })).toBeVisible();
-  await page.getByRole('button', { name: 'Invite member' }).click();
-  const organizationInviteDialog = page.getByRole('dialog', {
-    name: 'Invite an organization member'
-  });
-  await expect(organizationInviteDialog.getByRole('combobox', { name: 'Role' }))
-    .toContainText('No role');
-  await organizationInviteDialog.getByRole('textbox', { name: 'Email address' })
-    .fill(organizationInviteEmail);
-  await organizationInviteDialog.getByRole('button', { name: 'Send invitation' }).click();
-  await expect(organizationInviteDialog).toBeHidden();
-  await page.getByRole('tab', { name: /Invitations/u }).click();
-  await expect(page.getByText(organizationInviteEmail, { exact: true })).toBeVisible();
-  const organizationInviteRow = page.getByRole('row').filter({
-    hasText: organizationInviteEmail
-  });
-  await organizationInviteRow.getByRole('button', { name: 'Cancel', exact: true }).click();
-  await expect(page.getByText(organizationInviteEmail, { exact: true })).toHaveCount(0);
+    await openFeature(page, 'Organizations');
+    await expect(page.getByRole('heading', { level: 1, name: 'Organizations' })).toBeVisible();
+    await expect(page.getByText('No organizations yet', { exact: true })).toBeVisible();
+    await page.getByRole('button', { name: 'New organization' }).click();
+    const createOrganizationDialog = page.getByRole('dialog', {
+      name: 'Create an organization'
+    });
+    await createOrganizationDialog.getByRole('textbox', { name: 'Organization name' })
+      .fill(organizationName);
+    await createOrganizationDialog.getByRole('button', { name: 'Create organization' }).click();
+    await expect(createOrganizationDialog).toBeHidden();
+    await expect(page.getByText(organizationName, { exact: true }).first()).toBeVisible();
 
-  await signOutThroughUi(page);
+    const organizationRows = await pollRows(async () => {
+      const data = await graphQL<Record<string, unknown>>(
+        endpointUrl(tenant, 'auth'),
+        ORGANIZATION_USERS_READ,
+        {},
+        cleanupSession.token
+      );
+      const users = data.users && typeof data.users === 'object' && !Array.isArray(data.users)
+        ? (data.users as { nodes?: unknown }).nodes
+        : null;
+      return Array.isArray(users)
+        ? users.filter((row): row is Record<string, unknown> =>
+            Boolean(row) && typeof row === 'object' && !Array.isArray(row)
+          )
+        : [];
+    }, (rows) => rows.some((row) => row.displayName === organizationName && row.type === 2));
+    const createdOrganization = organizationRows.find(
+      (row) => row.displayName === organizationName && row.type === 2
+    );
+    organizationId = typeof createdOrganization?.id === 'string'
+      ? createdOrganization.id
+      : null;
+    expect(organizationId).toBeTruthy();
+
+    await page.getByRole('button', { name: 'Invite member' }).click();
+    const organizationInviteDialog = page.getByRole('dialog', {
+      name: 'Invite an organization member'
+    });
+    await expect(organizationInviteDialog.getByRole('combobox', { name: 'Role' }))
+      .toHaveCount(0);
+    await organizationInviteDialog.getByRole('textbox', { name: 'Email address' })
+      .fill(organizationInviteEmail);
+    await organizationInviteDialog.getByRole('button', { name: 'Send invitation' }).click();
+    await expect(organizationInviteDialog).toBeHidden();
+    await page.getByRole('tab', { name: /Invitations/u }).click();
+    await expect(page.getByText(organizationInviteEmail, { exact: true })).toBeVisible();
+    const organizationInviteRow = page.getByRole('row').filter({
+      hasText: organizationInviteEmail
+    });
+    await organizationInviteRow.getByRole('button', { name: 'Cancel', exact: true }).click();
+    await expect(page.getByText(organizationInviteEmail, { exact: true })).toHaveCount(0);
+
+    await signOutThroughUi(page);
+  } finally {
+    if (organizationId) {
+      const deleted = await graphQL<Record<string, unknown>>(
+        endpointUrl(tenant, 'auth'),
+        DELETE_ORGANIZATION_USER,
+        { input: { id: organizationId } },
+        cleanupSession.token
+      );
+      const deleteUser = deleted.deleteUser;
+      const deletedUser = deleteUser && typeof deleteUser === 'object' && !Array.isArray(deleteUser)
+        ? (deleteUser as Record<string, unknown>).user
+        : null;
+      expect(
+        deletedUser && typeof deletedUser === 'object' && !Array.isArray(deletedUser)
+          ? (deletedUser as Record<string, unknown>).id
+          : null
+      ).toBe(organizationId);
+    }
+    await signOut(tenant, cleanupSession.token);
+  }
 });
 
 test('rejects invalid, cross-tenant, and revoked bearer tokens at HTTP-200 GraphQL boundaries', async () => {

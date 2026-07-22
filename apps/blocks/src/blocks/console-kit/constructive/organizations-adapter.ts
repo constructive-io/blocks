@@ -61,6 +61,12 @@ const DELETE_INVITE_MUTATION = /* GraphQL */ `
   }
 `;
 
+const CREATE_ORGANIZATION_MUTATION = /* GraphQL */ `
+  mutation ConsoleKitCreateOrganization($input: CreateUserInput!) {
+    createUser(input: $input) { user { id } }
+  }
+`;
+
 export type ConstructiveOrganizationsAdapterOptions = Readonly<{
   store: ConsoleKitStoreApi;
   discovery: ConstructiveCapabilityDiscovery;
@@ -481,6 +487,13 @@ export function createConstructiveOrganizationsAdapter(
       const activeOrganizationId = loaded.data.activeOrganizationId;
       const reload = () => notifyConsoleAdapters(options.store);
       const adminSchema = options.discovery.getSchemas().admin;
+      const authSchema = options.discovery.getSchemas().auth;
+      const canCreateOrganization = supportsConstructiveMutationInput(
+        authSchema,
+        'createUser',
+        ['user'],
+        { field: 'user', requiredFields: ['displayName', 'type'] }
+      );
       const grantSupportsEntity = supportsConstructiveMutationInput(
         adminSchema,
         'createOrgProfileGrant',
@@ -541,9 +554,10 @@ export function createConstructiveOrganizationsAdapter(
             }
           : { status: 'empty' },
         policy: {
-          // createUser is an administrative root; its presence does not prove
-          // an application user may create organization identities.
-          createOrganization: false,
+          // A type-2 user is the organization identity. Constructive's user
+          // insert trigger creates the current actor's owner membership in the
+          // same transaction, which is the flow used by Dashboard as well.
+          createOrganization: canCreateOrganization,
           selectOrganization: true,
           inviteMember: canInvite,
           assignInviteRole: canInvite &&
@@ -555,6 +569,14 @@ export function createConstructiveOrganizationsAdapter(
           cancelInvite: canDeleteInvite
         },
         actions: {
+          createOrganization: canCreateOrganization
+            ? async ({ name }) => {
+                await executeConstructiveGraphQL(runtime, 'auth', CREATE_ORGANIZATION_MUTATION, {
+                  input: { user: { displayName: name, type: 2 } }
+                });
+                reload();
+              }
+            : undefined,
           selectOrganization: async ({ organizationId }) => {
             if (!loaded.data.organizations.some((organization) => organization.id === organizationId)) {
               throw new Error('The requested organization is not visible to this session.');
