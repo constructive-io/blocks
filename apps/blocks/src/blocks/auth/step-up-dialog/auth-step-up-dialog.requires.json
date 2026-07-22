@@ -1,6 +1,0 @@
-{
-  "namespace": "auth",
-  "mutations": ["verifyPassword", "verifyTotp"],
-  "queries": ["requireStepUp"],
-  "models": []
-}

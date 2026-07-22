@@ -1,6 +1,0 @@
-{
-  "namespace": "admin",
-  "mutations": ["createOrgProfile", "updateOrgProfile", "deleteOrgProfile"],
-  "queries": ["orgProfiles"],
-  "models": ["orgProfile"]
-}
