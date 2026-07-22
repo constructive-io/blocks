@@ -4,11 +4,19 @@ import { describe, expect, it } from 'vitest';
 
 import type {
   ConsoleGraphQLResult,
-  IdentityScopedConsoleTransport
+  IdentityScopedConsoleTransport,
+  ConsoleSession
 } from '../console-runtime';
 import type { ConsoleKitAdapterContext } from './console-kit-contracts';
-import { useConsoleKitMetadata } from './console-kit-runtime';
-import { ConsoleKitStoreProvider } from './store';
+import {
+  resolveConsoleKitEndpoints,
+  useConsoleKitMetadata,
+  useConsoleKitRuntime
+} from './console-kit-runtime';
+import {
+  ConsoleKitStoreProvider,
+  createConsoleKitStore
+} from './store';
 
 function deferred<T>() {
   let resolve!: (value: T) => void;
@@ -102,5 +110,69 @@ describe('Console Kit metadata lifecycle', () => {
       status: 'incompatible',
       missing: currentMissing
     });
+  });
+});
+
+describe('Console Kit endpoint runtime', () => {
+  it('resolves every semantic endpoint kind', () => {
+    expect(resolveConsoleKitEndpoints('database-1', {
+      data: '/api/graphql',
+      auth: '/auth/graphql',
+      admin: '/admin/graphql',
+      billing: '/usage/graphql',
+      storage: '/objects/graphql',
+      notifications: '/notifications/graphql'
+    }, undefined)).toMatchObject({
+      data: { kind: 'data', url: '/api/graphql' },
+      auth: { kind: 'auth', url: '/auth/graphql' },
+      admin: { kind: 'admin', url: '/admin/graphql' },
+      billing: { kind: 'billing', url: '/usage/graphql' },
+      storage: { kind: 'storage', url: '/objects/graphql' },
+      notifications: { kind: 'notifications', url: '/notifications/graphql' }
+    });
+  });
+
+  it('synchronizes normalized endpoints into the per-console store', async () => {
+    const store = createConsoleKitStore('data');
+    const snapshot = {
+      status: 'anonymous',
+      identity: {
+        kind: 'anonymous',
+        cachePartition: 'anonymous-1',
+        tenantId: 'database-1'
+      }
+    } as const;
+    const session: ConsoleSession = {
+      mode: 'embedded',
+      getSnapshot: () => snapshot,
+      subscribe: () => () => undefined,
+      getAccessToken: () => null
+    };
+    const wrapper = ({ children }: Readonly<{ children: React.ReactNode }>) => (
+      <ConsoleKitStoreProvider
+        initialFeature='data'
+        store={store}
+      >
+        {children}
+      </ConsoleKitStoreProvider>
+    );
+
+    renderHook(() => useConsoleKitRuntime({
+      databaseId: 'database-1',
+      endpoints: {
+        data: '/api/graphql',
+        billing: '/usage/graphql',
+        storage: '/objects/graphql',
+        notifications: '/notifications/graphql'
+      },
+      session
+    }), { wrapper });
+
+    await waitFor(() => expect(store.getState().endpoints).toMatchObject({
+      data: { kind: 'data', url: '/api/graphql' },
+      billing: { kind: 'billing', url: '/usage/graphql' },
+      storage: { kind: 'storage', url: '/objects/graphql' },
+      notifications: { kind: 'notifications', url: '/notifications/graphql' }
+    }));
   });
 });

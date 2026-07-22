@@ -14,6 +14,7 @@ import {
 } from '@constructive-io/data';
 
 import {
+  CONSOLE_ENDPOINT_KINDS,
   createFetchConsoleTransport,
   createConsoleIdentityKey,
   createIdentityScopedTransport,
@@ -92,10 +93,9 @@ export function resolveConsoleKitEndpoints(
   configured: Parameters<typeof resolveConsoleEndpoint>[0] | undefined,
   resolver: ConsoleKitEndpointResolver | undefined
 ): Readonly<Partial<Record<ConsoleEndpointKind, ConsoleEndpoint>>> {
-  const kinds = ['data', 'auth', 'admin'] as const;
   const endpoints: Partial<Record<ConsoleEndpointKind, ConsoleEndpoint>> = {};
 
-  for (const kind of kinds) {
+  for (const kind of CONSOLE_ENDPOINT_KINDS) {
     const input = configured?.[kind] ?? resolver?.({ databaseId, kind });
     if (input === undefined) continue;
     const resolution = resolveConsoleEndpoint({ [kind]: input }, kind);
@@ -103,6 +103,16 @@ export function resolveConsoleKitEndpoints(
   }
 
   return endpoints;
+}
+
+function configuredEndpointsKey(
+  configured: Parameters<typeof resolveConsoleEndpoint>[0] | undefined
+): string {
+  return JSON.stringify(CONSOLE_ENDPOINT_KINDS.map((kind) => {
+    const endpoint = configured?.[kind];
+    if (typeof endpoint === 'string') return [kind, endpoint];
+    return [kind, endpoint?.id ?? null, endpoint?.url ?? null];
+  }));
 }
 
 async function requireResult<T>(
@@ -247,10 +257,13 @@ export function useConsoleKitRuntime({
   const snapshot = useConsoleSessionSnapshot(session);
   const setSession = useConsoleKitStore((store) => store.setSession);
   React.useEffect(() => setSession(snapshot), [setSession, snapshot]);
+  const endpointConfigurationKey = configuredEndpointsKey(configuredEndpoints);
   const endpoints = React.useMemo(
     () => resolveConsoleKitEndpoints(databaseId, configuredEndpoints, resolveEndpoint),
-    [configuredEndpoints, databaseId, resolveEndpoint]
+    [databaseId, endpointConfigurationKey, resolveEndpoint]
   );
+  const setEndpoints = useConsoleKitStore((store) => store.setEndpoints);
+  React.useEffect(() => setEndpoints(endpoints), [endpoints, setEndpoints]);
   const selectedTransport = React.useMemo(() => transport ?? createFetchConsoleTransport(), [transport]);
   const identity = getConsoleSessionIdentity(snapshot);
 

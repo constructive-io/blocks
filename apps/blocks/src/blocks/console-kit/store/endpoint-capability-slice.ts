@@ -7,14 +7,31 @@ import type {
   ConsolePackCapabilityState
 } from '../../console-runtime';
 
+type ConsoleEndpointState = Readonly<
+  Partial<Record<ConsoleEndpointKind, ConsoleEndpoint>>
+>;
+
+function sameEndpoints(
+  current: ConsoleEndpointState,
+  next: ConsoleEndpointState
+): boolean {
+  const currentEntries = Object.entries(current);
+  const nextEntries = Object.entries(next);
+  if (currentEntries.length !== nextEntries.length) return false;
+  return nextEntries.every(([kind, endpoint]) => {
+    const existing = current[kind as ConsoleEndpointKind];
+    return existing?.id === endpoint?.id &&
+      existing?.kind === endpoint?.kind &&
+      existing?.url === endpoint?.url;
+  });
+}
+
 export type ConsoleKitEndpointCapabilitySlice = {
-  endpoints: Readonly<Partial<Record<ConsoleEndpointKind, ConsoleEndpoint>>>;
+  endpoints: ConsoleEndpointState;
   packCapabilities: Readonly<
     Partial<Record<FeaturePackId, ConsolePackCapabilityState>>
   >;
-  setEndpoints: (
-    endpoints: Readonly<Partial<Record<ConsoleEndpointKind, ConsoleEndpoint>>>
-  ) => void;
+  setEndpoints: (endpoints: ConsoleEndpointState) => void;
   setPackCapability: (
     pack: FeaturePackId,
     capability: ConsolePackCapabilityState
@@ -30,7 +47,11 @@ export const createConsoleKitEndpointCapabilitySlice: StateCreator<
 > = (set) => ({
   endpoints: {},
   packCapabilities: {},
-  setEndpoints: (endpoints) => set({ endpoints: { ...endpoints } }),
+  setEndpoints: (endpoints) => set((state) =>
+    sameEndpoints(state.endpoints, endpoints)
+      ? state
+      : { endpoints: { ...endpoints } }
+  ),
   setPackCapability: (pack, capability) => set((state) => ({
     packCapabilities: {
       ...state.packCapabilities,
