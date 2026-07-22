@@ -1,5 +1,4 @@
 import { readFileSync } from 'node:fs';
-import { isAbsolute } from 'node:path';
 import { notFound } from 'next/navigation';
 
 import type { ConsoleEndpointMap } from '@/blocks/console-runtime';
@@ -49,12 +48,7 @@ type ProofManifest = Readonly<{
   }>[];
 }>;
 
-function readProofManifest(): ProofManifest {
-  const path = process.env.CONSOLE_KIT_TENANT_MANIFEST;
-  if (!path || !isAbsolute(path)) {
-    throw new Error('CONSOLE_KIT_TENANT_MANIFEST must be an absolute path.');
-  }
-
+function readProofManifest(path: string): ProofManifest {
   const raw: unknown = JSON.parse(readFileSync(path, 'utf8'));
   assertSupportedProofManifest(raw, 'route-bootstrap');
   const parsed = raw as ProofManifest;
@@ -104,11 +98,12 @@ function toTenant(entry: ProofManifest['tenants'][number]): ConsoleKitProofTenan
 export default function ConsoleKitProofPage() {
   if (process.env.CONSOLE_KIT_INTEGRATION !== '1') notFound();
 
-  const proof = readProofManifest();
+  const paths = reviewPathsFromEnvironment();
+  const proof = readProofManifest(paths.routeInput);
   const status = resolveConsoleKitReviewStatus({
     runId: proof.runId,
     routeStatus: proof.status,
-    paths: reviewPathsFromEnvironment()
+    paths
   });
   return (
     <ConsoleKitProofClient
