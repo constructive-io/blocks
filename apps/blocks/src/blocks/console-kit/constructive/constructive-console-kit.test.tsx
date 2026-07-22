@@ -142,7 +142,7 @@ describe('ConstructiveConsoleKit external ownership', () => {
     expect(secondProps.config.adapters).not.toBe(firstProps.config.adapters);
   });
 
-  it('mounts a blank data-only tenant with a matching host-owned session', () => {
+  it('mounts a blank data-only tenant with a host session despite its nominal auth route', () => {
     const hostSession = embeddedSession('database-1');
     const hostTransport = transport('blank');
 
@@ -152,7 +152,8 @@ describe('ConstructiveConsoleKit external ownership', () => {
           id: 'database-1',
           name: 'Blank tenant',
           endpoints: {
-            data: { id: 'data-1', url: 'https://blank.example/data/graphql' }
+            data: { id: 'data-1', url: 'https://blank.example/data/graphql' },
+            auth: { id: 'auth-1', url: 'https://blank.example/auth/graphql' }
           }
         }}
         session={hostSession}
@@ -173,7 +174,8 @@ describe('ConstructiveConsoleKit external ownership', () => {
     }>;
     expect(props.store.getState().activeFeature).toBe('data');
     expect(props.config.endpoints).toEqual({
-      data: { id: 'data-1', url: 'https://blank.example/data/graphql' }
+      data: { id: 'data-1', url: 'https://blank.example/data/graphql' },
+      auth: { id: 'auth-1', url: 'https://blank.example/auth/graphql' }
     });
     expect(props.config.session).toBe(hostSession);
     expect(props.config.transport).toBe(hostTransport);
