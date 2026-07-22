@@ -13,6 +13,10 @@ export type BillingSettingsPageMessages = {
   overviewSectionLead: string;
   usageSectionLead: string;
   plansSectionLead: string;
+  /** Quiet zone labels for multi-block sections. */
+  entitlementsZoneLabel: string;
+  historyZoneLabel: string;
+  activityZoneLabel: string;
   accountKind: {
     personal: string;
     organization: string;
@@ -34,19 +38,24 @@ export type BillingSettingsPageMessageOverrides = Partial<
 export const defaultBillingSettingsPageMessages: BillingSettingsPageMessages = {
   title: 'Billing',
   description:
-    'Plan, usage, credits, entitlements, and activity for this account.',
+    'Manage your plan, track usage and credits, and review entitlements for this account.',
   helpTitle: 'About billing settings',
   tabListLabel: 'Billing sections',
   overviewTabLabel: 'Overview',
   usageTabLabel: 'Usage',
   plansTabLabel: 'Plans',
-  overviewSectionTitle: 'Billing overview',
-  usageSectionTitle: 'Usage and activity',
-  plansSectionTitle: 'Plans and pricing',
+  overviewSectionTitle: 'Overview',
+  usageSectionTitle: 'Usage',
+  plansSectionTitle: 'Plans',
   overviewSectionLead:
-    'Current plan, metered usage, credits, and entitlements for this period.',
-  usageSectionLead: 'Historical usage by period and recent ledger activity.',
-  plansSectionLead: 'Compare plans and change your subscription.',
+    'Your current plan and consumption for this billing period, with credits and included entitlements nearby.',
+  usageSectionLead:
+    'Period totals and ledger activity when you need to reconcile usage or investigate charges.',
+  plansSectionLead:
+    'Compare available plans and switch when your needs change.',
+  entitlementsZoneLabel: 'Included entitlements',
+  historyZoneLabel: 'By period',
+  activityZoneLabel: 'Ledger',
   accountKind: {
     personal: 'Personal account',
     organization: 'Organization'

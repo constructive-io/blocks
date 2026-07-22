@@ -3,21 +3,23 @@
 /**
  * Billing settings composition page.
  *
- * Lessons from usage overview / credits card:
- * - One identity cluster at the page level (not on every child card)
+ * SaaS destination layout:
+ * - One identity cluster at the page level (children use embedded mode)
+ * - Underline section nav (settings chrome, not a floating pill demo)
+ * - Section leads + zoned content; container queries for frame/sidebar embed
  * - Help copy in tooltips, not banners
- * - Container-query layout: 390 / tablet / desktop density
- * - Child blocks use embedded mode to drop repeated account chrome
  */
 
 import * as React from 'react';
-import { CircleHelpIcon } from 'lucide-react';
+import { Building2Icon, CircleHelpIcon, UserIcon } from 'lucide-react';
 
 import {
   Alert,
   AlertDescription,
   AlertTitle
 } from '@constructive-io/ui/alert';
+import { Badge } from '@constructive-io/ui/badge';
+import { Separator } from '@constructive-io/ui/separator';
 import {
   Tabs,
   TabsContent,
@@ -255,6 +257,15 @@ function pickAsOf(resources: BillingSettingsResources): string | undefined {
   return selected?.value;
 }
 
+const tabTriggerClassName = cn(
+  'relative min-h-10 shrink-0 rounded-none border-0 border-b-2 border-transparent bg-transparent px-3 py-2.5',
+  'text-sm font-medium text-muted-foreground shadow-none',
+  'hover:bg-transparent hover:text-foreground',
+  'data-[active]:border-foreground data-[active]:bg-transparent data-[active]:text-foreground data-[active]:shadow-none',
+  'focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background',
+  'pointer-coarse:min-h-11'
+);
+
 /**
  * Page identity cluster. Title is optional (`showHeader`); account meta is
  * always shown so embedded children can drop repeated Avery/Acme chrome.
@@ -274,64 +285,130 @@ function SettingsIdentity({
   formatOptions: BillingFormatOptions;
   showTitle: boolean;
 }) {
-  return (
-    <header className="flex min-w-0 flex-col gap-3">
-      {showTitle ? (
-        <div className="flex min-w-0 items-center gap-1.5">
-          <h1
-            id={headingId}
-            className="text-balance text-2xl font-semibold tracking-tight @min-[640px]/billing-settings-page:text-3xl"
-          >
-            {messages.title}
-          </h1>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <button
-                type="button"
-                className="inline-flex size-8 shrink-0 items-center justify-center rounded-md text-muted-foreground outline-none transition-colors hover:bg-muted/60 hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring"
-                aria-label={messages.helpTitle}
-              >
-                <CircleHelpIcon className="size-3.5" aria-hidden="true" />
-              </button>
-            </TooltipTrigger>
-            <TooltipContent className="max-w-xs text-pretty">
-              <p className="font-medium">{messages.helpTitle}</p>
-              <p className="mt-1">{messages.description}</p>
-            </TooltipContent>
-          </Tooltip>
-          <span className="sr-only" role="note">
-            {messages.description}
-          </span>
-        </div>
-      ) : null}
+  const AccountIcon =
+    account.kind === 'organization' ? Building2Icon : UserIcon;
+  const accountLabel = account.label ?? account.entityId;
 
-      <div className="grid min-w-0 gap-1 text-sm">
-        <div className="flex min-w-0 flex-wrap items-baseline gap-x-2 gap-y-0.5">
-          <span className="font-medium text-foreground">
-            {account.label ?? account.entityId}
-          </span>
-          <span className="text-muted-foreground">
-            {messages.accountKind[account.kind]}
-          </span>
-        </div>
-        {asOf ? (
-          <p className="tabular-nums text-muted-foreground">
-            {messages.asOfLabel}{' '}
-            <time dateTime={asOf}>
-              {formatBillingDate(asOf, formatOptions)}
-            </time>
-          </p>
+  return (
+    <header
+      className={cn(
+        'flex min-w-0 flex-col gap-4',
+        showTitle
+          ? 'border-b border-border/70 pb-5 @min-[640px]/billing-settings-page:pb-6'
+          : null
+      )}
+    >
+      <div
+        className={cn(
+          'flex min-w-0 flex-col gap-3',
+          '@min-[640px]/billing-settings-page:flex-row @min-[640px]/billing-settings-page:items-start @min-[640px]/billing-settings-page:justify-between @min-[640px]/billing-settings-page:gap-6'
+        )}
+      >
+        {showTitle ? (
+          <div className="min-w-0 flex-1 space-y-1.5">
+            <div className="flex min-w-0 items-center gap-1.5">
+              <h1
+                id={headingId}
+                className="text-balance text-2xl font-semibold tracking-tight @min-[640px]/billing-settings-page:text-[1.75rem]"
+              >
+                {messages.title}
+              </h1>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <button
+                    type="button"
+                    className="inline-flex size-8 shrink-0 items-center justify-center rounded-md text-muted-foreground outline-none transition-colors hover:bg-muted/60 hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring"
+                    aria-label={messages.helpTitle}
+                  >
+                    <CircleHelpIcon className="size-3.5" aria-hidden="true" />
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent className="max-w-xs text-pretty">
+                  <p className="font-medium">{messages.helpTitle}</p>
+                  <p className="mt-1">{messages.description}</p>
+                </TooltipContent>
+              </Tooltip>
+              <span className="sr-only" role="note">
+                {messages.description}
+              </span>
+            </div>
+            <p className="max-w-xl text-pretty text-sm text-muted-foreground">
+              {messages.description}
+            </p>
+          </div>
         ) : null}
+
+        <div
+          className={cn(
+            'flex min-w-0 flex-col gap-1.5',
+            showTitle
+              ? '@min-[640px]/billing-settings-page:items-end @min-[640px]/billing-settings-page:text-end'
+              : null
+          )}
+        >
+          <div className="flex min-w-0 flex-wrap items-center gap-2 @min-[640px]/billing-settings-page:justify-end">
+            <Badge
+              variant="secondary"
+              className="max-w-full gap-1.5 px-2.5 py-1 font-medium"
+            >
+              <AccountIcon className="size-3.5 shrink-0 opacity-70" aria-hidden />
+              <span className="min-w-0 truncate">{accountLabel}</span>
+            </Badge>
+            <span className="text-sm text-muted-foreground">
+              {messages.accountKind[account.kind]}
+            </span>
+          </div>
+          {asOf ? (
+            <p className="text-xs tabular-nums text-muted-foreground">
+              {messages.asOfLabel}{' '}
+              <time dateTime={asOf}>
+                {formatBillingDate(asOf, formatOptions)}
+              </time>
+            </p>
+          ) : null}
+        </div>
       </div>
     </header>
   );
 }
 
-function SectionLead({ children }: { children: React.ReactNode }) {
+function SectionIntro({
+  title,
+  lead
+}: {
+  title: string;
+  lead: string;
+}) {
   return (
-    <p className="max-w-2xl text-pretty text-sm text-muted-foreground">
+    <div className="grid min-w-0 max-w-2xl gap-1">
+      <h2 className="text-balance text-base font-semibold tracking-tight text-foreground">
+        {title}
+      </h2>
+      <p className="text-pretty text-sm leading-6 text-muted-foreground">
+        {lead}
+      </p>
+    </div>
+  );
+}
+
+function ContentZone({
+  children,
+  className,
+  label
+}: {
+  children: React.ReactNode;
+  className?: string;
+  label?: string;
+}) {
+  return (
+    <div className={cn('grid min-w-0 gap-3', className)}>
+      {label ? (
+        <p className="text-xs font-medium text-muted-foreground uppercase">
+          {label}
+        </p>
+      ) : null}
       {children}
-    </p>
+    </div>
   );
 }
 
@@ -406,8 +483,8 @@ export function BillingSettingsPage({
         className={cn(
           // Container is the layout engine — media queries alone aren't enough
           // when this page is embedded in a sidebar shell or showcase frame.
-          '@container/billing-settings-page mx-auto flex w-full max-w-7xl min-w-0 flex-col',
-          'gap-4 @min-[640px]/billing-settings-page:gap-6',
+          '@container/billing-settings-page mx-auto flex w-full max-w-6xl min-w-0 flex-col',
+          'gap-0',
           className
         )}
       >
@@ -421,7 +498,7 @@ export function BillingSettingsPage({
         />
 
         {sectionError ? (
-          <Alert variant="destructive">
+          <Alert className="mt-5" variant="destructive">
             <AlertTitle
               className="text-balance"
               role="heading"
@@ -436,46 +513,48 @@ export function BillingSettingsPage({
         <Tabs
           {...tabsState}
           onValueChange={(value) => void handleSectionChange(value)}
-          className="min-w-0 gap-4 @min-[640px]/billing-settings-page:gap-6"
+          className={cn(
+            'min-w-0 gap-0',
+            showHeader ? 'mt-1' : 'mt-4'
+          )}
         >
           {/*
-            Sticky section switcher: stays reachable while scrolling long
-            overview stacks. Full-width 3-up on narrow containers; inline
-            pill list when the page is wide enough.
+            Sticky underline section switcher — SaaS settings chrome.
+            Full-width 3-up on narrow containers; left-aligned tabs when wide.
           */}
           <div
             className={cn(
-              'sticky top-0 z-10 -mx-1 border-b border-border/40 bg-background/90 px-1 py-2 backdrop-blur-sm',
-              'supports-[backdrop-filter]:bg-background/75',
-              '@min-[640px]/billing-settings-page:static @min-[640px]/billing-settings-page:border-0 @min-[640px]/billing-settings-page:bg-transparent @min-[640px]/billing-settings-page:p-0 @min-[640px]/billing-settings-page:backdrop-blur-none'
+              'sticky top-0 z-10 -mx-1 border-b border-border bg-background/95 px-1 backdrop-blur-sm',
+              'supports-[backdrop-filter]:bg-background/80'
             )}
           >
             <div className="overflow-x-auto">
               <TabsList
                 aria-label={messages.tabListLabel}
                 className={cn(
-                  'grid h-auto w-full min-w-0 grid-cols-3 gap-0.5 p-0.5',
+                  'h-auto w-full min-w-0 justify-start gap-0 rounded-none bg-transparent p-0',
+                  'grid grid-cols-3',
                   '@min-[480px]/billing-settings-page:inline-flex @min-[480px]/billing-settings-page:w-auto @min-[480px]/billing-settings-page:min-w-max'
                 )}
               >
                 <TabsTrigger
                   disabled={sectionControlsDisabled}
                   value="overview"
-                  className="min-w-0 px-2 text-xs @min-[480px]/billing-settings-page:px-3 @min-[480px]/billing-settings-page:text-sm"
+                  className={tabTriggerClassName}
                 >
                   {messages.overviewTabLabel}
                 </TabsTrigger>
                 <TabsTrigger
                   disabled={sectionControlsDisabled}
                   value="usage"
-                  className="min-w-0 px-2 text-xs @min-[480px]/billing-settings-page:px-3 @min-[480px]/billing-settings-page:text-sm"
+                  className={tabTriggerClassName}
                 >
                   {messages.usageTabLabel}
                 </TabsTrigger>
                 <TabsTrigger
                   disabled={sectionControlsDisabled}
                   value="plans"
-                  className="min-w-0 px-2 text-xs @min-[480px]/billing-settings-page:px-3 @min-[480px]/billing-settings-page:text-sm"
+                  className={tabTriggerClassName}
                 >
                   {messages.plansTabLabel}
                 </TabsTrigger>
@@ -483,21 +562,25 @@ export function BillingSettingsPage({
             </div>
           </div>
 
-          <TabsContent value="overview" className="min-w-0 outline-none">
+          <TabsContent
+            value="overview"
+            className="min-w-0 outline-none data-[hidden]:hidden"
+          >
             <section
               aria-label={messages.overviewSectionTitle}
-              className="grid min-w-0 gap-4 @min-[640px]/billing-settings-page:gap-5"
+              className="grid min-w-0 gap-5 pt-5 @min-[640px]/billing-settings-page:gap-6 @min-[640px]/billing-settings-page:pt-6"
             >
-              <SectionLead>{messages.overviewSectionLead}</SectionLead>
+              <SectionIntro
+                title={messages.overviewSectionTitle}
+                lead={messages.overviewSectionLead}
+              />
 
               {/*
                 Two-stage layout so the side rail never paints over entitlements:
                 1) usage + rail share one row
-                2) entitlements is a full-width sibling below (not a grid peer
-                   that sticky content can cover). No sticky rail — tall
-                   subscription+credits stacks must scroll with the page.
+                2) entitlements is a full-width sibling below
               */}
-              <div className="flex min-w-0 flex-col gap-4 @min-[640px]/billing-settings-page:gap-5">
+              <div className="flex min-w-0 flex-col gap-5 @min-[640px]/billing-settings-page:gap-6">
                 <div
                   className={cn(
                     'grid min-w-0 gap-4',
@@ -554,27 +637,36 @@ export function BillingSettingsPage({
 
                 <div
                   data-slot="billing-settings-entitlements"
-                  className="min-w-0"
+                  className="min-w-0 space-y-4"
                 >
-                  <BillingEntitlementsList
-                    resource={resources.entitlements}
-                    account={account}
-                    formatOptions={formatOptions}
-                    embedded
-                    onError={onError}
-                    onMessage={onMessage}
-                  />
+                  <Separator className="bg-border/70" />
+                  <ContentZone label={messages.entitlementsZoneLabel}>
+                    <BillingEntitlementsList
+                      resource={resources.entitlements}
+                      account={account}
+                      formatOptions={formatOptions}
+                      embedded
+                      onError={onError}
+                      onMessage={onMessage}
+                    />
+                  </ContentZone>
                 </div>
               </div>
             </section>
           </TabsContent>
 
-          <TabsContent value="usage" className="min-w-0 outline-none">
+          <TabsContent
+            value="usage"
+            className="min-w-0 outline-none data-[hidden]:hidden"
+          >
             <section
               aria-label={messages.usageSectionTitle}
-              className="grid min-w-0 gap-4 @min-[640px]/billing-settings-page:gap-5"
+              className="grid min-w-0 gap-5 pt-5 @min-[640px]/billing-settings-page:gap-6 @min-[640px]/billing-settings-page:pt-6"
             >
-              <SectionLead>{messages.usageSectionLead}</SectionLead>
+              <SectionIntro
+                title={messages.usageSectionTitle}
+                lead={messages.usageSectionLead}
+              />
 
               {/*
                 Stack on phone/tablet; side-by-side only when the container is
@@ -582,11 +674,14 @@ export function BillingSettingsPage({
               */}
               <div
                 className={cn(
-                  'grid min-w-0 gap-4',
+                  'grid min-w-0 gap-5',
                   '@min-[1100px]/billing-settings-page:grid-cols-2 @min-[1100px]/billing-settings-page:items-start @min-[1100px]/billing-settings-page:gap-5'
                 )}
               >
-                <div className="min-w-0">
+                <ContentZone
+                  className="min-w-0"
+                  label={messages.historyZoneLabel}
+                >
                   <BillingUsageHistory
                     resource={resources.usageHistory}
                     account={account}
@@ -601,8 +696,11 @@ export function BillingSettingsPage({
                     onError={onError}
                     onMessage={onMessage}
                   />
-                </div>
-                <div className="min-w-0">
+                </ContentZone>
+                <ContentZone
+                  className="min-w-0"
+                  label={messages.activityZoneLabel}
+                >
                   <BillingActivityTable
                     resource={resources.activity}
                     account={account}
@@ -617,17 +715,23 @@ export function BillingSettingsPage({
                     onError={onError}
                     onMessage={onMessage}
                   />
-                </div>
+                </ContentZone>
               </div>
             </section>
           </TabsContent>
 
-          <TabsContent value="plans" className="min-w-0 outline-none">
+          <TabsContent
+            value="plans"
+            className="min-w-0 outline-none data-[hidden]:hidden"
+          >
             <section
               aria-label={messages.plansSectionTitle}
-              className="grid min-w-0 gap-4 @min-[640px]/billing-settings-page:gap-5"
+              className="grid min-w-0 gap-5 pt-5 @min-[640px]/billing-settings-page:gap-6 @min-[640px]/billing-settings-page:pt-6"
             >
-              <SectionLead>{messages.plansSectionLead}</SectionLead>
+              <SectionIntro
+                title={messages.plansSectionTitle}
+                lead={messages.plansSectionLead}
+              />
               <div className="min-w-0 overflow-x-auto">
                 <BillingPricingTable
                   resource={resources.plans}

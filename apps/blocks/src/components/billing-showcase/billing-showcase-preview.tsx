@@ -3,8 +3,11 @@
 import {
   useEffect,
   useId,
+  useLayoutEffect,
   useRef,
   useState,
+  type CSSProperties,
+  type ReactNode,
   type Ref
 } from 'react';
 import {
@@ -44,6 +47,7 @@ import {
 } from '@constructive-io/ui/tooltip';
 
 import { getBillingBlock, type BillingBlockName } from '@/lib/billing-blocks';
+import { cn } from '@/lib/utils';
 
 import {
   BILLING_SHOWCASE_ACCOUNT_OPTIONS,
@@ -85,6 +89,53 @@ function stateBadgeVariant(state: BillingShowcaseSettingsState) {
 
 function viewportOption(value: BillingPreviewViewport) {
   return BILLING_PREVIEW_VIEWPORTS.find((option) => option.value === value)!;
+}
+
+function fitScale(availableWidth: number, viewportWidth: number) {
+  if (availableWidth <= 0 || viewportWidth <= 0) return 1;
+  return Math.min(1, availableWidth / viewportWidth);
+}
+
+function formatPreviewScale(scale: number) {
+  return scale.toFixed(3);
+}
+
+/** Content-box width (clientWidth minus horizontal padding). */
+function contentBoxWidth(element: HTMLElement) {
+  const styles = window.getComputedStyle(element);
+  const paddingInline =
+    (Number.parseFloat(styles.paddingLeft) || 0) +
+    (Number.parseFloat(styles.paddingRight) || 0);
+  return Math.max(0, element.clientWidth - paddingInline);
+}
+
+/**
+ * Measure the stage content box and return a ≤1 scale so a fixed logical
+ * device width still fits without horizontal clipping.
+ */
+function usePreviewFitScale(
+  measureRef: { current: HTMLElement | null },
+  viewportWidth: number
+) {
+  const [scale, setScale] = useState(1);
+
+  useLayoutEffect(() => {
+    const element = measureRef.current;
+    if (!element) return;
+
+    const update = () => {
+      setScale(fitScale(contentBoxWidth(element), viewportWidth));
+    };
+
+    update();
+    if (typeof ResizeObserver === 'undefined') return;
+
+    const observer = new ResizeObserver(update);
+    observer.observe(element);
+    return () => observer.disconnect();
+  }, [measureRef, viewportWidth]);
+
+  return scale;
 }
 
 function BillingPreviewViewportControls({
@@ -137,31 +188,75 @@ function BillingPreviewIframe({
   height,
   mode,
   name,
+  scale,
   source,
   viewport
 }: {
   frameRef?: Ref<HTMLIFrameElement>;
-  height: number | string;
+  height: number;
   mode: 'full-screen' | 'inline';
   name: BillingBlockName;
+  scale: number;
   source: string;
   viewport: BillingPreviewViewport;
 }) {
   const option = viewportOption(viewport);
   const title = getBillingBlock(name)?.title ?? name;
+  const layoutWidth = option.width * scale;
+  const layoutHeight = height * scale;
+
+  const frameStyle: CSSProperties = {
+    width: option.width,
+    height,
+    transform: scale === 1 ? undefined : `scale(${scale})`,
+    transformOrigin: 'top left'
+  };
 
   return (
-    <iframe
-      className="mx-auto block shrink-0 rounded-lg border-0 bg-background shadow-sm ring-1 ring-border/60"
-      data-preview-viewport={viewport}
-      height={height}
-      loading="eager"
-      ref={frameRef}
-      src={source}
-      style={{ height, width: option.width }}
-      title={`${title} ${mode} live preview`}
-      width={option.width}
-    />
+    <div
+      className="relative mx-auto shrink-0 overflow-hidden rounded-lg shadow-sm ring-1 ring-border/60"
+      data-preview-scale={formatPreviewScale(scale)}
+      data-slot="billing-preview-frame"
+      style={{ width: layoutWidth, height: layoutHeight }}
+    >
+      <iframe
+        className="block border-0 bg-background"
+        data-preview-viewport={viewport}
+        height={height}
+        loading="eager"
+        ref={frameRef}
+        src={source}
+        style={frameStyle}
+        title={`${title} ${mode} live preview`}
+        width={option.width}
+      />
+    </div>
+  );
+}
+
+function BillingPreviewStage({
+  children,
+  className,
+  measureRef,
+  style
+}: {
+  children: ReactNode;
+  className?: string;
+  measureRef?: Ref<HTMLDivElement>;
+  style?: CSSProperties;
+}) {
+  return (
+    <div
+      className={cn(
+        'flex w-full min-w-0 justify-center overflow-x-hidden overflow-y-auto p-3 sm:p-5',
+        className
+      )}
+      data-slot="billing-preview-stage"
+      ref={measureRef}
+      style={style}
+    >
+      {children}
+    </div>
   );
 }
 
@@ -175,6 +270,8 @@ export function BillingShowcasePreview({
   const accountControlId = useId();
   const stateControlId = useId();
   const inlineFrameRef = useRef<HTMLIFrameElement | null>(null);
+  const inlineStageRef = useRef<HTMLDivElement | null>(null);
+  const fullscreenStageRef = useRef<HTMLDivElement | null>(null);
   const fullscreenViewportRef = useRef<HTMLButtonElement | null>(null);
   const resizeObserverRef = useRef<ResizeObserver | null>(null);
   const [accountKind, setAccountKind] =
@@ -185,6 +282,9 @@ export function BillingShowcasePreview({
     useState<BillingPreviewViewport>('desktop');
   const [fullscreen, setFullscreen] = useState(false);
   const [inlineHeight, setInlineHeight] = useState(DEFAULT_PREVIEW_HEIGHT);
+  const [fullscreenHeight, setFullscreenHeight] = useState(
+    DEFAULT_PREVIEW_HEIGHT
+  );
 
   const account = getBillingShowcaseAccount(accountKind);
   const isSettings = name === 'billing-settings-page';
@@ -196,6 +296,11 @@ export function BillingShowcasePreview({
   )?.label;
   const selectedViewport = viewportOption(viewport);
   const previewSource = `${previewPath}?account=${accountKind}&state=${resourceState}`;
+  const inlineScale = usePreviewFitScale(inlineStageRef, selectedViewport.width);
+  const fullscreenScale = usePreviewFitScale(
+    fullscreenStageRef,
+    selectedViewport.width
+  );
 
   function disconnectFrameObserver() {
     resizeObserverRef.current?.disconnect();
@@ -219,13 +324,15 @@ export function BillingShowcasePreview({
         return;
       }
 
+      // Use layout sizes (not getBoundingClientRect) so outer CSS scale on the
+      // iframe does not feed back into the measured logical height.
       const measure = () => {
         setInlineHeight(
           Math.min(
             MAXIMUM_PREVIEW_HEIGHT,
             Math.max(
               MINIMUM_PREVIEW_HEIGHT,
-              Math.ceil(canvas.getBoundingClientRect().height)
+              Math.ceil(Math.max(canvas.scrollHeight, canvas.offsetHeight))
             )
           )
         );
@@ -249,6 +356,31 @@ export function BillingShowcasePreview({
       disconnectFrameObserver();
     };
   }, [previewSource, viewport]);
+
+  useLayoutEffect(() => {
+    if (!fullscreen) return;
+    const stage = fullscreenStageRef.current;
+    if (!stage) return;
+
+    const update = () => {
+      const styles = window.getComputedStyle(stage);
+      const paddingBlock =
+        (Number.parseFloat(styles.paddingTop) || 0) +
+        (Number.parseFloat(styles.paddingBottom) || 0);
+      setFullscreenHeight(
+        Math.max(
+          MINIMUM_PREVIEW_HEIGHT,
+          Math.floor(stage.clientHeight - paddingBlock)
+        )
+      );
+    };
+
+    update();
+    if (typeof ResizeObserver === 'undefined') return;
+    const observer = new ResizeObserver(update);
+    observer.observe(stage);
+    return () => observer.disconnect();
+  }, [fullscreen, viewport]);
 
   function handleAccountChange(value: string) {
     if (!isBillingShowcaseAccountKind(value)) return;
@@ -371,23 +503,24 @@ export function BillingShowcasePreview({
             </div>
           </div>
 
-          <div className="registry-block-stage !block !overflow-auto !p-0">
-            <div className="w-max min-w-full p-3 sm:p-5">
+          <div className="registry-block-stage !block !overflow-hidden !p-0">
+            <BillingPreviewStage measureRef={inlineStageRef}>
               <BillingPreviewIframe
                 frameRef={inlineFrameRef}
                 height={inlineHeight}
                 mode="inline"
                 name={name}
+                scale={inlineScale}
                 source={previewSource}
                 viewport={viewport}
               />
-            </div>
+            </BillingPreviewStage>
           </div>
         </div>
 
         <DialogPopup
           bottomStickOnMobile={false}
-          className="fixed inset-0 h-dvh max-h-dvh w-screen max-w-none translate-y-0 overflow-hidden rounded-none border-0"
+          className="fixed inset-0 flex h-dvh max-h-dvh w-screen max-w-none translate-y-0 flex-col overflow-hidden rounded-none border-0"
           initialFocus={fullscreenViewportRef}
           showCloseButton={false}
         >
@@ -426,24 +559,24 @@ export function BillingShowcasePreview({
             </DialogClose>
           </DialogHeader>
 
-          <div
-            className="min-h-0 flex-1 overflow-auto bg-background p-3 sm:p-5"
+          <BillingPreviewStage
+            className="min-h-0 flex-1 bg-background"
+            measureRef={fullscreenStageRef}
             style={{
               paddingBlockEnd: 'max(0.75rem, env(safe-area-inset-bottom))',
               paddingInlineEnd: 'max(0.75rem, env(safe-area-inset-right))',
               paddingInlineStart: 'max(0.75rem, env(safe-area-inset-left))'
             }}
           >
-            <div className="h-full min-h-0 w-max min-w-full">
-              <BillingPreviewIframe
-                height="100%"
-                mode="full-screen"
-                name={name}
-                source={previewSource}
-                viewport={viewport}
-              />
-            </div>
-          </div>
+            <BillingPreviewIframe
+              height={fullscreenHeight}
+              mode="full-screen"
+              name={name}
+              scale={fullscreenScale}
+              source={previewSource}
+              viewport={viewport}
+            />
+          </BillingPreviewStage>
         </DialogPopup>
       </Dialog>
     </TooltipProvider>
