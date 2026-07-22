@@ -9,8 +9,7 @@ import { SiteTopbar } from '@/components/site/site-topbar';
 export function RegistryShell({ children }: { children: ReactNode }) {
   const [mobileOpen, setMobileOpen] = useState(false);
   const pathname = usePathname();
-  const isBillingPreview =
-    /^\/blocks\/billing\/[^/]+\/preview\/?$/.test(pathname);
+  const isStandalonePreview = /^\/blocks\/(?:billing\/[^/]+|features\/[^/]+)\/preview\/?$/.test(pathname);
 
   useEffect(() => {
     setMobileOpen(false);
@@ -25,7 +24,7 @@ export function RegistryShell({ children }: { children: ReactNode }) {
     return () => window.removeEventListener('keydown', onKey);
   }, [mobileOpen]);
 
-  if (isBillingPreview) return children;
+  if (isStandalonePreview) return children;
 
   return (
     <div className="registry-app">

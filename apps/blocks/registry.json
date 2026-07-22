@@ -359,6 +359,7 @@
       "type": "registry:block",
       "title": "Data Feature Pack",
       "description": "A current-_meta-only application data explorer with application-table filtering and spreadsheet CRUD.",
+      "docs": "## Usage\n\nPass a Sheets configuration for the active application database. The feature root reads the current `_meta` contract, keeps tables with an exact application smart-tag scope, and delegates table selection, creation, and spreadsheet events to the host.\n\n```tsx\nimport { DataFeaturePack } from '@/blocks/feature-packs/data/data-feature-pack';\n\n<DataFeaturePack\n  config={sheetsConfig}\n  defaultActiveTable=\"projects\"\n  applicationScopes={['app']}\n  onActiveTableChange={setActiveTable}\n  onEvent={recordSheetEvent}\n/>\n```\n\nUse `activeTable` with `onActiveTableChange` when routing owns selection. The installed sidecar describes compatibility for tooling; PostgreSQL privileges and RLS remain authoritative for every query and mutation.",
       "dependencies": [
         "@constructive-io/data",
         "@constructive-io/sheets",
@@ -388,6 +389,7 @@
       "type": "registry:block",
       "title": "Authentication Feature Pack",
       "description": "Provider-neutral public authentication flows and personal account/session management.",
+      "docs": "## Usage\n\nChoose the entry or account view, grant each available operation through policy, and provide its matching provider callback.\n\n```tsx\nimport { AuthFeaturePack } from '@/blocks/feature-packs/auth/auth-feature-pack';\n\n<AuthFeaturePack\n  view=\"account\"\n  account={account}\n  policy={{ signOut: true, updateProfile: true, changePassword: true, revokeSession: true }}\n  actions={authActions}\n  onError={reportAuthError}\n/>\n```\n\nAn action appears only when its policy grant and callback are both present. Credentials and sessions belong to the personal identity; application and organization membership remain separate feature-pack concerns.",
       "dependencies": [
         "lucide-react"
       ],
@@ -428,6 +430,7 @@
       "type": "registry:block",
       "title": "Users Feature Pack",
       "description": "Application membership, invitation, role, profile, and status management without credential ownership.",
+      "docs": "## Usage\n\nPass application members, optional invitations, and role choices through one resource, then grant and inject only the membership operations available to the current administrator.\n\n```tsx\nimport { UsersFeaturePack } from '@/blocks/feature-packs/users/users-feature-pack';\n\n<UsersFeaturePack\n  resource={users}\n  policy={{ invite: true, updateRole: true, toggleActive: true, remove: true }}\n  actions={userActions}\n  onError={reportMembershipError}\n/>\n```\n\nSearch remains local to the block. Invitations, roles, status changes, and removals stay host-controlled, so refresh the resource after a successful action and let database policy determine the resulting membership view.",
       "dependencies": [
         "lucide-react"
       ],
@@ -454,6 +457,7 @@
       "type": "registry:block",
       "title": "Organizations Feature Pack",
       "description": "Tenant switching plus organization membership and invitation management.",
+      "docs": "## Usage\n\nPass the visible organizations together with the selected tenant's members, invitations, and role choices. Keep tenant selection and every membership mutation in host state.\n\n```tsx\nimport { OrganizationsFeaturePack } from '@/blocks/feature-packs/organizations/organizations-feature-pack';\n\n<OrganizationsFeaturePack\n  resource={organizations}\n  policy={{ selectOrganization: true, inviteMember: true, updateMemberRole: true, removeMember: true }}\n  actions={organizationActions}\n  onError={reportOrganizationError}\n/>\n```\n\nThe UI never broadens tenant access. A policy grant only exposes a control; PostgreSQL privileges and RLS remain authoritative when the injected action executes.",
       "dependencies": [
         "lucide-react"
       ],
@@ -479,6 +483,7 @@
       "type": "registry:block",
       "title": "Storage Feature Pack",
       "description": "Bucket, folder, object, upload, download, and deletion surfaces backed by injected storage actions.",
+      "docs": "## Usage\n\nPass the policy-visible buckets, active path, and objects through resource, then inject only the file operations supported by the current database.\n\n```tsx\nimport { StorageFeaturePack } from '@/blocks/feature-packs/storage/storage-feature-pack';\n\n<StorageFeaturePack\n  resource={storage}\n  policy={{ selectBucket: true, navigate: true, createBucket: true, upload: true, download: true, deleteObject: true }}\n  actions={storageActions}\n  onError={reportStorageError}\n/>\n```\n\nThe host owns bucket and path state. Navigation and mutations report intent through callbacks, and the next resource value reflects the access that remains after storage policy is reapplied.",
       "dependencies": [
         "lucide-react"
       ],
@@ -504,6 +509,7 @@
       "type": "registry:block",
       "title": "Billing Feature Pack",
       "description": "The feature-pack root for Constructive billing plans, subscriptions, usage, entitlements, credits, and activity.",
+      "docs": "## Usage\n\nPass one billing account and the independent resources for subscription, entitlements, usage, credits, history, activity, and plans. The feature root preserves the mature Billing settings page contract.\n\n```tsx\nimport { BillingFeaturePack } from '@/blocks/feature-packs/billing/billing-feature-pack';\n\n<BillingFeaturePack\n  account={account}\n  resources={billingResources}\n  actions={billingActions}\n  formatOptions={{ locale: 'en-US', timeZone: 'UTC' }}\n  section={section}\n  onSectionChange={setSection}\n/>\n```\n\nEach resource keeps its own loading, empty, error, ready, and quality state. Omitted callbacks remove their controls, and provider operations remain outside the reusable billing view.",
       "dependencies": [],
       "registryDependencies": [
         "feature-pack-data"
@@ -526,6 +532,7 @@
       "type": "registry:block",
       "title": "Notifications Feature Pack",
       "description": "An application notification inbox with read, open, and deletion actions.",
+      "docs": "## Usage\n\nPass notifications and the authoritative unread count through resource, then grant and inject the inbox actions supported by the application.\n\n```tsx\nimport { NotificationsFeaturePack } from '@/blocks/feature-packs/notifications/notifications-feature-pack';\n\n<NotificationsFeaturePack\n  resource={notifications}\n  policy={{ markRead: true, markAllRead: true, openNotification: true, deleteNotification: true }}\n  actions={notificationActions}\n  onError={reportNotificationError}\n/>\n```\n\nThe all and unread filter remains local. Message content and read state stay host-controlled, so refresh the resource after a successful action and let database policy determine the resulting inbox.",
       "dependencies": [
         "lucide-react"
       ],

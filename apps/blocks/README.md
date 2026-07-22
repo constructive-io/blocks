@@ -1,8 +1,8 @@
 # Blocks docs
 
-This Next.js app is the clean documentation surface for the Constructive UI foundation. It intentionally exposes only
-the landing page, setup guidance, and the 29 base primitive pages while the complete block catalog remains available
-through the public registry.
+This Next.js app documents the Constructive Blocks registry: the UI foundation,
+29 base primitives, customer billing blocks, seven capability-aligned feature
+packs, and Console Kit.
 
 The same primitive implementation is shown through two distribution modes:
 
@@ -18,9 +18,10 @@ pnpm --filter blocks test
 pnpm --filter blocks build:pages
 ```
 
-`src/lib/base-primitives.ts` is the single docs catalog. `pnpm gen:check` validates that every entry has an npm export,
-a registry item, and a preview that imports the npm subpath. The SDK fixture and mutation-selection checks remain in
-place for the canonical block source under `src/blocks`.
+`src/lib/base-primitives.ts`, `src/lib/billing-blocks.ts`, and
+`src/lib/feature-packs.ts` are the documentation catalogs. `pnpm gen:check`
+validates primitive distribution and keeps the feature-pack docs aligned with
+their manifests, registry roots, and live previews.
 
 The static Pages build uses `/blocks` as its deployment base path. Publishing npm packages remains a separate manual
 release step.

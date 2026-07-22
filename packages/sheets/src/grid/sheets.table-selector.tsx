@@ -25,26 +25,30 @@ interface TableItemProps {
 	activeTable: string;
 	onTableSelect: (tableName: string) => void;
 	/** Ref to attach to this item (used for scroll-into-view on active item) */
-	itemRef?: React.RefObject<HTMLDivElement | null>;
+	itemRef?: React.RefObject<HTMLButtonElement | null>;
 }
 
 const TableItem = memo(function TableItem({ table, activeTable, onTableSelect, itemRef }: TableItemProps) {
 	const isActive = activeTable === table.value;
 
 	return (
-		<div
+		<Button
 			ref={isActive ? itemRef : undefined}
+			aria-pressed={isActive}
 			data-testid='table-item'
+			static
+			size='sm'
+			type='button'
+			variant='ghost'
 			className={cn(
-				`group relative my-1 flex h-8 cursor-pointer items-center justify-between rounded-lg px-2 transition-all
-				duration-200`,
+				'group relative my-1 flex h-8 w-full shrink items-center justify-between rounded-lg px-2 text-left text-xs font-normal transition-colors duration-150',
 				isActive
 					? 'bg-primary/10 text-foreground ring-primary/30 dark:bg-primary/15 dark:ring-primary/40 ring-1'
 					: 'text-muted-foreground hover:text-foreground',
 			)}
 			onClick={() => onTableSelect(table.value)}
 		>
-			<div className='flex min-w-0 flex-1 items-center'>
+			<span className='flex min-w-0 flex-1 items-center'>
 				<Tooltip>
 					<TooltipTrigger asChild>
 						<span className='truncate text-xs'>{table.label}</span>
@@ -53,8 +57,8 @@ const TableItem = memo(function TableItem({ table, activeTable, onTableSelect, i
 						<span className='text-xs font-medium'>{table.label}</span>
 					</TooltipContent>
 				</Tooltip>
-			</div>
-		</div>
+			</span>
+		</Button>
 	);
 });
 
@@ -259,7 +263,7 @@ function SheetsTableListByCategory({
 	shouldScrollToActive = false,
 }: TableListByCategoryProps) {
 	const scrollRef = useRef<HTMLDivElement>(null);
-	const activeItemRef = useRef<HTMLDivElement>(null);
+	const activeItemRef = useRef<HTMLButtonElement>(null);
 	const [showBottomBlur, setShowBottomBlur] = useState(false);
 	const [scrollAreaHeight, setScrollAreaHeight] = useState(0);
 

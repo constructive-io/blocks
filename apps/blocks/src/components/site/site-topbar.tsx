@@ -9,6 +9,9 @@ import { Button } from '@constructive-io/ui/button';
 
 import { ThemeToggle } from '@/components/site/theme-toggle';
 import { getBasePrimitive, registryInstall } from '@/lib/base-primitives';
+import { getBillingBlock } from '@/lib/billing-blocks';
+import { getFeaturePackDoc } from '@/lib/feature-packs';
+import { registryAdd } from '@/lib/install-mode';
 
 function normalizePath(path: string) {
   if (path.length > 1 && path.endsWith('/')) return path.slice(0, -1);
@@ -20,6 +23,18 @@ function crumbFor(path: string): string {
   if (p === '/') return 'Overview';
   if (p === '/blocks') return 'Setup';
   if (p === '/blocks/styling') return 'Styling';
+  if (p === '/blocks/features') return 'Feature packs';
+  if (p.startsWith('/blocks/features/')) {
+    const id = p.slice('/blocks/features/'.length);
+    const pack = getFeaturePackDoc(id);
+    return pack ? `${pack.title} feature pack` : 'Feature packs';
+  }
+  if (p === '/blocks/console-kit') return 'Console Kit';
+  if (p === '/blocks/billing') return 'Billing';
+  if (p.startsWith('/blocks/billing/')) {
+    const name = p.slice('/blocks/billing/'.length);
+    return getBillingBlock(name)?.title ?? 'Billing';
+  }
   if (p.startsWith('/blocks/ui/')) {
     const name = p.slice('/blocks/ui/'.length);
     return getBasePrimitive(name)?.title ?? name;
@@ -29,6 +44,36 @@ function crumbFor(path: string): string {
 
 function installActionFor(path: string) {
   const normalizedPath = normalizePath(path);
+  if (normalizedPath.startsWith('/blocks/features/')) {
+    const id = normalizedPath.slice('/blocks/features/'.length);
+    const pack = getFeaturePackDoc(id);
+    if (!pack) return null;
+    return {
+      command: registryAdd(pack.registryName),
+      label: `shadcn add @constructive/${pack.registryName}`,
+      title: `${pack.title} feature pack`,
+    };
+  }
+
+  if (normalizedPath.startsWith('/blocks/billing/')) {
+    const name = normalizedPath.slice('/blocks/billing/'.length);
+    const block = getBillingBlock(name);
+    if (!block) return null;
+    return {
+      command: registryAdd(block.name),
+      label: `shadcn add @constructive/${block.name}`,
+      title: block.title,
+    };
+  }
+
+  if (normalizedPath === '/blocks/console-kit') {
+    return {
+      command: registryAdd('console-kit-nextjs'),
+      label: 'shadcn add @constructive/console-kit-nextjs',
+      title: 'Console Kit',
+    };
+  }
+
   if (!normalizedPath.startsWith('/blocks/ui/')) return null;
 
   const name = normalizedPath.slice('/blocks/ui/'.length);
@@ -82,10 +127,7 @@ export function SiteTopbar({ onMenuClick }: SiteTopbarProps) {
           <Menu aria-hidden />
         </Button>
 
-        <nav
-          aria-label="Breadcrumb"
-          className="flex min-w-0 items-center gap-2 text-[13px] text-muted-foreground"
-        >
+        <nav aria-label="Breadcrumb" className="flex min-w-0 items-center gap-2 text-[13px] text-muted-foreground">
           <Link
             href="/"
             className="shrink-0 outline-none hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring"
@@ -108,9 +150,7 @@ export function SiteTopbar({ onMenuClick }: SiteTopbarProps) {
             className="hidden sm:inline-flex"
             onClick={copyCli}
             aria-label={
-              copied
-                ? `${installAction.title} install command copied`
-                : `Copy ${installAction.title} install command`
+              copied ? `${installAction.title} install command copied` : `Copy ${installAction.title} install command`
             }
             title={installAction.command}
           >

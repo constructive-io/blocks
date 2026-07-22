@@ -1,6 +1,6 @@
 import { z } from 'zod';
 
-import { CONSOLE_ENDPOINT_KINDS } from '@/blocks/console-runtime';
+import { CONSOLE_ENDPOINT_KINDS } from '../blocks/console-runtime/endpoints';
 
 import { ATOMIC_CAPABILITY_IDS } from './capabilities';
 

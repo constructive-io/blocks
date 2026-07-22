@@ -18,7 +18,7 @@ const openSans = Open_Sans({
 
 const SITE_TITLE = 'Constructive Blocks';
 const SITE_DESCRIPTION =
-  'A shadcn-compatible registry of Constructive UI primitives — npm or source install.';
+  'A shadcn-compatible registry of Constructive UI primitives, feature packs, billing blocks, and Console Kit.';
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_ORIGIN),
