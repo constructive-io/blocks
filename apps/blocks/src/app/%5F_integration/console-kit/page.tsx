@@ -9,6 +9,10 @@ import {
   ConsoleKitProofClient,
   type ConsoleKitProofTenant
 } from './console-kit-proof-client';
+import {
+  resolveConsoleKitReviewStatus,
+  reviewPathsFromEnvironment
+} from './review-status';
 
 export const dynamic = 'force-dynamic';
 
@@ -101,10 +105,15 @@ export default function ConsoleKitProofPage() {
   if (process.env.CONSOLE_KIT_INTEGRATION !== '1') notFound();
 
   const proof = readProofManifest();
+  const status = resolveConsoleKitReviewStatus({
+    runId: proof.runId,
+    routeStatus: proof.status,
+    paths: reviewPathsFromEnvironment()
+  });
   return (
     <ConsoleKitProofClient
       runId={proof.runId}
-      status={proof.status}
+      status={status}
       tenants={proof.tenants.map(toTenant)}
     />
   );
