@@ -478,8 +478,11 @@ function assertSeederEndpoint(
     !nonEmptyString(endpoint.reason)) {
     throw new Error(`${label} ${kind} endpoint reason is malformed.`);
   }
-  if (endpoint.routable === true && !nonEmptyString(endpoint.url)) {
-    throw new Error(`${label} ${kind} endpoint is routable without a URL.`);
+  if (
+    endpoint.routable === true &&
+    (!nonEmptyString(endpoint.apiId) || !nonEmptyString(endpoint.url))
+  ) {
+    throw new Error(`${label} ${kind} endpoint is routable without an API ID and URL.`);
   }
   if (nonEmptyString(endpoint.url)) {
     try {
@@ -498,6 +501,29 @@ function assertSeederEndpoint(
     schemaIds: stringArray(endpoint.schemaIds, `${label} ${kind} endpoint schemaIds`),
     ...(nonEmptyString(endpoint.reason) ? { reason: endpoint.reason } : {})
   };
+}
+
+function assertLocalTenantEndpoint(urlValue: string, label: string): void {
+  const url = new URL(urlValue);
+  if (
+    url.protocol !== 'http:' ||
+    !url.hostname.endsWith('.localhost') ||
+    url.port !== '3000' ||
+    url.pathname !== '/graphql' ||
+    url.username ||
+    url.password ||
+    url.search ||
+    url.hash
+  ) {
+    throw new Error(`${label} is not an exact local tenant GraphQL endpoint.`);
+  }
+}
+
+function domainRouteUrl(domain: string | null, subdomain: string | null): string | null {
+  if (!domain) return null;
+  const host = subdomain ? `${subdomain}.${domain}` : domain;
+  const isLocal = host.includes('localhost');
+  return `${isLocal ? 'http' : 'https'}://${isLocal ? `${host}:3000` : host}/graphql`;
 }
 
 function assertSeederManifest(
@@ -545,21 +571,7 @@ function assertSeederManifest(
   for (const kind of ENDPOINT_KINDS) {
     const endpoint = endpoints[kind];
     if (endpoint.routable !== true) continue;
-    const url = new URL(String(endpoint.url));
-    const expectedHostname =
-      `${String(endpoint.apiName)}-${String(database.subdomain)}.${String(database.domain)}`;
-    if (
-      url.protocol !== 'http:' ||
-      url.hostname !== expectedHostname ||
-      url.port !== '3000' ||
-      url.pathname !== '/graphql' ||
-      url.username ||
-      url.password ||
-      url.search ||
-      url.hash
-    ) {
-      throw new Error(`${label} ${kind} endpoint is not bound to its tenant identity.`);
-    }
+    assertLocalTenantEndpoint(String(endpoint.url), `${label} ${kind} endpoint`);
   }
   const normalized = {
     version: 1,
@@ -579,7 +591,11 @@ function assertSeederManifest(
     },
     endpoints
   };
-  return { databaseId, endpoints, normalized };
+  return {
+    databaseId,
+    endpoints,
+    normalized
+  };
 }
 
 function assertTenantProbe(
@@ -587,7 +603,8 @@ function assertTenantProbe(
   fixture: typeof PROOF_FIXTURES[number],
   databaseId: string,
   endpoints: Readonly<Record<typeof ENDPOINT_KINDS[number], JsonRecord>>,
-  label: string
+  label: string,
+  globallySeenApiIds: Set<string>
 ): void {
   const probe = record(value, label);
   if (probe.preset !== fixture.preset || probe.databaseId !== databaseId) {
@@ -615,6 +632,8 @@ function assertTenantProbe(
     seenKinds.add(endpointProbe.kind);
     const kind = endpointProbe.kind as typeof ENDPOINT_KINDS[number];
     const endpoint = endpoints[kind];
+    const topology = record(endpointProbe.topology, `${label} ${kind} topology`);
+    const api = record(topology.api, `${label} ${kind} topology API`);
     const missingFields = stringArray(
       endpointProbe.missingFields,
       `${label} ${kind} missing fields`
@@ -629,6 +648,117 @@ function assertTenantProbe(
       nonNegativeInteger(endpointProbe.queryFieldCount, `${label} ${kind} query count`) < 1
     ) {
       throw new Error(`${label} ${kind} has incomplete or unbound GraphQL evidence.`);
+    }
+    if (
+      !nonEmptyString(endpoint.apiId) ||
+      !nonEmptyString(api.id) ||
+      !nonEmptyString(api.databaseId) ||
+      !nonEmptyString(api.name) ||
+      api.isPublic !== true ||
+      (api.roleName !== null && !nonEmptyString(api.roleName)) ||
+      (api.anonRole !== null && !nonEmptyString(api.anonRole)) ||
+      api.id !== endpoint.apiId ||
+      api.databaseId !== databaseId ||
+      api.name !== endpoint.apiName ||
+      api.roleName !== endpoint.roleName ||
+      api.anonRole !== endpoint.anonRole
+    ) {
+      throw new Error(`${label} ${kind} topology is not bound to its tenant API.`);
+    }
+    if (globallySeenApiIds.has(api.id)) {
+      throw new Error('Console Kit proof tenant API IDs must be globally unique.');
+    }
+    globallySeenApiIds.add(api.id);
+
+    assertLocalTenantEndpoint(String(endpoint.url), `${label} ${kind} endpoint`);
+    if (!Array.isArray(topology.domains)) {
+      throw new Error(`${label} ${kind} topology Domains must be an array.`);
+    }
+    const domainRows = topology.domains.map((value, domainIndex) => {
+      const domain = record(value, `${label} ${kind} Domain ${domainIndex + 1}`);
+      if (
+        !nonEmptyString(domain.id) ||
+        !nonEmptyString(domain.databaseId) ||
+        !nonEmptyString(domain.apiId) ||
+        (domain.domain !== null && !nonEmptyString(domain.domain)) ||
+        (domain.subdomain !== null && !nonEmptyString(domain.subdomain)) ||
+        domain.databaseId !== databaseId ||
+        domain.apiId !== endpoint.apiId
+      ) {
+        throw new Error(`${label} ${kind} Domain is not bound to the tenant database and API.`);
+      }
+      return {
+        domain: {
+          id: domain.id,
+          databaseId: domain.databaseId,
+          apiId: domain.apiId,
+          domain: domain.domain,
+          subdomain: domain.subdomain
+        },
+        url: domainRouteUrl(domain.domain, domain.subdomain)
+      };
+    });
+    const canonicalDomains = [...domainRows].sort((left, right) =>
+      (left.url ?? '\uffff').localeCompare(right.url ?? '\uffff') ||
+        left.domain.id.localeCompare(right.domain.id)
+    );
+    const routableDomains = canonicalDomains.filter((entry) => entry.url !== null);
+    if (
+      canonicalDomains.length === 0 ||
+      JSON.stringify(domainRows) !== JSON.stringify(canonicalDomains) ||
+      routableDomains[0]?.url !== endpoint.url ||
+      new Set(canonicalDomains.map((entry) => entry.domain.id)).size !==
+        canonicalDomains.length ||
+      new Set(routableDomains.map((entry) => entry.url)).size !== routableDomains.length
+    ) {
+      throw new Error(`${label} ${kind} Domains do not preserve the canonical Seeder route set.`);
+    }
+
+    if (!Array.isArray(topology.schemaLinks)) {
+      throw new Error(`${label} ${kind} topology schema links must be an array.`);
+    }
+    const schemaLinks = topology.schemaLinks.map((value, schemaIndex) => {
+      const link = record(value, `${label} ${kind} schema link ${schemaIndex + 1}`);
+      if (
+        !nonEmptyString(link.id) ||
+        !nonEmptyString(link.databaseId) ||
+        !nonEmptyString(link.apiId) ||
+        !nonEmptyString(link.schemaId) ||
+        !nonEmptyString(link.schemaDatabaseId)
+      ) {
+        throw new Error(`${label} ${kind} topology schema link is malformed.`);
+      }
+      return {
+        id: link.id,
+        databaseId: link.databaseId,
+        apiId: link.apiId,
+        schemaId: link.schemaId,
+        schemaDatabaseId: link.schemaDatabaseId
+      };
+    });
+    const canonicalLinks = [...schemaLinks].sort((left, right) =>
+      left.schemaId.localeCompare(right.schemaId) || left.id.localeCompare(right.id)
+    );
+    if (JSON.stringify(schemaLinks) !== JSON.stringify(canonicalLinks)) {
+      throw new Error(`${label} ${kind} topology schema links are not canonical.`);
+    }
+    const schemaIds = new Set<string>();
+    for (const link of schemaLinks) {
+      if (
+        link.databaseId !== databaseId ||
+        link.apiId !== endpoint.apiId ||
+        link.schemaDatabaseId !== databaseId ||
+        schemaIds.has(link.schemaId)
+      ) {
+        throw new Error(`${label} ${kind} schema link is not bound to the tenant database.`);
+      }
+      schemaIds.add(link.schemaId);
+    }
+    if (
+      JSON.stringify([...schemaIds].sort()) !==
+      JSON.stringify([...stringArray(endpoint.schemaIds, `${label} ${kind} schemaIds`)].sort())
+    ) {
+      throw new Error(`${label} ${kind} schema links differ from its Seeder manifest.`);
     }
     nonNegativeInteger(endpointProbe.mutationFieldCount, `${label} ${kind} mutation count`);
     sha256(endpointProbe.schemaRootHash, `${label} ${kind} schema-root hash`);
@@ -665,6 +795,7 @@ function assertCanonicalFixtureMatrix(
   }
 
   const databaseIds = new Set<string>();
+  const apiIds = new Set<string>();
   for (let index = 0; index < PROOF_FIXTURES.length; index++) {
     const fixture = PROOF_FIXTURES[index]!;
     const tenant = record(tenants[index], `Console Kit aggregate tenant ${index + 1}`);
@@ -700,7 +831,8 @@ function assertCanonicalFixtureMatrix(
       fixture,
       manifest.databaseId,
       manifest.endpoints,
-      `Console Kit ${fixture.preset} tenant probe`
+      `Console Kit ${fixture.preset} tenant probe`,
+      apiIds
     );
   }
 }

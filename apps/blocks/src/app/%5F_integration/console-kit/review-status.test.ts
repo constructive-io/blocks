@@ -221,6 +221,18 @@ function createReviewFixture() {
     storage: 'objects',
     notifications: 'notifications'
   } as const;
+  const b2bRouteSubdomains = {
+    data: 'd1b-deliberate-black-donkey',
+    auth: 'identity-route',
+    admin: 'operator-route',
+    billing: 'metering-route',
+    storage: 'files-route',
+    notifications: 'events-route'
+  } as const;
+  const endpointSubdomain = (
+    index: number,
+    kind: typeof ENDPOINT_KINDS[number]
+  ): string => index === 1 ? b2bRouteSubdomains[kind] : `${apiNames[kind]}-proof-${index}`;
   const manifests = fixtures.map((fixture, index) => {
     const databaseId = index === 0
       ? DATABASE_ID
@@ -231,7 +243,7 @@ function createReviewFixture() {
         apiName: apiNames[kind],
         apiId: routable ? `${kind}-api-${index}` : null,
         url: routable
-          ? `http://${apiNames[kind]}-proof-${index}.localhost:3000/graphql`
+          ? `http://${endpointSubdomain(index, kind)}.localhost:3000/graphql`
           : null,
         routable,
         roleName: routable ? `${kind}_authenticated` : null,
@@ -254,7 +266,7 @@ function createReviewFixture() {
         id: databaseId,
         name: `${fixture.preset} proof`,
         domain: 'localhost',
-        subdomain: `proof-${index}`
+        subdomain: index === 1 ? 'b2bu6w3c0f8' : `proof-${index}`
       },
       endpoints
     };
@@ -471,6 +483,50 @@ function createReviewFixture() {
         kind,
         apiName: endpoint.apiName,
         url: endpoint.url,
+        topology: {
+          api: {
+            id: endpoint.apiId,
+            databaseId: manifests[index]!.databaseId,
+            name: endpoint.apiName,
+            isPublic: true,
+            roleName: endpoint.roleName,
+            anonRole: endpoint.anonRole
+          },
+          domains: [
+            {
+              id: `${kind}-domain-${index}`,
+              databaseId: manifests[index]!.databaseId,
+              apiId: endpoint.apiId,
+              domain: 'localhost',
+              subdomain: endpointSubdomain(index, kind)
+            },
+            ...(index === 1 && kind === 'data'
+              ? [
+                  {
+                    id: `${kind}-external-domain-${index}`,
+                    databaseId: manifests[index]!.databaseId,
+                    apiId: endpoint.apiId,
+                    domain: 'example.test',
+                    subdomain: 'fallback-tenant-route'
+                  },
+                  {
+                    id: `${kind}-unroutable-domain-${index}`,
+                    databaseId: manifests[index]!.databaseId,
+                    apiId: endpoint.apiId,
+                    domain: null,
+                    subdomain: null
+                  }
+                ]
+              : [])
+          ],
+          schemaLinks: endpoint.schemaIds.map((schemaId, schemaIndex) => ({
+            id: `${kind}-schema-link-${index}-${schemaIndex}`,
+            databaseId: manifests[index]!.databaseId,
+            apiId: endpoint.apiId,
+            schemaId,
+            schemaDatabaseId: manifests[index]!.databaseId
+          }))
+        },
         graphqlSucceeded: true,
         invalidBearerRejected: true,
         semanticContract: 'verified',
@@ -637,7 +693,7 @@ afterEach(() => {
 });
 
 describe('retained Console Kit review status', () => {
-  it('reports passed only for the exact route, completion, and live receipt evidence', () => {
+  it('passes exact evidence with independent API routes and canonical Domain candidates', () => {
     const fixture = createReviewFixture();
 
     expect(resolveConsoleKitReviewStatus({
@@ -824,6 +880,105 @@ describe('retained Console Kit review status', () => {
       routeStatus: 'testing',
       paths: sourceDrift.paths
     })).toThrow(/not bound to the aggregate proof/u);
+  });
+
+  it('rejects cross-database and manifest-divergent topology rows', () => {
+    const mutations: Array<(topology: Record<string, unknown>) => void> = [
+      (topology) => {
+        (topology.api as Record<string, unknown>).databaseId = 'cross-tenant-database';
+      },
+      (topology) => {
+        const domains = topology.domains as Record<string, unknown>[];
+        domains[0]!.databaseId = 'cross-tenant-database';
+      },
+      (topology) => {
+        const links = topology.schemaLinks as Record<string, unknown>[];
+        links[0]!.databaseId = 'cross-tenant-database';
+      },
+      (topology) => {
+        const links = topology.schemaLinks as Record<string, unknown>[];
+        links[0]!.schemaDatabaseId = 'cross-tenant-database';
+      },
+      (topology) => {
+        (topology.api as Record<string, unknown>).roleName = 'substituted_role';
+      },
+      (topology) => {
+        const links = topology.schemaLinks as Record<string, unknown>[];
+        links[0]!.schemaId = 'substituted-schema';
+      }
+    ];
+
+    for (const mutate of mutations) {
+      const fixture = createReviewFixture();
+      const aggregate = JSON.parse(
+        readFileSync(fixture.aggregatePath, 'utf8')
+      ) as Record<string, unknown>;
+      const probes = (aggregate.execution as Record<string, unknown>)
+        .tenantProbes as Record<string, unknown>[];
+      const endpoint = (probes[0]!.endpoints as Record<string, unknown>[])[0]!;
+      mutate(endpoint.topology as Record<string, unknown>);
+      writeJson(fixture.aggregatePath, aggregate);
+      writeAttestation(fixture);
+
+      expect(() => resolveConsoleKitReviewStatus({
+        runId: RUN_ID,
+        routeStatus: 'testing',
+        paths: fixture.paths
+      })).toThrow(/topology is not bound|Domain is not bound|schema link/u);
+    }
+  });
+
+  it('rejects a noncanonical multi-Domain candidate set', () => {
+    const fixture = createReviewFixture();
+    const aggregate = JSON.parse(
+      readFileSync(fixture.aggregatePath, 'utf8')
+    ) as Record<string, unknown>;
+    const probes = (aggregate.execution as Record<string, unknown>)
+      .tenantProbes as Record<string, unknown>[];
+    const dataProbe = (probes[1]!.endpoints as Record<string, unknown>[])[0]!;
+    const topology = dataProbe.topology as Record<string, unknown>;
+    topology.domains = [...(topology.domains as Record<string, unknown>[])].reverse();
+    writeJson(fixture.aggregatePath, aggregate);
+    writeAttestation(fixture);
+
+    expect(() => resolveConsoleKitReviewStatus({
+      runId: RUN_ID,
+      routeStatus: 'testing',
+      paths: fixture.paths
+    })).toThrow(/Domains do not preserve the canonical Seeder route set/u);
+  });
+
+  it('rejects API identity reuse across tenant proofs', () => {
+    const fixture = createReviewFixture();
+    const aggregate = JSON.parse(
+      readFileSync(fixture.aggregatePath, 'utf8')
+    ) as Record<string, unknown>;
+    const tenants = aggregate.tenants as Record<string, unknown>[];
+    const firstManifest = tenants[0]!.manifest as Record<string, unknown>;
+    const firstEndpoints = firstManifest.endpoints as Record<string, Record<string, unknown>>;
+    const reusedApiId = firstEndpoints.data!.apiId;
+    const b2bManifest = tenants[1]!.manifest as Record<string, unknown>;
+    const b2bEndpoints = b2bManifest.endpoints as Record<string, Record<string, unknown>>;
+    b2bEndpoints.data!.apiId = reusedApiId;
+    const probes = (aggregate.execution as Record<string, unknown>)
+      .tenantProbes as Record<string, unknown>[];
+    const dataProbe = (probes[1]!.endpoints as Record<string, unknown>[])[0]!;
+    const topology = dataProbe.topology as Record<string, unknown>;
+    (topology.api as Record<string, unknown>).id = reusedApiId;
+    for (const domain of topology.domains as Record<string, unknown>[]) {
+      domain.apiId = reusedApiId;
+    }
+    for (const link of topology.schemaLinks as Record<string, unknown>[]) {
+      link.apiId = reusedApiId;
+    }
+    writeJson(fixture.aggregatePath, aggregate);
+    writeAttestation(fixture);
+
+    expect(() => resolveConsoleKitReviewStatus({
+      runId: RUN_ID,
+      routeStatus: 'testing',
+      paths: fixture.paths
+    })).toThrow(/API IDs must be globally unique/u);
   });
 
   it('keeps testing during completion publication and gives failure precedence', () => {

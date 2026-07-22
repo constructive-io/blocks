@@ -40,6 +40,16 @@ real user against each one:
 | `b2b:storage` | SaaS | Data, authentication, users, organizations, and storage when the storage schema is routed |
 | `full` | Blog | Every pack whose semantic endpoint is routed and whose exact contract is present |
 
+The seeder's requested database subdomain is allocation metadata, not a tenant
+route identity. A warm-pool claim keeps the pre-provisioned API Domains, so a
+valid endpoint can use an unrelated generated hostname. The retained proof
+queries the private meta-schema for each exact API ID, rejects cross-database
+API, Domain, API-schema, or linked-schema rows, preserves the complete
+canonical Domain candidate set, and requires the selected endpoint to be the
+Seeder-selected `http://*.localhost:3000/graphql` route. Console Kit consumes
+that attested endpoint directly and never reconstructs one from the provision
+ticket.
+
 The proof covers sign-up, sign-in, current-account loading, sign-out, revoked
 and cross-database bearer rejection, strict Origin and User-Agent fingerprint
 rejection for both sign-in and sign-up sessions, database-scoped session restoration,
