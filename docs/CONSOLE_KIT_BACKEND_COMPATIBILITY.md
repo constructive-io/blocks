@@ -6,6 +6,10 @@ that the data endpoint satisfies that complete metadata contract and each
 enabled feature endpoint exposes the roots and input objects its adapter checks.
 An arbitrary GraphQL endpoint, an older `_meta` shape, or a routed API name by
 itself is not treated as compatible.
+The retained matrix therefore proves every canonical preset that the current
+backend can bootstrap, while custom tenants remain compatible only when they
+provide the same semantic endpoint, operation, metadata, auth, and RLS
+contracts.
 
 The `blank` profile installs no auth or RLS modules. Current provisioning still
 creates routable `api` and `auth` routes, but the auth route has no user
@@ -50,10 +54,16 @@ administrator, active, approved, not banned, not disabled, and not read-only,
 and must carry the all-one owner permission mask. The proof creates and cancels
 roleless application and organization invitations through the UI. A
 freshly signed-up user receives the generated all-zero app permission default;
-the proof activates that membership without changing its mask, checks that app
-and organization management controls are absent for the active ordinary user,
-and confirms that direct type-2 user and organization-invite mutations both
-return PostgreSQL authorization code `42501` and leave no row behind. It removes
+the proof activates that membership without changing its mask. For the
+fixture organization it removes the generated member permission default,
+creates and approves the ordinary membership, proves the resulting
+organization support row is readable, and verifies an all-zero organization
+mask. It then checks that app and organization management controls are absent for the active ordinary user,
+and confirms that direct type-2 user and organization-invite mutations are
+denied and leave no row behind. The canonical proof's development-mode Graphile
+server exposes PostgreSQL authorization code `42501` as diagnostic evidence;
+production Graphile masks that SQLSTATE, so Console Kit does not treat the raw
+code or message as a public API contract. It removes
 every uniquely named identity, membership,
 and invitation fixture and verifies their absence before releasing its cleanup
 session. The suite verifies the versioned `_meta` query before loading
@@ -68,6 +78,9 @@ deletes the source Mailpit message, so the token is not written to the tenant
 manifest, Next request logs, retained test artifacts, or retained proof mailbox.
 This establishes fresh-credential handling; it does not establish expiry or
 replay rejection, which remain backend gaps below.
+The proof pins `SERVER_STRICT_AUTH=true`; the stock server default is
+`strictAuth: false`, so fingerprint rejection is a verified deployment mode
+rather than an untouched-backend default.
 Hub wraps the email proof with one site-domain row created through its
 loopback-only private meta endpoint because this tenant has no site-bound
 domain. Hub deletes the row after Playwright, with tenant cleanup as the
@@ -88,7 +101,7 @@ administrators retain their backend role fallback while active, while
 delegated sessions only receive assignable profiles. Invitations without a
 profile remain available whenever `create_invites` is granted.
 Organization creation is enabled only when introspection proves the required
-create and rollback inputs, including a writable unique `username`, the auth
+create and rollback inputs, including a writable `username`, the auth
 user directory exposes `id`, `username`, and `type`,
 the organization membership directory exposes every owner-status field needed
 for verification, and the current actor has an active RLS-visible app
@@ -96,14 +109,16 @@ membership whose effective mask includes `create_entity`. Optional auth user
 fields such as `displayName` and `profilePicture` are selected only when the
 tenant exposes them. The adapter fixes the input type to `2`, assigns a unique
 `console-kit-org-*` username as a reconciliation key for the lifetime of that
-adapter instance, uses a client UUID too when the tenant accepts one, then
-re-reads that exact identity and requires one current-actor
+adapter instance, omits generated columns such as `id` even when GraphQL
+introspection exposes them, then re-reads that exact identity and requires one current-actor
 membership that is owner, administrator, active, approved, not banned, not
 disabled, not read-only, and carries an all-one effective permission mask. Only
 then does it select the new organization. If a create response is lost, the
-unique username makes the result recoverable and an in-flight same-name retry
-in the same database and actor scope reuses that key while the adapter instance
-remains alive; if the postcondition fails, the adapter
+generated username makes the result recoverable and an in-flight same-name
+retry in the same database and actor scope only reconciles that key while the
+adapter instance remains alive; it never repeats the create mutation. A
+definitive GraphQL rejection clears the pending key so a corrected request can
+proceed. If the postcondition fails, the adapter
 attempts authenticated deletion, leaves the previous selection unchanged, and
 returns a typed non-retryable provisioning error.
 
@@ -190,6 +205,12 @@ returned by `getAccessToken` or written back to browser storage.
   ledger data, but it has no public authoritative current-balance read model or
   RLS-safe subscription-management RPC. The first-party adapter is therefore
   read-only and does not claim provider management.
+- The public `request_database` and `fulfilled_at` comments describe
+  `status=completed` plus `fulfilled_at` as ready, but both warm and async-cold
+  provisioning can record those before owner bootstrap finishes. Integrations must also wait for
+  `bootstrap_status=completed`, as the canonical seeder does; the backend SQL
+  documentation should be corrected so new clients do not race the first
+  tenant sign-in.
 - MFA challenge completion and personal profile editing are not part of the
   standalone Console Kit flow. The former needs a session completion contract;
   the latter needs a constrained backend self-update policy or RPC.

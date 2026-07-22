@@ -4,7 +4,7 @@
   "title": "Organizations",
   "description": "Organization selection, creation, memberships, role assignment, and invitations.",
   "dependencies": ["users"],
-  "endpoints": { "required": ["admin"], "optional": ["auth"] },
+  "endpoints": { "required": ["admin"], "optional": ["auth", "billing"] },
   "capabilities": {
     "required": ["organizations.memberships"],
     "optional": ["organizations.permissions", "organizations.limits", "organizations.profiles", "organizations.hierarchy", "organizations.invites"]

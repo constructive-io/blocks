@@ -65,6 +65,14 @@ const EMAIL_VERIFICATION_READ = /* GraphQL */ `
   }
 `;
 
+const RECOVER_AMBIGUOUS_SIGN_UP = /* GraphQL */ `
+  mutation ConsoleKitProofRecoverAmbiguousSignUp($input: SignInInput!) {
+    signIn(input: $input) {
+      result { id userId accessToken accessTokenExpiresAt }
+    }
+  }
+`;
+
 const ORGANIZATION_USER_FIELDS = 'id displayName username type';
 const APP_MEMBERSHIP_PROOF_FIELDS = [
   'id',
@@ -76,7 +84,6 @@ const APP_MEMBERSHIP_PROOF_FIELDS = [
   'isVerified',
   'isBanned',
   'isDisabled',
-  'isReadOnly',
   'permissions'
 ].join(' ');
 const ORG_MEMBERSHIP_PROOF_FIELDS = [
@@ -117,6 +124,18 @@ const UPDATE_APP_MEMBERSHIP = /* GraphQL */ `
   }
 `;
 
+const CREATE_ORGANIZATION_MEMBERSHIP = /* GraphQL */ `
+  mutation ConsoleKitProofCreateOrganizationMembership($input: CreateOrgMembershipInput!) {
+    createOrgMembership(input: $input) { orgMembership { id } }
+  }
+`;
+
+const UPDATE_ORGANIZATION_MEMBERSHIP = /* GraphQL */ `
+  mutation ConsoleKitProofUpdateOrganizationMembership($input: UpdateOrgMembershipInput!) {
+    updateOrgMembership(input: $input) { orgMembership { id } }
+  }
+`;
+
 const DELETE_APP_INVITE = /* GraphQL */ `
   mutation ConsoleKitProofDeleteAppInvite($input: DeleteAppInviteInput!) {
     deleteAppInvite(input: $input) { appInvite { id } }
@@ -126,6 +145,14 @@ const DELETE_APP_INVITE = /* GraphQL */ `
 const DELETE_ORGANIZATION_INVITE = /* GraphQL */ `
   mutation ConsoleKitProofDeleteOrganizationInvite($input: DeleteOrgInviteInput!) {
     deleteOrgInvite(input: $input) { orgInvite { id } }
+  }
+`;
+
+const DELETE_ORGANIZATION_PERMISSION_DEFAULT = /* GraphQL */ `
+  mutation ConsoleKitProofDeleteOrganizationPermissionDefault(
+    $input: DeleteOrgPermissionDefaultInput!
+  ) {
+    deleteOrgPermissionDefault(input: $input) { orgPermissionDefault { id } }
   }
 `;
 
@@ -262,6 +289,46 @@ function mutationRowId(data: Record<string, unknown>, field: string, row: string
     typeof (value as Record<string, unknown>).id === 'string'
     ? (value as Record<string, unknown>).id as string
     : null;
+}
+
+async function recoverAmbiguousSignUp(
+  tenant: ProofTenant,
+  credentials: ProofCredentials
+): Promise<LiveSession | null> {
+  const payload = await rawGraphQL<Record<string, unknown>>(
+    endpointUrl(tenant, 'auth'),
+    RECOVER_AMBIGUOUS_SIGN_UP,
+    { input: { email: credentials.email, password: credentials.password, rememberMe: false } }
+  );
+  if (payload.errors?.length || !payload.data || typeof payload.data !== 'object') {
+    throw new Error('Ambiguous signup recovery returned GraphQL errors or no data.');
+  }
+  const mutation = payload.data.signIn;
+  if (!mutation || typeof mutation !== 'object' || Array.isArray(mutation)) {
+    throw new Error('Ambiguous signup recovery returned a malformed signIn payload.');
+  }
+  const result = (mutation as Record<string, unknown>).result;
+  if (result === null) return null;
+  if (!result || typeof result !== 'object' || Array.isArray(result)) {
+    throw new Error('Ambiguous signup recovery returned a malformed signIn result.');
+  }
+  const session = result as Record<string, unknown>;
+  if (['id', 'userId', 'accessToken', 'accessTokenExpiresAt'].every(
+    (key) => session[key] === null
+  )) return null;
+  if (
+    typeof session.userId !== 'string' ||
+    !session.userId ||
+    typeof session.accessToken !== 'string' ||
+    !session.accessToken
+  ) {
+    throw new Error('Ambiguous signup recovery returned a partial session.');
+  }
+  return {
+    userId: session.userId,
+    token: session.accessToken,
+    sessionId: typeof session.id === 'string' ? session.id : null
+  };
 }
 
 async function readEmailVerificationState(
@@ -736,6 +803,9 @@ test('loads authoritative memberships and fails closed around organization RLS',
   const cleanupSession = await signIn(tenant, proof.credentials(tenant));
   let organizationId: string | null = null;
   let ordinarySession: LiveSession | null = null;
+  const ordinaryUserIds = new Set<string>();
+  const ordinarySignupBaselineActorIds = new Set<string>();
+  let ordinarySignupAttempted = false;
   let ordinaryContext: BrowserContext | null = null;
   let ownerUiSignedIn = false;
   let ordinaryUiSignedIn = false;
@@ -756,8 +826,7 @@ test('loads authoritative memberships and fails closed around organization RLS',
       isApproved: true,
       isVerified: true,
       isBanned: false,
-      isDisabled: false,
-      isReadOnly: false
+      isDisabled: false
     });
     expect(seededAppMembership?.permissions).toMatch(/^1+$/u);
     const seededUsers = await readOrganizationUsers(tenant, cleanupSession.token);
@@ -841,6 +910,42 @@ test('loads authoritative memberships and fails closed around organization RLS',
       isReadOnly: false
     });
     expect(ownerMembership?.permissions).toMatch(/^1+$/u);
+    const organizationPermissionDefaults = await readProofConnection(
+      tenant,
+      'admin',
+      cleanupSession.token,
+      'ConsoleKitProofOrganizationPermissionDefaults',
+      'orgPermissionDefaults',
+      'id entityId'
+    );
+    const fixturePermissionDefaults = organizationPermissionDefaults.filter(
+      (permissionDefault) => permissionDefault.entityId === organizationId
+    );
+    expect(fixturePermissionDefaults).toHaveLength(1);
+    const permissionDefaultId = fixturePermissionDefaults[0]?.id;
+    expect(typeof permissionDefaultId).toBe('string');
+    const deletedPermissionDefault = await graphQL<Record<string, unknown>>(
+      endpointUrl(tenant, 'admin'),
+      DELETE_ORGANIZATION_PERMISSION_DEFAULT,
+      { input: { id: permissionDefaultId } },
+      cleanupSession.token
+    );
+    expect(mutationRowId(
+      deletedPermissionDefault,
+      'deleteOrgPermissionDefault',
+      'orgPermissionDefault'
+    )).toBe(permissionDefaultId);
+    const permissionDefaultsAfterDelete = await readProofConnection(
+      tenant,
+      'admin',
+      cleanupSession.token,
+      'ConsoleKitProofOrganizationPermissionDefaultsAfterDelete',
+      'orgPermissionDefaults',
+      'id entityId'
+    );
+    expect(permissionDefaultsAfterDelete.some(
+      (permissionDefault) => permissionDefault.entityId === organizationId
+    )).toBe(false);
     const organizationOwnerRow = page.getByRole('row')
       .filter({ hasText: seededUserLabel })
       .filter({ hasText: 'Owner' })
@@ -866,7 +971,15 @@ test('loads authoritative memberships and fails closed around organization RLS',
     await organizationInviteRow.getByRole('button', { name: 'Cancel', exact: true }).click();
     await expect(page.getByText(organizationInviteEmail, { exact: true })).toHaveCount(0);
 
+    const beforeOrdinarySignup = await readMembershipProof(tenant, cleanupSession.token);
+    for (const membership of beforeOrdinarySignup.appMemberships) {
+      if (typeof membership.actorId === 'string') {
+        ordinarySignupBaselineActorIds.add(membership.actorId);
+      }
+    }
+    ordinarySignupAttempted = true;
     ordinarySession = await signUp(tenant, ordinaryCredentials);
+    ordinaryUserIds.add(ordinarySession.userId);
     const newOrdinaryMemberships = await readMembershipProof(tenant, cleanupSession.token);
     const newOrdinaryAppMembershipRows = newOrdinaryMemberships.appMemberships.filter(
       (membership) => membership.actorId === ordinarySession?.userId
@@ -880,8 +993,7 @@ test('loads authoritative memberships and fails closed around organization RLS',
       isApproved: false,
       isVerified: false,
       isBanned: false,
-      isDisabled: false,
-      isReadOnly: false
+      isDisabled: false
     });
     expect(newOrdinaryAppMembershipRows[0]?.permissions).toMatch(/^0+$/u);
     const ordinaryMembershipId = newOrdinaryAppMembershipRows[0]?.id;
@@ -917,10 +1029,80 @@ test('loads authoritative memberships and fails closed around organization RLS',
       isApproved: true,
       isVerified: true,
       isBanned: false,
+      isDisabled: false
+    });
+    expect(activeOrdinaryAppMemberships[0]?.permissions).toMatch(/^0+$/u);
+    const createdOrdinaryOrgMembership = await graphQL<Record<string, unknown>>(
+      endpointUrl(tenant, 'admin'),
+      CREATE_ORGANIZATION_MEMBERSHIP,
+      {
+        input: {
+          orgMembership: {
+            actorId: ordinarySession.userId,
+            entityId: organizationId
+          }
+        }
+      },
+      cleanupSession.token
+    );
+    const ordinaryOrgMembershipId = mutationRowId(
+      createdOrdinaryOrgMembership,
+      'createOrgMembership',
+      'orgMembership'
+    );
+    expect(typeof ordinaryOrgMembershipId).toBe('string');
+    const approvedOrdinaryOrgMembership = await graphQL<Record<string, unknown>>(
+      endpointUrl(tenant, 'admin'),
+      UPDATE_ORGANIZATION_MEMBERSHIP,
+      {
+        input: {
+          id: ordinaryOrgMembershipId,
+          orgMembershipPatch: { isApproved: true }
+        }
+      },
+      cleanupSession.token
+    );
+    expect(mutationRowId(
+      approvedOrdinaryOrgMembership,
+      'updateOrgMembership',
+      'orgMembership'
+    )).toBe(ordinaryOrgMembershipId);
+    const ordinaryOrgMembershipRows = await pollRows(async () => {
+      const memberships = await readMembershipProof(tenant, ordinarySession!.token);
+      return memberships.orgMemberships;
+    }, (rows) => rows.some((membership) =>
+      membership.id === ordinaryOrgMembershipId &&
+      membership.actorId === ordinarySession?.userId &&
+      membership.entityId === organizationId &&
+      membership.isActive === true
+    ));
+    const activeOrdinaryOrgMemberships = ordinaryOrgMembershipRows.filter(
+      (membership) => membership.id === ordinaryOrgMembershipId
+    );
+    expect(activeOrdinaryOrgMemberships).toHaveLength(1);
+    expect(activeOrdinaryOrgMemberships[0]).toMatchObject({
+      actorId: ordinarySession.userId,
+      entityId: organizationId,
+      isOwner: false,
+      isAdmin: false,
+      isActive: true,
+      isApproved: true,
+      isBanned: false,
       isDisabled: false,
       isReadOnly: false
     });
-    expect(activeOrdinaryAppMemberships[0]?.permissions).toMatch(/^0+$/u);
+    expect(activeOrdinaryOrgMemberships[0]?.permissions).toMatch(/^0+$/u);
+    const ordinaryVisibleOrgMembers = await readProofConnection(
+      tenant,
+      'admin',
+      ordinarySession.token,
+      'ConsoleKitProofOrdinaryVisibleOrgMembers',
+      'orgMembers',
+      'id actorId entityId'
+    );
+    expect(ordinaryVisibleOrgMembers.filter((member) =>
+      member.actorId === ordinarySession?.userId && member.entityId === organizationId
+    )).toHaveLength(1);
     const deniedOrganization = await rawGraphQL<Record<string, unknown>>(
       endpointUrl(tenant, 'auth'),
       CREATE_ORGANIZATION_USER,
@@ -990,6 +1172,7 @@ test('loads authoritative memberships and fails closed around organization RLS',
     await openFeature(ordinaryPage, 'Organizations');
     await expect(ordinaryPage.getByRole('heading', { level: 1, name: 'Organizations' }))
       .toBeVisible();
+    await expect(ordinaryPage.getByText(organizationName, { exact: true }).first()).toBeVisible();
     await expect(ordinaryPage.getByRole('button', { name: 'New organization', exact: true }))
       .toHaveCount(0);
     await expect(ordinaryPage.getByRole('button', { name: 'Invite member', exact: true }))
@@ -1035,6 +1218,60 @@ test('loads authoritative memberships and fails closed around organization RLS',
   if (ordinarySession) {
     await cleanup('revoke the ordinary direct session', async () => {
       await signOut(tenant, ordinarySession!.token);
+    });
+  } else if (ordinarySignupAttempted) {
+    await cleanup('settle an ambiguously committed ordinary signup', async () => {
+      const commitHorizon = Date.now() + 30_000;
+      const failureHorizon = commitHorizon + 15_000;
+      let stableAbsenceSince: number | null = null;
+      let lastFailure: unknown;
+      for (;;) {
+        let membershipReadSucceeded = false;
+        let recoveryReadSucceeded = false;
+        try {
+          const memberships = await readMembershipProof(tenant, cleanupSession.token);
+          membershipReadSucceeded = true;
+          for (const membership of memberships.appMemberships) {
+            if (
+              typeof membership.actorId === 'string' &&
+              !ordinarySignupBaselineActorIds.has(membership.actorId)
+            ) {
+              ordinaryUserIds.add(membership.actorId);
+            }
+          }
+        } catch (cause) {
+          lastFailure = cause;
+        }
+
+        let recovered: LiveSession | null = null;
+        try {
+          recovered = await recoverAmbiguousSignUp(tenant, ordinaryCredentials);
+          recoveryReadSucceeded = true;
+        } catch (cause) {
+          lastFailure = cause;
+        }
+        if (recovered) {
+          ordinarySession = recovered;
+          ordinaryUserIds.add(recovered.userId);
+          await signOut(tenant, recovered.token);
+          return;
+        }
+        if (ordinaryUserIds.size > 0) return;
+
+        const now = Date.now();
+        if (membershipReadSucceeded && recoveryReadSucceeded && now >= commitHorizon) {
+          stableAbsenceSince ??= now;
+          if (now - stableAbsenceSince >= 2_000) return;
+        } else {
+          stableAbsenceSince = null;
+        }
+        if (now >= failureHorizon) {
+          throw lastFailure instanceof Error
+            ? lastFailure
+            : new Error('The ambiguous signup outcome could not be settled.');
+        }
+        await new Promise((resolve) => setTimeout(resolve, 500));
+      }
     });
   }
 
@@ -1090,15 +1327,18 @@ test('loads authoritative memberships and fails closed around organization RLS',
       expect(mutationRowId(deleted, 'deleteUser', 'user')).toBe(id);
     }
   });
-  if (ordinarySession) {
+  if (ordinarySession) ordinaryUserIds.add(ordinarySession.userId);
+  if (ordinaryUserIds.size > 0) {
     await cleanup('remove the ordinary proof identity', async () => {
-      const deleted = await graphQL<Record<string, unknown>>(
-        endpointUrl(tenant, 'auth'),
-        DELETE_USER,
-        { input: { id: ordinarySession!.userId } },
-        cleanupSession.token
-      );
-      expect(mutationRowId(deleted, 'deleteUser', 'user')).toBe(ordinarySession!.userId);
+      for (const userId of ordinaryUserIds) {
+        const deleted = await graphQL<Record<string, unknown>>(
+          endpointUrl(tenant, 'auth'),
+          DELETE_USER,
+          { input: { id: userId } },
+          cleanupSession.token
+        );
+        expect(mutationRowId(deleted, 'deleteUser', 'user')).toBe(userId);
+      }
     });
   }
 
@@ -1111,7 +1351,7 @@ test('loads authoritative memberships and fails closed around organization RLS',
       fixtureOrganizationIds.has(String(user.id)) ||
       user.displayName === organizationName ||
       user.displayName === unauthorizedOrganizationName ||
-      user.id === ordinarySession?.userId
+      ordinaryUserIds.has(String(user.id))
     )).toBe(false);
     expect(memberships.appInvites.some((invite) => invite.email === appInviteEmail)).toBe(false);
     expect(memberships.orgInvites.some((invite) =>
@@ -1121,7 +1361,7 @@ test('loads authoritative memberships and fails closed around organization RLS',
       fixtureOrganizationIds.has(String(membership.entityId))
     )).toBe(false);
     expect(memberships.appMemberships.some((membership) =>
-      membership.actorId === ordinarySession?.userId
+      ordinaryUserIds.has(String(membership.actorId))
     )).toBe(false);
   });
   await cleanup('revoke the cleanup session', async () => {

@@ -229,7 +229,7 @@ export const FEATURE_PACK_DOCS = [
     exportName: 'UsersFeaturePack',
     description:
       'An application member directory with invitations, role assignment, profile context, and access-status management.',
-    endpoints: 'admin, optional auth',
+    endpoints: 'admin, optional auth, optional billing',
     dependencies: ['data', 'auth'],
     resource: 'FeaturePackResource<UsersFeatureData>',
     actions: ['invite({ email, role })', 'updateRole / toggleActive / remove', 'cancelInvite / extendInvite'],
@@ -310,7 +310,7 @@ export const FEATURE_PACK_DOCS = [
     exportName: 'OrganizationsFeaturePack',
     description:
       'A tenant switcher with organization creation, invitations, memberships, role assignment, and removal controls.',
-    endpoints: 'admin, optional auth',
+    endpoints: 'admin, optional auth, optional billing',
     dependencies: ['users'],
     resource: 'FeaturePackResource<OrganizationsFeatureData>',
     actions: [

@@ -4,7 +4,7 @@
   "title": "Users",
   "description": "Application member directory, invitations, role assignment, and membership-status management.",
   "dependencies": ["data", "auth"],
-  "endpoints": { "required": ["admin"], "optional": ["auth"] },
+  "endpoints": { "required": ["admin"], "optional": ["auth", "billing"] },
   "capabilities": {
     "required": ["users.directory", "users.memberships"],
     "optional": ["users.permissions", "users.limits", "users.profiles", "users.invites"]

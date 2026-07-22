@@ -698,7 +698,6 @@ export function createConstructiveOrganizationsAdapter(
   const pendingOrganizationCreates = new Map<string, Readonly<{
     name: string;
     username: string;
-    id: string | null;
   }>>();
   const capabilities: readonly AtomicCapabilityId[] = [
     'organizations.memberships',
@@ -729,12 +728,6 @@ export function createConstructiveOrganizationsAdapter(
         authSchema,
         'deleteUser',
         ['id']
-      );
-      const createSupportsClientId = supportsConstructiveMutationInput(
-        authSchema,
-        'createUser',
-        ['user'],
-        { field: 'user', requiredFields: ['id'] }
       );
       const canCreateOrganization = Boolean(creationActorId) && loaded.canCreateOrganization &&
         loaded.canValidateCreatedOwnerMembership &&
@@ -837,8 +830,7 @@ export function createConstructiveOrganizationsAdapter(
                 }
                 const provisioning = pendingOrganizationCreate ?? {
                   name,
-                  username: organizationProvisioningUsername(),
-                  id: createSupportsClientId ? globalThis.crypto.randomUUID() : null
+                  username: organizationProvisioningUsername()
                 };
                 pendingOrganizationCreates.set(provisioningScope, provisioning);
                 const clearPendingOrganizationCreate = () => {
@@ -858,7 +850,6 @@ export function createConstructiveOrganizationsAdapter(
                       {
                         input: {
                           user: {
-                            ...(provisioning.id ? { id: provisioning.id } : {}),
                             username: provisioning.username,
                             displayName: name,
                             type: 2
@@ -878,7 +869,7 @@ export function createConstructiveOrganizationsAdapter(
                 if (!creationActorId) {
                   return rejectIncompleteOrganization(
                     runtime,
-                    provisioning.id,
+                    null,
                     canDeleteIncompleteOrganization,
                     'The organization was created without an authenticated actor identity.',
                     clearPendingOrganizationCreate
@@ -905,8 +896,7 @@ export function createConstructiveOrganizationsAdapter(
                     throw unknownOrganizationProvisioningOutcome(provisioning.username);
                   }
                   const returnedId = returnedUser?.type === 2 &&
-                    asString(returnedUser?.username) === provisioning.username &&
-                    (!provisioning.id || asString(returnedUser?.id) === provisioning.id)
+                    asString(returnedUser?.username) === provisioning.username
                     ? asString(returnedUser?.id)
                     : null;
                   return rejectIncompleteOrganization(
@@ -931,7 +921,6 @@ export function createConstructiveOrganizationsAdapter(
                   returnedId &&
                   returnedUser?.type === 2 &&
                   asString(returnedUser?.username) === provisioning.username &&
-                  (!provisioning.id || returnedId === provisioning.id) &&
                   (
                     !loaded.userFields.includes('displayName') ||
                     returnedUser?.displayName === name
@@ -952,7 +941,6 @@ export function createConstructiveOrganizationsAdapter(
                   persistedCandidates.length !== 1 ||
                   persisted?.type !== 2 ||
                   asString(persisted.username) !== provisioning.username ||
-                  (provisioning.id && organizationId !== provisioning.id) ||
                   (loaded.userFields.includes('displayName') && persisted.displayName !== name) ||
                   ownerMemberships.length !== 1 ||
                   !isExactCreatedOwnerMembership(

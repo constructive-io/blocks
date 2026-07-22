@@ -78,7 +78,7 @@ export const USERS_FEATURE_PACK = {
   dependencies: ['data', 'auth'],
   endpoints: {
     required: ['admin'],
-    optional: ['auth']
+    optional: ['auth', 'billing']
   },
   capabilities: {
     required: [
@@ -104,7 +104,7 @@ export const ORGANIZATIONS_FEATURE_PACK = {
   dependencies: ['users'],
   endpoints: {
     required: ['admin'],
-    optional: ['auth']
+    optional: ['auth', 'billing']
   },
   capabilities: {
     required: ['organizations.memberships'],

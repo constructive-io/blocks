@@ -31,6 +31,24 @@ function schema(endpointId: string): ConstructiveSchemaSnapshot {
   };
 }
 
+function schemaWithQueries(
+  endpointKind: ConstructiveSchemaSnapshot['endpointKind'],
+  endpointId: string,
+  fields: readonly string[]
+): ConstructiveSchemaSnapshot {
+  return {
+    endpointKind,
+    endpointId,
+    queryFields: Object.fromEntries(fields.map((name) => [name, {
+      name,
+      args: [],
+      type: { kind: 'OBJECT', name: `${name}Connection` }
+    }])),
+    mutationFields: {},
+    types: {}
+  };
+}
+
 function runtime(url: string): ConsoleKitAdapterContext {
   return {
     databaseId: 'database-1',
@@ -107,5 +125,51 @@ describe('Constructive capability discovery lifecycle', () => {
 
     await discovery.ensure(runtime('/second/graphql'));
     expect(inspectSchema).toHaveBeenCalledTimes(2);
+  });
+
+  it('discovers application and organization limits on the semantic usage endpoint', async () => {
+    inspectSchema.mockImplementation(async (_runtime, kind) => {
+      if (kind === 'auth') return schemaWithQueries('auth', 'auth', ['users']);
+      if (kind === 'admin') {
+        return schemaWithQueries('admin', 'admin', ['appMemberships', 'orgMemberships']);
+      }
+      if (kind === 'billing') {
+        return schemaWithQueries('billing', 'usage', ['appLimits', 'orgLimits']);
+      }
+      throw new Error(`Unexpected endpoint ${kind}.`);
+    });
+    const store = createConsoleKitStore('data');
+    const discovery = createConstructiveCapabilityDiscovery(store);
+    const currentRuntime: ConsoleKitAdapterContext = {
+      ...runtime('/auth/graphql'),
+      endpoints: {
+        auth: { id: 'auth', kind: 'auth', url: '/auth/graphql' },
+        admin: { id: 'admin', kind: 'admin', url: '/admin/graphql' },
+        billing: { id: 'usage', kind: 'billing', url: '/usage/graphql' }
+      }
+    };
+
+    await discovery.ensure(currentRuntime);
+
+    expect(store.getState().packCapabilities.users).toMatchObject({
+      supportedCapabilities: expect.arrayContaining(['users.limits']),
+      evidence: expect.arrayContaining([
+        expect.objectContaining({
+          source: 'graphql-operation',
+          endpointKind: 'billing',
+          coordinate: 'Query.appLimits'
+        })
+      ])
+    });
+    expect(store.getState().packCapabilities.organizations).toMatchObject({
+      supportedCapabilities: expect.arrayContaining(['organizations.limits']),
+      evidence: expect.arrayContaining([
+        expect.objectContaining({
+          source: 'graphql-operation',
+          endpointKind: 'billing',
+          coordinate: 'Query.orgLimits'
+        })
+      ])
+    });
   });
 });

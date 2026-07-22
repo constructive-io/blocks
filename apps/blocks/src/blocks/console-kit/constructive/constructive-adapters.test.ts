@@ -1293,12 +1293,13 @@ describe('Constructive organizations adapter RLS contract', () => {
     });
     let createdOrganizationId: string | null = null;
     let createdOrganizationUsername: string | null = null;
+    let createCount = 0;
     const loaded = await adapter.load(runtime((call) => {
       calls.push(call);
       if (call.document.includes('ConsoleKitCreateOrganization')) {
         const user = (call.variables?.input as { user?: Record<string, unknown> } | undefined)
           ?.user;
-        createdOrganizationId = typeof user?.id === 'string' ? user.id : null;
+        createdOrganizationId = `org-incomplete-${++createCount}`;
         createdOrganizationUsername = typeof user?.username === 'string'
           ? user.username
           : null;
