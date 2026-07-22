@@ -24,7 +24,8 @@ import {
   hasEffectivePermission,
   imageUrl,
   notifyConsoleAdapters,
-  packAvailability
+  packAvailability,
+  permissionMaskIsSubset
 } from './constructive-adapter-utils';
 import {
   executeConstructiveGraphQL,
@@ -125,7 +126,11 @@ function adminDocument(options: ConstructiveOrganizationsAdapterOptions): string
     throw new Error('The organization membership type exposes no readable fields.');
   }
 
-  const profileFields = connectionSelection(schema, 'OrgProfile', ['id', 'name', 'entityId']);
+  const profileFields = connectionSelection(
+    schema,
+    'OrgProfile',
+    ['id', 'name', 'entityId', 'permissions']
+  );
   const profiles = supports(options, 'admin', 'query', 'orgProfiles') && profileFields.length > 0
     ? `orgProfiles(first: 250) { nodes { ${profileFields.join(' ')} } }`
     : '';
@@ -145,6 +150,15 @@ function adminDocument(options: ConstructiveOrganizationsAdapterOptions): string
     permissionFields.includes('name') && permissionFields.includes('bitstr')
     ? `orgPermissions(first: 100) { nodes { ${permissionFields.join(' ')} } }`
     : '';
+  const settingFields = connectionSelection(
+    schema,
+    'OrgMembershipSetting',
+    ['entityId', 'inviteProfileAssignmentMode']
+  );
+  const settings = supports(options, 'admin', 'query', 'orgMembershipSettings') &&
+    settingFields.includes('entityId') && settingFields.includes('inviteProfileAssignmentMode')
+    ? `orgMembershipSettings(first: 250) { nodes { ${settingFields.join(' ')} } }`
+    : '';
   return `
     query ConsoleKitOrganizationMemberships {
       orgMemberships(first: 500) {
@@ -153,6 +167,7 @@ function adminDocument(options: ConstructiveOrganizationsAdapterOptions): string
       ${profiles}
       ${invites}
       ${permissions}
+      ${settings}
     }
   `;
 }
@@ -173,6 +188,18 @@ function memberRole(
     (asBoolean(member.isOwner) ? 'Owner' : asBoolean(member.isAdmin) ? 'Admin' : 'Member');
 }
 
+type InviteProfileAssignmentMode = 'strict' | 'permission_only' | 'subset_only';
+
+function inviteProfileAssignmentMode(
+  rows: readonly Record<string, unknown>[],
+  organizationId: string | undefined
+): InviteProfileAssignmentMode {
+  const value = asString(rows.find(
+    (row) => asString(row.entityId) === organizationId
+  )?.inviteProfileAssignmentMode);
+  return value === 'permission_only' || value === 'subset_only' ? value : 'strict';
+}
+
 async function loadOrganizations(
   options: ConstructiveOrganizationsAdapterOptions,
   runtime: ConsoleKitAdapterContext,
@@ -180,6 +207,7 @@ async function loadOrganizations(
 ): Promise<Readonly<{
   data: OrganizationsFeatureData;
   roleIds: ReadonlyMap<string, string>;
+  inviteRoleIds: ReadonlyMap<string, string>;
   canManageActiveOrganization: boolean;
   canCreateInvites: boolean;
   canAssignInviteProfiles: boolean;
@@ -188,6 +216,7 @@ async function loadOrganizations(
     return {
       data: { organizations: [], members: [], invites: [], roles: [] },
       roleIds: new Map(),
+      inviteRoleIds: new Map(),
       canManageActiveOrganization: false,
       canCreateInvites: false,
       canAssignInviteProfiles: false
@@ -241,7 +270,8 @@ async function loadOrganizations(
     : organizations[0]?.id;
   const roleIds = new Map<string, string>();
   const profileNames = new Map<string, string>();
-  for (const profile of connectionNodes(adminResult.orgProfiles)) {
+  const profileRows = connectionNodes(adminResult.orgProfiles);
+  for (const profile of profileRows) {
     const id = asString(profile.id);
     const name = asString(profile.name);
     const entityId = asString(profile.entityId);
@@ -284,35 +314,62 @@ async function loadOrganizations(
   const actorMembership = actorMemberships.find(
     (membership) => asString(membership.entityId) === activeOrganizationId
   );
+  const hasActiveMembership = asBoolean(actorMembership?.isActive);
   const hasAdministrativeRole = Boolean(
-    actorMembership && (asBoolean(actorMembership.isOwner) || asBoolean(actorMembership.isAdmin))
+    hasActiveMembership && actorMembership &&
+    (asBoolean(actorMembership.isOwner) || asBoolean(actorMembership.isAdmin))
   );
   const permissionRows = connectionNodes(adminResult.orgPermissions);
-  const canManageActiveOrganization = hasAdministrativeRole || hasEffectivePermission(
-    actorMembership,
-    permissionRows,
+  const hasNamedPermission = (permissionName: string) => hasActiveMembership &&
+    hasEffectivePermission(
+      actorMembership,
+      permissionRows,
+      permissionName
+    );
+  const canManageActiveOrganization = hasAdministrativeRole || hasNamedPermission(
     'admin_members'
   );
+  const assignmentMode = inviteProfileAssignmentMode(
+    connectionNodes(adminResult.orgMembershipSettings),
+    activeOrganizationId
+  );
+  const hasAssignProfiles = hasNamedPermission('assign_profiles');
+  const canAssignInviteProfiles = hasAdministrativeRole ||
+    (hasActiveMembership && assignmentMode === 'subset_only') || hasAssignProfiles;
+  const inviteRoleIds = new Map<string, string>();
+  for (const profile of profileRows) {
+    const id = asString(profile.id);
+    const name = asString(profile.name);
+    const entityId = asString(profile.entityId);
+    const belongsToActiveOrganization = !entityId || entityId === activeOrganizationId;
+    const satisfiesSubset = assignmentMode === 'permission_only' || permissionMaskIsSubset(
+      profile.permissions,
+      actorMembership?.permissions
+    );
+    if (
+      id &&
+      name &&
+      belongsToActiveOrganization &&
+      canAssignInviteProfiles &&
+      (hasAdministrativeRole || satisfiesSubset)
+    ) {
+      inviteRoleIds.set(name, id);
+    }
+  }
   return {
     data: {
       organizations,
       activeOrganizationId,
       members,
       invites,
-      roles: [...roleIds.keys()]
+      roles: [...roleIds.keys()],
+      inviteRoles: [...inviteRoleIds.keys()]
     },
     roleIds,
+    inviteRoleIds,
     canManageActiveOrganization,
-    canCreateInvites: hasAdministrativeRole || hasEffectivePermission(
-      actorMembership,
-      permissionRows,
-      'create_invites'
-    ),
-    canAssignInviteProfiles: hasAdministrativeRole || hasEffectivePermission(
-      actorMembership,
-      permissionRows,
-      'assign_profiles'
-    )
+    canCreateInvites: hasAdministrativeRole || hasNamedPermission('create_invites'),
+    canAssignInviteProfiles
   };
 }
 
@@ -401,6 +458,7 @@ export function createConstructiveOrganizationsAdapter(
           inviteMember: canInvite,
           assignInviteRole: canInvite &&
             loaded.canAssignInviteProfiles &&
+            loaded.inviteRoleIds.size > 0 &&
             inviteSupportsProfile,
           updateMemberRole: canGrantProfile,
           removeMember: canUpdateMembership,
@@ -420,7 +478,7 @@ export function createConstructiveOrganizationsAdapter(
           inviteMember: canInvite
             ? async ({ organizationId, email, role }) => {
                 assertActiveOrganization(organizationId);
-                const profileId = role ? loaded.roleIds.get(role) : undefined;
+                const profileId = role ? loaded.inviteRoleIds.get(role) : undefined;
                 if (role && (
                   !loaded.canAssignInviteProfiles || !inviteSupportsProfile || !profileId
                 )) {

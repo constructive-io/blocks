@@ -98,6 +98,7 @@ export type UsersFeatureData = Readonly<{
   members: readonly AppMember[];
   invites?: readonly AppInvite[];
   roles?: readonly string[];
+  inviteRoles?: readonly string[];
 }>;
 
 export type UsersFeatureAction =
@@ -151,6 +152,10 @@ function InviteMemberDialog({
   const [pending, setPending] = React.useState(false);
   const [error, setError] = React.useState<string>();
   const fieldId = React.useId();
+
+  React.useEffect(() => {
+    setRole((currentRole) => roles.includes(currentRole) ? currentRole : '');
+  }, [roles]);
 
   const submit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -404,7 +409,7 @@ export function UsersFeaturePack({
   const normalizedQuery = query.trim().toLowerCase();
   const canInvite = canPerform(policy, 'invite') && Boolean(actions?.invite);
   const inviteRoles = resource.status === 'ready' && canPerform(policy, 'assignInviteRole')
-    ? resource.data.roles ?? []
+    ? resource.data.inviteRoles ?? resource.data.roles ?? []
     : [];
 
   return (

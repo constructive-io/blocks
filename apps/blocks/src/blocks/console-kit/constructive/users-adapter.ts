@@ -23,7 +23,8 @@ import {
   hasEffectivePermission,
   imageUrl,
   notifyConsoleAdapters,
-  packAvailability
+  packAvailability,
+  permissionMaskIsSubset
 } from './constructive-adapter-utils';
 import {
   executeConstructiveGraphQL,
@@ -148,7 +149,7 @@ function adminDirectoryDocument(options: ConstructiveUsersAdapterOptions): strin
   const invites = supports(options, 'admin', 'query', 'appInvites') && inviteFields.length > 0
     ? `appInvites(first: 100) { nodes { ${inviteFields.join(' ')} } }`
     : '';
-  const profileFields = connectionSelection(schema, 'AppProfile', ['id', 'name']);
+  const profileFields = connectionSelection(schema, 'AppProfile', ['id', 'name', 'permissions']);
   const profiles = supports(options, 'admin', 'query', 'appProfiles') && profileFields.length > 0
     ? `appProfiles(first: 100) { nodes { ${profileFields.join(' ')} } }`
     : '';
@@ -193,6 +194,7 @@ async function loadDirectory(
 ): Promise<Readonly<{
   data: UsersFeatureData;
   roleIds: ReadonlyMap<string, string>;
+  inviteRoleIds: ReadonlyMap<string, string>;
   canManageMembers: boolean;
   canCreateInvites: boolean;
   canAssignInviteProfiles: boolean;
@@ -201,6 +203,7 @@ async function loadDirectory(
     return {
       data: { members: [], invites: [], roles: [] },
       roleIds: new Map(),
+      inviteRoleIds: new Map(),
       canManageMembers: false,
       canCreateInvites: false,
       canAssignInviteProfiles: false
@@ -254,7 +257,8 @@ async function loadDirectory(
 
   const roleIds = new Map<string, string>();
   const profileNames = new Map<string, string>();
-  for (const profile of connectionNodes(adminResult.appProfiles)) {
+  const profileRows = connectionNodes(adminResult.appProfiles);
+  for (const profile of profileRows) {
     const id = asString(profile.id);
     const name = asString(profile.name);
     if (id && name) {
@@ -300,30 +304,56 @@ async function loadDirectory(
   const actorMembership = membershipRows.find(
     (membership) => asString(membership.actorId) === actorId
   );
+  const hasActiveMembership = asBoolean(actorMembership?.isActive);
   const hasAdministrativeRole = Boolean(
-    actorMembership && (asBoolean(actorMembership.isOwner) || asBoolean(actorMembership.isAdmin))
+    hasActiveMembership && actorMembership &&
+    (asBoolean(actorMembership.isOwner) || asBoolean(actorMembership.isAdmin))
   );
   const permissionRows = connectionNodes(adminResult.appPermissions);
-  const canManageMembers = hasAdministrativeRole || hasEffectivePermission(
-    actorMembership,
-    permissionRows,
+  const hasNamedPermission = (permissionName: string) => hasActiveMembership &&
+    hasEffectivePermission(
+      actorMembership,
+      permissionRows,
+      permissionName
+    );
+  const canManageMembers = hasAdministrativeRole || hasNamedPermission(
     'admin_members'
   );
+  const canCreateInvites = hasAdministrativeRole || hasNamedPermission(
+    'create_invites'
+  );
+  const canAssignInviteProfiles = hasAdministrativeRole || hasNamedPermission(
+    'assign_profiles'
+  );
+  const inviteRoleIds = new Map<string, string>();
+  for (const profile of profileRows) {
+    const id = asString(profile.id);
+    const name = asString(profile.name);
+    if (
+      id &&
+      name &&
+      hasActiveMembership &&
+      (hasAdministrativeRole || permissionMaskIsSubset(
+        profile.permissions,
+        actorMembership?.permissions
+      ))
+    ) {
+      inviteRoleIds.set(name, id);
+    }
+  }
 
   return {
-    data: { members, invites, roles: [...roleIds.keys()] },
+    data: {
+      members,
+      invites,
+      roles: [...roleIds.keys()],
+      inviteRoles: [...inviteRoleIds.keys()]
+    },
     roleIds,
+    inviteRoleIds,
     canManageMembers,
-    canCreateInvites: hasAdministrativeRole || hasEffectivePermission(
-      actorMembership,
-      permissionRows,
-      'create_invites'
-    ),
-    canAssignInviteProfiles: hasAdministrativeRole || hasEffectivePermission(
-      actorMembership,
-      permissionRows,
-      'assign_profiles'
-    )
+    canCreateInvites,
+    canAssignInviteProfiles
   };
 }
 
@@ -403,6 +433,7 @@ export function createConstructiveUsersAdapter(
           invite: canCreateInvite,
           assignInviteRole: canCreateInvite &&
             directory.canAssignInviteProfiles &&
+            directory.inviteRoleIds.size > 0 &&
             inviteSupportsProfile,
           updateRole: canGrantProfile,
           toggleActive: canUpdateMembership,
@@ -413,7 +444,7 @@ export function createConstructiveUsersAdapter(
         actions: {
           invite: canCreateInvite
             ? async ({ email, role }) => {
-                const profileId = role ? directory.roleIds.get(role) : undefined;
+                const profileId = role ? directory.inviteRoleIds.get(role) : undefined;
                 if (role && (
                   !directory.canAssignInviteProfiles || !inviteSupportsProfile || !profileId
                 )) {

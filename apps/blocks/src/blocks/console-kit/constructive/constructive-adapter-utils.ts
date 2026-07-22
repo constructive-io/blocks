@@ -36,13 +36,24 @@ export function hasEffectivePermission(
   const requiredMask = asString(permissionRows.find(
     (permission) => asString(permission.name) === permissionName
   )?.bitstr);
+  return Boolean(requiredMask?.includes('1')) && permissionMaskIsSubset(
+    requiredMask,
+    effectiveMask
+  );
+}
+
+export function permissionMaskIsSubset(
+  requiredValue: unknown,
+  effectiveValue: unknown
+): boolean {
+  const requiredMask = asString(requiredValue);
+  const effectiveMask = asString(effectiveValue);
   if (
-    !effectiveMask ||
     !requiredMask ||
-    effectiveMask.length !== requiredMask.length ||
-    !/^[01]+$/u.test(effectiveMask) ||
+    !effectiveMask ||
+    requiredMask.length !== effectiveMask.length ||
     !/^[01]+$/u.test(requiredMask) ||
-    !requiredMask.includes('1')
+    !/^[01]+$/u.test(effectiveMask)
   ) {
     return false;
   }

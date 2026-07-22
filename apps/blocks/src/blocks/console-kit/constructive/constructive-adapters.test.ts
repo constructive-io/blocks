@@ -305,7 +305,7 @@ describe('Constructive auth adapter RLS contract', () => {
 });
 
 describe('Constructive users adapter RLS contract', () => {
-  it('omits absent profile fields and hides mutation controls for an ordinary app member', async () => {
+  it('omits absent profile fields and ignores an inactive app membership permission mask', async () => {
     const calls: GraphQLCall[] = [];
     const adminSchema = snapshot({
       endpoint: 'admin',
@@ -340,10 +340,10 @@ describe('Constructive users adapter RLS contract', () => {
               actorId: 'user-1',
               isOwner: false,
               isAdmin: false,
-              isActive: true,
+              isActive: false,
               isApproved: true,
               isDisabled: false,
-              permissions: '0000'
+              permissions: '0001'
             }]
           },
           appInvites: { nodes: [] },
@@ -360,6 +360,7 @@ describe('Constructive users adapter RLS contract', () => {
     expect(directoryQuery).not.toContain('profile {');
     expect(directoryQuery).not.toMatch(/\bdata\b/u);
     expect(directoryQuery).toContain('permissions');
+    expect(directoryQuery).toContain('isActive');
     expect(directoryQuery).toContain('appPermissions');
     expect(loaded.policy).toMatchObject({
       invite: false,
@@ -378,7 +379,9 @@ describe('Constructive users adapter RLS contract', () => {
       queries: ['appMemberships', 'appInvites', 'appProfiles'],
       mutations: { createAppInvite: 'CreateAppInviteInput' },
       types: [
-        objectType('AppMembership', ['id', 'actorId', 'isOwner', 'isAdmin', 'profileId']),
+        objectType('AppMembership', [
+          'id', 'actorId', 'isOwner', 'isAdmin', 'isActive', 'profileId'
+        ]),
         objectType('AppInvite', ['id', 'email', 'profileId']),
         objectType('AppProfile', ['id', 'name']),
         ...adminMutationTypes('App')
@@ -400,7 +403,8 @@ describe('Constructive users adapter RLS contract', () => {
               id: 'membership-1',
               actorId: 'user-1',
               isOwner: true,
-              isAdmin: false
+              isAdmin: false,
+              isActive: true
             }]
           },
           appInvites: { nodes: [] },
@@ -426,6 +430,89 @@ describe('Constructive users adapter RLS contract', () => {
     expect(mutation?.variables).not.toHaveProperty('input.appInvite.data');
   });
 
+  it('filters delegated app invitation profiles by the backend subset rule', async () => {
+    const calls: GraphQLCall[] = [];
+    const adminSchema = snapshot({
+      endpoint: 'admin',
+      queries: ['appMemberships', 'appProfiles', 'appPermissions'],
+      mutations: { createAppInvite: 'CreateAppInviteInput' },
+      types: [
+        objectType('AppMembership', [
+          'id', 'actorId', 'isOwner', 'isAdmin', 'isActive', 'permissions'
+        ]),
+        objectType('AppProfile', ['id', 'name', 'permissions']),
+        objectType('AppPermission', ['name', 'bitstr']),
+        ...adminMutationTypes('App')
+      ]
+    });
+    const adapter = createConstructiveUsersAdapter({
+      store: createConsoleKitStore('users'),
+      discovery: discovery({
+        admin: adminSchema,
+        auth: snapshot({ endpoint: 'auth', queries: ['users'] })
+      })
+    });
+    const loaded = await adapter.load(runtime((call) => {
+      calls.push(call);
+      if (call.document.includes('ConsoleKitAppMemberships')) {
+        return {
+          appMemberships: {
+            nodes: [{
+              id: 'membership-1',
+              actorId: 'user-1',
+              isOwner: false,
+              isAdmin: false,
+              isActive: true,
+              permissions: '0111'
+            }]
+          },
+          appProfiles: {
+            nodes: [
+              { id: 'profile-subset', name: 'Member', permissions: '0010' },
+              { id: 'profile-empty', name: 'No permissions', permissions: '0000' },
+              { id: 'profile-elevated', name: 'Owner', permissions: '1000' },
+              { id: 'profile-wrong-width', name: 'Malformed', permissions: '111' }
+            ]
+          },
+          appPermissions: {
+            nodes: [
+              { name: 'admin_members', bitstr: '0001' },
+              { name: 'create_invites', bitstr: '0010' },
+              { name: 'assign_profiles', bitstr: '0100' }
+            ]
+          }
+        };
+      }
+      if (call.document.includes('ConsoleKitUsersDirectory')) {
+        return { users: { nodes: [{ id: 'user-1', displayName: 'Manager' }] } };
+      }
+      return { createAppInvite: { appInvite: { id: 'invite-1' } } };
+    }), new AbortController().signal);
+
+    expect(loaded.resource).toMatchObject({
+      status: 'ready',
+      data: {
+        roles: ['Member', 'No permissions', 'Owner', 'Malformed'],
+        inviteRoles: ['Member', 'No permissions']
+      }
+    });
+    expect(loaded.policy).toMatchObject({ invite: true, assignInviteRole: true });
+    await expect(loaded.actions?.invite?.({
+      email: 'elevated@example.com',
+      role: 'Owner'
+    })).rejects.toThrow('The Owner profile cannot be assigned to an app invitation.');
+    expect(calls.some((call) => call.document.includes('ConsoleKitCreateAppInvite'))).toBe(false);
+
+    await loaded.actions?.invite?.({ email: 'roleless@example.com' });
+    await loaded.actions?.invite?.({ email: 'member@example.com', role: 'Member' });
+    const mutations = calls.filter((call) => call.document.includes('ConsoleKitCreateAppInvite'));
+    expect(mutations[0]?.variables).not.toHaveProperty('input.appInvite.profileId');
+    expect(mutations[1]?.variables).toHaveProperty(
+      'input.appInvite.profileId',
+      'profile-subset'
+    );
+  });
+
   it('honors a delegated app admin_members permission without requiring an admin flag', async () => {
     const adminSchema = snapshot({
       endpoint: 'admin',
@@ -437,7 +524,7 @@ describe('Constructive users adapter RLS contract', () => {
       },
       types: [
         objectType('AppMembership', [
-          'id', 'actorId', 'isOwner', 'isAdmin', 'permissions', 'profileId'
+          'id', 'actorId', 'isOwner', 'isAdmin', 'isActive', 'permissions', 'profileId'
         ]),
         objectType('AppProfile', ['id', 'name']),
         objectType('AppPermission', ['name', 'bitstr']),
@@ -460,6 +547,7 @@ describe('Constructive users adapter RLS contract', () => {
               actorId: 'user-1',
               isOwner: false,
               isAdmin: false,
+              isActive: true,
               permissions: '0001'
             }]
           },
@@ -504,7 +592,7 @@ describe('Constructive organizations adapter RLS contract', () => {
       },
       types: [
         objectType('OrgMembership', [
-          'id', 'actorId', 'entityId', 'isOwner', 'isAdmin', 'profileId'
+          'id', 'actorId', 'entityId', 'isOwner', 'isAdmin', 'isActive', 'profileId'
         ]),
         objectType('OrgInvite', ['id', 'entityId', 'email', 'profileId']),
         objectType('OrgProfile', ['id', 'name', 'entityId']),
@@ -518,7 +606,9 @@ describe('Constructive organizations adapter RLS contract', () => {
         auth: snapshot({ endpoint: 'auth', queries: ['users'], mutations: { createUser: 'CreateUserInput' } })
       })
     });
-    const responder = (role: Readonly<{ isOwner: boolean; isAdmin: boolean }>) => (call: GraphQLCall) => {
+    const responder = (
+      role: Readonly<{ isOwner: boolean; isAdmin: boolean; isActive: boolean }>
+    ) => (call: GraphQLCall) => {
       calls.push(call);
       if (call.document.includes('ConsoleKitOrganizationMemberships')) {
         return {
@@ -528,7 +618,8 @@ describe('Constructive organizations adapter RLS contract', () => {
               actorId: 'user-1',
               entityId: 'org-1',
               isOwner: role.isOwner,
-              isAdmin: role.isAdmin
+              isAdmin: role.isAdmin,
+              isActive: role.isActive
             }]
           },
           orgInvites: { nodes: [] },
@@ -549,7 +640,7 @@ describe('Constructive organizations adapter RLS contract', () => {
     };
 
     const ordinary = await makeAdapter().load(
-      runtime(responder({ isOwner: false, isAdmin: false })),
+      runtime(responder({ isOwner: false, isAdmin: false, isActive: true })),
       new AbortController().signal
     );
     expect(ordinary.policy).toMatchObject({
@@ -561,7 +652,7 @@ describe('Constructive organizations adapter RLS contract', () => {
     });
 
     const owner = await makeAdapter().load(
-      runtime(responder({ isOwner: true, isAdmin: false })),
+      runtime(responder({ isOwner: true, isAdmin: false, isActive: true })),
       new AbortController().signal
     );
     await owner.actions?.inviteMember?.({
@@ -594,7 +685,8 @@ describe('Constructive organizations adapter RLS contract', () => {
       },
       types: [
         objectType('OrgMembership', [
-          'id', 'actorId', 'entityId', 'isOwner', 'isAdmin', 'permissions', 'profileId'
+          'id', 'actorId', 'entityId', 'isOwner', 'isAdmin', 'isActive', 'permissions',
+          'profileId'
         ]),
         objectType('OrgProfile', ['id', 'name', 'entityId']),
         objectType('OrgPermission', ['name', 'bitstr']),
@@ -618,6 +710,7 @@ describe('Constructive organizations adapter RLS contract', () => {
               entityId: 'org-1',
               isOwner: false,
               isAdmin: false,
+              isActive: true,
               permissions: '0001'
             }]
           },
@@ -652,6 +745,133 @@ describe('Constructive organizations adapter RLS contract', () => {
       updateMemberRole: true,
       removeMember: true,
       cancelInvite: false
+    });
+  });
+
+  it('honors organization invite assignment modes and defaults missing settings to strict', async () => {
+    const adminSchema = snapshot({
+      endpoint: 'admin',
+      queries: [
+        'orgMemberships',
+        'orgProfiles',
+        'orgPermissions',
+        'orgMembershipSettings'
+      ],
+      mutations: { createOrgInvite: 'CreateOrgInviteInput' },
+      types: [
+        objectType('OrgMembership', [
+          'id', 'actorId', 'entityId', 'isOwner', 'isAdmin', 'isActive', 'permissions'
+        ]),
+        objectType('OrgProfile', ['id', 'name', 'entityId', 'permissions']),
+        objectType('OrgPermission', ['name', 'bitstr']),
+        objectType('OrgMembershipSetting', ['entityId', 'inviteProfileAssignmentMode']),
+        ...adminMutationTypes('Org')
+      ]
+    });
+    const loadForMode = async (
+      mode: 'strict' | 'permission_only' | 'subset_only' | undefined,
+      permissions: string,
+      isActive = true
+    ) => {
+      const adapter = createConstructiveOrganizationsAdapter({
+        store: createConsoleKitStore('organizations'),
+        discovery: discovery({
+          admin: adminSchema,
+          auth: snapshot({ endpoint: 'auth', queries: ['users'] })
+        })
+      });
+      return adapter.load(runtime((call) => {
+        if (call.document.includes('ConsoleKitOrganizationMemberships')) {
+          return {
+            orgMemberships: {
+              nodes: [{
+                id: 'membership-1',
+                actorId: 'user-1',
+                entityId: 'org-1',
+                isOwner: false,
+                isAdmin: false,
+                isActive,
+                permissions
+              }]
+            },
+            orgProfiles: {
+              nodes: [
+                {
+                  id: 'profile-subset',
+                  name: 'Member',
+                  entityId: 'org-1',
+                  permissions: '0010'
+                },
+                {
+                  id: 'profile-elevated',
+                  name: 'Owner',
+                  entityId: 'org-1',
+                  permissions: '1000'
+                }
+              ]
+            },
+            orgPermissions: {
+              nodes: [
+                { name: 'admin_members', bitstr: '0001' },
+                { name: 'create_invites', bitstr: '0010' },
+                { name: 'assign_profiles', bitstr: '0100' }
+              ]
+            },
+            orgMembershipSettings: {
+              nodes: mode ? [{
+                entityId: 'org-1',
+                inviteProfileAssignmentMode: mode
+              }] : []
+            }
+          };
+        }
+        if (call.document.includes('ConsoleKitOrganizationUsers')) {
+          return {
+            users: {
+              nodes: [
+                { id: 'user-1', displayName: 'Manager', type: 1 },
+                { id: 'org-1', displayName: 'Acme', username: 'acme', type: 2 }
+              ]
+            }
+          };
+        }
+        return {};
+      }), new AbortController().signal);
+    };
+
+    const strict = await loadForMode('strict', '0111');
+    const permissionOnly = await loadForMode('permission_only', '0111');
+    const subsetOnly = await loadForMode('subset_only', '0011');
+    const missingSetting = await loadForMode(undefined, '0011');
+    const inactive = await loadForMode('permission_only', '0111', false);
+
+    expect(strict.resource).toMatchObject({
+      status: 'ready',
+      data: { inviteRoles: ['Member'] }
+    });
+    expect(permissionOnly.resource).toMatchObject({
+      status: 'ready',
+      data: { inviteRoles: ['Member', 'Owner'] }
+    });
+    expect(subsetOnly.resource).toMatchObject({
+      status: 'ready',
+      data: { inviteRoles: ['Member'] }
+    });
+    expect(subsetOnly.policy?.assignInviteRole).toBe(true);
+    expect(missingSetting.resource).toMatchObject({
+      status: 'ready',
+      data: { inviteRoles: [] }
+    });
+    expect(missingSetting.policy?.assignInviteRole).toBe(false);
+    expect(inactive.resource).toMatchObject({
+      status: 'ready',
+      data: { inviteRoles: [] }
+    });
+    expect(inactive.policy).toMatchObject({
+      inviteMember: false,
+      assignInviteRole: false,
+      updateMemberRole: false,
+      removeMember: false
     });
   });
 });

@@ -253,7 +253,7 @@ describe('feature-pack interaction policy', () => {
     expect(screen.queryByRole('combobox', { name: 'Role' })).not.toBeInTheDocument();
   });
 
-  it('drops a selected app profile when invitation-profile permission is revoked', async () => {
+  it('drops a selected app profile when the backend-filtered role list changes', async () => {
     const user = userEvent.setup();
     const invite = vi.fn();
     const resource = {
@@ -276,8 +276,11 @@ describe('feature-pack interaction policy', () => {
     view.rerender(
       <UsersFeaturePack
         actions={{ invite }}
-        policy={{ invite: true }}
-        resource={resource}
+        policy={{ assignInviteRole: true, invite: true }}
+        resource={{
+          ...resource,
+          data: { ...resource.data, inviteRoles: [] }
+        }}
       />
     );
     await user.type(screen.getByRole('textbox', { name: 'Email address' }), 'app@example.com');
@@ -289,7 +292,7 @@ describe('feature-pack interaction policy', () => {
     }));
   });
 
-  it('drops a selected organization profile when invitation-profile permission is revoked', async () => {
+  it('drops a selected organization profile when the backend-filtered role list changes', async () => {
     const user = userEvent.setup();
     const inviteMember = vi.fn();
     const resource = {
@@ -317,8 +320,11 @@ describe('feature-pack interaction policy', () => {
     view.rerender(
       <OrganizationsFeaturePack
         actions={{ inviteMember }}
-        policy={{ inviteMember: true }}
-        resource={resource}
+        policy={{ assignInviteRole: true, inviteMember: true }}
+        resource={{
+          ...resource,
+          data: { ...resource.data, inviteRoles: [] }
+        }}
       />
     );
     await user.type(screen.getByRole('textbox', { name: 'Email address' }), 'org@example.com');

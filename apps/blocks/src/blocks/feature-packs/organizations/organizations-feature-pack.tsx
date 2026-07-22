@@ -113,6 +113,7 @@ export type OrganizationsFeatureData = Readonly<{
   members: readonly OrganizationMember[];
   invites?: readonly OrganizationInvite[];
   roles?: readonly string[];
+  inviteRoles?: readonly string[];
 }>;
 
 export type OrganizationsFeatureAction =
@@ -181,6 +182,10 @@ function TextActionDialog({
   const [pending, setPending] = React.useState(false);
   const [error, setError] = React.useState<string>();
   const fieldId = React.useId();
+
+  React.useEffect(() => {
+    setRole((currentRole) => roles.includes(currentRole) ? currentRole : '');
+  }, [roles]);
 
   const submit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -498,7 +503,9 @@ export function OrganizationsFeaturePack({
                           'The invitation could not be sent.'
                         )
                       }
-                      roles={canPerform(policy, 'assignInviteRole') ? data.roles : []}
+                      roles={canPerform(policy, 'assignInviteRole')
+                        ? data.inviteRoles ?? data.roles
+                        : []}
                     />
                   ) : null}
                 </div>
