@@ -1,6 +1,31 @@
-export const CONSOLE_ENDPOINT_KINDS = ['data', 'auth', 'admin'] as const;
+export const CONSOLE_ENDPOINT_KINDS = [
+  'data',
+  'auth',
+  'admin',
+  'billing',
+  'storage',
+  'notifications'
+] as const;
 
 export type ConsoleEndpointKind = (typeof CONSOLE_ENDPOINT_KINDS)[number];
+
+export const CONSTRUCTIVE_API_NAME_BY_CONSOLE_ENDPOINT = {
+  data: 'api',
+  auth: 'auth',
+  admin: 'admin',
+  billing: 'usage',
+  storage: 'objects',
+  notifications: 'notifications'
+} as const satisfies Record<ConsoleEndpointKind, string>;
+
+export type ConstructiveApiName =
+  (typeof CONSTRUCTIVE_API_NAME_BY_CONSOLE_ENDPOINT)[ConsoleEndpointKind];
+
+export function getConstructiveApiName(
+  kind: ConsoleEndpointKind
+): ConstructiveApiName {
+  return CONSTRUCTIVE_API_NAME_BY_CONSOLE_ENDPOINT[kind];
+}
 
 export type ConsoleEndpointInput =
   | string

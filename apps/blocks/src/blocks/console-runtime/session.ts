@@ -76,8 +76,9 @@ export interface StandaloneConsoleSession extends ConsoleSessionBase {
   mode: 'standalone';
   beginSignIn(input?: {
     returnTo?: string;
-    credentials?: Readonly<{ email: string; password: string }>;
+    credentials?: ConsoleCredentials;
   }): void | Promise<void>;
+  beginSignUp?(credentials: ConsoleCredentials): void | Promise<void>;
   signOut(): void | Promise<void>;
   refresh?(): void | Promise<void>;
 }
@@ -93,3 +94,10 @@ export function getConsoleSessionIdentity(
   if (snapshot.status === 'authenticated') return snapshot.identity;
   return null;
 }
+
+export type ConsoleCredentials = Readonly<{
+  email: string;
+  password: string;
+  /** Persists across browser restarts when true; defaults to session storage. */
+  rememberMe?: boolean;
+}>;

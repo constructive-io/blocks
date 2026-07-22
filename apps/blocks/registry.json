@@ -289,6 +289,11 @@
       "registryDependencies": [],
       "files": [
         {
+          "path": "registry/constructive/blocks/console-runtime/capabilities.ts",
+          "target": "src/blocks/console-runtime/capabilities.ts",
+          "type": "registry:lib"
+        },
+        {
           "path": "registry/constructive/blocks/console-runtime/endpoints.ts",
           "target": "src/blocks/console-runtime/endpoints.ts",
           "type": "registry:lib"
@@ -306,6 +311,11 @@
         {
           "path": "registry/constructive/blocks/console-runtime/session.ts",
           "target": "src/blocks/console-runtime/session.ts",
+          "type": "registry:lib"
+        },
+        {
+          "path": "registry/constructive/blocks/console-runtime/standalone-session.ts",
+          "target": "src/blocks/console-runtime/standalone-session.ts",
           "type": "registry:lib"
         },
         {
@@ -680,6 +690,16 @@
           "type": "registry:lib"
         },
         {
+          "path": "registry/constructive/blocks/console-kit/store/context-slice.ts",
+          "target": "src/blocks/console-kit/store/context-slice.ts",
+          "type": "registry:lib"
+        },
+        {
+          "path": "registry/constructive/blocks/console-kit/store/endpoint-capability-slice.ts",
+          "target": "src/blocks/console-kit/store/endpoint-capability-slice.ts",
+          "type": "registry:lib"
+        },
+        {
           "path": "registry/constructive/blocks/console-kit/store/navigation-slice.ts",
           "target": "src/blocks/console-kit/store/navigation-slice.ts",
           "type": "registry:lib"
@@ -687,6 +707,11 @@
         {
           "path": "registry/constructive/blocks/console-kit/store/runtime-slice.ts",
           "target": "src/blocks/console-kit/store/runtime-slice.ts",
+          "type": "registry:lib"
+        },
+        {
+          "path": "registry/constructive/blocks/console-kit/store/session-slice.ts",
+          "target": "src/blocks/console-kit/store/session-slice.ts",
           "type": "registry:lib"
         },
         {

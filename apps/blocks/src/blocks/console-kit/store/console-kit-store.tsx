@@ -10,6 +10,15 @@ import {
   type ConsoleKitAdapterSlice
 } from './adapter-slice';
 import {
+  createConsoleKitContextSlice,
+  type ConsoleKitContext,
+  type ConsoleKitContextSlice
+} from './context-slice';
+import {
+  createConsoleKitEndpointCapabilitySlice,
+  type ConsoleKitEndpointCapabilitySlice
+} from './endpoint-capability-slice';
+import {
   createConsoleKitNavigationSlice,
   type ConsoleKitNavigationSlice
 } from './navigation-slice';
@@ -17,18 +26,29 @@ import {
   createConsoleKitRuntimeSlice,
   type ConsoleKitRuntimeSlice
 } from './runtime-slice';
+import {
+  createConsoleKitSessionSlice,
+  type ConsoleKitSessionSlice
+} from './session-slice';
 
 export type ConsoleKitStore = ConsoleKitNavigationSlice &
+  ConsoleKitContextSlice &
+  ConsoleKitSessionSlice &
+  ConsoleKitEndpointCapabilitySlice &
   ConsoleKitRuntimeSlice &
   ConsoleKitAdapterSlice;
 
 export type ConsoleKitStoreApi = StoreApi<ConsoleKitStore>;
 
 export function createConsoleKitStore(
-  initialFeature: FeaturePackId
+  initialFeature: FeaturePackId,
+  initialContext: ConsoleKitContext | null = null
 ): ConsoleKitStoreApi {
   return createStore<ConsoleKitStore>()((...args) => ({
     ...createConsoleKitNavigationSlice(initialFeature)(...args),
+    ...createConsoleKitContextSlice(initialContext)(...args),
+    ...createConsoleKitSessionSlice(...args),
+    ...createConsoleKitEndpointCapabilitySlice(...args),
     ...createConsoleKitRuntimeSlice(...args),
     ...createConsoleKitAdapterSlice(...args)
   }));
@@ -41,14 +61,18 @@ const ConsoleKitStoreContext = React.createContext<ConsoleKitStoreApi | null>(
 export function ConsoleKitStoreProvider({
   children,
   initialFeature,
+  initialContext = null,
   store
 }: Readonly<{
   children: React.ReactNode;
   initialFeature: FeaturePackId;
+  initialContext?: ConsoleKitContext | null;
   store?: ConsoleKitStoreApi;
 }>) {
   const storeRef = React.useRef<ConsoleKitStoreApi | null>(store ?? null);
-  if (!storeRef.current) storeRef.current = createConsoleKitStore(initialFeature);
+  if (!storeRef.current) {
+    storeRef.current = createConsoleKitStore(initialFeature, initialContext);
+  }
 
   return (
     <ConsoleKitStoreContext.Provider value={storeRef.current}>

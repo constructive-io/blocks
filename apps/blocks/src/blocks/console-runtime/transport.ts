@@ -10,6 +10,27 @@ export type ConsoleGraphQLError = {
   extensions?: Readonly<Record<string, unknown>>;
 };
 
+export const CONSOLE_AUTHENTICATION_ERROR_CODES = [
+  'UNAUTHENTICATED',
+  'BAD_TOKEN_DEFINITION'
+] as const;
+
+export type ConsoleAuthenticationErrorCode =
+  (typeof CONSOLE_AUTHENTICATION_ERROR_CODES)[number];
+
+export type ConsoleAuthenticationErrorContext = Readonly<{
+  endpoint: ConsoleEndpoint;
+  identity: ConsoleIdentity;
+  error: ConsoleGraphQLError;
+}>;
+
+export type FetchConsoleTransportOptions = Readonly<{
+  authenticationErrorCodes?: readonly string[];
+  onAuthenticationError?: (
+    context: ConsoleAuthenticationErrorContext
+  ) => void | Promise<void>;
+}>;
+
 export type ConsoleGraphQLResult<TData> =
   | {
       ok: true;
@@ -85,14 +106,54 @@ function normalizeGraphQLErrors(errors: unknown): ConsoleGraphQLError[] {
   return errors.map(normalizeGraphQLError);
 }
 
+function graphQLErrorCode(error: ConsoleGraphQLError): string | null {
+  const code = error.extensions?.code;
+  return typeof code === 'string' && code.length > 0 ? code : null;
+}
+
+export function findConsoleAuthenticationError(
+  errors: readonly ConsoleGraphQLError[],
+  authenticationErrorCodes: readonly string[] = CONSOLE_AUTHENTICATION_ERROR_CODES
+): ConsoleGraphQLError | null {
+  const codes = new Set(authenticationErrorCodes);
+  return errors.find((error) => {
+    const code = graphQLErrorCode(error);
+    if (code && codes.has(code)) return true;
+    return error.extensions?.code === 'HTTP_ERROR' &&
+      error.extensions.status === 401;
+  }) ?? null;
+}
+
 /**
  * Creates a request-scoped GraphQL transport with no generated SDK or global
  * client. Tokens are read immediately before each request and are never stored
  * in a response, cache key, or log.
  */
 export function createFetchConsoleTransport(
-  fetchImpl: typeof fetch = fetch
+  fetchImpl: typeof fetch = fetch,
+  options: FetchConsoleTransportOptions = {}
 ): ConsoleTransport {
+  async function notifyAuthenticationError(
+    scope: ConsoleTransportScope,
+    errors: readonly ConsoleGraphQLError[]
+  ): Promise<void> {
+    if (!options.onAuthenticationError) return;
+    const error = findConsoleAuthenticationError(
+      errors,
+      options.authenticationErrorCodes
+    );
+    if (!error) return;
+    try {
+      await options.onAuthenticationError({
+        endpoint: scope.endpoint,
+        identity: scope.identity,
+        error
+      });
+    } catch {
+      // A session cleanup hook cannot change the request's normalized result.
+    }
+  }
+
   return {
     async execute<
       TData,
@@ -171,25 +232,28 @@ export function createFetchConsoleTransport(
 
       const graphQLErrors = normalizeGraphQLErrors(payload?.errors);
       if (!response.ok) {
+        const errors: ConsoleGraphQLError[] = [
+          {
+            message: response.statusText
+              ? `HTTP ${response.status}: ${response.statusText}`
+              : `HTTP ${response.status}`,
+            extensions: {
+              code: 'HTTP_ERROR',
+              status: response.status
+            }
+          },
+          ...graphQLErrors
+        ];
+        await notifyAuthenticationError(scope, errors);
         return {
           ok: false,
           data: payload?.data ?? null,
-          errors: [
-            {
-              message: response.statusText
-                ? `HTTP ${response.status}: ${response.statusText}`
-                : `HTTP ${response.status}`,
-              extensions: {
-                code: 'HTTP_ERROR',
-                status: response.status
-              }
-            },
-            ...graphQLErrors
-          ]
+          errors
         };
       }
 
       if (graphQLErrors.length > 0) {
+        await notifyAuthenticationError(scope, graphQLErrors);
         return {
           ok: false,
           data: payload?.data ?? null,

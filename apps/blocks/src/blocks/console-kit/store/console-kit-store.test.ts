@@ -4,7 +4,10 @@ import { createConsoleKitStore } from './console-kit-store';
 
 describe('Console Kit store', () => {
   it('composes navigation, runtime, and adapter slices in one isolated store', () => {
-    const first = createConsoleKitStore('data');
+    const first = createConsoleKitStore('data', {
+      databaseId: 'database-1',
+      organizationId: null
+    });
     const second = createConsoleKitStore('auth');
     const adapter = {};
 
@@ -29,11 +32,23 @@ describe('Console Kit store', () => {
       message: 'The endpoint is missing the current _meta contract.',
       missing: ['Query._meta']
     });
+    first.getState().setEndpoints({
+      data: { id: 'database-1-data', kind: 'data', url: '/graphql' }
+    });
+    first.getState().setPackCapability('data', {
+      status: 'ready',
+      packId: 'data',
+      supportedCapabilities: ['data.read'],
+      evidence: []
+    });
 
     expect(first.getState()).toMatchObject({
       activeFeature: 'organizations',
+      context: { databaseId: 'database-1', organizationId: null },
       session: { status: 'authenticated' },
       metadataKey: 'database-1:user-1:data',
+      endpoints: { data: { id: 'database-1-data' } },
+      packCapabilities: { data: { status: 'ready' } },
       adapterLoads: {
         users: {
           status: 'ready',
@@ -44,7 +59,10 @@ describe('Console Kit store', () => {
     });
     expect(second.getState()).toMatchObject({
       activeFeature: 'auth',
+      context: null,
       session: { status: 'loading' },
+      endpoints: {},
+      packCapabilities: {},
       adapterLoads: {}
     });
   });
