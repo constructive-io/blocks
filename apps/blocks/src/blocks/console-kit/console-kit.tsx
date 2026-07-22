@@ -42,8 +42,10 @@ import { StorageFeaturePack, type StorageFeaturePackProps } from '../feature-pac
 import { UsersFeaturePack, type UsersFeaturePackProps } from '../feature-packs/users/users-feature-pack';
 import type { ConsoleRuntimeError } from '../console-runtime';
 import {
+  CONSOLE_ENDPOINT_KINDS,
   createConsoleIdentityKey,
-  getConsoleSessionIdentity
+  getConsoleSessionIdentity,
+  type ConsolePackCapabilityState
 } from '../console-runtime';
 
 import type {
@@ -91,7 +93,7 @@ function adapterLoadRequestKey(
   subscriptionRevision: number
 ): string {
   const identity = getConsoleSessionIdentity(runtime.session);
-  const endpoints = (['data', 'auth', 'admin'] as const).map((kind) => {
+  const endpoints = CONSOLE_ENDPOINT_KINDS.map((kind) => {
     const endpoint = runtime.endpoints[kind];
     return [kind, endpoint?.id ?? null, endpoint?.url ?? null];
   });
@@ -114,7 +116,8 @@ export function getConsoleKitFeatureAvailability(
   feature: FeaturePackId,
   runtime: ConsoleKitAdapterContext,
   adapter: ConsoleKitFeatureAdapter<unknown> | undefined,
-  standaloneAuth: boolean
+  standaloneAuth: boolean,
+  discoveredCapability?: ConsolePackCapabilityState
 ): ConsoleKitFeatureAvailability {
   if (runtime.session.status === 'loading') return { status: 'checking' };
   if (runtime.session.status === 'error') {
@@ -127,6 +130,11 @@ export function getConsoleKitFeatureAvailability(
 
   const manifest = manifests.get(feature);
   if (!manifest) return { status: 'unavailable', reason: 'The feature is not part of this Console Kit release.' };
+
+  if (discoveredCapability?.status === 'checking') return { status: 'checking' };
+  if (discoveredCapability?.status === 'unavailable') {
+    return { status: 'unavailable', reason: discoveredCapability.reason };
+  }
 
   const missingEndpoint = manifest.endpoints.required.find((kind) => !runtime.endpoints[kind]);
   if (missingEndpoint) {
@@ -426,6 +434,9 @@ function ConsoleKitContent({ config, className }: ConsoleKitProps) {
     runtime,
     config.onError
   );
+  const discoveredCapabilities = useConsoleKitStore(
+    (store) => store.packCapabilities
+  );
   const availability = React.useMemo(
     () => Object.fromEntries(featureOrder.map((feature) => [
       feature,
@@ -433,10 +444,11 @@ function ConsoleKitContent({ config, className }: ConsoleKitProps) {
         feature,
         runtime,
         config.adapters?.[feature] as ConsoleKitFeatureAdapter<unknown> | undefined,
-        config.session.mode === 'standalone'
+        config.session.mode === 'standalone',
+        discoveredCapabilities[feature]
       )
     ])) as Record<FeaturePackId, ConsoleKitFeatureAvailability>,
-    [adapterRevision, config.adapters, config.session.mode, featureOrder, runtime]
+    [adapterRevision, config.adapters, config.session.mode, discoveredCapabilities, featureOrder, runtime]
   );
 
   const internalFeature = useConsoleKitStore((store) => store.activeFeature);
@@ -494,10 +506,16 @@ function ConsoleKitContent({ config, className }: ConsoleKitProps) {
         icon: FEATURE_ICONS[feature],
         isActive: feature === activeFeature,
         disabled: state?.status !== 'available',
-        badge: state?.status === 'checking' ? '…' : state?.status !== 'available' ? 'Setup' : undefined
+        badge: state?.status === 'checking'
+          ? '…'
+          : discoveredCapabilities[feature]?.status === 'partial'
+            ? 'Partial'
+            : state?.status !== 'available'
+              ? 'Setup'
+              : undefined
       };
     })
-  }], [activeFeature, availability, config.labels, featureHref, visibleFeatures]);
+  }], [activeFeature, availability, config.labels, discoveredCapabilities, featureHref, visibleFeatures]);
 
   const identity = runtime.session.status === 'authenticated' ? runtime.session.identity : undefined;
   const account = React.useMemo<AppAccount | undefined>(() => {
@@ -577,6 +595,7 @@ function ConsoleKitContent({ config, className }: ConsoleKitProps) {
   }), [config.databaseId, config.onError, config.queryClient, dataEndpoint?.url, execute, runtime.session]);
   const defaultDataProps = React.useMemo<Omit<DataFeaturePackProps, 'config'>>(() => ({
     applicationScopes: config.table?.applicationScopes,
+    includeTables: config.table?.includeTables,
     excludeTables: config.table?.excludeTables,
     pageSize: config.table?.pageSize,
     onCreateTable: config.table?.onCreateTable,

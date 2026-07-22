@@ -292,9 +292,12 @@ export function createConstructiveBillingAdapter(
       const entitlements = entitlementsByPlan(result);
       const subscriptionRows = connectionNodes(result.planSubscriptions);
       const selectedOrganizationId = options.store.getState().context?.organizationId;
-      const subscriptionRow = subscriptionRows.find(
-        (row) => selectedOrganizationId && asString(row.entityId) === selectedOrganizationId
-      ) ?? subscriptionRows.find((row) => optionalBoolean(row.isActive) === true) ?? subscriptionRows[0];
+      const subscriptionRow = selectedOrganizationId
+        ? subscriptionRows.find((row) =>
+            asString(row.entityId) === selectedOrganizationId ||
+            asString(row.organizationId) === selectedOrganizationId
+          )
+        : subscriptionRows.find((row) => optionalBoolean(row.isActive) === true) ?? subscriptionRows[0];
       const subscribedPlanId = asString(subscriptionRow?.planId);
 
       const plans: BillingPlan[] = connectionNodes(result.plans).flatMap((row) => {
@@ -332,9 +335,9 @@ export function createConstructiveBillingAdapter(
       }
 
       const entityId = asString(subscriptionRow?.entityId) ?? (
-        runtime.session.status === 'authenticated'
+        selectedOrganizationId ?? (runtime.session.status === 'authenticated'
           ? runtime.session.identity.subjectId
-          : runtime.databaseId
+          : runtime.databaseId)
       );
       const entityType = asString(subscriptionRow?.entityType)?.toLowerCase();
       const currentEntitlements = subscribedPlanId
@@ -343,7 +346,9 @@ export function createConstructiveBillingAdapter(
       return {
         account: {
           entityId,
-          kind: entityType?.startsWith('org') ? 'organization' : 'personal'
+          kind: selectedOrganizationId || entityType?.startsWith('org')
+            ? 'organization'
+            : 'personal'
         },
         resources: {
           plans: plans.length > 0

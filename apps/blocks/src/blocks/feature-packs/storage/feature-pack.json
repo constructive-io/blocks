@@ -4,7 +4,7 @@
   "title": "Storage",
   "description": "Policy-aware bucket navigation, uploads, downloads, and object deletion.",
   "dependencies": ["data"],
-  "endpoints": { "required": ["data"], "optional": [] },
+  "endpoints": { "required": ["storage"], "optional": [] },
   "capabilities": {
     "required": ["storage.buckets", "storage.files"],
     "optional": ["storage.versioning", "storage.content-hash", "storage.custom-keys", "storage.audit-log"]

@@ -25,6 +25,8 @@ export type DataFeaturePackProps = Readonly<{
   defaultActiveTable?: string;
   /** Exact `_meta.scope.scope` values that identify application-owned tables. */
   applicationScopes?: readonly string[];
+  /** Exact `_meta` table names or `schema.table` identifiers allowed by the host. */
+  includeTables?: readonly string[];
   excludeTables?: readonly string[];
   pageSize?: number;
   onActiveTableChange?: (tableName: string) => void;
@@ -37,6 +39,7 @@ function DataExplorer({
   activeTable: controlledActiveTable,
   defaultActiveTable,
   applicationScopes,
+  includeTables,
   excludeTables,
   pageSize = 50,
   onActiveTableChange,
@@ -49,9 +52,10 @@ function DataExplorer({
   const tables = React.useMemo(
     () => selectConsoleDataTables(metaQuery.data?._meta?.tables ?? [], {
       applicationScopes,
+      includeTables,
       excludeTables
     }),
-    [applicationScopes, excludeTables, metaQuery.data?._meta?.tables]
+    [applicationScopes, excludeTables, includeTables, metaQuery.data?._meta?.tables]
   );
   const tableNames = React.useMemo(() => tables.map((table) => table.name), [tables]);
   const requestedTable = controlledActiveTable ?? uncontrolledActiveTable;

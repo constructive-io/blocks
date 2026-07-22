@@ -61,14 +61,18 @@ const RULES: readonly CapabilityRule[] = [
   { capability: 'organizations.profiles', endpoint: 'admin', operation: 'query', fields: ['orgProfiles'] },
   { capability: 'organizations.hierarchy', endpoint: 'admin', operation: 'query', fields: ['orgHierarchies'] },
   { capability: 'organizations.invites', endpoint: 'admin', operation: 'query', fields: ['orgInvites'] },
+  { capability: 'storage.buckets', endpoint: 'storage', operation: 'query', fields: ['buckets'] },
   { capability: 'storage.buckets', endpoint: 'storage', operation: 'query', fields: ['appBuckets'] },
+  { capability: 'storage.files', endpoint: 'storage', operation: 'query', fields: ['files'] },
   { capability: 'storage.files', endpoint: 'storage', operation: 'query', fields: ['appFiles'] },
   { capability: 'billing.plans', endpoint: 'billing', operation: 'query', fields: ['plans'] },
   { capability: 'billing.subscriptions', endpoint: 'billing', operation: 'query', fields: ['planSubscriptions'] },
   { capability: 'billing.meters', endpoint: 'billing', operation: 'query', fields: ['meters'] },
-  { capability: 'notifications.settings', endpoint: 'notifications', operation: 'query', fields: ['userSettings'] },
+  { capability: 'notifications.settings', endpoint: 'notifications', operation: 'query', fields: ['notificationPreferences'] },
   { capability: 'notifications.inbox', endpoint: 'notifications', operation: 'query', fields: ['notifications'] },
-  { capability: 'notifications.realtime', endpoint: 'notifications', operation: 'query', fields: ['notificationEvents'] }
+  // Realtime is deliberately absent here. A query root does not prove a
+  // subscription contract; custom tenants must expose _meta realtime metadata
+  // and a subscription root before this capability can be enabled.
 ];
 
 export type ConstructiveMutationObjectInput = Readonly<{

@@ -13,41 +13,30 @@ const DESCRIPTION =
 
 const CONSOLE_EXAMPLE = `'use client';
 
-import { ConsoleKit } from '@/blocks/console-kit/console-kit';
-import type { ConsoleKitConfig } from '@/blocks/console-kit/console-kit-contracts';
+import { ConstructiveConsoleKit } from '@/blocks/console-kit/constructive';
 
-const config = {
-  databaseId,
+const database = {
+  id: tenant.id,
+  name: tenant.name,
   endpoints: {
-    data: { id: 'tenant-data', url: dataGraphqlUrl },
-    auth: { id: 'tenant-auth', url: authGraphqlUrl },
-    admin: { id: 'tenant-admin', url: adminGraphqlUrl }
+    data: { id: tenant.endpoints.data.apiId, url: tenant.endpoints.data.url },
+    auth: { id: tenant.endpoints.auth.apiId, url: tenant.endpoints.auth.url },
+    admin: { id: tenant.endpoints.admin.apiId, url: tenant.endpoints.admin.url },
+    billing: tenant.endpoints.billing?.routable
+      ? { id: tenant.endpoints.billing.apiId, url: tenant.endpoints.billing.url }
+      : undefined,
+    storage: tenant.endpoints.storage?.routable
+      ? { id: tenant.endpoints.storage.apiId, url: tenant.endpoints.storage.url }
+      : undefined,
+    notifications: tenant.endpoints.notifications?.routable
+      ? { id: tenant.endpoints.notifications.apiId, url: tenant.endpoints.notifications.url }
+      : undefined
   },
-  session: {
-    mode: 'embedded',
-    getSnapshot: sessionStore.getSnapshot,
-    subscribe: sessionStore.subscribe,
-    getAccessToken: ({ endpoint, signal }) =>
-      tokenBroker.getAccessToken({ endpoint, signal })
-  },
-  adapters: {
-    auth: authAdapter,
-    users: usersAdapter,
-    organizations: organizationsAdapter,
-    storage: storageAdapter,
-    billing: billingAdapter,
-    notifications: notificationsAdapter
-  },
-  routes: {
-    activeFeature,
-    getFeatureHref: (feature) => \`/console/\${feature}\`,
-    onNavigate: (feature) => router.push(\`/console/\${feature}\`),
-    renderLink: ({ href, ...props }) => <Link href={href} {...props} />
-  }
-} satisfies ConsoleKitConfig;
+  tableAllowlist: tenant.tableAllowlist
+};
 
 export function ApplicationConsole() {
-  return <ConsoleKit config={config} />;
+  return <ConstructiveConsoleKit database={database} />;
 }`;
 
 const ENDPOINT_RESOLVER_EXAMPLE = `resolveEndpoint: ({ databaseId, kind }) => ({
@@ -64,9 +53,9 @@ export default function ConsoleKitPage() {
           Console Kit for Next.js
         </h1>
         <p className="mt-2 text-pretty text-sm leading-7 text-muted-foreground sm:text-[15px]">
-          {DESCRIPTION} It owns the console composition and discovery lifecycle,
-          while your app keeps control of endpoint resolution, identity, routing,
-          and provider-specific operations.
+          {DESCRIPTION} Pass the secret-free tenant descriptor returned by
+          provisioning; the first-party wrapper handles standalone auth,
+          capability discovery, endpoint-scoped requests, and pack adapters.
         </p>
       </header>
 
@@ -96,13 +85,13 @@ export default function ConsoleKitPage() {
               id="console-host-contract-heading"
               className="text-lg font-semibold tracking-tight"
             >
-              The host owns three boundaries
+              Start from the provisioned tenant contract
             </h2>
             <p className="mt-1.5 text-pretty text-sm leading-7 text-muted-foreground">
-              The kit does not read environment globals or create a singleton
-              GraphQL client. Its configuration makes every deployment-specific
-              boundary explicit, which keeps tenant changes and token rotation
-              observable to the runtime.
+              The canonical seeder manifest supplies the database ID, routable
+              semantic endpoints, and exact application table allowlist. Keep
+              credentials on the user side of the sign-in form; the descriptor
+              itself is safe to pass from a server component to the client.
             </p>
           </div>
 
@@ -110,18 +99,18 @@ export default function ConsoleKitPage() {
             {[
               {
                 title: 'Endpoints',
-                badge: 'data · auth · admin',
-                body: 'Pass a map for fixed deployments or resolve each endpoint from databaseId and endpoint kind at runtime.'
+                badge: 'six semantic kinds',
+                body: 'Pass only routable data, auth, admin, billing, storage, and notifications endpoints from the tenant manifest.'
               },
               {
                 title: 'Session',
-                badge: 'embedded · standalone',
-                body: 'Expose a subscribable identity snapshot and resolve a fresh access token for every endpoint request.'
+                badge: 'standalone default',
+                body: 'The first-party wrapper scopes in-memory and browser session state to the database, then resolves a fresh token per request.'
               },
               {
                 title: 'Adapters',
-                badge: 'resources · actions',
-                body: 'Bind feature-pack props to provider-specific loaders and mutations without moving authorization into the UI.'
+                badge: 'first-party included',
+                body: 'Constructive adapters discover operations before enabling actions; use the lower-level ConsoleKit only for a custom provider.'
               }
             ].map((boundary) => (
               <div
@@ -151,9 +140,9 @@ export default function ConsoleKitPage() {
 
           <div className="mt-4 max-w-3xl">
             <p className="text-pretty text-sm leading-7 text-muted-foreground">
-              Use an endpoint resolver when URLs depend on the selected
-              database or deployment. Endpoint fallback is intentionally opt-in,
-              so an admin operation cannot silently cross onto the data endpoint.
+              Use the lower-level Console Kit endpoint resolver for embedded or
+              non-Constructive providers. Endpoint fallback stays opt-in, so an
+              admin operation cannot silently cross onto the data endpoint.
             </p>
             <CodeBlock className="mt-3" label="Dynamic endpoint resolution">
               {ENDPOINT_RESOLVER_EXAMPLE}

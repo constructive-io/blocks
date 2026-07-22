@@ -94,6 +94,8 @@ export type ConsoleKitRouteConfig = Readonly<{
 export type ConsoleKitTableConfig = Readonly<{
   /** Exact `_meta.scope.scope` values included in the Data explorer. Defaults to `app`. */
   applicationScopes?: readonly string[];
+  /** Exact `_meta` table names or `schema.table` identifiers allowed by the host. */
+  includeTables?: readonly string[];
   excludeTables?: readonly string[];
   pageSize?: number;
   onCreateTable?: () => void;

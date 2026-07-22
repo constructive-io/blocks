@@ -6,7 +6,8 @@ import { getConsoleKitFeatureAvailability } from './console-kit';
 const runtime = {
   databaseId: 'db-1',
   endpoints: {
-    data: { id: 'data', kind: 'data', url: '/graphql' }
+    data: { id: 'data', kind: 'data', url: '/graphql' },
+    storage: { id: 'storage', kind: 'storage', url: '/storage/graphql' }
   },
   session: {
     status: 'authenticated',

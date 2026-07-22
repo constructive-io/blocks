@@ -4,7 +4,7 @@
   "title": "Notifications",
   "description": "User notification inbox and read-state actions with optional settings and realtime capabilities.",
   "dependencies": ["users"],
-  "endpoints": { "required": ["data"], "optional": [] },
+  "endpoints": { "required": ["notifications"], "optional": [] },
   "capabilities": {
     "required": ["notifications.inbox"],
     "optional": ["notifications.settings", "notifications.realtime"]

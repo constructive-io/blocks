@@ -112,4 +112,19 @@ describe('selectConsoleDataTables', () => {
 			}),
 		).toEqual([alpha]);
 	});
+
+	it('accepts an exact host allowlist while preserving framework-table exclusions', () => {
+		const project = table('Project', { schemaName: 'tenant-app' });
+		const internal = table('InternalAudit', { schemaName: 'tenant-app' });
+		const assignment = table('ProjectAssignment', { schemaName: 'tenant-app' });
+		project.relations = {
+			manyToMany: [{ junctionTable: { name: 'projectAssignments' } } as never],
+		};
+		const bucket = table('Bucket', { schemaName: 'tenant-app' });
+		bucket.storage = { isBucketsTable: true, isFilesTable: false };
+
+		expect(selectConsoleDataTables([project, internal, assignment, bucket], {
+			includeTables: ['tenant-app.Project', 'project_assignments', 'Bucket'],
+		}).map(({ name }) => name)).toEqual(['Project', 'ProjectAssignment']);
+	});
 });

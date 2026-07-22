@@ -19,7 +19,8 @@
     "scripts:typecheck": "tsc --noEmit -p tsconfig.scripts.json",
     "test": "vitest run",
     "test:watch": "vitest --watch",
-    "test:e2e": "playwright test"
+    "test:e2e": "playwright test",
+    "test:e2e:live": "playwright test --config playwright.live.config.ts"
   },
   "postcss": {
     "plugins": {

@@ -127,7 +127,7 @@ export const STORAGE_FEATURE_PACK = {
     'Policy-aware bucket navigation, uploads, downloads, and object deletion.',
   dependencies: ['data'],
   endpoints: {
-    required: ['data'],
+    required: ['storage'],
     optional: [] as FeaturePackManifestV1['endpoints']['optional']
   },
   capabilities: {
@@ -153,15 +153,15 @@ export const BILLING_FEATURE_PACK = {
   id: 'billing',
   title: 'Billing',
   description:
-    'Plans, subscriptions, entitlement meters, usage, and provider-backed billing management.',
+    'Plans, subscriptions, entitlement meters, usage, credits, and account activity.',
   dependencies: ['data'],
   endpoints: {
-    required: ['data'],
-    optional: ['admin']
+    required: ['billing'],
+    optional: ['admin', 'data']
   },
   capabilities: {
     required: ['billing.plans', 'billing.subscriptions'],
-    optional: ['billing.meters', 'billing.provider']
+    optional: ['billing.meters']
   },
   metadata: TABLE_METADATA_REQUIREMENTS
 } satisfies FeaturePackManifestV1;
@@ -174,7 +174,7 @@ export const NOTIFICATIONS_FEATURE_PACK = {
     'User notification inbox and read-state actions with optional settings and realtime capabilities.',
   dependencies: ['users'],
   endpoints: {
-    required: ['data'],
+    required: ['notifications'],
     optional: [] as FeaturePackManifestV1['endpoints']['optional']
   },
   capabilities: {

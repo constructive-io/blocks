@@ -647,8 +647,8 @@
       "name": "console-kit-nextjs",
       "type": "registry:block",
       "title": "Constructive Console Kit for Next.js",
-      "description": "A full-page, route-neutral application console composed from the Base UI app shell and every Constructive feature pack.",
-      "docs": "Install with the shadcn CLI, then render <ConsoleKit config={config} /> inside any Next.js route. The kit never overwrites app routes, accepts endpoint, session, transport, and feature adapters from the host, and keeps navigation, runtime, and adapter state in one per-instance Zustand store composed from modular slices.",
+      "description": "A full-page Constructive application console with tenant-scoped auth, dynamic endpoint discovery, first-party adapters, and every feature pack.",
+      "docs": "Install with the shadcn CLI, then render <ConstructiveConsoleKit database={tenant} /> inside any Next.js route. Pass the secret-free database ID, semantic endpoints, and table allowlist returned by provisioning. The lower-level ConsoleKit remains available for custom sessions and providers. Navigation, runtime, session, capability, and adapter state live in one per-instance Zustand store composed from modular slices.",
       "dependencies": [
         "@constructive-io/data",
         "@constructive-io/sheets",
@@ -683,6 +683,61 @@
           "path": "registry/constructive/blocks/console-kit/console-kit.tsx",
           "target": "src/blocks/console-kit/console-kit.tsx",
           "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/console-kit/constructive/auth-adapter.ts",
+          "target": "src/blocks/console-kit/constructive/auth-adapter.ts",
+          "type": "registry:lib"
+        },
+        {
+          "path": "registry/constructive/blocks/console-kit/constructive/billing-adapter.ts",
+          "target": "src/blocks/console-kit/constructive/billing-adapter.ts",
+          "type": "registry:lib"
+        },
+        {
+          "path": "registry/constructive/blocks/console-kit/constructive/constructive-adapter-utils.ts",
+          "target": "src/blocks/console-kit/constructive/constructive-adapter-utils.ts",
+          "type": "registry:lib"
+        },
+        {
+          "path": "registry/constructive/blocks/console-kit/constructive/constructive-capabilities.ts",
+          "target": "src/blocks/console-kit/constructive/constructive-capabilities.ts",
+          "type": "registry:lib"
+        },
+        {
+          "path": "registry/constructive/blocks/console-kit/constructive/constructive-console-kit.tsx",
+          "target": "src/blocks/console-kit/constructive/constructive-console-kit.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/console-kit/constructive/constructive-graphql.ts",
+          "target": "src/blocks/console-kit/constructive/constructive-graphql.ts",
+          "type": "registry:lib"
+        },
+        {
+          "path": "registry/constructive/blocks/console-kit/constructive/index.ts",
+          "target": "src/blocks/console-kit/constructive/index.ts",
+          "type": "registry:lib"
+        },
+        {
+          "path": "registry/constructive/blocks/console-kit/constructive/notifications-adapter.ts",
+          "target": "src/blocks/console-kit/constructive/notifications-adapter.ts",
+          "type": "registry:lib"
+        },
+        {
+          "path": "registry/constructive/blocks/console-kit/constructive/organizations-adapter.ts",
+          "target": "src/blocks/console-kit/constructive/organizations-adapter.ts",
+          "type": "registry:lib"
+        },
+        {
+          "path": "registry/constructive/blocks/console-kit/constructive/storage-adapter.ts",
+          "target": "src/blocks/console-kit/constructive/storage-adapter.ts",
+          "type": "registry:lib"
+        },
+        {
+          "path": "registry/constructive/blocks/console-kit/constructive/users-adapter.ts",
+          "target": "src/blocks/console-kit/constructive/users-adapter.ts",
+          "type": "registry:lib"
         },
         {
           "path": "registry/constructive/blocks/console-kit/store/adapter-slice.ts",

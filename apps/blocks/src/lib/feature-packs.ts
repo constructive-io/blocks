@@ -48,6 +48,7 @@ export const FEATURE_PACK_DOCS = [
   config={sheetsConfig}
   defaultActiveTable="projects"
   applicationScopes={['app']}
+  includeTables={['projects', 'tasks']}
   excludeTables={['app-public.audit_log']}
   onActiveTableChange={setActiveTable}
   onEvent={recordSheetEvent}
@@ -75,6 +76,7 @@ export const FEATURE_PACK_DOCS = [
       'activeTable',
       'defaultActiveTable',
       'applicationScopes',
+      'includeTables',
       'excludeTables',
       'pageSize',
       'onActiveTableChange',
@@ -95,10 +97,10 @@ export const FEATURE_PACK_DOCS = [
         behavior: 'Uses either a controlled table name or an initial table selection.',
       },
       {
-        name: 'applicationScopes / excludeTables',
+        name: 'applicationScopes / includeTables / excludeTables',
         type: 'readonly string[]',
         behavior:
-          'Controls the exact smart-tag scopes included in the explorer and removes host-selected table identifiers.',
+          'Uses exact smart-tag scopes by default, accepts an authoritative host allowlist, and removes host-selected table identifiers.',
       },
       {
         name: 'pageSize',
@@ -375,7 +377,7 @@ export const FEATURE_PACK_DOCS = [
     exportName: 'StorageFeaturePack',
     description:
       'A policy-aware bucket and object browser with folder navigation, upload, download, creation, and deletion actions.',
-    endpoints: 'data',
+    endpoints: 'storage',
     dependencies: ['data'],
     resource: 'FeaturePackResource<StorageFeatureData>',
     actions: ['selectBucket / navigate / createBucket', 'upload / download / deleteObject'],
@@ -445,7 +447,7 @@ export const FEATURE_PACK_DOCS = [
     exportName: 'BillingFeaturePack',
     description:
       'A complete customer billing destination for subscriptions, entitlements, usage, credits, plans, and account activity.',
-    endpoints: 'data, optional admin',
+    endpoints: 'billing, optional admin, optional data',
     dependencies: ['data'],
     resource: 'BillingSettingsResources',
     actions: ['BillingSettingsActions', 'onSectionChange(section)'],
@@ -545,7 +547,7 @@ export const FEATURE_PACK_DOCS = [
     exportName: 'NotificationsFeaturePack',
     description:
       'An application notification inbox with all and unread views, read state, deep-link actions, and deletion controls.',
-    endpoints: 'data',
+    endpoints: 'notifications',
     dependencies: ['users'],
     resource: 'FeaturePackResource<NotificationsFeatureData>',
     actions: ['markRead / markAllRead', 'openNotification / deleteNotification'],
