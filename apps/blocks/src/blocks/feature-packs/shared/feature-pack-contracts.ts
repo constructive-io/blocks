@@ -4,6 +4,11 @@ export type FeaturePackError = Readonly<{
   retryable?: boolean;
 }>;
 
+export type FeaturePackLimitation = Readonly<{
+  code: string;
+  message: string;
+}>;
+
 export type FeaturePackResource<T> =
   | Readonly<{ status: 'loading' }>
   | Readonly<{ status: 'empty' }>
@@ -17,6 +22,7 @@ export type FeaturePackResource<T> =
       data: T;
       asOf?: string;
       quality?: 'authoritative' | 'estimated' | 'stale';
+      limitations?: readonly FeaturePackLimitation[];
     }>;
 
 export type FeatureActionPolicy<Action extends string = string> = Readonly<

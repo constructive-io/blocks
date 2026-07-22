@@ -92,6 +92,7 @@ export type AppInvite = Readonly<{
   status: string;
   role?: string;
   expiresAt?: string;
+  actionPolicy?: FeatureActionPolicy<'cancelInvite' | 'extendInvite'>;
 }>;
 
 export type UsersFeatureData = Readonly<{
@@ -537,7 +538,9 @@ export function UsersFeaturePack({
                           <TableCell>{invite.expiresAt ?? '—'}</TableCell>
                           <TableCell>
                             <div className='flex justify-end gap-2'>
-                              {canPerform(policy, 'extendInvite') && actions?.extendInvite ? (
+                              {canPerform(policy, 'extendInvite') &&
+                              canPerform(invite.actionPolicy, 'extendInvite') &&
+                              actions?.extendInvite ? (
                                 <Button
                                   aria-label={`Extend invitation for ${invite.email}`}
                                   onClick={() => {
@@ -555,7 +558,9 @@ export function UsersFeaturePack({
                                   <RefreshCwIcon />
                                 </Button>
                               ) : null}
-                              {canPerform(policy, 'cancelInvite') && actions?.cancelInvite ? (
+                              {canPerform(policy, 'cancelInvite') &&
+                              canPerform(invite.actionPolicy, 'cancelInvite') &&
+                              actions?.cancelInvite ? (
                                 <Button
                                   onClick={() => {
                                     void (async () => {

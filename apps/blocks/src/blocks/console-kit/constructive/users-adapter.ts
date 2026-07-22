@@ -15,10 +15,10 @@ import {
   type ConstructiveCapabilityDiscovery
 } from './constructive-capabilities';
 import {
+  assertAuthorizedTarget,
   asBoolean,
   asRecord,
   asString,
-  connectionNodes,
   expiresIn,
   hasEffectivePermission,
   imageUrl,
@@ -27,28 +27,13 @@ import {
   permissionMaskIsSubset
 } from './constructive-adapter-utils';
 import {
+  executeConstructiveConnectionQuery,
   executeConstructiveGraphQL,
   fieldsForType,
   namedTypeName,
   selectExistingFields,
   type ConstructiveSchemaSnapshot
 } from './constructive-graphql';
-
-const USERS_QUERY = /* GraphQL */ `
-  query ConsoleKitUsersDirectory {
-    users(first: 250) {
-      nodes { id displayName username profilePicture }
-    }
-  }
-`;
-
-const EMAILS_QUERY = /* GraphQL */ `
-  query ConsoleKitUsersEmails {
-    emails(first: 500) {
-      nodes { ownerId email isPrimary }
-    }
-  }
-`;
 
 const UPDATE_MEMBERSHIP_MUTATION = /* GraphQL */ `
   mutation ConsoleKitUpdateAppMembership($input: UpdateAppMembershipInput!) {
@@ -116,7 +101,16 @@ function connectionSelection(
   return selectExistingFields(schema, typeName, desiredFields);
 }
 
-function adminDirectoryDocument(options: ConstructiveUsersAdapterOptions): string {
+type AppDirectorySelections = Readonly<{
+  memberships: readonly string[];
+  invites: readonly string[];
+  profiles: readonly string[];
+  permissions: readonly string[];
+}>;
+
+function adminDirectorySelections(
+  options: ConstructiveUsersAdapterOptions
+): AppDirectorySelections {
   const schema = options.discovery.getSchemas().admin;
   if (!schema) throw new Error('The admin endpoint schema is unavailable.');
   const membershipFields = connectionSelection(schema, 'AppMembership', [
@@ -141,33 +135,21 @@ function adminDirectoryDocument(options: ConstructiveUsersAdapterOptions): strin
   const inviteFields = connectionSelection(schema, 'AppInvite', [
     'id',
     'email',
+    'senderId',
     'createdAt',
     'expiresAt',
     'inviteValid',
     'profileId'
   ]);
-  const invites = supports(options, 'admin', 'query', 'appInvites') && inviteFields.length > 0
-    ? `appInvites(first: 100) { nodes { ${inviteFields.join(' ')} } }`
-    : '';
+  const invites = supports(options, 'admin', 'query', 'appInvites') ? inviteFields : [];
   const profileFields = connectionSelection(schema, 'AppProfile', ['id', 'name', 'permissions']);
-  const profiles = supports(options, 'admin', 'query', 'appProfiles') && profileFields.length > 0
-    ? `appProfiles(first: 100) { nodes { ${profileFields.join(' ')} } }`
-    : '';
+  const profiles = supports(options, 'admin', 'query', 'appProfiles') ? profileFields : [];
   const permissionFields = connectionSelection(schema, 'AppPermission', ['name', 'bitstr']);
   const permissions = supports(options, 'admin', 'query', 'appPermissions') &&
     permissionFields.includes('name') && permissionFields.includes('bitstr')
-    ? `appPermissions(first: 100) { nodes { ${permissionFields.join(' ')} } }`
-    : '';
-  return `
-    query ConsoleKitAppMemberships {
-      appMemberships(first: 250) {
-        nodes { ${membershipFields.join(' ')} }
-      }
-      ${invites}
-      ${profiles}
-      ${permissions}
-    }
-  `;
+    ? permissionFields
+    : [];
+  return { memberships: membershipFields, invites, profiles, permissions };
 }
 
 function statusFor(member: Record<string, unknown>): string {
@@ -195,6 +177,8 @@ async function loadDirectory(
   data: UsersFeatureData;
   roleIds: ReadonlyMap<string, string>;
   inviteRoleIds: ReadonlyMap<string, string>;
+  memberIds: ReadonlySet<string>;
+  ownedInviteIds: ReadonlySet<string>;
   canManageMembers: boolean;
   canCreateInvites: boolean;
   canAssignInviteProfiles: boolean;
@@ -204,46 +188,67 @@ async function loadDirectory(
       data: { members: [], invites: [], roles: [] },
       roleIds: new Map(),
       inviteRoleIds: new Map(),
+      memberIds: new Set(),
+      ownedInviteIds: new Set(),
       canManageMembers: false,
       canCreateInvites: false,
       canAssignInviteProfiles: false
     };
   }
   const actorId = runtime.session.identity.subjectId;
-  const [adminResult, authResult] = await Promise.all([
-    executeConstructiveGraphQL<Record<string, unknown>>(
-      runtime,
-      'admin',
-      adminDirectoryDocument(options),
-      undefined,
-      signal
-    ),
-    executeConstructiveGraphQL<Record<string, unknown>>(
-      runtime,
-      'auth',
-      USERS_QUERY,
-      undefined,
-      signal
-    )
-  ]);
+  const selections = adminDirectorySelections(options);
+  const optionalAdminConnection = (
+    operationName: string,
+    fieldName: string,
+    nodeFields: readonly string[]
+  ): Promise<Record<string, unknown>[]> => nodeFields.length > 0
+    ? executeConstructiveConnectionQuery(runtime, 'admin', {
+        operationName,
+        fieldName,
+        nodeSelection: nodeFields.join(' ')
+      }, signal)
+    : Promise.resolve([]);
+  const emailRowsPromise = supports(options, 'auth', 'query', 'emails')
+    ? executeConstructiveConnectionQuery(runtime, 'auth', {
+        operationName: 'ConsoleKitUsersEmailsPage',
+        fieldName: 'emails',
+        nodeSelection: 'ownerId email isPrimary'
+      }, signal).catch((): Record<string, unknown>[] => {
+        // User-directory access does not imply access to private email rows.
+        return [];
+      })
+    : Promise.resolve([]);
+  const [membershipRows, inviteRows, profileRows, permissionRows, userRows, emailRows] =
+    await Promise.all([
+      executeConstructiveConnectionQuery(runtime, 'admin', {
+        operationName: 'ConsoleKitAppMembershipsPage',
+        fieldName: 'appMemberships',
+        nodeSelection: selections.memberships.join(' ')
+      }, signal),
+      optionalAdminConnection(
+        'ConsoleKitAppMembershipsInvitesPage',
+        'appInvites',
+        selections.invites
+      ),
+      optionalAdminConnection(
+        'ConsoleKitAppMembershipsProfilesPage',
+        'appProfiles',
+        selections.profiles
+      ),
+      optionalAdminConnection(
+        'ConsoleKitAppMembershipsPermissionsPage',
+        'appPermissions',
+        selections.permissions
+      ),
+      executeConstructiveConnectionQuery(runtime, 'auth', {
+        operationName: 'ConsoleKitUsersDirectoryPage',
+        fieldName: 'users',
+        nodeSelection: 'id displayName username profilePicture'
+      }, signal),
+      emailRowsPromise
+    ]);
 
-  let emailRows: Record<string, unknown>[] = [];
-  if (supports(options, 'auth', 'query', 'emails')) {
-    try {
-      const result = await executeConstructiveGraphQL<Record<string, unknown>>(
-        runtime,
-        'auth',
-        EMAILS_QUERY,
-        undefined,
-        signal
-      );
-      emailRows = connectionNodes(result.emails);
-    } catch {
-      // User-directory access does not imply access to private email rows.
-    }
-  }
-
-  const users = new Map(connectionNodes(authResult.users).flatMap((user) => {
+  const users = new Map(userRows.flatMap((user) => {
     const id = asString(user.id);
     return id ? [[id, user] as const] : [];
   }));
@@ -257,7 +262,6 @@ async function loadDirectory(
 
   const roleIds = new Map<string, string>();
   const profileNames = new Map<string, string>();
-  const profileRows = connectionNodes(adminResult.appProfiles);
   for (const profile of profileRows) {
     const id = asString(profile.id);
     const name = asString(profile.name);
@@ -267,7 +271,6 @@ async function loadDirectory(
     }
   }
 
-  const membershipRows = connectionNodes(adminResult.appMemberships);
   const members: AppMember[] = membershipRows.flatMap((membership) => {
     const id = asString(membership.id);
     const userId = asString(membership.actorId);
@@ -288,16 +291,23 @@ async function loadDirectory(
     }];
   });
 
-  const invites: AppInvite[] = connectionNodes(adminResult.appInvites).flatMap((invite) => {
+  const ownedInviteIds = new Set<string>();
+  const invites: AppInvite[] = inviteRows.flatMap((invite) => {
     const id = asString(invite.id);
     const email = asString(invite.email);
     if (!id || !email) return [];
+    const isOwned = asString(invite.senderId) === actorId;
+    if (isOwned) ownedInviteIds.add(id);
     return [{
       id,
       email,
       status: asBoolean(invite.inviteValid) ? 'pending' : 'expired',
       role: profileNames.get(asString(invite.profileId) ?? ''),
-      expiresAt: asString(invite.expiresAt) ?? undefined
+      expiresAt: asString(invite.expiresAt) ?? undefined,
+      actionPolicy: {
+        cancelInvite: isOwned,
+        extendInvite: isOwned
+      }
     }];
   });
 
@@ -309,7 +319,6 @@ async function loadDirectory(
     hasActiveMembership && actorMembership &&
     (asBoolean(actorMembership.isOwner) || asBoolean(actorMembership.isAdmin))
   );
-  const permissionRows = connectionNodes(adminResult.appPermissions);
   const hasNamedPermission = (permissionName: string) => hasActiveMembership &&
     hasEffectivePermission(
       actorMembership,
@@ -351,6 +360,8 @@ async function loadDirectory(
     },
     roleIds,
     inviteRoleIds,
+    memberIds: new Set(members.map((member) => member.id)),
+    ownedInviteIds,
     canManageMembers,
     canCreateInvites,
     canAssignInviteProfiles
@@ -414,13 +425,13 @@ export function createConstructiveUsersAdapter(
         ['appInvite'],
         { field: 'appInvite', requiredFields: ['profileId'] }
       );
-      const canUpdateInvite = directory.canCreateInvites && supportsConstructiveMutationInput(
+      const canUpdateInvite = directory.ownedInviteIds.size > 0 && supportsConstructiveMutationInput(
         adminSchema,
         'updateAppInvite',
         ['id', 'appInvitePatch'],
         { field: 'appInvitePatch', requiredFields: ['expiresAt'] }
       );
-      const canDeleteInvite = directory.canCreateInvites && supportsConstructiveMutationInput(
+      const canDeleteInvite = directory.ownedInviteIds.size > 0 && supportsConstructiveMutationInput(
         adminSchema,
         'deleteAppInvite',
         ['id']
@@ -464,6 +475,7 @@ export function createConstructiveUsersAdapter(
             : undefined,
           updateRole: canGrantProfile
             ? async ({ membershipId, role }) => {
+                assertAuthorizedTarget(directory.memberIds, membershipId, 'app membership');
                 const profileId = directory.roleIds.get(role);
                 if (!profileId) throw new Error(`The ${role} profile is not available.`);
                 await executeConstructiveGraphQL(runtime, 'admin', CREATE_PROFILE_GRANT_MUTATION, {
@@ -476,6 +488,7 @@ export function createConstructiveUsersAdapter(
             : undefined,
           toggleActive: canUpdateMembership
             ? async ({ membershipId, active }) => {
+                assertAuthorizedTarget(directory.memberIds, membershipId, 'app membership');
                 await executeConstructiveGraphQL(runtime, 'admin', UPDATE_MEMBERSHIP_MUTATION, {
                   input: { id: membershipId, appMembershipPatch: { isDisabled: !active } }
                 });
@@ -484,6 +497,7 @@ export function createConstructiveUsersAdapter(
             : undefined,
           remove: canUpdateMembership
             ? async ({ membershipId }) => {
+                assertAuthorizedTarget(directory.memberIds, membershipId, 'app membership');
                 await executeConstructiveGraphQL(runtime, 'admin', UPDATE_MEMBERSHIP_MUTATION, {
                   input: { id: membershipId, appMembershipPatch: { isDisabled: true } }
                 });
@@ -492,6 +506,7 @@ export function createConstructiveUsersAdapter(
             : undefined,
           cancelInvite: canDeleteInvite
             ? async ({ inviteId }) => {
+                assertAuthorizedTarget(directory.ownedInviteIds, inviteId, 'app invitation');
                 await executeConstructiveGraphQL(runtime, 'admin', DELETE_INVITE_MUTATION, {
                   input: { id: inviteId }
                 });
@@ -500,6 +515,7 @@ export function createConstructiveUsersAdapter(
             : undefined,
           extendInvite: canUpdateInvite
             ? async ({ inviteId }) => {
+                assertAuthorizedTarget(directory.ownedInviteIds, inviteId, 'app invitation');
                 await executeConstructiveGraphQL(runtime, 'admin', UPDATE_INVITE_MUTATION, {
                   input: { id: inviteId, appInvitePatch: { expiresAt: expiresIn(7) } }
                 });

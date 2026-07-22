@@ -302,6 +302,190 @@ describe('Constructive auth adapter RLS contract', () => {
     expect(account.policy?.updateProfile).toBe(false);
     expect(account.actions?.updateProfile).toBeUndefined();
   });
+
+  it('sends verification for the loaded primary email and consumes a host-provided credential', async () => {
+    const store = createConsoleKitStore('auth');
+    const authSchema = snapshot({
+      endpoint: 'auth',
+      queries: ['currentUser', 'emails'],
+      mutations: {
+        sendVerificationEmail: 'SendVerificationEmailInput',
+        verifyEmail: 'VerifyEmailInput'
+      }
+    });
+    const session = {
+      mode: 'standalone',
+      databaseId: 'database-1',
+      getSnapshot: () => ({
+        status: 'authenticated',
+        identity: {
+          kind: 'authenticated',
+          cachePartition: 'session-1',
+          subjectId: 'user-1'
+        }
+      }),
+      subscribe: () => () => undefined,
+      getAccessToken: () => null,
+      beginSignIn: () => undefined,
+      signIn: vi.fn(),
+      signUp: vi.fn(),
+      signOut: vi.fn(),
+      handleAuthenticationFailure: () => undefined
+    } as unknown as DatabaseScopedStandaloneConsoleSession;
+    const calls: GraphQLCall[] = [];
+    const unverifiedRuntime = runtime((call) => {
+      calls.push(call);
+      if (call.document.includes('ConsoleKitCurrentAccount')) {
+        return { currentUser: { id: 'user-1', displayName: 'User One' } };
+      }
+      if (call.document.includes('ConsoleKitCurrentEmails')) {
+        return {
+          emails: {
+            nodes: [{
+              id: 'email-1',
+              ownerId: 'user-1',
+              email: 'person@example.com',
+              isPrimary: true,
+              isVerified: false
+            }]
+          }
+        };
+      }
+      if (call.document.includes('ConsoleKitSendVerificationEmail')) {
+        return { sendVerificationEmail: { result: true } };
+      }
+      return {};
+    });
+    const resendAdapter = createConstructiveAuthAdapter({
+      store,
+      session,
+      discovery: discovery({ auth: authSchema })
+    });
+
+    const unverified = await resendAdapter.load(
+      unverifiedRuntime,
+      new AbortController().signal
+    );
+    expect(unverified.policy?.sendVerificationEmail).toBe(true);
+    await unverified.actions?.sendVerificationEmail?.({ email: 'person@example.com' });
+    expect(calls.at(-1)).toMatchObject({
+      endpoint: 'auth',
+      variables: { input: { email: 'person@example.com' } }
+    });
+    const sendCallCount = calls.filter((call) =>
+      call.document.includes('ConsoleKitSendVerificationEmail')
+    ).length;
+    await expect(unverified.actions?.sendVerificationEmail?.({
+      email: 'different-account@example.com'
+    })).rejects.toThrow('bound to the current account primary email');
+    expect(calls.filter((call) =>
+      call.document.includes('ConsoleKitSendVerificationEmail')
+    )).toHaveLength(sendCallCount);
+
+    const verificationCalls: GraphQLCall[] = [];
+    const verificationAdapter = createConstructiveAuthAdapter({
+      store,
+      session,
+      discovery: discovery({ auth: authSchema }),
+      verificationEmailId: 'email-1',
+      verificationToken: 'fresh-verification-credential'
+    });
+    const verificationEntry = await verificationAdapter.load(runtime((call) => {
+      verificationCalls.push(call);
+      if (call.document.includes('ConsoleKitVerifyEmail')) {
+        return { verifyEmail: { result: true } };
+      }
+      return {};
+    }, 'user-1', false), new AbortController().signal);
+    expect(verificationEntry.verificationNotice).toEqual({
+      status: 'success',
+      message: 'Your email address has been verified. You can sign in now.'
+    });
+
+    const verified = await verificationAdapter.load(runtime((call) => {
+      verificationCalls.push(call);
+      if (call.document.includes('ConsoleKitCurrentAccount')) {
+        return { currentUser: { id: 'user-1', displayName: 'User One' } };
+      }
+      return {
+        emails: {
+          nodes: [{
+            id: 'email-1',
+            ownerId: 'user-1',
+            email: 'person@example.com',
+            isPrimary: true,
+            isVerified: true
+          }]
+        }
+      };
+    }), new AbortController().signal);
+
+    expect(verificationCalls[0]).toMatchObject({
+      endpoint: 'auth',
+      variables: {
+        input: { emailId: 'email-1', token: 'fresh-verification-credential' }
+      }
+    });
+    expect(verificationCalls[0]?.document).toContain('ConsoleKitVerifyEmail');
+    expect(verificationCalls.filter((call) =>
+      call.document.includes('ConsoleKitVerifyEmail')
+    )).toHaveLength(1);
+    expect(verified.account).toMatchObject({
+      status: 'ready',
+      data: { identity: { emailVerified: true } }
+    });
+    expect(verified.policy?.sendVerificationEmail).toBe(false);
+  });
+
+  it('keeps a transient verification failure retryable', async () => {
+    const store = createConsoleKitStore('auth');
+    const authSchema = snapshot({
+      endpoint: 'auth',
+      mutations: { verifyEmail: 'VerifyEmailInput' }
+    });
+    const session = {
+      mode: 'standalone',
+      databaseId: 'database-1',
+      getSnapshot: () => ({
+        status: 'anonymous',
+        identity: { kind: 'anonymous', cachePartition: 'anonymous-1' }
+      }),
+      subscribe: () => () => undefined,
+      getAccessToken: () => null,
+      beginSignIn: () => undefined,
+      signIn: vi.fn(),
+      signUp: vi.fn(),
+      signOut: vi.fn(),
+      handleAuthenticationFailure: () => undefined
+    } as unknown as DatabaseScopedStandaloneConsoleSession;
+    const adapter = createConstructiveAuthAdapter({
+      store,
+      session,
+      discovery: discovery({ auth: authSchema }),
+      verificationEmailId: 'email-1',
+      verificationToken: 'fresh-verification-credential'
+    });
+    let attempts = 0;
+    const retryingRuntime = runtime((call) => {
+      if (call.document.includes('ConsoleKitVerifyEmail')) {
+        attempts += 1;
+        if (attempts === 1) throw new Error('temporary network failure');
+        return { verifyEmail: { result: true } };
+      }
+      return {};
+    }, 'user-1', false);
+
+    await expect(adapter.load(
+      retryingRuntime,
+      new AbortController().signal
+    )).rejects.toThrow('temporary network failure');
+    const recovered = await adapter.load(
+      retryingRuntime,
+      new AbortController().signal
+    );
+    expect(attempts).toBe(2);
+    expect(recovered.verificationNotice).toMatchObject({ status: 'success' });
+  });
 });
 
 describe('Constructive users adapter RLS contract', () => {
@@ -355,7 +539,10 @@ describe('Constructive users adapter RLS contract', () => {
       return { users: { nodes: [{ id: 'user-1', displayName: 'User One' }] } };
     }), new AbortController().signal);
 
-    const directoryQuery = calls.find((call) => call.endpoint === 'admin')?.document ?? '';
+    const directoryQuery = calls
+      .filter((call) => call.endpoint === 'admin')
+      .map((call) => call.document)
+      .join('\n');
     expect(directoryQuery).not.toContain('profileId');
     expect(directoryQuery).not.toContain('profile {');
     expect(directoryQuery).not.toMatch(/\bdata\b/u);
@@ -576,6 +763,174 @@ describe('Constructive users adapter RLS contract', () => {
       extendInvite: false
     });
   });
+
+  it('paginates the RLS directory and binds app mutations to loaded rows', async () => {
+    const calls: GraphQLCall[] = [];
+    const adminSchema = snapshot({
+      endpoint: 'admin',
+      queries: ['appMemberships', 'appInvites', 'appProfiles', 'appPermissions'],
+      mutations: {
+        updateAppMembership: 'UpdateAppMembershipInput',
+        createAppProfileGrant: 'CreateAppProfileGrantInput',
+        updateAppInvite: 'UpdateAppInviteInput',
+        deleteAppInvite: 'DeleteAppInviteInput'
+      },
+      types: [
+        objectType('AppMembership', [
+          'id', 'actorId', 'isOwner', 'isAdmin', 'isActive', 'permissions'
+        ]),
+        objectType('AppInvite', ['id', 'email', 'senderId', 'inviteValid']),
+        objectType('AppProfile', ['id', 'name', 'permissions']),
+        objectType('AppPermission', ['name', 'bitstr']),
+        ...adminMutationTypes('App')
+      ]
+    });
+    const adapter = createConstructiveUsersAdapter({
+      store: createConsoleKitStore('users'),
+      discovery: discovery({
+        admin: adminSchema,
+        auth: snapshot({ endpoint: 'auth', queries: ['users'] })
+      })
+    });
+    const loaded = await adapter.load(runtime((call) => {
+      calls.push(call);
+      if (call.document.includes('appMemberships(first:')) {
+        return call.variables?.after === 'members-next'
+          ? {
+              appMemberships: {
+                nodes: [{
+                  id: 'membership-actor',
+                  actorId: 'user-1',
+                  isOwner: false,
+                  isAdmin: false,
+                  isActive: true,
+                  permissions: '0001'
+                }],
+                pageInfo: { hasNextPage: false, endCursor: 'members-end' }
+              }
+            }
+          : {
+              appMemberships: {
+                nodes: [{
+                  id: 'membership-member',
+                  actorId: 'user-2',
+                  isOwner: false,
+                  isAdmin: false,
+                  isActive: true,
+                  permissions: '0000'
+                }],
+                pageInfo: { hasNextPage: true, endCursor: 'members-next' }
+              }
+            };
+      }
+      if (call.document.includes('appInvites(first:')) {
+        return {
+          appInvites: {
+            nodes: [
+              {
+                id: 'invite-owned',
+                email: 'owned@example.com',
+                senderId: 'user-1',
+                inviteValid: true
+              },
+              {
+                id: 'invite-foreign',
+                email: 'foreign@example.com',
+                senderId: 'user-2',
+                inviteValid: true
+              }
+            ],
+            pageInfo: { hasNextPage: false, endCursor: 'invites-end' }
+          }
+        };
+      }
+      if (call.document.includes('appProfiles(first:')) {
+        return {
+          appProfiles: {
+            nodes: [{ id: 'profile-1', name: 'Member', permissions: '0000' }],
+            pageInfo: { hasNextPage: false, endCursor: 'profiles-end' }
+          }
+        };
+      }
+      if (call.document.includes('appPermissions(first:')) {
+        return {
+          appPermissions: {
+            nodes: [{ name: 'admin_members', bitstr: '0001' }],
+            pageInfo: { hasNextPage: false, endCursor: 'permissions-end' }
+          }
+        };
+      }
+      if (call.document.includes('users(first:')) {
+        return call.variables?.after === 'users-next'
+          ? {
+              users: {
+                nodes: [{ id: 'user-1', displayName: 'Manager' }],
+                pageInfo: { hasNextPage: false, endCursor: 'users-end' }
+              }
+            }
+          : {
+              users: {
+                nodes: [{ id: 'user-2', displayName: 'Member' }],
+                pageInfo: { hasNextPage: true, endCursor: 'users-next' }
+              }
+            };
+      }
+      return {};
+    }), new AbortController().signal);
+
+    expect(loaded.resource).toMatchObject({
+      status: 'ready',
+      data: {
+        members: [{ id: 'membership-member' }, { id: 'membership-actor' }],
+        invites: [
+          {
+            id: 'invite-owned',
+            actionPolicy: { cancelInvite: true, extendInvite: true }
+          },
+          {
+            id: 'invite-foreign',
+            actionPolicy: { cancelInvite: false, extendInvite: false }
+          }
+        ]
+      }
+    });
+    expect(loaded.policy).toMatchObject({
+      invite: false,
+      updateRole: true,
+      toggleActive: true,
+      remove: true,
+      cancelInvite: true,
+      extendInvite: true
+    });
+    expect(calls).toEqual(expect.arrayContaining([
+      expect.objectContaining({ variables: { first: 100, after: 'members-next' } }),
+      expect.objectContaining({ variables: { first: 100, after: 'users-next' } })
+    ]));
+
+    await expect(loaded.actions?.updateRole?.({
+      membershipId: 'membership-outside-page',
+      role: 'Member'
+    })).rejects.toThrow('not in the current authorized resource');
+    await expect(loaded.actions?.toggleActive?.({
+      membershipId: 'membership-outside-page',
+      active: false
+    })).rejects.toThrow('not in the current authorized resource');
+    await expect(loaded.actions?.remove?.({
+      membershipId: 'membership-outside-page'
+    })).rejects.toThrow('not in the current authorized resource');
+    await expect(loaded.actions?.cancelInvite?.({
+      inviteId: 'invite-foreign'
+    })).rejects.toThrow('not in the current authorized resource');
+    await expect(loaded.actions?.extendInvite?.({
+      inviteId: 'invite-foreign'
+    })).rejects.toThrow('not in the current authorized resource');
+    expect(calls.some((call) => call.document.includes('mutation ConsoleKit'))).toBe(false);
+
+    await loaded.actions?.updateRole?.({ membershipId: 'membership-member', role: 'Member' });
+    await loaded.actions?.cancelInvite?.({ inviteId: 'invite-owned' });
+    await loaded.actions?.extendInvite?.({ inviteId: 'invite-owned' });
+    expect(calls.filter((call) => call.document.includes('mutation ConsoleKit'))).toHaveLength(3);
+  });
 });
 
 describe('Constructive organizations adapter RLS contract', () => {
@@ -748,6 +1103,449 @@ describe('Constructive organizations adapter RLS contract', () => {
     });
   });
 
+  it('paginates organizations and rejects cross-organization mutation targets', async () => {
+    const calls: GraphQLCall[] = [];
+    const store = createConsoleKitStore('organizations');
+    store.getState().setContext({
+      databaseId: 'database-1',
+      organizationId: 'org-a'
+    });
+    const adminSchema = snapshot({
+      endpoint: 'admin',
+      queries: ['orgMemberships', 'orgProfiles', 'orgInvites', 'orgPermissions'],
+      mutations: {
+        updateOrgMembership: 'UpdateOrgMembershipInput',
+        createOrgProfileGrant: 'CreateOrgProfileGrantInput',
+        deleteOrgInvite: 'DeleteOrgInviteInput'
+      },
+      types: [
+        objectType('OrgMembership', [
+          'id', 'actorId', 'entityId', 'isOwner', 'isAdmin', 'isActive', 'permissions'
+        ]),
+        objectType('OrgProfile', ['id', 'name', 'entityId']),
+        objectType('OrgInvite', ['id', 'entityId', 'email', 'senderId', 'inviteValid']),
+        objectType('OrgPermission', ['name', 'bitstr']),
+        ...adminMutationTypes('Org')
+      ]
+    });
+    const adapter = createConstructiveOrganizationsAdapter({
+      store,
+      discovery: discovery({
+        admin: adminSchema,
+        auth: snapshot({ endpoint: 'auth', queries: ['users'] })
+      })
+    });
+    const loaded = await adapter.load(runtime((call) => {
+      calls.push(call);
+      if (call.document.includes('orgMemberships(first:')) {
+        return call.variables?.after === 'members-next'
+          ? {
+              orgMemberships: {
+                nodes: [
+                  {
+                    id: 'membership-actor-a',
+                    actorId: 'user-1',
+                    entityId: 'org-a',
+                    isOwner: false,
+                    isAdmin: false,
+                    isActive: true,
+                    permissions: '0001'
+                  },
+                  {
+                    id: 'membership-member-a',
+                    actorId: 'user-2',
+                    entityId: 'org-a',
+                    isOwner: false,
+                    isAdmin: false,
+                    isActive: true,
+                    permissions: '0000'
+                  }
+                ],
+                pageInfo: { hasNextPage: false, endCursor: 'members-end' }
+              }
+            }
+          : {
+              orgMemberships: {
+                nodes: [{
+                  id: 'membership-actor-b',
+                  actorId: 'user-1',
+                  entityId: 'org-b',
+                  isOwner: false,
+                  isAdmin: false,
+                  isActive: true,
+                  permissions: '0000'
+                }],
+                pageInfo: { hasNextPage: true, endCursor: 'members-next' }
+              }
+            };
+      }
+      if (call.document.includes('orgProfiles(first:')) {
+        return {
+          orgProfiles: {
+            nodes: [{ id: 'profile-a', name: 'Manager', entityId: 'org-a' }],
+            pageInfo: { hasNextPage: false, endCursor: 'profiles-end' }
+          }
+        };
+      }
+      if (call.document.includes('orgInvites(first:')) {
+        return {
+          orgInvites: {
+            nodes: [{
+              id: 'invite-foreign-a',
+              entityId: 'org-a',
+              email: 'foreign@example.com',
+              senderId: 'user-2',
+              inviteValid: true
+            }],
+            pageInfo: { hasNextPage: false, endCursor: 'invites-end' }
+          }
+        };
+      }
+      if (call.document.includes('orgPermissions(first:')) {
+        return {
+          orgPermissions: {
+            nodes: [{ name: 'admin_members', bitstr: '0001' }],
+            pageInfo: { hasNextPage: false, endCursor: 'permissions-end' }
+          }
+        };
+      }
+      if (call.document.includes('users(first:')) {
+        return call.variables?.after === 'users-next'
+          ? {
+              users: {
+                nodes: [
+                  { id: 'org-a', displayName: 'Org A', type: 2 },
+                  { id: 'user-2', displayName: 'Member', type: 1 }
+                ],
+                pageInfo: { hasNextPage: false, endCursor: 'users-end' }
+              }
+            }
+          : {
+              users: {
+                nodes: [
+                  { id: 'org-b', displayName: 'Org B', type: 2 },
+                  { id: 'user-1', displayName: 'Manager', type: 1 }
+                ],
+                pageInfo: { hasNextPage: true, endCursor: 'users-next' }
+              }
+            };
+      }
+      return {};
+    }), new AbortController().signal);
+
+    expect(loaded.resource).toMatchObject({
+      status: 'ready',
+      data: {
+        activeOrganizationId: 'org-a',
+        organizations: [{ id: 'org-b' }, { id: 'org-a' }],
+        members: [
+          { id: 'membership-actor-a' },
+          { id: 'membership-member-a' }
+        ],
+        invites: [{
+          id: 'invite-foreign-a',
+          actionPolicy: { cancelInvite: false }
+        }]
+      }
+    });
+    expect(loaded.policy).toMatchObject({
+      updateMemberRole: true,
+      removeMember: true,
+      cancelInvite: false
+    });
+    expect(calls).toEqual(expect.arrayContaining([
+      expect.objectContaining({ variables: { first: 100, after: 'members-next' } }),
+      expect.objectContaining({ variables: { first: 100, after: 'users-next' } })
+    ]));
+
+    await expect(loaded.actions?.updateMemberRole?.({
+      organizationId: 'org-a',
+      membershipId: 'membership-actor-b',
+      role: 'Manager'
+    })).rejects.toThrow('not in the current authorized resource');
+    await expect(loaded.actions?.removeMember?.({
+      organizationId: 'org-a',
+      membershipId: 'membership-actor-b'
+    })).rejects.toThrow('not in the current authorized resource');
+    expect(loaded.actions?.cancelInvite).toBeUndefined();
+    expect(calls.some((call) => call.document.includes('mutation ConsoleKit'))).toBe(false);
+
+    await loaded.actions?.updateMemberRole?.({
+      organizationId: 'org-a',
+      membershipId: 'membership-member-a',
+      role: 'Manager'
+    });
+    expect(calls.find((call) => call.document.includes('ConsoleKitCreateOrgProfileGrant')))
+      .toMatchObject({
+        variables: {
+          input: {
+            orgProfileGrant: {
+              entityId: 'org-a',
+              membershipId: 'membership-member-a',
+              profileId: 'profile-a',
+              isGrant: true
+            }
+          }
+        }
+      });
+  });
+
+  it('matches organization invite deletion to the sender and active admin rules', async () => {
+    const adminSchema = snapshot({
+      endpoint: 'admin',
+      queries: ['orgMemberships', 'orgInvites'],
+      mutations: { deleteOrgInvite: 'DeleteOrgInviteInput' },
+      types: [
+        objectType('OrgMembership', [
+          'id', 'actorId', 'entityId', 'isOwner', 'isAdmin', 'isActive', 'permissions'
+        ]),
+        objectType('OrgInvite', ['id', 'entityId', 'email', 'senderId', 'inviteValid']),
+        ...adminMutationTypes('Org')
+      ]
+    });
+    const loadForRole = async (isAdmin: boolean, senderId: string) => {
+      const calls: GraphQLCall[] = [];
+      const adapter = createConstructiveOrganizationsAdapter({
+        store: createConsoleKitStore('organizations'),
+        discovery: discovery({
+          admin: adminSchema,
+          auth: snapshot({ endpoint: 'auth', queries: ['users'] })
+        })
+      });
+      const loaded = await adapter.load(runtime((call) => {
+        calls.push(call);
+        if (call.document.includes('orgMemberships(first:')) {
+          return {
+            orgMemberships: {
+              nodes: [{
+                id: 'membership-1',
+                actorId: 'user-1',
+                entityId: 'org-1',
+                isOwner: false,
+                isAdmin,
+                isActive: true,
+                permissions: '0000'
+              }]
+            }
+          };
+        }
+        if (call.document.includes('orgInvites(first:')) {
+          return {
+            orgInvites: {
+              nodes: [{
+                id: 'invite-1',
+                entityId: 'org-1',
+                email: 'invite@example.com',
+                senderId,
+                inviteValid: true
+              }]
+            }
+          };
+        }
+        if (call.document.includes('users(first:')) {
+          return {
+            users: {
+              nodes: [
+                { id: 'user-1', displayName: 'Actor', type: 1 },
+                { id: 'org-1', displayName: 'Org One', type: 2 }
+              ]
+            }
+          };
+        }
+        return {};
+      }), new AbortController().signal);
+      return { calls, loaded };
+    };
+
+    const sender = await loadForRole(false, 'user-1');
+    expect(sender.loaded.resource).toMatchObject({
+      status: 'ready',
+      data: { invites: [{ actionPolicy: { cancelInvite: true } }] }
+    });
+    expect(sender.loaded.policy?.cancelInvite).toBe(true);
+    await expect(sender.loaded.actions?.cancelInvite?.({
+      organizationId: 'org-1',
+      inviteId: 'invite-not-loaded'
+    })).rejects.toThrow('not in the current authorized resource');
+    expect(sender.calls.some((call) => call.document.includes('ConsoleKitDeleteOrgInvite')))
+      .toBe(false);
+    await sender.loaded.actions?.cancelInvite?.({
+      organizationId: 'org-1',
+      inviteId: 'invite-1'
+    });
+    expect(sender.calls.some((call) => call.document.includes('ConsoleKitDeleteOrgInvite')))
+      .toBe(true);
+
+    const admin = await loadForRole(true, 'user-2');
+    expect(admin.loaded.resource).toMatchObject({
+      status: 'ready',
+      data: { invites: [{ actionPolicy: { cancelInvite: true } }] }
+    });
+    expect(admin.loaded.policy?.cancelInvite).toBe(true);
+
+    const delegated = await loadForRole(false, 'user-2');
+    expect(delegated.loaded.resource).toMatchObject({
+      status: 'ready',
+      data: { invites: [{ actionPolicy: { cancelInvite: false } }] }
+    });
+    expect(delegated.loaded.policy?.cancelInvite).toBe(false);
+    expect(delegated.loaded.actions?.cancelInvite).toBeUndefined();
+  });
+
+  it('fails closed when organization profile scope is unreadable', async () => {
+    const adminSchema = snapshot({
+      endpoint: 'admin',
+      queries: ['orgMemberships', 'orgProfiles'],
+      mutations: {
+        createOrgInvite: 'CreateOrgInviteInput',
+        createOrgProfileGrant: 'CreateOrgProfileGrantInput'
+      },
+      types: [
+        objectType('OrgMembership', [
+          'id', 'actorId', 'entityId', 'isOwner', 'isAdmin', 'isActive', 'permissions'
+        ]),
+        // A profile connection without entityId cannot prove whether a row is
+        // global or belongs to another organization visible to this actor.
+        objectType('OrgProfile', ['id', 'name', 'permissions']),
+        ...adminMutationTypes('Org')
+      ]
+    });
+    const adapter = createConstructiveOrganizationsAdapter({
+      store: createConsoleKitStore('organizations'),
+      discovery: discovery({
+        admin: adminSchema,
+        auth: snapshot({ endpoint: 'auth', queries: ['users'] })
+      })
+    });
+    const loaded = await adapter.load(runtime((call) => {
+      if (call.document.includes('orgMemberships(first:')) {
+        return {
+          orgMemberships: {
+            nodes: [{
+              id: 'membership-owner',
+              actorId: 'user-1',
+              entityId: 'org-1',
+              isOwner: true,
+              isAdmin: false,
+              isActive: true,
+              permissions: '1111'
+            }]
+          }
+        };
+      }
+      if (call.document.includes('orgProfiles(first:')) {
+        return {
+          orgProfiles: {
+            nodes: [{ id: 'profile-from-unknown-scope', name: 'Manager', permissions: '0011' }]
+          }
+        };
+      }
+      if (call.document.includes('users(first:')) {
+        return {
+          users: {
+            nodes: [
+              { id: 'user-1', displayName: 'Owner', type: 1 },
+              { id: 'org-1', displayName: 'Org One', type: 2 }
+            ]
+          }
+        };
+      }
+      return {};
+    }), new AbortController().signal);
+
+    expect(loaded.resource).toMatchObject({
+      status: 'ready',
+      data: { roles: [], inviteRoles: [] }
+    });
+    expect(loaded.resource.status === 'ready' ? loaded.resource.limitations : []).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ code: 'constructive.org-profile-scope-unavailable' })
+      ])
+    );
+    expect(loaded.policy).toMatchObject({
+      assignInviteRole: false,
+      updateMemberRole: false
+    });
+    expect(loaded.actions?.updateMemberRole).toBeUndefined();
+  });
+
+  it('omits duplicate organization profile names instead of choosing an arbitrary ID', async () => {
+    const adminSchema = snapshot({
+      endpoint: 'admin',
+      queries: ['orgMemberships', 'orgProfiles'],
+      mutations: {
+        createOrgInvite: 'CreateOrgInviteInput',
+        createOrgProfileGrant: 'CreateOrgProfileGrantInput'
+      },
+      types: [
+        objectType('OrgMembership', [
+          'id', 'actorId', 'entityId', 'isOwner', 'isAdmin', 'isActive', 'permissions'
+        ]),
+        objectType('OrgProfile', ['id', 'name', 'entityId', 'permissions']),
+        ...adminMutationTypes('Org')
+      ]
+    });
+    const adapter = createConstructiveOrganizationsAdapter({
+      store: createConsoleKitStore('organizations'),
+      discovery: discovery({
+        admin: adminSchema,
+        auth: snapshot({ endpoint: 'auth', queries: ['users'] })
+      })
+    });
+    const loaded = await adapter.load(runtime((call) => {
+      if (call.document.includes('orgMemberships(first:')) {
+        return {
+          orgMemberships: {
+            nodes: [{
+              id: 'membership-owner',
+              actorId: 'user-1',
+              entityId: 'org-1',
+              isOwner: true,
+              isAdmin: false,
+              isActive: true,
+              permissions: '1111'
+            }]
+          }
+        };
+      }
+      if (call.document.includes('orgProfiles(first:')) {
+        return {
+          orgProfiles: {
+            nodes: [
+              { id: 'profile-global', name: 'Manager', entityId: null, permissions: '0001' },
+              { id: 'profile-org', name: 'Manager', entityId: 'org-1', permissions: '0011' }
+            ]
+          }
+        };
+      }
+      if (call.document.includes('users(first:')) {
+        return {
+          users: {
+            nodes: [
+              { id: 'user-1', displayName: 'Owner', type: 1 },
+              { id: 'org-1', displayName: 'Org One', type: 2 }
+            ]
+          }
+        };
+      }
+      return {};
+    }), new AbortController().signal);
+
+    expect(loaded.resource).toMatchObject({
+      status: 'ready',
+      data: { roles: [], inviteRoles: [] }
+    });
+    expect(loaded.resource.status === 'ready' ? loaded.resource.limitations : []).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ code: 'constructive.org-profile-name-ambiguous' })
+      ])
+    );
+    expect(loaded.policy).toMatchObject({
+      assignInviteRole: false,
+      updateMemberRole: false
+    });
+  });
+
   it('honors organization invite assignment modes and defaults missing settings to strict', async () => {
     const adminSchema = snapshot({
       endpoint: 'admin',
@@ -842,7 +1640,9 @@ describe('Constructive organizations adapter RLS contract', () => {
     const strict = await loadForMode('strict', '0111');
     const permissionOnly = await loadForMode('permission_only', '0111');
     const subsetOnly = await loadForMode('subset_only', '0011');
-    const missingSetting = await loadForMode(undefined, '0011');
+    // A create-invites-only member cannot read orgMembershipSettings under the
+    // stock RLS policy, even when the database mode would allow assignment.
+    const missingSetting = await loadForMode(undefined, '0010');
     const inactive = await loadForMode('permission_only', '0111', false);
 
     expect(strict.resource).toMatchObject({
@@ -860,9 +1660,15 @@ describe('Constructive organizations adapter RLS contract', () => {
     expect(subsetOnly.policy?.assignInviteRole).toBe(true);
     expect(missingSetting.resource).toMatchObject({
       status: 'ready',
-      data: { inviteRoles: [] }
+      data: { inviteRoles: [] },
+      limitations: [{
+        code: 'constructive.org-invite-profile-mode-unavailable'
+      }]
     });
-    expect(missingSetting.policy?.assignInviteRole).toBe(false);
+    expect(missingSetting.policy).toMatchObject({
+      inviteMember: true,
+      assignInviteRole: false
+    });
     expect(inactive.resource).toMatchObject({
       status: 'ready',
       data: { inviteRoles: [] }

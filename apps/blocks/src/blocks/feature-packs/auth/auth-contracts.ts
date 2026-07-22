@@ -38,6 +38,7 @@ export type AuthFeatureAction =
   | 'signUp'
   | 'recoverPassword'
   | 'resetPassword'
+  | 'sendVerificationEmail'
   | 'signOut'
   | 'updateProfile'
   | 'changePassword'
@@ -54,6 +55,7 @@ export type AuthFeatureActions = Readonly<{
     password: string;
     resetToken?: string;
   }) => FeatureActionResult;
+  sendVerificationEmail?: (input: { email: string }) => FeatureActionResult;
   signOut?: () => FeatureActionResult;
   updateProfile?: (input: { displayName: string }) => FeatureActionResult;
   changePassword?: (input: {
@@ -66,6 +68,10 @@ export type AuthFeatureActions = Readonly<{
 export type AuthFeaturePackProps = Readonly<{
   view: 'entry' | 'account';
   account?: FeaturePackResource<AuthAccountData>;
+  verificationNotice?: Readonly<{
+    status: 'error' | 'success';
+    message: string;
+  }>;
   mode?: AuthEntryMode;
   resetToken?: string;
   policy?: FeatureActionPolicy<AuthFeatureAction>;

@@ -75,6 +75,7 @@ import {
 } from '../shared/feature-pack-contracts';
 import {
   FeaturePackBoundary,
+  FeaturePackLimitations,
   FeaturePackPageHeader,
   FeatureStatusBadge
 } from '../shared/feature-pack-ui';
@@ -105,6 +106,7 @@ export type OrganizationInvite = Readonly<{
   role?: string;
   status: string;
   expiresAt?: string;
+  actionPolicy?: FeatureActionPolicy<'cancelInvite'>;
 }>;
 
 export type OrganizationsFeatureData = Readonly<{
@@ -425,6 +427,9 @@ export function OrganizationsFeaturePack({
         eyebrow='Tenant access'
         title='Organizations'
       />
+      <FeaturePackLimitations
+        limitations={resource.status === 'ready' ? resource.limitations : undefined}
+      />
       <FeaturePackBoundary
         emptyAction={
           canPerform(policy, 'createOrganization') && actions?.createOrganization ? (
@@ -593,7 +598,10 @@ export function OrganizationsFeaturePack({
                               <TableCell><FeatureStatusBadge status={invite.status} /></TableCell>
                               <TableCell>{invite.expiresAt ?? '—'}</TableCell>
                               <TableCell className='text-right'>
-                                {active && canPerform(policy, 'cancelInvite') && actions?.cancelInvite ? (
+                                {active &&
+                                canPerform(policy, 'cancelInvite') &&
+                                canPerform(invite.actionPolicy, 'cancelInvite') &&
+                                actions?.cancelInvite ? (
                                   <Button
                                     onClick={() => void run(
                                       () => actions.cancelInvite!({ organizationId: active.id, inviteId: invite.id }),

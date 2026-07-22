@@ -73,6 +73,36 @@ describe('feature-pack interaction policy', () => {
     expect(newPasswords[0]).toHaveValue('');
   });
 
+  it('keeps email verification resend feedback next to the account action', async () => {
+    const user = userEvent.setup();
+    const sendVerificationEmail = vi.fn().mockResolvedValue(undefined);
+    render(
+      <AuthFeaturePack
+        account={{
+          status: 'ready',
+          data: {
+            identity: {
+              id: 'user-1',
+              displayName: 'Ada Lovelace',
+              primaryEmail: 'ada@example.com',
+              emailVerified: false
+            }
+          }
+        }}
+        actions={{ sendVerificationEmail }}
+        policy={{ sendVerificationEmail: true }}
+        view='account'
+      />
+    );
+
+    await user.click(screen.getByRole('button', { name: 'Send verification email' }));
+
+    await waitFor(() => expect(sendVerificationEmail).toHaveBeenCalledWith({
+      email: 'ada@example.com'
+    }));
+    expect(screen.getByRole('status')).toHaveTextContent('Verification email sent.');
+  });
+
   it('does not render a notification action unless policy and a host action allow it', () => {
     const notification = {
       id: 'notification-1',

@@ -57,6 +57,7 @@ export function AuthEntryPanel({
   resetToken,
   policy,
   actions,
+  verificationNotice,
   onModeChange,
   onAuthenticated,
   onError
@@ -134,6 +135,11 @@ export function AuthEntryPanel({
         </CardHeader>
         <form onSubmit={(event) => void submit(event)}>
           <CardContent className='flex flex-col gap-4'>
+            {verificationNotice ? (
+              <Alert variant={verificationNotice.status === 'error' ? 'destructive' : 'default'}>
+                <AlertDescription>{verificationNotice.message}</AlertDescription>
+              </Alert>
+            ) : null}
             {mode !== 'reset-password' ? (
               <Field htmlFor={`${fieldId}-email`} label='Email address' required>
                 <div className='relative'>

@@ -19,7 +19,10 @@ import {
 } from '@constructive-io/ui/card';
 import { Skeleton } from '@constructive-io/ui/skeleton';
 
-import type { FeaturePackResource } from './feature-pack-contracts';
+import type {
+  FeaturePackLimitation,
+  FeaturePackResource
+} from './feature-pack-contracts';
 
 export type FeaturePackBoundaryProps<T> = Readonly<{
   resource: FeaturePackResource<T>;
@@ -92,6 +95,26 @@ export function FeaturePackBoundary<T>({
   }
 
   return children(resource.data);
+}
+
+export function FeaturePackLimitations({
+  limitations
+}: Readonly<{ limitations: readonly FeaturePackLimitation[] | undefined }>) {
+  if (!limitations?.length) return null;
+
+  return (
+    <Alert>
+      <CircleAlertIcon aria-hidden='true' />
+      <AlertTitle>Some policy details are unavailable</AlertTitle>
+      <AlertDescription>
+        <ul className='list-disc space-y-1 pl-4'>
+          {limitations.map((limitation) => (
+            <li key={limitation.code}>{limitation.message}</li>
+          ))}
+        </ul>
+      </AlertDescription>
+    </Alert>
+  );
 }
 
 export type FeaturePackPageHeaderProps = Readonly<{

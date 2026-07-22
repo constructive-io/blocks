@@ -65,12 +65,26 @@ const SET_PASSWORD_MUTATION = /* GraphQL */ `
   }
 `;
 
+const SEND_VERIFICATION_EMAIL_MUTATION = /* GraphQL */ `
+  mutation ConsoleKitSendVerificationEmail($input: SendVerificationEmailInput!) {
+    sendVerificationEmail(input: $input) { result }
+  }
+`;
+
+const VERIFY_EMAIL_MUTATION = /* GraphQL */ `
+  mutation ConsoleKitVerifyEmail($input: VerifyEmailInput!) {
+    verifyEmail(input: $input) { result }
+  }
+`;
+
 export type ConstructiveAuthAdapterOptions = Readonly<{
   store: ConsoleKitStoreApi;
   session: DatabaseScopedStandaloneConsoleSession;
   discovery: ConstructiveCapabilityDiscovery;
   resetRoleId?: string;
   resetToken?: string;
+  verificationEmailId?: string;
+  verificationToken?: string;
 }>;
 
 function supports(
@@ -85,7 +99,7 @@ function supports(
 async function currentAccount(
   runtime: ConsoleKitAdapterContext,
   signal: AbortSignal
-): Promise<AuthFeaturePackProps['account']> {
+): Promise<NonNullable<AuthFeaturePackProps['account']>> {
   const current = await executeConstructiveGraphQL<{
     currentUser?: Record<string, unknown> | null;
   }>(runtime, 'auth', CURRENT_ACCOUNT_QUERY, undefined, signal);
@@ -94,7 +108,7 @@ async function currentAccount(
   if (!user || !id) return { status: 'empty' };
 
   let email = '';
-  let emailVerified = false;
+  let emailVerified: boolean | undefined;
   try {
     const result = await executeConstructiveGraphQL<{ emails?: unknown }>(
       runtime,
@@ -108,7 +122,7 @@ async function currentAccount(
     );
     const primary = emails.find((candidate) => asBoolean(candidate.isPrimary)) ?? emails[0];
     email = asString(primary?.email) ?? '';
-    emailVerified = asBoolean(primary?.isVerified);
+    if (primary) emailVerified = asBoolean(primary.isVerified);
   } catch {
     // Email visibility is independent of the current-user contract. The
     // account page remains useful when an application intentionally hides it.
@@ -134,6 +148,7 @@ async function currentAccount(
 export function createConstructiveAuthAdapter(
   options: ConstructiveAuthAdapterOptions
 ): ConsoleKitFeatureAdapter<AuthFeaturePackProps> {
+  let verificationNotice: AuthFeaturePackProps['verificationNotice'];
   const capabilities: readonly AtomicCapabilityId[] = [
     'auth.sessions',
     'auth.credentials',
@@ -194,9 +209,64 @@ export function createConstructiveAuthAdapter(
           : undefined
       };
 
+      if (
+        !verificationNotice &&
+        Boolean(options.verificationEmailId) !== Boolean(options.verificationToken)
+      ) {
+        verificationNotice = {
+          status: 'error',
+          message: 'The email verification link is incomplete.'
+        };
+      }
+
+      if (
+        !verificationNotice &&
+        options.verificationEmailId &&
+        options.verificationToken &&
+        options.discovery.getSchemas().auth
+      ) {
+        if (!supports(options, 'mutation', 'verifyEmail')) {
+          verificationNotice = {
+            status: 'error',
+            message: 'This application does not support email verification.'
+          };
+        } else {
+          try {
+            const result = await executeConstructiveGraphQL<Record<string, unknown>>(
+              runtime,
+              'auth',
+              VERIFY_EMAIL_MUTATION,
+              {
+                input: {
+                  emailId: options.verificationEmailId,
+                  token: options.verificationToken
+                }
+              },
+              signal
+            );
+            verificationNotice = asBoolean(asRecord(result.verifyEmail)?.result)
+              ? {
+                  status: 'success',
+                  message: 'Your email address has been verified. You can sign in now.'
+                }
+              : {
+                  status: 'error',
+                  message: 'This email address could not be verified with that credential.'
+                };
+          } catch (cause) {
+            if (signal.aborted) throw cause;
+            // Keep transport and server failures retryable. The host has
+            // already scrubbed the fragment, but the adapter props retain the
+            // credential for the runtime's normal retry path.
+            throw cause;
+          }
+        }
+      }
+
       if (runtime.session.status !== 'authenticated') {
         return {
           view: 'entry',
+          verificationNotice,
           resetToken: options.resetToken,
           mode: options.resetRoleId && options.resetToken
             ? 'reset-password'
@@ -233,15 +303,22 @@ export function createConstructiveAuthAdapter(
       }
 
       const account = await currentAccount(runtime, signal);
+      const canSendVerificationEmail =
+        account.status === 'ready' &&
+        account.data.identity.emailVerified === false &&
+        Boolean(account.data.identity.primaryEmail) &&
+        supports(options, 'mutation', 'sendVerificationEmail');
       return {
         view: 'account',
         account,
+        verificationNotice,
         policy: {
           signOut: supports(options, 'mutation', 'signOut'),
           // The generated updateUser root is visible to application users, but
           // the stock RLS contract does not authorize ordinary self-updates.
           updateProfile: false,
           changePassword: supports(options, 'mutation', 'setPassword'),
+          sendVerificationEmail: canSendVerificationEmail,
           revokeSession: false
         },
         actions: {
@@ -251,6 +328,24 @@ export function createConstructiveAuthAdapter(
                 await executeConstructiveGraphQL(runtime, 'auth', SET_PASSWORD_MUTATION, {
                   input: { currentPassword, newPassword }
                 });
+              }
+            : undefined,
+          sendVerificationEmail: canSendVerificationEmail
+            ? async ({ email }) => {
+                if (email !== account.data.identity.primaryEmail) {
+                  throw new Error(
+                    'Verification email delivery is bound to the current account primary email.'
+                  );
+                }
+                const result = await executeConstructiveGraphQL<Record<string, unknown>>(
+                  runtime,
+                  'auth',
+                  SEND_VERIFICATION_EMAIL_MUTATION,
+                  { input: { email } }
+                );
+                if (!asBoolean(asRecord(result.sendVerificationEmail)?.result)) {
+                  throw new Error('The verification email could not be queued.');
+                }
               }
             : undefined
         }

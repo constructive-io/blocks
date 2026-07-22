@@ -56,6 +56,9 @@ export type ConstructiveConsoleKitProps = Readonly<{
   transport?: ConsoleTransport;
   resetRoleId?: string;
   resetToken?: string;
+  /** Values parsed and scrubbed by the host from a client-only email-link fragment. */
+  verificationEmailId?: string;
+  verificationToken?: string;
   onError?: ConsoleKitConfig['onError'];
 }>;
 
@@ -64,6 +67,8 @@ export type CreateConstructiveAdaptersOptions = Readonly<{
   session: DatabaseScopedStandaloneConsoleSession;
   resetRoleId?: string;
   resetToken?: string;
+  verificationEmailId?: string;
+  verificationToken?: string;
 }>;
 
 function endpoint(
@@ -190,9 +195,18 @@ function ConstructiveConsoleKitInstance(props: ConstructiveConsoleKitProps) {
       store,
       session,
       resetRoleId: props.resetRoleId,
-      resetToken: props.resetToken
+      resetToken: props.resetToken,
+      verificationEmailId: props.verificationEmailId,
+      verificationToken: props.verificationToken
     });
-  }, [props.resetRoleId, props.resetToken, session, store]);
+  }, [
+    props.resetRoleId,
+    props.resetToken,
+    props.verificationEmailId,
+    props.verificationToken,
+    session,
+    store
+  ]);
 
   if (!authEndpoint || !store || !session || !transport || !adapters) {
     return (

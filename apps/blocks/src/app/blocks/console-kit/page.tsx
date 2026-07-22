@@ -90,6 +90,47 @@ export function HardenedTenantConsole({
   );
 }`;
 
+const EMAIL_VERIFICATION_EXAMPLE = `'use client';
+
+import * as React from 'react';
+
+import {
+  ConstructiveConsoleKit,
+  type ConstructiveTenantDatabase
+} from '@/blocks/console-kit/constructive';
+
+type VerificationCredential = Readonly<{ emailId: string; token: string }>;
+
+export function VerificationConsole({
+  database
+}: Readonly<{ database: ConstructiveTenantDatabase }>) {
+  const [credential, setCredential] =
+    React.useState<VerificationCredential | null>(null);
+  const [ready, setReady] = React.useState(false);
+
+  React.useEffect(() => {
+    const fragment = new URLSearchParams(window.location.hash.slice(1));
+    const emailId = fragment.get('email_id');
+    const token = fragment.get('verification_token');
+    window.history.replaceState(
+      window.history.state,
+      '',
+      window.location.pathname + window.location.search
+    );
+    setCredential(emailId && token ? { emailId, token } : null);
+    setReady(true);
+  }, []);
+
+  if (!ready) return null;
+  return (
+    <ConstructiveConsoleKit
+      database={database}
+      verificationEmailId={credential?.emailId}
+      verificationToken={credential?.token}
+    />
+  );
+}`;
+
 export default function ConsoleKitPage() {
   return (
     <article className="registry-page">
@@ -224,6 +265,59 @@ export default function ConsoleKitPage() {
               language="tsx"
             >
               {CSRF_PROVIDER_EXAMPLE}
+            </CodeBlock>
+          </div>
+
+          <div className="mt-6 max-w-3xl">
+            <h3 className="text-sm font-medium text-foreground">
+              Complete email verification in the host route
+            </h3>
+            <p className="mt-1.5 text-pretty text-sm leading-7 text-muted-foreground">
+              Unverified signed-in accounts can send a fresh verification
+              email from Account security. Your verification route reads the{' '}
+              <code className="rounded bg-muted px-1 py-0.5 font-mono text-[12px]">
+                email_id
+              </code>{' '}
+              and{' '}
+              <code className="rounded bg-muted px-1 py-0.5 font-mono text-[12px]">
+                verification_token
+              </code>{' '}
+              values from a URL fragment and passes them to Console Kit; the auth
+              adapter calls{' '}
+              <code className="rounded bg-muted px-1 py-0.5 font-mono text-[12px]">
+                verifyEmail
+              </code>{' '}
+              using the freshly delivered credential, including from a fresh signed-out
+              browser. After sign-in, Console Kit reloads the account so the
+              verified state is authoritative. Console Kit binds its send action
+              to the signed-in account&apos;s loaded primary email, but the stock
+              backend mutation is not owner-bound; direct GraphQL callers need
+              the backend hardening documented below. Treat the token as a
+              credential: generate or rewrite the public link so these values
+              follow the URL&apos;s <code className="rounded bg-muted px-1 py-0.5 font-mono text-[12px]">#</code>,
+              which keeps them out of the HTTP request, then scrub the fragment
+              before mounting Console Kit.
+            </p>
+            <p className="mt-2 text-pretty text-sm leading-7 text-muted-foreground">
+              Email delivery and link routing are separate deployment
+              contracts. The stock local SMTP configuration currently emits{' '}
+              <code className="rounded bg-muted px-1 py-0.5 font-mono text-[12px]">
+                https://localhost/verify-email
+              </code>{' '}
+              without the Blocks development port. The live proof validates
+              delivery, moves the extracted values through a client-only URL
+              fragment, scrubs that fragment, deletes the token-bearing Mailpit
+              message, and consumes the credential through
+              its integration route. It does not claim that the stock link is
+              directly clickable; production hosts must configure or rewrite
+              the public verification URL to their own fragment-based route.
+            </p>
+            <CodeBlock
+              className="mt-3"
+              label="app/verify-email/verification-console.tsx"
+              language="tsx"
+            >
+              {EMAIL_VERIFICATION_EXAMPLE}
             </CodeBlock>
           </div>
         </section>

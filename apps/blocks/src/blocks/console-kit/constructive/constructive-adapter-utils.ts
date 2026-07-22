@@ -76,6 +76,16 @@ export function expiresIn(days: number): string {
   return new Date(Date.now() + days * 24 * 60 * 60 * 1000).toISOString();
 }
 
+export function assertAuthorizedTarget(
+  authorizedIds: ReadonlySet<string>,
+  id: string,
+  label: string
+): void {
+  if (!authorizedIds.has(id)) {
+    throw new Error(`The requested ${label} is not in the current authorized resource.`);
+  }
+}
+
 export function packAvailability(
   store: ConsoleKitStoreApi,
   feature: FeaturePackId,

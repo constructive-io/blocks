@@ -33,6 +33,13 @@ export type ConstructiveSchemaSnapshot = Readonly<{
   types: Readonly<Record<string, ConstructiveSchemaType>>;
 }>;
 
+export type ConstructiveConnectionQuery = Readonly<{
+  operationName: string;
+  fieldName: string;
+  nodeSelection: string;
+  pageSize?: number;
+}>;
+
 type IntrospectionField = {
   name?: unknown;
   args?: unknown;
@@ -197,6 +204,58 @@ export async function executeConstructiveGraphQL<T>(
   if (typeof code === 'string') error.code = code;
   error.errors = result.errors;
   throw error;
+}
+
+/**
+ * Reads a PostGraphile Relay connection to exhaustion. Every connection owns
+ * its cursor because unrelated tables can advance at different rates.
+ */
+export async function executeConstructiveConnectionQuery(
+  runtime: ConsoleKitAdapterContext,
+  endpointKind: ConsoleEndpointKind,
+  query: ConstructiveConnectionQuery,
+  signal?: AbortSignal
+): Promise<Record<string, unknown>[]> {
+  const document = `
+    query ${query.operationName}($first: Int!, $after: Cursor) {
+      ${query.fieldName}(first: $first, after: $after) {
+        nodes { ${query.nodeSelection} }
+        pageInfo { hasNextPage endCursor }
+      }
+    }
+  `;
+  const nodes: Record<string, unknown>[] = [];
+  const seenCursors = new Set<string>();
+  let after: string | null = null;
+
+  for (;;) {
+    const result = await executeConstructiveGraphQL<Record<string, unknown>>(
+      runtime,
+      endpointKind,
+      document,
+      { first: query.pageSize ?? 100, after },
+      signal
+    );
+    const connection = asRecord(result[query.fieldName]);
+    const pageNodes = Array.isArray(connection?.nodes) ? connection.nodes : [];
+    for (const candidate of pageNodes) {
+      const node = asRecord(candidate);
+      if (node) nodes.push(node);
+    }
+
+    const pageInfo = asRecord(connection?.pageInfo);
+    if (pageInfo?.hasNextPage !== true) return nodes;
+    const endCursor = typeof pageInfo.endCursor === 'string' && pageInfo.endCursor.length > 0
+      ? pageInfo.endCursor
+      : null;
+    if (!endCursor || seenCursors.has(endCursor)) {
+      throw new Error(
+        `The ${query.fieldName} connection reported another page without a new cursor.`
+      );
+    }
+    seenCursors.add(endCursor);
+    after = endCursor;
+  }
 }
 
 export async function inspectConstructiveSchema(

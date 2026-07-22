@@ -1,5 +1,11 @@
 import { randomUUID } from 'node:crypto';
-import { expect, test, type Locator, type Page } from '@playwright/test';
+import {
+  expect,
+  test,
+  type BrowserContext,
+  type Locator,
+  type Page
+} from '@playwright/test';
 
 import {
   authenticationErrorCodes,
@@ -75,11 +81,42 @@ const CREATE_SITE_DOMAIN = /* GraphQL */ `
   }
 `;
 
-const SEND_VERIFICATION_EMAIL = /* GraphQL */ `
-  mutation ConsoleKitSendVerificationEmail($input: SendVerificationEmailInput!) {
-    sendVerificationEmail(input: $input) { result clientMutationId }
+const EMAIL_VERIFICATION_READ = /* GraphQL */ `
+  query ConsoleKitEmailVerificationRead {
+    emails(first: 50) {
+      nodes { id email isPrimary isVerified }
+    }
   }
 `;
+
+async function readEmailVerificationState(
+  tenant: ProofTenant,
+  email: string,
+  token: string
+): Promise<Readonly<{ isPrimary: boolean; isVerified: boolean }> | undefined> {
+  const emailData = await graphQL<Record<string, unknown>>(
+    endpointUrl(tenant, 'auth'),
+    EMAIL_VERIFICATION_READ,
+    {},
+    token
+  );
+  const emails = emailData.emails &&
+    typeof emailData.emails === 'object' &&
+    !Array.isArray(emailData.emails)
+    ? (emailData.emails as { nodes?: unknown }).nodes
+    : null;
+  const record = Array.isArray(emails)
+    ? emails.find((candidate) =>
+        candidate &&
+        typeof candidate === 'object' &&
+        !Array.isArray(candidate) &&
+        (candidate as Record<string, unknown>).email === email
+      ) as Record<string, unknown> | undefined
+    : undefined;
+  return record
+    ? { isPrimary: record.isPrimary === true, isVerified: record.isVerified === true }
+    : undefined;
+}
 
 type MailpitAddress = Readonly<{ Address?: string }>;
 type MailpitMessage = Readonly<{
@@ -108,34 +145,60 @@ async function waitForVerificationMessage(
   throw new Error('The verification email did not arrive in Mailpit within 60 seconds.');
 }
 
-async function expectVerificationMessage(
+type VerificationLinkParameters = Readonly<{
+  emailId: string;
+  token: string;
+}>;
+
+async function readVerificationLinkParameters(
   recipient: string,
   siteNick: string
-): Promise<void> {
+): Promise<VerificationLinkParameters> {
   const message = await waitForVerificationMessage(
     recipient,
     `${siteNick} Email Verification`
   );
   expect(message.From?.Address).toBe('noreply@test.constructive.io');
 
-  const response = await fetch(
-    `http://127.0.0.1:8025/api/v1/message/${encodeURIComponent(message.ID)}`
-  );
-  if (!response.ok) throw new Error(`Mailpit message lookup returned HTTP ${response.status}.`);
-  const detail = await response.json() as { HTML?: string };
-  if (typeof detail.HTML !== 'string') {
-    throw new Error('The verification email had no HTML body.');
+  try {
+    const response = await fetch(
+      `http://127.0.0.1:8025/api/v1/message/${encodeURIComponent(message.ID)}`
+    );
+    if (!response.ok) throw new Error(`Mailpit message lookup returned HTTP ${response.status}.`);
+    const detail = await response.json() as { HTML?: string };
+    if (typeof detail.HTML !== 'string') {
+      throw new Error('The verification email had no HTML body.');
+    }
+    const href = detail.HTML.match(/href=["']([^"']*\/verify-email[^"']*)["']/iu)?.[1]
+      ?.replaceAll('&amp;', '&')
+      .replaceAll('&#38;', '&');
+    if (!href) throw new Error('The verification email had no verification link.');
+    const link = new URL(href);
+    // Delivery and token extraction are valid, but the stock local SMTP link is
+    // not a clickable Blocks route: it omits the development port and forces TLS.
+    expect(link.protocol).toBe('https:');
+    expect(link.hostname).toBe('localhost');
+    expect(link.port).toBe('');
+    expect(link.pathname).toBe('/verify-email');
+    const emailId = link.searchParams.get('email_id') ?? '';
+    const token = link.searchParams.get('verification_token') ?? '';
+    expect(/^[0-9a-f-]{36}$/iu.test(emailId)).toBe(true);
+    expect(Boolean(token)).toBe(true);
+    return { emailId, token };
+  } finally {
+    const deleteResponse = await fetch('http://127.0.0.1:8025/api/v1/messages', {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ IDs: [message.ID] })
+    });
+    if (!deleteResponse.ok) {
+      throw new Error(`Mailpit message deletion returned HTTP ${deleteResponse.status}.`);
+    }
+    const retained = await fetch(
+      `http://127.0.0.1:8025/api/v1/message/${encodeURIComponent(message.ID)}`
+    );
+    expect(retained.status, 'The token-bearing Mailpit message must not be retained.').toBe(404);
   }
-  const href = detail.HTML.match(/href=["']([^"']*\/verify-email[^"']*)["']/iu)?.[1]
-    ?.replaceAll('&amp;', '&')
-    .replaceAll('&#38;', '&');
-  if (!href) throw new Error('The verification email had no verification link.');
-  const link = new URL(href);
-  expect(link.protocol).toBe('https:');
-  expect(link.hostname).toBe('localhost');
-  expect(link.pathname).toBe('/verify-email');
-  expect(/^[0-9a-f-]{36}$/iu.test(link.searchParams.get('email_id') ?? '')).toBe(true);
-  expect(Boolean(link.searchParams.get('verification_token'))).toBe(true);
 }
 
 async function visitProof(page: Page): Promise<void> {
@@ -178,6 +241,20 @@ async function signInThroughUi(
   await page.getByLabel('Email address').fill(credentials.email);
   await page.getByLabel('Password').fill(credentials.password);
   await page.getByRole('button', { name: 'Sign in', exact: true }).click();
+  await expect(page.getByRole('heading', { level: 1, name: 'Account security' })).toBeVisible();
+}
+
+async function signUpThroughUi(
+  page: Page,
+  tenant: ProofTenant,
+  credentials: ProofCredentials
+): Promise<void> {
+  await selectTenant(page, tenant);
+  await expectSignIn(page);
+  await page.getByRole('button', { name: 'Create account', exact: true }).click();
+  await page.getByLabel('Email address').fill(credentials.email);
+  await page.getByLabel('Password').fill(credentials.password);
+  await page.getByRole('button', { name: 'Create account', exact: true }).click();
   await expect(page.getByRole('heading', { level: 1, name: 'Account security' })).toBeVisible();
 }
 
@@ -286,6 +363,15 @@ test('switches the tenant-scoped shell, signs in to every preset, and discovers 
   await expectDataExplorer(page, third);
   await openFeature(page, 'Billing');
   await expect(page.getByRole('heading', { level: 1, name: 'Billing' })).toBeVisible();
+  await expect(page.getByText('No subscription', { exact: true })).toBeVisible();
+  await expect(page.getByText('No usage available', { exact: true })).toBeVisible();
+  await expect(page.getByText('No credit balances', { exact: true })).toBeVisible();
+  await expect(page.getByText('No entitlements configured', { exact: true })).toBeVisible();
+  await expect(page.getByText('Subscription could not be loaded', { exact: true })).toHaveCount(0);
+  await expect(page.getByText('Usage could not be loaded', { exact: true })).toHaveCount(0);
+  await page.getByRole('tab', { name: 'Plans', exact: true }).click();
+  await expect(page.getByText('No plans available', { exact: true })).toBeVisible();
+  await expect(page.getByText('Plans could not be loaded', { exact: true })).toHaveCount(0);
   await signOutThroughUi(page);
 });
 
@@ -297,13 +383,7 @@ test('completes standalone auth and restores the database-scoped session after r
   };
 
   await visitProof(page);
-  await selectTenant(page, tenant);
-  await expect(page.getByRole('button', { name: 'Create account', exact: true })).toBeVisible();
-  await page.getByRole('button', { name: 'Create account', exact: true }).click();
-  await page.getByLabel('Email address').fill(credentials.email);
-  await page.getByLabel('Password').fill(credentials.password);
-  await page.getByRole('button', { name: 'Create account', exact: true }).click();
-  await expect(page.getByRole('heading', { level: 1, name: 'Account security' })).toBeVisible();
+  await signUpThroughUi(page, tenant, credentials);
   await expect(page.getByText(credentials.email, { exact: true }).first()).toBeVisible();
 
   await signOutThroughUi(page);
@@ -327,7 +407,10 @@ test('completes standalone auth and restores the database-scoped session after r
   await signOutThroughUi(page);
 });
 
-test('delivers an explicit verification email through the proof job and SMTP stack', async () => {
+test('signs up, sends, and consumes fresh email verification through Console Kit', async ({
+  browser,
+  page
+}) => {
   const tenant = proof.tenant('auth:hardened');
   const ownerCredentials = proof.credentials(tenant);
   const verificationCredentials = {
@@ -335,7 +418,9 @@ test('delivers an explicit verification email through the proof job and SMTP sta
     password: `ConsoleKit-${randomUUID()}-Aa1!`
   };
   let controlSession: LiveSession | null = null;
-  let verificationSession: LiveSession | null = null;
+  let verificationCheckSession: LiveSession | null = null;
+  let invalidVerificationContext: BrowserContext | null = null;
+  let verificationContext: BrowserContext | null = null;
 
   try {
     controlSession = await signInAt(proof.controlEndpoint, ownerCredentials);
@@ -399,29 +484,102 @@ test('delivers an explicit verification email through the proof job and SMTP sta
     expect((domain as Record<string, unknown>).databaseId).toBe(tenant.manifest.databaseId);
     expect((domain as Record<string, unknown>).siteId).toBe(site.id);
 
-    verificationSession = await signUp(tenant, verificationCredentials);
-    const sendData = await graphQL<Record<string, unknown>>(
-      endpointUrl(tenant, 'auth'),
-      SEND_VERIFICATION_EMAIL,
-      { input: { email: verificationCredentials.email } },
-      verificationSession.token
+    await visitProof(page);
+    await signUpThroughUi(page, tenant, verificationCredentials);
+    await expect(page.getByText('Unverified', { exact: true })).toBeVisible();
+    await page.getByRole('button', { name: 'Send verification email', exact: true }).click();
+    await expect(page.getByRole('status')).toHaveText('Verification email sent.');
+
+    const verification = await readVerificationLinkParameters(
+      verificationCredentials.email,
+      siteNick
     );
-    const sendVerificationEmail = sendData.sendVerificationEmail;
-    const queued = sendVerificationEmail &&
-      typeof sendVerificationEmail === 'object' &&
-      !Array.isArray(sendVerificationEmail)
-      ? (sendVerificationEmail as Record<string, unknown>).result
-      : null;
-    expect(queued).toBe(true);
-    await expectVerificationMessage(verificationCredentials.email, siteNick);
+    await signOutThroughUi(page);
+
+    invalidVerificationContext = await browser.newContext({ serviceWorkers: 'block' });
+    const invalidVerificationPage = await invalidVerificationContext.newPage();
+    await visitProof(invalidVerificationPage);
+    await invalidVerificationPage.evaluate(({ databaseId, emailId, token }) => {
+      const fragment = new URLSearchParams({
+        verification_database_id: databaseId,
+        email_id: emailId,
+        verification_token: token
+      });
+      window.location.hash = fragment.toString();
+    }, {
+      databaseId: tenant.manifest.databaseId,
+      emailId: verification.emailId,
+      token: `${verification.token}-wrong`
+    });
+    await expect(invalidVerificationPage.getByText(
+      'This email address could not be verified with that credential.',
+      { exact: true }
+    )).toBeVisible();
+    expect(await invalidVerificationPage.evaluate(() =>
+      !window.location.hash.includes('verification_token')
+    )).toBe(true);
+    await invalidVerificationContext.close();
+    invalidVerificationContext = null;
+
+    verificationCheckSession = await signIn(tenant, verificationCredentials);
+    const rejectedState = await readEmailVerificationState(
+      tenant,
+      verificationCredentials.email,
+      verificationCheckSession.token
+    );
+    expect(rejectedState).toEqual({ isPrimary: true, isVerified: false });
+    await signOut(tenant, verificationCheckSession.token);
+    verificationCheckSession = null;
+
+    verificationContext = await browser.newContext({ serviceWorkers: 'block' });
+    const verificationPage = await verificationContext.newPage();
+    await visitProof(verificationPage);
+    await verificationPage.evaluate(({ databaseId, emailId, token }) => {
+      const fragment = new URLSearchParams({
+        verification_database_id: databaseId,
+        email_id: emailId,
+        verification_token: token
+      });
+      window.location.hash = fragment.toString();
+    }, {
+      databaseId: tenant.manifest.databaseId,
+      emailId: verification.emailId,
+      token: verification.token
+    });
+    await expect(verificationPage.getByTestId('console-kit-proof-root')).toHaveAttribute(
+      'data-database-id',
+      tenant.manifest.databaseId
+    );
+    await expectSignIn(verificationPage);
+    await expect(verificationPage.getByText(
+      'Your email address has been verified. You can sign in now.',
+      { exact: true }
+    )).toBeVisible();
+    expect(await verificationPage.evaluate(() =>
+      !window.location.hash.includes('verification_token')
+    )).toBe(true);
+
+    await signInThroughUi(verificationPage, tenant, verificationCredentials);
+    await expect(verificationPage.getByText('Verified', { exact: true })).toBeVisible();
+
+    await signOutThroughUi(verificationPage);
+    verificationCheckSession = await signIn(tenant, verificationCredentials);
+    const verifiedEmail = await readEmailVerificationState(
+      tenant,
+      verificationCredentials.email,
+      verificationCheckSession.token
+    );
+    expect(verifiedEmail).toEqual({ isPrimary: true, isVerified: true });
   } finally {
     await Promise.allSettled([
-      verificationSession
-        ? signOut(tenant, verificationSession.token)
+      verificationCheckSession
+        ? signOut(tenant, verificationCheckSession.token)
         : Promise.resolve(),
       controlSession
         ? signOutAt(proof.controlEndpoint, controlSession.token)
-        : Promise.resolve()
+        : Promise.resolve(),
+      invalidVerificationContext?.close() ?? Promise.resolve(),
+      verificationContext?.close() ?? Promise.resolve()
     ]);
   }
 });
@@ -436,6 +594,7 @@ test('reads the complete full-preset billing contract through the billing endpoi
       {},
       session.token
     );
+    let stockFixtureRows = 0;
     for (const field of [
       'plans',
       'planSubscriptions',
@@ -450,13 +609,18 @@ test('reads the complete full-preset billing contract through the billing endpoi
         ? (connection as Record<string, unknown>).nodes
         : null;
       expect(Array.isArray(nodes), `${field} must return a GraphQL connection`).toBe(true);
+      if (Array.isArray(nodes)) stockFixtureRows += nodes.length;
     }
+    expect(
+      stockFixtureRows,
+      'The stock full-preset seed intentionally has no billing fixture rows.'
+    ).toBe(0);
   } finally {
     await signOut(tenant, session.token);
   }
 });
 
-test('loads membership views and creates roleless app and organization invitations', async ({ page }) => {
+test('loads membership views and creates and cancels roleless app and organization invitations', async ({ page }) => {
   const tenant = proof.tenant('full');
   const appInviteEmail = `console-kit-app-invite-${randomUUID()}@example.test`;
   const organizationInviteEmail = `console-kit-org-invite-${randomUUID()}@example.test`;
@@ -474,6 +638,9 @@ test('loads membership views and creates roleless app and organization invitatio
   await expect(appInviteDialog).toBeHidden();
   await page.getByRole('tab', { name: /Invitations/u }).click();
   await expect(page.getByText(appInviteEmail, { exact: true })).toBeVisible();
+  const appInviteRow = page.getByRole('row').filter({ hasText: appInviteEmail });
+  await appInviteRow.getByRole('button', { name: 'Cancel', exact: true }).click();
+  await expect(page.getByText(appInviteEmail, { exact: true })).toHaveCount(0);
 
   await openFeature(page, 'Organizations');
   await expect(page.getByRole('heading', { level: 1, name: 'Organizations' })).toBeVisible();
@@ -489,6 +656,11 @@ test('loads membership views and creates roleless app and organization invitatio
   await expect(organizationInviteDialog).toBeHidden();
   await page.getByRole('tab', { name: /Invitations/u }).click();
   await expect(page.getByText(organizationInviteEmail, { exact: true })).toBeVisible();
+  const organizationInviteRow = page.getByRole('row').filter({
+    hasText: organizationInviteEmail
+  });
+  await organizationInviteRow.getByRole('button', { name: 'Cancel', exact: true }).click();
+  await expect(page.getByText(organizationInviteEmail, { exact: true })).toHaveCount(0);
 
   await signOutThroughUi(page);
 });
@@ -523,6 +695,68 @@ test('rejects invalid, cross-tenant, and revoked bearer tokens at HTTP-200 Graph
     await Promise.allSettled([
       signOut(first, firstSession.token),
       signOut(second, secondSession.token)
+    ]);
+  }
+});
+
+test('binds sign-in and sign-up sessions to their original strict-auth fingerprint', async () => {
+  const tenant = proof.tenant('auth:hardened');
+  const signedIn = await signIn(tenant, proof.credentials(tenant));
+  const signedUp = await signUp(tenant, {
+    email: `console-kit-strict-${randomUUID()}@example.test`,
+    password: `ConsoleKit-${randomUUID()}-Aa1!`
+  });
+  const endpoint = endpointUrl(tenant, 'data');
+  const health = 'query ConsoleKitStrictAuthProof { __typename }';
+
+  try {
+    for (const session of [signedIn, signedUp]) {
+      const original = await rawGraphQL<{ __typename: string }>(
+        endpoint,
+        health,
+        {},
+        session.token
+      );
+      expect(original.errors).toBeUndefined();
+      expect(original.data?.__typename).toBe('Query');
+
+      const wrongUserAgent = await rawGraphQL(
+        endpoint,
+        health,
+        {},
+        session.token,
+        { userAgent: 'constructive-console-kit-live-proof-mismatch' }
+      );
+      expect(wrongUserAgent.data == null).toBe(true);
+      expect(authenticationErrorCodes(wrongUserAgent)).toEqual(
+        expect.arrayContaining([expect.stringMatching(/^(?:UNAUTHENTICATED|BAD_TOKEN_DEFINITION)$/u)])
+      );
+
+      const wrongOrigin = await rawGraphQL(
+        endpoint,
+        health,
+        {},
+        session.token,
+        { origin: 'http://127.0.0.1:3999' }
+      );
+      expect(wrongOrigin.data == null).toBe(true);
+      expect(authenticationErrorCodes(wrongOrigin)).toEqual(
+        expect.arrayContaining([expect.stringMatching(/^(?:UNAUTHENTICATED|BAD_TOKEN_DEFINITION)$/u)])
+      );
+
+      const restored = await rawGraphQL<{ __typename: string }>(
+        endpoint,
+        health,
+        {},
+        session.token
+      );
+      expect(restored.errors).toBeUndefined();
+      expect(restored.data?.__typename).toBe('Query');
+    }
+  } finally {
+    await Promise.allSettled([
+      signOut(tenant, signedIn.token),
+      signOut(tenant, signedUp.token)
     ]);
   }
 });

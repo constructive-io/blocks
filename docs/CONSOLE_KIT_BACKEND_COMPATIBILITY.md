@@ -19,16 +19,27 @@ real user against each one:
 | `full` | Blog | Every pack whose semantic endpoint is routed and whose exact contract is present |
 
 The proof covers sign-up, sign-in, current-account loading, sign-out, revoked
-and cross-database bearer rejection, database-scoped session restoration,
+and cross-database bearer rejection, strict Origin and User-Agent fingerprint
+rejection for both sign-in and sign-up sessions, database-scoped session restoration,
 persisted CRUD, direct-owner RLS isolation, and a composite `post_tags`
 primary key. It also executes the full preset's seven-connection billing read,
-verifies the versioned `_meta` query before loading data-backed features, and
-round-trips an explicit verification email through the job worker, generated
-function, SMTP, and Mailpit. That email proof creates one site-domain row
-through the official control-plane mutation because the stock seed omits it;
-the row belongs to the proof tenant and is removed by tenant cleanup. Proof
-credentials stay in mode-0600 sidecars and are never embedded in the
-secret-free tenant manifest or rendered page.
+asserts that the stock seed intentionally returns zero billing rows, and proves
+that Console Kit renders its billing empty states without an error. The suite
+verifies the versioned `_meta` query before loading data-backed features and
+drives sign-up and an explicit verification send through Console Kit before delivering
+the email through the job worker, generated function, SMTP, and Mailpit. The
+proof first rejects a wrong credential, then consumes the freshly delivered
+credential through `verifyEmail` from a fresh signed-out browser context,
+signs in, and confirms the account email is now verified. It transfers those
+values through a client-only fragment, scrubs the fragment before use, and
+deletes the source Mailpit message, so the token is not written to the tenant
+manifest, Next request logs, retained test artifacts, or retained proof mailbox.
+This establishes fresh-credential handling; it does not establish expiry or
+replay rejection, which remain backend gaps below.
+The email proof creates one site-domain row through the official control-plane
+mutation because the stock seed omits it; the row belongs to the proof tenant
+and is removed by tenant cleanup. Proof credentials stay in mode-0600 sidecars
+and are never embedded in the secret-free tenant manifest or rendered page.
 
 Membership controls derive delegated authority from the membership's effective
 permission mask and the named permission catalog; a visible mutation root does
@@ -60,6 +71,33 @@ returned by `getAccessToken` or written back to browser storage.
 
 ## Current backend gaps
 
+- The generated `verify_email` function checks expiry before assigning the
+  verification secret name. On the first request after three days it removes
+  the expiry/rate-limit row, attempts to delete a `NULL` secret name, and
+  returns false; a second request can then use the surviving expired secret
+  because its expiry metadata is gone. The function also returns true without
+  checking the supplied token when the email is already verified, so replay is
+  idempotent rather than rejected. Assign the secret name before the expiry
+  branch, remove the secret and rate-limit row atomically, and add first- and
+  repeated-post-expiry regression tests before treating the credential as
+  strictly expiring or one-time.
+- The generated `send_verification_email` function is `SECURITY DEFINER`, is
+  executable by anonymous through the stock schema defaults, and selects the
+  target solely from a caller-supplied email. Console Kit binds its UI action
+  to the authenticated account's loaded primary email, but direct GraphQL can
+  send across accounts and distinguish an existing unverified address from a
+  missing or verified address. The backend needs owner matching plus uniform
+  responses and negative authorization tests; the UI guard is not the
+  security boundary.
+- Organization profile grants authorize the caller through the submitted
+  `entity_id`, but the `SECURITY DEFINER` apply trigger updates the submitted
+  `membership_id` without proving that the membership and profile belong to
+  the same entity. Organization invites similarly accept a profile by ID
+  without binding it to the invitation entity. Console Kit filters profile
+  IDs by the active organization, requires readable scope metadata, removes
+  ambiguous role names, and binds membership IDs to its RLS-visible snapshot,
+  but direct GraphQL remains vulnerable until both generator paths enforce the
+  same-entity invariant in the database.
 - The generated `sign_in` and `sign_up` functions currently revoke a validated
   anonymous session with an unqualified `WHERE id = v_anon_session.id`. The
   column conflicts with each function's `OUT id` parameter, so PostgreSQL
@@ -76,7 +114,12 @@ returned by `getAccessToken` or written back to browser storage.
   site-domain row, and sign-up does not enqueue verification automatically.
   `sendVerificationEmail` therefore fails later in the worker until a domain
   is configured. The live proof adds that reversible prerequisite explicitly;
-  an untouched seeded tenant still does not have working email delivery.
+  an untouched seeded tenant still does not have working email delivery. The
+  stock local SMTP configuration also emits
+  `https://localhost/verify-email` without the Blocks development port, so the
+  proof establishes delivery and token consumption through its integration
+  adapter but does not claim that this generated local link is directly
+  clickable end to end.
 - The stock `full` preset creates a notifications API and schema link without a
   domain, so the seeder reports Notifications as unroutable. Core notification
   rows also need SELECT-only recipient policy; user dismissal belongs in the

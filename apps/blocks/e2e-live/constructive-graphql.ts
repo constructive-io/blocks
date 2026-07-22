@@ -31,6 +31,11 @@ export type GraphQLPayload<TData> = Readonly<{
   errors?: readonly GraphQLError[];
 }>;
 
+export type GraphQLRequestFingerprint = Readonly<{
+  origin?: string;
+  userAgent?: string;
+}>;
+
 export type LiveSession = Readonly<{
   token: string;
   userId: string;
@@ -112,15 +117,16 @@ export async function rawGraphQL<TData>(
   url: string,
   document: unknown,
   variables: Readonly<Record<string, unknown>> = {},
-  token?: string
+  token?: string,
+  fingerprint: GraphQLRequestFingerprint = {}
 ): Promise<GraphQLPayload<TData>> {
   const response = await fetch(url, {
     method: 'POST',
     headers: {
       Accept: 'application/json',
       'Content-Type': 'application/json',
-      Origin: new URL(process.env.CONSOLE_KIT_BASE_URL!).origin,
-      'User-Agent': 'constructive-console-kit-live-proof',
+      Origin: fingerprint.origin ?? new URL(process.env.CONSOLE_KIT_BASE_URL!).origin,
+      'User-Agent': fingerprint.userAgent ?? 'constructive-console-kit-live-proof',
       ...(token ? { Authorization: `Bearer ${token}` } : {})
     },
     body: JSON.stringify({ query: documentSource(document), variables })

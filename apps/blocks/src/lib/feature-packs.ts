@@ -175,6 +175,7 @@ export const FEATURE_PACK_DOCS = [
     apiProps: featurePackApiProps<AuthFeaturePackProps>()([
       'view',
       'account',
+      'verificationNotice',
       'mode',
       'resetToken',
       'policy',
@@ -193,6 +194,11 @@ export const FEATURE_PACK_DOCS = [
         name: 'account',
         type: 'FeaturePackResource<AuthAccountData>',
         behavior: 'Supplies loading, empty, error, or ready identity and session content for the account view.',
+      },
+      {
+        name: 'verificationNotice',
+        type: "{ status: 'success' | 'error'; message: string }",
+        behavior: 'Reports the result of consuming a host-provided email verification credential, including on a signed-out entry route.',
       },
       {
         name: 'mode / resetToken',
@@ -253,7 +259,7 @@ export const FEATURE_PACK_DOCS = [
       description:
         'Members and invitations arrive as one resource so their counts and tabs describe the same application boundary. Search remains local, while role, status, invitation, and removal operations stay controlled by the host resource and actions.',
       actionGuidance:
-        'A policy grant and matching callback enable each administrative action. Async failures remain beside the dialog or row action that started them and are normalized through onError for host-level reporting.',
+        'A policy grant and matching callback enable each administrative action. Invitation cancellation and extension also require the row actionPolicy supplied with that invitation, which lets adapters mirror sender-scoped RLS without exposing unusable controls.',
     },
     surfaces: [
       'Searchable application member directory with profile, role, and status context.',
@@ -278,7 +284,7 @@ export const FEATURE_PACK_DOCS = [
         name: 'resource',
         type: 'FeaturePackResource<UsersFeatureData>',
         behavior:
-          'Supplies members, optional invitations, optional roles, and their loading, empty, error, or ready state.',
+          'Supplies members, optional invitations with row action policies, optional roles, and their loading, empty, error, or ready state.',
       },
       {
         name: 'policy / actions',
@@ -339,7 +345,7 @@ export const FEATURE_PACK_DOCS = [
       description:
         'The resource keeps the organization list and selected tenant membership data in one snapshot. Selection, role changes, invitations, and removals are delegated to the host; pass a refreshed resource after an action succeeds.',
       actionGuidance:
-        'A policy grant and matching callback enable each tenant or membership action. Async failures remain beside the initiating control and are normalized through onError for host-level reporting.',
+        'A policy grant, matching callback, and row policy enable each tenant or membership action. Console Kit treats an unreadable invitation-profile assignment mode as strict, disables profile actions when entity scope is unreadable, omits duplicate profile labels, and reports each condition as a resource limitation. The stock Constructive RLS policy exposes the invite setting only to admin_members, so delegated inviters can otherwise be authorized by the database without being able to discover the configured mode.',
     },
     surfaces: [
       'Organization selection and creation for the current personal identity.',
@@ -356,12 +362,12 @@ export const FEATURE_PACK_DOCS = [
       {
         name: 'resource',
         type: 'FeaturePackResource<OrganizationsFeatureData>',
-        behavior: 'Supplies organizations, active tenant context, memberships, optional invitations, and roles.',
+        behavior: 'Supplies organizations, active tenant context, memberships, optional invitations, roles, and policy limitations when the adapter must fail closed.',
       },
       {
         name: 'policy / actions',
         type: 'FeatureActionPolicy / OrganizationsFeatureActions',
-        behavior: 'Requires both an explicit grant and callback before a tenant or membership action is available.',
+        behavior: 'Requires an explicit grant, callback, and matching invitation row policy before a tenant or membership action is available.',
       },
       {
         name: 'onError',

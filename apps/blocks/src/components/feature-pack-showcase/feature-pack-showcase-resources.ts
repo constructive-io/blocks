@@ -143,6 +143,7 @@ export const FEATURE_PACK_SHOWCASE_USERS: UsersFeatureData = {
       status: 'pending',
       role: 'Member',
       expiresAt: 'Jul 29, 2026',
+      actionPolicy: { cancelInvite: true, extendInvite: true },
     },
     {
       id: 'invite_margaret',
@@ -150,6 +151,7 @@ export const FEATURE_PACK_SHOWCASE_USERS: UsersFeatureData = {
       status: 'expired',
       role: 'Administrator',
       expiresAt: 'Jul 18, 2026',
+      actionPolicy: { cancelInvite: true, extendInvite: true },
     },
   ],
 };
@@ -204,6 +206,7 @@ export const FEATURE_PACK_SHOWCASE_ORGANIZATIONS: OrganizationsFeatureData = {
       role: 'Member',
       status: 'pending',
       expiresAt: 'Jul 29, 2026',
+      actionPolicy: { cancelInvite: true },
     },
   ],
 };

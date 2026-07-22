@@ -1,9 +1,17 @@
 'use client';
 
 import * as React from 'react';
-import { LogOutIcon, MonitorSmartphoneIcon, ShieldCheckIcon, UserRoundIcon } from 'lucide-react';
+import {
+  LogOutIcon,
+  MailCheckIcon,
+  MailIcon,
+  MonitorSmartphoneIcon,
+  ShieldCheckIcon,
+  UserRoundIcon
+} from 'lucide-react';
 
 import { Avatar, AvatarFallback, AvatarImage } from '@constructive-io/ui/avatar';
+import { Alert, AlertDescription } from '@constructive-io/ui/alert';
 import { Badge } from '@constructive-io/ui/badge';
 import { Button } from '@constructive-io/ui/button';
 import {
@@ -38,12 +46,17 @@ export function AuthAccountView({
   account = { status: 'loading' },
   policy,
   actions,
+  verificationNotice,
   onError
 }: Omit<AuthFeaturePackProps, 'view' | 'mode' | 'resetToken' | 'onModeChange' | 'onAuthenticated'>) {
   const [displayName, setDisplayName] = React.useState('');
   const [currentPassword, setCurrentPassword] = React.useState('');
   const [newPassword, setNewPassword] = React.useState('');
   const [pendingAction, setPendingAction] = React.useState<string>();
+  const [verificationMessage, setVerificationMessage] = React.useState<Readonly<{
+    kind: 'error' | 'success';
+    text: string;
+  }>>();
   const fieldIdPrefix = React.useId();
   const displayNameId = `${fieldIdPrefix}-display-name`;
   const currentPasswordId = `${fieldIdPrefix}-current-password`;
@@ -53,14 +66,17 @@ export function AuthAccountView({
     key: string,
     action: () => FeatureActionResult,
     fallback: string,
-    onSuccess?: () => void
+    onSuccess?: () => void,
+    onFailure?: (message: string) => void
   ) => {
     setPendingAction(key);
     try {
       await action();
       onSuccess?.();
     } catch (cause) {
-      onError?.(normalizeFeaturePackError(cause, fallback));
+      const error = normalizeFeaturePackError(cause, fallback);
+      onError?.(error);
+      onFailure?.(error.message);
     } finally {
       setPendingAction(undefined);
     }
@@ -85,6 +101,11 @@ export function AuthAccountView({
         eyebrow='Authentication'
         title='Account security'
       />
+      {verificationNotice?.status === 'error' ? (
+        <Alert variant='destructive'>
+          <AlertDescription>{verificationNotice.message}</AlertDescription>
+        </Alert>
+      ) : null}
       <FeaturePackBoundary
         emptyDescription='Sign in before opening account security.'
         emptyTitle='No active account'
@@ -107,13 +128,64 @@ export function AuthAccountView({
                     <p className='truncate font-medium'>{data.identity.displayName}</p>
                     <p className='text-muted-foreground truncate text-sm'>{data.identity.primaryEmail}</p>
                   </div>
-                  {data.identity.emailVerified ? (
+                  {data.identity.emailVerified === true ? (
                     <Badge className='ml-auto' variant='secondary'>
                       <ShieldCheckIcon data-icon='inline-start' />
                       Verified
                     </Badge>
+                  ) : data.identity.emailVerified === false ? (
+                    <Badge className='ml-auto' variant='outline'>
+                      <MailIcon data-icon='inline-start' />
+                      Unverified
+                    </Badge>
                   ) : null}
                 </div>
+                {data.identity.emailVerified === false &&
+                canPerform(policy, 'sendVerificationEmail') &&
+                actions?.sendVerificationEmail ? (
+                  <div className='flex flex-col gap-3 rounded-lg border bg-muted/30 p-3 sm:flex-row sm:items-center sm:justify-between'>
+                    <div className='min-w-0'>
+                      <p className='text-sm font-medium'>Verify your email address</p>
+                      <p className='text-muted-foreground mt-0.5 text-xs leading-5'>
+                        We&apos;ll send a fresh verification link to your primary email.
+                      </p>
+                      {verificationMessage ? (
+                        <p
+                          className={verificationMessage.kind === 'error'
+                            ? 'text-destructive mt-1.5 text-xs'
+                            : 'text-muted-foreground mt-1.5 text-xs'}
+                          role={verificationMessage.kind === 'error' ? 'alert' : 'status'}
+                        >
+                          {verificationMessage.text}
+                        </p>
+                      ) : null}
+                    </div>
+                    <Button
+                      className='shrink-0 self-start sm:self-auto'
+                      disabled={pendingAction === 'verificationEmail'}
+                      onClick={() => {
+                        setVerificationMessage(undefined);
+                        void run(
+                          'verificationEmail',
+                          () => actions.sendVerificationEmail!({
+                            email: data.identity.primaryEmail
+                          }),
+                          'The verification email could not be sent.',
+                          () => setVerificationMessage({
+                            kind: 'success',
+                            text: 'Verification email sent.'
+                          }),
+                          (message) => setVerificationMessage({ kind: 'error', text: message })
+                        );
+                      }}
+                      size='sm'
+                      variant='outline'
+                    >
+                      <MailCheckIcon data-icon='inline-start' />
+                      Send verification email
+                    </Button>
+                  </div>
+                ) : null}
                 {canPerform(policy, 'updateProfile') && actions?.updateProfile ? (
                   <form
                     className='flex flex-col gap-3'

@@ -27,6 +27,12 @@ export type ConsoleKitProofTenant = Readonly<{
   endpointSummary: string;
 }>;
 
+type ConsoleKitProofEmailVerification = Readonly<{
+  databaseId: string;
+  emailId: string;
+  token: string;
+}>;
+
 export function ConsoleKitProofClient({
   runId,
   status,
@@ -37,6 +43,51 @@ export function ConsoleKitProofClient({
   tenants: readonly ConsoleKitProofTenant[];
 }>) {
   const [databaseId, setDatabaseId] = React.useState(tenants[0]?.database.id ?? '');
+  const [emailVerification, setEmailVerification] =
+    React.useState<ConsoleKitProofEmailVerification>();
+  const [fragmentReady, setFragmentReady] = React.useState(false);
+
+  React.useEffect(() => {
+    const consumeVerificationFragment = () => {
+      const fragment = new URLSearchParams(window.location.hash.replace(/^#/u, ''));
+      const hasSensitiveValue = fragment.has('email_id') || fragment.has('verification_token');
+      const verification = {
+        databaseId: fragment.get('verification_database_id') ?? '',
+        emailId: fragment.get('email_id') ?? '',
+        token: fragment.get('verification_token') ?? ''
+      };
+      if (hasSensitiveValue) {
+        window.history.replaceState(
+          window.history.state,
+          '',
+          `${window.location.pathname}${window.location.search}`
+        );
+      }
+      if (
+        verification.databaseId &&
+        verification.emailId &&
+        verification.token &&
+        tenants.some((candidate) => candidate.database.id === verification.databaseId)
+      ) {
+        setDatabaseId(verification.databaseId);
+        setEmailVerification(verification);
+        window.removeEventListener('hashchange', consumeVerificationFragment);
+      }
+    };
+    window.addEventListener('hashchange', consumeVerificationFragment);
+    consumeVerificationFragment();
+    setFragmentReady(true);
+    return () => window.removeEventListener('hashchange', consumeVerificationFragment);
+  }, [tenants]);
+
+  if (!fragmentReady) {
+    return (
+      <main className='flex min-h-screen items-center justify-center p-8'>
+        <p className='text-muted-foreground text-sm'>Preparing the tenant console…</p>
+      </main>
+    );
+  }
+
   const tenant = tenants.find((candidate) => candidate.database.id === databaseId) ?? tenants[0];
 
   if (!tenant) {
@@ -88,6 +139,12 @@ export function ConsoleKitProofClient({
         className='min-h-svh'
         database={tenant.database}
         showUnavailable
+        verificationEmailId={emailVerification?.databaseId === tenant.database.id
+          ? emailVerification.emailId
+          : undefined}
+        verificationToken={emailVerification?.databaseId === tenant.database.id
+          ? emailVerification.token
+          : undefined}
       />
     </main>
   );
