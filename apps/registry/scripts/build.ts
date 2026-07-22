@@ -15,9 +15,15 @@ import { fileURLToPath } from 'node:url';
 import { registrySchema } from 'shadcn/schema';
 
 import {
+	FEATURE_PACK_MANIFESTS,
+	PRESET_PROFILES,
+} from '../../blocks/src/feature-packs/catalog';
+
+import {
 	CONSTRUCTIVE_UI_PACKAGE,
 	FEATURE_PACK_MANIFEST_TARGETS,
 	FEATURE_PACK_ROOT_DEPENDENCIES,
+	assertCanonicalFeaturePackSidecar,
 	assertExactInternalDependencyEdges,
 	assertFeaturePackRegistryContract,
 	assertNoForbiddenDistributionReferences,
@@ -218,19 +224,27 @@ for (const { source, manifest } of loadedSources) {
 
 const moduleOwnership = createRegistryModuleOwnership(preparedItems.map(({ item }) => item));
 
+const canonicalFeaturePackSidecars = new Map<string, unknown>([
+	...FEATURE_PACK_MANIFESTS.map(
+		(manifest) => [`feature-pack-${manifest.id}`, manifest] as const,
+	),
+	...PRESET_PROFILES.map(
+		(manifest) => [`preset-${manifest.id}`, manifest] as const,
+	),
+]);
+
 for (const [itemName, expectedTarget] of FEATURE_PACK_MANIFEST_TARGETS) {
 	const item = preparedItems.find(({ item: candidate }) => candidate.name === itemName)?.item;
 	const manifestFile = item?.files?.find((file) => file.target === expectedTarget);
 	if (!manifestFile) continue;
-	const manifest = parseJson<{ schemaVersion?: unknown; id?: unknown }>(
+	const manifest = parseJson<unknown>(
 		path.join(registryApp, manifestFile.path),
 	);
-	const expectedId = itemName.replace(/^(?:feature-pack|preset)-/, '');
-	if (manifest.schemaVersion !== 1 || manifest.id !== expectedId) {
-		throw new Error(
-			`${itemName} manifest must declare schemaVersion 1 and id '${expectedId}'.`,
-		);
-	}
+	assertCanonicalFeaturePackSidecar(
+		itemName,
+		manifest,
+		canonicalFeaturePackSidecars.get(itemName),
+	);
 }
 
 for (const { source, item } of preparedItems) {

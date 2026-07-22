@@ -10,6 +10,7 @@ import {
 	CONSTRUCTIVE_NAMESPACE,
 	FEATURE_PACK_MANIFEST_TARGETS,
 	FEATURE_PACK_ROOT_DEPENDENCIES,
+	assertCanonicalFeaturePackSidecar,
 	assertExactInternalDependencyEdges,
 	assertFeaturePackRegistryContract,
 	assertUniqueRegistryShape,
@@ -325,6 +326,9 @@ function featurePackContractFixture(): RegistryItem[] {
 	const items: RegistryItem[] = [...FEATURE_PACK_MANIFEST_TARGETS].map(([itemName, target]) => ({
 		name: itemName,
 		type: 'registry:block',
+		docs: itemName.startsWith('feature-pack-')
+			? `import '@/blocks/feature-packs/${itemName.slice('feature-pack-'.length)}/${itemName.slice('feature-pack-'.length)}-feature-pack';`
+			: undefined,
 		registryDependencies: (FEATURE_PACK_ROOT_DEPENDENCIES.get(itemName) ?? []).map(
 			(dependency) => `${CONSTRUCTIVE_NAMESPACE}${dependency}`,
 		),
@@ -350,6 +354,36 @@ test('accepts the exact feature-pack, preset, console-kit, and sidecar surface',
 	assert.doesNotThrow(() => assertFeaturePackRegistryContract(featurePackContractFixture()));
 });
 
+test('rejects nested drift in installed feature-pack and preset sidecars', () => {
+	const canonicalPack = {
+		schemaVersion: 1,
+		id: 'data',
+		endpoints: { required: ['data'], optional: [] },
+		capabilities: { required: ['data.meta'], optional: ['data.search'] },
+	};
+	assert.doesNotThrow(() =>
+		assertCanonicalFeaturePackSidecar('feature-pack-data', structuredClone(canonicalPack), canonicalPack),
+	);
+
+	const driftedPack = structuredClone(canonicalPack);
+	driftedPack.capabilities.optional = ['data.realtime'];
+	assert.throws(
+		() => assertCanonicalFeaturePackSidecar('feature-pack-data', driftedPack, canonicalPack),
+		/installed manifest drifted from the canonical feature-pack catalog/,
+	);
+
+	const canonicalPreset = {
+		schemaVersion: 1,
+		id: 'blank',
+		featurePacks: ['data'],
+	};
+	const driftedPreset = { ...canonicalPreset, featurePacks: ['data', 'auth'] };
+	assert.throws(
+		() => assertCanonicalFeaturePackSidecar('preset-blank', driftedPreset, canonicalPreset),
+		/installed manifest drifted from the canonical feature-pack catalog/,
+	);
+});
+
 test('rejects feature-pack surface drift and obsolete generated-SDK sidecars', () => {
 	const missingPack = featurePackContractFixture().filter((item) => item.name !== 'feature-pack-storage');
 	assert.throws(() => assertFeaturePackRegistryContract(missingPack), /Missing: feature-pack-storage/);
@@ -372,6 +406,13 @@ test('rejects feature-pack surface drift and obsolete generated-SDK sidecars', (
 		],
 	});
 	assert.throws(() => assertFeaturePackRegistryContract(obsoleteSidecar), /obsolete generated-SDK/);
+
+	const missingDocs = featurePackContractFixture();
+	missingDocs.find((item) => item.name === 'feature-pack-auth')!.docs = '';
+	assert.throws(
+		() => assertFeaturePackRegistryContract(missingDocs),
+		/feature-pack-auth must document its root import/,
+	);
 });
 
 test('rejects feature-pack dependency profile drift and removed public items', () => {

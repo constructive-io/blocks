@@ -1,3 +1,4 @@
+import { isDeepStrictEqual } from 'node:util';
 import ts from 'typescript';
 
 export const CONSTRUCTIVE_UI_PACKAGE = '@constructive-io/ui';
@@ -118,6 +119,23 @@ export type Registry = {
 };
 
 /**
+ * Keeps the JSON sidecar installed for a feature pack or preset identical to
+ * the typed catalog used by Console Kit and the Blocks documentation.
+ */
+export function assertCanonicalFeaturePackSidecar(
+	itemName: string,
+	actual: unknown,
+	expected: unknown,
+): void {
+	if (expected === undefined) {
+		throw new Error(`${itemName} does not have a canonical feature-pack manifest.`);
+	}
+	if (!isDeepStrictEqual(actual, expected)) {
+		throw new Error(`${itemName} installed manifest drifted from the canonical feature-pack catalog.`);
+	}
+}
+
+/**
  * Checks the intentionally small public product surface that sits above the
  * primitive and billing catalogs. Counts for the whole registry are avoided:
  * adding a primitive should not require updating an unrelated snapshot.
@@ -151,6 +169,17 @@ export function assertFeaturePackRegistryContract(items: readonly RegistryItem[]
 	assertExactNames('Preset', actualPresetNames, expectedPresetNames);
 	if (!itemByName.has(CONSOLE_KIT_ITEM_NAME)) {
 		throw new Error(`Missing registry root ${CONSOLE_KIT_ITEM_NAME}.`);
+	}
+
+	for (const id of FEATURE_PACK_IDS) {
+		const itemName = `feature-pack-${id}`;
+		const item = itemByName.get(itemName);
+		if (!item) continue;
+		const docs = item.docs?.trim() ?? '';
+		const rootImport = `@/blocks/feature-packs/${id}/${id}-feature-pack`;
+		if (!docs || !docs.includes(rootImport)) {
+			throw new Error(`${itemName} must document its root import ${rootImport}.`);
+		}
 	}
 
 	const actualManifestTargets = new Set<string>();
