@@ -61,11 +61,41 @@ const DELETE_INVITE_MUTATION = /* GraphQL */ `
   }
 `;
 
-const CREATE_ORGANIZATION_MUTATION = /* GraphQL */ `
-  mutation ConsoleKitCreateOrganization($input: CreateUserInput!) {
-    createUser(input: $input) { user { id } }
+const DELETE_ORGANIZATION_MUTATION = /* GraphQL */ `
+  mutation ConsoleKitDeleteIncompleteOrganization($input: DeleteUserInput!) {
+    deleteUser(input: $input) { user { id } }
   }
 `;
+
+const ORGANIZATION_USER_FIELDS = [
+  'id',
+  'type',
+  'displayName',
+  'username',
+  'profilePicture'
+] as const;
+
+const CREATED_OWNER_MEMBERSHIP_FIELDS = [
+  'id',
+  'actorId',
+  'entityId',
+  'isOwner',
+  'isAdmin',
+  'isActive',
+  'isApproved',
+  'isBanned',
+  'isDisabled',
+  'isReadOnly',
+  'permissions'
+] as const;
+
+function createOrganizationMutation(userFields: readonly string[]): string {
+  return /* GraphQL */ `
+    mutation ConsoleKitCreateOrganization($input: CreateUserInput!) {
+      createUser(input: $input) { user { ${userFields.join(' ')} } }
+    }
+  `;
+}
 
 export type ConstructiveOrganizationsAdapterOptions = Readonly<{
   store: ConsoleKitStoreApi;
@@ -109,7 +139,18 @@ type OrganizationDirectorySelections = Readonly<{
   invites: readonly string[];
   permissions: readonly string[];
   settings: readonly string[];
+  appMemberships: readonly string[];
+  appPermissions: readonly string[];
 }>;
+
+function organizationUserFields(
+  options: ConstructiveOrganizationsAdapterOptions
+): readonly string[] | null {
+  const schema = options.discovery.getSchemas().auth;
+  if (!schema || !supports(options, 'auth', 'query', 'users')) return null;
+  const fields = connectionSelection(schema, 'User', ORGANIZATION_USER_FIELDS);
+  return fields.includes('id') && fields.includes('type') ? fields : null;
+}
 
 function adminDirectorySelections(
   options: ConstructiveOrganizationsAdapterOptions
@@ -127,6 +168,7 @@ function adminDirectorySelections(
     'isApproved',
     'isBanned',
     'isDisabled',
+    'isReadOnly',
     'permissions',
     'profileId'
   ]);
@@ -166,7 +208,29 @@ function adminDirectorySelections(
     settingFields.includes('entityId') && settingFields.includes('inviteProfileAssignmentMode')
     ? settingFields
     : [];
-  return { memberships: membershipFields, profiles, invites, permissions, settings };
+  const appMembershipFields = connectionSelection(schema, 'AppMembership', [
+    'actorId',
+    'isActive',
+    'permissions'
+  ]);
+  const appMemberships = supports(options, 'admin', 'query', 'appMemberships') &&
+    ['actorId', 'isActive', 'permissions'].every((field) => appMembershipFields.includes(field))
+    ? appMembershipFields
+    : [];
+  const appPermissionFields = connectionSelection(schema, 'AppPermission', ['name', 'bitstr']);
+  const appPermissions = supports(options, 'admin', 'query', 'appPermissions') &&
+    appPermissionFields.includes('name') && appPermissionFields.includes('bitstr')
+    ? appPermissionFields
+    : [];
+  return {
+    memberships: membershipFields,
+    profiles,
+    invites,
+    permissions,
+    settings,
+    appMemberships,
+    appPermissions
+  };
 }
 
 function memberStatus(member: Record<string, unknown>): string {
@@ -247,6 +311,9 @@ async function loadOrganizations(
   canManageActiveOrganization: boolean;
   canCreateInvites: boolean;
   canAssignInviteProfiles: boolean;
+  canCreateOrganization: boolean;
+  canValidateCreatedOwnerMembership: boolean;
+  userFields: readonly string[];
 }>> {
   if (runtime.session.status !== 'authenticated') {
     return {
@@ -258,10 +325,19 @@ async function loadOrganizations(
       policyLimitations: [],
       canManageActiveOrganization: false,
       canCreateInvites: false,
-      canAssignInviteProfiles: false
+      canAssignInviteProfiles: false,
+      canCreateOrganization: false,
+      canValidateCreatedOwnerMembership: false,
+      userFields: []
     };
   }
   const selections = adminDirectorySelections(options);
+  const userFields = organizationUserFields(options);
+  if (!userFields) {
+    throw new Error(
+      'The auth endpoint must expose users with readable id and type fields for organization identities.'
+    );
+  }
   const profileScopeReadable = selections.profiles.includes('entityId');
   const optionalAdminConnection = (
     operationName: string,
@@ -274,7 +350,16 @@ async function loadOrganizations(
         nodeSelection: nodeFields.join(' ')
       }, signal)
     : Promise.resolve([]);
-  const [memberships, profileRows, inviteRows, permissionRows, settingRows, userRows] =
+  const [
+    memberships,
+    profileRows,
+    inviteRows,
+    permissionRows,
+    settingRows,
+    appMembershipRows,
+    appPermissionRows,
+    userRows
+  ] =
     await Promise.all([
       executeConstructiveConnectionQuery(runtime, 'admin', {
         operationName: 'ConsoleKitOrganizationMembershipsPage',
@@ -301,10 +386,20 @@ async function loadOrganizations(
         'orgMembershipSettings',
         selections.settings
       ),
+      optionalAdminConnection(
+        'ConsoleKitOrganizationAppMembershipsPage',
+        'appMemberships',
+        selections.appMemberships
+      ),
+      optionalAdminConnection(
+        'ConsoleKitOrganizationAppPermissionsPage',
+        'appPermissions',
+        selections.appPermissions
+      ),
       executeConstructiveConnectionQuery(runtime, 'auth', {
         operationName: 'ConsoleKitOrganizationUsersPage',
         fieldName: 'users',
-        nodeSelection: 'id displayName username profilePicture type'
+        nodeSelection: userFields.join(' ')
       }, signal)
     ]);
   const users = new Map(userRows.flatMap((user) => {
@@ -312,6 +407,13 @@ async function loadOrganizations(
     return id ? [[id, user] as const] : [];
   }));
   const actorId = runtime.session.identity.subjectId;
+  const actorAppMemberships = appMembershipRows.filter(
+    (membership) => asString(membership.actorId) === actorId
+  );
+  const actorAppMembership = actorAppMemberships[0];
+  const canCreateOrganization = actorAppMemberships.length === 1 &&
+    asBoolean(actorAppMembership?.isActive) &&
+    hasEffectivePermission(actorAppMembership, appPermissionRows, 'create_entity');
   const actorMemberships = memberships.filter(
     (membership) => asString(membership.actorId) === actorId
   );
@@ -459,13 +561,122 @@ async function loadOrganizations(
     policyLimitations,
     canManageActiveOrganization,
     canCreateInvites: hasAdministrativeRole || hasNamedPermission('create_invites'),
-    canAssignInviteProfiles
+    canAssignInviteProfiles,
+    canCreateOrganization,
+    canValidateCreatedOwnerMembership: CREATED_OWNER_MEMBERSHIP_FIELDS.every(
+      (field) => selections.memberships.includes(field)
+    ),
+    userFields
   };
+}
+
+function createdOrganizationUser(
+  data: unknown
+): Record<string, unknown> | null {
+  return asRecord(asRecord(asRecord(data)?.createUser)?.user);
+}
+
+function deletedOrganizationId(data: unknown): string | null {
+  return asString(asRecord(asRecord(asRecord(data)?.deleteUser)?.user)?.id);
+}
+
+function isExactCreatedOwnerMembership(
+  membership: Record<string, unknown>,
+  actorId: string,
+  organizationId: string
+): boolean {
+  const permissions = asString(membership.permissions);
+  return Boolean(asString(membership.id)) &&
+    asString(membership.actorId) === actorId &&
+    asString(membership.entityId) === organizationId &&
+    asBoolean(membership.isOwner) &&
+    asBoolean(membership.isAdmin) &&
+    asBoolean(membership.isActive) &&
+    asBoolean(membership.isApproved) &&
+    membership.isBanned === false &&
+    membership.isDisabled === false &&
+    membership.isReadOnly === false &&
+    Boolean(permissions && /^1+$/u.test(permissions));
+}
+
+function organizationProvisioningUsername(): string {
+  return `console-kit-org-${globalThis.crypto.randomUUID()}`;
+}
+
+function unknownOrganizationProvisioningOutcome(resourceKey: string): Error {
+  const error = new Error(
+    'The organization create request did not return a trustworthy outcome. ' +
+    `Reconcile organization key ${resourceKey} before changing the organization name.`
+  ) as Error & { code?: string; retryable?: boolean; resourceKey?: string };
+  error.code = 'ORGANIZATION_PROVISIONING_OUTCOME_UNKNOWN';
+  error.retryable = false;
+  error.resourceKey = resourceKey;
+  return error;
+}
+
+async function rollbackIncompleteOrganization(
+  runtime: ConsoleKitAdapterContext,
+  organizationId: string,
+  canDelete: boolean
+): Promise<boolean> {
+  if (!canDelete) return false;
+  try {
+    const deleted = await executeConstructiveGraphQL<Record<string, unknown>>(
+      runtime,
+      'auth',
+      DELETE_ORGANIZATION_MUTATION,
+      { input: { id: organizationId } }
+    );
+    return deletedOrganizationId(deleted) === organizationId;
+  } catch {
+    return false;
+  }
+}
+
+async function rejectIncompleteOrganization(
+  runtime: ConsoleKitAdapterContext,
+  organizationId: string | null,
+  canDelete: boolean,
+  reason: string,
+  onRemoved?: () => void
+): Promise<never> {
+  const removed = organizationId
+    ? await rollbackIncompleteOrganization(runtime, organizationId, canDelete)
+    : false;
+  if (removed) onRemoved?.();
+  const error = new Error(
+    removed
+      ? `${reason} The incomplete organization was removed.`
+      : `${reason} Console Kit did not select it; this tenant may require backend cleanup.`
+  ) as Error & { code?: string; retryable?: boolean };
+  error.code = 'ORGANIZATION_PROVISIONING_CONTRACT_FAILED';
+  error.retryable = false;
+  throw error;
+}
+
+function organizationsAvailability(
+  options: ConstructiveOrganizationsAdapterOptions
+) {
+  const availability = packAvailability(options.store, 'organizations');
+  if (availability.status !== 'available') return availability;
+  if (!organizationUserFields(options)) {
+    return {
+      status: 'unavailable' as const,
+      reason:
+        'The auth endpoint must expose the users connection with readable id and type fields.'
+    };
+  }
+  return availability;
 }
 
 export function createConstructiveOrganizationsAdapter(
   options: ConstructiveOrganizationsAdapterOptions
 ): ConsoleKitFeatureAdapter<OrganizationsFeaturePackProps> {
+  const pendingOrganizationCreates = new Map<string, Readonly<{
+    name: string;
+    username: string;
+    id: string | null;
+  }>>();
   const capabilities: readonly AtomicCapabilityId[] = [
     'organizations.memberships',
     'organizations.permissions',
@@ -476,7 +687,7 @@ export function createConstructiveOrganizationsAdapter(
   ];
   return {
     capabilities,
-    getAvailability: () => packAvailability(options.store, 'organizations'),
+    getAvailability: () => organizationsAvailability(options),
     subscribe(runtime, listener) {
       const unsubscribe = options.discovery.subscribe(listener);
       void options.discovery.ensure(runtime);
@@ -488,11 +699,28 @@ export function createConstructiveOrganizationsAdapter(
       const reload = () => notifyConsoleAdapters(options.store);
       const adminSchema = options.discovery.getSchemas().admin;
       const authSchema = options.discovery.getSchemas().auth;
-      const canCreateOrganization = supportsConstructiveMutationInput(
+      const creationActorId = runtime.session.status === 'authenticated'
+        ? runtime.session.identity.subjectId
+        : null;
+      const canDeleteIncompleteOrganization = supportsConstructiveMutationInput(
+        authSchema,
+        'deleteUser',
+        ['id']
+      );
+      const createSupportsClientId = supportsConstructiveMutationInput(
         authSchema,
         'createUser',
         ['user'],
-        { field: 'user', requiredFields: ['displayName', 'type'] }
+        { field: 'user', requiredFields: ['id'] }
+      );
+      const canCreateOrganization = Boolean(creationActorId) && loaded.canCreateOrganization &&
+        loaded.canValidateCreatedOwnerMembership &&
+        loaded.userFields.includes('username') &&
+        canDeleteIncompleteOrganization && supportsConstructiveMutationInput(
+        authSchema,
+        'createUser',
+        ['user'],
+        { field: 'user', requiredFields: ['username', 'displayName', 'type'] }
       );
       const grantSupportsEntity = supportsConstructiveMutationInput(
         adminSchema,
@@ -556,7 +784,8 @@ export function createConstructiveOrganizationsAdapter(
         policy: {
           // A type-2 user is the organization identity. Constructive's user
           // insert trigger creates the current actor's owner membership in the
-          // same transaction, which is the flow used by Dashboard as well.
+          // same transaction. Creation is exposed only when the actor's active
+          // app membership carries create_entity and the result can be checked.
           createOrganization: canCreateOrganization,
           selectOrganization: true,
           inviteMember: canInvite,
@@ -571,8 +800,143 @@ export function createConstructiveOrganizationsAdapter(
         actions: {
           createOrganization: canCreateOrganization
             ? async ({ name }) => {
-                await executeConstructiveGraphQL(runtime, 'auth', CREATE_ORGANIZATION_MUTATION, {
-                  input: { user: { displayName: name, type: 2 } }
+                const provisioningScope = JSON.stringify([
+                  runtime.databaseId,
+                  creationActorId
+                ]);
+                const pendingOrganizationCreate = pendingOrganizationCreates.get(
+                  provisioningScope
+                );
+                if (pendingOrganizationCreate && pendingOrganizationCreate.name !== name) {
+                  throw unknownOrganizationProvisioningOutcome(
+                    pendingOrganizationCreate.username
+                  );
+                }
+                const provisioning = pendingOrganizationCreate ?? {
+                  name,
+                  username: organizationProvisioningUsername(),
+                  id: createSupportsClientId ? globalThis.crypto.randomUUID() : null
+                };
+                pendingOrganizationCreates.set(provisioningScope, provisioning);
+                let returnedUser: Record<string, unknown> | null = null;
+                let creationFailure: unknown;
+                try {
+                  const created = await executeConstructiveGraphQL<Record<string, unknown>>(
+                    runtime,
+                    'auth',
+                    createOrganizationMutation(loaded.userFields),
+                    {
+                      input: {
+                        user: {
+                          ...(provisioning.id ? { id: provisioning.id } : {}),
+                          username: provisioning.username,
+                          displayName: name,
+                          type: 2
+                        }
+                      }
+                    }
+                  );
+                  returnedUser = createdOrganizationUser(created);
+                } catch (cause) {
+                  creationFailure = cause;
+                }
+                if (!creationActorId) {
+                  return rejectIncompleteOrganization(
+                    runtime,
+                    provisioning.id,
+                    canDeleteIncompleteOrganization,
+                    'The organization was created without an authenticated actor identity.',
+                    () => pendingOrganizationCreates.delete(provisioningScope)
+                  );
+                }
+
+                let persistedUsers: Record<string, unknown>[];
+                let createdMemberships: Record<string, unknown>[];
+                try {
+                  [persistedUsers, createdMemberships] = await Promise.all([
+                    executeConstructiveConnectionQuery(runtime, 'auth', {
+                      operationName: 'ConsoleKitCreatedOrganizationUsersPage',
+                      fieldName: 'users',
+                      nodeSelection: loaded.userFields.join(' ')
+                    }),
+                    executeConstructiveConnectionQuery(runtime, 'admin', {
+                      operationName: 'ConsoleKitCreatedOrganizationMembershipsPage',
+                      fieldName: 'orgMemberships',
+                      nodeSelection: CREATED_OWNER_MEMBERSHIP_FIELDS.join(' ')
+                    })
+                  ]);
+                } catch (cause) {
+                  if (creationFailure) {
+                    throw unknownOrganizationProvisioningOutcome(provisioning.username);
+                  }
+                  const returnedId = returnedUser?.type === 2 &&
+                    asString(returnedUser?.username) === provisioning.username &&
+                    (!provisioning.id || asString(returnedUser?.id) === provisioning.id)
+                    ? asString(returnedUser?.id)
+                    : null;
+                  return rejectIncompleteOrganization(
+                    runtime,
+                    returnedId,
+                    canDeleteIncompleteOrganization,
+                    cause instanceof Error
+                      ? `The organization postcondition could not be verified: ${cause.message}`
+                      : 'The organization postcondition could not be verified.',
+                    () => pendingOrganizationCreates.delete(provisioningScope)
+                  );
+                }
+                const persistedCandidates = persistedUsers.filter(
+                  (user) => asString(user.username) === provisioning.username
+                );
+                const persisted = persistedCandidates.length === 1
+                  ? persistedCandidates[0]
+                  : undefined;
+                const organizationId = asString(persisted?.id);
+                const returnedId = asString(returnedUser?.id);
+                const responseMatches = Boolean(
+                  returnedId &&
+                  returnedUser?.type === 2 &&
+                  asString(returnedUser?.username) === provisioning.username &&
+                  (!provisioning.id || returnedId === provisioning.id) &&
+                  (
+                    !loaded.userFields.includes('displayName') ||
+                    returnedUser?.displayName === name
+                  )
+                );
+                if (creationFailure && !organizationId) {
+                  throw unknownOrganizationProvisioningOutcome(provisioning.username);
+                }
+                const ownerMemberships = organizationId
+                  ? createdMemberships.filter((membership) =>
+                      asString(membership.actorId) === creationActorId &&
+                      asString(membership.entityId) === organizationId
+                    )
+                  : [];
+                if (
+                  (!creationFailure && (!responseMatches || returnedId !== organizationId)) ||
+                  persistedCandidates.length !== 1 ||
+                  persisted?.type !== 2 ||
+                  asString(persisted.username) !== provisioning.username ||
+                  (provisioning.id && organizationId !== provisioning.id) ||
+                  (loaded.userFields.includes('displayName') && persisted.displayName !== name) ||
+                  ownerMemberships.length !== 1 ||
+                  !isExactCreatedOwnerMembership(
+                    ownerMemberships[0]!,
+                    creationActorId,
+                    organizationId ?? ''
+                  )
+                ) {
+                  return rejectIncompleteOrganization(
+                    runtime,
+                    organizationId ?? (responseMatches ? returnedId : null),
+                    canDeleteIncompleteOrganization,
+                    'The database did not create exactly one active owner membership for the current actor.',
+                    () => pendingOrganizationCreates.delete(provisioningScope)
+                  );
+                }
+                pendingOrganizationCreates.delete(provisioningScope);
+                options.store.getState().setContext({
+                  databaseId: runtime.databaseId,
+                  organizationId: organizationId!
                 });
                 reload();
               }

@@ -65,17 +65,204 @@ const EMAIL_VERIFICATION_READ = /* GraphQL */ `
   }
 `;
 
-const ORGANIZATION_USERS_READ = /* GraphQL */ `
-  query ConsoleKitProofOrganizationUsers {
-    users(first: 500) { nodes { id displayName type } }
+const ORGANIZATION_USER_FIELDS = 'id displayName username type';
+const APP_MEMBERSHIP_PROOF_FIELDS = [
+  'id',
+  'actorId',
+  'isOwner',
+  'isAdmin',
+  'isActive',
+  'isApproved',
+  'isVerified',
+  'isBanned',
+  'isDisabled',
+  'isReadOnly',
+  'permissions'
+].join(' ');
+const ORG_MEMBERSHIP_PROOF_FIELDS = [
+  'id',
+  'actorId',
+  'entityId',
+  'isOwner',
+  'isAdmin',
+  'isActive',
+  'isApproved',
+  'isBanned',
+  'isDisabled',
+  'isReadOnly',
+  'permissions'
+].join(' ');
+
+const CREATE_ORGANIZATION_USER = /* GraphQL */ `
+  mutation ConsoleKitProofCreateOrganization($input: CreateUserInput!) {
+    createUser(input: $input) { user { id displayName type } }
   }
 `;
 
-const DELETE_ORGANIZATION_USER = /* GraphQL */ `
-  mutation ConsoleKitProofDeleteOrganization($input: DeleteUserInput!) {
+const DELETE_USER = /* GraphQL */ `
+  mutation ConsoleKitProofDeleteUser($input: DeleteUserInput!) {
     deleteUser(input: $input) { user { id } }
   }
 `;
+
+const CREATE_ORGANIZATION_INVITE = /* GraphQL */ `
+  mutation ConsoleKitProofCreateOrganizationInvite($input: CreateOrgInviteInput!) {
+    createOrgInvite(input: $input) { orgInvite { id } }
+  }
+`;
+
+const UPDATE_APP_MEMBERSHIP = /* GraphQL */ `
+  mutation ConsoleKitProofUpdateAppMembership($input: UpdateAppMembershipInput!) {
+    updateAppMembership(input: $input) { appMembership { id } }
+  }
+`;
+
+const DELETE_APP_INVITE = /* GraphQL */ `
+  mutation ConsoleKitProofDeleteAppInvite($input: DeleteAppInviteInput!) {
+    deleteAppInvite(input: $input) { appInvite { id } }
+  }
+`;
+
+const DELETE_ORGANIZATION_INVITE = /* GraphQL */ `
+  mutation ConsoleKitProofDeleteOrganizationInvite($input: DeleteOrgInviteInput!) {
+    deleteOrgInvite(input: $input) { orgInvite { id } }
+  }
+`;
+
+function connectionRows(
+  data: Record<string, unknown>,
+  field: string
+): Record<string, unknown>[] {
+  const connection = data[field];
+  const nodes = connection && typeof connection === 'object' && !Array.isArray(connection)
+    ? (connection as { nodes?: unknown }).nodes
+    : null;
+  return Array.isArray(nodes)
+    ? nodes.filter((row): row is Record<string, unknown> =>
+        Boolean(row) && typeof row === 'object' && !Array.isArray(row)
+      )
+    : [];
+}
+
+async function readProofConnection(
+  tenant: ProofTenant,
+  endpoint: 'auth' | 'admin',
+  token: string,
+  operationName: string,
+  field: string,
+  nodeSelection: string
+): Promise<Record<string, unknown>[]> {
+  const document = /* GraphQL */ `
+    query ${operationName}($first: Int!, $after: Cursor) {
+      ${field}(first: $first, after: $after) {
+        nodes { ${nodeSelection} }
+        pageInfo { hasNextPage endCursor }
+      }
+    }
+  `;
+  const rows: Record<string, unknown>[] = [];
+  const cursors = new Set<string>();
+  let after: string | null = null;
+  for (;;) {
+    const data: Record<string, unknown> = await graphQL<Record<string, unknown>>(
+      endpointUrl(tenant, endpoint),
+      document,
+      { first: 100, after },
+      token
+    );
+    rows.push(...connectionRows(data, field));
+    const connection: unknown = data[field];
+    const pageInfo: unknown = connection && typeof connection === 'object' &&
+      !Array.isArray(connection)
+      ? (connection as { pageInfo?: unknown }).pageInfo
+      : null;
+    const page: Record<string, unknown> | null = pageInfo &&
+      typeof pageInfo === 'object' && !Array.isArray(pageInfo)
+      ? pageInfo as Record<string, unknown>
+      : null;
+    if (page?.hasNextPage !== true) return rows;
+    const endCursor: string | null = typeof page.endCursor === 'string' &&
+      page.endCursor.length > 0
+      ? page.endCursor
+      : null;
+    if (!endCursor || cursors.has(endCursor)) {
+      throw new Error(`${field} returned an invalid pagination cursor.`);
+    }
+    cursors.add(endCursor);
+    after = endCursor;
+  }
+}
+
+async function readOrganizationUsers(
+  tenant: ProofTenant,
+  token: string
+): Promise<Record<string, unknown>[]> {
+  return readProofConnection(
+    tenant,
+    'auth',
+    token,
+    'ConsoleKitProofOrganizationUsersPage',
+    'users',
+    ORGANIZATION_USER_FIELDS
+  );
+}
+
+async function readMembershipProof(
+  tenant: ProofTenant,
+  token: string
+): Promise<Record<string, Record<string, unknown>[]>> {
+  const [appMemberships, orgMemberships, appInvites, orgInvites] = await Promise.all([
+    readProofConnection(
+      tenant,
+      'admin',
+      token,
+      'ConsoleKitProofAppMembershipsPage',
+      'appMemberships',
+      APP_MEMBERSHIP_PROOF_FIELDS
+    ),
+    readProofConnection(
+      tenant,
+      'admin',
+      token,
+      'ConsoleKitProofOrgMembershipsPage',
+      'orgMemberships',
+      ORG_MEMBERSHIP_PROOF_FIELDS
+    ),
+    readProofConnection(
+      tenant,
+      'admin',
+      token,
+      'ConsoleKitProofAppInvitesPage',
+      'appInvites',
+      'id email'
+    ),
+    readProofConnection(
+      tenant,
+      'admin',
+      token,
+      'ConsoleKitProofOrgInvitesPage',
+      'orgInvites',
+      'id entityId email'
+    )
+  ]);
+  return {
+    appMemberships,
+    orgMemberships,
+    appInvites,
+    orgInvites
+  };
+}
+
+function mutationRowId(data: Record<string, unknown>, field: string, row: string): string | null {
+  const payload = data[field];
+  const value = payload && typeof payload === 'object' && !Array.isArray(payload)
+    ? (payload as Record<string, unknown>)[row]
+    : null;
+  return value && typeof value === 'object' && !Array.isArray(value) &&
+    typeof (value as Record<string, unknown>).id === 'string'
+    ? (value as Record<string, unknown>).id as string
+    : null;
+}
 
 async function readEmailVerificationState(
   tenant: ProofTenant,
@@ -535,20 +722,65 @@ test('reads the complete full-preset billing contract through the billing endpoi
   }
 });
 
-test('loads membership views and creates and cancels roleless app and organization invitations', async ({ page }) => {
+test('loads authoritative memberships and fails closed around organization RLS', async ({ browser, page }) => {
   const tenant = proof.tenant('full');
   const appInviteEmail = `console-kit-app-invite-${randomUUID()}@example.test`;
   const organizationInviteEmail = `console-kit-org-invite-${randomUUID()}@example.test`;
+  const unauthorizedInviteEmail = `console-kit-denied-org-invite-${randomUUID()}@example.test`;
   const organizationName = `Console Kit Proof ${randomUUID().slice(0, 8)}`;
+  const unauthorizedOrganizationName = `Console Kit Denied ${randomUUID().slice(0, 8)}`;
+  const ordinaryCredentials = {
+    email: `console-kit-ordinary-${randomUUID()}@example.test`,
+    password: `ConsoleKit-${randomUUID()}-Aa1!`
+  };
   const cleanupSession = await signIn(tenant, proof.credentials(tenant));
   let organizationId: string | null = null;
+  let ordinarySession: LiveSession | null = null;
+  let ordinaryContext: BrowserContext | null = null;
+  let ownerUiSignedIn = false;
+  let ordinaryUiSignedIn = false;
+  let scenarioFailure: unknown;
 
   try {
+    const seededMemberships = await readMembershipProof(tenant, cleanupSession.token);
+    const seededAppMembershipRows = seededMemberships.appMemberships.filter(
+      (membership) => membership.actorId === cleanupSession.userId
+    );
+    expect(seededAppMembershipRows).toHaveLength(1);
+    const [seededAppMembership] = seededAppMembershipRows;
+    expect(seededAppMembership).toMatchObject({
+      actorId: cleanupSession.userId,
+      isOwner: true,
+      isAdmin: true,
+      isActive: true,
+      isApproved: true,
+      isVerified: true,
+      isBanned: false,
+      isDisabled: false,
+      isReadOnly: false
+    });
+    expect(seededAppMembership?.permissions).toMatch(/^1+$/u);
+    const seededUsers = await readOrganizationUsers(tenant, cleanupSession.token);
+    const seededUser = seededUsers.find((user) => user.id === cleanupSession.userId);
+    expect(seededUser).toBeDefined();
+    const seededUserLabel = typeof seededUser?.displayName === 'string' && seededUser.displayName
+      ? seededUser.displayName
+      : typeof seededUser?.username === 'string' && seededUser.username
+        ? seededUser.username
+        : cleanupSession.userId;
+
     await visitProof(page);
     await signInThroughUi(page, tenant, proof.credentials(tenant));
+    ownerUiSignedIn = true;
 
     await openFeature(page, 'Users');
     await expect(page.getByRole('heading', { level: 1, name: 'Users' })).toBeVisible();
+    const seededAppMemberRow = page.getByRole('row')
+      .filter({ hasText: seededUserLabel })
+      .filter({ hasText: 'Owner' })
+      .filter({ hasText: 'active' });
+    await expect(seededAppMemberRow).toHaveCount(1);
+    await expect(seededAppMemberRow).toBeVisible();
     await page.getByRole('button', { name: 'Invite member' }).click();
     const appInviteDialog = page.getByRole('dialog', { name: 'Invite an app member' });
     await expect(appInviteDialog.getByRole('combobox', { name: 'Role' })).toHaveCount(0);
@@ -574,22 +806,10 @@ test('loads membership views and creates and cancels roleless app and organizati
     await expect(createOrganizationDialog).toBeHidden();
     await expect(page.getByText(organizationName, { exact: true }).first()).toBeVisible();
 
-    const organizationRows = await pollRows(async () => {
-      const data = await graphQL<Record<string, unknown>>(
-        endpointUrl(tenant, 'auth'),
-        ORGANIZATION_USERS_READ,
-        {},
-        cleanupSession.token
-      );
-      const users = data.users && typeof data.users === 'object' && !Array.isArray(data.users)
-        ? (data.users as { nodes?: unknown }).nodes
-        : null;
-      return Array.isArray(users)
-        ? users.filter((row): row is Record<string, unknown> =>
-            Boolean(row) && typeof row === 'object' && !Array.isArray(row)
-          )
-        : [];
-    }, (rows) => rows.some((row) => row.displayName === organizationName && row.type === 2));
+    const organizationRows = await pollRows(
+      () => readOrganizationUsers(tenant, cleanupSession.token),
+      (rows) => rows.some((row) => row.displayName === organizationName && row.type === 2)
+    );
     const createdOrganization = organizationRows.find(
       (row) => row.displayName === organizationName && row.type === 2
     );
@@ -597,6 +817,36 @@ test('loads membership views and creates and cancels roleless app and organizati
       ? createdOrganization.id
       : null;
     expect(organizationId).toBeTruthy();
+
+    const ownerMembershipRows = await pollRows(async () => {
+      const memberships = await readMembershipProof(tenant, cleanupSession.token);
+      return memberships.orgMemberships;
+    }, (rows) => rows.some((row) =>
+      row.actorId === cleanupSession.userId && row.entityId === organizationId
+    ));
+    const matchingOwnerMemberships = ownerMembershipRows.filter((row) =>
+      row.actorId === cleanupSession.userId && row.entityId === organizationId
+    );
+    expect(matchingOwnerMemberships).toHaveLength(1);
+    const [ownerMembership] = matchingOwnerMemberships;
+    expect(ownerMembership).toMatchObject({
+      actorId: cleanupSession.userId,
+      entityId: organizationId,
+      isOwner: true,
+      isAdmin: true,
+      isActive: true,
+      isApproved: true,
+      isBanned: false,
+      isDisabled: false,
+      isReadOnly: false
+    });
+    expect(ownerMembership?.permissions).toMatch(/^1+$/u);
+    const organizationOwnerRow = page.getByRole('row')
+      .filter({ hasText: seededUserLabel })
+      .filter({ hasText: 'Owner' })
+      .filter({ hasText: 'active' });
+    await expect(organizationOwnerRow).toHaveCount(1);
+    await expect(organizationOwnerRow).toBeVisible();
 
     await page.getByRole('button', { name: 'Invite member' }).click();
     const organizationInviteDialog = page.getByRole('dialog', {
@@ -616,26 +866,274 @@ test('loads membership views and creates and cancels roleless app and organizati
     await organizationInviteRow.getByRole('button', { name: 'Cancel', exact: true }).click();
     await expect(page.getByText(organizationInviteEmail, { exact: true })).toHaveCount(0);
 
+    ordinarySession = await signUp(tenant, ordinaryCredentials);
+    const newOrdinaryMemberships = await readMembershipProof(tenant, cleanupSession.token);
+    const newOrdinaryAppMembershipRows = newOrdinaryMemberships.appMemberships.filter(
+      (membership) => membership.actorId === ordinarySession?.userId
+    );
+    expect(newOrdinaryAppMembershipRows).toHaveLength(1);
+    expect(newOrdinaryAppMembershipRows[0]).toMatchObject({
+      actorId: ordinarySession.userId,
+      isOwner: false,
+      isAdmin: false,
+      isActive: false,
+      isApproved: false,
+      isVerified: false,
+      isBanned: false,
+      isDisabled: false,
+      isReadOnly: false
+    });
+    expect(newOrdinaryAppMembershipRows[0]?.permissions).toMatch(/^0+$/u);
+    const ordinaryMembershipId = newOrdinaryAppMembershipRows[0]?.id;
+    expect(typeof ordinaryMembershipId).toBe('string');
+    const activatedMembership = await graphQL<Record<string, unknown>>(
+      endpointUrl(tenant, 'admin'),
+      UPDATE_APP_MEMBERSHIP,
+      {
+        input: {
+          id: ordinaryMembershipId,
+          appMembershipPatch: { isApproved: true, isVerified: true }
+        }
+      },
+      cleanupSession.token
+    );
+    expect(mutationRowId(activatedMembership, 'updateAppMembership', 'appMembership'))
+      .toBe(ordinaryMembershipId);
+    const ordinaryAppMembershipRows = await pollRows(async () => {
+      const memberships = await readMembershipProof(tenant, ordinarySession!.token);
+      return memberships.appMemberships;
+    }, (rows) => rows.some((membership) =>
+      membership.actorId === ordinarySession?.userId && membership.isActive === true
+    ));
+    const activeOrdinaryAppMemberships = ordinaryAppMembershipRows.filter(
+      (membership) => membership.actorId === ordinarySession?.userId
+    );
+    expect(activeOrdinaryAppMemberships).toHaveLength(1);
+    expect(activeOrdinaryAppMemberships[0]).toMatchObject({
+      actorId: ordinarySession.userId,
+      isOwner: false,
+      isAdmin: false,
+      isActive: true,
+      isApproved: true,
+      isVerified: true,
+      isBanned: false,
+      isDisabled: false,
+      isReadOnly: false
+    });
+    expect(activeOrdinaryAppMemberships[0]?.permissions).toMatch(/^0+$/u);
+    const deniedOrganization = await rawGraphQL<Record<string, unknown>>(
+      endpointUrl(tenant, 'auth'),
+      CREATE_ORGANIZATION_USER,
+      {
+        input: {
+          user: { displayName: unauthorizedOrganizationName, type: 2 }
+        }
+      },
+      ordinarySession.token
+    );
+    expect(deniedOrganization.errors?.length ?? 0).toBeGreaterThan(0);
+    expect(deniedOrganization.errors?.map((error) => error.extensions?.code))
+      .toContain('42501');
+    expect(deniedOrganization.errors?.some((error) =>
+      /row-level security|permission denied/iu.test(error.message ?? '')
+    )).toBe(true);
+    expect(
+      deniedOrganization.data && typeof deniedOrganization.data === 'object'
+        ? deniedOrganization.data.createUser
+        : null
+    ).toBeFalsy();
+    const usersAfterDeniedOrganization = await readOrganizationUsers(
+      tenant,
+      cleanupSession.token
+    );
+    expect(usersAfterDeniedOrganization.some((user) =>
+      user.type === 2 && user.displayName === unauthorizedOrganizationName
+    )).toBe(false);
+
+    const deniedInvite = await rawGraphQL<Record<string, unknown>>(
+      endpointUrl(tenant, 'admin'),
+      CREATE_ORGANIZATION_INVITE,
+      {
+        input: {
+          orgInvite: { entityId: organizationId, email: unauthorizedInviteEmail }
+        }
+      },
+      ordinarySession.token
+    );
+    expect(deniedInvite.errors?.length ?? 0).toBeGreaterThan(0);
+    expect(deniedInvite.errors?.map((error) => error.extensions?.code)).toContain('42501');
+    expect(deniedInvite.errors?.some((error) =>
+      /row-level security|permission denied/iu.test(error.message ?? '')
+    )).toBe(true);
+    expect(
+      deniedInvite.data && typeof deniedInvite.data === 'object'
+        ? deniedInvite.data.createOrgInvite
+        : null
+    ).toBeFalsy();
+    const membershipsAfterDeniedInvite = await readMembershipProof(
+      tenant,
+      cleanupSession.token
+    );
+    expect(membershipsAfterDeniedInvite.orgInvites.some((invite) =>
+      invite.email === unauthorizedInviteEmail
+    )).toBe(false);
+
+    ordinaryContext = await browser.newContext({ serviceWorkers: 'block' });
+    const ordinaryPage = await ordinaryContext.newPage();
+    await visitProof(ordinaryPage);
+    await signInThroughUi(ordinaryPage, tenant, ordinaryCredentials);
+    ordinaryUiSignedIn = true;
+    await openFeature(ordinaryPage, 'Users');
+    await expect(ordinaryPage.getByRole('heading', { level: 1, name: 'Users' })).toBeVisible();
+    await expect(ordinaryPage.getByRole('button', { name: 'Invite member', exact: true }))
+      .toHaveCount(0);
+    await openFeature(ordinaryPage, 'Organizations');
+    await expect(ordinaryPage.getByRole('heading', { level: 1, name: 'Organizations' }))
+      .toBeVisible();
+    await expect(ordinaryPage.getByRole('button', { name: 'New organization', exact: true }))
+      .toHaveCount(0);
+    await expect(ordinaryPage.getByRole('button', { name: 'Invite member', exact: true }))
+      .toHaveCount(0);
+    await signOutThroughUi(ordinaryPage);
+    ordinaryUiSignedIn = false;
+    await ordinaryContext.close();
+    ordinaryContext = null;
+
     await signOutThroughUi(page);
-  } finally {
-    if (organizationId) {
+    ownerUiSignedIn = false;
+  } catch (cause) {
+    scenarioFailure = cause;
+  }
+
+  const cleanupFailures: unknown[] = [];
+  const cleanup = async (label: string, action: () => Promise<void>) => {
+    try {
+      await action();
+    } catch (cause) {
+      cleanupFailures.push(new Error(
+        `${label}: ${cause instanceof Error ? cause.message : String(cause)}`
+      ));
+    }
+  };
+  if (ordinaryContext) {
+    if (ordinaryUiSignedIn) {
+      await cleanup('sign out the ordinary browser session', async () => {
+        await signOutThroughUi((ordinaryContext as BrowserContext).pages()[0]!);
+      });
+    }
+    await cleanup('close the ordinary browser context', async () => {
+      await ordinaryContext?.close();
+      ordinaryContext = null;
+    });
+  }
+  if (ownerUiSignedIn) {
+    await cleanup('sign out the owner browser session', async () => {
+      await signOutThroughUi(page);
+      ownerUiSignedIn = false;
+    });
+  }
+  if (ordinarySession) {
+    await cleanup('revoke the ordinary direct session', async () => {
+      await signOut(tenant, ordinarySession!.token);
+    });
+  }
+
+  const fixtureOrganizationIds = new Set<string>();
+  if (organizationId) fixtureOrganizationIds.add(organizationId);
+  await cleanup('discover created organization identities', async () => {
+    const users = await readOrganizationUsers(tenant, cleanupSession.token);
+    for (const user of users) {
+      if (
+        user.type === 2 &&
+        (user.displayName === organizationName || user.displayName === unauthorizedOrganizationName) &&
+        typeof user.id === 'string'
+      ) {
+        fixtureOrganizationIds.add(user.id);
+      }
+    }
+  });
+
+  await cleanup('remove retained invitation fixtures', async () => {
+    const memberships = await readMembershipProof(tenant, cleanupSession.token);
+    const appEmails = new Set([appInviteEmail]);
+    const organizationEmails = new Set([organizationInviteEmail, unauthorizedInviteEmail]);
+    for (const invite of memberships.appInvites) {
+      if (!appEmails.has(String(invite.email)) || typeof invite.id !== 'string') continue;
       const deleted = await graphQL<Record<string, unknown>>(
-        endpointUrl(tenant, 'auth'),
-        DELETE_ORGANIZATION_USER,
-        { input: { id: organizationId } },
+        endpointUrl(tenant, 'admin'),
+        DELETE_APP_INVITE,
+        { input: { id: invite.id } },
         cleanupSession.token
       );
-      const deleteUser = deleted.deleteUser;
-      const deletedUser = deleteUser && typeof deleteUser === 'object' && !Array.isArray(deleteUser)
-        ? (deleteUser as Record<string, unknown>).user
-        : null;
-      expect(
-        deletedUser && typeof deletedUser === 'object' && !Array.isArray(deletedUser)
-          ? (deletedUser as Record<string, unknown>).id
-          : null
-      ).toBe(organizationId);
+      expect(mutationRowId(deleted, 'deleteAppInvite', 'appInvite')).toBe(invite.id);
     }
+    for (const invite of memberships.orgInvites) {
+      if (!organizationEmails.has(String(invite.email)) || typeof invite.id !== 'string') continue;
+      const deleted = await graphQL<Record<string, unknown>>(
+        endpointUrl(tenant, 'admin'),
+        DELETE_ORGANIZATION_INVITE,
+        { input: { id: invite.id } },
+        cleanupSession.token
+      );
+      expect(mutationRowId(deleted, 'deleteOrgInvite', 'orgInvite')).toBe(invite.id);
+    }
+  });
+
+  await cleanup('remove created organization identities', async () => {
+    for (const id of fixtureOrganizationIds) {
+      const deleted = await graphQL<Record<string, unknown>>(
+        endpointUrl(tenant, 'auth'),
+        DELETE_USER,
+        { input: { id } },
+        cleanupSession.token
+      );
+      expect(mutationRowId(deleted, 'deleteUser', 'user')).toBe(id);
+    }
+  });
+  if (ordinarySession) {
+    await cleanup('remove the ordinary proof identity', async () => {
+      const deleted = await graphQL<Record<string, unknown>>(
+        endpointUrl(tenant, 'auth'),
+        DELETE_USER,
+        { input: { id: ordinarySession!.userId } },
+        cleanupSession.token
+      );
+      expect(mutationRowId(deleted, 'deleteUser', 'user')).toBe(ordinarySession!.userId);
+    });
+  }
+
+  await cleanup('verify membership fixture cleanup', async () => {
+    const [users, memberships] = await Promise.all([
+      readOrganizationUsers(tenant, cleanupSession.token),
+      readMembershipProof(tenant, cleanupSession.token)
+    ]);
+    expect(users.some((user) =>
+      fixtureOrganizationIds.has(String(user.id)) ||
+      user.displayName === organizationName ||
+      user.displayName === unauthorizedOrganizationName ||
+      user.id === ordinarySession?.userId
+    )).toBe(false);
+    expect(memberships.appInvites.some((invite) => invite.email === appInviteEmail)).toBe(false);
+    expect(memberships.orgInvites.some((invite) =>
+      invite.email === organizationInviteEmail || invite.email === unauthorizedInviteEmail
+    )).toBe(false);
+    expect(memberships.orgMemberships.some((membership) =>
+      fixtureOrganizationIds.has(String(membership.entityId))
+    )).toBe(false);
+    expect(memberships.appMemberships.some((membership) =>
+      membership.actorId === ordinarySession?.userId
+    )).toBe(false);
+  });
+  await cleanup('revoke the cleanup session', async () => {
     await signOut(tenant, cleanupSession.token);
+  });
+
+  const failures = [
+    ...(scenarioFailure === undefined ? [] : [scenarioFailure]),
+    ...cleanupFailures
+  ];
+  if (failures.length > 0) {
+    throw new AggregateError(failures, 'The membership proof or its cleanup failed.');
   }
 });
 

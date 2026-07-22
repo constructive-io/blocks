@@ -8,7 +8,8 @@ An arbitrary GraphQL endpoint, an older `_meta` shape, or a routed API name by
 itself is not treated as compatible.
 
 The `blank` profile installs no auth or RLS modules. Current provisioning still
-creates a nominal `auth` route, but that route has no usable auth lifecycle.
+creates routable `api` and `auth` routes, but the auth route has no user
+lifecycle contract and bearer-auth middleware is skipped.
 Pass a host-owned, database-scoped session when mounting
 `ConstructiveConsoleKit` for that profile; the wrapper verifies that the session
 database ID matches the tenant descriptor, starts on Data, and omits the auth
@@ -42,11 +43,22 @@ persisted CRUD, direct-owner RLS isolation, and a composite `post_tags`
 primary key. It also executes the full preset's seven-connection billing read,
 asserts that the stock seed intentionally returns zero billing rows, and proves
 that Console Kit renders its billing empty states without an error. The suite
-creates an organization through the same type-2 user contract used by
-Dashboard, observes its trigger-created owner membership, and creates and
-cancels roleless application and organization invitations through the UI. It
-verifies the versioned `_meta` query before loading data-backed features and
-drives sign-up and an explicit verification send through Console Kit before delivering
+creates an organization through Console Kit's type-2 user contract, then
+verifies that Console Kit loads and manages it. The
+trigger-created membership must be the sole current-actor row, must be owner,
+administrator, active, approved, not banned, not disabled, and not read-only,
+and must carry the all-one owner permission mask. The proof creates and cancels
+roleless application and organization invitations through the UI. A
+freshly signed-up user receives the generated all-zero app permission default;
+the proof activates that membership without changing its mask, checks that app
+and organization management controls are absent for the active ordinary user,
+and confirms that direct type-2 user and organization-invite mutations both
+return PostgreSQL authorization code `42501` and leave no row behind. It removes
+every uniquely named identity, membership,
+and invitation fixture and verifies their absence before releasing its cleanup
+session. The suite verifies the versioned `_meta` query before loading
+data-backed features and drives sign-up and an explicit verification send
+through Console Kit before delivering
 the email through the job worker, generated function, SMTP, and Mailpit. The
 proof first rejects a wrong credential, then consumes the freshly delivered
 credential through `verifyEmail` from a fresh signed-out browser context,
@@ -75,10 +87,25 @@ incompatible mask width falls back to strict filtering. Owners and
 administrators retain their backend role fallback while active, while
 delegated sessions only receive assignable profiles. Invitations without a
 profile remain available whenever `create_invites` is granted.
-Organization creation is enabled only when introspection proves that
-`createUser.user` accepts both `displayName` and `type`; the adapter fixes
-`type` to `2`, and the backend user-insert trigger creates the current actor's
-owner membership in the same transaction.
+Organization creation is enabled only when introspection proves the required
+create and rollback inputs, including a writable unique `username`, the auth
+user directory exposes `id`, `username`, and `type`,
+the organization membership directory exposes every owner-status field needed
+for verification, and the current actor has an active RLS-visible app
+membership whose effective mask includes `create_entity`. Optional auth user
+fields such as `displayName` and `profilePicture` are selected only when the
+tenant exposes them. The adapter fixes the input type to `2`, assigns a unique
+`console-kit-org-*` username as a reconciliation key for the lifetime of that
+adapter instance, uses a client UUID too when the tenant accepts one, then
+re-reads that exact identity and requires one current-actor
+membership that is owner, administrator, active, approved, not banned, not
+disabled, not read-only, and carries an all-one effective permission mask. Only
+then does it select the new organization. If a create response is lost, the
+unique username makes the result recoverable and an in-flight same-name retry
+in the same database and actor scope reuses that key while the adapter instance
+remains alive; if the postcondition fails, the adapter
+attempts authenticated deletion, leaves the previous selection unchanged, and
+returns a typed non-retryable provisioning error.
 
 Hardened auth tenants can enable `require_csrf_for_auth`. Console Kit accepts
 an async `csrfTokenProvider` which must ask a trusted host endpoint to create a
@@ -97,6 +124,12 @@ returned by `getAccessToken` or written back to browser storage.
 
 ## Current backend gaps
 
+- Organization creation is a generic type-2 user insert whose owner membership
+  is created by a trigger, with no backend idempotency key or purpose-built
+  atomic provisioning RPC. Console Kit can reconcile a lost response and reuse
+  its generated username only while the same adapter instance retains that
+  pending key; a page reload loses it, so exactly-once provisioning still needs
+  a backend operation that accepts and persists a client request key.
 - The generated `verify_email` function checks expiry before assigning the
   verification secret name. On the first request after three days it removes
   the expiry/rate-limit row, attempts to delete a `NULL` secret name, and

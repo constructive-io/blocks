@@ -68,6 +68,13 @@ function snapshot(input: Readonly<{
   mutations?: Readonly<Record<string, string>>;
   types?: readonly ConstructiveSchemaType[];
 }>): ConstructiveSchemaSnapshot {
+  const types = [...(input.types ?? [])];
+  if (
+    input.queries?.includes('users') &&
+    !types.some((type) => type.name === 'User')
+  ) {
+    types.push(objectType('User', ['id', 'displayName', 'username', 'profilePicture', 'type']));
+  }
   return {
     endpointKind: input.endpoint,
     endpointId: `${input.endpoint}-endpoint`,
@@ -81,7 +88,7 @@ function snapshot(input: Readonly<{
         }])
       ]
     )),
-    types: Object.fromEntries((input.types ?? []).map((type) => [type.name, type]))
+    types: Object.fromEntries(types.map((type) => [type.name, type]))
   };
 }
 
@@ -97,14 +104,15 @@ function discovery(schemas: ConstructiveSchemaMap): ConstructiveCapabilityDiscov
 function runtime(
   responder: (call: GraphQLCall) => unknown,
   subjectId = 'user-1',
-  authenticated = true
+  authenticated = true,
+  databaseId = 'database-1'
 ): ConsoleKitAdapterContext {
   const endpoints = {
     auth: { id: 'auth-endpoint', kind: 'auth', url: '/auth/graphql' },
     admin: { id: 'admin-endpoint', kind: 'admin', url: '/admin/graphql' }
   } as const;
   return {
-    databaseId: 'database-1',
+    databaseId,
     endpoints,
     session: authenticated
       ? {
@@ -934,53 +942,344 @@ describe('Constructive users adapter RLS contract', () => {
 });
 
 describe('Constructive organizations adapter RLS contract', () => {
-  it('creates an organization through the trigger-backed type-2 user contract', async () => {
+  it('scopes ambiguous username retries by database and actor', async () => {
     const calls: GraphQLCall[] = [];
+    const store = createConsoleKitStore('organizations');
     const adapter = createConstructiveOrganizationsAdapter({
-      store: createConsoleKitStore('organizations'),
+      store,
       discovery: discovery({
         admin: snapshot({
           endpoint: 'admin',
-          queries: ['orgMemberships'],
-          types: [objectType('OrgMembership', ['id', 'actorId', 'entityId'])]
+          queries: ['orgMemberships', 'appMemberships', 'appPermissions'],
+          types: [
+            objectType('OrgMembership', [
+              'id', 'actorId', 'entityId', 'isOwner', 'isAdmin', 'isActive', 'isApproved',
+              'isBanned', 'isDisabled', 'isReadOnly', 'permissions'
+            ]),
+            objectType('AppMembership', ['actorId', 'isActive', 'permissions']),
+            objectType('AppPermission', ['name', 'bitstr'])
+          ]
         }),
         auth: snapshot({
           endpoint: 'auth',
           queries: ['users'],
-          mutations: { createUser: 'CreateUserInput' },
+          mutations: {
+            createUser: 'CreateUserInput',
+            deleteUser: 'DeleteUserInput'
+          },
           types: [
+            objectType('User', ['id', 'username', 'type']),
             inputType('CreateUserInput', { user: 'UserInput' }),
-            inputType('UserInput', { displayName: 'String', type: 'Int' })
+            inputType('UserInput', {
+              username: 'String',
+              displayName: 'String',
+              type: 'Int'
+            }),
+            inputType('DeleteUserInput', { id: 'UUID' })
           ]
         })
       })
     });
-    const loaded = await adapter.load(runtime((call) => {
+    const createdByDatabase = new Map<string, Readonly<{
+      id: string;
+      username: string;
+      name: string;
+    }>>();
+    const recoveryQueryFailures = new Map([['database-1', 1]]);
+    const responderFor = (databaseId: string) => (call: GraphQLCall) => {
       calls.push(call);
-      if (call.document.includes('ConsoleKitOrganizationMemberships')) {
-        return { orgMemberships: { nodes: [] } };
+      if (call.document.includes('ConsoleKitCreateOrganization')) {
+        const user = (call.variables?.input as { user?: Record<string, unknown> } | undefined)
+          ?.user;
+        const username = typeof user?.username === 'string' ? user.username : '';
+        const name = typeof user?.displayName === 'string' ? user.displayName : '';
+        const existing = createdByDatabase.get(databaseId);
+        if (existing) {
+          throw new Error('The organization username already exists.');
+        }
+        const created = {
+          id: `org-${databaseId}`,
+          username,
+          name
+        };
+        createdByDatabase.set(databaseId, created);
+        if (databaseId === 'database-1') {
+          throw new Error('The connection closed after the database committed.');
+        }
+        return { createUser: { user: { ...created, displayName: name, type: 2 } } };
       }
-      if (call.document.includes('ConsoleKitOrganizationUsers')) {
-        return { users: { nodes: [] } };
+      const created = createdByDatabase.get(databaseId);
+      if (call.document.includes('orgMemberships(first:')) {
+        return {
+          orgMemberships: {
+            nodes: created ? [{
+              id: `membership-owner-${databaseId}`,
+              actorId: 'user-1',
+              entityId: created.id,
+              isOwner: true,
+              isAdmin: true,
+              isActive: true,
+              isApproved: true,
+              isBanned: false,
+              isDisabled: false,
+              isReadOnly: false,
+              permissions: '111'
+            }] : []
+          }
+        };
       }
-      return { createUser: { user: { id: 'org-1' } } };
-    }), new AbortController().signal);
+      if (call.document.includes('appMemberships(first:')) {
+        return {
+          appMemberships: {
+            nodes: [{ actorId: 'user-1', isActive: true, permissions: '001' }]
+          }
+        };
+      }
+      if (call.document.includes('appPermissions(first:')) {
+        return {
+          appPermissions: { nodes: [{ name: 'create_entity', bitstr: '001' }] }
+        };
+      }
+      if (call.document.includes('users(first:')) {
+        const remainingFailures = recoveryQueryFailures.get(databaseId) ?? 0;
+        if (created && remainingFailures > 0) {
+          recoveryQueryFailures.set(databaseId, remainingFailures - 1);
+          throw new Error('The recovery read was temporarily unavailable.');
+        }
+        return {
+          users: {
+            nodes: created ? [{
+              id: created.id,
+              username: created.username,
+              type: 2
+            }] : []
+          }
+        };
+      }
+      return {};
+    };
+    const loaded = await adapter.load(
+      runtime(responderFor('database-1')),
+      new AbortController().signal
+    );
 
     expect(loaded.resource).toEqual({ status: 'empty' });
     expect(loaded.policy?.createOrganization).toBe(true);
+    await expect(loaded.actions?.createOrganization?.({ name: 'Acme' }))
+      .rejects.toMatchObject({
+        code: 'ORGANIZATION_PROVISIONING_OUTCOME_UNKNOWN',
+        retryable: false,
+        resourceKey: expect.stringMatching(/^console-kit-org-/u)
+      });
+    const otherScope = await adapter.load(
+      runtime(responderFor('database-2'), 'user-1', true, 'database-2'),
+      new AbortController().signal
+    );
+    expect(otherScope.policy?.createOrganization).toBe(true);
+    await otherScope.actions?.createOrganization?.({ name: 'Other' });
     await loaded.actions?.createOrganization?.({ name: 'Acme' });
-    expect(calls.find((call) => call.document.includes('ConsoleKitCreateOrganization')))
+    const createCalls = calls.filter((call) =>
+      call.document.includes('ConsoleKitCreateOrganization')
+    );
+    expect(createCalls).toHaveLength(3);
+    expect(createCalls[0])
       .toMatchObject({
         endpoint: 'auth',
-        variables: { input: { user: { displayName: 'Acme', type: 2 } } }
+        variables: {
+          input: {
+            user: {
+              username: expect.stringMatching(/^console-kit-org-/u),
+              displayName: 'Acme',
+              type: 2
+            }
+          }
+        }
       });
+    expect(createCalls[0]?.variables).toEqual(createCalls[2]?.variables);
+    expect(createCalls[1]?.variables).not.toEqual(createCalls[0]?.variables);
+    expect(createCalls[0]?.variables).not.toHaveProperty('input.user.id');
+    expect(store.getState().context).toEqual({
+      databaseId: 'database-1',
+      organizationId: 'org-database-1'
+    });
+    expect(calls.some((call) =>
+      call.document.includes('ConsoleKitCreatedOrganizationMembershipsPage')
+    )).toBe(true);
+  });
+
+  it('rolls back an organization whose exact owner-membership postcondition fails', async () => {
+    const calls: GraphQLCall[] = [];
+    const store = createConsoleKitStore('organizations');
+    const adapter = createConstructiveOrganizationsAdapter({
+      store,
+      discovery: discovery({
+        admin: snapshot({
+          endpoint: 'admin',
+          queries: ['orgMemberships', 'appMemberships', 'appPermissions'],
+          types: [
+            objectType('OrgMembership', [
+              'id', 'actorId', 'entityId', 'isOwner', 'isAdmin', 'isActive', 'isApproved',
+              'isBanned', 'isDisabled', 'isReadOnly', 'permissions'
+            ]),
+            objectType('AppMembership', ['actorId', 'isActive', 'permissions']),
+            objectType('AppPermission', ['name', 'bitstr'])
+          ]
+        }),
+        auth: snapshot({
+          endpoint: 'auth',
+          queries: ['users'],
+          mutations: {
+            createUser: 'CreateUserInput',
+            deleteUser: 'DeleteUserInput'
+          },
+          types: [
+            objectType('User', ['id', 'username', 'displayName', 'type']),
+            inputType('CreateUserInput', { user: 'UserInput' }),
+            inputType('UserInput', {
+              id: 'UUID',
+              username: 'String',
+              displayName: 'String',
+              type: 'Int'
+            }),
+            inputType('DeleteUserInput', { id: 'UUID' })
+          ]
+        })
+      })
+    });
+    let createdOrganizationId: string | null = null;
+    let createdOrganizationUsername: string | null = null;
+    const loaded = await adapter.load(runtime((call) => {
+      calls.push(call);
+      if (call.document.includes('ConsoleKitCreateOrganization')) {
+        const user = (call.variables?.input as { user?: Record<string, unknown> } | undefined)
+          ?.user;
+        createdOrganizationId = typeof user?.id === 'string' ? user.id : null;
+        createdOrganizationUsername = typeof user?.username === 'string'
+          ? user.username
+          : null;
+        return {
+          createUser: {
+            user: {
+              id: createdOrganizationId,
+              username: createdOrganizationUsername,
+              displayName: 'Incomplete',
+              type: 2
+            }
+          }
+        };
+      }
+      if (call.document.includes('ConsoleKitDeleteIncompleteOrganization')) {
+        return { deleteUser: { user: { id: createdOrganizationId } } };
+      }
+      if (call.document.includes('orgMemberships(first:')) {
+        return {
+          orgMemberships: {
+            nodes: createdOrganizationId ? [{
+              id: 'membership-incomplete',
+              actorId: 'user-1',
+              entityId: createdOrganizationId,
+              isOwner: false,
+              isAdmin: true,
+              isActive: true,
+              isApproved: true,
+              isBanned: false,
+              isDisabled: false,
+              isReadOnly: false,
+              permissions: '111'
+            }] : []
+          }
+        };
+      }
+      if (call.document.includes('appMemberships(first:')) {
+        return {
+          appMemberships: {
+            nodes: [{ actorId: 'user-1', isActive: true, permissions: '001' }]
+          }
+        };
+      }
+      if (call.document.includes('appPermissions(first:')) {
+        return {
+          appPermissions: { nodes: [{ name: 'create_entity', bitstr: '001' }] }
+        };
+      }
+      if (call.document.includes('users(first:')) {
+        return {
+          users: {
+            nodes: createdOrganizationId
+              ? [{
+                  id: createdOrganizationId,
+                  username: createdOrganizationUsername,
+                  displayName: 'Incomplete',
+                  type: 2
+                }]
+              : []
+          }
+        };
+      }
+      return {};
+    }), new AbortController().signal);
+
+    await expect(loaded.actions?.createOrganization?.({ name: 'Incomplete' }))
+      .rejects.toMatchObject({
+        code: 'ORGANIZATION_PROVISIONING_CONTRACT_FAILED',
+        retryable: false,
+        message: expect.stringContaining('The incomplete organization was removed.')
+      });
+    expect(calls.find((call) =>
+      call.document.includes('ConsoleKitDeleteIncompleteOrganization')
+    )).toMatchObject({
+      endpoint: 'auth',
+      variables: { input: { id: createdOrganizationId } }
+    });
+    expect(store.getState().context).toBeNull();
+    await expect(loaded.actions?.createOrganization?.({ name: 'Another incomplete org' }))
+      .rejects.toMatchObject({
+        code: 'ORGANIZATION_PROVISIONING_CONTRACT_FAILED',
+        retryable: false
+      });
+    const createCalls = calls.filter((call) =>
+      call.document.includes('ConsoleKitCreateOrganization')
+    );
+    expect(createCalls).toHaveLength(2);
+    expect(createCalls[1]?.variables).not.toEqual(createCalls[0]?.variables);
+  });
+
+  it('reports a clean unavailable state when auth omits required organization identity fields', () => {
+    const store = createConsoleKitStore('organizations');
+    store.getState().setPackCapability('organizations', {
+      status: 'ready',
+      packId: 'organizations',
+      supportedCapabilities: ['organizations.memberships'],
+      evidence: []
+    });
+    const adapter = createConstructiveOrganizationsAdapter({
+      store,
+      discovery: discovery({
+        auth: snapshot({
+          endpoint: 'auth',
+          queries: ['users'],
+          types: [objectType('User', ['id', 'displayName'])]
+        })
+      })
+    });
+
+    expect(adapter.getAvailability!(runtime(() => ({})))).toEqual({
+      status: 'unavailable',
+      reason: 'The auth endpoint must expose the users connection with readable id and type fields.'
+    });
   });
 
   it('keeps an ordinary member read-only and preserves the owner fallback', async () => {
     const calls: GraphQLCall[] = [];
     const adminSchema = snapshot({
       endpoint: 'admin',
-      queries: ['orgMemberships', 'orgInvites', 'orgProfiles'],
+      queries: [
+        'orgMemberships',
+        'orgInvites',
+        'orgProfiles',
+        'appMemberships',
+        'appPermissions'
+      ],
       mutations: {
         createOrgInvite: 'CreateOrgInviteInput',
         updateOrgMembership: 'UpdateOrgMembershipInput',
@@ -989,10 +1288,13 @@ describe('Constructive organizations adapter RLS contract', () => {
       },
       types: [
         objectType('OrgMembership', [
-          'id', 'actorId', 'entityId', 'isOwner', 'isAdmin', 'isActive', 'profileId'
+          'id', 'actorId', 'entityId', 'isOwner', 'isAdmin', 'isActive', 'isApproved',
+          'isBanned', 'isDisabled', 'isReadOnly', 'permissions', 'profileId'
         ]),
         objectType('OrgInvite', ['id', 'entityId', 'email', 'profileId']),
         objectType('OrgProfile', ['id', 'name', 'entityId']),
+        objectType('AppMembership', ['actorId', 'isActive', 'permissions']),
+        objectType('AppPermission', ['name', 'bitstr']),
         ...adminMutationTypes('Org')
       ]
     });
@@ -1000,7 +1302,25 @@ describe('Constructive organizations adapter RLS contract', () => {
       store: createConsoleKitStore('organizations'),
       discovery: discovery({
         admin: adminSchema,
-        auth: snapshot({ endpoint: 'auth', queries: ['users'], mutations: { createUser: 'CreateUserInput' } })
+        auth: snapshot({
+          endpoint: 'auth',
+          queries: ['users'],
+          mutations: {
+            createUser: 'CreateUserInput',
+            deleteUser: 'DeleteUserInput'
+          },
+          types: [
+            objectType('User', ['id', 'displayName', 'username', 'profilePicture', 'type']),
+            inputType('CreateUserInput', { user: 'UserInput' }),
+            inputType('UserInput', {
+              id: 'UUID',
+              username: 'String',
+              displayName: 'String',
+              type: 'Int'
+            }),
+            inputType('DeleteUserInput', { id: 'UUID' })
+          ]
+        })
       })
     });
     const responder = (
@@ -1031,6 +1351,18 @@ describe('Constructive organizations adapter RLS contract', () => {
               { id: 'org-1', displayName: 'Acme', username: 'acme', type: 2 }
             ]
           }
+        };
+      }
+      if (call.document.includes('ConsoleKitOrganizationAppMemberships')) {
+        return {
+          appMemberships: {
+            nodes: [{ actorId: 'user-1', isActive: true, permissions: '000' }]
+          }
+        };
+      }
+      if (call.document.includes('ConsoleKitOrganizationAppPermissions')) {
+        return {
+          appPermissions: { nodes: [{ name: 'create_entity', bitstr: '001' }] }
         };
       }
       return { createOrgInvite: { orgInvite: { id: 'invite-1' } } };
