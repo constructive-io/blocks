@@ -1078,11 +1078,11 @@
       "name": "sidebar",
       "type": "registry:ui",
       "title": "Sidebar",
-      "description": "A responsive sidebar with collapsible state.",
+      "description": "A responsive Base UI sidebar with off-canvas, icon-only, and fixed collapse modes.",
       "categories": ["navigation"],
       "docs": "Import: `import { Sidebar, SidebarProvider, SidebarTrigger } from '@/components/ui/sidebar'`",
-      "dependencies": ["class-variance-authority", "lucide-react"],
-      "registryDependencies": ["cn", "slot", "use-mobile", "button", "input", "separator", "sheet", "skeleton", "tooltip"],
+      "dependencies": ["@base-ui/react", "class-variance-authority", "lucide-react"],
+      "registryDependencies": ["cn", "use-mobile", "button", "input", "separator", "sheet", "skeleton", "tooltip"],
       "files": [
         {
           "path": "registry/constructive/ui/sidebar.tsx",
@@ -1374,210 +1374,34 @@
       ]
     },
     {
-      "name": "org-chart",
+      "name": "app-bar",
       "type": "registry:block",
-      "title": "Org Chart",
-      "description": "Interactive organizational chart with drag-to-reparent, zoom controls, and per-node actions. Built on React Flow (@xyflow/react).",
-      "categories": ["block"],
-      "docs": "Import: `import { OrgChart } from '@/components/ui/org-chart'`",
-      "dependencies": ["@xyflow/react", "@remixicon/react", "lucide-react"],
-      "registryDependencies": ["cn", "button", "tooltip", "avatar", "badge", "dropdown-menu"],
+      "title": "App Bar",
+      "description": "A sticky application header with a sidebar trigger, responsive breadcrumbs, and framework-neutral search and action slots.",
+      "categories": ["block", "navigation"],
+      "docs": "Import: `import { AppBar } from '@/components/ui/app-bar'`",
+      "dependencies": ["@base-ui/react"],
+      "registryDependencies": ["cn", "breadcrumb", "separator", "sidebar"],
       "files": [
         {
-          "path": "registry/constructive/blocks/org-chart/index.ts",
+          "path": "registry/constructive/blocks/app-bar.tsx",
           "type": "registry:component"
-        },
+        }
+      ]
+    },
+    {
+      "name": "app-shell",
+      "type": "registry:block",
+      "title": "App Shell",
+      "description": "A provider-neutral application shell with typed navigation, brand, account, breadcrumb, and link-render contracts.",
+      "categories": ["block", "navigation"],
+      "docs": "Import: `import { AppShell } from '@/components/ui/app-shell'`",
+      "dependencies": ["@base-ui/react", "lucide-react"],
+      "registryDependencies": ["cn", "app-bar", "avatar", "collapsible", "dropdown-menu", "sidebar"],
+      "files": [
         {
-          "path": "registry/constructive/blocks/org-chart/org-chart.tsx",
+          "path": "registry/constructive/blocks/app-shell.tsx",
           "type": "registry:component"
-        },
-        {
-          "path": "registry/constructive/blocks/org-chart/org-chart-context.tsx",
-          "type": "registry:component"
-        },
-        {
-          "path": "registry/constructive/blocks/org-chart/org-chart-node.tsx",
-          "type": "registry:component"
-        },
-        {
-          "path": "registry/constructive/blocks/org-chart/org-chart-edge.tsx",
-          "type": "registry:component"
-        },
-        {
-          "path": "registry/constructive/blocks/org-chart/org-chart-empty.tsx",
-          "type": "registry:component"
-        },
-        {
-          "path": "registry/constructive/blocks/org-chart/layout.ts",
-          "type": "registry:lib"
-        },
-        {
-          "path": "registry/constructive/blocks/org-chart/org-chart-utils.ts",
-          "type": "registry:lib"
-        },
-        {
-          "path": "registry/constructive/blocks/org-chart/org-chart.types.ts",
-          "type": "registry:lib"
-        }
-      ]
-    },
-    {
-      "name": "storage",
-      "type": "registry:block",
-      "title": "Storage Kit",
-      "description": "Shared foundation for the Storage UI kit: domain types, pure formatters, and the stateless leaf components (file-type icon, visibility/status badges, breadcrumb, object toolbar) the other storage blocks build on.",
-      "categories": ["block"],
-      "docs": "Import: `import { FileTypeIcon, VisibilityBadge, humanizeBytes } from '@/components/ui/storage'`",
-      "dependencies": ["lucide-react"],
-      "registryDependencies": ["cn", "badge", "breadcrumb", "button", "dropdown-menu", "input-group"],
-      "files": [
-        {
-          "path": "registry/constructive/blocks/storage/types.ts",
-          "type": "registry:component",
-          "target": "src/components/ui/storage/types.ts"
-        },
-        {
-          "path": "registry/constructive/blocks/storage/utils.ts",
-          "type": "registry:component",
-          "target": "src/components/ui/storage/utils.ts"
-        },
-        {
-          "path": "registry/constructive/blocks/storage/file-type-icon.tsx",
-          "type": "registry:component",
-          "target": "src/components/ui/storage/file-type-icon.tsx"
-        },
-        {
-          "path": "registry/constructive/blocks/storage/visibility-badge.tsx",
-          "type": "registry:component",
-          "target": "src/components/ui/storage/visibility-badge.tsx"
-        },
-        {
-          "path": "registry/constructive/blocks/storage/storage-breadcrumb.tsx",
-          "type": "registry:component",
-          "target": "src/components/ui/storage/storage-breadcrumb.tsx"
-        },
-        {
-          "path": "registry/constructive/blocks/storage/object-toolbar.tsx",
-          "type": "registry:component",
-          "target": "src/components/ui/storage/object-toolbar.tsx"
-        }
-      ]
-    },
-    {
-      "name": "storage-bucket-rail",
-      "type": "registry:block",
-      "title": "Storage Bucket Rail",
-      "description": "Vertical, scrollable list of buckets with visibility badges, object counts, and a pinned New bucket action. Stateless: selection is controlled.",
-      "categories": ["block"],
-      "docs": "Import: `import { BucketRail } from '@/components/ui/storage'`",
-      "dependencies": ["lucide-react"],
-      "registryDependencies": ["storage", "cn", "badge", "button", "scroll-area", "separator"],
-      "files": [
-        {
-          "path": "registry/constructive/blocks/storage/bucket-rail.tsx",
-          "type": "registry:component",
-          "target": "src/components/ui/storage/bucket-rail.tsx"
-        }
-      ]
-    },
-    {
-      "name": "storage-object-table",
-      "type": "registry:block",
-      "title": "Storage Object Table",
-      "description": "The object browser table: controlled sort and selection, per-row actions, a skeleton loading state, and an empty-body message.",
-      "categories": ["block"],
-      "docs": "Import: `import { ObjectTable } from '@/components/ui/storage'`",
-      "dependencies": ["lucide-react"],
-      "registryDependencies": ["storage", "button", "checkbox", "dropdown-menu", "skeleton", "table"],
-      "files": [
-        {
-          "path": "registry/constructive/blocks/storage/object-table.tsx",
-          "type": "registry:component",
-          "target": "src/components/ui/storage/object-table.tsx"
-        }
-      ]
-    },
-    {
-      "name": "storage-upload-dropzone",
-      "type": "registry:block",
-      "title": "Storage Upload Dropzone",
-      "description": "A presentational drag-and-drop target with a Browse button and an in-flight upload progress list. Upload behavior is delegated to the parent.",
-      "categories": ["block"],
-      "docs": "Import: `import { UploadDropzone } from '@/components/ui/storage'`",
-      "dependencies": ["lucide-react"],
-      "registryDependencies": ["storage", "cn", "button", "progress"],
-      "files": [
-        {
-          "path": "registry/constructive/blocks/storage/upload-dropzone.tsx",
-          "type": "registry:component",
-          "target": "src/components/ui/storage/upload-dropzone.tsx"
-        }
-      ]
-    },
-    {
-      "name": "storage-object-detail-sheet",
-      "type": "registry:block",
-      "title": "Storage Object Detail Sheet",
-      "description": "Right-side detail panel for a single object: image or file-type preview, a metadata list, inline rename, and primary actions with a confirmed delete.",
-      "categories": ["block"],
-      "docs": "Import: `import { ObjectDetailSheet } from '@/components/ui/storage'`",
-      "dependencies": ["lucide-react"],
-      "registryDependencies": ["storage", "cn", "alert-dialog", "button", "input", "separator", "skeleton", "sheet"],
-      "files": [
-        {
-          "path": "registry/constructive/blocks/storage/object-detail-sheet.tsx",
-          "type": "registry:component",
-          "target": "src/components/ui/storage/object-detail-sheet.tsx"
-        }
-      ]
-    },
-    {
-      "name": "storage-bucket-config-sheet",
-      "type": "registry:block",
-      "title": "Storage Bucket Config Sheet",
-      "description": "Create or edit a bucket via a right-side Sheet form: key, visibility, custom-key/MIME/size/origin controls, and a description, gated to the host schema's real columns.",
-      "categories": ["block"],
-      "docs": "Import: `import { BucketConfigSheet } from '@/components/ui/storage'`",
-      "dependencies": ["lucide-react"],
-      "registryDependencies": ["storage", "cn", "badge", "button", "input", "label", "radio-group", "switch", "textarea", "sheet"],
-      "files": [
-        {
-          "path": "registry/constructive/blocks/storage/bucket-config-sheet.tsx",
-          "type": "registry:component",
-          "target": "src/components/ui/storage/bucket-config-sheet.tsx"
-        }
-      ]
-    },
-    {
-      "name": "storage-empty-state",
-      "type": "registry:block",
-      "title": "Storage Empty State",
-      "description": "Centered empty/zero states for the storage surface — no buckets, not provisioned, empty bucket, or no access — each with an icon, copy, and a primary action.",
-      "categories": ["block"],
-      "docs": "Import: `import { StorageEmptyState } from '@/components/ui/storage'`",
-      "dependencies": ["lucide-react"],
-      "registryDependencies": ["cn", "button"],
-      "files": [
-        {
-          "path": "registry/constructive/blocks/storage/storage-empty-state.tsx",
-          "type": "registry:component",
-          "target": "src/components/ui/storage/storage-empty-state.tsx"
-        }
-      ]
-    },
-    {
-      "name": "storage-browser",
-      "type": "registry:block",
-      "title": "Storage Browser",
-      "description": "Master/detail page composition: a bucket rail on the left and an object browser on the right (header, toolbar, breadcrumb, table, and empty states). Composes the full storage kit.",
-      "categories": ["block"],
-      "docs": "Import: `import { StorageBrowser } from '@/components/ui/storage'`",
-      "registryDependencies": ["storage", "storage-bucket-rail", "storage-object-table", "storage-upload-dropzone", "storage-object-detail-sheet", "storage-bucket-config-sheet", "storage-empty-state", "cn", "separator"],
-      "files": [
-        {
-          "path": "registry/constructive/blocks/storage/storage-browser.tsx",
-          "type": "registry:component",
-          "target": "src/components/ui/storage/storage-browser.tsx"
         }
       ]
     },
@@ -1585,13 +1409,28 @@
       "name": "field",
       "type": "registry:ui",
       "title": "Field",
-      "description": "Form field wrapper with label, description, and error message. Works standalone without any form library.",
+      "description": "Composable form layout with groups, fieldsets, legends, labels, descriptions, separators, and accessible errors.",
       "categories": ["form"],
-      "docs": "Import: `import { Field, FieldRow } from '@/components/ui/field'`",
-      "registryDependencies": ["cn", "label"],
+      "docs": "Import: `import { Field, FieldGroup, FieldLabel, FieldDescription, FieldError } from '@/components/ui/field'`",
+      "registryDependencies": ["cn", "label", "separator"],
       "files": [
         {
           "path": "registry/constructive/ui/field.tsx",
+          "type": "registry:ui"
+        }
+      ]
+    },
+    {
+      "name": "empty",
+      "type": "registry:ui",
+      "title": "Empty",
+      "description": "A composable empty-state layout with media, title, description, and action content.",
+      "categories": ["layout"],
+      "docs": "Import: `import { Empty, EmptyHeader, EmptyMedia, EmptyTitle, EmptyDescription, EmptyContent } from '@/components/ui/empty'`",
+      "registryDependencies": ["cn"],
+      "files": [
+        {
+          "path": "registry/constructive/ui/empty.tsx",
           "type": "registry:ui"
         }
       ]
@@ -1602,7 +1441,7 @@
       "title": "Form Kit",
       "description": "All form-related components: input, textarea, checkbox, radio, select, switch, progress, form controls.",
       "categories": ["bundle"],
-      "registryDependencies": ["input", "textarea", "checkbox", "checkbox-group", "radio-group", "switch", "select", "progress", "form", "form-control", "input-group", "label"],
+      "registryDependencies": ["input", "textarea", "checkbox", "checkbox-group", "radio-group", "switch", "select", "progress", "form", "form-control", "input-group", "field", "label"],
       "files": []
     },
     {
@@ -1620,7 +1459,7 @@
       "title": "Layout Kit",
       "description": "Layout and navigation components: tabs, sidebar, collapsible, resizable panels, scroll area, breadcrumb, pagination.",
       "categories": ["bundle"],
-      "registryDependencies": ["tabs", "sidebar", "collapsible", "resizable", "scroll-area", "breadcrumb", "pagination", "separator"],
+      "registryDependencies": ["tabs", "sidebar", "collapsible", "resizable", "scroll-area", "breadcrumb", "pagination", "separator", "empty"],
       "files": []
     }
   ]

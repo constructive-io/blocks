@@ -1,100 +1,241 @@
 'use client';
 
+import * as React from 'react';
+import { cva, type VariantProps } from 'class-variance-authority';
+
 import { cn } from '../lib/utils';
 import { Label } from './label';
+import { Separator } from './separator';
 
-interface FieldProps {
-	/** Field label text */
+function FieldSet({ className, ...props }: React.ComponentProps<'fieldset'>) {
+	return (
+		<fieldset
+			data-slot='field-set'
+			className={cn(
+				'flex flex-col gap-4 has-[>[data-slot=checkbox-group]]:gap-3 has-[>[data-slot=radio-group]]:gap-3',
+				className,
+			)}
+			{...props}
+		/>
+	);
+}
+
+function FieldLegend({
+	className,
+	variant = 'legend',
+	...props
+}: React.ComponentProps<'legend'> & { variant?: 'legend' | 'label' }) {
+	return (
+		<legend
+			data-slot='field-legend'
+			data-variant={variant}
+			className={cn('mb-1.5 font-medium data-[variant=label]:text-sm data-[variant=legend]:text-base', className)}
+			{...props}
+		/>
+	);
+}
+
+function FieldGroup({ className, ...props }: React.ComponentProps<'div'>) {
+	return (
+		<div
+			data-slot='field-group'
+			className={cn(
+				`group/field-group @container/field-group flex w-full flex-col gap-5
+				data-[slot=checkbox-group]:gap-3 *:data-[slot=field-group]:gap-4`,
+				className,
+			)}
+			{...props}
+		/>
+	);
+}
+
+const fieldVariants = cva('group/field flex w-full gap-2 data-[invalid=true]:text-destructive', {
+	variants: {
+		orientation: {
+			vertical: 'flex-col *:w-full [&>.sr-only]:w-auto',
+			horizontal:
+				'flex-row items-center has-[>[data-slot=field-content]]:items-start *:data-[slot=field-label]:flex-auto has-[>[data-slot=field-content]]:[&>[role=checkbox],[role=radio]]:mt-px',
+			responsive:
+				'flex-col *:w-full @md/field-group:flex-row @md/field-group:items-center @md/field-group:*:w-auto @md/field-group:has-[>[data-slot=field-content]]:items-start @md/field-group:*:data-[slot=field-label]:flex-auto [&>.sr-only]:w-auto @md/field-group:has-[>[data-slot=field-content]]:[&>[role=checkbox],[role=radio]]:mt-px',
+		},
+	},
+	defaultVariants: {
+		orientation: 'vertical',
+	},
+});
+
+type StructuralFieldProps = React.ComponentProps<'div'> & VariantProps<typeof fieldVariants>;
+
+interface LegacyFieldProps {
 	label: string;
-	/** Optional description text shown below the control */
 	description?: string;
-	/** Error message - shows in destructive color */
 	error?: string;
-	/** Shows required indicator (*) after label */
 	required?: boolean;
-	/** HTML id for the form control - used for label's htmlFor */
 	htmlFor?: string;
-	/** Additional className for the wrapper */
 	className?: string;
-	/** The form control (InputGroup, Input, Select, etc.) */
 	children: React.ReactNode;
 }
 
-/**
- * Field wraps a form control with label, description, and error message.
- * Works standalone without any form library dependency.
- *
- * @example
- * ```tsx
- * <Field label="Email" required error={errors.email} htmlFor="email">
- *   <InputGroup>
- *     <InputGroupAddon><Mail /></InputGroupAddon>
- *     <InputGroupInput id="email" type="email" placeholder="name@example.com" />
- *   </InputGroup>
- * </Field>
- * ```
- */
-function Field({
-	label,
-	description,
-	error,
-	required,
-	htmlFor,
-	className,
-	children,
-}: FieldProps) {
+type FieldProps = LegacyFieldProps | StructuralFieldProps;
+
+function isLegacyFieldProps(props: FieldProps): props is LegacyFieldProps {
+	return typeof (props as LegacyFieldProps).label === 'string';
+}
+
+function FieldContainer({ className, orientation = 'vertical', ...props }: StructuralFieldProps) {
 	return (
-		<div data-slot="field" className={cn('grid gap-2', className)}>
-			<Label
-				htmlFor={htmlFor}
-				data-slot="field-label"
-				className={cn(error && 'text-destructive')}
-			>
+		<div
+			role='group'
+			data-slot='field'
+			data-orientation={orientation}
+			className={cn(fieldVariants({ orientation }), className)}
+			{...props}
+		/>
+	);
+}
+
+function Field(props: LegacyFieldProps): React.ReactElement;
+function Field(props: StructuralFieldProps): React.ReactElement;
+function Field(props: FieldProps) {
+	if (!isLegacyFieldProps(props)) {
+		return <FieldContainer {...props} />;
+	}
+
+	const { label, description, error, required, htmlFor, className, children } = props;
+	return (
+		<FieldContainer className={className} data-invalid={Boolean(error)}>
+			<FieldLabel htmlFor={htmlFor}>
 				{label}
 				{required && (
-					<span className="text-destructive ml-1" aria-hidden="true">
+					<span className='ml-1 text-destructive' aria-hidden='true'>
 						*
 					</span>
 				)}
-			</Label>
-
+			</FieldLabel>
 			{children}
+			{description && <FieldDescription>{description}</FieldDescription>}
+			{error && <FieldError>{error}</FieldError>}
+		</FieldContainer>
+	);
+}
 
-			{description && (
-				<p
-					data-slot="field-description"
-					className="text-muted-foreground text-sm"
-				>
-					{description}
-				</p>
+function FieldContent({ className, ...props }: React.ComponentProps<'div'>) {
+	return (
+		<div
+			data-slot='field-content'
+			className={cn('group/field-content flex flex-1 flex-col gap-0.5 leading-snug', className)}
+			{...props}
+		/>
+	);
+}
+
+function FieldLabel({ className, ...props }: React.ComponentProps<typeof Label>) {
+	return (
+		<Label
+			data-slot='field-label'
+			className={cn(
+				`group/field-label peer/field-label flex w-fit gap-2 leading-snug
+				group-data-[disabled=true]/field:opacity-50 has-data-checked:border-primary/30 has-data-checked:bg-primary/5
+				has-[>[data-slot=field]]:rounded-lg has-[>[data-slot=field]]:border
+				*:data-[slot=field]:p-2.5 has-[>[data-slot=field]]:w-full has-[>[data-slot=field]]:flex-col`,
+				className,
 			)}
+			{...props}
+		/>
+	);
+}
 
-			{error && (
-				<p
-					data-slot="field-error"
-					className="text-destructive text-sm"
-					role="alert"
-				>
-					{error}
-				</p>
+function FieldTitle({ className, ...props }: React.ComponentProps<'div'>) {
+	return (
+		<div
+			data-slot='field-label'
+			className={cn(
+				'flex w-fit items-center gap-2 text-sm font-medium group-data-[disabled=true]/field:opacity-50',
+				className,
+			)}
+			{...props}
+		/>
+	);
+}
+
+function FieldDescription({ className, ...props }: React.ComponentProps<'p'>) {
+	return (
+		<p
+			data-slot='field-description'
+			className={cn(
+				`text-left text-sm leading-normal font-normal text-muted-foreground
+				group-has-data-horizontal/field:text-balance [[data-variant=legend]+&]:-mt-1.5 last:mt-0 nth-last-2:-mt-1
+				[&>a]:underline [&>a]:underline-offset-4 [&>a:hover]:text-primary`,
+				className,
+			)}
+			{...props}
+		/>
+	);
+}
+
+function FieldSeparator({
+	children,
+	className,
+	...props
+}: React.ComponentProps<'div'> & {
+	children?: React.ReactNode;
+}) {
+	return (
+		<div
+			data-slot='field-separator'
+			data-content={Boolean(children)}
+			className={cn('relative -my-2 h-5 text-sm group-data-[variant=outline]/field-group:-mb-2', className)}
+			{...props}
+		>
+			<Separator className='absolute inset-0 top-1/2' />
+			{children && (
+				<span className='relative mx-auto block w-fit bg-background px-2 text-muted-foreground' data-slot='field-separator-content'>
+					{children}
+				</span>
 			)}
 		</div>
 	);
 }
 
-/**
- * FieldRow is a horizontal layout variant for inline controls like checkboxes and switches.
- * Places label beside the control instead of above.
- *
- * @example
- * ```tsx
- * <FieldRow label="Enable notifications" description="Receive email updates" htmlFor="notifications">
- *   <Switch id="notifications" />
- * </FieldRow>
- * ```
- */
-interface FieldRowProps extends Omit<FieldProps, 'required'> {
-	/** Position of the label relative to the control */
+function FieldError({
+	className,
+	children,
+	errors,
+	...props
+}: React.ComponentProps<'div'> & {
+	errors?: Array<{ message?: string } | undefined>;
+}) {
+	const content = React.useMemo(() => {
+		if (children) return children;
+		if (!errors?.length) return null;
+
+		const uniqueErrors = [...new Map(errors.map((error) => [error?.message, error])).values()];
+		if (uniqueErrors.length === 1) return uniqueErrors[0]?.message;
+
+		return (
+			<ul className='ml-4 flex list-disc flex-col gap-1'>
+				{uniqueErrors.map(
+					(error, index) => error?.message && <li key={`${error.message}-${index}`}>{error.message}</li>,
+				)}
+			</ul>
+		);
+	}, [children, errors]);
+
+	if (!content) return null;
+
+	return (
+		<div
+			role='alert'
+			data-slot='field-error'
+			className={cn('text-sm font-normal text-destructive', className)}
+			{...props}
+		>
+			{content}
+		</div>
+	);
+}
+
+interface FieldRowProps extends Omit<LegacyFieldProps, 'required'> {
 	labelPosition?: 'start' | 'end';
 }
 
@@ -107,47 +248,36 @@ function FieldRow({
 	className,
 	children,
 }: FieldRowProps) {
-	const labelElement = (
-		<Label
-			htmlFor={htmlFor}
-			data-slot="field-label"
-			className={cn(
-				'text-sm font-medium leading-none',
-				error && 'text-destructive',
-			)}
-		>
-			{label}
-		</Label>
-	);
+	const labelElement = <FieldLabel htmlFor={htmlFor}>{label}</FieldLabel>;
 
 	return (
-		<div data-slot="field-row" className={cn('grid gap-2', className)}>
-			<div className="flex items-center gap-2">
+		<div
+			data-slot='field-row'
+			data-invalid={Boolean(error)}
+			className={cn('group/field flex flex-col gap-2 data-[invalid=true]:text-destructive', className)}
+		>
+			<div className='flex items-center gap-2'>
 				{labelPosition === 'start' && labelElement}
 				{children}
 				{labelPosition === 'end' && labelElement}
 			</div>
-
-			{description && (
-				<p
-					data-slot="field-description"
-					className="text-muted-foreground text-sm"
-				>
-					{description}
-				</p>
-			)}
-
-			{error && (
-				<p
-					data-slot="field-error"
-					className="text-destructive text-sm"
-					role="alert"
-				>
-					{error}
-				</p>
-			)}
+			{description && <FieldDescription>{description}</FieldDescription>}
+			{error && <FieldError>{error}</FieldError>}
 		</div>
 	);
 }
 
-export { Field, FieldRow, type FieldProps, type FieldRowProps };
+export {
+	Field,
+	FieldContent,
+	FieldDescription,
+	FieldError,
+	FieldGroup,
+	FieldLabel,
+	FieldLegend,
+	FieldRow,
+	FieldSeparator,
+	FieldSet,
+	FieldTitle,
+};
+export type { FieldProps, FieldRowProps, LegacyFieldProps, StructuralFieldProps };
