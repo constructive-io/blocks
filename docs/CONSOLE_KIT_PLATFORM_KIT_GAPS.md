@@ -10,8 +10,10 @@ The reference points are the current
 [Platform Kit documentation](https://supabase.com/ui/docs/platform/platform-kit),
 the [Supabase for Platforms guidance](https://supabase.com/docs/guides/integrations/supabase-for-platforms#platform-kit),
 and the checked-out implementation under
-`apps/ui-library/registry/default/platform/platform-kit-nextjs` in the local
-Supabase checkout.
+`apps/ui-library/registry/default/platform/platform-kit-nextjs` at Supabase
+revision `5cb81123ae63bdbcefc710ce32a33ee95e21bcd5` in the local checkout. Pinning
+the implementation revision keeps this UX/DX comparison reproducible even as
+the public documentation changes.
 
 ## Product position
 
