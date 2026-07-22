@@ -51,6 +51,13 @@ import { useGridSelectionState } from './hooks/use-grid-selection';
 import { useGridState } from './hooks/use-grid-state';
 import { useInfiniteGridData, type VisibleRowRange } from './hooks/use-infinite-grid-data';
 import { useDataLoading } from './hooks/use-load-grid';
+import {
+	canRunSheetsMutation,
+	getSheetsWriteCapability,
+	resolveSheetsRowIdentity,
+	sheetsRowKey,
+	type SheetsRowIdentifier,
+} from '../row-identity';
 
 const EMPTY_RELATION_INFO_BY_FIELD = new Map<string, RelationInfo>();
 
@@ -151,6 +158,13 @@ export interface SheetsShellBindings {
 	resizeColumn: ReturnType<typeof useGridState>['actions']['resizeColumn'];
 	frozenCount: number;
 	selectedRowCount: number;
+	canCreate: boolean;
+	canUpdate: boolean;
+	canDelete: boolean;
+	/** Human-readable reason shown when `_meta` proves the whole table is read-only. */
+	readOnlyReason: string | null;
+	/** Stable identity for selection, TanStack rows, and editor instances. */
+	getRowId: (row: SheetsRow | null | undefined, index: number) => string;
 	isSubmittingDrafts: boolean;
 	submitDraftButtonDisabled: boolean;
 	submitDraftLabel: string;
@@ -356,6 +370,39 @@ export function useSheets<TRow extends SheetsRow = SheetsRow>(
 		};
 	}, [infiniteScroll, infiniteGridData, dataLoadingResult.contextValue]);
 
+	const writeCapability = useMemo(() => getSheetsWriteCapability(tableMeta), [tableMeta]);
+	const canCreate = canRunSheetsMutation(writeCapability, 'create');
+	const canUpdate = canRunSheetsMutation(writeCapability, 'update');
+	const canDelete = canRunSheetsMutation(writeCapability, 'delete');
+	const primaryKeyFields = useMemo(
+		() => new Set(writeCapability?.status === 'mutable' ? writeCapability.primaryKeyFields : []),
+		[writeCapability],
+	);
+	const supportsScalarSelfCommit =
+		writeCapability?.status === 'mutable' &&
+		writeCapability.primaryKeyFields.length === 1 &&
+		writeCapability.primaryKeyFields[0] === 'id';
+	const readOnlyReason = writeCapability?.status === 'read-only'
+		? 'This table is read-only because it has no primary key.'
+		: null;
+	const getRowIdentifier = useCallback(
+		(row: Readonly<Record<string, unknown>>): SheetsRowIdentifier | null => {
+			if (!tableMeta) return null;
+			const resolution = resolveSheetsRowIdentity(tableMeta, row);
+			return resolution.status === 'identified' ? resolution.identifier : null;
+		},
+		[tableMeta],
+	);
+	const getRowId = useCallback(
+		(row: SheetsRow | null | undefined, index: number): string => {
+			const draftMeta = getDraftMeta(row);
+			if (draftMeta) return draftMeta.draftRowId;
+			if (row && tableMeta) return sheetsRowKey(tableMeta, row, index);
+			return `${tableMeta?.schemaName ?? ''}:${tableName}:row:${index}`;
+		},
+		[tableMeta, tableName],
+	);
+
 	// Emit load:success / load:error once per transition. Tracked via a ref so we
 	// don't re-fire on unrelated re-renders.
 	const lastLoadEmitRef = useRef<'success' | 'error' | null>(null);
@@ -555,6 +602,10 @@ export function useSheets<TRow extends SheetsRow = SheetsRow>(
 		options: { relationChipLimit, relationLabelMaxLength },
 		relationInfoByField,
 		meta: filterMeta,
+		serverRowsReadOnly: !canUpdate,
+		serverReadOnlyFields: primaryKeyFields,
+		getRowIdentifier,
+		supportsScalarSelfCommit,
 	});
 
 	const effectiveColumnOrder = useMemo(() => {
@@ -642,9 +693,11 @@ export function useSheets<TRow extends SheetsRow = SheetsRow>(
 	const gridOpsOptions = useMemo(
 		() => ({
 			onRemoveDraftRow: (draftRowId: string) => removeDraftRow(tableKey, draftRowId),
+			getRowIdentifier,
+			canDeleteServerRows: canDelete,
 			feedback: operationFeedback,
 		}),
-		[removeDraftRow, tableKey, operationFeedback],
+		[removeDraftRow, tableKey, getRowIdentifier, canDelete, operationFeedback],
 	);
 
 	const { deleteSelected: baseDeleteSelected } = useGridOperations(
@@ -697,6 +750,9 @@ export function useSheets<TRow extends SheetsRow = SheetsRow>(
 		updateDraftCell,
 		tableKey,
 		update,
+		getRowIdentifier,
+		readOnlyFields: primaryKeyFields,
+		canUpdate,
 		onCellEdit,
 		applyOptimisticPatch: applyOptimisticCellPatch,
 	});
@@ -723,6 +779,9 @@ export function useSheets<TRow extends SheetsRow = SheetsRow>(
 		fieldMetaMap,
 		relationInfoByField,
 		update,
+		getRowIdentifier,
+		readOnlyFields: primaryKeyFields,
+		canUpdate,
 		applyOptimisticPatch: applyOptimisticCellPatch,
 		resyncRow,
 		editCell,
@@ -784,6 +843,7 @@ export function useSheets<TRow extends SheetsRow = SheetsRow>(
 	}, [infiniteScroll, infiniteGridData]);
 
 	const handleRowAppended = useCallback(async () => {
+		if (!canCreate) return undefined;
 		if (draftRows.length > 0) {
 			return serverRowCount + draftRows.length - 1;
 		}
@@ -811,6 +871,7 @@ export function useSheets<TRow extends SheetsRow = SheetsRow>(
 		tableKey,
 		draftRows,
 		serverRowCount,
+		canCreate,
 		emit,
 	]);
 
@@ -993,6 +1054,11 @@ export function useSheets<TRow extends SheetsRow = SheetsRow>(
 			resizeColumn: gridActions.resizeColumn,
 			frozenCount,
 			selectedRowCount,
+			canCreate,
+			canUpdate,
+			canDelete,
+			readOnlyReason,
+			getRowId,
 			isSubmittingDrafts,
 			submitDraftButtonDisabled,
 			submitDraftLabel,

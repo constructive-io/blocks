@@ -4,6 +4,7 @@ import type { SheetsSelection } from '../../selection/selection-model';
 import { SHEETS_CONCURRENCY } from '../../config/sheets-concurrency';
 import { sheetsLogger } from '../../utils/sheets-logger';
 import { getDraftMeta } from '../row-model';
+import type { SheetsRowIdentifier } from '../../row-identity';
 
 interface OperationFeedbackCallbacks {
 	onStart?: (type: 'delete', total: number) => string;
@@ -52,12 +53,14 @@ export function summarizeDeleteResult(drafts: number, deleted: number, failed: n
 
 export function useGridOperations(
 	data: any[],
-	deleteRow: (id: string | number) => Promise<any>,
+	deleteRow: (id: SheetsRowIdentifier) => Promise<any>,
 	gridSelection: SheetsSelection | undefined,
 	clearSelection: () => void,
 	options?: {
 		onRemoveDraftRow?: (draftRowId: string) => void;
 		onAfterServerDeletes?: () => void;
+		getRowIdentifier?: (row: Readonly<Record<string, unknown>>) => SheetsRowIdentifier | null;
+		canDeleteServerRows?: boolean;
 		feedback?: OperationFeedbackCallbacks;
 	},
 ) {
@@ -94,13 +97,22 @@ export function useGridOperations(
 						} else {
 							failures += 1;
 						}
-					} else if (record?.id) {
+					} else if (options?.canDeleteServerRows !== false) {
+						const identifier = options?.getRowIdentifier
+							? options.getRowIdentifier(record)
+							: typeof record?.id === 'string' || typeof record?.id === 'number'
+								? record.id
+								: null;
+						if (identifier === null) {
+							failures += 1;
+							continue;
+						}
 						try {
-							await deleteRow(record.id);
+							await deleteRow(identifier);
 							successes += 1;
 							serverSuccesses += 1;
 						} catch (error) {
-							sheetsLogger().error(`Failed to delete record ${record.id}:`, error);
+							sheetsLogger().error('Failed to delete record', { identifier, error });
 							failures += 1;
 						}
 					} else {

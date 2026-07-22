@@ -4,6 +4,7 @@ import { DRAFT_ACTION_COLUMN_KEY } from '../sheets.constants';
 import { prepareDraftRelationValue } from '../sheets.utils';
 import type { DraftRowsState } from './use-draft-rows';
 import { getDraftMeta } from '../row-model';
+import type { SheetsRowIdentifier } from '../../row-identity';
 
 /** Result from the useCellEditing hook */
 export interface CellEditingResult {
@@ -23,8 +24,11 @@ interface UseCellEditingParams {
 	relationInfoByField: Map<string, any>;
 	updateDraftCell: DraftRowsState['updateDraftCell'];
 	tableKey: string;
-	update: (id: string | number, data: Record<string, unknown>) => Promise<{ updatedRow?: Record<string, unknown> | null }>;
-	onCellEdit?: (id: string | number, field: string, value: unknown) => void;
+	update: (id: SheetsRowIdentifier, data: Record<string, unknown>) => Promise<{ updatedRow?: Record<string, unknown> | null }>;
+	getRowIdentifier?: (row: Readonly<Record<string, unknown>>) => SheetsRowIdentifier | null;
+	readOnlyFields?: ReadonlySet<string>;
+	canUpdate?: boolean;
+	onCellEdit?: (id: SheetsRowIdentifier, field: string, value: unknown) => void;
 	/**
 	 * Optimistic server-row cache patch. Applied to the local (infinite) cache BEFORE
 	 * the `update` round-trip so the cell flips instantly; returns a revert thunk that
@@ -32,6 +36,10 @@ interface UseCellEditingParams {
 	 * no pre-await patch and the consumer reconciles after the await as before.
 	 */
 	applyOptimisticPatch?: (rowIndex: number, patch: Record<string, unknown>) => (() => void) | void;
+}
+
+function legacyRowIdentifier(row: Readonly<Record<string, unknown>>): SheetsRowIdentifier | null {
+	return typeof row.id === 'string' || typeof row.id === 'number' ? row.id : null;
 }
 
 /**
@@ -86,8 +94,10 @@ export function resolveServerPatch(
 	rawValue: unknown,
 	fieldMetaMap: Map<string, any>,
 	relationInfoByField: Map<string, any>,
+	readOnlyFields?: ReadonlySet<string>,
 ): ServerPatchResolution {
 	if (!colKey || colKey === DRAFT_ACTION_COLUMN_KEY) return { kind: 'noop' };
+	if (readOnlyFields?.has(colKey)) return { kind: 'noop' };
 
 	// Block edits to the UUID primary key id.
 	const metaField = fieldMetaMap.get(colKey);
@@ -116,6 +126,9 @@ export function useCellEditing({
 	updateDraftCell,
 	tableKey,
 	update,
+	getRowIdentifier = legacyRowIdentifier,
+	readOnlyFields,
+	canUpdate = true,
 	onCellEdit,
 	applyOptimisticPatch,
 }: UseCellEditingParams) {
@@ -213,9 +226,12 @@ export function useCellEditing({
 
 			// Server row edit — derive the PATCH via the shared resolver (the single owner
 			// of server-row coercion + readonly guards, also used by batched `commitCells`).
-			const resolution = resolveServerPatch(colKey, rawValue, fieldMetaMap, relationInfoByField);
+			if (!canUpdate) return { type: 'noop' };
+			const resolution = resolveServerPatch(colKey, rawValue, fieldMetaMap, relationInfoByField, readOnlyFields);
 			if (resolution.kind === 'noop') return { type: 'noop' };
 			const { field: patchField, value } = resolution;
+			const rowIdentifier = getRowIdentifier(rowData);
+			if (rowIdentifier === null) return { type: 'noop' };
 
 			// Optimistic: patch the local cache with the new value BEFORE awaiting the
 			// server so the cell updates instantly. `applyOptimisticPatch` returns a revert
@@ -224,12 +240,12 @@ export function useCellEditing({
 
 			let result: { updatedRow?: Record<string, unknown> | null };
 			try {
-				result = await update(rowData.id, { [patchField]: value });
+				result = await update(rowIdentifier, { [patchField]: value });
 			} catch (error) {
 				revertOptimisticPatch?.();
 				throw error;
 			}
-			onCellEdit?.(rowData.id, patchField, value);
+			onCellEdit?.(rowIdentifier, patchField, value);
 
 			return {
 				type: 'server',
@@ -238,6 +254,6 @@ export function useCellEditing({
 				patchValue: value,
 			};
 		},
-		[combinedRows, fieldMetaMap, relationInfoByField, tableKey, update, onCellEdit, updateDraftCell, applyOptimisticPatch],
+		[combinedRows, fieldMetaMap, relationInfoByField, tableKey, update, getRowIdentifier, readOnlyFields, canUpdate, onCellEdit, updateDraftCell, applyOptimisticPatch],
 	);
 }

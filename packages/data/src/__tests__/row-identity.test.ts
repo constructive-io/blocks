@@ -35,12 +35,12 @@ function primaryKey(...columnNames: string[]): MetaschemaConstraints {
 }
 
 describe('row identity', () => {
-	it('uses a renamed primary key and GraphQL field inflection', () => {
+	it('uses a renamed primary key from its GraphQL field name', () => {
 		const result = resolveRowIdentity(
 			table({
 				name: 'Account',
 				schemaName: 'app_public',
-				constraints: primaryKey('account_code'),
+				constraints: primaryKey('accountCode'),
 			}),
 			{ accountCode: 'acct-1', id: 'wrong' },
 		);
@@ -51,7 +51,7 @@ describe('row identity', () => {
 			accountCode: 'acct-1',
 		});
 		expect(result.identity.fields[0]).toMatchObject({
-			columnName: 'account_code',
+			columnName: 'accountCode',
 			fieldName: 'accountCode',
 		});
 	});
@@ -61,7 +61,7 @@ describe('row identity', () => {
 			table({
 				name: 'Membership',
 				schemaName: 'tenant_a',
-				constraints: primaryKey('organization_id', 'user_id'),
+				constraints: primaryKey('organizationId', 'userId'),
 			}),
 			{ userId: 'user-1', organizationId: 'org-1' },
 		);
@@ -73,14 +73,14 @@ describe('row identity', () => {
 			'userId',
 		]);
 		expect(serializeRowIdentity(result.identity)).toBe(
-			'["tenant_a","Membership",[["organization_id","organizationId","org-1"],["user_id","userId","user-1"]]]',
+			'["tenant_a","Membership",[["organizationId","organizationId","org-1"],["userId","userId","user-1"]]]',
 		);
 	});
 
 	it('keeps identically named tables in different schemas distinct', () => {
 		const base = {
 			name: 'Entry',
-			constraints: primaryKey('entry_id'),
+			constraints: primaryKey('entryId'),
 		};
 		const left = resolveRowIdentity(table({ ...base, schemaName: 'alpha' }), {
 			entryId: 'entry-1',
@@ -121,7 +121,7 @@ describe('row identity', () => {
 	it('fails closed when a primary-key value is missing or invalid', () => {
 		const meta = table({
 			name: 'Membership',
-			constraints: primaryKey('organization_id', 'user_id'),
+			constraints: primaryKey('organizationId', 'userId'),
 		});
 
 		expect(resolveRowIdentity(meta, { organizationId: 'org-1' })).toMatchObject({

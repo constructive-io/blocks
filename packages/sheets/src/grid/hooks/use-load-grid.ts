@@ -1,7 +1,8 @@
 import { useMemo } from 'react';
 import type { ReactNode } from 'react';
 
-import type { FieldSelection, MetaField, MetaQuery, QueryOptions } from '@constructive-io/data';
+import { assessTableWriteCapability, getRowIdentityDefinition } from '@constructive-io/data';
+import type { FieldSelection, MetaField, MetaQuery, QueryOptions, TableWriteCapability } from '@constructive-io/data';
 
 import { useSheetsContext } from '../../context/sheets-context';
 import { useSheetsMeta } from '../../hooks/use-sheets-meta';
@@ -9,11 +10,12 @@ import { useSheetsTable, type UseTableResult } from '../../hooks/use-sheets-tabl
 import { getAllRelationFields } from '../../utils/relation-utils';
 import { createColumnSchemaFromMeta } from '../../cell-types/type-mapping';
 import type { TableSchema, ColumnSchema } from '../../cell-types/types';
+import { resolveSheetsRowIdentity } from '../../row-identity';
 
 type MetaTable = NonNullable<NonNullable<NonNullable<MetaQuery['_meta']>['tables']>[number]>;
 type RowRecord = Record<string, unknown>;
 type TableOperations = Pick<UseTableResult<RowRecord>, 'update' | 'delete'>;
-type CreatedRow = { id: string | number; [key: string]: unknown };
+type CreatedRow = Record<string, unknown>;
 
 // Data loading context type
 export interface DataLoadingContextValue {
@@ -33,6 +35,7 @@ export interface DataLoadingContextValue {
 	// Meta information
 	meta: MetaQuery | undefined;
 	tableMeta: MetaTable | null;
+	writeCapability: TableWriteCapability | null;
 	tableSchema: TableSchema | null;
 	fieldMetaMap: Map<string, MetaField>;
 	allRelationFields: string[];
@@ -108,6 +111,10 @@ export function useDataLoading({
 
 	// Table schema for form integration
 	const tableSchema = useMemo<TableSchema | null>(() => buildTableSchema(tableMeta), [tableMeta]);
+	const writeCapability = useMemo<TableWriteCapability | null>(
+		() => tableMeta ? assessTableWriteCapability(tableMeta) : null,
+		[tableMeta],
+	);
 
 	// Field metadata map for quick lookup, enhanced with field type overrides
 	const fieldMetaMap = useMemo(() => {
@@ -149,11 +156,12 @@ export function useDataLoading({
 	const create: DataLoadingContextValue['create'] = async (payload) => {
 		const result = await createRow(payload);
 		const createdRow = result?.createdRow;
-		if (
-			!createdRow ||
-			(typeof createdRow.id !== 'string' && typeof createdRow.id !== 'number')
-		) {
-			return { createdRow: null };
+		if (!createdRow || typeof createdRow !== 'object' || !tableMeta) {
+			throw new Error(`Create mutation for '${tableName}' did not return a row identity.`);
+		}
+		const identity = resolveSheetsRowIdentity(tableMeta, createdRow);
+		if (identity.status !== 'identified') {
+			throw new Error(`Create mutation for '${tableName}' returned an incomplete primary-key identity.`);
 		}
 
 		return { createdRow: createdRow as CreatedRow };
@@ -177,6 +185,7 @@ export function useDataLoading({
 			refetch,
 			meta,
 			tableMeta,
+			writeCapability,
 			tableSchema,
 			fieldMetaMap,
 			allRelationFields,
@@ -193,6 +202,7 @@ export function useDataLoading({
 			refetch,
 			meta,
 			tableMeta,
+			writeCapability,
 			tableSchema,
 			fieldMetaMap,
 			allRelationFields,
@@ -214,10 +224,10 @@ function buildTableSchema(metaTable: MetaTable | null): TableSchema | null {
 		columns.push(createColumnSchemaFromMeta(field));
 	}
 
-	const primaryKeyFields = (metaTable.primaryKeyConstraints ?? [])
-		.flatMap((constraint) => constraint?.fields ?? [])
-		.map((field) => field?.name)
-		.filter((name): name is string => Boolean(name));
+	const identity = getRowIdentityDefinition(metaTable);
+	const primaryKeyFields = identity.status === 'keyed'
+		? identity.fields.map((field) => field.fieldName)
+		: [];
 
 	const inflection = metaTable.inflection;
 

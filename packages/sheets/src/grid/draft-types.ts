@@ -5,6 +5,6 @@
 
 /** Result of submitting a draft row */
 export interface DraftSubmitResult {
-	/** The created row with real database ID */
-	createdRow: { id: string | number; [key: string]: unknown } | null;
+	/** The created row with its metadata-defined primary-key fields. */
+	createdRow: Record<string, unknown> | null;
 }

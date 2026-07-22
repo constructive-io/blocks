@@ -45,6 +45,8 @@ export interface MockTable {
 	name: string;
 	fields: MockTableField[];
 	rows: Record<string, unknown>[];
+	/** GraphQL field names in PK order. Defaults to `['id']` when an id field exists. */
+	primaryKeyFields?: string[];
 }
 
 export interface RecordedMutation {
@@ -85,9 +87,10 @@ function documentToString(document: ExecutableDocument): string {
 // Meta response synthesis
 // ============================================================================
 
-function buildMetaField(field: MockTableField) {
+function buildMetaField(field: MockTableField, primaryKeyFields: ReadonlySet<string>) {
 	return {
 		name: field.name,
+		isPrimaryKey: primaryKeyFields.has(field.name),
 		isNotNull: false,
 		hasDefault: false,
 		type: {
@@ -102,6 +105,13 @@ function buildMetaField(field: MockTableField) {
 }
 
 function buildMetaTable(table: MockTable) {
+	const primaryKeyFields = table.primaryKeyFields ?? (
+		table.fields.some((field) => field.name === 'id') ? ['id'] : []
+	);
+	const primaryKeySet = new Set(primaryKeyFields);
+	const primaryKeyMetaFields = table.fields
+		.filter((field) => primaryKeySet.has(field.name))
+		.map((field) => buildMetaField(field, primaryKeySet));
 	return {
 		name: table.name,
 		schemaName: 'public',
@@ -112,16 +122,24 @@ function buildMetaTable(table: MockTable) {
 			one: toCamelCaseSingular(table.name),
 			update: toUpdateMutationName(table.name),
 		},
-		fields: table.fields.map(buildMetaField),
+		fields: table.fields.map((field) => buildMetaField(field, primaryKeySet)),
 		inflection: {
 			allRows: toCamelCasePlural(table.name),
 			connection: toCamelCasePlural(table.name),
 			tableType: table.name,
 		},
 		indexes: [],
-		constraints: { primaryKey: null, unique: [], foreignKey: [] },
+		constraints: {
+			primaryKey: primaryKeyMetaFields.length > 0
+				? { name: `${table.name}_pkey`, fields: primaryKeyMetaFields }
+				: null,
+			unique: [],
+			foreignKey: [],
+		},
 		foreignKeyConstraints: [],
-		primaryKeyConstraints: [],
+		primaryKeyConstraints: primaryKeyMetaFields.length > 0
+			? [{ name: `${table.name}_pkey`, fields: primaryKeyMetaFields }]
+			: [],
 		uniqueConstraints: [],
 		relations: { belongsTo: [], has: [], hasOne: [], hasMany: [], manyToMany: [] },
 	};

@@ -56,17 +56,18 @@ export function SheetsErrorState({ error, onRetry }: SheetsErrorStateProps) {
 interface SheetsEmptyStateProps {
 	tableName?: string;
 	onAddRow?: () => void;
+	readOnlyReason?: string | null;
 }
 
 /** Shown when the table loaded successfully but has no rows. */
-export function SheetsEmptyState({ tableName, onAddRow }: SheetsEmptyStateProps) {
+export function SheetsEmptyState({ tableName, onAddRow, readOnlyReason }: SheetsEmptyStateProps) {
 	return (
 		<SheetsStateShell>
 			<RiInboxLine className='text-muted-foreground h-8 w-8' />
 			<div className='space-y-1'>
 				<p className='text-foreground text-sm font-medium'>No rows yet</p>
 				<p className='text-muted-foreground max-w-md text-sm'>
-					{tableName ? `The "${tableName}" table is empty.` : 'This table is empty.'}
+					{readOnlyReason ?? (tableName ? `The "${tableName}" table is empty.` : 'This table is empty.')}
 				</p>
 			</div>
 			{onAddRow && (

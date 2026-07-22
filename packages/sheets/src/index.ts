@@ -48,6 +48,16 @@ export { tokensFromCssVars } from './grid/sheets.theme';
 // -- Row Model (typed rows + draft metadata) ----------------------------------
 export { getDraftMeta, isDraftRow } from './grid/row-model';
 export type { SheetsRow, DraftMeta, RowWithDraft } from './grid/row-model';
+export {
+	resolveSheetsRowIdentity,
+	resolveSheetsIdentifier,
+	sheetsIdentifierToWhere,
+	sheetsIdentifierCacheKey,
+	sheetsRowKey,
+	getSheetsWriteCapability,
+	canRunSheetsMutation,
+} from './row-identity';
+export type { SheetsRowIdentifier, SheetsRowIdentityResolution } from './row-identity';
 export { SheetsControls, createEmptyGroup, countConditions, MAX_FILTER_DEPTH } from './grid/sheets.controls';
 export type {
 	FilterCondition,

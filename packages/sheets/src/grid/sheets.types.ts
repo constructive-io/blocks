@@ -6,6 +6,7 @@ import type { CellSlots } from '../cell-model/cell-slots';
 // cross-unit transient error — both units typecheck once they land together.
 import type { SheetsThemeInput } from './sheets.theme';
 import type { GridCommand, Binding, Interceptor, DispatchEvent, CommandResult } from '../commands';
+import type { SheetsRowIdentifier } from '../row-identity';
 
 export interface DataGridRow {
 	id: string;
@@ -101,7 +102,7 @@ export interface DataGridProps<TRow extends SheetsRow = SheetsRow> {
 	showSelection?: boolean;
 	showPagination?: boolean;
 	onRowSelect?: (selectedRows: TRow[]) => void;
-	onCellEdit?: (id: string | number, field: string, value: unknown) => void;
+	onCellEdit?: (id: SheetsRowIdentifier, field: string, value: unknown) => void;
 	// Relation rendering options
 	relationChipLimit?: number;
 	relationLabelMaxLength?: number;

@@ -1,6 +1,7 @@
 import * as React from 'react';
 
 import { useSheetsTable } from '../hooks/use-sheets-table';
+import type { SheetsRowIdentifier } from '../row-identity';
 
 export interface DynamicMutationResult<TData = unknown> {
 	submit: (values: Record<string, unknown>) => Promise<TData | null>;
@@ -26,7 +27,7 @@ export function useDynamicCreate(tableName: string): DynamicMutationResult {
 	};
 }
 
-export function useDynamicUpdate(tableName: string, rowId: string | number): DynamicMutationResult {
+export function useDynamicUpdate(tableName: string, rowId: SheetsRowIdentifier): DynamicMutationResult {
 	const table = useSheetsTable(tableName, { enabled: false });
 
 	const submit = React.useCallback(

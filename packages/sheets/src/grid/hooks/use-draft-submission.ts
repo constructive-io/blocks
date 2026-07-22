@@ -28,7 +28,7 @@ interface UseDraftSubmissionParams {
 	draftRowsTable?: DraftRowsTableState;
 	selectedDraftRowEntries: DraftRowEntry[];
 	hasDraftSelection: boolean;
-	create: (data: Record<string, unknown>) => Promise<{ createdRow?: { id: string | number; [key: string]: unknown } | null }>;
+	create: (data: Record<string, unknown>) => Promise<{ createdRow?: Record<string, unknown> | null }>;
 	removeDraftRow: (tableKey: string, draftRowId: string) => void;
 	setDraftRowStatus: (args: {
 		tableKey: string;

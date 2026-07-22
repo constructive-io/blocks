@@ -142,7 +142,7 @@ export function createPostGraphileAdapter(): SheetsBackendAdapter {
 
 			const variables = {
 				input: {
-					id,
+					...(typeof id === 'object' ? id : { id }),
 					[patchFieldName]: sanitizedPatch,
 				},
 			};

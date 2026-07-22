@@ -24,6 +24,7 @@ import { useCallback, useRef } from 'react';
 import { resolveServerPatch } from './use-cell-editing';
 import type { CellEditingResult } from './use-cell-editing';
 import { getDraftMeta, type SheetsRow } from '../row-model';
+import type { SheetsRowIdentifier } from '../../row-identity';
 
 /** A single cell write request. */
 export interface CellWrite {
@@ -46,7 +47,10 @@ interface UseBatchCommitParams {
 	combinedRows: SheetsRow[];
 	fieldMetaMap: Map<string, any>;
 	relationInfoByField: Map<string, any>;
-	update: (id: string | number, data: Record<string, unknown>) => Promise<{ updatedRow?: Record<string, unknown> | null }>;
+	update: (id: SheetsRowIdentifier, data: Record<string, unknown>) => Promise<{ updatedRow?: Record<string, unknown> | null }>;
+	getRowIdentifier?: (row: Readonly<Record<string, unknown>>) => SheetsRowIdentifier | null;
+	readOnlyFields?: ReadonlySet<string>;
+	canUpdate?: boolean;
 	/** Single-write optimistic cache patch (infinite mode) — returns a revert thunk. */
 	applyOptimisticPatch?: (rowIndex: number, patch: Record<string, unknown>) => (() => void) | void;
 	/** Re-sync a server row over the optimistic patch after the mutation resolves (infinite mode). */
@@ -54,7 +58,7 @@ interface UseBatchCommitParams {
 	/** Existing per-cell editor (draft routing + single-cell server coercion). */
 	editCell: (rowIndex: number, colKey: string, rawValue: unknown) => Promise<CellEditingResult>;
 	/** Observational per-server-write callback (mirrors useCellEditing's onCellEdit). */
-	onCellEdit?: (id: string | number, field: string, value: unknown) => void;
+	onCellEdit?: (id: SheetsRowIdentifier, field: string, value: unknown) => void;
 	/** Push a reversible step to the history. */
 	record: (entry: { label: string; undo: () => Promise<void> | void; redo: () => Promise<void> | void }) => void;
 }
@@ -62,10 +66,14 @@ interface UseBatchCommitParams {
 /** A resolved server write: its row, the patch field, the next + prior values. */
 interface ResolvedWrite {
 	rowIndex: number;
-	rowId: string | number;
+	rowId: SheetsRowIdentifier;
 	field: string;
 	value: unknown;
 	prior: unknown;
+}
+
+function legacyRowIdentifier(row: Readonly<Record<string, unknown>>): SheetsRowIdentifier | null {
+	return typeof row.id === 'string' || typeof row.id === 'number' ? row.id : null;
 }
 
 export function useBatchCommit({
@@ -73,6 +81,9 @@ export function useBatchCommit({
 	fieldMetaMap,
 	relationInfoByField,
 	update,
+	getRowIdentifier = legacyRowIdentifier,
+	readOnlyFields,
+	canUpdate = true,
 	applyOptimisticPatch,
 	resyncRow,
 	editCell,
@@ -102,12 +113,15 @@ export function useBatchCommit({
 					continue;
 				}
 
-				const resolution = resolveServerPatch(w.colKey, w.value, fieldMetaMap, relationInfoByField);
+				if (!canUpdate) continue;
+				const resolution = resolveServerPatch(w.colKey, w.value, fieldMetaMap, relationInfoByField, readOnlyFields);
 				if (resolution.kind === 'noop') continue;
+				const rowIdentifier = getRowIdentifier(rowData);
+				if (rowIdentifier === null) continue;
 
 				resolved.push({
 					rowIndex: w.rowIndex,
-					rowId: rowData.id as string | number,
+					rowId: rowIdentifier,
 					field: resolution.field,
 					value: resolution.value,
 					// Capture the PRIOR value of the patched field BEFORE any optimistic patch.
@@ -177,7 +191,7 @@ export function useBatchCommit({
 
 			return { applied: resolved.length };
 		},
-		[combinedRows, fieldMetaMap, relationInfoByField, update, applyOptimisticPatch, resyncRow, editCell, onCellEdit, record],
+		[combinedRows, fieldMetaMap, relationInfoByField, update, getRowIdentifier, readOnlyFields, canUpdate, applyOptimisticPatch, resyncRow, editCell, onCellEdit, record],
 	);
 
 	commitRef.current = commitCells;

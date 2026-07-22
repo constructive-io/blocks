@@ -1,4 +1,4 @@
-import { pgFieldToCamelCase, type MetaTable } from './data.types';
+import type { MetaTable } from './data.types';
 
 export interface RowIdentityObject {
 	readonly [key: string]: RowIdentityValue;
@@ -126,7 +126,9 @@ export function getRowIdentityDefinition(table: MetaTable): RowIdentityDefinitio
 		tableName: table.name,
 		fields: columnNames.map((columnName) => ({
 			columnName,
-			fieldName: pgFieldToCamelCase(columnName),
+			// `_meta` exposes GraphQL field names here (already inflected), so using
+			// them verbatim also handles custom/renamed primary keys.
+			fieldName: columnName,
 		})),
 	};
 }

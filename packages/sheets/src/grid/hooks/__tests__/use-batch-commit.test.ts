@@ -136,6 +136,56 @@ describe('useBatchCommit — coalescing', () => {
 		expect(update).toHaveBeenCalledTimes(1);
 		expect(update.mock.calls[0]).toEqual(['r0', { name: 'A2' }]);
 	});
+
+	it('sends a metadata-resolved composite identifier and protects every PK field', async () => {
+		const update = vi.fn().mockResolvedValue({ updatedRow: null });
+		const rows: SheetsRow[] = [{ actionId: 'action-1', goalId: 'goal-1', name: 'Old' }];
+		const { commit } = mount({
+			combinedRows: rows,
+			fieldMetaMap: META,
+			relationInfoByField: new Map(),
+			update,
+			getRowIdentifier: (row) => ({
+				actionId: String(row.actionId),
+				goalId: String(row.goalId),
+			}),
+			readOnlyFields: new Set(['actionId', 'goalId']),
+			editCell: vi.fn(),
+		});
+
+		let result!: Awaited<ReturnType<CommitCells>>;
+		await act(async () => {
+			result = await commit([
+				{ rowIndex: 0, colKey: 'actionId', value: 'changed' },
+				{ rowIndex: 0, colKey: 'name', value: 'New' },
+			]);
+		});
+
+		expect(result.applied).toBe(1);
+		expect(update).toHaveBeenCalledWith(
+			{ actionId: 'action-1', goalId: 'goal-1' },
+			{ name: 'New' },
+		);
+	});
+
+	it('does not optimistically patch or mutate when update capability is absent', async () => {
+		const update = vi.fn().mockResolvedValue({ updatedRow: null });
+		const applyOptimisticPatch = vi.fn();
+		const { commit } = mount({
+			combinedRows: [{ id: 'r0', name: 'Old' }],
+			fieldMetaMap: META,
+			relationInfoByField: new Map(),
+			update,
+			applyOptimisticPatch,
+			canUpdate: false,
+			editCell: vi.fn(),
+		});
+
+		await expect(commit([{ rowIndex: 0, colKey: 'name', value: 'New' }]))
+			.resolves.toEqual({ applied: 0 });
+		expect(applyOptimisticPatch).not.toHaveBeenCalled();
+		expect(update).not.toHaveBeenCalled();
+	});
 });
 
 describe('useBatchCommit — undo/redo', () => {

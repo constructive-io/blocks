@@ -101,6 +101,8 @@ export interface SheetsControlsProps {
   deleteSelected: () => void;
   onAddRow?: () => void;
   onExport?: () => void;
+  canDelete?: boolean;
+  readOnlyReason?: string | null;
 }
 
 function getInputType(valueType: OperatorValueType): string {
@@ -447,6 +449,8 @@ export function SheetsControls(props: SheetsControlsProps) {
     deleteSelected,
     onAddRow,
     onExport,
+    canDelete = true,
+    readOnlyReason,
   } = props;
 
   const filterableColumns = useMemo(() => {
@@ -493,6 +497,15 @@ export function SheetsControls(props: SheetsControlsProps) {
         className="flex shrink-0 flex-wrap items-center justify-between gap-4 py-4"
       >
         <div className="flex items-center gap-2">
+		  {readOnlyReason && (
+			<span
+				className="border-border bg-muted text-muted-foreground inline-flex h-8 items-center rounded-md border px-2.5 text-xs"
+				role="status"
+				title={readOnlyReason}
+			>
+				Read-only
+			</span>
+		  )}
           <Button variant="outline" size="sm" onClick={() => openSearch?.()}>
             <RiSearch2Line className="text-muted-foreground/60 -ms-1.5 size-5" aria-hidden="true" />
             Search
@@ -518,7 +531,12 @@ export function SheetsControls(props: SheetsControlsProps) {
           {showSelection && (
             <AlertDialog>
               <AlertDialogTrigger asChild>
-                <Button variant="destructive-outline" size="sm" disabled={selectedRowCount === 0}>
+                <Button
+				  variant="destructive-outline"
+				  size="sm"
+				  disabled={!canDelete || selectedRowCount === 0}
+				  title={!canDelete ? readOnlyReason ?? 'Delete is unavailable for this table.' : undefined}
+				>
                   <RiDeleteBin6Line className="-ms-1.5 size-5" aria-hidden="true" />
                   Delete
                   {selectedRowCount > 0 ? ` (${selectedRowCount})` : ""}

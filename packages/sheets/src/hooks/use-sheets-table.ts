@@ -24,18 +24,17 @@ import {
 import { sheetsQueryKeys } from './query-keys';
 import { resolveRelationFieldMap } from './relation-field-resolution';
 import { validateOrderByVariables } from './orderby-enum-resolution';
+import {
+	assertSheetsMutationAllowed,
+	resolveSheetsIdentifier,
+	resolveSheetsRowIdentity,
+	sheetsIdentifierCacheKey,
+	sheetsIdentifierToWhere,
+	type SheetsRowIdentifier,
+} from '../row-identity';
 
 type RowRecord = Record<string, unknown>;
-type DeleteIdentifier = string | number | Record<string, string | number>;
-
-function extractRowId(row: RowRecord | null | undefined): string | number | null {
-	if (!row || typeof row !== 'object') {
-		return null;
-	}
-
-	const candidate = (row as RowRecord).id;
-	return typeof candidate === 'string' || typeof candidate === 'number' ? candidate : null;
-}
+type DeleteIdentifier = SheetsRowIdentifier;
 
 /**
  * Transform relation data by extracting nodes from hasMany/manyToMany connections
@@ -93,11 +92,11 @@ export interface UseTableResult<TData extends RowRecord = RowRecord> {
 	error: Error | null;
 
 	// Single row operations
-	findOne: (id: string | number) => Promise<TData | null>;
+	findOne: (id: SheetsRowIdentifier) => Promise<TData | null>;
 
 	// Mutations
 	create: (data: RowRecord) => Promise<{ createdRow: TData | null }>;
-	update: (id: string | number, patch: RowRecord) => Promise<{ updatedRow: TData | null }>;
+	update: (id: SheetsRowIdentifier, patch: RowRecord) => Promise<{ updatedRow: TData | null }>;
 	delete: (id: DeleteIdentifier) => Promise<{ deletedId: DeleteIdentifier }>;
 
 	// Mutation states
@@ -196,18 +195,38 @@ export function useSheetsTable<TData extends RowRecord = RowRecord>(
 	const { data: meta } = useSheetsMeta();
 	const adapter = useSheetsAdapter();
 
-	const tables = useMemo<CleanTable[]>(() => {
+	const metaTables = useMemo<MetaTable[]>(() => {
 		if (!meta?._meta?.tables) return [];
 
-		return meta._meta.tables
-			.filter((candidate): candidate is MetaTable => candidate != null)
-			.map((metaTable) => cleanTable(metaTable));
+		return meta._meta.tables.filter((candidate): candidate is MetaTable => candidate != null);
 	}, [meta]);
+
+	const tables = useMemo<CleanTable[]>(() => metaTables.map(cleanTable), [metaTables]);
 
 	const table = useMemo<CleanTable | null>(
 		() => tables.find((candidate) => candidate.name === tableName) ?? null,
 		[tables, tableName],
 	);
+	const tableMeta = useMemo<MetaTable | null>(
+		() => metaTables.find((candidate) => candidate.name === tableName) ?? null,
+		[metaTables, tableName],
+	);
+
+	const resolveIdentifier = (identifier: SheetsRowIdentifier): SheetsRowIdentifier => {
+		if (!tableMeta) throw createError.notFound(`Table '${tableName}' not found`);
+		const resolution = resolveSheetsIdentifier(tableMeta, identifier);
+		if (resolution.status !== 'identified') {
+			throw createError.badRequest(`Cannot resolve a primary-key identity for table '${tableName}'.`);
+		}
+		return resolution.identifier;
+	};
+
+	const rowCacheKey = (row: RowRecord | null | undefined): string | number | null => {
+		if (!tableMeta || !row) return null;
+		const resolution = resolveSheetsRowIdentity(tableMeta, row);
+		if (resolution.status !== 'identified') return null;
+		return typeof resolution.identifier === 'object' ? resolution.key : resolution.identifier;
+	};
 
 	// Extract options
 	const { enabled = true, select: fieldSelection, mutationOptions = {}, ...queryOptions } = options;
@@ -285,9 +304,10 @@ export function useSheetsTable<TData extends RowRecord = RowRecord>(
 	>({
 		mutationKey: sheetsTableMutationKeys.create(scopeKey, tableName),
 		mutationFn: async (data: RowRecord) => {
-			if (!table) {
+			if (!table || !tableMeta) {
 				throw createError.notFound(`Table '${tableName}' not found`);
 			}
+			assertSheetsMutationAllowed(tableMeta, 'create');
 
 			// Get all tables for AST generation
 			const allTables = meta?._meta?.tables
@@ -309,9 +329,9 @@ export function useSheetsTable<TData extends RowRecord = RowRecord>(
 			queryClient.invalidateQueries({ queryKey: sheetsQueryKeys.infiniteTable(scopeKey, tableName) });
 
 			// Update individual row cache
-			const createdRowId = extractRowId(createdRow as RowRecord | null);
-			if (createdRowId !== null) {
-				queryClient.setQueryData(sheetsTableQueryKeys.tableRow(scopeKey, tableName, createdRowId), createdRow);
+			const createdRowKey = rowCacheKey(createdRow as RowRecord | null);
+			if (createdRowKey !== null) {
+				queryClient.setQueryData(sheetsTableQueryKeys.tableRow(scopeKey, tableName, createdRowKey), createdRow);
 			}
 		},
 	});
@@ -320,21 +340,23 @@ export function useSheetsTable<TData extends RowRecord = RowRecord>(
 	const updateMutation = useMutation<
 		{ updatedRow: TData | null; __rawResult: Record<string, unknown> },
 		Error,
-		{ id: string | number; patch: RowRecord },
+		{ id: SheetsRowIdentifier; patch: RowRecord },
 		{ previousRows: Array<[readonly unknown[], { rows: TData[]; totalCount: number } | undefined]> }
 	>({
 		mutationKey: sheetsTableMutationKeys.update(scopeKey, tableName),
 		mutationFn: async ({ id, patch }) => {
-			if (!table) {
+			if (!table || !tableMeta) {
 				throw createError.notFound(`Table '${tableName}' not found`);
 			}
+			assertSheetsMutationAllowed(tableMeta, 'update');
+			const mutationIdentifier = resolveIdentifier(id);
 
 			// Get all tables for AST generation
 			const allTables = meta?._meta?.tables
 				? meta._meta.tables.filter((t): t is NonNullable<typeof t> => t != null).map(cleanTable)
 				: [];
 
-			const updatedRow = await adapter.updateRow<TData>({ table, allTables, tableName }, id, patch, execute, {
+			const updatedRow = await adapter.updateRow<TData>({ table, allTables, tableName }, mutationIdentifier, patch, execute, {
 				...mutationOptions,
 				fieldSelection: mutationOptions.fieldSelection || fieldSelection || 'display',
 			});
@@ -350,6 +372,7 @@ export function useSheetsTable<TData extends RowRecord = RowRecord>(
 		onMutate: async ({ id, patch }) => {
 			const tablePrefix = sheetsTableQueryKeys.table(scopeKey, tableName);
 			await queryClient.cancelQueries({ queryKey: tablePrefix });
+			const targetKey = tableMeta ? sheetsIdentifierCacheKey(tableMeta, id) : null;
 
 			const isRowsKey = (key: readonly unknown[]) => key[key.length - 2] === 'rows';
 			const previousRows = queryClient
@@ -363,7 +386,7 @@ export function useSheetsTable<TData extends RowRecord = RowRecord>(
 					if (!old) return old;
 					let changed = false;
 					const rows = old.rows.map((row) => {
-						if (extractRowId(row as RowRecord) === id) {
+						if (targetKey !== null && rowCacheKey(row as RowRecord) === targetKey) {
 							changed = true;
 							return { ...(row as RowRecord), ...patch } as TData;
 						}
@@ -395,9 +418,9 @@ export function useSheetsTable<TData extends RowRecord = RowRecord>(
 			// covers a membership change.
 
 			// Update individual row cache
-			const updatedRowId = extractRowId(updatedRow as RowRecord | null);
-			if (updatedRowId !== null) {
-				queryClient.setQueryData(sheetsTableQueryKeys.tableRow(scopeKey, tableName, updatedRowId), updatedRow);
+			const updatedRowKey = rowCacheKey(updatedRow as RowRecord | null);
+			if (updatedRowKey !== null) {
+				queryClient.setQueryData(sheetsTableQueryKeys.tableRow(scopeKey, tableName, updatedRowKey), updatedRow);
 			}
 		},
 	});
@@ -410,16 +433,18 @@ export function useSheetsTable<TData extends RowRecord = RowRecord>(
 	>({
 		mutationKey: sheetsTableMutationKeys.delete(scopeKey, tableName),
 		mutationFn: async (idOrPk) => {
-			if (!table) {
+			if (!table || !tableMeta) {
 				throw createError.notFound(`Table '${tableName}' not found`);
 			}
+			assertSheetsMutationAllowed(tableMeta, 'delete');
+			const mutationIdentifier = resolveIdentifier(idOrPk);
 
 			// Get all tables for AST generation
 			const allTables = meta?._meta?.tables
 				? meta._meta.tables.filter((t): t is NonNullable<typeof t> => t != null).map(cleanTable)
 				: [];
 
-			await adapter.deleteRow({ table, allTables, tableName }, idOrPk, execute, mutationOptions);
+			await adapter.deleteRow({ table, allTables, tableName }, mutationIdentifier, execute, mutationOptions);
 
 			return { deletedId: idOrPk, __rawResult: {} };
 		},
@@ -430,27 +455,31 @@ export function useSheetsTable<TData extends RowRecord = RowRecord>(
 			// Cross-invalidate infinite scroll queries to ensure both modes stay in sync
 			queryClient.invalidateQueries({ queryKey: sheetsQueryKeys.infiniteTable(scopeKey, tableName) });
 
-			// Remove individual row cache (only for scalar PK rows — composite PK rows aren't individually cached)
-			if (deletedId && typeof deletedId !== 'object') {
+			const deletedRowKey = tableMeta ? sheetsIdentifierCacheKey(tableMeta, deletedId) : null;
+			if (deletedRowKey !== null) {
 				queryClient.removeQueries({
-					queryKey: sheetsTableQueryKeys.tableRow(scopeKey, tableName, deletedId),
+					queryKey: sheetsTableQueryKeys.tableRow(scopeKey, tableName, deletedRowKey),
 				});
 			}
 		},
 	});
 
 	// Find one function with error handling
-	const findOne = async (id: string | number) => {
-		if (!table) {
+	const findOne = async (id: SheetsRowIdentifier) => {
+		if (!table || !tableMeta) {
 			throw createError.notFound(`Table '${tableName}' not found`);
+		}
+		const where = sheetsIdentifierToWhere(tableMeta, id);
+		if (!where) {
+			throw createError.badRequest(`Cannot resolve a primary-key identity for table '${tableName}'.`);
 		}
 
 		const doc = buildSelect(table, tables, {
-			where: { id: { equalTo: id } },
+			where,
 			limit: 1,
 		});
 		const variables = transformToPostGraphileVariables(table, {
-			where: { id: { equalTo: id } },
+			where,
 			limit: 1,
 		});
 		const result = (await execute(doc, variables)) as Record<string, unknown>;
@@ -495,7 +524,7 @@ export function useSheetsTable<TData extends RowRecord = RowRecord>(
 
 		// Mutations
 		create: (data: RowRecord) => createMutation.mutateAsync(data),
-		update: (id: string | number, patch: RowRecord) => updateMutation.mutateAsync({ id, patch }),
+		update: (id: SheetsRowIdentifier, patch: RowRecord) => updateMutation.mutateAsync({ id, patch }),
 		delete: (id: DeleteIdentifier) => deleteMutation.mutateAsync(id),
 
 		// Mutation states

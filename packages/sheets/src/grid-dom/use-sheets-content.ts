@@ -23,6 +23,8 @@ import type { MetaQuery } from '@constructive-io/data';
 import { buildRelationFieldNameSet, resolveGridCellRoute } from '../grid/cell-routing';
 import { getDraftMeta } from '../grid/row-model';
 import { unwrapRelationValue } from '../grid/sheets.utils';
+import { MEDIA_TYPES } from '../cell-types/cell-type-groups';
+import type { SheetsRowIdentifier } from '../row-identity';
 
 interface RelationOptions {
 	relationChipLimit?: number;
@@ -58,6 +60,14 @@ export interface UseSheetsContentArgs {
 	relationInfoByField: ReadonlyMap<string, RelationInfo>;
 	/** Schema meta (same value the canvas path reads via useSheetsMeta). */
 	meta: MetaQuery | undefined;
+	/** Disable every persisted-row editor when the table cannot expose update mutations. */
+	serverRowsReadOnly?: boolean;
+	/** Primary-key fields are immutable after insertion because they define row identity. */
+	serverReadOnlyFields?: ReadonlySet<string>;
+	/** Resolve the GraphQL mutation identity; self-committing editors require a legacy scalar id. */
+	getRowIdentifier?: (row: Readonly<Record<string, unknown>>) => SheetsRowIdentifier | null;
+	/** Relation/upload editors still use scalar record APIs and must fail closed otherwise. */
+	supportsScalarSelfCommit?: boolean;
 }
 
 function isDraftId(value: unknown): boolean {
@@ -103,7 +113,20 @@ function tagDraftStyle(cell: SheetsCell, hasError: boolean): SheetsCell {
  * tags draft rows. The view component is resolved alongside via `getCellComponent`.
  */
 export function useSheetsContent(args: UseSheetsContentArgs) {
-	const { data, columnKeys, fieldMetaMap, registry, tableName, options, relationInfoByField, meta } = args;
+	const {
+		data,
+		columnKeys,
+		fieldMetaMap,
+		registry,
+		tableName,
+		options,
+		relationInfoByField,
+		meta,
+		serverRowsReadOnly = false,
+		serverReadOnlyFields,
+		getRowIdentifier,
+		supportsScalarSelfCommit = true,
+	} = args;
 
 	const relationFieldNamesFromMeta = useMemo(() => buildRelationFieldNameSet(meta, tableName), [meta, tableName]);
 
@@ -126,7 +149,7 @@ export function useSheetsContent(args: UseSheetsContentArgs) {
 	// reference-equal guarantees an identical resolution.
 	const cache = useMemo(
 		() => new Map<string, { value: unknown; resolution: SheetsCellResolution }>(),
-		[data, columnKeys, fieldMetaMap, registry, relationFieldNamesFromMeta, relationInfoByField, options],
+		[data, columnKeys, fieldMetaMap, registry, relationFieldNamesFromMeta, relationInfoByField, options, serverRowsReadOnly, serverReadOnlyFields, getRowIdentifier, supportsScalarSelfCommit],
 	);
 
 	const getSheetsCell = useCallback(
@@ -188,6 +211,9 @@ export function useSheetsContent(args: UseSheetsContentArgs) {
 				isDraftIdCell,
 				hasForeignKeyField: canEditRelationInline,
 			});
+			const tableForcedReadOnly = !isDraftRow && (
+				serverRowsReadOnly || Boolean(serverReadOnlyFields?.has(colKey))
+			);
 
 			let valueForCell = rawValue;
 
@@ -221,6 +247,14 @@ export function useSheetsContent(args: UseSheetsContentArgs) {
 				fieldName: colKey,
 			};
 			const cellType = registry.resolveTypeKey(matchInput, () => route.cellType);
+			const rowIdentifier = !isDraftRow ? getRowIdentifier?.(rowData) : null;
+			const selfCommittingEditor = isRelation || MEDIA_TYPES.has(cellType);
+			const lacksScalarEditorIdentity =
+				selfCommittingEditor &&
+				(!supportsScalarSelfCommit || (
+					rowIdentifier != null && typeof rowIdentifier === 'object'
+				));
+			const forcedReadOnly = tableForcedReadOnly || lacksScalarEditorIdentity;
 
 			const metadata: CellCreationMetadata = {
 				cellType,
@@ -228,12 +262,15 @@ export function useSheetsContent(args: UseSheetsContentArgs) {
 				fieldMeta,
 				relationInfo,
 				relationOptions: relationInfo ? options || {} : undefined,
-				canEdit: route.canEdit,
-				isReadonly: route.isReadonly,
+				canEdit: route.canEdit && !forcedReadOnly,
+				isReadonly: route.isReadonly || forcedReadOnly,
 				activationBehavior: route.activationBehavior,
 			};
 
-			const cell = registry.toSheetsCell(cellType, valueForCell, { metadata });
+			const resolvedCell = registry.toSheetsCell(cellType, valueForCell, { metadata });
+			const cell = forcedReadOnly && !resolvedCell.readonly
+				? { ...resolvedCell, readonly: true }
+				: resolvedCell;
 
 			// Blank any internal draft key that would otherwise render as visible text
 			// (kind unchanged); narrow to the draft id, nothing else.
@@ -259,7 +296,7 @@ export function useSheetsContent(args: UseSheetsContentArgs) {
 			cache.set(cacheKey, { value: rawValue, resolution });
 			return resolution;
 		},
-		[data, columnKeys, fieldMetaMap, registry, relationFieldNamesFromMeta, relationInfoByField, options],
+		[data, columnKeys, fieldMetaMap, registry, relationFieldNamesFromMeta, relationInfoByField, options, serverRowsReadOnly, serverReadOnlyFields, getRowIdentifier, supportsScalarSelfCommit],
 	);
 
 	return { getSheetsCell };

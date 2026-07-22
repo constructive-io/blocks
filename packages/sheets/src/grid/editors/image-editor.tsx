@@ -330,17 +330,20 @@ export const ImageEditor: React.FC<ImageEditorProps> = ({
         setUploadState('submitting-draft');
 
         const result = await onSubmitDraft();
-        if (!result.createdRow?.id) throw new Error('Failed to create row');
+		const createdId = result.createdRow?.id;
+		if (typeof createdId !== 'string' && typeof createdId !== 'number') {
+			throw new Error('Image uploads require a scalar id primary key.');
+		}
 
         // Row is now persisted and the draft has been removed from the store.
         // From here on, treat it as a real row: any retry must hit this id.
-        committedRecordIdRef.current = result.createdRow.id;
+		committedRecordIdRef.current = createdId;
 
         toast.info({ message: `Uploading ${noun}...` });
         setUploadState('uploading');
 
         const uploadResult = await executeFieldUpload(
-          tableName, fieldName, result.createdRow.id, selectedFile,
+			tableName, fieldName, createdId, selectedFile,
           config.endpoint, getToken, undefined, { onAuthError: config.onAuthError },
         );
 

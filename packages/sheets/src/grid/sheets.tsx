@@ -133,16 +133,6 @@ export const Sheets = forwardRef(SheetsInnerComponent) as <TRow extends SheetsRo
 const EMPTY_OBJ = {} as const;
 const noop = () => {};
 
-/**
- * Row id for `combinedRows[index]` — MUST match `useSheetsTableInstance`'s
- * `defaultGetRowId` (`row.id` when present, else the index) so the rowSelection
- * map ↔ RangeSet projection is an exact inverse.
- */
-function rowIdAt(rows: readonly unknown[], index: number): string {
-	const id = (rows[index] as { id?: unknown } | undefined)?.id;
-	return id != null ? String(id) : String(index);
-}
-
 // Overlay flip-geometry knobs — MUST match the OverlayManager's private constants so
 // the geometry we hand the editor via EditorProps.overlay matches where it's placed.
 const OVERLAY_MARGIN_PX = 12;
@@ -240,9 +230,10 @@ function SheetsDomInner<TRow extends SheetsRow = SheetsRow>({
 
 	// ============== ROW-SELECTION STATE MIRROR (Phase 6, both directions) ==============
 	// The native SheetsSelection (RangeSet of ROW indices) stays canonical; the v9
-	// table only needs a derived `Record<rowId, true>` view. Row ids match the table's
-	// default getRowId (`row.id` else index), so the two maps below are exact inverses.
+	// table only needs a derived `Record<rowId, true>` view. Both directions use the
+	// same metadata-defined row key, so renamed/composite PK selections round-trip.
 	const combinedRows = shell.combinedRows;
+	const getRowId = shell.getRowId;
 	const selection = s.selection.gridSelection;
 	const setSelection = s.selection.setGridSelection;
 	// Active (keyboard cursor) cell `[col, row]`, threaded to the viewport for the focus ring +
@@ -253,10 +244,10 @@ function SheetsDomInner<TRow extends SheetsRow = SheetsRow>({
 		if (!selection) return EMPTY_OBJ;
 		const map: Record<string, boolean> = {};
 		for (const index of selection.rows.toArray()) {
-			map[rowIdAt(combinedRows, index)] = true;
+			map[getRowId(combinedRows[index], index)] = true;
 		}
 		return map;
-	}, [selection, combinedRows]);
+	}, [selection, combinedRows, getRowId]);
 
 	const onRowSelectionChange = useCallback<OnChangeFn<RowSelectionState>>(
 		(updater) => {
@@ -265,7 +256,7 @@ function SheetsDomInner<TRow extends SheetsRow = SheetsRow>({
 			// into a fresh RangeSet. Active cell follows the lowest selected index (or
 			// clears to the empty selection when nothing is selected).
 			const indexById = new Map<string, number>();
-			for (let i = 0; i < combinedRows.length; i++) indexById.set(rowIdAt(combinedRows, i), i);
+			for (let i = 0; i < combinedRows.length; i++) indexById.set(getRowId(combinedRows[i], i), i);
 
 			let rows = RangeSet.empty();
 			let lowest: number | undefined;
@@ -283,7 +274,7 @@ function SheetsDomInner<TRow extends SheetsRow = SheetsRow>({
 			}
 			setSelection({ current: { cell: [0, lowest] }, rows, columns: RangeSet.empty() });
 		},
-		[rowSelection, combinedRows, setSelection],
+		[rowSelection, combinedRows, getRowId, setSelection],
 	);
 
 	const table = useSheetsTableInstance({
@@ -296,6 +287,7 @@ function SheetsDomInner<TRow extends SheetsRow = SheetsRow>({
 		// Pinning is shell-derived (frozenCount), never edited from the grid → no writer needed.
 		onColumnPinningChange: noop,
 		onRowSelectionChange,
+		getRowId,
 	});
 
 	// ============== LEADING CHECKBOX / SELECT-ALL COLUMN (drives the canonical RangeSet) ==============
@@ -776,7 +768,7 @@ function SheetsDomInner<TRow extends SheetsRow = SheetsRow>({
 					value={rowValue}
 					cell={resolution.cell}
 					colKey={active.colKey}
-					rowId={String((combinedRows[active.rowIndex] as Record<string, unknown> | undefined)?.id ?? '')}
+					rowId={getRowId(combinedRows[active.rowIndex], active.rowIndex)}
 					rowIndex={active.rowIndex}
 					tableName={props.tableName}
 					fieldMeta={resolution.fieldMeta}
@@ -909,9 +901,10 @@ function SheetsDomInner<TRow extends SheetsRow = SheetsRow>({
 		return (
 			<SheetsEmptyState
 				tableName={tableName}
-				onAddRow={() => {
+				readOnlyReason={shell.readOnlyReason}
+				onAddRow={shell.canCreate ? () => {
 					void s.draft.appendRow();
-				}}
+				} : undefined}
 			/>
 		);
 	}
@@ -943,7 +936,9 @@ function SheetsDomInner<TRow extends SheetsRow = SheetsRow>({
 						gridSelection={s.selection.gridSelection ?? null}
 						setGridSelection={shell.setGridSelectionForControls}
 						deleteSelected={s.draft.deleteSelected}
-						onAddRow={handleAddRow}
+						onAddRow={shell.canCreate ? handleAddRow : undefined}
+						canDelete={shell.canDelete}
+						readOnlyReason={shell.readOnlyReason}
 						onExport={handleExport}
 					/>
 				)}
@@ -1029,6 +1024,8 @@ function SheetsDomInner<TRow extends SheetsRow = SheetsRow>({
 				onAddRow={handleAddRow}
 				onDeleteRows={s.draft.deleteSelected}
 				selectedRowCount={selection?.rows.length ?? 0}
+				canAddRows={shell.canCreate}
+				canDeleteRows={shell.canDelete}
 			/>
 		</SheetsErrorBoundary>
 	);

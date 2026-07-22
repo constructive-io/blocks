@@ -63,6 +63,8 @@ export interface BuildContextMenuItemsArgs {
 	requestDelete: () => void;
 	/** Count of currently selected rows — gates Delete + drives its label. */
 	selectedRowCount: number;
+	canAddRows?: boolean;
+	canDeleteRows?: boolean;
 }
 
 /**
@@ -76,6 +78,8 @@ export function buildContextMenuItems({
 	onAddRow,
 	requestDelete,
 	selectedRowCount,
+	canAddRows = true,
+	canDeleteRows = true,
 }: BuildContextMenuItemsArgs): ContextMenuItem[] {
 	const cmd = (key: string, commandId: string, label: string, icon: ReactNode, shortcut?: string): ContextMenuItem => ({
 		key,
@@ -95,6 +99,7 @@ export function buildContextMenuItems({
 			key: 'add-row',
 			label: 'Add row',
 			icon: <RiAddLine className='size-4' aria-hidden='true' />,
+			disabled: !canAddRows,
 			run: onAddRow,
 		},
 		{
@@ -102,7 +107,7 @@ export function buildContextMenuItems({
 			label: selectedRowCount > 1 ? `Delete ${selectedRowCount} rows` : 'Delete row',
 			icon: <RiDeleteBin6Line className='size-4' aria-hidden='true' />,
 			destructive: true,
-			disabled: selectedRowCount === 0,
+			disabled: !canDeleteRows || selectedRowCount === 0,
 			run: requestDelete,
 		},
 	];
@@ -123,6 +128,8 @@ export interface SheetsContextMenuProps {
 	onDeleteRows: () => void;
 	/** Count of currently selected rows — drives the destructive dialog copy. */
 	selectedRowCount: number;
+	canAddRows?: boolean;
+	canDeleteRows?: boolean;
 }
 
 export function SheetsContextMenu({
@@ -133,6 +140,8 @@ export function SheetsContextMenu({
 	onAddRow,
 	onDeleteRows,
 	selectedRowCount,
+	canAddRows = true,
+	canDeleteRows = true,
 }: SheetsContextMenuProps) {
 	const [confirmDelete, setConfirmDelete] = useState(false);
 	const open = state !== null;
@@ -143,6 +152,8 @@ export function SheetsContextMenu({
 		onAddRow,
 		requestDelete: () => setConfirmDelete(true),
 		selectedRowCount,
+		canAddRows,
+		canDeleteRows,
 	});
 
 	return (
