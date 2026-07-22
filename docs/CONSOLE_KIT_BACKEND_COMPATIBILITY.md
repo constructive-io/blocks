@@ -69,11 +69,11 @@ fixture organization it removes the generated member permission default,
 creates and approves the ordinary membership, proves the resulting
 organization support row is readable, and verifies an all-zero organization
 mask. It then checks that app and organization management controls are absent for the active ordinary user,
-and confirms that direct type-2 user and organization-invite mutations are
-denied and leave no row behind. The canonical proof's development-mode Graphile
-server exposes PostgreSQL authorization code `42501` as diagnostic evidence;
-production Graphile masks that SQLSTATE, so Console Kit does not treat the raw
-code or message as a public API contract. It removes
+and confirms that direct type-2 user and organization-invite mutations return
+GraphQL errors, return no mutation payload, and leave no row behind. The public
+Graphile response can mask PostgreSQL authorization code `42501` and its
+message even in this local topology, so Console Kit does not treat either as a
+public API contract. It removes
 every uniquely named identity, membership,
 and invitation fixture and verifies their absence before releasing its cleanup
 session. The suite verifies the versioned `_meta` query before loading
