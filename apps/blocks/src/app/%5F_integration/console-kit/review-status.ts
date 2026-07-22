@@ -344,10 +344,116 @@ function assertBlocksReceipt(receipt: JsonRecord): void {
   }
 }
 
+type VerificationFixtureDescriptorEntry = Readonly<{
+  preset: typeof PROOF_FIXTURES[number]['preset'];
+  databaseId: string;
+  siteId: string;
+  subdomain: string;
+  domain: string;
+}>;
+
+type VerificationFixtureReceiptEntry = VerificationFixtureDescriptorEntry & Readonly<{
+  domainId: string;
+  createdAt: string;
+  deletedAt: string;
+  creationRelationshipVerified: true;
+  deletionAbsenceVerified: true;
+  deleteAttempts: number;
+  ambiguousDeleteAttempts: number;
+  absenceReadCount: number;
+  absenceQuietPeriodMs: number;
+}>;
+
+type VerificationFixtureDescriptorEvidence = Readonly<{
+  legacyAuthOnly: boolean;
+  fixtures: readonly VerificationFixtureDescriptorEntry[];
+}>;
+
+function verificationFixtureDescriptorEntry(
+  value: unknown,
+  expectedPreset: typeof PROOF_FIXTURES[number]['preset'],
+  label: string
+): VerificationFixtureDescriptorEntry {
+  const fixture = record(value, label);
+  if (
+    fixture.preset !== expectedPreset ||
+    !nonEmptyString(fixture.databaseId) ||
+    !nonEmptyString(fixture.siteId) ||
+    !nonEmptyString(fixture.subdomain) ||
+    !nonEmptyString(fixture.domain)
+  ) {
+    throw new Error(`${label} is malformed or reordered.`);
+  }
+  return {
+    preset: expectedPreset,
+    databaseId: fixture.databaseId,
+    siteId: fixture.siteId,
+    subdomain: fixture.subdomain,
+    domain: fixture.domain
+  };
+}
+
+function assertVerificationDescriptorIdentities(
+  fixtures: readonly VerificationFixtureDescriptorEntry[]
+): void {
+  const databaseIds = new Set<string>();
+  const siteIds = new Set<string>();
+  const domainKeys = new Set<string>();
+  const recoveryKeys = new Set<string>();
+  for (const fixture of fixtures) {
+    const domainKey = JSON.stringify([fixture.subdomain, fixture.domain]);
+    const recoveryKey = JSON.stringify([
+      fixture.databaseId,
+      fixture.subdomain,
+      fixture.domain
+    ]);
+    if (
+      databaseIds.has(fixture.databaseId) ||
+      siteIds.has(fixture.siteId) ||
+      domainKeys.has(domainKey) ||
+      recoveryKeys.has(recoveryKey)
+    ) {
+      throw new Error(
+        'Console Kit verification fixture descriptor identities and recovery keys must be unique.'
+      );
+    }
+    databaseIds.add(fixture.databaseId);
+    siteIds.add(fixture.siteId);
+    domainKeys.add(domainKey);
+    recoveryKeys.add(recoveryKey);
+  }
+}
+
+function assertVerificationDescriptorTenantBinding(
+  fixtures: readonly VerificationFixtureDescriptorEntry[],
+  routeInput: JsonRecord
+): void {
+  if (!Array.isArray(routeInput.tenants) || routeInput.tenants.length !== PROOF_FIXTURES.length) {
+    throw new Error('Console Kit route input has no canonical tenant matrix.');
+  }
+  for (const fixture of fixtures) {
+    const tenantIndex = PROOF_FIXTURES.findIndex((candidate) => candidate.preset === fixture.preset);
+    const tenant = record(
+      routeInput.tenants[tenantIndex],
+      `Console Kit ${fixture.preset} route tenant`
+    );
+    const manifest = record(
+      tenant.manifest,
+      `Console Kit ${fixture.preset} route tenant manifest`
+    );
+    if (tenant.preset !== fixture.preset || manifest.databaseId !== fixture.databaseId) {
+      throw new Error(
+        `Console Kit ${fixture.preset} verification fixture belongs to another tenant database.`
+      );
+    }
+  }
+}
+
 function assertVerificationFixtureDescriptor(
   descriptor: JsonRecord,
-  runId: string
-): void {
+  runId: string,
+  routeInput: JsonRecord
+): VerificationFixtureDescriptorEvidence {
   if (
     descriptor.version !== 1 ||
     descriptor.kind !== 'constructive-console-kit-verification-fixture-descriptor' ||
@@ -357,51 +463,136 @@ function assertVerificationFixtureDescriptor(
     !nonEmptyString(descriptor.siteId) ||
     !nonEmptyString(descriptor.subdomain) ||
     !nonEmptyString(descriptor.domain) ||
-    !nonEmptyString(descriptor.preparedAt)
+    !nonEmptyString(descriptor.preparedAt) ||
+    (descriptor.fixtures !== undefined && !Array.isArray(descriptor.fixtures))
   ) {
     throw new Error('Console Kit verification fixture descriptor is malformed or incomplete.');
   }
+
+  const legacyAuthOnly = descriptor.fixtures === undefined;
+  const fixtureValues = legacyAuthOnly ? [] : descriptor.fixtures as unknown[];
+  if (!legacyAuthOnly && fixtureValues.length !== PROOF_FIXTURES.length) {
+    throw new Error('Console Kit verification fixture descriptor has no canonical fixture matrix.');
+  }
+  const fixtures = legacyAuthOnly
+    ? [verificationFixtureDescriptorEntry(
+        descriptor,
+        'auth:hardened',
+        'Console Kit legacy auth verification fixture descriptor'
+      )]
+    : PROOF_FIXTURES.map((fixture, index) => verificationFixtureDescriptorEntry(
+        fixtureValues[index],
+        fixture.preset,
+        `Console Kit ${fixture.preset} verification fixture descriptor`
+      ));
+  assertVerificationDescriptorIdentities(fixtures);
+  assertVerificationDescriptorTenantBinding(fixtures, routeInput);
+  const authFixture = fixtures[0]!;
+  if (
+    descriptor.databaseId !== authFixture.databaseId ||
+    descriptor.siteId !== authFixture.siteId ||
+    descriptor.subdomain !== authFixture.subdomain ||
+    descriptor.domain !== authFixture.domain
+  ) {
+    throw new Error(
+      'Console Kit verification fixture compatibility descriptor drifted from its auth entry.'
+    );
+  }
+  return { legacyAuthOnly, fixtures };
 }
 
-function assertVerificationFixtureReceipt(
-  receipt: JsonRecord,
-  descriptor: JsonRecord,
-  descriptorHash: string,
-  runId: string,
-  routeInput: JsonRecord
-): void {
-  const mailpit = record(receipt.mailpit, 'Console Kit verification fixture Mailpit evidence');
-  const deleteAttempts = receipt.deleteAttempts;
-  const ambiguousDeleteAttempts = receipt.ambiguousDeleteAttempts;
+function verificationFixtureReceiptEntry(
+  value: unknown,
+  descriptor: VerificationFixtureDescriptorEntry,
+  label: string
+): VerificationFixtureReceiptEntry {
+  const fixture = record(value, label);
+  const deleteAttempts = fixture.deleteAttempts;
+  const ambiguousDeleteAttempts = fixture.ambiguousDeleteAttempts;
   if (
-    receipt.version !== 2 ||
-    receipt.kind !== 'constructive-console-kit-verification-fixture-receipt' ||
-    receipt.runId !== runId ||
-    receipt.preset !== 'auth:hardened' ||
-    !nonEmptyString(receipt.databaseId) ||
-    !nonEmptyString(receipt.siteId) ||
-    !nonEmptyString(receipt.domainId) ||
-    !nonEmptyString(receipt.subdomain) ||
-    !nonEmptyString(receipt.domain) ||
-    !nonEmptyString(receipt.createdAt) ||
-    !nonEmptyString(receipt.deletedAt) ||
-    receipt.suiteStatus !== 'passed' ||
-    receipt.creationRelationshipVerified !== true ||
-    receipt.deletionAbsenceVerified !== true ||
-    receipt.descriptorHash !== descriptorHash ||
+    fixture.preset !== descriptor.preset ||
+    fixture.databaseId !== descriptor.databaseId ||
+    fixture.siteId !== descriptor.siteId ||
+    fixture.subdomain !== descriptor.subdomain ||
+    fixture.domain !== descriptor.domain ||
+    !nonEmptyString(fixture.domainId) ||
+    !nonEmptyString(fixture.createdAt) ||
+    !nonEmptyString(fixture.deletedAt) ||
+    fixture.creationRelationshipVerified !== true ||
+    fixture.deletionAbsenceVerified !== true ||
     !Number.isSafeInteger(deleteAttempts) ||
     (deleteAttempts as number) < 1 ||
     !Number.isSafeInteger(ambiguousDeleteAttempts) ||
     (ambiguousDeleteAttempts as number) < 0 ||
     (ambiguousDeleteAttempts as number) > (deleteAttempts as number) ||
-    !Number.isSafeInteger(receipt.absenceReadCount) ||
-    (receipt.absenceReadCount as number) < 2 ||
-    !Number.isSafeInteger(receipt.absenceQuietPeriodMs) ||
-    (receipt.absenceQuietPeriodMs as number) < 10_000 ||
+    !Number.isSafeInteger(fixture.absenceReadCount) ||
+    (fixture.absenceReadCount as number) < 2 ||
+    !Number.isSafeInteger(fixture.absenceQuietPeriodMs) ||
+    (fixture.absenceQuietPeriodMs as number) < 10_000
+  ) {
+    throw new Error(`${label} is malformed, incomplete, or drifted.`);
+  }
+  return fixture as unknown as VerificationFixtureReceiptEntry;
+}
+
+function assertVerificationFixtureReceipt(
+  receipt: JsonRecord,
+  descriptor: VerificationFixtureDescriptorEvidence,
+  descriptorHash: string,
+  runId: string
+): void {
+  const mailpit = record(receipt.mailpit, 'Console Kit verification fixture Mailpit evidence');
+  const receiptHasFixtures = receipt.fixtures !== undefined;
+  if (
+    (descriptor.legacyAuthOnly && receiptHasFixtures) ||
+    (!descriptor.legacyAuthOnly && !receiptHasFixtures)
+  ) {
+    throw new Error(
+      'Console Kit verification fixture artifacts contain a mixed legacy/matrix downgrade.'
+    );
+  }
+  if (
+    receiptHasFixtures &&
+    (!Array.isArray(receipt.fixtures) || receipt.fixtures.length !== descriptor.fixtures.length)
+  ) {
+    throw new Error('Console Kit verification fixture receipt has no canonical fixture matrix.');
+  }
+
+  const rawFixtures = descriptor.legacyAuthOnly
+    ? [receipt]
+    : receipt.fixtures as unknown[];
+  const fixtures = rawFixtures.map((fixture, index) => verificationFixtureReceiptEntry(
+    fixture,
+    descriptor.fixtures[index]!,
+    `Console Kit ${descriptor.fixtures[index]!.preset} verification fixture receipt`
+  ));
+  if (new Set(fixtures.map((fixture) => fixture.domainId)).size !== fixtures.length) {
+    throw new Error('Console Kit verification fixture receipt Domain IDs must be unique.');
+  }
+  const authFixture = fixtures[0]!;
+  if (
+    receipt.version !== 2 ||
+    receipt.kind !== 'constructive-console-kit-verification-fixture-receipt' ||
+    receipt.runId !== runId ||
+    receipt.preset !== authFixture.preset ||
+    receipt.databaseId !== authFixture.databaseId ||
+    receipt.siteId !== authFixture.siteId ||
+    receipt.domainId !== authFixture.domainId ||
+    receipt.subdomain !== authFixture.subdomain ||
+    receipt.domain !== authFixture.domain ||
+    receipt.createdAt !== authFixture.createdAt ||
+    receipt.deletedAt !== authFixture.deletedAt ||
+    receipt.creationRelationshipVerified !== authFixture.creationRelationshipVerified ||
+    receipt.deletionAbsenceVerified !== authFixture.deletionAbsenceVerified ||
+    receipt.deleteAttempts !== authFixture.deleteAttempts ||
+    receipt.ambiguousDeleteAttempts !== authFixture.ambiguousDeleteAttempts ||
+    receipt.absenceReadCount !== authFixture.absenceReadCount ||
+    receipt.absenceQuietPeriodMs !== authFixture.absenceQuietPeriodMs ||
+    receipt.suiteStatus !== 'passed' ||
+    receipt.descriptorHash !== descriptorHash ||
     !nonEmptyString(mailpit.purgedAt) ||
-    typeof mailpit.deletedMessageCount !== 'number' ||
     !Number.isSafeInteger(mailpit.deletedMessageCount) ||
-    mailpit.deletedMessageCount < 0 ||
+    (mailpit.deletedMessageCount as number) < 0 ||
     mailpit.remainingMessageCount !== 0 ||
     mailpit.jobTaskIdentifier !== 'email:send_verification_link' ||
     !Number.isSafeInteger(mailpit.queueSnapshotCount) ||
@@ -410,26 +601,9 @@ function assertVerificationFixtureReceipt(
     (mailpit.mailpitSnapshotCount as number) < 2 ||
     !Number.isSafeInteger(mailpit.settlePeriodMs) ||
     (mailpit.settlePeriodMs as number) < 5_000 ||
-    mailpit.remainingQueuedJobCount !== 0 ||
-    receipt.databaseId !== descriptor.databaseId ||
-    receipt.siteId !== descriptor.siteId ||
-    receipt.subdomain !== descriptor.subdomain ||
-    receipt.domain !== descriptor.domain
+    mailpit.remainingQueuedJobCount !== 0
   ) {
     throw new Error('Console Kit verification fixture receipt is malformed or incomplete.');
-  }
-
-  const tenants = routeInput.tenants;
-  if (!Array.isArray(tenants)) {
-    throw new Error('Console Kit route input has no tenant matrix.');
-  }
-  const matchesTenant = tenants.some((candidate) => {
-    const tenant = record(candidate, 'Console Kit route tenant');
-    const manifest = record(tenant.manifest, 'Console Kit route tenant manifest');
-    return tenant.preset === 'auth:hardened' && manifest.databaseId === receipt.databaseId;
-  });
-  if (!matchesTenant) {
-    throw new Error('Console Kit verification fixture receipt belongs to another tenant run.');
   }
 }
 
@@ -1454,13 +1628,16 @@ export function resolveConsoleKitReviewStatus({
     blocksSource
   );
   assertBlocksReceipt(blocksArtifact.value);
-  assertVerificationFixtureDescriptor(fixtureDescriptorArtifact.value, runId);
-  assertVerificationFixtureReceipt(
-    fixtureArtifact.value,
+  const fixtureDescriptor = assertVerificationFixtureDescriptor(
     fixtureDescriptorArtifact.value,
-    fixtureDescriptorArtifact.hash,
     runId,
     routeInput.value
+  );
+  assertVerificationFixtureReceipt(
+    fixtureArtifact.value,
+    fixtureDescriptor,
+    fixtureDescriptorArtifact.hash,
+    runId
   );
 
   const stableInputKeys = [

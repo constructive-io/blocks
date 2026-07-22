@@ -624,37 +624,42 @@ function createReviewFixture() {
     expectedScenarioIds: SCENARIOS,
     scenarios: SCENARIOS.map((id) => ({ id, status: 'passed', durationMs: 10 }))
   });
+  const verificationDescriptors = fixtures.map((fixture, index) => ({
+    preset: fixture.preset,
+    databaseId: manifests[index]!.databaseId,
+    siteId: `verification-site-${index}`,
+    subdomain: `${fixture.preset.replace(':', '-')}-mail-proof-${index}`,
+    domain: 'localhost'
+  }));
+  const authDescriptor = verificationDescriptors[0]!;
   writeJson(fixtureDescriptorPath, {
     version: 1,
     kind: 'constructive-console-kit-verification-fixture-descriptor',
     runId: RUN_ID,
-    preset: 'auth:hardened',
-    databaseId: DATABASE_ID,
-    siteId: '8bf254da-12f2-4ec5-a745-dd15181230f9',
-    subdomain: 'auth-proof-mail-deadbeef',
-    domain: 'localhost',
-    preparedAt: new Date(0).toISOString()
+    ...authDescriptor,
+    preparedAt: new Date(0).toISOString(),
+    fixtures: verificationDescriptors
   });
+  const verificationReceipts = verificationDescriptors.map((descriptor, index) => ({
+    ...descriptor,
+    domainId: `verification-domain-${index}`,
+    createdAt: new Date(0).toISOString(),
+    deletedAt: new Date(1).toISOString(),
+    creationRelationshipVerified: true,
+    deletionAbsenceVerified: true,
+    deleteAttempts: 1,
+    ambiguousDeleteAttempts: 0,
+    absenceReadCount: 21,
+    absenceQuietPeriodMs: 10_000
+  }));
+  const authReceipt = verificationReceipts[0]!;
   writeJson(fixtureReceiptPath, {
     version: 2,
     kind: 'constructive-console-kit-verification-fixture-receipt',
     runId: RUN_ID,
-    preset: 'auth:hardened',
-    databaseId: DATABASE_ID,
-    siteId: '8bf254da-12f2-4ec5-a745-dd15181230f9',
-    domainId: '9cf254da-12f2-4ec5-a745-dd15181230f9',
-    subdomain: 'auth-proof-mail-deadbeef',
-    domain: 'localhost',
-    createdAt: new Date(0).toISOString(),
-    deletedAt: new Date(1).toISOString(),
+    ...authReceipt,
     suiteStatus: 'passed',
-    creationRelationshipVerified: true,
-    deletionAbsenceVerified: true,
     descriptorHash: hash(fixtureDescriptorPath),
-    deleteAttempts: 1,
-    ambiguousDeleteAttempts: 0,
-    absenceReadCount: 21,
-    absenceQuietPeriodMs: 10_000,
     mailpit: {
       purgedAt: new Date(1).toISOString(),
       deletedMessageCount: 1,
@@ -664,7 +669,8 @@ function createReviewFixture() {
       mailpitSnapshotCount: 11,
       settlePeriodMs: 5_000,
       remainingQueuedJobCount: 0
-    }
+    },
+    fixtures: verificationReceipts
   });
 
   const fixture = {
@@ -1093,6 +1099,142 @@ describe('retained Console Kit review status', () => {
       routeStatus: 'testing',
       paths: queued.paths
     })).toThrow(/malformed or incomplete/u);
+  });
+
+  it('accepts legacy auth-only evidence only when both fixture arrays are omitted', () => {
+    const legacy = createReviewFixture();
+    const legacyDescriptor = JSON.parse(
+      readFileSync(legacy.fixtureDescriptorPath, 'utf8')
+    ) as Record<string, unknown>;
+    delete legacyDescriptor.fixtures;
+    writeJson(legacy.fixtureDescriptorPath, legacyDescriptor);
+    const legacyReceipt = JSON.parse(
+      readFileSync(legacy.fixtureReceiptPath, 'utf8')
+    ) as Record<string, unknown>;
+    delete legacyReceipt.fixtures;
+    legacyReceipt.descriptorHash = hash(legacy.fixtureDescriptorPath);
+    writeJson(legacy.fixtureReceiptPath, legacyReceipt);
+    writeCompletion(legacy);
+    writeAttestation(legacy);
+    expect(resolveConsoleKitReviewStatus({
+      runId: RUN_ID,
+      routeStatus: 'testing',
+      paths: legacy.paths
+    })).toBe('passed');
+
+    const missingReceiptMatrix = createReviewFixture();
+    const matrixReceipt = JSON.parse(
+      readFileSync(missingReceiptMatrix.fixtureReceiptPath, 'utf8')
+    ) as Record<string, unknown>;
+    delete matrixReceipt.fixtures;
+    writeJson(missingReceiptMatrix.fixtureReceiptPath, matrixReceipt);
+    writeCompletion(missingReceiptMatrix);
+    writeAttestation(missingReceiptMatrix);
+    expect(() => resolveConsoleKitReviewStatus({
+      runId: RUN_ID,
+      routeStatus: 'testing',
+      paths: missingReceiptMatrix.paths
+    })).toThrow(/mixed legacy\/matrix downgrade/u);
+
+    const legacyDescriptorOnly = createReviewFixture();
+    const descriptor = JSON.parse(
+      readFileSync(legacyDescriptorOnly.fixtureDescriptorPath, 'utf8')
+    ) as Record<string, unknown>;
+    delete descriptor.fixtures;
+    writeJson(legacyDescriptorOnly.fixtureDescriptorPath, descriptor);
+    const receipt = JSON.parse(
+      readFileSync(legacyDescriptorOnly.fixtureReceiptPath, 'utf8')
+    ) as Record<string, unknown>;
+    receipt.descriptorHash = hash(legacyDescriptorOnly.fixtureDescriptorPath);
+    writeJson(legacyDescriptorOnly.fixtureReceiptPath, receipt);
+    writeCompletion(legacyDescriptorOnly);
+    writeAttestation(legacyDescriptorOnly);
+    expect(() => resolveConsoleKitReviewStatus({
+      runId: RUN_ID,
+      routeStatus: 'testing',
+      paths: legacyDescriptorOnly.paths
+    })).toThrow(/mixed legacy\/matrix downgrade/u);
+  });
+
+  it('rejects reordered, cross-tenant, and reused fixture descriptor identities', () => {
+    const mutations: Array<(fixtures: Record<string, unknown>[]) => void> = [
+      (fixtures) => {
+        [fixtures[1], fixtures[2]] = [fixtures[2]!, fixtures[1]!];
+      },
+      (fixtures) => {
+        fixtures[1]!.databaseId = 'unrelated-tenant-database';
+      },
+      (fixtures) => {
+        fixtures[2]!.siteId = fixtures[1]!.siteId;
+      },
+      (fixtures) => {
+        fixtures[2]!.subdomain = fixtures[1]!.subdomain;
+        fixtures[2]!.domain = fixtures[1]!.domain;
+      }
+    ];
+
+    for (const mutate of mutations) {
+      const fixture = createReviewFixture();
+      const descriptor = JSON.parse(
+        readFileSync(fixture.fixtureDescriptorPath, 'utf8')
+      ) as Record<string, unknown>;
+      mutate(descriptor.fixtures as Record<string, unknown>[]);
+      writeJson(fixture.fixtureDescriptorPath, descriptor);
+      const receipt = JSON.parse(
+        readFileSync(fixture.fixtureReceiptPath, 'utf8')
+      ) as Record<string, unknown>;
+      receipt.descriptorHash = hash(fixture.fixtureDescriptorPath);
+      writeJson(fixture.fixtureReceiptPath, receipt);
+      writeCompletion(fixture);
+      writeAttestation(fixture);
+
+      expect(() => resolveConsoleKitReviewStatus({
+        runId: RUN_ID,
+        routeStatus: 'testing',
+        paths: fixture.paths
+      })).toThrow(/malformed or reordered|another tenant database|must be unique/u);
+    }
+  });
+
+  it('rejects duplicate, drifted, and incomplete fixture receipt entries', () => {
+    const mutations: Array<(receipt: Record<string, unknown>) => void> = [
+      (receipt) => {
+        const fixtures = receipt.fixtures as Record<string, unknown>[];
+        fixtures[2]!.domainId = fixtures[1]!.domainId;
+      },
+      (receipt) => {
+        const fixtures = receipt.fixtures as Record<string, unknown>[];
+        fixtures[1]!.subdomain = 'drifted-mail-route';
+      },
+      (receipt) => {
+        const fixtures = receipt.fixtures as Record<string, unknown>[];
+        fixtures[2]!.deletionAbsenceVerified = false;
+      },
+      (receipt) => {
+        const fixtures = receipt.fixtures as Record<string, unknown>[];
+        [fixtures[1], fixtures[2]] = [fixtures[2]!, fixtures[1]!];
+      },
+      (receipt) => {
+        receipt.siteId = 'drifted-auth-compatibility-site';
+      }
+    ];
+
+    for (const mutate of mutations) {
+      const fixture = createReviewFixture();
+      const receipt = JSON.parse(
+        readFileSync(fixture.fixtureReceiptPath, 'utf8')
+      ) as Record<string, unknown>;
+      mutate(receipt);
+      writeJson(fixture.fixtureReceiptPath, receipt);
+      writeCompletion(fixture);
+      writeAttestation(fixture);
+
+      expect(() => resolveConsoleKitReviewStatus({
+        runId: RUN_ID,
+        routeStatus: 'testing',
+        paths: fixture.paths
+      })).toThrow(/Domain IDs must be unique|receipt is malformed|receipt.*drifted/u);
+    }
   });
 
   it('rejects route input drift and an attested route path mismatch', () => {
