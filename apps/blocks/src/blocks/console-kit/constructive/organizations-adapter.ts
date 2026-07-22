@@ -614,6 +614,29 @@ function unknownOrganizationProvisioningOutcome(resourceKey: string): Error {
   return error;
 }
 
+const AMBIGUOUS_ORGANIZATION_CREATE_CODES = new Set([
+  'HTTP_ERROR',
+  'INVALID_RESPONSE',
+  'NETWORK_ERROR',
+  'REQUEST_ABORTED'
+]);
+
+function isAmbiguousOrganizationCreateFailure(cause: unknown): boolean {
+  if (cause instanceof Error && cause.name === 'AbortError') return true;
+  const failure = asRecord(cause);
+  const errors = failure?.errors;
+  if (Array.isArray(errors) && errors.length > 0) {
+    return errors.every((candidate) => {
+      const error = asRecord(candidate);
+      const extensions = asRecord(error?.extensions);
+      const code = asString(extensions?.code);
+      return Boolean(code && AMBIGUOUS_ORGANIZATION_CREATE_CODES.has(code));
+    });
+  }
+  const code = asString(failure?.code);
+  return !code || AMBIGUOUS_ORGANIZATION_CREATE_CODES.has(code);
+}
+
 async function rollbackIncompleteOrganization(
   runtime: ConsoleKitAdapterContext,
   organizationId: string,
@@ -818,27 +841,39 @@ export function createConstructiveOrganizationsAdapter(
                   id: createSupportsClientId ? globalThis.crypto.randomUUID() : null
                 };
                 pendingOrganizationCreates.set(provisioningScope, provisioning);
+                const clearPendingOrganizationCreate = () => {
+                  if (pendingOrganizationCreates.get(provisioningScope) === provisioning) {
+                    pendingOrganizationCreates.delete(provisioningScope);
+                  }
+                };
                 let returnedUser: Record<string, unknown> | null = null;
-                let creationFailure: unknown;
-                try {
-                  const created = await executeConstructiveGraphQL<Record<string, unknown>>(
-                    runtime,
-                    'auth',
-                    createOrganizationMutation(loaded.userFields),
-                    {
-                      input: {
-                        user: {
-                          ...(provisioning.id ? { id: provisioning.id } : {}),
-                          username: provisioning.username,
-                          displayName: name,
-                          type: 2
+                let creationStatus: 'reconcile' | 'succeeded' | 'ambiguous' =
+                  pendingOrganizationCreate ? 'reconcile' : 'ambiguous';
+                if (!pendingOrganizationCreate) {
+                  try {
+                    const created = await executeConstructiveGraphQL<Record<string, unknown>>(
+                      runtime,
+                      'auth',
+                      createOrganizationMutation(loaded.userFields),
+                      {
+                        input: {
+                          user: {
+                            ...(provisioning.id ? { id: provisioning.id } : {}),
+                            username: provisioning.username,
+                            displayName: name,
+                            type: 2
+                          }
                         }
                       }
+                    );
+                    returnedUser = createdOrganizationUser(created);
+                    creationStatus = 'succeeded';
+                  } catch (cause) {
+                    if (!isAmbiguousOrganizationCreateFailure(cause)) {
+                      clearPendingOrganizationCreate();
+                      throw cause;
                     }
-                  );
-                  returnedUser = createdOrganizationUser(created);
-                } catch (cause) {
-                  creationFailure = cause;
+                  }
                 }
                 if (!creationActorId) {
                   return rejectIncompleteOrganization(
@@ -846,7 +881,7 @@ export function createConstructiveOrganizationsAdapter(
                     provisioning.id,
                     canDeleteIncompleteOrganization,
                     'The organization was created without an authenticated actor identity.',
-                    () => pendingOrganizationCreates.delete(provisioningScope)
+                    clearPendingOrganizationCreate
                   );
                 }
 
@@ -866,7 +901,7 @@ export function createConstructiveOrganizationsAdapter(
                     })
                   ]);
                 } catch (cause) {
-                  if (creationFailure) {
+                  if (creationStatus !== 'succeeded') {
                     throw unknownOrganizationProvisioningOutcome(provisioning.username);
                   }
                   const returnedId = returnedUser?.type === 2 &&
@@ -881,7 +916,7 @@ export function createConstructiveOrganizationsAdapter(
                     cause instanceof Error
                       ? `The organization postcondition could not be verified: ${cause.message}`
                       : 'The organization postcondition could not be verified.',
-                    () => pendingOrganizationCreates.delete(provisioningScope)
+                    clearPendingOrganizationCreate
                   );
                 }
                 const persistedCandidates = persistedUsers.filter(
@@ -902,7 +937,7 @@ export function createConstructiveOrganizationsAdapter(
                     returnedUser?.displayName === name
                   )
                 );
-                if (creationFailure && !organizationId) {
+                if (creationStatus !== 'succeeded' && !organizationId) {
                   throw unknownOrganizationProvisioningOutcome(provisioning.username);
                 }
                 const ownerMemberships = organizationId
@@ -912,7 +947,8 @@ export function createConstructiveOrganizationsAdapter(
                     )
                   : [];
                 if (
-                  (!creationFailure && (!responseMatches || returnedId !== organizationId)) ||
+                  (creationStatus === 'succeeded' &&
+                    (!responseMatches || returnedId !== organizationId)) ||
                   persistedCandidates.length !== 1 ||
                   persisted?.type !== 2 ||
                   asString(persisted.username) !== provisioning.username ||
@@ -930,10 +966,10 @@ export function createConstructiveOrganizationsAdapter(
                     organizationId ?? (responseMatches ? returnedId : null),
                     canDeleteIncompleteOrganization,
                     'The database did not create exactly one active owner membership for the current actor.',
-                    () => pendingOrganizationCreates.delete(provisioningScope)
+                    clearPendingOrganizationCreate
                   );
                 }
-                pendingOrganizationCreates.delete(provisioningScope);
+                clearPendingOrganizationCreate();
                 options.store.getState().setContext({
                   databaseId: runtime.databaseId,
                   organizationId: organizationId!

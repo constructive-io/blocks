@@ -942,7 +942,7 @@ describe('Constructive users adapter RLS contract', () => {
 });
 
 describe('Constructive organizations adapter RLS contract', () => {
-  it('scopes ambiguous username retries by database and actor', async () => {
+  it('reconciles an ambiguous create without reissuing it against a non-unique backend', async () => {
     const calls: GraphQLCall[] = [];
     const store = createConsoleKitStore('organizations');
     const adapter = createConstructiveOrganizationsAdapter({
@@ -980,11 +980,11 @@ describe('Constructive organizations adapter RLS contract', () => {
         })
       })
     });
-    const createdByDatabase = new Map<string, Readonly<{
+    const createdByDatabase = new Map<string, Array<Readonly<{
       id: string;
       username: string;
       name: string;
-    }>>();
+    }>>>();
     const recoveryQueryFailures = new Map([['database-1', 1]]);
     const responderFor = (databaseId: string) => (call: GraphQLCall) => {
       calls.push(call);
@@ -993,29 +993,26 @@ describe('Constructive organizations adapter RLS contract', () => {
           ?.user;
         const username = typeof user?.username === 'string' ? user.username : '';
         const name = typeof user?.displayName === 'string' ? user.displayName : '';
-        const existing = createdByDatabase.get(databaseId);
-        if (existing) {
-          throw new Error('The organization username already exists.');
-        }
+        const existing = createdByDatabase.get(databaseId) ?? [];
         const created = {
-          id: `org-${databaseId}`,
+          id: `org-${databaseId}-${existing.length + 1}`,
           username,
           name
         };
-        createdByDatabase.set(databaseId, created);
+        createdByDatabase.set(databaseId, [...existing, created]);
         if (databaseId === 'database-1') {
           throw new Error('The connection closed after the database committed.');
         }
         return { createUser: { user: { ...created, displayName: name, type: 2 } } };
       }
-      const created = createdByDatabase.get(databaseId);
+      const created = createdByDatabase.get(databaseId) ?? [];
       if (call.document.includes('orgMemberships(first:')) {
         return {
           orgMemberships: {
-            nodes: created ? [{
-              id: `membership-owner-${databaseId}`,
+            nodes: created.map((organization) => ({
+              id: `membership-owner-${organization.id}`,
               actorId: 'user-1',
-              entityId: created.id,
+              entityId: organization.id,
               isOwner: true,
               isAdmin: true,
               isActive: true,
@@ -1024,7 +1021,7 @@ describe('Constructive organizations adapter RLS contract', () => {
               isDisabled: false,
               isReadOnly: false,
               permissions: '111'
-            }] : []
+            }))
           }
         };
       }
@@ -1042,17 +1039,17 @@ describe('Constructive organizations adapter RLS contract', () => {
       }
       if (call.document.includes('users(first:')) {
         const remainingFailures = recoveryQueryFailures.get(databaseId) ?? 0;
-        if (created && remainingFailures > 0) {
+        if (created.length > 0 && remainingFailures > 0) {
           recoveryQueryFailures.set(databaseId, remainingFailures - 1);
           throw new Error('The recovery read was temporarily unavailable.');
         }
         return {
           users: {
-            nodes: created ? [{
-              id: created.id,
-              username: created.username,
+            nodes: created.map((organization) => ({
+              id: organization.id,
+              username: organization.username,
               type: 2
-            }] : []
+            }))
           }
         };
       }
@@ -1081,7 +1078,7 @@ describe('Constructive organizations adapter RLS contract', () => {
     const createCalls = calls.filter((call) =>
       call.document.includes('ConsoleKitCreateOrganization')
     );
-    expect(createCalls).toHaveLength(3);
+    expect(createCalls).toHaveLength(2);
     expect(createCalls[0])
       .toMatchObject({
         endpoint: 'auth',
@@ -1095,16 +1092,164 @@ describe('Constructive organizations adapter RLS contract', () => {
           }
         }
       });
-    expect(createCalls[0]?.variables).toEqual(createCalls[2]?.variables);
     expect(createCalls[1]?.variables).not.toEqual(createCalls[0]?.variables);
     expect(createCalls[0]?.variables).not.toHaveProperty('input.user.id');
+    expect(createdByDatabase.get('database-1')).toHaveLength(1);
+    expect(createdByDatabase.get('database-2')).toHaveLength(1);
     expect(store.getState().context).toEqual({
       databaseId: 'database-1',
-      organizationId: 'org-database-1'
+      organizationId: 'org-database-1-1'
     });
     expect(calls.some((call) =>
       call.document.includes('ConsoleKitCreatedOrganizationMembershipsPage')
     )).toBe(true);
+  });
+
+  it('clears a definitive create rejection so a corrected name can be submitted', async () => {
+    const calls: GraphQLCall[] = [];
+    const store = createConsoleKitStore('organizations');
+    const adapter = createConstructiveOrganizationsAdapter({
+      store,
+      discovery: discovery({
+        admin: snapshot({
+          endpoint: 'admin',
+          queries: ['orgMemberships', 'appMemberships', 'appPermissions'],
+          types: [
+            objectType('OrgMembership', [
+              'id', 'actorId', 'entityId', 'isOwner', 'isAdmin', 'isActive', 'isApproved',
+              'isBanned', 'isDisabled', 'isReadOnly', 'permissions'
+            ]),
+            objectType('AppMembership', ['actorId', 'isActive', 'permissions']),
+            objectType('AppPermission', ['name', 'bitstr'])
+          ]
+        }),
+        auth: snapshot({
+          endpoint: 'auth',
+          queries: ['users'],
+          mutations: {
+            createUser: 'CreateUserInput',
+            deleteUser: 'DeleteUserInput'
+          },
+          types: [
+            objectType('User', ['id', 'username', 'displayName', 'type']),
+            inputType('CreateUserInput', { user: 'UserInput' }),
+            inputType('UserInput', {
+              username: 'String',
+              displayName: 'String',
+              type: 'Int'
+            }),
+            inputType('DeleteUserInput', { id: 'UUID' })
+          ]
+        })
+      })
+    });
+    let createAttempts = 0;
+    let createdOrganization: Readonly<{
+      id: string;
+      username: string;
+      name: string;
+    }> | null = null;
+    const loaded = await adapter.load(runtime((call) => {
+      calls.push(call);
+      if (call.document.includes('ConsoleKitCreateOrganization')) {
+        createAttempts += 1;
+        const user = (call.variables?.input as { user?: Record<string, unknown> } | undefined)
+          ?.user;
+        if (createAttempts === 1) {
+          const denied = new Error('new row violates row-level security policy') as Error & {
+            code?: string;
+            errors?: readonly Readonly<{
+              message: string;
+              extensions: Readonly<{ code: string }>;
+            }>[];
+          };
+          denied.code = '42501';
+          denied.errors = [{
+            message: denied.message,
+            extensions: { code: denied.code }
+          }];
+          throw denied;
+        }
+        createdOrganization = {
+          id: 'org-corrected',
+          username: typeof user?.username === 'string' ? user.username : '',
+          name: typeof user?.displayName === 'string' ? user.displayName : ''
+        };
+        return {
+          createUser: {
+            user: {
+              ...createdOrganization,
+              displayName: createdOrganization.name,
+              type: 2
+            }
+          }
+        };
+      }
+      if (call.document.includes('orgMemberships(first:')) {
+        return {
+          orgMemberships: {
+            nodes: createdOrganization ? [{
+              id: 'membership-owner-corrected',
+              actorId: 'user-1',
+              entityId: createdOrganization.id,
+              isOwner: true,
+              isAdmin: true,
+              isActive: true,
+              isApproved: true,
+              isBanned: false,
+              isDisabled: false,
+              isReadOnly: false,
+              permissions: '111'
+            }] : []
+          }
+        };
+      }
+      if (call.document.includes('appMemberships(first:')) {
+        return {
+          appMemberships: {
+            nodes: [{ actorId: 'user-1', isActive: true, permissions: '001' }]
+          }
+        };
+      }
+      if (call.document.includes('appPermissions(first:')) {
+        return {
+          appPermissions: { nodes: [{ name: 'create_entity', bitstr: '001' }] }
+        };
+      }
+      if (call.document.includes('users(first:')) {
+        return {
+          users: {
+            nodes: createdOrganization ? [{
+              id: createdOrganization.id,
+              username: createdOrganization.username,
+              displayName: createdOrganization.name,
+              type: 2
+            }] : []
+          }
+        };
+      }
+      return {};
+    }), new AbortController().signal);
+
+    await expect(loaded.actions?.createOrganization?.({ name: 'Rejected' }))
+      .rejects.toMatchObject({ code: '42501' });
+    await loaded.actions?.createOrganization?.({ name: 'Corrected' });
+
+    const createCalls = calls.filter((call) =>
+      call.document.includes('ConsoleKitCreateOrganization')
+    );
+    expect(createCalls).toHaveLength(2);
+    expect(createCalls[0]?.variables).toMatchObject({
+      input: { user: { displayName: 'Rejected' } }
+    });
+    expect(createCalls[1]?.variables).toMatchObject({
+      input: { user: { displayName: 'Corrected' } }
+    });
+    expect(createCalls[1]?.variables).not.toEqual(createCalls[0]?.variables);
+    expect(store.getState().context).toEqual({
+      databaseId: 'database-1',
+      organizationId: 'org-corrected'
+    });
   });
 
   it('rolls back an organization whose exact owner-membership postcondition fails', async () => {
