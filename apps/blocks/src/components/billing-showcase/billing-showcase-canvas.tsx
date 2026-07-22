@@ -71,6 +71,8 @@ function previewWidth(name: BillingBlockName) {
   }
   if (name === 'billing-entitlements-list') return 'max-w-4xl';
   if (name === 'billing-usage-overview') return 'max-w-5xl';
+  // Settings is a full SaaS page — give it the reading width of a product surface.
+  if (name === 'billing-settings-page') return 'max-w-6xl';
   return 'max-w-7xl';
 }
 
@@ -317,7 +319,6 @@ export function BillingShowcaseCanvas({
               accountKind
             )}
             section={settingsSection}
-            showHeader={false}
           />
         );
     }

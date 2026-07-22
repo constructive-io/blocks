@@ -1,6 +1,6 @@
-import { fireEvent, render, screen, within } from '@testing-library/react';
+import { act, fireEvent, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
 import { BillingShowcaseCanvas } from './billing-showcase-canvas';
 import { BillingShowcasePreview } from './billing-showcase-preview';
@@ -11,6 +11,43 @@ function selectOption(triggerName: string, optionLabel: string) {
   expect(option).not.toBeNull();
   fireEvent.pointerDown(option as HTMLElement, { pointerType: 'mouse' });
   fireEvent.click(option as HTMLElement);
+}
+
+function mockStageWidth(width: number) {
+  const observers = new Set<ResizeObserverCallback>();
+
+  class ResizeObserverStub {
+    constructor(private readonly callback: ResizeObserverCallback) {
+      observers.add(callback);
+    }
+
+    observe() {
+      this.callback([], this as unknown as ResizeObserver);
+    }
+
+    unobserve() {}
+
+    disconnect() {
+      observers.delete(this.callback);
+    }
+  }
+
+  vi.stubGlobal('ResizeObserver', ResizeObserverStub);
+
+  return {
+    apply(stage: HTMLElement) {
+      Object.defineProperty(stage, 'clientWidth', {
+        configurable: true,
+        get: () => width
+      });
+      for (const callback of observers) {
+        callback([], {} as ResizeObserver);
+      }
+    },
+    cleanup() {
+      vi.unstubAllGlobals();
+    }
+  };
 }
 
 describe('BillingShowcasePreview', () => {
@@ -172,5 +209,67 @@ describe('BillingShowcasePreview', () => {
       'width',
       '768'
     );
+  });
+
+  it('scales the desktop frame to the stage width without changing the logical viewport', () => {
+    const stageWidth = mockStageWidth(640);
+
+    try {
+      const { container } = render(
+        <BillingShowcasePreview name="billing-pricing-table" />
+      );
+      const stage = container.querySelector(
+        '[data-slot="billing-preview-stage"]'
+      );
+      expect(stage).not.toBeNull();
+      act(() => {
+        stageWidth.apply(stage as HTMLElement);
+      });
+
+      const frame = screen.getByTitle('Pricing table inline live preview');
+      const shell = container.querySelector(
+        '[data-slot="billing-preview-frame"]'
+      );
+
+      expect(frame).toHaveAttribute('width', '1280');
+      expect(frame).toHaveAttribute('data-preview-viewport', 'desktop');
+      expect(shell).toHaveAttribute('data-preview-scale', '0.500');
+      expect(shell).toHaveStyle({ width: '640px' });
+    } finally {
+      stageWidth.cleanup();
+    }
+  });
+
+  it('does not upscale when the stage is wider than the device viewport', async () => {
+    const user = userEvent.setup();
+    const stageWidth = mockStageWidth(900);
+
+    try {
+      const { container } = render(
+        <BillingShowcasePreview name="billing-pricing-table" />
+      );
+      await user.click(
+        screen.getByRole('button', { name: 'Mobile preview, 390 pixels' })
+      );
+
+      const stage = container.querySelector(
+        '[data-slot="billing-preview-stage"]'
+      );
+      expect(stage).not.toBeNull();
+      act(() => {
+        stageWidth.apply(stage as HTMLElement);
+      });
+
+      const frame = screen.getByTitle('Pricing table inline live preview');
+      const shell = container.querySelector(
+        '[data-slot="billing-preview-frame"]'
+      );
+
+      expect(frame).toHaveAttribute('width', '390');
+      expect(shell).toHaveAttribute('data-preview-scale', '1.000');
+      expect(shell).toHaveStyle({ width: '390px' });
+    } finally {
+      stageWidth.cleanup();
+    }
   });
 });
