@@ -21,9 +21,27 @@ real user against each one:
 The proof covers sign-up, sign-in, current-account loading, sign-out, revoked
 and cross-database bearer rejection, database-scoped session restoration,
 persisted CRUD, direct-owner RLS isolation, and a composite `post_tags`
-primary key. It also verifies the versioned `_meta` query before loading
-data-backed features. Proof credentials stay in mode-0600 sidecars and are
-never embedded in the secret-free tenant manifest or rendered page.
+primary key. It also executes the full preset's seven-connection billing read,
+verifies the versioned `_meta` query before loading data-backed features, and
+round-trips an explicit verification email through the job worker, generated
+function, SMTP, and Mailpit. That email proof creates one site-domain row
+through the official control-plane mutation because the stock seed omits it;
+the row belongs to the proof tenant and is removed by tenant cleanup. Proof
+credentials stay in mode-0600 sidecars and are never embedded in the
+secret-free tenant manifest or rendered page.
+
+Membership controls derive delegated authority from the membership's effective
+permission mask and the named permission catalog; a visible mutation root does
+not grant authority by itself. Authority also requires an active membership,
+matching the backend support row that RLS evaluates; missing or false
+`isActive` fails closed even when the public membership row carries a grant.
+Application invite profiles always require an exact-width permission-mask
+subset. Organization invite profiles honor a readable
+`invite_profile_assignment_mode`, but a missing setting, permission mask, or
+incompatible mask width falls back to strict filtering. Owners and
+administrators retain their backend role fallback while active, while
+delegated sessions only receive assignable profiles. Invitations without a
+profile remain available whenever `create_invites` is granted.
 
 Hardened auth tenants can enable `require_csrf_for_auth`. Console Kit accepts
 an async `csrfTokenProvider` which must ask a trusted host endpoint to create a
@@ -54,6 +72,11 @@ returned by `getAccessToken` or written back to browser storage.
   an API name. The semantic `storage` endpoint currently resolves to the object
   service and exposes neither table, so Console Kit correctly marks Storage
   unavailable. Route the storage schema explicitly before claiming this pack.
+- Stock tenant provisioning creates site theme and legal-terms metadata but no
+  site-domain row, and sign-up does not enqueue verification automatically.
+  `sendVerificationEmail` therefore fails later in the worker until a domain
+  is configured. The live proof adds that reversible prerequisite explicitly;
+  an untouched seeded tenant still does not have working email delivery.
 - The stock `full` preset creates a notifications API and schema link without a
   domain, so the seeder reports Notifications as unroutable. Core notification
   rows also need SELECT-only recipient policy; user dismissal belongs in the

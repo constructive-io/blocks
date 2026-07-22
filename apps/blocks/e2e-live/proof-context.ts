@@ -31,7 +31,12 @@ export type ProofTenant = Readonly<{
   manifest: Readonly<{
     databaseId: string;
     tableAllowlist: readonly string[];
-    database?: Readonly<{ id?: string; name?: string }>;
+    database: Readonly<{
+      id: string;
+      name: string;
+      domain: string;
+      subdomain: string;
+    }>;
     endpoints: Readonly<Record<EndpointKind, ProofEndpoint>>;
   }>;
 }>;
@@ -45,6 +50,7 @@ export type ProofContext = Readonly<{
   manifestPath: string;
   credentialsDir: string;
   routeUrl: string;
+  controlEndpoint: string;
   runId: string;
   status: string;
   tenants: readonly ProofTenant[];
@@ -140,9 +146,7 @@ function parseTenant(value: unknown, index: number): ProofTenant {
     throw new Error(`tenants[${index}].manifest.tableAllowlist must contain strings.`);
   }
 
-  const database = manifest.database == null
-    ? undefined
-    : record(manifest.database, `tenants[${index}].manifest.database`);
+  const database = record(manifest.database, `tenants[${index}].manifest.database`);
   return {
     preset: preset as ProofPreset,
     blueprint: string(entry.blueprint, `tenants[${index}].blueprint`),
@@ -154,12 +158,15 @@ function parseTenant(value: unknown, index: number): ProofTenant {
         `tenants[${index}].manifest.databaseId`
       ),
       tableAllowlist: [...manifest.tableAllowlist] as string[],
-      database: database
-        ? {
-            id: typeof database.id === 'string' ? database.id : undefined,
-            name: typeof database.name === 'string' ? database.name : undefined
-          }
-        : undefined,
+      database: {
+        id: string(database.id, `tenants[${index}].manifest.database.id`),
+        name: string(database.name, `tenants[${index}].manifest.database.name`),
+        domain: string(database.domain, `tenants[${index}].manifest.database.domain`),
+        subdomain: string(
+          database.subdomain,
+          `tenants[${index}].manifest.database.subdomain`
+        )
+      },
       endpoints
     }
   };
@@ -204,6 +211,20 @@ export function loadProofContext(): ProofContext {
   const value = raw;
   if (!Array.isArray(value.tenants)) throw new Error('The Console Kit proof manifest has no tenants.');
   const tenants = value.tenants.map(parseTenant);
+  const controlEndpoint = string(value.controlEndpoint, 'proof manifest controlEndpoint');
+  const controlUrl = new URL(controlEndpoint);
+  if (
+    controlUrl.protocol !== 'http:' ||
+    controlUrl.hostname !== 'api.localhost' ||
+    controlUrl.port !== '3000' ||
+    controlUrl.pathname !== '/graphql' ||
+    controlUrl.search ||
+    controlUrl.hash ||
+    controlUrl.username ||
+    controlUrl.password
+  ) {
+    throw new Error('The proof manifest control endpoint is outside the local proof topology.');
+  }
   for (const preset of PROOF_PRESETS) {
     if (tenants.filter((tenant) => tenant.preset === preset).length !== 1) {
       throw new Error(`The live proof requires exactly one ${preset} tenant.`);
@@ -228,6 +249,7 @@ export function loadProofContext(): ProofContext {
     manifestPath,
     credentialsDir,
     routeUrl: new URL(routeUrl).toString(),
+    controlEndpoint,
     runId: string(value.runId, 'proof manifest runId'),
     status: string(value.status, 'proof manifest status'),
     tenants,

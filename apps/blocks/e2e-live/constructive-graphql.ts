@@ -175,8 +175,15 @@ export async function signIn(
   tenant: ProofTenant,
   credentials: ProofCredentials
 ): Promise<LiveSession> {
+  return signInAt(endpointUrl(tenant, 'auth'), credentials);
+}
+
+export async function signInAt(
+  url: string,
+  credentials: ProofCredentials
+): Promise<LiveSession> {
   const data = await graphQL<Record<string, unknown>>(
-    endpointUrl(tenant, 'auth'),
+    url,
     SIGN_IN,
     { input: { email: credentials.email, password: credentials.password, rememberMe: false } }
   );
@@ -196,7 +203,11 @@ export async function signUp(
 }
 
 export async function signOut(tenant: ProofTenant, token: string): Promise<void> {
-  await graphQL(endpointUrl(tenant, 'auth'), SIGN_OUT, { input: {} }, token);
+  await signOutAt(endpointUrl(tenant, 'auth'), token);
+}
+
+export async function signOutAt(url: string, token: string): Promise<void> {
+  await graphQL(url, SIGN_OUT, { input: {} }, token);
 }
 
 export async function loadSchema(tenant: ProofTenant, token: string): Promise<LiveSchema> {
