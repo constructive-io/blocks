@@ -179,6 +179,10 @@ export default function ConsoleKitPage() {
               semantic endpoints, and exact application table allowlist. Keep
               credentials on the user side of the sign-in form; the descriptor
               itself is safe to pass from a server component to the client.
+              A blank data-only tenant has no auth endpoint, so pass a host-owned
+              database-scoped session for that tenant. Console Kit verifies the
+              session database ID before using it and opens the Data feature
+              without manufacturing anonymous authority.
             </p>
           </div>
 

@@ -9,6 +9,7 @@ import {
   createDatabaseScopedStandaloneSession,
   createFetchConsoleTransport,
   resolveConsoleEndpoint,
+  type ConsoleSession,
   type ConsoleEndpoint,
   type ConsoleEndpointMap,
   type ConsoleCsrfTokenProvider,
@@ -43,13 +44,23 @@ export type ConstructiveTenantDatabase = Readonly<{
   tableAllowlist?: readonly string[];
 }>;
 
+/** Host-owned Console Kit session explicitly scoped to one tenant database. */
+export type ConstructiveTenantConsoleSession = ConsoleSession & Readonly<{
+  databaseId: string;
+}>;
+
 export type ConstructiveConsoleKitProps = Readonly<{
   database: ConstructiveTenantDatabase;
   className?: string;
   order?: readonly FeaturePackId[];
   routes?: ConsoleKitRouteConfig;
   showUnavailable?: boolean;
-  session?: DatabaseScopedStandaloneConsoleSession;
+  /**
+   * Host-owned session for an existing database identity. This is required for
+   * data-only tenants because Console Kit cannot mint authority without an auth
+   * endpoint, and its databaseId must match the tenant descriptor.
+   */
+  session?: ConstructiveTenantConsoleSession;
   /** Required when the tenant enables require_csrf_for_auth. */
   csrfTokenProvider?: ConsoleCsrfTokenProvider;
   store?: ConsoleKitStoreApi;
@@ -64,7 +75,7 @@ export type ConstructiveConsoleKitProps = Readonly<{
 
 export type CreateConstructiveAdaptersOptions = Readonly<{
   store: ConsoleKitStoreApi;
-  session: DatabaseScopedStandaloneConsoleSession;
+  session?: DatabaseScopedStandaloneConsoleSession;
   resetRoleId?: string;
   resetToken?: string;
   verificationEmailId?: string;
@@ -85,7 +96,9 @@ export function createConstructiveConsoleAdapters(
 ): ConsoleKitAdapters {
   const discovery = createConstructiveCapabilityDiscovery(options.store);
   return {
-    auth: createConstructiveAuthAdapter({ ...options, discovery }),
+    ...(options.session
+      ? { auth: createConstructiveAuthAdapter({ ...options, session: options.session, discovery }) }
+      : {}),
     users: createConstructiveUsersAdapter({ store: options.store, discovery }),
     organizations: createConstructiveOrganizationsAdapter({
       store: options.store,
@@ -98,6 +111,17 @@ export function createConstructiveConsoleAdapters(
       discovery
     })
   };
+}
+
+function isDatabaseScopedStandaloneSession(
+  session: ConstructiveTenantConsoleSession | null | undefined
+): session is DatabaseScopedStandaloneConsoleSession {
+  if (!session || session.mode !== 'standalone') return false;
+  const candidate = session as Partial<DatabaseScopedStandaloneConsoleSession>;
+  return typeof candidate.signIn === 'function' &&
+    typeof candidate.signUp === 'function' &&
+    typeof candidate.restorePersistedSession === 'function' &&
+    typeof candidate.handleAuthenticationFailure === 'function';
 }
 
 function ConfigurationError({ message }: Readonly<{ message: string }>) {
@@ -118,6 +142,9 @@ function reportConsoleKitError(error: ConsoleRuntimeError) {
 
 function ConstructiveConsoleKitInstance(props: ConstructiveConsoleKitProps) {
   const authEndpoint = endpoint(props.database.endpoints, 'auth');
+  const externalAuthSession = isDatabaseScopedStandaloneSession(props.session)
+    ? props.session
+    : null;
   const csrfTokenProviderRef = React.useRef(props.csrfTokenProvider);
   React.useEffect(() => {
     csrfTokenProviderRef.current = props.csrfTokenProvider;
@@ -128,7 +155,9 @@ function ConstructiveConsoleKitInstance(props: ConstructiveConsoleKitProps) {
   );
   const internalStoreRef = React.useRef<ConsoleKitStoreApi | null>(null);
   if (!props.store && !internalStoreRef.current) {
-    internalStoreRef.current = createConsoleKitStore('auth', {
+    const startsWithAuth = Boolean(authEndpoint) &&
+      (!props.session || Boolean(externalAuthSession));
+    internalStoreRef.current = createConsoleKitStore(startsWithAuth ? 'auth' : 'data', {
       databaseId: props.database.id,
       organizationId: null
     });
@@ -169,12 +198,19 @@ function ConstructiveConsoleKitInstance(props: ConstructiveConsoleKitProps) {
     resolveCsrfTokenProvider
   ]);
   const internalSession = internalSessionState.session;
-  const session = props.session ?? internalSession;
+  const sessionDatabaseMismatch = props.session &&
+    props.session.databaseId !== props.database.id;
+  const session = sessionDatabaseMismatch
+    ? null
+    : props.session ?? internalSession;
+  const authSession = sessionDatabaseMismatch
+    ? null
+    : internalSession ?? externalAuthSession;
   React.useEffect(() => {
     internalSession?.resume?.();
-    session?.restorePersistedSession();
+    authSession?.restorePersistedSession();
     return () => internalSession?.dispose?.();
-  }, [internalSession, session]);
+  }, [authSession, internalSession]);
 
   const transport = React.useMemo(() => {
     if (props.transport) return props.transport;
@@ -184,16 +220,16 @@ function ConstructiveConsoleKitInstance(props: ConstructiveConsoleKitProps) {
         const code = typeof error.extensions?.code === 'string'
           ? error.extensions.code
           : 'UNAUTHENTICATED';
-        session.handleAuthenticationFailure({ message: error.message, code, identity });
+        authSession?.handleAuthenticationFailure({ message: error.message, code, identity });
       }
     });
-  }, [props.transport, session]);
+  }, [authSession, props.transport, session]);
 
   const adapters = React.useMemo(() => {
     if (!store || !session) return null;
     return createConstructiveConsoleAdapters({
       store,
-      session,
+      session: authEndpoint ? authSession ?? undefined : undefined,
       resetRoleId: props.resetRoleId,
       resetToken: props.resetToken,
       verificationEmailId: props.verificationEmailId,
@@ -204,14 +240,26 @@ function ConstructiveConsoleKitInstance(props: ConstructiveConsoleKitProps) {
     props.resetToken,
     props.verificationEmailId,
     props.verificationToken,
+    authEndpoint?.id,
+    authEndpoint?.url,
+    authSession,
     session,
     store
   ]);
 
-  if (!authEndpoint || !store || !session || !transport || !adapters) {
+  if (sessionDatabaseMismatch) {
     return (
       <ConfigurationError
-        message={internalSessionState.error ?? 'A routable auth endpoint is required for the standalone Console Kit.'}
+        message='The host-owned session belongs to a different tenant database.'
+      />
+    );
+  }
+
+  if (!store || !session || !transport || !adapters) {
+    return (
+      <ConfigurationError
+        message={internalSessionState.error ??
+          'A routable auth endpoint or a matching host-owned session is required for Console Kit.'}
       />
     );
   }

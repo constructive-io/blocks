@@ -4,6 +4,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import type {
   ConsoleIdentity,
+  ConsoleSession,
   ConsoleTransport,
   DatabaseScopedStandaloneConsoleSession
 } from '../../console-runtime';
@@ -14,7 +15,7 @@ const consoleKitCaptures = vi.hoisted(() => ({ props: [] as unknown[] }));
 vi.mock('../console-kit', () => ({
   ConsoleKit: (props: unknown) => {
     consoleKitCaptures.props.push(props);
-    return null;
+    return 'Console Kit mounted';
   }
 }));
 
@@ -43,6 +44,22 @@ function session(id: string): DatabaseScopedStandaloneConsoleSession {
     handleAuthenticationFailure: vi.fn(),
     dispose: vi.fn(),
     resume: vi.fn(),
+    getSnapshot: () => ({ status: 'anonymous', identity }),
+    getServerSnapshot: () => ({ status: 'loading' }),
+    subscribe: () => () => undefined,
+    getAccessToken: () => null
+  };
+}
+
+function embeddedSession(databaseId: string): ConsoleSession & { databaseId: string } {
+  const identity: ConsoleIdentity = {
+    kind: 'anonymous',
+    cachePartition: `anonymous:${databaseId}`,
+    tenantId: databaseId
+  };
+  return {
+    mode: 'embedded',
+    databaseId,
     getSnapshot: () => ({ status: 'anonymous', identity }),
     getServerSnapshot: () => ({ status: 'loading' }),
     subscribe: () => () => undefined,
@@ -123,6 +140,68 @@ describe('ConstructiveConsoleKit external ownership', () => {
     expect(secondProps.config.session).toBe(secondSession);
     expect(secondProps.config.transport).toBe(secondTransport);
     expect(secondProps.config.adapters).not.toBe(firstProps.config.adapters);
+  });
+
+  it('mounts a blank data-only tenant with a matching host-owned session', () => {
+    const hostSession = embeddedSession('database-1');
+    const hostTransport = transport('blank');
+
+    render(
+      <ConstructiveConsoleKit
+        database={{
+          id: 'database-1',
+          name: 'Blank tenant',
+          endpoints: {
+            data: { id: 'data-1', url: 'https://blank.example/data/graphql' }
+          }
+        }}
+        session={hostSession}
+        transport={hostTransport}
+      />
+    );
+
+    expect(screen.getByText('Console Kit mounted')).toBeInTheDocument();
+    expect(screen.queryByText(/Console Kit is not configured/u)).not.toBeInTheDocument();
+    const props = consoleKitCaptures.props.at(-1) as Readonly<{
+      store: ReturnType<typeof createConsoleKitStore>;
+      config: Readonly<{
+        endpoints: Readonly<Record<string, unknown>>;
+        session: ConsoleSession;
+        transport: ConsoleTransport;
+        adapters: Readonly<Record<string, unknown>>;
+      }>;
+    }>;
+    expect(props.store.getState().activeFeature).toBe('data');
+    expect(props.config.endpoints).toEqual({
+      data: { id: 'data-1', url: 'https://blank.example/data/graphql' }
+    });
+    expect(props.config.session).toBe(hostSession);
+    expect(props.config.transport).toBe(hostTransport);
+    expect(props.config.adapters.auth).toBeUndefined();
+  });
+
+  it('rejects a host-owned session from another tenant database', () => {
+    const mismatchedSession = {
+      ...session('other-database'),
+      databaseId: 'database-2'
+    };
+
+    render(
+      <ConstructiveConsoleKit
+        database={{
+          id: 'database-1',
+          endpoints: {
+            data: { id: 'data-1', url: 'https://blank.example/data/graphql' }
+          }
+        }}
+        session={mismatchedSession}
+      />
+    );
+
+    expect(screen.getByText(/session belongs to a different tenant database/u))
+      .toBeInTheDocument();
+    expect(screen.queryByText('Console Kit mounted')).not.toBeInTheDocument();
+    expect(mismatchedSession.restorePersistedSession).not.toHaveBeenCalled();
   });
 
   it('uses the latest host CSRF provider in its internal standalone session', async () => {

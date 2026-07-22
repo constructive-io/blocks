@@ -7,6 +7,19 @@ enabled feature endpoint exposes the roots and input objects its adapter checks.
 An arbitrary GraphQL endpoint, an older `_meta` shape, or a routed API name by
 itself is not treated as compatible.
 
+The `blank` profile intentionally has no auth endpoint. Pass a host-owned,
+database-scoped session when mounting `ConstructiveConsoleKit` for that profile;
+the wrapper verifies that the session database ID matches the tenant descriptor
+and starts on Data. It does not invent anonymous authority or reuse a session
+from another database. This host-session path is covered by the Blocks contract,
+but the current backend cannot put `blank` into the canonical seeder matrix:
+the public `request_database` path hard-codes `bootstrap_user=true`,
+`bootstrap_owner_into_database` raises `TARGET_USERS_NOT_FOUND` against the
+blank preset's empty module list, and Dashboard seeder topology currently
+requires a routable auth endpoint. Until those backend contracts change,
+blank-profile behavior is a unit-proven host integration rather than retained
+tenant proof.
+
 ## Verified preset matrix
 
 The retained proof provisions three independent databases and authenticates a
