@@ -16,7 +16,10 @@ import { registrySchema } from 'shadcn/schema';
 
 import {
 	CONSTRUCTIVE_UI_PACKAGE,
+	FEATURE_PACK_MANIFEST_TARGETS,
+	FEATURE_PACK_ROOT_DEPENDENCIES,
 	assertExactInternalDependencyEdges,
+	assertFeaturePackRegistryContract,
 	assertNoForbiddenDistributionReferences,
 	assertUniqueRegistryShape,
 	compileRegistryDependencies,
@@ -34,7 +37,6 @@ const registryApp = path.resolve(scriptDirectory, '..');
 const repositoryRoot = path.resolve(registryApp, '..', '..');
 const stagingRoot = path.join(registryApp, 'registry');
 const publicRegistryRoot = path.join(registryApp, 'public', 'r');
-const expectedItemCount = 167;
 const namespace = 'constructive';
 const testFilePattern = /\.(test|spec|stories)\.[cm]?[jt]sx?$/;
 const sourceFilePattern = /\.[cm]?[jt]sx?$/;
@@ -48,6 +50,11 @@ type RegistrySource = {
 	destinationSubdirectory?: string;
 	excludeTests?: boolean;
 	uiPackage?: boolean;
+	additionalRegistryDirectories?: Array<{
+		sourceDirectory: string;
+		destinationSubdirectory: string;
+		excludeTests?: boolean;
+	}>;
 };
 
 const sources: RegistrySource[] = [
@@ -59,18 +66,19 @@ const sources: RegistrySource[] = [
 		uiPackage: true,
 	},
 	{
-		name: '@constructive-io/schema-builder',
-		filter: '@constructive-io/schema-builder',
-		manifestPath: path.join(repositoryRoot, 'packages/schema-builder/registry.json'),
-		registryDirectory: path.join(repositoryRoot, 'packages/schema-builder/registry/constructive'),
-	},
-	{
 		name: 'blocks',
 		local: true,
 		manifestPath: path.join(repositoryRoot, 'apps/blocks/registry.json'),
 		registryDirectory: path.join(repositoryRoot, 'apps/blocks/src/blocks'),
 		destinationSubdirectory: 'blocks',
 		excludeTests: true,
+		additionalRegistryDirectories: [
+			{
+				sourceDirectory: path.join(repositoryRoot, 'apps/blocks/src/feature-packs'),
+				destinationSubdirectory: 'feature-packs',
+				excludeTests: true,
+			},
+		],
 	},
 ];
 
@@ -128,6 +136,21 @@ for (const source of sources) {
 			? (sourcePath) => !testFilePattern.test(path.basename(sourcePath))
 			: undefined,
 	});
+	for (const additionalDirectory of source.additionalRegistryDirectories ?? []) {
+		if (!existsSync(additionalDirectory.sourceDirectory)) {
+			throw new Error(`${additionalDirectory.sourceDirectory} does not exist.`);
+		}
+		cpSync(
+			additionalDirectory.sourceDirectory,
+			path.join(stagingRoot, namespace, additionalDirectory.destinationSubdirectory),
+			{
+				recursive: true,
+				filter: additionalDirectory.excludeTests
+					? (sourcePath) => !testFilePattern.test(path.basename(sourcePath))
+					: undefined,
+			},
+		);
+	}
 	console.log(`Copied ${source.name}.`);
 }
 
@@ -138,9 +161,6 @@ const loadedSources = sources.map((source) => {
 	return { source, manifest };
 });
 const sourceItems = loadedSources.flatMap(({ manifest }) => manifest.items);
-if (sourceItems.length !== expectedItemCount) {
-	throw new Error(`Combined registry contains ${sourceItems.length} items; expected ${expectedItemCount}.`);
-}
 
 const ownItemNames = new Set(sourceItems.map((item) => item.name));
 const uiManifest = loadedSources.find(({ source }) => source.uiPackage)?.manifest;
@@ -162,24 +182,17 @@ const availableUiSubpaths = new Set(
 // or side effects even though the owning item's source does not import them.
 // Keeping this reviewed and item-scoped makes every other internal edge
 // mechanically exact.
-const globalDependencyOnlyEdges = new Set(['blocks-runtime']);
 const intentionalDependencyOnlyEdges = new Map<string, ReadonlySet<string>>([
 	// CheckboxGroup coordinates consumer-provided Checkbox children.
 	['checkbox-group', new Set(['checkbox'])],
-	// StorageBrowser is the public complete-kit installer; these optional panels
-	// are composed by hosts rather than imported by the browser source itself.
-	[
-		'storage-browser',
-		new Set([
-			'storage-upload-dropzone',
-			'storage-object-detail-sheet',
-			'storage-bucket-config-sheet',
-		]),
-	],
+	// Feature-pack and preset roots encode capability dependencies even when the
+	// source composition does not import every dependency directly.
+	...[...FEATURE_PACK_ROOT_DEPENDENCIES].map(
+		([itemName, dependencies]) => [itemName, new Set(dependencies)] as const,
+	),
 ]);
 
 const compiledItems: RegistryItem[] = [];
-const requirementsTargets: string[] = [];
 const preparedItems: Array<{ source: RegistrySource; item: RegistryItem }> = [];
 
 for (const { source, manifest } of loadedSources) {
@@ -193,7 +206,6 @@ for (const { source, manifest } of loadedSources) {
 		for (const file of item.files ?? []) {
 			if (!file.path) throw new Error(`${source.name}/${item.name} contains a file without a path.`);
 			if (source.uiPackage) file.target = portableTargetForUiFile(file.path);
-			if (file.target?.endsWith('.requires.json')) requirementsTargets.push(file.target);
 
 			const stagedPath = path.join(registryApp, file.path);
 			if (!existsSync(stagedPath)) {
@@ -206,28 +218,43 @@ for (const { source, manifest } of loadedSources) {
 
 const moduleOwnership = createRegistryModuleOwnership(preparedItems.map(({ item }) => item));
 
+for (const [itemName, expectedTarget] of FEATURE_PACK_MANIFEST_TARGETS) {
+	const item = preparedItems.find(({ item: candidate }) => candidate.name === itemName)?.item;
+	const manifestFile = item?.files?.find((file) => file.target === expectedTarget);
+	if (!manifestFile) continue;
+	const manifest = parseJson<{ schemaVersion?: unknown; id?: unknown }>(
+		path.join(registryApp, manifestFile.path),
+	);
+	const expectedId = itemName.replace(/^(?:feature-pack|preset)-/, '');
+	if (manifest.schemaVersion !== 1 || manifest.id !== expectedId) {
+		throw new Error(
+			`${itemName} manifest must declare schemaVersion 1 and id '${expectedId}'.`,
+		);
+	}
+}
+
 for (const { source, item } of preparedItems) {
 	const compiledSource = new Map<string, string>();
 
 	for (const file of item.files ?? []) {
 		if (!sourceFilePattern.test(file.path)) continue;
 
-			const stagedPath = path.join(registryApp, file.path);
-			const canonicalSource = readFileSync(stagedPath, 'utf8');
-			const rewritten = rewriteConstructiveUiImports(
-				canonicalSource,
-				`${source.name}/${item.name}/${file.path}`,
-				availableUiSubpaths,
-			);
-			// This call also rejects unresolved registry aliases. Target ownership,
-			// below, is the source of truth for the exact owning item.
-			deriveAliasDependencies(
-				rewritten.source,
-				`${source.name}/${item.name}/${file.path}`,
-				uiItemNames,
-			);
-			writeFileSync(stagedPath, rewritten.source, 'utf8');
-			compiledSource.set(file.path, rewritten.source);
+		const stagedPath = path.join(registryApp, file.path);
+		const canonicalSource = readFileSync(stagedPath, 'utf8');
+		const rewritten = rewriteConstructiveUiImports(
+			canonicalSource,
+			`${source.name}/${item.name}/${file.path}`,
+			availableUiSubpaths,
+		);
+		// This call also rejects unresolved registry aliases. Target ownership,
+		// below, is the source of truth for the exact owning item.
+		deriveAliasDependencies(
+			rewritten.source,
+			`${source.name}/${item.name}/${file.path}`,
+			uiItemNames,
+		);
+		writeFileSync(stagedPath, rewritten.source, 'utf8');
+		compiledSource.set(file.path, rewritten.source);
 	}
 
 	const derivedDependencies = new Set(
@@ -244,24 +271,11 @@ for (const { source, item } of preparedItems) {
 		derivedDependencies,
 		ownItemNames,
 		new Set([
-			...globalDependencyOnlyEdges,
 			...(intentionalDependencyOnlyEdges.get(item.name) ?? []),
 		]),
 	);
 	assertNoForbiddenDistributionReferences(item, compiledSource);
 	compiledItems.push(item);
-}
-
-const uniqueRequirementsTargets = new Set(requirementsTargets);
-if (requirementsTargets.length !== 54 || uniqueRequirementsTargets.size !== 54) {
-	throw new Error(
-		`Expected 54 unique registry requirements sidecars, found ${requirementsTargets.length} entries and ${uniqueRequirementsTargets.size} targets.`,
-	);
-}
-for (const target of uniqueRequirementsTargets) {
-	if (!/^~\/\.constructive\/blocks\/[a-z0-9-]+\.requires\.json$/.test(target)) {
-		throw new Error(`Requirements sidecar target is not root-stable: ${target}`);
-	}
 }
 
 for (const item of compiledItems) {
@@ -275,6 +289,7 @@ for (const item of compiledItems) {
 	}
 }
 assertUniqueRegistryShape(compiledItems);
+assertFeaturePackRegistryContract(compiledItems);
 
 const combined: Registry = {
 	$schema: 'https://ui.shadcn.com/schema/registry.json',
@@ -285,7 +300,7 @@ const combined: Registry = {
 validateRegistry('combined @constructive registry', combined);
 const combinedPath = path.join(registryApp, 'registry.json');
 writeFileSync(combinedPath, `${JSON.stringify(combined, null, 2)}\n`, 'utf8');
-console.log(`Compiled ${compiledItems.length} items and ${requirementsTargets.length} requirements sidecars.`);
+console.log(`Compiled ${compiledItems.length} items with the complete feature-pack contract.`);
 
 console.log('\n=== Step 4: build and verify shadcn output ===\n');
 mkdirSync(publicRegistryRoot, { recursive: true });

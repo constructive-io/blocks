@@ -4,6 +4,93 @@ export const CONSTRUCTIVE_UI_PACKAGE = '@constructive-io/ui';
 export const CONSTRUCTIVE_NAMESPACE = '@constructive/';
 export const CONSTRUCTIVE_THEME_DEPENDENCY = '@constructive/constructive-theme';
 
+export const FEATURE_PACK_IDS = [
+	'data',
+	'auth',
+	'users',
+	'organizations',
+	'storage',
+	'billing',
+	'notifications',
+] as const;
+
+export const PRESET_PROFILE_IDS = [
+	'blank',
+	'auth-hardened',
+	'b2b-storage',
+	'full',
+] as const;
+
+export const CONSOLE_KIT_ITEM_NAME = 'console-kit-nextjs';
+export const FEATURE_PACK_MANIFEST_TARGET_PREFIX = '~/.constructive/feature-packs/';
+
+export const FEATURE_PACK_MANIFEST_TARGETS = new Map<string, string>([
+	...FEATURE_PACK_IDS.map(
+		(id) => [`feature-pack-${id}`, `${FEATURE_PACK_MANIFEST_TARGET_PREFIX}${id}.json`] as const,
+	),
+	...PRESET_PROFILE_IDS.map(
+		(id) => [`preset-${id}`, `${FEATURE_PACK_MANIFEST_TARGET_PREFIX}${id}.json`] as const,
+	),
+]);
+
+export const FEATURE_PACK_ROOT_DEPENDENCIES = new Map<string, readonly string[]>([
+	['feature-pack-data', []],
+	['feature-pack-auth', ['feature-pack-data']],
+	['feature-pack-users', ['feature-pack-data', 'feature-pack-auth']],
+	['feature-pack-organizations', ['feature-pack-users']],
+	['feature-pack-storage', ['feature-pack-data']],
+	['feature-pack-billing', ['feature-pack-data']],
+	['feature-pack-notifications', ['feature-pack-users']],
+	['preset-blank', ['feature-pack-data']],
+	['preset-auth-hardened', ['feature-pack-data', 'feature-pack-auth', 'feature-pack-users']],
+	[
+		'preset-b2b-storage',
+		[
+			'feature-pack-data',
+			'feature-pack-auth',
+			'feature-pack-users',
+			'feature-pack-organizations',
+			'feature-pack-storage',
+		],
+	],
+	[
+		'preset-full',
+		[
+			'feature-pack-data',
+			'feature-pack-auth',
+			'feature-pack-users',
+			'feature-pack-organizations',
+			'feature-pack-storage',
+			'feature-pack-billing',
+			'feature-pack-notifications',
+		],
+	],
+	[
+		CONSOLE_KIT_ITEM_NAME,
+		FEATURE_PACK_IDS.map((id) => `feature-pack-${id}`),
+	],
+]);
+
+export const REMOVED_REGISTRY_ITEM_NAMES = new Set([
+	'blocks-runtime',
+	'org-chart',
+	'storage',
+	'storage-bucket-config-sheet',
+	'storage-bucket-rail',
+	'storage-browser',
+	'storage-empty-state',
+	'storage-object-detail-sheet',
+	'storage-object-table',
+	'storage-upload-dropzone',
+	'schema-builder',
+	'schema-builder-core',
+	'schema-builder-fields',
+	'schema-builder-indexes',
+	'schema-builder-policies',
+	'schema-builder-relationships',
+	'schema-builder-tables',
+]);
+
 export type RegistryFile = {
 	path: string;
 	target?: string;
@@ -15,6 +102,7 @@ export type RegistryItem = {
 	type: string;
 	title?: string;
 	description?: string;
+	docs?: string;
 	dependencies?: string[];
 	devDependencies?: string[];
 	registryDependencies?: string[];
@@ -28,6 +116,103 @@ export type Registry = {
 	homepage?: string;
 	items: RegistryItem[];
 };
+
+/**
+ * Checks the intentionally small public product surface that sits above the
+ * primitive and billing catalogs. Counts for the whole registry are avoided:
+ * adding a primitive should not require updating an unrelated snapshot.
+ */
+export function assertFeaturePackRegistryContract(items: readonly RegistryItem[]): void {
+	const itemByName = new Map(items.map((item) => [item.name, item]));
+	const expectedFeaturePackNames = new Set(FEATURE_PACK_IDS.map((id) => `feature-pack-${id}`));
+	const expectedPresetNames = new Set(PRESET_PROFILE_IDS.map((id) => `preset-${id}`));
+	const actualFeaturePackNames = new Set(
+		items.filter((item) => item.name.startsWith('feature-pack-')).map((item) => item.name),
+	);
+	const actualPresetNames = new Set(
+		items.filter((item) => item.name.startsWith('preset-')).map((item) => item.name),
+	);
+
+	const assertExactNames = (
+		label: string,
+		actual: ReadonlySet<string>,
+		expected: ReadonlySet<string>,
+	): void => {
+		const missing = [...expected].filter((name) => !actual.has(name));
+		const unexpected = [...actual].filter((name) => !expected.has(name));
+		if (missing.length > 0 || unexpected.length > 0) {
+			throw new Error(
+				`${label} registry roots drifted. Missing: ${missing.join(', ') || 'none'}. Unexpected: ${unexpected.join(', ') || 'none'}.`,
+			);
+		}
+	};
+
+	assertExactNames('Feature-pack', actualFeaturePackNames, expectedFeaturePackNames);
+	assertExactNames('Preset', actualPresetNames, expectedPresetNames);
+	if (!itemByName.has(CONSOLE_KIT_ITEM_NAME)) {
+		throw new Error(`Missing registry root ${CONSOLE_KIT_ITEM_NAME}.`);
+	}
+
+	const actualManifestTargets = new Set<string>();
+	for (const item of items) {
+		for (const file of item.files ?? []) {
+			if (file.target?.startsWith(FEATURE_PACK_MANIFEST_TARGET_PREFIX)) {
+				actualManifestTargets.add(file.target);
+			}
+			if (file.target?.endsWith('.requires.json')) {
+				throw new Error(`${item.name} retains obsolete generated-SDK requirements sidecar ${file.target}.`);
+			}
+		}
+	}
+
+	for (const [itemName, expectedTarget] of FEATURE_PACK_MANIFEST_TARGETS) {
+		const item = itemByName.get(itemName);
+		if (!item) continue;
+		const manifestFiles = (item.files ?? []).filter(
+			(file) => file.target?.startsWith(FEATURE_PACK_MANIFEST_TARGET_PREFIX) ?? false,
+		);
+		const itemManifestTargets = manifestFiles
+			.map((file) => file.target)
+			.filter((target): target is string => target !== undefined);
+		if (itemManifestTargets.length !== 1 || itemManifestTargets[0] !== expectedTarget) {
+			throw new Error(
+				`${itemName} must install exactly ${expectedTarget}; received ${itemManifestTargets.join(', ') || 'none'}.`,
+			);
+		}
+		const [manifestFile] = manifestFiles;
+		if (!manifestFile?.path.endsWith('.json') || manifestFile.type !== 'registry:file') {
+			throw new Error(`${itemName} must ship its feature-pack manifest as a registry:file JSON document.`);
+		}
+	}
+
+	const expectedManifestTargets = new Set(FEATURE_PACK_MANIFEST_TARGETS.values());
+	assertExactNames('Feature-pack manifest target', actualManifestTargets, expectedManifestTargets);
+
+	for (const [itemName, expectedDependencies] of FEATURE_PACK_ROOT_DEPENDENCIES) {
+		const item = itemByName.get(itemName);
+		if (!item) continue;
+		const actualDependencies = new Set(
+			(item.registryDependencies ?? [])
+				.map((dependency) =>
+					dependency.startsWith(CONSTRUCTIVE_NAMESPACE)
+						? dependency.slice(CONSTRUCTIVE_NAMESPACE.length)
+						: dependency,
+				)
+				.filter((dependency) => dependency.startsWith('feature-pack-')),
+		);
+		assertExactNames(
+			`${itemName} feature-pack dependency`,
+			actualDependencies,
+			new Set(expectedDependencies),
+		);
+	}
+
+	for (const removedName of REMOVED_REGISTRY_ITEM_NAMES) {
+		if (itemByName.has(removedName)) {
+			throw new Error(`Removed registry item ${removedName} is still public.`);
+		}
+	}
+}
 
 type ModuleSpecifier = {
 	literal: ts.StringLiteralLike;
@@ -280,7 +465,11 @@ export function deriveOwnedRegistryDependencies(
 			const owner = ownership.get(importedModule) ?? ownership.get(`${importedModule}/index`);
 			if (
 				!owner &&
-				(value.startsWith('./') || value.startsWith('../') || value.startsWith('@/blocks/'))
+				(value.startsWith('./') ||
+					value.startsWith('../') ||
+					value.startsWith('@/blocks/') ||
+					value === '@/feature-packs' ||
+					value.startsWith('@/feature-packs/'))
 			) {
 				throw new Error(`${filePath} imports unowned registry module '${value}'.`);
 			}
@@ -401,7 +590,7 @@ export function assertUniqueRegistryShape(items: readonly RegistryItem[]): void 
 		itemOwners.add(item.name);
 
 		for (const file of item.files ?? []) {
-			if (!file.target) continue;
+			if (!file.target) throw new Error(`${item.name}/${file.path} is missing an explicit install target.`);
 			const existingOwner = targetOwners.get(file.target);
 			if (existingOwner) {
 				throw new Error(`Duplicate registry target '${file.target}' from ${existingOwner} and ${item.name}.`);

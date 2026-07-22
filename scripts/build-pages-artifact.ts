@@ -12,6 +12,10 @@ type Registry = {
 const repositoryRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const blocksOutput = path.join(repositoryRoot, 'apps', 'blocks', 'out');
 const registryOutput = path.join(repositoryRoot, 'apps', 'registry', 'public', 'r');
+const canonicalRegistryManifests = [
+  path.join(repositoryRoot, 'packages', 'ui', 'registry.json'),
+  path.join(repositoryRoot, 'apps', 'blocks', 'registry.json'),
+];
 const artifactRoot = path.join(repositoryRoot, '.artifacts', 'pages');
 const artifactRegistry = path.join(artifactRoot, 'r');
 const pagesOrigin = 'https://constructive-io.github.io';
@@ -23,6 +27,8 @@ const pageRoutes = [
   '/',
   '/blocks',
   '/blocks/styling',
+  '/blocks/features',
+  '/blocks/console-kit',
   ...BASE_PRIMITIVES.map(({ name }) => `/blocks/ui/${name}`),
   '/blocks/billing',
   ...BILLING_BLOCKS.map(({ name }) => `/blocks/billing/${name}`),
@@ -127,8 +133,15 @@ await Promise.all([
 ]);
 
 const registry = JSON.parse(await readFile(path.join(artifactRegistry, 'registry.json'), 'utf8')) as Registry;
-if (registry.items.length !== 167) {
-  throw new Error(`Pages registry contains ${registry.items.length} items; expected 167.`);
+const expectedRegistryItemCount = (
+  await Promise.all(canonicalRegistryManifests.map(async (manifest) =>
+    (JSON.parse(await readFile(manifest, 'utf8')) as Registry).items.length
+  ))
+).reduce((total, count) => total + count, 0);
+if (registry.items.length !== expectedRegistryItemCount) {
+  throw new Error(
+    `Pages registry contains ${registry.items.length} items; canonical manifests declare ${expectedRegistryItemCount}.`,
+  );
 }
 const expectedRegistryFiles = new Set([
   'registry.json',

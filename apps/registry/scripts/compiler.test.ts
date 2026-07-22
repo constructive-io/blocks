@@ -5,8 +5,13 @@ import assert from 'node:assert/strict';
 import { fileURLToPath } from 'node:url';
 
 import {
+	CONSOLE_KIT_ITEM_NAME,
 	CONSTRUCTIVE_THEME_DEPENDENCY,
+	CONSTRUCTIVE_NAMESPACE,
+	FEATURE_PACK_MANIFEST_TARGETS,
+	FEATURE_PACK_ROOT_DEPENDENCIES,
 	assertExactInternalDependencyEdges,
+	assertFeaturePackRegistryContract,
 	assertUniqueRegistryShape,
 	compileRegistryDependencies,
 	createRegistryModuleOwnership,
@@ -84,8 +89,8 @@ test('derives portable v4 targets including coherent multi-file component folder
 		'@ui/stack/stack-card.tsx',
 	);
 	assert.equal(
-		portableTargetForUiFile('registry/constructive/blocks/storage/storage-browser.tsx'),
-		'@ui/storage/storage-browser.tsx',
+		portableTargetForUiFile('registry/constructive/blocks/stack/deferred-card-content.tsx'),
+		'@ui/stack/deferred-card-content.tsx',
 	);
 });
 
@@ -105,12 +110,12 @@ test('maps consumer module targets to their exact registry item owners', () => {
 			],
 		},
 		{
-			name: 'storage-bucket-rail',
+			name: 'app-shell-navigation',
 			type: 'registry:block',
 			files: [
 				{
-					path: 'registry/storage/bucket-rail.tsx',
-					target: '@ui/storage/bucket-rail.tsx',
+					path: 'registry/app-shell/navigation.tsx',
+					target: '@ui/app-shell/navigation.tsx',
 					type: 'registry:component',
 				},
 			],
@@ -120,7 +125,7 @@ test('maps consumer module targets to their exact registry item owners', () => {
 	assert.equal(ownership.get('components/ui/button'), 'button');
 	assert.equal(ownership.get('components/ui/stack'), 'stack');
 	assert.equal(ownership.get('components/ui/stack/index'), 'stack');
-	assert.equal(ownership.get('components/ui/storage/bucket-rail'), 'storage-bucket-rail');
+	assert.equal(ownership.get('components/ui/app-shell/navigation'), 'app-shell-navigation');
 });
 
 test('derives exact cross-item edges from aliases and relative imports', () => {
@@ -145,12 +150,12 @@ test('derives exact cross-item edges from aliases and relative imports', () => {
 			files: [{ path: 'registry/stack.ts', target: '@ui/stack/index.ts', type: 'registry:ui' }],
 		},
 		{
-			name: 'storage-bucket-rail',
+			name: 'app-shell-navigation',
 			type: 'registry:block',
 			files: [
 				{
-					path: 'registry/bucket-rail.tsx',
-					target: '@ui/storage/bucket-rail.tsx',
+					path: 'registry/navigation.tsx',
+					target: '@ui/app-shell/navigation.tsx',
 					type: 'registry:component',
 				},
 			],
@@ -166,6 +171,17 @@ test('derives exact cross-item edges from aliases and relative imports', () => {
 				},
 			],
 		},
+		{
+			name: 'console-feature-catalog',
+			type: 'registry:lib',
+			files: [
+				{
+					path: 'registry/feature-packs/index.ts',
+					target: 'src/feature-packs/index.ts',
+					type: 'registry:lib',
+				},
+			],
+		},
 	]);
 	const sourceByPath = new Map([
 		[
@@ -173,8 +189,9 @@ test('derives exact cross-item edges from aliases and relative imports', () => {
 			[
 				"import { Button } from '@/components/ui/button';",
 				"import type { CardStack } from '@/components/ui/stack';",
-				"import { BucketRail } from '@/components/ui/storage/bucket-rail';",
+				"import { Navigation } from '@/components/ui/app-shell/navigation';",
 				"import { helper } from '../shared/helper';",
+				"import { catalog } from '@/feature-packs';",
 				"import { local } from './local';",
 			].join('\n'),
 		],
@@ -183,11 +200,11 @@ test('derives exact cross-item edges from aliases and relative imports', () => {
 
 	assert.deepEqual(
 		deriveOwnedRegistryDependencies(consumer, sourceByPath, ownership),
-		['button', 'shared-helper', 'stack', 'storage-bucket-rail'],
+		['app-shell-navigation', 'button', 'console-feature-catalog', 'shared-helper', 'stack'],
 	);
 });
 
-test('rejects unowned relative and blocks-alias modules', () => {
+test('rejects unowned relative and canonical Blocks aliases', () => {
 	const consumer: RegistryItem = {
 		name: 'consumer',
 		type: 'registry:block',
@@ -197,7 +214,11 @@ test('rejects unowned relative and blocks-alias modules', () => {
 	};
 	const ownership = createRegistryModuleOwnership([consumer]);
 
-	for (const specifier of ['../missing/helper', '@/blocks/missing/helper']) {
+	for (const specifier of [
+		'../missing/helper',
+		'@/blocks/missing/helper',
+		'@/feature-packs/missing',
+	]) {
 		assert.throws(
 			() =>
 				deriveOwnedRegistryDependencies(
@@ -292,30 +313,93 @@ test('rejects duplicate item names and install targets', () => {
 		]),
 		/Duplicate registry target/,
 	);
+	assert.throws(
+		() => assertUniqueRegistryShape([
+			{ name: 'one', type: 'registry:ui', files: [{ path: 'one.ts', type: 'registry:ui' }] },
+		]),
+		/missing an explicit install target/,
+	);
 });
 
-test('source manifests preserve 167 items, 54 root sidecars, and no UI package dependency', () => {
-	const manifests = [
-		'packages/ui/registry.json',
-		'packages/schema-builder/registry.json',
-		'apps/blocks/registry.json',
-	].map((relativePath) => JSON.parse(fs.readFileSync(path.join(repositoryRoot, relativePath), 'utf8')) as Registry);
+function featurePackContractFixture(): RegistryItem[] {
+	const items: RegistryItem[] = [...FEATURE_PACK_MANIFEST_TARGETS].map(([itemName, target]) => ({
+		name: itemName,
+		type: 'registry:block',
+		registryDependencies: (FEATURE_PACK_ROOT_DEPENDENCIES.get(itemName) ?? []).map(
+			(dependency) => `${CONSTRUCTIVE_NAMESPACE}${dependency}`,
+		),
+		files: [
+			{
+				path: `registry/${itemName}.json`,
+				target,
+				type: 'registry:file',
+			},
+		],
+	}));
+	items.push({
+		name: CONSOLE_KIT_ITEM_NAME,
+		type: 'registry:block',
+		registryDependencies: (FEATURE_PACK_ROOT_DEPENDENCIES.get(CONSOLE_KIT_ITEM_NAME) ?? []).map(
+			(dependency) => `${CONSTRUCTIVE_NAMESPACE}${dependency}`,
+		),
+	});
+	return items;
+}
+
+test('accepts the exact feature-pack, preset, console-kit, and sidecar surface', () => {
+	assert.doesNotThrow(() => assertFeaturePackRegistryContract(featurePackContractFixture()));
+});
+
+test('rejects feature-pack surface drift and obsolete generated-SDK sidecars', () => {
+	const missingPack = featurePackContractFixture().filter((item) => item.name !== 'feature-pack-storage');
+	assert.throws(() => assertFeaturePackRegistryContract(missingPack), /Missing: feature-pack-storage/);
+
+	const wrongTarget = featurePackContractFixture();
+	wrongTarget.find((item) => item.name === 'preset-full')!.files![0]!.target =
+		'~/.constructive/feature-packs/everything.json';
+	assert.throws(() => assertFeaturePackRegistryContract(wrongTarget), /preset-full must install exactly/);
+
+	const obsoleteSidecar = featurePackContractFixture();
+	obsoleteSidecar.push({
+		name: 'legacy-auth',
+		type: 'registry:block',
+		files: [
+			{
+				path: 'registry/legacy.requires.json',
+				target: '~/.constructive/blocks/legacy.requires.json',
+				type: 'registry:file',
+			},
+		],
+	});
+	assert.throws(() => assertFeaturePackRegistryContract(obsoleteSidecar), /obsolete generated-SDK/);
+});
+
+test('rejects feature-pack dependency profile drift and removed public items', () => {
+	const missingDependency = featurePackContractFixture();
+	missingDependency.find((item) => item.name === 'preset-auth-hardened')!.registryDependencies = [
+		'@constructive/feature-pack-data',
+	];
+	assert.throws(
+		() => assertFeaturePackRegistryContract(missingDependency),
+		/Missing: feature-pack-auth, feature-pack-users/,
+	);
+
+	const removedItem = featurePackContractFixture();
+	removedItem.push({ name: 'schema-builder', type: 'registry:block' });
+	assert.throws(() => assertFeaturePackRegistryContract(removedItem), /still public/);
+});
+
+test('only UI and Blocks source manifests define the public registry contract', () => {
+	const manifests = ['packages/ui/registry.json', 'apps/blocks/registry.json'].map(
+		(relativePath) =>
+			JSON.parse(fs.readFileSync(path.join(repositoryRoot, relativePath), 'utf8')) as Registry,
+	);
 	const items = manifests.flatMap((manifest) => manifest.items);
-	assert.equal(items.length, 167);
-	assert.equal(new Set(items.map((item) => item.name)).size, 167);
+	assert.equal(new Set(items.map((item) => item.name)).size, items.length);
 	for (const item of items) {
 		assert.equal((item.dependencies ?? []).includes('@constructive-io/ui'), false, item.name);
 	}
-
-	const sidecarTargets = items
-		.flatMap((item) => item.files ?? [])
-		.map((file) => file.target)
-		.filter((target): target is string => target?.endsWith('.requires.json') ?? false);
-	assert.equal(sidecarTargets.length, 54);
-	assert.equal(new Set(sidecarTargets).size, 54);
-	for (const target of sidecarTargets) {
-		assert.match(target, /^~\/\.constructive\/blocks\/[a-z0-9-]+\.requires\.json$/);
-	}
+	assertFeaturePackRegistryContract(items);
 
 	const itemByName = new Map(items.map((item) => [item.name, item]));
 	assert.deepEqual(itemByName.get('billing-usage-overview')?.dependencies, ['lucide-react', 'motion']);
