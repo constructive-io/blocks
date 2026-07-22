@@ -181,14 +181,37 @@ function assertBlocksReceipt(receipt: JsonRecord): void {
   }
 }
 
+function assertVerificationFixtureDescriptor(
+  descriptor: JsonRecord,
+  runId: string
+): void {
+  if (
+    descriptor.version !== 1 ||
+    descriptor.kind !== 'constructive-console-kit-verification-fixture-descriptor' ||
+    descriptor.runId !== runId ||
+    descriptor.preset !== 'auth:hardened' ||
+    !nonEmptyString(descriptor.databaseId) ||
+    !nonEmptyString(descriptor.siteId) ||
+    !nonEmptyString(descriptor.subdomain) ||
+    !nonEmptyString(descriptor.domain) ||
+    !nonEmptyString(descriptor.preparedAt)
+  ) {
+    throw new Error('Console Kit verification fixture descriptor is malformed or incomplete.');
+  }
+}
+
 function assertVerificationFixtureReceipt(
   receipt: JsonRecord,
+  descriptor: JsonRecord,
+  descriptorHash: string,
   runId: string,
   routeInput: JsonRecord
 ): void {
   const mailpit = record(receipt.mailpit, 'Console Kit verification fixture Mailpit evidence');
+  const deleteAttempts = receipt.deleteAttempts;
+  const ambiguousDeleteAttempts = receipt.ambiguousDeleteAttempts;
   if (
-    receipt.version !== 1 ||
+    receipt.version !== 2 ||
     receipt.kind !== 'constructive-console-kit-verification-fixture-receipt' ||
     receipt.runId !== runId ||
     receipt.preset !== 'auth:hardened' ||
@@ -202,11 +225,33 @@ function assertVerificationFixtureReceipt(
     receipt.suiteStatus !== 'passed' ||
     receipt.creationRelationshipVerified !== true ||
     receipt.deletionAbsenceVerified !== true ||
+    receipt.descriptorHash !== descriptorHash ||
+    !Number.isSafeInteger(deleteAttempts) ||
+    (deleteAttempts as number) < 1 ||
+    !Number.isSafeInteger(ambiguousDeleteAttempts) ||
+    (ambiguousDeleteAttempts as number) < 0 ||
+    (ambiguousDeleteAttempts as number) > (deleteAttempts as number) ||
+    !Number.isSafeInteger(receipt.absenceReadCount) ||
+    (receipt.absenceReadCount as number) < 2 ||
+    !Number.isSafeInteger(receipt.absenceQuietPeriodMs) ||
+    (receipt.absenceQuietPeriodMs as number) < 10_000 ||
     !nonEmptyString(mailpit.purgedAt) ||
     typeof mailpit.deletedMessageCount !== 'number' ||
     !Number.isSafeInteger(mailpit.deletedMessageCount) ||
     mailpit.deletedMessageCount < 0 ||
-    mailpit.remainingMessageCount !== 0
+    mailpit.remainingMessageCount !== 0 ||
+    mailpit.jobTaskIdentifier !== 'email:send_verification_link' ||
+    !Number.isSafeInteger(mailpit.queueSnapshotCount) ||
+    (mailpit.queueSnapshotCount as number) < 2 ||
+    !Number.isSafeInteger(mailpit.mailpitSnapshotCount) ||
+    (mailpit.mailpitSnapshotCount as number) < 2 ||
+    !Number.isSafeInteger(mailpit.settlePeriodMs) ||
+    (mailpit.settlePeriodMs as number) < 5_000 ||
+    mailpit.remainingQueuedJobCount !== 0 ||
+    receipt.databaseId !== descriptor.databaseId ||
+    receipt.siteId !== descriptor.siteId ||
+    receipt.subdomain !== descriptor.subdomain ||
+    receipt.domain !== descriptor.domain
   ) {
     throw new Error('Console Kit verification fixture receipt is malformed or incomplete.');
   }
@@ -302,6 +347,7 @@ export function resolveConsoleKitReviewStatus({
   }
 
   const blocksPath = join(root, 'blocks-receipt.json');
+  const fixtureDescriptorPath = join(root, 'verification-fixture-descriptor.json');
   const fixturePath = join(root, 'verification-fixture-receipt.json');
   const routeReference = artifactReference(
     attestation.routeInput,
@@ -318,6 +364,11 @@ export function resolveConsoleKitReviewStatus({
     blocksPath,
     'Console Kit attested Blocks receipt'
   );
+  const fixtureDescriptorReference = artifactReference(
+    attestation.verificationFixtureDescriptor,
+    fixtureDescriptorPath,
+    'Console Kit attested verification fixture descriptor'
+  );
   const fixtureReference = artifactReference(
     attestation.verificationFixtureReceipt,
     fixturePath,
@@ -325,18 +376,30 @@ export function resolveConsoleKitReviewStatus({
   );
 
   const blocksArtifact = readArtifact(blocksPath, 'Console Kit Blocks receipt');
+  const fixtureDescriptorArtifact = readArtifact(
+    fixtureDescriptorPath,
+    'Console Kit verification fixture descriptor'
+  );
   const fixtureArtifact = readArtifact(
     fixturePath,
     'Console Kit verification fixture receipt'
   );
   assertBlocksReceipt(blocksArtifact.value);
-  assertVerificationFixtureReceipt(fixtureArtifact.value, runId, routeInput.value);
+  assertVerificationFixtureDescriptor(fixtureDescriptorArtifact.value, runId);
+  assertVerificationFixtureReceipt(
+    fixtureArtifact.value,
+    fixtureDescriptorArtifact.value,
+    fixtureDescriptorArtifact.hash,
+    runId,
+    routeInput.value
+  );
 
   const completion = completionArtifact.value;
   if (
     routeReference.hash !== routeInput.hash ||
     completionReference.hash !== completionArtifact.hash ||
     blocksReference.hash !== blocksArtifact.hash ||
+    fixtureDescriptorReference.hash !== fixtureDescriptorArtifact.hash ||
     fixtureReference.hash !== fixtureArtifact.hash ||
     completion.blocksReceiptHash !== blocksArtifact.hash ||
     completion.verificationFixtureReceiptHash !== fixtureArtifact.hash

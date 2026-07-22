@@ -36,6 +36,7 @@ type ReviewFixture = Readonly<{
   root: string;
   paths: ConsoleKitReviewPaths;
   blocksReceiptPath: string;
+  fixtureDescriptorPath: string;
   fixtureReceiptPath: string;
 }>;
 
@@ -73,6 +74,10 @@ function writeAttestation(
       path: fixture.blocksReceiptPath,
       hash: hash(fixture.blocksReceiptPath)
     },
+    verificationFixtureDescriptor: {
+      path: fixture.fixtureDescriptorPath,
+      hash: hash(fixture.fixtureDescriptorPath)
+    },
     verificationFixtureReceipt: {
       path: fixture.fixtureReceiptPath,
       hash: hash(fixture.fixtureReceiptPath)
@@ -92,6 +97,7 @@ function createReviewFixture() {
     finalAttestation: join(root, 'final-attestation.json')
   };
   const blocksReceiptPath = join(root, 'blocks-receipt.json');
+  const fixtureDescriptorPath = join(root, 'verification-fixture-descriptor.json');
   const fixtureReceiptPath = join(root, 'verification-fixture-receipt.json');
 
   writeJson(paths.routeInput, {
@@ -123,8 +129,19 @@ function createReviewFixture() {
       }
     ]
   });
-  writeJson(fixtureReceiptPath, {
+  writeJson(fixtureDescriptorPath, {
     version: 1,
+    kind: 'constructive-console-kit-verification-fixture-descriptor',
+    runId: RUN_ID,
+    preset: 'auth:hardened',
+    databaseId: DATABASE_ID,
+    siteId: '8bf254da-12f2-4ec5-a745-dd15181230f9',
+    subdomain: 'auth-proof-mail-deadbeef',
+    domain: 'localhost',
+    preparedAt: new Date(0).toISOString()
+  });
+  writeJson(fixtureReceiptPath, {
+    version: 2,
     kind: 'constructive-console-kit-verification-fixture-receipt',
     runId: RUN_ID,
     preset: 'auth:hardened',
@@ -138,14 +155,31 @@ function createReviewFixture() {
     suiteStatus: 'passed',
     creationRelationshipVerified: true,
     deletionAbsenceVerified: true,
+    descriptorHash: hash(fixtureDescriptorPath),
+    deleteAttempts: 1,
+    ambiguousDeleteAttempts: 0,
+    absenceReadCount: 21,
+    absenceQuietPeriodMs: 10_000,
     mailpit: {
       purgedAt: new Date(1).toISOString(),
       deletedMessageCount: 1,
-      remainingMessageCount: 0
+      remainingMessageCount: 0,
+      jobTaskIdentifier: 'email:send_verification_link',
+      queueSnapshotCount: 11,
+      mailpitSnapshotCount: 11,
+      settlePeriodMs: 5_000,
+      remainingQueuedJobCount: 0
     }
   });
 
-  const fixture = { base, root, paths, blocksReceiptPath, fixtureReceiptPath };
+  const fixture = {
+    base,
+    root,
+    paths,
+    blocksReceiptPath,
+    fixtureDescriptorPath,
+    fixtureReceiptPath
+  };
   writeCompletion(fixture);
   writeAttestation(fixture);
   return fixture;
@@ -230,6 +264,56 @@ describe('retained Console Kit review status', () => {
       routeStatus: 'testing',
       paths: drifted.paths
     })).toThrow(/evidence drifted/u);
+
+    const descriptorDrift = createReviewFixture();
+    const descriptor = JSON.parse(
+      readFileSync(descriptorDrift.fixtureDescriptorPath, 'utf8')
+    ) as Record<string, unknown>;
+    writeJson(descriptorDrift.fixtureDescriptorPath, { ...descriptor, preparedAt: new Date(2) });
+    expect(() => resolveConsoleKitReviewStatus({
+      runId: RUN_ID,
+      routeStatus: 'testing',
+      paths: descriptorDrift.paths
+    })).toThrow(/malformed or incomplete|evidence drifted/u);
+  });
+
+  it('rejects incomplete fixture absence and email-queue settlement evidence', () => {
+    const fixture = createReviewFixture();
+    const receipt = JSON.parse(
+      readFileSync(fixture.fixtureReceiptPath, 'utf8')
+    ) as Record<string, unknown>;
+    writeJson(fixture.fixtureReceiptPath, {
+      ...receipt,
+      absenceQuietPeriodMs: 9_999
+    });
+    writeCompletion(fixture);
+    writeAttestation(fixture);
+
+    expect(() => resolveConsoleKitReviewStatus({
+      runId: RUN_ID,
+      routeStatus: 'testing',
+      paths: fixture.paths
+    })).toThrow(/malformed or incomplete/u);
+
+    const queued = createReviewFixture();
+    const queuedReceipt = JSON.parse(
+      readFileSync(queued.fixtureReceiptPath, 'utf8')
+    ) as Record<string, unknown>;
+    writeJson(queued.fixtureReceiptPath, {
+      ...queuedReceipt,
+      mailpit: {
+        ...(queuedReceipt.mailpit as Record<string, unknown>),
+        remainingQueuedJobCount: 1
+      }
+    });
+    writeCompletion(queued);
+    writeAttestation(queued);
+
+    expect(() => resolveConsoleKitReviewStatus({
+      runId: RUN_ID,
+      routeStatus: 'testing',
+      paths: queued.paths
+    })).toThrow(/malformed or incomplete/u);
   });
 
   it('rejects route input drift and an attested route path mismatch', () => {
