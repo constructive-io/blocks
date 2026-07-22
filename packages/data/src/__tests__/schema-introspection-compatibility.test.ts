@@ -175,6 +175,27 @@ describe('assessSchemaIntrospectionCompatibility', () => {
 		});
 	});
 
+	it('accepts the current PostGraphile read surface when legacy one/condition hints are absent', () => {
+		const schema = structuredClone(introspect());
+		const queryRoot = schema.__schema.types.find(({ name }) => name === 'RootQuery')!;
+		const projects = queryRoot.fields!.find(({ name }) => name === 'projects')!;
+		projects.name = 'activities';
+		projects.args = projects.args.filter(({ name }) => name !== 'condition');
+		queryRoot.fields = queryRoot.fields!.filter(({ name }) => name !== 'project');
+		schema.__schema.types = schema.__schema.types.filter(({ name }) => name !== 'ProjectCondition');
+
+		const meta = metaQuery();
+		const table = meta._meta!.tables![0]!;
+		table.name = 'Activity';
+		table.query!.all = 'activitys';
+
+		expect(assessSchemaIntrospectionCompatibility(schema, meta)).toEqual({
+			contractVersion: META_CONTRACT_VERSION,
+			status: 'compatible',
+			missingPaths: [],
+		});
+	});
+
 	it('reports operation, argument, object, input, and enum drift as GraphQL paths', () => {
 		const schema = structuredClone(introspect());
 		const queryRoot = schema.__schema.types.find(({ name }) => name === 'RootQuery')!;

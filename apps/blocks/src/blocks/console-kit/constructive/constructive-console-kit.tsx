@@ -117,10 +117,12 @@ function ConstructiveConsoleKitInstance(props: ConstructiveConsoleKitProps) {
   if (!sessionRef.current && authEndpoint) {
     sessionRef.current = props.session ?? createDatabaseScopedStandaloneSession({
       databaseId: props.database.id,
-      authEndpoint
+      authEndpoint,
+      deferRestore: true
     });
   }
   const session = sessionRef.current;
+  React.useEffect(() => session?.restorePersistedSession(), [session]);
 
   const transportRef = React.useRef<ConsoleTransport | null>(null);
   if (!transportRef.current && session) {

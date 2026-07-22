@@ -1,6 +1,8 @@
 import * as React from 'react';
 import { act, renderHook, waitFor } from '@testing-library/react';
-import { describe, expect, it } from 'vitest';
+import { hydrateRoot, type Root } from 'react-dom/client';
+import { renderToString } from 'react-dom/server';
+import { describe, expect, it, vi } from 'vitest';
 
 import type {
   ConsoleGraphQLResult,
@@ -10,6 +12,7 @@ import type {
 import type { ConsoleKitAdapterContext } from './console-kit-contracts';
 import {
   resolveConsoleKitEndpoints,
+  useConsoleSessionSnapshot,
   useConsoleKitMetadata,
   useConsoleKitRuntime
 } from './console-kit-runtime';
@@ -70,6 +73,47 @@ function StoreWrapper({ children }: Readonly<{ children: React.ReactNode }>) {
     </ConsoleKitStoreProvider>
   );
 }
+
+function SessionStatus({ session }: Readonly<{ session: ConsoleSession }>) {
+  return <span>{useConsoleSessionSnapshot(session).status}</span>;
+}
+
+describe('Console Kit session hydration', () => {
+  it('hydrates through a credential-free snapshot before reading browser state', async () => {
+    const authenticated = {
+      status: 'authenticated',
+      identity: {
+        kind: 'authenticated',
+        subjectId: 'user-1',
+        cachePartition: 'login-1'
+      }
+    } as const;
+    const session: ConsoleSession = {
+      mode: 'embedded',
+      getSnapshot: () => authenticated,
+      subscribe: () => () => undefined,
+      getAccessToken: () => null
+    };
+    const markup = renderToString(<SessionStatus session={session} />);
+    expect(markup).toContain('loading');
+
+    const container = document.createElement('div');
+    container.innerHTML = markup;
+    document.body.appendChild(container);
+    const onRecoverableError = vi.fn();
+    let root: Root | undefined;
+    await act(async () => {
+      root = hydrateRoot(container, <SessionStatus session={session} />, {
+        onRecoverableError
+      });
+    });
+
+    await waitFor(() => expect(container).toHaveTextContent('authenticated'));
+    expect(onRecoverableError).not.toHaveBeenCalled();
+    await act(async () => root?.unmount());
+    container.remove();
+  });
+});
 
 describe('Console Kit metadata lifecycle', () => {
   it('does not let an aborted endpoint probe overwrite the current store state', async () => {

@@ -12,6 +12,7 @@ describe('Console Kit store', () => {
     const adapter = {};
 
     first.getState().setActiveFeature('organizations');
+    first.getState().setAuthEntryMode('sign-up');
     first.getState().setSession({
       status: 'authenticated',
       identity: {
@@ -44,6 +45,7 @@ describe('Console Kit store', () => {
 
     expect(first.getState()).toMatchObject({
       activeFeature: 'organizations',
+      authEntryMode: 'sign-up',
       context: { databaseId: 'database-1', organizationId: null },
       session: { status: 'authenticated' },
       metadataKey: 'database-1:user-1:data',
@@ -59,6 +61,7 @@ describe('Console Kit store', () => {
     });
     expect(second.getState()).toMatchObject({
       activeFeature: 'auth',
+      authEntryMode: 'sign-in',
       context: null,
       session: { status: 'loading' },
       endpoints: {},

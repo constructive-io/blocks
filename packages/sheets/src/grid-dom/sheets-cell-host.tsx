@@ -230,12 +230,14 @@ const SheetsCellHostInner = memo(
 				)}
 			>
 				{isDraftActionCell ? (
-					<DraftActionCellView
-						status={draftAction?.status}
-						errored={draftAction?.errored}
-						disabled={draftAction?.disabled}
-						onSubmit={submitDraft}
-					/>
+					draftAction ? (
+						<DraftActionCellView
+							status={draftAction.status}
+							errored={draftAction.errored}
+							disabled={draftAction.disabled}
+							onSubmit={submitDraft}
+						/>
+					) : null
 				) : props.isEditing ? (
 					// Inline (in-cell) edit for the simple text-representable types — a bare <input>
 					// overlaying the view. `isEditing` is set true ONLY for inline-edit intents (the

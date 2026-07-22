@@ -37,7 +37,10 @@ function makeRow(): SheetsRow {
 	return attachDraftMeta(row, DRAFT_META);
 }
 
-const ROWS: SheetsRow[] = [makeRow()];
+const ROWS: SheetsRow[] = [
+	{ id: 'existing:1', name: 'Existing', errorCol: 'Stable', loadingCol: null },
+	makeRow(),
+];
 
 const COLUMNS: SheetsColumnDescriptor[] = [
 	{ key: 'name', name: 'Name', size: 160 },
@@ -146,6 +149,7 @@ describe('Stage-4 host wiring (loading / draft-action / draft styling)', () => {
 		// shown and the button stays interactive (canvas parity: not disabled on error).
 		const actionBtn = container.querySelector('[data-slot="draft-action-cell"]') as HTMLButtonElement | null;
 		expect(actionBtn).not.toBeNull();
+		expect(container.querySelectorAll('[data-slot="draft-action-cell"]')).toHaveLength(1);
 		expect(actionBtn!.disabled).toBe(false);
 		expect(container.querySelector('[data-slot="draft-action-error"]')).not.toBeNull();
 

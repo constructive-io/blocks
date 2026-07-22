@@ -42,6 +42,9 @@ async function selectTenant(page: Page, tenant: ProofTenant): Promise<void> {
   const root = page.getByTestId('console-kit-proof-root');
   if (await root.getAttribute('data-database-id') === tenant.manifest.databaseId) return;
 
+  // Let the initial client boundary settle before opening the Base UI portal;
+  // a tenant switch intentionally remounts the entire Console Kit instance.
+  await expect(page.getByText('_meta 2026-07', { exact: true })).toBeVisible();
   const selector = page.getByRole('combobox', { name: 'Tenant database' });
   await selector.click();
   await page.getByRole('option', {
@@ -65,13 +68,14 @@ async function signInThroughUi(
   await selectTenant(page, tenant);
   await expectSignIn(page);
   await page.getByLabel('Email address').fill(credentials.email);
-  await page.getByLabel('Password', { exact: true }).fill(credentials.password);
+  await page.getByLabel('Password').fill(credentials.password);
   await page.getByRole('button', { name: 'Sign in', exact: true }).click();
   await expect(page.getByRole('heading', { level: 1, name: 'Account security' })).toBeVisible();
 }
 
 async function openFeature(page: Page, name: string): Promise<void> {
-  const link = page.getByRole('link', { name, exact: true });
+  const link = page.locator('a[data-sidebar="menu-button"]').filter({ hasText: name });
+  await expect(link).toHaveCount(1);
   await expect(link).not.toHaveAttribute('aria-disabled', 'true');
   await link.click();
 }
@@ -166,7 +170,7 @@ test('switches the tenant-scoped shell, signs in to every preset, and discovers 
   await signOutThroughUi(page);
 });
 
-test('completes standalone sign-up, sign-out, and sign-in through the auth feature pack', async ({ page }) => {
+test('completes standalone auth and restores the database-scoped session after reload', async ({ page }) => {
   const tenant = proof.tenant('auth:hardened');
   const credentials = {
     email: `console-kit-ui-${randomUUID()}@example.test`,
@@ -179,12 +183,27 @@ test('completes standalone sign-up, sign-out, and sign-in through the auth featu
   await page.getByRole('button', { name: 'Create account', exact: true }).click();
   await page.getByLabel('Name').fill('Console Kit UI Proof');
   await page.getByLabel('Email address').fill(credentials.email);
-  await page.getByLabel('Password', { exact: true }).fill(credentials.password);
+  await page.getByLabel('Password').fill(credentials.password);
   await page.getByRole('button', { name: 'Create account', exact: true }).click();
   await expect(page.getByRole('heading', { level: 1, name: 'Account security' })).toBeVisible();
 
   await signOutThroughUi(page);
   await signInThroughUi(page, tenant, credentials);
+  const hydrationErrors: string[] = [];
+  page.on('console', (message) => {
+    if (message.type() === 'error' && /hydrat|server rendered html/iu.test(message.text())) {
+      hydrationErrors.push(message.text());
+    }
+  });
+  page.on('pageerror', (error) => {
+    if (/hydrat|server rendered html/iu.test(error.message)) {
+      hydrationErrors.push(error.message);
+    }
+  });
+  await page.reload({ waitUntil: 'domcontentloaded' });
+  await expect(page.getByTestId('console-kit-proof-root')).toBeVisible();
+  await expect(page.getByRole('heading', { level: 1, name: 'Account security' })).toBeVisible();
+  expect(hydrationErrors).toEqual([]);
   await signOutThroughUi(page);
 });
 

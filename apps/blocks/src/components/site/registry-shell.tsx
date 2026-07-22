@@ -9,7 +9,9 @@ import { SiteTopbar } from '@/components/site/site-topbar';
 export function RegistryShell({ children }: { children: ReactNode }) {
   const [mobileOpen, setMobileOpen] = useState(false);
   const pathname = usePathname();
-  const isStandalonePreview = /^\/blocks\/(?:billing\/[^/]+|features\/[^/]+)\/preview\/?$/.test(pathname);
+  const isStandalonePreview =
+    pathname === '/__integration/console-kit' ||
+    /^\/blocks\/(?:billing\/[^/]+|features\/[^/]+)\/preview\/?$/.test(pathname);
 
   useEffect(() => {
     setMobileOpen(false);

@@ -15,6 +15,7 @@ import {
 
 import {
   CONSOLE_ENDPOINT_KINDS,
+  SERVER_CONSOLE_SESSION_SNAPSHOT,
   createFetchConsoleTransport,
   createConsoleIdentityKey,
   createIdentityScopedTransport,
@@ -84,8 +85,12 @@ export function useConsoleSessionSnapshot(session: ConsoleSession): ConsoleSessi
     [session]
   );
   const getSnapshot = React.useCallback(() => session.getSnapshot(), [session]);
+  const getServerSnapshot = React.useCallback(
+    () => session.getServerSnapshot?.() ?? SERVER_CONSOLE_SESSION_SNAPSHOT,
+    [session]
+  );
 
-  return React.useSyncExternalStore(subscribe, getSnapshot, getSnapshot);
+  return React.useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
 }
 
 export function resolveConsoleKitEndpoints(

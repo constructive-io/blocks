@@ -49,24 +49,21 @@ export function ConsoleKitProofClient({
 
   return (
     <main
-      className='flex min-h-screen flex-col bg-background'
+      className='min-h-svh bg-background'
       data-database-id={tenant.database.id}
       data-proof-status={status}
       data-testid='console-kit-proof-root'
     >
-      <header className='flex flex-col gap-4 border-b bg-card px-4 py-4 sm:flex-row sm:items-end sm:justify-between sm:px-6'>
-        <div className='min-w-0'>
-          <div className='flex flex-wrap items-center gap-2'>
-            <Badge variant='secondary'>Live tenant proof</Badge>
-            <Badge variant='outline'>
-              <CheckCircle2Icon data-icon='inline-start' />
-              {status}
-            </Badge>
-          </div>
-          <h1 className='mt-2 truncate text-lg font-semibold tracking-tight'>Console Kit tenant matrix</h1>
-          <p className='text-muted-foreground mt-1 truncate font-mono text-xs'>{runId}</p>
+      <aside aria-label='Tenant proof controls' className='fixed inset-x-3 bottom-3 z-50 ml-auto max-w-[26rem] rounded-xl border bg-card/95 p-3 shadow-lg backdrop-blur sm:left-auto'>
+        <div className='mb-2 flex min-w-0 items-center gap-2'>
+          <Badge className='shrink-0' variant='secondary'>Live proof</Badge>
+          <Badge className='shrink-0' variant='outline'>
+            <CheckCircle2Icon data-icon='inline-start' />
+            {status}
+          </Badge>
+          <span className='text-muted-foreground truncate font-mono text-[0.6875rem]' title={runId}>{runId}</span>
         </div>
-        <div className='w-full sm:w-[26rem]'>
+        <div>
           <Field label='Tenant database'>
             <Select onValueChange={setDatabaseId} value={tenant.database.id}>
               <SelectTrigger aria-label='Tenant database'>
@@ -86,9 +83,9 @@ export function ConsoleKitProofClient({
           </Field>
           <p className='text-muted-foreground mt-1.5 text-xs'>{tenant.endpointSummary}</p>
         </div>
-      </header>
+      </aside>
       <ConstructiveConsoleKit
-        className='min-h-0 flex-1'
+        className='min-h-svh'
         database={tenant.database}
         showUnavailable
       />

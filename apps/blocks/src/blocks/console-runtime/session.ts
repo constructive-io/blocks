@@ -46,6 +46,11 @@ export type ConsoleSessionSnapshot =
       identity?: ConsoleIdentity;
     };
 
+/** Credential-free snapshot shared by SSR and the first hydration pass. */
+export const SERVER_CONSOLE_SESSION_SNAPSHOT = {
+  status: 'loading'
+} as const satisfies ConsoleSessionSnapshot;
+
 export type ConsoleAccessTokenRequest = {
   endpoint: ConsoleEndpoint;
   signal?: AbortSignal;
@@ -61,6 +66,11 @@ export type GetConsoleAccessToken = (
 
 export interface ConsoleSessionBase {
   getSnapshot(): ConsoleSessionSnapshot;
+  /**
+   * Deterministic snapshot used for server rendering and the first hydration
+   * pass. Browser-backed sessions should not expose restored credentials here.
+   */
+  getServerSnapshot?(): ConsoleSessionSnapshot;
   subscribe(listener: () => void): () => void;
   /** Called for every request so token refresh never leaves a stale capture. */
   getAccessToken: GetConsoleAccessToken;

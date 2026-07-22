@@ -113,6 +113,77 @@ describe('database-scoped standalone session', () => {
     expect(otherDatabase.getSnapshot().status).toBe('anonymous');
   });
 
+  it('defers persisted credentials until hydration and restores them once', async () => {
+    const sessionStore = memoryStorage();
+    const fetchImpl = vi.fn<typeof fetch>().mockResolvedValue(authPayload());
+    const first = createDatabaseScopedStandaloneSession({
+      databaseId: 'database-1',
+      authEndpoint,
+      fetch: fetchImpl,
+      storage: { session: sessionStore },
+      now: () => Date.parse('2029-01-01T00:00:00.000Z')
+    });
+    await first.signIn({ email: 'person@example.com', password: 'password' });
+
+    const restored = createDatabaseScopedStandaloneSession({
+      databaseId: 'database-1',
+      authEndpoint,
+      fetch: fetchImpl,
+      storage: { session: sessionStore },
+      now: () => Date.parse('2029-01-01T00:00:00.000Z'),
+      deferRestore: true
+    });
+    const listener = vi.fn();
+    restored.subscribe(listener);
+
+    expect(restored.getSnapshot().status).toBe('loading');
+    expect(restored.getServerSnapshot?.()).toEqual({ status: 'loading' });
+    restored.restorePersistedSession();
+    expect(restored.getSnapshot().status).toBe('authenticated');
+    expect(listener).toHaveBeenCalledTimes(1);
+
+    restored.restorePersistedSession();
+    expect(listener).toHaveBeenCalledTimes(1);
+  });
+
+  it('cannot revive an old credential while a deferred sign-in is in flight', async () => {
+    const sessionStore = memoryStorage();
+    const seed = createDatabaseScopedStandaloneSession({
+      databaseId: 'database-1',
+      authEndpoint,
+      fetch: vi.fn<typeof fetch>().mockResolvedValue(authPayload()),
+      storage: { session: sessionStore }
+    });
+    await seed.signIn({ email: 'old@example.com', password: 'password' });
+
+    let resolveResponse!: (response: Response) => void;
+    const responsePromise = new Promise<Response>((resolve) => {
+      resolveResponse = resolve;
+    });
+    const session = createDatabaseScopedStandaloneSession({
+      databaseId: 'database-1',
+      authEndpoint,
+      fetch: vi.fn<typeof fetch>().mockReturnValue(responsePromise),
+      storage: { session: sessionStore },
+      deferRestore: true
+    });
+
+    const pendingSignIn = session.signIn({
+      email: 'new@example.com',
+      password: 'password'
+    });
+    session.restorePersistedSession();
+    expect(session.getSnapshot().status).toBe('loading');
+    expect(session.getAccessToken({ endpoint: authEndpoint })).toBeNull();
+
+    resolveResponse(authPayload({ userId: 'user-2', accessToken: 'new-token' }));
+    await expect(pendingSignIn).resolves.toMatchObject({
+      status: 'authenticated',
+      identity: { subjectId: 'user-2' }
+    });
+    expect(session.getAccessToken({ endpoint: authEndpoint })).toBe('new-token');
+  });
+
   it('clears the credential when an HTTP-200 GraphQL auth error is observed', async () => {
     const sessionStore = memoryStorage();
     const session = createDatabaseScopedStandaloneSession({

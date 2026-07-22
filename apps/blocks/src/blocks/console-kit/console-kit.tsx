@@ -687,14 +687,10 @@ function ConsoleKitContent({ config, className }: ConsoleKitProps) {
 
 function initialFeatureFor(config: ConsoleKitConfig): FeaturePackId {
   const order = orderedFeatures(config.order);
-  const snapshot = config.session.getSnapshot();
   const preferred = config.routes?.defaultFeature
-    ?? (
-      snapshot.status === 'anonymous' &&
-      (config.adapters?.auth || config.session.mode === 'standalone')
-        ? 'auth'
-        : 'data'
-    );
+    ?? ((config.adapters?.auth || config.session.mode === 'standalone')
+      ? 'auth'
+      : 'data');
   return order.includes(preferred) ? preferred : (order[0] ?? 'data');
 }
 

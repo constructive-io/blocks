@@ -1,6 +1,7 @@
 import type { IntrospectionQueryResponse } from '@constructive-io/graphql-query/introspect/schema-query';
+import { toCamelCasePlural } from '@constructive-io/graphql-query/generators';
 
-import { pgFieldToCamelCase } from './data.types';
+import { cleanTable, pgFieldToCamelCase } from './data.types';
 import { META_CONTRACT_VERSION, assertMetaQuery } from './meta-query';
 import type {
 	MetaQuery,
@@ -59,25 +60,6 @@ function fieldPath(rootName: string, fieldName: string): string {
 	return `${typePath(rootName)}.fields.${fieldName}`;
 }
 
-function primaryKeyFieldNames(table: MetaschemaTable): string[] {
-	const names = new Set<string>();
-	const constraints = table.constraints;
-
-	if (constraints && !Array.isArray(constraints)) {
-		for (const field of constraints.primaryKey?.fields ?? []) {
-			if (field?.name) names.add(pgFieldToCamelCase(field.name));
-		}
-	}
-
-	for (const constraint of table.primaryKeyConstraints ?? []) {
-		for (const field of constraint?.fields ?? []) {
-			if (field?.name) names.add(pgFieldToCamelCase(field.name));
-		}
-	}
-
-	return [...names];
-}
-
 function relevantTypes(
 	inflection: MetaschemaTableInflection | null | undefined,
 ): Array<[string, IntrospectionTypeKind]> {
@@ -92,7 +74,6 @@ function relevantTypes(
 		[inflection.createInputType, 'INPUT_OBJECT'],
 		[inflection.patchType, 'INPUT_OBJECT'],
 		[inflection.filterType, 'INPUT_OBJECT'],
-		[inflection.conditionType, 'INPUT_OBJECT'],
 		[inflection.orderByType, 'ENUM'],
 	].filter((entry): entry is [string, IntrospectionTypeKind] => nonEmptyName(entry[0]) !== null);
 }
@@ -238,6 +219,13 @@ export function assessSchemaIntrospectionCompatibility(
 			}
 		}
 
+		// The current PostGraphile schema does not guarantee the legacy
+		// `condition` argument or single-row query even when metaschema can
+		// derive their historical names. Console Kit only requires the list
+		// operation for reads, so validate the arguments the actual list root
+		// advertises and keep CRUD mutations strict below.
+		const allQueryName = toCamelCasePlural(table.name, cleanTable(table));
+		const allOperation = queryRoot?.fields?.find((field) => field.name === allQueryName);
 		const allArguments: ExpectedArgument[] = [
 			{ names: ['first'], typeName: 'Int' },
 			{ names: ['last'], typeName: 'Int' },
@@ -248,7 +236,10 @@ export function assessSchemaIntrospectionCompatibility(
 		if (nonEmptyName(inflection?.orderByType)) {
 			allArguments.push({ names: ['orderBy'], typeName: inflection?.orderByType });
 		}
-		if (nonEmptyName(inflection?.conditionType)) {
+		if (
+			nonEmptyName(inflection?.conditionType) &&
+			allOperation?.args.some((argument) => argument.name === 'condition')
+		) {
 			allArguments.push({ names: ['condition'], typeName: inflection?.conditionType });
 		}
 		if (nonEmptyName(inflection?.filterType)) {
@@ -256,17 +247,9 @@ export function assessSchemaIntrospectionCompatibility(
 		}
 
 		checkOperation(queryRootName, queryRoot, {
-			name: table.query?.all,
+			name: allQueryName,
 			returnType: inflection?.connection,
 			arguments: allArguments,
-		});
-
-		const primaryKeyArguments = primaryKeyFieldNames(table).map((name) => ({ names: [name] }));
-		checkOperation(queryRootName, queryRoot, {
-			name: table.query?.one,
-			returnType: inflection?.tableType,
-			arguments: primaryKeyArguments,
-			requireAnyArgument: primaryKeyArguments.length === 0,
 		});
 
 		const createOperation = checkOperation(mutationRootName, mutationRoot, {

@@ -1,4 +1,5 @@
 import type { ConsoleEndpoint } from './endpoints';
+import { SERVER_CONSOLE_SESSION_SNAPSHOT } from './session';
 import type {
   AuthenticatedConsoleIdentity,
   ConsoleCredentials,
@@ -73,6 +74,8 @@ export type DatabaseScopedStandaloneSessionOptions = Readonly<{
   fetch?: typeof fetch;
   storage?: Partial<Record<ConsoleSessionPersistence, ConsoleSessionStorage>>;
   now?: () => number;
+  /** Defers browser credential restoration until the React tree has hydrated. */
+  deferRestore?: boolean;
 }>;
 
 export interface DatabaseScopedStandaloneConsoleSession
@@ -80,6 +83,8 @@ export interface DatabaseScopedStandaloneConsoleSession
   readonly databaseId: string;
   signIn(credentials: ConsoleCredentials): Promise<ConsoleAuthenticationOutcome>;
   signUp(credentials: ConsoleCredentials): Promise<ConsoleAuthenticationOutcome>;
+  /** Restores a valid database-scoped credential at most once. */
+  restorePersistedSession(): void;
   /** Clears an authenticated credential after an HTTP-200 GraphQL auth error. */
   handleAuthenticationFailure(failure: ConsoleAuthenticationFailure): void;
 }
@@ -245,14 +250,8 @@ export function createDatabaseScopedStandaloneSession(
     local: options.storage?.local ?? browserStorage('local')
   };
   let credential: StoredCredential | null = null;
-  let snapshot: ConsoleSessionSnapshot = {
-    status: 'anonymous',
-    identity: {
-      kind: 'anonymous',
-      tenantId: databaseId,
-      cachePartition: createCachePartition()
-    }
-  };
+  let restoreAttempted = false;
+  let snapshot: ConsoleSessionSnapshot = SERVER_CONSOLE_SESSION_SNAPSHOT;
 
   const emit = () => {
     for (const listener of listeners) listener();
@@ -299,32 +298,41 @@ export function createDatabaseScopedStandaloneSession(
     emit();
   };
 
-  for (const persistence of ['session', 'local'] as const) {
-    const store = stores[persistence];
-    let raw: string | null = null;
-    try {
-      raw = store?.getItem(key) ?? null;
-    } catch {
-      raw = null;
-    }
-    const restored = parseStoredCredential(raw);
-    if (!restored || isExpired(restored, now())) {
-      if (raw !== null) {
-        try {
-          store?.removeItem(key);
-        } catch {
-          // An invalid record cannot authorize requests even if removal fails.
-        }
+  const restorePersistedSession = () => {
+    if (restoreAttempted) return;
+    restoreAttempted = true;
+
+    for (const persistence of ['session', 'local'] as const) {
+      const store = stores[persistence];
+      let raw: string | null = null;
+      try {
+        raw = store?.getItem(key) ?? null;
+      } catch {
+        raw = null;
       }
-      continue;
+      const restored = parseStoredCredential(raw);
+      if (!restored || isExpired(restored, now())) {
+        if (raw !== null) {
+          try {
+            store?.removeItem(key);
+          } catch {
+            // An invalid record cannot authorize requests even if removal fails.
+          }
+        }
+        continue;
+      }
+      credential = restored;
+      snapshot = {
+        status: 'authenticated',
+        identity: toIdentity(databaseId, restored)
+      };
+      emit();
+      return;
     }
-    credential = restored;
-    snapshot = {
-      status: 'authenticated',
-      identity: toIdentity(databaseId, restored)
-    };
-    break;
-  }
+    setAnonymous();
+  };
+
+  if (!options.deferRestore) restorePersistedSession();
 
   async function executeMutation(
     document: string,
@@ -379,6 +387,7 @@ export function createDatabaseScopedStandaloneSession(
     field: 'signIn' | 'signUp',
     credentials: ConsoleCredentials
   ): Promise<ConsoleAuthenticationOutcome> {
+    restoreAttempted = true;
     removePersistedCredentials();
     credential = null;
     snapshot = { status: 'loading' };
@@ -461,11 +470,13 @@ export function createDatabaseScopedStandaloneSession(
     mode: 'standalone',
     databaseId,
     getSnapshot: () => snapshot,
+    getServerSnapshot: () => SERVER_CONSOLE_SESSION_SNAPSHOT,
     subscribe(listener) {
       listeners.add(listener);
       return () => listeners.delete(listener);
     },
     getAccessToken,
+    restorePersistedSession,
     async beginSignIn(input) {
       if (!input?.credentials) {
         throw new ConsoleSessionOperationError(
@@ -487,6 +498,7 @@ export function createDatabaseScopedStandaloneSession(
     signIn: (credentials) => authenticate('signIn', credentials),
     signUp: (credentials) => authenticate('signUp', credentials),
     async signOut() {
+      restoreAttempted = true;
       const accessToken = credential?.accessToken;
       let failure: unknown = null;
       if (accessToken) {
@@ -514,6 +526,7 @@ export function createDatabaseScopedStandaloneSession(
       void getAccessToken({ endpoint: options.authEndpoint });
     },
     handleAuthenticationFailure(failure) {
+      restoreAttempted = true;
       if (!credential && snapshot.status !== 'authenticated') return;
       const identity = snapshot.status === 'authenticated'
         ? snapshot.identity

@@ -158,6 +158,7 @@ export function createConstructiveAuthAdapter(
         signOut: supports(options, 'mutation', 'signOut')
           ? async () => {
               await options.session.signOut();
+              options.store.getState().setAuthEntryMode('sign-in');
               notifyConsoleAdapters(options.store);
             }
           : undefined,
@@ -186,7 +187,13 @@ export function createConstructiveAuthAdapter(
         return {
           view: 'entry',
           resetToken: options.resetToken,
-          mode: options.resetRoleId && options.resetToken ? 'reset-password' : 'sign-in',
+          mode: options.resetRoleId && options.resetToken
+            ? 'reset-password'
+            : options.store.getState().authEntryMode,
+          onModeChange: (mode) => {
+            options.store.getState().setAuthEntryMode(mode);
+            notifyConsoleAdapters(options.store);
+          },
           policy: {
             signIn: supports(options, 'mutation', 'signIn'),
             signUp: supports(options, 'mutation', 'signUp'),
