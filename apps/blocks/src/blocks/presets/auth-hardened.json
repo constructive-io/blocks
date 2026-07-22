@@ -1,0 +1,9 @@
+{
+  "schemaVersion": 1,
+  "id": "auth-hardened",
+  "presetSlug": "auth:hardened",
+  "title": "Hardened authentication",
+  "description": "Data, authentication, and user-management feature packs.",
+  "stability": "experimental",
+  "featurePacks": ["data", "auth", "users"]
+}

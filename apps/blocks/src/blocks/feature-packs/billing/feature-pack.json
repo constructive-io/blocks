@@ -1,0 +1,18 @@
+{
+  "schemaVersion": 1,
+  "id": "billing",
+  "title": "Billing",
+  "description": "Plans, subscriptions, entitlement meters, usage, and provider-backed billing management.",
+  "dependencies": ["data"],
+  "endpoints": { "required": ["data"], "optional": ["admin"] },
+  "capabilities": {
+    "required": ["billing.plans", "billing.subscriptions"],
+    "optional": ["billing.meters", "billing.provider"]
+  },
+  "metadata": {
+    "requiredMetaSections": ["tables", "fields", "constraints", "relations", "query"],
+    "optionalMetaSections": ["scope", "encoding"],
+    "requiredIntrospectionSections": ["root-operations", "types", "input-objects"],
+    "optionalIntrospectionSections": ["enums", "directives"]
+  }
+}

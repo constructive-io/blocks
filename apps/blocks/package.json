@@ -5,10 +5,8 @@
   "scripts": {
     "gen": "tsx scripts/generate-ui-demo-source.ts && tsx scripts/check-docs.ts",
     "gen:check": "tsx scripts/generate-ui-demo-source.ts --check && tsx scripts/check-docs.ts",
-    "fixtures:refresh": "tsx scripts/refresh-sdk-fixtures.ts",
-    "fixtures:check": "tsx scripts/check-sdk-fixtures.ts",
     "build:registry": "pnpm --filter @constructive-io/registry build",
-    "check:flows": "pnpm gen:check && pnpm fixtures:check",
+    "check:flows": "pnpm gen:check",
     "check:install-namespace": "pnpm gen:check",
     "check:selections": "tsx scripts/check-mutation-selections.ts",
     "predev": "pnpm gen:check",
@@ -34,7 +32,9 @@
     "@ai-sdk/openai-compatible": "^3.0.9",
     "@ai-sdk/react": "^4.0.27",
     "@base-ui/react": "^1.0.0",
+    "@constructive-io/data": "workspace:*",
     "@constructive-io/graphql-types": "^3.4.3",
+    "@constructive-io/sheets": "workspace:*",
     "@constructive-io/ui": "workspace:*",
     "@tanstack/react-form": "^1.27.7",
     "@tanstack/react-query": "^5.90.16",
@@ -52,7 +52,8 @@
     "react-dom": "^19.2.0",
     "sugar-high": "1.2.0",
     "tailwind-merge": "^3.3.0",
-    "zod": "^4.4.3"
+    "zod": "^4.4.3",
+    "zustand": "^5.0.14"
   },
   "devDependencies": {
     "@playwright/test": "1.61.1",

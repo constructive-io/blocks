@@ -11,6 +11,8 @@ export default function sitemap(): MetadataRoute.Sitemap {
     '/',
     '/blocks',
     '/blocks/styling',
+    '/blocks/features',
+    '/blocks/console-kit',
     ...BASE_PRIMITIVES.map(({ name }) => `/blocks/ui/${name}`),
     '/blocks/billing',
     ...BILLING_BLOCKS.map(({ name }) => `/blocks/billing/${name}`),
@@ -25,6 +27,8 @@ export default function sitemap(): MetadataRoute.Sitemap {
         ? 1
         : path === '/blocks' ||
             path === '/blocks/styling' ||
+            path === '/blocks/features' ||
+            path === '/blocks/console-kit' ||
             path === '/blocks/billing'
           ? 0.9
           : 0.7,

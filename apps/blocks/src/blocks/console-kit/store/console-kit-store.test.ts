@@ -1,0 +1,62 @@
+import { describe, expect, it } from 'vitest';
+
+import { createConsoleKitStore } from './console-kit-store';
+
+describe('Console Kit store', () => {
+  it('composes navigation, runtime, and adapter slices in one isolated store', () => {
+    const first = createConsoleKitStore('data');
+    const second = createConsoleKitStore('auth');
+    const adapter = {};
+
+    first.getState().setActiveFeature('organizations');
+    first.getState().setSession({
+      status: 'authenticated',
+      identity: {
+        kind: 'authenticated',
+        cachePartition: 'login-1',
+        subjectId: 'user-1',
+        organizationId: 'org-1'
+      }
+    });
+    first.getState().setAdapterLoad('users', {
+      status: 'ready',
+      adapter,
+      requestKey: 'database-1:user-1:users',
+      props: { members: [] }
+    });
+    first.getState().setMetadata('database-1:user-1:data', {
+      status: 'incompatible',
+      message: 'The endpoint is missing the current _meta contract.',
+      missing: ['Query._meta']
+    });
+
+    expect(first.getState()).toMatchObject({
+      activeFeature: 'organizations',
+      session: { status: 'authenticated' },
+      metadataKey: 'database-1:user-1:data',
+      adapterLoads: {
+        users: {
+          status: 'ready',
+          adapter,
+          requestKey: 'database-1:user-1:users'
+        }
+      }
+    });
+    expect(second.getState()).toMatchObject({
+      activeFeature: 'auth',
+      session: { status: 'loading' },
+      adapterLoads: {}
+    });
+  });
+
+  it('keeps adapter subscription and retry revisions in their own slice', () => {
+    const store = createConsoleKitStore('data');
+
+    store.getState().notifyAdapterChange();
+    store.getState().retryAdapter('storage');
+    store.getState().retryAdapter('storage');
+
+    expect(store.getState().adapterRevision).toBe(1);
+    expect(store.getState().adapterAttempts.storage).toBe(2);
+  });
+});

@@ -1,0 +1,18 @@
+{
+  "schemaVersion": 1,
+  "id": "data",
+  "title": "Data",
+  "description": "Dynamic table exploration and CRUD surfaces driven by Constructive metadata and GraphQL introspection.",
+  "dependencies": [],
+  "endpoints": { "required": ["data"], "optional": [] },
+  "capabilities": {
+    "required": ["data.meta", "data.introspection"],
+    "optional": ["data.search", "data.i18n", "data.realtime"]
+  },
+  "metadata": {
+    "requiredMetaSections": ["tables", "fields", "constraints", "relations", "query"],
+    "optionalMetaSections": ["scope", "encoding", "search", "i18n", "realtime"],
+    "requiredIntrospectionSections": ["root-operations", "types", "input-objects"],
+    "optionalIntrospectionSections": ["enums", "directives"]
+  }
+}

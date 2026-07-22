@@ -117,19 +117,23 @@ export function SiteSidebar({ open, onNavigate, className }: SiteSidebarProps) {
   const onComponents = pathname.startsWith('/blocks/ui/');
   const onBilling =
     pathname === '/blocks/billing' || pathname.startsWith('/blocks/billing/');
+  const onApplication =
+    pathname === '/blocks/features' || pathname === '/blocks/console-kit';
   const onFoundations =
     pathname === '/' || pathname === '/blocks' || pathname === '/blocks/styling';
 
   const [foundationsOpen, setFoundationsOpen] = useState(true);
+  const [applicationOpen, setApplicationOpen] = useState(onApplication);
   const [billingOpen, setBillingOpen] = useState(onBilling);
   const [componentsOpen, setComponentsOpen] = useState(true);
 
   // Expand the section that owns the active route so deep links stay visible
   useEffect(() => {
     if (onComponents) setComponentsOpen(true);
+    if (onApplication) setApplicationOpen(true);
     if (onBilling) setBillingOpen(true);
     if (onFoundations) setFoundationsOpen(true);
-  }, [onBilling, onComponents, onFoundations]);
+  }, [onApplication, onBilling, onComponents, onFoundations]);
 
   const componentLinks = BASE_PRIMITIVES.map((p) => ({
     href: `/blocks/ui/${p.name}`,
@@ -189,6 +193,36 @@ export function SiteSidebar({ open, onNavigate, className }: SiteSidebarProps) {
             </NavLink>
           </div>
         </NavSection>
+
+        <div className="mt-3">
+          <NavSection
+            title="Application"
+            open={applicationOpen}
+            onToggle={() => setApplicationOpen((value) => !value)}
+            count={2}
+          >
+            <ul className="flex flex-col gap-0.5">
+              <li>
+                <NavLink
+                  href="/blocks/features"
+                  active={pathname === '/blocks/features'}
+                  onNavigate={onNavigate}
+                >
+                  Feature packs
+                </NavLink>
+              </li>
+              <li>
+                <NavLink
+                  href="/blocks/console-kit"
+                  active={pathname === '/blocks/console-kit'}
+                  onNavigate={onNavigate}
+                >
+                  Console Kit
+                </NavLink>
+              </li>
+            </ul>
+          </NavSection>
+        </div>
 
         <div className="mt-3">
           <NavSection

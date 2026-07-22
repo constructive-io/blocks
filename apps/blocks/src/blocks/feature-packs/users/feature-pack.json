@@ -1,0 +1,18 @@
+{
+  "schemaVersion": 1,
+  "id": "users",
+  "title": "Users",
+  "description": "Application member directory, invitations, role assignment, and membership-status management.",
+  "dependencies": ["data", "auth"],
+  "endpoints": { "required": ["admin"], "optional": ["auth"] },
+  "capabilities": {
+    "required": ["users.directory", "users.memberships"],
+    "optional": ["users.permissions", "users.limits", "users.profiles", "users.invites"]
+  },
+  "metadata": {
+    "requiredMetaSections": ["tables", "fields", "constraints", "relations", "query"],
+    "optionalMetaSections": ["scope", "encoding"],
+    "requiredIntrospectionSections": ["root-operations", "types", "input-objects"],
+    "optionalIntrospectionSections": ["enums", "directives"]
+  }
+}

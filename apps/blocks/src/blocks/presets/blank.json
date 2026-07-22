@@ -1,0 +1,9 @@
+{
+  "schemaVersion": 1,
+  "id": "blank",
+  "presetSlug": "blank",
+  "title": "Blank",
+  "description": "Dynamic data tooling without optional platform modules.",
+  "stability": "experimental",
+  "featurePacks": ["data"]
+}
