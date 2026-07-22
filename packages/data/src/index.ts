@@ -84,6 +84,23 @@ export {
 } from './console-data-tables';
 export type { SelectConsoleDataTablesOptions } from './console-data-tables';
 
+export {
+	assessTableWriteCapability,
+	getRowIdentityDefinition,
+	resolveRowIdentity,
+	rowIdentityToPrimaryKey,
+	serializeRowIdentity,
+} from './row-identity';
+export type {
+	RowIdentity,
+	RowIdentityDefinition,
+	RowIdentityField,
+	RowIdentityObject,
+	RowIdentityResolution,
+	RowIdentityValue,
+	TableWriteCapability,
+} from './row-identity';
+
 export { assessSchemaIntrospectionCompatibility } from './schema-introspection-compatibility';
 export type {
 	SchemaIntrospectionCompatibility,
