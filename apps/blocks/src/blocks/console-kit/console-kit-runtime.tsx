@@ -34,6 +34,7 @@ import type {
   ConsoleKitMetadataState
 } from './console-kit-contracts';
 import { useConsoleKitStore } from './store';
+import { useLatestCallback } from './use-latest-callback';
 
 const CHECKING_METADATA_STATE = { status: 'checking' } as const;
 const runtimeReferenceIds = new WeakMap<object, number>();
@@ -142,6 +143,9 @@ export function useConsoleKitMetadata(
   const requestKey = metadataRequestKey(context);
   const state = storedKey === requestKey ? storedState : CHECKING_METADATA_STATE;
   const requestGeneration = React.useRef(0);
+  const reportError = useLatestCallback((error: ConsoleRuntimeError) => {
+    onError?.(error);
+  });
 
   React.useEffect(() => {
     const generation = ++requestGeneration.current;
@@ -231,7 +235,7 @@ export function useConsoleKitMetadata(
         if (!isCurrent()) return;
         const error = normalizeConsoleKitError(cause, 'Console metadata could not be loaded.');
         setState(requestKey, { status: 'error', error });
-        onError?.(error);
+        reportError(error);
       }
     })();
 
@@ -239,7 +243,7 @@ export function useConsoleKitMetadata(
       controller.abort();
       if (requestGeneration.current === generation) requestGeneration.current += 1;
     };
-  }, [context.endpoints.data, context.transportFor, onError, requestKey, setState]);
+  }, [context.endpoints.data, context.transportFor, requestKey, setState]);
 
   return state;
 }

@@ -48,8 +48,9 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger
 } from '@constructive-io/ui/dropdown-menu';
-import { Field } from '@constructive-io/ui/field';
+import { Field, FieldLabel, FieldLegend, FieldSet } from '@constructive-io/ui/field';
 import { Input } from '@constructive-io/ui/input';
+import { RadioGroup, RadioGroupItem } from '@constructive-io/ui/radio-group';
 import {
   Table,
   TableBody,
@@ -178,21 +179,23 @@ function CreateBucketDialog({
                 value={name}
               />
             </Field>
-            <Field htmlFor={`${fieldId}-access`} label='Access'>
-              <div className='grid grid-cols-2 gap-2' id={`${fieldId}-access`}>
+            <FieldSet>
+              <FieldLegend id={`${fieldId}-access-label`} variant='label'>Access</FieldLegend>
+              <RadioGroup
+                aria-labelledby={`${fieldId}-access-label`}
+                className='grid grid-cols-2 gap-2'
+                name='bucket-access'
+                onValueChange={(value) => setAccess(value as 'public' | 'private')}
+                value={access}
+              >
                 {(['private', 'public'] as const).map((candidate) => (
-                  <Button
-                    aria-pressed={access === candidate}
-                    key={candidate}
-                    onClick={() => setAccess(candidate)}
-                    type='button'
-                    variant={access === candidate ? 'secondary' : 'outline'}
-                  >
+                  <FieldLabel className='rounded-lg border px-3 py-2' htmlFor={`${fieldId}-access-${candidate}`} key={candidate}>
+                    <RadioGroupItem id={`${fieldId}-access-${candidate}`} value={candidate} />
                     {candidate === 'private' ? 'Private' : 'Public'}
-                  </Button>
+                  </FieldLabel>
                 ))}
-              </div>
-            </Field>
+              </RadioGroup>
+            </FieldSet>
           </DialogPanel>
           <DialogFooter>
             <Button disabled={pending || !name.trim()} type='submit'>{pending ? 'Creating…' : 'Create bucket'}</Button>

@@ -61,6 +61,7 @@ import {
   ConsoleKitStoreProvider,
   useConsoleKitStore
 } from './store';
+import { useLatestCallback } from './use-latest-callback';
 
 const FEATURE_ICONS = {
   data: DatabaseIcon,
@@ -122,6 +123,14 @@ export function getConsoleKitFeatureAvailability(
   if (runtime.session.status === 'loading') return { status: 'checking' };
   if (runtime.session.status === 'error') {
     const unauthorized = runtime.session.error.code === 'UNAUTHENTICATED' || runtime.session.error.code === 'FORBIDDEN';
+    if (
+      feature === 'auth' &&
+      unauthorized &&
+      runtime.endpoints.auth &&
+      (adapter || standaloneAuth)
+    ) {
+      return { status: 'available' };
+    }
     return {
       status: unauthorized ? 'unauthorized' : 'error',
       reason: runtime.session.error.message
@@ -246,6 +255,9 @@ function AdapterFeature({
   const state = storedState?.adapter === adapter && storedState.requestKey === requestKey
     ? storedState
     : undefined;
+  const reportError = useLatestCallback((error: ConsoleRuntimeError) => {
+    onError?.(error, { phase: 'adapter', feature });
+  });
 
   React.useEffect(() => {
     const controller = new AbortController();
@@ -272,11 +284,11 @@ function AdapterFeature({
           requestKey,
           error
         });
-        onError?.(error, { phase: 'adapter', feature });
+        reportError(error);
       }
     );
     return () => controller.abort();
-  }, [adapter, feature, onError, requestKey, runtime, setAdapterLoad]);
+  }, [adapter, feature, requestKey, runtime, setAdapterLoad]);
 
   if (!state || state.status === 'loading') return <FeatureLoadingState />;
   if (state.status === 'error') {
@@ -295,6 +307,17 @@ function AdapterFeature({
     );
   }
 
+  const adapterOnError = (state.props as Readonly<{
+    onError?: (error: ConsoleRuntimeError) => void;
+  }>).onError;
+  const forwardFeatureError = (error: ConsoleRuntimeError) => {
+    adapterOnError?.(error);
+    onError?.(
+      normalizeConsoleKitError(error, `The ${feature} action failed.`),
+      { phase: 'feature', feature }
+    );
+  };
+
   if (feature === 'data') {
     return (
       <DataFeaturePack
@@ -304,14 +327,32 @@ function AdapterFeature({
       />
     );
   }
-  if (feature === 'auth') return <AuthFeaturePack {...(state.props as AuthFeaturePackProps)} />;
-  if (feature === 'users') return <UsersFeaturePack {...(state.props as UsersFeaturePackProps)} />;
-  if (feature === 'organizations') {
-    return <OrganizationsFeaturePack {...(state.props as OrganizationsFeaturePackProps)} />;
+  if (feature === 'auth') {
+    return <AuthFeaturePack {...(state.props as AuthFeaturePackProps)} onError={forwardFeatureError} />;
   }
-  if (feature === 'storage') return <StorageFeaturePack {...(state.props as StorageFeaturePackProps)} />;
-  if (feature === 'billing') return <BillingFeaturePack {...(state.props as BillingFeaturePackProps)} />;
-  return <NotificationsFeaturePack {...(state.props as NotificationsFeaturePackProps)} />;
+  if (feature === 'users') {
+    return <UsersFeaturePack {...(state.props as UsersFeaturePackProps)} onError={forwardFeatureError} />;
+  }
+  if (feature === 'organizations') {
+    return (
+      <OrganizationsFeaturePack
+        {...(state.props as OrganizationsFeaturePackProps)}
+        onError={forwardFeatureError}
+      />
+    );
+  }
+  if (feature === 'storage') {
+    return <StorageFeaturePack {...(state.props as StorageFeaturePackProps)} onError={forwardFeatureError} />;
+  }
+  if (feature === 'billing') {
+    return <BillingFeaturePack {...(state.props as BillingFeaturePackProps)} onError={forwardFeatureError} />;
+  }
+  return (
+    <NotificationsFeaturePack
+      {...(state.props as NotificationsFeaturePackProps)}
+      onError={forwardFeatureError}
+    />
+  );
 }
 
 function documentSource(document: unknown): string {
@@ -343,7 +384,9 @@ function UnavailableFeature({
         <div className='bg-muted text-muted-foreground mb-2 flex size-10 items-center justify-center rounded-lg'>
           <LockKeyholeIcon aria-hidden='true' />
         </div>
-        <CardTitle>{manifest?.title ?? feature} is unavailable</CardTitle>
+        <CardTitle>
+          <h1>{manifest?.title ?? feature} is unavailable</h1>
+        </CardTitle>
         <CardDescription>{reason}</CardDescription>
       </CardHeader>
       <CardContent>
@@ -367,6 +410,12 @@ function useAdapterSubscriptions(
   const notifyAdapterChange = useConsoleKitStore(
     (store) => store.notifyAdapterChange
   );
+  const reportError = useLatestCallback((
+    error: ConsoleRuntimeError,
+    feature: FeaturePackId
+  ) => {
+    onError?.(error, { phase: 'adapter', feature });
+  });
 
   React.useEffect(() => {
     const unsubscribers: Array<Readonly<{
@@ -386,12 +435,12 @@ function useAdapterSubscriptions(
           unsubscribe: adapter.subscribe(runtime, notifyAdapterChange)
         });
       } catch (cause) {
-        onError?.(
+        reportError(
           normalizeConsoleKitError(
             cause,
             `The ${feature} adapter subscription could not be started.`
           ),
-          { phase: 'adapter', feature }
+          feature
         );
       }
     }
@@ -401,17 +450,17 @@ function useAdapterSubscriptions(
         try {
           unsubscribe();
         } catch (cause) {
-          onError?.(
+          reportError(
             normalizeConsoleKitError(
               cause,
               `The ${feature} adapter subscription could not be stopped.`
             ),
-            { phase: 'adapter', feature }
+            feature
           );
         }
       }
     };
-  }, [adapters, notifyAdapterChange, onError, runtime]);
+  }, [adapters, notifyAdapterChange, runtime]);
 
   return revision;
 }
@@ -455,6 +504,9 @@ function ConsoleKitContent({ config, className }: ConsoleKitProps) {
   const setInternalFeature = useConsoleKitStore(
     (store) => store.setActiveFeature
   );
+  const setAuthEntryMode = useConsoleKitStore(
+    (store) => store.setAuthEntryMode
+  );
   const activeFeature = config.routes?.activeFeature ?? internalFeature;
   React.useEffect(() => {
     if (config.routes?.activeFeature) {
@@ -482,13 +534,50 @@ function ConsoleKitContent({ config, className }: ConsoleKitProps) {
     if (!feature) return config.routes?.renderLink ? config.routes.renderLink(props) : <a {...props} />;
     const onClick: React.MouseEventHandler<HTMLAnchorElement> = (event) => {
       props.onClick?.(event);
-      if (event.defaultPrevented) return;
+      if (
+        event.defaultPrevented ||
+        event.button !== 0 ||
+        event.metaKey ||
+        event.ctrlKey ||
+        event.shiftKey ||
+        event.altKey ||
+        (event.currentTarget.target && event.currentTarget.target !== '_self')
+      ) return;
       navigate(feature);
-      if (!config.routes?.renderLink) event.preventDefault();
     };
     const next = { ...props, onClick };
     return config.routes?.renderLink ? config.routes.renderLink(next) : <a {...next} />;
   }, [config.routes, hrefToFeature, navigate]);
+
+  React.useEffect(() => {
+    if (config.routes?.activeFeature) return;
+
+    const syncFeatureFromHash = () => {
+      const feature = hrefToFeature.get(window.location.hash);
+      if (runtime.session.status === 'loading') return;
+      if (runtime.session.status === 'anonymous') {
+        const authFeature = featureOrder.includes('auth') ? 'auth' : featureOrder[0];
+        if (!authFeature) return;
+        setInternalFeature(authFeature);
+        if (feature && feature !== authFeature) {
+          window.history.replaceState(null, '', featureHref(authFeature));
+        }
+        return;
+      }
+      if (feature) setInternalFeature(feature);
+    };
+
+    syncFeatureFromHash();
+    window.addEventListener('hashchange', syncFeatureFromHash);
+    return () => window.removeEventListener('hashchange', syncFeatureFromHash);
+  }, [
+    config.routes?.activeFeature,
+    featureHref,
+    featureOrder,
+    hrefToFeature,
+    runtime.session.status,
+    setInternalFeature
+  ]);
 
   const visibleFeatures = featureOrder.filter((feature) => {
     const status = availability[feature]?.status;
@@ -505,7 +594,6 @@ function ConsoleKitContent({ config, className }: ConsoleKitProps) {
         href: featureHref(feature),
         icon: FEATURE_ICONS[feature],
         isActive: feature === activeFeature,
-        disabled: state?.status !== 'available',
         badge: state?.status === 'checking'
           ? '…'
           : discoveredCapabilities[feature]?.status === 'partial'
@@ -532,10 +620,13 @@ function ConsoleKitContent({ config, className }: ConsoleKitProps) {
               label: 'Sign out',
               onSelect: () => {
                 if (config.session.mode !== 'standalone') return;
+                let completed = false;
                 void Promise.resolve()
-                  .then(() => config.session.mode === 'standalone'
-                    ? config.session.signOut()
-                    : undefined)
+                  .then(async () => {
+                    if (config.session.mode !== 'standalone') return;
+                    await config.session.signOut();
+                    completed = true;
+                  })
                   .catch((cause) => {
                     config.onError?.(
                       normalizeConsoleKitError(
@@ -544,13 +635,22 @@ function ConsoleKitContent({ config, className }: ConsoleKitProps) {
                       ),
                       { phase: 'feature', feature: 'auth' }
                     );
+                  })
+                  .finally(() => {
+                    if (
+                      config.session.mode === 'standalone' &&
+                      (completed ||
+                        config.session.getSnapshot().status !== 'authenticated')
+                    ) {
+                      setAuthEntryMode('sign-in');
+                    }
                   });
               }
             }]
           }]
         : undefined
     };
-  }, [config.account, config.onError, config.session, identity]);
+  }, [config.account, config.onError, config.session, identity, setAuthEntryMode]);
 
   const dataEndpoint = runtime.endpoints.data;
   const scopedDataTransport = runtime.transportFor('data');
@@ -633,7 +733,8 @@ function ConsoleKitContent({ config, className }: ConsoleKitProps) {
     } else if (
       activeFeature === 'auth' &&
       config.session.mode === 'standalone' &&
-      runtime.session.status === 'anonymous'
+      runtime.session.status !== 'authenticated' &&
+      runtime.session.status !== 'loading'
     ) {
       content = (
         <AuthFeaturePack
@@ -680,7 +781,7 @@ function ConsoleKitContent({ config, className }: ConsoleKitProps) {
       navigation={navigation}
       renderLink={renderLink}
     >
-      <main className='flex min-h-full min-w-0 flex-col p-4 sm:p-6'>{content}</main>
+      <div className='flex min-h-full min-w-0 flex-col p-4 sm:p-6'>{content}</div>
     </AppShell>
   );
 }

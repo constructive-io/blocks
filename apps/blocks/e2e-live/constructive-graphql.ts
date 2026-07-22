@@ -259,25 +259,40 @@ export async function createRow(
   input: Readonly<Record<string, unknown>>,
   fields: readonly string[]
 ): Promise<Readonly<Record<string, unknown>>> {
+  const request = createRequest(schema, table, input, fields);
+  const data = await graphQL<Record<string, unknown>>(
+    endpointUrl(tenant, 'data'),
+    request.document,
+    request.variables,
+    token
+  );
+  const payload = data[request.mutation];
+  const row = payload && typeof payload === 'object' && !Array.isArray(payload)
+    ? (payload as Record<string, unknown>)[request.singular]
+    : null;
+  if (!row || typeof row !== 'object' || Array.isArray(row)) {
+    throw new Error(`The ${request.mutation} mutation returned no row.`);
+  }
+  return row as Readonly<Record<string, unknown>>;
+}
+
+export function createRequest(
+  schema: LiveSchema,
+  table: LiveTable,
+  input: Readonly<Record<string, unknown>>,
+  fields: readonly string[]
+): Readonly<{ document: unknown; variables: Readonly<Record<string, unknown>>; mutation: string; singular: string }> {
   const document = buildPostGraphileCreate(table.clean, [...schema.tables], {
     fieldSelection: { select: [...fields] }
   });
   const singular = toCamelCaseSingular(table.clean.name, table.clean);
   const mutation = toCreateMutationName(table.clean.name, table.clean);
-  const data = await graphQL<Record<string, unknown>>(
-    endpointUrl(tenant, 'data'),
+  return {
     document,
-    { input: { [singular]: input } },
-    token
-  );
-  const payload = data[mutation];
-  const row = payload && typeof payload === 'object' && !Array.isArray(payload)
-    ? (payload as Record<string, unknown>)[singular]
-    : null;
-  if (!row || typeof row !== 'object' || Array.isArray(row)) {
-    throw new Error(`The ${mutation} mutation returned no row.`);
-  }
-  return row as Readonly<Record<string, unknown>>;
+    variables: { input: { [singular]: input } },
+    mutation,
+    singular
+  };
 }
 
 function primaryKey(table: LiveTable, row: Readonly<Record<string, unknown>>):

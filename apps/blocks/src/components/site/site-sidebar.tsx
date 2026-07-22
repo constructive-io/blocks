@@ -220,7 +220,7 @@ export function SiteSidebar({ open, onNavigate, className }: SiteSidebarProps) {
             title="Billing"
             open={billingOpen}
             onToggle={() => setBillingOpen((value) => !value)}
-            count={billingLinks.length}
+            count={billingLinks.length + 1}
           >
             <ul className="flex flex-col gap-0.5">
               <li>

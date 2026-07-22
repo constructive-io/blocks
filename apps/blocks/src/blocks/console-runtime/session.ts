@@ -53,6 +53,8 @@ export const SERVER_CONSOLE_SESSION_SNAPSHOT = {
 
 export type ConsoleAccessTokenRequest = {
   endpoint: ConsoleEndpoint;
+  /** Identity captured by the request scope that will receive the token. */
+  identity: ConsoleIdentity;
   signal?: AbortSignal;
 };
 

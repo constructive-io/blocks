@@ -69,13 +69,15 @@ export function ConsoleKitStoreProvider({
   initialContext?: ConsoleKitContext | null;
   store?: ConsoleKitStoreApi;
 }>) {
-  const storeRef = React.useRef<ConsoleKitStoreApi | null>(store ?? null);
-  if (!storeRef.current) {
-    storeRef.current = createConsoleKitStore(initialFeature, initialContext);
+  const internalStoreRef = React.useRef<ConsoleKitStoreApi | null>(null);
+  if (!store && !internalStoreRef.current) {
+    internalStoreRef.current = createConsoleKitStore(initialFeature, initialContext);
   }
+  const selectedStore = store ?? internalStoreRef.current;
+  if (!selectedStore) throw new Error('Console Kit could not create its state store.');
 
   return (
-    <ConsoleKitStoreContext.Provider value={storeRef.current}>
+    <ConsoleKitStoreContext.Provider value={selectedStore}>
       {children}
     </ConsoleKitStoreContext.Provider>
   );

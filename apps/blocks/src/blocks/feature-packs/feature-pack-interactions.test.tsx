@@ -5,6 +5,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { AuthEntryPanel } from './auth/auth-entry-panel';
 import { AuthFeaturePack } from './auth/auth-feature-pack';
 import { NotificationsFeaturePack } from './notifications/notifications-feature-pack';
+import { OrganizationsFeaturePack } from './organizations/organizations-feature-pack';
 import { StorageFeaturePack } from './storage/storage-feature-pack';
 import { UsersFeaturePack } from './users/users-feature-pack';
 
@@ -119,6 +120,41 @@ describe('feature-pack interaction policy', () => {
     expect(openNotification).toHaveBeenCalledWith({ notification });
   });
 
+  it('confirms notification deletion and keeps a failed action open', async () => {
+    const user = userEvent.setup();
+    const deleteNotification = vi.fn().mockRejectedValue(new Error('Delete rejected'));
+    const onError = vi.fn();
+    render(
+      <NotificationsFeaturePack
+        actions={{ deleteNotification }}
+        onError={onError}
+        policy={{ deleteNotification: true }}
+        resource={{
+          status: 'ready',
+          data: {
+            notifications: [{
+              id: 'notification-1',
+              title: 'Export complete',
+              createdAt: 'Just now'
+            }],
+            unreadCount: 1
+          }
+        }}
+      />
+    );
+
+    await user.click(screen.getByRole('button', { name: 'Delete Export complete' }));
+    expect(deleteNotification).not.toHaveBeenCalled();
+
+    await user.click(screen.getByRole('button', { name: 'Delete notification' }));
+    await waitFor(() => expect(deleteNotification).toHaveBeenCalledWith({
+      notificationId: 'notification-1'
+    }));
+    expect(onError).toHaveBeenCalledWith(expect.objectContaining({ message: 'Delete rejected' }));
+    expect(screen.getByRole('alertdialog')).toBeInTheDocument();
+    expect(screen.getByRole('alert')).toHaveTextContent('The notification could not be deleted.');
+  });
+
   it('offers the first invitation from an empty users resource and preserves failed input', async () => {
     const user = userEvent.setup();
     const invite = vi.fn().mockRejectedValue(new Error('Invite rejected'));
@@ -127,7 +163,7 @@ describe('feature-pack interaction policy', () => {
       <UsersFeaturePack
         actions={{ invite }}
         onError={onError}
-        policy={{ invite: true }}
+        policy={{ assignInviteRole: true, invite: true }}
         resource={{ status: 'empty' }}
       />
     );
@@ -142,6 +178,157 @@ describe('feature-pack interaction policy', () => {
     ));
     expect(screen.getByRole('dialog')).toBeInTheDocument();
     expect(email).toHaveValue('member@example.com');
+  });
+
+  it('allows an app invitation without assigning one of the visible profiles', async () => {
+    const user = userEvent.setup();
+    const invite = vi.fn().mockResolvedValue(undefined);
+    render(
+      <UsersFeaturePack
+        actions={{ invite }}
+        policy={{ assignInviteRole: true, invite: true }}
+        resource={{
+          status: 'ready',
+          data: { members: [], roles: ['Administrator'] }
+        }}
+      />
+    );
+
+    await user.click(screen.getByRole('button', { name: 'Invite member' }));
+    expect(screen.getByRole('combobox', { name: 'Role' })).toHaveTextContent('No role');
+    await user.type(screen.getByRole('textbox', { name: 'Email address' }), 'app@example.com');
+    await user.click(screen.getByRole('button', { name: 'Send invitation' }));
+
+    await waitFor(() => expect(invite).toHaveBeenCalledWith({
+      email: 'app@example.com',
+      role: undefined
+    }));
+  });
+
+  it('allows an organization invitation without assigning one of the visible profiles', async () => {
+    const user = userEvent.setup();
+    const inviteMember = vi.fn().mockResolvedValue(undefined);
+    render(
+      <OrganizationsFeaturePack
+        actions={{ inviteMember }}
+        policy={{ assignInviteRole: true, inviteMember: true }}
+        resource={{
+          status: 'ready',
+          data: {
+            activeOrganizationId: 'organization-1',
+            organizations: [{ id: 'organization-1', name: 'Acme' }],
+            members: [],
+            roles: ['Administrator']
+          }
+        }}
+      />
+    );
+
+    await user.click(screen.getByRole('button', { name: 'Invite member' }));
+    expect(screen.getByRole('combobox', { name: 'Role' })).toHaveTextContent('No role');
+    await user.type(screen.getByRole('textbox', { name: 'Email address' }), 'org@example.com');
+    await user.click(screen.getByRole('button', { name: 'Send invitation' }));
+
+    await waitFor(() => expect(inviteMember).toHaveBeenCalledWith({
+      organizationId: 'organization-1',
+      email: 'org@example.com',
+      role: undefined
+    }));
+  });
+
+  it('hides invitation profiles when policy only grants invitation creation', async () => {
+    const user = userEvent.setup();
+    render(
+      <UsersFeaturePack
+        actions={{ invite: vi.fn() }}
+        policy={{ invite: true }}
+        resource={{
+          status: 'ready',
+          data: { members: [], roles: ['Administrator'] }
+        }}
+      />
+    );
+
+    await user.click(screen.getByRole('button', { name: 'Invite member' }));
+    expect(screen.queryByRole('combobox', { name: 'Role' })).not.toBeInTheDocument();
+  });
+
+  it('drops a selected app profile when invitation-profile permission is revoked', async () => {
+    const user = userEvent.setup();
+    const invite = vi.fn();
+    const resource = {
+      status: 'ready' as const,
+      data: { members: [], roles: ['Administrator'] }
+    };
+    const view = render(
+      <UsersFeaturePack
+        actions={{ invite }}
+        policy={{ assignInviteRole: true, invite: true }}
+        resource={resource}
+      />
+    );
+    await user.click(screen.getByRole('button', { name: 'Invite member' }));
+    fireEvent.click(screen.getByRole('combobox', { name: 'Role' }));
+    const option = screen.getByText('Administrator').closest('[role="option"]');
+    fireEvent.pointerDown(option as HTMLElement, { pointerType: 'mouse' });
+    fireEvent.click(option as HTMLElement);
+
+    view.rerender(
+      <UsersFeaturePack
+        actions={{ invite }}
+        policy={{ invite: true }}
+        resource={resource}
+      />
+    );
+    await user.type(screen.getByRole('textbox', { name: 'Email address' }), 'app@example.com');
+    await user.click(screen.getByRole('button', { name: 'Send invitation' }));
+
+    await waitFor(() => expect(invite).toHaveBeenCalledWith({
+      email: 'app@example.com',
+      role: undefined
+    }));
+  });
+
+  it('drops a selected organization profile when invitation-profile permission is revoked', async () => {
+    const user = userEvent.setup();
+    const inviteMember = vi.fn();
+    const resource = {
+      status: 'ready' as const,
+      data: {
+        activeOrganizationId: 'organization-1',
+        organizations: [{ id: 'organization-1', name: 'Acme' }],
+        members: [],
+        roles: ['Administrator']
+      }
+    };
+    const view = render(
+      <OrganizationsFeaturePack
+        actions={{ inviteMember }}
+        policy={{ assignInviteRole: true, inviteMember: true }}
+        resource={resource}
+      />
+    );
+    await user.click(screen.getByRole('button', { name: 'Invite member' }));
+    fireEvent.click(screen.getByRole('combobox', { name: 'Role' }));
+    const option = screen.getByText('Administrator').closest('[role="option"]');
+    fireEvent.pointerDown(option as HTMLElement, { pointerType: 'mouse' });
+    fireEvent.click(option as HTMLElement);
+
+    view.rerender(
+      <OrganizationsFeaturePack
+        actions={{ inviteMember }}
+        policy={{ inviteMember: true }}
+        resource={resource}
+      />
+    );
+    await user.type(screen.getByRole('textbox', { name: 'Email address' }), 'org@example.com');
+    await user.click(screen.getByRole('button', { name: 'Send invitation' }));
+
+    await waitFor(() => expect(inviteMember).toHaveBeenCalledWith({
+      organizationId: 'organization-1',
+      email: 'org@example.com',
+      role: undefined
+    }));
   });
 
   it('requires confirmation before removing a member and keeps a failed confirmation open', async () => {

@@ -155,6 +155,24 @@ describe('identity-scoped transport and cache keys', () => {
     expect(JSON.stringify(first)).not.toContain('secret-token');
   });
 
+  it('partitions cache keys when an endpoint id is reused for a different URL', () => {
+    const first = createConsoleCacheKey(scope, 'tables');
+    const second = createConsoleCacheKey(
+      {
+        ...scope,
+        endpoint: {
+          ...scope.endpoint,
+          url: 'https://other-tenant.example/graphql'
+        }
+      },
+      'tables'
+    );
+
+    expect(first).not.toEqual(second);
+    expect(first).toContain('https://tenant.example/graphql');
+    expect(second).toContain('https://other-tenant.example/graphql');
+  });
+
   it('partitions nested client caches across user, session, tenant, and organization switches', () => {
     const base = scope.identity;
     if (base.kind !== 'authenticated') throw new Error('Expected authenticated test identity.');
@@ -224,6 +242,7 @@ describe('fetch console transport', () => {
     expect(getAccessToken).toHaveBeenCalledTimes(2);
     expect(getAccessToken).toHaveBeenNthCalledWith(1, {
       endpoint,
+      identity,
       signal: undefined
     });
     const firstInit = fetchImpl.mock.calls[0]?.[1];
@@ -232,6 +251,7 @@ describe('fetch console transport', () => {
       Authorization: 'Bearer token-1',
       'Content-Type': 'application/json'
     });
+    expect(firstInit?.credentials).toBe('omit');
     expect(secondInit?.headers).toMatchObject({
       Authorization: 'Bearer token-2'
     });
@@ -265,6 +285,8 @@ describe('fetch console transport', () => {
       },
       { document: 'query Users { users { id } }' }
     );
+
+    expect(fetchImpl.mock.calls[0]?.[1]?.credentials).toBe('omit');
 
     expect(result).toEqual({
       ok: false,

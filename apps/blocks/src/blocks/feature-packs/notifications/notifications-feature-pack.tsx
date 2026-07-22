@@ -3,6 +3,15 @@
 import * as React from 'react';
 import { BellIcon, CheckCheckIcon, ExternalLinkIcon, MailOpenIcon, Trash2Icon } from 'lucide-react';
 
+import {
+  AlertDialog,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle
+} from '@constructive-io/ui/alert-dialog';
 import { Badge } from '@constructive-io/ui/badge';
 import { Button } from '@constructive-io/ui/button';
 import { Card, CardContent } from '@constructive-io/ui/card';
@@ -55,6 +64,68 @@ export type NotificationsFeaturePackProps = Readonly<{
   onError?: (error: FeaturePackError) => void;
 }>;
 
+function DeleteNotificationAction({
+  notification,
+  onDelete
+}: Readonly<{
+  notification: AppNotification;
+  onDelete: () => Promise<boolean>;
+}>) {
+  const [open, setOpen] = React.useState(false);
+  const [pending, setPending] = React.useState(false);
+  const [error, setError] = React.useState<string>();
+
+  return (
+    <>
+      <Button
+        aria-label={`Delete ${notification.title}`}
+        onClick={() => setOpen(true)}
+        size='icon-sm'
+        variant='ghost'
+      >
+        <Trash2Icon />
+      </Button>
+      <AlertDialog
+        onOpenChange={(nextOpen) => {
+          if (pending) return;
+          setOpen(nextOpen);
+          if (!nextOpen) setError(undefined);
+        }}
+        open={open}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete {notification.title}?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This removes the notification from your inbox. This action cannot be undone from the console.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          {error ? <p className='text-destructive text-sm' role='alert'>{error}</p> : null}
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={pending}>Cancel</AlertDialogCancel>
+            <Button
+              disabled={pending}
+              onClick={() => {
+                setPending(true);
+                setError(undefined);
+                void onDelete()
+                  .then((succeeded) => {
+                    if (succeeded) setOpen(false);
+                    else setError('The notification could not be deleted.');
+                  })
+                  .finally(() => setPending(false));
+              }}
+              variant='destructive'
+            >
+              {pending ? 'Deleting…' : 'Delete notification'}
+            </Button>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
+  );
+}
+
 export function NotificationsFeaturePack({
   resource,
   policy,
@@ -63,11 +134,13 @@ export function NotificationsFeaturePack({
 }: NotificationsFeaturePackProps) {
   const [filter, setFilter] = React.useState<'all' | 'unread'>('all');
 
-  const run = async (action: () => FeatureActionResult, fallback: string) => {
+  const run = async (action: () => FeatureActionResult, fallback: string): Promise<boolean> => {
     try {
       await action();
+      return true;
     } catch (cause) {
       onError?.(normalizeFeaturePackError(cause, fallback));
+      return false;
     }
   };
 
@@ -154,17 +227,13 @@ export function NotificationsFeaturePack({
                             </Button>
                           ) : null}
                           {canPerform(policy, 'deleteNotification') && actions?.deleteNotification ? (
-                            <Button
-                              aria-label={`Delete ${notification.title}`}
-                              onClick={() => void run(
+                            <DeleteNotificationAction
+                              notification={notification}
+                              onDelete={() => run(
                                 () => actions.deleteNotification!({ notificationId: notification.id }),
                                 'The notification could not be deleted.'
                               )}
-                              size='icon-sm'
-                              variant='ghost'
-                            >
-                              <Trash2Icon />
-                            </Button>
+                            />
                           ) : null}
                         </div>
                       </article>

@@ -11,6 +11,7 @@ import {
   resolveConsoleEndpoint,
   type ConsoleEndpoint,
   type ConsoleEndpointMap,
+  type ConsoleCsrfTokenProvider,
   type ConsoleRuntimeError,
   type ConsoleTransport,
   type DatabaseScopedStandaloneConsoleSession
@@ -49,6 +50,8 @@ export type ConstructiveConsoleKitProps = Readonly<{
   routes?: ConsoleKitRouteConfig;
   showUnavailable?: boolean;
   session?: DatabaseScopedStandaloneConsoleSession;
+  /** Required when the tenant enables require_csrf_for_auth. */
+  csrfTokenProvider?: ConsoleCsrfTokenProvider;
   store?: ConsoleKitStoreApi;
   transport?: ConsoleTransport;
   resetRoleId?: string;
@@ -102,59 +105,104 @@ function ConfigurationError({ message }: Readonly<{ message: string }>) {
   );
 }
 
+function reportConsoleKitError(error: ConsoleRuntimeError) {
+  if (process.env.NODE_ENV !== 'production') {
+    console.error('[Constructive Console Kit]', error.message);
+  }
+}
+
 function ConstructiveConsoleKitInstance(props: ConstructiveConsoleKitProps) {
   const authEndpoint = endpoint(props.database.endpoints, 'auth');
-  const storeRef = React.useRef<ConsoleKitStoreApi | null>(null);
-  if (!storeRef.current) {
-    storeRef.current = props.store ?? createConsoleKitStore('auth', {
+  const csrfTokenProviderRef = React.useRef(props.csrfTokenProvider);
+  React.useEffect(() => {
+    csrfTokenProviderRef.current = props.csrfTokenProvider;
+  }, [props.csrfTokenProvider]);
+  const resolveCsrfTokenProvider = React.useCallback(
+    () => csrfTokenProviderRef.current,
+    []
+  );
+  const internalStoreRef = React.useRef<ConsoleKitStoreApi | null>(null);
+  if (!props.store && !internalStoreRef.current) {
+    internalStoreRef.current = createConsoleKitStore('auth', {
       databaseId: props.database.id,
       organizationId: null
     });
   }
-  const store = storeRef.current;
+  const store = props.store ?? internalStoreRef.current;
 
-  const sessionRef = React.useRef<DatabaseScopedStandaloneConsoleSession | null>(null);
-  if (!sessionRef.current && authEndpoint) {
-    sessionRef.current = props.session ?? createDatabaseScopedStandaloneSession({
-      databaseId: props.database.id,
-      authEndpoint,
-      deferRestore: true
-    });
-  }
-  const session = sessionRef.current;
-  React.useEffect(() => session?.restorePersistedSession(), [session]);
+  const hasExternalSession = Boolean(props.session);
+  const internalSessionState = React.useMemo<Readonly<{
+    session: DatabaseScopedStandaloneConsoleSession | null;
+    error: string | null;
+  }>>(() => {
+    if (hasExternalSession || !authEndpoint) {
+      return { session: null, error: null };
+    }
+    try {
+      return {
+        session: createDatabaseScopedStandaloneSession({
+          databaseId: props.database.id,
+          authEndpoint,
+          resolveCsrfTokenProvider,
+          deferRestore: true
+        }),
+        error: null
+      };
+    } catch (cause) {
+      return {
+        session: null,
+        error: cause instanceof Error
+          ? cause.message
+          : 'The auth endpoint configuration is invalid.'
+      };
+    }
+  }, [
+    authEndpoint?.id,
+    authEndpoint?.url,
+    props.database.id,
+    hasExternalSession,
+    resolveCsrfTokenProvider
+  ]);
+  const internalSession = internalSessionState.session;
+  const session = props.session ?? internalSession;
+  React.useEffect(() => {
+    internalSession?.resume?.();
+    session?.restorePersistedSession();
+    return () => internalSession?.dispose?.();
+  }, [internalSession, session]);
 
-  const transportRef = React.useRef<ConsoleTransport | null>(null);
-  if (!transportRef.current && session) {
-    transportRef.current = props.transport ?? createFetchConsoleTransport(fetch, {
-      onAuthenticationError: ({ error }) => {
+  const transport = React.useMemo(() => {
+    if (props.transport) return props.transport;
+    if (!session) return null;
+    return createFetchConsoleTransport(fetch, {
+      onAuthenticationError: ({ error, identity }) => {
         const code = typeof error.extensions?.code === 'string'
           ? error.extensions.code
           : 'UNAUTHENTICATED';
-        session.handleAuthenticationFailure({ message: error.message, code });
+        session.handleAuthenticationFailure({ message: error.message, code, identity });
       }
     });
-  }
+  }, [props.transport, session]);
 
-  const adaptersRef = React.useRef<ConsoleKitAdapters | null>(null);
-  if (!adaptersRef.current && session) {
-    adaptersRef.current = createConstructiveConsoleAdapters({
+  const adapters = React.useMemo(() => {
+    if (!store || !session) return null;
+    return createConstructiveConsoleAdapters({
       store,
       session,
       resetRoleId: props.resetRoleId,
       resetToken: props.resetToken
     });
+  }, [props.resetRoleId, props.resetToken, session, store]);
+
+  if (!authEndpoint || !store || !session || !transport || !adapters) {
+    return (
+      <ConfigurationError
+        message={internalSessionState.error ?? 'A routable auth endpoint is required for the standalone Console Kit.'}
+      />
+    );
   }
 
-  if (!authEndpoint || !session || !transportRef.current || !adaptersRef.current) {
-    return <ConfigurationError message='A routable auth endpoint is required for the standalone Console Kit.' />;
-  }
-
-  const reportError = props.onError ?? ((error: ConsoleRuntimeError) => {
-    if (process.env.NODE_ENV !== 'production') {
-      console.error('[Constructive Console Kit]', error.message);
-    }
-  });
+  const reportError = props.onError ?? reportConsoleKitError;
   return (
     <ConsoleKit
       className={props.className}
@@ -162,8 +210,8 @@ function ConstructiveConsoleKitInstance(props: ConstructiveConsoleKitProps) {
         databaseId: props.database.id,
         endpoints: props.database.endpoints,
         session,
-        transport: transportRef.current,
-        adapters: adaptersRef.current,
+        transport,
+        adapters,
         order: props.order,
         routes: props.routes,
         showUnavailable: props.showUnavailable ?? true,
@@ -184,9 +232,11 @@ function ConstructiveConsoleKitInstance(props: ConstructiveConsoleKitProps) {
  * tenant database. A database switch remounts every session and cache scope.
  */
 export function ConstructiveConsoleKit(props: ConstructiveConsoleKitProps) {
-  const authUrl = typeof props.database.endpoints.auth === 'string'
-    ? props.database.endpoints.auth
-    : props.database.endpoints.auth?.url;
-  const instanceKey = `${props.database.id}:${authUrl ?? 'missing-auth'}`;
+  const authEndpoint = endpoint(props.database.endpoints, 'auth');
+  const instanceKey = [
+    props.database.id,
+    authEndpoint?.id ?? 'missing-auth-id',
+    authEndpoint?.url ?? 'missing-auth-url'
+  ].join(':');
   return <ConstructiveConsoleKitInstance key={instanceKey} {...props} />;
 }

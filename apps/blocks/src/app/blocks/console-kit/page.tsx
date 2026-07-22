@@ -13,29 +13,47 @@ const DESCRIPTION =
 
 const CONSOLE_EXAMPLE = `'use client';
 
-import { ConstructiveConsoleKit } from '@/blocks/console-kit/constructive';
+import {
+  ConstructiveConsoleKit,
+  type ConstructiveTenantDatabase
+} from '@/blocks/console-kit/constructive';
 
-const database = {
-  id: tenant.id,
-  name: tenant.name,
-  endpoints: {
-    data: { id: tenant.endpoints.data.apiId, url: tenant.endpoints.data.url },
-    auth: { id: tenant.endpoints.auth.apiId, url: tenant.endpoints.auth.url },
-    admin: { id: tenant.endpoints.admin.apiId, url: tenant.endpoints.admin.url },
-    billing: tenant.endpoints.billing?.routable
-      ? { id: tenant.endpoints.billing.apiId, url: tenant.endpoints.billing.url }
-      : undefined,
-    storage: tenant.endpoints.storage?.routable
-      ? { id: tenant.endpoints.storage.apiId, url: tenant.endpoints.storage.url }
-      : undefined,
-    notifications: tenant.endpoints.notifications?.routable
-      ? { id: tenant.endpoints.notifications.apiId, url: tenant.endpoints.notifications.url }
-      : undefined
-  },
-  tableAllowlist: tenant.tableAllowlist
-};
+type TenantEndpoint = Readonly<{
+  apiId: string | null;
+  url: string | null;
+  routable: boolean;
+}>;
 
-export function ApplicationConsole() {
+type TenantManifest = Readonly<{
+  database: Readonly<{ id: string; name: string }>;
+  endpoints: Readonly<Record<
+    'data' | 'auth' | 'admin' | 'billing' | 'storage' | 'notifications',
+    TenantEndpoint
+  >>;
+  tableAllowlist: readonly string[];
+}>;
+
+function routed(endpoint: TenantEndpoint) {
+  return endpoint.routable && endpoint.apiId && endpoint.url
+    ? { id: endpoint.apiId, url: endpoint.url }
+    : undefined;
+}
+
+export function ApplicationConsole({ tenant }: Readonly<{ tenant: TenantManifest }>) {
+  const database: ConstructiveTenantDatabase = {
+    id: tenant.database.id,
+    name: tenant.database.name,
+    endpoints: {
+      data: routed(tenant.endpoints.data),
+      auth: routed(tenant.endpoints.auth),
+      admin: routed(tenant.endpoints.admin),
+      billing: routed(tenant.endpoints.billing),
+      storage: routed(tenant.endpoints.storage),
+      notifications: routed(tenant.endpoints.notifications)
+    },
+    tableAllowlist: tenant.tableAllowlist
+  };
+
   return <ConstructiveConsoleKit database={database} />;
 }`;
 
@@ -43,6 +61,34 @@ const ENDPOINT_RESOLVER_EXAMPLE = `resolveEndpoint: ({ databaseId, kind }) => ({
   id: \`\${databaseId}:\${kind}\`,
   url: endpointDirectory.graphqlUrl(databaseId, kind)
 })`;
+
+const CSRF_PROVIDER_EXAMPLE = `import {
+  ConstructiveConsoleKit,
+  type ConstructiveTenantDatabase
+} from '@/blocks/console-kit/constructive';
+import type { ConsoleCsrfTokenProvider } from '@/blocks/console-runtime';
+
+const csrfTokenProvider: ConsoleCsrfTokenProvider = async ({ databaseId, operation }) => {
+  const response = await fetch('/api/constructive/auth/csrf', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ databaseId, operation })
+  });
+  if (!response.ok) throw new Error('CSRF bootstrap failed.');
+  const payload = await response.json() as { csrfToken: string };
+  return payload.csrfToken;
+};
+
+export function HardenedTenantConsole({
+  database
+}: Readonly<{ database: ConstructiveTenantDatabase }>) {
+  return (
+    <ConstructiveConsoleKit
+      database={database}
+      csrfTokenProvider={csrfTokenProvider}
+    />
+  );
+}`;
 
 export default function ConsoleKitPage() {
   return (
@@ -146,6 +192,38 @@ export default function ConsoleKitPage() {
             </p>
             <CodeBlock className="mt-3" label="Dynamic endpoint resolution">
               {ENDPOINT_RESOLVER_EXAMPLE}
+            </CodeBlock>
+          </div>
+
+          <div className="mt-6 max-w-3xl">
+            <h3 className="text-sm font-medium text-foreground">
+              Bootstrap CSRF for hardened auth
+            </h3>
+            <p className="mt-1.5 text-pretty text-sm leading-7 text-muted-foreground">
+              When a tenant enables{' '}
+              <code className="rounded bg-muted px-1 py-0.5 font-mono text-[12px]">
+                require_csrf_for_auth
+              </code>
+              , pass an async token provider. Its host endpoint creates a
+              short-lived anonymous session with a cryptographically random
+              secret through a trusted backend connection and returns that
+              secret once; Console Kit sends it only as the auth mutation&apos;s{' '}
+              <code className="rounded bg-muted px-1 py-0.5 font-mono text-[12px]">
+                csrfToken
+              </code>
+              . Constructive consumes the anonymous session after successful
+              authentication, so the provider must mint a fresh token for each
+              attempt and must never cache it in browser storage. The current
+              backend revision still needs its anonymous-session bootstrap and
+              generated revocation query fixed before this secure toggle can
+              complete end to end.
+            </p>
+            <CodeBlock
+              className="mt-3"
+              label="Hardened auth token provider"
+              language="tsx"
+            >
+              {CSRF_PROVIDER_EXAMPLE}
             </CodeBlock>
           </div>
         </section>

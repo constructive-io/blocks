@@ -1,6 +1,8 @@
 import { readFileSync, realpathSync, statSync } from 'node:fs';
 import { dirname, isAbsolute, join, relative, resolve } from 'node:path';
 
+import { assertSupportedProofManifest } from '../src/blocks/console-kit/proof-manifest-contract';
+
 export const PROOF_PRESETS = ['auth:hardened', 'b2b:storage', 'full'] as const;
 export type ProofPreset = (typeof PROOF_PRESETS)[number];
 
@@ -198,10 +200,8 @@ export function loadProofContext(): ProofContext {
 
   const raw: unknown = JSON.parse(readFileSync(manifestPath, 'utf8'));
   assertSecretFree(raw);
-  const value = record(raw, 'proof manifest');
-  if (value.version !== 1 || value.kind !== 'constructive-console-kit-proof') {
-    throw new Error('The Console Kit proof manifest is unsupported.');
-  }
+  assertSupportedProofManifest(raw);
+  const value = raw;
   if (!Array.isArray(value.tenants)) throw new Error('The Console Kit proof manifest has no tenants.');
   const tenants = value.tenants.map(parseTenant);
   for (const preset of PROOF_PRESETS) {

@@ -3,6 +3,7 @@ import { isAbsolute } from 'node:path';
 import { notFound } from 'next/navigation';
 
 import type { ConsoleEndpointMap } from '@/blocks/console-runtime';
+import { assertSupportedProofManifest } from '@/blocks/console-kit/proof-manifest-contract';
 
 import {
   ConsoleKitProofClient,
@@ -50,10 +51,9 @@ function readProofManifest(): ProofManifest {
     throw new Error('CONSOLE_KIT_TENANT_MANIFEST must be an absolute path.');
   }
 
-  const parsed = JSON.parse(readFileSync(path, 'utf8')) as ProofManifest;
-  if (parsed.version !== 1 || parsed.kind !== 'constructive-console-kit-proof') {
-    throw new Error('The Console Kit proof manifest is unsupported.');
-  }
+  const raw: unknown = JSON.parse(readFileSync(path, 'utf8'));
+  assertSupportedProofManifest(raw, 'route-bootstrap');
+  const parsed = raw as ProofManifest;
   if (!Array.isArray(parsed.tenants)) {
     throw new Error('The Console Kit proof manifest has no tenant matrix.');
   }

@@ -116,6 +116,31 @@ describe('Console Kit session hydration', () => {
 });
 
 describe('Console Kit metadata lifecycle', () => {
+  it('does not restart metadata work when an observational callback changes', async () => {
+    const execute = vi.fn(async () => ({ ok: true, data: {} }) as const);
+    const scopedTransport = transport(execute);
+    const stableContext = context(scopedTransport);
+    const firstOnError = vi.fn();
+    const secondOnError = vi.fn();
+    const { result, rerender } = renderHook(
+      ({ onError }) => useConsoleKitMetadata(stableContext, onError),
+      {
+        initialProps: { onError: firstOnError },
+        wrapper: StoreWrapper
+      }
+    );
+
+    await waitFor(() => expect(result.current.status).toBe('incompatible'));
+    expect(execute).toHaveBeenCalledTimes(1);
+
+    rerender({ onError: secondOnError });
+    await act(async () => undefined);
+
+    expect(execute).toHaveBeenCalledTimes(1);
+    expect(firstOnError).not.toHaveBeenCalled();
+    expect(secondOnError).not.toHaveBeenCalled();
+  });
+
   it('does not let an aborted endpoint probe overwrite the current store state', async () => {
     const firstResponse = deferred<ConsoleGraphQLResult<unknown>>();
     const firstTransport = transport(() => firstResponse.promise);

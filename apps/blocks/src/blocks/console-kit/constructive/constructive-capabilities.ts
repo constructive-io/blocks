@@ -114,7 +114,11 @@ function discoveryKey(runtime: ConsoleKitAdapterContext): string {
   return JSON.stringify([
     runtime.databaseId,
     Object.entries(runtime.endpoints)
-      .map(([kind, endpoint]) => [kind, endpoint?.id ?? null])
+      .map(([kind, endpoint]) => [
+        kind,
+        endpoint?.id ?? null,
+        endpoint?.url ?? null
+      ])
       .sort(([left], [right]) => String(left).localeCompare(String(right))),
     runtime.session.status,
     identity ? createConsoleIdentityKey(identity) : null,
@@ -209,6 +213,8 @@ export function createConstructiveCapabilityDiscovery(
   let currentKey: string | null = null;
   let currentSchemas: ConstructiveSchemaMap = {};
   let currentPromise: Promise<ConstructiveSchemaMap> | null = null;
+  let currentController: AbortController | null = null;
+  let currentGeneration = 0;
 
   const emit = () => {
     for (const listener of listeners) listener();
@@ -221,6 +227,9 @@ export function createConstructiveCapabilityDiscovery(
       return () => listeners.delete(listener);
     },
     invalidate() {
+      currentGeneration += 1;
+      currentController?.abort();
+      currentController = null;
       currentKey = null;
       currentSchemas = {};
       currentPromise = null;
@@ -234,6 +243,10 @@ export function createConstructiveCapabilityDiscovery(
         return Promise.resolve(currentSchemas);
       }
 
+      currentController?.abort();
+      const controller = new AbortController();
+      const generation = ++currentGeneration;
+      currentController = controller;
       currentKey = key;
       currentSchemas = {};
       for (const manifest of FEATURE_PACK_MANIFESTS) {
@@ -247,7 +260,7 @@ export function createConstructiveCapabilityDiscovery(
       currentPromise = Promise.allSettled(
         endpointKinds.map(async (kind) => [
           kind,
-          await inspectConstructiveSchema(runtime, kind)
+          await inspectConstructiveSchema(runtime, kind, controller.signal)
         ] as const)
       ).then((results) => {
         const schemas: Partial<Record<ConsoleEndpointKind, ConstructiveSchemaSnapshot>> = {};
@@ -264,9 +277,19 @@ export function createConstructiveCapabilityDiscovery(
             message: `${kind}: ${result.reason instanceof Error ? result.reason.message : String(result.reason)}`
           });
         }
+
+        if (
+          controller.signal.aborted ||
+          currentGeneration !== generation ||
+          currentKey !== key
+        ) {
+          return currentSchemas;
+        }
+
         currentSchemas = schemas;
         assessPacks(runtime, store, currentSchemas, diagnostics);
         currentPromise = null;
+        currentController = null;
         emit();
         return currentSchemas;
       });

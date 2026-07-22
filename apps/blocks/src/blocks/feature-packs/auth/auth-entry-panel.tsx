@@ -1,7 +1,7 @@
 'use client';
 
 import * as React from 'react';
-import { ArrowLeftIcon, KeyRoundIcon, LockKeyholeIcon, MailIcon, UserIcon } from 'lucide-react';
+import { ArrowLeftIcon, KeyRoundIcon, LockKeyholeIcon, MailIcon } from 'lucide-react';
 
 import { Alert, AlertDescription } from '@constructive-io/ui/alert';
 import { Button } from '@constructive-io/ui/button';
@@ -62,7 +62,6 @@ export function AuthEntryPanel({
   onError
 }: Omit<AuthFeaturePackProps, 'view' | 'account'>) {
   const [email, setEmail] = React.useState('');
-  const [displayName, setDisplayName] = React.useState('');
   const [password, setPassword] = React.useState('');
   const [pending, setPending] = React.useState(false);
   const [feedback, setFeedback] = React.useState<string>();
@@ -100,8 +99,7 @@ export function AuthEntryPanel({
         if (!actions?.signUp) return;
         await actions.signUp({
           email: email.trim(),
-          password,
-          displayName: displayName.trim() || undefined
+          password
         });
         onAuthenticated?.();
       } else if (mode === 'recover-password') {
@@ -129,25 +127,13 @@ export function AuthEntryPanel({
           <div className='bg-primary text-primary-foreground mb-2 flex size-10 items-center justify-center rounded-lg'>
             <KeyRoundIcon aria-hidden='true' />
           </div>
-          <CardTitle className='text-xl'>{copy.title}</CardTitle>
+          <CardTitle className='text-xl'>
+            <h1>{copy.title}</h1>
+          </CardTitle>
           <CardDescription>{copy.description}</CardDescription>
         </CardHeader>
         <form onSubmit={(event) => void submit(event)}>
           <CardContent className='flex flex-col gap-4'>
-            {mode === 'sign-up' ? (
-              <Field htmlFor={`${fieldId}-display-name`} label='Name'>
-                <div className='relative'>
-                  <UserIcon className='text-muted-foreground pointer-events-none absolute left-3 top-1/2 -translate-y-1/2' />
-                  <Input
-                    autoComplete='name'
-                    className='pl-10'
-                    id={`${fieldId}-display-name`}
-                    onChange={(event) => setDisplayName(event.currentTarget.value)}
-                    value={displayName}
-                  />
-                </div>
-              </Field>
-            ) : null}
             {mode !== 'reset-password' ? (
               <Field htmlFor={`${fieldId}-email`} label='Email address' required>
                 <div className='relative'>

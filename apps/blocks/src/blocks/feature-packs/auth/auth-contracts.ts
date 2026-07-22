@@ -48,7 +48,6 @@ export type AuthFeatureActions = Readonly<{
   signUp?: (input: {
     email: string;
     password: string;
-    displayName?: string;
   }) => FeatureActionResult;
   recoverPassword?: (input: { email: string }) => FeatureActionResult;
   resetPassword?: (input: {

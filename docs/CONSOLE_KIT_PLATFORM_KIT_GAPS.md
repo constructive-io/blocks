@@ -46,6 +46,11 @@ of the setup burden.
 
 ### P0: product and UX
 
+- Ship a trusted anonymous-session CSRF bootstrap and repair the generated
+  `sign_in`/`sign_up` revocation query before presenting hardened auth as a
+  one-prop integration. Console Kit already accepts a host token provider, but
+  the current backend makes the secure default require unpublished server work
+  and then fails after credential validation.
 - Turn `Setup` and `Partial` states into diagnostics that name the missing
   endpoint, capability, GraphQL coordinate, or adapter and offer retry, docs,
   and copyable configuration.

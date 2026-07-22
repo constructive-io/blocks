@@ -20,6 +20,7 @@ import {
   asString,
   connectionNodes,
   expiresIn,
+  hasEffectivePermission,
   imageUrl,
   notifyConsoleAdapters,
   packAvailability
@@ -127,6 +128,7 @@ function adminDirectoryDocument(options: ConstructiveUsersAdapterOptions): strin
     'isApproved',
     'isBanned',
     'isDisabled',
+    'permissions',
     'profileId'
   ]);
   const profile = relationSelection(schema, 'AppMembership', 'profile', ['name']);
@@ -150,6 +152,11 @@ function adminDirectoryDocument(options: ConstructiveUsersAdapterOptions): strin
   const profiles = supports(options, 'admin', 'query', 'appProfiles') && profileFields.length > 0
     ? `appProfiles(first: 100) { nodes { ${profileFields.join(' ')} } }`
     : '';
+  const permissionFields = connectionSelection(schema, 'AppPermission', ['name', 'bitstr']);
+  const permissions = supports(options, 'admin', 'query', 'appPermissions') &&
+    permissionFields.includes('name') && permissionFields.includes('bitstr')
+    ? `appPermissions(first: 100) { nodes { ${permissionFields.join(' ')} } }`
+    : '';
   return `
     query ConsoleKitAppMemberships {
       appMemberships(first: 250) {
@@ -157,6 +164,7 @@ function adminDirectoryDocument(options: ConstructiveUsersAdapterOptions): strin
       }
       ${invites}
       ${profiles}
+      ${permissions}
     }
   `;
 }
@@ -185,13 +193,17 @@ async function loadDirectory(
 ): Promise<Readonly<{
   data: UsersFeatureData;
   roleIds: ReadonlyMap<string, string>;
-  canManage: boolean;
+  canManageMembers: boolean;
+  canCreateInvites: boolean;
+  canAssignInviteProfiles: boolean;
 }>> {
   if (runtime.session.status !== 'authenticated') {
     return {
       data: { members: [], invites: [], roles: [] },
       roleIds: new Map(),
-      canManage: false
+      canManageMembers: false,
+      canCreateInvites: false,
+      canAssignInviteProfiles: false
     };
   }
   const actorId = runtime.session.identity.subjectId;
@@ -288,14 +300,30 @@ async function loadDirectory(
   const actorMembership = membershipRows.find(
     (membership) => asString(membership.actorId) === actorId
   );
-  const canManage = Boolean(
+  const hasAdministrativeRole = Boolean(
     actorMembership && (asBoolean(actorMembership.isOwner) || asBoolean(actorMembership.isAdmin))
+  );
+  const permissionRows = connectionNodes(adminResult.appPermissions);
+  const canManageMembers = hasAdministrativeRole || hasEffectivePermission(
+    actorMembership,
+    permissionRows,
+    'admin_members'
   );
 
   return {
     data: { members, invites, roles: [...roleIds.keys()] },
     roleIds,
-    canManage
+    canManageMembers,
+    canCreateInvites: hasAdministrativeRole || hasEffectivePermission(
+      actorMembership,
+      permissionRows,
+      'create_invites'
+    ),
+    canAssignInviteProfiles: hasAdministrativeRole || hasEffectivePermission(
+      actorMembership,
+      permissionRows,
+      'assign_profiles'
+    )
   };
 }
 
@@ -322,13 +350,13 @@ export function createConstructiveUsersAdapter(
       const directory = await loadDirectory(options, runtime, signal);
       const reload = () => notifyConsoleAdapters(options.store);
       const adminSchema = options.discovery.getSchemas().admin;
-      const canUpdateMembership = directory.canManage && supportsConstructiveMutationInput(
+      const canUpdateMembership = directory.canManageMembers && supportsConstructiveMutationInput(
         adminSchema,
         'updateAppMembership',
         ['id', 'appMembershipPatch'],
         { field: 'appMembershipPatch', requiredFields: ['isDisabled'] }
       );
-      const canGrantProfile = directory.canManage && directory.roleIds.size > 0 &&
+      const canGrantProfile = directory.canManageMembers && directory.roleIds.size > 0 &&
         supportsConstructiveMutationInput(
           adminSchema,
           'createAppProfileGrant',
@@ -338,7 +366,7 @@ export function createConstructiveUsersAdapter(
             requiredFields: ['membershipId', 'profileId', 'isGrant']
           }
         );
-      const canCreateInvite = directory.canManage && supportsConstructiveMutationInput(
+      const canCreateInvite = directory.canCreateInvites && supportsConstructiveMutationInput(
         adminSchema,
         'createAppInvite',
         ['appInvite'],
@@ -356,13 +384,13 @@ export function createConstructiveUsersAdapter(
         ['appInvite'],
         { field: 'appInvite', requiredFields: ['profileId'] }
       );
-      const canUpdateInvite = directory.canManage && supportsConstructiveMutationInput(
+      const canUpdateInvite = directory.canCreateInvites && supportsConstructiveMutationInput(
         adminSchema,
         'updateAppInvite',
         ['id', 'appInvitePatch'],
         { field: 'appInvitePatch', requiredFields: ['expiresAt'] }
       );
-      const canDeleteInvite = directory.canManage && supportsConstructiveMutationInput(
+      const canDeleteInvite = directory.canCreateInvites && supportsConstructiveMutationInput(
         adminSchema,
         'deleteAppInvite',
         ['id']
@@ -373,6 +401,9 @@ export function createConstructiveUsersAdapter(
           : { status: 'empty' },
         policy: {
           invite: canCreateInvite,
+          assignInviteRole: canCreateInvite &&
+            directory.canAssignInviteProfiles &&
+            inviteSupportsProfile,
           updateRole: canGrantProfile,
           toggleActive: canUpdateMembership,
           remove: canUpdateMembership,
@@ -383,7 +414,9 @@ export function createConstructiveUsersAdapter(
           invite: canCreateInvite
             ? async ({ email, role }) => {
                 const profileId = role ? directory.roleIds.get(role) : undefined;
-                if (role && (!inviteSupportsProfile || !profileId)) {
+                if (role && (
+                  !directory.canAssignInviteProfiles || !inviteSupportsProfile || !profileId
+                )) {
                   throw new Error(`The ${role} profile cannot be assigned to an app invitation.`);
                 }
                 await executeConstructiveGraphQL(runtime, 'admin', CREATE_INVITE_MUTATION, {

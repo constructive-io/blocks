@@ -1,6 +1,7 @@
 import type { AtomicCapabilityId } from '../../../feature-packs';
-import type {
-  DatabaseScopedStandaloneConsoleSession
+import {
+  ConsoleMfaRequiredError,
+  type DatabaseScopedStandaloneConsoleSession
 } from '../../console-runtime';
 import type { AuthFeaturePackProps } from '../../feature-packs/auth/auth-contracts';
 import type {
@@ -157,9 +158,19 @@ export function createConstructiveAuthAdapter(
       const commonActions = {
         signOut: supports(options, 'mutation', 'signOut')
           ? async () => {
-              await options.session.signOut();
-              options.store.getState().setAuthEntryMode('sign-in');
-              notifyConsoleAdapters(options.store);
+              let completed = false;
+              try {
+                await options.session.signOut();
+                completed = true;
+              } finally {
+                if (
+                  completed ||
+                  options.session.getSnapshot().status !== 'authenticated'
+                ) {
+                  options.store.getState().setAuthEntryMode('sign-in');
+                  notifyConsoleAdapters(options.store);
+                }
+              }
             }
           : undefined,
         recoverPassword: supports(options, 'mutation', 'forgotPassword')
@@ -204,7 +215,10 @@ export function createConstructiveAuthAdapter(
             ...commonActions,
             signIn: supports(options, 'mutation', 'signIn')
               ? async ({ email, password }) => {
-                  await options.session.signIn({ email, password });
+                  const outcome = await options.session.signIn({ email, password });
+                  if (outcome.status === 'mfa-required') {
+                    throw new ConsoleMfaRequiredError();
+                  }
                   notifyConsoleAdapters(options.store);
                 }
               : undefined,

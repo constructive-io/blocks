@@ -166,6 +166,7 @@ export function createFetchConsoleTransport(
       try {
         token = await scope.getAccessToken({
           endpoint: scope.endpoint,
+          identity: scope.identity,
           signal: request.signal
         });
       } catch {
@@ -191,6 +192,7 @@ export function createFetchConsoleTransport(
       try {
         response = await fetchImpl(scope.endpoint.url, {
           method: 'POST',
+          credentials: 'omit',
           headers,
           signal: request.signal,
           body: JSON.stringify({
@@ -337,6 +339,7 @@ export function createConsoleCacheKey(
     'constructive-console',
     endpoint.kind,
     endpoint.id,
+    endpoint.url,
     createConsoleIdentityKey(identity),
     ...parts
   ] as const;

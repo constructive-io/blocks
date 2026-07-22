@@ -72,6 +72,8 @@ import {
   FeatureStatusBadge
 } from '../shared/feature-pack-ui';
 
+const NO_ROLE_VALUE = '__no_role__';
+
 export type AppMember = Readonly<{
   id: string;
   userId: string;
@@ -100,6 +102,7 @@ export type UsersFeatureData = Readonly<{
 
 export type UsersFeatureAction =
   | 'invite'
+  | 'assignInviteRole'
   | 'updateRole'
   | 'toggleActive'
   | 'remove'
@@ -144,7 +147,7 @@ function InviteMemberDialog({
 }>) {
   const [open, setOpen] = React.useState(false);
   const [email, setEmail] = React.useState('');
-  const [role, setRole] = React.useState(roles[0] ?? '');
+  const [role, setRole] = React.useState('');
   const [pending, setPending] = React.useState(false);
   const [error, setError] = React.useState<string>();
   const fieldId = React.useId();
@@ -156,7 +159,10 @@ function InviteMemberDialog({
     setPending(true);
     setError(undefined);
     try {
-      await onInvite({ email: email.trim(), role: role || undefined });
+      await onInvite({
+        email: email.trim(),
+        role: roles.includes(role) ? role : undefined
+      });
       setEmail('');
       setOpen(false);
     } catch (cause) {
@@ -197,12 +203,18 @@ function InviteMemberDialog({
               </Field>
               {roles.length > 0 ? (
                 <Field htmlFor={`${fieldId}-role`} label='Role'>
-                  <Select onValueChange={setRole} value={role}>
+                  <Select
+                    onValueChange={(value) => setRole(value === NO_ROLE_VALUE ? '' : value)}
+                    value={role || NO_ROLE_VALUE}
+                  >
                     <SelectTrigger id={`${fieldId}-role`}>
-                      <SelectValue placeholder='Choose a role' />
+                      <SelectValue>
+                        {(value: string | null) => value === NO_ROLE_VALUE ? 'No role' : value}
+                      </SelectValue>
                     </SelectTrigger>
                     <SelectContent>
                       <SelectGroup>
+                        <SelectItem value={NO_ROLE_VALUE}>No role</SelectItem>
                         {roles.map((candidate) => (
                           <SelectItem key={candidate} value={candidate}>
                             {candidate}
@@ -391,7 +403,9 @@ export function UsersFeaturePack({
   const [query, setQuery] = React.useState('');
   const normalizedQuery = query.trim().toLowerCase();
   const canInvite = canPerform(policy, 'invite') && Boolean(actions?.invite);
-  const inviteRoles = resource.status === 'ready' ? resource.data.roles ?? [] : [];
+  const inviteRoles = resource.status === 'ready' && canPerform(policy, 'assignInviteRole')
+    ? resource.data.roles ?? []
+    : [];
 
   return (
     <div className='flex flex-col gap-6'>
@@ -401,7 +415,7 @@ export function UsersFeaturePack({
             <InviteMemberDialog
               onError={onError}
               onInvite={actions.invite}
-              roles={resource.data.roles ?? []}
+              roles={inviteRoles}
             />
           ) : null
         }

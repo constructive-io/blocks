@@ -50,6 +50,7 @@ import { Input } from '@constructive-io/ui/input';
 import {
   Select,
   SelectContent,
+  SelectGroup,
   SelectItem,
   SelectTrigger,
   SelectValue
@@ -77,6 +78,8 @@ import {
   FeaturePackPageHeader,
   FeatureStatusBadge
 } from '../shared/feature-pack-ui';
+
+const NO_ROLE_VALUE = '__no_role__';
 
 export type OrganizationSummary = Readonly<{
   id: string;
@@ -116,6 +119,7 @@ export type OrganizationsFeatureAction =
   | 'createOrganization'
   | 'selectOrganization'
   | 'inviteMember'
+  | 'assignInviteRole'
   | 'updateMemberRole'
   | 'removeMember'
   | 'cancelInvite';
@@ -173,7 +177,7 @@ function TextActionDialog({
 }>) {
   const [open, setOpen] = React.useState(false);
   const [value, setValue] = React.useState('');
-  const [role, setRole] = React.useState(roles[0]);
+  const [role, setRole] = React.useState('');
   const [pending, setPending] = React.useState(false);
   const [error, setError] = React.useState<string>();
   const fieldId = React.useId();
@@ -184,7 +188,10 @@ function TextActionDialog({
     setPending(true);
     setError(undefined);
     try {
-      const result = await onSubmit({ value: value.trim(), role });
+      const result = await onSubmit({
+        value: value.trim(),
+        role: roles.includes(role) ? role : undefined
+      });
       if (result.ok) {
         setValue('');
         setOpen(false);
@@ -238,12 +245,22 @@ function TextActionDialog({
             </Field>
             {invitation && roles.length > 0 ? (
               <Field htmlFor={`${fieldId}-role`} label='Role'>
-                <Select onValueChange={setRole} value={role}>
+                <Select
+                  onValueChange={(nextRole) => setRole(
+                    nextRole === NO_ROLE_VALUE ? '' : nextRole
+                  )}
+                  value={role || NO_ROLE_VALUE}
+                >
                   <SelectTrigger id={`${fieldId}-role`}>
-                    <SelectValue placeholder='Choose a role' />
+                    <SelectValue>
+                      {(value: string | null) => value === NO_ROLE_VALUE ? 'No role' : value}
+                    </SelectValue>
                   </SelectTrigger>
                   <SelectContent>
-                    {roles.map((candidate) => <SelectItem key={candidate} value={candidate}>{candidate}</SelectItem>)}
+                    <SelectGroup>
+                      <SelectItem value={NO_ROLE_VALUE}>No role</SelectItem>
+                      {roles.map((candidate) => <SelectItem key={candidate} value={candidate}>{candidate}</SelectItem>)}
+                    </SelectGroup>
                   </SelectContent>
                 </Select>
               </Field>
@@ -294,7 +311,9 @@ function OrganizationMemberRoleSelect({
         <SelectValue />
       </SelectTrigger>
       <SelectContent>
-        {options.map((role) => <SelectItem key={role} value={role}>{role}</SelectItem>)}
+        <SelectGroup>
+          {options.map((role) => <SelectItem key={role} value={role}>{role}</SelectItem>)}
+        </SelectGroup>
       </SelectContent>
     </Select>
   );
@@ -479,7 +498,7 @@ export function OrganizationsFeaturePack({
                           'The invitation could not be sent.'
                         )
                       }
-                      roles={data.roles}
+                      roles={canPerform(policy, 'assignInviteRole') ? data.roles : []}
                     />
                   ) : null}
                 </div>

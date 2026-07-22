@@ -3,12 +3,14 @@ import { SERVER_CONSOLE_SESSION_SNAPSHOT } from './session';
 import type {
   AuthenticatedConsoleIdentity,
   ConsoleCredentials,
+  ConsoleIdentity,
   ConsoleSessionSnapshot,
   StandaloneConsoleSession
 } from './session';
 
-const SESSION_RECORD_VERSION = 1;
-const SESSION_STORAGE_PREFIX = 'constructive.console.session.v1';
+const SESSION_RECORD_VERSION = 2;
+const SESSION_STORAGE_PREFIX = 'constructive.console.session.v2';
+const LEGACY_SESSION_STORAGE_PREFIX = 'constructive.console.session.v1';
 
 const SIGN_IN_MUTATION = /* GraphQL */ `
   mutation ConsoleSignIn($input: SignInInput!) {
@@ -56,6 +58,8 @@ export type ConsoleSessionStorage = Pick<
 export type ConsoleAuthenticationFailure = Readonly<{
   message: string;
   code: string;
+  /** Identity captured by the request that observed the authentication error. */
+  identity: ConsoleIdentity;
 }>;
 
 export type ConsoleAuthenticationOutcome =
@@ -68,9 +72,31 @@ export type ConsoleAuthenticationOutcome =
       challengeToken: string;
     }>;
 
+export type ConsoleAuthenticationOperation = 'signIn' | 'signUp';
+
+export type ConsoleCsrfTokenRequest = Readonly<{
+  databaseId: string;
+  authEndpoint: ConsoleEndpoint;
+  operation: ConsoleAuthenticationOperation;
+}>;
+
+/**
+ * Host-owned bootstrap for tenants with require_csrf_for_auth enabled.
+ *
+ * The provider must create a fresh anonymous backend session and return its
+ * exact csrf_secret. Constructive consumes that anonymous session after a
+ * successful sign-in or sign-up, so providers must not cache tokens.
+ */
+export type ConsoleCsrfTokenProvider = (
+  request: ConsoleCsrfTokenRequest
+) => Promise<string | null | undefined>;
+
 export type DatabaseScopedStandaloneSessionOptions = Readonly<{
   databaseId: string;
   authEndpoint: ConsoleEndpoint;
+  csrfTokenProvider?: ConsoleCsrfTokenProvider;
+  /** Resolves mutable host configuration without replacing the session. */
+  resolveCsrfTokenProvider?: () => ConsoleCsrfTokenProvider | undefined;
   fetch?: typeof fetch;
   storage?: Partial<Record<ConsoleSessionPersistence, ConsoleSessionStorage>>;
   now?: () => number;
@@ -87,10 +113,28 @@ export interface DatabaseScopedStandaloneConsoleSession
   restorePersistedSession(): void;
   /** Clears an authenticated credential after an HTTP-200 GraphQL auth error. */
   handleAuthenticationFailure(failure: ConsoleAuthenticationFailure): void;
+  /** Retries server revocations retained after a local-first sign-out failure. */
+  retryPendingSignOut?(): Promise<void>;
+  /** Cancels in-flight work and prevents a detached kit from changing state. */
+  dispose?(): void;
+  /** React Strict Mode may replay an effect after disposing its first pass. */
+  resume?(): void;
+}
+
+export class ConsoleMfaRequiredError extends Error {
+  readonly code = 'MFA_REQUIRED' as const;
+  readonly retryable = false;
+
+  constructor() {
+    super('Multi-factor authentication is required to complete sign in.');
+    this.name = 'ConsoleMfaRequiredError';
+  }
 }
 
 type StoredCredential = Readonly<{
   version: typeof SESSION_RECORD_VERSION;
+  authEndpointId: string;
+  authEndpointUrl: string;
   accessToken: string;
   expiresAt: string | null;
   userId: string;
@@ -124,6 +168,13 @@ class ConsoleSessionOperationError extends Error {
   }
 }
 
+function supersededAuthenticationError(): ConsoleSessionOperationError {
+  return new ConsoleSessionOperationError(
+    'A newer authentication operation replaced this one.',
+    'AUTH_OPERATION_SUPERSEDED'
+  );
+}
+
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
@@ -132,8 +183,31 @@ function nonEmptyString(value: unknown): string | null {
   return typeof value === 'string' && value.length > 0 ? value : null;
 }
 
+function normalizedEndpointUrl(endpoint: ConsoleEndpoint): string {
+  const url = endpoint.url.trim();
+  let parsed: URL;
+  try {
+    parsed = new URL(url);
+  } catch {
+    throw new Error('A standalone session requires an absolute auth endpoint URL.');
+  }
+  if (
+    (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') ||
+    parsed.username ||
+    parsed.password ||
+    parsed.hash
+  ) {
+    throw new Error('A standalone session requires an absolute HTTP(S) auth endpoint URL without credentials or a fragment.');
+  }
+  return parsed.toString();
+}
+
 function storageKey(databaseId: string): string {
   return `${SESSION_STORAGE_PREFIX}:${encodeURIComponent(databaseId)}`;
+}
+
+function legacyStorageKey(databaseId: string): string {
+  return `${LEGACY_SESSION_STORAGE_PREFIX}:${encodeURIComponent(databaseId)}`;
 }
 
 function createCachePartition(): string {
@@ -154,12 +228,17 @@ function browserStorage(
   }
 }
 
-function parseStoredCredential(value: string | null): StoredCredential | null {
+function parseStoredCredential(
+  value: string | null,
+  endpoint: ConsoleEndpoint
+): StoredCredential | null {
   if (!value) return null;
   try {
     const parsed: unknown = JSON.parse(value);
     if (!isRecord(parsed) || parsed.version !== SESSION_RECORD_VERSION) return null;
     const accessToken = nonEmptyString(parsed.accessToken);
+    const authEndpointId = nonEmptyString(parsed.authEndpointId);
+    const authEndpointUrl = nonEmptyString(parsed.authEndpointUrl);
     const userId = nonEmptyString(parsed.userId);
     const cachePartition = nonEmptyString(parsed.cachePartition);
     const expiresAt = parsed.expiresAt === null
@@ -168,11 +247,21 @@ function parseStoredCredential(value: string | null): StoredCredential | null {
     const sessionId = parsed.sessionId === null
       ? null
       : nonEmptyString(parsed.sessionId);
-    if (!accessToken || !userId || !cachePartition) return null;
+    if (
+      !accessToken ||
+      !authEndpointId ||
+      !authEndpointUrl ||
+      authEndpointId !== endpoint.id ||
+      authEndpointUrl !== normalizedEndpointUrl(endpoint) ||
+      !userId ||
+      !cachePartition
+    ) return null;
     if (parsed.expiresAt !== null && !expiresAt) return null;
     if (parsed.sessionId !== null && !sessionId) return null;
     return {
       version: SESSION_RECORD_VERSION,
+      authEndpointId,
+      authEndpointUrl,
       accessToken,
       expiresAt,
       userId,
@@ -203,6 +292,17 @@ function toIdentity(
   };
 }
 
+function identifiesAuthenticatedCredential(
+  requestIdentity: ConsoleIdentity,
+  currentIdentity: AuthenticatedConsoleIdentity
+): boolean {
+  return requestIdentity.kind === 'authenticated' &&
+    requestIdentity.cachePartition === currentIdentity.cachePartition &&
+    requestIdentity.subjectId === currentIdentity.subjectId &&
+    requestIdentity.sessionId === currentIdentity.sessionId &&
+    requestIdentity.tenantId === currentIdentity.tenantId;
+}
+
 function firstGraphQLError(errors: unknown): ConsoleSessionOperationError | null {
   if (!Array.isArray(errors) || errors.length === 0) return null;
   const first = errors[0];
@@ -213,10 +313,18 @@ function firstGraphQLError(errors: unknown): ConsoleSessionOperationError | null
     );
   }
   const extensions = isRecord(first.extensions) ? first.extensions : null;
-  return new ConsoleSessionOperationError(
-    nonEmptyString(first.message) ?? 'The authentication operation failed.',
-    nonEmptyString(extensions?.code) ?? 'GRAPHQL_ERROR'
-  );
+  const serverMessage = nonEmptyString(first.message);
+  const messageCode = serverMessage === 'CSRF_TOKEN_REQUIRED' ||
+    serverMessage === 'INVALID_CSRF_TOKEN'
+    ? serverMessage
+    : null;
+  const code = messageCode ?? nonEmptyString(extensions?.code) ?? 'GRAPHQL_ERROR';
+  const message = code === 'CSRF_TOKEN_REQUIRED'
+    ? 'This tenant requires an anonymous-session CSRF bootstrap before authentication. Configure csrfTokenProvider on the standalone Console Kit session.'
+    : code === 'INVALID_CSRF_TOKEN'
+      ? 'The authentication CSRF token was rejected. Request a fresh anonymous-session token and try again.'
+      : serverMessage ?? 'The authentication operation failed.';
+  return new ConsoleSessionOperationError(message, code);
 }
 
 function mutationRecord(payload: GraphQLPayload, field: 'signIn' | 'signUp'):
@@ -241,9 +349,15 @@ export function createDatabaseScopedStandaloneSession(
     throw new Error('A standalone session requires an auth endpoint.');
   }
 
+  const authEndpoint: ConsoleEndpoint = {
+    ...options.authEndpoint,
+    url: normalizedEndpointUrl(options.authEndpoint)
+  };
+
   const fetchImpl = options.fetch ?? globalThis.fetch;
   const now = options.now ?? Date.now;
   const key = storageKey(databaseId);
+  const legacyKey = legacyStorageKey(databaseId);
   const listeners = new Set<() => void>();
   const stores: Record<ConsoleSessionPersistence, ConsoleSessionStorage | undefined> = {
     session: options.storage?.session ?? browserStorage('session'),
@@ -252,6 +366,13 @@ export function createDatabaseScopedStandaloneSession(
   let credential: StoredCredential | null = null;
   let restoreAttempted = false;
   let snapshot: ConsoleSessionSnapshot = SERVER_CONSOLE_SESSION_SNAPSHOT;
+  let authOperationGeneration = 0;
+  let activeAuthController: AbortController | null = null;
+  let disposed = false;
+  const pendingRevocationTokens = new Set<string>();
+
+  const resolveEffectiveCsrfTokenProvider = () =>
+    options.resolveCsrfTokenProvider?.() ?? options.csrfTokenProvider;
 
   const emit = () => {
     for (const listener of listeners) listener();
@@ -261,6 +382,7 @@ export function createDatabaseScopedStandaloneSession(
     for (const store of Object.values(stores)) {
       try {
         store?.removeItem(key);
+        store?.removeItem(legacyKey);
       } catch {
         // Storage can be unavailable in privacy modes; memory remains canonical.
       }
@@ -299,18 +421,23 @@ export function createDatabaseScopedStandaloneSession(
   };
 
   const restorePersistedSession = () => {
-    if (restoreAttempted) return;
+    if (disposed || restoreAttempted) return;
     restoreAttempted = true;
 
     for (const persistence of ['session', 'local'] as const) {
       const store = stores[persistence];
+      try {
+        store?.removeItem(legacyKey);
+      } catch {
+        // Legacy database-only records are never trusted by this session.
+      }
       let raw: string | null = null;
       try {
         raw = store?.getItem(key) ?? null;
       } catch {
         raw = null;
       }
-      const restored = parseStoredCredential(raw);
+      const restored = parseStoredCredential(raw, authEndpoint);
       if (!restored || isExpired(restored, now())) {
         if (raw !== null) {
           try {
@@ -337,12 +464,15 @@ export function createDatabaseScopedStandaloneSession(
   async function executeMutation(
     document: string,
     variables: Readonly<Record<string, unknown>>,
-    token?: string
+    token?: string,
+    signal?: AbortSignal
   ): Promise<GraphQLPayload> {
     let response: Response;
     try {
-      response = await fetchImpl(options.authEndpoint.url, {
+      response = await fetchImpl(authEndpoint.url, {
         method: 'POST',
+        credentials: 'omit',
+        signal,
         headers: {
           Accept: 'application/json',
           'Content-Type': 'application/json',
@@ -387,6 +517,16 @@ export function createDatabaseScopedStandaloneSession(
     field: 'signIn' | 'signUp',
     credentials: ConsoleCredentials
   ): Promise<ConsoleAuthenticationOutcome> {
+    if (disposed) {
+      throw new ConsoleSessionOperationError(
+        'This standalone session is no longer active.',
+        'SESSION_DISPOSED'
+      );
+    }
+    activeAuthController?.abort();
+    const controller = new AbortController();
+    activeAuthController = controller;
+    const operationGeneration = ++authOperationGeneration;
     restoreAttempted = true;
     removePersistedCredentials();
     credential = null;
@@ -394,16 +534,65 @@ export function createDatabaseScopedStandaloneSession(
     emit();
 
     try {
+      const csrfTokenProvider = resolveEffectiveCsrfTokenProvider();
+      let csrfToken: string | null = null;
+      if (csrfTokenProvider) {
+        let providedToken: string | null | undefined;
+        try {
+          providedToken = await csrfTokenProvider({
+            databaseId,
+            authEndpoint,
+            operation: field
+          });
+        } catch {
+          if (operationGeneration !== authOperationGeneration) {
+            throw supersededAuthenticationError();
+          }
+          throw new ConsoleSessionOperationError(
+            'The anonymous-session CSRF bootstrap could not be completed.',
+            'CSRF_BOOTSTRAP_FAILED',
+            true
+          );
+        }
+        if (operationGeneration !== authOperationGeneration) {
+          throw supersededAuthenticationError();
+        }
+        if (
+          resolveEffectiveCsrfTokenProvider() !== csrfTokenProvider
+        ) {
+          throw supersededAuthenticationError();
+        }
+        csrfToken = nonEmptyString(providedToken?.trim());
+        if (!csrfToken) {
+          throw new ConsoleSessionOperationError(
+            'The CSRF token provider did not return a usable anonymous-session token.',
+            'CSRF_TOKEN_UNAVAILABLE',
+            true
+          );
+        }
+      }
       const payload = await executeMutation(
         field === 'signIn' ? SIGN_IN_MUTATION : SIGN_UP_MUTATION,
         {
           input: {
             email: credentials.email.trim(),
             password: credentials.password,
-            rememberMe: credentials.rememberMe === true
+            rememberMe: credentials.rememberMe === true,
+            credentialKind: 'bearer',
+            ...(csrfToken ? { csrfToken } : {})
           }
-        }
+        },
+        undefined,
+        controller.signal
       );
+      if (operationGeneration !== authOperationGeneration) {
+        throw supersededAuthenticationError();
+      }
+      if (
+        resolveEffectiveCsrfTokenProvider() !== csrfTokenProvider
+      ) {
+        throw supersededAuthenticationError();
+      }
       const result = mutationRecord(payload, field);
       if (field === 'signIn' && result?.mfaRequired === true) {
         const challengeToken = nonEmptyString(result.mfaChallengeToken);
@@ -427,6 +616,8 @@ export function createDatabaseScopedStandaloneSession(
       }
       const record: StoredCredential = {
         version: SESSION_RECORD_VERSION,
+        authEndpointId: authEndpoint.id,
+        authEndpointUrl: authEndpoint.url,
         accessToken,
         expiresAt: nonEmptyString(result?.accessTokenExpiresAt),
         userId,
@@ -440,14 +631,42 @@ export function createDatabaseScopedStandaloneSession(
         identity: toIdentity(databaseId, record)
       };
     } catch (error) {
+      if (operationGeneration !== authOperationGeneration) {
+        throw supersededAuthenticationError();
+      }
       removePersistedCredentials();
       setAnonymous();
       throw error;
+    } finally {
+      if (activeAuthController === controller) activeAuthController = null;
     }
   }
 
-  const getAccessToken: DatabaseScopedStandaloneConsoleSession['getAccessToken'] = () => {
-    if (!credential) return null;
+  const getAccessToken: DatabaseScopedStandaloneConsoleSession['getAccessToken'] = ({ identity }) => {
+    if (disposed) {
+      if (identity.kind === 'authenticated') {
+        throw new ConsoleSessionOperationError(
+          'The authenticated request scope has been disposed.',
+          'SESSION_DISPOSED'
+        );
+      }
+      return null;
+    }
+    if (!credential || snapshot.status !== 'authenticated') {
+      if (identity.kind === 'authenticated') {
+        throw new ConsoleSessionOperationError(
+          'The request identity no longer owns an authenticated session.',
+          'AUTH_IDENTITY_SUPERSEDED'
+        );
+      }
+      return null;
+    }
+    if (!identifiesAuthenticatedCredential(identity, snapshot.identity)) {
+      throw new ConsoleSessionOperationError(
+        'The request identity no longer owns the current access token.',
+        'AUTH_IDENTITY_SUPERSEDED'
+      );
+    }
     if (isExpired(credential, now())) {
       const identity = toIdentity(databaseId, credential);
       removePersistedCredentials();
@@ -461,9 +680,41 @@ export function createDatabaseScopedStandaloneSession(
         identity
       };
       emit();
-      return null;
+      throw new ConsoleSessionOperationError(
+        'The session expired.',
+        'UNAUTHENTICATED'
+      );
     }
     return credential.accessToken;
+  };
+
+  const retryPendingSignOut = async (): Promise<void> => {
+    if (disposed) {
+      throw new ConsoleSessionOperationError(
+        'This standalone session is no longer active.',
+        'SESSION_DISPOSED'
+      );
+    }
+    let failure: unknown = null;
+    for (const pendingToken of [...pendingRevocationTokens]) {
+      try {
+        const payload = await executeMutation(
+          SIGN_OUT_MUTATION,
+          { input: {} },
+          pendingToken
+        );
+        if (!isRecord(payload.data) || !isRecord(payload.data.signOut)) {
+          throw new ConsoleSessionOperationError(
+            'The sign-out operation returned an invalid response.',
+            'INVALID_RESPONSE'
+          );
+        }
+        pendingRevocationTokens.delete(pendingToken);
+      } catch (error) {
+        failure ??= error;
+      }
+    }
+    if (failure) throw failure;
   };
 
   return {
@@ -486,10 +737,7 @@ export function createDatabaseScopedStandaloneSession(
       }
       const outcome = await authenticate('signIn', input.credentials);
       if (outcome.status === 'mfa-required') {
-        throw new ConsoleSessionOperationError(
-          'Multi-factor authentication is required to complete sign in.',
-          'MFA_REQUIRED'
-        );
+        throw new ConsoleMfaRequiredError();
       }
     },
     async beginSignUp(credentials) {
@@ -498,39 +746,37 @@ export function createDatabaseScopedStandaloneSession(
     signIn: (credentials) => authenticate('signIn', credentials),
     signUp: (credentials) => authenticate('signUp', credentials),
     async signOut() {
+      if (disposed) {
+        throw new ConsoleSessionOperationError(
+          'This standalone session is no longer active.',
+          'SESSION_DISPOSED'
+        );
+      }
+      authOperationGeneration += 1;
+      activeAuthController?.abort();
+      activeAuthController = null;
       restoreAttempted = true;
       const accessToken = credential?.accessToken;
-      let failure: unknown = null;
-      if (accessToken) {
-        try {
-          const payload = await executeMutation(
-            SIGN_OUT_MUTATION,
-            { input: {} },
-            accessToken
-          );
-          if (!isRecord(payload.data) || !isRecord(payload.data.signOut)) {
-            throw new ConsoleSessionOperationError(
-              'The sign-out operation returned an invalid response.',
-              'INVALID_RESPONSE'
-            );
-          }
-        } catch (error) {
-          failure = error;
-        }
-      }
+      if (accessToken) pendingRevocationTokens.add(accessToken);
       removePersistedCredentials();
       setAnonymous();
-      if (failure) throw failure;
+      await retryPendingSignOut();
     },
+    retryPendingSignOut,
     refresh() {
-      void getAccessToken({ endpoint: options.authEndpoint });
+      if (snapshot.status !== 'authenticated') return;
+      void getAccessToken({ endpoint: authEndpoint, identity: snapshot.identity });
     },
     handleAuthenticationFailure(failure) {
+      if (disposed) return;
       restoreAttempted = true;
-      if (!credential && snapshot.status !== 'authenticated') return;
-      const identity = snapshot.status === 'authenticated'
-        ? snapshot.identity
-        : undefined;
+      if (
+        !credential ||
+        snapshot.status !== 'authenticated' ||
+        !identifiesAuthenticatedCredential(failure.identity, snapshot.identity)
+      ) return;
+      authOperationGeneration += 1;
+      const identity = snapshot.identity;
       removePersistedCredentials();
       credential = null;
       snapshot = {
@@ -542,6 +788,17 @@ export function createDatabaseScopedStandaloneSession(
         identity
       };
       emit();
+    },
+    dispose() {
+      if (disposed) return;
+      disposed = true;
+      authOperationGeneration += 1;
+      activeAuthController?.abort();
+      activeAuthController = null;
+      listeners.clear();
+    },
+    resume() {
+      disposed = false;
     }
   };
 }

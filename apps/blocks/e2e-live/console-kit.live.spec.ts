@@ -3,6 +3,7 @@ import { expect, test, type Locator, type Page } from '@playwright/test';
 
 import {
   authenticationErrorCodes,
+  createRequest,
   createRow,
   deleteRequest,
   deleteRow,
@@ -154,6 +155,13 @@ test('switches the tenant-scoped shell, signs in to every preset, and discovers 
 
   await signInThroughUi(page, first, proof.credentials(first));
   await expectDataExplorer(page, first);
+  await expect(page).toHaveURL(/#console-data$/u);
+  await page.reload({ waitUntil: 'domcontentloaded' });
+  await expect(page.getByRole('heading', { level: 1, name: 'Data explorer' })).toBeVisible();
+  await openFeature(page, 'Storage');
+  await expect(page.getByRole('heading', { level: 1, name: 'Storage is unavailable' })).toBeVisible();
+  await expect(page).toHaveURL(/#console-storage$/u);
+  await expectDataExplorer(page, first);
 
   await selectTenant(page, second);
   await expectSignIn(page);
@@ -181,11 +189,11 @@ test('completes standalone auth and restores the database-scoped session after r
   await selectTenant(page, tenant);
   await expect(page.getByRole('button', { name: 'Create account', exact: true })).toBeVisible();
   await page.getByRole('button', { name: 'Create account', exact: true }).click();
-  await page.getByLabel('Name').fill('Console Kit UI Proof');
   await page.getByLabel('Email address').fill(credentials.email);
   await page.getByLabel('Password').fill(credentials.password);
   await page.getByRole('button', { name: 'Create account', exact: true }).click();
   await expect(page.getByRole('heading', { level: 1, name: 'Account security' })).toBeVisible();
+  await expect(page.getByText(credentials.email, { exact: true }).first()).toBeVisible();
 
   await signOutThroughUi(page);
   await signInThroughUi(page, tenant, credentials);
@@ -203,7 +211,45 @@ test('completes standalone auth and restores the database-scoped session after r
   await page.reload({ waitUntil: 'domcontentloaded' });
   await expect(page.getByTestId('console-kit-proof-root')).toBeVisible();
   await expect(page.getByRole('heading', { level: 1, name: 'Account security' })).toBeVisible();
+  await expect(page.getByText(credentials.email, { exact: true }).first()).toBeVisible();
   expect(hydrationErrors).toEqual([]);
+  await signOutThroughUi(page);
+});
+
+test('loads membership views and creates roleless app and organization invitations', async ({ page }) => {
+  const tenant = proof.tenant('full');
+  const appInviteEmail = `console-kit-app-invite-${randomUUID()}@example.test`;
+  const organizationInviteEmail = `console-kit-org-invite-${randomUUID()}@example.test`;
+
+  await visitProof(page);
+  await signInThroughUi(page, tenant, proof.credentials(tenant));
+
+  await openFeature(page, 'Users');
+  await expect(page.getByRole('heading', { level: 1, name: 'Users' })).toBeVisible();
+  await page.getByRole('button', { name: 'Invite member' }).click();
+  const appInviteDialog = page.getByRole('dialog', { name: 'Invite an app member' });
+  await expect(appInviteDialog.getByRole('combobox', { name: 'Role' })).toContainText('No role');
+  await appInviteDialog.getByRole('textbox', { name: 'Email address' }).fill(appInviteEmail);
+  await appInviteDialog.getByRole('button', { name: 'Send invitation' }).click();
+  await expect(appInviteDialog).toBeHidden();
+  await page.getByRole('tab', { name: /Invitations/u }).click();
+  await expect(page.getByText(appInviteEmail, { exact: true })).toBeVisible();
+
+  await openFeature(page, 'Organizations');
+  await expect(page.getByRole('heading', { level: 1, name: 'Organizations' })).toBeVisible();
+  await page.getByRole('button', { name: 'Invite member' }).click();
+  const organizationInviteDialog = page.getByRole('dialog', {
+    name: 'Invite an organization member'
+  });
+  await expect(organizationInviteDialog.getByRole('combobox', { name: 'Role' }))
+    .toContainText('No role');
+  await organizationInviteDialog.getByRole('textbox', { name: 'Email address' })
+    .fill(organizationInviteEmail);
+  await organizationInviteDialog.getByRole('button', { name: 'Send invitation' }).click();
+  await expect(organizationInviteDialog).toBeHidden();
+  await page.getByRole('tab', { name: /Invitations/u }).click();
+  await expect(page.getByText(organizationInviteEmail, { exact: true })).toBeVisible();
+
   await signOutThroughUi(page);
 });
 
@@ -272,6 +318,24 @@ test('enforces direct-owner RLS across create, read, update, and delete', async 
       ['id', 'firstName', 'lastName', 'ownerId']
     );
 
+    const blockedCreate = createRequest(
+      strangerSchema,
+      strangerTable,
+      { firstName: `Impersonated-${marker}`, lastName: 'Blocked', ownerId: owner.userId },
+      ['id', 'firstName', 'lastName', 'ownerId']
+    );
+    const blockedCreatePayload = await rawGraphQL<Record<string, unknown>>(
+      endpointUrl(tenant, 'data'),
+      blockedCreate.document,
+      blockedCreate.variables,
+      stranger.token
+    );
+    const blockedCreateMutation = blockedCreatePayload.data?.[blockedCreate.mutation];
+    const blockedCreateRow = blockedCreateMutation && typeof blockedCreateMutation === 'object' && !Array.isArray(blockedCreateMutation)
+      ? (blockedCreateMutation as Record<string, unknown>)[blockedCreate.singular]
+      : null;
+    expect(Boolean(blockedCreatePayload.errors?.length) || blockedCreateRow == null).toBe(true);
+
     const ownerRows = await listRows(
       tenant,
       owner.token,
@@ -290,6 +354,7 @@ test('enforces direct-owner RLS across create, read, update, and delete', async 
     expect(ownerRows.some((row) => row.id === strangerRow?.id)).toBe(false);
     expect(strangerRows.some((row) => row.id === strangerRow?.id)).toBe(true);
     expect(strangerRows.some((row) => row.id === ownerRow?.id)).toBe(false);
+    expect(strangerRows.some((row) => row.firstName === `Impersonated-${marker}`)).toBe(false);
 
     const blocked = updateRequest(
       strangerSchema,
@@ -557,5 +622,8 @@ test('keeps the live shell usable at the 390px review viewport', async ({ page }
     document.documentElement.scrollWidth <= document.documentElement.clientWidth
   )).toBe(true);
   await page.getByRole('button', { name: 'Toggle navigation' }).click();
-  await expect(page.getByRole('link', { name: 'Authentication', exact: true })).toBeVisible();
+  const mobileNavigation = page.getByRole('dialog');
+  await expect(mobileNavigation).toBeVisible();
+  await mobileNavigation.getByRole('link', { name: 'Authentication', exact: true }).click();
+  await expect(mobileNavigation).toBeHidden();
 });

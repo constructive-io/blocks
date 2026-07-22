@@ -27,6 +27,30 @@ export function connectionNodes(value: unknown): Record<string, unknown>[] {
   return nodes;
 }
 
+export function hasEffectivePermission(
+  membership: Record<string, unknown> | undefined,
+  permissionRows: readonly Record<string, unknown>[],
+  permissionName: string
+): boolean {
+  const effectiveMask = asString(membership?.permissions);
+  const requiredMask = asString(permissionRows.find(
+    (permission) => asString(permission.name) === permissionName
+  )?.bitstr);
+  if (
+    !effectiveMask ||
+    !requiredMask ||
+    effectiveMask.length !== requiredMask.length ||
+    !/^[01]+$/u.test(effectiveMask) ||
+    !/^[01]+$/u.test(requiredMask) ||
+    !requiredMask.includes('1')
+  ) {
+    return false;
+  }
+  return [...requiredMask].every(
+    (requiredBit, index) => requiredBit === '0' || effectiveMask[index] === '1'
+  );
+}
+
 export function imageUrl(value: unknown): string | undefined {
   if (typeof value === 'string' && value.length > 0) return value;
   const record = asRecord(value);

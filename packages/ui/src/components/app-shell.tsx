@@ -147,6 +147,7 @@ function navigationLink(
 	renderLink: AppLinkRenderer | undefined,
 	item: AppNavigationChild,
 	children: React.ReactNode,
+	onAcceptedNavigation?: () => void,
 ) {
 	return createAppLink(renderLink, {
 		href: item.href,
@@ -154,11 +155,30 @@ function navigationLink(
 		'aria-current': item.isActive ? 'page' : undefined,
 		'aria-disabled': item.disabled || undefined,
 		tabIndex: item.disabled ? -1 : undefined,
-		onClick: item.disabled ? (event) => event.preventDefault() : undefined,
+		onClick: (event) => {
+			if (item.disabled) {
+				event.preventDefault();
+				return;
+			}
+			if (
+				event.button !== 0 ||
+				event.metaKey ||
+				event.ctrlKey ||
+				event.shiftKey ||
+				event.altKey ||
+				(event.currentTarget.target && event.currentTarget.target !== '_self')
+			) return;
+			onAcceptedNavigation?.();
+		},
 	});
 }
 
 function NavigationGroup({ group, renderLink }: { group: AppNavigationGroup; renderLink?: AppLinkRenderer }) {
+	const { isMobile, setOpenMobile } = useSidebar();
+	const closeMobileNavigation = React.useCallback(() => {
+		if (isMobile) setOpenMobile(false);
+	}, [isMobile, setOpenMobile]);
+
 	return (
 		<SidebarGroup>
 			{group.label && <SidebarGroupLabel>{group.label}</SidebarGroupLabel>}
@@ -179,7 +199,7 @@ function NavigationGroup({ group, renderLink }: { group: AppNavigationGroup; ren
 									<SidebarMenuButton
 										isActive={item.isActive}
 										tooltip={typeof item.label === 'string' ? item.label : undefined}
-										render={navigationLink(renderLink, item, itemContent)}
+										render={navigationLink(renderLink, item, itemContent, closeMobileNavigation)}
 									/>
 									{item.badge && <SidebarMenuBadge>{item.badge}</SidebarMenuBadge>}
 								</SidebarMenuItem>
@@ -196,7 +216,7 @@ function NavigationGroup({ group, renderLink }: { group: AppNavigationGroup; ren
 								<SidebarMenuButton
 									isActive={item.isActive}
 									tooltip={typeof item.label === 'string' ? item.label : undefined}
-									render={navigationLink(renderLink, item, itemContent)}
+									render={navigationLink(renderLink, item, itemContent, closeMobileNavigation)}
 								/>
 								<SidebarMenuAction
 									render={
@@ -214,11 +234,16 @@ function NavigationGroup({ group, renderLink }: { group: AppNavigationGroup; ren
 								<CollapsibleContent innerClassName='py-0'>
 									<SidebarMenuSub>
 										{item.children.map((child) => (
-											<SidebarMenuSubItem key={child.id}>
-												<SidebarMenuSubButton
-													isActive={child.isActive}
-													render={navigationLink(renderLink, child, child.label)}
-												/>
+										<SidebarMenuSubItem key={child.id}>
+											<SidebarMenuSubButton
+												isActive={child.isActive}
+												render={navigationLink(
+													renderLink,
+													child,
+													child.label,
+													closeMobileNavigation,
+												)}
+											/>
 											</SidebarMenuSubItem>
 										))}
 									</SidebarMenuSub>

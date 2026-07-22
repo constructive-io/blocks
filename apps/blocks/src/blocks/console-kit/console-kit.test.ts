@@ -73,4 +73,24 @@ describe('Console Kit feature availability', () => {
       reason: 'The session expired.'
     });
   });
+
+  it('keeps standalone authentication available after credential rejection', () => {
+    expect(
+      getConsoleKitFeatureAvailability('auth', {
+        ...runtime,
+        endpoints: {
+          ...runtime.endpoints,
+          auth: { id: 'auth', kind: 'auth', url: '/auth/graphql' }
+        },
+        session: {
+          status: 'error',
+          error: {
+            message: 'The credential has been revoked.',
+            code: 'UNAUTHENTICATED'
+          },
+          identity: runtime.session.identity
+        }
+      }, undefined, true)
+    ).toEqual({ status: 'available' });
+  });
 });

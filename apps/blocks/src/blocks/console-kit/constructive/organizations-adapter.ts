@@ -21,6 +21,7 @@ import {
   asString,
   connectionNodes,
   expiresIn,
+  hasEffectivePermission,
   imageUrl,
   notifyConsoleAdapters,
   packAvailability
@@ -115,6 +116,7 @@ function adminDocument(options: ConstructiveOrganizationsAdapterOptions): string
     'isApproved',
     'isBanned',
     'isDisabled',
+    'permissions',
     'profileId'
   ]);
   const profile = relationSelection(schema, 'OrgMembership', 'profile', ['name']);
@@ -138,6 +140,11 @@ function adminDocument(options: ConstructiveOrganizationsAdapterOptions): string
   const invites = supports(options, 'admin', 'query', 'orgInvites') && inviteFields.length > 0
     ? `orgInvites(first: 250) { nodes { ${inviteFields.join(' ')} } }`
     : '';
+  const permissionFields = connectionSelection(schema, 'OrgPermission', ['name', 'bitstr']);
+  const permissions = supports(options, 'admin', 'query', 'orgPermissions') &&
+    permissionFields.includes('name') && permissionFields.includes('bitstr')
+    ? `orgPermissions(first: 100) { nodes { ${permissionFields.join(' ')} } }`
+    : '';
   return `
     query ConsoleKitOrganizationMemberships {
       orgMemberships(first: 500) {
@@ -145,6 +152,7 @@ function adminDocument(options: ConstructiveOrganizationsAdapterOptions): string
       }
       ${profiles}
       ${invites}
+      ${permissions}
     }
   `;
 }
@@ -173,12 +181,16 @@ async function loadOrganizations(
   data: OrganizationsFeatureData;
   roleIds: ReadonlyMap<string, string>;
   canManageActiveOrganization: boolean;
+  canCreateInvites: boolean;
+  canAssignInviteProfiles: boolean;
 }>> {
   if (runtime.session.status !== 'authenticated') {
     return {
       data: { organizations: [], members: [], invites: [], roles: [] },
       roleIds: new Map(),
-      canManageActiveOrganization: false
+      canManageActiveOrganization: false,
+      canCreateInvites: false,
+      canAssignInviteProfiles: false
     };
   }
   const [adminResult, authResult] = await Promise.all([
@@ -272,8 +284,14 @@ async function loadOrganizations(
   const actorMembership = actorMemberships.find(
     (membership) => asString(membership.entityId) === activeOrganizationId
   );
-  const canManageActiveOrganization = Boolean(
+  const hasAdministrativeRole = Boolean(
     actorMembership && (asBoolean(actorMembership.isOwner) || asBoolean(actorMembership.isAdmin))
+  );
+  const permissionRows = connectionNodes(adminResult.orgPermissions);
+  const canManageActiveOrganization = hasAdministrativeRole || hasEffectivePermission(
+    actorMembership,
+    permissionRows,
+    'admin_members'
   );
   return {
     data: {
@@ -284,7 +302,17 @@ async function loadOrganizations(
       roles: [...roleIds.keys()]
     },
     roleIds,
-    canManageActiveOrganization
+    canManageActiveOrganization,
+    canCreateInvites: hasAdministrativeRole || hasEffectivePermission(
+      actorMembership,
+      permissionRows,
+      'create_invites'
+    ),
+    canAssignInviteProfiles: hasAdministrativeRole || hasEffectivePermission(
+      actorMembership,
+      permissionRows,
+      'assign_profiles'
+    )
   };
 }
 
@@ -329,7 +357,7 @@ export function createConstructiveOrganizationsAdapter(
             requiredFields: ['membershipId', 'profileId', 'isGrant']
           }
         );
-      const canInvite = loaded.canManageActiveOrganization && Boolean(activeOrganizationId) &&
+      const canInvite = loaded.canCreateInvites && Boolean(activeOrganizationId) &&
         supportsConstructiveMutationInput(
           adminSchema,
           'createOrgInvite',
@@ -354,7 +382,7 @@ export function createConstructiveOrganizationsAdapter(
         ['orgProfileGrant'],
         { field: 'orgProfileGrant', requiredFields: ['entityId'] }
       );
-      const canDeleteInvite = loaded.canManageActiveOrganization &&
+      const canDeleteInvite = loaded.canCreateInvites &&
         supportsConstructiveMutationInput(adminSchema, 'deleteOrgInvite', ['id']);
       const assertActiveOrganization = (organizationId: string) => {
         if (!activeOrganizationId || organizationId !== activeOrganizationId) {
@@ -371,6 +399,9 @@ export function createConstructiveOrganizationsAdapter(
           createOrganization: false,
           selectOrganization: true,
           inviteMember: canInvite,
+          assignInviteRole: canInvite &&
+            loaded.canAssignInviteProfiles &&
+            inviteSupportsProfile,
           updateMemberRole: canGrantProfile,
           removeMember: canUpdateMembership,
           cancelInvite: canDeleteInvite
@@ -390,7 +421,9 @@ export function createConstructiveOrganizationsAdapter(
             ? async ({ organizationId, email, role }) => {
                 assertActiveOrganization(organizationId);
                 const profileId = role ? loaded.roleIds.get(role) : undefined;
-                if (role && (!inviteSupportsProfile || !profileId)) {
+                if (role && (
+                  !loaded.canAssignInviteProfiles || !inviteSupportsProfile || !profileId
+                )) {
                   throw new Error(`The ${role} profile cannot be assigned to an organization invitation.`);
                 }
                 await executeConstructiveGraphQL(runtime, 'admin', CREATE_INVITE_MUTATION, {

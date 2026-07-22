@@ -25,8 +25,31 @@ primary key. It also verifies the versioned `_meta` query before loading
 data-backed features. Proof credentials stay in mode-0600 sidecars and are
 never embedded in the secret-free tenant manifest or rendered page.
 
+Hardened auth tenants can enable `require_csrf_for_auth`. Console Kit accepts
+an async `csrfTokenProvider` which must ask a trusted host endpoint to create a
+fresh private anonymous session and return its `csrf_secret`; the token is sent
+only as `SignInInput.csrfToken` or `SignUpInput.csrfToken`, and Constructive
+is intended to revoke the anonymous session after successful authentication.
+The current GraphQL auth schema does not expose an anonymous-session bootstrap
+operation, so this provider cannot be implemented safely in browser code
+alone.
+
+Standalone sign-out clears the local credential before attempting server
+revocation. If that request fails, the session keeps the old bearer in a
+non-authorizing in-memory revocation queue and exposes
+`retryPendingSignOut()` for an explicit retry; the queued bearer is never
+returned by `getAccessToken` or written back to browser storage.
+
 ## Current backend gaps
 
+- The generated `sign_in` and `sign_up` functions currently revoke a validated
+  anonymous session with an unqualified `WHERE id = v_anon_session.id`. The
+  column conflicts with each function's `OUT id` parameter, so PostgreSQL
+  raises `column reference "id" is ambiguous` after valid credentials are
+  accepted. Qualify the target column in the auth generator and regenerate the
+  tenant before enabling `require_csrf_for_auth`; the Console Kit provider
+  contract is ready, but the secure-default flow cannot complete on this
+  backend revision.
 - The stock storage module creates bucket and file tables but does not assign
   an API name. The semantic `storage` endpoint currently resolves to the object
   service and exposes neither table, so Console Kit correctly marks Storage
