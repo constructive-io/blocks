@@ -37,6 +37,9 @@ import { useConsoleKitStore } from './store';
 import { useLatestCallback } from './use-latest-callback';
 
 const CHECKING_METADATA_STATE = { status: 'checking' } as const;
+const useIsomorphicLayoutEffect = typeof window === 'undefined'
+  ? React.useEffect
+  : React.useLayoutEffect;
 const runtimeReferenceIds = new WeakMap<object, number>();
 let nextRuntimeReferenceId = 1;
 
@@ -50,14 +53,15 @@ function runtimeReferenceId(value: object): number {
 }
 
 function metadataRequestKey(
-  context: Omit<ConsoleKitAdapterContext, 'metadata'>
+  context: Omit<ConsoleKitAdapterContext, 'metadata' | 'metadataByEndpoint'>
 ): string {
-  const endpoint = context.endpoints.data;
   const identity = getConsoleSessionIdentity(context.session);
   return JSON.stringify([
     context.databaseId,
-    endpoint?.id ?? null,
-    endpoint?.url ?? null,
+    CONSOLE_ENDPOINT_KINDS.map((kind) => {
+      const endpoint = context.endpoints[kind];
+      return [kind, endpoint?.id ?? null, endpoint?.url ?? null];
+    }),
     context.session.status,
     identity ? createConsoleIdentityKey(identity) : null,
     runtimeReferenceId(context.transportFor)
@@ -133,15 +137,20 @@ async function requireResult<T>(
   throw error;
 }
 
-export function useConsoleKitMetadata(
-  context: Omit<ConsoleKitAdapterContext, 'metadata'>,
+function useConsoleKitMetadataByEndpoint(
+  context: Omit<ConsoleKitAdapterContext, 'metadata' | 'metadataByEndpoint'>,
   onError?: (error: ConsoleRuntimeError) => void
-): ConsoleKitMetadataState {
-  const storedState = useConsoleKitStore((store) => store.metadata);
+): Readonly<{
+  metadata: ConsoleKitMetadataState;
+  metadataByEndpoint: Readonly<
+    Partial<Record<ConsoleEndpointKind, ConsoleKitMetadataState>>
+  >;
+}> {
+  const storedState = useConsoleKitStore((store) => store.metadataByEndpoint);
   const storedKey = useConsoleKitStore((store) => store.metadataKey);
-  const setState = useConsoleKitStore((store) => store.setMetadata);
+  const setState = useConsoleKitStore((store) => store.setMetadataByEndpoint);
   const requestKey = metadataRequestKey(context);
-  const state = storedKey === requestKey ? storedState : CHECKING_METADATA_STATE;
+  const state = storedKey === requestKey ? storedState : {};
   const requestGeneration = React.useRef(0);
   const reportError = useLatestCallback((error: ConsoleRuntimeError) => {
     onError?.(error);
@@ -149,24 +158,37 @@ export function useConsoleKitMetadata(
 
   React.useEffect(() => {
     const generation = ++requestGeneration.current;
-    const endpoint = context.endpoints.data;
-    const transport = context.transportFor('data');
-    if (!endpoint || !transport) {
-      setState(requestKey, {
-        status: 'incompatible',
-        message: 'A data endpoint and active session identity are required to inspect this database.',
-        missing: ['data endpoint']
-      });
+    const endpointKinds = CONSOLE_ENDPOINT_KINDS.filter(
+      (kind) => context.endpoints[kind] && context.transportFor(kind)
+    );
+    if (endpointKinds.length === 0) {
+      setState(requestKey, {});
       return;
     }
 
     const controller = new AbortController();
     const isCurrent = () =>
       !controller.signal.aborted && requestGeneration.current === generation;
-    setState(requestKey, CHECKING_METADATA_STATE);
+    setState(
+      requestKey,
+      Object.fromEntries(endpointKinds.map((kind) => [
+        kind,
+        CHECKING_METADATA_STATE
+      ]))
+    );
 
     void (async () => {
-      try {
+      const inspectEndpoint = async (
+        kind: ConsoleEndpointKind
+      ): Promise<ConsoleKitMetadataState> => {
+        const transport = context.transportFor(kind);
+        if (!transport) {
+          return {
+            status: 'incompatible',
+            message: `The ${kind} endpoint has no active session transport.`,
+            missing: [`${kind} transport`]
+          };
+        }
         const introspectionResult = await transport.execute<MetaContractIntrospectionQuery>({
           document: META_CONTRACT_INTROSPECTION_SOURCE,
           operationName: 'ConstructiveMetaContract',
@@ -178,18 +200,15 @@ export function useConsoleKitMetadata(
         );
         const compatibility = assessMetaContract(contractIntrospection);
         if (compatibility.status !== 'compatible') {
-          if (!isCurrent()) return;
-          setState(requestKey, {
+          return {
             status: 'incompatible',
             message:
               compatibility.status === 'unavailable'
                 ? 'This endpoint does not expose the current Constructive _meta contract.'
                 : 'This endpoint must be upgraded to the current Constructive _meta contract.',
             missing: compatibility.missing
-          });
-          return;
+          };
         }
-        if (!isCurrent()) return;
 
         const [metaResult, schemaIntrospectionResult] = await Promise.all([
           transport.execute<MetaQuery>({
@@ -214,38 +233,71 @@ export function useConsoleKitMetadata(
           meta
         );
         if (schemaCompatibility.status !== 'compatible') {
-          if (!isCurrent()) return;
-          setState(requestKey, {
+          return {
             status: 'incompatible',
             message:
               'The endpoint GraphQL schema does not satisfy the operations declared by its Constructive _meta contract.',
             missing: schemaCompatibility.missingPaths
-          });
-          return;
+          };
         }
 
-        if (!isCurrent()) return;
-        setState(requestKey, {
+        return {
           status: 'compatible',
           meta,
           contractIntrospection,
           introspection
-        });
-      } catch (cause) {
+        };
+      };
+
+      const results = await Promise.all(endpointKinds.map(async (kind) => {
+        try {
+          return [kind, await inspectEndpoint(kind)] as const;
+        } catch (cause) {
+          const error = normalizeConsoleKitError(
+            cause,
+            `The ${kind} endpoint metadata could not be loaded.`
+          );
+          return [kind, { status: 'error', error } as const] as const;
+        }
+      }));
+      if (!isCurrent()) return;
+      const next = Object.fromEntries(results) as Partial<
+        Record<ConsoleEndpointKind, ConsoleKitMetadataState>
+      >;
+      setState(requestKey, next);
+      const firstError = results.find(([, result]) => result.status === 'error');
+      if (firstError?.[1].status === 'error') {
+        reportError(firstError[1].error);
+      }
+      /* istanbul ignore next -- an unexpected orchestration failure. */
+    })().catch((cause) => {
         if (!isCurrent()) return;
         const error = normalizeConsoleKitError(cause, 'Console metadata could not be loaded.');
-        setState(requestKey, { status: 'error', error });
+        setState(requestKey, { data: { status: 'error', error } });
         reportError(error);
-      }
-    })();
+      });
 
     return () => {
       controller.abort();
       if (requestGeneration.current === generation) requestGeneration.current += 1;
     };
-  }, [context.endpoints.data, context.transportFor, requestKey, setState]);
+  }, [context.endpoints, context.transportFor, requestKey, setState]);
 
-  return state;
+  return React.useMemo(() => ({
+    metadata: state.data ?? {
+      status: 'incompatible' as const,
+      message: 'A data endpoint is required to inspect application tables.',
+      missing: ['data endpoint']
+    },
+    metadataByEndpoint: state
+  }), [state]);
+}
+
+export function useConsoleKitMetadata(
+  context: Omit<ConsoleKitAdapterContext, 'metadata' | 'metadataByEndpoint'>,
+  onError?: (error: ConsoleRuntimeError) => void
+): ConsoleKitMetadataState {
+  return useConsoleKitMetadataByEndpoint(context, onError).metadata;
 }
 
 export function useConsoleKitRuntime({
@@ -264,8 +316,13 @@ export function useConsoleKitRuntime({
   onMetadataError?: (error: ConsoleRuntimeError) => void;
 }>): ConsoleKitAdapterContext {
   const snapshot = useConsoleSessionSnapshot(session);
-  const setSession = useConsoleKitStore((store) => store.setSession);
-  React.useEffect(() => setSession(snapshot), [setSession, snapshot]);
+  const synchronizeScope = useConsoleKitStore(
+    (store) => store.synchronizeScope
+  );
+  useIsomorphicLayoutEffect(
+    () => synchronizeScope(databaseId, snapshot),
+    [databaseId, snapshot, synchronizeScope]
+  );
   const endpointConfigurationKey = configuredEndpointsKey(configuredEndpoints);
   const endpoints = React.useMemo(
     () => resolveConsoleKitEndpoints(databaseId, configuredEndpoints, resolveEndpoint),
@@ -287,13 +344,22 @@ export function useConsoleKitRuntime({
   }, [endpoints, identity, selectedTransport, session.getAccessToken]);
 
   const baseContext = React.useMemo(
-    () => ({ databaseId, endpoints, session: snapshot, transportFor }),
-    [databaseId, endpoints, snapshot, transportFor]
+    () => ({
+      databaseId,
+      endpoints,
+      session: snapshot,
+      sessionMode: session.mode,
+      transportFor
+    }),
+    [databaseId, endpoints, session.mode, snapshot, transportFor]
   );
-  const metadata = useConsoleKitMetadata(baseContext, onMetadataError);
+  const metadataState = useConsoleKitMetadataByEndpoint(
+    baseContext,
+    onMetadataError
+  );
 
   return React.useMemo(
-    () => ({ ...baseContext, metadata }),
-    [baseContext, metadata]
+    () => ({ ...baseContext, ...metadataState }),
+    [baseContext, metadataState]
   );
 }

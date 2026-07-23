@@ -4,6 +4,6 @@
   "presetSlug": "b2b:storage",
   "title": "B2B with storage",
   "description": "Data, authentication, users, organizations, and storage feature packs.",
-  "stability": "experimental",
+  "stability": "stable",
   "featurePacks": ["data", "auth", "users", "organizations", "storage"]
 }

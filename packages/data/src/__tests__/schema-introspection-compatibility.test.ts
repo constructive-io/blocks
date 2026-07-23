@@ -4,7 +4,11 @@ import { describe, expect, it } from 'vitest';
 
 import { SCHEMA_INTROSPECTION_QUERY } from '../index';
 import { META_CONTRACT_VERSION, MetaContractError } from '../meta-query';
-import { assessSchemaIntrospectionCompatibility } from '../schema-introspection-compatibility';
+import {
+	analyzeSchemaIntrospectionCompatibility,
+	assessSchemaIntrospectionCompatibility,
+	normalizeSchemaEnumInputValues,
+} from '../schema-introspection-compatibility';
 import type { MetaQuery } from '../meta-query.types';
 
 const schemaSource = /* GraphQL */ `
@@ -173,6 +177,98 @@ describe('assessSchemaIntrospectionCompatibility', () => {
 			status: 'compatible',
 			missingPaths: [],
 		});
+	});
+
+	it('resolves PostgreSQL enum identifiers through the field GraphQL type', () => {
+		const meta = metaQuery();
+		const status = meta._meta!.tables![0]!.fields!.find((field) => field?.name === 'status');
+		if (!status) throw new Error('The test fixture requires a status field.');
+		status.type!.gqlType = 'projectStatus';
+		status.enumValues = {
+			name: 'projectStatus',
+			values: ['active', 'archived'],
+		};
+
+		const analysis = analyzeSchemaIntrospectionCompatibility(introspect(), meta);
+		expect(analysis).toEqual({
+			contractVersion: META_CONTRACT_VERSION,
+			status: 'compatible',
+			missingPaths: [],
+			enumMappings: [
+				{
+					tableName: 'Project',
+					schemaName: null,
+					fieldName: 'status',
+					graphQLTypeName: 'ProjectStatus',
+					values: [
+						{ metaValue: 'active', graphQLValue: 'ACTIVE' },
+						{ metaValue: 'archived', graphQLValue: 'ARCHIVED' },
+					],
+				},
+			],
+		});
+		expect(
+			normalizeSchemaEnumInputValues(
+				{ status: 'active', labels: ['untouched'] },
+				{ name: 'Project', schemaName: null },
+				analysis.enumMappings,
+			),
+		).toEqual({ status: 'ACTIVE', labels: ['untouched'] });
+	});
+
+	it('rejects canonical enum collisions instead of guessing an exact GraphQL token', () => {
+		const schema = structuredClone(introspect());
+		const statusType = schema.__schema.types.find(({ name }) => name === 'ProjectStatus')!;
+		statusType.enumValues = [
+			...(statusType.enumValues ?? []),
+			{ name: 'ACT_IVE', description: null, isDeprecated: false, deprecationReason: null },
+		];
+		const meta = metaQuery();
+		const status = meta._meta!.tables![0]!.fields!.find((field) => field?.name === 'status');
+		if (!status) throw new Error('The test fixture requires a status field.');
+		status.enumValues = { name: 'projectStatus', values: ['active', 'archived'] };
+
+		const analysis = analyzeSchemaIntrospectionCompatibility(schema, meta);
+		expect(analysis.status).toBe('incompatible');
+		expect(analysis.enumMappings).toEqual([]);
+		expect(analysis.missingPaths).toContain(
+			'__schema.types.ProjectStatus.enumValues.active.exactMapping',
+		);
+	});
+
+	it('keeps enum drift detection strict for lowercase _meta labels', () => {
+		const schema = structuredClone(introspect());
+		const statusType = schema.__schema.types.find(({ name }) => name === 'ProjectStatus')!;
+		statusType.enumValues = statusType.enumValues!.filter(({ name }) => name !== 'ARCHIVED');
+		const meta = metaQuery();
+		const status = meta._meta!.tables![0]!.fields!.find((field) => field?.name === 'status');
+		if (!status) throw new Error('The test fixture requires a status field.');
+		status.enumValues = { name: 'projectStatus', values: ['active', 'archived'] };
+
+		const analysis = analyzeSchemaIntrospectionCompatibility(schema, meta);
+		expect(analysis.status).toBe('incompatible');
+		expect(analysis.missingPaths).toContain(
+			'__schema.types.ProjectStatus.enumValues.archived',
+		);
+	});
+
+	it('requires create and patch inputs to use the mapped enum type', () => {
+		const schema = structuredClone(introspect());
+		for (const inputTypeName of ['ProjectInput', 'ProjectPatch']) {
+			const inputType = schema.__schema.types.find(({ name }) => name === inputTypeName)!;
+			const statusField = inputType.inputFields!.find(({ name }) => name === 'status')!;
+			let namedType = statusField.type;
+			while (namedType.ofType) namedType = namedType.ofType;
+			namedType.name = 'String';
+		}
+
+		const analysis = analyzeSchemaIntrospectionCompatibility(schema, metaQuery());
+		expect(analysis.status).toBe('incompatible');
+		expect(analysis.enumMappings).toEqual([]);
+		expect(analysis.missingPaths).toEqual(expect.arrayContaining([
+			'__schema.types.ProjectInput.inputFields.status.type.ProjectStatus',
+			'__schema.types.ProjectPatch.inputFields.status.type.ProjectStatus',
+		]));
 	});
 
 	it('accepts the current PostGraphile read surface when legacy one/condition hints are absent', () => {

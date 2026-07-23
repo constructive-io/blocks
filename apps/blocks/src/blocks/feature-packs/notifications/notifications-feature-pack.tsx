@@ -26,7 +26,11 @@ import {
   type FeaturePackError,
   type FeaturePackResource
 } from '../shared/feature-pack-contracts';
-import { FeaturePackBoundary, FeaturePackPageHeader } from '../shared/feature-pack-ui';
+import {
+  FeaturePackBoundary,
+  FeaturePackPageHeader,
+  FeaturePackTimestamp
+} from '../shared/feature-pack-ui';
 
 export type AppNotification = Readonly<{
   id: string;
@@ -196,7 +200,9 @@ export function NotificationsFeaturePack({
                             {notification.category ? <Badge variant='outline'>{notification.category}</Badge> : null}
                           </div>
                           {notification.body ? <p className='text-muted-foreground mt-1 max-w-3xl text-pretty text-sm'>{notification.body}</p> : null}
-                          <p className='text-muted-foreground mt-2 text-xs'>{notification.createdAt}</p>
+                          <p className='text-muted-foreground mt-2 text-xs'>
+                            <FeaturePackTimestamp value={notification.createdAt} />
+                          </p>
                           {notification.actionLabel && canPerform(policy, 'openNotification') && actions?.openNotification ? (
                             <Button
                               className='mt-2 px-0'

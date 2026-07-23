@@ -6,6 +6,7 @@ import {
   createConsoleKitStore,
   useConsoleKitStore
 } from './console-kit-store';
+import { storageConsoleStoreSlice } from '../../feature-packs/storage/storage-console-slice';
 
 function ActiveFeature() {
   return <span>{useConsoleKitStore((state) => state.activeFeature)}</span>;
@@ -30,5 +31,19 @@ describe('ConsoleKitStoreProvider', () => {
     );
 
     expect(screen.getByText('auth')).toBeInTheDocument();
+  });
+
+  it('rejects a host-owned store that omitted an active module slice', () => {
+    const store = createConsoleKitStore('storage');
+
+    expect(() => render(
+      <ConsoleKitStoreProvider
+        initialFeature='storage'
+        sliceContributions={[storageConsoleStoreSlice]}
+        store={store}
+      >
+        <ActiveFeature />
+      </ConsoleKitStoreProvider>
+    )).toThrow(/missing the storage module slice/u);
   });
 });

@@ -5,11 +5,14 @@ import assert from 'node:assert/strict';
 import { fileURLToPath } from 'node:url';
 
 import {
+	CONSOLE_KIT_CORE_ITEM_NAME,
 	CONSOLE_KIT_ITEM_NAME,
+	CONSOLE_MODULE_ITEM_NAME_PREFIX,
+	CONSOLE_INSTALL_ROOT_DEPENDENCIES,
 	CONSTRUCTIVE_THEME_DEPENDENCY,
 	CONSTRUCTIVE_NAMESPACE,
+	FEATURE_PACK_IDS,
 	FEATURE_PACK_MANIFEST_TARGETS,
-	FEATURE_PACK_ROOT_DEPENDENCIES,
 	assertCanonicalFeaturePackSidecar,
 	assertExactInternalDependencyEdges,
 	assertFeaturePackRegistryContract,
@@ -323,34 +326,124 @@ test('rejects duplicate item names and install targets', () => {
 });
 
 function featurePackContractFixture(): RegistryItem[] {
-	const items: RegistryItem[] = [...FEATURE_PACK_MANIFEST_TARGETS].map(([itemName, target]) => ({
+	const items: RegistryItem[] = [
+		{
+			name: CONSOLE_KIT_CORE_ITEM_NAME,
+			type: 'registry:block',
+			registryDependencies: [],
+			files: [
+				{
+					path: 'registry/feature-module.ts',
+					target: 'src/blocks/console-kit/feature-module.ts',
+					type: 'registry:lib',
+				},
+				{
+					path: 'registry/console-kit-core.tsx',
+					target: 'src/blocks/console-kit/console-kit-core.tsx',
+					type: 'registry:component',
+				},
+				{
+					path: 'registry/constructive-console-kit.tsx',
+					target: 'src/blocks/console-kit/constructive/constructive-console-kit.tsx',
+					type: 'registry:component',
+				},
+				{
+					path: 'registry/constructive-meta-utils.ts',
+					target: 'src/blocks/console-kit/constructive/constructive-meta-utils.ts',
+					type: 'registry:lib',
+				},
+			],
+		},
+	];
+	items.push(...[...FEATURE_PACK_MANIFEST_TARGETS].map(([itemName, target]) => ({
 		name: itemName,
 		type: 'registry:block',
 		docs: itemName.startsWith('feature-pack-')
-			? `import '@/blocks/feature-packs/${itemName.slice('feature-pack-'.length)}/${itemName.slice('feature-pack-'.length)}-feature-pack';`
+			? `import '@/blocks/feature-packs/${itemName.slice('feature-pack-'.length)}/${itemName.slice('feature-pack-'.length)}-feature-pack'; install console-module-${itemName.slice('feature-pack-'.length)} for Console Kit.`
 			: undefined,
-		registryDependencies: (FEATURE_PACK_ROOT_DEPENDENCIES.get(itemName) ?? []).map(
+		registryDependencies: (CONSOLE_INSTALL_ROOT_DEPENDENCIES.get(itemName) ?? []).map(
 			(dependency) => `${CONSTRUCTIVE_NAMESPACE}${dependency}`,
 		),
 		files: [
 			{
+				path: itemName.startsWith('feature-pack-')
+					? `registry/${itemName}.tsx`
+					: `registry/${itemName}-console-kit.tsx`,
+				target: itemName.startsWith('feature-pack-')
+					? `src/blocks/feature-packs/${itemName.slice('feature-pack-'.length)}/${itemName.slice('feature-pack-'.length)}-feature-pack.tsx`
+					: `src/blocks/presets/${itemName.slice('preset-'.length)}-console-kit.tsx`,
+					type: 'registry:component',
+				},
+				{
 				path: `registry/${itemName}.json`,
 				target,
 				type: 'registry:file',
 			},
 		],
+	})));
+	items.push(...FEATURE_PACK_IDS.map((id) => {
+		const itemName = `${CONSOLE_MODULE_ITEM_NAME_PREFIX}${id}`;
+		return {
+			name: itemName,
+			type: 'registry:block',
+			docs: `import '@/blocks/feature-packs/${id}/${id}-console-module';`,
+			registryDependencies: (CONSOLE_INSTALL_ROOT_DEPENDENCIES.get(itemName) ?? []).map(
+				(dependency) => `${CONSTRUCTIVE_NAMESPACE}${dependency}`,
+			),
+			files: [
+				{
+					path: `registry/${itemName}.tsx`,
+					target: `src/blocks/feature-packs/${id}/${id}-console-module.tsx`,
+					type: 'registry:component',
+				},
+				...(id === 'data'
+					? []
+					: [{
+						path: `registry/${id}-adapter.ts`,
+						target: `src/blocks/console-kit/constructive/${id}-adapter.ts`,
+						type: 'registry:lib',
+					}]),
+				...(id === 'organizations'
+					? [{
+						path: 'registry/organizations-meta-contract.ts',
+						target: 'src/blocks/feature-packs/organizations/organizations-meta-contract.ts',
+						type: 'registry:lib',
+					}]
+					: id === 'storage'
+						? [
+							{
+								path: 'registry/storage-meta-contract.ts',
+								target: 'src/blocks/feature-packs/storage/storage-meta-contract.ts',
+								type: 'registry:lib',
+							},
+							{
+								path: 'registry/storage-console-slice.ts',
+								target: 'src/blocks/feature-packs/storage/storage-console-slice.ts',
+								type: 'registry:lib',
+							},
+						]
+						: []),
+			],
+		};
 	}));
 	items.push({
 		name: CONSOLE_KIT_ITEM_NAME,
 		type: 'registry:block',
-		registryDependencies: (FEATURE_PACK_ROOT_DEPENDENCIES.get(CONSOLE_KIT_ITEM_NAME) ?? []).map(
+		registryDependencies: (CONSOLE_INSTALL_ROOT_DEPENDENCIES.get(CONSOLE_KIT_ITEM_NAME) ?? []).map(
 			(dependency) => `${CONSTRUCTIVE_NAMESPACE}${dependency}`,
 		),
+		files: [
+			{
+				path: 'registry/constructive-index.ts',
+				target: 'src/blocks/console-kit/constructive/index.ts',
+				type: 'registry:lib',
+			},
+		],
 	});
 	return items;
 }
 
-test('accepts the exact feature-pack, preset, console-kit, and sidecar surface', () => {
+test('accepts the exact standalone pack, console module, preset, and sidecar surface', () => {
 	assert.doesNotThrow(() => assertFeaturePackRegistryContract(featurePackContractFixture()));
 });
 
@@ -374,12 +467,12 @@ test('rejects nested drift in installed feature-pack and preset sidecars', () =>
 
 	const canonicalPreset = {
 		schemaVersion: 1,
-		id: 'blank',
-		featurePacks: ['data'],
+		id: 'auth-hardened',
+		featurePacks: ['data', 'auth', 'users'],
 	};
 	const driftedPreset = { ...canonicalPreset, featurePacks: ['data', 'auth'] };
 	assert.throws(
-		() => assertCanonicalFeaturePackSidecar('preset-blank', driftedPreset, canonicalPreset),
+		() => assertCanonicalFeaturePackSidecar('preset-auth-hardened', driftedPreset, canonicalPreset),
 		/installed manifest drifted from the canonical feature-pack catalog/,
 	);
 });
@@ -388,9 +481,20 @@ test('rejects feature-pack surface drift and obsolete generated-SDK sidecars', (
 	const missingPack = featurePackContractFixture().filter((item) => item.name !== 'feature-pack-storage');
 	assert.throws(() => assertFeaturePackRegistryContract(missingPack), /Missing: feature-pack-storage/);
 
+	const missingConsoleModule = featurePackContractFixture().filter(
+		(item) => item.name !== 'console-module-storage',
+	);
+	assert.throws(
+		() => assertFeaturePackRegistryContract(missingConsoleModule),
+		/Missing: console-module-storage/,
+	);
+
 	const wrongTarget = featurePackContractFixture();
-	wrongTarget.find((item) => item.name === 'preset-full')!.files![0]!.target =
-		'~/.constructive/feature-packs/everything.json';
+	wrongTarget
+		.find((item) => item.name === 'preset-full')!
+		.files!
+		.find((file) => file.target === '~/.constructive/feature-packs/full.json')!.target =
+			'~/.constructive/feature-packs/everything.json';
 	assert.throws(() => assertFeaturePackRegistryContract(wrongTarget), /preset-full must install exactly/);
 
 	const obsoleteSidecar = featurePackContractFixture();
@@ -422,12 +526,37 @@ test('rejects feature-pack dependency profile drift and removed public items', (
 	];
 	assert.throws(
 		() => assertFeaturePackRegistryContract(missingDependency),
-		/Missing: feature-pack-auth, feature-pack-users/,
+		/Missing: console-kit-core, console-module-data, console-module-auth, console-module-users/,
+	);
+
+	const coupledLeaf = featurePackContractFixture();
+	coupledLeaf.find((item) => item.name === 'feature-pack-auth')!.registryDependencies = [
+		'@constructive/console-kit-core',
+		'@constructive/feature-pack-data',
+	];
+	assert.throws(
+		() => assertFeaturePackRegistryContract(coupledLeaf),
+		/must remain provider-neutral; remove Console Kit dependencies console-kit-core/,
+	);
+
+	const misplacedIntegration = featurePackContractFixture();
+	misplacedIntegration.find((item) => item.name === 'feature-pack-auth')!.files!.push({
+		path: 'registry/auth-console-module.tsx',
+		target: 'src/blocks/feature-packs/auth/auth-console-module.tsx',
+		type: 'registry:component',
+	});
+	assert.throws(
+		() => assertFeaturePackRegistryContract(misplacedIntegration),
+		/must not install Console Kit integration file/,
 	);
 
 	const removedItem = featurePackContractFixture();
 	removedItem.push({ name: 'schema-builder', type: 'registry:block' });
 	assert.throws(() => assertFeaturePackRegistryContract(removedItem), /still public/);
+
+	const removedPreset = featurePackContractFixture();
+	removedPreset.push({ name: 'preset-blank', type: 'registry:block' });
+	assert.throws(() => assertFeaturePackRegistryContract(removedPreset), /Unexpected: preset-blank/);
 });
 
 test('only UI and Blocks source manifests define the public registry contract', () => {

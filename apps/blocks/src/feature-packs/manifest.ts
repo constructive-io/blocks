@@ -34,6 +34,9 @@ export const FEATURE_PACK_META_SECTIONS = [
   'encoding'
 ] as const;
 
+export type FeaturePackMetaSection =
+  (typeof FEATURE_PACK_META_SECTIONS)[number];
+
 export const FEATURE_PACK_INTROSPECTION_SECTIONS = [
   'root-operations',
   'types',
@@ -42,8 +45,10 @@ export const FEATURE_PACK_INTROSPECTION_SECTIONS = [
   'directives'
 ] as const;
 
+export type FeaturePackIntrospectionSection =
+  (typeof FEATURE_PACK_INTROSPECTION_SECTIONS)[number];
+
 export const PRESET_PROFILE_IDS = [
-  'blank',
   'auth-hardened',
   'b2b-storage',
   'full'
@@ -93,10 +98,10 @@ export const presetProfileV1Schema = z
   .object({
     schemaVersion: z.literal(FEATURE_PACK_MANIFEST_SCHEMA_VERSION),
     id: z.enum(PRESET_PROFILE_IDS),
-    presetSlug: z.enum(['blank', 'auth:hardened', 'b2b:storage', 'full']),
+    presetSlug: z.enum(['auth:hardened', 'b2b:storage', 'full']),
     title: z.string().min(1),
     description: z.string().min(1),
-    stability: z.literal('experimental'),
+    stability: z.literal('stable'),
     featurePacks: z.array(z.enum(FEATURE_PACK_IDS))
   })
   .strict();

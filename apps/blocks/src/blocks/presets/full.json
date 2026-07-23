@@ -4,6 +4,6 @@
   "presetSlug": "full",
   "title": "Full",
   "description": "Every first-release Constructive feature pack.",
-  "stability": "experimental",
+  "stability": "stable",
   "featurePacks": ["data", "auth", "users", "organizations", "storage", "billing", "notifications"]
 }

@@ -19,6 +19,7 @@ import {
 } from '../../console-runtime';
 import type { FeaturePackId } from '../../../feature-packs';
 import { ConsoleKit } from '../console-kit';
+import type { ConsoleKitFeatureModule } from '../feature-module';
 import type {
   ConsoleKitAdapters,
   ConsoleKitConfig,
@@ -28,20 +29,12 @@ import {
   createConsoleKitStore,
   type ConsoleKitStoreApi
 } from '../store';
-import { createConstructiveAuthAdapter } from './auth-adapter';
-import { createConstructiveBillingAdapter } from './billing-adapter';
 import { createConstructiveCapabilityDiscovery } from './constructive-capabilities';
-import { createConstructiveNotificationsAdapter } from './notifications-adapter';
-import { createConstructiveOrganizationsAdapter } from './organizations-adapter';
-import { createConstructiveStorageAdapter } from './storage-adapter';
-import { createConstructiveUsersAdapter } from './users-adapter';
 
 export type ConstructiveTenantDatabase = Readonly<{
   id: string;
   name?: string;
   endpoints: ConsoleEndpointMap;
-  /** Exact application tables authorized by the provisioning manifest. */
-  tableAllowlist?: readonly string[];
 }>;
 
 /** Host-owned Console Kit session explicitly scoped to one tenant database. */
@@ -49,8 +42,9 @@ export type ConstructiveTenantConsoleSession = ConsoleSession & Readonly<{
   databaseId: string;
 }>;
 
-export type ConstructiveConsoleKitProps = Readonly<{
+export type ConstructiveConsoleKitCoreProps = Readonly<{
   database: ConstructiveTenantDatabase;
+  featureModules: readonly ConsoleKitFeatureModule[];
   className?: string;
   order?: readonly FeaturePackId[];
   routes?: ConsoleKitRouteConfig;
@@ -70,11 +64,13 @@ export type ConstructiveConsoleKitProps = Readonly<{
   /** Values parsed and scrubbed by the host from a client-only email-link fragment. */
   verificationEmailId?: string;
   verificationToken?: string;
+  featureOptions?: ConsoleKitConfig['featureOptions'];
   onError?: ConsoleKitConfig['onError'];
 }>;
 
 export type CreateConstructiveAdaptersOptions = Readonly<{
   store: ConsoleKitStoreApi;
+  featureModules: readonly ConsoleKitFeatureModule[];
   session?: DatabaseScopedStandaloneConsoleSession;
   resetRoleId?: string;
   resetToken?: string;
@@ -94,23 +90,27 @@ function endpoint(
 export function createConstructiveConsoleAdapters(
   options: CreateConstructiveAdaptersOptions
 ): ConsoleKitAdapters {
-  const discovery = createConstructiveCapabilityDiscovery(options.store);
-  return {
-    ...(options.session
-      ? { auth: createConstructiveAuthAdapter({ ...options, session: options.session, discovery }) }
-      : {}),
-    users: createConstructiveUsersAdapter({ store: options.store, discovery }),
-    organizations: createConstructiveOrganizationsAdapter({
+  const discovery = createConstructiveCapabilityDiscovery(
+    options.store,
+    options.featureModules
+  );
+  return Object.fromEntries(options.featureModules.flatMap((module) => {
+    const adapter = module.createAdapter?.({
       store: options.store,
-      discovery
-    }),
-    storage: createConstructiveStorageAdapter({ store: options.store, discovery }),
-    billing: createConstructiveBillingAdapter({ store: options.store, discovery }),
-    notifications: createConstructiveNotificationsAdapter({
-      store: options.store,
-      discovery
-    })
-  };
+      discovery,
+      session: options.session,
+      resetRoleId: options.resetRoleId,
+      resetToken: options.resetToken,
+      verificationEmailId: options.verificationEmailId,
+      verificationToken: options.verificationToken
+    });
+    return adapter
+      ? [[module.id, {
+          ...adapter,
+          requiresCapabilityDiscovery: true
+        }] as const]
+      : [];
+  })) as ConsoleKitAdapters;
 }
 
 function isDatabaseScopedStandaloneSession(
@@ -140,7 +140,7 @@ function reportConsoleKitError(error: ConsoleRuntimeError) {
   }
 }
 
-function ConstructiveConsoleKitInstance(props: ConstructiveConsoleKitProps) {
+function ConstructiveConsoleKitInstance(props: ConstructiveConsoleKitCoreProps) {
   const authEndpoint = endpoint(props.database.endpoints, 'auth');
   const externalAuthSession = isDatabaseScopedStandaloneSession(props.session)
     ? props.session
@@ -155,12 +155,22 @@ function ConstructiveConsoleKitInstance(props: ConstructiveConsoleKitProps) {
   );
   const internalStoreRef = React.useRef<ConsoleKitStoreApi | null>(null);
   if (!props.store && !internalStoreRef.current) {
-    const startsWithAuth = Boolean(authEndpoint) &&
+    const installed = new Set(props.featureModules.map((module) => module.id));
+    const startsWithAuth = installed.has('auth') && Boolean(authEndpoint) &&
       (!props.session || Boolean(externalAuthSession));
-    internalStoreRef.current = createConsoleKitStore(startsWithAuth ? 'auth' : 'data', {
-      databaseId: props.database.id,
-      organizationId: null
-    });
+    const initialFeature = startsWithAuth
+      ? 'auth'
+      : props.featureModules[0]?.id ?? 'data';
+    internalStoreRef.current = createConsoleKitStore(
+      initialFeature,
+      {
+        databaseId: props.database.id,
+        organizationId: null
+      },
+      props.featureModules.flatMap((module) =>
+        module.storeSlice ? [module.storeSlice] : []
+      )
+    );
   }
   const store = props.store ?? internalStoreRef.current;
 
@@ -229,6 +239,7 @@ function ConstructiveConsoleKitInstance(props: ConstructiveConsoleKitProps) {
     if (!store || !session) return null;
     return createConstructiveConsoleAdapters({
       store,
+      featureModules: props.featureModules,
       session: authEndpoint ? authSession ?? undefined : undefined,
       resetRoleId: props.resetRoleId,
       resetToken: props.resetToken,
@@ -240,6 +251,7 @@ function ConstructiveConsoleKitInstance(props: ConstructiveConsoleKitProps) {
     props.resetToken,
     props.verificationEmailId,
     props.verificationToken,
+    props.featureModules,
     authEndpoint?.id,
     authEndpoint?.url,
     authSession,
@@ -268,6 +280,7 @@ function ConstructiveConsoleKitInstance(props: ConstructiveConsoleKitProps) {
   return (
     <ConsoleKit
       className={props.className}
+      featureModules={props.featureModules}
       config={{
         databaseId: props.database.id,
         endpoints: props.database.endpoints,
@@ -277,7 +290,7 @@ function ConstructiveConsoleKitInstance(props: ConstructiveConsoleKitProps) {
         order: props.order,
         routes: props.routes,
         showUnavailable: props.showUnavailable ?? true,
-        table: { includeTables: props.database.tableAllowlist },
+        featureOptions: props.featureOptions,
         brand: {
           name: props.database.name ?? 'Constructive',
           description: props.database.id
@@ -293,12 +306,13 @@ function ConstructiveConsoleKitInstance(props: ConstructiveConsoleKitProps) {
  * Batteries-included application console for one compatible Constructive
  * tenant database. A database switch remounts every session and cache scope.
  */
-export function ConstructiveConsoleKit(props: ConstructiveConsoleKitProps) {
+export function ConstructiveConsoleKitCore(props: ConstructiveConsoleKitCoreProps) {
   const authEndpoint = endpoint(props.database.endpoints, 'auth');
   const instanceKey = [
     props.database.id,
     authEndpoint?.id ?? 'missing-auth-id',
-    authEndpoint?.url ?? 'missing-auth-url'
+    authEndpoint?.url ?? 'missing-auth-url',
+    props.featureModules.map((module) => module.id).join(',')
   ].join(':');
   return <ConstructiveConsoleKitInstance key={instanceKey} {...props} />;
 }

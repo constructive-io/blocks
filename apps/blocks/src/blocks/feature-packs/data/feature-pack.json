@@ -10,8 +10,8 @@
     "optional": ["data.search", "data.i18n", "data.realtime"]
   },
   "metadata": {
-    "requiredMetaSections": ["tables", "fields", "constraints", "relations", "query"],
-    "optionalMetaSections": ["scope", "encoding", "search", "i18n", "realtime"],
+    "requiredMetaSections": ["tables", "fields", "constraints", "relations", "query", "scope"],
+    "optionalMetaSections": ["encoding", "search", "i18n", "realtime"],
     "requiredIntrospectionSections": ["root-operations", "types", "input-objects"],
     "optionalIntrospectionSections": ["enums", "directives"]
   }

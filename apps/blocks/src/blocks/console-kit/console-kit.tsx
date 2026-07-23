@@ -1,19 +1,11 @@
 'use client';
 
 import * as React from 'react';
-import type { DocumentNode } from 'graphql';
-import { print } from 'graphql';
 import {
-  BellIcon,
-  Building2Icon,
   CircleAlertIcon,
-  CreditCardIcon,
   DatabaseIcon,
-  HardDriveIcon,
   LockKeyholeIcon,
-  RefreshCwIcon,
-  ShieldCheckIcon,
-  UsersIcon
+  RefreshCwIcon
 } from 'lucide-react';
 
 import { Alert, AlertDescription, AlertTitle } from '@constructive-io/ui/alert';
@@ -23,23 +15,8 @@ import { Badge } from '@constructive-io/ui/badge';
 import { Button } from '@constructive-io/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@constructive-io/ui/card';
 import { Skeleton } from '@constructive-io/ui/skeleton';
-import type { SheetsConfig, SheetsExecuteFn } from '@constructive-io/sheets';
 
-import { FEATURE_PACK_MANIFESTS, FEATURE_PACK_IDS, type FeaturePackId } from '../../feature-packs';
-import { AuthFeaturePack } from '../feature-packs/auth/auth-feature-pack';
-import type { AuthFeaturePackProps } from '../feature-packs/auth/auth-contracts';
-import { BillingFeaturePack, type BillingFeaturePackProps } from '../feature-packs/billing/billing-feature-pack';
-import { DataFeaturePack, type DataFeaturePackProps } from '../feature-packs/data/data-feature-pack';
-import {
-  NotificationsFeaturePack,
-  type NotificationsFeaturePackProps
-} from '../feature-packs/notifications/notifications-feature-pack';
-import {
-  OrganizationsFeaturePack,
-  type OrganizationsFeaturePackProps
-} from '../feature-packs/organizations/organizations-feature-pack';
-import { StorageFeaturePack, type StorageFeaturePackProps } from '../feature-packs/storage/storage-feature-pack';
-import { UsersFeaturePack, type UsersFeaturePackProps } from '../feature-packs/users/users-feature-pack';
+import type { FeaturePackId } from '../../feature-packs';
 import type { ConsoleRuntimeError } from '../console-runtime';
 import {
   CONSOLE_ENDPOINT_KINDS,
@@ -53,9 +30,10 @@ import type {
   ConsoleKitConfig,
   ConsoleKitFeatureAdapter,
   ConsoleKitFeatureAvailability,
-  ConsoleKitFeaturePropsMap,
   ConsoleKitProps
 } from './console-kit-contracts';
+import { ConsoleConnectionMenu } from './console-connection-menu';
+import type { ConsoleKitFeatureModule } from './feature-module';
 import { normalizeConsoleKitError, useConsoleKitRuntime } from './console-kit-runtime';
 import {
   ConsoleKitStoreProvider,
@@ -63,17 +41,6 @@ import {
 } from './store';
 import { useLatestCallback } from './use-latest-callback';
 
-const FEATURE_ICONS = {
-  data: DatabaseIcon,
-  auth: ShieldCheckIcon,
-  users: UsersIcon,
-  organizations: Building2Icon,
-  storage: HardDriveIcon,
-  billing: CreditCardIcon,
-  notifications: BellIcon
-} as const;
-
-const manifests = new Map(FEATURE_PACK_MANIFESTS.map((manifest) => [manifest.id, manifest]));
 const adapterReferenceIds = new WeakMap<object, number>();
 let nextAdapterReferenceId = 1;
 
@@ -93,6 +60,21 @@ function adapterLoadRequestKey(
   attempt: number,
   subscriptionRevision: number
 ): string {
+  const scopeKey = adapterLoadScopeKey(feature, adapter, runtime);
+
+  return JSON.stringify([
+    scopeKey,
+    adapterReferenceId(runtime.metadata),
+    attempt,
+    subscriptionRevision
+  ]);
+}
+
+function adapterLoadScopeKey(
+  feature: FeaturePackId,
+  adapter: ConsoleKitFeatureAdapter<unknown>,
+  runtime: ConsoleKitAdapterContext
+): string {
   const identity = getConsoleSessionIdentity(runtime.session);
   const endpoints = CONSOLE_ENDPOINT_KINDS.map((kind) => {
     const endpoint = runtime.endpoints[kind];
@@ -105,29 +87,26 @@ function adapterLoadRequestKey(
     endpoints,
     runtime.session.status,
     identity ? createConsoleIdentityKey(identity) : null,
-    adapterReferenceId(adapter),
     adapterReferenceId(runtime.transportFor),
-    adapterReferenceId(runtime.metadata),
-    attempt,
-    subscriptionRevision
+    adapterReferenceId(adapter)
   ]);
 }
 
 export function getConsoleKitFeatureAvailability(
-  feature: FeaturePackId,
+  module: ConsoleKitFeatureModule,
   runtime: ConsoleKitAdapterContext,
   adapter: ConsoleKitFeatureAdapter<unknown> | undefined,
-  standaloneAuth: boolean,
   discoveredCapability?: ConsolePackCapabilityState
 ): ConsoleKitFeatureAvailability {
+  const feature = module.id;
+  const canRenderWithoutAdapter = module.canRenderWithoutAdapter?.(runtime) ?? false;
   if (runtime.session.status === 'loading') return { status: 'checking' };
   if (runtime.session.status === 'error') {
     const unauthorized = runtime.session.error.code === 'UNAUTHENTICATED' || runtime.session.error.code === 'FORBIDDEN';
     if (
-      feature === 'auth' &&
       unauthorized &&
-      runtime.endpoints.auth &&
-      (adapter || standaloneAuth)
+      module.canRenderWithSessionError &&
+      canRenderWithoutAdapter
     ) {
       return { status: 'available' };
     }
@@ -137,17 +116,41 @@ export function getConsoleKitFeatureAvailability(
     };
   }
 
-  const manifest = manifests.get(feature);
-  if (!manifest) return { status: 'unavailable', reason: 'The feature is not part of this Console Kit release.' };
-
-  if (discoveredCapability?.status === 'checking') return { status: 'checking' };
-  if (discoveredCapability?.status === 'unavailable') {
-    return { status: 'unavailable', reason: discoveredCapability.reason };
-  }
+  const manifest = module.manifest;
 
   const missingEndpoint = manifest.endpoints.required.find((kind) => !runtime.endpoints[kind]);
   if (missingEndpoint) {
     return { status: 'unavailable', reason: `The ${missingEndpoint} endpoint is not configured.` };
+  }
+
+  // A configured protected endpoint is auth-locked until the identity is
+  // established. Capability discovery may itself be RLS-protected, so an
+  // anonymous probe cannot prove that the feature pack is absent.
+  if (
+    runtime.session.status === 'anonymous' &&
+    !canRenderWithoutAdapter
+  ) {
+    return { status: 'unauthorized', reason: 'Sign in to use this feature.' };
+  }
+
+  if (
+    adapter?.requiresCapabilityDiscovery &&
+    !discoveredCapability &&
+    !canRenderWithoutAdapter
+  ) {
+    return { status: 'checking' };
+  }
+  if (
+    discoveredCapability?.status === 'checking' &&
+    !canRenderWithoutAdapter
+  ) {
+    return { status: 'checking' };
+  }
+  if (
+    discoveredCapability?.status === 'unavailable' &&
+    !module.canRenderWithoutAdapter?.(runtime)
+  ) {
+    return { status: 'unavailable', reason: discoveredCapability.reason };
   }
 
   let adapterAvailability: ConsoleKitFeatureAvailability | undefined;
@@ -164,7 +167,11 @@ export function getConsoleKitFeatureAvailability(
       };
     }
   }
-  if (adapterAvailability && adapterAvailability.status !== 'available') {
+  if (
+    adapterAvailability &&
+    adapterAvailability.status !== 'available' &&
+    !canRenderWithoutAdapter
+  ) {
     return adapterAvailability;
   }
 
@@ -182,26 +189,19 @@ export function getConsoleKitFeatureAvailability(
     }
   }
 
-  // Authentication must remain reachable before the data endpoint can be
-  // inspected. A standalone session supplies the default sign-in adapter.
-  if (feature === 'auth' && runtime.session.status === 'anonymous') {
-    if (adapter || standaloneAuth) return { status: 'available' };
-    return { status: 'unavailable', reason: 'No authentication adapter was supplied.' };
+  if (module.requiresMetadata) {
+    if (runtime.metadata.status === 'checking') return { status: 'checking' };
+    if (runtime.metadata.status === 'incompatible') {
+      return { status: 'incompatible', reason: runtime.metadata.message };
+    }
+    if (runtime.metadata.status === 'error') {
+      return { status: 'error', reason: runtime.metadata.error.message };
+    }
   }
 
-  if (runtime.session.status === 'anonymous' && feature !== 'data') {
-    return { status: 'unauthorized', reason: 'Sign in to use this feature.' };
+  if (!adapter && canRenderWithoutAdapter) {
+    return { status: 'available' };
   }
-
-  if (runtime.metadata.status === 'checking') return { status: 'checking' };
-  if (runtime.metadata.status === 'incompatible') {
-    return { status: 'incompatible', reason: runtime.metadata.message };
-  }
-  if (runtime.metadata.status === 'error') {
-    return { status: 'error', reason: runtime.metadata.error.message };
-  }
-
-  if (feature === 'data' && !adapter) return { status: 'available' };
   if (!adapter) {
     return { status: 'unavailable', reason: `No ${feature} adapter was supplied by the host application.` };
   }
@@ -223,22 +223,21 @@ function FeatureLoadingState() {
 }
 
 function AdapterFeature({
-  feature,
+  module,
   adapter,
   runtime,
-  dataConfig,
-  defaultDataProps,
+  config,
   onError,
   subscriptionRevision
 }: Readonly<{
-  feature: FeaturePackId;
+  module: ConsoleKitFeatureModule;
   adapter: ConsoleKitFeatureAdapter<unknown>;
   runtime: ConsoleKitAdapterContext;
-  dataConfig: SheetsConfig;
-  defaultDataProps: Omit<DataFeaturePackProps, 'config'>;
+  config: ConsoleKitConfig;
   onError?: ConsoleKitConfig['onError'];
   subscriptionRevision: number;
 }>) {
+  const feature = module.id;
   const storedState = useConsoleKitStore((store) => store.adapterLoads[feature]);
   const attempt = useConsoleKitStore(
     (store) => store.adapterAttempts[feature] ?? 0
@@ -252,9 +251,22 @@ function AdapterFeature({
     attempt,
     subscriptionRevision
   );
+  const scopeKey = adapterLoadScopeKey(feature, adapter, runtime);
   const state = storedState?.adapter === adapter && storedState.requestKey === requestKey
     ? storedState
     : undefined;
+  const retainedReadyRef = React.useRef<Readonly<{
+    scopeKey: string;
+    props: unknown;
+  }> | null>(null);
+  if (retainedReadyRef.current?.scopeKey !== scopeKey) {
+    retainedReadyRef.current = null;
+  }
+  if (state?.status === 'ready') {
+    retainedReadyRef.current = { scopeKey, props: state.props };
+  } else if (state?.status === 'error') {
+    retainedReadyRef.current = null;
+  }
   const reportError = useLatestCallback((error: ConsoleRuntimeError) => {
     onError?.(error, { phase: 'adapter', feature });
   });
@@ -290,8 +302,13 @@ function AdapterFeature({
     return () => controller.abort();
   }, [adapter, feature, requestKey, runtime, setAdapterLoad]);
 
-  if (!state || state.status === 'loading') return <FeatureLoadingState />;
-  if (state.status === 'error') {
+  const retained = retainedReadyRef.current?.scopeKey === scopeKey
+    ? retainedReadyRef.current
+    : null;
+  if ((!state || state.status === 'loading') && !retained) {
+    return <FeatureLoadingState />;
+  }
+  if (state?.status === 'error') {
     return (
       <Alert variant='destructive'>
         <CircleAlertIcon aria-hidden='true' />
@@ -307,76 +324,48 @@ function AdapterFeature({
     );
   }
 
-  const adapterOnError = (state.props as Readonly<{
-    onError?: (error: ConsoleRuntimeError) => void;
-  }>).onError;
-  const forwardFeatureError = (error: ConsoleRuntimeError) => {
-    adapterOnError?.(error);
+  const forwardFeatureError = (cause: unknown) => {
+    const error = normalizeConsoleKitError(
+      cause,
+      `The ${feature} action failed.`
+    );
     onError?.(
-      normalizeConsoleKitError(error, `The ${feature} action failed.`),
+      error,
       { phase: 'feature', feature }
     );
   };
-
-  if (feature === 'data') {
-    return (
-      <DataFeaturePack
-        {...defaultDataProps}
-        {...(state.props as ConsoleKitFeaturePropsMap['data'])}
-        config={dataConfig}
-      />
-    );
-  }
-  if (feature === 'auth') {
-    return <AuthFeaturePack {...(state.props as AuthFeaturePackProps)} onError={forwardFeatureError} />;
-  }
-  if (feature === 'users') {
-    return <UsersFeaturePack {...(state.props as UsersFeaturePackProps)} onError={forwardFeatureError} />;
-  }
-  if (feature === 'organizations') {
-    return (
-      <OrganizationsFeaturePack
-        {...(state.props as OrganizationsFeaturePackProps)}
-        onError={forwardFeatureError}
-      />
-    );
-  }
-  if (feature === 'storage') {
-    return <StorageFeaturePack {...(state.props as StorageFeaturePackProps)} onError={forwardFeatureError} />;
-  }
-  if (feature === 'billing') {
-    return <BillingFeaturePack {...(state.props as BillingFeaturePackProps)} onError={forwardFeatureError} />;
-  }
+  const Feature = module.Component;
+  const adapterProps = state?.status === 'ready'
+    ? state.props
+    : retained?.props;
   return (
-    <NotificationsFeaturePack
-      {...(state.props as NotificationsFeaturePackProps)}
+    <Feature
+      adapterProps={adapterProps}
+      config={config}
       onError={forwardFeatureError}
+      runtime={runtime}
     />
   );
 }
 
-function documentSource(document: unknown): string {
-  if (typeof document === 'string') return document;
-  if (document && typeof document === 'object' && 'kind' in document) return print(document as DocumentNode);
-  return String(document);
-}
-
 function UnavailableFeature({
-  feature,
+  module,
   availability,
   render
 }: Readonly<{
-  feature: FeaturePackId;
+  module: ConsoleKitFeatureModule;
   availability: ConsoleKitFeatureAvailability;
   render?: ConsoleKitConfig['renderUnavailableFeature'];
 }>) {
+  const feature = module.id;
   if (render) return render(feature, availability);
-  const manifest = manifests.get(feature);
+  const manifest = module.manifest;
   const reason = availability.status === 'checking'
     ? 'Console Kit is checking this database.'
     : availability.status === 'available'
       ? ''
       : availability.reason;
+  const requiresSignIn = availability.status === 'unauthorized';
 
   return (
     <Card className='max-w-2xl' variant='flat'>
@@ -385,24 +374,46 @@ function UnavailableFeature({
           <LockKeyholeIcon aria-hidden='true' />
         </div>
         <CardTitle>
-          <h1>{manifest?.title ?? feature} is unavailable</h1>
+          <h1>
+            {requiresSignIn
+              ? `Sign in to use ${manifest?.title ?? feature}`
+              : `${manifest?.title ?? feature} is unavailable`}
+          </h1>
         </CardTitle>
         <CardDescription>{reason}</CardDescription>
       </CardHeader>
       <CardContent>
-        <p className='text-muted-foreground text-sm'>Install the matching database feature pack or update the host adapter, then reload this view.</p>
+        <p className='text-muted-foreground text-sm'>
+          {requiresSignIn
+            ? 'Authenticate with this tenant to load its policy-visible records and actions.'
+            : 'Install the matching database feature pack or update the host adapter, then reload this view.'}
+        </p>
       </CardContent>
     </Card>
   );
 }
 
-function orderedFeatures(order: readonly FeaturePackId[] | undefined): FeaturePackId[] {
-  const requested = order ?? FEATURE_PACK_IDS;
-  return [...new Set(requested)].filter((feature): feature is FeaturePackId => FEATURE_PACK_IDS.includes(feature));
+function orderedModules(
+  modules: readonly ConsoleKitFeatureModule[],
+  order: readonly FeaturePackId[] | undefined
+): ConsoleKitFeatureModule[] {
+  const byId = new Map<FeaturePackId, ConsoleKitFeatureModule>();
+  for (const module of modules) {
+    if (byId.has(module.id)) {
+      throw new Error(`Console Kit received duplicate ${module.id} feature modules.`);
+    }
+    byId.set(module.id, module);
+  }
+  const requested = order ?? modules.map((module) => module.id);
+  return [...new Set(requested)].flatMap((feature) => {
+    const module = byId.get(feature);
+    return module ? [module] : [];
+  });
 }
 
 function useAdapterSubscriptions(
   adapters: ConsoleKitConfig['adapters'],
+  features: readonly FeaturePackId[],
   runtime: ConsoleKitAdapterContext,
   onError?: ConsoleKitConfig['onError']
 ): number {
@@ -422,10 +433,10 @@ function useAdapterSubscriptions(
       feature: FeaturePackId;
       unsubscribe: () => void;
     }>> = [];
-    const entries = Object.entries(adapters ?? {}) as Array<[
-      FeaturePackId,
-      ConsoleKitFeatureAdapter<unknown> | undefined
-    ]>;
+    const entries = features.map((feature) => [
+      feature,
+      adapters?.[feature] as ConsoleKitFeatureAdapter<unknown> | undefined
+    ] as const);
 
     for (const [feature, adapter] of entries) {
       if (!adapter?.subscribe) continue;
@@ -460,12 +471,12 @@ function useAdapterSubscriptions(
         }
       }
     };
-  }, [adapters, notifyAdapterChange, runtime]);
+  }, [adapters, features, notifyAdapterChange, runtime]);
 
   return revision;
 }
 
-function ConsoleKitContent({ config, className }: ConsoleKitProps) {
+function ConsoleKitContent({ config, featureModules, className }: ConsoleKitProps) {
   const runtime = useConsoleKitRuntime({
     databaseId: config.databaseId,
     endpoints: config.endpoints,
@@ -477,27 +488,68 @@ function ConsoleKitContent({ config, className }: ConsoleKitProps) {
       [config.onError]
     )
   });
-  const featureOrder = React.useMemo(() => orderedFeatures(config.order), [config.order]);
+  const ordered = React.useMemo(
+    () => orderedModules(featureModules, config.order),
+    [config.order, featureModules]
+  );
+  const moduleById = React.useMemo(
+    () => new Map(ordered.map((module) => [module.id, module])),
+    [ordered]
+  );
+  const featureOrder = React.useMemo(
+    () => ordered.map((module) => module.id),
+    [ordered]
+  );
   const adapterRevision = useAdapterSubscriptions(
     config.adapters,
+    featureOrder,
     runtime,
     config.onError
   );
   const discoveredCapabilities = useConsoleKitStore(
     (store) => store.packCapabilities
   );
-  const availability = React.useMemo(
-    () => Object.fromEntries(featureOrder.map((feature) => [
-      feature,
-      getConsoleKitFeatureAvailability(
-        feature,
+  const authLoad = useConsoleKitStore((store) => store.adapterLoads.auth);
+  const authAttempt = useConsoleKitStore(
+    (store) => store.adapterAttempts.auth ?? 0
+  );
+  const authAdapter = config.adapters?.auth as
+    | ConsoleKitFeatureAdapter<unknown>
+    | undefined;
+  const authModule = moduleById.get('auth');
+  const authRequestKey = authAdapter
+    ? adapterLoadRequestKey(
+        'auth',
+        authAdapter,
         runtime,
-        config.adapters?.[feature] as ConsoleKitFeatureAdapter<unknown> | undefined,
-        config.session.mode === 'standalone',
-        discoveredCapabilities[feature]
+        authAttempt,
+        adapterRevision
+      )
+    : null;
+  const loadedAuthIdentity = React.useMemo(() => {
+    if (
+      !authAdapter ||
+      !authRequestKey ||
+      authLoad?.status !== 'ready' ||
+      authLoad.adapter !== authAdapter ||
+      authLoad.requestKey !== authRequestKey ||
+      runtime.session.status !== 'authenticated'
+    ) {
+      return undefined;
+    }
+    return authModule?.resolveAccountIdentity?.(authLoad.props, runtime);
+  }, [authAdapter, authLoad, authModule, authRequestKey, runtime]);
+  const availability = React.useMemo(
+    () => Object.fromEntries(ordered.map((module) => [
+      module.id,
+      getConsoleKitFeatureAvailability(
+        module,
+        runtime,
+        config.adapters?.[module.id] as ConsoleKitFeatureAdapter<unknown> | undefined,
+        discoveredCapabilities[module.id]
       )
     ])) as Record<FeaturePackId, ConsoleKitFeatureAvailability>,
-    [adapterRevision, config.adapters, config.session.mode, discoveredCapabilities, featureOrder, runtime]
+    [adapterRevision, config.adapters, discoveredCapabilities, ordered, runtime]
   );
 
   const internalFeature = useConsoleKitStore((store) => store.activeFeature);
@@ -507,13 +559,15 @@ function ConsoleKitContent({ config, className }: ConsoleKitProps) {
   const setAuthEntryMode = useConsoleKitStore(
     (store) => store.setAuthEntryMode
   );
-  const activeFeature = config.routes?.activeFeature ?? internalFeature;
+  const requestedActiveFeature = config.routes?.activeFeature ?? internalFeature;
+  const activeFeature = featureOrder.includes(requestedActiveFeature)
+    ? requestedActiveFeature
+    : (featureOrder[0] ?? requestedActiveFeature);
+  const activeModule = moduleById.get(activeFeature);
   React.useEffect(() => {
-    if (config.routes?.activeFeature) {
-      setInternalFeature(config.routes.activeFeature);
-    }
-  }, [config.routes?.activeFeature, setInternalFeature]);
-  const activeAvailability = availability[activeFeature]
+    if (activeFeature !== internalFeature) setInternalFeature(activeFeature);
+  }, [activeFeature, internalFeature, setInternalFeature]);
+  const activeAvailability = availability[activeModule?.id ?? activeFeature]
     ?? { status: 'unavailable', reason: 'This feature is not in the configured Console Kit order.' };
 
   const featureHref = React.useCallback(
@@ -527,7 +581,7 @@ function ConsoleKitContent({ config, className }: ConsoleKitProps) {
   const navigate = React.useCallback((feature: FeaturePackId) => {
     setInternalFeature(feature);
     config.routes?.onNavigate?.(feature);
-  }, [config.routes]);
+  }, [config.routes, setInternalFeature]);
 
   const renderLink = React.useCallback((props: AppLinkRenderProps) => {
     const feature = hrefToFeature.get(props.href);
@@ -579,23 +633,27 @@ function ConsoleKitContent({ config, className }: ConsoleKitProps) {
     setInternalFeature
   ]);
 
-  const visibleFeatures = featureOrder.filter((feature) => {
-    const status = availability[feature]?.status;
+  const visibleModules = ordered.filter((module) => {
+    const status = availability[module.id]?.status;
     return config.showUnavailable || status === 'available' || status === 'checking';
   });
   const navigation = React.useMemo<AppNavigationGroup[]>(() => [{
     id: 'features',
     label: 'Application',
-    items: visibleFeatures.map((feature) => {
-      const state = availability[feature];
+    items: visibleModules.map((module) => {
+      const feature = module.id;
+      const state = availability[module.id];
       return {
         id: feature,
-        label: config.labels?.[feature] ?? manifests.get(feature)?.title ?? feature,
+        label: config.labels?.[feature] ?? module.manifest.title,
         href: featureHref(feature),
-        icon: FEATURE_ICONS[feature],
+        icon: module.icon,
         isActive: feature === activeFeature,
+        disabled: state?.status === 'unauthorized',
         badge: state?.status === 'checking'
           ? '…'
+          : state?.status === 'unauthorized'
+            ? 'Sign in'
           : discoveredCapabilities[feature]?.status === 'partial'
             ? 'Partial'
             : state?.status !== 'available'
@@ -603,15 +661,26 @@ function ConsoleKitContent({ config, className }: ConsoleKitProps) {
               : undefined
       };
     })
-  }], [activeFeature, availability, config.labels, discoveredCapabilities, featureHref, visibleFeatures]);
+  }], [activeFeature, availability, config.labels, discoveredCapabilities, featureHref, visibleModules]);
 
   const identity = runtime.session.status === 'authenticated' ? runtime.session.identity : undefined;
   const account = React.useMemo<AppAccount | undefined>(() => {
     if (config.account) return config.account;
     if (!identity) return undefined;
+    const privateEmail = loadedAuthIdentity?.primaryEmail === 'Private email';
+    const accountName = loadedAuthIdentity?.displayName ||
+      (!privateEmail ? loadedAuthIdentity?.primaryEmail : undefined) ||
+      'Signed-in user';
+    const shortId = identity.subjectId.length > 12
+      ? `${identity.subjectId.slice(0, 8)}…`
+      : identity.subjectId;
     return {
-      name: identity.subjectId,
-      secondaryLabel: identity.organizationId ?? identity.tenantId,
+      name: accountName,
+      secondaryLabel: !privateEmail && loadedAuthIdentity?.primaryEmail
+        ? loadedAuthIdentity.primaryEmail
+        : `User ${shortId}`,
+      avatarUrl: loadedAuthIdentity?.avatarUrl,
+      avatarAlt: loadedAuthIdentity?.avatarUrl ? `${accountName} avatar` : undefined,
       actionGroups: config.session.mode === 'standalone'
         ? [{
             id: 'session',
@@ -650,109 +719,79 @@ function ConsoleKitContent({ config, className }: ConsoleKitProps) {
           }]
         : undefined
     };
-  }, [config.account, config.onError, config.session, identity, setAuthEntryMode]);
-
-  const dataEndpoint = runtime.endpoints.data;
-  const scopedDataTransport = runtime.transportFor('data');
-  const execute = React.useMemo<SheetsExecuteFn | undefined>(() => {
-    if (!scopedDataTransport) return undefined;
-    return async <T,>(document: unknown, variables?: Record<string, unknown>) => {
-      const result = await scopedDataTransport.execute<T>({
-        document: documentSource(document),
-        variables
-      });
-      if (result.ok) return result.data;
-      const first = result.errors[0];
-      const error = new Error(first?.message || 'The GraphQL operation failed.') as Error & { code?: string };
-      const code = first?.extensions?.code;
-      if (typeof code === 'string') error.code = code;
-      throw error;
-    };
-  }, [scopedDataTransport]);
-  const sheetsConfig = React.useMemo<SheetsConfig>(() => ({
-    endpoint: dataEndpoint?.url ?? '',
-    databaseId: config.databaseId,
-    auth: {
-      mode: 'embedded',
-      getToken: () => null,
-      getIdentityKey: () => {
-        if (runtime.session.status === 'authenticated' || runtime.session.status === 'anonymous') {
-          return createConsoleIdentityKey(runtime.session.identity);
-        }
-        return null;
-      }
-    },
-    execute,
-    queryClient: config.queryClient,
-    onAuthError: () => config.onError?.(
-      { message: 'The data endpoint rejected the current session.', code: 'UNAUTHENTICATED' },
-      { phase: 'feature', feature: 'data' }
-    ),
-    onError: (cause) => config.onError?.(
-      normalizeConsoleKitError(cause, 'The data explorer reported an error.'),
-      { phase: 'feature', feature: 'data' }
-    )
-  }), [config.databaseId, config.onError, config.queryClient, dataEndpoint?.url, execute, runtime.session]);
-  const defaultDataProps = React.useMemo<Omit<DataFeaturePackProps, 'config'>>(() => ({
-    applicationScopes: config.table?.applicationScopes,
-    includeTables: config.table?.includeTables,
-    excludeTables: config.table?.excludeTables,
-    pageSize: config.table?.pageSize,
-    onCreateTable: config.table?.onCreateTable,
-    onEvent: config.table?.onEvent,
-    sheetsProps: config.table?.sheetsProps
-  }), [config.table]);
+  }, [
+    config.account,
+    config.onError,
+    config.session,
+    identity,
+    loadedAuthIdentity,
+    setAuthEntryMode
+  ]);
 
   let content: React.ReactNode;
-  if (activeAvailability.status === 'checking') {
+  if (!activeModule) {
+    content = (
+      <Alert variant='destructive'>
+        <CircleAlertIcon aria-hidden='true' />
+        <AlertTitle>No feature modules are installed</AlertTitle>
+        <AlertDescription>
+          Install at least one Console Kit feature pack and pass its module to the core.
+        </AlertDescription>
+      </Alert>
+    );
+  } else if (activeAvailability.status === 'checking') {
     content = <FeatureLoadingState />;
   } else if (activeAvailability.status !== 'available') {
     content = (
       <UnavailableFeature
         availability={activeAvailability}
-        feature={activeFeature}
+        module={activeModule}
         render={config.renderUnavailableFeature}
       />
     );
   } else {
-    const adapter = config.adapters?.[activeFeature] as ConsoleKitFeatureAdapter<unknown> | undefined;
-    if (activeFeature === 'data' && !adapter) {
-      content = <DataFeaturePack {...defaultDataProps} config={sheetsConfig} />;
-    } else if (adapter) {
+    const adapter = config.adapters?.[activeModule.id] as ConsoleKitFeatureAdapter<unknown> | undefined;
+    const discoveredCapability = discoveredCapabilities[activeModule.id];
+    const canRenderWhileDiscovering = activeModule.canRenderWithoutAdapter?.(runtime) ?? false;
+    const adapterAwaitingDiscovery = adapter?.requiresCapabilityDiscovery && (
+      !discoveredCapability || discoveredCapability.status === 'checking'
+    ) && !canRenderWhileDiscovering;
+    if (adapter) {
+      content = adapterAwaitingDiscovery
+        ? <FeatureLoadingState />
+        : (
+            <AdapterFeature
+              adapter={adapter}
+              config={config}
+              module={activeModule}
+              onError={config.onError}
+              runtime={runtime}
+              subscriptionRevision={adapterRevision}
+            />
+          );
+    } else if (activeModule.canRenderWithoutAdapter?.(runtime)) {
+      const Feature = activeModule.Component;
       content = (
-        <AdapterFeature
-          adapter={adapter}
-          dataConfig={sheetsConfig}
-          defaultDataProps={defaultDataProps}
-          feature={activeFeature}
-          onError={config.onError}
-          runtime={runtime}
-          subscriptionRevision={adapterRevision}
-        />
-      );
-    } else if (
-      activeFeature === 'auth' &&
-      config.session.mode === 'standalone' &&
-      runtime.session.status !== 'authenticated' &&
-      runtime.session.status !== 'loading'
-    ) {
-      content = (
-        <AuthFeaturePack
-          actions={{
-            signIn: ({ email, password }) => config.session.mode === 'standalone'
-              ? config.session.beginSignIn({ credentials: { email, password } })
-              : undefined
-          }}
-          onError={(error) => config.onError?.(error, {
+        <Feature
+          config={config}
+          onError={(cause) => config.onError?.(
+            normalizeConsoleKitError(
+              cause,
+              `The ${activeModule.id} action failed.`
+            ), {
             phase: 'feature',
-            feature: 'auth'
+            feature: activeModule.id
           })}
-          policy={{ signIn: true }}
-          view='entry'
+          runtime={runtime}
         />
       );
     } else {
-      content = <UnavailableFeature availability={{ status: 'unavailable', reason: 'No adapter is configured.' }} feature={activeFeature} />;
+      content = (
+        <UnavailableFeature
+          availability={{ status: 'unavailable', reason: 'No adapter is configured.' }}
+          module={activeModule}
+        />
+      );
     }
   }
 
@@ -765,7 +804,16 @@ function ConsoleKitContent({ config, className }: ConsoleKitProps) {
   return (
     <AppShell
       account={account}
-      barActions={metadataBadge}
+      barActions={(
+        <div className='flex items-center gap-2'>
+          <ConsoleConnectionMenu
+            databaseId={runtime.databaseId}
+            databaseLabel={config.brand?.name}
+            endpoints={runtime.endpoints}
+          />
+          {metadataBadge}
+        </div>
+      )}
       brand={config.brand ?? {
         name: 'Constructive',
         description: config.databaseId,
@@ -773,11 +821,12 @@ function ConsoleKitContent({ config, className }: ConsoleKitProps) {
       }}
       breadcrumbs={[{
         id: activeFeature,
-        label: config.labels?.[activeFeature] ?? manifests.get(activeFeature)?.title ?? activeFeature,
+        label: config.labels?.[activeFeature] ?? activeModule?.manifest.title ?? activeFeature,
         current: true
       }]}
       className={className}
       contentClassName='bg-muted/20'
+      contentProps={{ id: 'main-content', tabIndex: -1 }}
       navigation={navigation}
       renderLink={renderLink}
     >
@@ -786,8 +835,13 @@ function ConsoleKitContent({ config, className }: ConsoleKitProps) {
   );
 }
 
-function initialFeatureFor(config: ConsoleKitConfig): FeaturePackId {
-  const order = orderedFeatures(config.order);
+function initialFeatureFor(
+  config: ConsoleKitConfig,
+  featureModules: readonly ConsoleKitFeatureModule[]
+): FeaturePackId {
+  const order = orderedModules(featureModules, config.order).map(
+    (module) => module.id
+  );
   const preferred = config.routes?.defaultFeature
     ?? ((config.adapters?.auth || config.session.mode === 'standalone')
       ? 'auth'
@@ -795,13 +849,20 @@ function initialFeatureFor(config: ConsoleKitConfig): FeaturePackId {
   return order.includes(preferred) ? preferred : (order[0] ?? 'data');
 }
 
-export function ConsoleKit({ store, ...props }: ConsoleKitProps) {
+export function ConsoleKit({ store, featureModules, ...props }: ConsoleKitProps) {
+  const sliceContributions = React.useMemo(
+    () => featureModules.flatMap((module) =>
+      module.storeSlice ? [module.storeSlice] : []
+    ),
+    [featureModules]
+  );
   return (
     <ConsoleKitStoreProvider
-      initialFeature={initialFeatureFor(props.config)}
+      initialFeature={initialFeatureFor(props.config, featureModules)}
+      sliceContributions={sliceContributions}
       store={store}
     >
-      <ConsoleKitContent {...props} />
+      <ConsoleKitContent {...props} featureModules={featureModules} />
     </ConsoleKitStoreProvider>
   );
 }
@@ -816,9 +877,12 @@ export type {
   ConsoleKitFeaturePropsMap,
   ConsoleKitMetadataState,
   ConsoleKitProps,
-  ConsoleKitRouteConfig,
-  ConsoleKitTableConfig
+  ConsoleKitRouteConfig
 } from './console-kit-contracts';
+export type {
+  ConsoleKitFeatureComponentProps,
+  ConsoleKitFeatureModule
+} from './feature-module';
 export {
   createConsoleKitStore,
   useConsoleKitStore,

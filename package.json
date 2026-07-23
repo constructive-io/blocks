@@ -15,6 +15,7 @@
     "build:pages": "pnpm build:packages && pnpm build:registry && pnpm --filter blocks build:pages && pnpm pages:artifact",
     "build:storybook": "pnpm --filter @constructive-io/ui build-sb",
     "dev": "pnpm --filter blocks dev",
+    "fixture:console-kit": "pnpm --filter blocks fixture:console-kit",
     "test": "lerna run test",
     "lint:types": "lerna run lint:types",
     "lint:scripts": "tsc --noEmit -p tsconfig.scripts.json",

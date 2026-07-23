@@ -3,15 +3,15 @@
   "id": "billing",
   "title": "Billing",
   "description": "Plans, subscriptions, entitlement meters, usage, credits, and account activity.",
-  "dependencies": ["data"],
-  "endpoints": { "required": ["billing"], "optional": ["admin", "data"] },
+  "dependencies": [],
+  "endpoints": { "required": [], "optional": ["billing", "admin", "data"] },
   "capabilities": {
     "required": ["billing.plans", "billing.subscriptions"],
     "optional": ["billing.meters"]
   },
   "metadata": {
-    "requiredMetaSections": ["tables", "fields", "constraints", "relations", "query"],
-    "optionalMetaSections": ["scope", "encoding"],
+    "requiredMetaSections": [],
+    "optionalMetaSections": ["tables", "fields", "constraints", "relations", "query", "scope", "encoding"],
     "requiredIntrospectionSections": ["root-operations", "types", "input-objects"],
     "optionalIntrospectionSections": ["enums", "directives"]
   }

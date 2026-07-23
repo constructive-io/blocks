@@ -101,8 +101,15 @@ export type {
 	TableWriteCapability,
 } from './row-identity';
 
-export { assessSchemaIntrospectionCompatibility } from './schema-introspection-compatibility';
+export {
+	analyzeSchemaIntrospectionCompatibility,
+	assessSchemaIntrospectionCompatibility,
+	normalizeSchemaEnumInputValues,
+} from './schema-introspection-compatibility';
 export type {
+	SchemaEnumFieldMapping,
+	SchemaEnumValueToken,
+	SchemaIntrospectionAnalysis,
 	SchemaIntrospectionCompatibility,
 	SchemaIntrospectionCompatibilityStatus,
 } from './schema-introspection-compatibility';

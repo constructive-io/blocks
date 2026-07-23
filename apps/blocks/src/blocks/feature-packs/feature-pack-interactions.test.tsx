@@ -103,6 +103,43 @@ describe('feature-pack interaction policy', () => {
     expect(screen.getByRole('status')).toHaveTextContent('Verification email sent.');
   });
 
+  it('confirms another-device session revocation before calling the host action', async () => {
+    const user = userEvent.setup();
+    const revokeSession = vi.fn().mockResolvedValue(undefined);
+    render(
+      <AuthFeaturePack
+        account={{
+          status: 'ready',
+          data: {
+            identity: {
+              id: 'user-1',
+              displayName: 'Ada Lovelace',
+              primaryEmail: 'ada@example.com'
+            },
+            sessions: [{
+              id: 'session-2',
+              deviceLabel: 'Firefox on Linux',
+              current: false,
+              lastSeenAt: '2026-07-23T08:30:00.000Z'
+            }]
+          }
+        }}
+        actions={{ revokeSession }}
+        policy={{ revokeSession: true }}
+        view='account'
+      />
+    );
+
+    await user.click(screen.getByRole('button', { name: 'Revoke' }));
+    expect(revokeSession).not.toHaveBeenCalled();
+    expect(screen.getByRole('alertdialog')).toHaveTextContent('Revoke Firefox on Linux?');
+
+    await user.click(screen.getByRole('button', { name: 'Revoke session' }));
+    await waitFor(() => expect(revokeSession).toHaveBeenCalledWith({
+      sessionId: 'session-2'
+    }));
+  });
+
   it('does not render a notification action unless policy and a host action allow it', () => {
     const notification = {
       id: 'notification-1',
@@ -235,6 +272,41 @@ describe('feature-pack interaction policy', () => {
     }));
   });
 
+  it('confirms application invitation cancellation before calling the host action', async () => {
+    const user = userEvent.setup();
+    const cancelInvite = vi.fn().mockResolvedValue(undefined);
+    render(
+      <UsersFeaturePack
+        actions={{ cancelInvite }}
+        policy={{ cancelInvite: true }}
+        resource={{
+          status: 'ready',
+          data: {
+            members: [],
+            invites: [{
+              id: 'invite-1',
+              email: 'grace@example.com',
+              status: 'pending',
+              actionPolicy: { cancelInvite: true }
+            }]
+          }
+        }}
+      />
+    );
+
+    await user.click(screen.getByRole('tab', { name: 'Invitations (1)' }));
+    await user.click(screen.getByRole('button', { name: 'Cancel' }));
+    expect(cancelInvite).not.toHaveBeenCalled();
+    expect(screen.getByRole('alertdialog')).toHaveTextContent(
+      'Cancel invitation for grace@example.com?'
+    );
+
+    await user.click(screen.getByRole('button', { name: 'Cancel invitation' }));
+    await waitFor(() => expect(cancelInvite).toHaveBeenCalledWith({
+      inviteId: 'invite-1'
+    }));
+  });
+
   it('allows an organization invitation without assigning one of the visible profiles', async () => {
     const user = userEvent.setup();
     const inviteMember = vi.fn().mockResolvedValue(undefined);
@@ -263,6 +335,44 @@ describe('feature-pack interaction policy', () => {
       organizationId: 'organization-1',
       email: 'org@example.com',
       role: undefined
+    }));
+  });
+
+  it('confirms organization invitation cancellation before calling the host action', async () => {
+    const user = userEvent.setup();
+    const cancelInvite = vi.fn().mockResolvedValue(undefined);
+    render(
+      <OrganizationsFeaturePack
+        actions={{ cancelInvite }}
+        policy={{ cancelInvite: true }}
+        resource={{
+          status: 'ready',
+          data: {
+            organizations: [{ id: 'org-1', name: 'Research' }],
+            activeOrganizationId: 'org-1',
+            members: [],
+            invites: [{
+              id: 'invite-2',
+              email: 'katherine@example.com',
+              status: 'pending',
+              actionPolicy: { cancelInvite: true }
+            }]
+          }
+        }}
+      />
+    );
+
+    await user.click(screen.getByRole('tab', { name: 'Invitations (1)' }));
+    await user.click(screen.getByRole('button', { name: 'Cancel' }));
+    expect(cancelInvite).not.toHaveBeenCalled();
+    expect(screen.getByRole('alertdialog')).toHaveTextContent(
+      'Cancel invitation for katherine@example.com?'
+    );
+
+    await user.click(screen.getByRole('button', { name: 'Cancel invitation' }));
+    await waitFor(() => expect(cancelInvite).toHaveBeenCalledWith({
+      organizationId: 'org-1',
+      inviteId: 'invite-2'
     }));
   });
 

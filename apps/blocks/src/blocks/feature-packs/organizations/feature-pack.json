@@ -3,15 +3,15 @@
   "id": "organizations",
   "title": "Organizations",
   "description": "Organization selection, creation, memberships, role assignment, and invitations.",
-  "dependencies": ["users"],
-  "endpoints": { "required": ["admin"], "optional": ["auth", "billing"] },
+  "dependencies": [],
+  "endpoints": { "required": [], "optional": ["admin", "auth", "billing", "data"] },
   "capabilities": {
     "required": ["organizations.memberships"],
     "optional": ["organizations.permissions", "organizations.limits", "organizations.profiles", "organizations.hierarchy", "organizations.invites"]
   },
   "metadata": {
-    "requiredMetaSections": ["tables", "fields", "constraints", "relations", "query"],
-    "optionalMetaSections": ["scope", "encoding"],
+    "requiredMetaSections": ["tables", "fields", "constraints", "relations", "query", "scope"],
+    "optionalMetaSections": ["encoding"],
     "requiredIntrospectionSections": ["root-operations", "types", "input-objects"],
     "optionalIntrospectionSections": ["enums", "directives"]
   }

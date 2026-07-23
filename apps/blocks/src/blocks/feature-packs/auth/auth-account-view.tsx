@@ -12,6 +12,15 @@ import {
 
 import { Avatar, AvatarFallback, AvatarImage } from '@constructive-io/ui/avatar';
 import { Alert, AlertDescription } from '@constructive-io/ui/alert';
+import {
+  AlertDialog,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle
+} from '@constructive-io/ui/alert-dialog';
 import { Badge } from '@constructive-io/ui/badge';
 import { Button } from '@constructive-io/ui/button';
 import {
@@ -30,7 +39,11 @@ import {
   normalizeFeaturePackError,
   type FeatureActionResult
 } from '../shared/feature-pack-contracts';
-import { FeaturePackBoundary, FeaturePackPageHeader } from '../shared/feature-pack-ui';
+import {
+  FeaturePackBoundary,
+  FeaturePackPageHeader,
+  FeaturePackTimestamp
+} from '../shared/feature-pack-ui';
 import type { AuthFeaturePackProps } from './auth-contracts';
 
 function identityInitials(value: string): string {
@@ -53,6 +66,10 @@ export function AuthAccountView({
   const [currentPassword, setCurrentPassword] = React.useState('');
   const [newPassword, setNewPassword] = React.useState('');
   const [pendingAction, setPendingAction] = React.useState<string>();
+  const [sessionToRevoke, setSessionToRevoke] = React.useState<Readonly<{
+    id: string;
+    deviceLabel: string;
+  }>>();
   const [verificationMessage, setVerificationMessage] = React.useState<Readonly<{
     kind: 'error' | 'success';
     text: string;
@@ -112,14 +129,14 @@ export function AuthAccountView({
         resource={account}
       >
         {(data) => (
-          <div className='grid gap-6 lg:grid-cols-2'>
-            <Card variant='flat'>
+          <div className='grid min-w-0 gap-6 lg:grid-cols-2'>
+            <Card className='min-w-0' variant='flat'>
               <CardHeader>
                 <CardTitle>Profile</CardTitle>
                 <CardDescription>This identity follows you across applications that trust the same auth service.</CardDescription>
               </CardHeader>
-              <CardContent className='flex flex-col gap-5'>
-                <div className='flex items-center gap-4'>
+              <CardContent className='flex min-w-0 flex-col gap-5'>
+                <div className='grid min-w-0 grid-cols-[auto_minmax(0,1fr)] items-center gap-x-4 gap-y-2 sm:flex'>
                   <Avatar className='size-12'>
                     {data.identity.avatarUrl ? <AvatarImage alt='' src={data.identity.avatarUrl} /> : null}
                     <AvatarFallback>{identityInitials(data.identity.displayName)}</AvatarFallback>
@@ -129,12 +146,12 @@ export function AuthAccountView({
                     <p className='text-muted-foreground truncate text-sm'>{data.identity.primaryEmail}</p>
                   </div>
                   {data.identity.emailVerified === true ? (
-                    <Badge className='ml-auto' variant='secondary'>
+                    <Badge className='col-start-2 justify-self-start sm:ml-auto' variant='secondary'>
                       <ShieldCheckIcon data-icon='inline-start' />
                       Verified
                     </Badge>
                   ) : data.identity.emailVerified === false ? (
-                    <Badge className='ml-auto' variant='outline'>
+                    <Badge className='col-start-2 justify-self-start sm:ml-auto' variant='outline'>
                       <MailIcon data-icon='inline-start' />
                       Unverified
                     </Badge>
@@ -218,7 +235,7 @@ export function AuthAccountView({
               </CardContent>
             </Card>
 
-            <Card variant='flat'>
+            <Card className='min-w-0' variant='flat'>
               <CardHeader>
                 <CardTitle>Password</CardTitle>
                 <CardDescription>Changing the password can affect every application using this identity.</CardDescription>
@@ -291,19 +308,19 @@ export function AuthAccountView({
                             {session.current ? <Badge variant='secondary'>Current</Badge> : null}
                           </div>
                           <p className='text-muted-foreground truncate text-xs'>
-                            {[session.location, session.lastSeenAt].filter(Boolean).join(' · ') || 'Session details unavailable'}
+                            {session.location ? <>{session.location}{session.lastSeenAt ? ' · ' : null}</> : null}
+                            {session.lastSeenAt ? (
+                              <FeaturePackTimestamp value={session.lastSeenAt} />
+                            ) : session.location ? null : 'Session details unavailable'}
                           </p>
                         </div>
                         {!session.current && canPerform(policy, 'revokeSession') && actions?.revokeSession ? (
                           <Button
                             disabled={pendingAction === session.id}
-                            onClick={() =>
-                              void run(
-                                session.id,
-                                () => actions.revokeSession!({ sessionId: session.id }),
-                                'The session could not be revoked.'
-                              )
-                            }
+                            onClick={() => setSessionToRevoke({
+                              id: session.id,
+                              deviceLabel: session.deviceLabel
+                            })}
                             size='sm'
                             variant='outline'
                           >
@@ -313,6 +330,46 @@ export function AuthAccountView({
                       </div>
                     </React.Fragment>
                   ))}
+                  {canPerform(policy, 'revokeSession') && actions?.revokeSession ? (
+                    <AlertDialog
+                      onOpenChange={(open) => {
+                        if (!open && pendingAction !== sessionToRevoke?.id) {
+                          setSessionToRevoke(undefined);
+                        }
+                      }}
+                      open={Boolean(sessionToRevoke)}
+                    >
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>Revoke {sessionToRevoke?.deviceLabel}?</AlertDialogTitle>
+                          <AlertDialogDescription>
+                            This signs that device out of your account. You will need to authenticate there again.
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel disabled={pendingAction === sessionToRevoke?.id}>
+                            Cancel
+                          </AlertDialogCancel>
+                          <Button
+                            disabled={!sessionToRevoke || pendingAction === sessionToRevoke.id}
+                            onClick={() => {
+                              if (!sessionToRevoke) return;
+                              const sessionId = sessionToRevoke.id;
+                              void run(
+                                sessionId,
+                                () => actions.revokeSession!({ sessionId }),
+                                'The session could not be revoked.',
+                                () => setSessionToRevoke(undefined)
+                              );
+                            }}
+                            variant='destructive'
+                          >
+                            {pendingAction === sessionToRevoke?.id ? 'Revoking…' : 'Revoke session'}
+                          </Button>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
+                  ) : null}
                 </CardContent>
               </Card>
             ) : null}

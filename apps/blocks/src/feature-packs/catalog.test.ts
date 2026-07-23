@@ -39,7 +39,6 @@ describe('first-release feature pack catalog', () => {
         ])
       )
     ).toEqual({
-      blank: ['data'],
       'auth:hardened': ['data', 'auth', 'users'],
       'b2b:storage': [
         'data',
@@ -58,7 +57,7 @@ describe('first-release feature pack catalog', () => {
         'notifications'
       ]
     });
-    expect(PRESET_PROFILES.every((profile) => profile.stability === 'experimental')).toBe(true);
+    expect(PRESET_PROFILES.every((profile) => profile.stability === 'stable')).toBe(true);
   });
 
   it('keeps search, i18n, and realtime optional', () => {
@@ -124,11 +123,17 @@ describe('feature pack catalog validation', () => {
   });
 
   it('rejects profiles that omit a selected pack dependency', () => {
+    const manifests = structuredClone(
+      FEATURE_PACK_MANIFESTS
+    ) as unknown as FeaturePackManifestV1[];
+    const users = manifests.find((manifest) => manifest.id === 'users');
+    if (!users) throw new Error('The Users feature pack is missing.');
+    users.dependencies = ['auth'];
     const profiles = structuredClone(PRESET_PROFILES);
-    profiles[1].featurePacks = ['users'];
+    profiles[0].featurePacks = ['users'];
     const validation = validateFeaturePackCatalog({
       schemaVersion: 1,
-      featurePacks: FEATURE_PACK_MANIFESTS,
+      featurePacks: manifests,
       presets: profiles
     });
 

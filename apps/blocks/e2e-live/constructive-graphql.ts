@@ -49,6 +49,7 @@ export type LiveTable = Readonly<{
 
 export type LiveSchema = Readonly<{
   tables: readonly CleanTable[];
+  entries: readonly LiveTable[];
   table(name: string): LiveTable;
 }>;
 
@@ -73,29 +74,6 @@ const SIGN_OUT = /* GraphQL */ `
     signOut(input: $input) { clientMutationId }
   }
 `;
-
-/**
- * Direct RLS probes keep using `_meta` for table/field/identity facts, but only
- * request the stable subset so they can still diagnose CRUD when the separate
- * Console Kit compatibility test reports a missing July-contract field.
- */
-function backendProofMetaQuery(source: string): string {
-  let skippingEncoding = false;
-  return source.split('\n').filter((line) => {
-    const trimmed = line.trim();
-    if (trimmed === 'encoding {') {
-      skippingEncoding = true;
-      return false;
-    }
-    if (skippingEncoding) {
-      if (trimmed === '}') skippingEncoding = false;
-      return false;
-    }
-    return !trimmed.startsWith('scope {');
-  }).join('\n');
-}
-
-const BACKEND_PROOF_META_QUERY = backendProofMetaQuery(META_QUERY_SOURCE);
 
 function documentSource(document: unknown): string {
   if (typeof document === 'string') return document;
@@ -125,13 +103,15 @@ export async function rawGraphQL<TData>(
     headers: {
       Accept: 'application/json',
       'Content-Type': 'application/json',
-      Origin: fingerprint.origin ?? new URL(process.env.CONSOLE_KIT_BASE_URL!).origin,
+      Origin: fingerprint.origin ?? new URL(process.env.CONSOLE_KIT_BASE_URL ?? url).origin,
       'User-Agent': fingerprint.userAgent ?? 'constructive-console-kit-live-proof',
       ...(token ? { Authorization: `Bearer ${token}` } : {})
     },
     body: JSON.stringify({ query: documentSource(document), variables })
   });
-  if (!response.ok) throw new Error(`GraphQL transport returned HTTP ${response.status}.`);
+  if (!response.ok) {
+    throw new Error(`GraphQL transport to ${url} returned HTTP ${response.status}.`);
+  }
 
   const payload: unknown = await response.json();
   if (!payload || typeof payload !== 'object' || Array.isArray(payload)) {
@@ -217,9 +197,13 @@ export async function signOutAt(url: string, token: string): Promise<void> {
 }
 
 export async function loadSchema(tenant: ProofTenant, token: string): Promise<LiveSchema> {
+  return loadSchemaAt(endpointUrl(tenant, 'data'), token);
+}
+
+export async function loadSchemaAt(url: string, token: string): Promise<LiveSchema> {
   const data = await graphQL<MetaQuery>(
-    endpointUrl(tenant, 'data'),
-    BACKEND_PROOF_META_QUERY,
+    url,
+    META_QUERY_SOURCE,
     {},
     token
   );
@@ -228,13 +212,18 @@ export async function loadSchema(tenant: ProofTenant, token: string): Promise<Li
     (table): table is MetaTable => Boolean(table?.name)
   );
   const tables = metaTables.map(cleanTable);
+  const entries = metaTables.map((meta, index): LiveTable => ({
+    meta,
+    clean: tables[index]!
+  }));
 
   return {
     tables,
+    entries,
     table(name) {
-      const index = metaTables.findIndex((table) => table.name === name);
-      if (index < 0 || !tables[index]) throw new Error(`_meta did not expose table ${name}.`);
-      return { meta: metaTables[index], clean: tables[index] };
+      const entry = entries.find(({ meta }) => meta.name === name);
+      if (!entry) throw new Error(`_meta did not expose table ${name}.`);
+      return entry;
     }
   };
 }

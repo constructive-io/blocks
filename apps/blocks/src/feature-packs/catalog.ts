@@ -7,15 +7,28 @@ const TABLE_METADATA_REQUIREMENTS: FeaturePackManifestV1['metadata'] = {
     'fields',
     'constraints',
     'relations',
-    'query'
+    'query',
+    'scope'
   ],
-  optionalMetaSections: ['scope', 'encoding'],
+  optionalMetaSections: ['encoding'],
   requiredIntrospectionSections: [
     'root-operations',
     'types',
     'input-objects'
   ],
   optionalIntrospectionSections: ['enums', 'directives']
+};
+
+const INTROSPECTION_ONLY_REQUIREMENTS: FeaturePackManifestV1['metadata'] = {
+  requiredMetaSections: [],
+  optionalMetaSections: [
+    ...TABLE_METADATA_REQUIREMENTS.requiredMetaSections,
+    ...TABLE_METADATA_REQUIREMENTS.optionalMetaSections
+  ],
+  requiredIntrospectionSections:
+    TABLE_METADATA_REQUIREMENTS.requiredIntrospectionSections,
+  optionalIntrospectionSections:
+    TABLE_METADATA_REQUIREMENTS.optionalIntrospectionSections
 };
 
 export const DATA_FEATURE_PACK = {
@@ -50,7 +63,7 @@ export const AUTH_FEATURE_PACK = {
   title: 'Authentication',
   description:
     'Consumer sign-in, account profile, password, and session-management surfaces.',
-  dependencies: ['data'],
+  dependencies: [] as FeaturePackManifestV1['dependencies'],
   endpoints: {
     required: ['auth'],
     optional: [] as FeaturePackManifestV1['endpoints']['optional']
@@ -66,7 +79,7 @@ export const AUTH_FEATURE_PACK = {
       'auth.devices'
     ]
   },
-  metadata: TABLE_METADATA_REQUIREMENTS
+  metadata: INTROSPECTION_ONLY_REQUIREMENTS
 } satisfies FeaturePackManifestV1;
 
 export const USERS_FEATURE_PACK = {
@@ -75,10 +88,10 @@ export const USERS_FEATURE_PACK = {
   title: 'Users',
   description:
     'Application member directory, invitations, role assignment, and membership-status management.',
-  dependencies: ['data', 'auth'],
+  dependencies: [] as FeaturePackManifestV1['dependencies'],
   endpoints: {
-    required: ['admin'],
-    optional: ['auth', 'billing']
+    required: [] as FeaturePackManifestV1['endpoints']['required'],
+    optional: ['admin', 'auth', 'billing', 'data']
   },
   capabilities: {
     required: [
@@ -92,7 +105,7 @@ export const USERS_FEATURE_PACK = {
       'users.invites'
     ]
   },
-  metadata: TABLE_METADATA_REQUIREMENTS
+  metadata: INTROSPECTION_ONLY_REQUIREMENTS
 } satisfies FeaturePackManifestV1;
 
 export const ORGANIZATIONS_FEATURE_PACK = {
@@ -101,10 +114,10 @@ export const ORGANIZATIONS_FEATURE_PACK = {
   title: 'Organizations',
   description:
     'Organization selection, creation, memberships, role assignment, and invitations.',
-  dependencies: ['users'],
+  dependencies: [] as FeaturePackManifestV1['dependencies'],
   endpoints: {
-    required: ['admin'],
-    optional: ['auth', 'billing']
+    required: [] as FeaturePackManifestV1['endpoints']['required'],
+    optional: ['admin', 'auth', 'billing', 'data']
   },
   capabilities: {
     required: ['organizations.memberships'],
@@ -125,10 +138,10 @@ export const STORAGE_FEATURE_PACK = {
   title: 'Storage',
   description:
     'Policy-aware bucket navigation, uploads, downloads, and object deletion.',
-  dependencies: ['data'],
+  dependencies: [] as FeaturePackManifestV1['dependencies'],
   endpoints: {
-    required: ['storage'],
-    optional: [] as FeaturePackManifestV1['endpoints']['optional']
+    required: [] as FeaturePackManifestV1['endpoints']['required'],
+    optional: ['storage', 'admin', 'data']
   },
   capabilities: {
     required: ['storage.buckets', 'storage.files'],
@@ -154,16 +167,16 @@ export const BILLING_FEATURE_PACK = {
   title: 'Billing',
   description:
     'Plans, subscriptions, entitlement meters, usage, credits, and account activity.',
-  dependencies: ['data'],
+  dependencies: [] as FeaturePackManifestV1['dependencies'],
   endpoints: {
-    required: ['billing'],
-    optional: ['admin', 'data']
+    required: [] as FeaturePackManifestV1['endpoints']['required'],
+    optional: ['billing', 'admin', 'data']
   },
   capabilities: {
     required: ['billing.plans', 'billing.subscriptions'],
     optional: ['billing.meters']
   },
-  metadata: TABLE_METADATA_REQUIREMENTS
+  metadata: INTROSPECTION_ONLY_REQUIREMENTS
 } satisfies FeaturePackManifestV1;
 
 export const NOTIFICATIONS_FEATURE_PACK = {
@@ -172,19 +185,19 @@ export const NOTIFICATIONS_FEATURE_PACK = {
   title: 'Notifications',
   description:
     'User notification inbox and read-state actions with optional settings and realtime capabilities.',
-  dependencies: ['users'],
+  dependencies: [] as FeaturePackManifestV1['dependencies'],
   endpoints: {
-    required: ['notifications'],
-    optional: [] as FeaturePackManifestV1['endpoints']['optional']
+    required: [] as FeaturePackManifestV1['endpoints']['required'],
+    optional: ['notifications', 'auth', 'data']
   },
   capabilities: {
     required: ['notifications.inbox'],
     optional: ['notifications.settings', 'notifications.realtime']
   },
   metadata: {
-    ...TABLE_METADATA_REQUIREMENTS,
+    ...INTROSPECTION_ONLY_REQUIREMENTS,
     optionalMetaSections: [
-      ...TABLE_METADATA_REQUIREMENTS.optionalMetaSections,
+      ...INTROSPECTION_ONLY_REQUIREMENTS.optionalMetaSections,
       'realtime'
     ]
   }
@@ -200,23 +213,13 @@ export const FEATURE_PACK_MANIFESTS = [
   NOTIFICATIONS_FEATURE_PACK
 ] as const;
 
-export const BLANK_PRESET_PROFILE = {
-  schemaVersion: 1,
-  id: 'blank',
-  presetSlug: 'blank',
-  title: 'Blank',
-  description: 'Dynamic data tooling without optional platform modules.',
-  stability: 'experimental',
-  featurePacks: ['data']
-} satisfies PresetProfileV1;
-
 export const AUTH_HARDENED_PRESET_PROFILE = {
   schemaVersion: 1,
   id: 'auth-hardened',
   presetSlug: 'auth:hardened',
   title: 'Hardened authentication',
   description: 'Data, authentication, and user-management feature packs.',
-  stability: 'experimental',
+  stability: 'stable',
   featurePacks: ['data', 'auth', 'users']
 } satisfies PresetProfileV1;
 
@@ -227,7 +230,7 @@ export const B2B_STORAGE_PRESET_PROFILE = {
   title: 'B2B with storage',
   description:
     'Data, authentication, users, organizations, and storage feature packs.',
-  stability: 'experimental',
+  stability: 'stable',
   featurePacks: ['data', 'auth', 'users', 'organizations', 'storage']
 } satisfies PresetProfileV1;
 
@@ -237,7 +240,7 @@ export const FULL_PRESET_PROFILE = {
   presetSlug: 'full',
   title: 'Full',
   description: 'Every first-release Constructive feature pack.',
-  stability: 'experimental',
+  stability: 'stable',
   featurePacks: [
     'data',
     'auth',
@@ -250,7 +253,6 @@ export const FULL_PRESET_PROFILE = {
 } satisfies PresetProfileV1;
 
 export const PRESET_PROFILES = [
-  BLANK_PRESET_PROFILE,
   AUTH_HARDENED_PRESET_PROFILE,
   B2B_STORAGE_PRESET_PROFILE,
   FULL_PRESET_PROFILE

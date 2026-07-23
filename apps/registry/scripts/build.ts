@@ -21,8 +21,8 @@ import {
 
 import {
 	CONSTRUCTIVE_UI_PACKAGE,
+	CONSOLE_INSTALL_ROOT_DEPENDENCIES,
 	FEATURE_PACK_MANIFEST_TARGETS,
-	FEATURE_PACK_ROOT_DEPENDENCIES,
 	assertCanonicalFeaturePackSidecar,
 	assertExactInternalDependencyEdges,
 	assertFeaturePackRegistryContract,
@@ -193,7 +193,7 @@ const intentionalDependencyOnlyEdges = new Map<string, ReadonlySet<string>>([
 	['checkbox-group', new Set(['checkbox'])],
 	// Feature-pack and preset roots encode capability dependencies even when the
 	// source composition does not import every dependency directly.
-	...[...FEATURE_PACK_ROOT_DEPENDENCIES].map(
+	...[...CONSOLE_INSTALL_ROOT_DEPENDENCIES].map(
 		([itemName, dependencies]) => [itemName, new Set(dependencies)] as const,
 	),
 ]);

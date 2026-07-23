@@ -132,6 +132,7 @@ type AppShellProps = Omit<AppShellRootProps, 'children'> & {
 	sidebarOpen?: boolean;
 	onSidebarOpenChange?: (open: boolean) => void;
 	contentClassName?: string;
+	contentProps?: Omit<React.ComponentProps<'main'>, 'children' | 'className'>;
 };
 
 function initials(name: string) {
@@ -402,6 +403,7 @@ function AppShell({
 	sidebarOpen,
 	onSidebarOpenChange,
 	contentClassName,
+	contentProps,
 	className,
 	style,
 	render,
@@ -458,7 +460,12 @@ function AppShell({
 					)}
 					<SidebarRail />
 				</Sidebar>
-				<SidebarInset className={cn('min-w-0 overflow-auto', contentClassName)}>{children}</SidebarInset>
+				<SidebarInset
+					{...contentProps}
+					className={cn('min-w-0 overflow-auto', contentClassName)}
+				>
+					{children}
+				</SidebarInset>
 			</div>
 		</SidebarProvider>
 	);

@@ -1,9 +1,8 @@
-export * from './auth-adapter';
-export * from './billing-adapter';
-export * from './constructive-capabilities';
-export * from './constructive-console-kit';
-export * from './constructive-graphql';
-export * from './notifications-adapter';
-export * from './organizations-adapter';
-export * from './storage-adapter';
-export * from './users-adapter';
+export {
+  ConstructiveConsoleKit,
+  FullConsoleKit,
+  fullFeatureModules,
+  type ConstructiveTenantConsoleSession,
+  type ConstructiveTenantDatabase,
+  type FullConsoleKitProps
+} from '../../presets/full-console-kit';

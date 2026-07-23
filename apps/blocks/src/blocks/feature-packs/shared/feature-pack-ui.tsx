@@ -159,3 +159,21 @@ export function FeatureStatusBadge({
 
   return <Badge variant={variant}>{status}</Badge>;
 }
+
+export function FeaturePackTimestamp({
+  value,
+  fallback = '—'
+}: Readonly<{ value: string | undefined; fallback?: string }>) {
+  if (!value) return <>{fallback}</>;
+  const timestamp = Date.parse(value);
+  if (Number.isNaN(timestamp)) return <>{value}</>;
+
+  return (
+    <time dateTime={value} suppressHydrationWarning title={new Date(timestamp).toISOString()}>
+      {new Intl.DateTimeFormat(undefined, {
+        dateStyle: 'medium',
+        timeStyle: 'short'
+      }).format(timestamp)}
+    </time>
+  );
+}

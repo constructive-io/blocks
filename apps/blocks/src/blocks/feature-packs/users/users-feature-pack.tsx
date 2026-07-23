@@ -18,7 +18,8 @@ import {
   AlertDialogDescription,
   AlertDialogFooter,
   AlertDialogHeader,
-  AlertDialogTitle
+  AlertDialogTitle,
+  AlertDialogTrigger
 } from '@constructive-io/ui/alert-dialog';
 import { Button } from '@constructive-io/ui/button';
 import {
@@ -38,8 +39,21 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger
 } from '@constructive-io/ui/dropdown-menu';
+import {
+  Empty,
+  EmptyContent,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle
+} from '@constructive-io/ui/empty';
 import { Field } from '@constructive-io/ui/field';
 import { Input } from '@constructive-io/ui/input';
+import {
+  InputGroup,
+  InputGroupAddon,
+  InputGroupInput
+} from '@constructive-io/ui/input-group';
 import {
   Select,
   SelectContent,
@@ -69,7 +83,8 @@ import {
 import {
   FeaturePackBoundary,
   FeaturePackPageHeader,
-  FeatureStatusBadge
+  FeatureStatusBadge,
+  FeaturePackTimestamp
 } from '../shared/feature-pack-ui';
 
 const NO_ROLE_VALUE = '__no_role__';
@@ -398,6 +413,58 @@ function MemberRoleSelect({
   );
 }
 
+function CancelAppInviteAction({
+  invite,
+  cancelInvite,
+  onError
+}: Readonly<{
+  invite: AppInvite;
+  cancelInvite: NonNullable<UsersFeatureActions['cancelInvite']>;
+  onError?: UsersFeaturePackProps['onError'];
+}>) {
+  const [open, setOpen] = React.useState(false);
+  const [pending, setPending] = React.useState(false);
+
+  const cancel = async () => {
+    setPending(true);
+    try {
+      await cancelInvite({ inviteId: invite.id });
+      setOpen(false);
+    } catch (cause) {
+      onError?.(normalizeFeaturePackError(cause, 'The invitation could not be canceled.'));
+    } finally {
+      setPending(false);
+    }
+  };
+
+  return (
+    <AlertDialog
+      onOpenChange={(nextOpen) => {
+        if (!pending) setOpen(nextOpen);
+      }}
+      open={open}
+    >
+      <AlertDialogTrigger render={<Button size='sm' variant='outline' />}>
+        Cancel
+      </AlertDialogTrigger>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>Cancel invitation for {invite.email}?</AlertDialogTitle>
+          <AlertDialogDescription>
+            The invitation link will stop working. You can send a new invitation later.
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel disabled={pending}>Keep invitation</AlertDialogCancel>
+          <Button disabled={pending} onClick={() => void cancel()} variant='destructive'>
+            {pending ? 'Canceling…' : 'Cancel invitation'}
+          </Button>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+  );
+}
+
 export function UsersFeaturePack({
   resource,
   policy,
@@ -457,22 +524,30 @@ export function UsersFeaturePack({
                     <TabsTrigger value='invites'>Invitations ({invites.length})</TabsTrigger>
                   ) : null}
                 </TabsList>
-                <label className='relative block w-full sm:max-w-xs'>
+                <label className='block w-full sm:max-w-xs'>
                   <span className='sr-only'>Search members</span>
-                  <SearchIcon
-                    aria-hidden='true'
-                    className='text-muted-foreground pointer-events-none absolute left-3 top-1/2 -translate-y-1/2'
-                  />
-                  <Input
-                    onChange={(event) => setQuery(event.currentTarget.value)}
-                    placeholder='Search members'
-                    type='search'
-                    value={query}
-                  />
+                  <InputGroup>
+                    <InputGroupAddon>
+                      <SearchIcon aria-hidden='true' />
+                    </InputGroupAddon>
+                    <InputGroupInput
+                      onChange={(event) => setQuery(event.currentTarget.value)}
+                      placeholder='Search members'
+                      type='search'
+                      value={query}
+                    />
+                  </InputGroup>
                 </label>
               </div>
               <TabsContent value='members'>
-                <Table>
+                <p className='text-muted-foreground mb-2 text-xs sm:hidden'>Swipe horizontally to see every member field and action.</p>
+                <Table
+                  containerClassName='[scrollbar-gutter:stable]'
+                  containerProps={{
+                    'aria-label': 'Application members table. Scroll horizontally for more columns.',
+                    tabIndex: 0
+                  }}
+                >
                   <TableHeader>
                     <TableRow>
                       <TableHead>Member</TableHead>
@@ -519,70 +594,92 @@ export function UsersFeaturePack({
               </TabsContent>
               {data.invites ? (
                 <TabsContent value='invites'>
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Email</TableHead>
-                        <TableHead>Role</TableHead>
-                        <TableHead>Status</TableHead>
-                        <TableHead>Expires</TableHead>
-                        <TableHead className='text-right'>Actions</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {invites.map((invite) => (
-                        <TableRow key={invite.id}>
-                          <TableCell className='font-medium'>{invite.email}</TableCell>
-                          <TableCell>{invite.role ?? 'Member'}</TableCell>
-                          <TableCell><FeatureStatusBadge status={invite.status} /></TableCell>
-                          <TableCell>{invite.expiresAt ?? '—'}</TableCell>
-                          <TableCell>
-                            <div className='flex justify-end gap-2'>
-                              {canPerform(policy, 'extendInvite') &&
-                              canPerform(invite.actionPolicy, 'extendInvite') &&
-                              actions?.extendInvite ? (
-                                <Button
-                                  aria-label={`Extend invitation for ${invite.email}`}
-                                  onClick={() => {
-                                    void (async () => {
-                                      try {
-                                        await actions.extendInvite!({ inviteId: invite.id });
-                                      } catch (cause) {
-                                        onError?.(normalizeFeaturePackError(cause, 'The invitation could not be extended.'));
-                                      }
-                                    })();
-                                  }}
-                                  size='icon'
-                                  variant='ghost'
-                                >
-                                  <RefreshCwIcon />
-                                </Button>
-                              ) : null}
-                              {canPerform(policy, 'cancelInvite') &&
-                              canPerform(invite.actionPolicy, 'cancelInvite') &&
-                              actions?.cancelInvite ? (
-                                <Button
-                                  onClick={() => {
-                                    void (async () => {
-                                      try {
-                                        await actions.cancelInvite!({ inviteId: invite.id });
-                                      } catch (cause) {
-                                        onError?.(normalizeFeaturePackError(cause, 'The invitation could not be canceled.'));
-                                      }
-                                    })();
-                                  }}
-                                  size='sm'
-                                  variant='outline'
-                                >
-                                  Cancel
-                                </Button>
-                              ) : null}
-                            </div>
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
+                  {invites.length === 0 ? (
+                    <Empty className='min-h-52 border'>
+                      <EmptyHeader>
+                        <EmptyMedia variant='icon'>
+                          <MailPlusIcon aria-hidden='true' />
+                        </EmptyMedia>
+                        <EmptyTitle>No pending invitations</EmptyTitle>
+                        <EmptyDescription>
+                          Invite a collaborator when they are ready to join this application.
+                        </EmptyDescription>
+                      </EmptyHeader>
+                      {canInvite && actions?.invite ? (
+                        <EmptyContent>
+                          <InviteMemberDialog
+                            onError={onError}
+                            onInvite={actions.invite}
+                            roles={inviteRoles}
+                          />
+                        </EmptyContent>
+                      ) : null}
+                    </Empty>
+                  ) : (
+                    <>
+                      <p className='text-muted-foreground mb-2 text-xs sm:hidden'>Swipe horizontally to see every invitation field and action.</p>
+                      <Table
+                        containerClassName='[scrollbar-gutter:stable]'
+                        containerProps={{
+                          'aria-label': 'Application invitations table. Scroll horizontally for more columns.',
+                          tabIndex: 0
+                        }}
+                      >
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead>Email</TableHead>
+                            <TableHead>Role</TableHead>
+                            <TableHead>Status</TableHead>
+                            <TableHead>Expires</TableHead>
+                            <TableHead className='text-right'>Actions</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {invites.map((invite) => (
+                            <TableRow key={invite.id}>
+                              <TableCell className='font-medium'>{invite.email}</TableCell>
+                              <TableCell>{invite.role ?? 'Member'}</TableCell>
+                              <TableCell><FeatureStatusBadge status={invite.status} /></TableCell>
+                              <TableCell><FeaturePackTimestamp value={invite.expiresAt} /></TableCell>
+                              <TableCell>
+                                <div className='flex justify-end gap-2'>
+                                  {canPerform(policy, 'extendInvite') &&
+                                  canPerform(invite.actionPolicy, 'extendInvite') &&
+                                  actions?.extendInvite ? (
+                                    <Button
+                                      aria-label={`Extend invitation for ${invite.email}`}
+                                      onClick={() => {
+                                        void (async () => {
+                                          try {
+                                            await actions.extendInvite!({ inviteId: invite.id });
+                                          } catch (cause) {
+                                            onError?.(normalizeFeaturePackError(cause, 'The invitation could not be extended.'));
+                                          }
+                                        })();
+                                      }}
+                                      size='icon'
+                                      variant='ghost'
+                                    >
+                                      <RefreshCwIcon />
+                                    </Button>
+                                  ) : null}
+                                  {canPerform(policy, 'cancelInvite') &&
+                                  canPerform(invite.actionPolicy, 'cancelInvite') &&
+                                  actions?.cancelInvite ? (
+                                    <CancelAppInviteAction
+                                      cancelInvite={actions.cancelInvite}
+                                      invite={invite}
+                                      onError={onError}
+                                    />
+                                  ) : null}
+                                </div>
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </>
+                  )}
                 </TabsContent>
               ) : null}
             </Tabs>

@@ -9,8 +9,9 @@ import { SiteTopbar } from '@/components/site/site-topbar';
 export function RegistryShell({ children }: { children: ReactNode }) {
   const [mobileOpen, setMobileOpen] = useState(false);
   const pathname = usePathname();
+  const isConsoleKitProof = pathname === '/__integration/console-kit';
   const isStandalonePreview =
-    pathname === '/__integration/console-kit' ||
+    isConsoleKitProof ||
     /^\/blocks\/(?:billing\/[^/]+|features\/[^/]+)\/preview\/?$/.test(pathname);
 
   useEffect(() => {
@@ -26,7 +27,10 @@ export function RegistryShell({ children }: { children: ReactNode }) {
     return () => window.removeEventListener('keydown', onKey);
   }, [mobileOpen]);
 
-  if (isStandalonePreview) return children;
+  if (isConsoleKitProof) return children;
+  if (isStandalonePreview) {
+    return <main id="main-content" tabIndex={-1}>{children}</main>;
+  }
 
   return (
     <div className="registry-app">
@@ -43,7 +47,9 @@ export function RegistryShell({ children }: { children: ReactNode }) {
 
       <div className="registry-main">
         <SiteTopbar onMenuClick={() => setMobileOpen(true)} />
-        <div className="registry-content flex-1">{children}</div>
+        <main className="registry-content flex-1" id="main-content" tabIndex={-1}>
+          {children}
+        </main>
       </div>
     </div>
   );

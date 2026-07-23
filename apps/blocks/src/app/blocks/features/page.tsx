@@ -108,9 +108,9 @@ export default function FeaturePacksPage() {
                   <p className="mt-3 text-pretty text-xs leading-5 text-muted-foreground">{pack.description}</p>
                   <dl className="mt-3 grid gap-1 border-t border-border/60 pt-3 text-xs">
                     <div className="flex gap-2">
-                      <dt className="shrink-0 text-muted-foreground">Depends on</dt>
+                      <dt className="shrink-0 text-muted-foreground">Feature dependencies</dt>
                       <dd className="min-w-0 font-mono text-foreground">
-                        {pack.dependencies.length > 0 ? pack.dependencies.join(', ') : 'foundation'}
+                        {pack.dependencies.length > 0 ? pack.dependencies.join(', ') : 'None'}
                       </dd>
                     </div>
                     <div className="flex gap-2">
@@ -134,13 +134,12 @@ export default function FeaturePacksPage() {
               <h2 id="preset-profile-heading" className="text-lg font-semibold tracking-tight">
                 Preset profiles
               </h2>
-              <Badge variant="warning">Experimental</Badge>
+              <Badge variant="secondary">Install profiles</Badge>
             </div>
             <p className="mt-1.5 text-pretty text-sm leading-7 text-muted-foreground">
-              These profiles map the current backend preset slugs to the feature packs they are expected to support.
-              Treat them as compatibility declarations while backend preset behavior is still being stabilized;
-              installing a profile copies its manifest and its transitive UI packs, but it does not provision or migrate
-              a database.
+              These profiles map the current backend preset slugs to their stable frontend module compositions.
+              Installing a profile copies its manifest and transitive Console Kit modules, but it does not provision or
+              migrate a database; runtime availability still comes from endpoint discovery, PostgreSQL grants, and RLS.
             </p>
           </div>
 

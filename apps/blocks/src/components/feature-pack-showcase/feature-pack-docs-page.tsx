@@ -169,7 +169,7 @@ export function FeaturePackDocsPage({
     <article aria-labelledby="feature-pack-title" className="registry-page">
       <section aria-labelledby="feature-pack-title" className="scroll-mt-20" id="overview">
         <header className="mb-6 max-w-2xl">
-          <p className="registry-eyebrow">{block.title} feature pack</p>
+          <p className="registry-eyebrow">Feature packs</p>
           <h1
             className="mt-2 text-balance text-[22px] font-semibold tracking-tight sm:text-[1.75rem]"
             id="feature-pack-title"

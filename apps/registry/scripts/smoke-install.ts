@@ -17,6 +17,8 @@ type SmokeCase = {
 	customAliases?: boolean;
 	expected: string[];
 	expectedPackages?: string[];
+	forbidden?: string[];
+	forbiddenPackages?: string[];
 	items?: string[];
 };
 
@@ -30,6 +32,213 @@ const overlayItems = [
 	'sheet',
 	'tooltip',
 ] as const;
+
+const featurePackIds = [
+	'data',
+	'auth',
+	'users',
+	'organizations',
+	'storage',
+	'billing',
+	'notifications',
+] as const;
+
+type FeaturePackId = (typeof featurePackIds)[number];
+
+const consoleCoreFiles = [
+	'src/blocks/console-runtime/capabilities.ts',
+	'src/blocks/console-runtime/endpoints.ts',
+	'src/blocks/console-runtime/feature-adapter.ts',
+	'src/blocks/console-runtime/index.ts',
+	'src/blocks/console-runtime/session.ts',
+	'src/blocks/console-runtime/standalone-session.ts',
+	'src/blocks/console-runtime/transport.ts',
+	'src/feature-packs/capabilities.ts',
+	'src/feature-packs/catalog.ts',
+	'src/feature-packs/catalog-validation.ts',
+	'src/feature-packs/index.ts',
+	'src/feature-packs/manifest.ts',
+	'src/blocks/console-kit/feature-module.ts',
+	'src/blocks/console-kit/console-kit-contracts.ts',
+	'src/blocks/console-kit/console-connection-menu.tsx',
+	'src/blocks/console-kit/console-kit-runtime.tsx',
+	'src/blocks/console-kit/use-latest-callback.ts',
+	'src/blocks/console-kit/console-kit-core.tsx',
+	'src/blocks/console-kit/console-kit.tsx',
+	'src/blocks/console-kit/constructive/constructive-adapter-utils.ts',
+	'src/blocks/console-kit/constructive/constructive-capabilities.ts',
+	'src/blocks/console-kit/constructive/constructive-console-kit.tsx',
+	'src/blocks/console-kit/constructive/constructive-graphql.ts',
+	'src/blocks/console-kit/constructive/constructive-meta-utils.ts',
+	'src/blocks/console-kit/store/adapter-slice.ts',
+	'src/blocks/console-kit/store/context-slice.ts',
+	'src/blocks/console-kit/store/endpoint-capability-slice.ts',
+	'src/blocks/console-kit/store/navigation-slice.ts',
+	'src/blocks/console-kit/store/runtime-slice.ts',
+	'src/blocks/console-kit/store/session-slice.ts',
+	'src/blocks/console-kit/store/console-kit-store.tsx',
+	'src/blocks/console-kit/store/index.ts',
+] as const;
+
+const featurePackViewFiles: Record<FeaturePackId, readonly string[]> = {
+	data: [
+		'src/blocks/feature-packs/data/data-feature-pack.tsx',
+	],
+	auth: [
+		'src/blocks/feature-packs/auth/auth-contracts.ts',
+		'src/blocks/feature-packs/auth/auth-entry-panel.tsx',
+		'src/blocks/feature-packs/auth/auth-account-view.tsx',
+		'src/blocks/feature-packs/auth/auth-feature-pack.tsx',
+	],
+	users: [
+		'src/blocks/feature-packs/users/users-feature-pack.tsx',
+	],
+	organizations: [
+		'src/blocks/feature-packs/organizations/organizations-feature-pack.tsx',
+	],
+	storage: [
+		'src/blocks/feature-packs/storage/storage-feature-pack.tsx',
+	],
+	billing: [
+		'src/blocks/feature-packs/billing/billing-feature-pack.tsx',
+	],
+	notifications: [
+		'src/blocks/feature-packs/notifications/notifications-feature-pack.tsx',
+	],
+};
+
+const consoleModuleFiles: Record<FeaturePackId, readonly string[]> = {
+	data: [
+		'src/blocks/feature-packs/data/data-console-module.tsx',
+	],
+	auth: [
+		'src/blocks/feature-packs/auth/auth-console-module.tsx',
+		'src/blocks/console-kit/constructive/auth-adapter.ts',
+	],
+	users: [
+		'src/blocks/feature-packs/users/users-console-module.tsx',
+		'src/blocks/console-kit/constructive/users-adapter.ts',
+	],
+	organizations: [
+		'src/blocks/feature-packs/organizations/organizations-console-module.tsx',
+		'src/blocks/feature-packs/organizations/organizations-meta-contract.ts',
+		'src/blocks/console-kit/constructive/organizations-adapter.ts',
+	],
+	storage: [
+		'src/blocks/feature-packs/storage/storage-console-module.tsx',
+		'src/blocks/feature-packs/storage/storage-console-slice.ts',
+		'src/blocks/feature-packs/storage/storage-meta-contract.ts',
+		'src/blocks/console-kit/constructive/storage-adapter.ts',
+	],
+	billing: [
+		'src/blocks/feature-packs/billing/billing-console-module.tsx',
+		'src/blocks/console-kit/constructive/billing-adapter.ts',
+	],
+	notifications: [
+		'src/blocks/feature-packs/notifications/notifications-console-module.tsx',
+		'src/blocks/console-kit/constructive/notifications-adapter.ts',
+	],
+};
+
+const featurePackManifest = (id: FeaturePackId): string =>
+	`.constructive/feature-packs/${id}.json`;
+
+const presetManifest = (id: string): string =>
+	`.constructive/feature-packs/${id}.json`;
+
+function featurePackClosure(ids: readonly FeaturePackId[]): string[] {
+	return ids.flatMap((id) => [...featurePackViewFiles[id], featurePackManifest(id)]);
+}
+
+function consoleModuleClosure(ids: readonly FeaturePackId[]): string[] {
+	return [
+		...consoleCoreFiles,
+		...ids.flatMap((id) => [
+			...featurePackViewFiles[id],
+			...consoleModuleFiles[id],
+			featurePackManifest(id),
+		]),
+	];
+}
+
+function forbiddenFeaturePacks(ids: readonly FeaturePackId[]): string[] {
+	const selected = new Set(ids);
+	return featurePackIds
+		.filter((id) => !selected.has(id))
+		.map(featurePackManifest);
+}
+
+const standaloneFeaturePackCases: SmokeCase[] = featurePackIds.map((id) => ({
+	name: `feature-pack-${id}`,
+	expectedPackages: id === 'data'
+		? ['@constructive-io/data', '@constructive-io/sheets']
+		: [],
+	forbiddenPackages: [
+		'zustand',
+		...(id === 'data' ? [] : ['@constructive-io/data', '@constructive-io/sheets']),
+	],
+	expected: featurePackClosure([id]),
+	forbidden: [
+		...consoleCoreFiles,
+		...featurePackIds.flatMap((featureId) => consoleModuleFiles[featureId]),
+		...forbiddenFeaturePacks([id]),
+		presetManifest('blank'),
+		presetManifest('auth-hardened'),
+		presetManifest('b2b-storage'),
+		presetManifest('full'),
+	],
+}));
+
+const consoleModuleCases: SmokeCase[] = featurePackIds.map((id) => ({
+	name: `console-module-${id}`,
+	expectedPackages: [
+		'@constructive-io/data',
+		...(id === 'data' ? ['@constructive-io/sheets'] : []),
+		'zustand',
+	],
+	forbiddenPackages: id === 'data' ? [] : ['@constructive-io/sheets'],
+	expected: consoleModuleClosure([id]),
+	forbidden: [
+		...featurePackIds
+			.filter((featureId) => featureId !== id)
+			.flatMap((featureId) => consoleModuleFiles[featureId]),
+		...forbiddenFeaturePacks([id]),
+		presetManifest('blank'),
+		presetManifest('auth-hardened'),
+		presetManifest('b2b-storage'),
+		presetManifest('full'),
+	],
+}));
+
+const presetCases: SmokeCase[] = [
+	{
+		id: 'auth-hardened',
+		packs: ['data', 'auth', 'users'],
+	},
+	{
+		id: 'b2b-storage',
+		packs: ['data', 'auth', 'users', 'organizations', 'storage'],
+	},
+	{
+		id: 'full',
+		packs: [...featurePackIds],
+	},
+].map(({ id, packs }) => ({
+	name: `preset-${id}`,
+	expectedPackages: ['@constructive-io/data', '@constructive-io/sheets', 'zustand'],
+	expected: [
+		...consoleModuleClosure(packs as readonly FeaturePackId[]),
+		`src/blocks/presets/${id}-console-kit.tsx`,
+		presetManifest(id),
+	],
+	forbidden: [
+		...forbiddenFeaturePacks(packs as readonly FeaturePackId[]),
+		presetManifest('blank'),
+		...['auth-hardened', 'b2b-storage', 'full']
+			.filter((presetId) => presetId !== id)
+			.map(presetManifest),
+	],
+}));
 
 const cases: SmokeCase[] = [
 	{
@@ -71,32 +280,21 @@ const cases: SmokeCase[] = [
 		expected: ['src/components/ui/app-shell.tsx', 'src/components/ui/app-bar.tsx'],
 	},
 	{
-		name: 'feature-pack-users',
-		expectedPackages: ['@constructive-io/data', '@constructive-io/sheets'],
-		expected: [
-			'src/blocks/feature-packs/users/users-feature-pack.tsx',
-			'.constructive/feature-packs/data.json',
-			'.constructive/feature-packs/auth.json',
-			'.constructive/feature-packs/users.json',
+		name: 'console-kit-core',
+		expectedPackages: ['@constructive-io/data', 'zustand'],
+		forbiddenPackages: ['@constructive-io/sheets'],
+		expected: [...consoleCoreFiles],
+		forbidden: [
+			...featurePackIds.map(featurePackManifest),
+			presetManifest('blank'),
+			presetManifest('auth-hardened'),
+			presetManifest('b2b-storage'),
+			presetManifest('full'),
 		],
 	},
-	{
-		name: 'preset-b2b-storage',
-		expectedPackages: ['@constructive-io/data', '@constructive-io/sheets'],
-		expected: [
-			'src/blocks/feature-packs/data/data-feature-pack.tsx',
-			'src/blocks/feature-packs/auth/auth-feature-pack.tsx',
-			'src/blocks/feature-packs/users/users-feature-pack.tsx',
-			'src/blocks/feature-packs/organizations/organizations-feature-pack.tsx',
-			'src/blocks/feature-packs/storage/storage-feature-pack.tsx',
-			'.constructive/feature-packs/data.json',
-			'.constructive/feature-packs/auth.json',
-			'.constructive/feature-packs/users.json',
-			'.constructive/feature-packs/organizations.json',
-			'.constructive/feature-packs/storage.json',
-			'.constructive/feature-packs/b2b-storage.json',
-		],
-	},
+	...standaloneFeaturePackCases,
+	...consoleModuleCases,
+	...presetCases,
 	{
 		name: 'console-kit-nextjs',
 		expectedPackages: [
@@ -105,32 +303,15 @@ const cases: SmokeCase[] = [
 			'zustand',
 		],
 		expected: [
-			'src/blocks/console-kit/console-kit-contracts.ts',
-			'src/blocks/console-kit/console-kit-runtime.tsx',
-			'src/blocks/console-kit/console-kit.tsx',
-			'src/blocks/console-kit/constructive/auth-adapter.ts',
-			'src/blocks/console-kit/constructive/billing-adapter.ts',
-			'src/blocks/console-kit/constructive/constructive-adapter-utils.ts',
-			'src/blocks/console-kit/constructive/constructive-capabilities.ts',
-			'src/blocks/console-kit/constructive/constructive-console-kit.tsx',
-			'src/blocks/console-kit/constructive/constructive-graphql.ts',
+			...consoleModuleClosure(featurePackIds),
+			'src/blocks/presets/full-console-kit.tsx',
+			presetManifest('full'),
 			'src/blocks/console-kit/constructive/index.ts',
-			'src/blocks/console-kit/constructive/notifications-adapter.ts',
-			'src/blocks/console-kit/constructive/organizations-adapter.ts',
-			'src/blocks/console-kit/constructive/storage-adapter.ts',
-			'src/blocks/console-kit/constructive/users-adapter.ts',
-			'src/blocks/console-kit/store/adapter-slice.ts',
-			'src/blocks/console-kit/store/navigation-slice.ts',
-			'src/blocks/console-kit/store/runtime-slice.ts',
-			'src/blocks/console-kit/store/console-kit-store.tsx',
-			'src/blocks/console-kit/store/index.ts',
-			'.constructive/feature-packs/data.json',
-			'.constructive/feature-packs/auth.json',
-			'.constructive/feature-packs/users.json',
-			'.constructive/feature-packs/organizations.json',
-			'.constructive/feature-packs/storage.json',
-			'.constructive/feature-packs/billing.json',
-			'.constructive/feature-packs/notifications.json',
+		],
+		forbidden: [
+			presetManifest('blank'),
+			presetManifest('auth-hardened'),
+			presetManifest('b2b-storage'),
 		],
 	},
 	{
@@ -300,7 +481,7 @@ function prepareConsumer(
 		`${JSON.stringify(
 			{
 				$schema: 'https://ui.shadcn.com/schema.json',
-				style: 'new-york',
+				style: 'base-nova',
 				rsc: true,
 				tsx: true,
 				tailwind: {
@@ -461,10 +642,20 @@ function assertInstalled(root: string, testCase: SmokeCase): void {
 			throw new Error(`@constructive/${testCase.name} did not install ${packageName}.`);
 		}
 	}
+	for (const packageName of testCase.forbiddenPackages ?? []) {
+		if (packageJson.dependencies?.[packageName] || packageJson.devDependencies?.[packageName]) {
+			throw new Error(`@constructive/${testCase.name} unexpectedly installed ${packageName}.`);
+		}
+	}
 
 	for (const relativePath of testCase.expected) {
 		if (!fs.existsSync(path.join(root, relativePath))) {
 			throw new Error(`@constructive/${testCase.name} did not create ${relativePath}.`);
+		}
+	}
+	for (const relativePath of testCase.forbidden ?? []) {
+		if (fs.existsSync(path.join(root, relativePath))) {
+			throw new Error(`@constructive/${testCase.name} unexpectedly created ${relativePath}.`);
 		}
 	}
 	if (fs.existsSync(path.join(root, 'src', '.constructive'))) {

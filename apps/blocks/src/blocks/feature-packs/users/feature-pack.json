@@ -3,15 +3,15 @@
   "id": "users",
   "title": "Users",
   "description": "Application member directory, invitations, role assignment, and membership-status management.",
-  "dependencies": ["data", "auth"],
-  "endpoints": { "required": ["admin"], "optional": ["auth", "billing"] },
+  "dependencies": [],
+  "endpoints": { "required": [], "optional": ["admin", "auth", "billing", "data"] },
   "capabilities": {
     "required": ["users.directory", "users.memberships"],
     "optional": ["users.permissions", "users.limits", "users.profiles", "users.invites"]
   },
   "metadata": {
-    "requiredMetaSections": ["tables", "fields", "constraints", "relations", "query"],
-    "optionalMetaSections": ["scope", "encoding"],
+    "requiredMetaSections": [],
+    "optionalMetaSections": ["tables", "fields", "constraints", "relations", "query", "scope", "encoding"],
     "requiredIntrospectionSections": ["root-operations", "types", "input-objects"],
     "optionalIntrospectionSections": ["enums", "directives"]
   }

@@ -8,6 +8,7 @@ const skippedDirectories = new Set([
   '.next',
   '.artifacts',
   '.context',
+  '.local',
   'coverage',
   'dist',
   'node_modules',

@@ -19,7 +19,10 @@ vi.mock('../console-kit', () => ({
   }
 }));
 
-import { ConstructiveConsoleKit } from './constructive-console-kit';
+import { ConstructiveConsoleKit } from '../../presets/full-console-kit';
+import { authConsoleModule } from '../../feature-packs/auth/auth-console-module';
+import { dataConsoleModule } from '../../feature-packs/data/data-console-module';
+import { ConstructiveConsoleKitCore } from '../console-kit-core';
 
 afterEach(() => {
   vi.unstubAllGlobals();
@@ -79,6 +82,34 @@ function transport(id: string): ConsoleTransport {
 }
 
 describe('ConstructiveConsoleKit external ownership', () => {
+  it('supports a first-party selected-pack composition from the core barrel', () => {
+    const hostSession = embeddedSession('database-1');
+    const hostTransport = transport('selected-packs');
+
+    render(
+      <ConstructiveConsoleKitCore
+        database={{
+          id: 'database-1',
+          endpoints: {
+            data: { id: 'data-1', url: 'https://tenant.example/data/graphql' },
+            auth: { id: 'auth-1', url: 'https://tenant.example/auth/graphql' }
+          }
+        }}
+        featureModules={[dataConsoleModule, authConsoleModule]}
+        session={hostSession}
+        transport={hostTransport}
+      />
+    );
+
+    const props = consoleKitCaptures.props.at(-1) as Readonly<{
+      featureModules: readonly Readonly<{ id: string }>[];
+    }>;
+    expect(props.featureModules.map((module) => module.id)).toEqual([
+      'data',
+      'auth'
+    ]);
+  });
+
   it('renders a configuration error for a relative internal auth endpoint', () => {
     render(
       <ConstructiveConsoleKit

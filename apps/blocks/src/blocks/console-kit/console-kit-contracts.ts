@@ -23,14 +23,8 @@ import type {
   FeatureAdapter,
   FeatureAvailability
 } from '../console-runtime';
-import type { AuthFeaturePackProps } from '../feature-packs/auth/auth-contracts';
-import type { BillingFeaturePackProps } from '../feature-packs/billing/billing-feature-pack';
-import type { DataFeaturePackProps } from '../feature-packs/data/data-feature-pack';
-import type { NotificationsFeaturePackProps } from '../feature-packs/notifications/notifications-feature-pack';
-import type { OrganizationsFeaturePackProps } from '../feature-packs/organizations/organizations-feature-pack';
-import type { StorageFeaturePackProps } from '../feature-packs/storage/storage-feature-pack';
-import type { UsersFeaturePackProps } from '../feature-packs/users/users-feature-pack';
 import type { AtomicCapabilityId, FeaturePackId } from '../../feature-packs';
+import type { ConsoleKitFeatureModule } from './feature-module';
 import type { ConsoleKitStoreApi } from './store';
 
 export type ConsoleKitMetadataState =
@@ -53,8 +47,13 @@ export type ConsoleKitFeatureAvailability = FeatureAvailability;
 export type ConsoleKitAdapterContext = Readonly<{
   databaseId: string;
   endpoints: Readonly<Partial<Record<ConsoleEndpointKind, ConsoleEndpoint>>>;
+  /** Session ownership determines whether a pack can expose standalone flows. */
+  sessionMode?: ConsoleSession['mode'];
   session: ConsoleSessionSnapshot;
   metadata: ConsoleKitMetadataState;
+  metadataByEndpoint?: Readonly<
+    Partial<Record<ConsoleEndpointKind, ConsoleKitMetadataState>>
+  >;
   transportFor: (kind: ConsoleEndpointKind) => IdentityScopedConsoleTransport | null;
 }>;
 
@@ -62,21 +61,18 @@ export type ConsoleKitFeatureAdapter<TProps> = FeatureAdapter<
   TProps,
   ConsoleKitAdapterContext,
   AtomicCapabilityId
+> & Readonly<{
+  /** First-party adapters wait for live schema/capability discovery before loading. */
+  requiresCapabilityDiscovery?: boolean;
+}>;
+
+export type ConsoleKitFeaturePropsMap = Readonly<
+  Record<FeaturePackId, unknown>
 >;
 
-export type ConsoleKitFeaturePropsMap = Readonly<{
-  data: Omit<DataFeaturePackProps, 'config'>;
-  auth: AuthFeaturePackProps;
-  users: UsersFeaturePackProps;
-  organizations: OrganizationsFeaturePackProps;
-  storage: StorageFeaturePackProps;
-  billing: BillingFeaturePackProps;
-  notifications: NotificationsFeaturePackProps;
-}>;
-
-export type ConsoleKitAdapters = Partial<{
-  [Id in FeaturePackId]: ConsoleKitFeatureAdapter<ConsoleKitFeaturePropsMap[Id]>;
-}>;
+export type ConsoleKitAdapters = Readonly<
+  Partial<Record<FeaturePackId, ConsoleKitFeatureAdapter<unknown>>>
+>;
 
 export type ConsoleKitEndpointResolver = (input: Readonly<{
   databaseId: string;
@@ -91,18 +87,6 @@ export type ConsoleKitRouteConfig = Readonly<{
   renderLink?: AppLinkRenderer;
 }>;
 
-export type ConsoleKitTableConfig = Readonly<{
-  /** Exact `_meta.scope.scope` values included in the Data explorer. Defaults to `app`. */
-  applicationScopes?: readonly string[];
-  /** Exact `_meta` table names or `schema.table` identifiers allowed by the host. */
-  includeTables?: readonly string[];
-  excludeTables?: readonly string[];
-  pageSize?: number;
-  onCreateTable?: () => void;
-  onEvent?: DataFeaturePackProps['onEvent'];
-  sheetsProps?: DataFeaturePackProps['sheetsProps'];
-}>;
-
 export type ConsoleKitConfig = Readonly<{
   databaseId: string;
   endpoints?: ConsoleEndpointMap;
@@ -115,7 +99,8 @@ export type ConsoleKitConfig = Readonly<{
   labels?: Partial<Record<FeaturePackId, string>>;
   showUnavailable?: boolean;
   routes?: ConsoleKitRouteConfig;
-  table?: ConsoleKitTableConfig;
+  /** Pack-owned configuration keyed by an installed feature module id. */
+  featureOptions?: Readonly<Partial<Record<FeaturePackId, unknown>>>;
   brand?: AppShellBrand;
   account?: AppAccount;
   onError?: (
@@ -133,6 +118,8 @@ export type ConsoleKitConfig = Readonly<{
 
 export type ConsoleKitProps = Readonly<{
   config: ConsoleKitConfig;
+  /** The exact feature modules installed into this console instance. */
+  featureModules: readonly ConsoleKitFeatureModule[];
   className?: string;
   /** Optional pre-created per-console store for host integration and testing. */
   store?: ConsoleKitStoreApi;

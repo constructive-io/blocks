@@ -1,3 +1,4 @@
+import type { MetaschemaField, MetaschemaTable } from '@constructive-io/data';
 import { describe, expect, it, vi } from 'vitest';
 
 import type {
@@ -5,7 +6,11 @@ import type {
   DatabaseScopedStandaloneConsoleSession,
   IdentityScopedConsoleTransport
 } from '../../console-runtime';
-import type { ConsoleKitAdapterContext } from '../console-kit-contracts';
+import type {
+  ConsoleKitAdapterContext,
+  ConsoleKitMetadataState
+} from '../console-kit-contracts';
+import { storageConsoleStoreSlice } from '../../feature-packs/storage/storage-console-slice';
 import { createConsoleKitStore } from '../store';
 import { createConstructiveAuthAdapter } from './auth-adapter';
 import type {
@@ -18,6 +23,7 @@ import type {
   ConstructiveSchemaType
 } from './constructive-graphql';
 import { createConstructiveOrganizationsAdapter } from './organizations-adapter';
+import { createConstructiveStorageAdapter } from './storage-adapter';
 import { createConstructiveUsersAdapter } from './users-adapter';
 
 type GraphQLCall = Readonly<{
@@ -109,7 +115,9 @@ function runtime(
 ): ConsoleKitAdapterContext {
   const endpoints = {
     auth: { id: 'auth-endpoint', kind: 'auth', url: '/auth/graphql' },
-    admin: { id: 'admin-endpoint', kind: 'admin', url: '/admin/graphql' }
+    admin: { id: 'admin-endpoint', kind: 'admin', url: '/admin/graphql' },
+    data: { id: 'data-endpoint', kind: 'data', url: '/data/graphql' },
+    storage: { id: 'storage-endpoint', kind: 'storage', url: '/storage/graphql' }
   } as const;
   return {
     databaseId,
@@ -150,6 +158,41 @@ function runtime(
       } as IdentityScopedConsoleTransport;
     }
   };
+}
+
+function metaField(name: string): MetaschemaField {
+  return {
+    name,
+    type: { gqlType: 'String', isArray: false, pgType: 'text' }
+  };
+}
+
+function metaTable(input: Readonly<{
+  name: string;
+  root: string;
+  fields: readonly string[];
+}>): MetaschemaTable {
+  const tableFields = input.fields.map(metaField);
+  return {
+    name: input.name,
+    query: { all: input.root },
+    fields: tableFields,
+    primaryKeyConstraints: [{
+      name: `${input.name}_pkey`,
+      fields: tableFields.filter((candidate) => candidate.name === 'id')
+    }]
+  };
+}
+
+function compatibleMetadata(
+  tables: readonly MetaschemaTable[]
+): ConsoleKitMetadataState {
+  return {
+    status: 'compatible',
+    meta: { _meta: { tables: [...tables] } },
+    contractIntrospection: {},
+    introspection: {}
+  } as ConsoleKitMetadataState;
 }
 
 function adminMutationTypes(prefix: 'App' | 'Org'): ConstructiveSchemaType[] {
@@ -2198,6 +2241,739 @@ describe('Constructive organizations adapter RLS contract', () => {
       assignInviteRole: false,
       updateMemberRole: false,
       removeMember: false
+    });
+  });
+
+  it('loads RLS-visible application organizations and memberships through dynamic _meta roots', async () => {
+    const organizations = metaTable({
+      name: 'organizations',
+      root: 'tenantOrganizations',
+      fields: ['id', 'name', 'slug']
+    });
+    const members = metaTable({
+      name: 'members',
+      root: 'tenantMembers',
+      fields: ['id', 'organizationId', 'userId', 'role', 'joinedAt']
+    });
+    members.relations = {
+      belongsTo: [{
+        isUnique: false,
+        keys: [metaField('organizationId')],
+        references: { name: 'organizations' }
+      }]
+    };
+    const calls: GraphQLCall[] = [];
+    const adapter = createConstructiveOrganizationsAdapter({
+      store: createConsoleKitStore('organizations'),
+      discovery: discovery({
+        auth: snapshot({ endpoint: 'auth', queries: ['users'] })
+      })
+    });
+    const respond = (call: GraphQLCall) => {
+      calls.push(call);
+      if (call.document.includes('ConsoleKitOrganizationMembershipsPage')) {
+        return { orgMemberships: { nodes: [] } };
+      }
+      if (call.document.includes('ConsoleKitOrganizationUsersPage')) {
+        return {
+          users: {
+            nodes: [{
+              id: 'user-1',
+              displayName: 'Ada Lovelace',
+              username: 'ada@example.com',
+              type: 1
+            }]
+          }
+        };
+      }
+      if (call.document.includes('ConsoleKitApplicationOrganizationsPage')) {
+        return {
+          tenantOrganizations: {
+            nodes: [
+              { id: 'org-a', name: 'Analytical Engines', slug: 'engines' },
+              { id: 'org-b', name: 'Difference Works', slug: 'difference' }
+            ]
+          }
+        };
+      }
+      if (call.document.includes('ConsoleKitApplicationOrganizationMembersPage')) {
+        return {
+          tenantMembers: {
+            nodes: [
+              {
+                id: 'member-a',
+                organizationId: 'org-a',
+                userId: 'user-1',
+                role: 'owner',
+                joinedAt: '2026-07-20T00:00:00Z'
+              },
+              {
+                id: 'member-b',
+                organizationId: 'org-b',
+                userId: 'user-1',
+                role: 'member',
+                joinedAt: '2026-07-21T00:00:00Z'
+              }
+            ]
+          }
+        };
+      }
+      return {};
+    };
+    const baseRuntime = runtime(respond);
+
+    const loaded = await adapter.load({
+      ...baseRuntime,
+      metadata: compatibleMetadata([organizations, members])
+    }, new AbortController().signal);
+
+    expect(loaded.resource).toMatchObject({
+      status: 'ready',
+      quality: 'authoritative',
+      data: {
+        activeOrganizationId: 'application:organizations:org-a',
+        organizations: [
+          {
+            id: 'application:organizations:org-a',
+            name: 'Analytical Engines',
+            memberCount: 1
+          },
+          {
+            id: 'application:organizations:org-b',
+            name: 'Difference Works',
+            memberCount: 1
+          }
+        ],
+        members: [{
+          id: 'member-a',
+          userId: 'user-1',
+          name: 'Ada Lovelace',
+          email: 'ada@example.com',
+          role: 'owner',
+          status: 'active'
+        }]
+      },
+      limitations: [{
+        code: 'constructive.application-organization-directory-read-only'
+      }]
+    });
+    expect(loaded.policy).toMatchObject({
+      selectOrganization: true,
+      inviteMember: false,
+      updateMemberRole: false,
+      removeMember: false
+    });
+    expect(calls.filter((call) =>
+      call.document.includes('ConsoleKitApplication')
+    )).toEqual(expect.arrayContaining([
+      expect.objectContaining({ endpoint: 'data' }),
+      expect.objectContaining({ endpoint: 'data' })
+    ]));
+  });
+
+  it('keeps a colliding application organization read-only while retaining global creation', async () => {
+    const organizations = metaTable({
+      name: 'organizations',
+      root: 'tenantOrganizations',
+      fields: ['id', 'name']
+    });
+    const members = metaTable({
+      name: 'members',
+      root: 'tenantMembers',
+      fields: ['id', 'organizationId', 'userId', 'role']
+    });
+    members.relations = {
+      belongsTo: [{
+        isUnique: false,
+        keys: [metaField('organizationId')],
+        references: { name: 'organizations' }
+      }]
+    };
+    const store = createConsoleKitStore('organizations');
+    store.getState().setContext({
+      databaseId: 'database-1',
+      organizationId: 'application:organizations:org-shared'
+    });
+    const adminSchema = snapshot({
+      endpoint: 'admin',
+      queries: [
+        'orgMemberships',
+        'orgProfiles',
+        'orgInvites',
+        'orgPermissions',
+        'appMemberships',
+        'appPermissions'
+      ],
+      mutations: {
+        createOrgInvite: 'CreateOrgInviteInput',
+        updateOrgMembership: 'UpdateOrgMembershipInput',
+        createOrgProfileGrant: 'CreateOrgProfileGrantInput',
+        deleteOrgInvite: 'DeleteOrgInviteInput'
+      },
+      types: [
+        objectType('OrgMembership', [
+          'id',
+          'actorId',
+          'entityId',
+          'isOwner',
+          'isAdmin',
+          'isActive',
+          'isApproved',
+          'isBanned',
+          'isDisabled',
+          'isReadOnly',
+          'permissions',
+          'profileId'
+        ]),
+        objectType('OrgProfile', ['id', 'name', 'entityId', 'permissions']),
+        objectType('OrgInvite', [
+          'id', 'entityId', 'email', 'senderId', 'inviteValid', 'profileId'
+        ]),
+        objectType('OrgPermission', ['name', 'bitstr']),
+        objectType('AppMembership', ['actorId', 'isActive', 'permissions']),
+        objectType('AppPermission', ['name', 'bitstr']),
+        ...adminMutationTypes('Org')
+      ]
+    });
+    const authSchema = snapshot({
+      endpoint: 'auth',
+      queries: ['users'],
+      mutations: {
+        createUser: 'CreateUserInput',
+        deleteUser: 'DeleteUserInput'
+      },
+      types: [
+        objectType('User', ['id', 'displayName', 'username', 'profilePicture', 'type']),
+        inputType('CreateUserInput', { user: 'UserInput' }),
+        inputType('UserInput', {
+          username: 'String',
+          displayName: 'String',
+          type: 'Int'
+        }),
+        inputType('DeleteUserInput', { id: 'UUID' })
+      ]
+    });
+    const adapter = createConstructiveOrganizationsAdapter({
+      store,
+      discovery: discovery({ admin: adminSchema, auth: authSchema })
+    });
+    const loaded = await adapter.load({
+      ...runtime((call) => {
+        if (call.document.includes('orgMemberships(first:')) {
+          return {
+            orgMemberships: {
+              nodes: [{
+                id: 'managed-membership',
+                actorId: 'user-1',
+                entityId: 'org-shared',
+                isOwner: true,
+                isAdmin: true,
+                isActive: true,
+                isApproved: true,
+                isBanned: false,
+                isDisabled: false,
+                isReadOnly: false,
+                permissions: '1'
+              }]
+            }
+          };
+        }
+        if (call.document.includes('orgProfiles(first:')) {
+          return {
+            orgProfiles: {
+              nodes: [{ id: 'profile-1', name: 'Owner', entityId: 'org-shared' }]
+            }
+          };
+        }
+        if (call.document.includes('orgInvites(first:')) {
+          return {
+            orgInvites: {
+              nodes: [{
+                id: 'invite-1',
+                entityId: 'org-shared',
+                email: 'member@example.com',
+                senderId: 'user-1',
+                inviteValid: true
+              }]
+            }
+          };
+        }
+        if (call.document.includes('orgPermissions(first:')) {
+          return { orgPermissions: { nodes: [{ name: 'admin_members', bitstr: '1' }] } };
+        }
+        if (call.document.includes('appMemberships(first:')) {
+          return {
+            appMemberships: {
+              nodes: [{ actorId: 'user-1', isActive: true, permissions: '1' }]
+            }
+          };
+        }
+        if (call.document.includes('appPermissions(first:')) {
+          return { appPermissions: { nodes: [{ name: 'create_entity', bitstr: '1' }] } };
+        }
+        if (call.document.includes('ConsoleKitOrganizationUsersPage')) {
+          return {
+            users: {
+              nodes: [
+                { id: 'user-1', displayName: 'Ada', username: 'ada@example.com', type: 1 },
+                { id: 'org-shared', displayName: 'Managed', username: 'managed', type: 2 }
+              ]
+            }
+          };
+        }
+        if (call.document.includes('ConsoleKitApplicationOrganizationsPage')) {
+          return {
+            tenantOrganizations: { nodes: [{ id: 'org-shared', name: 'Application' }] }
+          };
+        }
+        if (call.document.includes('ConsoleKitApplicationOrganizationMembersPage')) {
+          return {
+            tenantMembers: {
+              nodes: [{
+                id: 'application-membership',
+                organizationId: 'org-shared',
+                userId: 'user-1',
+                role: 'owner'
+              }]
+            }
+          };
+        }
+        return {};
+      }),
+      metadata: compatibleMetadata([organizations, members])
+    }, new AbortController().signal);
+
+    expect(loaded.resource).toMatchObject({
+      status: 'ready',
+      data: {
+        activeOrganizationId: 'application:organizations:org-shared',
+        organizations: [
+          { id: 'org-shared', name: 'Managed' },
+          { id: 'application:organizations:org-shared', name: 'Application' }
+        ],
+        members: [{ id: 'application-membership' }],
+        invites: []
+      }
+    });
+    expect(loaded.policy).toMatchObject({
+      createOrganization: true,
+      selectOrganization: true,
+      inviteMember: false,
+      assignInviteRole: false,
+      updateMemberRole: false,
+      removeMember: false,
+      cancelInvite: false
+    });
+    expect(loaded.actions?.createOrganization).toBeTypeOf('function');
+    expect(loaded.actions?.inviteMember).toBeUndefined();
+    expect(loaded.actions?.updateMemberRole).toBeUndefined();
+    expect(loaded.actions?.removeMember).toBeUndefined();
+    expect(loaded.actions?.cancelInvite).toBeUndefined();
+  });
+});
+
+describe('Constructive storage adapter _meta contract', () => {
+  it('loads RLS-visible storage rows through dynamically discovered data roots', async () => {
+    const buckets = metaTable({
+      name: 'workspace_buckets',
+      root: 'workspaceBuckets',
+      fields: ['id', 'key', 'description', 'isPublic']
+    });
+    buckets.storage = { isBucketsTable: true, isFilesTable: false };
+    const files = metaTable({
+      name: 'workspace_files',
+      root: 'workspaceFiles',
+      fields: ['id', 'key', 'bucketId', 'filename', 'mimeType', 'size', 'updatedAt']
+    });
+    files.storage = { isBucketsTable: false, isFilesTable: true };
+    files.relations = {
+      belongsTo: [{
+        isUnique: false,
+        keys: [metaField('bucketId')],
+        references: { name: 'workspace_buckets' }
+      }]
+    };
+    const calls: GraphQLCall[] = [];
+    const adapter = createConstructiveStorageAdapter({
+      store: createConsoleKitStore('storage', undefined, [storageConsoleStoreSlice]),
+      discovery: discovery({})
+    });
+    const baseRuntime = runtime((call) => {
+      calls.push(call);
+      if (call.document.includes('ConsoleKitStorageMetaBuckets0')) {
+        return {
+          workspaceBuckets: {
+            nodes: [{
+              id: 'bucket-1',
+              key: 'documents',
+              description: 'Documents',
+              isPublic: false
+            }]
+          }
+        };
+      }
+      if (call.document.includes('ConsoleKitStorageMetaFiles0')) {
+        return {
+          workspaceFiles: {
+            nodes: [{
+              id: 'file-1',
+              key: 'reports/quarterly.pdf',
+              bucketId: 'bucket-1',
+              filename: 'quarterly.pdf',
+              mimeType: 'application/pdf',
+              size: '2048',
+              updatedAt: '2026-07-22T00:00:00Z'
+            }]
+          }
+        };
+      }
+      return {};
+    });
+
+    const loaded = await adapter.load({
+      ...baseRuntime,
+      metadata: compatibleMetadata([buckets, files])
+    }, new AbortController().signal);
+
+    expect(loaded.resource).toMatchObject({
+      status: 'ready',
+      quality: 'authoritative',
+      data: {
+        activeBucketKey: 'documents',
+        buckets: [{
+          id: 'bucket-1',
+          key: 'documents',
+          name: 'Documents',
+          access: 'private',
+          objectCount: 1
+        }],
+        objects: [{
+          id: 'file-1',
+          name: 'quarterly.pdf',
+          contentType: 'application/pdf',
+          sizeLabel: '2.0 KB'
+        }]
+      }
+    });
+    expect(loaded.policy).toEqual({
+      selectBucket: false,
+      navigate: false,
+      createBucket: false,
+      upload: false,
+      download: false,
+      deleteObject: false
+    });
+    expect(calls).toHaveLength(2);
+    expect(calls.every((call) => call.endpoint === 'data')).toBe(true);
+  });
+
+  it('pairs reused IDs by family, switches buckets, and scopes selection by tenant', async () => {
+    const documentBuckets = metaTable({
+      name: 'document_buckets',
+      root: 'documentBuckets',
+      fields: ['id', 'key', 'description']
+    });
+    documentBuckets.storage = { isBucketsTable: true, isFilesTable: false };
+    const mediaBuckets = metaTable({
+      name: 'media_buckets',
+      root: 'mediaBuckets',
+      fields: ['id', 'key', 'description']
+    });
+    mediaBuckets.storage = { isBucketsTable: true, isFilesTable: false };
+    const documentFiles = metaTable({
+      name: 'document_files',
+      root: 'documentFiles',
+      fields: ['id', 'key', 'bucketId', 'filename']
+    });
+    documentFiles.storage = { isBucketsTable: false, isFilesTable: true };
+    documentFiles.relations = {
+      belongsTo: [{
+        isUnique: false,
+        keys: [metaField('bucketId')],
+        references: { name: 'document_buckets' }
+      }]
+    };
+    const mediaFiles = metaTable({
+      name: 'media_files',
+      root: 'mediaFiles',
+      fields: ['id', 'key', 'bucketId', 'filename']
+    });
+    mediaFiles.storage = { isBucketsTable: false, isFilesTable: true };
+    mediaFiles.relations = {
+      belongsTo: [{
+        isUnique: false,
+        keys: [metaField('bucketId')],
+        references: { name: 'media_buckets' }
+      }]
+    };
+    const store = createConsoleKitStore('storage', undefined, [storageConsoleStoreSlice]);
+    const adapter = createConstructiveStorageAdapter({
+      store,
+      discovery: discovery({})
+    });
+    const respond = (call: GraphQLCall) => {
+      if (call.document.includes('documentBuckets')) {
+        return {
+          documentBuckets: {
+            nodes: [{ id: 'bucket-1', key: 'assets', description: 'Documents' }]
+          }
+        };
+      }
+      if (call.document.includes('mediaBuckets')) {
+        return {
+          mediaBuckets: {
+            nodes: [{ id: 'bucket-1', key: 'assets', description: 'Media' }]
+          }
+        };
+      }
+      if (call.document.includes('documentFiles')) {
+        return {
+          documentFiles: {
+            nodes: [{
+              id: 'file-1',
+              key: 'shared-name.txt',
+              bucketId: 'bucket-1',
+              filename: 'document.txt'
+            }]
+          }
+        };
+      }
+      if (call.document.includes('mediaFiles')) {
+        return {
+          mediaFiles: {
+            nodes: [{
+              id: 'file-1',
+              key: 'shared-name.txt',
+              bucketId: 'bucket-1',
+              filename: 'media.txt'
+            }]
+          }
+        };
+      }
+      return {};
+    };
+    const baseRuntime = runtime(respond);
+    const metadata = compatibleMetadata([
+      documentBuckets,
+      mediaBuckets,
+      documentFiles,
+      mediaFiles
+    ]);
+
+    const first = await adapter.load({ ...baseRuntime, metadata }, new AbortController().signal);
+    if (first.resource.status !== 'ready') throw new Error('Expected storage rows.');
+    expect(first.resource.data).toMatchObject({
+      activeBucketKey: 'document_buckets:assets',
+      buckets: [{
+        id: 'document_buckets:bucket-1',
+        key: 'document_buckets:assets',
+        access: 'unknown'
+      }, {
+        id: 'media_buckets:bucket-1',
+        key: 'media_buckets:assets',
+        access: 'unknown'
+      }],
+      objects: [{ id: 'document_files:file-1', key: 'document_files:shared-name.txt' }]
+    });
+
+    await first.actions?.selectBucket?.({ bucketKey: 'media_buckets:assets' });
+    const selected = await adapter.load(
+      { ...baseRuntime, metadata },
+      new AbortController().signal
+    );
+    expect(selected.resource).toMatchObject({
+      status: 'ready',
+      data: {
+        activeBucketKey: 'media_buckets:assets',
+        objects: [{ id: 'media_files:file-1', name: 'media.txt' }]
+      }
+    });
+
+    const otherTenant = await adapter.load(
+      { ...runtime(respond, 'user-1', true, 'database-2'), metadata },
+      new AbortController().signal
+    );
+    expect(otherTenant.resource).toMatchObject({
+      status: 'ready',
+      data: { activeBucketKey: 'document_buckets:assets' }
+    });
+  });
+
+  it('bounds _meta pages, labels partial rows, and sends a discovered bucket condition', async () => {
+    const buckets = metaTable({
+      name: 'workspace_buckets',
+      root: 'workspaceBuckets',
+      fields: ['id', 'key']
+    });
+    buckets.storage = { isBucketsTable: true, isFilesTable: false };
+    const files = metaTable({
+      name: 'workspace_files',
+      root: 'workspaceFiles',
+      fields: ['id', 'key', 'bucketId']
+    });
+    files.storage = { isBucketsTable: false, isFilesTable: true };
+    files.relations = {
+      belongsTo: [{
+        isUnique: false,
+        keys: [metaField('bucketId')],
+        references: { name: 'workspace_buckets' }
+      }]
+    };
+    const conditionType = inputType('WorkspaceFileCondition', { bucketId: 'UUID' });
+    const dataSchema: ConstructiveSchemaSnapshot = {
+      endpointKind: 'data',
+      endpointId: 'data-endpoint',
+      queryFields: {
+        workspaceFiles: field('workspaceFiles', 'WorkspaceFilesConnection', [{
+          name: 'condition',
+          type: { kind: 'INPUT_OBJECT', name: conditionType.name }
+        }])
+      },
+      mutationFields: {},
+      types: { [conditionType.name]: conditionType }
+    };
+    const calls: GraphQLCall[] = [];
+    const adapter = createConstructiveStorageAdapter({
+      store: createConsoleKitStore('storage', undefined, [storageConsoleStoreSlice]),
+      discovery: discovery({ data: dataSchema })
+    });
+    const loaded = await adapter.load({
+      ...runtime((call) => {
+        calls.push(call);
+        if (call.document.includes('ConsoleKitStorageMetaBuckets')) {
+          const secondPage = Boolean(call.variables?.after);
+          return {
+            workspaceBuckets: {
+              nodes: [{
+                id: secondPage ? 'bucket-2' : 'bucket-1',
+                key: secondPage ? 'media' : 'documents'
+              }],
+              pageInfo: secondPage
+                ? { hasNextPage: true, endCursor: 'bucket-page-3' }
+                : { hasNextPage: true, endCursor: 'bucket-page-2' }
+            }
+          };
+        }
+        if (call.document.includes('ConsoleKitStorageMetaFiles')) {
+          return {
+            workspaceFiles: {
+              nodes: [{
+                id: String(call.variables?.after ?? 'file-1'),
+                key: String(call.variables?.after ?? 'file-1'),
+                bucketId: 'bucket-1'
+              }],
+              pageInfo: { hasNextPage: false, endCursor: 'files-end' }
+            }
+          };
+        }
+        return {};
+      }),
+      metadata: compatibleMetadata([buckets, files])
+    }, new AbortController().signal);
+
+    const bucketCalls = calls.filter((call) =>
+      call.document.includes('ConsoleKitStorageMetaBuckets')
+    );
+    const fileCalls = calls.filter((call) =>
+      call.document.includes('ConsoleKitStorageMetaFiles')
+    );
+    expect(bucketCalls).toHaveLength(2);
+    expect(bucketCalls.map((call) => call.variables?.after)).toEqual([null, 'bucket-page-2']);
+    expect(fileCalls).toHaveLength(1);
+    expect(fileCalls[0]?.variables).toMatchObject({
+      first: 100,
+      after: null,
+      condition: { bucketId: 'bucket-1' }
+    });
+    expect(loaded.resource).toMatchObject({
+      status: 'ready',
+      limitations: [{ code: 'constructive.storage-result-window' }]
+    });
+    if (loaded.resource.status !== 'ready') throw new Error('Expected storage rows.');
+    expect(loaded.resource.data.buckets).toHaveLength(2);
+    expect(loaded.resource.data.buckets.every(
+      (bucket) => bucket.objectCount === undefined
+    )).toBe(true);
+  });
+
+  it('bounds and bucket-scopes the specialized storage endpoint', async () => {
+    const connectionType = (
+      name: string,
+      nodeType: string
+    ): ConstructiveSchemaType => ({
+      kind: 'OBJECT',
+      name,
+      fields: [field('nodes', nodeType)],
+      inputFields: []
+    });
+    const fileCondition = inputType('FileCondition', { bucketId: 'UUID' });
+    const schema: ConstructiveSchemaSnapshot = {
+      endpointKind: 'storage',
+      endpointId: 'storage-endpoint',
+      queryFields: {
+        buckets: field('buckets', 'BucketConnection'),
+        files: field('files', 'FileConnection', [{
+          name: 'condition',
+          type: { kind: 'INPUT_OBJECT', name: fileCondition.name }
+        }])
+      },
+      mutationFields: {},
+      types: Object.fromEntries([
+        connectionType('BucketConnection', 'Bucket'),
+        connectionType('FileConnection', 'File'),
+        objectType('Bucket', ['id', 'key', 'isPublic']),
+        objectType('File', ['id', 'key', 'bucketId']),
+        fileCondition
+      ].map((type) => [type.name, type]))
+    };
+    const calls: GraphQLCall[] = [];
+    const adapter = createConstructiveStorageAdapter({
+      store: createConsoleKitStore('storage', undefined, [storageConsoleStoreSlice]),
+      discovery: discovery({ storage: schema })
+    });
+    const loaded = await adapter.load(runtime((call) => {
+      calls.push(call);
+      if (call.document.includes('ConsoleKitStorageBuckets')) {
+        return {
+          buckets: {
+            nodes: [{ id: 'bucket-1', key: 'documents', isPublic: false }],
+            pageInfo: { hasNextPage: false, endCursor: 'buckets-end' }
+          }
+        };
+      }
+      if (call.document.includes('ConsoleKitStorageFiles')) {
+        const after = call.variables?.after;
+        return {
+          files: {
+            nodes: [{
+              id: after ? 'file-2' : 'file-1',
+              key: after ? 'second.txt' : 'first.txt',
+              bucketId: 'bucket-1'
+            }],
+            pageInfo: after
+              ? { hasNextPage: true, endCursor: 'file-page-3' }
+              : { hasNextPage: true, endCursor: 'file-page-2' }
+          }
+        };
+      }
+      return {};
+    }), new AbortController().signal);
+
+    const fileCalls = calls.filter((call) =>
+      call.document.includes('ConsoleKitStorageFiles')
+    );
+    expect(fileCalls).toHaveLength(2);
+    expect(fileCalls.map((call) => call.variables)).toEqual([
+      { first: 100, after: null, condition: { bucketId: 'bucket-1' } },
+      { first: 100, after: 'file-page-2', condition: { bucketId: 'bucket-1' } }
+    ]);
+    expect(loaded.resource).toMatchObject({
+      status: 'ready',
+      data: {
+        buckets: [{ access: 'private', objectCount: undefined }],
+        objects: [{ id: 'file-1' }, { id: 'file-2' }]
+      },
+      limitations: [{ code: 'constructive.storage-result-window' }]
     });
   });
 });

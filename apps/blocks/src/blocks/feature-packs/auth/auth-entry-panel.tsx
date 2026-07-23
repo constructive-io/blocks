@@ -146,10 +146,13 @@ export function AuthEntryPanel({
                   <MailIcon className='text-muted-foreground pointer-events-none absolute left-3 top-1/2 -translate-y-1/2' />
                   <Input
                     autoComplete='email'
+                    autoCapitalize='none'
                     className='pl-10'
                     id={`${fieldId}-email`}
+                    name='email'
                     onChange={(event) => setEmail(event.currentTarget.value)}
                     required
+                    spellCheck={false}
                     type='email'
                     value={email}
                   />
@@ -170,6 +173,7 @@ export function AuthEntryPanel({
                     className='pl-10'
                     id={`${fieldId}-password`}
                     minLength={mode === 'sign-in' ? undefined : 12}
+                    name='password'
                     onChange={(event) => setPassword(event.currentTarget.value)}
                     required
                     type='password'

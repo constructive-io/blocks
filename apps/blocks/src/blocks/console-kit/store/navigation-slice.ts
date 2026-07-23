@@ -1,13 +1,18 @@
 import type { StateCreator } from 'zustand/vanilla';
 
 import type { FeaturePackId } from '../../../feature-packs';
-import type { AuthEntryMode } from '../../feature-packs/auth/auth-contracts';
+
+export type ConsoleKitAuthEntryMode =
+  | 'sign-in'
+  | 'sign-up'
+  | 'recover-password'
+  | 'reset-password';
 
 export type ConsoleKitNavigationSlice = {
   activeFeature: FeaturePackId;
-  authEntryMode: AuthEntryMode;
+  authEntryMode: ConsoleKitAuthEntryMode;
   setActiveFeature: (feature: FeaturePackId) => void;
-  setAuthEntryMode: (mode: AuthEntryMode) => void;
+  setAuthEntryMode: (mode: ConsoleKitAuthEntryMode) => void;
 };
 
 export function createConsoleKitNavigationSlice(

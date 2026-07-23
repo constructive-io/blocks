@@ -1,12 +1,16 @@
 import {
 	META_CONTRACT_INTROSPECTION_DOCUMENT,
 	META_DOCUMENT,
+	SCHEMA_INTROSPECTION_QUERY,
+	analyzeSchemaIntrospectionCompatibility,
 	assertMetaContract,
 	assertMetaQuery,
 	buildPostGraphileCreate,
 	buildPostGraphileDelete,
 	buildPostGraphileUpdate,
 	buildSelect,
+	createError,
+	normalizeSchemaEnumInputValues,
 	prepareCreateInput,
 	prepareUpdateInput,
 	toCamelCasePlural,
@@ -16,10 +20,12 @@ import {
 	toUpdateMutationName,
 } from '@constructive-io/data';
 import type {
+	IntrospectionQueryResponse,
 	MetaContractIntrospectionQuery,
 	MetaQuery,
 	MutationOptions,
 	QueryOptions,
+	SchemaEnumFieldMapping,
 } from '@constructive-io/data';
 
 import type { SheetsExecuteFn } from '../context/sheets-execute';
@@ -32,6 +38,7 @@ import type {
 } from './sheets-adapter';
 
 const compatibilityChecks = new WeakMap<SheetsExecuteFn, Promise<void>>();
+const enumMappings = new WeakMap<SheetsExecuteFn, readonly SchemaEnumFieldMapping[]>();
 
 async function ensureCurrentMetaContract(execute: SheetsExecuteFn): Promise<void> {
 	const cached = compatibilityChecks.get(execute);
@@ -54,6 +61,42 @@ async function ensureCurrentMetaContract(execute: SheetsExecuteFn): Promise<void
 	}
 }
 
+function hasDeclaredEnums(meta: MetaQuery): boolean {
+	return Boolean(meta._meta?.tables?.some((table) =>
+		table?.fields?.some((field) => Boolean(field?.enumValues?.name)),
+	));
+}
+
+function schemaCompatibilityError(missingPaths: readonly string[]): Error {
+	const detail = missingPaths.length > 0 ? ` Missing: ${missingPaths.join(', ')}.` : '';
+	return createError.badRequest(
+		`The GraphQL schema does not match the enum values declared by Constructive _meta.${detail}`,
+		'SCHEMA_INTROSPECTION_INCOMPATIBLE',
+	);
+}
+
+function normalizeMutationEnums(
+	ctx: AdapterTableContext,
+	input: Record<string, unknown>,
+	execute: SheetsExecuteFn,
+): Record<string, unknown> {
+	const hasEnumInput = ctx.table.fields.some(
+		(field) =>
+			Boolean(field.enumValues?.length) &&
+			Object.prototype.hasOwnProperty.call(input, field.name),
+	);
+	if (!hasEnumInput) return input;
+
+	const mappings = enumMappings.get(execute);
+	if (!mappings) {
+		throw createError.badRequest(
+			'Enum schema mappings are unavailable. Load table metadata before mutating enum fields.',
+			'ENUM_MAPPING_UNAVAILABLE',
+		);
+	}
+	return normalizeSchemaEnumInputValues(input, ctx.table, mappings);
+}
+
 /**
  * Create the default PostGraphile-backed adapter. The metadata preflight makes
  * an outdated endpoint distinguishable from an ordinary transport failure,
@@ -65,6 +108,22 @@ export function createPostGraphileAdapter(): SheetsBackendAdapter {
 			await ensureCurrentMetaContract(execute);
 			const meta = await execute<MetaQuery>(META_DOCUMENT);
 			assertMetaQuery(meta);
+			if (!hasDeclaredEnums(meta)) {
+				enumMappings.set(execute, []);
+				return meta;
+			}
+
+			try {
+				const introspection = await execute<IntrospectionQueryResponse>(SCHEMA_INTROSPECTION_QUERY);
+				const analysis = analyzeSchemaIntrospectionCompatibility(introspection, meta);
+				if (analysis.status !== 'compatible') {
+					throw schemaCompatibilityError(analysis.missingPaths);
+				}
+				enumMappings.set(execute, analysis.enumMappings);
+			} catch (error) {
+				enumMappings.delete(execute);
+				throw error;
+			}
 			return meta;
 		},
 
@@ -112,7 +171,11 @@ export function createPostGraphileAdapter(): SheetsBackendAdapter {
 				fieldSelection: options.fieldSelection || 'display',
 			});
 			const singularName = toCamelCaseSingular(tableName, table);
-			const sanitizedData = prepareCreateInput(data);
+			const sanitizedData = normalizeMutationEnums(
+				ctx,
+				prepareCreateInput(data),
+				execute,
+			);
 			const variables = {
 				input: {
 					[singularName]: sanitizedData,
@@ -139,11 +202,12 @@ export function createPostGraphileAdapter(): SheetsBackendAdapter {
 			const patchFieldName = toPatchFieldName(tableName, table);
 			const sanitizedPatch = prepareUpdateInput(patch);
 			if (Object.keys(sanitizedPatch).length === 0) return null;
+			const normalizedPatch = normalizeMutationEnums(ctx, sanitizedPatch, execute);
 
 			const variables = {
 				input: {
 					...(typeof id === 'object' ? id : { id }),
-					[patchFieldName]: sanitizedPatch,
+					[patchFieldName]: normalizedPatch,
 				},
 			};
 			const result = (await execute(doc, variables)) as Record<string, unknown>;

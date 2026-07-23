@@ -122,13 +122,16 @@ function DataExplorer({
       </aside>
       <div className='flex min-h-[28rem] min-w-0 flex-col overflow-hidden p-3'>
         {activeTable ? (
-          <Sheets
-            {...sheetsProps}
-            className='min-h-0 flex-1'
-            onEvent={onEvent}
-            pageSize={pageSize}
-            tableName={activeTable}
-          />
+          <>
+            <p className='text-muted-foreground mb-2 text-xs sm:hidden'>Swipe the table horizontally to see more fields and actions.</p>
+            <Sheets
+              {...sheetsProps}
+              className='min-h-0 flex-1'
+              onEvent={onEvent}
+              pageSize={pageSize}
+              tableName={activeTable}
+            />
+          </>
         ) : null}
       </div>
     </div>

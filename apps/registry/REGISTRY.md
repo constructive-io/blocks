@@ -3,7 +3,7 @@
 The public `@constructive` registry is built from two canonical sources:
 
 - `packages/ui` provides the Constructive primitives, app bar, and app shell.
-- `apps/blocks` provides billing blocks, capability-aware feature packs, preset roots, and `console-kit-nextjs`.
+- `apps/blocks` provides billing blocks, provider-neutral feature packs, optional Console Kit modules, preset roots, and `console-kit-nextjs`.
 
 `packages/schema-builder` remains an npm package for platform-operator tooling,
 but it is deliberately absent from this application-database registry. The
@@ -29,15 +29,21 @@ standalone primitive:
 ```bash
 pnpm dlx shadcn@4.13.1 add @constructive/console-kit-nextjs
 pnpm dlx shadcn@4.13.1 add @constructive/preset-b2b-storage
+pnpm dlx shadcn@4.13.1 add @constructive/console-module-users
 pnpm dlx shadcn@4.13.1 add @constructive/feature-pack-users
 pnpm dlx shadcn@4.13.1 add @constructive/app-shell
 pnpm dlx shadcn@4.13.1 add @constructive/billing-settings-page
 ```
 
-Feature-pack and preset installs write their machine-readable contract to
-`.constructive/feature-packs/<id>.json` at the consumer root. The console uses
-injected endpoints, session state, and action adapters, so installing source
-does not embed deployment-specific URLs or generated SDK fixtures.
+`feature-pack-*` installs are standalone views and write their machine-readable
+contract to `.constructive/feature-packs/<id>.json` at the consumer root without
+installing Console Kit. A matching `console-module-*` item installs that view
+and `console-kit-core` transitively, then adds discovery, navigation, and the
+Constructive adapter or pack slice it needs. Presets depend on those console
+modules, so they install the same view contracts without duplicating ownership.
+The console uses injected endpoints, session state, and action adapters, so
+installing source does not embed deployment-specific URLs or generated SDK
+fixtures.
 
 The registry requires shadcn 4.13.1 or newer. Standalone UI and billing roots
 copy their primitives and theme into the consumer without an npm package. Data
@@ -67,12 +73,12 @@ canonical app block sources into an ignored staging directory, merges both
 manifests, namespaces internal dependencies, and runs `shadcn build` into
 `apps/registry/public/r`.
 
-The smoke command performs isolated package-free installs for representative UI
-and billing roots, then uses a local read-only npm registry for
-`feature-pack-users`, `preset-b2b-storage`, and `console-kit-nextjs`. Every
-fixture is typechecked and compiles its Tailwind CSS. The package-backed cases
-also verify the installed feature-pack sidecars, the console's Zustand store
-slices, and the Data/Sheets runtime dependencies. All cases reject
+The smoke command performs isolated installs for UI, billing, standalone
+feature-pack, Console Kit module, preset, and full-console roots. Every fixture
+is typechecked and compiles its Tailwind CSS. The package-backed cases use a
+local read-only npm registry and verify the installed feature-pack sidecars,
+the console's Zustand store slices, and the Data/Sheets runtime dependencies.
+All cases reject
 `tw-animate-css`, registry-internal paths, and obsolete generated-SDK sidecars;
 source-installed UI files must not retain `@constructive-io/ui` imports.
 

@@ -3,15 +3,15 @@
   "id": "storage",
   "title": "Storage",
   "description": "Policy-aware bucket navigation, uploads, downloads, and object deletion.",
-  "dependencies": ["data"],
-  "endpoints": { "required": ["storage"], "optional": [] },
+  "dependencies": [],
+  "endpoints": { "required": [], "optional": ["storage", "admin", "data"] },
   "capabilities": {
     "required": ["storage.buckets", "storage.files"],
     "optional": ["storage.versioning", "storage.content-hash", "storage.custom-keys", "storage.audit-log"]
   },
   "metadata": {
-    "requiredMetaSections": ["tables", "fields", "constraints", "relations", "query"],
-    "optionalMetaSections": ["scope", "encoding", "storage"],
+    "requiredMetaSections": ["tables", "fields", "constraints", "relations", "query", "scope"],
+    "optionalMetaSections": ["encoding", "storage"],
     "requiredIntrospectionSections": ["root-operations", "types", "input-objects"],
     "optionalIntrospectionSections": ["enums", "directives"]
   }

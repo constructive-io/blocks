@@ -329,7 +329,7 @@
       "name": "console-feature-catalog",
       "type": "registry:lib",
       "title": "Console Feature Catalog",
-      "description": "Validated feature-pack capability manifests and experimental backend preset profiles.",
+      "description": "Validated feature-pack capability manifests and stable backend preset profiles.",
       "dependencies": [
         "zod"
       ],
@@ -365,293 +365,12 @@
       ]
     },
     {
-      "name": "feature-pack-data",
+      "name": "console-kit-core",
       "type": "registry:block",
-      "title": "Data Feature Pack",
-      "description": "A current-_meta-only application data explorer with application-table filtering and spreadsheet CRUD.",
-      "docs": "## Usage\n\nPass a Sheets configuration for the active application database. The feature root reads the current `_meta` contract, keeps tables with an exact application smart-tag scope, and delegates table selection, creation, and spreadsheet events to the host.\n\n```tsx\nimport { DataFeaturePack } from '@/blocks/feature-packs/data/data-feature-pack';\n\n<DataFeaturePack\n  config={sheetsConfig}\n  defaultActiveTable=\"projects\"\n  applicationScopes={['app']}\n  onActiveTableChange={setActiveTable}\n  onEvent={recordSheetEvent}\n/>\n```\n\nUse `activeTable` with `onActiveTableChange` when routing owns selection. The installed sidecar describes compatibility for tooling; PostgreSQL privileges and RLS remain authoritative for every query and mutation.",
+      "title": "Constructive Console Kit Core",
+      "description": "The leaf-independent Console Kit shell, runtime, discovery, and single modular Zustand store.",
       "dependencies": [
         "@constructive-io/data",
-        "@constructive-io/sheets",
-        "lucide-react"
-      ],
-      "css": {
-        "@import '@constructive-io/sheets/styles.css'": {}
-      },
-      "registryDependencies": [
-        "pack-foundation"
-      ],
-      "files": [
-        {
-          "path": "registry/constructive/blocks/feature-packs/data/data-feature-pack.tsx",
-          "target": "src/blocks/feature-packs/data/data-feature-pack.tsx",
-          "type": "registry:component"
-        },
-        {
-          "path": "registry/constructive/blocks/feature-packs/data/feature-pack.json",
-          "target": "~/.constructive/feature-packs/data.json",
-          "type": "registry:file"
-        }
-      ]
-    },
-    {
-      "name": "feature-pack-auth",
-      "type": "registry:block",
-      "title": "Authentication Feature Pack",
-      "description": "Provider-neutral public authentication flows and personal account/session management.",
-      "docs": "## Usage\n\nChoose the entry or account view, grant each available operation through policy, and provide its matching provider callback.\n\n```tsx\nimport { AuthFeaturePack } from '@/blocks/feature-packs/auth/auth-feature-pack';\n\n<AuthFeaturePack\n  view=\"account\"\n  account={account}\n  verificationNotice={verificationNotice}\n  policy={{ signOut: true, changePassword: true, sendVerificationEmail: true }}\n  actions={authActions}\n  onError={reportAuthError}\n/>\n```\n\nAn action appears only when its policy grant and callback are both present. `verificationNotice` reports a host-consumed credential on either the signed-out entry view or account view; keep that credential in a client-only fragment and scrub it before mounting. Credentials and sessions belong to the personal identity, while application and organization membership remain separate feature-pack concerns.",
-      "dependencies": [
-        "lucide-react"
-      ],
-      "registryDependencies": [
-        "feature-pack-data",
-        "pack-foundation"
-      ],
-      "files": [
-        {
-          "path": "registry/constructive/blocks/feature-packs/auth/auth-contracts.ts",
-          "target": "src/blocks/feature-packs/auth/auth-contracts.ts",
-          "type": "registry:lib"
-        },
-        {
-          "path": "registry/constructive/blocks/feature-packs/auth/auth-entry-panel.tsx",
-          "target": "src/blocks/feature-packs/auth/auth-entry-panel.tsx",
-          "type": "registry:component"
-        },
-        {
-          "path": "registry/constructive/blocks/feature-packs/auth/auth-account-view.tsx",
-          "target": "src/blocks/feature-packs/auth/auth-account-view.tsx",
-          "type": "registry:component"
-        },
-        {
-          "path": "registry/constructive/blocks/feature-packs/auth/auth-feature-pack.tsx",
-          "target": "src/blocks/feature-packs/auth/auth-feature-pack.tsx",
-          "type": "registry:component"
-        },
-        {
-          "path": "registry/constructive/blocks/feature-packs/auth/feature-pack.json",
-          "target": "~/.constructive/feature-packs/auth.json",
-          "type": "registry:file"
-        }
-      ]
-    },
-    {
-      "name": "feature-pack-users",
-      "type": "registry:block",
-      "title": "Users Feature Pack",
-      "description": "Application membership, invitation, role, profile, and status management without credential ownership.",
-      "docs": "## Usage\n\nPass application members, optional invitations, and role choices through one resource, then grant and inject only the membership operations available to the current administrator.\n\n```tsx\nimport { UsersFeaturePack } from '@/blocks/feature-packs/users/users-feature-pack';\n\n<UsersFeaturePack\n  resource={users}\n  policy={{ invite: true, assignInviteRole: true, updateRole: true, toggleActive: true, remove: true, cancelInvite: true, extendInvite: true }}\n  actions={userActions}\n  onError={reportMembershipError}\n/>\n```\n\n`invite` exposes roleless invitations. Grant `assignInviteRole` only when the current administrator may attach one of the visible profiles; otherwise the role field stays hidden. Invitation cancellation and extension additionally require each row's `actionPolicy`, which lets the resource mirror sender-scoped RLS without rendering unusable controls. Search remains local to the block, while every mutation stays host-controlled and PostgreSQL policy determines the resulting membership view.",
-      "dependencies": [
-        "lucide-react"
-      ],
-      "registryDependencies": [
-        "feature-pack-data",
-        "feature-pack-auth",
-        "pack-foundation"
-      ],
-      "files": [
-        {
-          "path": "registry/constructive/blocks/feature-packs/users/users-feature-pack.tsx",
-          "target": "src/blocks/feature-packs/users/users-feature-pack.tsx",
-          "type": "registry:component"
-        },
-        {
-          "path": "registry/constructive/blocks/feature-packs/users/feature-pack.json",
-          "target": "~/.constructive/feature-packs/users.json",
-          "type": "registry:file"
-        }
-      ]
-    },
-    {
-      "name": "feature-pack-organizations",
-      "type": "registry:block",
-      "title": "Organizations Feature Pack",
-      "description": "Tenant switching plus organization membership and invitation management.",
-      "docs": "## Usage\n\nPass the visible organizations together with the selected tenant's members, invitations, role choices, and any ready-resource `limitations`. Keep tenant selection and every membership mutation in host state.\n\n```tsx\nimport { OrganizationsFeaturePack } from '@/blocks/feature-packs/organizations/organizations-feature-pack';\n\n<OrganizationsFeaturePack\n  resource={organizations}\n  policy={{ selectOrganization: true, inviteMember: true, assignInviteRole: true, updateMemberRole: true, removeMember: true, cancelInvite: true }}\n  actions={organizationActions}\n  onError={reportOrganizationError}\n/>\n```\n\n`inviteMember` exposes roleless invitations. Grant `assignInviteRole` only when the current organization administrator may attach one of the visible profiles. Cancellation also requires the invitation row's `actionPolicy`; scope, invite-mode, and ambiguous-profile conditions belong in `resource.limitations` and should disable unsafe role actions. The UI never broadens tenant access: each policy grant exposes a control, while PostgreSQL privileges and RLS remain authoritative when the injected action executes.",
-      "dependencies": [
-        "lucide-react"
-      ],
-      "registryDependencies": [
-        "feature-pack-users",
-        "pack-foundation"
-      ],
-      "files": [
-        {
-          "path": "registry/constructive/blocks/feature-packs/organizations/organizations-feature-pack.tsx",
-          "target": "src/blocks/feature-packs/organizations/organizations-feature-pack.tsx",
-          "type": "registry:component"
-        },
-        {
-          "path": "registry/constructive/blocks/feature-packs/organizations/feature-pack.json",
-          "target": "~/.constructive/feature-packs/organizations.json",
-          "type": "registry:file"
-        }
-      ]
-    },
-    {
-      "name": "feature-pack-storage",
-      "type": "registry:block",
-      "title": "Storage Feature Pack",
-      "description": "Bucket, folder, object, upload, download, and deletion surfaces backed by injected storage actions.",
-      "docs": "## Usage\n\nPass the policy-visible buckets, active path, and objects through resource, then inject only the file operations supported by the current database.\n\n```tsx\nimport { StorageFeaturePack } from '@/blocks/feature-packs/storage/storage-feature-pack';\n\n<StorageFeaturePack\n  resource={storage}\n  policy={{ selectBucket: true, navigate: true, createBucket: true, upload: true, download: true, deleteObject: true }}\n  actions={storageActions}\n  onError={reportStorageError}\n/>\n```\n\nThe host owns bucket and path state. Navigation and mutations report intent through callbacks, and the next resource value reflects the access that remains after storage policy is reapplied.",
-      "dependencies": [
-        "lucide-react"
-      ],
-      "registryDependencies": [
-        "feature-pack-data",
-        "pack-foundation"
-      ],
-      "files": [
-        {
-          "path": "registry/constructive/blocks/feature-packs/storage/storage-feature-pack.tsx",
-          "target": "src/blocks/feature-packs/storage/storage-feature-pack.tsx",
-          "type": "registry:component"
-        },
-        {
-          "path": "registry/constructive/blocks/feature-packs/storage/feature-pack.json",
-          "target": "~/.constructive/feature-packs/storage.json",
-          "type": "registry:file"
-        }
-      ]
-    },
-    {
-      "name": "feature-pack-billing",
-      "type": "registry:block",
-      "title": "Billing Feature Pack",
-      "description": "The feature-pack root for Constructive billing plans, subscriptions, usage, entitlements, credits, and activity.",
-      "docs": "## Usage\n\nPass one billing account and the independent resources for subscription, entitlements, usage, credits, history, activity, and plans. The feature root preserves the mature Billing settings page contract.\n\n```tsx\nimport { BillingFeaturePack } from '@/blocks/feature-packs/billing/billing-feature-pack';\n\n<BillingFeaturePack\n  account={account}\n  resources={billingResources}\n  actions={billingActions}\n  formatOptions={{ locale: 'en-US', timeZone: 'UTC' }}\n  section={section}\n  onSectionChange={setSection}\n/>\n```\n\nEach resource keeps its own loading, empty, error, ready, and quality state. Omitted callbacks remove their controls, and provider operations remain outside the reusable billing view.",
-      "dependencies": [],
-      "registryDependencies": [
-        "feature-pack-data"
-      ],
-      "files": [
-        {
-          "path": "registry/constructive/blocks/feature-packs/billing/billing-feature-pack.tsx",
-          "target": "src/blocks/feature-packs/billing/billing-feature-pack.tsx",
-          "type": "registry:component"
-        },
-        {
-          "path": "registry/constructive/blocks/feature-packs/billing/feature-pack.json",
-          "target": "~/.constructive/feature-packs/billing.json",
-          "type": "registry:file"
-        }
-      ]
-    },
-    {
-      "name": "feature-pack-notifications",
-      "type": "registry:block",
-      "title": "Notifications Feature Pack",
-      "description": "An application notification inbox with read, open, and deletion actions.",
-      "docs": "## Usage\n\nPass notifications and the authoritative unread count through resource, then grant and inject the inbox actions supported by the application.\n\n```tsx\nimport { NotificationsFeaturePack } from '@/blocks/feature-packs/notifications/notifications-feature-pack';\n\n<NotificationsFeaturePack\n  resource={notifications}\n  policy={{ markRead: true, markAllRead: true, openNotification: true, deleteNotification: true }}\n  actions={notificationActions}\n  onError={reportNotificationError}\n/>\n```\n\nThe all and unread filter remains local. Message content and read state stay host-controlled, so refresh the resource after a successful action and let database policy determine the resulting inbox.",
-      "dependencies": [
-        "lucide-react"
-      ],
-      "registryDependencies": [
-        "feature-pack-users",
-        "pack-foundation"
-      ],
-      "files": [
-        {
-          "path": "registry/constructive/blocks/feature-packs/notifications/notifications-feature-pack.tsx",
-          "target": "src/blocks/feature-packs/notifications/notifications-feature-pack.tsx",
-          "type": "registry:component"
-        },
-        {
-          "path": "registry/constructive/blocks/feature-packs/notifications/feature-pack.json",
-          "target": "~/.constructive/feature-packs/notifications.json",
-          "type": "registry:file"
-        }
-      ]
-    },
-    {
-      "name": "preset-blank",
-      "type": "registry:block",
-      "title": "Blank Preset",
-      "description": "Experimental Constructive blank backend preset mapped to its supported UI feature packs.",
-      "dependencies": [],
-      "registryDependencies": [
-        "feature-pack-data"
-      ],
-      "files": [
-        {
-          "path": "registry/constructive/blocks/presets/blank.json",
-          "target": "~/.constructive/feature-packs/blank.json",
-          "type": "registry:file"
-        }
-      ]
-    },
-    {
-      "name": "preset-auth-hardened",
-      "type": "registry:block",
-      "title": "Hardened Authentication Preset",
-      "description": "Experimental Constructive auth-hardened backend preset mapped to its supported UI feature packs.",
-      "dependencies": [],
-      "registryDependencies": [
-        "feature-pack-data",
-        "feature-pack-auth",
-        "feature-pack-users"
-      ],
-      "files": [
-        {
-          "path": "registry/constructive/blocks/presets/auth-hardened.json",
-          "target": "~/.constructive/feature-packs/auth-hardened.json",
-          "type": "registry:file"
-        }
-      ]
-    },
-    {
-      "name": "preset-b2b-storage",
-      "type": "registry:block",
-      "title": "B2B with Storage Preset",
-      "description": "Experimental Constructive b2b-storage backend preset mapped to its supported UI feature packs.",
-      "dependencies": [],
-      "registryDependencies": [
-        "feature-pack-data",
-        "feature-pack-auth",
-        "feature-pack-users",
-        "feature-pack-organizations",
-        "feature-pack-storage"
-      ],
-      "files": [
-        {
-          "path": "registry/constructive/blocks/presets/b2b-storage.json",
-          "target": "~/.constructive/feature-packs/b2b-storage.json",
-          "type": "registry:file"
-        }
-      ]
-    },
-    {
-      "name": "preset-full",
-      "type": "registry:block",
-      "title": "Full Preset",
-      "description": "Experimental Constructive full backend preset mapped to its supported UI feature packs.",
-      "dependencies": [],
-      "registryDependencies": [
-        "feature-pack-data",
-        "feature-pack-auth",
-        "feature-pack-users",
-        "feature-pack-organizations",
-        "feature-pack-storage",
-        "feature-pack-billing",
-        "feature-pack-notifications"
-      ],
-      "files": [
-        {
-          "path": "registry/constructive/blocks/presets/full.json",
-          "target": "~/.constructive/feature-packs/full.json",
-          "type": "registry:file"
-        }
-      ]
-    },
-    {
-      "name": "console-kit-nextjs",
-      "type": "registry:block",
-      "title": "Constructive Console Kit for Next.js",
-      "description": "A full-page Constructive application console with tenant-scoped auth, dynamic endpoint discovery, first-party adapters, and every feature pack.",
-      "docs": "Install with the shadcn CLI, then render <ConstructiveConsoleKit database={tenant} /> inside any Next.js route. Pass the secret-free database ID, semantic endpoints, and table allowlist returned by provisioning. The lower-level ConsoleKit remains available for custom sessions and providers. Navigation, runtime, session, capability, and adapter state live in one per-instance Zustand store composed from modular slices.",
-      "dependencies": [
-        "@constructive-io/data",
-        "@constructive-io/sheets",
         "@tanstack/react-query",
         "graphql",
         "lucide-react",
@@ -659,20 +378,23 @@
       ],
       "registryDependencies": [
         "console-runtime",
-        "console-feature-catalog",
-        "feature-pack-data",
-        "feature-pack-auth",
-        "feature-pack-users",
-        "feature-pack-organizations",
-        "feature-pack-storage",
-        "feature-pack-billing",
-        "feature-pack-notifications"
+        "console-feature-catalog"
       ],
       "files": [
+        {
+          "path": "registry/constructive/blocks/console-kit/feature-module.ts",
+          "target": "src/blocks/console-kit/feature-module.ts",
+          "type": "registry:lib"
+        },
         {
           "path": "registry/constructive/blocks/console-kit/console-kit-contracts.ts",
           "target": "src/blocks/console-kit/console-kit-contracts.ts",
           "type": "registry:lib"
+        },
+        {
+          "path": "registry/constructive/blocks/console-kit/console-connection-menu.tsx",
+          "target": "src/blocks/console-kit/console-connection-menu.tsx",
+          "type": "registry:component"
         },
         {
           "path": "registry/constructive/blocks/console-kit/console-kit-runtime.tsx",
@@ -685,19 +407,14 @@
           "type": "registry:lib"
         },
         {
-          "path": "registry/constructive/blocks/console-kit/console-kit.tsx",
-          "target": "src/blocks/console-kit/console-kit.tsx",
+          "path": "registry/constructive/blocks/console-kit/console-kit-core.tsx",
+          "target": "src/blocks/console-kit/console-kit-core.tsx",
           "type": "registry:component"
         },
         {
-          "path": "registry/constructive/blocks/console-kit/constructive/auth-adapter.ts",
-          "target": "src/blocks/console-kit/constructive/auth-adapter.ts",
-          "type": "registry:lib"
-        },
-        {
-          "path": "registry/constructive/blocks/console-kit/constructive/billing-adapter.ts",
-          "target": "src/blocks/console-kit/constructive/billing-adapter.ts",
-          "type": "registry:lib"
+          "path": "registry/constructive/blocks/console-kit/console-kit.tsx",
+          "target": "src/blocks/console-kit/console-kit.tsx",
+          "type": "registry:component"
         },
         {
           "path": "registry/constructive/blocks/console-kit/constructive/constructive-adapter-utils.ts",
@@ -720,28 +437,8 @@
           "type": "registry:lib"
         },
         {
-          "path": "registry/constructive/blocks/console-kit/constructive/index.ts",
-          "target": "src/blocks/console-kit/constructive/index.ts",
-          "type": "registry:lib"
-        },
-        {
-          "path": "registry/constructive/blocks/console-kit/constructive/notifications-adapter.ts",
-          "target": "src/blocks/console-kit/constructive/notifications-adapter.ts",
-          "type": "registry:lib"
-        },
-        {
-          "path": "registry/constructive/blocks/console-kit/constructive/organizations-adapter.ts",
-          "target": "src/blocks/console-kit/constructive/organizations-adapter.ts",
-          "type": "registry:lib"
-        },
-        {
-          "path": "registry/constructive/blocks/console-kit/constructive/storage-adapter.ts",
-          "target": "src/blocks/console-kit/constructive/storage-adapter.ts",
-          "type": "registry:lib"
-        },
-        {
-          "path": "registry/constructive/blocks/console-kit/constructive/users-adapter.ts",
-          "target": "src/blocks/console-kit/constructive/users-adapter.ts",
+          "path": "registry/constructive/blocks/console-kit/constructive/constructive-meta-utils.ts",
+          "target": "src/blocks/console-kit/constructive/constructive-meta-utils.ts",
           "type": "registry:lib"
         },
         {
@@ -782,6 +479,474 @@
         {
           "path": "registry/constructive/blocks/console-kit/store/index.ts",
           "target": "src/blocks/console-kit/store/index.ts",
+          "type": "registry:lib"
+        }
+      ]
+    },
+    {
+      "name": "feature-pack-data",
+      "type": "registry:block",
+      "title": "Data Feature Pack",
+      "description": "A current-_meta-only application data explorer with application-table filtering and spreadsheet CRUD.",
+      "docs": "## Usage\n\nPass a Sheets configuration for the active application database. The feature root reads the current `_meta` contract, keeps tables with an exact application smart-tag scope, and delegates table selection, creation, and spreadsheet events to the host.\n\n```tsx\nimport { DataFeaturePack } from '@/blocks/feature-packs/data/data-feature-pack';\n\n<DataFeaturePack\n  config={sheetsConfig}\n  defaultActiveTable=\"projects\"\n  applicationScopes={['app']}\n  onActiveTableChange={setActiveTable}\n  onEvent={recordSheetEvent}\n/>\n```\n\nUse `activeTable` with `onActiveTableChange` when routing owns selection. The installed sidecar describes compatibility for tooling; PostgreSQL privileges and RLS remain authoritative for every query and mutation.\n\nThis `feature-pack-data` item is provider-neutral and works without Console Kit. Install `console-module-data` when Console Kit should supply its navigation, capability discovery, and tenant runtime binding.",
+      "dependencies": [
+        "@constructive-io/data",
+        "@constructive-io/sheets",
+        "lucide-react"
+      ],
+      "css": {
+        "@import '@constructive-io/sheets/styles.css'": {}
+      },
+      "registryDependencies": [
+        "pack-foundation"
+      ],
+      "files": [
+        {
+          "path": "registry/constructive/blocks/feature-packs/data/data-feature-pack.tsx",
+          "target": "src/blocks/feature-packs/data/data-feature-pack.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/feature-packs/data/feature-pack.json",
+          "target": "~/.constructive/feature-packs/data.json",
+          "type": "registry:file"
+        }
+      ]
+    },
+    {
+      "name": "console-module-data",
+      "type": "registry:block",
+      "title": "Data Console Module",
+      "description": "Console Kit navigation, capability discovery, and tenant runtime binding for the Data feature pack.",
+      "docs": "## Console Kit integration\n\nInstall this item for Console Kit composition. It installs `console-kit-core` and the standalone `feature-pack-data` view transitively.\n\n```tsx\nimport { dataConsoleModule } from '@/blocks/feature-packs/data/data-console-module';\n\nconst featureModules = [dataConsoleModule];\n```\n\nPass the module to `ConstructiveConsoleKitCore` or `ConsoleKit`; install `feature-pack-data` alone when the host supplies the view props directly.",
+      "dependencies": [],
+      "registryDependencies": [
+        "console-kit-core",
+        "feature-pack-data"
+      ],
+      "files": [
+        {
+          "path": "registry/constructive/blocks/feature-packs/data/data-console-module.tsx",
+          "target": "src/blocks/feature-packs/data/data-console-module.tsx",
+          "type": "registry:component"
+        }
+      ]
+    },
+    {
+      "name": "feature-pack-auth",
+      "type": "registry:block",
+      "title": "Authentication Feature Pack",
+      "description": "Provider-neutral public authentication flows and personal account/session management.",
+      "docs": "## Usage\n\nChoose the entry or account view, grant each available operation through policy, and provide its matching provider callback.\n\n```tsx\nimport { AuthFeaturePack } from '@/blocks/feature-packs/auth/auth-feature-pack';\n\n<AuthFeaturePack\n  view=\"account\"\n  account={account}\n  verificationNotice={verificationNotice}\n  policy={{ signOut: true, changePassword: true, sendVerificationEmail: true }}\n  actions={authActions}\n  onError={reportAuthError}\n/>\n```\n\nAn action appears only when its policy grant and callback are both present. `verificationNotice` reports a host-consumed credential on either the signed-out entry view or account view; keep that credential in a client-only fragment and scrub it before mounting. Credentials and sessions belong to the personal identity, while application and organization membership remain separate feature-pack concerns.\n\nThis `feature-pack-auth` item is provider-neutral and works without Console Kit. Install `console-module-auth` when Console Kit should supply its navigation, capability discovery, session flow, and Constructive adapter.",
+      "dependencies": [
+        "lucide-react"
+      ],
+      "registryDependencies": [
+        "pack-foundation"
+      ],
+      "files": [
+        {
+          "path": "registry/constructive/blocks/feature-packs/auth/auth-contracts.ts",
+          "target": "src/blocks/feature-packs/auth/auth-contracts.ts",
+          "type": "registry:lib"
+        },
+        {
+          "path": "registry/constructive/blocks/feature-packs/auth/auth-entry-panel.tsx",
+          "target": "src/blocks/feature-packs/auth/auth-entry-panel.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/feature-packs/auth/auth-account-view.tsx",
+          "target": "src/blocks/feature-packs/auth/auth-account-view.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/feature-packs/auth/auth-feature-pack.tsx",
+          "target": "src/blocks/feature-packs/auth/auth-feature-pack.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/feature-packs/auth/feature-pack.json",
+          "target": "~/.constructive/feature-packs/auth.json",
+          "type": "registry:file"
+        }
+      ]
+    },
+    {
+      "name": "console-module-auth",
+      "type": "registry:block",
+      "title": "Authentication Console Module",
+      "description": "Console Kit session flow, capability discovery, and Constructive adapter for the Authentication feature pack.",
+      "docs": "## Console Kit integration\n\nInstall this item for Console Kit composition. It installs `console-kit-core` and the standalone `feature-pack-auth` view transitively.\n\n```tsx\nimport { authConsoleModule } from '@/blocks/feature-packs/auth/auth-console-module';\n\nconst featureModules = [authConsoleModule];\n```\n\nPass the module to `ConstructiveConsoleKitCore` or `ConsoleKit`; install `feature-pack-auth` alone when the host supplies the view props and provider actions directly.",
+      "dependencies": [],
+      "registryDependencies": [
+        "console-kit-core",
+        "feature-pack-auth"
+      ],
+      "files": [
+        {
+          "path": "registry/constructive/blocks/feature-packs/auth/auth-console-module.tsx",
+          "target": "src/blocks/feature-packs/auth/auth-console-module.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/console-kit/constructive/auth-adapter.ts",
+          "target": "src/blocks/console-kit/constructive/auth-adapter.ts",
+          "type": "registry:lib"
+        }
+      ]
+    },
+    {
+      "name": "feature-pack-users",
+      "type": "registry:block",
+      "title": "Users Feature Pack",
+      "description": "Application membership, invitation, role, profile, and status management without credential ownership.",
+      "docs": "## Usage\n\nPass application members, optional invitations, and role choices through one resource, then grant and inject only the membership operations available to the current administrator.\n\n```tsx\nimport { UsersFeaturePack } from '@/blocks/feature-packs/users/users-feature-pack';\n\n<UsersFeaturePack\n  resource={users}\n  policy={{ invite: true, assignInviteRole: true, updateRole: true, toggleActive: true, remove: true, cancelInvite: true, extendInvite: true }}\n  actions={userActions}\n  onError={reportMembershipError}\n/>\n```\n\n`invite` exposes roleless invitations. Grant `assignInviteRole` only when the current administrator may attach one of the visible profiles; otherwise the role field stays hidden. Invitation cancellation and extension additionally require each row's `actionPolicy`, which lets the resource mirror sender-scoped RLS without rendering unusable controls. Search remains local to the block, while every mutation stays host-controlled and PostgreSQL policy determines the resulting membership view.\n\nThis `feature-pack-users` item is provider-neutral and works without Console Kit. Install `console-module-users` when Console Kit should supply its navigation, capability discovery, and Constructive adapter.",
+      "dependencies": [
+        "lucide-react"
+      ],
+      "registryDependencies": [
+        "pack-foundation"
+      ],
+      "files": [
+        {
+          "path": "registry/constructive/blocks/feature-packs/users/users-feature-pack.tsx",
+          "target": "src/blocks/feature-packs/users/users-feature-pack.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/feature-packs/users/feature-pack.json",
+          "target": "~/.constructive/feature-packs/users.json",
+          "type": "registry:file"
+        }
+      ]
+    },
+    {
+      "name": "console-module-users",
+      "type": "registry:block",
+      "title": "Users Console Module",
+      "description": "Console Kit navigation, capability discovery, and Constructive adapter for the Users feature pack.",
+      "docs": "## Console Kit integration\n\nInstall this item for Console Kit composition. It installs `console-kit-core` and the standalone `feature-pack-users` view transitively.\n\n```tsx\nimport { usersConsoleModule } from '@/blocks/feature-packs/users/users-console-module';\n\nconst featureModules = [usersConsoleModule];\n```\n\nPass the module to `ConstructiveConsoleKitCore` or `ConsoleKit`; install `feature-pack-users` alone when the host supplies membership resources and actions directly.",
+      "dependencies": [],
+      "registryDependencies": [
+        "console-kit-core",
+        "feature-pack-users"
+      ],
+      "files": [
+        {
+          "path": "registry/constructive/blocks/feature-packs/users/users-console-module.tsx",
+          "target": "src/blocks/feature-packs/users/users-console-module.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/console-kit/constructive/users-adapter.ts",
+          "target": "src/blocks/console-kit/constructive/users-adapter.ts",
+          "type": "registry:lib"
+        }
+      ]
+    },
+    {
+      "name": "feature-pack-organizations",
+      "type": "registry:block",
+      "title": "Organizations Feature Pack",
+      "description": "Tenant switching plus organization membership and invitation management.",
+      "docs": "## Usage\n\nPass the visible organizations together with the selected tenant's members, invitations, role choices, and any ready-resource `limitations`. Keep tenant selection and every membership mutation in host state.\n\n```tsx\nimport { OrganizationsFeaturePack } from '@/blocks/feature-packs/organizations/organizations-feature-pack';\n\n<OrganizationsFeaturePack\n  resource={organizations}\n  policy={{ selectOrganization: true, inviteMember: true, assignInviteRole: true, updateMemberRole: true, removeMember: true, cancelInvite: true }}\n  actions={organizationActions}\n  onError={reportOrganizationError}\n/>\n```\n\n`inviteMember` exposes roleless invitations. Grant `assignInviteRole` only when the current organization administrator may attach one of the visible profiles. Cancellation also requires the invitation row's `actionPolicy`; scope, invite-mode, and ambiguous-profile conditions belong in `resource.limitations` and should disable unsafe role actions. The UI never broadens tenant access: each policy grant exposes a control, while PostgreSQL privileges and RLS remain authoritative when the injected action executes.\n\nThis `feature-pack-organizations` item is provider-neutral and works without Console Kit. Install `console-module-organizations` when Console Kit should supply its navigation, capability discovery, `_meta` contract resolver, and Constructive adapter.",
+      "dependencies": [
+        "lucide-react"
+      ],
+      "registryDependencies": [
+        "pack-foundation"
+      ],
+      "files": [
+        {
+          "path": "registry/constructive/blocks/feature-packs/organizations/organizations-feature-pack.tsx",
+          "target": "src/blocks/feature-packs/organizations/organizations-feature-pack.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/feature-packs/organizations/feature-pack.json",
+          "target": "~/.constructive/feature-packs/organizations.json",
+          "type": "registry:file"
+        }
+      ]
+    },
+    {
+      "name": "console-module-organizations",
+      "type": "registry:block",
+      "title": "Organizations Console Module",
+      "description": "Console Kit discovery, metadata resolution, and Constructive adapter for the Organizations feature pack.",
+      "docs": "## Console Kit integration\n\nInstall this item for Console Kit composition. It installs `console-kit-core` and the standalone `feature-pack-organizations` view transitively.\n\n```tsx\nimport { organizationsConsoleModule } from '@/blocks/feature-packs/organizations/organizations-console-module';\n\nconst featureModules = [organizationsConsoleModule];\n```\n\nPass the module to `ConstructiveConsoleKitCore` or `ConsoleKit`; install `feature-pack-organizations` alone when the host supplies organization resources and actions directly.",
+      "dependencies": [],
+      "registryDependencies": [
+        "console-kit-core",
+        "feature-pack-organizations"
+      ],
+      "files": [
+        {
+          "path": "registry/constructive/blocks/feature-packs/organizations/organizations-console-module.tsx",
+          "target": "src/blocks/feature-packs/organizations/organizations-console-module.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/feature-packs/organizations/organizations-meta-contract.ts",
+          "target": "src/blocks/feature-packs/organizations/organizations-meta-contract.ts",
+          "type": "registry:lib"
+        },
+        {
+          "path": "registry/constructive/blocks/console-kit/constructive/organizations-adapter.ts",
+          "target": "src/blocks/console-kit/constructive/organizations-adapter.ts",
+          "type": "registry:lib"
+        }
+      ]
+    },
+    {
+      "name": "feature-pack-storage",
+      "type": "registry:block",
+      "title": "Storage Feature Pack",
+      "description": "Bucket, folder, object, upload, download, and deletion surfaces backed by injected storage actions.",
+      "docs": "## Usage\n\nPass the policy-visible buckets, active path, and objects through resource, then inject only the file operations supported by the current database.\n\n```tsx\nimport { StorageFeaturePack } from '@/blocks/feature-packs/storage/storage-feature-pack';\n\n<StorageFeaturePack\n  resource={storage}\n  policy={{ selectBucket: true, navigate: true, createBucket: true, upload: true, download: true, deleteObject: true }}\n  actions={storageActions}\n  onError={reportStorageError}\n/>\n```\n\nThe host owns bucket and path state. Navigation and mutations report intent through callbacks, and the next resource value reflects the access that remains after storage policy is reapplied.\n\nThis `feature-pack-storage` item is provider-neutral and works without Console Kit. Install `console-module-storage` when Console Kit should supply its navigation, capability discovery, `_meta` contract resolver, Constructive adapter, and storage state slice.",
+      "dependencies": [
+        "lucide-react"
+      ],
+      "registryDependencies": [
+        "pack-foundation"
+      ],
+      "files": [
+        {
+          "path": "registry/constructive/blocks/feature-packs/storage/storage-feature-pack.tsx",
+          "target": "src/blocks/feature-packs/storage/storage-feature-pack.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/feature-packs/storage/feature-pack.json",
+          "target": "~/.constructive/feature-packs/storage.json",
+          "type": "registry:file"
+        }
+      ]
+    },
+    {
+      "name": "console-module-storage",
+      "type": "registry:block",
+      "title": "Storage Console Module",
+      "description": "Console Kit discovery, metadata resolution, adapter, and modular state slice for the Storage feature pack.",
+      "docs": "## Console Kit integration\n\nInstall this item for Console Kit composition. It installs `console-kit-core` and the standalone `feature-pack-storage` view transitively.\n\n```tsx\nimport { storageConsoleModule } from '@/blocks/feature-packs/storage/storage-console-module';\n\nconst featureModules = [storageConsoleModule];\n```\n\nPass the module to `ConstructiveConsoleKitCore` or `ConsoleKit`; install `feature-pack-storage` alone when the host supplies storage resources, policy, and actions directly.",
+      "dependencies": [],
+      "registryDependencies": [
+        "console-kit-core",
+        "feature-pack-storage"
+      ],
+      "files": [
+        {
+          "path": "registry/constructive/blocks/feature-packs/storage/storage-console-module.tsx",
+          "target": "src/blocks/feature-packs/storage/storage-console-module.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/console-kit/constructive/storage-adapter.ts",
+          "target": "src/blocks/console-kit/constructive/storage-adapter.ts",
+          "type": "registry:lib"
+        },
+        {
+          "path": "registry/constructive/blocks/feature-packs/storage/storage-console-slice.ts",
+          "target": "src/blocks/feature-packs/storage/storage-console-slice.ts",
+          "type": "registry:lib"
+        },
+        {
+          "path": "registry/constructive/blocks/feature-packs/storage/storage-meta-contract.ts",
+          "target": "src/blocks/feature-packs/storage/storage-meta-contract.ts",
+          "type": "registry:lib"
+        }
+      ]
+    },
+    {
+      "name": "feature-pack-billing",
+      "type": "registry:block",
+      "title": "Billing Feature Pack",
+      "description": "The feature-pack root for Constructive billing plans, subscriptions, usage, entitlements, credits, and activity.",
+      "docs": "## Usage\n\nPass one billing account and the independent resources for subscription, entitlements, usage, credits, history, activity, and plans. The feature root preserves the mature Billing settings page contract.\n\n```tsx\nimport { BillingFeaturePack } from '@/blocks/feature-packs/billing/billing-feature-pack';\n\n<BillingFeaturePack\n  account={account}\n  resources={billingResources}\n  actions={billingActions}\n  formatOptions={{ locale: 'en-US', timeZone: 'UTC' }}\n  section={section}\n  onSectionChange={setSection}\n/>\n```\n\nEach resource keeps its own loading, empty, error, ready, and quality state. Omitted callbacks remove their controls, and provider operations remain outside the reusable billing view.\n\nThis `feature-pack-billing` item is provider-neutral and works without Console Kit. Install `console-module-billing` when Console Kit should supply its navigation, capability discovery, and Constructive adapter.",
+      "dependencies": [],
+      "registryDependencies": [],
+      "files": [
+        {
+          "path": "registry/constructive/blocks/feature-packs/billing/billing-feature-pack.tsx",
+          "target": "src/blocks/feature-packs/billing/billing-feature-pack.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/feature-packs/billing/feature-pack.json",
+          "target": "~/.constructive/feature-packs/billing.json",
+          "type": "registry:file"
+        }
+      ]
+    },
+    {
+      "name": "console-module-billing",
+      "type": "registry:block",
+      "title": "Billing Console Module",
+      "description": "Console Kit navigation, capability discovery, and Constructive adapter for the Billing feature pack.",
+      "docs": "## Console Kit integration\n\nInstall this item for Console Kit composition. It installs `console-kit-core` and the standalone `feature-pack-billing` view transitively.\n\n```tsx\nimport { billingConsoleModule } from '@/blocks/feature-packs/billing/billing-console-module';\n\nconst featureModules = [billingConsoleModule];\n```\n\nPass the module to `ConstructiveConsoleKitCore` or `ConsoleKit`; install `feature-pack-billing` alone when the host supplies billing resources and provider actions directly.",
+      "dependencies": [],
+      "registryDependencies": [
+        "console-kit-core",
+        "feature-pack-billing"
+      ],
+      "files": [
+        {
+          "path": "registry/constructive/blocks/feature-packs/billing/billing-console-module.tsx",
+          "target": "src/blocks/feature-packs/billing/billing-console-module.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/console-kit/constructive/billing-adapter.ts",
+          "target": "src/blocks/console-kit/constructive/billing-adapter.ts",
+          "type": "registry:lib"
+        }
+      ]
+    },
+    {
+      "name": "feature-pack-notifications",
+      "type": "registry:block",
+      "title": "Notifications Feature Pack",
+      "description": "An application notification inbox with read, open, and deletion actions.",
+      "docs": "## Usage\n\nPass notifications and the authoritative unread count through resource, then grant and inject the inbox actions supported by the application.\n\n```tsx\nimport { NotificationsFeaturePack } from '@/blocks/feature-packs/notifications/notifications-feature-pack';\n\n<NotificationsFeaturePack\n  resource={notifications}\n  policy={{ markRead: true, markAllRead: true, openNotification: true, deleteNotification: true }}\n  actions={notificationActions}\n  onError={reportNotificationError}\n/>\n```\n\nThe all and unread filter remains local. Message content and read state stay host-controlled, so refresh the resource after a successful action and let database policy determine the resulting inbox.\n\nThis `feature-pack-notifications` item is provider-neutral and works without Console Kit. Install `console-module-notifications` when Console Kit should supply its navigation, capability discovery, and Constructive adapter.",
+      "dependencies": [
+        "lucide-react"
+      ],
+      "registryDependencies": [
+        "pack-foundation"
+      ],
+      "files": [
+        {
+          "path": "registry/constructive/blocks/feature-packs/notifications/notifications-feature-pack.tsx",
+          "target": "src/blocks/feature-packs/notifications/notifications-feature-pack.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/feature-packs/notifications/feature-pack.json",
+          "target": "~/.constructive/feature-packs/notifications.json",
+          "type": "registry:file"
+        }
+      ]
+    },
+    {
+      "name": "console-module-notifications",
+      "type": "registry:block",
+      "title": "Notifications Console Module",
+      "description": "Console Kit navigation, capability discovery, and Constructive adapter for the Notifications feature pack.",
+      "docs": "## Console Kit integration\n\nInstall this item for Console Kit composition. It installs `console-kit-core` and the standalone `feature-pack-notifications` view transitively.\n\n```tsx\nimport { notificationsConsoleModule } from '@/blocks/feature-packs/notifications/notifications-console-module';\n\nconst featureModules = [notificationsConsoleModule];\n```\n\nPass the module to `ConstructiveConsoleKitCore` or `ConsoleKit`; install `feature-pack-notifications` alone when the host supplies notification resources and actions directly.",
+      "dependencies": [],
+      "registryDependencies": [
+        "console-kit-core",
+        "feature-pack-notifications"
+      ],
+      "files": [
+        {
+          "path": "registry/constructive/blocks/feature-packs/notifications/notifications-console-module.tsx",
+          "target": "src/blocks/feature-packs/notifications/notifications-console-module.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/console-kit/constructive/notifications-adapter.ts",
+          "target": "src/blocks/console-kit/constructive/notifications-adapter.ts",
+          "type": "registry:lib"
+        }
+      ]
+    },
+    {
+      "name": "preset-auth-hardened",
+      "type": "registry:block",
+      "title": "Hardened Authentication Preset",
+      "description": "Stable Constructive auth-hardened backend preset mapped to its supported Console Kit modules.",
+      "dependencies": [],
+      "registryDependencies": [
+        "console-kit-core",
+        "console-module-data",
+        "console-module-auth",
+        "console-module-users"
+      ],
+      "files": [
+        {
+          "path": "registry/constructive/blocks/presets/auth-hardened-console-kit.tsx",
+          "target": "src/blocks/presets/auth-hardened-console-kit.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/presets/auth-hardened.json",
+          "target": "~/.constructive/feature-packs/auth-hardened.json",
+          "type": "registry:file"
+        }
+      ]
+    },
+    {
+      "name": "preset-b2b-storage",
+      "type": "registry:block",
+      "title": "B2B with Storage Preset",
+      "description": "Stable Constructive b2b-storage backend preset mapped to its supported Console Kit modules.",
+      "dependencies": [],
+      "registryDependencies": [
+        "console-kit-core",
+        "console-module-data",
+        "console-module-auth",
+        "console-module-users",
+        "console-module-organizations",
+        "console-module-storage"
+      ],
+      "files": [
+        {
+          "path": "registry/constructive/blocks/presets/b2b-storage-console-kit.tsx",
+          "target": "src/blocks/presets/b2b-storage-console-kit.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/presets/b2b-storage.json",
+          "target": "~/.constructive/feature-packs/b2b-storage.json",
+          "type": "registry:file"
+        }
+      ]
+    },
+    {
+      "name": "preset-full",
+      "type": "registry:block",
+      "title": "Full Preset",
+      "description": "Stable Constructive full backend preset mapped to its supported Console Kit modules.",
+      "dependencies": [],
+      "registryDependencies": [
+        "console-kit-core",
+        "console-module-data",
+        "console-module-auth",
+        "console-module-users",
+        "console-module-organizations",
+        "console-module-storage",
+        "console-module-billing",
+        "console-module-notifications"
+      ],
+      "files": [
+        {
+          "path": "registry/constructive/blocks/presets/full-console-kit.tsx",
+          "target": "src/blocks/presets/full-console-kit.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/presets/full.json",
+          "target": "~/.constructive/feature-packs/full.json",
+          "type": "registry:file"
+        }
+      ]
+    },
+    {
+      "name": "console-kit-nextjs",
+      "type": "registry:block",
+      "title": "Constructive Console Kit for Next.js",
+      "description": "A full-page Constructive application console with tenant-scoped auth, dynamic endpoint discovery, first-party adapters, and every feature pack.",
+      "docs": "Install with the shadcn CLI, then render <ConstructiveConsoleKit database={tenant} /> inside any Next.js route. Pass the secret-free database ID and explicit semantic endpoint map returned by provisioning. Install `console-kit-core` plus selected `console-module-*` items for a smaller custom composition; each console module installs its provider-neutral `feature-pack-*` view transitively. Install a `feature-pack-*` item alone when a host wants the standalone view without Console Kit. Navigation, runtime, session, capability, and pack state live in one per-instance Zustand store composed from modular slices.",
+      "dependencies": [],
+      "registryDependencies": [
+        "preset-full"
+      ],
+      "files": [
+        {
+          "path": "registry/constructive/blocks/console-kit/constructive/index.ts",
+          "target": "src/blocks/console-kit/constructive/index.ts",
           "type": "registry:lib"
         }
       ]

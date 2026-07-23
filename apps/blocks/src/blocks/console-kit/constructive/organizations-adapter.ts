@@ -6,12 +6,18 @@ import type {
   OrganizationsFeaturePackProps,
   OrganizationSummary
 } from '../../feature-packs/organizations/organizations-feature-pack';
+import { resolveApplicationOrganizationContract } from '../../feature-packs/organizations/organizations-meta-contract';
 import type { FeaturePackLimitation } from '../../feature-packs/shared/feature-pack-contracts';
 import type {
   ConsoleKitAdapterContext,
-  ConsoleKitFeatureAdapter
+  ConsoleKitFeatureAdapter,
+  ConsoleKitMetadataState
 } from '../console-kit-contracts';
 import type { ConsoleKitStoreApi } from '../store';
+import {
+  CONSOLE_ENDPOINT_KINDS,
+  type ConsoleEndpointKind
+} from '../../console-runtime';
 import {
   supportsConstructiveMutationInput,
   type ConstructiveCapabilityDiscovery
@@ -36,6 +42,7 @@ import {
   selectExistingFields,
   type ConstructiveSchemaSnapshot
 } from './constructive-graphql';
+import { metaSelection } from './constructive-meta-utils';
 
 const UPDATE_MEMBERSHIP_MUTATION = /* GraphQL */ `
   mutation ConsoleKitUpdateOrgMembership($input: UpdateOrgMembershipInput!) {
@@ -143,6 +150,16 @@ type OrganizationDirectorySelections = Readonly<{
   appPermissions: readonly string[];
 }>;
 
+const EMPTY_ORGANIZATION_DIRECTORY_SELECTIONS: OrganizationDirectorySelections = {
+  memberships: [],
+  profiles: [],
+  invites: [],
+  permissions: [],
+  settings: [],
+  appMemberships: [],
+  appPermissions: []
+};
+
 function organizationUserFields(
   options: ConstructiveOrganizationsAdapterOptions
 ): readonly string[] | null {
@@ -156,8 +173,9 @@ function adminDirectorySelections(
   options: ConstructiveOrganizationsAdapterOptions
 ): OrganizationDirectorySelections {
   const schema = options.discovery.getSchemas().admin;
-  if (!schema) throw new Error('The admin endpoint schema is unavailable.');
-  const membershipFields = connectionSelection(schema, 'OrgMembership', [
+  if (!schema) return EMPTY_ORGANIZATION_DIRECTORY_SELECTIONS;
+  const membershipFields = supports(options, 'admin', 'query', 'orgMemberships')
+    ? connectionSelection(schema, 'OrgMembership', [
     'id',
     'actorId',
     'entityId',
@@ -170,13 +188,11 @@ function adminDirectorySelections(
     'isDisabled',
     'isReadOnly',
     'permissions',
-    'profileId'
-  ]);
+      'profileId'
+    ])
+    : [];
   const profile = relationSelection(schema, 'OrgMembership', 'profile', ['name']);
-  if (profile) membershipFields.push(profile);
-  if (membershipFields.length === 0) {
-    throw new Error('The organization membership type exposes no readable fields.');
-  }
+  if (profile && membershipFields.length > 0) membershipFields.push(profile);
 
   const profileFields = connectionSelection(
     schema,
@@ -269,6 +285,42 @@ const AMBIGUOUS_PROFILE_NAME_LIMITATION: FeaturePackLimitation = {
     'Profiles that share the same display name are omitted from role actions because a label cannot safely identify which profile ID should be submitted.'
 };
 
+const APPLICATION_DIRECTORY_READ_ONLY_LIMITATION: FeaturePackLimitation = {
+  code: 'constructive.application-organization-directory-read-only',
+  message:
+    'Application organization rows are loaded through the public endpoint whose _meta contract exposes them and its RLS policies. Console Kit keeps this metadata-derived directory read-only; edit those application tables from Data unless the host supplies an explicit organization action adapter.'
+};
+
+function applicationOrganizationSource(
+  metadataByEndpoint: ConsoleKitAdapterContext['metadataByEndpoint'],
+  fallback: ConsoleKitMetadataState
+): Readonly<{
+  kind: ConsoleEndpointKind;
+  contract: NonNullable<ReturnType<typeof resolveApplicationOrganizationContract>>;
+}> | null {
+  const metadata = metadataByEndpoint ?? { data: fallback };
+  for (const kind of ['data', ...CONSOLE_ENDPOINT_KINDS.filter(
+    (candidate) => candidate !== 'data'
+  )] as const) {
+    const endpointMetadata = metadata[kind];
+    if (!endpointMetadata) continue;
+    const contract = resolveApplicationOrganizationContract(endpointMetadata);
+    if (contract) return { kind, contract };
+  }
+  return null;
+}
+
+function applicationOrganizationId(
+  contract: NonNullable<ReturnType<typeof resolveApplicationOrganizationContract>>,
+  rawId: string
+): string {
+  const tableIdentity = [
+    contract.organizations.table.schemaName,
+    contract.organizations.table.name
+  ].filter(Boolean).join('.') || contract.organizations.root;
+  return `application:${encodeURIComponent(tableIdentity)}:${encodeURIComponent(rawId)}`;
+}
+
 function addUnambiguousProfile(
   profiles: Map<string, string>,
   ambiguousNames: Set<string>,
@@ -333,7 +385,12 @@ async function loadOrganizations(
   }
   const selections = adminDirectorySelections(options);
   const userFields = organizationUserFields(options);
-  if (!userFields) {
+  const applicationSource = applicationOrganizationSource(
+    runtime.metadataByEndpoint,
+    runtime.metadata
+  );
+  const applicationContract = applicationSource?.contract ?? null;
+  if (!userFields && !applicationContract) {
     throw new Error(
       'The auth endpoint must expose users with readable id and type fields for organization identities.'
     );
@@ -358,14 +415,16 @@ async function loadOrganizations(
     settingRows,
     appMembershipRows,
     appPermissionRows,
-    userRows
+    userRows,
+    applicationOrganizationRows,
+    applicationMemberRows
   ] =
     await Promise.all([
-      executeConstructiveConnectionQuery(runtime, 'admin', {
-        operationName: 'ConsoleKitOrganizationMembershipsPage',
-        fieldName: 'orgMemberships',
-        nodeSelection: selections.memberships.join(' ')
-      }, signal),
+      optionalAdminConnection(
+        'ConsoleKitOrganizationMembershipsPage',
+        'orgMemberships',
+        selections.memberships
+      ),
       optionalAdminConnection(
         'ConsoleKitOrganizationMembershipsProfilesPage',
         'orgProfiles',
@@ -396,11 +455,40 @@ async function loadOrganizations(
         'appPermissions',
         selections.appPermissions
       ),
-      executeConstructiveConnectionQuery(runtime, 'auth', {
-        operationName: 'ConsoleKitOrganizationUsersPage',
-        fieldName: 'users',
-        nodeSelection: userFields.join(' ')
-      }, signal)
+      userFields
+        ? executeConstructiveConnectionQuery(runtime, 'auth', {
+            operationName: 'ConsoleKitOrganizationUsersPage',
+            fieldName: 'users',
+            nodeSelection: userFields.join(' ')
+          }, signal)
+        : Promise.resolve([]),
+      applicationContract
+        ? executeConstructiveConnectionQuery(runtime, applicationSource!.kind, {
+            operationName: 'ConsoleKitApplicationOrganizationsPage',
+            fieldName: applicationContract.organizations.root,
+            nodeSelection: metaSelection([
+              applicationContract.organizations.id,
+              applicationContract.organizations.name,
+              applicationContract.organizations.slug,
+              applicationContract.organizations.avatar
+            ])
+          }, signal)
+        : Promise.resolve([]),
+      applicationContract?.members
+        ? executeConstructiveConnectionQuery(runtime, applicationSource!.kind, {
+            operationName: 'ConsoleKitApplicationOrganizationMembersPage',
+            fieldName: applicationContract.members.root,
+            nodeSelection: metaSelection([
+              applicationContract.members.id,
+              applicationContract.members.organizationId,
+              applicationContract.members.userId,
+              applicationContract.members.role,
+              applicationContract.members.status,
+              applicationContract.members.joinedAt,
+              applicationContract.members.invitedAt
+            ])
+          }, signal)
+        : Promise.resolve([])
     ]);
   const users = new Map(userRows.flatMap((user) => {
     const id = asString(user.id);
@@ -422,7 +510,7 @@ async function loadOrganizations(
     const entityId = asString(membership.entityId);
     if (entityId) memberCount.set(entityId, (memberCount.get(entityId) ?? 0) + 1);
   }
-  const organizations: OrganizationSummary[] = actorMemberships.flatMap((membership) => {
+  const managedOrganizations: OrganizationSummary[] = actorMemberships.flatMap((membership) => {
     const entityId = asString(membership.entityId);
     const entity = entityId ? users.get(entityId) : undefined;
     if (!entityId || !entity || entity.type !== 2) return [];
@@ -434,6 +522,45 @@ async function loadOrganizations(
       memberCount: memberCount.get(entityId) ?? 0
     }];
   });
+  const applicationMemberCount = new Map<string, number>();
+  if (applicationContract?.members) {
+    for (const membership of applicationMemberRows) {
+      const entityId = asString(
+        membership[applicationContract.members.organizationId]
+      );
+      if (entityId) {
+        applicationMemberCount.set(
+          entityId,
+          (applicationMemberCount.get(entityId) ?? 0) + 1
+        );
+      }
+    }
+  }
+  const applicationOrganizationRawIds = new Map<string, string>();
+  const applicationOrganizations: OrganizationSummary[] = applicationContract
+    ? applicationOrganizationRows.flatMap((row) => {
+        const rawId = asString(row[applicationContract.organizations.id]);
+        const name = asString(row[applicationContract.organizations.name]);
+        if (!rawId || !name) return [];
+        const id = applicationOrganizationId(applicationContract, rawId);
+        applicationOrganizationRawIds.set(id, rawId);
+        return [{
+          id,
+          name,
+          slug: applicationContract.organizations.slug
+            ? asString(row[applicationContract.organizations.slug]) ?? undefined
+            : undefined,
+          avatarUrl: applicationContract.organizations.avatar
+            ? imageUrl(row[applicationContract.organizations.avatar])
+            : undefined,
+          memberCount: applicationMemberCount.get(rawId) ?? 0
+        }];
+      })
+    : [];
+  const organizations = [...managedOrganizations, ...applicationOrganizations];
+  const applicationOrganizationIds = new Set(
+    applicationOrganizations.map((organization) => organization.id)
+  );
   const configuredOrganization = options.store.getState().context?.organizationId;
   const activeOrganizationId = organizations.some((item) => item.id === configuredOrganization)
     ? configuredOrganization ?? undefined
@@ -452,7 +579,7 @@ async function loadOrganizations(
       }
     }
   }
-  const members: OrganizationMember[] = memberships
+  const managedMembers: OrganizationMember[] = memberships
     .filter((membership) => asString(membership.entityId) === activeOrganizationId)
     .flatMap((membership) => {
       const id = asString(membership.id);
@@ -469,6 +596,52 @@ async function loadOrganizations(
         status: memberStatus(membership)
       }];
     });
+  const activeIsApplicationOrganization = Boolean(
+    activeOrganizationId && applicationOrganizationIds.has(activeOrganizationId)
+  );
+  const activeApplicationOrganizationRawId = activeOrganizationId
+    ? applicationOrganizationRawIds.get(activeOrganizationId)
+    : undefined;
+  const applicationMembers: OrganizationMember[] = applicationContract?.members &&
+    activeIsApplicationOrganization
+    ? applicationMemberRows
+        .filter((membership) => asString(
+          membership[applicationContract.members!.organizationId]
+        ) === activeApplicationOrganizationRawId)
+        .flatMap((membership) => {
+          const contract = applicationContract.members!;
+          const id = asString(membership[contract.id]);
+          if (!id) return [];
+          const userId = contract.userId
+            ? asString(membership[contract.userId])
+            : null;
+          const user = userId ? users.get(userId) : undefined;
+          const joinedAt = contract.joinedAt
+            ? asString(membership[contract.joinedAt])
+            : null;
+          const invitedAt = contract.invitedAt
+            ? asString(membership[contract.invitedAt])
+            : null;
+          return [{
+            id,
+            userId: userId ?? id,
+            name: asString(user?.displayName) ?? asString(user?.username) ?? userId ?? 'Member',
+            email: asString(user?.username)?.includes('@')
+              ? asString(user?.username)!
+              : 'Private email',
+            avatarUrl: imageUrl(user?.profilePicture),
+            role: contract.role
+              ? asString(membership[contract.role]) ?? 'Member'
+              : 'Member',
+            status: contract.status
+              ? asString(membership[contract.status]) ?? 'active'
+              : joinedAt || !invitedAt ? 'active' : 'pending'
+          }];
+        })
+    : [];
+  const members = activeIsApplicationOrganization
+    ? applicationMembers
+    : managedMembers;
   const actorMembership = actorMemberships.find(
     (membership) => asString(membership.entityId) === activeOrganizationId
   );
@@ -486,12 +659,12 @@ async function loadOrganizations(
       permissionRows,
       permissionName
     );
-  const canManageActiveOrganization = hasAdministrativeRole || hasNamedPermission(
-    'admin_members'
+  const canManageActiveOrganization = !activeIsApplicationOrganization && (
+    hasAdministrativeRole || hasNamedPermission('admin_members')
   );
   const assignmentMode = inviteProfileAssignmentMode(settingRows, activeOrganizationId);
   const hasAssignProfiles = hasNamedPermission('assign_profiles');
-  const canAssignInviteProfiles = profileScopeReadable && (
+  const canAssignInviteProfiles = !activeIsApplicationOrganization && profileScopeReadable && (
     hasAdministrativeRole ||
     (hasActiveMembership && assignmentMode.mode === 'subset_only') || hasAssignProfiles
   );
@@ -523,7 +696,9 @@ async function loadOrganizations(
       const id = asString(invite.id);
       const email = asString(invite.email);
       if (!id || !email) return [];
-      const canCancel = hasActiveAdminRole || asString(invite.senderId) === actorId;
+      const canCancel = !activeIsApplicationOrganization && (
+        hasActiveAdminRole || asString(invite.senderId) === actorId
+      );
       if (canCancel) cancelableInviteIds.add(id);
       return [{
         id,
@@ -534,11 +709,18 @@ async function loadOrganizations(
         actionPolicy: { cancelInvite: canCancel }
       }];
     });
+  const applicationRoles = new Set(
+    applicationMembers.map((member) => member.role).filter(Boolean)
+  );
   const policyLimitations = [
-    ...(activeOrganizationId && !assignmentMode.known
+    ...(activeIsApplicationOrganization
+      ? [APPLICATION_DIRECTORY_READ_ONLY_LIMITATION]
+      : []),
+    ...(activeOrganizationId && !activeIsApplicationOrganization && !assignmentMode.known
       ? [INVITE_PROFILE_MODE_LIMITATION]
       : []),
-    ...(activeOrganizationId && selections.profiles.length > 0 && !profileScopeReadable
+    ...(activeOrganizationId && !activeIsApplicationOrganization &&
+      selections.profiles.length > 0 && !profileScopeReadable
       ? [PROFILE_SCOPE_LIMITATION]
       : []),
     ...(ambiguousRoleNames.size > 0 || ambiguousInviteRoleNames.size > 0
@@ -551,22 +733,28 @@ async function loadOrganizations(
       activeOrganizationId,
       members,
       invites,
-      roles: [...roleIds.keys()],
+      roles: activeIsApplicationOrganization
+        ? [...applicationRoles]
+        : [...roleIds.keys()],
       inviteRoles: [...inviteRoleIds.keys()]
     },
     roleIds,
     inviteRoleIds,
-    activeOrganizationMemberIds: new Set(members.map((member) => member.id)),
+    activeOrganizationMemberIds: activeIsApplicationOrganization
+      ? new Set()
+      : new Set(managedMembers.map((member) => member.id)),
     cancelableInviteIds,
     policyLimitations,
     canManageActiveOrganization,
-    canCreateInvites: hasAdministrativeRole || hasNamedPermission('create_invites'),
+    canCreateInvites: !activeIsApplicationOrganization && (
+      hasAdministrativeRole || hasNamedPermission('create_invites')
+    ),
     canAssignInviteProfiles,
     canCreateOrganization,
     canValidateCreatedOwnerMembership: CREATED_OWNER_MEMBERSHIP_FIELDS.every(
       (field) => selections.memberships.includes(field)
     ),
-    userFields
+    userFields: userFields ?? []
   };
 }
 
@@ -682,7 +870,11 @@ function organizationsAvailability(
 ) {
   const availability = packAvailability(options.store, 'organizations');
   if (availability.status !== 'available') return availability;
-  if (!organizationUserFields(options)) {
+  const state = options.store.getState();
+  if (
+    !organizationUserFields(options) &&
+    !applicationOrganizationSource(state.metadataByEndpoint, state.metadata)
+  ) {
     return {
       status: 'unavailable' as const,
       reason:

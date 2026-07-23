@@ -1,11 +1,13 @@
 import type { IntrospectionQueryResponse } from '@constructive-io/graphql-query/introspect/schema-query';
-import { toCamelCasePlural } from '@constructive-io/graphql-query/generators';
+import {
+	toCamelCasePlural,
+	toCamelCaseSingular,
+} from '@constructive-io/graphql-query/generators';
 
-import { cleanTable, pgFieldToCamelCase } from './data.types';
+import { cleanTable, pgFieldToCamelCase, type CleanTable } from './data.types';
 import { META_CONTRACT_VERSION, assertMetaQuery } from './meta-query';
 import type {
 	MetaQuery,
-	MetaschemaField,
 	MetaschemaTable,
 	MetaschemaTableInflection,
 } from './meta-query.types';
@@ -25,6 +27,26 @@ export interface SchemaIntrospectionCompatibility {
 	missingPaths: string[];
 }
 
+export interface SchemaEnumValueToken {
+	/** Exact value returned by the Constructive `_meta` contract. */
+	metaValue: string;
+	/** Exact token accepted by GraphQL variables for this enum field. */
+	graphQLValue: string;
+}
+
+export interface SchemaEnumFieldMapping {
+	tableName: string;
+	schemaName: string | null;
+	fieldName: string;
+	graphQLTypeName: string;
+	values: SchemaEnumValueToken[];
+}
+
+export interface SchemaIntrospectionAnalysis extends SchemaIntrospectionCompatibility {
+	/** Exact, field-scoped mappings from `_meta` enum labels to GraphQL tokens. */
+	enumMappings: SchemaEnumFieldMapping[];
+}
+
 type ExpectedArgument = {
 	names: readonly string[];
 	typeName?: string | null;
@@ -41,6 +63,23 @@ function nonEmptyName(value: string | null | undefined): string | null {
 	if (typeof value !== 'string') return null;
 	const name = value.trim();
 	return name.length > 0 ? name : null;
+}
+
+function canonicalEnumIdentifier(value: string): string {
+	return value.replace(/[^A-Za-z0-9]/gu, '').toLowerCase();
+}
+
+function enumIdentifiersByCanonical(values: readonly string[]): Map<string, string[]> {
+	const grouped = new Map<string, Set<string>>();
+	for (const value of values) {
+		const canonical = canonicalEnumIdentifier(value);
+		const identifiers = grouped.get(canonical) ?? new Set<string>();
+		identifiers.add(value);
+		grouped.set(canonical, identifiers);
+	}
+	return new Map(
+		[...grouped].map(([canonical, identifiers]) => [canonical, [...identifiers]]),
+	);
 }
 
 function baseTypeName(
@@ -78,12 +117,6 @@ function relevantTypes(
 	].filter((entry): entry is [string, IntrospectionTypeKind] => nonEmptyName(entry[0]) !== null);
 }
 
-function enumFields(table: MetaschemaTable): MetaschemaField[] {
-	return (table.fields ?? []).filter(
-		(field): field is MetaschemaField => Boolean(field?.enumValues?.name),
-	);
-}
-
 /**
  * Cross-check a July `_meta` response against the endpoint's standard GraphQL
  * introspection result. This uses the schema's declared root type names rather
@@ -93,19 +126,21 @@ function enumFields(table: MetaschemaTable): MetaschemaField[] {
  * this function still calls `assertMetaQuery` so malformed runtime data cannot
  * be mistaken for an incompatible GraphQL schema.
  */
-export function assessSchemaIntrospectionCompatibility(
+export function analyzeSchemaIntrospectionCompatibility(
 	introspection: IntrospectionQueryResponse | null | undefined,
 	metaQuery: MetaQuery,
-): SchemaIntrospectionCompatibility {
+): SchemaIntrospectionAnalysis {
 	assertMetaQuery(metaQuery);
 
 	const missing = new Set<string>();
+	const enumMappings: SchemaEnumFieldMapping[] = [];
 	const schema = introspection?.__schema;
 	if (!schema) {
 		return {
 			contractVersion: META_CONTRACT_VERSION,
 			status: 'incompatible',
 			missingPaths: ['__schema'],
+			enumMappings,
 		};
 	}
 
@@ -190,41 +225,41 @@ export function assessSchemaIntrospectionCompatibility(
 		return operation;
 	};
 
+	const checkEnumInputField = (
+		inputType: IntrospectionType | undefined,
+		fieldName: string,
+		enumTypeName: string,
+		fallbackPath: string,
+	): boolean => {
+		if (!inputType || inputType.kind !== 'INPUT_OBJECT') {
+			missing.add(fallbackPath);
+			return false;
+		}
+
+		const inputField = inputType.inputFields?.find((field) => field.name === fieldName);
+		if (!inputField) {
+			missing.add(`${typePath(inputType.name)}.inputFields.${fieldName}`);
+			return false;
+		}
+
+		if (baseTypeName(inputField.type) !== enumTypeName) {
+			missing.add(`${typePath(inputType.name)}.inputFields.${fieldName}.type.${enumTypeName}`);
+			return false;
+		}
+		return true;
+	};
+
 	for (const table of tables) {
 		const inflection = table.inflection;
 		for (const [typeName, kind] of relevantTypes(inflection)) requireType(typeName, kind);
-
-		const tableType = requireType(inflection?.tableType, 'OBJECT');
-		for (const field of table.fields ?? []) {
-			if (!field?.name || !tableType) continue;
-			const graphQLFieldName = pgFieldToCamelCase(field.name);
-			const graphQLField = tableType.fields?.find((candidate) => candidate.name === graphQLFieldName);
-			if (!graphQLField) {
-				missing.add(`${typePath(tableType.name)}.fields.${graphQLFieldName}`);
-				continue;
-			}
-
-			const enumName = nonEmptyName(field.enumValues?.name);
-			if (enumName && baseTypeName(graphQLField.type) !== enumName) {
-				missing.add(`${typePath(tableType.name)}.fields.${graphQLFieldName}.type.${enumName}`);
-			}
-		}
-
-		for (const field of enumFields(table)) {
-			const enumName = field.enumValues!.name;
-			const enumType = requireType(enumName, 'ENUM');
-			const values = new Set(enumType?.enumValues?.map((value) => value.name) ?? []);
-			for (const value of field.enumValues!.values ?? []) {
-				if (!values.has(value)) missing.add(`${typePath(enumName)}.enumValues.${value}`);
-			}
-		}
+		const cleanedTable = cleanTable(table);
 
 		// The current PostGraphile schema does not guarantee the legacy
 		// `condition` argument or single-row query even when metaschema can
 		// derive their historical names. Console Kit only requires the list
 		// operation for reads, so validate the arguments the actual list root
 		// advertises and keep CRUD mutations strict below.
-		const allQueryName = toCamelCasePlural(table.name, cleanTable(table));
+		const allQueryName = toCamelCasePlural(table.name, cleanedTable);
 		const allOperation = queryRoot?.fields?.find((field) => field.name === allQueryName);
 		const allArguments: ExpectedArgument[] = [
 			{ names: ['first'], typeName: 'Int' },
@@ -275,7 +310,28 @@ export function assessSchemaIntrospectionCompatibility(
 			if (inputTypeName) requireType(inputTypeName, 'INPUT_OBJECT');
 		}
 
+		const createInputName = createOperation
+			? baseTypeName(createOperation.args.find(({ name }) => name === 'input')?.type)
+			: null;
+		const createInput = createInputName
+			? requireType(createInputName, 'INPUT_OBJECT')
+			: undefined;
+		const createObjectFieldName = toCamelCaseSingular(table.name, cleanedTable);
+		const createObjectField = createInput?.inputFields?.find(
+			(field) => field.name === createObjectFieldName,
+		);
+		if (createOperation && createInput && !createObjectField) {
+			missing.add(`${typePath(createInput.name)}.inputFields.${createObjectFieldName}`);
+		}
+		const createObjectInputName = baseTypeName(createObjectField?.type);
+		const createObjectInput = createObjectInputName
+			? requireType(createObjectInputName, 'INPUT_OBJECT')
+			: undefined;
+
 		const patchTypeName = nonEmptyName(inflection?.patchType);
+		const patchInput = patchTypeName
+			? requireType(patchTypeName, 'INPUT_OBJECT')
+			: undefined;
 		const updateInputName = updateOperation
 			? baseTypeName(updateOperation.args.find(({ name }) => name === 'input')?.type)
 			: null;
@@ -287,12 +343,161 @@ export function assessSchemaIntrospectionCompatibility(
 		) {
 			missing.add(`${typePath(updateInput.name)}.inputFields.type.${patchTypeName}`);
 		}
+
+		const tableType = requireType(inflection?.tableType, 'OBJECT');
+		for (const field of table.fields ?? []) {
+			if (!field?.name || !tableType) continue;
+			const graphQLFieldName = pgFieldToCamelCase(field.name);
+			const graphQLField = tableType.fields?.find((candidate) => candidate.name === graphQLFieldName);
+			if (!graphQLField) {
+				missing.add(`${typePath(tableType.name)}.fields.${graphQLFieldName}`);
+			}
+
+			const declaredEnumName = nonEmptyName(field.enumValues?.name);
+			if (!declaredEnumName) continue;
+			let fieldMappingValid = Boolean(graphQLField);
+			const fieldEnumTypeName = graphQLField
+				? baseTypeName(graphQLField.type)
+				: null;
+			if (
+				fieldEnumTypeName &&
+				canonicalEnumIdentifier(fieldEnumTypeName) !==
+					canonicalEnumIdentifier(declaredEnumName)
+			) {
+				fieldMappingValid = false;
+				missing.add(
+					`${typePath(tableType.name)}.fields.${graphQLFieldName}.type.${declaredEnumName}`,
+				);
+			}
+			const canonicalMatches = [...types.values()].filter(
+				(type) =>
+					type.kind === 'ENUM' &&
+					canonicalEnumIdentifier(type.name) === canonicalEnumIdentifier(declaredEnumName),
+			);
+			const enumTypeName = fieldEnumTypeName ??
+				(canonicalMatches.length === 1 ? canonicalMatches[0]!.name : null);
+			if (!enumTypeName) {
+				fieldMappingValid = false;
+				missing.add(typePath(declaredEnumName));
+				continue;
+			}
+			const enumType = requireType(enumTypeName, 'ENUM');
+			if (enumType?.kind !== 'ENUM') fieldMappingValid = false;
+			if (
+				nonEmptyName(table.query?.create) &&
+				!checkEnumInputField(
+					createObjectInput,
+					graphQLFieldName,
+					enumTypeName,
+					`${typePath(tableType.name)}.fields.${graphQLFieldName}.createInput`,
+				)
+			) {
+				fieldMappingValid = false;
+			}
+			if (
+				nonEmptyName(table.query?.update) &&
+				!checkEnumInputField(
+					patchInput,
+					graphQLFieldName,
+					enumTypeName,
+					`${typePath(tableType.name)}.fields.${graphQLFieldName}.patchInput`,
+				)
+			) {
+				fieldMappingValid = false;
+			}
+			const graphQLValues = enumType?.enumValues?.map((value) => value.name) ?? [];
+			const metaValues = field.enumValues?.values ?? [];
+			const graphQLByCanonical = enumIdentifiersByCanonical(graphQLValues);
+			const metaByCanonical = enumIdentifiersByCanonical(metaValues);
+			const mappedValues: SchemaEnumValueToken[] = [];
+
+			for (const metaValue of metaValues) {
+				const canonical = canonicalEnumIdentifier(metaValue);
+				const graphQLCandidates = graphQLByCanonical.get(canonical) ?? [];
+				const metaCandidates = metaByCanonical.get(canonical) ?? [];
+				if (graphQLCandidates.length === 0) {
+					fieldMappingValid = false;
+					missing.add(`${typePath(enumTypeName)}.enumValues.${metaValue}`);
+					continue;
+				}
+				if (graphQLCandidates.length !== 1 || metaCandidates.length !== 1) {
+					fieldMappingValid = false;
+					missing.add(`${typePath(enumTypeName)}.enumValues.${metaValue}.exactMapping`);
+					continue;
+				}
+				mappedValues.push({
+					metaValue,
+					graphQLValue: graphQLCandidates[0]!,
+				});
+			}
+
+			if (fieldMappingValid) {
+				enumMappings.push({
+					tableName: table.name,
+					schemaName: table.schemaName ?? null,
+					fieldName: graphQLFieldName,
+					graphQLTypeName: enumTypeName,
+					values: mappedValues,
+				});
+			}
+		}
+
 	}
 
 	const missingPaths = [...missing];
+	const status = missingPaths.length === 0 ? 'compatible' : 'incompatible';
 	return {
 		contractVersion: META_CONTRACT_VERSION,
-		status: missingPaths.length === 0 ? 'compatible' : 'incompatible',
+		status,
 		missingPaths,
+		enumMappings: status === 'compatible' ? enumMappings : [],
 	};
+}
+
+export function assessSchemaIntrospectionCompatibility(
+	introspection: IntrospectionQueryResponse | null | undefined,
+	metaQuery: MetaQuery,
+): SchemaIntrospectionCompatibility {
+	const { enumMappings: _enumMappings, ...compatibility } =
+		analyzeSchemaIntrospectionCompatibility(introspection, metaQuery);
+	return compatibility;
+}
+
+function normalizeEnumValue(value: unknown, mapping: SchemaEnumFieldMapping): unknown {
+	const normalizeOne = (candidate: unknown): unknown => {
+		if (typeof candidate !== 'string') return candidate;
+		const token = mapping.values.find(
+			(entry) => entry.metaValue === candidate || entry.graphQLValue === candidate,
+		);
+		return token?.graphQLValue ?? candidate;
+	};
+
+	return Array.isArray(value) ? value.map(normalizeOne) : normalizeOne(value);
+}
+
+/**
+ * Translate `_meta` enum labels to the exact tokens accepted by GraphQL.
+ * Unknown values are preserved so GraphQL remains the final input validator.
+ */
+export function normalizeSchemaEnumInputValues(
+	input: Record<string, unknown>,
+	table: Pick<CleanTable, 'name' | 'schemaName'>,
+	mappings: readonly SchemaEnumFieldMapping[],
+): Record<string, unknown> {
+	let normalized = input;
+	for (const mapping of mappings) {
+		if (
+			mapping.tableName !== table.name ||
+			mapping.schemaName !== (table.schemaName ?? null) ||
+			!Object.prototype.hasOwnProperty.call(input, mapping.fieldName)
+		) {
+			continue;
+		}
+
+		const value = normalizeEnumValue(input[mapping.fieldName], mapping);
+		if (value === input[mapping.fieldName]) continue;
+		if (normalized === input) normalized = { ...input };
+		normalized[mapping.fieldName] = value;
+	}
+	return normalized;
 }

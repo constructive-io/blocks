@@ -1,7 +1,16 @@
 import { describe, expect, it, vi } from 'vitest';
+import { buildSchema, graphqlSync } from 'graphql';
 
-import { MetaContractError } from '@constructive-io/data';
-import type { CleanTable, MetaQuery } from '@constructive-io/data';
+import {
+	MetaContractError,
+	SCHEMA_INTROSPECTION_QUERY,
+	cleanTable,
+} from '@constructive-io/data';
+import type {
+	CleanTable,
+	IntrospectionQueryResponse,
+	MetaQuery,
+} from '@constructive-io/data';
 
 import type { SheetsExecuteFn } from '../context/sheets-execute';
 import { createMetaContractFixture } from '../testing/meta-contract-fixture';
@@ -29,6 +38,90 @@ function mutationTable(name: string, primaryKeyFields: string[]): CleanTable {
 			delete: `delete${name}`,
 		},
 	} as CleanTable;
+}
+
+const enumSchema = /* GraphQL */ `
+	schema {
+		query: RootQuery
+		mutation: RootMutation
+	}
+
+	scalar Cursor
+	scalar UUID
+
+	type RootQuery {
+		projects(first: Int, last: Int, offset: Int, before: Cursor, after: Cursor): ProjectsConnection!
+	}
+
+	type RootMutation {
+		createProject(input: CreateProjectInput!): CreateProjectPayload
+		updateProject(input: UpdateProjectInput!): UpdateProjectPayload
+	}
+
+	type Project { id: UUID!, status: ProjectStatus! }
+	type ProjectsConnection { nodes: [Project!]!, totalCount: Int! }
+	type CreateProjectPayload { project: Project }
+	type UpdateProjectPayload { project: Project }
+	input ProjectInput { status: ProjectStatus! }
+	input ProjectPatch { status: ProjectStatus }
+	input CreateProjectInput { project: ProjectInput! }
+	input UpdateProjectInput { id: UUID!, projectPatch: ProjectPatch! }
+	enum ProjectStatus { ACTIVE, ARCHIVED }
+`;
+
+function enumIntrospection(): IntrospectionQueryResponse {
+	const result = graphqlSync({
+		schema: buildSchema(enumSchema),
+		source: SCHEMA_INTROSPECTION_QUERY,
+	});
+	if (result.errors || !result.data) {
+		throw new Error(result.errors?.[0]?.message ?? 'No introspection data');
+	}
+	return result.data as unknown as IntrospectionQueryResponse;
+}
+
+function enumMeta(): MetaQuery {
+	return {
+		_meta: {
+			tables: [
+				{
+					name: 'Project',
+					query: {
+						all: 'projects',
+						create: 'createProject',
+						update: 'updateProject',
+					},
+					inflection: {
+						tableType: 'Project',
+						connection: 'ProjectsConnection',
+						patchType: 'ProjectPatch',
+						createInputType: 'CreateProjectInput',
+						createPayloadType: 'CreateProjectPayload',
+						updatePayloadType: 'UpdateProjectPayload',
+					},
+					fields: [
+						{
+							name: 'id',
+							type: { gqlType: 'UUID', pgType: 'uuid', isArray: false },
+							isPrimaryKey: true,
+						},
+						{
+							name: 'status',
+							type: {
+								gqlType: 'projectStatus',
+								pgType: 'project_status',
+								isArray: false,
+							},
+							enumValues: {
+								name: 'projectStatus',
+								values: ['active', 'archived'],
+							},
+						},
+					],
+				},
+			],
+		},
+	};
 }
 
 describe('PostGraphile metadata adapter', () => {
@@ -74,6 +167,33 @@ describe('PostGraphile metadata adapter', () => {
 		await expect(adapter.fetchMeta(execute)).rejects.toThrow('temporary network error');
 		await expect(adapter.fetchMeta(execute)).resolves.toBe(meta);
 		expect(execute).toHaveBeenCalledTimes(3);
+	});
+
+	it('maps lowercase _meta enum labels to exact GraphQL mutation tokens', async () => {
+		const meta = enumMeta();
+		const introspection = enumIntrospection();
+		const execute = vi.fn(async (document: unknown) => {
+			const query = String(document);
+			if (query.includes('ConstructiveMetaContract')) return createMetaContractFixture();
+			if (query.includes('query ConstructiveMeta')) return meta;
+			if (query.includes('__schema')) return introspection;
+			return {};
+		}) as unknown as SheetsExecuteFn;
+		const adapter = createPostGraphileAdapter();
+
+		const fetched = await adapter.fetchMeta(execute);
+		const table = cleanTable(fetched._meta!.tables![0]!);
+		const ctx = { table, allTables: [table], tableName: table.name };
+		await adapter.createRow(ctx, { status: 'active' }, execute);
+		await adapter.updateRow(ctx, 'project-1', { status: 'archived' }, execute);
+
+		const variables = vi.mocked(execute).mock.calls
+			.map(([, callVariables]) => callVariables)
+			.filter((callVariables) => callVariables !== undefined);
+		expect(variables).toEqual([
+			{ input: { project: { status: 'ACTIVE' } } },
+			{ input: { id: 'project-1', projectPatch: { status: 'ARCHIVED' } } },
+		]);
 	});
 });
 

@@ -24,7 +24,7 @@ import {
   AlertDialogTitle
 } from '@constructive-io/ui/alert-dialog';
 import { Badge } from '@constructive-io/ui/badge';
-import { Button } from '@constructive-io/ui/button';
+import { Button, buttonVariants } from '@constructive-io/ui/button';
 import {
   Card,
   CardContent,
@@ -68,7 +68,12 @@ import {
   type FeaturePackError,
   type FeaturePackResource
 } from '../shared/feature-pack-contracts';
-import { FeaturePackBoundary, FeaturePackPageHeader } from '../shared/feature-pack-ui';
+import {
+  FeaturePackBoundary,
+  FeaturePackLimitations,
+  FeaturePackPageHeader,
+  FeaturePackTimestamp
+} from '../shared/feature-pack-ui';
 
 export type StorageBucket = Readonly<{
   id: string;
@@ -283,6 +288,10 @@ export function StorageFeaturePack({
   actions,
   onError
 }: StorageFeaturePackProps) {
+  const createBucket = actions?.createBucket;
+  const upload = actions?.upload;
+  const canCreateBucket = canPerform(policy, 'createBucket') && Boolean(createBucket);
+  const canUpload = canPerform(policy, 'upload') && Boolean(upload);
   const run = async (action: () => FeatureActionResult, fallback: string): Promise<boolean> => {
     try {
       await action();
@@ -297,21 +306,26 @@ export function StorageFeaturePack({
     <div className='flex flex-col gap-6'>
       <FeaturePackPageHeader
         actions={
-          resource.status === 'ready' && canPerform(policy, 'createBucket') && actions?.createBucket ? (
-            <CreateBucketDialog onCreate={(input) => run(() => actions.createBucket!(input), 'The bucket could not be created.')} />
+          resource.status === 'ready' && canCreateBucket && createBucket ? (
+            <CreateBucketDialog onCreate={(input) => run(() => createBucket(input), 'The bucket could not be created.')} />
           ) : null
         }
         description='Browse buckets and objects through host-injected storage actions and database-scoped access.'
         eyebrow='Application files'
         title='Storage'
       />
+      <FeaturePackLimitations
+        limitations={resource.status === 'ready' ? resource.limitations : undefined}
+      />
       <FeaturePackBoundary
         emptyAction={
-          canPerform(policy, 'createBucket') && actions?.createBucket ? (
-            <CreateBucketDialog onCreate={(input) => run(() => actions.createBucket!(input), 'The bucket could not be created.')} />
+          canCreateBucket && createBucket ? (
+            <CreateBucketDialog onCreate={(input) => run(() => createBucket(input), 'The bucket could not be created.')} />
           ) : null
         }
-        emptyDescription='Create a bucket after the storage feature pack is installed on the database.'
+        emptyDescription={canCreateBucket
+          ? 'Create a bucket to add the first storage boundary.'
+          : 'No storage buckets are visible to this session, and the connected endpoint does not expose bucket creation.'}
         emptyTitle='No storage buckets'
         resource={resource}
       >
@@ -399,28 +413,26 @@ export function StorageFeaturePack({
                       );
                     })}
                   </nav>
-                  {activeBucket && canPerform(policy, 'upload') && actions?.upload ? (
-                    <Button asChild>
-                      <label>
-                        <UploadIcon data-icon='inline-start' />
-                        Upload files
-                        <Input
-                          className='sr-only'
-                          multiple
-                          onChange={(event) => {
-                            const files = Array.from(event.currentTarget.files ?? []);
-                            if (files.length > 0) {
-                              void run(
-                                () => actions.upload!({ bucketKey: activeBucket.key, path, files }),
-                                'The files could not be uploaded.'
-                              );
-                            }
-                            event.currentTarget.value = '';
-                          }}
-                          type='file'
-                        />
-                      </label>
-                    </Button>
+                  {activeBucket && canUpload && upload ? (
+                    <label className={buttonVariants()}>
+                      <UploadIcon data-icon='inline-start' />
+                      Upload files
+                      <Input
+                        className='sr-only'
+                        multiple
+                        onChange={(event) => {
+                          const files = Array.from(event.currentTarget.files ?? []);
+                          if (files.length > 0) {
+                            void run(
+                              () => upload({ bucketKey: activeBucket.key, path, files }),
+                              'The files could not be uploaded.'
+                            );
+                          }
+                          event.currentTarget.value = '';
+                        }}
+                        type='file'
+                      />
+                    </label>
                   ) : null}
                 </div>
 
@@ -461,7 +473,7 @@ export function StorageFeaturePack({
                           </TableCell>
                           <TableCell>{object.contentType ?? object.kind}</TableCell>
                           <TableCell>{object.sizeLabel ?? '—'}</TableCell>
-                          <TableCell>{object.updatedAt ?? '—'}</TableCell>
+                          <TableCell><FeaturePackTimestamp value={object.updatedAt} /></TableCell>
                           <TableCell>
                             {activeBucket ? (
                               <StorageObjectActions
@@ -487,7 +499,11 @@ export function StorageFeaturePack({
                         <TableRow>
                           <TableCell className='h-32 text-center' colSpan={5}>
                             <p className='font-medium'>This folder is empty</p>
-                            <p className='text-muted-foreground text-sm'>Upload a file to add the first object.</p>
+                            <p className='text-muted-foreground text-sm'>
+                              {canUpload
+                                ? 'Upload a file to add the first object.'
+                                : 'No objects are visible, and uploads are unavailable on the connected endpoint.'}
+                            </p>
                           </TableCell>
                         </TableRow>
                       ) : null}

@@ -15,21 +15,22 @@ const proofUrl = requiredRouteUrl();
 
 export default defineConfig({
   testDir: './e2e-live',
+  testMatch: /console-kit\.live\.spec\.ts/,
   outputDir: '/tmp/constructive-blocks-playwright-live',
   fullyParallel: false,
   forbidOnly: true,
   retries: 0,
   workers: 1,
   reporter: 'list',
-  preserveOutput: 'never',
+  preserveOutput: 'failures-only',
   timeout: 120_000,
   expect: { timeout: 20_000 },
   use: {
     baseURL: new URL(proofUrl).origin,
     colorScheme: 'dark',
     serviceWorkers: 'block',
-    screenshot: 'off',
-    trace: 'off',
+    screenshot: 'only-on-failure',
+    trace: 'retain-on-failure',
     video: 'off'
   },
   projects: [

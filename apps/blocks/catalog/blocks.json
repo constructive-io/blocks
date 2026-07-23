@@ -156,13 +156,13 @@
       "purpose": "Application notification inbox and message actions."
     },
     {
-      "name": "preset-blank",
-      "slug": "preset-blank",
-      "title": "Blank Preset",
-      "category": "preset",
-      "type": "preset-profile",
-      "status": "experimental",
-      "purpose": "Maps the blank backend preset to the data feature pack."
+      "name": "console-kit-core",
+      "slug": "console-kit-core",
+      "title": "Constructive Console Kit Core",
+      "category": "console",
+      "type": "application-kit",
+      "status": "ready",
+      "purpose": "Leaf-independent shell, runtime, discovery, and modular Zustand store."
     },
     {
       "name": "preset-auth-hardened",

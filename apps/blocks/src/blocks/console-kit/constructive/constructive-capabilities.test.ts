@@ -1,5 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { fullFeatureModules } from '../../presets/full-console-kit';
+import { storageConsoleModule } from '../../feature-packs/storage/storage-console-module';
 import type { ConsoleKitAdapterContext } from '../console-kit-contracts';
 import { createConsoleKitStore } from '../store';
 import {
@@ -49,6 +51,23 @@ function schemaWithQueries(
   };
 }
 
+function schemaWithOperations(
+  endpointKind: ConstructiveSchemaSnapshot['endpointKind'],
+  endpointId: string,
+  queries: readonly string[],
+  mutations: readonly string[]
+): ConstructiveSchemaSnapshot {
+  const snapshot = schemaWithQueries(endpointKind, endpointId, queries);
+  return {
+    ...snapshot,
+    mutationFields: Object.fromEntries(mutations.map((name) => [name, {
+      name,
+      args: [],
+      type: { kind: 'OBJECT', name: `${name}Payload` }
+    }]))
+  };
+}
+
 function runtime(url: string): ConsoleKitAdapterContext {
   return {
     databaseId: 'database-1',
@@ -68,6 +87,24 @@ function runtime(url: string): ConsoleKitAdapterContext {
   };
 }
 
+function compatibleMetadata(): ConsoleKitAdapterContext['metadata'] {
+  return {
+    status: 'compatible',
+    meta: { _meta: { tables: [] } },
+    contractIntrospection: {},
+    introspection: {}
+  } as unknown as ConsoleKitAdapterContext['metadata'];
+}
+
+function incompatibleMetadata(message = 'The endpoint metadata is incompatible.'):
+ConsoleKitAdapterContext['metadata'] {
+  return {
+    status: 'incompatible',
+    message,
+    missing: ['MetaTable.scope']
+  };
+}
+
 const inspectSchema = vi.mocked(inspectConstructiveSchema);
 
 describe('Constructive capability discovery lifecycle', () => {
@@ -80,7 +117,8 @@ describe('Constructive capability discovery lifecycle', () => {
       .mockResolvedValueOnce(schema('first-schema'))
       .mockResolvedValueOnce(schema('second-schema'));
     const discovery = createConstructiveCapabilityDiscovery(
-      createConsoleKitStore('data')
+      createConsoleKitStore('data'),
+      fullFeatureModules
     );
 
     await discovery.ensure(runtime('/first/graphql'));
@@ -101,7 +139,8 @@ describe('Constructive capability discovery lifecycle', () => {
         : second.promise;
     });
     const discovery = createConstructiveCapabilityDiscovery(
-      createConsoleKitStore('data')
+      createConsoleKitStore('data'),
+      fullFeatureModules
     );
     const listener = vi.fn();
     discovery.subscribe(listener);
@@ -139,13 +178,22 @@ describe('Constructive capability discovery lifecycle', () => {
       throw new Error(`Unexpected endpoint ${kind}.`);
     });
     const store = createConsoleKitStore('data');
-    const discovery = createConstructiveCapabilityDiscovery(store);
+    const discovery = createConstructiveCapabilityDiscovery(
+      store,
+      fullFeatureModules
+    );
     const currentRuntime: ConsoleKitAdapterContext = {
       ...runtime('/auth/graphql'),
       endpoints: {
         auth: { id: 'auth', kind: 'auth', url: '/auth/graphql' },
         admin: { id: 'admin', kind: 'admin', url: '/admin/graphql' },
         billing: { id: 'usage', kind: 'billing', url: '/usage/graphql' }
+      },
+      metadata: compatibleMetadata(),
+      metadataByEndpoint: {
+        auth: compatibleMetadata(),
+        admin: compatibleMetadata(),
+        billing: compatibleMetadata()
       }
     };
 
@@ -168,6 +216,316 @@ describe('Constructive capability discovery lifecycle', () => {
           source: 'graphql-operation',
           endpointKind: 'billing',
           coordinate: 'Query.orgLimits'
+        })
+      ])
+    });
+  });
+
+  it('uses operation roots only for packs that explicitly declare _meta optional', async () => {
+    inspectSchema.mockImplementation(async (_runtime, kind) => {
+      if (kind === 'auth') {
+        return schemaWithOperations(
+          'auth',
+          'auth',
+          ['users'],
+          ['signIn', 'signUp', 'signOut', 'forgotPassword', 'resetPassword']
+        );
+      }
+      if (kind === 'admin') {
+        return schemaWithQueries('admin', 'admin', ['appMemberships']);
+      }
+      if (kind === 'billing') {
+        return schemaWithQueries(
+          'billing',
+          'billing',
+          ['plans', 'planSubscriptions']
+        );
+      }
+      if (kind === 'notifications') {
+        return schemaWithQueries(
+          'notifications',
+          'notifications',
+          ['notifications']
+        );
+      }
+      throw new Error(`Unexpected endpoint ${kind}.`);
+    });
+    const store = createConsoleKitStore('auth');
+    const discovery = createConstructiveCapabilityDiscovery(
+      store,
+      fullFeatureModules
+    );
+    const rejectedMetadata = incompatibleMetadata();
+
+    await discovery.ensure({
+      ...runtime('/auth/graphql'),
+      endpoints: {
+        auth: { id: 'auth', kind: 'auth', url: '/auth/graphql' },
+        admin: { id: 'admin', kind: 'admin', url: '/admin/graphql' },
+        billing: { id: 'billing', kind: 'billing', url: '/billing/graphql' },
+        notifications: {
+          id: 'notifications',
+          kind: 'notifications',
+          url: '/notifications/graphql'
+        }
+      },
+      metadata: rejectedMetadata,
+      metadataByEndpoint: {
+        auth: rejectedMetadata,
+        admin: rejectedMetadata,
+        billing: rejectedMetadata,
+        notifications: rejectedMetadata
+      }
+    });
+
+    for (const pack of ['auth', 'users', 'billing', 'notifications'] as const) {
+      expect(store.getState().packCapabilities[pack]).toMatchObject({
+        status: 'ready'
+      });
+    }
+    expect(store.getState().packCapabilities.organizations).toMatchObject({
+      status: 'unavailable',
+      supportedCapabilities: []
+    });
+  });
+
+  it('distinguishes a missing storage route from incompatible routed storage metadata', async () => {
+    inspectSchema.mockImplementation(async (_runtime, kind) =>
+      schemaWithQueries(kind, `${kind}-endpoint`, [])
+    );
+    const withoutRouteStore = createConsoleKitStore('storage');
+    const withoutRoute = createConstructiveCapabilityDiscovery(
+      withoutRouteStore,
+      [storageConsoleModule]
+    );
+    const compatible = compatibleMetadata();
+
+    await withoutRoute.ensure({
+      ...runtime('/auth/graphql'),
+      endpoints: {
+        data: { id: 'data', kind: 'data', url: '/data/graphql' }
+      },
+      metadata: compatible,
+      metadataByEndpoint: { data: compatible }
+    });
+    expect(withoutRouteStore.getState().packCapabilities.storage).toMatchObject({
+      status: 'unavailable',
+      reason: expect.stringMatching(/semantic storage endpoint is not routed/u)
+    });
+
+    const routedStore = createConsoleKitStore('storage');
+    const routed = createConstructiveCapabilityDiscovery(
+      routedStore,
+      [storageConsoleModule]
+    );
+    await routed.ensure({
+      ...runtime('/auth/graphql'),
+      endpoints: {
+        storage: {
+          id: 'storage',
+          kind: 'storage',
+          url: '/storage/graphql'
+        }
+      },
+      metadata: { status: 'checking' },
+      metadataByEndpoint: { storage: compatible }
+    });
+    expect(routedStore.getState().packCapabilities.storage).toMatchObject({
+      status: 'unavailable',
+      reason: expect.stringMatching(/routed storage endpoint/u)
+    });
+  });
+
+  it('uses _meta storage tables as capability evidence when the storage route has no table roots', async () => {
+    inspectSchema.mockImplementation(async (_runtime, kind) =>
+      schemaWithQueries(kind, `${kind}-endpoint`, [])
+    );
+    const store = createConsoleKitStore('storage');
+    const discovery = createConstructiveCapabilityDiscovery(
+      store,
+      fullFeatureModules
+    );
+    const currentRuntime: ConsoleKitAdapterContext = {
+      ...runtime('/auth/graphql'),
+      endpoints: {
+        data: { id: 'data', kind: 'data', url: '/data/graphql' },
+        storage: { id: 'storage', kind: 'storage', url: '/objects/graphql' }
+      },
+      metadata: {
+        status: 'compatible',
+        meta: {
+          _meta: {
+            tables: [{
+              name: 'workspace_buckets',
+              query: { all: 'workspaceBuckets' },
+              fields: [
+                { name: 'id', type: { gqlType: 'UUID', isArray: false, pgType: 'uuid' } },
+                { name: 'key', type: { gqlType: 'String', isArray: false, pgType: 'text' } }
+              ],
+              primaryKeyConstraints: [{
+                name: 'workspace_buckets_pkey',
+                fields: [{
+                  name: 'id',
+                  type: { gqlType: 'UUID', isArray: false, pgType: 'uuid' }
+                }]
+              }],
+              storage: { isBucketsTable: true, isFilesTable: false }
+            }, {
+              name: 'workspace_files',
+              query: { all: 'workspaceFiles' },
+              fields: [
+                { name: 'id', type: { gqlType: 'UUID', isArray: false, pgType: 'uuid' } },
+                { name: 'key', type: { gqlType: 'String', isArray: false, pgType: 'text' } },
+                { name: 'bucketId', type: { gqlType: 'UUID', isArray: false, pgType: 'uuid' } }
+              ],
+              primaryKeyConstraints: [{
+                name: 'workspace_files_pkey',
+                fields: [{
+                  name: 'id',
+                  type: { gqlType: 'UUID', isArray: false, pgType: 'uuid' }
+                }]
+              }],
+              relations: {
+                belongsTo: [{
+                  isUnique: false,
+                  keys: [{
+                    name: 'bucketId',
+                    type: { gqlType: 'UUID', isArray: false, pgType: 'uuid' }
+                  }],
+                  references: { name: 'workspace_buckets' }
+                }]
+              },
+              storage: { isBucketsTable: false, isFilesTable: true }
+            }]
+          }
+        },
+        contractIntrospection: {},
+        introspection: {}
+      } as ConsoleKitAdapterContext['metadata']
+    };
+
+    const primaryMetadata = {
+      status: 'compatible',
+      meta: { _meta: { tables: [] } },
+      contractIntrospection: {},
+      introspection: {}
+    } as unknown as ConsoleKitAdapterContext['metadata'];
+    const waitingRuntime: ConsoleKitAdapterContext = {
+      ...currentRuntime,
+      metadata: primaryMetadata,
+      metadataByEndpoint: {
+        data: primaryMetadata,
+        storage: { status: 'checking' }
+      }
+    };
+    await discovery.ensure(waitingRuntime);
+    expect(store.getState().packCapabilities.storage?.status).toBe('unavailable');
+
+    await discovery.ensure({
+      ...waitingRuntime,
+      metadataByEndpoint: {
+        data: primaryMetadata,
+        storage: currentRuntime.metadata
+      }
+    });
+
+    expect(store.getState().packCapabilities.storage).toMatchObject({
+      status: 'ready',
+      supportedCapabilities: expect.arrayContaining([
+        'storage.buckets',
+        'storage.files'
+      ]),
+      evidence: expect.arrayContaining([
+        expect.objectContaining({
+          source: 'graphql-operation',
+          endpointKind: 'storage',
+          coordinate: 'Query.workspaceBuckets'
+        }),
+        expect.objectContaining({
+          source: 'graphql-operation',
+          endpointKind: 'storage',
+          coordinate: 'Query.workspaceFiles'
+        })
+      ])
+    });
+    expect(inspectSchema).toHaveBeenCalledTimes(4);
+  });
+
+  it('uses a data _meta organization directory as read-only capability evidence without admin', async () => {
+    inspectSchema.mockImplementation(async (_runtime, kind) =>
+      schemaWithQueries(kind, `${kind}-endpoint`, [])
+    );
+    const store = createConsoleKitStore('organizations');
+    const discovery = createConstructiveCapabilityDiscovery(
+      store,
+      fullFeatureModules
+    );
+    const id = {
+      name: 'id',
+      type: { gqlType: 'UUID', isArray: false, pgType: 'uuid' }
+    } as const;
+    const organizationId = {
+      name: 'organizationId',
+      type: { gqlType: 'UUID', isArray: false, pgType: 'uuid' }
+    } as const;
+    const currentRuntime: ConsoleKitAdapterContext = {
+      ...runtime('/auth/graphql'),
+      endpoints: {
+        data: { id: 'data', kind: 'data', url: '/data/graphql' }
+      },
+      metadata: {
+        status: 'compatible',
+        meta: {
+          _meta: {
+            tables: [{
+              name: 'organizations',
+              query: { all: 'tenantOrganizations' },
+              fields: [id, {
+                name: 'name',
+                type: { gqlType: 'String', isArray: false, pgType: 'text' }
+              }],
+              primaryKeyConstraints: [{
+                name: 'organizations_pkey',
+                fields: [id]
+              }]
+            }, {
+              name: 'members',
+              query: { all: 'tenantMembers' },
+              fields: [id, organizationId],
+              primaryKeyConstraints: [{
+                name: 'members_pkey',
+                fields: [id]
+              }],
+              relations: {
+                belongsTo: [{
+                  isUnique: false,
+                  keys: [organizationId],
+                  references: { name: 'organizations' }
+                }]
+              }
+            }]
+          }
+        },
+        contractIntrospection: {},
+        introspection: {}
+      } as ConsoleKitAdapterContext['metadata']
+    };
+
+    await discovery.ensure(currentRuntime);
+
+    expect(store.getState().packCapabilities.organizations).toMatchObject({
+      status: 'ready',
+      supportedCapabilities: expect.arrayContaining(['organizations.memberships']),
+      evidence: expect.arrayContaining([
+        expect.objectContaining({
+          source: 'graphql-operation',
+          endpointKind: 'data',
+          coordinate: 'Query.tenantOrganizations'
+        }),
+        expect.objectContaining({
+          source: 'graphql-operation',
+          endpointKind: 'data',
+          coordinate: 'Query.tenantMembers'
         })
       ])
     });

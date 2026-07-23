@@ -7,12 +7,16 @@ import {
   type ConsoleCapabilityEvidence,
   type ConsoleEndpointKind
 } from '../../console-runtime';
-import {
-  FEATURE_PACK_MANIFESTS,
-  type AtomicCapabilityId,
-  type FeaturePackId
+import type {
+  AtomicCapabilityId,
+  FeaturePackIntrospectionSection,
+  FeaturePackMetaSection,
+  FeaturePackManifestV1
 } from '../../../feature-packs';
-import type { ConsoleKitAdapterContext } from '../console-kit-contracts';
+import type {
+  ConsoleKitAdapterContext,
+  ConsoleKitMetadataState
+} from '../console-kit-contracts';
 import type { ConsoleKitStoreApi } from '../store';
 import {
   hasSchemaFields,
@@ -32,48 +36,64 @@ export type ConstructiveCapabilityDiscovery = Readonly<{
   invalidate(): void;
 }>;
 
-type CapabilityRule = Readonly<{
+export type ConstructiveCapabilityRule = Readonly<{
   capability: AtomicCapabilityId;
   endpoint: ConsoleEndpointKind;
   operation: 'query' | 'mutation';
   fields: readonly string[];
 }>;
 
-const RULES: readonly CapabilityRule[] = [
-  { capability: 'auth.credentials', endpoint: 'auth', operation: 'mutation', fields: ['signIn', 'signUp'] },
-  { capability: 'auth.sessions', endpoint: 'auth', operation: 'mutation', fields: ['signOut'] },
-  { capability: 'auth.password', endpoint: 'auth', operation: 'mutation', fields: ['forgotPassword', 'resetPassword'] },
-  { capability: 'auth.email', endpoint: 'auth', operation: 'query', fields: ['emails'] },
-  { capability: 'auth.connected-accounts', endpoint: 'auth', operation: 'query', fields: ['userConnectedAccounts'] },
-  { capability: 'auth.identity-providers', endpoint: 'auth', operation: 'query', fields: ['identityProviders'] },
-  { capability: 'auth.passkeys', endpoint: 'auth', operation: 'query', fields: ['webauthnCredentials'] },
-  { capability: 'auth.phone', endpoint: 'auth', operation: 'query', fields: ['phoneNumbers'] },
-  { capability: 'auth.devices', endpoint: 'auth', operation: 'mutation', fields: ['revokeSession'] },
-  { capability: 'users.directory', endpoint: 'auth', operation: 'query', fields: ['users'] },
-  { capability: 'users.memberships', endpoint: 'admin', operation: 'query', fields: ['appMemberships'] },
-  { capability: 'users.permissions', endpoint: 'admin', operation: 'query', fields: ['appPermissions'] },
-  { capability: 'users.limits', endpoint: 'billing', operation: 'query', fields: ['appLimits'] },
-  { capability: 'users.profiles', endpoint: 'admin', operation: 'query', fields: ['appProfiles'] },
-  { capability: 'users.invites', endpoint: 'admin', operation: 'query', fields: ['appInvites'] },
-  { capability: 'organizations.memberships', endpoint: 'admin', operation: 'query', fields: ['orgMemberships'] },
-  { capability: 'organizations.permissions', endpoint: 'admin', operation: 'query', fields: ['orgPermissions'] },
-  { capability: 'organizations.limits', endpoint: 'billing', operation: 'query', fields: ['orgLimits'] },
-  { capability: 'organizations.profiles', endpoint: 'admin', operation: 'query', fields: ['orgProfiles'] },
-  { capability: 'organizations.hierarchy', endpoint: 'admin', operation: 'query', fields: ['orgHierarchies'] },
-  { capability: 'organizations.invites', endpoint: 'admin', operation: 'query', fields: ['orgInvites'] },
-  { capability: 'storage.buckets', endpoint: 'storage', operation: 'query', fields: ['buckets'] },
-  { capability: 'storage.buckets', endpoint: 'storage', operation: 'query', fields: ['appBuckets'] },
-  { capability: 'storage.files', endpoint: 'storage', operation: 'query', fields: ['files'] },
-  { capability: 'storage.files', endpoint: 'storage', operation: 'query', fields: ['appFiles'] },
-  { capability: 'billing.plans', endpoint: 'billing', operation: 'query', fields: ['plans'] },
-  { capability: 'billing.subscriptions', endpoint: 'billing', operation: 'query', fields: ['planSubscriptions'] },
-  { capability: 'billing.meters', endpoint: 'billing', operation: 'query', fields: ['meters'] },
-  { capability: 'notifications.settings', endpoint: 'notifications', operation: 'query', fields: ['notificationPreferences'] },
-  { capability: 'notifications.inbox', endpoint: 'notifications', operation: 'query', fields: ['notifications'] },
-  // Realtime is deliberately absent here. A query root does not prove a
-  // subscription contract; custom tenants must expose _meta realtime metadata
-  // and a subscription root before this capability can be enabled.
-];
+export type ConstructiveCapabilityAssessmentContext = Readonly<{
+  runtime: ConsoleKitAdapterContext;
+  schemas: ConstructiveSchemaMap;
+  metadataByEndpoint: ReadonlyMap<ConsoleEndpointKind, ConsoleKitMetadataState>;
+}>;
+
+export type ConstructiveCapabilityAssessment = Readonly<{
+  endpoint: ConsoleEndpointKind;
+  supportedCapabilities: readonly AtomicCapabilityId[];
+  evidence: readonly ConsoleCapabilityEvidence[];
+}>;
+
+export type ConstructiveCapabilityContribution = Readonly<{
+  rules?: readonly ConstructiveCapabilityRule[];
+  assess?: (
+    context: ConstructiveCapabilityAssessmentContext
+  ) => ConstructiveCapabilityAssessment | null;
+  unavailableReason?: string | ((
+    context: ConstructiveCapabilityAssessmentContext
+  ) => string);
+}>;
+
+export type ConstructiveCapabilityFeature = Readonly<{
+  manifest: FeaturePackManifestV1;
+  capabilityDiscovery?: ConstructiveCapabilityContribution;
+}>;
+
+const CURRENT_META_SECTIONS = new Set<FeaturePackMetaSection>([
+  'tables',
+  'fields',
+  'constraints',
+  'relations',
+  'inflection',
+  'query',
+  'scope',
+  'storage',
+  'search',
+  'i18n',
+  'realtime',
+  'encoding'
+]);
+
+const CURRENT_INTROSPECTION_SECTIONS = new Set<
+  FeaturePackIntrospectionSection
+>([
+  'root-operations',
+  'types',
+  'input-objects',
+  'enums',
+  'directives'
+]);
 
 export type ConstructiveMutationObjectInput = Readonly<{
   field: string;
@@ -122,11 +142,13 @@ function discoveryKey(runtime: ConsoleKitAdapterContext): string {
       .sort(([left], [right]) => String(left).localeCompare(String(right))),
     runtime.session.status,
     identity ? createConsoleIdentityKey(identity) : null,
-    runtime.metadata.status
+    Object.entries(runtime.metadataByEndpoint ?? { data: runtime.metadata })
+      .map(([kind, metadata]) => [kind, metadata?.status ?? null])
+      .sort(([left], [right]) => String(left).localeCompare(String(right)))
   ]);
 }
 
-function endpointEvidence(
+export function createConstructiveEndpointEvidence(
   kind: ConsoleEndpointKind,
   schema: ConstructiveSchemaSnapshot
 ): ConsoleCapabilityEvidence {
@@ -138,7 +160,9 @@ function endpointEvidence(
   };
 }
 
-function operationEvidence(rule: CapabilityRule): ConsoleCapabilityEvidence[] {
+function operationEvidence(
+  rule: ConstructiveCapabilityRule
+): ConsoleCapabilityEvidence[] {
   return rule.fields.map((field) => ({
     source: 'graphql-operation' as const,
     endpointKind: rule.endpoint,
@@ -148,18 +172,54 @@ function operationEvidence(rule: CapabilityRule): ConsoleCapabilityEvidence[] {
 
 function supportsRule(
   schemas: ConstructiveSchemaMap,
-  rule: CapabilityRule
+  rule: ConstructiveCapabilityRule
 ): boolean {
   return hasSchemaFields(schemas[rule.endpoint], rule.operation, rule.fields);
+}
+
+function metadataEntries(
+  runtime: ConsoleKitAdapterContext
+): ReadonlyMap<ConsoleEndpointKind, ConsoleKitMetadataState> {
+  const discovered = Object.entries(runtime.metadataByEndpoint ?? {}) as Array<
+    [ConsoleEndpointKind, ConsoleKitMetadataState]
+  >;
+  return new Map(
+    discovered.length > 0
+      ? discovered
+      : [['data', runtime.metadata] as const]
+  );
+}
+
+/**
+ * A compatible runtime state has already passed the current `_meta` signature
+ * and the standard-introspection cross-check. The manifest vocabulary check
+ * keeps future pack requirements from being accepted by an older core merely
+ * because that endpoint happened to expose a similarly named root field.
+ */
+export function supportsConstructiveManifestMetadata(
+  metadata: ConsoleKitMetadataState | undefined,
+  manifest: FeaturePackManifestV1
+): boolean {
+  const requiresMeta = manifest.metadata.requiredMetaSections.length > 0;
+  return (!requiresMeta || metadata?.status === 'compatible') &&
+    manifest.metadata.requiredMetaSections.every((section) =>
+      CURRENT_META_SECTIONS.has(section)
+    ) &&
+    manifest.metadata.requiredIntrospectionSections.every((section) =>
+      CURRENT_INTROSPECTION_SECTIONS.has(section)
+    );
 }
 
 function assessPacks(
   runtime: ConsoleKitAdapterContext,
   store: ConsoleKitStoreApi,
+  features: readonly ConstructiveCapabilityFeature[],
   schemas: ConstructiveSchemaMap,
   diagnostics: readonly ConsoleCapabilityEvidence[]
 ) {
-  for (const manifest of FEATURE_PACK_MANIFESTS) {
+  const metadataByEndpoint = metadataEntries(runtime);
+  const assessmentContext = { runtime, schemas, metadataByEndpoint };
+  for (const { manifest, capabilityDiscovery } of features) {
     const supported: AtomicCapabilityId[] = [];
     const evidence: ConsoleCapabilityEvidence[] = [];
     const manifestCapabilities = new Set<AtomicCapabilityId>([
@@ -167,33 +227,59 @@ function assessPacks(
       ...(manifest.capabilities.optional as readonly AtomicCapabilityId[])
     ]);
 
-    if (manifest.id === 'data' && runtime.metadata.status === 'compatible') {
-      supported.push('data.meta', 'data.introspection');
-      const endpoint = schemas.data;
-      if (endpoint) evidence.push(endpointEvidence('data', endpoint));
-      evidence.push({
-        source: 'graphql-operation',
-        endpointKind: 'data',
-        coordinate: 'Query._meta'
-      });
-    }
-
-    for (const rule of RULES) {
+    for (const rule of capabilityDiscovery?.rules ?? []) {
       if (!manifestCapabilities.has(rule.capability)) continue;
+      if (!supportsConstructiveManifestMetadata(
+        metadataByEndpoint.get(rule.endpoint),
+        manifest
+      )) continue;
       if (!supportsRule(schemas, rule)) continue;
-      supported.push(rule.capability);
+      if (!supported.includes(rule.capability)) supported.push(rule.capability);
       evidence.push(...operationEvidence(rule));
       const endpoint = schemas[rule.endpoint];
       if (endpoint && !evidence.some((item) =>
         item.source === 'endpoint' && item.endpointKind === rule.endpoint
       )) {
-        evidence.push(endpointEvidence(rule.endpoint, endpoint));
+        evidence.push(createConstructiveEndpointEvidence(rule.endpoint, endpoint));
+      }
+    }
+
+    const customAssessment = capabilityDiscovery?.assess?.(assessmentContext);
+    if (
+      customAssessment &&
+      supportsConstructiveManifestMetadata(
+        metadataByEndpoint.get(customAssessment.endpoint),
+        manifest
+      )
+    ) {
+      for (const capability of customAssessment.supportedCapabilities) {
+        if (
+          manifestCapabilities.has(capability) &&
+          !supported.includes(capability)
+        ) {
+          supported.push(capability);
+        }
+      }
+      evidence.push(...customAssessment.evidence);
+      const endpoint = schemas[customAssessment.endpoint];
+      if (endpoint && !evidence.some((item) =>
+        item.source === 'endpoint' &&
+        item.endpointKind === customAssessment.endpoint
+      )) {
+        evidence.push(createConstructiveEndpointEvidence(
+          customAssessment.endpoint,
+          endpoint
+        ));
       }
     }
 
     const missingEndpoint = manifest.endpoints.required.find(
       (kind) => !runtime.endpoints[kind]
     );
+    const contributionReason = typeof capabilityDiscovery?.unavailableReason ===
+      'function'
+      ? capabilityDiscovery.unavailableReason(assessmentContext)
+      : capabilityDiscovery?.unavailableReason;
     store.getState().setPackCapability(manifest.id, assessConsolePackCapability({
       packId: manifest.id,
       requiredCapabilities: manifest.capabilities.required as readonly AtomicCapabilityId[],
@@ -201,13 +287,15 @@ function assessPacks(
       evidence: [...evidence, ...diagnostics],
       unavailableReason: missingEndpoint
         ? `The ${missingEndpoint} endpoint is not routed for this database.`
-        : 'The configured endpoints do not expose this feature pack contract.'
+        : contributionReason ??
+          'The configured endpoints do not expose this feature pack contract with compatible metadata.'
     }));
   }
 }
 
 export function createConstructiveCapabilityDiscovery(
-  store: ConsoleKitStoreApi
+  store: ConsoleKitStoreApi,
+  features: readonly ConstructiveCapabilityFeature[]
 ): ConstructiveCapabilityDiscovery {
   const listeners = new Set<() => void>();
   let currentKey: string | null = null;
@@ -249,9 +337,9 @@ export function createConstructiveCapabilityDiscovery(
       currentController = controller;
       currentKey = key;
       currentSchemas = {};
-      for (const manifest of FEATURE_PACK_MANIFESTS) {
+      for (const { manifest } of features) {
         store.getState().setPackCapability(
-          manifest.id as FeaturePackId,
+          manifest.id,
           createCheckingConsolePackCapability(manifest.id)
         );
       }
@@ -287,7 +375,7 @@ export function createConstructiveCapabilityDiscovery(
         }
 
         currentSchemas = schemas;
-        assessPacks(runtime, store, currentSchemas, diagnostics);
+        assessPacks(runtime, store, features, currentSchemas, diagnostics);
         currentPromise = null;
         currentController = null;
         emit();

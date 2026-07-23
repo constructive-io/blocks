@@ -9,7 +9,7 @@ import { OG_IMAGE, withBase } from '@/lib/site';
 
 const TITLE = 'Console Kit for Next.js';
 const DESCRIPTION =
-  'A full-page, route-neutral Constructive application console composed from the app shell and seven feature packs.';
+  'A full-page, route-neutral Constructive application console composed from an installable core and feature modules.';
 
 const CONSOLE_EXAMPLE = `'use client';
 
@@ -30,7 +30,6 @@ type TenantManifest = Readonly<{
     'data' | 'auth' | 'admin' | 'billing' | 'storage' | 'notifications',
     TenantEndpoint
   >>;
-  tableAllowlist: readonly string[];
 }>;
 
 function routed(endpoint: TenantEndpoint) {
@@ -50,17 +49,86 @@ export function ApplicationConsole({ tenant }: Readonly<{ tenant: TenantManifest
       billing: routed(tenant.endpoints.billing),
       storage: routed(tenant.endpoints.storage),
       notifications: routed(tenant.endpoints.notifications)
-    },
-    tableAllowlist: tenant.tableAllowlist
+    }
   };
 
   return <ConstructiveConsoleKit database={database} />;
+}`;
+
+const LOWER_LEVEL_EXAMPLE = `'use client';
+
+import {
+  ConstructiveConsoleKitCore,
+  type ConstructiveTenantDatabase
+} from '@/blocks/console-kit/console-kit-core';
+import { authConsoleModule } from '@/blocks/feature-packs/auth/auth-console-module';
+import { dataConsoleModule } from '@/blocks/feature-packs/data/data-console-module';
+
+const featureModules = [dataConsoleModule, authConsoleModule] as const;
+
+export function SelectedPackConsole({
+  database
+}: Readonly<{ database: ConstructiveTenantDatabase }>) {
+  return (
+    <ConstructiveConsoleKitCore
+      database={database}
+      featureModules={featureModules}
+    />
+  );
 }`;
 
 const ENDPOINT_RESOLVER_EXAMPLE = `resolveEndpoint: ({ databaseId, kind }) => ({
   id: \`\${databaseId}:\${kind}\`,
   url: endpointDirectory.graphqlUrl(databaseId, kind)
 })`;
+
+const STORE_EXAMPLE = `'use client';
+
+import * as React from 'react';
+
+import {
+  ConsoleKit,
+  createConsoleKitStore,
+  type ConsoleKitConfig,
+  type ConsoleKitFeatureModule
+} from '@/blocks/console-kit/console-kit-core';
+import { dataConsoleModule } from '@/blocks/feature-packs/data/data-console-module';
+import { storageConsoleModule } from '@/blocks/feature-packs/storage/storage-console-module';
+
+const featureModules: readonly ConsoleKitFeatureModule[] = [
+  dataConsoleModule,
+  storageConsoleModule
+];
+
+export function ObservableConsole({
+  config
+}: Readonly<{ config: ConsoleKitConfig }>) {
+  const [store] = React.useState(() => createConsoleKitStore(
+    'data',
+    { databaseId: config.databaseId, organizationId: null },
+    featureModules.flatMap((module) =>
+      module.storeSlice ? [module.storeSlice] : []
+    )
+  ));
+
+  return (
+    <ConsoleKit
+      config={config}
+      featureModules={featureModules}
+      store={store}
+    />
+  );
+}`;
+
+const NATIVE_PROOF_EXAMPLE = `# Start the untouched Constructive DB runtime.
+cd /absolute/path/to/constructive-db/functions
+fun up --local --db consolekitblocks
+
+# From the Blocks repository in another terminal, provision, test, and clean up.
+pnpm fixture:console-kit run \\
+  --constructive-db /absolute/path/to/constructive-db \\
+  --database consolekitblocks \\
+  -- pnpm --filter blocks test:e2e:live`;
 
 const CSRF_PROVIDER_EXAMPLE = `import {
   ConstructiveConsoleKit,
@@ -157,12 +225,91 @@ export default function ConsoleKitPage() {
             </h2>
             <p className="mt-1.5 text-pretty text-sm leading-7 text-muted-foreground">
               One registry item installs the Console Kit, all seven feature
-              packs, its modular Zustand store, the runtime and catalog
-              contracts, and the shadcn Base UI app shell dependency graph.
+              modules, the runtime and catalog contracts, the single modular
+              Zustand store, and the shadcn Base UI app shell dependency graph.
             </p>
           </div>
           <CodeBlock label="shadcn CLI">
             {registryAdd('console-kit-nextjs')}
+          </CodeBlock>
+
+          <div className="mt-8 max-w-3xl">
+            <h3 className="text-sm font-medium text-foreground">
+              Install an official preset
+            </h3>
+            <p className="mt-1.5 text-pretty text-sm leading-7 text-muted-foreground">
+              Each preset registry item installs the core and the exact feature
+              modules mapped to its Constructive DB preset. Runtime navigation
+              still follows the contracts discovered from the active tenant,
+              so installed code never grants a capability by itself.
+            </p>
+          </div>
+          <div className="mt-3 grid gap-3 lg:grid-cols-3">
+            {[
+              {
+                title: 'Auth hardened',
+                registryName: 'preset-auth-hardened',
+                modules: 'Data, Auth, Users'
+              },
+              {
+                title: 'B2B with Storage',
+                registryName: 'preset-b2b-storage',
+                modules: 'Data, Auth, Users, Organizations, Storage'
+              },
+              {
+                title: 'Full',
+                registryName: 'preset-full',
+                modules: 'All seven feature modules'
+              }
+            ].map((preset) => (
+              <div
+                key={preset.registryName}
+                className="min-w-0 rounded-xl border border-border/60 bg-card p-4"
+              >
+                <h4 className="text-sm font-medium text-foreground">
+                  {preset.title}
+                </h4>
+                <p className="mt-1 text-xs leading-5 text-muted-foreground">
+                  {preset.modules}
+                </p>
+                <CodeBlock className="mt-3" label="shadcn CLI">
+                  {registryAdd(preset.registryName)}
+                </CodeBlock>
+              </div>
+            ))}
+          </div>
+
+          <div className="mt-8 max-w-3xl">
+            <h3 className="text-sm font-medium text-foreground">
+              Compose feature modules independently
+            </h3>
+            <p className="mt-1.5 text-pretty text-sm leading-7 text-muted-foreground">
+              Install the leaf-independent core and only the Console Kit modules
+              your product needs. Every console module installs its standalone,
+              provider-neutral feature-pack view transitively, then adds
+              discovery, navigation, its Constructive adapter when available,
+              and any pack-owned store slice. Install a feature-pack item alone
+              when the host supplies the view props without Console Kit.
+            </p>
+          </div>
+          <CodeBlock className="mt-3" label="Core and Console Kit modules">
+            {[
+              'console-kit-core',
+              'console-module-data',
+              'console-module-auth',
+              'console-module-users',
+              'console-module-organizations',
+              'console-module-storage',
+              'console-module-billing',
+              'console-module-notifications'
+            ].map(registryAdd).join('\n')}
+          </CodeBlock>
+          <CodeBlock
+            className="mt-4"
+            label="Selected-pack Constructive composition"
+            language="tsx"
+          >
+            {LOWER_LEVEL_EXAMPLE}
           </CodeBlock>
         </section>
 
@@ -172,17 +319,16 @@ export default function ConsoleKitPage() {
               id="console-host-contract-heading"
               className="text-lg font-semibold tracking-tight"
             >
-              Start from the provisioned tenant contract
+              Start from the tenant endpoint contract
             </h2>
             <p className="mt-1.5 text-pretty text-sm leading-7 text-muted-foreground">
-              The canonical seeder manifest supplies the database ID, routable
-              semantic endpoints, and exact application table allowlist. Keep
-              credentials on the user side of the sign-in form; the descriptor
-              itself is safe to pass from a server component to the client.
-              A blank data-only tenant has no auth endpoint, so pass a host-owned
-              database-scoped session for that tenant. Console Kit verifies the
-              session database ID before using it and opens the Data feature
-              without manufacturing anonymous authority.
+              The host supplies a database ID and its routable public GraphQL
+              endpoints; Console Kit does not need a preset name or a
+              control-plane receipt at runtime. Keep credentials on the user
+              side of the sign-in form, because the secret-free descriptor is
+              safe to pass from a server component to the client. A host-owned
+              session must carry the same database ID, which prevents identity
+              state from crossing between tenants.
             </p>
           </div>
 
@@ -191,7 +337,7 @@ export default function ConsoleKitPage() {
               {
                 title: 'Endpoints',
                 badge: 'six semantic kinds',
-                body: 'Pass only routable data, auth, admin, billing, storage, and notifications endpoints from the tenant manifest.'
+                body: 'Pass only routable data, auth, admin, billing, storage, and notifications endpoints; no sibling endpoint is inferred.'
               },
               {
                 title: 'Session',
@@ -199,9 +345,9 @@ export default function ConsoleKitPage() {
                 body: 'The first-party wrapper scopes in-memory and browser session state to the database, then resolves a fresh token per request.'
               },
               {
-                title: 'Adapters',
-                badge: 'first-party included',
-                body: 'Constructive adapters discover operations before enabling actions; use the lower-level ConsoleKit only for a custom provider.'
+                title: 'Capabilities',
+                badge: 'discovered at runtime',
+                body: 'Installed modules become available only when endpoint metadata, GraphQL operations, and the active identity support them.'
               }
             ].map((boundary) => (
               <div
@@ -258,10 +404,7 @@ export default function ConsoleKitPage() {
               </code>
               . Constructive consumes the anonymous session after successful
               authentication, so the provider must mint a fresh token for each
-              attempt and must never cache it in browser storage. The current
-              backend revision still needs its anonymous-session bootstrap and
-              generated revocation query fixed before this secure toggle can
-              complete end to end.
+              attempt and must never cache it in browser storage.
             </p>
             <CodeBlock
               className="mt-3"
@@ -293,28 +436,13 @@ export default function ConsoleKitPage() {
               </code>{' '}
               using the freshly delivered credential, including from a fresh signed-out
               browser. After sign-in, Console Kit reloads the account so the
-              verified state is authoritative. Console Kit binds its send action
-              to the signed-in account&apos;s loaded primary email, but the stock
-              backend mutation is not owner-bound; direct GraphQL callers need
-              the backend hardening documented below. Treat the token as a
-              credential: generate or rewrite the public link so these values
-              follow the URL&apos;s <code className="rounded bg-muted px-1 py-0.5 font-mono text-[12px]">#</code>,
-              which keeps them out of the HTTP request, then scrub the fragment
-              before mounting Console Kit.
-            </p>
-            <p className="mt-2 text-pretty text-sm leading-7 text-muted-foreground">
-              Email delivery and link routing are separate deployment
-              contracts. The stock local SMTP configuration currently emits{' '}
+              verified state is authoritative. Treat the token as a credential:
+              route these values through the URL&apos;s{' '}
               <code className="rounded bg-muted px-1 py-0.5 font-mono text-[12px]">
-                https://localhost/verify-email
+                #
               </code>{' '}
-              without the Blocks development port. The live proof validates
-              delivery, moves the extracted values through a client-only URL
-              fragment, scrubs that fragment, deletes the token-bearing Mailpit
-              message, and consumes the credential through
-              its integration route. It does not claim that the stock link is
-              directly clickable; production hosts must configure or rewrite
-              the public verification URL to their own fragment-based route.
+              fragment so they stay out of the HTTP request, then scrub that
+              fragment before mounting Console Kit.
             </p>
             <CodeBlock
               className="mt-3"
@@ -336,19 +464,18 @@ export default function ConsoleKitPage() {
             </h2>
             <p className="mt-1.5 text-pretty text-sm leading-7 text-muted-foreground">
               Each Console Kit instance creates one Zustand vanilla store and
-              composes navigation, runtime, and adapter slices into it. The
-              store is scoped to the mounted console, so server renders and
-              multiple consoles cannot leak identity or navigation state across
-              instances. Pass a pre-created store only when the host needs to
-              subscribe to or test console state directly.
+              composes the core navigation, tenant, session, endpoint,
+              discovery, runtime, and adapter slices with slices contributed by
+              installed feature modules. The store is scoped to the mounted
+              console, so server renders and multiple consoles cannot leak
+              identity or navigation state across instances. If the host owns
+              the store, it must compose the same module slices; Console Kit
+              verifies that composition and resets its scoped state when the
+              tenant or identity changes.
             </p>
           </div>
           <CodeBlock label="Optional host-owned store" language="tsx">
-            {`const [consoleStore] = React.useState(() =>
-  createConsoleKitStore('data')
-);
-
-return <ConsoleKit config={config} store={consoleStore} />;`}
+            {STORE_EXAMPLE}
           </CodeBlock>
         </section>
 
@@ -364,17 +491,18 @@ return <ConsoleKit config={config} store={consoleStore} />;`}
               <Badge variant="info">_meta 2026-07</Badge>
             </div>
             <p className="mt-1.5 text-pretty text-sm leading-7 text-muted-foreground">
-              Before loading data-backed features, the runtime checks standard
-              GraphQL introspection and Constructive&apos;s versioned{' '}
+              The runtime checks every configured, reachable endpoint with
+              standard GraphQL introspection and Constructive&apos;s versioned{' '}
               <code className="rounded bg-muted px-1 py-0.5 font-mono text-[12px]">
                 _meta
               </code>{' '}
-              response. This release accepts contract version{' '}
+              contract. This release accepts contract version{' '}
               <code className="rounded bg-muted px-1 py-0.5 font-mono text-[12px]">
                 2026-07
               </code>{' '}
-              only; unversioned or incompatible metadata stops feature loading
-              instead of guessing at table and mutation shapes.
+              only; each feature module selects its evidence from the endpoint
+              map, and incompatible metadata stops that feature instead of
+              guessing at tables, relations, or mutation shapes.
             </p>
           </div>
 
@@ -383,15 +511,15 @@ return <ConsoleKit config={config} store={consoleStore} />;`}
               {[
                 {
                   title: 'Preflight',
-                  body: 'Resolve the data endpoint and read a fresh token from the active session.'
+                  body: 'Resolve each explicit semantic endpoint and read a fresh token from the active database-scoped session.'
                 },
                 {
                   title: 'Discover',
-                  body: 'Load the _meta contract plus GraphQL root operations, types, and input objects.'
+                  body: 'Load _meta plus GraphQL root operations, types, and input objects independently for every reachable endpoint.'
                 },
                 {
                   title: 'Expose',
-                  body: 'Show application tables and feature navigation only when their required contract is present.'
+                  body: 'Show a module only when its schema contract is exposed, then let PostgreSQL privileges and RLS decide each operation.'
                 }
               ].map((step, index) => (
                 <li key={step.title} className="min-w-0">
@@ -408,6 +536,33 @@ return <ConsoleKit config={config} store={consoleStore} />;`}
               ))}
             </ol>
           </div>
+        </section>
+
+        <section aria-labelledby="console-native-proof-heading">
+          <div className="mb-4 max-w-3xl">
+            <h2
+              id="console-native-proof-heading"
+              className="text-lg font-semibold tracking-tight"
+            >
+              Prove compatibility against native tenants
+            </h2>
+            <p className="mt-1.5 text-pretty text-sm leading-7 text-muted-foreground">
+              Start the untouched Constructive DB services with{' '}
+              <code className="rounded bg-muted px-1 py-0.5 font-mono text-[12px]">
+                fun up
+              </code>
+              , then let the Blocks fixture call the native provisioning
+              procedure for the three official presets and one supported
+              storage-routed tenant. The generated secret-free manifest feeds
+              the integration route, while the live suite exercises auth,
+              identity-scoped CRUD, cross-tenant rejection, capability
+              discovery, and RLS through public GraphQL endpoints. Cleanup uses
+              only the exact tenant database IDs recorded by that run.
+            </p>
+          </div>
+          <CodeBlock label="Native Console Kit proof">
+            {NATIVE_PROOF_EXAMPLE}
+          </CodeBlock>
         </section>
 
         <section aria-labelledby="console-shell-heading">
@@ -429,7 +584,7 @@ return <ConsoleKit config={config} store={consoleStore} />;`}
 
           <div className="grid gap-3 md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
             <CodeBlock label="Install the shell without Console Kit">
-              {`${registryAdd('app-shell')}\n${registryAdd('app-bar')}`}
+              {registryAdd('app-shell')}
             </CodeBlock>
             <div className="rounded-xl border border-border/60 bg-card p-4">
               <h3 className="text-sm font-medium text-foreground">

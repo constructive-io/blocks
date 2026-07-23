@@ -20,6 +20,10 @@ import {
   ConsoleKitStoreProvider,
   createConsoleKitStore
 } from './store';
+import {
+  getConsoleKitStorageSlice,
+  storageConsoleStoreSlice
+} from '../feature-packs/storage/storage-console-slice';
 
 function deferred<T>() {
   let resolve!: (value: T) => void;
@@ -243,5 +247,76 @@ describe('Console Kit endpoint runtime', () => {
       storage: { kind: 'storage', url: '/objects/graphql' },
       notifications: { kind: 'notifications', url: '/notifications/graphql' }
     }));
+  });
+
+  it('resets an external store across database and identity scopes', async () => {
+    const store = createConsoleKitStore('storage', null, [
+      storageConsoleStoreSlice
+    ]);
+    const sessionFor = (cachePartition: string): ConsoleSession => {
+      const snapshot = {
+        status: 'authenticated',
+        identity: {
+          kind: 'authenticated',
+          cachePartition,
+          subjectId: cachePartition
+        }
+      } as const;
+      return {
+        mode: 'embedded',
+        getSnapshot: () => snapshot,
+        subscribe: () => () => undefined,
+        getAccessToken: () => null
+      };
+    };
+    const firstSession = sessionFor('login-1');
+    const wrapper = ({ children }: Readonly<{ children: React.ReactNode }>) => (
+      <ConsoleKitStoreProvider initialFeature='storage' store={store}>
+        {children}
+      </ConsoleKitStoreProvider>
+    );
+    const { rerender } = renderHook(
+      ({ databaseId, session }) => useConsoleKitRuntime({
+        databaseId,
+        session
+      }),
+      {
+        initialProps: {
+          databaseId: 'database-1',
+          session: firstSession
+        },
+        wrapper
+      }
+    );
+
+    await waitFor(() => expect(store.getState().context).toEqual({
+      databaseId: 'database-1',
+      organizationId: null
+    }));
+    getConsoleKitStorageSlice(store).selectStorageBucket(
+      'database-1:login-1',
+      'documents'
+    );
+    rerender({ databaseId: 'database-1', session: firstSession });
+    expect(getConsoleKitStorageSlice(store).storageSelection).not.toBeNull();
+
+    rerender({ databaseId: 'database-2', session: firstSession });
+    await waitFor(() => {
+      expect(store.getState().context?.databaseId).toBe('database-2');
+      expect(getConsoleKitStorageSlice(store).storageSelection).toBeNull();
+    });
+
+    getConsoleKitStorageSlice(store).selectStorageBucket(
+      'database-2:login-1',
+      'documents'
+    );
+    rerender({ databaseId: 'database-2', session: sessionFor('login-2') });
+    await waitFor(() => {
+      expect(store.getState().session).toMatchObject({
+        status: 'authenticated',
+        identity: { cachePartition: 'login-2' }
+      });
+      expect(getConsoleKitStorageSlice(store).storageSelection).toBeNull();
+    });
   });
 });

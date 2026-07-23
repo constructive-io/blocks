@@ -4,6 +4,6 @@
   "presetSlug": "auth:hardened",
   "title": "Hardened authentication",
   "description": "Data, authentication, and user-management feature packs.",
-  "stability": "experimental",
+  "stability": "stable",
   "featurePacks": ["data", "auth", "users"]
 }

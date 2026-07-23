@@ -19,7 +19,8 @@ import {
   AlertDialogDescription,
   AlertDialogFooter,
   AlertDialogHeader,
-  AlertDialogTitle
+  AlertDialogTitle,
+  AlertDialogTrigger
 } from '@constructive-io/ui/alert-dialog';
 import { Button } from '@constructive-io/ui/button';
 import {
@@ -77,7 +78,8 @@ import {
   FeaturePackBoundary,
   FeaturePackLimitations,
   FeaturePackPageHeader,
-  FeatureStatusBadge
+  FeatureStatusBadge,
+  FeaturePackTimestamp
 } from '../shared/feature-pack-ui';
 
 const NO_ROLE_VALUE = '__no_role__';
@@ -390,6 +392,60 @@ function OrganizationMemberActions({
   );
 }
 
+function CancelOrganizationInviteAction({
+  invite,
+  organizationId,
+  cancelInvite,
+  onError
+}: Readonly<{
+  invite: OrganizationInvite;
+  organizationId: string;
+  cancelInvite: NonNullable<OrganizationsFeatureActions['cancelInvite']>;
+  onError?: OrganizationsFeaturePackProps['onError'];
+}>) {
+  const [open, setOpen] = React.useState(false);
+  const [pending, setPending] = React.useState(false);
+
+  const cancel = async () => {
+    setPending(true);
+    try {
+      await cancelInvite({ organizationId, inviteId: invite.id });
+      setOpen(false);
+    } catch (cause) {
+      onError?.(normalizeFeaturePackError(cause, 'The invitation could not be canceled.'));
+    } finally {
+      setPending(false);
+    }
+  };
+
+  return (
+    <AlertDialog
+      onOpenChange={(nextOpen) => {
+        if (!pending) setOpen(nextOpen);
+      }}
+      open={open}
+    >
+      <AlertDialogTrigger render={<Button size='sm' variant='outline' />}>
+        Cancel
+      </AlertDialogTrigger>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>Cancel invitation for {invite.email}?</AlertDialogTitle>
+          <AlertDialogDescription>
+            The organization invitation link will stop working. You can invite this person again later.
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel disabled={pending}>Keep invitation</AlertDialogCancel>
+          <Button disabled={pending} onClick={() => void cancel()} variant='destructive'>
+            {pending ? 'Canceling…' : 'Cancel invitation'}
+          </Button>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+  );
+}
+
 export function OrganizationsFeaturePack({
   resource,
   policy,
@@ -596,22 +652,18 @@ export function OrganizationsFeaturePack({
                               <TableCell className='font-medium'>{invite.email}</TableCell>
                               <TableCell>{invite.role ?? 'Member'}</TableCell>
                               <TableCell><FeatureStatusBadge status={invite.status} /></TableCell>
-                              <TableCell>{invite.expiresAt ?? '—'}</TableCell>
+                              <TableCell><FeaturePackTimestamp value={invite.expiresAt} /></TableCell>
                               <TableCell className='text-right'>
                                 {active &&
                                 canPerform(policy, 'cancelInvite') &&
                                 canPerform(invite.actionPolicy, 'cancelInvite') &&
                                 actions?.cancelInvite ? (
-                                  <Button
-                                    onClick={() => void run(
-                                      () => actions.cancelInvite!({ organizationId: active.id, inviteId: invite.id }),
-                                      'The invitation could not be canceled.'
-                                    )}
-                                    size='sm'
-                                    variant='outline'
-                                  >
-                                    Cancel
-                                  </Button>
+                                  <CancelOrganizationInviteAction
+                                    cancelInvite={actions.cancelInvite}
+                                    invite={invite}
+                                    onError={onError}
+                                    organizationId={active.id}
+                                  />
                                 ) : null}
                               </TableCell>
                             </TableRow>

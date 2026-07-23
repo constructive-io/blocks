@@ -17,10 +17,12 @@
     "start": "next start --port 3005",
     "lint:types": "tsc --noEmit && pnpm scripts:typecheck",
     "scripts:typecheck": "tsc --noEmit -p tsconfig.scripts.json",
-    "test": "vitest run",
+    "test": "vitest run && pnpm test:native-fixture",
+    "test:native-fixture": "tsx --test e2e-live/native-fixture.test.ts",
     "test:watch": "vitest --watch",
     "test:e2e": "playwright test",
-    "test:e2e:live": "playwright test --config playwright.live.config.ts"
+    "test:e2e:live": "playwright test --config playwright.live.config.ts",
+    "fixture:console-kit": "tsx scripts/console-kit-native-fixture.ts"
   },
   "postcss": {
     "plugins": {

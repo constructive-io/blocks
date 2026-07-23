@@ -127,7 +127,7 @@ export const FEATURE_PACK_DOCS = [
     exportName: 'AuthFeaturePack',
     description: 'Provider-neutral sign-in, recovery, personal profile, password, and session-management surfaces.',
     endpoints: 'auth',
-    dependencies: ['data'],
+    dependencies: [],
     resource: 'FeaturePackResource<AuthAccountData>',
     actions: [
       'signIn / signUp / recoverPassword / resetPassword',
@@ -229,8 +229,8 @@ export const FEATURE_PACK_DOCS = [
     exportName: 'UsersFeaturePack',
     description:
       'An application member directory with invitations, role assignment, profile context, and access-status management.',
-    endpoints: 'admin, optional auth, optional billing',
-    dependencies: ['data', 'auth'],
+    endpoints: 'optional admin, optional auth, optional billing, optional data',
+    dependencies: [],
     resource: 'FeaturePackResource<UsersFeatureData>',
     actions: ['invite({ email, role })', 'updateRole / toggleActive / remove', 'cancelInvite / extendInvite'],
     whenToUse: [
@@ -310,8 +310,8 @@ export const FEATURE_PACK_DOCS = [
     exportName: 'OrganizationsFeaturePack',
     description:
       'A tenant switcher with organization creation, invitations, memberships, role assignment, and removal controls.',
-    endpoints: 'admin, optional auth, optional billing',
-    dependencies: ['users'],
+    endpoints: 'optional admin, optional auth, optional billing, optional data',
+    dependencies: [],
     resource: 'FeaturePackResource<OrganizationsFeatureData>',
     actions: [
       'createOrganization / selectOrganization',
@@ -383,8 +383,8 @@ export const FEATURE_PACK_DOCS = [
     exportName: 'StorageFeaturePack',
     description:
       'A policy-aware bucket and object browser with folder navigation, upload, download, creation, and deletion actions.',
-    endpoints: 'storage',
-    dependencies: ['data'],
+    endpoints: 'optional storage, optional admin, optional data',
+    dependencies: [],
     resource: 'FeaturePackResource<StorageFeatureData>',
     actions: ['selectBucket / navigate / createBucket', 'upload / download / deleteObject'],
     whenToUse: [
@@ -453,8 +453,8 @@ export const FEATURE_PACK_DOCS = [
     exportName: 'BillingFeaturePack',
     description:
       'A complete customer billing destination for subscriptions, entitlements, usage, credits, plans, and account activity.',
-    endpoints: 'billing, optional admin, optional data',
-    dependencies: ['data'],
+    endpoints: 'optional billing, optional admin, optional data',
+    dependencies: [],
     resource: 'BillingSettingsResources',
     actions: ['BillingSettingsActions', 'onSectionChange(section)'],
     whenToUse: [
@@ -553,8 +553,8 @@ export const FEATURE_PACK_DOCS = [
     exportName: 'NotificationsFeaturePack',
     description:
       'An application notification inbox with all and unread views, read state, deep-link actions, and deletion controls.',
-    endpoints: 'notifications',
-    dependencies: ['users'],
+    endpoints: 'optional notifications, optional auth, optional data',
+    dependencies: [],
     resource: 'FeaturePackResource<NotificationsFeatureData>',
     actions: ['markRead / markAllRead', 'openNotification / deleteNotification'],
     whenToUse: [
@@ -632,13 +632,6 @@ export function getFeaturePackDoc(value: string): FeaturePackDoc | undefined {
 }
 
 export const PRESET_PROFILE_DOCS = [
-  {
-    id: 'blank',
-    registryName: 'preset-blank',
-    presetSlug: 'blank',
-    title: 'Blank',
-    featurePacks: ['data'],
-  },
   {
     id: 'auth-hardened',
     registryName: 'preset-auth-hardened',
