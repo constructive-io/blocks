@@ -48,11 +48,11 @@ and capabilities actually discovered for the active tenant.
 Every Console Kit instance owns one Zustand store composed from modular
 slices. Core contributes navigation, tenant, session, endpoint, discovery,
 runtime, and adapter state; packs may contribute their own slices through
-their feature modules. Console Kit snapshots each contribution's initial state;
-changing the database or identity aborts stale work, clears scoped core caches,
-and restores every module slice to that initial state. Same-scope adapter
-refreshes preserve module state. A feature pack must not create another
-provider or use a process-wide store.
+their feature modules. Changing the database or identity aborts stale work,
+clears scoped core caches, constructs fresh module state, and invalidates old
+module action and getter closures. Same-scope adapter refreshes preserve module
+state. A feature pack must not create another provider or use a process-wide
+store.
 
 ## Capability and authorization evidence
 
