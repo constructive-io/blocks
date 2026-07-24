@@ -135,7 +135,7 @@ export const FEATURE_PACK_DOCS = [
     ],
     whenToUse: [
       'Use the Authentication feature pack for public credential flows and personal account security that should remain independent from an application membership.',
-      'Use the Users or Organizations feature pack when the task changes application access, roles, invitations, or tenant membership rather than the person’s credentials.',
+      'Use App access or Organizations when the task changes application access, grants, invitations, or tenant membership rather than the person’s credentials.',
     ],
     usage: {
       description:
@@ -175,9 +175,11 @@ export const FEATURE_PACK_DOCS = [
     apiProps: featurePackApiProps<AuthFeaturePackProps>()([
       'view',
       'account',
+      'notice',
       'verificationNotice',
       'mode',
-      'resetToken',
+      'passwordPolicy',
+      'challengeContributions',
       'policy',
       'actions',
       'onModeChange',
@@ -196,14 +198,24 @@ export const FEATURE_PACK_DOCS = [
         behavior: 'Supplies loading, empty, error, or ready identity and session content for the account view.',
       },
       {
-        name: 'verificationNotice',
-        type: "{ status: 'success' | 'error'; message: string }",
-        behavior: 'Reports the result of consuming a host-provided email verification credential, including on a signed-out entry route.',
+        name: 'notice / verificationNotice',
+        type: 'AuthFeatureNotice',
+        behavior: 'Reports callback and account-operation outcomes; verificationNotice remains as a deprecated compatibility alias.',
       },
       {
-        name: 'mode / resetToken',
-        type: 'AuthEntryMode / string',
-        behavior: 'Selects the entry flow and supplies an optional provider-issued password reset token.',
+        name: 'mode',
+        type: 'AuthEntryMode',
+        behavior: 'Selects the entry flow. Reset credentials remain in the host action closure or Console Kit callback vault.',
+      },
+      {
+        name: 'passwordPolicy',
+        type: 'AuthPasswordPolicy',
+        behavior: 'Supplies host-owned password length, hint, and validation rules without inventing a frontend policy.',
+      },
+      {
+        name: 'challengeContributions',
+        type: 'readonly AuthChallengeContribution[]',
+        behavior: 'Adds complete provider-neutral challenge flows while their credentials remain in trusted contribution closures.',
       },
       {
         name: 'policy / actions',
@@ -225,56 +237,65 @@ export const FEATURE_PACK_DOCS = [
   {
     id: 'users',
     registryName: 'feature-pack-users',
-    title: 'Users',
+    title: 'App access',
     exportName: 'UsersFeaturePack',
     description:
-      'An application member directory with invitations, role assignment, profile context, and access-status management.',
-    endpoints: 'optional admin, optional auth, optional billing, optional data',
+      'Application member governance, lifecycle controls, access profiles, permission grants, and invitations.',
+    endpoints: 'admin, optional auth',
     dependencies: [],
     resource: 'FeaturePackResource<UsersFeatureData>',
-    actions: ['invite({ email, role })', 'updateRole / toggleActive / remove', 'cancelInvite / extendInvite'],
+    actions: [
+      'invite({ recipient, profileId? }) / cancelInvite / extendInvite',
+      'setApproved / setVerified / setBanned / setDisabled',
+      'setOwner / setAdmin / setProfile / setDirectPermission',
+      'profile CRUD / profile composition / new-member defaults',
+    ],
     whenToUse: [
-      'Use the Users feature pack when administrators need to manage access to one application, including invitations, roles, profiles, and membership status.',
+      'Use App access when administrators need to govern access to one application, including invitations, membership lifecycle, ownership, administration, profiles, and permission grants.',
       'Use the Authentication feature pack for personal credentials and sessions, or Organizations when membership must be scoped to a selected tenant.',
     ],
     usage: {
       description:
-        'Pass members, optional invitations, and role choices through resource. Grant each administrative operation through policy and provide the matching host action.',
+        'Pass members and any discovered invitation, profile, permission, default, or audit sections through resource. Grant each administrative operation through policy and provide the matching host action.',
       example: `import { UsersFeaturePack } from '@/blocks/feature-packs/users/users-feature-pack';
 
 <UsersFeaturePack
   resource={users}
   policy={{
     invite: true,
-    updateRole: true,
-    toggleActive: true,
-    remove: true
+    setApproved: true,
+    setDisabled: true,
+    setProfile: true,
+    setDirectPermission: true
   }}
   actions={userActions}
   onError={reportMembershipError}
 />`,
     },
     state: {
-      title: 'Membership and action state',
+      title: 'Application access state',
       description:
-        'Members and invitations arrive as one resource so their counts and tabs describe the same application boundary. Search remains local, while role, status, invitation, and removal operations stay controlled by the host resource and actions.',
+        'Members and discovered access surfaces arrive as one resource so every section describes the same application boundary. Search and section selection remain local by default, while lifecycle, governance, invitation, profile, and permission operations stay controlled by the host resource and actions.',
       actionGuidance:
-        'A policy grant and matching callback enable each administrative action. Invitation cancellation and extension also require the row actionPolicy supplied with that invitation, which lets adapters mirror sender-scoped RLS without exposing unusable controls.',
+        'A policy grant, matching callback, and row actionPolicy enable each administrative action. Adapters can mirror RLS and final-owner constraints without exposing controls that the current actor cannot use.',
     },
     surfaces: [
-      'Searchable application member directory with profile, role, and status context.',
-      'Invitation creation, extension, and cancellation inside a dedicated tab.',
-      'Policy-gated role, active-state, and membership removal controls.',
+      'Searchable application member directory with separate lifecycle, governance, profile, direct-grant, and effective-permission context.',
+      'Capability-gated invitations, accepted-invite history, access profiles, permission catalog, and new-member defaults.',
+      'Semantic membership and grant controls that reflect append-only Constructive actions and final-owner policy.',
     ],
     accessibility: [
       'Member and invitation tables use scoped headers, readable status labels, and named action triggers for each row.',
-      'The member search keeps a visible placeholder and an assistive label, while tabs expose member and invitation counts in their accessible names.',
-      'Invitation and removal dialogs have explicit titles and consequences, keep focus inside while open, and return focus to their trigger when closed.',
+      'The member search keeps a visible placeholder and an assistive label, while available sections and counts are exposed through one named tab list.',
+      'Invitation, lifecycle, governance, and profile deletion dialogs state their consequences and preserve dialog focus behavior.',
     ],
     apiProps: featurePackApiProps<UsersFeaturePackProps>()([
       'resource',
       'policy',
       'actions',
+      'section',
+      'defaultSection',
+      'onSectionChange',
       'title',
       'description',
       'onError',
@@ -284,12 +305,17 @@ export const FEATURE_PACK_DOCS = [
         name: 'resource',
         type: 'FeaturePackResource<UsersFeatureData>',
         behavior:
-          'Supplies members, optional invitations with row action policies, optional roles, and their loading, empty, error, or ready state.',
+          'Supplies members and optional invitations, accepted-invite history, profiles, permissions, defaults, and their loading, empty, error, or ready state.',
       },
       {
         name: 'policy / actions',
         type: 'FeatureActionPolicy / UsersFeatureActions',
-        behavior: 'Requires both an explicit grant and callback before a membership action is available.',
+        behavior: 'Requires an explicit grant, matching callback, and any row policy before an access action is available.',
+      },
+      {
+        name: 'section / defaultSection / onSectionChange',
+        type: 'UsersSection / callback',
+        behavior: 'Controls or initializes the visible App access section and reports section navigation to the host.',
       },
       {
         name: 'title / description',
@@ -309,70 +335,92 @@ export const FEATURE_PACK_DOCS = [
     title: 'Organizations',
     exportName: 'OrganizationsFeaturePack',
     description:
-      'A tenant switcher with organization creation, invitations, memberships, role assignment, and removal controls.',
+      'A complete tenant administration destination for membership governance, invitations, access policy, hierarchy, settings, and developer credentials.',
     endpoints: 'optional admin, optional auth, optional billing, optional data',
     dependencies: [],
     resource: 'FeaturePackResource<OrganizationsFeatureData>',
     actions: [
-      'createOrganization / selectOrganization',
-      'inviteMember / updateMemberRole / removeMember',
-      'cancelInvite',
+      'createOrganization / selectOrganization / updateOrganization / leaveOrganization / deleteOrganization',
+      'inviteMember / cancelInvite',
+      'updateMemberLifecycle / removeMember / setMemberAdmin / setMemberOwner',
+      'setMemberProfile / setMemberPermission / upsertMemberProfile',
+      'createAccessProfile / updateAccessProfile / deleteAccessProfile / setProfilePermission',
+      'updateMembershipDefault / updateMembershipSettings',
+      'setHierarchyEdge / removeHierarchyEdge',
+      'createOrganizationPrincipal / revokeOrganizationPrincipal',
+      'createOrganizationApiKey / revokeOrganizationApiKey',
     ],
     whenToUse: [
-      'Use the Organizations feature pack when the selected tenant determines which memberships and organization-owned resources an administrator can manage.',
-      'Use the Users feature pack when access belongs to one application boundary and no tenant switcher or organization context is required.',
+      'Use the Organizations feature pack when a selected tenant owns its memberships, invitations, access profiles, hierarchy, settings, and service credentials.',
+      'Use App access when access belongs to one application boundary and does not require an organization selector, tenant governance, or organization-scoped credentials.',
     ],
     usage: {
       description:
-        'Pass organizations together with the active organization’s members, invitations, and roles. Keep selection and mutations in host state so every refresh remains subject to database policy.',
+        'Pass one policy-filtered organization snapshot and the callbacks supported by the current tenant database. The host owns the active organization through resource; use section and onSectionChange when application routing owns the management section, or defaultSection for an internal initial selection.',
       example: `import { OrganizationsFeaturePack } from '@/blocks/feature-packs/organizations/organizations-feature-pack';
 
 <OrganizationsFeaturePack
   resource={organizations}
-  policy={{
-    selectOrganization: true,
-    createOrganization: true,
-    inviteMember: true,
-    updateMemberRole: true,
-    removeMember: true
-  }}
+  policy={organizationPolicy}
   actions={organizationActions}
+  section={section}
+  onSectionChange={setSection}
   onError={reportOrganizationError}
 />`,
     },
     state: {
-      title: 'Tenant and membership state',
+      title: 'Tenant, section, and authorization state',
       description:
-        'The resource keeps the organization list and selected tenant membership data in one snapshot. Selection, role changes, invitations, and removals are delegated to the host; pass a refreshed resource after an action succeeds.',
+        'Use defaultSection when the page can remember its own organization-management section. Pass section and onSectionChange when routing or application state owns the selection. The resource keeps the visible organization directory and active tenant data in one snapshot; optional data controls invitations, profiles, permissions, defaults, hierarchy, and developer sections, while membership settings extend the tenant settings section when readable.',
       actionGuidance:
-        'A policy grant, matching callback, and row policy enable each tenant or membership action. Console Kit treats an unreadable invitation-profile assignment mode as strict, disables profile actions when entity scope is unreadable, omits duplicate profile labels, and reports each condition as a resource limitation. The stock Constructive RLS policy exposes the invite setting only to admin_members, so delegated inviters can otherwise be authorized by the database without being able to discover the configured mode.',
+        'A pack policy grant, matching callback, and any row policy enable each action; PostgreSQL privileges and RLS remain authoritative after the control is shown. Refresh the resource after a successful mutation, treat reusable invitation tokens as secrets, and expose new API keys only for the response that creates them. Missing optional capability evidence omits its dependent surface instead of guessing at tenant permissions.',
     },
     surfaces: [
-      'Organization selection and creation for the current personal identity.',
-      'Tenant-scoped member search, role assignment, and removal controls.',
-      'Organization invitation creation and cancellation.',
+      'Organization selection and creation, plus tenant identity settings, leave, and deletion controls.',
+      'Members with governance, lifecycle status, access-profile assignment, direct permission exceptions, and organization member profiles.',
+      'Invitations by email, SMS, or reusable link with profile assignment, expiry, reusable claim limits and counts, token copying, cancellation, and accepted-invite history.',
+      'Access-profile creation, editing, deletion, and permission grants alongside a readable permission catalog.',
+      'Membership defaults and tenant-wide membership settings for approval, inheritance, external access, invitation assignment, and limit allocation.',
+      'Organization hierarchy edges with position metadata and cycle-safe creation and removal controls.',
+      'Developer credentials with service-principal creation and revocation, one-time API-key issuance, and key revocation.',
     ],
     accessibility: [
-      'The selected organization uses a readable name and selection indicator, while unavailable tenant changes remain disabled instead of becoming inert text.',
-      'Member and invitation tables use scoped headers, named row actions, and text status labels that remain meaningful without color.',
-      'Creation, invitation, and removal dialogs state their tenant scope and consequences before submission.',
+      'The selected organization and active management section use readable labels and selection indicators, while unavailable tenant actions remain disabled or absent according to policy.',
+      'Member, invitation, hierarchy, principal, and API-key tables use scoped headers, named row actions, and text status labels whose meaning does not depend on color.',
+      'Destructive, hierarchy, invitation, principal, and credential dialogs identify their tenant scope and consequences before submission; a newly issued key is labelled as a one-time secret.',
     ],
-    apiProps: featurePackApiProps<OrganizationsFeaturePackProps>()(['resource', 'policy', 'actions', 'onError']),
+    apiProps: featurePackApiProps<OrganizationsFeaturePackProps>()([
+      'resource',
+      'policy',
+      'actions',
+      'section',
+      'defaultSection',
+      'onSectionChange',
+      'onError',
+    ]),
     api: [
       {
         name: 'resource',
         type: 'FeaturePackResource<OrganizationsFeatureData>',
-        behavior: 'Supplies organizations, active tenant context, memberships, optional invitations, roles, and policy limitations when the adapter must fail closed.',
+        behavior:
+          'Supplies organizations and active tenant context, members, invitations and claim history, access profiles, permissions, defaults, settings, hierarchy, principals, API keys, and any fail-closed limitations.',
       },
       {
         name: 'policy / actions',
         type: 'FeatureActionPolicy / OrganizationsFeatureActions',
-        behavior: 'Requires an explicit grant, callback, and matching invitation row policy before a tenant or membership action is available.',
+        behavior:
+          'Requires an explicit pack grant, callback, and any matching organization, member, invitation, profile, hierarchy, principal, or API-key row policy before an action is available.',
+      },
+      {
+        name: 'section / defaultSection / onSectionChange',
+        type: 'OrganizationsSection / callback',
+        behavior:
+          'Uses either a controlled section or an initial selection across members, invitations, profiles, permissions, defaults, hierarchy, settings, and developer credentials, then reports section changes to the host.',
       },
       {
         name: 'onError',
         type: '(error: FeaturePackError) => void',
-        behavior: 'Reports normalized tenant, invitation, and membership failures.',
+        behavior: 'Reports normalized tenant, access, invitation, hierarchy, settings, principal, and credential failures.',
       },
     ] satisfies readonly FeaturePackApiRow[],
   },

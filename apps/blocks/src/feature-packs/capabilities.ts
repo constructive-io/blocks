@@ -16,7 +16,6 @@ export const ATOMIC_CAPABILITY_IDS = [
   'users.directory',
   'users.memberships',
   'users.permissions',
-  'users.limits',
   'users.profiles',
   'users.invites',
   'organizations.memberships',
@@ -65,7 +64,6 @@ export const CAPABILITY_IDS_BY_FEATURE_PACK = {
     'users.directory',
     'users.memberships',
     'users.permissions',
-    'users.limits',
     'users.profiles',
     'users.invites'
   ],

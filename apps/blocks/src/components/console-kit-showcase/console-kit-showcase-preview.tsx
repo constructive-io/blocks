@@ -71,12 +71,12 @@ const PRESET_OPTIONS: readonly Readonly<{
   {
     value: 'auth-hardened',
     label: 'Auth hardened',
-    modules: 'Data · Auth · Users'
+    modules: 'Data · Auth · App access'
   },
   {
     value: 'b2b-storage',
     label: 'B2B with Storage',
-    modules: 'Data · Auth · Users · Orgs · Storage'
+    modules: 'Data · Auth · App access · Orgs · Storage'
   },
   {
     value: 'full',
@@ -86,9 +86,9 @@ const PRESET_OPTIONS: readonly Readonly<{
 ];
 
 const NAV_BY_PRESET: Record<ConsoleKitShowcasePreset, readonly string[]> = {
-  'auth-hardened': ['Data', 'Auth', 'Users'],
-  'b2b-storage': ['Data', 'Auth', 'Users', 'Organizations', 'Storage'],
-  full: ['Data', 'Auth', 'Users', 'Organizations', 'Storage', 'Billing', 'Notifications']
+  'auth-hardened': ['Data', 'Auth', 'App access'],
+  'b2b-storage': ['Data', 'Auth', 'App access', 'Organizations', 'Storage'],
+  full: ['Data', 'Auth', 'App access', 'Organizations', 'Storage', 'Billing', 'Notifications']
 };
 
 function stateBadge(state: ConsoleKitShowcaseState) {
@@ -104,7 +104,7 @@ function ShowcaseShell({
   preset,
   state,
   children,
-  activeNav = 'Users'
+  activeNav = 'App access'
 }: Readonly<{
   preset: ConsoleKitShowcasePreset;
   state: ConsoleKitShowcaseState;
@@ -216,10 +216,10 @@ function unavailableFeatureFor(preset: ConsoleKitShowcasePreset): Readonly<{
 }> {
   if (preset === 'auth-hardened') {
     return {
-      nav: 'Users',
+      nav: 'App access',
       feature: 'users',
       endpoint: 'admin',
-      title: 'Users is unavailable',
+      title: 'App access is unavailable',
       description: 'The admin endpoint that backs membership reads is not configured or not publicly routable for this tenant.'
     };
   }
@@ -291,7 +291,7 @@ function ShowcaseBody({
         ) : (
           <Card variant="flat">
             <CardHeader>
-              <CardTitle className="text-base">Users (partial)</CardTitle>
+              <CardTitle className="text-base">App access (partial)</CardTitle>
               <CardDescription>
                 Member reads work. Invite writes stay hidden until the public
                 contract exposes them.
@@ -340,10 +340,10 @@ export function ConsoleKitShowcasePreview({ className }: Readonly<{ className?: 
       : state === 'incompatible'
         ? 'Data'
         : state === 'partial'
-          ? (nav.includes('Organizations') ? 'Organizations' : 'Users')
+          ? (nav.includes('Organizations') ? 'Organizations' : 'App access')
           : state === 'signed-out'
             ? 'Auth'
-            : 'Users';
+            : 'App access';
 
   return (
     <div className={cn('flex flex-col gap-4', className)}>

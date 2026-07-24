@@ -215,43 +215,17 @@ export function HardenedTenantConsole({
 
 const EMAIL_VERIFICATION_EXAMPLE = `'use client';
 
-import * as React from 'react';
-
 import {
   ConstructiveConsoleKit,
   type ConstructiveTenantDatabase
 } from '@/blocks/console-kit/constructive';
 
-type VerificationCredential = Readonly<{ emailId: string; token: string }>;
-
 export function VerificationConsole({
   database
 }: Readonly<{ database: ConstructiveTenantDatabase }>) {
-  const [credential, setCredential] =
-    React.useState<VerificationCredential | null>(null);
-  const [ready, setReady] = React.useState(false);
-
-  React.useEffect(() => {
-    const fragment = new URLSearchParams(window.location.hash.slice(1));
-    const emailId = fragment.get('email_id');
-    const token = fragment.get('verification_token');
-    window.history.replaceState(
-      window.history.state,
-      '',
-      window.location.pathname + window.location.search
-    );
-    setCredential(emailId && token ? { emailId, token } : null);
-    setReady(true);
-  }, []);
-
-  if (!ready) return null;
-  return (
-    <ConstructiveConsoleKit
-      database={database}
-      verificationEmailId={credential?.emailId}
-      verificationToken={credential?.token}
-    />
-  );
+  // Console Kit captures a supported callback from the current URL into its
+  // closure-owned credential vault and scrubs the credential before rendering.
+  return <ConstructiveConsoleKit database={database} />;
 }`;
 
 export default function ConsoleKitPage() {

@@ -127,7 +127,7 @@ describe('feature pack catalog validation', () => {
       FEATURE_PACK_MANIFESTS
     ) as unknown as FeaturePackManifestV1[];
     const users = manifests.find((manifest) => manifest.id === 'users');
-    if (!users) throw new Error('The Users feature pack is missing.');
+    if (!users) throw new Error('The App access feature pack is missing.');
     users.dependencies = ['auth'];
     const profiles = structuredClone(PRESET_PROFILES);
     profiles[0].featurePacks = ['users'];

@@ -180,6 +180,60 @@ describe('Console Kit observational callbacks', () => {
     window.history.replaceState(null, '', '/');
   });
 
+  it('lets a host enhance one adapter without replacing the Console Kit composition', async () => {
+    runtimeMocks.useConsoleKitRuntime.mockReturnValue(runtime);
+    const baseLoad = vi.fn(async () => ({ view: 'account' as const }));
+    const enhancedAction = vi.fn();
+    const session = {
+      mode: 'embedded',
+      getSnapshot: () => snapshot,
+      subscribe: () => () => undefined,
+      getAccessToken: () => null
+    } as const;
+
+    render(
+      <ConsoleKit
+        featureModules={fullFeatureModules}
+        config={{
+          adapterEnhancers: {
+            auth: (base) => ({
+              ...base,
+              capabilities: base?.capabilities ?? [],
+              load: async () => ({
+                view: 'account',
+                actions: { changePassword: enhancedAction }
+              })
+            })
+          },
+          adapters: {
+            auth: {
+              capabilities: [
+                'auth.sessions',
+                'auth.credentials',
+                'auth.password'
+              ],
+              load: baseLoad
+            }
+          },
+          databaseId: 'database-1',
+          endpoints: { auth: '/auth/graphql' },
+          order: ['auth'],
+          session
+        }}
+      />
+    );
+
+    fireEvent.click(await screen.findByRole('button', {
+      name: 'Invoke adapter action'
+    }));
+
+    expect(enhancedAction).toHaveBeenCalledWith({
+      currentPassword: 'old-password',
+      newPassword: 'new-password'
+    });
+    expect(baseLoad).not.toHaveBeenCalled();
+  });
+
   it('marks configured protected navigation as sign-in required while anonymous', async () => {
     const anonymousSnapshot = {
       status: 'anonymous',
@@ -193,7 +247,7 @@ describe('Console Kit observational callbacks', () => {
       },
       session: anonymousSnapshot
     });
-    const onNavigate = vi.fn();
+    const onRouteChange = vi.fn();
     const session = {
       mode: 'embedded',
       getSnapshot: () => anonymousSnapshot,
@@ -221,7 +275,7 @@ describe('Console Kit observational callbacks', () => {
             storage: '/storage/graphql'
           },
           order: ['auth', 'storage'],
-          routes: { onNavigate },
+          routes: { onRouteChange },
           session,
           showUnavailable: true
         }}
@@ -232,7 +286,7 @@ describe('Console Kit observational callbacks', () => {
     expect(storageLink).toHaveAttribute('aria-disabled', 'true');
     expect(screen.getAllByText('Sign in')).toHaveLength(2);
     fireEvent.click(storageLink);
-    expect(onNavigate).not.toHaveBeenCalled();
+    expect(onRouteChange).not.toHaveBeenCalled();
   });
 
   it('does not subscribe adapters excluded by the configured module order', async () => {
@@ -298,10 +352,10 @@ describe('Console Kit observational callbacks', () => {
       level: 1,
       name: 'Authentication is unavailable'
     });
-    fireEvent.click(screen.getByRole('link', { name: 'Users' }));
+    fireEvent.click(screen.getByRole('link', { name: 'App access' }));
     await screen.findByRole('heading', {
       level: 1,
-      name: 'Users is unavailable'
+      name: 'App access is unavailable'
     });
 
     view.rerender(
@@ -406,14 +460,14 @@ describe('Console Kit observational callbacks', () => {
         store={secondStore}
       />
     );
-    fireEvent.click(screen.getByRole('link', { name: 'Users' }));
+    fireEvent.click(screen.getByRole('link', { name: 'App access' }));
 
     await screen.findByRole('heading', {
       level: 1,
-      name: 'Users is unavailable'
+      name: 'App access is unavailable'
     });
-    expect(firstStore.getState().activeFeature).toBe('data');
-    expect(secondStore.getState().activeFeature).toBe('users');
+    expect(firstStore.getState().route.feature).toBe('data');
+    expect(secondStore.getState().route.feature).toBe('users');
   });
 
   it('keeps the standalone auth draft mounted while capability discovery refreshes', async () => {
@@ -840,12 +894,54 @@ describe('Console Kit observational callbacks', () => {
       window.dispatchEvent(new HashChangeEvent('hashchange'));
     });
 
-    await screen.findByRole('heading', { level: 1, name: 'Users is unavailable' });
+    await screen.findByRole('heading', { level: 1, name: 'App access is unavailable' });
+  });
+
+  it('reports semantic routes without overriding a host-controlled route', async () => {
+    runtimeMocks.useConsoleKitRuntime.mockReturnValue(runtime);
+    const onRouteChange = vi.fn();
+    const session = {
+      mode: 'embedded',
+      getSnapshot: () => snapshot,
+      subscribe: () => () => undefined,
+      getAccessToken: () => null
+    } as const;
+
+    render(
+      <ConsoleKit
+        featureModules={fullFeatureModules}
+        config={{
+          databaseId: 'database-1',
+          endpoints: { auth: '/auth/graphql' },
+          order: ['auth', 'users'],
+          routes: {
+            route: {
+              feature: 'users',
+              screen: 'member',
+              membershipId: 'membership-1'
+            },
+            onRouteChange
+          },
+          session,
+          showUnavailable: true
+        }}
+      />
+    );
+    await screen.findByRole('heading', { level: 1, name: 'App access is unavailable' });
+
+    fireEvent.click(screen.getByRole('link', { name: 'Authentication' }));
+
+    expect(onRouteChange).toHaveBeenCalledWith({
+      feature: 'auth',
+      screen: 'entry'
+    });
+    expect(screen.getByRole('heading', { level: 1, name: 'App access is unavailable' }))
+      .toBeVisible();
   });
 
   it('does not mutate the active console for a modified link click', async () => {
     runtimeMocks.useConsoleKitRuntime.mockReturnValue(runtime);
-    const onNavigate = vi.fn();
+    const onRouteChange = vi.fn();
     const session = {
       mode: 'embedded',
       getSnapshot: () => snapshot,
@@ -859,7 +955,7 @@ describe('Console Kit observational callbacks', () => {
           databaseId: 'database-1',
           endpoints: { auth: '/auth/graphql' },
           order: ['auth', 'users'],
-          routes: { onNavigate },
+          routes: { onRouteChange },
           session,
           showUnavailable: true
         }}
@@ -867,12 +963,12 @@ describe('Console Kit observational callbacks', () => {
     );
     await screen.findByRole('heading', { level: 1, name: 'Authentication is unavailable' });
 
-    fireEvent.click(screen.getByRole('link', { name: 'Users' }), {
+    fireEvent.click(screen.getByRole('link', { name: 'App access' }), {
       button: 0,
       metaKey: true
     });
 
-    expect(onNavigate).not.toHaveBeenCalled();
+    expect(onRouteChange).not.toHaveBeenCalled();
     expect(screen.getByRole('heading', { level: 1, name: 'Authentication is unavailable' }))
       .toBeVisible();
   });
@@ -924,7 +1020,7 @@ describe('Console Kit observational callbacks', () => {
   it('resets create-account mode after signing out from the global account menu', async () => {
     runtimeMocks.useConsoleKitRuntime.mockReturnValue(runtime);
     const store = createFullConsoleKitStore();
-    store.getState().setAuthEntryMode('sign-up');
+    store.getState().setAuthFlow({ status: 'entry', mode: 'sign-up' });
     const signOut = vi.fn();
     const session = {
       mode: 'standalone',
@@ -955,14 +1051,17 @@ describe('Console Kit observational callbacks', () => {
     );
     fireEvent.click(await screen.findByRole('button', { name: 'Sign out' }));
 
-    await waitFor(() => expect(store.getState().authEntryMode).toBe('sign-in'));
+    await waitFor(() => expect(store.getState().authFlow).toEqual({
+      status: 'entry',
+      mode: 'sign-in'
+    }));
     expect(signOut).toHaveBeenCalledTimes(1);
   });
 
   it('resets create-account mode when remote revocation fails after local sign-out', async () => {
     runtimeMocks.useConsoleKitRuntime.mockReturnValue(runtime);
     const store = createFullConsoleKitStore();
-    store.getState().setAuthEntryMode('sign-up');
+    store.getState().setAuthFlow({ status: 'entry', mode: 'sign-up' });
     let currentSnapshot: typeof snapshot | Readonly<{
       status: 'anonymous';
       identity: Readonly<{
@@ -1012,7 +1111,10 @@ describe('Console Kit observational callbacks', () => {
       expect.objectContaining({ message: 'Revocation failed' }),
       { phase: 'feature', feature: 'auth' }
     ));
-    expect(store.getState().authEntryMode).toBe('sign-in');
+    expect(store.getState().authFlow).toEqual({
+      status: 'entry',
+      mode: 'sign-in'
+    });
   });
 
   it('adopts the latest error callback without restarting adapter load or subscription work', async () => {

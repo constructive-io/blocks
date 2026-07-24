@@ -37,9 +37,15 @@ import type {
 } from './console-kit-contracts';
 import { ConsoleConnectionMenu } from './console-connection-menu';
 import type { ConsoleKitFeatureModule } from './feature-module';
+import {
+  consoleKitRouteKey,
+  defaultConsoleKitRoute,
+  type ConsoleKitRoute
+} from './console-kit-routes';
 import { normalizeConsoleKitError, useConsoleKitRuntime } from './console-kit-runtime';
 import {
   ConsoleKitStoreProvider,
+  authFlowFromEntryMode,
   useConsoleKitStore
 } from './store';
 import { useLatestCallback } from './use-latest-callback';
@@ -231,6 +237,8 @@ function AdapterFeature({
   module,
   adapter,
   runtime,
+  route,
+  onRouteChange,
   config,
   onError,
   subscriptionRevision
@@ -238,6 +246,8 @@ function AdapterFeature({
   module: ConsoleKitFeatureModule;
   adapter: ConsoleKitFeatureAdapter<unknown>;
   runtime: ConsoleKitAdapterContext;
+  route: ConsoleKitRoute;
+  onRouteChange: (route: ConsoleKitRoute) => void;
   config: ConsoleKitConfig;
   onError?: ConsoleKitConfig['onError'];
   subscriptionRevision: number;
@@ -347,7 +357,9 @@ function AdapterFeature({
     <Feature
       adapterProps={adapterProps}
       config={config}
+      onRouteChange={onRouteChange}
       onError={forwardFeatureError}
+      route={route}
       runtime={runtime}
     />
   );
@@ -568,8 +580,19 @@ function ConsoleKitContent({ config, featureModules, className }: ConsoleKitProp
     () => ordered.map((module) => module.id),
     [ordered]
   );
+  const adapters = React.useMemo(() => {
+    if (!config.adapterEnhancers) return config.adapters;
+    return Object.fromEntries(featureOrder.flatMap((feature) => {
+      const base = config.adapters?.[feature] as
+        | ConsoleKitFeatureAdapter<unknown>
+        | undefined;
+      const enhancer = config.adapterEnhancers?.[feature];
+      const enhanced = enhancer ? enhancer(base) : base;
+      return enhanced ? [[feature, enhanced] as const] : [];
+    }));
+  }, [config.adapterEnhancers, config.adapters, featureOrder]);
   const adapterRevision = useAdapterSubscriptions(
-    config.adapters,
+    adapters,
     featureOrder,
     runtime,
     config.onError
@@ -581,7 +604,7 @@ function ConsoleKitContent({ config, featureModules, className }: ConsoleKitProp
   const authAttempt = useConsoleKitStore(
     (store) => store.adapterAttempts.auth ?? 0
   );
-  const authAdapter = config.adapters?.auth as
+  const authAdapter = adapters?.auth as
     | ConsoleKitFeatureAdapter<unknown>
     | undefined;
   const authModule = moduleById.get('auth');
@@ -613,47 +636,60 @@ function ConsoleKitContent({ config, featureModules, className }: ConsoleKitProp
       getConsoleKitFeatureAvailability(
         module,
         runtime,
-        config.adapters?.[module.id] as ConsoleKitFeatureAdapter<unknown> | undefined,
+        adapters?.[module.id] as ConsoleKitFeatureAdapter<unknown> | undefined,
         discoveredCapabilities[module.id]
       )
     ])) as Record<FeaturePackId, ConsoleKitFeatureAvailability>,
-    [adapterRevision, config.adapters, discoveredCapabilities, ordered, runtime]
+    [adapterRevision, adapters, discoveredCapabilities, ordered, runtime]
   );
 
-  const internalFeature = useConsoleKitStore((store) => store.activeFeature);
-  const setInternalFeature = useConsoleKitStore(
-    (store) => store.setActiveFeature
+  const internalRoute = useConsoleKitStore((store) => store.route);
+  const setInternalRoute = useConsoleKitStore((store) => store.setRoute);
+  const setAuthFlow = useConsoleKitStore((store) => store.setAuthFlow);
+  const requestedRoute = config.routes?.route ?? internalRoute;
+  const activeRoute = React.useMemo(
+    () => featureOrder.includes(requestedRoute.feature)
+      ? requestedRoute
+      : defaultConsoleKitRoute(featureOrder[0] ?? requestedRoute.feature),
+    [featureOrder, requestedRoute]
   );
-  const setAuthEntryMode = useConsoleKitStore(
-    (store) => store.setAuthEntryMode
-  );
-  const requestedActiveFeature = config.routes?.activeFeature ?? internalFeature;
-  const activeFeature = featureOrder.includes(requestedActiveFeature)
-    ? requestedActiveFeature
-    : (featureOrder[0] ?? requestedActiveFeature);
+  const activeRouteKey = consoleKitRouteKey(activeRoute);
+  const internalRouteKey = consoleKitRouteKey(internalRoute);
+  const activeFeature = activeRoute.feature;
   const activeModule = moduleById.get(activeFeature);
   React.useEffect(() => {
-    if (activeFeature !== internalFeature) setInternalFeature(activeFeature);
-  }, [activeFeature, internalFeature, setInternalFeature]);
+    if (activeRouteKey !== internalRouteKey) setInternalRoute(activeRoute);
+  }, [activeRoute, activeRouteKey, internalRouteKey, setInternalRoute]);
   const activeAvailability = availability[activeModule?.id ?? activeFeature]
     ?? { status: 'unavailable', reason: 'This feature is not in the configured Console Kit order.' };
 
-  const featureHref = React.useCallback(
-    (feature: FeaturePackId) => config.routes?.getFeatureHref?.(feature) ?? `#console-${feature}`,
+  const routeHref = React.useCallback(
+    (route: ConsoleKitRoute) => config.routes?.getHref?.(route) ??
+      `#console-${route.feature}`,
     [config.routes]
   );
-  const hrefToFeature = React.useMemo(
-    () => new Map(featureOrder.map((feature) => [featureHref(feature), feature])),
-    [featureHref, featureOrder]
+  const featureRoutes = React.useMemo(
+    () => new Map(featureOrder.map((feature) => [
+      feature,
+      defaultConsoleKitRoute(feature)
+    ])),
+    [featureOrder]
   );
-  const navigate = React.useCallback((feature: FeaturePackId) => {
-    setInternalFeature(feature);
-    config.routes?.onNavigate?.(feature);
-  }, [config.routes, setInternalFeature]);
+  const hrefToRoute = React.useMemo(
+    () => new Map([...featureRoutes.values()].map((route) => [
+      routeHref(route),
+      route
+    ])),
+    [featureRoutes, routeHref]
+  );
+  const navigate = React.useCallback((route: ConsoleKitRoute) => {
+    setInternalRoute(route);
+    config.routes?.onRouteChange?.(route);
+  }, [config.routes, setInternalRoute]);
 
   const renderLink = React.useCallback((props: AppLinkRenderProps) => {
-    const feature = hrefToFeature.get(props.href);
-    if (!feature) return config.routes?.renderLink ? config.routes.renderLink(props) : <a {...props} />;
+    const route = hrefToRoute.get(props.href);
+    if (!route) return config.routes?.renderLink ? config.routes.renderLink(props) : <a {...props} />;
     const onClick: React.MouseEventHandler<HTMLAnchorElement> = (event) => {
       props.onClick?.(event);
       if (
@@ -665,40 +701,43 @@ function ConsoleKitContent({ config, featureModules, className }: ConsoleKitProp
         event.altKey ||
         (event.currentTarget.target && event.currentTarget.target !== '_self')
       ) return;
-      navigate(feature);
+      navigate(route);
     };
     const next = { ...props, onClick };
     return config.routes?.renderLink ? config.routes.renderLink(next) : <a {...next} />;
-  }, [config.routes, hrefToFeature, navigate]);
+  }, [config.routes, hrefToRoute, navigate]);
 
   React.useEffect(() => {
-    if (config.routes?.activeFeature) return;
+    if (config.routes?.route) return;
 
-    const syncFeatureFromHash = () => {
-      const feature = hrefToFeature.get(window.location.hash);
+    const syncRouteFromHash = () => {
+      const route = hrefToRoute.get(window.location.hash);
       if (runtime.session.status === 'loading') return;
       if (runtime.session.status === 'anonymous') {
         const authFeature = featureOrder.includes('auth') ? 'auth' : featureOrder[0];
         if (!authFeature) return;
-        setInternalFeature(authFeature);
-        if (feature && feature !== authFeature) {
-          window.history.replaceState(null, '', featureHref(authFeature));
+        const authRoute = featureRoutes.get(authFeature);
+        if (!authRoute) return;
+        setInternalRoute(authRoute);
+        if (route && route.feature !== authFeature) {
+          window.history.replaceState(null, '', routeHref(authRoute));
         }
         return;
       }
-      if (feature) setInternalFeature(feature);
+      if (route) setInternalRoute(route);
     };
 
-    syncFeatureFromHash();
-    window.addEventListener('hashchange', syncFeatureFromHash);
-    return () => window.removeEventListener('hashchange', syncFeatureFromHash);
+    syncRouteFromHash();
+    window.addEventListener('hashchange', syncRouteFromHash);
+    return () => window.removeEventListener('hashchange', syncRouteFromHash);
   }, [
-    config.routes?.activeFeature,
-    featureHref,
+    config.routes?.route,
     featureOrder,
-    hrefToFeature,
+    featureRoutes,
+    hrefToRoute,
+    routeHref,
     runtime.session.status,
-    setInternalFeature
+    setInternalRoute
   ]);
 
   const visibleModules = ordered.filter((module) => {
@@ -708,10 +747,11 @@ function ConsoleKitContent({ config, featureModules, className }: ConsoleKitProp
   const navigationItems = React.useMemo(() => visibleModules.map((module) => {
     const feature = module.id;
     const state = availability[module.id];
+    const route = featureRoutes.get(feature) ?? defaultConsoleKitRoute(feature);
     return {
       id: feature,
       label: config.labels?.[feature] ?? module.manifest.title,
-      href: featureHref(feature),
+      href: routeHref(route),
       icon: module.icon,
       isActive: feature === activeFeature,
       disabled: state?.status === 'unauthorized',
@@ -725,7 +765,7 @@ function ConsoleKitContent({ config, featureModules, className }: ConsoleKitProp
             ? 'Setup'
             : undefined
     };
-  }), [activeFeature, availability, config.labels, discoveredCapabilities, featureHref, visibleModules]);
+  }), [activeFeature, availability, config.labels, discoveredCapabilities, featureRoutes, routeHref, visibleModules]);
 
   // Platform Kit uses a quiet section label above icon+text manager links.
   const navigation = React.useMemo<AppNavigationGroup[]>(() => [{
@@ -766,7 +806,10 @@ function ConsoleKitContent({ config, featureModules, className }: ConsoleKitProp
               disabled={item.disabled}
               onClick={() => {
                 if (item.disabled) return;
-                navigate(item.id as FeaturePackId);
+                navigate(
+                  featureRoutes.get(item.id as FeaturePackId) ??
+                    defaultConsoleKitRoute(item.id as FeaturePackId)
+                );
               }}
               size='sm'
               type='button'
@@ -835,7 +878,7 @@ function ConsoleKitContent({ config, featureModules, className }: ConsoleKitProp
                       (completed ||
                         config.session.getSnapshot().status !== 'authenticated')
                     ) {
-                      setAuthEntryMode('sign-in');
+                      setAuthFlow(authFlowFromEntryMode('sign-in'));
                     }
                   });
               }
@@ -849,7 +892,7 @@ function ConsoleKitContent({ config, featureModules, className }: ConsoleKitProp
     config.session,
     identity,
     loadedAuthIdentity,
-    setAuthEntryMode
+    setAuthFlow
   ]);
 
   let content: React.ReactNode;
@@ -877,7 +920,7 @@ function ConsoleKitContent({ config, featureModules, className }: ConsoleKitProp
       />
     );
   } else {
-    const adapter = config.adapters?.[activeModule.id] as ConsoleKitFeatureAdapter<unknown> | undefined;
+    const adapter = adapters?.[activeModule.id] as ConsoleKitFeatureAdapter<unknown> | undefined;
     const discoveredCapability = discoveredCapabilities[activeModule.id];
     const canRenderWhileDiscovering = activeModule.canRenderWithoutAdapter?.(runtime) ?? false;
     const adapterAwaitingDiscovery = adapter?.requiresCapabilityDiscovery && (
@@ -891,7 +934,9 @@ function ConsoleKitContent({ config, featureModules, className }: ConsoleKitProp
               adapter={adapter}
               config={config}
               module={activeModule}
+              onRouteChange={navigate}
               onError={config.onError}
+              route={activeRoute}
               runtime={runtime}
               subscriptionRevision={adapterRevision}
             />
@@ -901,6 +946,7 @@ function ConsoleKitContent({ config, featureModules, className }: ConsoleKitProp
       content = (
         <Feature
           config={config}
+          onRouteChange={navigate}
           onError={(cause) => config.onError?.(
             normalizeConsoleKitError(
               cause,
@@ -909,6 +955,7 @@ function ConsoleKitContent({ config, featureModules, className }: ConsoleKitProp
             phase: 'feature',
             feature: activeModule.id
           })}
+          route={activeRoute}
           runtime={runtime}
         />
       );
@@ -965,18 +1012,20 @@ function ConsoleKitContent({ config, featureModules, className }: ConsoleKitProp
   );
 }
 
-function initialFeatureFor(
+function initialRouteFor(
   config: ConsoleKitConfig,
   featureModules: readonly ConsoleKitFeatureModule[]
-): FeaturePackId {
+): ConsoleKitRoute {
   const order = orderedModules(featureModules, config.order).map(
     (module) => module.id
   );
-  const preferred = config.routes?.defaultFeature
+  const preferred = config.routes?.defaultRoute
     ?? ((config.adapters?.auth || config.session.mode === 'standalone')
-      ? 'auth'
-      : 'data');
-  return order.includes(preferred) ? preferred : (order[0] ?? 'data');
+      ? defaultConsoleKitRoute('auth')
+      : defaultConsoleKitRoute('data'));
+  return order.includes(preferred.feature)
+    ? preferred
+    : defaultConsoleKitRoute(order[0] ?? 'data');
 }
 
 export function ConsoleKit({ store, featureModules, ...props }: ConsoleKitProps) {
@@ -988,7 +1037,7 @@ export function ConsoleKit({ store, featureModules, ...props }: ConsoleKitProps)
   );
   return (
     <ConsoleKitStoreProvider
-      initialFeature={initialFeatureFor(props.config, featureModules)}
+      initialRoute={initialRouteFor(props.config, featureModules)}
       sliceContributions={sliceContributions}
       store={store}
     >
@@ -999,7 +1048,10 @@ export function ConsoleKit({ store, featureModules, ...props }: ConsoleKitProps)
 
 export type {
   ConsoleKitAdapterContext,
+  ConsoleKitAdapterEnhancer,
+  ConsoleKitAdapterEnhancers,
   ConsoleKitAdapters,
+  ConsoleKitAuthMethodConfig,
   ConsoleKitConfig,
   ConsoleKitEndpointResolver,
   ConsoleKitFeatureAdapter,
@@ -1009,6 +1061,20 @@ export type {
   ConsoleKitProps,
   ConsoleKitRouteConfig
 } from './console-kit-contracts';
+export type {
+  ConsoleKitAppAccessRoute,
+  ConsoleKitAuthRoute,
+  ConsoleKitBillingRoute,
+  ConsoleKitDataRoute,
+  ConsoleKitNotificationsRoute,
+  ConsoleKitOrganizationsRoute,
+  ConsoleKitRoute,
+  ConsoleKitStorageRoute
+} from './console-kit-routes';
+export {
+  consoleKitRouteKey,
+  defaultConsoleKitRoute
+} from './console-kit-routes';
 export type {
   ConsoleKitFeatureComponentProps,
   ConsoleKitFeatureModule

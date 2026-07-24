@@ -85,13 +85,13 @@ export const AUTH_FEATURE_PACK = {
 export const USERS_FEATURE_PACK = {
   schemaVersion: 1,
   id: 'users',
-  title: 'Users',
+  title: 'App access',
   description:
-    'Application member directory, invitations, role assignment, and membership-status management.',
+    'Application member governance, lifecycle controls, profiles, permission grants, and invitations.',
   dependencies: [] as FeaturePackManifestV1['dependencies'],
   endpoints: {
-    required: [] as FeaturePackManifestV1['endpoints']['required'],
-    optional: ['admin', 'auth', 'billing', 'data']
+    required: ['admin'],
+    optional: ['auth']
   },
   capabilities: {
     required: [
@@ -100,7 +100,6 @@ export const USERS_FEATURE_PACK = {
     ],
     optional: [
       'users.permissions',
-      'users.limits',
       'users.profiles',
       'users.invites'
     ]
@@ -113,7 +112,7 @@ export const ORGANIZATIONS_FEATURE_PACK = {
   id: 'organizations',
   title: 'Organizations',
   description:
-    'Organization selection, creation, memberships, role assignment, and invitations.',
+    'Tenant membership governance, invitations, access policy, hierarchy, settings, and developer credentials.',
   dependencies: [] as FeaturePackManifestV1['dependencies'],
   endpoints: {
     required: [] as FeaturePackManifestV1['endpoints']['required'],

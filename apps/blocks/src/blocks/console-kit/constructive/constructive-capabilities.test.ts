@@ -166,14 +166,14 @@ describe('Constructive capability discovery lifecycle', () => {
     expect(inspectSchema).toHaveBeenCalledTimes(2);
   });
 
-  it('discovers application and organization limits on the semantic usage endpoint', async () => {
+  it('discovers organization limits on the semantic usage endpoint', async () => {
     inspectSchema.mockImplementation(async (_runtime, kind) => {
       if (kind === 'auth') return schemaWithQueries('auth', 'auth', ['users']);
       if (kind === 'admin') {
         return schemaWithQueries('admin', 'admin', ['appMemberships', 'orgMemberships']);
       }
       if (kind === 'billing') {
-        return schemaWithQueries('billing', 'usage', ['appLimits', 'orgLimits']);
+        return schemaWithQueries('billing', 'usage', ['orgLimits']);
       }
       throw new Error(`Unexpected endpoint ${kind}.`);
     });
@@ -199,16 +199,6 @@ describe('Constructive capability discovery lifecycle', () => {
 
     await discovery.ensure(currentRuntime);
 
-    expect(store.getState().packCapabilities.users).toMatchObject({
-      supportedCapabilities: expect.arrayContaining(['users.limits']),
-      evidence: expect.arrayContaining([
-        expect.objectContaining({
-          source: 'graphql-operation',
-          endpointKind: 'billing',
-          coordinate: 'Query.appLimits'
-        })
-      ])
-    });
     expect(store.getState().packCapabilities.organizations).toMatchObject({
       supportedCapabilities: expect.arrayContaining(['organizations.limits']),
       evidence: expect.arrayContaining([

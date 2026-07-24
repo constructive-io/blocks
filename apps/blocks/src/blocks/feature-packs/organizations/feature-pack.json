@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "id": "organizations",
   "title": "Organizations",
-  "description": "Organization selection, creation, memberships, role assignment, and invitations.",
+  "description": "Tenant membership governance, invitations, access policy, hierarchy, settings, and developer credentials.",
   "dependencies": [],
   "endpoints": { "required": [], "optional": ["admin", "auth", "billing", "data"] },
   "capabilities": {

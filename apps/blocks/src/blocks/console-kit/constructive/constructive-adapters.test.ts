@@ -17,6 +17,10 @@ import type {
   ConstructiveCapabilityDiscovery,
   ConstructiveSchemaMap
 } from './constructive-capabilities';
+import {
+  createConstructiveCallbackCredentialVault,
+  type ConstructiveConsoleCallback
+} from './constructive-callback';
 import type {
   ConstructiveSchemaField,
   ConstructiveSchemaSnapshot,
@@ -233,6 +237,84 @@ function adminMutationTypes(prefix: 'App' | 'Org'): ConstructiveSchemaType[] {
   ];
 }
 
+function appAccessMutationTypes(): ConstructiveSchemaType[] {
+  return [
+    inputType('UpdateAppMembershipInput', {
+      id: 'UUID',
+      appMembershipPatch: 'AppMembershipPatch'
+    }),
+    inputType('AppMembershipPatch', {
+      isApproved: 'Boolean',
+      isVerified: 'Boolean',
+      isBanned: 'Boolean',
+      isDisabled: 'Boolean'
+    }),
+    inputType('CreateAppOwnerGrantInput', { appOwnerGrant: 'AppOwnerGrantInput' }),
+    inputType('AppOwnerGrantInput', { actorId: 'UUID', isGrant: 'Boolean' }),
+    inputType('CreateAppAdminGrantInput', { appAdminGrant: 'AppAdminGrantInput' }),
+    inputType('AppAdminGrantInput', { actorId: 'UUID', isGrant: 'Boolean' }),
+    inputType('CreateAppGrantInput', { appGrant: 'AppGrantInput' }),
+    inputType('AppGrantInput', {
+      actorId: 'UUID',
+      permissions: 'BitString',
+      isGrant: 'Boolean'
+    }),
+    inputType('CreateAppProfileGrantInput', {
+      appProfileGrant: 'AppProfileGrantInput'
+    }),
+    inputType('AppProfileGrantInput', {
+      membershipId: 'UUID',
+      profileId: 'UUID',
+      isGrant: 'Boolean'
+    }),
+    inputType('CreateAppProfileDefinitionGrantInput', {
+      appProfileDefinitionGrant: 'AppProfileDefinitionGrantInput'
+    }),
+    inputType('AppProfileDefinitionGrantInput', {
+      profileId: 'UUID',
+      permissionId: 'UUID',
+      isGrant: 'Boolean'
+    }),
+    inputType('CreateAppPermissionDefaultGrantInput', {
+      appPermissionDefaultGrant: 'AppPermissionDefaultGrantInput'
+    }),
+    inputType('AppPermissionDefaultGrantInput', {
+      permissionId: 'UUID',
+      isGrant: 'Boolean'
+    }),
+    inputType('CreateAppProfileInput', { appProfile: 'AppProfileInput' }),
+    inputType('AppProfileInput', {
+      name: 'String',
+      slug: 'String',
+      description: 'String'
+    }),
+    inputType('UpdateAppProfileInput', {
+      id: 'UUID',
+      appProfilePatch: 'AppProfilePatch'
+    }),
+    inputType('AppProfilePatch', {
+      name: 'String',
+      slug: 'String',
+      description: 'String',
+      isDefault: 'Boolean'
+    }),
+    inputType('DeleteAppProfileInput', { id: 'UUID' }),
+    inputType('CreateAppInviteInput', { appInvite: 'AppInviteInput' }),
+    inputType('AppInviteInput', {
+      email: 'String',
+      channel: 'String',
+      expiresAt: 'Datetime',
+      profileId: 'UUID'
+    }),
+    inputType('UpdateAppInviteInput', {
+      id: 'UUID',
+      appInvitePatch: 'AppInvitePatch'
+    }),
+    inputType('AppInvitePatch', { expiresAt: 'Datetime' }),
+    inputType('DeleteAppInviteInput', { id: 'UUID' })
+  ];
+}
+
 describe('Constructive auth adapter RLS contract', () => {
   it('surfaces an MFA challenge as a typed failure instead of auth success', async () => {
     const store = createConsoleKitStore('auth');
@@ -434,12 +516,21 @@ describe('Constructive auth adapter RLS contract', () => {
     )).toHaveLength(sendCallCount);
 
     const verificationCalls: GraphQLCall[] = [];
+    const verificationVault = createConstructiveCallbackCredentialVault();
+    const verificationCredentialRef = verificationVault.put(
+      'fresh-verification-credential'
+    );
     const verificationAdapter = createConstructiveAuthAdapter({
       store,
       session,
       discovery: discovery({ auth: authSchema }),
-      verificationEmailId: 'email-1',
-      verificationToken: 'fresh-verification-credential'
+      callback: {
+        kind: 'email-verification',
+        databaseId: 'database-1',
+        emailId: 'email-1',
+        credentialRef: verificationCredentialRef
+      } satisfies ConstructiveConsoleCallback,
+      callbackCredentials: verificationVault
     });
     const verificationEntry = await verificationAdapter.load(runtime((call) => {
       verificationCalls.push(call);
@@ -509,12 +600,21 @@ describe('Constructive auth adapter RLS contract', () => {
       signOut: vi.fn(),
       handleAuthenticationFailure: () => undefined
     } as unknown as DatabaseScopedStandaloneConsoleSession;
+    const verificationVault = createConstructiveCallbackCredentialVault();
+    const verificationCredentialRef = verificationVault.put(
+      'fresh-verification-credential'
+    );
     const adapter = createConstructiveAuthAdapter({
       store,
       session,
       discovery: discovery({ auth: authSchema }),
-      verificationEmailId: 'email-1',
-      verificationToken: 'fresh-verification-credential'
+      callback: {
+        kind: 'email-verification',
+        databaseId: 'database-1',
+        emailId: 'email-1',
+        credentialRef: verificationCredentialRef
+      } satisfies ConstructiveConsoleCallback,
+      callbackCredentials: verificationVault
     });
     let attempts = 0;
     const retryingRuntime = runtime((call) => {
@@ -540,300 +640,20 @@ describe('Constructive auth adapter RLS contract', () => {
 });
 
 describe('Constructive users adapter RLS contract', () => {
-  it('omits absent profile fields and ignores an inactive app membership permission mask', async () => {
+  it('separates lifecycle, governance, direct grants, effective permissions, and defaults', async () => {
     const calls: GraphQLCall[] = [];
     const adminSchema = snapshot({
       endpoint: 'admin',
-      queries: ['appMemberships', 'appInvites', 'appPermissions'],
-      mutations: {
-        createAppInvite: 'CreateAppInviteInput',
-        updateAppMembership: 'UpdateAppMembershipInput',
-        deleteAppInvite: 'DeleteAppInviteInput'
-      },
+      queries: ['appMemberships', 'appPermissions', 'appPermissionDefaults'],
+      mutations: { updateAppMembership: 'UpdateAppMembershipInput' },
       types: [
         objectType('AppMembership', [
-          'id', 'actorId', 'isOwner', 'isAdmin', 'isActive', 'isApproved', 'isDisabled',
-          'permissions'
+          'id', 'actorId', 'createdAt', 'isOwner', 'isAdmin', 'isActive',
+          'isApproved', 'isVerified', 'isBanned', 'isDisabled', 'permissions', 'granted'
         ]),
-        objectType('AppInvite', ['id', 'email', 'inviteValid', 'expiresAt']),
-        objectType('AppPermission', ['name', 'bitstr']),
-        ...adminMutationTypes('App')
-      ]
-    });
-    const authSchema = snapshot({ endpoint: 'auth', queries: ['users'] });
-    const adapter = createConstructiveUsersAdapter({
-      store: createConsoleKitStore('users'),
-      discovery: discovery({ admin: adminSchema, auth: authSchema })
-    });
-    const loaded = await adapter.load(runtime((call) => {
-      calls.push(call);
-      if (call.endpoint === 'admin') {
-        return {
-          appMemberships: {
-            nodes: [{
-              id: 'membership-1',
-              actorId: 'user-1',
-              isOwner: false,
-              isAdmin: false,
-              isActive: false,
-              isApproved: true,
-              isDisabled: false,
-              permissions: '0001'
-            }]
-          },
-          appInvites: { nodes: [] },
-          appPermissions: {
-            nodes: [{ name: 'admin_members', bitstr: '0001' }]
-          }
-        };
-      }
-      return { users: { nodes: [{ id: 'user-1', displayName: 'User One' }] } };
-    }), new AbortController().signal);
-
-    const directoryQuery = calls
-      .filter((call) => call.endpoint === 'admin')
-      .map((call) => call.document)
-      .join('\n');
-    expect(directoryQuery).not.toContain('profileId');
-    expect(directoryQuery).not.toContain('profile {');
-    expect(directoryQuery).not.toMatch(/\bdata\b/u);
-    expect(directoryQuery).toContain('permissions');
-    expect(directoryQuery).toContain('isActive');
-    expect(directoryQuery).toContain('appPermissions');
-    expect(loaded.policy).toMatchObject({
-      invite: false,
-      updateRole: false,
-      toggleActive: false,
-      remove: false,
-      cancelInvite: false,
-      extendInvite: false
-    });
-  });
-
-  it('assigns an introspected profile without writing invite data for an app owner', async () => {
-    const calls: GraphQLCall[] = [];
-    const adminSchema = snapshot({
-      endpoint: 'admin',
-      queries: ['appMemberships', 'appInvites', 'appProfiles'],
-      mutations: { createAppInvite: 'CreateAppInviteInput' },
-      types: [
-        objectType('AppMembership', [
-          'id', 'actorId', 'isOwner', 'isAdmin', 'isActive', 'profileId'
-        ]),
-        objectType('AppInvite', ['id', 'email', 'profileId']),
-        objectType('AppProfile', ['id', 'name']),
-        ...adminMutationTypes('App')
-      ]
-    });
-    const adapter = createConstructiveUsersAdapter({
-      store: createConsoleKitStore('users'),
-      discovery: discovery({
-        admin: adminSchema,
-        auth: snapshot({ endpoint: 'auth', queries: ['users'] })
-      })
-    });
-    const loaded = await adapter.load(runtime((call) => {
-      calls.push(call);
-      if (call.document.includes('ConsoleKitAppMemberships')) {
-        return {
-          appMemberships: {
-            nodes: [{
-              id: 'membership-1',
-              actorId: 'user-1',
-              isOwner: true,
-              isAdmin: false,
-              isActive: true
-            }]
-          },
-          appInvites: { nodes: [] },
-          appProfiles: { nodes: [{ id: 'profile-1', name: 'Member' }] }
-        };
-      }
-      if (call.document.includes('ConsoleKitUsersDirectory')) {
-        return { users: { nodes: [{ id: 'user-1', displayName: 'Admin' }] } };
-      }
-      return { createAppInvite: { appInvite: { id: 'invite-1' } } };
-    }), new AbortController().signal);
-
-    await loaded.actions?.invite?.({ email: 'member@example.com', role: 'Member' });
-    const mutation = calls.find((call) => call.document.includes('ConsoleKitCreateAppInvite'));
-    expect(mutation?.variables).toMatchObject({
-      input: {
-        appInvite: {
-          email: 'member@example.com',
-          profileId: 'profile-1'
-        }
-      }
-    });
-    expect(mutation?.variables).not.toHaveProperty('input.appInvite.data');
-  });
-
-  it('filters delegated app invitation profiles by the backend subset rule', async () => {
-    const calls: GraphQLCall[] = [];
-    const adminSchema = snapshot({
-      endpoint: 'admin',
-      queries: ['appMemberships', 'appProfiles', 'appPermissions'],
-      mutations: { createAppInvite: 'CreateAppInviteInput' },
-      types: [
-        objectType('AppMembership', [
-          'id', 'actorId', 'isOwner', 'isAdmin', 'isActive', 'permissions'
-        ]),
-        objectType('AppProfile', ['id', 'name', 'permissions']),
-        objectType('AppPermission', ['name', 'bitstr']),
-        ...adminMutationTypes('App')
-      ]
-    });
-    const adapter = createConstructiveUsersAdapter({
-      store: createConsoleKitStore('users'),
-      discovery: discovery({
-        admin: adminSchema,
-        auth: snapshot({ endpoint: 'auth', queries: ['users'] })
-      })
-    });
-    const loaded = await adapter.load(runtime((call) => {
-      calls.push(call);
-      if (call.document.includes('ConsoleKitAppMemberships')) {
-        return {
-          appMemberships: {
-            nodes: [{
-              id: 'membership-1',
-              actorId: 'user-1',
-              isOwner: false,
-              isAdmin: false,
-              isActive: true,
-              permissions: '0111'
-            }]
-          },
-          appProfiles: {
-            nodes: [
-              { id: 'profile-subset', name: 'Member', permissions: '0010' },
-              { id: 'profile-empty', name: 'No permissions', permissions: '0000' },
-              { id: 'profile-elevated', name: 'Owner', permissions: '1000' },
-              { id: 'profile-wrong-width', name: 'Malformed', permissions: '111' }
-            ]
-          },
-          appPermissions: {
-            nodes: [
-              { name: 'admin_members', bitstr: '0001' },
-              { name: 'create_invites', bitstr: '0010' },
-              { name: 'assign_profiles', bitstr: '0100' }
-            ]
-          }
-        };
-      }
-      if (call.document.includes('ConsoleKitUsersDirectory')) {
-        return { users: { nodes: [{ id: 'user-1', displayName: 'Manager' }] } };
-      }
-      return { createAppInvite: { appInvite: { id: 'invite-1' } } };
-    }), new AbortController().signal);
-
-    expect(loaded.resource).toMatchObject({
-      status: 'ready',
-      data: {
-        roles: ['Member', 'No permissions', 'Owner', 'Malformed'],
-        inviteRoles: ['Member', 'No permissions']
-      }
-    });
-    expect(loaded.policy).toMatchObject({ invite: true, assignInviteRole: true });
-    await expect(loaded.actions?.invite?.({
-      email: 'elevated@example.com',
-      role: 'Owner'
-    })).rejects.toThrow('The Owner profile cannot be assigned to an app invitation.');
-    expect(calls.some((call) => call.document.includes('ConsoleKitCreateAppInvite'))).toBe(false);
-
-    await loaded.actions?.invite?.({ email: 'roleless@example.com' });
-    await loaded.actions?.invite?.({ email: 'member@example.com', role: 'Member' });
-    const mutations = calls.filter((call) => call.document.includes('ConsoleKitCreateAppInvite'));
-    expect(mutations[0]?.variables).not.toHaveProperty('input.appInvite.profileId');
-    expect(mutations[1]?.variables).toHaveProperty(
-      'input.appInvite.profileId',
-      'profile-subset'
-    );
-  });
-
-  it('honors a delegated app admin_members permission without requiring an admin flag', async () => {
-    const adminSchema = snapshot({
-      endpoint: 'admin',
-      queries: ['appMemberships', 'appProfiles', 'appPermissions'],
-      mutations: {
-        createAppInvite: 'CreateAppInviteInput',
-        updateAppMembership: 'UpdateAppMembershipInput',
-        createAppProfileGrant: 'CreateAppProfileGrantInput'
-      },
-      types: [
-        objectType('AppMembership', [
-          'id', 'actorId', 'isOwner', 'isAdmin', 'isActive', 'permissions', 'profileId'
-        ]),
-        objectType('AppProfile', ['id', 'name']),
-        objectType('AppPermission', ['name', 'bitstr']),
-        ...adminMutationTypes('App')
-      ]
-    });
-    const adapter = createConstructiveUsersAdapter({
-      store: createConsoleKitStore('users'),
-      discovery: discovery({
-        admin: adminSchema,
-        auth: snapshot({ endpoint: 'auth', queries: ['users'] })
-      })
-    });
-    const loaded = await adapter.load(runtime((call) => {
-      if (call.document.includes('ConsoleKitAppMemberships')) {
-        return {
-          appMemberships: {
-            nodes: [{
-              id: 'membership-1',
-              actorId: 'user-1',
-              isOwner: false,
-              isAdmin: false,
-              isActive: true,
-              permissions: '0001'
-            }]
-          },
-          appProfiles: { nodes: [{ id: 'profile-1', name: 'Member' }] },
-          appPermissions: {
-            nodes: [
-              { name: 'admin_members', bitstr: '0001' },
-              { name: 'create_invites', bitstr: '0010' },
-              { name: 'assign_profiles', bitstr: '0100' }
-            ]
-          }
-        };
-      }
-      if (call.document.includes('ConsoleKitUsersDirectory')) {
-        return { users: { nodes: [{ id: 'user-1', displayName: 'Manager' }] } };
-      }
-      return {};
-    }), new AbortController().signal);
-
-    expect(loaded.policy).toMatchObject({
-      invite: false,
-      updateRole: true,
-      toggleActive: true,
-      remove: true,
-      cancelInvite: false,
-      extendInvite: false
-    });
-  });
-
-  it('paginates the RLS directory and binds app mutations to loaded rows', async () => {
-    const calls: GraphQLCall[] = [];
-    const adminSchema = snapshot({
-      endpoint: 'admin',
-      queries: ['appMemberships', 'appInvites', 'appProfiles', 'appPermissions'],
-      mutations: {
-        updateAppMembership: 'UpdateAppMembershipInput',
-        createAppProfileGrant: 'CreateAppProfileGrantInput',
-        updateAppInvite: 'UpdateAppInviteInput',
-        deleteAppInvite: 'DeleteAppInviteInput'
-      },
-      types: [
-        objectType('AppMembership', [
-          'id', 'actorId', 'isOwner', 'isAdmin', 'isActive', 'permissions'
-        ]),
-        objectType('AppInvite', ['id', 'email', 'senderId', 'inviteValid']),
-        objectType('AppProfile', ['id', 'name', 'permissions']),
-        objectType('AppPermission', ['name', 'bitstr']),
-        ...adminMutationTypes('App')
+        objectType('AppPermission', ['id', 'name', 'description', 'bitnum', 'bitstr']),
+        objectType('AppPermissionDefault', ['id', 'permissions']),
+        ...appAccessMutationTypes()
       ]
     });
     const adapter = createConstructiveUsersAdapter({
@@ -846,33 +666,555 @@ describe('Constructive users adapter RLS contract', () => {
     const loaded = await adapter.load(runtime((call) => {
       calls.push(call);
       if (call.document.includes('appMemberships(first:')) {
-        return call.variables?.after === 'members-next'
-          ? {
-              appMemberships: {
-                nodes: [{
-                  id: 'membership-actor',
-                  actorId: 'user-1',
-                  isOwner: false,
-                  isAdmin: false,
-                  isActive: true,
-                  permissions: '0001'
-                }],
-                pageInfo: { hasNextPage: false, endCursor: 'members-end' }
+        return {
+          appMemberships: {
+            nodes: [
+              {
+                id: 'membership-actor',
+                actorId: 'user-1',
+                isOwner: true,
+                isAdmin: true,
+                isActive: true,
+                isApproved: true,
+                isVerified: true,
+                isBanned: false,
+                isDisabled: false,
+                permissions: '0011',
+                granted: '0000'
+              },
+              {
+                id: 'membership-member',
+                actorId: 'user-2',
+                isOwner: false,
+                isAdmin: false,
+                isActive: false,
+                isApproved: true,
+                isVerified: false,
+                isBanned: false,
+                isDisabled: true,
+                permissions: '0011',
+                granted: '0010'
               }
+            ]
+          }
+        };
+      }
+      if (call.document.includes('appPermissions(first:')) {
+        return {
+          appPermissions: {
+            nodes: [
+              {
+                id: 'permission-admin-members',
+                name: 'admin_members',
+                description: 'Manage member lifecycle.',
+                bitnum: 0,
+                bitstr: '0001'
+              },
+              {
+                id: 'permission-create-entity',
+                name: 'create_entity',
+                description: 'Create application records.',
+                bitnum: 1,
+                bitstr: '0010'
+              }
+            ]
+          }
+        };
+      }
+      if (call.document.includes('appPermissionDefaults(first:')) {
+        return {
+          appPermissionDefaults: {
+            nodes: [{ id: 'default-1', permissions: '0010' }]
+          }
+        };
+      }
+      if (call.document.includes('users(first:')) {
+        return {
+          users: {
+            nodes: [
+              { id: 'user-1', displayName: 'Ada Admin', username: 'ada@example.com' },
+              { id: 'user-2', displayName: 'Grace Member', username: 'grace@example.com' }
+            ]
+          }
+        };
+      }
+      return { updateAppMembership: { appMembership: { id: 'membership-member' } } };
+    }), new AbortController().signal);
+
+    expect(loaded.resource).toMatchObject({
+      status: 'ready',
+      data: {
+        defaultPermissionIds: ['permission-create-entity'],
+        members: [
+          {
+            id: 'membership-actor',
+            governance: { owner: true, admin: true },
+            lifecycle: { active: true },
+            directPermissionIds: [],
+            effectivePermissionIds: [
+              'permission-admin-members',
+              'permission-create-entity'
+            ]
+          },
+          {
+            id: 'membership-member',
+            governance: { owner: false, admin: false },
+            lifecycle: {
+              approved: true,
+              verified: false,
+              disabled: true,
+              active: false
+            },
+            directPermissionIds: ['permission-create-entity'],
+            effectivePermissionIds: [
+              'permission-admin-members',
+              'permission-create-entity'
+            ]
+          }
+        ],
+        permissions: [
+          { id: 'permission-admin-members', name: 'admin_members', bit: 0 },
+          { id: 'permission-create-entity', name: 'create_entity', bit: 1 }
+        ]
+      }
+    });
+    expect(loaded.resource).not.toHaveProperty('data.profiles');
+    expect(loaded.resource).not.toHaveProperty('data.invitations');
+    expect(loaded.policy).toMatchObject({
+      setApproved: true,
+      setVerified: true,
+      setBanned: true,
+      setDisabled: true,
+      setProfile: false,
+      invite: false
+    });
+
+    await loaded.actions?.setDisabled?.({
+      membershipId: 'membership-member',
+      disabled: false
+    });
+    const mutation = calls.find((call) =>
+      call.document.includes('ConsoleKitUpdateAppMembership')
+    );
+    expect(mutation?.variables).toEqual({
+      input: {
+        id: 'membership-member',
+        appMembershipPatch: { isDisabled: false }
+      }
+    });
+    expect(JSON.stringify(mutation?.variables)).not.toContain('isActive');
+  });
+
+  it('uses append-only grants and profile actions for the complete access surface', async () => {
+    const calls: GraphQLCall[] = [];
+    const adminSchema = snapshot({
+      endpoint: 'admin',
+      queries: [
+        'appMemberships',
+        'appInvites',
+        'appClaimedInvites',
+        'appProfiles',
+        'appPermissions',
+        'appPermissionDefaults'
+      ],
+      mutations: {
+        createAppInvite: 'CreateAppInviteInput',
+        updateAppInvite: 'UpdateAppInviteInput',
+        deleteAppInvite: 'DeleteAppInviteInput',
+        updateAppMembership: 'UpdateAppMembershipInput',
+        createAppOwnerGrant: 'CreateAppOwnerGrantInput',
+        createAppAdminGrant: 'CreateAppAdminGrantInput',
+        createAppGrant: 'CreateAppGrantInput',
+        createAppProfileGrant: 'CreateAppProfileGrantInput',
+        createAppProfileDefinitionGrant: 'CreateAppProfileDefinitionGrantInput',
+        createAppPermissionDefaultGrant: 'CreateAppPermissionDefaultGrantInput',
+        createAppProfile: 'CreateAppProfileInput',
+        updateAppProfile: 'UpdateAppProfileInput',
+        deleteAppProfile: 'DeleteAppProfileInput'
+      },
+      types: [
+        objectType('AppMembership', [
+          'id', 'actorId', 'createdAt', 'isOwner', 'isAdmin', 'isActive',
+          'isApproved', 'isVerified', 'isBanned', 'isDisabled', 'permissions',
+          'granted', 'profileId'
+        ]),
+        objectType('AppInvite', [
+          'id', 'channel', 'email', 'senderId', 'createdAt', 'expiresAt',
+          'inviteValid', 'inviteCount', 'inviteLimit', 'profileId'
+        ]),
+        objectType('AppClaimedInvite', ['id', 'senderId', 'receiverId', 'createdAt']),
+        objectType('AppProfile', [
+          'id', 'name', 'slug', 'description', 'permissions', 'isSystem', 'isDefault'
+        ]),
+        objectType('AppPermission', ['id', 'name', 'description', 'bitnum', 'bitstr']),
+        objectType('AppPermissionDefault', ['id', 'permissions']),
+        ...appAccessMutationTypes()
+      ]
+    });
+    const adapter = createConstructiveUsersAdapter({
+      store: createConsoleKitStore('users'),
+      discovery: discovery({
+        admin: adminSchema,
+        auth: snapshot({
+          endpoint: 'auth',
+          queries: ['users', 'emails'],
+          types: [
+            objectType('User', ['id', 'displayName', 'username', 'profilePicture']),
+            objectType('Email', ['ownerId', 'email', 'isPrimary'])
+          ]
+        })
+      })
+    });
+    const loaded = await adapter.load(runtime((call) => {
+      calls.push(call);
+      if (call.document.includes('appMemberships(first:')) {
+        return {
+          appMemberships: {
+            nodes: [
+              {
+                id: 'membership-owner',
+                actorId: 'user-1',
+                isOwner: true,
+                isAdmin: true,
+                isActive: true,
+                isApproved: true,
+                isVerified: true,
+                isBanned: false,
+                isDisabled: false,
+                permissions: '1111',
+                granted: '0000',
+                profileId: 'profile-operator'
+              },
+              {
+                id: 'membership-member',
+                actorId: 'user-2',
+                isOwner: false,
+                isAdmin: false,
+                isActive: true,
+                isApproved: true,
+                isVerified: true,
+                isBanned: false,
+                isDisabled: false,
+                permissions: '0101',
+                granted: '0100',
+                profileId: 'profile-operator'
+              }
+            ]
+          }
+        };
+      }
+      if (call.document.includes('appInvites(first:')) {
+        return {
+          appInvites: {
+            nodes: [
+              {
+                id: 'invite-owned',
+                channel: 'email',
+                email: 'owned@example.com',
+                senderId: 'user-1',
+                inviteValid: true,
+                profileId: 'profile-operator'
+              },
+              {
+                id: 'invite-foreign',
+                channel: 'email',
+                email: 'foreign@example.com',
+                senderId: 'user-2',
+                inviteValid: true
+              }
+            ]
+          }
+        };
+      }
+      if (call.document.includes('appClaimedInvites(first:')) {
+        return {
+          appClaimedInvites: {
+            nodes: [{
+              id: 'claimed-1',
+              senderId: 'user-1',
+              receiverId: 'user-2',
+              createdAt: '2026-07-20T10:00:00.000Z'
+            }]
+          }
+        };
+      }
+      if (call.document.includes('appProfiles(first:')) {
+        return {
+          appProfiles: {
+            nodes: [
+              {
+                id: 'profile-operator',
+                name: 'Operator',
+                slug: 'operator',
+                permissions: '0001',
+                isSystem: false,
+                isDefault: true
+              },
+              {
+                id: 'profile-system',
+                name: 'System',
+                slug: 'system',
+                permissions: '1111',
+                isSystem: true,
+                isDefault: false
+              }
+            ]
+          }
+        };
+      }
+      if (call.document.includes('appPermissions(first:')) {
+        return {
+          appPermissions: {
+            nodes: [
+              { id: 'permission-members', name: 'admin_members', bitnum: 0, bitstr: '0001' },
+              { id: 'permission-policy', name: 'admin_permissions', bitnum: 1, bitstr: '0010' },
+              { id: 'permission-invites', name: 'create_invites', bitnum: 2, bitstr: '0100' },
+              { id: 'permission-profiles', name: 'assign_profiles', bitnum: 3, bitstr: '1000' }
+            ]
+          }
+        };
+      }
+      if (call.document.includes('appPermissionDefaults(first:')) {
+        return {
+          appPermissionDefaults: {
+            nodes: [{ id: 'default-1', permissions: '0100' }]
+          }
+        };
+      }
+      if (call.document.includes('emails(first:')) {
+        return {
+          emails: {
+            nodes: [
+              { ownerId: 'user-1', email: 'owner@example.com', isPrimary: true },
+              { ownerId: 'user-2', email: 'member@example.com', isPrimary: true }
+            ]
+          }
+        };
+      }
+      if (call.document.includes('users(first:')) {
+        return {
+          users: {
+            nodes: [
+              { id: 'user-1', displayName: 'Owner' },
+              { id: 'user-2', displayName: 'Member' }
+            ]
+          }
+        };
+      }
+      return {};
+    }), new AbortController().signal);
+
+    expect(loaded.resource).toMatchObject({
+      status: 'ready',
+      data: {
+        invitations: [
+          {
+            id: 'invite-owned',
+            recipient: 'owned@example.com',
+            profile: { id: 'profile-operator', name: 'Operator' },
+            actionPolicy: { cancelInvite: true, extendInvite: true }
+          },
+          {
+            id: 'invite-foreign',
+            actionPolicy: { cancelInvite: false, extendInvite: false }
+          }
+        ],
+        acceptedInvites: [{
+          id: 'claimed-1',
+          senderName: 'Owner',
+          receiverName: 'Member'
+        }],
+        profiles: [
+          {
+            id: 'profile-operator',
+            permissionIds: ['permission-members'],
+            memberCount: 2,
+            actionPolicy: {
+              updateProfile: true,
+              deleteProfile: true,
+              setDefaultProfile: true,
+              setProfilePermission: true
             }
-          : {
-              appMemberships: {
-                nodes: [{
-                  id: 'membership-member',
-                  actorId: 'user-2',
-                  isOwner: false,
-                  isAdmin: false,
-                  isActive: true,
-                  permissions: '0000'
-                }],
-                pageInfo: { hasNextPage: true, endCursor: 'members-next' }
-              }
-            };
+          },
+          {
+            id: 'profile-system',
+            actionPolicy: {
+              updateProfile: false,
+              deleteProfile: false,
+              setDefaultProfile: false,
+              setProfilePermission: false
+            }
+          }
+        ],
+        defaultPermissionIds: ['permission-invites'],
+        inviteProfileIds: ['profile-operator', 'profile-system']
+      }
+    });
+    expect(loaded.policy).toMatchObject({
+      invite: true,
+      assignInviteProfile: true,
+      setOwner: true,
+      setAdmin: true,
+      setDirectPermission: true,
+      setProfile: true,
+      createProfile: true,
+      updateProfile: true,
+      deleteProfile: true,
+      setDefaultProfile: true,
+      setProfilePermission: true,
+      setDefaultPermission: true,
+      cancelInvite: true,
+      extendInvite: true
+    });
+
+    await loaded.actions?.invite?.({
+      recipient: 'new@example.com',
+      profileId: 'profile-operator'
+    });
+    await loaded.actions?.setOwner?.({ userId: 'user-2', owner: true });
+    await loaded.actions?.setAdmin?.({ userId: 'user-2', admin: true });
+    await loaded.actions?.setDirectPermission?.({
+      userId: 'user-2',
+      permissionId: 'permission-invites',
+      granted: false
+    });
+    await loaded.actions?.setProfile?.({
+      membershipId: 'membership-member',
+      profileId: 'profile-operator'
+    });
+    await loaded.actions?.setProfilePermission?.({
+      profileId: 'profile-operator',
+      permissionId: 'permission-invites',
+      granted: true
+    });
+    await loaded.actions?.setDefaultPermission?.({
+      permissionId: 'permission-members',
+      granted: true
+    });
+    await loaded.actions?.createProfile?.({
+      name: 'Reviewer',
+      slug: 'reviewer',
+      description: 'Reviews records.'
+    });
+    await loaded.actions?.updateProfile?.({
+      profileId: 'profile-operator',
+      name: 'Operations',
+      slug: 'operations'
+    });
+    await loaded.actions?.setDefaultProfile?.({ profileId: 'profile-operator' });
+    await loaded.actions?.deleteProfile?.({ profileId: 'profile-operator' });
+
+    expect(calls.find((call) => call.document.includes('ConsoleKitCreateAppInvite'))?.variables)
+      .toMatchObject({
+        input: {
+          appInvite: {
+            email: 'new@example.com',
+            channel: 'email',
+            profileId: 'profile-operator'
+          }
+        }
+      });
+    expect(calls.find((call) => call.document.includes('ConsoleKitCreateAppOwnerGrant'))?.variables)
+      .toEqual({ input: { appOwnerGrant: { actorId: 'user-2', isGrant: true } } });
+    expect(calls.find((call) => call.document.includes('ConsoleKitCreateAppAdminGrant'))?.variables)
+      .toEqual({ input: { appAdminGrant: { actorId: 'user-2', isGrant: true } } });
+    expect(calls.find((call) => call.document.includes('ConsoleKitCreateAppGrant'))?.variables)
+      .toEqual({
+        input: {
+          appGrant: {
+            actorId: 'user-2',
+            permissions: '0100',
+            isGrant: false
+          }
+        }
+      });
+    expect(calls.find((call) => call.document.includes('ConsoleKitCreateAppProfileGrant'))?.variables)
+      .toEqual({
+        input: {
+          appProfileGrant: {
+            membershipId: 'membership-member',
+            profileId: 'profile-operator',
+            isGrant: true
+          }
+        }
+      });
+    expect(calls.find((call) =>
+      call.document.includes('ConsoleKitCreateAppProfileDefinitionGrant')
+    )?.variables).toEqual({
+      input: {
+        appProfileDefinitionGrant: {
+          profileId: 'profile-operator',
+          permissionId: 'permission-invites',
+          isGrant: true
+        }
+      }
+    });
+    expect(calls.find((call) =>
+      call.document.includes('ConsoleKitCreateAppPermissionDefaultGrant')
+    )?.variables).toEqual({
+      input: {
+        appPermissionDefaultGrant: {
+          permissionId: 'permission-members',
+          isGrant: true
+        }
+      }
+    });
+  });
+
+  it('enforces loaded-row, sender, owner, and system-profile boundaries before writes', async () => {
+    const calls: GraphQLCall[] = [];
+    const adminSchema = snapshot({
+      endpoint: 'admin',
+      queries: ['appMemberships', 'appInvites', 'appProfiles', 'appPermissions'],
+      mutations: {
+        updateAppMembership: 'UpdateAppMembershipInput',
+        createAppOwnerGrant: 'CreateAppOwnerGrantInput',
+        createAppAdminGrant: 'CreateAppAdminGrantInput',
+        updateAppInvite: 'UpdateAppInviteInput',
+        deleteAppInvite: 'DeleteAppInviteInput',
+        updateAppProfile: 'UpdateAppProfileInput',
+        deleteAppProfile: 'DeleteAppProfileInput'
+      },
+      types: [
+        objectType('AppMembership', [
+          'id', 'actorId', 'isOwner', 'isAdmin', 'isActive', 'isApproved',
+          'isVerified', 'isBanned', 'isDisabled', 'permissions', 'granted'
+        ]),
+        objectType('AppInvite', ['id', 'email', 'senderId', 'inviteValid']),
+        objectType('AppProfile', [
+          'id', 'name', 'slug', 'permissions', 'isSystem', 'isDefault'
+        ]),
+        objectType('AppPermission', ['id', 'name', 'bitstr']),
+        ...appAccessMutationTypes()
+      ]
+    });
+    const adapter = createConstructiveUsersAdapter({
+      store: createConsoleKitStore('users'),
+      discovery: discovery({
+        admin: adminSchema,
+        auth: snapshot({ endpoint: 'auth', queries: ['users'] })
+      })
+    });
+    const loaded = await adapter.load(runtime((call) => {
+      calls.push(call);
+      if (call.document.includes('appMemberships(first:')) {
+        return {
+          appMemberships: {
+            nodes: [{
+              id: 'membership-owner',
+              actorId: 'user-1',
+              isOwner: true,
+              isAdmin: true,
+              isActive: true,
+              isApproved: true,
+              isVerified: true,
+              isBanned: false,
+              isDisabled: false,
+              permissions: '0001',
+              granted: '0000'
+            }]
+          }
+        };
       }
       if (call.document.includes('appInvites(first:')) {
         return {
@@ -890,100 +1232,81 @@ describe('Constructive users adapter RLS contract', () => {
                 senderId: 'user-2',
                 inviteValid: true
               }
-            ],
-            pageInfo: { hasNextPage: false, endCursor: 'invites-end' }
+            ]
           }
         };
       }
       if (call.document.includes('appProfiles(first:')) {
         return {
           appProfiles: {
-            nodes: [{ id: 'profile-1', name: 'Member', permissions: '0000' }],
-            pageInfo: { hasNextPage: false, endCursor: 'profiles-end' }
+            nodes: [
+              {
+                id: 'profile-mutable',
+                name: 'Member',
+                slug: 'member',
+                permissions: '0001',
+                isSystem: false,
+                isDefault: false
+              },
+              {
+                id: 'profile-system',
+                name: 'System',
+                slug: 'system',
+                permissions: '0001',
+                isSystem: true,
+                isDefault: true
+              }
+            ]
           }
         };
       }
       if (call.document.includes('appPermissions(first:')) {
         return {
           appPermissions: {
-            nodes: [{ name: 'admin_members', bitstr: '0001' }],
-            pageInfo: { hasNextPage: false, endCursor: 'permissions-end' }
+            nodes: [{ id: 'permission-members', name: 'admin_members', bitstr: '0001' }]
           }
         };
       }
       if (call.document.includes('users(first:')) {
-        return call.variables?.after === 'users-next'
-          ? {
-              users: {
-                nodes: [{ id: 'user-1', displayName: 'Manager' }],
-                pageInfo: { hasNextPage: false, endCursor: 'users-end' }
-              }
-            }
-          : {
-              users: {
-                nodes: [{ id: 'user-2', displayName: 'Member' }],
-                pageInfo: { hasNextPage: true, endCursor: 'users-next' }
-              }
-            };
+        return { users: { nodes: [{ id: 'user-1', displayName: 'Final Owner' }] } };
       }
       return {};
     }), new AbortController().signal);
 
-    expect(loaded.resource).toMatchObject({
-      status: 'ready',
-      data: {
-        members: [{ id: 'membership-member' }, { id: 'membership-actor' }],
-        invites: [
-          {
-            id: 'invite-owned',
-            actionPolicy: { cancelInvite: true, extendInvite: true }
-          },
-          {
-            id: 'invite-foreign',
-            actionPolicy: { cancelInvite: false, extendInvite: false }
-          }
-        ]
-      }
-    });
-    expect(loaded.policy).toMatchObject({
-      invite: false,
-      updateRole: true,
-      toggleActive: true,
-      remove: true,
-      cancelInvite: true,
-      extendInvite: true
-    });
-    expect(calls).toEqual(expect.arrayContaining([
-      expect.objectContaining({ variables: { first: 100, after: 'members-next' } }),
-      expect.objectContaining({ variables: { first: 100, after: 'users-next' } })
-    ]));
+    expect(loaded.resource).toHaveProperty(
+      'data.members.0.actionPolicy.setOwner',
+      false
+    );
+    expect(loaded.resource).toHaveProperty(
+      'data.profiles.1.actionPolicy.deleteProfile',
+      false
+    );
 
-    await expect(loaded.actions?.updateRole?.({
-      membershipId: 'membership-outside-page',
-      role: 'Member'
-    })).rejects.toThrow('not in the current authorized resource');
-    await expect(loaded.actions?.toggleActive?.({
-      membershipId: 'membership-outside-page',
-      active: false
-    })).rejects.toThrow('not in the current authorized resource');
-    await expect(loaded.actions?.remove?.({
-      membershipId: 'membership-outside-page'
+    await expect(loaded.actions?.setOwner?.({
+      userId: 'user-1',
+      owner: false
+    })).rejects.toThrow('final application owner');
+    await expect(loaded.actions?.setDisabled?.({
+      membershipId: 'membership-owner',
+      disabled: true
+    })).rejects.toThrow('Application owners cannot be disabled');
+    await expect(loaded.actions?.setAdmin?.({
+      userId: 'user-1',
+      admin: false
+    })).rejects.toThrow('retain admin access');
+    await expect(loaded.actions?.setOwner?.({
+      userId: 'user-outside-resource',
+      owner: true
     })).rejects.toThrow('not in the current authorized resource');
     await expect(loaded.actions?.cancelInvite?.({
       inviteId: 'invite-foreign'
     })).rejects.toThrow('not in the current authorized resource');
-    await expect(loaded.actions?.extendInvite?.({
-      inviteId: 'invite-foreign'
+    await expect(loaded.actions?.deleteProfile?.({
+      profileId: 'profile-system'
     })).rejects.toThrow('not in the current authorized resource');
     expect(calls.some((call) => call.document.includes('mutation ConsoleKit'))).toBe(false);
-
-    await loaded.actions?.updateRole?.({ membershipId: 'membership-member', role: 'Member' });
-    await loaded.actions?.cancelInvite?.({ inviteId: 'invite-owned' });
-    await loaded.actions?.extendInvite?.({ inviteId: 'invite-owned' });
-    expect(calls.filter((call) => call.document.includes('mutation ConsoleKit'))).toHaveLength(3);
   });
 });
-
 describe('Constructive organizations adapter RLS contract', () => {
   it('reconciles an ambiguous create without reissuing it against a non-unique backend', async () => {
     const calls: GraphQLCall[] = [];
@@ -1564,7 +1887,7 @@ describe('Constructive organizations adapter RLS contract', () => {
     expect(ordinary.policy).toMatchObject({
       createOrganization: false,
       inviteMember: false,
-      updateMemberRole: false,
+      assignProfile: false,
       removeMember: false,
       cancelInvite: false
     });
@@ -1575,8 +1898,9 @@ describe('Constructive organizations adapter RLS contract', () => {
     );
     await owner.actions?.inviteMember?.({
       organizationId: 'org-1',
-      email: 'member@example.com',
-      role: 'Member'
+      channel: 'email',
+      recipient: 'member@example.com',
+      profileId: 'profile-1'
     });
     const mutation = calls.findLast((call) => call.document.includes('ConsoleKitCreateOrgInvite'));
     expect(mutation?.variables).toMatchObject({
@@ -1660,7 +1984,7 @@ describe('Constructive organizations adapter RLS contract', () => {
     expect(loaded.policy).toMatchObject({
       createOrganization: false,
       inviteMember: false,
-      updateMemberRole: true,
+      assignProfile: true,
       removeMember: true,
       cancelInvite: false
     });
@@ -1812,7 +2136,7 @@ describe('Constructive organizations adapter RLS contract', () => {
       }
     });
     expect(loaded.policy).toMatchObject({
-      updateMemberRole: true,
+      assignProfile: true,
       removeMember: true,
       cancelInvite: false
     });
@@ -1821,10 +2145,11 @@ describe('Constructive organizations adapter RLS contract', () => {
       expect.objectContaining({ variables: { first: 100, after: 'users-next' } })
     ]));
 
-    await expect(loaded.actions?.updateMemberRole?.({
+    await expect(loaded.actions?.setMemberProfile?.({
       organizationId: 'org-a',
       membershipId: 'membership-actor-b',
-      role: 'Manager'
+      profileId: 'profile-a',
+      isGrant: true
     })).rejects.toThrow('not in the current authorized resource');
     await expect(loaded.actions?.removeMember?.({
       organizationId: 'org-a',
@@ -1833,10 +2158,11 @@ describe('Constructive organizations adapter RLS contract', () => {
     expect(loaded.actions?.cancelInvite).toBeUndefined();
     expect(calls.some((call) => call.document.includes('mutation ConsoleKit'))).toBe(false);
 
-    await loaded.actions?.updateMemberRole?.({
+    await loaded.actions?.setMemberProfile?.({
       organizationId: 'org-a',
       membershipId: 'membership-member-a',
-      role: 'Manager'
+      profileId: 'profile-a',
+      isGrant: true
     });
     expect(calls.find((call) => call.document.includes('ConsoleKitCreateOrgProfileGrant')))
       .toMatchObject({
@@ -2018,7 +2344,7 @@ describe('Constructive organizations adapter RLS contract', () => {
 
     expect(loaded.resource).toMatchObject({
       status: 'ready',
-      data: { roles: [], inviteRoles: [] }
+      data: { assignableInviteProfileIds: [] }
     });
     expect(loaded.resource.status === 'ready' ? loaded.resource.limitations : []).toEqual(
       expect.arrayContaining([
@@ -2026,13 +2352,13 @@ describe('Constructive organizations adapter RLS contract', () => {
       ])
     );
     expect(loaded.policy).toMatchObject({
-      assignInviteRole: false,
-      updateMemberRole: false
+      assignInviteProfile: false,
+      assignProfile: false
     });
-    expect(loaded.actions?.updateMemberRole).toBeUndefined();
+    expect(loaded.actions?.setMemberProfile).toBeUndefined();
   });
 
-  it('omits duplicate organization profile names instead of choosing an arbitrary ID', async () => {
+  it('keeps duplicate organization profile names distinct by profile ID', async () => {
     const adminSchema = snapshot({
       endpoint: 'admin',
       queries: ['orgMemberships', 'orgProfiles'],
@@ -2096,16 +2422,18 @@ describe('Constructive organizations adapter RLS contract', () => {
 
     expect(loaded.resource).toMatchObject({
       status: 'ready',
-      data: { roles: [], inviteRoles: [] }
+      data: {
+        assignableInviteProfileIds: ['profile-global', 'profile-org']
+      }
     });
-    expect(loaded.resource.status === 'ready' ? loaded.resource.limitations : []).toEqual(
+    expect(loaded.resource.status === 'ready' ? loaded.resource.limitations : []).not.toEqual(
       expect.arrayContaining([
         expect.objectContaining({ code: 'constructive.org-profile-name-ambiguous' })
       ])
     );
     expect(loaded.policy).toMatchObject({
-      assignInviteRole: false,
-      updateMemberRole: false
+      assignInviteProfile: true,
+      assignProfile: true
     });
   });
 
@@ -2210,36 +2538,36 @@ describe('Constructive organizations adapter RLS contract', () => {
 
     expect(strict.resource).toMatchObject({
       status: 'ready',
-      data: { inviteRoles: ['Member'] }
+      data: { assignableInviteProfileIds: ['profile-subset'] }
     });
     expect(permissionOnly.resource).toMatchObject({
       status: 'ready',
-      data: { inviteRoles: ['Member', 'Owner'] }
+      data: { assignableInviteProfileIds: ['profile-subset', 'profile-elevated'] }
     });
     expect(subsetOnly.resource).toMatchObject({
       status: 'ready',
-      data: { inviteRoles: ['Member'] }
+      data: { assignableInviteProfileIds: ['profile-subset'] }
     });
-    expect(subsetOnly.policy?.assignInviteRole).toBe(true);
+    expect(subsetOnly.policy?.assignInviteProfile).toBe(true);
     expect(missingSetting.resource).toMatchObject({
       status: 'ready',
-      data: { inviteRoles: [] },
+      data: { assignableInviteProfileIds: [] },
       limitations: [{
         code: 'constructive.org-invite-profile-mode-unavailable'
       }]
     });
     expect(missingSetting.policy).toMatchObject({
       inviteMember: true,
-      assignInviteRole: false
+      assignInviteProfile: false
     });
     expect(inactive.resource).toMatchObject({
       status: 'ready',
-      data: { inviteRoles: [] }
+      data: { assignableInviteProfileIds: [] }
     });
     expect(inactive.policy).toMatchObject({
       inviteMember: false,
-      assignInviteRole: false,
-      updateMemberRole: false,
+      assignInviteProfile: false,
+      assignProfile: false,
       removeMember: false
     });
   });
@@ -2349,7 +2677,7 @@ describe('Constructive organizations adapter RLS contract', () => {
           userId: 'user-1',
           name: 'Ada Lovelace',
           email: 'ada@example.com',
-          role: 'owner',
+          profileName: 'owner',
           status: 'active'
         }]
       },
@@ -2360,7 +2688,7 @@ describe('Constructive organizations adapter RLS contract', () => {
     expect(loaded.policy).toMatchObject({
       selectOrganization: true,
       inviteMember: false,
-      updateMemberRole: false,
+      assignProfile: false,
       removeMember: false
     });
     expect(calls.filter((call) =>
@@ -2559,14 +2887,14 @@ describe('Constructive organizations adapter RLS contract', () => {
       createOrganization: true,
       selectOrganization: true,
       inviteMember: false,
-      assignInviteRole: false,
-      updateMemberRole: false,
+      assignInviteProfile: false,
+      assignProfile: false,
       removeMember: false,
       cancelInvite: false
     });
     expect(loaded.actions?.createOrganization).toBeTypeOf('function');
     expect(loaded.actions?.inviteMember).toBeUndefined();
-    expect(loaded.actions?.updateMemberRole).toBeUndefined();
+    expect(loaded.actions?.setMemberProfile).toBeUndefined();
     expect(loaded.actions?.removeMember).toBeUndefined();
     expect(loaded.actions?.cancelInvite).toBeUndefined();
   });

@@ -387,6 +387,11 @@
           "type": "registry:lib"
         },
         {
+          "path": "registry/constructive/blocks/console-kit/console-kit-routes.ts",
+          "target": "src/blocks/console-kit/console-kit-routes.ts",
+          "type": "registry:lib"
+        },
+        {
           "path": "registry/constructive/blocks/console-kit/console-kit-contracts.ts",
           "target": "src/blocks/console-kit/console-kit-contracts.ts",
           "type": "registry:lib"
@@ -424,6 +429,11 @@
         {
           "path": "registry/constructive/blocks/console-kit/constructive/constructive-capabilities.ts",
           "target": "src/blocks/console-kit/constructive/constructive-capabilities.ts",
+          "type": "registry:lib"
+        },
+        {
+          "path": "registry/constructive/blocks/console-kit/constructive/constructive-callback.ts",
+          "target": "src/blocks/console-kit/constructive/constructive-callback.ts",
           "type": "registry:lib"
         },
         {
@@ -537,7 +547,7 @@
       "type": "registry:block",
       "title": "Authentication Feature Pack",
       "description": "Provider-neutral public authentication flows and personal account/session management.",
-      "docs": "## Usage\n\nChoose the entry or account view, grant each available operation through policy, and provide its matching provider callback.\n\n```tsx\nimport { AuthFeaturePack } from '@/blocks/feature-packs/auth/auth-feature-pack';\n\n<AuthFeaturePack\n  view=\"account\"\n  account={account}\n  verificationNotice={verificationNotice}\n  policy={{ signOut: true, changePassword: true, sendVerificationEmail: true }}\n  actions={authActions}\n  onError={reportAuthError}\n/>\n```\n\nAn action appears only when its policy grant and callback are both present. `verificationNotice` reports a host-consumed credential on either the signed-out entry view or account view; keep that credential in a client-only fragment and scrub it before mounting. Credentials and sessions belong to the personal identity, while application and organization membership remain separate feature-pack concerns.\n\nThis `feature-pack-auth` item is provider-neutral and works without Console Kit. Install `console-module-auth` when Console Kit should supply its navigation, capability discovery, session flow, and Constructive adapter.",
+      "docs": "## Usage\n\nChoose the entry or account view, grant each available operation through policy, and provide its matching provider callback.\n\n```tsx\nimport { AuthFeaturePack } from '@/blocks/feature-packs/auth/auth-feature-pack';\n\n<AuthFeaturePack\n  view=\"account\"\n  account={account}\n  notice={notice}\n  passwordPolicy={{ minLength: 12 }}\n  policy={{ signOut: true, changePassword: true, sendVerificationEmail: true }}\n  actions={authActions}\n  onError={reportAuthError}\n/>\n```\n\nAn action appears only when its policy grant and callback are both present. Password policy is host-defined, and complete OTP, passkey, OAuth, or TOTP implementations can be contributed through `challengeContributions` without placing challenge credentials in public component state. Callback credentials stay inside the trusted adapter boundary; the feature pack receives only token-free flow state and notices.\n\nThis `feature-pack-auth` item is provider-neutral and works without Console Kit. Install `console-module-auth` when Console Kit should supply its navigation, capability discovery, session flow, and Constructive adapter.",
       "dependencies": [
         "lucide-react"
       ],
@@ -559,6 +569,11 @@
           "path": "registry/constructive/blocks/feature-packs/auth/auth-account-view.tsx",
           "target": "src/blocks/feature-packs/auth/auth-account-view.tsx",
           "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/feature-packs/auth/auth-password-policy.ts",
+          "target": "src/blocks/feature-packs/auth/auth-password-policy.ts",
+          "type": "registry:lib"
         },
         {
           "path": "registry/constructive/blocks/feature-packs/auth/auth-feature-pack.tsx",
@@ -599,9 +614,9 @@
     {
       "name": "feature-pack-users",
       "type": "registry:block",
-      "title": "Users Feature Pack",
-      "description": "Application membership, invitation, role, profile, and status management without credential ownership.",
-      "docs": "## Usage\n\nPass application members, optional invitations, and role choices through one resource, then grant and inject only the membership operations available to the current administrator.\n\n```tsx\nimport { UsersFeaturePack } from '@/blocks/feature-packs/users/users-feature-pack';\n\n<UsersFeaturePack\n  resource={users}\n  policy={{ invite: true, assignInviteRole: true, updateRole: true, toggleActive: true, remove: true, cancelInvite: true, extendInvite: true }}\n  actions={userActions}\n  onError={reportMembershipError}\n/>\n```\n\n`invite` exposes roleless invitations. Grant `assignInviteRole` only when the current administrator may attach one of the visible profiles; otherwise the role field stays hidden. Invitation cancellation and extension additionally require each row's `actionPolicy`, which lets the resource mirror sender-scoped RLS without rendering unusable controls. Search remains local to the block, while every mutation stays host-controlled and PostgreSQL policy determines the resulting membership view.\n\nThis `feature-pack-users` item is provider-neutral and works without Console Kit. Install `console-module-users` when Console Kit should supply its navigation, capability discovery, and Constructive adapter.",
+      "title": "App access Feature Pack",
+      "description": "Application member governance, lifecycle controls, profiles, permission grants, and invitations without credential ownership.",
+      "docs": "## Usage\n\nPass application members and any discovered invitation, profile, permission, default, or audit sections through one resource, then grant and inject only the access operations available to the current administrator.\n\n```tsx\nimport { UsersFeaturePack } from '@/blocks/feature-packs/users/users-feature-pack';\n\n<UsersFeaturePack\n  resource={appAccess}\n  policy={{ invite: true, setApproved: true, setDisabled: true, setProfile: true, setDirectPermission: true }}\n  actions={appAccessActions}\n  onError={reportAccessError}\n/>\n```\n\nLifecycle, owner, admin, profile, direct-permission, and default-permission changes use separate semantic actions. Invitation and member rows additionally require their own `actionPolicy`, which lets the resource mirror RLS and final-owner constraints without rendering unusable controls. The permission catalog stays read-only, effective permissions stay separate from direct grants, and `section` plus `onSectionChange` can synchronize nested navigation with a host router.\n\nThis `feature-pack-users` item keeps its stable registry ID, remains provider-neutral, and works without Console Kit. Install `console-module-users` when Console Kit should supply navigation, capability discovery, and the Constructive adapter.",
       "dependencies": [
         "lucide-react"
       ],
@@ -624,9 +639,9 @@
     {
       "name": "console-module-users",
       "type": "registry:block",
-      "title": "Users Console Module",
-      "description": "Console Kit navigation, capability discovery, and Constructive adapter for the Users feature pack.",
-      "docs": "## Console Kit integration\n\nInstall this item for Console Kit composition. It installs `console-kit-core` and the standalone `feature-pack-users` view transitively.\n\n```tsx\nimport { usersConsoleModule } from '@/blocks/feature-packs/users/users-console-module';\n\nconst featureModules = [usersConsoleModule];\n```\n\nPass the module to `ConstructiveConsoleKitCore` or `ConsoleKit`; install `feature-pack-users` alone when the host supplies membership resources and actions directly.",
+      "title": "App access Console Module",
+      "description": "Console Kit navigation, capability discovery, and Constructive adapter for the App access feature pack.",
+      "docs": "## Console Kit integration\n\nInstall this item for Console Kit composition. It installs `console-kit-core` and the standalone `feature-pack-users` view transitively.\n\n```tsx\nimport { usersConsoleModule } from '@/blocks/feature-packs/users/users-console-module';\n\nconst featureModules = [usersConsoleModule];\n```\n\nPass the module to `ConstructiveConsoleKitCore` or `ConsoleKit`; install `feature-pack-users` alone when the host supplies App access resources and semantic actions directly. The module maps Console Kit's nested users routes to controlled sections while preserving the stable `users` registry ID.",
       "dependencies": [],
       "registryDependencies": [
         "console-kit-core",
@@ -649,8 +664,8 @@
       "name": "feature-pack-organizations",
       "type": "registry:block",
       "title": "Organizations Feature Pack",
-      "description": "Tenant switching plus organization membership and invitation management.",
-      "docs": "## Usage\n\nPass the visible organizations together with the selected tenant's members, invitations, role choices, and any ready-resource `limitations`. Keep tenant selection and every membership mutation in host state.\n\n```tsx\nimport { OrganizationsFeaturePack } from '@/blocks/feature-packs/organizations/organizations-feature-pack';\n\n<OrganizationsFeaturePack\n  resource={organizations}\n  policy={{ selectOrganization: true, inviteMember: true, assignInviteRole: true, updateMemberRole: true, removeMember: true, cancelInvite: true }}\n  actions={organizationActions}\n  onError={reportOrganizationError}\n/>\n```\n\n`inviteMember` exposes roleless invitations. Grant `assignInviteRole` only when the current organization administrator may attach one of the visible profiles. Cancellation also requires the invitation row's `actionPolicy`; scope, invite-mode, and ambiguous-profile conditions belong in `resource.limitations` and should disable unsafe role actions. The UI never broadens tenant access: each policy grant exposes a control, while PostgreSQL privileges and RLS remain authoritative when the injected action executes.\n\nThis `feature-pack-organizations` item is provider-neutral and works without Console Kit. Install `console-module-organizations` when Console Kit should supply its navigation, capability discovery, `_meta` contract resolver, and Constructive adapter.",
+      "description": "Tenant switching, membership governance, access profiles, hierarchy, settings, and organization-scoped developer credentials.",
+      "docs": "## Usage\n\nPass one policy-filtered organization snapshot and the semantic callbacks supported by the current tenant database. Keep the active organization and optional controlled section in host state.\n\n```tsx\nimport { OrganizationsFeaturePack } from '@/blocks/feature-packs/organizations/organizations-feature-pack';\n\n<OrganizationsFeaturePack\n  resource={organizations}\n  policy={organizationPolicy}\n  actions={organizationActions}\n  section={section}\n  onSectionChange={setSection}\n  onError={reportOrganizationError}\n/>\n```\n\nThe resource can expose members, active and claimed invitations, access profiles, permissions, defaults, membership settings, hierarchy edges, principals, and API keys. Every mutation requires a pack policy grant, a matching callback, and any relevant row policy; PostgreSQL privileges and RLS remain authoritative. Treat reusable invitation tokens as secrets and display a newly created API key only from that mutation's one-time result.\n\nThis `feature-pack-organizations` item is provider-neutral and works without Console Kit. Install `console-module-organizations` when Console Kit should supply semantic routing, capability discovery, `_meta` contract resolution, and the Constructive adapter.",
       "dependencies": [
         "lucide-react"
       ],
@@ -658,6 +673,21 @@
         "pack-foundation"
       ],
       "files": [
+        {
+          "path": "registry/constructive/blocks/feature-packs/organizations/organizations-contracts.ts",
+          "target": "src/blocks/feature-packs/organizations/organizations-contracts.ts",
+          "type": "registry:lib"
+        },
+        {
+          "path": "registry/constructive/blocks/feature-packs/organizations/organizations-access-panels.tsx",
+          "target": "src/blocks/feature-packs/organizations/organizations-access-panels.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/feature-packs/organizations/organizations-operation-panels.tsx",
+          "target": "src/blocks/feature-packs/organizations/organizations-operation-panels.tsx",
+          "type": "registry:component"
+        },
         {
           "path": "registry/constructive/blocks/feature-packs/organizations/organizations-feature-pack.tsx",
           "target": "src/blocks/feature-packs/organizations/organizations-feature-pack.tsx",

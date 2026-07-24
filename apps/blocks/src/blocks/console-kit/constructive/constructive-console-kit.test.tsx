@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { render, screen } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import type {
@@ -22,12 +22,18 @@ vi.mock('../console-kit', () => ({
 import { ConstructiveConsoleKit } from '../../presets/full-console-kit';
 import { authConsoleModule } from '../../feature-packs/auth/auth-console-module';
 import { dataConsoleModule } from '../../feature-packs/data/data-console-module';
-import { ConstructiveConsoleKitCore } from '../console-kit-core';
+import {
+  ConstructiveConsoleKitCore,
+  createConstructiveCallbackCredentialVault,
+  createConstructiveConsoleAdapters
+} from '../console-kit-core';
+import type { ConstructiveConsoleCallback } from './constructive-callback';
 
 afterEach(() => {
   vi.unstubAllGlobals();
   window.localStorage.clear();
   window.sessionStorage.clear();
+  window.history.replaceState(null, '', '/');
 });
 
 function session(id: string): DatabaseScopedStandaloneConsoleSession {
@@ -82,6 +88,91 @@ function transport(id: string): ConsoleTransport {
 }
 
 describe('ConstructiveConsoleKit external ownership', () => {
+  it('passes auth policy into first-party adapter factories without global state', () => {
+    const factory = vi.fn(() => ({
+      capabilities: [],
+      load: async () => ({})
+    }));
+    const module = { ...dataConsoleModule, createAdapter: factory };
+    const store = createConsoleKitStore('data');
+    const callbackCredentials = createConstructiveCallbackCredentialVault();
+    const validate = vi.fn(() => undefined);
+
+    createConstructiveConsoleAdapters({
+      authMethods: { password: false, passkey: true },
+      authPasswordPolicy: { minLength: 16, validate },
+      callbackCredentials,
+      featureModules: [module],
+      store
+    });
+
+    expect(factory).toHaveBeenCalledWith(expect.objectContaining({
+      authMethods: { password: false, passkey: true },
+      callbackCredentials,
+      passwordPolicy: { minLength: 16, validate },
+      store
+    }));
+  });
+
+  it('exposes every callback descriptor only to the auth adapter factory', () => {
+    const store = createConsoleKitStore('auth');
+    const callbackCredentials = createConstructiveCallbackCredentialVault();
+    const authFactory = vi.fn(() => ({ capabilities: [], load: async () => ({}) }));
+    const usersFactory = vi.fn(() => ({ capabilities: [], load: async () => ({}) }));
+    const organizationsFactory = vi.fn(() => ({ capabilities: [], load: async () => ({}) }));
+    const dataFactory = vi.fn(() => ({ capabilities: [], load: async () => ({}) }));
+    const modules = [
+      { ...dataConsoleModule, id: 'auth', createAdapter: authFactory },
+      { ...dataConsoleModule, id: 'users', createAdapter: usersFactory },
+      { ...dataConsoleModule, id: 'organizations', createAdapter: organizationsFactory },
+      { ...dataConsoleModule, id: 'data', createAdapter: dataFactory }
+    ] as const;
+    const callbacks = [
+      {
+        kind: 'password-reset',
+        databaseId: 'database-1',
+        roleId: 'role-1',
+        credentialRef: callbackCredentials.put('reset-token')
+      },
+      {
+        kind: 'email-verification',
+        databaseId: 'database-1',
+        emailId: 'email-1',
+        credentialRef: callbackCredentials.put('verification-token')
+      },
+      {
+        kind: 'account-deletion',
+        databaseId: 'database-1',
+        userId: 'user-1',
+        credentialRef: callbackCredentials.put('deletion-token')
+      },
+      {
+        kind: 'app-invite',
+        databaseId: 'database-1',
+        credentialRef: callbackCredentials.put('app-invite-token')
+      },
+      {
+        kind: 'organization-invite',
+        databaseId: 'database-1',
+        credentialRef: callbackCredentials.put('organization-invite-token')
+      }
+    ] as const satisfies readonly ConstructiveConsoleCallback[];
+
+    for (const callback of callbacks) {
+      createConstructiveConsoleAdapters({
+        callback,
+        callbackCredentials,
+        featureModules: modules,
+        store
+      });
+
+      expect(authFactory).toHaveBeenLastCalledWith(expect.objectContaining({ callback }));
+      expect(usersFactory).toHaveBeenLastCalledWith(expect.objectContaining({ callback: undefined }));
+      expect(organizationsFactory).toHaveBeenLastCalledWith(expect.objectContaining({ callback: undefined }));
+      expect(dataFactory).toHaveBeenLastCalledWith(expect.objectContaining({ callback: undefined }));
+    }
+  });
+
   it('supports a first-party selected-pack composition from the core barrel', () => {
     const hostSession = embeddedSession('database-1');
     const hostTransport = transport('selected-packs');
@@ -137,14 +228,15 @@ describe('ConstructiveConsoleKit external ownership', () => {
 
     const view = render(
       <ConstructiveConsoleKit
+        callback='https://tenant.example/reset-password?database_id=database-1&role_id=role-1&reset_token=token-1'
         database={database}
-        resetRoleId='role-1'
-        resetToken='token-1'
         session={firstSession}
         store={firstStore}
         transport={firstTransport}
       />
     );
+
+    await screen.findByText('Console Kit mounted');
 
     const firstProps = consoleKitCaptures.props.at(-1) as Readonly<{
       store: ReturnType<typeof createConsoleKitStore>;
@@ -157,14 +249,20 @@ describe('ConstructiveConsoleKit external ownership', () => {
 
     view.rerender(
       <ConstructiveConsoleKit
+        callback='https://tenant.example/reset-password?database_id=database-1&role_id=role-2&reset_token=token-2'
         database={database}
-        resetRoleId='role-2'
-        resetToken='token-2'
         session={secondSession}
         store={secondStore}
         transport={secondTransport}
       />
     );
+
+    await waitFor(() => {
+      const latest = consoleKitCaptures.props.at(-1) as Readonly<{
+        store?: ReturnType<typeof createConsoleKitStore>;
+      }>;
+      expect(latest.store).toBe(secondStore);
+    });
 
     const secondProps = consoleKitCaptures.props.at(-1) as typeof firstProps;
     expect(secondProps.store).toBe(secondStore);
@@ -203,7 +301,7 @@ describe('ConstructiveConsoleKit external ownership', () => {
         adapters: Readonly<Record<string, unknown>>;
       }>;
     }>;
-    expect(props.store.getState().activeFeature).toBe('data');
+    expect(props.store.getState().route.feature).toBe('data');
     expect(props.config.endpoints).toEqual({
       data: { id: 'data-1', url: 'https://blank.example/data/graphql' },
       auth: { id: 'auth-1', url: 'https://blank.example/auth/graphql' }
@@ -389,5 +487,66 @@ describe('ConstructiveConsoleKit external ownership', () => {
     expect([...Array(window.sessionStorage.length)].map((_, index) =>
       window.sessionStorage.getItem(window.sessionStorage.key(index) ?? '')
     ).join('')).not.toContain('tenant-a-token');
+  });
+
+  it('scrubs a browser callback before mounting adapters and never serializes its credential', async () => {
+    window.history.replaceState(
+      { preserved: true },
+      '',
+      '/reset-password?database_id=database-1&role_id=user-1&reset_token=browser-secret&campaign=launch'
+    );
+
+    render(
+      <React.StrictMode>
+        <ConstructiveConsoleKit
+          database={{
+            id: 'database-1',
+            endpoints: {
+              auth: {
+                id: 'auth-1',
+                url: 'https://tenant.example/auth/graphql'
+              }
+            }
+          }}
+          session={session('callback')}
+        />
+      </React.StrictMode>
+    );
+
+    await screen.findByText('Console Kit mounted');
+    expect(`${window.location.pathname}${window.location.search}`)
+      .toBe('/reset-password?campaign=launch');
+    const props = consoleKitCaptures.props.at(-1) as Readonly<{
+      store: ReturnType<typeof createConsoleKitStore>;
+    }>;
+    expect(JSON.stringify(props)).not.toContain('browser-secret');
+    expect(props.store.getState().authFlow).toEqual({
+      status: 'callback',
+      kind: 'password-reset',
+      phase: 'ready'
+    });
+  });
+
+  it('rejects a cross-tenant callback before Console Kit mounts', async () => {
+    const captureCount = consoleKitCaptures.props.length;
+
+    render(
+      <ConstructiveConsoleKit
+        callback='https://tenant.example/verify-email?database_id=database-2&email_id=email-1&verification_token=secret'
+        database={{
+          id: 'database-1',
+          endpoints: {
+            auth: {
+              id: 'auth-1',
+              url: 'https://tenant.example/auth/graphql'
+            }
+          }
+        }}
+        session={session('cross-tenant')}
+      />
+    );
+
+    expect(await screen.findByText(/different tenant database/u)).toBeVisible();
+    expect(consoleKitCaptures.props).toHaveLength(captureCount);
   });
 });

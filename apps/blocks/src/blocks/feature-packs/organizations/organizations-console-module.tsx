@@ -11,7 +11,8 @@ import type {
 } from '../../console-kit/feature-module';
 import {
   OrganizationsFeaturePack,
-  type OrganizationsFeaturePackProps
+  type OrganizationsFeaturePackProps,
+  type OrganizationsSection
 } from './organizations-feature-pack';
 import { resolveApplicationOrganizationContract } from './organizations-meta-contract';
 
@@ -21,7 +22,7 @@ export const organizationsCapabilityDiscovery = {
     { capability: 'organizations.permissions', endpoint: 'admin', operation: 'query', fields: ['orgPermissions'] },
     { capability: 'organizations.limits', endpoint: 'billing', operation: 'query', fields: ['orgLimits'] },
     { capability: 'organizations.profiles', endpoint: 'admin', operation: 'query', fields: ['orgProfiles'] },
-    { capability: 'organizations.hierarchy', endpoint: 'admin', operation: 'query', fields: ['orgHierarchies'] },
+    { capability: 'organizations.hierarchy', endpoint: 'admin', operation: 'query', fields: ['orgChartEdges'] },
     { capability: 'organizations.invites', endpoint: 'admin', operation: 'query', fields: ['orgInvites'] }
   ],
   assess: ({ metadataByEndpoint }) => {
@@ -46,11 +47,69 @@ export const organizationsCapabilityDiscovery = {
   }
 } satisfies ConstructiveCapabilityContribution;
 
-function OrganizationsConsoleFeature({ adapterProps, onError }: ConsoleKitFeatureComponentProps) {
+const sectionForScreen: Partial<Record<
+  Extract<ConsoleKitFeatureComponentProps['route'], { feature: 'organizations' }>['screen'],
+  OrganizationsSection
+>> = {
+  overview: 'members',
+  members: 'members',
+  member: 'members',
+  invitations: 'invitations',
+  invitation: 'invitations',
+  profiles: 'profiles',
+  profile: 'profiles',
+  permissions: 'permissions',
+  defaults: 'defaults',
+  hierarchy: 'hierarchy',
+  settings: 'settings',
+  developer: 'developer',
+  'api-keys': 'developer',
+  principals: 'developer'
+};
+
+function OrganizationsConsoleFeature({
+  adapterProps,
+  route,
+  onRouteChange,
+  onError
+}: ConsoleKitFeatureComponentProps) {
+  const props = adapterProps as OrganizationsFeaturePackProps;
+  const activeOrganizationId = props.resource.status === 'ready'
+    ? props.resource.data.activeOrganizationId
+    : undefined;
+  const organizationRoute = route.feature === 'organizations' ? route : undefined;
+  const section = organizationRoute ? sectionForScreen[organizationRoute.screen] : undefined;
+  const organizationId = organizationRoute && 'organizationId' in organizationRoute
+    ? organizationRoute.organizationId
+    : activeOrganizationId;
+  const actions = props.actions?.selectOrganization
+    ? {
+        ...props.actions,
+        selectOrganization: async (input: { organizationId: string }) => {
+          await props.actions!.selectOrganization!(input);
+          onRouteChange({
+            feature: 'organizations',
+            screen: 'members',
+            organizationId: input.organizationId
+          });
+        }
+      }
+    : props.actions;
+
   return (
     <OrganizationsFeaturePack
-      {...(adapterProps as OrganizationsFeaturePackProps)}
+      {...props}
+      actions={actions}
       onError={onError}
+      onSectionChange={(nextSection) => {
+        if (!organizationId) return;
+        onRouteChange({
+          feature: 'organizations',
+          screen: nextSection,
+          organizationId
+        });
+      }}
+      section={section}
     />
   );
 }

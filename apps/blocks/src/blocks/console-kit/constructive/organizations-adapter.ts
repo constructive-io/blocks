@@ -1,11 +1,20 @@
 import type { AtomicCapabilityId } from '../../../feature-packs';
 import type {
+  OrganizationAccessProfile,
+  OrganizationApiKey,
+  OrganizationChartEdge,
+  OrganizationClaimedInvite,
   OrganizationInvite,
   OrganizationMember,
+  OrganizationMemberRowAction,
+  OrganizationMembershipDefault,
+  OrganizationMembershipSettings,
+  OrganizationPermission,
+  OrganizationPrincipal,
   OrganizationsFeatureData,
   OrganizationsFeaturePackProps,
   OrganizationSummary
-} from '../../feature-packs/organizations/organizations-feature-pack';
+} from '../../feature-packs/organizations/organizations-contracts';
 import { resolveApplicationOrganizationContract } from '../../feature-packs/organizations/organizations-meta-contract';
 import type { FeaturePackLimitation } from '../../feature-packs/shared/feature-pack-contracts';
 import type {
@@ -50,9 +59,95 @@ const UPDATE_MEMBERSHIP_MUTATION = /* GraphQL */ `
   }
 `;
 
+const DELETE_MEMBERSHIP_MUTATION = /* GraphQL */ `
+  mutation ConsoleKitDeleteOrgMembership($input: DeleteOrgMembershipInput!) {
+    deleteOrgMembership(input: $input) { orgMembership { id } }
+  }
+`;
+
+const CREATE_ADMIN_GRANT_MUTATION = /* GraphQL */ `
+  mutation ConsoleKitCreateOrgAdminGrant($input: CreateOrgAdminGrantInput!) {
+    createOrgAdminGrant(input: $input) { orgAdminGrant { id } }
+  }
+`;
+
+const CREATE_OWNER_GRANT_MUTATION = /* GraphQL */ `
+  mutation ConsoleKitCreateOrgOwnerGrant($input: CreateOrgOwnerGrantInput!) {
+    createOrgOwnerGrant(input: $input) { orgOwnerGrant { id } }
+  }
+`;
+
+const CREATE_PERMISSION_GRANT_MUTATION = /* GraphQL */ `
+  mutation ConsoleKitCreateOrgGrant($input: CreateOrgGrantInput!) {
+    createOrgGrant(input: $input) { orgGrant { id } }
+  }
+`;
+
 const CREATE_PROFILE_GRANT_MUTATION = /* GraphQL */ `
   mutation ConsoleKitCreateOrgProfileGrant($input: CreateOrgProfileGrantInput!) {
     createOrgProfileGrant(input: $input) { orgProfileGrant { id } }
+  }
+`;
+
+const CREATE_PROFILE_DEFINITION_GRANT_MUTATION = /* GraphQL */ `
+  mutation ConsoleKitCreateOrgProfileDefinitionGrant(
+    $input: CreateOrgProfileDefinitionGrantInput!
+  ) {
+    createOrgProfileDefinitionGrant(input: $input) {
+      orgProfileDefinitionGrant { id }
+    }
+  }
+`;
+
+const CREATE_PROFILE_MUTATION = /* GraphQL */ `
+  mutation ConsoleKitCreateOrgProfile($input: CreateOrgProfileInput!) {
+    createOrgProfile(input: $input) { orgProfile { id } }
+  }
+`;
+
+const UPDATE_PROFILE_MUTATION = /* GraphQL */ `
+  mutation ConsoleKitUpdateOrgProfile($input: UpdateOrgProfileInput!) {
+    updateOrgProfile(input: $input) { orgProfile { id } }
+  }
+`;
+
+const DELETE_PROFILE_MUTATION = /* GraphQL */ `
+  mutation ConsoleKitDeleteOrgProfile($input: DeleteOrgProfileInput!) {
+    deleteOrgProfile(input: $input) { orgProfile { id } }
+  }
+`;
+
+const CREATE_MEMBER_PROFILE_MUTATION = /* GraphQL */ `
+  mutation ConsoleKitCreateOrgMemberProfile($input: CreateOrgMemberProfileInput!) {
+    createOrgMemberProfile(input: $input) { orgMemberProfile { id } }
+  }
+`;
+
+const UPDATE_MEMBER_PROFILE_MUTATION = /* GraphQL */ `
+  mutation ConsoleKitUpdateOrgMemberProfile($input: UpdateOrgMemberProfileInput!) {
+    updateOrgMemberProfile(input: $input) { orgMemberProfile { id } }
+  }
+`;
+
+const UPDATE_MEMBERSHIP_SETTINGS_MUTATION = /* GraphQL */ `
+  mutation ConsoleKitUpdateOrgMembershipSetting(
+    $input: UpdateOrgMembershipSettingInput!
+  ) {
+    updateOrgMembershipSetting(input: $input) { orgMembershipSetting { id } }
+  }
+`;
+
+const UPDATE_MEMBERSHIP_DEFAULT_MUTATION = /* GraphQL */ `
+  mutation ConsoleKitUpdateOrgMembershipDefault(
+    $input: UpdateOrgMembershipDefaultInput!
+  ) {
+    updateOrgMembershipDefault(input: $input) { orgMembershipDefault { id } }
+  }
+`;
+
+const CREATE_CHART_EDGE_GRANT_MUTATION = /* GraphQL */ `
+  mutation ConsoleKitCreateOrgChartEdgeGrant($input: CreateOrgChartEdgeGrantInput!) {
+    createOrgChartEdgeGrant(input: $input) { orgChartEdgeGrant { id } }
   }
 `;
 
@@ -71,6 +166,38 @@ const DELETE_INVITE_MUTATION = /* GraphQL */ `
 const DELETE_ORGANIZATION_MUTATION = /* GraphQL */ `
   mutation ConsoleKitDeleteIncompleteOrganization($input: DeleteUserInput!) {
     deleteUser(input: $input) { user { id } }
+  }
+`;
+
+const UPDATE_ORGANIZATION_MUTATION = /* GraphQL */ `
+  mutation ConsoleKitUpdateOrganization($input: UpdateUserInput!) {
+    updateUser(input: $input) { user { id } }
+  }
+`;
+
+const CREATE_ORG_API_KEY_MUTATION = /* GraphQL */ `
+  mutation ConsoleKitCreateOrgApiKey($input: CreateOrgApiKeyInput!) {
+    createOrgApiKey(input: $input) {
+      result { apiKey keyId expiresAt }
+    }
+  }
+`;
+
+const REVOKE_ORG_API_KEY_MUTATION = /* GraphQL */ `
+  mutation ConsoleKitRevokeOrgApiKey($input: RevokeOrgApiKeyInput!) {
+    revokeOrgApiKey(input: $input) { result }
+  }
+`;
+
+const DELETE_ORG_PRINCIPAL_MUTATION = /* GraphQL */ `
+  mutation ConsoleKitDeleteOrgPrincipal($input: DeleteOrgPrincipalInput!) {
+    deleteOrgPrincipal(input: $input) { result }
+  }
+`;
+
+const CREATE_ORG_PRINCIPAL_MUTATION = /* GraphQL */ `
+  mutation ConsoleKitCreateOrgPrincipal($input: CreateOrgPrincipalInput!) {
+    createOrgPrincipal(input: $input) { result }
   }
 `;
 
@@ -142,20 +269,30 @@ function connectionSelection(
 
 type OrganizationDirectorySelections = Readonly<{
   memberships: readonly string[];
+  memberProfiles: readonly string[];
   profiles: readonly string[];
+  profilePermissions: readonly string[];
   invites: readonly string[];
+  claimedInvites: readonly string[];
   permissions: readonly string[];
   settings: readonly string[];
+  defaults: readonly string[];
+  hierarchy: readonly string[];
   appMemberships: readonly string[];
   appPermissions: readonly string[];
 }>;
 
 const EMPTY_ORGANIZATION_DIRECTORY_SELECTIONS: OrganizationDirectorySelections = {
   memberships: [],
+  memberProfiles: [],
   profiles: [],
+  profilePermissions: [],
   invites: [],
+  claimedInvites: [],
   permissions: [],
   settings: [],
+  defaults: [],
+  hierarchy: [],
   appMemberships: [],
   appPermissions: []
 };
@@ -188,29 +325,80 @@ function adminDirectorySelections(
     'isDisabled',
     'isReadOnly',
     'permissions',
-      'profileId'
+    'granted',
+    'profileId'
     ])
     : [];
   const profile = relationSelection(schema, 'OrgMembership', 'profile', ['name']);
   if (profile && membershipFields.length > 0) membershipFields.push(profile);
 
+  const memberProfiles = supports(options, 'admin', 'query', 'orgMemberProfiles')
+    ? connectionSelection(schema, 'OrgMemberProfile', [
+        'id',
+        'membershipId',
+        'entityId',
+        'actorId',
+        'displayName',
+        'email',
+        'title',
+        'bio',
+        'profilePicture'
+      ])
+    : [];
   const profileFields = connectionSelection(
     schema,
     'OrgProfile',
-    ['id', 'name', 'entityId', 'permissions']
+    [
+      'id',
+      'name',
+      'slug',
+      'description',
+      'entityId',
+      'permissions',
+      'isSystem',
+      'isDefault'
+    ]
   );
   const profiles = supports(options, 'admin', 'query', 'orgProfiles') ? profileFields : [];
+  const profilePermissions = supports(options, 'admin', 'query', 'orgProfilePermissions')
+    ? connectionSelection(schema, 'OrgProfilePermission', [
+        'id',
+        'profileId',
+        'permissionId'
+      ])
+    : [];
   const inviteFields = connectionSelection(schema, 'OrgInvite', [
     'id',
     'entityId',
+    'channel',
     'email',
+    'phone',
     'senderId',
+    'receiverId',
+    'inviteToken',
     'inviteValid',
+    'inviteLimit',
+    'inviteCount',
+    'multiple',
+    'isReadOnly',
     'expiresAt',
     'profileId'
   ]);
   const invites = supports(options, 'admin', 'query', 'orgInvites') ? inviteFields : [];
-  const permissionFields = connectionSelection(schema, 'OrgPermission', ['name', 'bitstr']);
+  const claimedInvites = supports(options, 'admin', 'query', 'orgClaimedInvites')
+    ? connectionSelection(schema, 'OrgClaimedInvite', [
+        'id',
+        'entityId',
+        'senderId',
+        'receiverId',
+        'createdAt'
+      ])
+    : [];
+  const permissionFields = connectionSelection(
+    schema,
+    'OrgPermission',
+    ['id', 'name', 'description', 'bitstr']
+  );
   const permissions = supports(options, 'admin', 'query', 'orgPermissions') &&
     permissionFields.includes('name') && permissionFields.includes('bitstr')
     ? permissionFields
@@ -218,11 +406,35 @@ function adminDirectorySelections(
   const settingFields = connectionSelection(
     schema,
     'OrgMembershipSetting',
-    ['entityId', 'inviteProfileAssignmentMode']
+    [
+      'id',
+      'entityId',
+      'deleteMemberCascadeChildren',
+      'createChildCascadeOwners',
+      'createChildCascadeAdmins',
+      'createChildCascadeMembers',
+      'allowExternalMembers',
+      'inviteProfileAssignmentMode',
+      'populateMemberEmail',
+      'limitAllocationMode'
+    ]
   );
   const settings = supports(options, 'admin', 'query', 'orgMembershipSettings') &&
     settingFields.includes('entityId') && settingFields.includes('inviteProfileAssignmentMode')
     ? settingFields
+    : [];
+  const defaults = supports(options, 'admin', 'query', 'orgMembershipDefaults')
+    ? connectionSelection(schema, 'OrgMembershipDefault', ['id', 'entityId', 'isApproved'])
+    : [];
+  const hierarchy = supports(options, 'admin', 'query', 'orgChartEdges')
+    ? connectionSelection(schema, 'OrgChartEdge', [
+        'id',
+        'entityId',
+        'childId',
+        'parentId',
+        'positionTitle',
+        'positionLevel'
+      ])
     : [];
   const appMembershipFields = connectionSelection(schema, 'AppMembership', [
     'actorId',
@@ -240,10 +452,15 @@ function adminDirectorySelections(
     : [];
   return {
     memberships: membershipFields,
+    memberProfiles,
     profiles,
+    profilePermissions,
     invites,
+    claimedInvites,
     permissions,
     settings,
+    defaults,
+    hierarchy,
     appMemberships,
     appPermissions
   };
@@ -256,33 +473,18 @@ function memberStatus(member: Record<string, unknown>): string {
   return asBoolean(member.isActive) ? 'active' : 'inactive';
 }
 
-function memberRole(
-  member: Record<string, unknown>,
-  profileNames: ReadonlyMap<string, string>
-): string {
-  return asString(asRecord(member.profile)?.name) ??
-    profileNames.get(asString(member.profileId) ?? '') ??
-    (asBoolean(member.isOwner) ? 'Owner' : asBoolean(member.isAdmin) ? 'Admin' : 'Member');
-}
-
 type InviteProfileAssignmentMode = 'strict' | 'permission_only' | 'subset_only';
 
 const INVITE_PROFILE_MODE_LIMITATION: FeaturePackLimitation = {
   code: 'constructive.org-invite-profile-mode-unavailable',
   message:
-    'Invite roles use the strict fallback because no readable membership-setting row was returned. Constructive\'s stock RLS exposes this setting only to admin_members, so delegated inviters may see fewer role choices than the database would accept.'
+    'Invite profile assignment uses the strict fallback because no readable membership-setting row was returned. Constructive\'s stock RLS exposes this setting only to admin_members, so delegated inviters may see fewer profile choices than the database would accept.'
 };
 
 const PROFILE_SCOPE_LIMITATION: FeaturePackLimitation = {
   code: 'constructive.org-profile-scope-unavailable',
   message:
-    'Organization role actions are disabled because the profile entityId field is not readable. Console Kit cannot safely distinguish global profiles from profiles belonging to another visible organization.'
-};
-
-const AMBIGUOUS_PROFILE_NAME_LIMITATION: FeaturePackLimitation = {
-  code: 'constructive.org-profile-name-ambiguous',
-  message:
-    'Profiles that share the same display name are omitted from role actions because a label cannot safely identify which profile ID should be submitted.'
+    'Organization profile actions are disabled because the profile entityId field is not readable. Console Kit cannot safely distinguish global profiles from profiles belonging to another visible organization.'
 };
 
 const APPLICATION_DIRECTORY_READ_ONLY_LIMITATION: FeaturePackLimitation = {
@@ -321,21 +523,6 @@ function applicationOrganizationId(
   return `application:${encodeURIComponent(tableIdentity)}:${encodeURIComponent(rawId)}`;
 }
 
-function addUnambiguousProfile(
-  profiles: Map<string, string>,
-  ambiguousNames: Set<string>,
-  name: string,
-  id: string
-): void {
-  const existing = profiles.get(name);
-  if (existing && existing !== id) {
-    profiles.delete(name);
-    ambiguousNames.add(name);
-    return;
-  }
-  if (!ambiguousNames.has(name)) profiles.set(name, id);
-}
-
 function inviteProfileAssignmentMode(
   rows: readonly Record<string, unknown>[],
   organizationId: string | undefined
@@ -349,18 +536,30 @@ function inviteProfileAssignmentMode(
   return { mode: 'strict', known: false };
 }
 
+function isOptionalReadDenied(cause: unknown): boolean {
+  const error = cause as Readonly<{ code?: unknown; message?: unknown }> | null;
+  const code = typeof error?.code === 'string' ? error.code.toUpperCase() : '';
+  const message = typeof error?.message === 'string' ? error.message : '';
+  return code === '42501' ||
+    code === 'FORBIDDEN' ||
+    code === 'INSUFFICIENT_PRIVILEGE' ||
+    /permission denied for (?:table|relation|schema)|insufficient privilege/iu.test(message);
+}
+
 async function loadOrganizations(
   options: ConstructiveOrganizationsAdapterOptions,
   runtime: ConsoleKitAdapterContext,
   signal: AbortSignal
 ): Promise<Readonly<{
   data: OrganizationsFeatureData;
-  roleIds: ReadonlyMap<string, string>;
-  inviteRoleIds: ReadonlyMap<string, string>;
+  inviteProfileIds: ReadonlySet<string>;
   activeOrganizationMemberIds: ReadonlySet<string>;
   cancelableInviteIds: ReadonlySet<string>;
   policyLimitations: readonly FeaturePackLimitation[];
   canManageActiveOrganization: boolean;
+  canManagePermissions: boolean;
+  canManageCredentials: boolean;
+  profileScopeReadable: boolean;
   canCreateInvites: boolean;
   canAssignInviteProfiles: boolean;
   canCreateOrganization: boolean;
@@ -369,13 +568,15 @@ async function loadOrganizations(
 }>> {
   if (runtime.session.status !== 'authenticated') {
     return {
-      data: { organizations: [], members: [], invites: [], roles: [] },
-      roleIds: new Map(),
-      inviteRoleIds: new Map(),
+      data: { organizations: [], members: [], invites: [] },
+      inviteProfileIds: new Set(),
       activeOrganizationMemberIds: new Set(),
       cancelableInviteIds: new Set(),
       policyLimitations: [],
       canManageActiveOrganization: false,
+      canManagePermissions: false,
+      canManageCredentials: false,
+      profileScopeReadable: false,
       canCreateInvites: false,
       canAssignInviteProfiles: false,
       canCreateOrganization: false,
@@ -396,23 +597,58 @@ async function loadOrganizations(
     );
   }
   const profileScopeReadable = selections.profiles.includes('entityId');
+  const deniedOptionalReads = new Set<string>();
+  const optionalConnection = (
+    endpoint: ConsoleEndpointKind,
+    operationName: string,
+    fieldName: string,
+    nodeSelection: string
+  ): Promise<Record<string, unknown>[]> => executeConstructiveConnectionQuery(
+    runtime,
+    endpoint,
+    { operationName, fieldName, nodeSelection },
+    signal
+  ).catch((cause) => {
+    if (!isOptionalReadDenied(cause)) throw cause;
+    deniedOptionalReads.add(`${endpoint}:${fieldName}`);
+    return [];
+  });
   const optionalAdminConnection = (
     operationName: string,
     fieldName: string,
     nodeFields: readonly string[]
   ): Promise<Record<string, unknown>[]> => nodeFields.length > 0
-    ? executeConstructiveConnectionQuery(runtime, 'admin', {
-        operationName,
-        fieldName,
-        nodeSelection: nodeFields.join(' ')
-      }, signal)
+    ? optionalConnection('admin', operationName, fieldName, nodeFields.join(' '))
     : Promise.resolve([]);
+  const authSchema = options.discovery.getSchemas().auth;
+  const optionalAuthConnection = (
+    operationName: string,
+    fieldName: string,
+    typeName: string,
+    desiredFields: readonly string[]
+  ): Promise<Record<string, unknown>[]> => {
+    if (!authSchema || !supports(options, 'auth', 'query', fieldName)) {
+      return Promise.resolve([]);
+    }
+    const fields = connectionSelection(authSchema, typeName, desiredFields);
+    return fields.length > 0
+      ? optionalConnection('auth', operationName, fieldName, fields.join(' '))
+      : Promise.resolve([]);
+  };
   const [
     memberships,
+    memberProfileRows,
     profileRows,
+    profilePermissionRows,
     inviteRows,
+    claimedInviteRows,
     permissionRows,
     settingRows,
+    defaultRows,
+    hierarchyRows,
+    apiKeyRows,
+    principalEntityRows,
+    principalRows,
     appMembershipRows,
     appPermissionRows,
     userRows,
@@ -426,14 +662,29 @@ async function loadOrganizations(
         selections.memberships
       ),
       optionalAdminConnection(
+        'ConsoleKitOrganizationMemberProfilesPage',
+        'orgMemberProfiles',
+        selections.memberProfiles
+      ),
+      optionalAdminConnection(
         'ConsoleKitOrganizationMembershipsProfilesPage',
         'orgProfiles',
         selections.profiles
       ),
       optionalAdminConnection(
+        'ConsoleKitOrganizationProfilePermissionsPage',
+        'orgProfilePermissions',
+        selections.profilePermissions
+      ),
+      optionalAdminConnection(
         'ConsoleKitOrganizationMembershipsInvitesPage',
         'orgInvites',
         selections.invites
+      ),
+      optionalAdminConnection(
+        'ConsoleKitOrganizationClaimedInvitesPage',
+        'orgClaimedInvites',
+        selections.claimedInvites
       ),
       optionalAdminConnection(
         'ConsoleKitOrganizationMembershipsPermissionsPage',
@@ -444,6 +695,34 @@ async function loadOrganizations(
         'ConsoleKitOrganizationMembershipsSettingsPage',
         'orgMembershipSettings',
         selections.settings
+      ),
+      optionalAdminConnection(
+        'ConsoleKitOrganizationMembershipDefaultsPage',
+        'orgMembershipDefaults',
+        selections.defaults
+      ),
+      optionalAdminConnection(
+        'ConsoleKitOrganizationHierarchyPage',
+        'orgChartEdges',
+        selections.hierarchy
+      ),
+      optionalAuthConnection(
+        'ConsoleKitOrganizationApiKeysPage',
+        'orgApiKeyLists',
+        'OrgApiKeyList',
+        ['id', 'keyId', 'name', 'principalId', 'orgId', 'expiresAt', 'revokedAt', 'lastUsedAt', 'createdAt']
+      ),
+      optionalAuthConnection(
+        'ConsoleKitOrganizationPrincipalEntitiesPage',
+        'principalEntities',
+        'PrincipalEntity',
+        ['id', 'principalId', 'entityId']
+      ),
+      optionalAuthConnection(
+        'ConsoleKitOrganizationPrincipalsPage',
+        'principals',
+        'Principal',
+        ['id', 'name', 'useAdminOwner', 'isReadOnly', 'bypassStepUp']
       ),
       optionalAdminConnection(
         'ConsoleKitOrganizationAppMembershipsPage',
@@ -463,22 +742,24 @@ async function loadOrganizations(
           }, signal)
         : Promise.resolve([]),
       applicationContract
-        ? executeConstructiveConnectionQuery(runtime, applicationSource!.kind, {
-            operationName: 'ConsoleKitApplicationOrganizationsPage',
-            fieldName: applicationContract.organizations.root,
-            nodeSelection: metaSelection([
+        ? optionalConnection(
+            applicationSource!.kind,
+            'ConsoleKitApplicationOrganizationsPage',
+            applicationContract.organizations.root,
+            metaSelection([
               applicationContract.organizations.id,
               applicationContract.organizations.name,
               applicationContract.organizations.slug,
               applicationContract.organizations.avatar
             ])
-          }, signal)
+          )
         : Promise.resolve([]),
       applicationContract?.members
-        ? executeConstructiveConnectionQuery(runtime, applicationSource!.kind, {
-            operationName: 'ConsoleKitApplicationOrganizationMembersPage',
-            fieldName: applicationContract.members.root,
-            nodeSelection: metaSelection([
+        ? optionalConnection(
+            applicationSource!.kind,
+            'ConsoleKitApplicationOrganizationMembersPage',
+            applicationContract.members.root,
+            metaSelection([
               applicationContract.members.id,
               applicationContract.members.organizationId,
               applicationContract.members.userId,
@@ -487,7 +768,7 @@ async function loadOrganizations(
               applicationContract.members.joinedAt,
               applicationContract.members.invitedAt
             ])
-          }, signal)
+          )
         : Promise.resolve([])
     ]);
   const users = new Map(userRows.flatMap((user) => {
@@ -506,9 +787,21 @@ async function loadOrganizations(
     (membership) => asString(membership.actorId) === actorId
   );
   const memberCount = new Map<string, number>();
+  const ownerCountByOrganization = new Map<string, number>();
   for (const membership of memberships) {
     const entityId = asString(membership.entityId);
-    if (entityId) memberCount.set(entityId, (memberCount.get(entityId) ?? 0) + 1);
+    if (!entityId) continue;
+    memberCount.set(entityId, (memberCount.get(entityId) ?? 0) + 1);
+    if (
+      asBoolean(membership.isOwner) &&
+      !asBoolean(membership.isDisabled) &&
+      !asBoolean(membership.isBanned)
+    ) {
+      ownerCountByOrganization.set(
+        entityId,
+        (ownerCountByOrganization.get(entityId) ?? 0) + 1
+      );
+    }
   }
   const managedOrganizations: OrganizationSummary[] = actorMemberships.flatMap((membership) => {
     const entityId = asString(membership.entityId);
@@ -565,20 +858,52 @@ async function loadOrganizations(
   const activeOrganizationId = organizations.some((item) => item.id === configuredOrganization)
     ? configuredOrganization ?? undefined
     : organizations[0]?.id;
-  const roleIds = new Map<string, string>();
-  const ambiguousRoleNames = new Set<string>();
   const profileNames = new Map<string, string>();
   for (const profile of profileRows) {
     const id = asString(profile.id);
     const name = asString(profile.name);
-    const entityId = asString(profile.entityId);
     if (id && name) {
       profileNames.set(id, name);
-      if (profileScopeReadable && (!entityId || entityId === activeOrganizationId)) {
-        addUnambiguousProfile(roleIds, ambiguousRoleNames, name, id);
-      }
     }
   }
+  const activeIsApplicationOrganization = Boolean(
+    activeOrganizationId && applicationOrganizationIds.has(activeOrganizationId)
+  );
+  const actorMembership = actorMemberships.find(
+    (membership) => asString(membership.entityId) === activeOrganizationId
+  );
+  const hasActiveMembership = asBoolean(actorMembership?.isActive);
+  const hasAdministrativeRole = Boolean(
+    hasActiveMembership && actorMembership &&
+    (asBoolean(actorMembership.isOwner) || asBoolean(actorMembership.isAdmin))
+  );
+  const hasActiveAdminRole = Boolean(
+    hasActiveMembership && actorMembership && asBoolean(actorMembership.isAdmin)
+  );
+  const hasActiveOwnerRole = Boolean(
+    hasActiveMembership && actorMembership && asBoolean(actorMembership.isOwner)
+  );
+  const hasNamedPermission = (permissionName: string) => hasActiveMembership &&
+    hasEffectivePermission(actorMembership, permissionRows, permissionName);
+  const canManageActiveOrganization = !activeIsApplicationOrganization && (
+    hasAdministrativeRole || hasNamedPermission('admin_members')
+  );
+  const canManagePermissions = !activeIsApplicationOrganization && (
+    hasAdministrativeRole || hasNamedPermission('admin_permissions')
+  );
+  const memberProfilesByMembership = new Map(
+    memberProfileRows.flatMap((profile) => {
+      const membershipId = asString(profile.membershipId);
+      return membershipId ? [[membershipId, profile] as const] : [];
+    })
+  );
+  const activeMembershipRows = memberships.filter(
+    (membership) => asString(membership.entityId) === activeOrganizationId
+  );
+  const ownerCount = activeMembershipRows.filter((membership) =>
+    asBoolean(membership.isOwner) && !asBoolean(membership.isDisabled) &&
+    !asBoolean(membership.isBanned)
+  ).length;
   const managedMembers: OrganizationMember[] = memberships
     .filter((membership) => asString(membership.entityId) === activeOrganizationId)
     .flatMap((membership) => {
@@ -586,19 +911,61 @@ async function loadOrganizations(
       const userId = asString(membership.actorId);
       if (!id || !userId) return [];
       const user = users.get(userId);
+      const profile = memberProfilesByMembership.get(id);
+      const governance = asBoolean(membership.isOwner)
+        ? 'owner' as const
+        : asBoolean(membership.isAdmin)
+          ? 'admin' as const
+          : 'member' as const;
+      const targetIsOwner = governance === 'owner';
+      const canChangeOwner = hasActiveOwnerRole && (!targetIsOwner || ownerCount > 1);
+      const canChangeLifecycle = canManageActiveOrganization && !targetIsOwner;
       return [{
         id,
         userId,
-        name: asString(user?.displayName) ?? asString(user?.username) ?? userId,
-        email: asString(user?.username)?.includes('@') ? asString(user?.username)! : 'Private email',
-        avatarUrl: imageUrl(user?.profilePicture),
-        role: memberRole(membership, profileNames),
-        status: memberStatus(membership)
+        name: asString(profile?.displayName) ?? asString(user?.displayName) ??
+          asString(user?.username) ?? userId,
+        email: asString(profile?.email) ?? (
+          asString(user?.username)?.includes('@') ? asString(user?.username)! : 'Private email'
+        ),
+        avatarUrl: imageUrl(profile?.profilePicture) ?? imageUrl(user?.profilePicture),
+        governance,
+        status: memberStatus(membership) as OrganizationMember['status'],
+        isApproved: asBoolean(membership.isApproved),
+        isBanned: asBoolean(membership.isBanned),
+        isDisabled: asBoolean(membership.isDisabled),
+        isActive: asBoolean(membership.isActive),
+        isExternal: asBoolean(membership.isExternal),
+        isReadOnly: asBoolean(membership.isReadOnly),
+        profileId: asString(membership.profileId) ?? undefined,
+        profileName: profileNames.get(asString(membership.profileId) ?? ''),
+        directPermissions: asString(membership.granted) ?? undefined,
+        effectivePermissions: asString(membership.permissions) ?? undefined,
+        memberProfile: profile
+          ? {
+              id: asString(profile.id) ?? undefined,
+              displayName: asString(profile.displayName) ?? undefined,
+              email: asString(profile.email) ?? undefined,
+              title: asString(profile.title) ?? undefined,
+              bio: asString(profile.bio) ?? undefined,
+              avatarUrl: imageUrl(profile.profilePicture)
+            }
+          : undefined,
+        actionPolicy: {
+          approveMember: canChangeLifecycle,
+          banMember: canChangeLifecycle,
+          disableMember: canChangeLifecycle,
+          markMemberExternal: canChangeLifecycle,
+          markMemberReadOnly: canChangeLifecycle,
+          removeMember: canChangeLifecycle,
+          grantAdmin: hasActiveAdminRole && !targetIsOwner,
+          grantOwner: canChangeOwner,
+          assignProfile: canManageActiveOrganization,
+          grantPermission: canManagePermissions,
+          updateMemberProfile: canManageActiveOrganization || userId === actorId
+        }
       }];
     });
-  const activeIsApplicationOrganization = Boolean(
-    activeOrganizationId && applicationOrganizationIds.has(activeOrganizationId)
-  );
   const activeApplicationOrganizationRawId = activeOrganizationId
     ? applicationOrganizationRawIds.get(activeOrganizationId)
     : undefined;
@@ -630,49 +997,35 @@ async function loadOrganizations(
               ? asString(user?.username)!
               : 'Private email',
             avatarUrl: imageUrl(user?.profilePicture),
-            role: contract.role
-              ? asString(membership[contract.role]) ?? 'Member'
-              : 'Member',
+            profileName: contract.role
+              ? asString(membership[contract.role]) ?? undefined
+              : undefined,
+            governance: 'member' as const,
             status: contract.status
-              ? asString(membership[contract.status]) ?? 'active'
-              : joinedAt || !invitedAt ? 'active' : 'pending'
+              ? (asString(membership[contract.status]) ?? 'active') as OrganizationMember['status']
+              : joinedAt || !invitedAt ? 'active' as const : 'pending' as const,
+            isApproved: true,
+            isBanned: false,
+            isDisabled: false,
+            isActive: true,
+            isExternal: false,
+            isReadOnly: true,
+            actionPolicy: {}
           }];
         })
     : [];
   const members = activeIsApplicationOrganization
     ? applicationMembers
     : managedMembers;
-  const actorMembership = actorMemberships.find(
-    (membership) => asString(membership.entityId) === activeOrganizationId
-  );
-  const hasActiveMembership = asBoolean(actorMembership?.isActive);
-  const hasAdministrativeRole = Boolean(
-    hasActiveMembership && actorMembership &&
-    (asBoolean(actorMembership.isOwner) || asBoolean(actorMembership.isAdmin))
-  );
-  const hasActiveAdminRole = Boolean(
-    hasActiveMembership && actorMembership && asBoolean(actorMembership.isAdmin)
-  );
-  const hasNamedPermission = (permissionName: string) => hasActiveMembership &&
-    hasEffectivePermission(
-      actorMembership,
-      permissionRows,
-      permissionName
-    );
-  const canManageActiveOrganization = !activeIsApplicationOrganization && (
-    hasAdministrativeRole || hasNamedPermission('admin_members')
-  );
   const assignmentMode = inviteProfileAssignmentMode(settingRows, activeOrganizationId);
   const hasAssignProfiles = hasNamedPermission('assign_profiles');
   const canAssignInviteProfiles = !activeIsApplicationOrganization && profileScopeReadable && (
     hasAdministrativeRole ||
     (hasActiveMembership && assignmentMode.mode === 'subset_only') || hasAssignProfiles
   );
-  const inviteRoleIds = new Map<string, string>();
-  const ambiguousInviteRoleNames = new Set<string>();
+  const inviteProfileIds = new Set<string>();
   for (const profile of profileRows) {
     const id = asString(profile.id);
-    const name = asString(profile.name);
     const entityId = asString(profile.entityId);
     const belongsToActiveOrganization = !entityId || entityId === activeOrganizationId;
     const satisfiesSubset = assignmentMode.mode === 'permission_only' || permissionMaskIsSubset(
@@ -681,12 +1034,11 @@ async function loadOrganizations(
     );
     if (
       id &&
-      name &&
       belongsToActiveOrganization &&
       canAssignInviteProfiles &&
       (hasAdministrativeRole || satisfiesSubset)
     ) {
-      addUnambiguousProfile(inviteRoleIds, ambiguousInviteRoleNames, name, id);
+      inviteProfileIds.add(id);
     }
   }
   const cancelableInviteIds = new Set<string>();
@@ -695,24 +1047,189 @@ async function loadOrganizations(
     .flatMap((invite) => {
       const id = asString(invite.id);
       const email = asString(invite.email);
-      if (!id || !email) return [];
+      const phone = asString(invite.phone);
+      if (!id) return [];
+      const rawChannel = asString(invite.channel);
+      const channel = rawChannel === 'sms' || rawChannel === 'link'
+        ? rawChannel
+        : email ? 'email' as const : phone ? 'sms' as const : 'link' as const;
       const canCancel = !activeIsApplicationOrganization && (
-        hasActiveAdminRole || asString(invite.senderId) === actorId
+        hasActiveAdminRole || hasNamedPermission('admin_invites') ||
+        asString(invite.senderId) === actorId
       );
       if (canCancel) cancelableInviteIds.add(id);
       return [{
         id,
-        email,
-        role: profileNames.get(asString(invite.profileId) ?? ''),
+        channel,
+        recipient: email ?? phone ?? 'Reusable link',
+        email: email ?? undefined,
+        phone: phone ?? undefined,
+        token: channel === 'link' ? asString(invite.inviteToken) ?? undefined : undefined,
+        profileId: asString(invite.profileId) ?? undefined,
+        profileName: profileNames.get(asString(invite.profileId) ?? ''),
         status: asBoolean(invite.inviteValid) ? 'pending' : 'expired',
         expiresAt: asString(invite.expiresAt) ?? undefined,
+        multiple: asBoolean(invite.multiple),
+        inviteLimit: typeof invite.inviteLimit === 'number' ? invite.inviteLimit : undefined,
+        inviteCount: typeof invite.inviteCount === 'number' ? invite.inviteCount : undefined,
+        isReadOnly: asBoolean(invite.isReadOnly),
         actionPolicy: { cancelInvite: canCancel }
       }];
     });
-  const applicationRoles = new Set(
-    applicationMembers.map((member) => member.role).filter(Boolean)
+  const permissionIdsByProfile = new Map<string, string[]>();
+  for (const row of profilePermissionRows) {
+    const profileId = asString(row.profileId);
+    const permissionId = asString(row.permissionId);
+    if (!profileId || !permissionId) continue;
+    const existing = permissionIdsByProfile.get(profileId) ?? [];
+    existing.push(permissionId);
+    permissionIdsByProfile.set(profileId, existing);
+  }
+  const permissions: OrganizationPermission[] = permissionRows.flatMap((permission) => {
+    const id = asString(permission.id);
+    const name = asString(permission.name);
+    const bitstr = asString(permission.bitstr);
+    return id && name && bitstr
+      ? [{
+          id,
+          name,
+          description: asString(permission.description) ?? undefined,
+          bitstr
+        }]
+      : [];
+  });
+  const profiles: OrganizationAccessProfile[] = profileRows
+    .filter((profile) => {
+      const entityId = asString(profile.entityId);
+      return !entityId || entityId === activeOrganizationId;
+    })
+    .flatMap((profile) => {
+      const id = asString(profile.id);
+      const name = asString(profile.name);
+      if (!id || !name) return [];
+      const isSystem = asBoolean(profile.isSystem);
+      return [{
+        id,
+        name,
+        slug: asString(profile.slug) ?? undefined,
+        description: asString(profile.description) ?? undefined,
+        permissions: asString(profile.permissions) ?? '',
+        permissionIds: permissionIdsByProfile.get(id) ?? [],
+        isSystem,
+        isDefault: asBoolean(profile.isDefault),
+        actionPolicy: {
+          updateAccessProfile: canManagePermissions && profileScopeReadable && !isSystem,
+          deleteAccessProfile: canManagePermissions && profileScopeReadable && !isSystem,
+          setProfilePermission: canManagePermissions && profileScopeReadable && !isSystem
+        }
+      }];
+    });
+  const settingsRow = settingRows.find(
+    (row) => asString(row.entityId) === activeOrganizationId
   );
+  const settingsId = asString(settingsRow?.id);
+  const membershipSettings: OrganizationMembershipSettings | undefined = settingsId
+    ? {
+        id: settingsId,
+        deleteMemberCascadeChildren: asBoolean(settingsRow?.deleteMemberCascadeChildren),
+        createChildCascadeOwners: asBoolean(settingsRow?.createChildCascadeOwners),
+        createChildCascadeAdmins: asBoolean(settingsRow?.createChildCascadeAdmins),
+        createChildCascadeMembers: asBoolean(settingsRow?.createChildCascadeMembers),
+        allowExternalMembers: asBoolean(settingsRow?.allowExternalMembers),
+        inviteProfileAssignmentMode: inviteProfileAssignmentMode(
+          settingRows,
+          activeOrganizationId
+        ).mode,
+        populateMemberEmail: asBoolean(settingsRow?.populateMemberEmail),
+        limitAllocationMode: asString(settingsRow?.limitAllocationMode) ?? 'none'
+      }
+    : undefined;
+  const defaultRow = defaultRows.find(
+    (row) => asString(row.entityId) === activeOrganizationId
+  );
+  const defaultId = asString(defaultRow?.id);
+  const membershipDefault: OrganizationMembershipDefault | undefined = defaultId
+    ? { id: defaultId, isApproved: asBoolean(defaultRow?.isApproved) }
+    : undefined;
+  const hierarchy: OrganizationChartEdge[] = hierarchyRows
+    .filter((edge) => asString(edge.entityId) === activeOrganizationId)
+    .flatMap((edge) => {
+      const id = asString(edge.id);
+      const childId = asString(edge.childId);
+      const parentId = asString(edge.parentId);
+      if (!id || !childId || !parentId) return [];
+      return [{
+        id,
+        childId,
+        parentId,
+        positionTitle: asString(edge.positionTitle) ?? undefined,
+        positionLevel: typeof edge.positionLevel === 'number'
+          ? edge.positionLevel
+          : undefined,
+        actionPolicy: { removeHierarchyEdge: canManageActiveOrganization }
+      }];
+    });
+  const claimedInvites: OrganizationClaimedInvite[] = claimedInviteRows
+    .filter((row) => asString(row.entityId) === activeOrganizationId)
+    .flatMap((row) => {
+      const id = asString(row.id);
+      const senderId = asString(row.senderId);
+      const receiverId = asString(row.receiverId);
+      return id && senderId && receiverId
+        ? [{
+            id,
+            senderId,
+            receiverId,
+            createdAt: asString(row.createdAt) ?? undefined
+          }]
+        : [];
+    });
+  const apiKeys: OrganizationApiKey[] = apiKeyRows
+    .filter((row) => asString(row.orgId) === activeOrganizationId && !asString(row.revokedAt))
+    .flatMap((row) => {
+      const id = asString(row.keyId) ?? asString(row.id);
+      const principalId = asString(row.principalId);
+      if (!id || !principalId) return [];
+      return [{
+        id,
+        principalId,
+        name: asString(row.name) ?? undefined,
+        createdAt: asString(row.createdAt) ?? undefined,
+        expiresAt: asString(row.expiresAt) ?? undefined,
+        lastUsedAt: asString(row.lastUsedAt) ?? undefined,
+        actionPolicy: { revokeOrganizationApiKey: hasAdministrativeRole }
+      }];
+    });
+  const activePrincipalIds = new Set(principalEntityRows
+    .filter((row) => asString(row.entityId) === activeOrganizationId)
+    .flatMap((row) => {
+      const principalId = asString(row.principalId);
+      return principalId ? [principalId] : [];
+    }));
+  const principals: OrganizationPrincipal[] = principalRows
+    .filter((row) => activePrincipalIds.has(asString(row.id) ?? ''))
+    .flatMap((row) => {
+      const id = asString(row.id);
+      const name = asString(row.name);
+      return id && name
+        ? [{
+            id,
+            name,
+            type: asBoolean(row.useAdminOwner) ? 'Owner delegated' :
+              asBoolean(row.isReadOnly) ? 'Read only' : 'Custom',
+            useAdminOwner: asBoolean(row.useAdminOwner),
+            isReadOnly: asBoolean(row.isReadOnly),
+            bypassStepUp: asBoolean(row.bypassStepUp),
+            actionPolicy: { revokeOrganizationPrincipal: hasAdministrativeRole }
+          }]
+        : [];
+    });
   const policyLimitations = [
+    ...[...deniedOptionalReads].sort().map((coordinate) => ({
+      code: `constructive.optional-read-denied.${coordinate.replaceAll(':', '.')}`,
+      message:
+        `The current session cannot read the optional ${coordinate} organization surface, so Console Kit omitted it. Database authorization remains authoritative.`
+    })),
     ...(activeIsApplicationOrganization
       ? [APPLICATION_DIRECTORY_READ_ONLY_LIMITATION]
       : []),
@@ -722,30 +1239,88 @@ async function loadOrganizations(
     ...(activeOrganizationId && !activeIsApplicationOrganization &&
       selections.profiles.length > 0 && !profileScopeReadable
       ? [PROFILE_SCOPE_LIMITATION]
-      : []),
-    ...(ambiguousRoleNames.size > 0 || ambiguousInviteRoleNames.size > 0
-      ? [AMBIGUOUS_PROFILE_NAME_LIMITATION]
       : [])
   ];
   return {
     data: {
-      organizations,
+      organizations: organizations.map((organization) => {
+        const applicationOrganization = applicationOrganizationIds.has(organization.id);
+        const membership = actorMemberships.find(
+          (candidate) => asString(candidate.entityId) === organization.id
+        );
+        const active = asBoolean(membership?.isActive);
+        const owner = active && asBoolean(membership?.isOwner);
+        const banned = asBoolean(membership?.isBanned);
+        const canAdminAccount = active && Boolean(
+          membership && hasEffectivePermission(membership, permissionRows, 'admin_account')
+        );
+        const canLeave = Boolean(membership) && !banned && (
+          !owner ||
+          (ownerCountByOrganization.get(organization.id) ?? 0) > 1 ||
+          (memberCount.get(organization.id) ?? 0) <= 1
+        );
+        return {
+          ...organization,
+          source: applicationOrganization
+            ? 'application-meta' as const
+            : 'constructive-membership' as const,
+          actionPolicy: applicationOrganization
+            ? {}
+            : {
+                updateOrganization: owner || canAdminAccount,
+                deleteOrganization: owner,
+                leaveOrganization: canLeave
+              }
+        };
+      }),
       activeOrganizationId,
+      currentActorId: actorId,
       members,
-      invites,
-      roles: activeIsApplicationOrganization
-        ? [...applicationRoles]
-        : [...roleIds.keys()],
-      inviteRoles: [...inviteRoleIds.keys()]
+      invites: selections.invites.length > 0 && !deniedOptionalReads.has('admin:orgInvites')
+        ? invites
+        : undefined,
+      claimedInvites: selections.claimedInvites.length > 0 &&
+        !deniedOptionalReads.has('admin:orgClaimedInvites')
+        ? claimedInvites
+        : undefined,
+      profiles: selections.profiles.length > 0 && !deniedOptionalReads.has('admin:orgProfiles')
+        ? profiles
+        : undefined,
+      permissions: selections.permissions.length > 0 &&
+        !deniedOptionalReads.has('admin:orgPermissions')
+        ? permissions
+        : undefined,
+      membershipSettings: deniedOptionalReads.has('admin:orgMembershipSettings')
+        ? undefined
+        : membershipSettings,
+      membershipDefault: deniedOptionalReads.has('admin:orgMembershipDefaults')
+        ? undefined
+        : membershipDefault,
+      hierarchy: selections.hierarchy.length > 0 && !deniedOptionalReads.has('admin:orgChartEdges')
+        ? hierarchy
+        : undefined,
+      apiKeys: supports(options, 'auth', 'query', 'orgApiKeyLists') &&
+        !deniedOptionalReads.has('auth:orgApiKeyLists')
+        ? apiKeys
+        : undefined,
+      principals: supports(options, 'auth', 'query', 'principalEntities') &&
+        supports(options, 'auth', 'query', 'principals') &&
+        !deniedOptionalReads.has('auth:principalEntities') &&
+        !deniedOptionalReads.has('auth:principals')
+        ? principals
+        : undefined,
+      assignableInviteProfileIds: [...inviteProfileIds]
     },
-    roleIds,
-    inviteRoleIds,
+    inviteProfileIds,
     activeOrganizationMemberIds: activeIsApplicationOrganization
       ? new Set()
       : new Set(managedMembers.map((member) => member.id)),
     cancelableInviteIds,
     policyLimitations,
     canManageActiveOrganization,
+    canManagePermissions,
+    canManageCredentials: hasAdministrativeRole,
+    profileScopeReadable,
     canCreateInvites: !activeIsApplicationOrganization && (
       hasAdministrativeRole || hasNamedPermission('create_invites')
     ),
@@ -943,8 +1518,27 @@ export function createConstructiveOrganizationsAdapter(
           ['id', 'orgMembershipPatch'],
           { field: 'orgMembershipPatch', requiredFields: ['isDisabled'] }
         );
-      const canGrantProfile = loaded.canManageActiveOrganization && grantSupportsEntity &&
-        loaded.roleIds.size > 0 &&
+      const canUpdateMembershipLifecycle = loaded.canManageActiveOrganization &&
+        supportsConstructiveMutationInput(
+          adminSchema,
+          'updateOrgMembership',
+          ['id', 'orgMembershipPatch'],
+          {
+            field: 'orgMembershipPatch',
+            requiredFields: [
+              'isApproved',
+              'isBanned',
+              'isDisabled',
+              'isExternal',
+              'isReadOnly'
+            ]
+          }
+        );
+      const canDeleteMembership = loaded.canManageActiveOrganization &&
+        supportsConstructiveMutationInput(adminSchema, 'deleteOrgMembership', ['id']);
+      const canSetMemberProfile = loaded.canManageActiveOrganization &&
+        loaded.profileScopeReadable && grantSupportsEntity &&
+        (loaded.data.profiles?.length ?? 0) > 0 &&
         supportsConstructiveMutationInput(
           adminSchema,
           'createOrgProfileGrant',
@@ -954,13 +1548,31 @@ export function createConstructiveOrganizationsAdapter(
             requiredFields: ['membershipId', 'profileId', 'isGrant']
           }
         );
+      const inviteSupportsChannel = supportsConstructiveMutationInput(
+        adminSchema,
+        'createOrgInvite',
+        ['orgInvite'],
+        { field: 'orgInvite', requiredFields: ['channel'] }
+      );
+      const inviteSupportsEmail = supportsConstructiveMutationInput(
+        adminSchema,
+        'createOrgInvite',
+        ['orgInvite'],
+        { field: 'orgInvite', requiredFields: ['email'] }
+      );
+      const inviteSupportsPhone = supportsConstructiveMutationInput(
+        adminSchema,
+        'createOrgInvite',
+        ['orgInvite'],
+        { field: 'orgInvite', requiredFields: ['phone'] }
+      );
       const canInvite = loaded.canCreateInvites && Boolean(activeOrganizationId) &&
         supportsConstructiveMutationInput(
           adminSchema,
           'createOrgInvite',
           ['orgInvite'],
-          { field: 'orgInvite', requiredFields: ['entityId', 'email'] }
-        );
+          { field: 'orgInvite', requiredFields: ['entityId'] }
+        ) && (inviteSupportsEmail || inviteSupportsPhone || inviteSupportsChannel);
       const inviteSupportsExpiry = supportsConstructiveMutationInput(
         adminSchema,
         'createOrgInvite',
@@ -973,13 +1585,189 @@ export function createConstructiveOrganizationsAdapter(
         ['orgInvite'],
         { field: 'orgInvite', requiredFields: ['profileId'] }
       );
+      const inviteSupportsMultiple = supportsConstructiveMutationInput(
+        adminSchema,
+        'createOrgInvite',
+        ['orgInvite'],
+        { field: 'orgInvite', requiredFields: ['multiple', 'inviteLimit'] }
+      );
+      const inviteSupportsReadOnly = supportsConstructiveMutationInput(
+        adminSchema,
+        'createOrgInvite',
+        ['orgInvite'],
+        { field: 'orgInvite', requiredFields: ['isReadOnly'] }
+      );
       const canDeleteInvite = loaded.cancelableInviteIds.size > 0 &&
         supportsConstructiveMutationInput(adminSchema, 'deleteOrgInvite', ['id']);
+      const canGrantAdmin = loaded.data.members.some(
+        (member) => member.actionPolicy?.grantAdmin
+      ) && supportsConstructiveMutationInput(
+        adminSchema,
+        'createOrgAdminGrant',
+        ['orgAdminGrant'],
+        { field: 'orgAdminGrant', requiredFields: ['actorId', 'entityId', 'isGrant'] }
+      );
+      const canGrantOwner = loaded.data.members.some(
+        (member) => member.actionPolicy?.grantOwner
+      ) && supportsConstructiveMutationInput(
+        adminSchema,
+        'createOrgOwnerGrant',
+        ['orgOwnerGrant'],
+        { field: 'orgOwnerGrant', requiredFields: ['actorId', 'entityId', 'isGrant'] }
+      );
+      const canGrantPermission = loaded.data.members.some(
+        (member) => member.actionPolicy?.grantPermission
+      ) && supportsConstructiveMutationInput(
+        adminSchema,
+        'createOrgGrant',
+        ['orgGrant'],
+        {
+          field: 'orgGrant',
+          requiredFields: ['actorId', 'entityId', 'permissions', 'isGrant']
+        }
+      );
+      const canDefineProfile = loaded.data.profiles?.some(
+        (profile) => profile.actionPolicy?.setProfilePermission
+      ) === true && supportsConstructiveMutationInput(
+        adminSchema,
+        'createOrgProfileDefinitionGrant',
+        ['orgProfileDefinitionGrant'],
+        {
+          field: 'orgProfileDefinitionGrant',
+          requiredFields: ['profileId', 'permissionId', 'isGrant']
+        }
+      );
+      const canCreateProfile = loaded.canManagePermissions &&
+        supportsConstructiveMutationInput(
+        adminSchema,
+        'createOrgProfile',
+        ['orgProfile'],
+        { field: 'orgProfile', requiredFields: ['entityId', 'name'] }
+      );
+      const canUpdateProfile = loaded.data.profiles?.some(
+        (profile) => profile.actionPolicy?.updateAccessProfile
+      ) === true && supportsConstructiveMutationInput(
+        adminSchema,
+        'updateOrgProfile',
+        ['id', 'orgProfilePatch'],
+        { field: 'orgProfilePatch', requiredFields: ['name', 'description'] }
+      );
+      const canDeleteProfile = loaded.data.profiles?.some(
+        (profile) => profile.actionPolicy?.deleteAccessProfile
+      ) === true && supportsConstructiveMutationInput(
+        adminSchema,
+        'deleteOrgProfile',
+        ['id']
+      );
+      const canUpdateSettings = loaded.canManageActiveOrganization &&
+        Boolean(loaded.data.membershipSettings) &&
+        supportsConstructiveMutationInput(
+          adminSchema,
+          'updateOrgMembershipSetting',
+          ['id', 'orgMembershipSettingPatch']
+        );
+      const canUpdateDefault = loaded.canManageActiveOrganization &&
+        Boolean(loaded.data.membershipDefault) &&
+        supportsConstructiveMutationInput(
+          adminSchema,
+          'updateOrgMembershipDefault',
+          ['id', 'orgMembershipDefaultPatch'],
+          { field: 'orgMembershipDefaultPatch', requiredFields: ['isApproved'] }
+        );
+      const canCreateMemberProfile = supportsConstructiveMutationInput(
+        adminSchema,
+        'createOrgMemberProfile',
+        ['orgMemberProfile'],
+        {
+          field: 'orgMemberProfile',
+          requiredFields: ['membershipId', 'entityId', 'actorId', 'displayName']
+        }
+      );
+      const canUpdateMemberProfile = supportsConstructiveMutationInput(
+        adminSchema,
+        'updateOrgMemberProfile',
+        ['id', 'orgMemberProfilePatch'],
+        { field: 'orgMemberProfilePatch', requiredFields: ['displayName'] }
+      );
+      const canManageHierarchy = loaded.canManageActiveOrganization &&
+        supportsConstructiveMutationInput(
+        adminSchema,
+        'createOrgChartEdgeGrant',
+        ['orgChartEdgeGrant'],
+        {
+          field: 'orgChartEdgeGrant',
+          requiredFields: ['entityId', 'childId', 'parentId', 'isGrant']
+        }
+      );
+      const canUpdateOrganization = Boolean(activeOrganizationId) &&
+        supportsConstructiveMutationInput(
+          authSchema,
+          'updateUser',
+          ['id', 'userPatch'],
+          { field: 'userPatch', requiredFields: ['displayName', 'username'] }
+        );
+      const canDeleteOrganization = Boolean(activeOrganizationId) &&
+        supportsConstructiveMutationInput(authSchema, 'deleteUser', ['id']);
+      const canCreateApiKey = loaded.canManageCredentials &&
+        (loaded.data.principals?.length ?? 0) > 0 && supportsConstructiveMutationInput(
+        authSchema,
+        'createOrgApiKey',
+        ['orgId', 'principalId', 'keyName']
+      );
+      const canRevokeApiKey = loaded.canManageCredentials && supportsConstructiveMutationInput(
+        authSchema,
+        'revokeOrgApiKey',
+        ['orgId', 'keyId']
+      );
+      const canRevokePrincipal = loaded.canManageCredentials && supportsConstructiveMutationInput(
+        authSchema,
+        'deleteOrgPrincipal',
+        ['principalId']
+      );
+      const canCreatePrincipal = loaded.canManageCredentials &&
+        supportsConstructiveMutationInput(
+          authSchema,
+          'createOrgPrincipal',
+          ['name', 'orgId', 'useAdminOwner', 'isReadOnly', 'bypassStepUp']
+        );
+      const activeMemberIds = new Set(loaded.data.members.map((member) => member.id));
+      const activeMemberActorIds = new Set(loaded.data.members.map((member) => member.userId));
+      const membersById = new Map(loaded.data.members.map((member) => [member.id, member]));
+      const profileIds = new Set(loaded.data.profiles?.map((profile) => profile.id) ?? []);
+      const permissionIds = new Set(loaded.data.permissions?.map((permission) => permission.id) ?? []);
+      const permissionMasks = new Set(
+        loaded.data.permissions?.map((permission) => permission.bitstr) ?? []
+      );
+      const hierarchyEdgeIds = new Set(loaded.data.hierarchy?.map((edge) => edge.id) ?? []);
+      const apiKeyIds = new Set(loaded.data.apiKeys?.map((apiKey) => apiKey.id) ?? []);
+      const principalIds = new Set(
+        loaded.data.principals?.map((principal) => principal.id) ?? []
+      );
       const assertActiveOrganization = (organizationId: string) => {
         if (!activeOrganizationId || organizationId !== activeOrganizationId) {
           throw new Error('The requested organization is not the active authorized organization.');
         }
       };
+      const assertMemberAction = (
+        membershipId: string,
+        action: OrganizationMemberRowAction
+      ): OrganizationMember => {
+        assertAuthorizedTarget(activeMemberIds, membershipId, 'organization membership');
+        const member = membersById.get(membershipId);
+        if (!member || member.actionPolicy?.[action] !== true) {
+          throw new Error(`The ${action} action is not authorized for this member.`);
+        }
+        return member;
+      };
+      const activeOrganization = loaded.data.organizations.find(
+        (organization) => organization.id === activeOrganizationId
+      );
+      const currentActorMembership = loaded.data.members.find(
+        (member) => member.userId === loaded.data.currentActorId
+      );
+      const canLeaveOrganization = Boolean(
+        activeOrganization?.actionPolicy?.leaveOrganization && currentActorMembership
+      ) && supportsConstructiveMutationInput(adminSchema, 'deleteOrgMembership', ['id']);
       return {
         resource: loaded.data.organizations.length
           ? {
@@ -996,13 +1784,50 @@ export function createConstructiveOrganizationsAdapter(
           // app membership carries create_entity and the result can be checked.
           createOrganization: canCreateOrganization,
           selectOrganization: true,
+          updateOrganization: canUpdateOrganization && Boolean(
+            loaded.data.organizations.find(
+              (organization) => organization.id === activeOrganizationId
+            )?.actionPolicy?.updateOrganization
+          ),
+          deleteOrganization: canDeleteOrganization && Boolean(
+            loaded.data.organizations.find(
+              (organization) => organization.id === activeOrganizationId
+            )?.actionPolicy?.deleteOrganization
+          ),
+          leaveOrganization: canLeaveOrganization,
           inviteMember: canInvite,
-          assignInviteRole: canInvite &&
+          assignInviteProfile: canInvite &&
             loaded.canAssignInviteProfiles &&
-            loaded.inviteRoleIds.size > 0 &&
+            loaded.inviteProfileIds.size > 0 &&
             inviteSupportsProfile,
-          updateMemberRole: canGrantProfile,
-          removeMember: canUpdateMembership,
+          approveMember: canUpdateMembershipLifecycle,
+          banMember: canUpdateMembershipLifecycle,
+          disableMember: canUpdateMembershipLifecycle,
+          markMemberExternal: canUpdateMembershipLifecycle,
+          markMemberReadOnly: canUpdateMembershipLifecycle,
+          removeMember: canDeleteMembership || canUpdateMembership,
+          grantAdmin: canGrantAdmin,
+          grantOwner: canGrantOwner,
+          assignProfile: canSetMemberProfile,
+          grantPermission: canGrantPermission,
+          updateMemberProfile: loaded.data.members.some(
+            (member) => member.actionPolicy?.updateMemberProfile && (
+              member.memberProfile ? canUpdateMemberProfile : canCreateMemberProfile
+            )
+          ),
+          createAccessProfile: canCreateProfile,
+          updateAccessProfile: canUpdateProfile,
+          deleteAccessProfile: canDeleteProfile,
+          setProfilePermission: canDefineProfile,
+          updateMembershipSettings: canUpdateSettings,
+          updateMembershipDefault: canUpdateDefault,
+          setHierarchyEdge: canManageHierarchy,
+          removeHierarchyEdge: canManageHierarchy && hierarchyEdgeIds.size > 0,
+          createOrganizationApiKey: canCreateApiKey,
+          createOrganizationPrincipal: canCreatePrincipal,
+          revokeOrganizationApiKey: canRevokeApiKey && (loaded.data.apiKeys?.length ?? 0) > 0,
+          revokeOrganizationPrincipal: canRevokePrincipal &&
+            (loaded.data.principals?.length ?? 0) > 0,
           cancelInvite: canDeleteInvite
         },
         actions: {
@@ -1167,61 +1992,588 @@ export function createConstructiveOrganizationsAdapter(
             });
             reload();
           },
-          inviteMember: canInvite
-            ? async ({ organizationId, email, role }) => {
+          updateOrganization: canUpdateOrganization &&
+            activeOrganization?.actionPolicy?.updateOrganization
+            ? async ({ organizationId, name, slug }) => {
                 assertActiveOrganization(organizationId);
-                const profileId = role ? loaded.inviteRoleIds.get(role) : undefined;
-                if (role && (
-                  !loaded.canAssignInviteProfiles || !inviteSupportsProfile || !profileId
+                const displayName = name.trim();
+                if (!displayName) throw new Error('Organization name is required.');
+                await executeConstructiveGraphQL(
+                  runtime,
+                  'auth',
+                  UPDATE_ORGANIZATION_MUTATION,
+                  {
+                    input: {
+                      id: organizationId,
+                      userPatch: {
+                        displayName,
+                        ...(slug === undefined ? {} : { username: slug.trim() })
+                      }
+                    }
+                  }
+                );
+                reload();
+              }
+            : undefined,
+          deleteOrganization: canDeleteOrganization &&
+            activeOrganization?.actionPolicy?.deleteOrganization
+            ? async ({ organizationId }) => {
+                assertActiveOrganization(organizationId);
+                const deleted = await executeConstructiveGraphQL<Record<string, unknown>>(
+                  runtime,
+                  'auth',
+                  DELETE_ORGANIZATION_MUTATION,
+                  { input: { id: organizationId } }
+                );
+                if (deletedOrganizationId(deleted) !== organizationId) {
+                  throw new Error('The organization deletion could not be verified.');
+                }
+                options.store.getState().setContext({
+                  databaseId: runtime.databaseId,
+                  organizationId: loaded.data.organizations.find(
+                    (organization) => organization.id !== organizationId
+                  )?.id ?? null
+                });
+                reload();
+              }
+            : undefined,
+          leaveOrganization: canLeaveOrganization && currentActorMembership
+            ? async ({ organizationId, membershipId }) => {
+                assertActiveOrganization(organizationId);
+                if (membershipId !== currentActorMembership.id) {
+                  throw new Error('Only the current actor membership can leave an organization.');
+                }
+                await executeConstructiveGraphQL(
+                  runtime,
+                  'admin',
+                  DELETE_MEMBERSHIP_MUTATION,
+                  { input: { id: membershipId } }
+                );
+                options.store.getState().setContext({
+                  databaseId: runtime.databaseId,
+                  organizationId: loaded.data.organizations.find(
+                    (organization) => organization.id !== organizationId
+                  )?.id ?? null
+                });
+                reload();
+              }
+            : undefined,
+          inviteMember: canInvite
+            ? async ({
+                organizationId,
+                channel,
+                recipient,
+                profileId,
+                expiresAt,
+                multiple,
+                inviteLimit,
+                isReadOnly
+              }) => {
+                assertActiveOrganization(organizationId);
+                const normalizedRecipient = recipient?.trim();
+                if (channel === 'email' && (!inviteSupportsEmail || !normalizedRecipient)) {
+                  throw new Error('An email recipient is required for an email invitation.');
+                }
+                if (channel === 'sms' && (!inviteSupportsPhone || !normalizedRecipient)) {
+                  throw new Error('A phone recipient is required for an SMS invitation.');
+                }
+                if (channel === 'link' && !inviteSupportsChannel) {
+                  throw new Error('This tenant does not expose reusable link invitations.');
+                }
+                const allowedInviteProfileIds = loaded.inviteProfileIds;
+                if (profileId && (
+                  !loaded.canAssignInviteProfiles ||
+                  !inviteSupportsProfile ||
+                  !allowedInviteProfileIds.has(profileId)
                 )) {
-                  throw new Error(`The ${role} profile cannot be assigned to an organization invitation.`);
+                  throw new Error('The selected profile cannot be assigned to this invitation.');
+                }
+                if (multiple && !inviteSupportsMultiple) {
+                  throw new Error('This tenant does not expose reusable invitation limits.');
+                }
+                if (inviteLimit !== undefined && (!Number.isInteger(inviteLimit) || inviteLimit < 1)) {
+                  throw new Error('Invitation limit must be a positive integer.');
                 }
                 await executeConstructiveGraphQL(runtime, 'admin', CREATE_INVITE_MUTATION, {
                   input: {
                     orgInvite: {
                       entityId: organizationId,
-                      email,
-                      ...(inviteSupportsExpiry ? { expiresAt: expiresIn(7) } : {}),
-                      ...(profileId ? { profileId } : {})
+                      ...(inviteSupportsChannel ? { channel } : {}),
+                      ...(channel === 'email' ? { email: normalizedRecipient } : {}),
+                      ...(channel === 'sms' ? { phone: normalizedRecipient } : {}),
+                      ...(inviteSupportsExpiry
+                        ? { expiresAt: expiresAt ?? expiresIn(7) }
+                        : {}),
+                      ...(profileId ? { profileId } : {}),
+                      ...(inviteSupportsMultiple
+                        ? {
+                            multiple: multiple ?? channel === 'link',
+                            ...(inviteLimit === undefined ? {} : { inviteLimit })
+                          }
+                        : {}),
+                      ...(inviteSupportsReadOnly && isReadOnly !== undefined
+                        ? { isReadOnly }
+                        : {})
                     }
                   }
                 });
                 reload();
               }
             : undefined,
-          updateMemberRole: canGrantProfile
-            ? async ({ organizationId, membershipId, role }) => {
+          updateMemberLifecycle: canUpdateMembershipLifecycle
+            ? async ({ organizationId, membershipId, patch }) => {
                 assertActiveOrganization(organizationId);
-                assertAuthorizedTarget(
-                  loaded.activeOrganizationMemberIds,
-                  membershipId,
-                  'organization membership'
+                const entries = Object.entries(patch).filter(([, value]) => value !== undefined);
+                if (entries.length === 0) throw new Error('A lifecycle change is required.');
+                const actionForField = {
+                  isApproved: 'approveMember',
+                  isBanned: 'banMember',
+                  isDisabled: 'disableMember',
+                  isExternal: 'markMemberExternal',
+                  isReadOnly: 'markMemberReadOnly'
+                } as const;
+                for (const [field] of entries) {
+                  const action = actionForField[field as keyof typeof actionForField];
+                  if (!action) throw new Error(`Unsupported membership lifecycle field: ${field}.`);
+                  assertMemberAction(membershipId, action);
+                }
+                await executeConstructiveGraphQL(runtime, 'admin', UPDATE_MEMBERSHIP_MUTATION, {
+                  input: {
+                    id: membershipId,
+                    orgMembershipPatch: Object.fromEntries(entries)
+                  }
+                });
+                reload();
+              }
+            : undefined,
+          removeMember: canDeleteMembership || canUpdateMembership
+            ? async ({ organizationId, membershipId }) => {
+                assertActiveOrganization(organizationId);
+                assertMemberAction(membershipId, 'removeMember');
+                await executeConstructiveGraphQL(
+                  runtime,
+                  'admin',
+                  canDeleteMembership ? DELETE_MEMBERSHIP_MUTATION : UPDATE_MEMBERSHIP_MUTATION,
+                  canDeleteMembership
+                    ? { input: { id: membershipId } }
+                    : { input: { id: membershipId, orgMembershipPatch: { isDisabled: true } } }
                 );
-                const profileId = loaded.roleIds.get(role);
-                if (!profileId) throw new Error(`The ${role} profile is not available.`);
+                reload();
+              }
+            : undefined,
+          setMemberAdmin: canGrantAdmin
+            ? async ({ organizationId, actorId, isGrant }) => {
+                assertActiveOrganization(organizationId);
+                assertAuthorizedTarget(activeMemberActorIds, actorId, 'organization member');
+                const member = loaded.data.members.find((candidate) => candidate.userId === actorId);
+                if (!member) throw new Error('The organization member is no longer visible.');
+                assertMemberAction(member.id, 'grantAdmin');
+                await executeConstructiveGraphQL(runtime, 'admin', CREATE_ADMIN_GRANT_MUTATION, {
+                  input: { orgAdminGrant: { entityId: organizationId, actorId, isGrant } }
+                });
+                reload();
+              }
+            : undefined,
+          setMemberOwner: canGrantOwner
+            ? async ({ organizationId, actorId, isGrant }) => {
+                assertActiveOrganization(organizationId);
+                assertAuthorizedTarget(activeMemberActorIds, actorId, 'organization member');
+                const member = loaded.data.members.find((candidate) => candidate.userId === actorId);
+                if (!member) throw new Error('The organization member is no longer visible.');
+                assertMemberAction(member.id, 'grantOwner');
+                await executeConstructiveGraphQL(runtime, 'admin', CREATE_OWNER_GRANT_MUTATION, {
+                  input: { orgOwnerGrant: { entityId: organizationId, actorId, isGrant } }
+                });
+                reload();
+              }
+            : undefined,
+          setMemberProfile: canSetMemberProfile
+            ? async ({ organizationId, membershipId, profileId, isGrant }) => {
+                assertActiveOrganization(organizationId);
+                assertMemberAction(membershipId, 'assignProfile');
+                assertAuthorizedTarget(profileIds, profileId, 'organization access profile');
                 await executeConstructiveGraphQL(runtime, 'admin', CREATE_PROFILE_GRANT_MUTATION, {
                   input: {
                     orgProfileGrant: {
                       membershipId,
                       profileId,
                       entityId: organizationId,
-                      isGrant: true
+                      isGrant
                     }
                   }
                 });
                 reload();
               }
             : undefined,
-          removeMember: canUpdateMembership
-            ? async ({ organizationId, membershipId }) => {
+          setMemberPermission: canGrantPermission
+            ? async ({ organizationId, actorId, permissions, isGrant }) => {
                 assertActiveOrganization(organizationId);
-                assertAuthorizedTarget(
-                  loaded.activeOrganizationMemberIds,
-                  membershipId,
-                  'organization membership'
+                assertAuthorizedTarget(activeMemberActorIds, actorId, 'organization member');
+                if (!permissionMasks.has(permissions)) {
+                  throw new Error('The permission mask is not present in the visible catalog.');
+                }
+                const member = loaded.data.members.find((candidate) => candidate.userId === actorId);
+                if (!member) throw new Error('The organization member is no longer visible.');
+                assertMemberAction(member.id, 'grantPermission');
+                await executeConstructiveGraphQL(runtime, 'admin', CREATE_PERMISSION_GRANT_MUTATION, {
+                  input: {
+                    orgGrant: { entityId: organizationId, actorId, permissions, isGrant }
+                  }
+                });
+                reload();
+              }
+            : undefined,
+          upsertMemberProfile: canCreateMemberProfile || canUpdateMemberProfile
+            ? async ({ organizationId, membershipId, profile }) => {
+                assertActiveOrganization(organizationId);
+                const member = assertMemberAction(membershipId, 'updateMemberProfile');
+                const profilePatch = {
+                  ...(profile.displayName === undefined
+                    ? {}
+                    : { displayName: profile.displayName.trim() }),
+                  ...(profile.email === undefined ? {} : { email: profile.email.trim() }),
+                  ...(profile.title === undefined ? {} : { title: profile.title.trim() }),
+                  ...(profile.bio === undefined ? {} : { bio: profile.bio.trim() })
+                };
+                if (member.memberProfile?.id) {
+                  if (!canUpdateMemberProfile) {
+                    throw new Error('This tenant does not expose member profile updates.');
+                  }
+                  await executeConstructiveGraphQL(
+                    runtime,
+                    'admin',
+                    UPDATE_MEMBER_PROFILE_MUTATION,
+                    {
+                      input: {
+                        id: member.memberProfile.id,
+                        orgMemberProfilePatch: profilePatch
+                      }
+                    }
+                  );
+                } else {
+                  if (!canCreateMemberProfile) {
+                    throw new Error('This tenant does not expose member profile creation.');
+                  }
+                  await executeConstructiveGraphQL(
+                    runtime,
+                    'admin',
+                    CREATE_MEMBER_PROFILE_MUTATION,
+                    {
+                      input: {
+                        orgMemberProfile: {
+                          membershipId,
+                          entityId: organizationId,
+                          actorId: member.userId,
+                          ...profilePatch
+                        }
+                      }
+                    }
+                  );
+                }
+                reload();
+              }
+            : undefined,
+          createAccessProfile: canCreateProfile
+            ? async ({ organizationId, name, description }) => {
+                assertActiveOrganization(organizationId);
+                const profileName = name.trim();
+                if (!profileName) throw new Error('Access profile name is required.');
+                await executeConstructiveGraphQL(runtime, 'admin', CREATE_PROFILE_MUTATION, {
+                  input: {
+                    orgProfile: {
+                      entityId: organizationId,
+                      name: profileName,
+                      ...(description === undefined
+                        ? {}
+                        : { description: description.trim() })
+                    }
+                  }
+                });
+                reload();
+              }
+            : undefined,
+          updateAccessProfile: canUpdateProfile
+            ? async ({ organizationId, profileId, name, description }) => {
+                assertActiveOrganization(organizationId);
+                assertAuthorizedTarget(profileIds, profileId, 'organization access profile');
+                const profile = loaded.data.profiles?.find((candidate) => candidate.id === profileId);
+                if (profile?.actionPolicy?.updateAccessProfile !== true) {
+                  throw new Error('This access profile cannot be updated.');
+                }
+                const profileName = name.trim();
+                if (!profileName) throw new Error('Access profile name is required.');
+                await executeConstructiveGraphQL(runtime, 'admin', UPDATE_PROFILE_MUTATION, {
+                  input: {
+                    id: profileId,
+                    orgProfilePatch: {
+                      name: profileName,
+                      ...(description === undefined
+                        ? {}
+                        : { description: description.trim() })
+                    }
+                  }
+                });
+                reload();
+              }
+            : undefined,
+          deleteAccessProfile: canDeleteProfile
+            ? async ({ organizationId, profileId }) => {
+                assertActiveOrganization(organizationId);
+                assertAuthorizedTarget(profileIds, profileId, 'organization access profile');
+                const profile = loaded.data.profiles?.find((candidate) => candidate.id === profileId);
+                if (profile?.actionPolicy?.deleteAccessProfile !== true) {
+                  throw new Error('This access profile cannot be deleted.');
+                }
+                await executeConstructiveGraphQL(runtime, 'admin', DELETE_PROFILE_MUTATION, {
+                  input: { id: profileId }
+                });
+                reload();
+              }
+            : undefined,
+          setProfilePermission: canDefineProfile
+            ? async ({ organizationId, profileId, permissionId, isGrant }) => {
+                assertActiveOrganization(organizationId);
+                assertAuthorizedTarget(profileIds, profileId, 'organization access profile');
+                assertAuthorizedTarget(permissionIds, permissionId, 'organization permission');
+                const profile = loaded.data.profiles?.find((candidate) => candidate.id === profileId);
+                if (profile?.actionPolicy?.setProfilePermission !== true) {
+                  throw new Error('This access profile cannot be changed.');
+                }
+                await executeConstructiveGraphQL(
+                  runtime,
+                  'admin',
+                  CREATE_PROFILE_DEFINITION_GRANT_MUTATION,
+                  {
+                    input: {
+                      orgProfileDefinitionGrant: { profileId, permissionId, isGrant }
+                    }
+                  }
                 );
-                await executeConstructiveGraphQL(runtime, 'admin', UPDATE_MEMBERSHIP_MUTATION, {
-                  input: { id: membershipId, orgMembershipPatch: { isDisabled: true } }
+                reload();
+              }
+            : undefined,
+          updateMembershipSettings: canUpdateSettings && loaded.data.membershipSettings
+            ? async ({ organizationId, settingsId, patch }) => {
+                assertActiveOrganization(organizationId);
+                if (settingsId !== loaded.data.membershipSettings?.id) {
+                  throw new Error('The membership settings row is not active.');
+                }
+                const allowedFields = new Set([
+                  'deleteMemberCascadeChildren',
+                  'createChildCascadeOwners',
+                  'createChildCascadeAdmins',
+                  'createChildCascadeMembers',
+                  'allowExternalMembers',
+                  'inviteProfileAssignmentMode',
+                  'populateMemberEmail',
+                  'limitAllocationMode'
+                ]);
+                const entries = Object.entries(patch).filter(
+                  ([field, value]) => allowedFields.has(field) && value !== undefined
+                );
+                if (entries.length === 0) throw new Error('A membership setting change is required.');
+                await executeConstructiveGraphQL(
+                  runtime,
+                  'admin',
+                  UPDATE_MEMBERSHIP_SETTINGS_MUTATION,
+                  {
+                    input: {
+                      id: settingsId,
+                      orgMembershipSettingPatch: Object.fromEntries(entries)
+                    }
+                  }
+                );
+                reload();
+              }
+            : undefined,
+          updateMembershipDefault: canUpdateDefault && loaded.data.membershipDefault
+            ? async ({ organizationId, defaultId, isApproved }) => {
+                assertActiveOrganization(organizationId);
+                if (defaultId !== loaded.data.membershipDefault?.id) {
+                  throw new Error('The membership default row is not active.');
+                }
+                await executeConstructiveGraphQL(
+                  runtime,
+                  'admin',
+                  UPDATE_MEMBERSHIP_DEFAULT_MUTATION,
+                  {
+                    input: {
+                      id: defaultId,
+                      orgMembershipDefaultPatch: { isApproved }
+                    }
+                  }
+                );
+                reload();
+              }
+            : undefined,
+          setHierarchyEdge: canManageHierarchy
+            ? async ({
+                organizationId,
+                childId,
+                parentId,
+                positionTitle,
+                positionLevel
+              }) => {
+                assertActiveOrganization(organizationId);
+                assertAuthorizedTarget(activeMemberActorIds, childId, 'organization chart member');
+                assertAuthorizedTarget(activeMemberActorIds, parentId, 'organization chart member');
+                if (childId === parentId) throw new Error('A member cannot report to themselves.');
+                const parentByChild = new Map(
+                  loaded.data.hierarchy?.map((edge) => [edge.childId, edge.parentId]) ?? []
+                );
+                parentByChild.set(childId, parentId);
+                const visited = new Set<string>();
+                let cursor: string | undefined = parentId;
+                while (cursor) {
+                  if (cursor === childId) {
+                    throw new Error('The organization chart change would create a cycle.');
+                  }
+                  if (visited.has(cursor)) break;
+                  visited.add(cursor);
+                  cursor = parentByChild.get(cursor);
+                }
+                await executeConstructiveGraphQL(
+                  runtime,
+                  'admin',
+                  CREATE_CHART_EDGE_GRANT_MUTATION,
+                  {
+                    input: {
+                      orgChartEdgeGrant: {
+                        entityId: organizationId,
+                        childId,
+                        parentId,
+                        isGrant: true,
+                        ...(positionTitle === undefined
+                          ? {}
+                          : { positionTitle: positionTitle.trim() }),
+                        ...(positionLevel === undefined ? {} : { positionLevel })
+                      }
+                    }
+                  }
+                );
+                reload();
+              }
+            : undefined,
+          removeHierarchyEdge: canManageHierarchy
+            ? async ({ organizationId, edge }) => {
+                assertActiveOrganization(organizationId);
+                assertAuthorizedTarget(hierarchyEdgeIds, edge.id, 'organization chart edge');
+                const activeEdge = loaded.data.hierarchy?.find(
+                  (candidate) => candidate.id === edge.id
+                );
+                if (!activeEdge || activeEdge.actionPolicy?.removeHierarchyEdge !== true) {
+                  throw new Error('The organization chart edge cannot be removed.');
+                }
+                await executeConstructiveGraphQL(
+                  runtime,
+                  'admin',
+                  CREATE_CHART_EDGE_GRANT_MUTATION,
+                  {
+                    input: {
+                      orgChartEdgeGrant: {
+                        entityId: organizationId,
+                        childId: activeEdge.childId,
+                        parentId: activeEdge.parentId,
+                        isGrant: false,
+                        ...(activeEdge.positionTitle === undefined
+                          ? {}
+                          : { positionTitle: activeEdge.positionTitle }),
+                        ...(activeEdge.positionLevel === undefined
+                          ? {}
+                          : { positionLevel: activeEdge.positionLevel })
+                      }
+                    }
+                  }
+                );
+                reload();
+              }
+            : undefined,
+          createOrganizationApiKey: canCreateApiKey
+            ? async ({
+                organizationId,
+                principalId,
+                name,
+                accessLevel,
+                mfaLevel,
+                expiresIn: keyExpiresIn
+              }) => {
+                assertActiveOrganization(organizationId);
+                assertAuthorizedTarget(principalIds, principalId, 'organization principal');
+                const keyName = name.trim();
+                if (!keyName) throw new Error('API key name is required.');
+                const response = await executeConstructiveGraphQL<Record<string, unknown>>(
+                  runtime,
+                  'auth',
+                  CREATE_ORG_API_KEY_MUTATION,
+                  {
+                    input: {
+                      orgId: organizationId,
+                      principalId,
+                      keyName,
+                      ...(accessLevel === undefined ? {} : { accessLevel }),
+                      ...(mfaLevel === undefined ? {} : { mfaLevel }),
+                      ...(keyExpiresIn === undefined ? {} : { expiresIn: keyExpiresIn })
+                    }
+                  }
+                );
+                const result = asRecord(asRecord(response.createOrgApiKey)?.result);
+                const token = asString(result?.apiKey);
+                if (!token) throw new Error('The API key response did not include the one-time token.');
+                reload();
+                return {
+                  token,
+                  id: asString(result?.keyId) ?? undefined,
+                  expiresAt: asString(result?.expiresAt) ?? undefined
+                };
+              }
+            : undefined,
+          createOrganizationPrincipal: canCreatePrincipal
+            ? async ({
+                organizationId,
+                name,
+                useAdminOwner,
+                isReadOnly,
+                bypassStepUp
+              }) => {
+                assertActiveOrganization(organizationId);
+                const principalName = name.trim();
+                if (!principalName) throw new Error('Principal name is required.');
+                const response = await executeConstructiveGraphQL<Record<string, unknown>>(
+                  runtime,
+                  'auth',
+                  CREATE_ORG_PRINCIPAL_MUTATION,
+                  {
+                    input: {
+                      orgId: organizationId,
+                      name: principalName,
+                      useAdminOwner: useAdminOwner ?? true,
+                      isReadOnly: isReadOnly ?? false,
+                      bypassStepUp: bypassStepUp ?? false
+                    }
+                  }
+                );
+                const id = asString(asRecord(response.createOrgPrincipal)?.result);
+                if (!id) throw new Error('The principal creation could not be verified.');
+                reload();
+                return { id };
+              }
+            : undefined,
+          revokeOrganizationApiKey: canRevokeApiKey
+            ? async ({ organizationId, apiKeyId }) => {
+                assertActiveOrganization(organizationId);
+                assertAuthorizedTarget(apiKeyIds, apiKeyId, 'organization API key');
+                await executeConstructiveGraphQL(runtime, 'auth', REVOKE_ORG_API_KEY_MUTATION, {
+                  input: { orgId: organizationId, keyId: apiKeyId }
+                });
+                reload();
+              }
+            : undefined,
+          revokeOrganizationPrincipal: canRevokePrincipal
+            ? async ({ organizationId, principalId }) => {
+                assertActiveOrganization(organizationId);
+                assertAuthorizedTarget(principalIds, principalId, 'organization principal');
+                await executeConstructiveGraphQL(runtime, 'auth', DELETE_ORG_PRINCIPAL_MUTATION, {
+                  input: { principalId }
                 });
                 reload();
               }

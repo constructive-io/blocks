@@ -72,7 +72,7 @@ function context(
 
 function StoreWrapper({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <ConsoleKitStoreProvider initialFeature='data'>
+    <ConsoleKitStoreProvider initialRoute='data'>
       {children}
     </ConsoleKitStoreProvider>
   );
@@ -223,7 +223,7 @@ describe('Console Kit endpoint runtime', () => {
     };
     const wrapper = ({ children }: Readonly<{ children: React.ReactNode }>) => (
       <ConsoleKitStoreProvider
-        initialFeature='data'
+        initialRoute='data'
         store={store}
       >
         {children}
@@ -271,7 +271,7 @@ describe('Console Kit endpoint runtime', () => {
     };
     const firstSession = sessionFor('login-1');
     const wrapper = ({ children }: Readonly<{ children: React.ReactNode }>) => (
-      <ConsoleKitStoreProvider initialFeature='storage' store={store}>
+      <ConsoleKitStoreProvider initialRoute='storage' store={store}>
         {children}
       </ConsoleKitStoreProvider>
     );

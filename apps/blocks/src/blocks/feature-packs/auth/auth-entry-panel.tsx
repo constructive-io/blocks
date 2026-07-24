@@ -20,7 +20,8 @@ import {
   CardHeader,
   CardTitle
 } from '@constructive-io/ui/card';
-import { Field } from '@constructive-io/ui/field';
+import { Checkbox } from '@constructive-io/ui/checkbox';
+import { Field, FieldGroup, FieldLabel } from '@constructive-io/ui/field';
 import {
   InputGroup,
   InputGroupAddon,
@@ -28,9 +29,15 @@ import {
 } from '@constructive-io/ui/input-group';
 
 import { canPerform, normalizeFeaturePackError } from '../shared/feature-pack-contracts';
-import type { AuthEntryMode, AuthFeaturePackProps } from './auth-contracts';
-
-const MIN_PASSWORD_LENGTH = 12;
+import type {
+  AuthEntryMode,
+  AuthFeaturePackProps
+} from './auth-contracts';
+import {
+  authPasswordHint,
+  authPasswordPolicyError,
+  normalizedPasswordLength
+} from './auth-password-policy';
 
 const modeCopy: Record<
   AuthEntryMode,
@@ -69,26 +76,20 @@ function actionForMode(mode: AuthEntryMode) {
   return 'resetPassword' as const;
 }
 
-function passwordRequirementMessage(password: string): string | undefined {
-  if (!password) return undefined;
-  if (password.length < MIN_PASSWORD_LENGTH) {
-    return `Use at least ${MIN_PASSWORD_LENGTH} characters (${password.length} so far).`;
-  }
-  return undefined;
-}
-
 export function AuthEntryPanel({
   mode = 'sign-in',
-  resetToken,
   policy,
   actions,
+  notice,
   verificationNotice,
+  passwordPolicy,
   onModeChange,
   onAuthenticated,
   onError
 }: Omit<AuthFeaturePackProps, 'view' | 'account'>) {
   const [email, setEmail] = React.useState('');
   const [password, setPassword] = React.useState('');
+  const [rememberMe, setRememberMe] = React.useState(false);
   const [showPassword, setShowPassword] = React.useState(false);
   const [pending, setPending] = React.useState(false);
   const [feedback, setFeedback] = React.useState<string>();
@@ -110,10 +111,15 @@ export function AuthEntryPanel({
   const requiresPassword = mode !== 'recover-password';
   const requiresStrongPassword = mode === 'sign-up' || mode === 'reset-password';
   const passwordHint = requiresStrongPassword
-    ? passwordRequirementMessage(password) ?? `Use at least ${MIN_PASSWORD_LENGTH} characters.`
+    ? authPasswordHint(password, passwordPolicy)
     : undefined;
+  const minPasswordLength = normalizedPasswordLength(passwordPolicy?.minLength);
+  const maxPasswordLength = normalizedPasswordLength(passwordPolicy?.maxLength);
+  const activeNotice = notice ?? verificationNotice;
 
   React.useEffect(() => {
+    setPassword('');
+    setRememberMe(false);
     setError(undefined);
     setFeedback(undefined);
     setEmailError(undefined);
@@ -142,8 +148,8 @@ export function AuthEntryPanel({
     const nextPasswordError = requiresPassword
       ? !password
         ? 'Enter a password.'
-        : requiresStrongPassword && password.length < MIN_PASSWORD_LENGTH
-          ? `Password must be at least ${MIN_PASSWORD_LENGTH} characters.`
+        : requiresStrongPassword
+          ? authPasswordPolicyError(password, passwordPolicy)
           : undefined
       : undefined;
 
@@ -162,13 +168,14 @@ export function AuthEntryPanel({
     try {
       if (mode === 'sign-in') {
         if (!actions?.signIn) return;
-        await actions.signIn({ email: email.trim(), password });
+        await actions.signIn({ email: email.trim(), password, rememberMe });
         onAuthenticated?.();
       } else if (mode === 'sign-up') {
         if (!actions?.signUp) return;
         await actions.signUp({
           email: email.trim(),
-          password
+          password,
+          rememberMe
         });
         onAuthenticated?.();
       } else if (mode === 'recover-password') {
@@ -177,7 +184,7 @@ export function AuthEntryPanel({
         setFeedback('If that address can receive recovery email, instructions are on the way.');
       } else {
         if (!actions?.resetPassword) return;
-        await actions.resetPassword({ password, resetToken });
+        await actions.resetPassword({ password });
         setFeedback('Your password has been reset. You can sign in now.');
       }
     } catch (cause) {
@@ -211,86 +218,102 @@ export function AuthEntryPanel({
         </CardHeader>
         <form noValidate onSubmit={(event) => void submit(event)}>
           <CardContent className='flex flex-col gap-4'>
-            {verificationNotice ? (
-              <Alert variant={verificationNotice.status === 'error' ? 'destructive' : 'default'}>
-                <AlertDescription>{verificationNotice.message}</AlertDescription>
+            {activeNotice ? (
+              <Alert variant={activeNotice.status === 'error' ? 'destructive' : 'default'}>
+                <AlertDescription>{activeNotice.message}</AlertDescription>
               </Alert>
             ) : null}
-            {mode !== 'reset-password' ? (
-              <Field
-                error={emailError}
-                htmlFor={`${fieldId}-email`}
-                label='Email address'
-                required
-              >
-                <InputGroup>
-                  <InputGroupAddon>
-                    <MailIcon aria-hidden='true' />
-                  </InputGroupAddon>
-                  <InputGroupInput
-                    aria-invalid={emailError ? true : undefined}
-                    autoComplete='email'
-                    autoCapitalize='none'
-                    id={`${fieldId}-email`}
-                    name='email'
-                    onChange={(event) => {
-                      setEmail(event.currentTarget.value);
-                      if (emailError) setEmailError(undefined);
-                    }}
-                    ref={emailRef}
-                    required
-                    spellCheck={false}
-                    type='email'
-                    value={email}
+            <FieldGroup>
+              {mode !== 'reset-password' ? (
+                <Field
+                  error={emailError}
+                  htmlFor={`${fieldId}-email`}
+                  label='Email address'
+                  required
+                >
+                  <InputGroup>
+                    <InputGroupAddon>
+                      <MailIcon aria-hidden='true' />
+                    </InputGroupAddon>
+                    <InputGroupInput
+                      aria-invalid={emailError ? true : undefined}
+                      autoComplete='email'
+                      autoCapitalize='none'
+                      id={`${fieldId}-email`}
+                      name='email'
+                      onChange={(event) => {
+                        setEmail(event.currentTarget.value);
+                        if (emailError) setEmailError(undefined);
+                      }}
+                      ref={emailRef}
+                      required
+                      spellCheck={false}
+                      type='email'
+                      value={email}
+                    />
+                  </InputGroup>
+                </Field>
+              ) : null}
+              {requiresPassword ? (
+                <Field
+                  description={passwordHint}
+                  error={passwordError}
+                  htmlFor={`${fieldId}-password`}
+                  label={mode === 'reset-password' ? 'New password' : 'Password'}
+                  required
+                >
+                  <InputGroup>
+                    <InputGroupAddon>
+                      <LockKeyholeIcon aria-hidden='true' />
+                    </InputGroupAddon>
+                    <InputGroupInput
+                      aria-invalid={passwordError ? true : undefined}
+                      autoComplete={mode === 'sign-in' ? 'current-password' : 'new-password'}
+                      id={`${fieldId}-password`}
+                      maxLength={requiresStrongPassword ? maxPasswordLength : undefined}
+                      minLength={requiresStrongPassword ? minPasswordLength : undefined}
+                      name='password'
+                      onChange={(event) => {
+                        setPassword(event.currentTarget.value);
+                        if (passwordError) setPasswordError(undefined);
+                      }}
+                      ref={passwordRef}
+                      required
+                      type={showPassword ? 'text' : 'password'}
+                      value={password}
+                    />
+                    <InputGroupAddon align='inline-end'>
+                      <Button
+                        aria-label={showPassword ? 'Hide password' : 'Show password'}
+                        aria-pressed={showPassword}
+                        className='size-7 p-0'
+                        onClick={() => setShowPassword((value) => !value)}
+                        size='sm'
+                        type='button'
+                        variant='ghost'
+                      >
+                        {showPassword
+                          ? <EyeOffIcon aria-hidden='true' />
+                          : <EyeIcon aria-hidden='true' />}
+                      </Button>
+                    </InputGroupAddon>
+                  </InputGroup>
+                </Field>
+              ) : null}
+              {mode === 'sign-in' || mode === 'sign-up' ? (
+                <Field orientation='horizontal'>
+                  <Checkbox
+                    checked={rememberMe}
+                    id={`${fieldId}-remember-me`}
+                    name='remember-me'
+                    onCheckedChange={(checked) => setRememberMe(checked === true)}
                   />
-                </InputGroup>
-              </Field>
-            ) : null}
-            {requiresPassword ? (
-              <Field
-                description={passwordHint}
-                error={passwordError}
-                htmlFor={`${fieldId}-password`}
-                label={mode === 'reset-password' ? 'New password' : 'Password'}
-                required
-              >
-                <InputGroup>
-                  <InputGroupAddon>
-                    <LockKeyholeIcon aria-hidden='true' />
-                  </InputGroupAddon>
-                  <InputGroupInput
-                    aria-invalid={passwordError ? true : undefined}
-                    autoComplete={mode === 'sign-in' ? 'current-password' : 'new-password'}
-                    id={`${fieldId}-password`}
-                    minLength={requiresStrongPassword ? MIN_PASSWORD_LENGTH : undefined}
-                    name='password'
-                    onChange={(event) => {
-                      setPassword(event.currentTarget.value);
-                      if (passwordError) setPasswordError(undefined);
-                    }}
-                    ref={passwordRef}
-                    required
-                    type={showPassword ? 'text' : 'password'}
-                    value={password}
-                  />
-                  <InputGroupAddon align='inline-end'>
-                    <Button
-                      aria-label={showPassword ? 'Hide password' : 'Show password'}
-                      aria-pressed={showPassword}
-                      className='size-7 p-0'
-                      onClick={() => setShowPassword((value) => !value)}
-                      size='sm'
-                      type='button'
-                      variant='ghost'
-                    >
-                      {showPassword
-                        ? <EyeOffIcon aria-hidden='true' className='size-4' />
-                        : <EyeIcon aria-hidden='true' className='size-4' />}
-                    </Button>
-                  </InputGroupAddon>
-                </InputGroup>
-              </Field>
-            ) : null}
+                  <FieldLabel htmlFor={`${fieldId}-remember-me`}>
+                    Keep me signed in on this device
+                  </FieldLabel>
+                </Field>
+              ) : null}
+            </FieldGroup>
             {error ? (
               <Alert role='alert' variant='destructive'>
                 <AlertDescription>{error}</AlertDescription>

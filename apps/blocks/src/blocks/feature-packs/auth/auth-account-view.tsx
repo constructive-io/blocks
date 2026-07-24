@@ -5,11 +5,13 @@ import {
   EyeIcon,
   EyeOffIcon,
   KeyRoundIcon,
+  Link2Icon,
   LogOutIcon,
   MailCheckIcon,
   MailIcon,
   MonitorSmartphoneIcon,
   ShieldCheckIcon,
+  Trash2Icon,
   UserRoundIcon
 } from 'lucide-react';
 
@@ -26,13 +28,14 @@ import {
 } from '@constructive-io/ui/alert-dialog';
 import { Badge } from '@constructive-io/ui/badge';
 import { Button } from '@constructive-io/ui/button';
-import { Field } from '@constructive-io/ui/field';
+import { Field, FieldGroup } from '@constructive-io/ui/field';
 import { Input } from '@constructive-io/ui/input';
 import {
   InputGroup,
   InputGroupAddon,
   InputGroupInput
 } from '@constructive-io/ui/input-group';
+import { Separator } from '@constructive-io/ui/separator';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@constructive-io/ui/tabs';
 import { cn } from '@/lib/utils';
 
@@ -47,11 +50,20 @@ import {
 } from '../shared/feature-pack-ui';
 import type {
   AuthAccountData,
+  AuthConnectedAccount,
+  AuthFeatureActions,
   AuthFeaturePackProps,
+  AuthIdentity,
+  AuthPasswordPolicy,
   AuthSession
 } from './auth-contracts';
+import {
+  authPasswordHint,
+  authPasswordPolicyError,
+  normalizedPasswordLength
+} from './auth-password-policy';
 
-type AccountSection = 'profile' | 'security' | 'sessions';
+type AccountSection = 'profile' | 'security' | 'connections' | 'sessions';
 
 function identityInitials(value: string): string {
   return value
@@ -78,9 +90,11 @@ export function AuthAccountView({
   account = { status: 'loading' },
   policy,
   actions,
+  notice,
   verificationNotice,
+  passwordPolicy,
   onError
-}: Omit<AuthFeaturePackProps, 'view' | 'mode' | 'resetToken' | 'onModeChange' | 'onAuthenticated'>) {
+}: Omit<AuthFeaturePackProps, 'view' | 'mode' | 'onModeChange' | 'onAuthenticated'>) {
   const [displayName, setDisplayName] = React.useState('');
   const [currentPassword, setCurrentPassword] = React.useState('');
   const [newPassword, setNewPassword] = React.useState('');
@@ -100,6 +114,16 @@ export function AuthAccountView({
   const displayNameId = `${fieldIdPrefix}-display-name`;
   const currentPasswordId = `${fieldIdPrefix}-current-password`;
   const newPasswordId = `${fieldIdPrefix}-new-password`;
+  const activeNotice = notice ?? verificationNotice;
+  const identityId = account.status === 'ready' ? account.data.identity.id : undefined;
+
+  React.useEffect(() => {
+    setCurrentPassword('');
+    setNewPassword('');
+    setShowCurrentPassword(false);
+    setShowNewPassword(false);
+    setSessionToRevoke(undefined);
+  }, [identityId]);
 
   const run = async (
     key: string,
@@ -124,9 +148,9 @@ export function AuthAccountView({
   return (
     <div className='mx-auto flex w-full max-w-2xl flex-col gap-6'>
       <h1 className='sr-only'>Account</h1>
-      {verificationNotice?.status === 'error' ? (
-        <Alert variant='destructive'>
-          <AlertDescription>{verificationNotice.message}</AlertDescription>
+      {activeNotice ? (
+        <Alert variant={activeNotice.status === 'error' ? 'destructive' : 'default'}>
+          <AlertDescription>{activeNotice.message}</AlertDescription>
         </Alert>
       ) : null}
       <FeaturePackBoundary
@@ -136,12 +160,17 @@ export function AuthAccountView({
       >
         {(data) => {
           const showSecurity =
-            canPerform(policy, 'changePassword') && Boolean(actions?.changePassword);
+            (canPerform(policy, 'changePassword') && Boolean(actions?.changePassword)) ||
+            (canPerform(policy, 'requestAccountDeletion') &&
+              Boolean(actions?.requestAccountDeletion));
+          const connectedAccounts = data.connectedAccounts ?? [];
+          const showConnections = connectedAccounts.length > 0;
           const sessions = data.sessions ?? [];
           const showSessions = sessions.length > 0;
           const sections: AccountSection[] = [
             'profile',
             ...(showSecurity ? (['security'] as const) : []),
+            ...(showConnections ? (['connections'] as const) : []),
             ...(showSessions ? (['sessions'] as const) : [])
           ];
           const activeSection = sections.includes(section) ? section : 'profile';
@@ -200,6 +229,14 @@ export function AuthAccountView({
                         Security
                       </TabsTrigger>
                     ) : null}
+                    {showConnections ? (
+                      <TabsTrigger className={sectionTriggerClass} value='connections'>
+                        Connections
+                        <span className='text-muted-foreground ml-1.5 tabular-nums text-xs'>
+                          {connectedAccounts.length}
+                        </span>
+                      </TabsTrigger>
+                    ) : null}
                     {showSessions ? (
                       <TabsTrigger className={sectionTriggerClass} value='sessions'>
                         Sessions
@@ -235,33 +272,66 @@ export function AuthAccountView({
 
                   {showSecurity ? (
                     <TabsContent className='mt-6 outline-none' value='security'>
-                      <SecuritySection
-                        currentPassword={currentPassword}
-                        currentPasswordId={currentPasswordId}
-                        newPassword={newPassword}
-                        newPasswordId={newPasswordId}
-                        pending={pendingAction === 'password'}
-                        showCurrentPassword={showCurrentPassword}
-                        showNewPassword={showNewPassword}
-                        onCurrentPasswordChange={setCurrentPassword}
-                        onNewPasswordChange={setNewPassword}
-                        onToggleCurrent={() => setShowCurrentPassword((v) => !v)}
-                        onToggleNew={() => setShowNewPassword((v) => !v)}
-                        onSubmit={() => {
-                          if (!actions?.changePassword) return;
-                          void run(
-                            'password',
-                            () => actions.changePassword!({
-                              currentPassword,
-                              newPassword
-                            }),
-                            'Your password could not be changed.',
-                            () => {
-                              setCurrentPassword('');
-                              setNewPassword('');
-                            }
-                          );
-                        }}
+                      <div className='flex flex-col gap-8'>
+                        {canPerform(policy, 'changePassword') && actions?.changePassword ? (
+                          <SecuritySection
+                            currentPassword={currentPassword}
+                            currentPasswordId={currentPasswordId}
+                            newPassword={newPassword}
+                            newPasswordId={newPasswordId}
+                            passwordPolicy={passwordPolicy}
+                            pending={pendingAction === 'password'}
+                            showCurrentPassword={showCurrentPassword}
+                            showNewPassword={showNewPassword}
+                            onCurrentPasswordChange={setCurrentPassword}
+                            onNewPasswordChange={setNewPassword}
+                            onToggleCurrent={() => setShowCurrentPassword((v) => !v)}
+                            onToggleNew={() => setShowNewPassword((v) => !v)}
+                            onSubmit={() => {
+                              void run(
+                                'password',
+                                () => actions.changePassword!({
+                                  currentPassword,
+                                  newPassword
+                                }),
+                                'Your password could not be changed.',
+                                () => {
+                                  setCurrentPassword('');
+                                  setNewPassword('');
+                                }
+                              );
+                            }}
+                          />
+                        ) : null}
+                        {canPerform(policy, 'requestAccountDeletion') &&
+                        actions?.requestAccountDeletion ? (
+                          <>
+                            {canPerform(policy, 'changePassword') && actions?.changePassword ? (
+                              <Separator />
+                            ) : null}
+                            <AccountDeletionSection
+                              identity={data.identity}
+                              key={`account-deletion-${data.identity.id}`}
+                              onError={onError}
+                              requestAccountDeletion={actions.requestAccountDeletion}
+                            />
+                          </>
+                        ) : null}
+                      </div>
+                    </TabsContent>
+                  ) : null}
+
+                  {showConnections ? (
+                    <TabsContent className='mt-6 outline-none' value='connections'>
+                      <ConnectedAccountsSection
+                        accounts={connectedAccounts}
+                        disconnect={
+                          canPerform(policy, 'disconnectConnectedAccount')
+                            ? actions?.disconnectConnectedAccount
+                            : undefined
+                        }
+                        key={`connected-accounts-${data.identity.id}`}
+                        onError={onError}
                       />
                     </TabsContent>
                   ) : null}
@@ -539,6 +609,7 @@ function SecuritySection({
   currentPasswordId,
   newPassword,
   newPasswordId,
+  passwordPolicy,
   showCurrentPassword,
   showNewPassword,
   pending,
@@ -552,6 +623,7 @@ function SecuritySection({
   currentPasswordId: string;
   newPassword: string;
   newPasswordId: string;
+  passwordPolicy?: AuthPasswordPolicy;
   showCurrentPassword: boolean;
   showNewPassword: boolean;
   pending: boolean;
@@ -561,6 +633,13 @@ function SecuritySection({
   onToggleNew: () => void;
   onSubmit: () => void;
 }>) {
+  const passwordError = newPassword
+    ? authPasswordPolicyError(newPassword, passwordPolicy)
+    : undefined;
+  const passwordHint = authPasswordHint(newPassword, passwordPolicy);
+  const minLength = normalizedPasswordLength(passwordPolicy?.minLength);
+  const maxLength = normalizedPasswordLength(passwordPolicy?.maxLength);
+
   return (
     <section className='max-w-md'>
       <SectionLabel
@@ -575,74 +654,348 @@ function SecuritySection({
           onSubmit();
         }}
       >
-        <Field htmlFor={currentPasswordId} label='Current password' required>
-          <InputGroup>
-            <InputGroupInput
-              autoComplete='current-password'
-              id={currentPasswordId}
-              onChange={(event) => onCurrentPasswordChange(event.currentTarget.value)}
-              required
-              type={showCurrentPassword ? 'text' : 'password'}
-              value={currentPassword}
-            />
-            <InputGroupAddon align='inline-end'>
-              <Button
-                aria-label={showCurrentPassword ? 'Hide current password' : 'Show current password'}
-                aria-pressed={showCurrentPassword}
-                className='size-7 p-0'
-                onClick={onToggleCurrent}
-                size='sm'
-                type='button'
-                variant='ghost'
-              >
-                {showCurrentPassword
-                  ? <EyeOffIcon aria-hidden='true' className='size-4' />
-                  : <EyeIcon aria-hidden='true' className='size-4' />}
-              </Button>
-            </InputGroupAddon>
-          </InputGroup>
-        </Field>
-        <Field
-          description={
-            newPassword && newPassword.length < 12
-              ? `Use at least 12 characters (${newPassword.length} so far).`
-              : 'Use at least 12 characters.'
-          }
-          htmlFor={newPasswordId}
-          label='New password'
-          required
+        <FieldGroup>
+          <Field htmlFor={currentPasswordId} label='Current password' required>
+            <InputGroup>
+              <InputGroupInput
+                autoComplete='current-password'
+                id={currentPasswordId}
+                onChange={(event) => onCurrentPasswordChange(event.currentTarget.value)}
+                required
+                type={showCurrentPassword ? 'text' : 'password'}
+                value={currentPassword}
+              />
+              <InputGroupAddon align='inline-end'>
+                <Button
+                  aria-label={showCurrentPassword ? 'Hide current password' : 'Show current password'}
+                  aria-pressed={showCurrentPassword}
+                  className='size-7 p-0'
+                  onClick={onToggleCurrent}
+                  size='sm'
+                  type='button'
+                  variant='ghost'
+                >
+                  {showCurrentPassword
+                    ? <EyeOffIcon aria-hidden='true' />
+                    : <EyeIcon aria-hidden='true' />}
+                </Button>
+              </InputGroupAddon>
+            </InputGroup>
+          </Field>
+          <Field
+            description={passwordHint}
+            error={passwordError}
+            htmlFor={newPasswordId}
+            label='New password'
+            required
+          >
+            <InputGroup>
+              <InputGroupInput
+                autoComplete='new-password'
+                aria-invalid={passwordError ? true : undefined}
+                id={newPasswordId}
+                maxLength={maxLength}
+                minLength={minLength}
+                onChange={(event) => onNewPasswordChange(event.currentTarget.value)}
+                required
+                type={showNewPassword ? 'text' : 'password'}
+                value={newPassword}
+              />
+              <InputGroupAddon align='inline-end'>
+                <Button
+                  aria-label={showNewPassword ? 'Hide new password' : 'Show new password'}
+                  aria-pressed={showNewPassword}
+                  className='size-7 p-0'
+                  onClick={onToggleNew}
+                  size='sm'
+                  type='button'
+                  variant='ghost'
+                >
+                  {showNewPassword
+                    ? <EyeOffIcon aria-hidden='true' />
+                    : <EyeIcon aria-hidden='true' />}
+                </Button>
+              </InputGroupAddon>
+            </InputGroup>
+          </Field>
+        </FieldGroup>
+        <Button
+          className='self-start'
+          disabled={!currentPassword || !newPassword || Boolean(passwordError) || pending}
+          size='sm'
+          type='submit'
         >
-          <InputGroup>
-            <InputGroupInput
-              autoComplete='new-password'
-              id={newPasswordId}
-              minLength={12}
-              onChange={(event) => onNewPasswordChange(event.currentTarget.value)}
-              required
-              type={showNewPassword ? 'text' : 'password'}
-              value={newPassword}
-            />
-            <InputGroupAddon align='inline-end'>
-              <Button
-                aria-label={showNewPassword ? 'Hide new password' : 'Show new password'}
-                aria-pressed={showNewPassword}
-                className='size-7 p-0'
-                onClick={onToggleNew}
-                size='sm'
-                type='button'
-                variant='ghost'
-              >
-                {showNewPassword
-                  ? <EyeOffIcon aria-hidden='true' className='size-4' />
-                  : <EyeIcon aria-hidden='true' className='size-4' />}
-              </Button>
-            </InputGroupAddon>
-          </InputGroup>
-        </Field>
-        <Button className='self-start' disabled={pending} size='sm' type='submit'>
           {pending ? 'Changing password…' : 'Change password'}
         </Button>
       </form>
+    </section>
+  );
+}
+
+function AccountDeletionSection({
+  identity,
+  requestAccountDeletion,
+  onError
+}: Readonly<{
+  identity: AuthIdentity;
+  requestAccountDeletion: NonNullable<AuthFeatureActions['requestAccountDeletion']>;
+  onError?: AuthFeaturePackProps['onError'];
+}>) {
+  const [open, setOpen] = React.useState(false);
+  const [confirmation, setConfirmation] = React.useState('');
+  const [password, setPassword] = React.useState('');
+  const [pending, setPending] = React.useState(false);
+  const [error, setError] = React.useState<string>();
+  const [feedback, setFeedback] = React.useState<string>();
+  const fieldId = React.useId();
+  const confirmationValue = identity.primaryEmail === 'Private email'
+    ? identity.displayName
+    : identity.primaryEmail;
+  const confirmed = confirmation.trim() === confirmationValue;
+
+  const resetDialog = () => {
+    setConfirmation('');
+    setPassword('');
+    setError(undefined);
+  };
+
+  const submit = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (!confirmed || !password || pending) return;
+    setPending(true);
+    setError(undefined);
+    try {
+      await requestAccountDeletion({ password });
+      setOpen(false);
+      resetDialog();
+      setFeedback('Check your email to finish deleting this account.');
+    } catch (cause) {
+      const normalized = normalizeFeaturePackError(
+        cause,
+        'The account deletion email could not be sent.'
+      );
+      setError(normalized.message);
+      onError?.(normalized);
+    } finally {
+      setPending(false);
+    }
+  };
+
+  return (
+    <section className='max-w-md'>
+      <SectionLabel
+        description='Permanently removes this identity after you follow a confirmation link.'
+        icon={Trash2Icon}
+        title='Delete account'
+      />
+      {feedback ? (
+        <Alert className='mb-4'>
+          <AlertDescription>{feedback}</AlertDescription>
+        </Alert>
+      ) : null}
+      <Button onClick={() => setOpen(true)} size='sm' variant='destructive'>
+        Delete account
+      </Button>
+      <AlertDialog
+        onOpenChange={(nextOpen) => {
+          if (!nextOpen && !pending) resetDialog();
+          setOpen(nextOpen);
+        }}
+        open={open}
+      >
+        <AlertDialogContent>
+          <form className='flex flex-col gap-4' onSubmit={(event) => void submit(event)}>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Request permanent account deletion?</AlertDialogTitle>
+              <AlertDialogDescription className='text-pretty'>
+                This sends a time-limited confirmation link. Verify your password and type{' '}
+                <strong className='text-foreground'>{confirmationValue}</strong> to continue.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <FieldGroup>
+              <Field
+                htmlFor={`${fieldId}-confirmation`}
+                label={`Type ${confirmationValue} to confirm`}
+                required
+              >
+                <Input
+                  autoComplete='off'
+                  id={`${fieldId}-confirmation`}
+                  onChange={(event) => setConfirmation(event.currentTarget.value)}
+                  required
+                  value={confirmation}
+                />
+              </Field>
+              <Field htmlFor={`${fieldId}-password`} label='Current password' required>
+                <Input
+                  autoComplete='current-password'
+                  id={`${fieldId}-password`}
+                  onChange={(event) => setPassword(event.currentTarget.value)}
+                  required
+                  type='password'
+                  value={password}
+                />
+              </Field>
+            </FieldGroup>
+            {error ? (
+              <Alert role='alert' variant='destructive'>
+                <AlertDescription>{error}</AlertDescription>
+              </Alert>
+            ) : null}
+            <AlertDialogFooter>
+              <AlertDialogCancel disabled={pending} type='button'>Cancel</AlertDialogCancel>
+              <Button
+                disabled={!confirmed || !password || pending}
+                type='submit'
+                variant='destructive'
+              >
+                {pending ? 'Sending confirmation…' : 'Send deletion email'}
+              </Button>
+            </AlertDialogFooter>
+          </form>
+        </AlertDialogContent>
+      </AlertDialog>
+    </section>
+  );
+}
+
+function ConnectedAccountsSection({
+  accounts,
+  disconnect,
+  onError
+}: Readonly<{
+  accounts: readonly AuthConnectedAccount[];
+  disconnect?: AuthFeatureActions['disconnectConnectedAccount'];
+  onError?: AuthFeaturePackProps['onError'];
+}>) {
+  const [target, setTarget] = React.useState<AuthConnectedAccount>();
+  const [confirmation, setConfirmation] = React.useState('');
+  const [password, setPassword] = React.useState('');
+  const [pending, setPending] = React.useState(false);
+  const [error, setError] = React.useState<string>();
+  const fieldId = React.useId();
+  const confirmed = Boolean(target) && confirmation.trim() === target?.identifier;
+
+  const resetDialog = () => {
+    setTarget(undefined);
+    setConfirmation('');
+    setPassword('');
+    setError(undefined);
+  };
+
+  const submit = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (!disconnect || !target || !confirmed || !password || pending) return;
+    setPending(true);
+    setError(undefined);
+    try {
+      await disconnect({ accountId: target.id, password });
+      resetDialog();
+    } catch (cause) {
+      const normalized = normalizeFeaturePackError(
+        cause,
+        'The connected account could not be disconnected.'
+      );
+      setError(normalized.message);
+      onError?.(normalized);
+    } finally {
+      setPending(false);
+    }
+  };
+
+  return (
+    <section>
+      <SectionLabel
+        description='External identities that can authenticate as this account.'
+        icon={Link2Icon}
+        title='Connected accounts'
+      />
+      <ul className='border-border/70 divide-border/60 divide-y overflow-hidden rounded-xl border'>
+        {accounts.map((account) => (
+          <li className='flex min-h-14 items-center gap-3 px-3 py-3 sm:px-4' key={account.id}>
+            <div className='bg-muted text-muted-foreground flex size-9 shrink-0 items-center justify-center rounded-lg'>
+              <Link2Icon aria-hidden='true' className='size-4' />
+            </div>
+            <div className='min-w-0 flex-1'>
+              <div className='flex min-w-0 flex-wrap items-center gap-2'>
+                <p className='truncate text-sm font-medium'>{account.service}</p>
+                {account.isVerified ? (
+                  <Badge size='sm' variant='secondary'>Verified</Badge>
+                ) : null}
+              </div>
+              <p className='text-muted-foreground mt-0.5 truncate text-xs'>
+                {account.identifier}
+              </p>
+            </div>
+            {disconnect ? (
+              <Button onClick={() => setTarget(account)} size='sm' variant='ghost'>
+                Disconnect
+              </Button>
+            ) : null}
+          </li>
+        ))}
+      </ul>
+      {disconnect ? (
+        <AlertDialog
+          onOpenChange={(open) => {
+            if (!open && !pending) resetDialog();
+          }}
+          open={Boolean(target)}
+        >
+          <AlertDialogContent>
+            <form className='flex flex-col gap-4' onSubmit={(event) => void submit(event)}>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Disconnect {target?.service}?</AlertDialogTitle>
+                <AlertDialogDescription className='text-pretty'>
+                  Verify your password and type{' '}
+                  <strong className='text-foreground'>{target?.identifier}</strong> to confirm.
+                  You will no longer be able to sign in with this connection.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <FieldGroup>
+                <Field
+                  htmlFor={`${fieldId}-confirmation`}
+                  label={`Type ${target?.identifier ?? 'the account identifier'} to confirm`}
+                  required
+                >
+                  <Input
+                    autoComplete='off'
+                    id={`${fieldId}-confirmation`}
+                    onChange={(event) => setConfirmation(event.currentTarget.value)}
+                    required
+                    value={confirmation}
+                  />
+                </Field>
+                <Field htmlFor={`${fieldId}-password`} label='Current password' required>
+                  <Input
+                    autoComplete='current-password'
+                    id={`${fieldId}-password`}
+                    onChange={(event) => setPassword(event.currentTarget.value)}
+                    required
+                    type='password'
+                    value={password}
+                  />
+                </Field>
+              </FieldGroup>
+              {error ? (
+                <Alert role='alert' variant='destructive'>
+                  <AlertDescription>{error}</AlertDescription>
+                </Alert>
+              ) : null}
+              <AlertDialogFooter>
+                <AlertDialogCancel disabled={pending} type='button'>Cancel</AlertDialogCancel>
+                <Button
+                  disabled={!confirmed || !password || pending}
+                  type='submit'
+                  variant='destructive'
+                >
+                  {pending ? 'Disconnecting…' : 'Disconnect account'}
+                </Button>
+              </AlertDialogFooter>
+            </form>
+          </AlertDialogContent>
+        </AlertDialog>
+      ) : null}
     </section>
   );
 }

@@ -32,17 +32,17 @@ const BROWSER_PROFILES = [...OFFICIAL_PROFILES, 'storage-routed'] as const;
 const FEATURE_LABELS = [
   'Data',
   'Authentication',
-  'Users',
+  'App access',
   'Organizations',
   'Storage',
   'Billing',
   'Notifications'
 ] as const;
 const PROFILE_FEATURES = {
-  'auth-hardened': ['Data', 'Authentication', 'Users'],
-  'b2b-storage': ['Data', 'Authentication', 'Users', 'Organizations', 'Storage'],
+  'auth-hardened': ['Data', 'Authentication', 'App access'],
+  'b2b-storage': ['Data', 'Authentication', 'App access', 'Organizations', 'Storage'],
   full: FEATURE_LABELS,
-  'storage-routed': ['Data', 'Authentication', 'Users', 'Organizations', 'Storage']
+  'storage-routed': ['Data', 'Authentication', 'App access', 'Organizations', 'Storage']
 } as const;
 
 function uniqueCredentials(base: ProofCredentials, purpose: string): ProofCredentials {
@@ -156,7 +156,7 @@ test('signs up, opens _meta-discovered data, signs out, and signs back in throug
   await expect(page.getByRole('heading', { name: 'Create an account', exact: true }))
     .toBeVisible();
   await page.getByLabel('Email address').fill(credentials.email);
-  await page.getByLabel('Password').fill(credentials.password);
+  await page.getByRole('textbox', { name: 'Password', exact: true }).fill(credentials.password);
   await page.getByRole('button', { name: 'Create account', exact: true }).click();
 
   await expect(page.getByRole('heading', { name: 'Account', exact: true }))
@@ -170,8 +170,8 @@ test('signs up, opens _meta-discovered data, signs out, and signs back in throug
   await expect(page.getByRole('button', { name: 'Sign out', exact: true }))
     .toBeVisible();
 
-  await page.getByRole('link', { name: 'Users', exact: true }).click();
-  await expect(page.getByRole('heading', { name: 'Users', exact: true })).toBeVisible();
+  await page.getByRole('link', { name: 'App access', exact: true }).click();
+  await expect(page.getByRole('heading', { name: 'App access', exact: true })).toBeVisible();
 
   await page.getByRole('link', { name: 'Data', exact: true }).click();
   await expect(page.getByRole('heading', { name: 'Data', exact: true }))
@@ -184,7 +184,7 @@ test('signs up, opens _meta-discovered data, signs out, and signs back in throug
   await expect(page.getByRole('heading', { name: 'Sign in', exact: true })).toBeVisible();
 
   await page.getByLabel('Email address').fill(credentials.email);
-  await page.getByLabel('Password').fill(credentials.password);
+  await page.getByRole('textbox', { name: 'Password', exact: true }).fill(credentials.password);
   await page.getByRole('button', { name: 'Sign in', exact: true }).click();
   await expect(page.getByRole('heading', { name: 'Account', exact: true }))
     .toBeVisible();
@@ -354,7 +354,7 @@ test('discovers routed Storage tables in _meta and keeps unsupported writes unav
 
     await page.goto(proofPageUrl('storage-routed'));
     await page.getByLabel('Email address').fill(actor.credentials.email);
-    await page.getByLabel('Password').fill(actor.credentials.password);
+    await page.getByRole('textbox', { name: 'Password', exact: true }).fill(actor.credentials.password);
     await page.getByRole('button', { name: 'Sign in', exact: true }).click();
     await expect(page.getByRole('heading', { name: 'Account', exact: true }))
       .toBeVisible();

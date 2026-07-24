@@ -24,8 +24,11 @@ describe('Console Kit store', () => {
         organizationId: 'org-1'
       }
     });
-    first.getState().setActiveFeature('organizations');
-    first.getState().setAuthEntryMode('sign-up');
+    first.getState().setAuthFlow({ status: 'entry', mode: 'sign-up' });
+    first.getState().setRoute({
+      feature: 'organizations',
+      screen: 'organizations'
+    });
     first.getState().setAdapterLoad('users', {
       status: 'ready',
       adapter,
@@ -53,8 +56,8 @@ describe('Console Kit store', () => {
 
     const revisionAfterAuth = first.getState().metadataRevision;
     expect(first.getState()).toMatchObject({
-      activeFeature: 'organizations',
-      authEntryMode: 'sign-up',
+      route: { feature: 'organizations', screen: 'organizations' },
+      authFlow: { status: 'entry', mode: 'sign-up' },
       context: { databaseId: 'database-1', organizationId: null },
       session: { status: 'authenticated' },
       metadataKey: 'database-1:user-1:data',
@@ -82,8 +85,8 @@ describe('Console Kit store', () => {
       metadataByEndpoint: {}
     });
     expect(second.getState()).toMatchObject({
-      activeFeature: 'auth',
-      authEntryMode: 'sign-in',
+      route: { feature: 'auth', screen: 'entry' },
+      authFlow: { status: 'entry', mode: 'sign-in' },
       context: null,
       session: { status: 'loading' },
       endpoints: {},
@@ -185,8 +188,8 @@ describe('Console Kit store', () => {
     store.getState().synchronizeScope('database-2', session);
 
     expect(store.getState()).toMatchObject({
-      activeFeature: 'storage',
-      authEntryMode: 'sign-in',
+      route: { feature: 'storage', screen: 'buckets' },
+      authFlow: { status: 'entry', mode: 'sign-in' },
       context: { databaseId: 'database-2', organizationId: null },
       session,
       packCapabilities: {},

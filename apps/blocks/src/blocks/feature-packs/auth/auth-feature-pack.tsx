@@ -14,10 +14,18 @@ export function AuthFeaturePack(props: AuthFeaturePackProps) {
 
 export type {
   AuthAccountData,
+  AuthChallengeContribution,
+  AuthChallengeDescriptor,
+  AuthChallengeResponse,
+  AuthConnectedAccount,
   AuthEntryMode,
   AuthFeatureAction,
   AuthFeatureActions,
+  AuthFeatureNotice,
   AuthFeaturePackProps,
+  AuthFlowState,
   AuthIdentity,
+  AuthMethod,
+  AuthPasswordPolicy,
   AuthSession
 } from './auth-contracts';

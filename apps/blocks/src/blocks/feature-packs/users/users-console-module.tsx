@@ -11,6 +11,7 @@ import type {
 } from '../../console-kit/feature-module';
 import {
   UsersFeaturePack,
+  type UsersSection,
   type UsersFeaturePackProps
 } from './users-feature-pack';
 
@@ -19,17 +20,42 @@ export const usersCapabilityDiscovery = {
     { capability: 'users.directory', endpoint: 'auth', operation: 'query', fields: ['users'] },
     { capability: 'users.memberships', endpoint: 'admin', operation: 'query', fields: ['appMemberships'] },
     { capability: 'users.permissions', endpoint: 'admin', operation: 'query', fields: ['appPermissions'] },
-    { capability: 'users.limits', endpoint: 'billing', operation: 'query', fields: ['appLimits'] },
     { capability: 'users.profiles', endpoint: 'admin', operation: 'query', fields: ['appProfiles'] },
     { capability: 'users.invites', endpoint: 'admin', operation: 'query', fields: ['appInvites'] }
   ]
 } satisfies ConstructiveCapabilityContribution;
 
-function UsersConsoleFeature({ adapterProps, onError }: ConsoleKitFeatureComponentProps) {
+function sectionForRoute(
+  route: ConsoleKitFeatureComponentProps['route']
+): UsersSection {
+  if (route.feature !== 'users') return 'members';
+  switch (route.screen) {
+    case 'member':
+      return 'members';
+    case 'invitation':
+      return 'invitations';
+    case 'profile':
+      return 'profiles';
+    default:
+      return route.screen;
+  }
+}
+
+function UsersConsoleFeature({
+  adapterProps,
+  onError,
+  onRouteChange,
+  route
+}: ConsoleKitFeatureComponentProps) {
   return (
     <UsersFeaturePack
       {...(adapterProps as UsersFeaturePackProps)}
       onError={onError}
+      onSectionChange={(nextSection) => onRouteChange({
+        feature: 'users',
+        screen: nextSection
+      })}
+      section={sectionForRoute(route)}
     />
   );
 }

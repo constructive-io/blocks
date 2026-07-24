@@ -236,7 +236,7 @@ describe('feature-pack interaction policy', () => {
       <UsersFeaturePack
         actions={{ invite }}
         onError={onError}
-        policy={{ assignInviteRole: true, invite: true }}
+        policy={{ invite: true }}
         resource={{ status: 'empty' }}
       />
     );
@@ -259,22 +259,32 @@ describe('feature-pack interaction policy', () => {
     render(
       <UsersFeaturePack
         actions={{ invite }}
-        policy={{ assignInviteRole: true, invite: true }}
+        policy={{ assignInviteProfile: true, invite: true }}
         resource={{
           status: 'ready',
-          data: { members: [], roles: ['Administrator'] }
+          data: {
+            members: [],
+            invitations: [],
+            profiles: [{
+              id: 'profile-admin',
+              name: 'Administrator',
+              permissionIds: []
+            }],
+            inviteProfileIds: ['profile-admin']
+          }
         }}
       />
     );
 
+    await user.click(screen.getByRole('tab', { name: /Invitations/ }));
     await user.click(screen.getByRole('button', { name: 'Invite member' }));
-    expect(screen.getByRole('combobox', { name: 'Role' })).toHaveTextContent('No role');
+    expect(screen.getByRole('combobox', { name: 'Access profile' })).toHaveTextContent('No profile');
     await user.type(screen.getByRole('textbox', { name: 'Email address' }), 'app@example.com');
     await user.click(screen.getByRole('button', { name: 'Send invitation' }));
 
     await waitFor(() => expect(invite).toHaveBeenCalledWith({
-      email: 'app@example.com',
-      role: undefined
+      recipient: 'app@example.com',
+      profileId: undefined
     }));
   });
 
@@ -289,9 +299,9 @@ describe('feature-pack interaction policy', () => {
           status: 'ready',
           data: {
             members: [],
-            invites: [{
+            invitations: [{
               id: 'invite-1',
-              email: 'grace@example.com',
+              recipient: 'grace@example.com',
               status: 'pending',
               actionPolicy: { cancelInvite: true }
             }]
@@ -313,34 +323,72 @@ describe('feature-pack interaction policy', () => {
     }));
   });
 
+  it('reports controlled App access section changes to the host', async () => {
+    const user = userEvent.setup();
+    const onSectionChange = vi.fn();
+    render(
+      <UsersFeaturePack
+        onSectionChange={onSectionChange}
+        resource={{
+          status: 'ready',
+          data: { members: [], invitations: [] }
+        }}
+        section='members'
+      />
+    );
+
+    await user.click(screen.getByRole('tab', { name: /Invitations/ }));
+
+    expect(onSectionChange).toHaveBeenCalledWith('invitations');
+    expect(screen.getByRole('tab', { name: /Members/ })).toHaveAttribute(
+      'aria-selected',
+      'true'
+    );
+  });
+
   it('allows an organization invitation without assigning one of the visible profiles', async () => {
     const user = userEvent.setup();
     const inviteMember = vi.fn().mockResolvedValue(undefined);
     render(
       <OrganizationsFeaturePack
         actions={{ inviteMember }}
-        policy={{ assignInviteRole: true, inviteMember: true }}
+        policy={{ assignInviteProfile: true, inviteMember: true }}
         resource={{
           status: 'ready',
           data: {
             activeOrganizationId: 'organization-1',
             organizations: [{ id: 'organization-1', name: 'Acme' }],
             members: [],
-            roles: ['Administrator']
+            invites: [],
+            profiles: [{
+              id: 'profile-admin',
+              name: 'Administrator',
+              permissions: '',
+              permissionIds: [],
+              isSystem: false,
+              isDefault: false
+            }],
+            assignableInviteProfileIds: ['profile-admin']
           }
         }}
       />
     );
 
+    await user.click(screen.getByRole('tab', { name: /Invitations/ }));
     await user.click(screen.getByRole('button', { name: 'Invite member' }));
-    expect(screen.getByRole('combobox', { name: 'Role' })).toHaveTextContent('No role');
+    expect(screen.getByRole('combobox', { name: 'Access profile' })).toHaveTextContent('No profile');
     await user.type(screen.getByRole('textbox', { name: 'Email address' }), 'org@example.com');
     await user.click(screen.getByRole('button', { name: 'Send invitation' }));
 
     await waitFor(() => expect(inviteMember).toHaveBeenCalledWith({
       organizationId: 'organization-1',
-      email: 'org@example.com',
-      role: undefined
+      channel: 'email',
+      recipient: 'org@example.com',
+      profileId: undefined,
+      expiresAt: undefined,
+      multiple: false,
+      inviteLimit: undefined,
+      isReadOnly: false
     }));
   });
 
@@ -359,8 +407,12 @@ describe('feature-pack interaction policy', () => {
             members: [],
             invites: [{
               id: 'invite-2',
+              channel: 'email',
+              recipient: 'katherine@example.com',
               email: 'katherine@example.com',
               status: 'pending',
+              multiple: false,
+              isReadOnly: false,
               actionPolicy: { cancelInvite: true }
             }]
           }
@@ -390,13 +442,23 @@ describe('feature-pack interaction policy', () => {
         policy={{ invite: true }}
         resource={{
           status: 'ready',
-          data: { members: [], roles: ['Administrator'] }
+          data: {
+            members: [],
+            invitations: [],
+            profiles: [{
+              id: 'profile-admin',
+              name: 'Administrator',
+              permissionIds: []
+            }],
+            inviteProfileIds: ['profile-admin']
+          }
         }}
       />
     );
 
+    await user.click(screen.getByRole('tab', { name: /Invitations/ }));
     await user.click(screen.getByRole('button', { name: 'Invite member' }));
-    expect(screen.queryByRole('combobox', { name: 'Role' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('combobox', { name: 'Access profile' })).not.toBeInTheDocument();
   });
 
   it('drops a selected app profile when the backend-filtered role list changes', async () => {
@@ -404,17 +466,27 @@ describe('feature-pack interaction policy', () => {
     const invite = vi.fn();
     const resource = {
       status: 'ready' as const,
-      data: { members: [], roles: ['Administrator'] }
+      data: {
+        members: [],
+        invitations: [],
+        profiles: [{
+          id: 'profile-admin',
+          name: 'Administrator',
+          permissionIds: []
+        }],
+        inviteProfileIds: ['profile-admin']
+      }
     };
     const view = render(
       <UsersFeaturePack
         actions={{ invite }}
-        policy={{ assignInviteRole: true, invite: true }}
+        policy={{ assignInviteProfile: true, invite: true }}
         resource={resource}
       />
     );
+    await user.click(screen.getByRole('tab', { name: /Invitations/ }));
     await user.click(screen.getByRole('button', { name: 'Invite member' }));
-    fireEvent.click(screen.getByRole('combobox', { name: 'Role' }));
+    fireEvent.click(screen.getByRole('combobox', { name: 'Access profile' }));
     const option = screen.getByText('Administrator').closest('[role="option"]');
     fireEvent.pointerDown(option as HTMLElement, { pointerType: 'mouse' });
     fireEvent.click(option as HTMLElement);
@@ -422,10 +494,10 @@ describe('feature-pack interaction policy', () => {
     view.rerender(
       <UsersFeaturePack
         actions={{ invite }}
-        policy={{ assignInviteRole: true, invite: true }}
+        policy={{ assignInviteProfile: true, invite: true }}
         resource={{
           ...resource,
-          data: { ...resource.data, inviteRoles: [] }
+          data: { ...resource.data, inviteProfileIds: [] }
         }}
       />
     );
@@ -433,12 +505,12 @@ describe('feature-pack interaction policy', () => {
     await user.click(screen.getByRole('button', { name: 'Send invitation' }));
 
     await waitFor(() => expect(invite).toHaveBeenCalledWith({
-      email: 'app@example.com',
-      role: undefined
+      recipient: 'app@example.com',
+      profileId: undefined
     }));
   });
 
-  it('drops a selected organization profile when the backend-filtered role list changes', async () => {
+  it('drops a selected organization profile when the backend-filtered profile list changes', async () => {
     const user = userEvent.setup();
     const inviteMember = vi.fn();
     const resource = {
@@ -447,18 +519,28 @@ describe('feature-pack interaction policy', () => {
         activeOrganizationId: 'organization-1',
         organizations: [{ id: 'organization-1', name: 'Acme' }],
         members: [],
-        roles: ['Administrator']
+        invites: [],
+        profiles: [{
+          id: 'profile-admin',
+          name: 'Administrator',
+          permissions: '',
+          permissionIds: [],
+          isSystem: false,
+          isDefault: false
+        }],
+        assignableInviteProfileIds: ['profile-admin']
       }
     };
     const view = render(
       <OrganizationsFeaturePack
         actions={{ inviteMember }}
-        policy={{ assignInviteRole: true, inviteMember: true }}
+        policy={{ assignInviteProfile: true, inviteMember: true }}
         resource={resource}
       />
     );
+    await user.click(screen.getByRole('tab', { name: /Invitations/ }));
     await user.click(screen.getByRole('button', { name: 'Invite member' }));
-    fireEvent.click(screen.getByRole('combobox', { name: 'Role' }));
+    fireEvent.click(screen.getByRole('combobox', { name: 'Access profile' }));
     const option = screen.getByText('Administrator').closest('[role="option"]');
     fireEvent.pointerDown(option as HTMLElement, { pointerType: 'mouse' });
     fireEvent.click(option as HTMLElement);
@@ -466,10 +548,10 @@ describe('feature-pack interaction policy', () => {
     view.rerender(
       <OrganizationsFeaturePack
         actions={{ inviteMember }}
-        policy={{ assignInviteRole: true, inviteMember: true }}
+        policy={{ assignInviteProfile: true, inviteMember: true }}
         resource={{
           ...resource,
-          data: { ...resource.data, inviteRoles: [] }
+          data: { ...resource.data, assignableInviteProfileIds: [] }
         }}
       />
     );
@@ -478,20 +560,25 @@ describe('feature-pack interaction policy', () => {
 
     await waitFor(() => expect(inviteMember).toHaveBeenCalledWith({
       organizationId: 'organization-1',
-      email: 'org@example.com',
-      role: undefined
+      channel: 'email',
+      recipient: 'org@example.com',
+      profileId: undefined,
+      expiresAt: undefined,
+      multiple: false,
+      inviteLimit: undefined,
+      isReadOnly: false
     }));
   });
 
-  it('requires confirmation before removing a member and keeps a failed confirmation open', async () => {
+  it('requires confirmation before disabling a member and keeps a failed confirmation open', async () => {
     const user = userEvent.setup();
-    const remove = vi.fn().mockRejectedValue(new Error('Removal rejected'));
+    const setDisabled = vi.fn().mockRejectedValue(new Error('Lifecycle update rejected'));
     const onError = vi.fn();
     render(
       <UsersFeaturePack
-        actions={{ remove }}
+        actions={{ setDisabled }}
         onError={onError}
-        policy={{ remove: true }}
+        policy={{ setDisabled: true }}
         resource={{
           status: 'ready',
           data: {
@@ -500,8 +587,17 @@ describe('feature-pack interaction policy', () => {
               userId: 'user-1',
               name: 'Ada Lovelace',
               email: 'ada@example.com',
-              status: 'active',
-              role: 'Member'
+              lifecycle: {
+                approved: true,
+                verified: true,
+                banned: false,
+                disabled: false,
+                active: true
+              },
+              governance: { owner: false, admin: false },
+              directPermissionIds: [],
+              effectivePermissionIds: [],
+              actionPolicy: { setDisabled: true }
             }]
           }
         }}
@@ -510,49 +606,63 @@ describe('feature-pack interaction policy', () => {
 
     const actionTrigger = screen.getByRole('button', { name: 'Actions for Ada Lovelace' });
     await user.click(actionTrigger);
-    await user.click(await screen.findByRole('menuitem', { name: 'Remove membership' }));
-    expect(remove).not.toHaveBeenCalled();
+    await user.click(await screen.findByRole('menuitem', { name: 'Disable access' }));
+    expect(setDisabled).not.toHaveBeenCalled();
     expect(screen.getByRole('alertdialog')).toBeInTheDocument();
 
-    await user.click(screen.getByRole('button', { name: 'Remove membership' }));
+    await user.click(screen.getByRole('button', { name: 'Disable access' }));
     await waitFor(() => expect(onError).toHaveBeenCalledWith(
-      expect.objectContaining({ message: 'Removal rejected' })
+      expect.objectContaining({ message: 'Lifecycle update rejected' })
     ));
     expect(screen.getByRole('alertdialog')).toBeInTheDocument();
   });
 
-  it('routes user role changes through the injected update callback', async () => {
-    const updateRole = vi.fn();
+  it('routes profile grants through the injected semantic callback', async () => {
+    const setProfile = vi.fn();
     render(
       <UsersFeaturePack
-        actions={{ updateRole }}
-        policy={{ updateRole: true }}
+        actions={{ setProfile }}
+        policy={{ setProfile: true }}
         resource={{
           status: 'ready',
           data: {
-            roles: ['Member', 'Admin'],
+            profiles: [
+              { id: 'profile-member', name: 'Member', permissionIds: [] },
+              { id: 'profile-admin', name: 'Admin', permissionIds: [] }
+            ],
             members: [{
               id: 'membership-1',
               userId: 'user-1',
               name: 'Ada Lovelace',
               email: 'ada@example.com',
-              status: 'active',
-              role: 'Member'
+              lifecycle: {
+                approved: true,
+                verified: true,
+                banned: false,
+                disabled: false,
+                active: true
+              },
+              governance: { owner: false, admin: false },
+              profile: { id: 'profile-member', name: 'Member' },
+              directPermissionIds: [],
+              effectivePermissionIds: [],
+              actionPolicy: { setProfile: true }
             }]
           }
         }}
       />
     );
 
-    fireEvent.click(screen.getByRole('combobox', { name: 'Role for Ada Lovelace' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Manage access' }));
+    fireEvent.click(screen.getByRole('combobox', { name: 'Access profile' }));
     const option = screen.getByText('Admin').closest('[role="option"]');
     expect(option).not.toBeNull();
     fireEvent.pointerDown(option as HTMLElement, { pointerType: 'mouse' });
     fireEvent.click(option as HTMLElement);
 
-    await waitFor(() => expect(updateRole).toHaveBeenCalledWith({
+    await waitFor(() => expect(setProfile).toHaveBeenCalledWith({
       membershipId: 'membership-1',
-      role: 'Admin'
+      profileId: 'profile-admin'
     }));
   });
 
@@ -591,22 +701,32 @@ describe('feature-pack interaction policy', () => {
               userId: 'user-1',
               name: 'Ada Lovelace',
               email: 'ada@example.com',
-              status: 'active',
-              role: 'Owner'
-            }],
-            roles: ['Owner']
+              lifecycle: {
+                approved: true,
+                verified: true,
+                banned: false,
+                disabled: false,
+                active: true
+              },
+              governance: { owner: true, admin: true },
+              directPermissionIds: [],
+              effectivePermissionIds: []
+            }]
           }
         }}
       />
     );
 
-    await user.type(screen.getByRole('searchbox', { name: 'Search members' }), 'grace');
-    expect(screen.getByText('No members match')).toBeVisible();
+    await user.type(
+      screen.getByRole('searchbox', { name: 'Search application members' }),
+      'grace'
+    );
+    expect(screen.getByText('No application members match')).toBeVisible();
     expect(screen.getByText(/No results for “grace”/)).toBeVisible();
 
     await user.click(screen.getByRole('button', { name: 'Clear search' }));
     expect(screen.getByText('Ada Lovelace')).toBeVisible();
-    expect(screen.queryByText('No members match')).toBeNull();
+    expect(screen.queryByText('No application members match')).toBeNull();
   });
 
   it('toggles password visibility and uses mode-specific pending labels on auth entry', async () => {

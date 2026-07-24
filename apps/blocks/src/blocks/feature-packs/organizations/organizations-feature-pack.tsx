@@ -4,6 +4,7 @@ import * as React from 'react';
 import {
   Building2Icon,
   CheckIcon,
+  CopyIcon,
   MailPlusIcon,
   MoreHorizontalIcon,
   PlusIcon,
@@ -53,8 +54,14 @@ import {
   EmptyMedia,
   EmptyTitle
 } from '@constructive-io/ui/empty';
-import { Field } from '@constructive-io/ui/field';
+import {
+  Field,
+  FieldDescription,
+  FieldGroup,
+  FieldLabel
+} from '@constructive-io/ui/field';
 import { Input } from '@constructive-io/ui/input';
+import { Switch } from '@constructive-io/ui/switch';
 import {
   Select,
   SelectContent,
@@ -76,10 +83,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@constructive-io/ui/ta
 import {
   canPerform,
   normalizeFeaturePackError,
-  type FeatureActionPolicy,
   type FeatureActionResult,
-  type FeaturePackError,
-  type FeaturePackResource
+  type FeaturePackError
 } from '../shared/feature-pack-contracts';
 import {
   FeaturePackBoundary,
@@ -89,83 +94,30 @@ import {
   FeatureStatusBadge,
   FeaturePackTimestamp
 } from '../shared/feature-pack-ui';
+import type {
+  OrganizationInvite,
+  OrganizationMember,
+  OrganizationAccessProfile,
+  OrganizationsFeatureActions,
+  OrganizationsFeaturePackProps,
+  OrganizationsSection
+} from './organizations-contracts';
+import {
+  OrganizationDefaultsPanel,
+  OrganizationMemberAccessDialog,
+  OrganizationPermissionsPanel,
+  OrganizationProfilesPanel
+} from './organizations-access-panels';
+import {
+  OrganizationApiKeysPanel,
+  OrganizationHierarchyPanel,
+  OrganizationPrincipalsPanel,
+  OrganizationSettingsPanel
+} from './organizations-operation-panels';
 
-const NO_ROLE_VALUE = '__no_role__';
+export * from './organizations-contracts';
 
-export type OrganizationSummary = Readonly<{
-  id: string;
-  name: string;
-  slug?: string;
-  avatarUrl?: string;
-  memberCount?: number;
-}>;
-
-export type OrganizationMember = Readonly<{
-  id: string;
-  userId: string;
-  name: string;
-  email: string;
-  avatarUrl?: string;
-  role: string;
-  status: string;
-}>;
-
-export type OrganizationInvite = Readonly<{
-  id: string;
-  email: string;
-  role?: string;
-  status: string;
-  expiresAt?: string;
-  actionPolicy?: FeatureActionPolicy<'cancelInvite'>;
-}>;
-
-export type OrganizationsFeatureData = Readonly<{
-  organizations: readonly OrganizationSummary[];
-  activeOrganizationId?: string;
-  members: readonly OrganizationMember[];
-  invites?: readonly OrganizationInvite[];
-  roles?: readonly string[];
-  inviteRoles?: readonly string[];
-}>;
-
-export type OrganizationsFeatureAction =
-  | 'createOrganization'
-  | 'selectOrganization'
-  | 'inviteMember'
-  | 'assignInviteRole'
-  | 'updateMemberRole'
-  | 'removeMember'
-  | 'cancelInvite';
-
-export type OrganizationsFeatureActions = Readonly<{
-  createOrganization?: (input: { name: string }) => FeatureActionResult;
-  selectOrganization?: (input: { organizationId: string }) => FeatureActionResult;
-  inviteMember?: (input: {
-    organizationId: string;
-    email: string;
-    role?: string;
-  }) => FeatureActionResult;
-  updateMemberRole?: (input: {
-    organizationId: string;
-    membershipId: string;
-    role: string;
-  }) => FeatureActionResult;
-  removeMember?: (input: {
-    organizationId: string;
-    membershipId: string;
-  }) => FeatureActionResult;
-  cancelInvite?: (input: {
-    organizationId: string;
-    inviteId: string;
-  }) => FeatureActionResult;
-}>;
-
-export type OrganizationsFeaturePackProps = Readonly<{
-  resource: FeaturePackResource<OrganizationsFeatureData>;
-  policy?: FeatureActionPolicy<OrganizationsFeatureAction>;
-  actions?: OrganizationsFeatureActions;
-  onError?: (error: FeaturePackError) => void;
-}>;
+const NO_PROFILE_VALUE = '__no_profile__';
 
 function initials(value: string): string {
   return value
@@ -176,13 +128,9 @@ function initials(value: string): string {
     .join('');
 }
 
-function TextActionDialog({
-  kind,
-  roles = [],
+function CreateOrganizationDialog({
   onSubmit
 }: Readonly<{
-  kind: 'organization' | 'invitation';
-  roles?: readonly string[];
   onSubmit: (input: { value: string; role?: string }) => Promise<
     | Readonly<{ ok: true }>
     | Readonly<{ ok: false; error: FeaturePackError }>
@@ -190,14 +138,9 @@ function TextActionDialog({
 }>) {
   const [open, setOpen] = React.useState(false);
   const [value, setValue] = React.useState('');
-  const [role, setRole] = React.useState('');
   const [pending, setPending] = React.useState(false);
   const [error, setError] = React.useState<string>();
   const fieldId = React.useId();
-
-  React.useEffect(() => {
-    setRole((currentRole) => roles.includes(currentRole) ? currentRole : '');
-  }, [roles]);
 
   const submit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -206,8 +149,7 @@ function TextActionDialog({
     setError(undefined);
     try {
       const result = await onSubmit({
-        value: value.trim(),
-        role: roles.includes(role) ? role : undefined
+        value: value.trim()
       });
       if (result.ok) {
         setValue('');
@@ -220,7 +162,6 @@ function TextActionDialog({
     }
   };
 
-  const invitation = kind === 'invitation';
   return (
     <Dialog
       open={open}
@@ -230,25 +171,23 @@ function TextActionDialog({
         if (!nextOpen) setError(undefined);
       }}
     >
-      <DialogTrigger render={<Button variant={invitation ? 'default' : 'outline'} />}>
-        {invitation ? <MailPlusIcon data-icon='inline-start' /> : <PlusIcon data-icon='inline-start' />}
-        {invitation ? 'Invite member' : 'New organization'}
+      <DialogTrigger render={<Button variant='outline' />}>
+        <PlusIcon data-icon='inline-start' />
+        New organization
       </DialogTrigger>
       <DialogContent>
         <form onSubmit={(event) => void submit(event)}>
           <DialogHeader>
-            <DialogTitle>{invitation ? 'Invite an organization member' : 'Create an organization'}</DialogTitle>
+            <DialogTitle>Create an organization</DialogTitle>
             <DialogDescription>
-              {invitation
-                ? 'Membership grants access within the selected organization.'
-                : 'Create a tenant boundary for memberships and organization-owned resources.'}
+              Create a tenant boundary for memberships and organization-owned resources.
             </DialogDescription>
           </DialogHeader>
           <DialogPanel className='flex flex-col gap-4'>
             <Field
               error={error}
               htmlFor={`${fieldId}-value`}
-              label={invitation ? 'Email address' : 'Organization name'}
+              label='Organization name'
               required
             >
               <Input
@@ -256,36 +195,14 @@ function TextActionDialog({
                 id={`${fieldId}-value`}
                 onChange={(event) => setValue(event.currentTarget.value)}
                 required
-                type={invitation ? 'email' : 'text'}
+                type='text'
                 value={value}
               />
             </Field>
-            {invitation && roles.length > 0 ? (
-              <Field htmlFor={`${fieldId}-role`} label='Role'>
-                <Select
-                  onValueChange={(nextRole) => setRole(
-                    nextRole === NO_ROLE_VALUE ? '' : nextRole
-                  )}
-                  value={role || NO_ROLE_VALUE}
-                >
-                  <SelectTrigger id={`${fieldId}-role`}>
-                    <SelectValue>
-                      {(value: string | null) => value === NO_ROLE_VALUE ? 'No role' : value}
-                    </SelectValue>
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectGroup>
-                      <SelectItem value={NO_ROLE_VALUE}>No role</SelectItem>
-                      {roles.map((candidate) => <SelectItem key={candidate} value={candidate}>{candidate}</SelectItem>)}
-                    </SelectGroup>
-                  </SelectContent>
-                </Select>
-              </Field>
-            ) : null}
           </DialogPanel>
           <DialogFooter>
             <Button disabled={pending || !value.trim()} type='submit'>
-              {pending ? 'Working…' : invitation ? 'Send invitation' : 'Create organization'}
+              {pending ? 'Creating…' : 'Create organization'}
             </Button>
           </DialogFooter>
         </form>
@@ -294,45 +211,204 @@ function TextActionDialog({
   );
 }
 
-function OrganizationMemberRoleSelect({
-  member,
-  organizationId,
-  roles,
-  updateRole,
-  onError
+function OrganizationInviteDialog({
+  profiles,
+  assignableProfileIds,
+  onSubmit
 }: Readonly<{
-  member: OrganizationMember;
-  organizationId: string;
-  roles: readonly string[];
-  updateRole: NonNullable<OrganizationsFeatureActions['updateMemberRole']>;
-  onError?: OrganizationsFeaturePackProps['onError'];
+  profiles: readonly OrganizationAccessProfile[];
+  assignableProfileIds: readonly string[];
+  onSubmit: (input: {
+    channel: 'email' | 'sms' | 'link';
+    recipient?: string;
+    profileId?: string;
+    expiresAt?: string;
+    multiple?: boolean;
+    inviteLimit?: number;
+    isReadOnly?: boolean;
+  }) => Promise<Readonly<{ ok: true }> | Readonly<{ ok: false; error: FeaturePackError }>>;
 }>) {
+  const [open, setOpen] = React.useState(false);
+  const [channel, setChannel] = React.useState<'email' | 'sms' | 'link'>('email');
+  const [recipient, setRecipient] = React.useState('');
+  const [profileId, setProfileId] = React.useState('');
+  const [expiresAt, setExpiresAt] = React.useState('');
+  const [multiple, setMultiple] = React.useState(false);
+  const [inviteLimit, setInviteLimit] = React.useState('');
+  const [isReadOnly, setIsReadOnly] = React.useState(false);
   const [pending, setPending] = React.useState(false);
-  const options = roles.includes(member.role) ? roles : [member.role, ...roles];
+  const [error, setError] = React.useState<string>();
+  const fieldId = React.useId();
+  const assignableProfiles = React.useMemo(
+    () => profiles.filter((profile) => assignableProfileIds.includes(profile.id)),
+    [assignableProfileIds, profiles]
+  );
+  const needsRecipient = channel !== 'link';
 
-  const changeRole = async (role: string) => {
-    if (role === member.role) return;
+  React.useEffect(() => {
+    setProfileId((current) => assignableProfiles.some((profile) => profile.id === current)
+      ? current
+      : '');
+  }, [assignableProfiles]);
+
+  const submit = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (needsRecipient && !recipient.trim()) return;
     setPending(true);
+    setError(undefined);
     try {
-      await updateRole({ organizationId, membershipId: member.id, role });
-    } catch (cause) {
-      onError?.(normalizeFeaturePackError(cause, 'The organization member role could not be changed.'));
+      const result = await onSubmit({
+        channel,
+        recipient: needsRecipient ? recipient.trim() : undefined,
+        profileId: profileId || undefined,
+        expiresAt: expiresAt ? new Date(expiresAt).toISOString() : undefined,
+        multiple: channel === 'link' ? multiple : false,
+        inviteLimit: channel === 'link' && inviteLimit ? Number(inviteLimit) : undefined,
+        isReadOnly
+      });
+      if (result.ok) {
+        setOpen(false);
+        setRecipient('');
+        setProfileId('');
+        setExpiresAt('');
+        setMultiple(false);
+        setInviteLimit('');
+        setIsReadOnly(false);
+      } else if ('error' in result) {
+        setError(result.error.message);
+      }
     } finally {
       setPending(false);
     }
   };
 
   return (
-    <Select disabled={pending} onValueChange={(role) => void changeRole(role)} value={member.role}>
-      <SelectTrigger aria-label={`Role for ${member.name}`} className='min-w-32' size='sm'>
-        <SelectValue />
-      </SelectTrigger>
-      <SelectContent>
-        <SelectGroup>
-          {options.map((role) => <SelectItem key={role} value={role}>{role}</SelectItem>)}
-        </SelectGroup>
-      </SelectContent>
-    </Select>
+    <Dialog
+      onOpenChange={(nextOpen) => {
+        if (!pending) setOpen(nextOpen);
+        if (!nextOpen) setError(undefined);
+      }}
+      open={open}
+    >
+      <DialogTrigger render={<Button />}>
+        <MailPlusIcon data-icon='inline-start' />Invite member
+      </DialogTrigger>
+      <DialogContent>
+        <form onSubmit={(event) => void submit(event)}>
+          <DialogHeader>
+            <DialogTitle>Invite an organization member</DialogTitle>
+            <DialogDescription>
+              Email and SMS invites target one recipient. Reusable links require a verified email when redeemed.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogPanel>
+            <FieldGroup>
+              <Field htmlFor={`${fieldId}-channel`} label='Delivery channel'>
+                <Select
+                  onValueChange={(value) => setChannel(value as typeof channel)}
+                  value={channel}
+                >
+                  <SelectTrigger id={`${fieldId}-channel`}><SelectValue /></SelectTrigger>
+                  <SelectContent><SelectGroup>
+                    <SelectItem value='email'>Email</SelectItem>
+                    <SelectItem value='sms'>SMS</SelectItem>
+                    <SelectItem value='link'>Reusable link</SelectItem>
+                  </SelectGroup></SelectContent>
+                </Select>
+              </Field>
+              {needsRecipient ? (
+                <Field
+                  error={error}
+                  htmlFor={`${fieldId}-recipient`}
+                  label={channel === 'sms' ? 'Phone number' : 'Email address'}
+                  required
+                >
+                  <Input
+                    aria-invalid={error ? true : undefined}
+                    id={`${fieldId}-recipient`}
+                    onChange={(event) => setRecipient(event.currentTarget.value)}
+                    placeholder={channel === 'sms' ? '+15551234567' : 'person@example.com'}
+                    required
+                    type={channel === 'email' ? 'email' : 'tel'}
+                    value={recipient}
+                  />
+                </Field>
+              ) : error ? <p className='text-destructive text-sm' role='alert'>{error}</p> : null}
+              {assignableProfiles.length > 0 ? (
+                <Field htmlFor={`${fieldId}-profile`} label='Access profile'>
+                  <Select
+                    onValueChange={(value) => setProfileId(
+                      value === NO_PROFILE_VALUE ? '' : value
+                    )}
+                    value={profileId || NO_PROFILE_VALUE}
+                  >
+                    <SelectTrigger id={`${fieldId}-profile`}>
+                      <SelectValue>
+                        {(value: string | null) => value === NO_PROFILE_VALUE
+                          ? 'No profile'
+                          : assignableProfiles.find((profile) => profile.id === value)?.name ?? value}
+                      </SelectValue>
+                    </SelectTrigger>
+                    <SelectContent><SelectGroup>
+                      <SelectItem value={NO_PROFILE_VALUE}>No profile</SelectItem>
+                      {assignableProfiles.map((profile) => (
+                        <SelectItem key={profile.id} value={profile.id}>{profile.name}</SelectItem>
+                      ))}
+                    </SelectGroup></SelectContent>
+                  </Select>
+                </Field>
+              ) : null}
+              <Field htmlFor={`${fieldId}-expires`} label='Expires at'>
+                <Input
+                  id={`${fieldId}-expires`}
+                  onChange={(event) => setExpiresAt(event.currentTarget.value)}
+                  type='datetime-local'
+                  value={expiresAt}
+                />
+              </Field>
+              <Field orientation='horizontal'>
+                <div className='min-w-0 flex-1'>
+                  <FieldLabel htmlFor={`${fieldId}-read-only`}>Read-only membership</FieldLabel>
+                  <FieldDescription>The membership is created with its read-only scope enabled.</FieldDescription>
+                </div>
+                <Switch
+                  checked={isReadOnly}
+                  id={`${fieldId}-read-only`}
+                  onCheckedChange={setIsReadOnly}
+                />
+              </Field>
+              {channel === 'link' ? (
+                <>
+                  <Field orientation='horizontal'>
+                    <div className='min-w-0 flex-1'>
+                      <FieldLabel htmlFor={`${fieldId}-multiple`}>Allow multiple claims</FieldLabel>
+                      <FieldDescription>Keep the link valid until its claim limit or expiry.</FieldDescription>
+                    </div>
+                    <Switch checked={multiple} id={`${fieldId}-multiple`} onCheckedChange={setMultiple} />
+                  </Field>
+                  {multiple ? (
+                    <Field htmlFor={`${fieldId}-limit`} label='Claim limit'>
+                      <Input
+                        id={`${fieldId}-limit`}
+                        min={1}
+                        onChange={(event) => setInviteLimit(event.currentTarget.value)}
+                        type='number'
+                        value={inviteLimit}
+                      />
+                    </Field>
+                  ) : null}
+                </>
+              ) : null}
+            </FieldGroup>
+          </DialogPanel>
+          <DialogFooter>
+            <Button disabled={pending || (needsRecipient && !recipient.trim())} type='submit'>
+              {pending ? 'Creating…' : channel === 'link' ? 'Create invite link' : 'Send invitation'}
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
   );
 }
 
@@ -438,7 +514,7 @@ function CancelOrganizationInviteAction({
       </AlertDialogTrigger>
       <AlertDialogContent>
         <AlertDialogHeader>
-          <AlertDialogTitle>Cancel invitation for {invite.email}?</AlertDialogTitle>
+          <AlertDialogTitle>Cancel invitation for {invite.recipient}?</AlertDialogTitle>
           <AlertDialogDescription>
             The organization invitation link will stop working. You can invite this person again later.
           </AlertDialogDescription>
@@ -458,9 +534,15 @@ export function OrganizationsFeaturePack({
   resource,
   policy,
   actions,
+  section: controlledSection,
+  defaultSection = 'members',
+  onSectionChange,
   onError
 }: OrganizationsFeaturePackProps) {
   const [query, setQuery] = React.useState('');
+  const [internalSection, setInternalSection] = React.useState<OrganizationsSection>(
+    defaultSection
+  );
 
   const run = async (
     action: () => FeatureActionResult,
@@ -481,8 +563,7 @@ export function OrganizationsFeaturePack({
       <FeaturePackPageHeader
         actions={
           resource.status === 'ready' && canPerform(policy, 'createOrganization') && actions?.createOrganization ? (
-            <TextActionDialog
-              kind='organization'
+            <CreateOrganizationDialog
               onSubmit={({ value }) => run(() => actions.createOrganization!({ name: value }), 'The organization could not be created.')}
             />
           ) : null
@@ -495,8 +576,7 @@ export function OrganizationsFeaturePack({
       <FeaturePackBoundary
         emptyAction={
           canPerform(policy, 'createOrganization') && actions?.createOrganization ? (
-            <TextActionDialog
-              kind='organization'
+            <CreateOrganizationDialog
               onSubmit={({ value }) => run(() => actions.createOrganization!({ name: value }), 'The organization could not be created.')}
             />
           ) : null
@@ -510,8 +590,52 @@ export function OrganizationsFeaturePack({
             ?? data.organizations[0];
           const normalized = query.trim().toLowerCase();
           const members = data.members.filter((member) =>
-            !normalized || `${member.name} ${member.email} ${member.role}`.toLowerCase().includes(normalized)
+            !normalized || `${member.name} ${member.email} ${member.governance} ${member.profileName ?? ''}`.toLowerCase().includes(normalized)
           );
+          const sections: Array<Readonly<{
+            id: OrganizationsSection;
+            label: string;
+            count?: number;
+          }>> = [
+            { id: 'members', label: 'Members', count: data.members.length },
+            ...(data.invites === undefined && data.claimedInvites === undefined
+              ? []
+              : [{
+                  id: 'invitations' as const,
+                  label: 'Invitations',
+                  count: (data.invites?.length ?? 0) + (data.claimedInvites?.length ?? 0)
+                }]),
+            ...(data.profiles === undefined
+              ? []
+              : [{ id: 'profiles' as const, label: 'Profiles', count: data.profiles.length }]),
+            ...(data.permissions === undefined
+              ? []
+              : [{ id: 'permissions' as const, label: 'Permissions', count: data.permissions.length }]),
+            ...(data.membershipDefault === undefined
+              ? []
+              : [{ id: 'defaults' as const, label: 'Defaults' }]),
+            ...(data.hierarchy === undefined
+              ? []
+              : [{ id: 'hierarchy' as const, label: 'Hierarchy', count: data.hierarchy.length }]),
+            { id: 'settings', label: 'Settings' },
+            ...(data.apiKeys === undefined && data.principals === undefined
+              ? []
+              : [{
+                  id: 'developer' as const,
+                  label: 'Developer',
+                  count: (data.apiKeys?.length ?? 0) + (data.principals?.length ?? 0)
+                }])
+          ];
+          const requestedSection = controlledSection ?? internalSection;
+          const activeSection = sections.some((candidate) => candidate.id === requestedSection)
+            ? requestedSection
+            : 'members';
+          const changeSection = (value: string) => {
+            const nextSection = value as OrganizationsSection;
+            if (!sections.some((candidate) => candidate.id === nextSection)) return;
+            if (controlledSection === undefined) setInternalSection(nextSection);
+            onSectionChange?.(nextSection);
+          };
 
           return (
             <div className='grid min-h-[32rem] gap-6 lg:grid-cols-[17rem_minmax(0,1fr)]'>
@@ -556,59 +680,84 @@ export function OrganizationsFeaturePack({
               </Card>
 
               <div className='min-w-0'>
-                <div className='mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between'>
+                <div className='mb-4 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between'>
                   <div>
-                    <h2 className='text-lg font-semibold'>{active?.name ?? 'Organization'}</h2>
-                    <p className='text-muted-foreground text-sm'>Membership and invitations for this tenant.</p>
+                    <h2 className='text-balance text-lg font-semibold'>{active?.name ?? 'Organization'}</h2>
+                    <p className='text-muted-foreground text-pretty text-sm'>
+                      Tenant memberships, access policy, hierarchy, and machine credentials.
+                    </p>
                   </div>
-                  {active && canPerform(policy, 'inviteMember') && actions?.inviteMember ? (
-                    <TextActionDialog
-                      kind='invitation'
-                      onSubmit={({ value, role }) =>
-                        run(
-                          () => actions.inviteMember!({ organizationId: active.id, email: value, role }),
-                          'The invitation could not be sent.'
-                        )
-                      }
-                      roles={canPerform(policy, 'assignInviteRole')
-                        ? data.inviteRoles ?? data.roles
+                  {active &&
+                  activeSection === 'invitations' &&
+                  canPerform(policy, 'inviteMember') &&
+                  actions?.inviteMember ? (
+                    <OrganizationInviteDialog
+                      assignableProfileIds={canPerform(policy, 'assignInviteProfile')
+                        ? data.assignableInviteProfileIds ?? []
                         : []}
+                      onSubmit={(input) => run(
+                        () => actions.inviteMember!({ organizationId: active.id, ...input }),
+                        'The invitation could not be created.'
+                      )}
+                      profiles={data.profiles ?? []}
                     />
                   ) : null}
                 </div>
-                <Tabs defaultValue='members'>
-                  <div className='flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between'>
-                    <TabsList>
-                      <TabsTrigger value='members'>Members ({data.members.length})</TabsTrigger>
-                      {data.invites ? <TabsTrigger value='invites'>Invitations ({data.invites.length})</TabsTrigger> : null}
+                <Tabs onValueChange={changeSection} value={activeSection}>
+                  <div className='flex flex-col gap-4'>
+                    <TabsList
+                      aria-label='Organization management sections'
+                      className='h-auto w-full justify-start gap-1 overflow-x-auto rounded-none border-b border-border/60 bg-transparent p-0'
+                    >
+                      {sections.map((candidate) => (
+                        <TabsTrigger
+                          className='text-muted-foreground data-[active]:text-foreground data-[active]:border-foreground h-10 shrink-0 rounded-none border-0 border-b-2 border-transparent bg-transparent px-3 shadow-none data-[active]:bg-transparent data-[active]:shadow-none'
+                          key={candidate.id}
+                          value={candidate.id}
+                        >
+                          {candidate.label}
+                          {candidate.count === undefined ? null : (
+                            <span className='text-muted-foreground ml-1.5 text-xs tabular-nums'>
+                              {candidate.count}
+                            </span>
+                          )}
+                        </TabsTrigger>
+                      ))}
                     </TabsList>
-                    <label className='relative block w-full sm:max-w-xs'>
-                      <span className='sr-only'>Search organization members</span>
-                      <SearchIcon className='text-muted-foreground pointer-events-none absolute left-3 top-1/2 -translate-y-1/2' />
-                      <Input className='pl-10' onChange={(event) => setQuery(event.currentTarget.value)} placeholder='Search members' value={query} />
-                    </label>
+                    {activeSection === 'members' ? (
+                      <label className='relative block w-full self-end sm:max-w-xs'>
+                        <span className='sr-only'>Search organization members</span>
+                        <SearchIcon className='text-muted-foreground pointer-events-none absolute left-3 top-1/2 -translate-y-1/2' />
+                        <Input
+                          className='pl-10'
+                          onChange={(event) => setQuery(event.currentTarget.value)}
+                          placeholder='Search organization members'
+                          type='search'
+                          value={query}
+                        />
+                      </label>
+                    ) : null}
                   </div>
-                  <TabsContent value='members'>
+
+                  <TabsContent className='mt-5' value='members'>
                     {members.length === 0 && normalized ? (
                       <FeaturePackFilteredEmpty
                         clearLabel='Clear search'
-                        description='Try a different name, email, or role, or clear the search to see every member.'
+                        description='Try a different name, email, profile, or governance role.'
                         onClear={() => setQuery('')}
                         query={query}
                         title='No members match'
                       />
                     ) : (
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
+                      <Table>
+                        <TableHeader><TableRow>
                           <TableHead>Member</TableHead>
-                          <TableHead>Role</TableHead>
+                          <TableHead>Governance</TableHead>
+                          <TableHead>Access profile</TableHead>
                           <TableHead>Status</TableHead>
-                          <TableHead className='w-12'><span className='sr-only'>Actions</span></TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {members.map((member) => (
+                          <TableHead className='w-24'><span className='sr-only'>Actions</span></TableHead>
+                        </TableRow></TableHeader>
+                        <TableBody>{members.map((member) => (
                           <TableRow key={member.id}>
                             <TableCell>
                               <div className='flex min-w-48 items-center gap-3'>
@@ -622,84 +771,215 @@ export function OrganizationsFeaturePack({
                                 </div>
                               </div>
                             </TableCell>
-                            <TableCell>
-                              {active && canPerform(policy, 'updateMemberRole') && actions?.updateMemberRole && (data.roles?.length ?? 0) > 0 ? (
-                                <OrganizationMemberRoleSelect
-                                  member={member}
-                                  onError={onError}
-                                  organizationId={active.id}
-                                  roles={data.roles ?? []}
-                                  updateRole={actions.updateMemberRole}
-                                />
-                              ) : member.role}
-                            </TableCell>
+                            <TableCell className='capitalize'>{member.governance}</TableCell>
+                            <TableCell>{member.profileName ?? 'No profile'}</TableCell>
                             <TableCell><FeatureStatusBadge status={member.status} /></TableCell>
                             <TableCell>
-                              {active && canPerform(policy, 'removeMember') && actions?.removeMember ? (
-                                <OrganizationMemberActions
-                                  member={member}
-                                  onError={onError}
-                                  organizationId={active.id}
-                                  removeMember={actions.removeMember}
-                                />
+                              {active ? (
+                                <div className='flex items-center justify-end gap-1'>
+                                  <OrganizationMemberAccessDialog
+                                    actions={actions}
+                                    member={member}
+                                    onError={onError}
+                                    organizationId={active.id}
+                                    permissions={data.permissions ?? []}
+                                    policy={policy}
+                                    profiles={data.profiles ?? []}
+                                  />
+                                  {canPerform(policy, 'removeMember') &&
+                                  member.actionPolicy?.removeMember &&
+                                  actions?.removeMember ? (
+                                    <OrganizationMemberActions
+                                      member={member}
+                                      onError={onError}
+                                      organizationId={active.id}
+                                      removeMember={actions.removeMember}
+                                    />
+                                  ) : null}
+                                </div>
                               ) : null}
                             </TableCell>
                           </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
+                        ))}</TableBody>
+                      </Table>
                     )}
                   </TabsContent>
-                  {data.invites ? (
-                    <TabsContent value='invites'>
-                      {data.invites.length === 0 ? (
+
+                  {data.invites !== undefined || data.claimedInvites !== undefined ? (
+                    <TabsContent className='mt-5' value='invitations'>
+                      {(data.invites?.length ?? 0) === 0 && (data.claimedInvites?.length ?? 0) === 0 ? (
                         <Empty className='min-h-52 border' role='status'>
                           <EmptyHeader>
-                            <EmptyMedia variant='icon'>
-                              <MailPlusIcon aria-hidden='true' />
-                            </EmptyMedia>
-                            <EmptyTitle>No pending invitations</EmptyTitle>
-                            <EmptyDescription>
-                              Invite a collaborator when they are ready to join this organization.
-                            </EmptyDescription>
+                            <EmptyMedia variant='icon'><MailPlusIcon aria-hidden='true' /></EmptyMedia>
+                            <EmptyTitle>No active invitations</EmptyTitle>
+                            <EmptyDescription>Invite by email, SMS, or a reusable link.</EmptyDescription>
                           </EmptyHeader>
                         </Empty>
                       ) : (
-                      <Table>
-                        <TableHeader>
-                          <TableRow>
-                            <TableHead>Email</TableHead>
-                            <TableHead>Role</TableHead>
-                            <TableHead>Status</TableHead>
-                            <TableHead>Expires</TableHead>
-                            <TableHead className='text-right'>Actions</TableHead>
-                          </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                          {data.invites.map((invite) => (
-                            <TableRow key={invite.id}>
-                              <TableCell className='font-medium'>{invite.email}</TableCell>
-                              <TableCell>{invite.role ?? 'Member'}</TableCell>
-                              <TableCell><FeatureStatusBadge status={invite.status} /></TableCell>
-                              <TableCell><FeaturePackTimestamp value={invite.expiresAt} /></TableCell>
-                              <TableCell className='text-right'>
-                                {active &&
-                                canPerform(policy, 'cancelInvite') &&
-                                canPerform(invite.actionPolicy, 'cancelInvite') &&
-                                actions?.cancelInvite ? (
-                                  <CancelOrganizationInviteAction
-                                    cancelInvite={actions.cancelInvite}
-                                    invite={invite}
-                                    onError={onError}
-                                    organizationId={active.id}
-                                  />
-                                ) : null}
-                              </TableCell>
-                            </TableRow>
-                          ))}
-                        </TableBody>
-                      </Table>
+                        <div className='flex flex-col gap-8'>
+                          {(data.invites?.length ?? 0) > 0 ? (
+                            <section className='flex flex-col gap-3'>
+                              <div>
+                                <h3 className='text-sm font-medium'>Active invitations</h3>
+                                <p className='text-muted-foreground text-sm'>Pending delivery and reusable links that can still be claimed.</p>
+                              </div>
+                              <Table>
+                                <TableHeader><TableRow>
+                                  <TableHead>Recipient</TableHead><TableHead>Profile</TableHead>
+                                  <TableHead>Status</TableHead><TableHead>Claims</TableHead>
+                                  <TableHead>Expires</TableHead><TableHead className='text-right'>Actions</TableHead>
+                                </TableRow></TableHeader>
+                                <TableBody>{data.invites?.map((invite) => (
+                                  <TableRow key={invite.id}>
+                                    <TableCell>
+                                      <div className='flex items-center gap-2'>
+                                        <span className='font-medium'>{invite.recipient || 'Reusable link'}</span>
+                                        <span className='text-muted-foreground text-xs uppercase'>{invite.channel}</span>
+                                      </div>
+                                    </TableCell>
+                                    <TableCell>{invite.profileName ?? 'No profile'}</TableCell>
+                                    <TableCell><FeatureStatusBadge status={invite.status} /></TableCell>
+                                    <TableCell className='tabular-nums'>
+                                      {invite.inviteCount ?? 0}{invite.inviteLimit ? ` / ${invite.inviteLimit}` : ''}
+                                    </TableCell>
+                                    <TableCell><FeaturePackTimestamp value={invite.expiresAt} /></TableCell>
+                                    <TableCell>
+                                      <div className='flex justify-end gap-2'>
+                                        {invite.token ? (
+                                          <Button
+                                            onClick={() => void navigator.clipboard?.writeText(invite.token!)}
+                                            size='sm'
+                                            variant='outline'
+                                          >
+                                            <CopyIcon data-icon='inline-start' />Copy token
+                                          </Button>
+                                        ) : null}
+                                        {active &&
+                                        canPerform(policy, 'cancelInvite') &&
+                                        invite.actionPolicy?.cancelInvite &&
+                                        actions?.cancelInvite ? (
+                                          <CancelOrganizationInviteAction
+                                            cancelInvite={actions.cancelInvite}
+                                            invite={invite}
+                                            onError={onError}
+                                            organizationId={active.id}
+                                          />
+                                        ) : null}
+                                      </div>
+                                    </TableCell>
+                                  </TableRow>
+                                ))}</TableBody>
+                              </Table>
+                            </section>
+                          ) : null}
+                          {(data.claimedInvites?.length ?? 0) > 0 ? (
+                            <section className='flex flex-col gap-3'>
+                              <div>
+                                <h3 className='text-sm font-medium'>Claim history</h3>
+                                <p className='text-muted-foreground text-sm'>Accepted invitations retained by Constructive for membership audit history.</p>
+                              </div>
+                              <Table>
+                                <TableHeader><TableRow>
+                                  <TableHead>Sender</TableHead>
+                                  <TableHead>Receiver</TableHead>
+                                  <TableHead>Claimed</TableHead>
+                                </TableRow></TableHeader>
+                                <TableBody>{data.claimedInvites?.map((invite) => (
+                                  <TableRow key={invite.id}>
+                                    <TableCell className='font-mono text-xs'>{invite.senderId}</TableCell>
+                                    <TableCell className='font-mono text-xs'>{invite.receiverId}</TableCell>
+                                    <TableCell><FeaturePackTimestamp value={invite.createdAt} /></TableCell>
+                                  </TableRow>
+                                ))}</TableBody>
+                              </Table>
+                            </section>
+                          ) : null}
+                        </div>
                       )}
+                    </TabsContent>
+                  ) : null}
+
+                  {active && data.profiles !== undefined ? (
+                    <TabsContent className='mt-5' value='profiles'>
+                      <OrganizationProfilesPanel
+                        actions={actions}
+                        onError={onError}
+                        organizationId={active.id}
+                        permissions={data.permissions ?? []}
+                        policy={policy}
+                        profiles={data.profiles}
+                      />
+                    </TabsContent>
+                  ) : null}
+                  {data.permissions !== undefined ? (
+                    <TabsContent className='mt-5' value='permissions'>
+                      <OrganizationPermissionsPanel
+                        members={data.members}
+                        permissions={data.permissions}
+                        profiles={data.profiles ?? []}
+                      />
+                    </TabsContent>
+                  ) : null}
+                  {active && data.membershipDefault ? (
+                    <TabsContent className='mt-5' value='defaults'>
+                      <OrganizationDefaultsPanel
+                        actions={actions}
+                        membershipDefault={data.membershipDefault}
+                        onError={onError}
+                        organizationId={active.id}
+                        policy={policy}
+                      />
+                    </TabsContent>
+                  ) : null}
+                  {active && data.hierarchy !== undefined ? (
+                    <TabsContent className='mt-5' value='hierarchy'>
+                      <OrganizationHierarchyPanel
+                        actions={actions}
+                        edges={data.hierarchy}
+                        members={data.members}
+                        onError={onError}
+                        organizationId={active.id}
+                        policy={policy}
+                      />
+                    </TabsContent>
+                  ) : null}
+                  {active ? (
+                    <TabsContent className='mt-5' value='settings'>
+                      <OrganizationSettingsPanel
+                        actions={actions}
+                        currentMembership={data.members.find(
+                          (member) => member.userId === data.currentActorId
+                        )}
+                        onError={onError}
+                        organization={active}
+                        policy={policy}
+                        settings={data.membershipSettings}
+                      />
+                    </TabsContent>
+                  ) : null}
+                  {active && (data.apiKeys !== undefined || data.principals !== undefined) ? (
+                    <TabsContent className='mt-5' value='developer'>
+                      <div className='flex flex-col gap-10'>
+                        {data.principals !== undefined ? (
+                          <OrganizationPrincipalsPanel
+                            actions={actions}
+                            onError={onError}
+                            organizationId={active.id}
+                            policy={policy}
+                            principals={data.principals}
+                          />
+                        ) : null}
+                        {data.apiKeys !== undefined ? (
+                          <OrganizationApiKeysPanel
+                            actions={actions}
+                            apiKeys={data.apiKeys}
+                            onError={onError}
+                            organizationId={active.id}
+                            policy={policy}
+                            principals={data.principals ?? []}
+                          />
+                        ) : null}
+                      </div>
                     </TabsContent>
                   ) : null}
                 </Tabs>

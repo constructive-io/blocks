@@ -8,6 +8,8 @@ import { Alert, AlertDescription, AlertTitle } from '@constructive-io/ui/alert';
 import {
   createDatabaseScopedStandaloneSession,
   createFetchConsoleTransport,
+  createConsoleIdentityKey,
+  getConsoleSessionIdentity,
   resolveConsoleEndpoint,
   type ConsoleSession,
   type ConsoleEndpoint,
@@ -21,7 +23,9 @@ import type { FeaturePackId } from '../../../feature-packs';
 import { ConsoleKit } from '../console-kit';
 import type { ConsoleKitFeatureModule } from '../feature-module';
 import type {
+  ConsoleKitAdapterEnhancers,
   ConsoleKitAdapters,
+  ConsoleKitAuthMethodConfig,
   ConsoleKitConfig,
   ConsoleKitRouteConfig
 } from '../console-kit-contracts';
@@ -30,6 +34,15 @@ import {
   type ConsoleKitStoreApi
 } from '../store';
 import { createConstructiveCapabilityDiscovery } from './constructive-capabilities';
+import {
+  createConstructiveCallbackCredentialVault,
+  parseConstructiveConsoleCallback,
+  scrubConstructiveConsoleCallbackLocation,
+  type ConstructiveCallbackCredentialVault,
+  type ConstructiveConsoleCallback,
+  type ConstructiveConsoleCallbackResult,
+  type ConstructiveConsoleCallbackSource
+} from './constructive-callback';
 
 export type ConstructiveTenantDatabase = Readonly<{
   id: string;
@@ -62,11 +75,14 @@ export type ConstructiveConsoleKitCoreProps = Readonly<{
   csrfTokenProvider?: ConsoleCsrfTokenProvider;
   store?: ConsoleKitStoreApi;
   transport?: ConsoleTransport;
-  resetRoleId?: string;
-  resetToken?: string;
-  /** Values parsed and scrubbed by the host from a client-only email-link fragment. */
-  verificationEmailId?: string;
-  verificationToken?: string;
+  /**
+   * A callback URL/parameter source. Omit it to inspect the current browser
+   * location, or pass false when the host owns callback handling.
+   */
+  callback?: ConstructiveConsoleCallbackSource | false;
+  adapterEnhancers?: ConsoleKitAdapterEnhancers;
+  authMethods?: ConsoleKitAuthMethodConfig;
+  authPasswordPolicy?: ConsoleKitConfig['authPasswordPolicy'];
   featureOptions?: ConsoleKitConfig['featureOptions'];
   onError?: ConsoleKitConfig['onError'];
 }>;
@@ -75,10 +91,10 @@ export type CreateConstructiveAdaptersOptions = Readonly<{
   store: ConsoleKitStoreApi;
   featureModules: readonly ConsoleKitFeatureModule[];
   session?: DatabaseScopedStandaloneConsoleSession;
-  resetRoleId?: string;
-  resetToken?: string;
-  verificationEmailId?: string;
-  verificationToken?: string;
+  callback?: ConstructiveConsoleCallback;
+  callbackCredentials: ConstructiveCallbackCredentialVault;
+  authMethods?: ConsoleKitAuthMethodConfig;
+  authPasswordPolicy?: ConsoleKitConfig['authPasswordPolicy'];
 }>;
 
 function endpoint(
@@ -98,14 +114,21 @@ export function createConstructiveConsoleAdapters(
     options.featureModules
   );
   return Object.fromEntries(options.featureModules.flatMap((module) => {
+    // Auth owns the full callback lifecycle, including invitations that must
+    // survive an anonymous-to-authenticated identity transition before they
+    // can be redeemed. Other packs receive neither the descriptor nor its
+    // opaque credential reference.
+    const callback = options.callback && module.id === 'auth'
+      ? options.callback
+      : undefined;
     const adapter = module.createAdapter?.({
       store: options.store,
       discovery,
       session: options.session,
-      resetRoleId: options.resetRoleId,
-      resetToken: options.resetToken,
-      verificationEmailId: options.verificationEmailId,
-      verificationToken: options.verificationToken
+      callback,
+      callbackCredentials: options.callbackCredentials,
+      authMethods: options.authMethods,
+      passwordPolicy: options.authPasswordPolicy
     });
     return adapter
       ? [[module.id, {
@@ -143,7 +166,93 @@ function reportConsoleKitError(error: ConsoleRuntimeError) {
   }
 }
 
+type CallbackBoundaryState =
+  | Readonly<{ status: 'checking' }>
+  | ConstructiveConsoleCallbackResult;
+const useCallbackBoundaryEffect = typeof window === 'undefined'
+  ? React.useEffect
+  : React.useLayoutEffect;
+
+function useConstructiveCallbackBoundary(
+  databaseId: string,
+  source: ConstructiveConsoleCallbackSource | false | undefined
+): Readonly<{
+  state: CallbackBoundaryState;
+  credentials: ConstructiveCallbackCredentialVault;
+}> {
+  const credentialsRef = React.useRef<ConstructiveCallbackCredentialVault | null>(null);
+  if (!credentialsRef.current) {
+    credentialsRef.current = createConstructiveCallbackCredentialVault();
+  }
+  const credentials = credentialsRef.current;
+  const captureRef = React.useRef<Readonly<{
+    databaseId: string;
+    source: ConstructiveConsoleCallbackSource | false | undefined;
+    state: ConstructiveConsoleCallbackResult;
+  }> | null>(null);
+  const effectGenerationRef = React.useRef(0);
+  const [state, setState] = React.useState<CallbackBoundaryState>(
+    source === undefined || source === false
+      ? { status: 'none' }
+      : { status: 'checking' }
+  );
+
+  useCallbackBoundaryEffect(() => {
+    effectGenerationRef.current += 1;
+    const generation = effectGenerationRef.current;
+    const releaseAfterEffect = () => {
+      queueMicrotask(() => {
+        if (effectGenerationRef.current === generation) credentials.clear();
+      });
+    };
+    const captured = captureRef.current;
+    if (
+      captured?.databaseId === databaseId &&
+      Object.is(captured.source, source)
+    ) {
+      setState(captured.state);
+      return releaseAfterEffect;
+    }
+
+    credentials.clear();
+    if (source === false) {
+      const result = { status: 'none' } as const;
+      captureRef.current = { databaseId, source, state: result };
+      setState(result);
+      return releaseAfterEffect;
+    }
+    if (source === undefined && typeof window === 'undefined') {
+      const result = { status: 'none' } as const;
+      captureRef.current = { databaseId, source, state: result };
+      setState(result);
+      return releaseAfterEffect;
+    }
+
+    const selectedSource = source ?? window.location.href;
+    const result = parseConstructiveConsoleCallback(selectedSource, {
+      databaseId,
+      credentialVault: credentials
+    });
+    if (source === undefined && typeof window !== 'undefined') {
+      scrubConstructiveConsoleCallbackLocation(
+        result,
+        window.location,
+        window.history
+      );
+    }
+    captureRef.current = { databaseId, source, state: result };
+    setState(result);
+    return releaseAfterEffect;
+  }, [credentials, databaseId, source]);
+
+  return { state, credentials };
+}
+
 function ConstructiveConsoleKitInstance(props: ConstructiveConsoleKitCoreProps) {
+  const callbackBoundary = useConstructiveCallbackBoundary(
+    props.database.id,
+    props.callback
+  );
   const authEndpoint = endpoint(props.database.endpoints, 'auth');
   const externalAuthSession = isDatabaseScopedStandaloneSession(props.session)
     ? props.session
@@ -176,6 +285,17 @@ function ConstructiveConsoleKitInstance(props: ConstructiveConsoleKitCoreProps) 
     );
   }
   const store = props.store ?? internalStoreRef.current;
+  useCallbackBoundaryEffect(() => {
+    if (!store || callbackBoundary.state.status !== 'ready') return;
+    const kind = callbackBoundary.state.callback.kind;
+    if (
+      kind === 'password-reset' ||
+      kind === 'email-verification' ||
+      kind === 'account-deletion'
+    ) {
+      store.getState().setAuthFlow({ status: 'callback', kind, phase: 'ready' });
+    }
+  }, [callbackBoundary.state, store]);
 
   const hasExternalSession = Boolean(props.session);
   const internalSessionState = React.useMemo<Readonly<{
@@ -220,6 +340,27 @@ function ConstructiveConsoleKitInstance(props: ConstructiveConsoleKitCoreProps) 
     ? null
     : internalSession ?? externalAuthSession;
   React.useEffect(() => {
+    if (!session || callbackBoundary.state.status !== 'ready') return;
+    const callback = callbackBoundary.state.callback;
+    let previous = getConsoleSessionIdentity(session.getSnapshot());
+    return session.subscribe(() => {
+      const next = getConsoleSessionIdentity(session.getSnapshot());
+      const previousKey = previous ? createConsoleIdentityKey(previous) : null;
+      const nextKey = next ? createConsoleIdentityKey(next) : null;
+      if (previousKey === nextKey) return;
+
+      const preserveInviteThroughAuthentication =
+        previous?.kind === 'anonymous' &&
+        next?.kind === 'authenticated' &&
+        (callback.kind === 'app-invite' ||
+          callback.kind === 'organization-invite');
+      if (!preserveInviteThroughAuthentication) {
+        callbackBoundary.credentials.clear(callback.credentialRef);
+      }
+      previous = next;
+    });
+  }, [callbackBoundary.credentials, callbackBoundary.state, session]);
+  React.useEffect(() => {
     internalSession?.resume?.();
     authSession?.restorePersistedSession();
     return () => internalSession?.dispose?.();
@@ -239,21 +380,30 @@ function ConstructiveConsoleKitInstance(props: ConstructiveConsoleKitCoreProps) 
   }, [authSession, props.transport, session]);
 
   const adapters = React.useMemo(() => {
-    if (!store || !session) return null;
+    if (
+      !store ||
+      !session ||
+      callbackBoundary.state.status === 'checking' ||
+      callbackBoundary.state.status === 'invalid' ||
+      callbackBoundary.state.status === 'incomplete' ||
+      callbackBoundary.state.status === 'cross-tenant'
+    ) return null;
     return createConstructiveConsoleAdapters({
       store,
       featureModules: props.featureModules,
       session: authEndpoint ? authSession ?? undefined : undefined,
-      resetRoleId: props.resetRoleId,
-      resetToken: props.resetToken,
-      verificationEmailId: props.verificationEmailId,
-      verificationToken: props.verificationToken
+      callback: callbackBoundary.state.status === 'ready'
+        ? callbackBoundary.state.callback
+        : undefined,
+      callbackCredentials: callbackBoundary.credentials,
+      authMethods: props.authMethods,
+      authPasswordPolicy: props.authPasswordPolicy
     });
   }, [
-    props.resetRoleId,
-    props.resetToken,
-    props.verificationEmailId,
-    props.verificationToken,
+    callbackBoundary.credentials,
+    callbackBoundary.state,
+    props.authMethods,
+    props.authPasswordPolicy,
     props.featureModules,
     authEndpoint?.id,
     authEndpoint?.url,
@@ -261,6 +411,15 @@ function ConstructiveConsoleKitInstance(props: ConstructiveConsoleKitCoreProps) 
     session,
     store
   ]);
+
+  if (callbackBoundary.state.status === 'checking') return null;
+  if (
+    callbackBoundary.state.status === 'invalid' ||
+    callbackBoundary.state.status === 'incomplete' ||
+    callbackBoundary.state.status === 'cross-tenant'
+  ) {
+    return <ConfigurationError message={callbackBoundary.state.message} />;
+  }
 
   if (sessionDatabaseMismatch) {
     return (
@@ -290,6 +449,9 @@ function ConstructiveConsoleKitInstance(props: ConstructiveConsoleKitCoreProps) 
         session,
         transport,
         adapters,
+        adapterEnhancers: props.adapterEnhancers,
+        authMethods: props.authMethods,
+        authPasswordPolicy: props.authPasswordPolicy,
         order: props.order,
         routes: props.routes,
         showUnavailable: props.showUnavailable ?? true,

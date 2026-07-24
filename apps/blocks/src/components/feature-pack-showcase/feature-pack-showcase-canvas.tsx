@@ -222,7 +222,6 @@ export function FeaturePackShowcaseCanvas({
               recoverPassword: true,
               resetPassword: true,
             }}
-            resetToken={variant === 'reset-password' ? 'preview-token' : undefined}
             view="entry"
           />
         );
@@ -254,19 +253,56 @@ export function FeaturePackShowcaseCanvas({
       return (
         <FeatureRoot
           actions={{
-            invite: ({ email, role }) => recordAction(`invite('${email}', '${role ?? ''}')`),
-            updateRole: ({ membershipId, role }) => recordAction(`updateRole('${membershipId}', '${role}')`),
-            toggleActive: ({ membershipId, active }) => recordAction(`toggleActive('${membershipId}', ${active})`),
-            remove: ({ membershipId }) => recordAction(`remove('${membershipId}')`),
+            invite: ({ recipient, profileId }) =>
+              recordAction(`invite('${recipient}', '${profileId ?? ''}')`),
+            setApproved: ({ membershipId, approved }) =>
+              recordAction(`setApproved('${membershipId}', ${approved})`),
+            setVerified: ({ membershipId, verified }) =>
+              recordAction(`setVerified('${membershipId}', ${verified})`),
+            setBanned: ({ membershipId, banned }) =>
+              recordAction(`setBanned('${membershipId}', ${banned})`),
+            setDisabled: ({ membershipId, disabled }) =>
+              recordAction(`setDisabled('${membershipId}', ${disabled})`),
+            setOwner: ({ userId, owner }) =>
+              recordAction(`setOwner('${userId}', ${owner})`),
+            setAdmin: ({ userId, admin }) =>
+              recordAction(`setAdmin('${userId}', ${admin})`),
+            setProfile: ({ membershipId, profileId }) =>
+              recordAction(`setProfile('${membershipId}', '${profileId ?? ''}')`),
+            setDirectPermission: ({ userId, permissionId, granted }) =>
+              recordAction(`setDirectPermission('${userId}', '${permissionId}', ${granted})`),
+            createProfile: ({ name, slug }) =>
+              recordAction(`createProfile('${name}', '${slug}')`),
+            updateProfile: ({ profileId, name, slug }) =>
+              recordAction(`updateProfile('${profileId}', '${name}', '${slug}')`),
+            deleteProfile: ({ profileId }) => recordAction(`deleteProfile('${profileId}')`),
+            setDefaultProfile: ({ profileId }) =>
+              recordAction(`setDefaultProfile('${profileId}')`),
+            setProfilePermission: ({ profileId, permissionId, granted }) =>
+              recordAction(`setProfilePermission('${profileId}', '${permissionId}', ${granted})`),
+            setDefaultPermission: ({ permissionId, granted }) =>
+              recordAction(`setDefaultPermission('${permissionId}', ${granted})`),
             cancelInvite: ({ inviteId }) => recordAction(`cancelInvite('${inviteId}')`),
             extendInvite: ({ inviteId }) => recordAction(`extendInvite('${inviteId}')`),
           }}
           onError={(error) => recordAction(`onError('${error.message}')`)}
           policy={{
             invite: true,
-            updateRole: true,
-            toggleActive: true,
-            remove: true,
+            assignInviteProfile: true,
+            setApproved: true,
+            setVerified: true,
+            setBanned: true,
+            setDisabled: true,
+            setOwner: true,
+            setAdmin: true,
+            setProfile: true,
+            setDirectPermission: true,
+            createProfile: true,
+            updateProfile: true,
+            deleteProfile: true,
+            setDefaultProfile: true,
+            setProfilePermission: true,
+            setDefaultPermission: true,
             cancelInvite: true,
             extendInvite: true,
           }}
@@ -282,10 +318,18 @@ export function FeaturePackShowcaseCanvas({
           actions={{
             createOrganization: ({ name }) => recordAction(`createOrganization('${name}')`),
             selectOrganization: ({ organizationId }) => recordAction(`selectOrganization('${organizationId}')`),
-            inviteMember: ({ organizationId, email, role }) =>
-              recordAction(`inviteMember('${organizationId}', '${email}', '${role ?? ''}')`),
-            updateMemberRole: ({ organizationId, membershipId, role }) =>
-              recordAction(`updateMemberRole('${organizationId}', '${membershipId}', '${role}')`),
+            inviteMember: ({ organizationId, channel, recipient, profileId }) =>
+              recordAction(`inviteMember('${organizationId}', '${channel}', '${recipient ?? ''}', '${profileId ?? ''}')`),
+            updateMemberLifecycle: ({ organizationId, membershipId, patch }) =>
+              recordAction(`updateMemberLifecycle('${organizationId}', '${membershipId}', '${JSON.stringify(patch)}')`),
+            setMemberAdmin: ({ organizationId, actorId, isGrant }) =>
+              recordAction(`setMemberAdmin('${organizationId}', '${actorId}', ${isGrant})`),
+            setMemberOwner: ({ organizationId, actorId, isGrant }) =>
+              recordAction(`setMemberOwner('${organizationId}', '${actorId}', ${isGrant})`),
+            setMemberProfile: ({ organizationId, membershipId, profileId, isGrant }) =>
+              recordAction(`setMemberProfile('${organizationId}', '${membershipId}', '${profileId}', ${isGrant})`),
+            setMemberPermission: ({ organizationId, actorId, permissions, isGrant }) =>
+              recordAction(`setMemberPermission('${organizationId}', '${actorId}', '${permissions}', ${isGrant})`),
             removeMember: ({ organizationId, membershipId }) =>
               recordAction(`removeMember('${organizationId}', '${membershipId}')`),
             cancelInvite: ({ organizationId, inviteId }) =>
@@ -296,7 +340,16 @@ export function FeaturePackShowcaseCanvas({
             createOrganization: true,
             selectOrganization: true,
             inviteMember: true,
-            updateMemberRole: true,
+            assignInviteProfile: true,
+            approveMember: true,
+            banMember: true,
+            disableMember: true,
+            markMemberExternal: true,
+            markMemberReadOnly: true,
+            grantAdmin: true,
+            grantOwner: true,
+            assignProfile: true,
+            grantPermission: true,
             removeMember: true,
             cancelInvite: true,
           }}

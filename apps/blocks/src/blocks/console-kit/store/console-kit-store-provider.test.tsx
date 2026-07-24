@@ -9,7 +9,7 @@ import {
 import { storageConsoleStoreSlice } from '../../feature-packs/storage/storage-console-slice';
 
 function ActiveFeature() {
-  return <span>{useConsoleKitStore((state) => state.activeFeature)}</span>;
+  return <span>{useConsoleKitStore((state) => state.route.feature)}</span>;
 }
 
 describe('ConsoleKitStoreProvider', () => {
@@ -17,7 +17,7 @@ describe('ConsoleKitStoreProvider', () => {
     const first = createConsoleKitStore('data');
     const second = createConsoleKitStore('auth');
     const { rerender } = render(
-      <ConsoleKitStoreProvider initialFeature='data' store={first}>
+      <ConsoleKitStoreProvider initialRoute='data' store={first}>
         <ActiveFeature />
       </ConsoleKitStoreProvider>
     );
@@ -25,7 +25,7 @@ describe('ConsoleKitStoreProvider', () => {
     expect(screen.getByText('data')).toBeInTheDocument();
 
     rerender(
-      <ConsoleKitStoreProvider initialFeature='data' store={second}>
+      <ConsoleKitStoreProvider initialRoute='data' store={second}>
         <ActiveFeature />
       </ConsoleKitStoreProvider>
     );
@@ -38,7 +38,7 @@ describe('ConsoleKitStoreProvider', () => {
 
     expect(() => render(
       <ConsoleKitStoreProvider
-        initialFeature='storage'
+        initialRoute='storage'
         sliceContributions={[storageConsoleStoreSlice]}
         store={store}
       >

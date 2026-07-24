@@ -5,7 +5,11 @@ import { ShieldCheckIcon } from 'lucide-react';
 import { AUTH_FEATURE_PACK } from '../../../feature-packs';
 import type { DatabaseScopedStandaloneConsoleSession } from '../../console-runtime';
 import { createConstructiveAuthAdapter } from '../../console-kit/constructive/auth-adapter';
-import type { ConstructiveCapabilityContribution } from '../../console-kit/constructive/constructive-capabilities';
+import {
+  supportsConstructiveMutationInput,
+  type ConstructiveCapabilityContribution
+} from '../../console-kit/constructive/constructive-capabilities';
+import { namedTypeName } from '../../console-kit/constructive/constructive-graphql';
 import type {
   ConsoleKitFeatureComponentProps,
   ConsoleKitFeatureModule
@@ -18,13 +22,48 @@ export const authCapabilityDiscovery = {
     { capability: 'auth.credentials', endpoint: 'auth', operation: 'mutation', fields: ['signIn', 'signUp'] },
     { capability: 'auth.sessions', endpoint: 'auth', operation: 'mutation', fields: ['signOut'] },
     { capability: 'auth.password', endpoint: 'auth', operation: 'mutation', fields: ['forgotPassword', 'resetPassword'] },
-    { capability: 'auth.email', endpoint: 'auth', operation: 'query', fields: ['emails'] },
-    { capability: 'auth.connected-accounts', endpoint: 'auth', operation: 'query', fields: ['userConnectedAccounts'] },
-    { capability: 'auth.identity-providers', endpoint: 'auth', operation: 'query', fields: ['identityProviders'] },
-    { capability: 'auth.passkeys', endpoint: 'auth', operation: 'query', fields: ['webauthnCredentials'] },
-    { capability: 'auth.phone', endpoint: 'auth', operation: 'query', fields: ['phoneNumbers'] },
-    { capability: 'auth.devices', endpoint: 'auth', operation: 'mutation', fields: ['revokeSession'] }
-  ]
+    { capability: 'auth.email', endpoint: 'auth', operation: 'query', fields: ['emails'] }
+  ],
+  assess: ({ schemas }) => {
+    const schema = schemas.auth;
+    const accountType = schema?.types.UserConnectedAccount;
+    const disconnect = schema?.mutationFields.disconnectAccount;
+    const disconnectPayloadName = namedTypeName(disconnect?.type);
+    const disconnectPayload = disconnectPayloadName
+      ? schema?.types[disconnectPayloadName]
+      : undefined;
+    const connectedAccountsComplete = Boolean(
+      schema?.queryFields.userConnectedAccounts &&
+      accountType &&
+      ['id', 'ownerId', 'service', 'identifier', 'isVerified', 'createdAt']
+        .every((field) => accountType.fields.some((candidate) => candidate.name === field)) &&
+      supportsConstructiveMutationInput(schema, 'verifyPassword', ['password']) &&
+      supportsConstructiveMutationInput(schema, 'disconnectAccount', ['accountId']) &&
+      disconnectPayload?.fields.some((field) => field.name === 'result')
+    );
+    if (!schema || !connectedAccountsComplete) return null;
+    return {
+      endpoint: 'auth',
+      supportedCapabilities: ['auth.connected-accounts'],
+      evidence: [
+        {
+          source: 'graphql-operation',
+          endpointKind: 'auth',
+          coordinate: 'Query.userConnectedAccounts'
+        },
+        {
+          source: 'graphql-operation',
+          endpointKind: 'auth',
+          coordinate: 'Mutation.verifyPassword'
+        },
+        {
+          source: 'graphql-operation',
+          endpointKind: 'auth',
+          coordinate: 'Mutation.disconnectAccount'
+        }
+      ]
+    };
+  }
 } satisfies ConstructiveCapabilityContribution;
 
 function AuthConsoleFeature({
@@ -42,21 +81,26 @@ function AuthConsoleFeature({
     );
   }
   if (config.session.mode !== 'standalone') return null;
+  const session = config.session;
+  const passwordEnabled = config.authMethods?.password !== false;
 
   return (
     <AuthFeaturePack
       actions={{
-        signIn: ({ email, password }) => config.session.mode === 'standalone'
-          ? config.session.beginSignIn({ credentials: { email, password } })
+        signIn: passwordEnabled
+          ? ({ email, password, rememberMe }) => session.beginSignIn({
+              credentials: { email, password, rememberMe }
+            })
           : undefined,
-        signUp: ({ email, password }) => config.session.mode === 'standalone'
-          ? config.session.beginSignUp?.({ email, password })
+        signUp: passwordEnabled
+          ? ({ email, password, rememberMe }) =>
+              session.beginSignUp?.({ email, password, rememberMe })
           : undefined
       }}
       onError={onError}
       policy={{
-        signIn: true,
-        signUp: Boolean(config.session.beginSignUp)
+        signIn: passwordEnabled,
+        signUp: passwordEnabled && Boolean(session.beginSignUp)
       }}
       view='entry'
     />

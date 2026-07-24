@@ -5,6 +5,7 @@ import { useStore as useZustandStore } from 'zustand';
 import { createStore, type StoreApi } from 'zustand/vanilla';
 
 import type { FeaturePackId } from '../../../feature-packs';
+import type { ConsoleKitRoute } from '../console-kit-routes';
 import {
   createConsoleIdentityKey,
   getConsoleSessionIdentity,
@@ -25,6 +26,7 @@ import {
 } from './endpoint-capability-slice';
 import {
   createConsoleKitNavigationSlice,
+  normalizeInitialConsoleKitRoute,
   type ConsoleKitNavigationSlice
 } from './navigation-slice';
 import {
@@ -190,10 +192,11 @@ function identityScope(session: ConsoleSessionSnapshot): string | null {
 }
 
 export function createConsoleKitStore(
-  initialFeature: FeaturePackId,
+  initialRouteInput: ConsoleKitRoute | FeaturePackId,
   initialContext: ConsoleKitContext | null = null,
   sliceContributions: readonly ConsoleKitStoreSliceContribution[] = []
 ): ConsoleKitStoreApi {
+  const initialRoute = normalizeInitialConsoleKitRoute(initialRouteInput);
   const ids = new Set<FeaturePackId>();
   for (const contribution of sliceContributions) {
     if (ids.has(contribution.id)) {
@@ -206,7 +209,7 @@ export function createConsoleKitStore(
     const [set, get] = args;
     let contributionGeneration = 0;
     const core = {
-      ...createConsoleKitNavigationSlice(initialFeature)(...args),
+      ...createConsoleKitNavigationSlice(initialRoute)(...args),
       ...createConsoleKitContextSlice(initialContext)(...args),
       ...createConsoleKitSessionSlice(...args),
       ...createConsoleKitEndpointCapabilitySlice(...args),
@@ -234,8 +237,8 @@ export function createConsoleKitStore(
     ): Partial<ConsoleKitStore> => {
       contributionGeneration += 1;
       return {
-        activeFeature: initialFeature,
-        authEntryMode: 'sign-in',
+        route: { ...initialRoute },
+        authFlow: { ...core.authFlow },
         context,
         session,
         endpoints: {},
@@ -309,13 +312,13 @@ const ConsoleKitStoreContext = React.createContext<ConsoleKitStoreApi | null>(
 
 export function ConsoleKitStoreProvider({
   children,
-  initialFeature,
+  initialRoute,
   initialContext = null,
   sliceContributions = [],
   store
 }: Readonly<{
   children: React.ReactNode;
-  initialFeature: FeaturePackId;
+  initialRoute: ConsoleKitRoute | FeaturePackId;
   initialContext?: ConsoleKitContext | null;
   sliceContributions?: readonly ConsoleKitStoreSliceContribution[];
   store?: ConsoleKitStoreApi;
@@ -323,7 +326,7 @@ export function ConsoleKitStoreProvider({
   const internalStoreRef = React.useRef<ConsoleKitStoreApi | null>(null);
   if (!store && !internalStoreRef.current) {
     internalStoreRef.current = createConsoleKitStore(
-      initialFeature,
+      initialRoute,
       initialContext,
       sliceContributions
     );

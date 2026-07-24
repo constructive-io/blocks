@@ -1,4 +1,5 @@
 export * from './console-kit';
+export * from './constructive/constructive-callback';
 export {
   ConstructiveConsoleKitCore,
   createConstructiveConsoleAdapters,

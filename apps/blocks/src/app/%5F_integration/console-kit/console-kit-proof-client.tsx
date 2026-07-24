@@ -108,18 +108,29 @@ function PresetConsoleKit({
   tenant: ConsoleKitProofTenant;
   verification?: ConsoleKitProofEmailVerification;
 }>) {
+  const callback = React.useMemo(() => {
+    if (!verification || verification.databaseId !== tenant.database.id) {
+      return false as const;
+    }
+    return new URLSearchParams({
+      callback: 'email-verification',
+      database_id: verification.databaseId,
+      email_id: verification.emailId,
+      verification_token: verification.token
+    });
+  }, [
+    tenant.database.id,
+    verification?.databaseId,
+    verification?.emailId,
+    verification?.token
+  ]);
   const props = {
     className: 'min-h-svh',
     database: tenant.database,
     // Product chrome stays neutral; profile/preset live in proof controls only.
     brand: { name: 'Application' },
     showUnavailable: true,
-    verificationEmailId: verification?.databaseId === tenant.database.id
-      ? verification.emailId
-      : undefined,
-    verificationToken: verification?.databaseId === tenant.database.id
-      ? verification.token
-      : undefined
+    callback
   } as const;
 
   switch (tenant.profile) {

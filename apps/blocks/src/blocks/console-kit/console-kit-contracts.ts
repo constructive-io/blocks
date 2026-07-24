@@ -25,6 +25,7 @@ import type {
 } from '../console-runtime';
 import type { AtomicCapabilityId, FeaturePackId } from '../../feature-packs';
 import type { ConsoleKitFeatureModule } from './feature-module';
+import type { ConsoleKitRoute } from './console-kit-routes';
 import type { ConsoleKitStoreApi } from './store';
 
 export type ConsoleKitMetadataState =
@@ -74,16 +75,49 @@ export type ConsoleKitAdapters = Readonly<
   Partial<Record<FeaturePackId, ConsoleKitFeatureAdapter<unknown>>>
 >;
 
+export type ConsoleKitAdapterEnhancer = (
+  adapter: ConsoleKitFeatureAdapter<unknown> | undefined
+) => ConsoleKitFeatureAdapter<unknown> | undefined;
+
+export type ConsoleKitAdapterEnhancers = Readonly<
+  Partial<Record<FeaturePackId, ConsoleKitAdapterEnhancer>>
+>;
+
+export type ConsoleKitAuthMethod =
+  | 'password'
+  | 'email-otp'
+  | 'sms-otp'
+  | 'totp'
+  | 'passkey'
+  | 'oauth';
+
+export type ConsoleKitPasswordPolicy = Readonly<{
+  minLength?: number;
+  maxLength?: number;
+  hint?: string;
+  validate?: (password: string) => string | undefined;
+}>;
+
+/**
+ * Undefined methods are discovered from complete public operation chains.
+ * False always hides a method; true permits it only when a trusted adapter can
+ * prove and own the complete start-to-finish flow.
+ */
+export type ConsoleKitAuthMethodConfig = Readonly<
+  Partial<Record<ConsoleKitAuthMethod, boolean>>
+>;
+
 export type ConsoleKitEndpointResolver = (input: Readonly<{
   databaseId: string;
   kind: ConsoleEndpointKind;
 }>) => ConsoleEndpointInput | undefined;
 
 export type ConsoleKitRouteConfig = Readonly<{
-  activeFeature?: FeaturePackId;
-  defaultFeature?: FeaturePackId;
-  getFeatureHref?: (feature: FeaturePackId) => string;
-  onNavigate?: (feature: FeaturePackId) => void;
+  /** When supplied, the host owns navigation state. */
+  route?: ConsoleKitRoute;
+  defaultRoute?: ConsoleKitRoute;
+  getHref?: (route: ConsoleKitRoute) => string;
+  onRouteChange?: (route: ConsoleKitRoute) => void;
   renderLink?: AppLinkRenderer;
 }>;
 
@@ -94,6 +128,9 @@ export type ConsoleKitConfig = Readonly<{
   session: ConsoleSession;
   transport?: ConsoleTransport;
   adapters?: ConsoleKitAdapters;
+  adapterEnhancers?: ConsoleKitAdapterEnhancers;
+  authMethods?: ConsoleKitAuthMethodConfig;
+  authPasswordPolicy?: ConsoleKitPasswordPolicy;
   queryClient?: QueryClient;
   order?: readonly FeaturePackId[];
   labels?: Partial<Record<FeaturePackId, string>>;
