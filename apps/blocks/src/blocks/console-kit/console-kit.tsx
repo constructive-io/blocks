@@ -67,9 +67,10 @@ function adapterLoadRequestKey(
   adapter: ConsoleKitFeatureAdapter<unknown>,
   runtime: ConsoleKitAdapterContext,
   attempt: number,
-  subscriptionRevision: number
+  subscriptionRevision: number,
+  contextKey?: string | null
 ): string {
-  const scopeKey = adapterLoadScopeKey(feature, adapter, runtime);
+  const scopeKey = adapterLoadScopeKey(feature, adapter, runtime, contextKey);
 
   return JSON.stringify([
     scopeKey,
@@ -82,7 +83,8 @@ function adapterLoadRequestKey(
 function adapterLoadScopeKey(
   feature: FeaturePackId,
   adapter: ConsoleKitFeatureAdapter<unknown>,
-  runtime: ConsoleKitAdapterContext
+  runtime: ConsoleKitAdapterContext,
+  contextKey?: string | null
 ): string {
   const identity = getConsoleSessionIdentity(runtime.session);
   const endpoints = CONSOLE_ENDPOINT_KINDS.map((kind) => {
@@ -96,6 +98,7 @@ function adapterLoadScopeKey(
     endpoints,
     runtime.session.status,
     identity ? createConsoleIdentityKey(identity) : null,
+    contextKey ?? null,
     adapterReferenceId(runtime.transportFor),
     adapterReferenceId(adapter)
   ]);
@@ -259,14 +262,19 @@ function AdapterFeature({
   );
   const retryAdapter = useConsoleKitStore((store) => store.retryAdapter);
   const setAdapterLoad = useConsoleKitStore((store) => store.setAdapterLoad);
+  const organizationId = useConsoleKitStore(
+    (store) => store.context?.organizationId ?? null
+  );
+  const contextKey = feature === 'organizations' ? organizationId : null;
   const requestKey = adapterLoadRequestKey(
     feature,
     adapter,
     runtime,
     attempt,
-    subscriptionRevision
+    subscriptionRevision,
+    contextKey
   );
-  const scopeKey = adapterLoadScopeKey(feature, adapter, runtime);
+  const scopeKey = adapterLoadScopeKey(feature, adapter, runtime, contextKey);
   const state = storedState?.adapter === adapter && storedState.requestKey === requestKey
     ? storedState
     : undefined;
@@ -683,7 +691,7 @@ function ConsoleKitContent({ config, featureModules, className }: ConsoleKitProp
     [featureRoutes, routeHref]
   );
   const navigate = React.useCallback((route: ConsoleKitRoute) => {
-    setInternalRoute(route);
+    if (config.routes?.route === undefined) setInternalRoute(route);
     config.routes?.onRouteChange?.(route);
   }, [config.routes, setInternalRoute]);
 
@@ -701,6 +709,7 @@ function ConsoleKitContent({ config, featureModules, className }: ConsoleKitProp
         event.altKey ||
         (event.currentTarget.target && event.currentTarget.target !== '_self')
       ) return;
+      if (config.routes?.route !== undefined) event.preventDefault();
       navigate(route);
     };
     const next = { ...props, onClick };

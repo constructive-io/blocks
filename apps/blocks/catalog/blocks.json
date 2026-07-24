@@ -113,11 +113,11 @@
     {
       "name": "feature-pack-users",
       "slug": "feature-pack-users",
-      "title": "Users Feature Pack",
+      "title": "App access Feature Pack",
       "category": "feature-pack",
       "type": "feature-pack",
       "status": "ready",
-      "purpose": "Application memberships, invitations, roles, profiles, and status."
+      "purpose": "Application member governance, lifecycle controls, invitations, access profiles, direct permission grants, and defaults."
     },
     {
       "name": "feature-pack-organizations",
@@ -126,7 +126,7 @@
       "category": "feature-pack",
       "type": "feature-pack",
       "status": "ready",
-      "purpose": "Tenant switching plus organization memberships and invitations."
+      "purpose": "Tenant switching, member governance, invitations, profiles, permissions, defaults, hierarchy, settings, principals, and API keys."
     },
     {
       "name": "feature-pack-storage",
@@ -198,7 +198,7 @@
       "category": "console",
       "type": "application-kit",
       "status": "ready",
-      "purpose": "Full-page, route-neutral application console with one modular per-instance Zustand store."
+      "purpose": "Full-page Next.js console with semantic routing, dynamic tenant discovery, every feature pack, and one modular per-instance Zustand store."
     }
   ]
 }

@@ -1,10 +1,10 @@
 'use client';
 
 import { AuthAccountView } from './auth-account-view';
-import type { AuthFeaturePackProps } from './auth-contracts';
+import type { AuthFeaturePackComponentProps } from './auth-contracts';
 import { AuthEntryPanel } from './auth-entry-panel';
 
-export function AuthFeaturePack(props: AuthFeaturePackProps) {
+export function AuthFeaturePack(props: AuthFeaturePackComponentProps) {
   if (props.view === 'account') {
     return <AuthAccountView {...props} />;
   }
@@ -14,6 +14,8 @@ export function AuthFeaturePack(props: AuthFeaturePackProps) {
 
 export type {
   AuthAccountData,
+  AuthAccountNavigationProps,
+  AuthAccountSection,
   AuthChallengeContribution,
   AuthChallengeDescriptor,
   AuthChallengeResponse,
@@ -22,6 +24,7 @@ export type {
   AuthFeatureAction,
   AuthFeatureActions,
   AuthFeatureNotice,
+  AuthFeaturePackComponentProps,
   AuthFeaturePackProps,
   AuthFlowState,
   AuthIdentity,

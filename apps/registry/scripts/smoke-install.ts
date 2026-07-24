@@ -87,6 +87,7 @@ const featurePackViewFiles: Record<FeaturePackId, readonly string[]> = {
 	auth: [
 		'src/blocks/feature-packs/auth/auth-contracts.ts',
 		'src/blocks/feature-packs/auth/auth-entry-panel.tsx',
+		'src/blocks/feature-packs/auth/auth-challenge-panel.tsx',
 		'src/blocks/feature-packs/auth/auth-account-view.tsx',
 		'src/blocks/feature-packs/auth/auth-feature-pack.tsx',
 	],

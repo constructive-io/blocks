@@ -175,14 +175,6 @@ const UPDATE_ORGANIZATION_MUTATION = /* GraphQL */ `
   }
 `;
 
-const CREATE_ORG_API_KEY_MUTATION = /* GraphQL */ `
-  mutation ConsoleKitCreateOrgApiKey($input: CreateOrgApiKeyInput!) {
-    createOrgApiKey(input: $input) {
-      result { apiKey keyId expiresAt }
-    }
-  }
-`;
-
 const REVOKE_ORG_API_KEY_MUTATION = /* GraphQL */ `
   mutation ConsoleKitRevokeOrgApiKey($input: RevokeOrgApiKeyInput!) {
     revokeOrgApiKey(input: $input) { result }
@@ -487,6 +479,18 @@ const PROFILE_SCOPE_LIMITATION: FeaturePackLimitation = {
     'Organization profile actions are disabled because the profile entityId field is not readable. Console Kit cannot safely distinguish global profiles from profiles belonging to another visible organization.'
 };
 
+const PRINCIPAL_SCOPE_LIMITATION: FeaturePackLimitation = {
+  code: 'constructive.org-principal-scope-unavailable',
+  message:
+    'Some visible principals are omitted because the public API does not expose their organization scope. Console Kit only includes principals linked by public membership, principal-entity, API-key, or current-session creation evidence.'
+};
+
+const API_KEY_CREATION_LIMITATION: FeaturePackLimitation = {
+  code: 'constructive.org-api-key-creation-unavailable',
+  message:
+    'Organization API key creation is disabled because the current create_org_principal and create_org_api_key ownership contracts do not compose into a principal that Console Kit can verify as eligible. Existing keys remain available for read and revoke when database authorization permits.'
+};
+
 const APPLICATION_DIRECTORY_READ_ONLY_LIMITATION: FeaturePackLimitation = {
   code: 'constructive.application-organization-directory-read-only',
   message:
@@ -523,6 +527,10 @@ function applicationOrganizationId(
   return `application:${encodeURIComponent(tableIdentity)}:${encodeURIComponent(rawId)}`;
 }
 
+function principalOrganizationKey(databaseId: string, principalUserId: string): string {
+  return JSON.stringify([databaseId, principalUserId]);
+}
+
 function inviteProfileAssignmentMode(
   rows: readonly Record<string, unknown>[],
   organizationId: string | undefined
@@ -549,7 +557,8 @@ function isOptionalReadDenied(cause: unknown): boolean {
 async function loadOrganizations(
   options: ConstructiveOrganizationsAdapterOptions,
   runtime: ConsoleKitAdapterContext,
-  signal: AbortSignal
+  signal: AbortSignal,
+  knownPrincipalOrganizations: ReadonlyMap<string, string>
 ): Promise<Readonly<{
   data: OrganizationsFeatureData;
   inviteProfileIds: ReadonlySet<string>;
@@ -558,6 +567,7 @@ async function loadOrganizations(
   policyLimitations: readonly FeaturePackLimitation[];
   canManageActiveOrganization: boolean;
   canManagePermissions: boolean;
+  canManageHierarchy: boolean;
   canManageCredentials: boolean;
   profileScopeReadable: boolean;
   canCreateInvites: boolean;
@@ -575,6 +585,7 @@ async function loadOrganizations(
       policyLimitations: [],
       canManageActiveOrganization: false,
       canManagePermissions: false,
+      canManageHierarchy: false,
       canManageCredentials: false,
       profileScopeReadable: false,
       canCreateInvites: false,
@@ -608,7 +619,7 @@ async function loadOrganizations(
     endpoint,
     { operationName, fieldName, nodeSelection },
     signal
-  ).catch((cause) => {
+  ).catch((cause): Record<string, unknown>[] => {
     if (!isOptionalReadDenied(cause)) throw cause;
     deniedOptionalReads.add(`${endpoint}:${fieldName}`);
     return [];
@@ -722,7 +733,7 @@ async function loadOrganizations(
         'ConsoleKitOrganizationPrincipalsPage',
         'principals',
         'Principal',
-        ['id', 'name', 'useAdminOwner', 'isReadOnly', 'bypassStepUp']
+        ['id', 'userId', 'name', 'useAdminOwner', 'isReadOnly', 'bypassStepUp']
       ),
       optionalAdminConnection(
         'ConsoleKitOrganizationAppMembershipsPage',
@@ -891,6 +902,9 @@ async function loadOrganizations(
   const canManagePermissions = !activeIsApplicationOrganization && (
     hasAdministrativeRole || hasNamedPermission('admin_permissions')
   );
+  const canManageHierarchy = !activeIsApplicationOrganization && (
+    hasAdministrativeRole || hasNamedPermission('manage_hierarchy')
+  );
   const memberProfilesByMembership = new Map(
     memberProfileRows.flatMap((profile) => {
       const membershipId = asString(profile.membershipId);
@@ -961,7 +975,7 @@ async function loadOrganizations(
           grantAdmin: hasActiveAdminRole && !targetIsOwner,
           grantOwner: canChangeOwner,
           assignProfile: canManageActiveOrganization,
-          grantPermission: canManagePermissions,
+          grantPermission: canManageActiveOrganization,
           updateMemberProfile: canManageActiveOrganization || userId === actorId
         }
       }];
@@ -1054,7 +1068,7 @@ async function loadOrganizations(
         ? rawChannel
         : email ? 'email' as const : phone ? 'sms' as const : 'link' as const;
       const canCancel = !activeIsApplicationOrganization && (
-        hasActiveAdminRole || hasNamedPermission('admin_invites') ||
+        hasActiveAdminRole ||
         asString(invite.senderId) === actorId
       );
       if (canCancel) cancelableInviteIds.add(id);
@@ -1166,7 +1180,7 @@ async function loadOrganizations(
         positionLevel: typeof edge.positionLevel === 'number'
           ? edge.positionLevel
           : undefined,
-        actionPolicy: { removeHierarchyEdge: canManageActiveOrganization }
+        actionPolicy: { removeHierarchyEdge: canManageHierarchy }
       }];
     });
   const claimedInvites: OrganizationClaimedInvite[] = claimedInviteRows
@@ -1200,20 +1214,47 @@ async function loadOrganizations(
         actionPolicy: { revokeOrganizationApiKey: hasAdministrativeRole }
       }];
     });
-  const activePrincipalIds = new Set(principalEntityRows
+  const activePrincipalRowIds = new Set(principalEntityRows
     .filter((row) => asString(row.entityId) === activeOrganizationId)
     .flatMap((row) => {
       const principalId = asString(row.principalId);
       return principalId ? [principalId] : [];
     }));
-  const principals: OrganizationPrincipal[] = principalRows
-    .filter((row) => activePrincipalIds.has(asString(row.id) ?? ''))
+  const activePrincipalUserIdsFromCredentials = new Set(apiKeyRows
+    .filter((row) => asString(row.orgId) === activeOrganizationId)
     .flatMap((row) => {
-      const id = asString(row.id);
+      const principalId = asString(row.principalId);
+      return principalId ? [principalId] : [];
+    }));
+  const activeMembershipActorIds = new Set(activeMembershipRows.flatMap((membership) => {
+    const membershipActorId = asString(membership.actorId);
+    return membershipActorId ? [membershipActorId] : [];
+  }));
+  let hasUnscopedPrincipalRows = false;
+  const principals: OrganizationPrincipal[] = principalRows
+    .flatMap((row) => {
+      const rowId = asString(row.id);
+      const userId = asString(row.userId);
+      const belongsToActiveOrganization = Boolean(
+        rowId && userId && (
+          activePrincipalRowIds.has(rowId) ||
+          activePrincipalUserIdsFromCredentials.has(userId) ||
+          activeMembershipActorIds.has(userId) ||
+          knownPrincipalOrganizations.get(
+            principalOrganizationKey(runtime.databaseId, userId)
+          ) === activeOrganizationId
+        )
+      );
       const name = asString(row.name);
-      return id && name
+      if (rowId && (!userId || !belongsToActiveOrganization)) {
+        hasUnscopedPrincipalRows = true;
+      }
+      return belongsToActiveOrganization && userId && name
         ? [{
-            id,
+            // Constructive's semantic principal procedures accept and return
+            // principals.user_id. principals.id is an internal row identity
+            // used by principal_entities and scope overrides.
+            id: userId,
             name,
             type: asBoolean(row.useAdminOwner) ? 'Owner delegated' :
               asBoolean(row.isReadOnly) ? 'Read only' : 'Custom',
@@ -1224,23 +1265,30 @@ async function loadOrganizations(
           }]
         : [];
     });
-  const policyLimitations = [
-    ...[...deniedOptionalReads].sort().map((coordinate) => ({
+  const policyLimitations: FeaturePackLimitation[] = Array.from(
+    deniedOptionalReads
+  ).sort().map((coordinate) => ({
       code: `constructive.optional-read-denied.${coordinate.replaceAll(':', '.')}`,
       message:
         `The current session cannot read the optional ${coordinate} organization surface, so Console Kit omitted it. Database authorization remains authoritative.`
-    })),
-    ...(activeIsApplicationOrganization
-      ? [APPLICATION_DIRECTORY_READ_ONLY_LIMITATION]
-      : []),
-    ...(activeOrganizationId && !activeIsApplicationOrganization && !assignmentMode.known
-      ? [INVITE_PROFILE_MODE_LIMITATION]
-      : []),
-    ...(activeOrganizationId && !activeIsApplicationOrganization &&
-      selections.profiles.length > 0 && !profileScopeReadable
-      ? [PROFILE_SCOPE_LIMITATION]
-      : [])
-  ];
+    }));
+  if (activeIsApplicationOrganization) {
+    policyLimitations.push(APPLICATION_DIRECTORY_READ_ONLY_LIMITATION);
+  }
+  if (activeOrganizationId && !activeIsApplicationOrganization && !assignmentMode.known) {
+    policyLimitations.push(INVITE_PROFILE_MODE_LIMITATION);
+  }
+  if (
+    activeOrganizationId &&
+    !activeIsApplicationOrganization &&
+    selections.profiles.length > 0 &&
+    !profileScopeReadable
+  ) {
+    policyLimitations.push(PROFILE_SCOPE_LIMITATION);
+  }
+  if (activeOrganizationId && !activeIsApplicationOrganization && hasUnscopedPrincipalRows) {
+    policyLimitations.push(PRINCIPAL_SCOPE_LIMITATION);
+  }
   return {
     data: {
       organizations: organizations.map((organization) => {
@@ -1303,9 +1351,7 @@ async function loadOrganizations(
         !deniedOptionalReads.has('auth:orgApiKeyLists')
         ? apiKeys
         : undefined,
-      principals: supports(options, 'auth', 'query', 'principalEntities') &&
-        supports(options, 'auth', 'query', 'principals') &&
-        !deniedOptionalReads.has('auth:principalEntities') &&
+      principals: supports(options, 'auth', 'query', 'principals') &&
         !deniedOptionalReads.has('auth:principals')
         ? principals
         : undefined,
@@ -1319,6 +1365,7 @@ async function loadOrganizations(
     policyLimitations,
     canManageActiveOrganization,
     canManagePermissions,
+    canManageHierarchy,
     canManageCredentials: hasAdministrativeRole,
     profileScopeReadable,
     canCreateInvites: !activeIsApplicationOrganization && (
@@ -1466,6 +1513,11 @@ export function createConstructiveOrganizationsAdapter(
     name: string;
     username: string;
   }>>();
+  // create_org_principal scopes through the private organization SPRT and
+  // intentionally does not create principal_entities. Preserve the exact
+  // association for this adapter's lifetime so multi-org owners do not need to
+  // guess the new principal's scope.
+  const knownPrincipalOrganizations = new Map<string, string>();
   const capabilities: readonly AtomicCapabilityId[] = [
     'organizations.memberships',
     'organizations.permissions',
@@ -1483,7 +1535,12 @@ export function createConstructiveOrganizationsAdapter(
       return unsubscribe;
     },
     async load(runtime, signal) {
-      const loaded = await loadOrganizations(options, runtime, signal);
+      const loaded = await loadOrganizations(
+        options,
+        runtime,
+        signal,
+        knownPrincipalOrganizations
+      );
       const activeOrganizationId = loaded.data.activeOrganizationId;
       const reload = () => notifyConsoleAdapters(options.store);
       const adminSchema = options.discovery.getSchemas().admin;
@@ -1689,7 +1746,7 @@ export function createConstructiveOrganizationsAdapter(
         ['id', 'orgMemberProfilePatch'],
         { field: 'orgMemberProfilePatch', requiredFields: ['displayName'] }
       );
-      const canManageHierarchy = loaded.canManageActiveOrganization &&
+      const canManageHierarchy = loaded.canManageHierarchy &&
         supportsConstructiveMutationInput(
         adminSchema,
         'createOrgChartEdgeGrant',
@@ -1708,8 +1765,8 @@ export function createConstructiveOrganizationsAdapter(
         );
       const canDeleteOrganization = Boolean(activeOrganizationId) &&
         supportsConstructiveMutationInput(authSchema, 'deleteUser', ['id']);
-      const canCreateApiKey = loaded.canManageCredentials &&
-        (loaded.data.principals?.length ?? 0) > 0 && supportsConstructiveMutationInput(
+      const hasApiKeyCreationContract = loaded.canManageCredentials &&
+        supportsConstructiveMutationInput(
         authSchema,
         'createOrgApiKey',
         ['orgId', 'principalId', 'keyName']
@@ -1731,7 +1788,9 @@ export function createConstructiveOrganizationsAdapter(
           ['name', 'orgId', 'useAdminOwner', 'isReadOnly', 'bypassStepUp']
         );
       const activeMemberIds = new Set(loaded.data.members.map((member) => member.id));
-      const activeMemberActorIds = new Set(loaded.data.members.map((member) => member.userId));
+      const activeMemberActorIds = new Set(loaded.data.members
+        .filter((member) => member.isApproved && !member.isDisabled && !member.isBanned)
+        .map((member) => member.userId));
       const membersById = new Map(loaded.data.members.map((member) => [member.id, member]));
       const profileIds = new Set(loaded.data.profiles?.map((profile) => profile.id) ?? []);
       const permissionIds = new Set(loaded.data.permissions?.map((permission) => permission.id) ?? []);
@@ -1768,13 +1827,17 @@ export function createConstructiveOrganizationsAdapter(
       const canLeaveOrganization = Boolean(
         activeOrganization?.actionPolicy?.leaveOrganization && currentActorMembership
       ) && supportsConstructiveMutationInput(adminSchema, 'deleteOrgMembership', ['id']);
+      const limitations = loaded.policyLimitations.slice();
+      if (activeOrganizationId && hasApiKeyCreationContract) {
+        limitations.push(API_KEY_CREATION_LIMITATION);
+      }
       return {
         resource: loaded.data.organizations.length
           ? {
               status: 'ready',
               data: loaded.data,
               quality: 'authoritative',
-              limitations: loaded.policyLimitations
+              limitations
             }
           : { status: 'empty' },
         policy: {
@@ -1823,7 +1886,7 @@ export function createConstructiveOrganizationsAdapter(
           updateMembershipDefault: canUpdateDefault,
           setHierarchyEdge: canManageHierarchy,
           removeHierarchyEdge: canManageHierarchy && hierarchyEdgeIds.size > 0,
-          createOrganizationApiKey: canCreateApiKey,
+          createOrganizationApiKey: false,
           createOrganizationPrincipal: canCreatePrincipal,
           revokeOrganizationApiKey: canRevokeApiKey && (loaded.data.apiKeys?.length ?? 0) > 0,
           revokeOrganizationPrincipal: canRevokePrincipal &&
@@ -2087,6 +2150,11 @@ export function createConstructiveOrganizationsAdapter(
                   !allowedInviteProfileIds.has(profileId)
                 )) {
                   throw new Error('The selected profile cannot be assigned to this invitation.');
+                }
+                if (profileId && (channel !== 'email' || multiple === true)) {
+                  throw new Error(
+                    'An access profile can only be assigned to a single-recipient email invitation.'
+                  );
                 }
                 if (multiple && !inviteSupportsMultiple) {
                   throw new Error('This tenant does not expose reusable invitation limits.');
@@ -2488,45 +2556,6 @@ export function createConstructiveOrganizationsAdapter(
                 reload();
               }
             : undefined,
-          createOrganizationApiKey: canCreateApiKey
-            ? async ({
-                organizationId,
-                principalId,
-                name,
-                accessLevel,
-                mfaLevel,
-                expiresIn: keyExpiresIn
-              }) => {
-                assertActiveOrganization(organizationId);
-                assertAuthorizedTarget(principalIds, principalId, 'organization principal');
-                const keyName = name.trim();
-                if (!keyName) throw new Error('API key name is required.');
-                const response = await executeConstructiveGraphQL<Record<string, unknown>>(
-                  runtime,
-                  'auth',
-                  CREATE_ORG_API_KEY_MUTATION,
-                  {
-                    input: {
-                      orgId: organizationId,
-                      principalId,
-                      keyName,
-                      ...(accessLevel === undefined ? {} : { accessLevel }),
-                      ...(mfaLevel === undefined ? {} : { mfaLevel }),
-                      ...(keyExpiresIn === undefined ? {} : { expiresIn: keyExpiresIn })
-                    }
-                  }
-                );
-                const result = asRecord(asRecord(response.createOrgApiKey)?.result);
-                const token = asString(result?.apiKey);
-                if (!token) throw new Error('The API key response did not include the one-time token.');
-                reload();
-                return {
-                  token,
-                  id: asString(result?.keyId) ?? undefined,
-                  expiresAt: asString(result?.expiresAt) ?? undefined
-                };
-              }
-            : undefined,
           createOrganizationPrincipal: canCreatePrincipal
             ? async ({
                 organizationId,
@@ -2554,6 +2583,10 @@ export function createConstructiveOrganizationsAdapter(
                 );
                 const id = asString(asRecord(response.createOrgPrincipal)?.result);
                 if (!id) throw new Error('The principal creation could not be verified.');
+                knownPrincipalOrganizations.set(
+                  principalOrganizationKey(runtime.databaseId, id),
+                  organizationId
+                );
                 reload();
                 return { id };
               }
@@ -2575,6 +2608,9 @@ export function createConstructiveOrganizationsAdapter(
                 await executeConstructiveGraphQL(runtime, 'auth', DELETE_ORG_PRINCIPAL_MUTATION, {
                   input: { principalId }
                 });
+                knownPrincipalOrganizations.delete(
+                  principalOrganizationKey(runtime.databaseId, principalId)
+                );
                 reload();
               }
             : undefined,

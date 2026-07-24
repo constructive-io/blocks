@@ -14,8 +14,14 @@ import type {
   ConsoleKitFeatureComponentProps,
   ConsoleKitFeatureModule
 } from '../../console-kit/feature-module';
+import type { ConsoleKitAuthRoute } from '../../console-kit/console-kit-routes';
 import { AuthFeaturePack } from './auth-feature-pack';
-import type { AuthFeaturePackProps } from './auth-contracts';
+import type {
+  AuthAccountSection,
+  AuthEntryMode,
+  AuthFeaturePackComponentProps,
+  AuthFeaturePackProps
+} from './auth-contracts';
 
 export const authCapabilityDiscovery = {
   rules: [
@@ -66,16 +72,102 @@ export const authCapabilityDiscovery = {
   }
 } satisfies ConstructiveCapabilityContribution;
 
+function accountSectionFromRoute(
+  route: ConsoleKitAuthRoute
+): AuthAccountSection | undefined {
+  switch (route.screen) {
+    case 'account':
+      return 'profile';
+    case 'security':
+      return 'security';
+    case 'connected-accounts':
+      return 'connected-accounts';
+    case 'devices':
+    case 'sessions':
+      return 'sessions';
+    case 'entry':
+    case 'recovery':
+    case 'callback':
+      return undefined;
+  }
+}
+
+function routeFromAccountSection(
+  section: AuthAccountSection
+): ConsoleKitAuthRoute {
+  switch (section) {
+    case 'profile':
+      return { feature: 'auth', screen: 'account' };
+    case 'security':
+      return { feature: 'auth', screen: 'security' };
+    case 'connected-accounts':
+      return { feature: 'auth', screen: 'connected-accounts' };
+    case 'sessions':
+      return { feature: 'auth', screen: 'sessions' };
+  }
+}
+
+function entryModeFromRoute(
+  route: ConsoleKitAuthRoute,
+  fallback: AuthEntryMode | undefined
+): AuthEntryMode | undefined {
+  switch (route.screen) {
+    case 'entry':
+      return fallback === 'sign-up' ? 'sign-up' : 'sign-in';
+    case 'recovery':
+      return 'recover-password';
+    case 'callback':
+      return fallback;
+    case 'account':
+    case 'security':
+    case 'connected-accounts':
+    case 'devices':
+    case 'sessions':
+      return undefined;
+  }
+}
+
+function routeFromEntryMode(mode: AuthEntryMode): ConsoleKitAuthRoute {
+  switch (mode) {
+    case 'recover-password':
+      return { feature: 'auth', screen: 'recovery' };
+    case 'reset-password':
+      return { feature: 'auth', screen: 'callback' };
+    case 'sign-in':
+    case 'sign-up':
+      return { feature: 'auth', screen: 'entry' };
+  }
+}
+
 function AuthConsoleFeature({
   adapterProps,
   config,
   runtime,
+  route,
+  onRouteChange,
   onError
 }: ConsoleKitFeatureComponentProps) {
   if (adapterProps) {
+    const authProps = adapterProps as AuthFeaturePackComponentProps;
+    const routeSection = route.feature === 'auth'
+      ? accountSectionFromRoute(route)
+      : undefined;
+    const routeMode = route.feature === 'auth' && authProps.view === 'entry'
+      ? entryModeFromRoute(route, authProps.mode)
+      : authProps.mode;
     return (
       <AuthFeaturePack
-        {...(adapterProps as AuthFeaturePackProps)}
+        {...authProps}
+        accountSection={routeSection ?? authProps.accountSection}
+        mode={routeMode}
+        onAccountSectionChange={(section) => {
+          authProps.onAccountSectionChange?.(section);
+          onRouteChange(routeFromAccountSection(section));
+        }}
+        onModeChange={(mode) => {
+          authProps.onModeChange?.(mode);
+          onRouteChange(routeFromEntryMode(mode));
+        }}
         onError={onError}
       />
     );

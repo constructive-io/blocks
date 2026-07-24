@@ -166,6 +166,101 @@ describe('Constructive capability discovery lifecycle', () => {
     expect(inspectSchema).toHaveBeenCalledTimes(2);
   });
 
+  it('does not let an unused render-time discovery replace the committed owner', async () => {
+    const result = deferred<ConstructiveSchemaSnapshot>();
+    inspectSchema.mockReturnValue(result.promise);
+    const store = createConsoleKitStore('auth');
+    const discovery = createConstructiveCapabilityDiscovery(
+      store,
+      fullFeatureModules
+    );
+    discovery.subscribe(vi.fn());
+    const request = discovery.ensure({
+      ...runtime('/tenant-a/graphql'),
+      metadata: compatibleMetadata(),
+      metadataByEndpoint: { auth: compatibleMetadata() }
+    });
+
+    createConstructiveCapabilityDiscovery(store, fullFeatureModules);
+    result.resolve(schemaWithOperations(
+      'auth',
+      'tenant-a-auth',
+      ['emails'],
+      ['signIn', 'signUp', 'signOut', 'forgotPassword', 'resetPassword']
+    ));
+    await request;
+
+    const capability = store.getState().packCapabilities.auth;
+    expect(capability?.status).not.toBe('checking');
+    if (!capability || capability.status === 'checking') {
+      throw new Error('The committed auth capability was not assessed.');
+    }
+    expect(capability.evidence).toContainEqual(expect.objectContaining({
+      source: 'endpoint',
+      endpointId: 'tenant-a-auth'
+    }));
+  });
+
+  it('prevents a replaced discovery instance from overwriting a reused store', async () => {
+    const first = deferred<ConstructiveSchemaSnapshot>();
+    const second = deferred<ConstructiveSchemaSnapshot>();
+    inspectSchema.mockImplementation((currentRuntime) =>
+      currentRuntime.endpoints.auth?.url === '/tenant-a/graphql'
+        ? first.promise
+        : second.promise
+    );
+    const store = createConsoleKitStore('auth');
+    const firstDiscovery = createConstructiveCapabilityDiscovery(
+      store,
+      fullFeatureModules
+    );
+    firstDiscovery.subscribe(vi.fn());
+    const firstRequest = firstDiscovery.ensure({
+      ...runtime('/tenant-a/graphql'),
+      metadata: compatibleMetadata(),
+      metadataByEndpoint: { auth: compatibleMetadata() }
+    });
+    const secondDiscovery = createConstructiveCapabilityDiscovery(
+      store,
+      fullFeatureModules
+    );
+    secondDiscovery.subscribe(vi.fn());
+    const secondRequest = secondDiscovery.ensure({
+      ...runtime('/tenant-b/graphql'),
+      metadata: compatibleMetadata(),
+      metadataByEndpoint: { auth: compatibleMetadata() }
+    });
+
+    second.resolve(schemaWithOperations(
+      'auth',
+      'tenant-b-auth',
+      ['emails'],
+      ['signIn', 'signUp', 'signOut', 'forgotPassword', 'resetPassword']
+    ));
+    await secondRequest;
+    const tenantBCapability = store.getState().packCapabilities.auth;
+    expect(tenantBCapability?.status).not.toBe('checking');
+    if (!tenantBCapability || tenantBCapability.status === 'checking') {
+      throw new Error('The tenant B auth capability was not assessed.');
+    }
+    expect(tenantBCapability.evidence).toContainEqual(expect.objectContaining({
+      source: 'endpoint',
+      endpointId: 'tenant-b-auth'
+    }));
+
+    first.resolve(schemaWithOperations(
+      'auth',
+      'tenant-a-auth',
+      ['emails'],
+      ['signIn', 'signUp', 'signOut', 'forgotPassword', 'resetPassword']
+    ));
+    await firstRequest;
+
+    expect(store.getState().packCapabilities.auth).toEqual(tenantBCapability);
+    firstDiscovery.invalidate();
+    expect(store.getState().packCapabilities.auth).toEqual(tenantBCapability);
+  });
+
   it('discovers organization limits on the semantic usage endpoint', async () => {
     inspectSchema.mockImplementation(async (_runtime, kind) => {
       if (kind === 'auth') return schemaWithQueries('auth', 'auth', ['users']);

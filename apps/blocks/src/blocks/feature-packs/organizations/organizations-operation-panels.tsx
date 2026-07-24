@@ -22,6 +22,7 @@ import {
 } from '@constructive-io/ui/alert-dialog';
 import { Badge } from '@constructive-io/ui/badge';
 import { Button } from '@constructive-io/ui/button';
+import { Checkbox } from '@constructive-io/ui/checkbox';
 import {
   Dialog,
   DialogContent,
@@ -115,24 +116,41 @@ function ConfirmAction({
   onError?: OrganizationsFeaturePackProps['onError'];
   fallback: string;
 }>) {
+  const [open, setOpen] = React.useState(false);
   const [pending, setPending] = React.useState(false);
+  const [error, setError] = React.useState<string>();
   return (
-    <AlertDialog>
+    <AlertDialog
+      onOpenChange={(nextOpen) => {
+        if (pending) return;
+        setOpen(nextOpen);
+        if (!nextOpen) setError(undefined);
+      }}
+      open={open}
+    >
       <AlertDialogTrigger render={trigger} />
       <AlertDialogContent>
         <AlertDialogHeader>
           <AlertDialogTitle>{title}</AlertDialogTitle>
           <AlertDialogDescription>{description}</AlertDialogDescription>
         </AlertDialogHeader>
+        {error ? <p className='text-destructive text-pretty text-sm' role='alert'>{error}</p> : null}
         <AlertDialogFooter>
           <AlertDialogCancel disabled={pending}>Cancel</AlertDialogCancel>
           <Button
             disabled={pending}
             onClick={() => {
               setPending(true);
-              void Promise.resolve(onConfirm()).catch((cause) => {
-                report(cause, fallback, onError);
-              }).finally(() => setPending(false));
+              setError(undefined);
+              void Promise.resolve()
+                .then(onConfirm)
+                .then(() => {
+                  setOpen(false);
+                })
+                .catch((cause) => {
+                  report(cause, fallback, onError, setError);
+                })
+                .finally(() => setPending(false));
             }}
             variant='destructive'
           >
@@ -162,6 +180,7 @@ export function OrganizationSettingsPanel({
   const [pendingGeneral, setPendingGeneral] = React.useState(false);
   const [pendingSetting, setPendingSetting] = React.useState<string>();
   const [error, setError] = React.useState<string>();
+  const [settingError, setSettingError] = React.useState<string>();
   const fieldId = React.useId();
   const canUpdateOrganization = canPerform(policy, 'updateOrganization') &&
     Boolean(actions?.updateOrganization);
@@ -179,6 +198,7 @@ export function OrganizationSettingsPanel({
   ) => {
     if (!actions?.updateMembershipSettings || !settings) return;
     setPendingSetting(field);
+    setSettingError(undefined);
     try {
       await actions.updateMembershipSettings({
         organizationId,
@@ -186,7 +206,7 @@ export function OrganizationSettingsPanel({
         patch: { [field]: value }
       });
     } catch (cause) {
-      report(cause, 'The membership setting could not be changed.', onError);
+      report(cause, 'The membership setting could not be changed.', onError, setSettingError);
     } finally {
       setPendingSetting(undefined);
     }
@@ -365,6 +385,9 @@ export function OrganizationSettingsPanel({
               </Select>
             </Field>
           </FieldGroup>
+          {settingError ? (
+            <p className='text-destructive text-pretty text-sm' role='alert'>{settingError}</p>
+          ) : null}
         </section>
       ) : null}
 
@@ -541,14 +564,26 @@ function CreatePrincipalDialog({
 }>) {
   const [open, setOpen] = React.useState(false);
   const [name, setName] = React.useState('');
-  const [useAdminOwner, setUseAdminOwner] = React.useState(true);
-  const [isReadOnly, setIsReadOnly] = React.useState(false);
+  const [useAdminOwner, setUseAdminOwner] = React.useState(false);
+  const [isReadOnly, setIsReadOnly] = React.useState(true);
   const [bypassStepUp, setBypassStepUp] = React.useState(false);
   const [pending, setPending] = React.useState(false);
   const [error, setError] = React.useState<string>();
   const fieldId = React.useId();
   return (
-    <Dialog onOpenChange={(nextOpen) => !pending && setOpen(nextOpen)} open={open}>
+    <Dialog
+      onOpenChange={(nextOpen) => {
+        if (pending) return;
+        if (nextOpen) {
+          setUseAdminOwner(false);
+          setIsReadOnly(true);
+          setBypassStepUp(false);
+          setError(undefined);
+        }
+        setOpen(nextOpen);
+      }}
+      open={open}
+    >
       <DialogTrigger render={<Button size='sm' variant='outline' />}>
         <PlusIcon data-icon='inline-start' />New principal
       </DialogTrigger>
@@ -618,11 +653,12 @@ function CreateApiKeyDialog({
   const [open, setOpen] = React.useState(false);
   const [name, setName] = React.useState('');
   const [principalId, setPrincipalId] = React.useState(principals[0]?.id ?? '');
-  const [accessLevel, setAccessLevel] = React.useState<'full_access' | 'read_only'>('full_access');
-  const [mfaLevel, setMfaLevel] = React.useState<'none' | 'verified'>('none');
+  const [accessLevel, setAccessLevel] = React.useState<'full_access' | 'read_only'>('read_only');
+  const [mfaLevel, setMfaLevel] = React.useState<'none' | 'verified'>('verified');
   const [expiresIn, setExpiresIn] = React.useState('30 days');
   const [created, setCreated] = React.useState<Readonly<{ token: string; id?: string; expiresAt?: string }>>();
   const [copied, setCopied] = React.useState(false);
+  const [acknowledged, setAcknowledged] = React.useState(false);
   const [pending, setPending] = React.useState(false);
   const [error, setError] = React.useState<string>();
   const fieldId = React.useId();
@@ -637,10 +673,19 @@ function CreateApiKeyDialog({
     <Dialog
       onOpenChange={(nextOpen) => {
         if (pending) return;
+        if (created && !nextOpen) return;
+        if (nextOpen) {
+          setName('');
+          setAccessLevel('read_only');
+          setMfaLevel('verified');
+          setExpiresIn('30 days');
+          setError(undefined);
+        }
         setOpen(nextOpen);
         if (!nextOpen) {
           setCreated(undefined);
           setCopied(false);
+          setAcknowledged(false);
           setError(undefined);
         }
       }}
@@ -649,22 +694,31 @@ function CreateApiKeyDialog({
       <DialogTrigger render={<Button size='sm' />}>
         <KeyRoundIcon data-icon='inline-start' />Create API key
       </DialogTrigger>
-      <DialogContent>
+      <DialogContent showCloseButton={!created}>
         {created ? (
           <>
             <DialogHeader>
               <DialogTitle>Copy the API key now</DialogTitle>
               <DialogDescription>
-                Console Kit cannot retrieve this token again. Store it in a secret manager before closing.
+                Console Kit cannot retrieve this token again. Closing is disabled until you confirm that it is stored safely.
               </DialogDescription>
             </DialogHeader>
             <DialogPanel>
-              <Field label='API key'>
+              <Field htmlFor={`${fieldId}-created-key`} label='API key'>
                 <div className='flex gap-2'>
-                  <Input readOnly value={created.token} />
+                  <Input id={`${fieldId}-created-key`} readOnly value={created.token} />
                   <Button
                     onClick={() => {
-                      void navigator.clipboard?.writeText(created.token).then(() => setCopied(true));
+                      if (!navigator.clipboard) {
+                        setError('Clipboard access is unavailable. Copy the key manually, then confirm storage.');
+                        return;
+                      }
+                      void navigator.clipboard.writeText(created.token).then(() => {
+                        setCopied(true);
+                        setError(undefined);
+                      }).catch(() => {
+                        setError('The key could not be copied. Copy it manually, then confirm storage.');
+                      });
                     }}
                     type='button'
                     variant='outline'
@@ -674,8 +728,35 @@ function CreateApiKeyDialog({
                 </div>
               </Field>
               {created.expiresAt ? <p className='text-muted-foreground text-sm'>Expires <FeaturePackTimestamp value={created.expiresAt} /></p> : null}
+              <Field orientation='horizontal'>
+                <Checkbox
+                  checked={acknowledged}
+                  id={`${fieldId}-stored`}
+                  onCheckedChange={(checked) => setAcknowledged(checked === true)}
+                />
+                <div className='min-w-0 flex-1'>
+                  <FieldLabel htmlFor={`${fieldId}-stored`}>I stored this API key securely</FieldLabel>
+                  <FieldDescription>
+                    {copied ? 'The key was copied from Console Kit.' : 'Confirm only after copying the key manually.'}
+                  </FieldDescription>
+                </div>
+              </Field>
+              {error ? <p className='text-destructive text-pretty text-sm' role='alert'>{error}</p> : null}
             </DialogPanel>
-            <DialogFooter><Button onClick={() => setOpen(false)}>Done</Button></DialogFooter>
+            <DialogFooter>
+              <Button
+                disabled={!acknowledged}
+                onClick={() => {
+                  setCreated(undefined);
+                  setCopied(false);
+                  setAcknowledged(false);
+                  setError(undefined);
+                  setOpen(false);
+                }}
+              >
+                Done
+              </Button>
+            </DialogFooter>
           </>
         ) : (
           <form onSubmit={(event) => {
@@ -689,7 +770,11 @@ function CreateApiKeyDialog({
               accessLevel,
               mfaLevel,
               expiresIn: expiresIn.trim() || undefined
-            }).then(setCreated).catch((cause) => {
+            }).then((result) => {
+              setCreated(result);
+              setCopied(false);
+              setAcknowledged(false);
+            }).catch((cause) => {
               report(cause, 'The organization API key could not be created.', onError, setError);
             }).finally(() => setPending(false));
           }}>
@@ -704,26 +789,34 @@ function CreateApiKeyDialog({
                 <Field error={error} htmlFor={`${fieldId}-key-name`} label='Key name' required>
                   <Input id={`${fieldId}-key-name`} onChange={(event) => setName(event.currentTarget.value)} required value={name} />
                 </Field>
-                <Field label='Principal'>
+                <Field htmlFor={`${fieldId}-principal`} label='Principal'>
                   <Select onValueChange={setPrincipalId} value={principalId}>
-                    <SelectTrigger><SelectValue placeholder='Select principal' /></SelectTrigger>
+                    <SelectTrigger id={`${fieldId}-principal`}><SelectValue placeholder='Select principal' /></SelectTrigger>
                     <SelectContent><SelectGroup>{principals.map((principal) => (
                       <SelectItem key={principal.id} value={principal.id}>{principal.name}</SelectItem>
                     ))}</SelectGroup></SelectContent>
                   </Select>
                 </Field>
-                <Field label='Access level'>
+                <Field htmlFor={`${fieldId}-access-level`} label='Access level'>
                   <Select onValueChange={(value) => setAccessLevel(value as typeof accessLevel)} value={accessLevel}>
-                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectTrigger id={`${fieldId}-access-level`}>
+                      <SelectValue>
+                        {(value: string | null) => value === 'full_access' ? 'Full access' : 'Read only'}
+                      </SelectValue>
+                    </SelectTrigger>
                     <SelectContent><SelectGroup>
                       <SelectItem value='full_access'>Full access</SelectItem>
                       <SelectItem value='read_only'>Read only</SelectItem>
                     </SelectGroup></SelectContent>
                   </Select>
                 </Field>
-                <Field label='MFA requirement'>
+                <Field htmlFor={`${fieldId}-mfa-level`} label='MFA requirement'>
                   <Select onValueChange={(value) => setMfaLevel(value as typeof mfaLevel)} value={mfaLevel}>
-                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectTrigger id={`${fieldId}-mfa-level`}>
+                      <SelectValue>
+                        {(value: string | null) => value === 'verified' ? 'Verified' : 'None'}
+                      </SelectValue>
+                    </SelectTrigger>
                     <SelectContent><SelectGroup>
                       <SelectItem value='none'>None</SelectItem>
                       <SelectItem value='verified'>Verified</SelectItem>

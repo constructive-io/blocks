@@ -79,6 +79,7 @@ import {
   TableRow
 } from '@constructive-io/ui/table';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@constructive-io/ui/tabs';
+import { cn } from '@/lib/utils';
 
 import {
   canPerform,
@@ -118,6 +119,8 @@ import {
 export * from './organizations-contracts';
 
 const NO_PROFILE_VALUE = '__no_profile__';
+const focusedRecordClass =
+  'bg-muted/60 outline outline-2 outline-offset-[-2px] outline-ring';
 
 function initials(value: string): string {
   return value
@@ -129,18 +132,27 @@ function initials(value: string): string {
 }
 
 function CreateOrganizationDialog({
+  open: controlledOpen,
+  onOpenChange,
   onSubmit
 }: Readonly<{
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
   onSubmit: (input: { value: string; role?: string }) => Promise<
     | Readonly<{ ok: true }>
     | Readonly<{ ok: false; error: FeaturePackError }>
   >;
 }>) {
-  const [open, setOpen] = React.useState(false);
+  const [internalOpen, setInternalOpen] = React.useState(false);
   const [value, setValue] = React.useState('');
   const [pending, setPending] = React.useState(false);
   const [error, setError] = React.useState<string>();
   const fieldId = React.useId();
+  const open = controlledOpen ?? internalOpen;
+  const changeOpen = (nextOpen: boolean) => {
+    if (controlledOpen === undefined) setInternalOpen(nextOpen);
+    onOpenChange?.(nextOpen);
+  };
 
   const submit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -153,7 +165,7 @@ function CreateOrganizationDialog({
       });
       if (result.ok) {
         setValue('');
-        setOpen(false);
+        changeOpen(false);
       } else if ('error' in result) {
         setError(result.error.message);
       }
@@ -167,7 +179,7 @@ function CreateOrganizationDialog({
       open={open}
       onOpenChange={(nextOpen) => {
         if (pending) return;
-        setOpen(nextOpen);
+        changeOpen(nextOpen);
         if (!nextOpen) setError(undefined);
       }}
     >
@@ -244,6 +256,7 @@ function OrganizationInviteDialog({
     [assignableProfileIds, profiles]
   );
   const needsRecipient = channel !== 'link';
+  const canAssignProfile = channel === 'email' && !multiple;
 
   React.useEffect(() => {
     setProfileId((current) => assignableProfiles.some((profile) => profile.id === current)
@@ -260,7 +273,9 @@ function OrganizationInviteDialog({
       const result = await onSubmit({
         channel,
         recipient: needsRecipient ? recipient.trim() : undefined,
-        profileId: profileId || undefined,
+        profileId: canAssignProfile && assignableProfiles.some(
+          (profile) => profile.id === profileId
+        ) ? profileId : undefined,
         expiresAt: expiresAt ? new Date(expiresAt).toISOString() : undefined,
         multiple: channel === 'link' ? multiple : false,
         inviteLimit: channel === 'link' && inviteLimit ? Number(inviteLimit) : undefined,
@@ -305,7 +320,15 @@ function OrganizationInviteDialog({
             <FieldGroup>
               <Field htmlFor={`${fieldId}-channel`} label='Delivery channel'>
                 <Select
-                  onValueChange={(value) => setChannel(value as typeof channel)}
+                  onValueChange={(value) => {
+                    const nextChannel = value as typeof channel;
+                    setChannel(nextChannel);
+                    if (nextChannel !== 'email') setProfileId('');
+                    if (nextChannel !== 'link') {
+                      setMultiple(false);
+                      setInviteLimit('');
+                    }
+                  }}
                   value={channel}
                 >
                   <SelectTrigger id={`${fieldId}-channel`}><SelectValue /></SelectTrigger>
@@ -335,8 +358,13 @@ function OrganizationInviteDialog({
                 </Field>
               ) : error ? <p className='text-destructive text-sm' role='alert'>{error}</p> : null}
               {assignableProfiles.length > 0 ? (
-                <Field htmlFor={`${fieldId}-profile`} label='Access profile'>
+                <Field
+                  data-disabled={!canAssignProfile}
+                  htmlFor={`${fieldId}-profile`}
+                  label='Access profile'
+                >
                   <Select
+                    disabled={!canAssignProfile}
                     onValueChange={(value) => setProfileId(
                       value === NO_PROFILE_VALUE ? '' : value
                     )}
@@ -356,6 +384,9 @@ function OrganizationInviteDialog({
                       ))}
                     </SelectGroup></SelectContent>
                   </Select>
+                  <FieldDescription>
+                    Access profiles can be attached only to single-use email invitations.
+                  </FieldDescription>
                 </Field>
               ) : null}
               <Field htmlFor={`${fieldId}-expires`} label='Expires at'>
@@ -384,7 +415,14 @@ function OrganizationInviteDialog({
                       <FieldLabel htmlFor={`${fieldId}-multiple`}>Allow multiple claims</FieldLabel>
                       <FieldDescription>Keep the link valid until its claim limit or expiry.</FieldDescription>
                     </div>
-                    <Switch checked={multiple} id={`${fieldId}-multiple`} onCheckedChange={setMultiple} />
+                    <Switch
+                      checked={multiple}
+                      id={`${fieldId}-multiple`}
+                      onCheckedChange={(checked) => {
+                        setMultiple(checked);
+                        if (checked) setProfileId('');
+                      }}
+                    />
                   </Field>
                   {multiple ? (
                     <Field htmlFor={`${fieldId}-limit`} label='Claim limit'>
@@ -425,14 +463,21 @@ function OrganizationMemberActions({
 }>) {
   const [open, setOpen] = React.useState(false);
   const [pending, setPending] = React.useState(false);
+  const [error, setError] = React.useState<string>();
 
   const remove = async () => {
     setPending(true);
+    setError(undefined);
     try {
       await removeMember({ organizationId, membershipId: member.id });
       setOpen(false);
     } catch (cause) {
-      onError?.(normalizeFeaturePackError(cause, 'The organization member could not be removed.'));
+      const normalized = normalizeFeaturePackError(
+        cause,
+        'The organization member could not be removed.'
+      );
+      setError(normalized.message);
+      onError?.(normalized);
     } finally {
       setPending(false);
     }
@@ -453,7 +498,10 @@ function OrganizationMemberActions({
       </DropdownMenu>
       <AlertDialog
         onOpenChange={(nextOpen) => {
-          if (!pending) setOpen(nextOpen);
+          if (!pending) {
+            setOpen(nextOpen);
+            if (!nextOpen) setError(undefined);
+          }
         }}
         open={open}
       >
@@ -464,6 +512,7 @@ function OrganizationMemberActions({
               This revokes the member&apos;s access to this organization. Their personal account remains intact.
             </AlertDialogDescription>
           </AlertDialogHeader>
+          {error ? <p className='text-destructive text-pretty text-sm' role='alert'>{error}</p> : null}
           <AlertDialogFooter>
             <AlertDialogCancel disabled={pending}>Cancel</AlertDialogCancel>
             <Button disabled={pending} onClick={() => void remove()} variant='destructive'>
@@ -489,14 +538,21 @@ function CancelOrganizationInviteAction({
 }>) {
   const [open, setOpen] = React.useState(false);
   const [pending, setPending] = React.useState(false);
+  const [error, setError] = React.useState<string>();
 
   const cancel = async () => {
     setPending(true);
+    setError(undefined);
     try {
       await cancelInvite({ organizationId, inviteId: invite.id });
       setOpen(false);
     } catch (cause) {
-      onError?.(normalizeFeaturePackError(cause, 'The invitation could not be canceled.'));
+      const normalized = normalizeFeaturePackError(
+        cause,
+        'The invitation could not be canceled.'
+      );
+      setError(normalized.message);
+      onError?.(normalized);
     } finally {
       setPending(false);
     }
@@ -505,7 +561,10 @@ function CancelOrganizationInviteAction({
   return (
     <AlertDialog
       onOpenChange={(nextOpen) => {
-        if (!pending) setOpen(nextOpen);
+        if (!pending) {
+          setOpen(nextOpen);
+          if (!nextOpen) setError(undefined);
+        }
       }}
       open={open}
     >
@@ -519,6 +578,7 @@ function CancelOrganizationInviteAction({
             The organization invitation link will stop working. You can invite this person again later.
           </AlertDialogDescription>
         </AlertDialogHeader>
+        {error ? <p className='text-destructive text-pretty text-sm' role='alert'>{error}</p> : null}
         <AlertDialogFooter>
           <AlertDialogCancel disabled={pending}>Keep invitation</AlertDialogCancel>
           <Button disabled={pending} onClick={() => void cancel()} variant='destructive'>
@@ -537,12 +597,47 @@ export function OrganizationsFeaturePack({
   section: controlledSection,
   defaultSection = 'members',
   onSectionChange,
+  createOrganizationOpen,
+  onCreateOrganizationOpenChange,
+  focusedMemberId,
+  focusedInvitationId,
+  focusedProfileId,
+  developerView = 'all',
   onError
 }: OrganizationsFeaturePackProps) {
   const [query, setQuery] = React.useState('');
+  const [selectionError, setSelectionError] = React.useState<string>();
   const [internalSection, setInternalSection] = React.useState<OrganizationsSection>(
     defaultSection
   );
+  const focusedMemberRef = React.useRef<HTMLTableRowElement>(null);
+  const focusedInvitationRef = React.useRef<HTMLTableRowElement>(null);
+  const focusedMemberPresent = resource.status === 'ready' && Boolean(
+    focusedMemberId && resource.data.members.some((member) => member.id === focusedMemberId)
+  );
+  const focusedInvitationPresent = resource.status === 'ready' && Boolean(
+    focusedInvitationId && resource.data.invites?.some(
+      (invite) => invite.id === focusedInvitationId
+    )
+  );
+
+  React.useEffect(() => {
+    if (focusedMemberId) setQuery('');
+  }, [focusedMemberId]);
+
+  React.useEffect(() => {
+    if (!focusedMemberPresent) return;
+    const element = focusedMemberRef.current;
+    element?.focus({ preventScroll: true });
+    element?.scrollIntoView?.({ block: 'nearest' });
+  }, [focusedMemberId, focusedMemberPresent]);
+
+  React.useEffect(() => {
+    if (!focusedInvitationPresent) return;
+    const element = focusedInvitationRef.current;
+    element?.focus({ preventScroll: true });
+    element?.scrollIntoView?.({ block: 'nearest' });
+  }, [focusedInvitationId, focusedInvitationPresent]);
 
   const run = async (
     action: () => FeatureActionResult,
@@ -564,7 +659,9 @@ export function OrganizationsFeaturePack({
         actions={
           resource.status === 'ready' && canPerform(policy, 'createOrganization') && actions?.createOrganization ? (
             <CreateOrganizationDialog
+              onOpenChange={onCreateOrganizationOpenChange}
               onSubmit={({ value }) => run(() => actions.createOrganization!({ name: value }), 'The organization could not be created.')}
+              open={createOrganizationOpen}
             />
           ) : null
         }
@@ -577,7 +674,9 @@ export function OrganizationsFeaturePack({
         emptyAction={
           canPerform(policy, 'createOrganization') && actions?.createOrganization ? (
             <CreateOrganizationDialog
+              onOpenChange={onCreateOrganizationOpenChange}
               onSubmit={({ value }) => run(() => actions.createOrganization!({ name: value }), 'The organization could not be created.')}
+              open={createOrganizationOpen}
             />
           ) : null
         }
@@ -654,10 +753,15 @@ export function OrganizationsFeaturePack({
                         key={organization.id}
                         onClick={() => {
                           if (!selected && canPerform(policy, 'selectOrganization') && actions?.selectOrganization) {
+                            setSelectionError(undefined);
                             void run(
                               () => actions.selectOrganization!({ organizationId: organization.id }),
                               'The organization could not be selected.'
-                            );
+                            ).then((result) => {
+                              if ('error' in result) {
+                                setSelectionError(result.error.message);
+                              }
+                            });
                           }
                         }}
                         variant={selected ? 'secondary' : 'ghost'}
@@ -676,6 +780,11 @@ export function OrganizationsFeaturePack({
                       </Button>
                     );
                   })}
+                  {selectionError ? (
+                    <p className='text-destructive px-2 pt-2 text-pretty text-xs' role='alert'>
+                      {selectionError}
+                    </p>
+                  ) : null}
                 </CardContent>
               </Card>
 
@@ -711,7 +820,7 @@ export function OrganizationsFeaturePack({
                     >
                       {sections.map((candidate) => (
                         <TabsTrigger
-                          className='text-muted-foreground data-[active]:text-foreground data-[active]:border-foreground h-10 shrink-0 rounded-none border-0 border-b-2 border-transparent bg-transparent px-3 shadow-none data-[active]:bg-transparent data-[active]:shadow-none'
+                          className='text-muted-foreground data-[active]:text-foreground data-[active]:border-foreground h-10 shrink-0 rounded-none border-0 border-b-2 border-transparent bg-transparent px-3 data-[active]:bg-transparent focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-ring'
                           key={candidate.id}
                           value={candidate.id}
                         >
@@ -757,8 +866,16 @@ export function OrganizationsFeaturePack({
                           <TableHead>Status</TableHead>
                           <TableHead className='w-24'><span className='sr-only'>Actions</span></TableHead>
                         </TableRow></TableHeader>
-                        <TableBody>{members.map((member) => (
-                          <TableRow key={member.id}>
+                        <TableBody>{members.map((member) => {
+                          const focused = member.id === focusedMemberId;
+                          return (
+                          <TableRow
+                            aria-current={focused ? 'true' : undefined}
+                            className={cn(focused && focusedRecordClass)}
+                            key={member.id}
+                            ref={focused ? focusedMemberRef : undefined}
+                            tabIndex={focused ? -1 : undefined}
+                          >
                             <TableCell>
                               <div className='flex min-w-48 items-center gap-3'>
                                 <Avatar>
@@ -800,7 +917,8 @@ export function OrganizationsFeaturePack({
                               ) : null}
                             </TableCell>
                           </TableRow>
-                        ))}</TableBody>
+                          );
+                        })}</TableBody>
                       </Table>
                     )}
                   </TabsContent>
@@ -829,8 +947,16 @@ export function OrganizationsFeaturePack({
                                   <TableHead>Status</TableHead><TableHead>Claims</TableHead>
                                   <TableHead>Expires</TableHead><TableHead className='text-right'>Actions</TableHead>
                                 </TableRow></TableHeader>
-                                <TableBody>{data.invites?.map((invite) => (
-                                  <TableRow key={invite.id}>
+                                <TableBody>{data.invites?.map((invite) => {
+                                  const focused = invite.id === focusedInvitationId;
+                                  return (
+                                  <TableRow
+                                    aria-current={focused ? 'true' : undefined}
+                                    className={cn(focused && focusedRecordClass)}
+                                    key={invite.id}
+                                    ref={focused ? focusedInvitationRef : undefined}
+                                    tabIndex={focused ? -1 : undefined}
+                                  >
                                     <TableCell>
                                       <div className='flex items-center gap-2'>
                                         <span className='font-medium'>{invite.recipient || 'Reusable link'}</span>
@@ -868,7 +994,8 @@ export function OrganizationsFeaturePack({
                                       </div>
                                     </TableCell>
                                   </TableRow>
-                                ))}</TableBody>
+                                  );
+                                })}</TableBody>
                               </Table>
                             </section>
                           ) : null}
@@ -904,6 +1031,7 @@ export function OrganizationsFeaturePack({
                       <OrganizationProfilesPanel
                         actions={actions}
                         onError={onError}
+                        focusedProfileId={focusedProfileId}
                         organizationId={active.id}
                         permissions={data.permissions ?? []}
                         policy={policy}
@@ -960,7 +1088,7 @@ export function OrganizationsFeaturePack({
                   {active && (data.apiKeys !== undefined || data.principals !== undefined) ? (
                     <TabsContent className='mt-5' value='developer'>
                       <div className='flex flex-col gap-10'>
-                        {data.principals !== undefined ? (
+                        {data.principals !== undefined && developerView !== 'api-keys' ? (
                           <OrganizationPrincipalsPanel
                             actions={actions}
                             onError={onError}
@@ -969,7 +1097,7 @@ export function OrganizationsFeaturePack({
                             principals={data.principals}
                           />
                         ) : null}
-                        {data.apiKeys !== undefined ? (
+                        {data.apiKeys !== undefined && developerView !== 'principals' ? (
                           <OrganizationApiKeysPanel
                             actions={actions}
                             apiKeys={data.apiKeys}

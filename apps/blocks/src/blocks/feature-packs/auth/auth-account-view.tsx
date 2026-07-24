@@ -50,8 +50,10 @@ import {
 } from '../shared/feature-pack-ui';
 import type {
   AuthAccountData,
+  AuthAccountSection,
   AuthConnectedAccount,
   AuthFeatureActions,
+  AuthFeaturePackComponentProps,
   AuthFeaturePackProps,
   AuthIdentity,
   AuthPasswordPolicy,
@@ -62,8 +64,6 @@ import {
   authPasswordPolicyError,
   normalizedPasswordLength
 } from './auth-password-policy';
-
-type AccountSection = 'profile' | 'security' | 'connections' | 'sessions';
 
 function identityInitials(value: string): string {
   return value
@@ -79,7 +79,7 @@ const sectionTriggerClass = cn(
   'text-muted-foreground shadow-none',
   'hover:text-foreground data-[active]:text-foreground',
   'data-[active]:border-foreground data-[active]:bg-transparent data-[active]:shadow-none',
-  'focus-visible:ring-0 focus-visible:outline-none'
+  'focus-visible:z-10 focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:outline-none'
 );
 
 /**
@@ -93,8 +93,14 @@ export function AuthAccountView({
   notice,
   verificationNotice,
   passwordPolicy,
+  accountSection,
+  defaultAccountSection = 'profile',
+  onAccountSectionChange,
   onError
-}: Omit<AuthFeaturePackProps, 'view' | 'mode' | 'onModeChange' | 'onAuthenticated'>) {
+}: Omit<
+  AuthFeaturePackComponentProps,
+  'view' | 'mode' | 'onModeChange' | 'onAuthenticated'
+>) {
   const [displayName, setDisplayName] = React.useState('');
   const [currentPassword, setCurrentPassword] = React.useState('');
   const [newPassword, setNewPassword] = React.useState('');
@@ -109,13 +115,25 @@ export function AuthAccountView({
     kind: 'error' | 'success';
     text: string;
   }>>();
-  const [section, setSection] = React.useState<AccountSection>('profile');
+  const [uncontrolledSection, setUncontrolledSection] =
+    React.useState<AuthAccountSection>(defaultAccountSection);
+  const [actionError, setActionError] = React.useState<Readonly<{
+    key: string;
+    message: string;
+  }>>();
   const fieldIdPrefix = React.useId();
   const displayNameId = `${fieldIdPrefix}-display-name`;
   const currentPasswordId = `${fieldIdPrefix}-current-password`;
   const newPasswordId = `${fieldIdPrefix}-new-password`;
   const activeNotice = notice ?? verificationNotice;
   const identityId = account.status === 'ready' ? account.data.identity.id : undefined;
+  const section = accountSection ?? uncontrolledSection;
+
+  const changeSection = (nextSection: AuthAccountSection) => {
+    if (accountSection === undefined) setUncontrolledSection(nextSection);
+    setActionError(undefined);
+    onAccountSectionChange?.(nextSection);
+  };
 
   React.useEffect(() => {
     setCurrentPassword('');
@@ -123,6 +141,7 @@ export function AuthAccountView({
     setShowCurrentPassword(false);
     setShowNewPassword(false);
     setSessionToRevoke(undefined);
+    setActionError(undefined);
   }, [identityId]);
 
   const run = async (
@@ -133,13 +152,18 @@ export function AuthAccountView({
     onFailure?: (message: string) => void
   ) => {
     setPendingAction(key);
+    setActionError(undefined);
     try {
       await action();
       onSuccess?.();
     } catch (cause) {
       const error = normalizeFeaturePackError(cause, fallback);
       onError?.(error);
-      onFailure?.(error.message);
+      if (onFailure) {
+        onFailure(error.message);
+      } else {
+        setActionError({ key, message: error.message });
+      }
     } finally {
       setPendingAction(undefined);
     }
@@ -167,12 +191,10 @@ export function AuthAccountView({
           const showConnections = connectedAccounts.length > 0;
           const sessions = data.sessions ?? [];
           const showSessions = sessions.length > 0;
-          const sections: AccountSection[] = [
-            'profile',
-            ...(showSecurity ? (['security'] as const) : []),
-            ...(showConnections ? (['connections'] as const) : []),
-            ...(showSessions ? (['sessions'] as const) : [])
-          ];
+          const sections: AuthAccountSection[] = ['profile'];
+          if (showSecurity) sections.push('security');
+          if (showConnections) sections.push('connected-accounts');
+          if (showSessions) sections.push('sessions');
           const activeSection = sections.includes(section) ? section : 'profile';
           const multiSection = sections.length > 1;
 
@@ -187,6 +209,9 @@ export function AuthAccountView({
                 }
                 signOutPending={pendingAction === 'signOut'}
               />
+              {actionError?.key === 'signOut' ? (
+                <ActionError message={actionError.message} />
+              ) : null}
 
               {data.identity.emailVerified === false &&
               canPerform(policy, 'sendVerificationEmail') &&
@@ -214,7 +239,7 @@ export function AuthAccountView({
 
               {multiSection ? (
                 <Tabs
-                  onValueChange={(value) => setSection(value as AccountSection)}
+                  onValueChange={(value) => changeSection(value as AuthAccountSection)}
                   value={activeSection}
                 >
                   <TabsList
@@ -230,7 +255,7 @@ export function AuthAccountView({
                       </TabsTrigger>
                     ) : null}
                     {showConnections ? (
-                      <TabsTrigger className={sectionTriggerClass} value='connections'>
+                      <TabsTrigger className={sectionTriggerClass} value='connected-accounts'>
                         Connections
                         <span className='text-muted-foreground ml-1.5 tabular-nums text-xs'>
                           {connectedAccounts.length}
@@ -254,6 +279,7 @@ export function AuthAccountView({
                       displayNameId={displayNameId}
                       onDisplayNameChange={setDisplayName}
                       pending={pendingAction === 'profile'}
+                      error={actionError?.key === 'profile' ? actionError.message : undefined}
                       canUpdate={
                         canPerform(policy, 'updateProfile') && Boolean(actions?.updateProfile)
                       }
@@ -281,6 +307,7 @@ export function AuthAccountView({
                             newPasswordId={newPasswordId}
                             passwordPolicy={passwordPolicy}
                             pending={pendingAction === 'password'}
+                            error={actionError?.key === 'password' ? actionError.message : undefined}
                             showCurrentPassword={showCurrentPassword}
                             showNewPassword={showNewPassword}
                             onCurrentPasswordChange={setCurrentPassword}
@@ -322,7 +349,7 @@ export function AuthAccountView({
                   ) : null}
 
                   {showConnections ? (
-                    <TabsContent className='mt-6 outline-none' value='connections'>
+                    <TabsContent className='mt-6 outline-none' value='connected-accounts'>
                       <ConnectedAccountsSection
                         accounts={connectedAccounts}
                         disconnect={
@@ -361,6 +388,7 @@ export function AuthAccountView({
                   displayNameId={displayNameId}
                   onDisplayNameChange={setDisplayName}
                   pending={pendingAction === 'profile'}
+                  error={actionError?.key === 'profile' ? actionError.message : undefined}
                   canUpdate={
                     canPerform(policy, 'updateProfile') && Boolean(actions?.updateProfile)
                   }
@@ -381,7 +409,11 @@ export function AuthAccountView({
                 <AlertDialog
                   onOpenChange={(open) => {
                     if (!open && pendingAction !== sessionToRevoke?.id) {
+                      const sessionId = sessionToRevoke?.id;
                       setSessionToRevoke(undefined);
+                      setActionError((current) =>
+                        current?.key === sessionId ? undefined : current
+                      );
                     }
                   }}
                   open={Boolean(sessionToRevoke)}
@@ -393,6 +425,9 @@ export function AuthAccountView({
                         This signs that device out of your account. You will need to authenticate there again.
                       </AlertDialogDescription>
                     </AlertDialogHeader>
+                    {sessionToRevoke && actionError?.key === sessionToRevoke.id ? (
+                      <ActionError message={actionError.message} />
+                    ) : null}
                     <AlertDialogFooter>
                       <AlertDialogCancel disabled={pendingAction === sessionToRevoke?.id}>
                         Cancel
@@ -521,6 +556,14 @@ function VerificationBanner({
   );
 }
 
+function ActionError({ message }: Readonly<{ message: string }>) {
+  return (
+    <Alert role='alert' variant='destructive'>
+      <AlertDescription>{message}</AlertDescription>
+    </Alert>
+  );
+}
+
 function SectionLabel({
   icon: Icon,
   title,
@@ -552,6 +595,7 @@ function ProfileSection({
   onDisplayNameChange,
   canUpdate,
   pending,
+  error,
   onSave
 }: Readonly<{
   data: AuthAccountData;
@@ -560,6 +604,7 @@ function ProfileSection({
   onDisplayNameChange: (value: string) => void;
   canUpdate: boolean;
   pending: boolean;
+  error?: string;
   onSave: () => void;
 }>) {
   return (
@@ -593,6 +638,7 @@ function ProfileSection({
           >
             Save changes
           </Button>
+          {error ? <ActionError message={error} /> : null}
         </form>
       ) : (
         <p className='text-sm'>
@@ -613,6 +659,7 @@ function SecuritySection({
   showCurrentPassword,
   showNewPassword,
   pending,
+  error,
   onCurrentPasswordChange,
   onNewPasswordChange,
   onToggleCurrent,
@@ -627,6 +674,7 @@ function SecuritySection({
   showCurrentPassword: boolean;
   showNewPassword: boolean;
   pending: boolean;
+  error?: string;
   onCurrentPasswordChange: (value: string) => void;
   onNewPasswordChange: (value: string) => void;
   onToggleCurrent: () => void;
@@ -727,6 +775,7 @@ function SecuritySection({
         >
           {pending ? 'Changing password…' : 'Change password'}
         </Button>
+        {error ? <ActionError message={error} /> : null}
       </form>
     </section>
   );

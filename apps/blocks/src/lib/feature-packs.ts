@@ -1,5 +1,5 @@
 import type { BillingFeaturePackProps } from '@/blocks/feature-packs/billing/billing-feature-pack';
-import type { AuthFeaturePackProps } from '@/blocks/feature-packs/auth/auth-contracts';
+import type { AuthFeaturePackComponentProps } from '@/blocks/feature-packs/auth/auth-contracts';
 import type { DataFeaturePackProps } from '@/blocks/feature-packs/data/data-feature-pack';
 import type { NotificationsFeaturePackProps } from '@/blocks/feature-packs/notifications/notifications-feature-pack';
 import type { OrganizationsFeaturePackProps } from '@/blocks/feature-packs/organizations/organizations-feature-pack';
@@ -172,7 +172,7 @@ export const FEATURE_PACK_DOCS = [
       'Pending authentication and account actions disable their initiating control, which prevents duplicate submission without hiding the action label.',
       'Session status, verification, and unavailable actions use text in addition to visual treatment, so their meaning does not depend on color.',
     ],
-    apiProps: featurePackApiProps<AuthFeaturePackProps>()([
+    apiProps: featurePackApiProps<AuthFeaturePackComponentProps>()([
       'view',
       'account',
       'notice',
@@ -185,6 +185,9 @@ export const FEATURE_PACK_DOCS = [
       'onModeChange',
       'onAuthenticated',
       'onError',
+      'accountSection',
+      'defaultAccountSection',
+      'onAccountSectionChange',
     ]),
     api: [
       {
@@ -206,6 +209,11 @@ export const FEATURE_PACK_DOCS = [
         name: 'mode',
         type: 'AuthEntryMode',
         behavior: 'Selects the entry flow. Reset credentials remain in the host action closure or Console Kit callback vault.',
+      },
+      {
+        name: 'accountSection / defaultAccountSection / onAccountSectionChange',
+        type: 'AuthAccountSection / callback',
+        behavior: 'Controls or initializes the visible account section and reports account navigation to the host.',
       },
       {
         name: 'passwordPolicy',
@@ -296,6 +304,9 @@ export const FEATURE_PACK_DOCS = [
       'section',
       'defaultSection',
       'onSectionChange',
+      'focusedMemberId',
+      'focusedInvitationId',
+      'focusedProfileId',
       'title',
       'description',
       'onError',
@@ -316,6 +327,11 @@ export const FEATURE_PACK_DOCS = [
         name: 'section / defaultSection / onSectionChange',
         type: 'UsersSection / callback',
         behavior: 'Controls or initializes the visible App access section and reports section navigation to the host.',
+      },
+      {
+        name: 'focusedMemberId / focusedInvitationId / focusedProfileId',
+        type: 'string',
+        behavior: 'Highlights and focuses a route-selected App access record while leaving standalone lists uncontrolled by default.',
       },
       {
         name: 'title / description',
@@ -373,7 +389,7 @@ export const FEATURE_PACK_DOCS = [
       description:
         'Use defaultSection when the page can remember its own organization-management section. Pass section and onSectionChange when routing or application state owns the selection. The resource keeps the visible organization directory and active tenant data in one snapshot; optional data controls invitations, profiles, permissions, defaults, hierarchy, and developer sections, while membership settings extend the tenant settings section when readable.',
       actionGuidance:
-        'A pack policy grant, matching callback, and any row policy enable each action; PostgreSQL privileges and RLS remain authoritative after the control is shown. Refresh the resource after a successful mutation, treat reusable invitation tokens as secrets, and expose new API keys only for the response that creates them. Missing optional capability evidence omits its dependent surface instead of guessing at tenant permissions.',
+        'A pack policy grant, matching callback, and any row policy enable each action; PostgreSQL privileges and RLS remain authoritative after the control is shown. Refresh the resource after a successful mutation, treat reusable invitation tokens as secrets, and expose new API keys only for the response that creates them. Because create_org_principal returns user_id while public reads may omit its organization scope, Console Kit must fail closed and surface a limitation for an unscopable keyless principal rather than guessing the only visible organization.',
     },
     surfaces: [
       'Organization selection and creation, plus tenant identity settings, leave, and deletion controls.',
@@ -396,6 +412,12 @@ export const FEATURE_PACK_DOCS = [
       'section',
       'defaultSection',
       'onSectionChange',
+      'focusedMemberId',
+      'focusedInvitationId',
+      'focusedProfileId',
+      'developerView',
+      'createOrganizationOpen',
+      'onCreateOrganizationOpenChange',
       'onError',
     ]),
     api: [
@@ -416,6 +438,21 @@ export const FEATURE_PACK_DOCS = [
         type: 'OrganizationsSection / callback',
         behavior:
           'Uses either a controlled section or an initial selection across members, invitations, profiles, permissions, defaults, hierarchy, settings, and developer credentials, then reports section changes to the host.',
+      },
+      {
+        name: 'focusedMemberId / focusedInvitationId / focusedProfileId',
+        type: 'string',
+        behavior: 'Highlights and focuses the record selected by a semantic organization detail route.',
+      },
+      {
+        name: 'developerView',
+        type: "'all' | 'principals' | 'api-keys'",
+        behavior: 'Shows both developer credential surfaces by default or narrows the destination for a semantic principal or API-key route.',
+      },
+      {
+        name: 'createOrganizationOpen / onCreateOrganizationOpenChange',
+        type: 'boolean / callback',
+        behavior: 'Controls the organization creation dialog when a host route owns its open state.',
       },
       {
         name: 'onError',

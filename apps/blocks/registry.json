@@ -566,6 +566,11 @@
           "type": "registry:component"
         },
         {
+          "path": "registry/constructive/blocks/feature-packs/auth/auth-challenge-panel.tsx",
+          "target": "src/blocks/feature-packs/auth/auth-challenge-panel.tsx",
+          "type": "registry:component"
+        },
+        {
           "path": "registry/constructive/blocks/feature-packs/auth/auth-account-view.tsx",
           "target": "src/blocks/feature-packs/auth/auth-account-view.tsx",
           "type": "registry:component"
@@ -615,7 +620,7 @@
       "name": "feature-pack-users",
       "type": "registry:block",
       "title": "App access Feature Pack",
-      "description": "Application member governance, lifecycle controls, profiles, permission grants, and invitations without credential ownership.",
+      "description": "App access governance with member lifecycle controls, invitations, access profiles, direct and effective permissions, and new-member defaults.",
       "docs": "## Usage\n\nPass application members and any discovered invitation, profile, permission, default, or audit sections through one resource, then grant and inject only the access operations available to the current administrator.\n\n```tsx\nimport { UsersFeaturePack } from '@/blocks/feature-packs/users/users-feature-pack';\n\n<UsersFeaturePack\n  resource={appAccess}\n  policy={{ invite: true, setApproved: true, setDisabled: true, setProfile: true, setDirectPermission: true }}\n  actions={appAccessActions}\n  onError={reportAccessError}\n/>\n```\n\nLifecycle, owner, admin, profile, direct-permission, and default-permission changes use separate semantic actions. Invitation and member rows additionally require their own `actionPolicy`, which lets the resource mirror RLS and final-owner constraints without rendering unusable controls. The permission catalog stays read-only, effective permissions stay separate from direct grants, and `section` plus `onSectionChange` can synchronize nested navigation with a host router.\n\nThis `feature-pack-users` item keeps its stable registry ID, remains provider-neutral, and works without Console Kit. Install `console-module-users` when Console Kit should supply navigation, capability discovery, and the Constructive adapter.",
       "dependencies": [
         "lucide-react"
@@ -664,8 +669,8 @@
       "name": "feature-pack-organizations",
       "type": "registry:block",
       "title": "Organizations Feature Pack",
-      "description": "Tenant switching, membership governance, access profiles, hierarchy, settings, and organization-scoped developer credentials.",
-      "docs": "## Usage\n\nPass one policy-filtered organization snapshot and the semantic callbacks supported by the current tenant database. Keep the active organization and optional controlled section in host state.\n\n```tsx\nimport { OrganizationsFeaturePack } from '@/blocks/feature-packs/organizations/organizations-feature-pack';\n\n<OrganizationsFeaturePack\n  resource={organizations}\n  policy={organizationPolicy}\n  actions={organizationActions}\n  section={section}\n  onSectionChange={setSection}\n  onError={reportOrganizationError}\n/>\n```\n\nThe resource can expose members, active and claimed invitations, access profiles, permissions, defaults, membership settings, hierarchy edges, principals, and API keys. Every mutation requires a pack policy grant, a matching callback, and any relevant row policy; PostgreSQL privileges and RLS remain authoritative. Treat reusable invitation tokens as secrets and display a newly created API key only from that mutation's one-time result.\n\nThis `feature-pack-organizations` item is provider-neutral and works without Console Kit. Install `console-module-organizations` when Console Kit should supply semantic routing, capability discovery, `_meta` contract resolution, and the Constructive adapter.",
+      "description": "Complete tenant administration for selection, member governance, invitations, profiles, permissions, defaults, hierarchy, settings, principals, and API keys.",
+      "docs": "## Usage\n\nPass one policy-filtered organization snapshot and the semantic callbacks supported by the current tenant database. Keep the active organization and optional controlled section in host state.\n\n```tsx\nimport { OrganizationsFeaturePack } from '@/blocks/feature-packs/organizations/organizations-feature-pack';\n\n<OrganizationsFeaturePack\n  resource={organizations}\n  policy={organizationPolicy}\n  actions={organizationActions}\n  section={section}\n  onSectionChange={setSection}\n  onError={reportOrganizationError}\n/>\n```\n\nThe resource can expose members, active and claimed invitations, access profiles, permissions, defaults, membership settings, hierarchy edges, principals, and API keys. Every mutation requires a pack policy grant, a matching callback, and any relevant row policy; PostgreSQL privileges and RLS remain authoritative. Treat reusable invitation tokens as secrets and display a newly created API key only from that mutation's one-time result. Because `create_org_principal` returns `user_id` while public reads may omit organization scope, fail closed and surface a limitation for an unscopable keyless principal; never infer that it belongs to the only visible organization.\n\nThis `feature-pack-organizations` item is provider-neutral and works without Console Kit. Install `console-module-organizations` when Console Kit should supply semantic routing, capability discovery, `_meta` contract resolution, and the Constructive adapter.",
       "dependencies": [
         "lucide-react"
       ],
@@ -967,8 +972,8 @@
       "name": "console-kit-nextjs",
       "type": "registry:block",
       "title": "Constructive Console Kit for Next.js",
-      "description": "A full-page Constructive application console with tenant-scoped auth, dynamic endpoint discovery, first-party adapters, and every feature pack.",
-      "docs": "Install with the shadcn CLI, then render <ConstructiveConsoleKit database={tenant} /> inside any Next.js route. Pass the secret-free database ID and explicit semantic endpoint map returned by provisioning. Install `console-kit-core` plus selected `console-module-*` items for a smaller custom composition; each console module installs its provider-neutral `feature-pack-*` view transitively. Install a `feature-pack-*` item alone when a host wants the standalone view without Console Kit. Navigation, runtime, session, capability, and pack state live in one per-instance Zustand store composed from modular slices.",
+      "description": "A full-page Next.js tenant console with semantic routing, auth, dynamic endpoint discovery, first-party adapters, and every feature pack.",
+      "docs": "Install with the shadcn CLI, then render `<ConstructiveConsoleKit database={tenant} />` inside any Next.js route. Pass the secret-free database ID and explicit semantic endpoint map returned by provisioning. Omit `routes.route` for internal navigation and optionally set `routes.defaultRoute`; for URL-owned navigation, pass the parsed semantic `route` together with `getHref`, `onRouteChange`, and a Next.js `renderLink`. Install `console-kit-core` plus selected `console-module-*` items for a smaller custom composition; each console module installs its provider-neutral `feature-pack-*` view transitively. Install a `feature-pack-*` item alone when a host wants the standalone view without Console Kit. Navigation, runtime, session, capability, and pack state live in one per-instance Zustand store composed from modular slices.",
       "dependencies": [],
       "registryDependencies": [
         "preset-full"

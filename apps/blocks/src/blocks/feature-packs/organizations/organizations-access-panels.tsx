@@ -50,6 +50,7 @@ import {
 } from '@constructive-io/ui/select';
 import { Switch } from '@constructive-io/ui/switch';
 import { Textarea } from '@constructive-io/ui/textarea';
+import { cn } from '@/lib/utils';
 
 import {
   canPerform,
@@ -236,12 +237,25 @@ export function OrganizationProfilesPanel({
   permissions,
   actions,
   policy,
+  focusedProfileId,
   onError
 }: AccessPanelProps & Readonly<{
   profiles: readonly OrganizationAccessProfile[];
   permissions: readonly OrganizationPermission[];
+  focusedProfileId?: string;
 }>) {
   const [pendingPermission, setPendingPermission] = React.useState<string>();
+  const focusedProfileRef = React.useRef<HTMLElement>(null);
+  const focusedProfilePresent = Boolean(
+    focusedProfileId && profiles.some((profile) => profile.id === focusedProfileId)
+  );
+
+  React.useEffect(() => {
+    if (!focusedProfilePresent) return;
+    const element = focusedProfileRef.current;
+    element?.focus({ preventScroll: true });
+    element?.scrollIntoView?.({ block: 'nearest' });
+  }, [focusedProfileId, focusedProfilePresent]);
 
   const setPermission = async (
     profile: OrganizationAccessProfile,
@@ -298,7 +312,17 @@ export function OrganizationProfilesPanel({
               profile.actionPolicy?.setProfilePermission === true &&
               Boolean(actions?.setProfilePermission);
             return (
-              <section className='border-border/70 rounded-xl border p-4' key={profile.id}>
+              <section
+                aria-current={profile.id === focusedProfileId ? 'true' : undefined}
+                className={cn(
+                  'border-border/70 rounded-xl border p-4',
+                  profile.id === focusedProfileId &&
+                    'bg-muted/60 outline outline-2 outline-offset-[-2px] outline-ring'
+                )}
+                key={profile.id}
+                ref={profile.id === focusedProfileId ? focusedProfileRef : undefined}
+                tabIndex={profile.id === focusedProfileId ? -1 : undefined}
+              >
                 <div className='flex items-start justify-between gap-3'>
                   <div className='min-w-0'>
                     <div className='flex flex-wrap items-center gap-2'>

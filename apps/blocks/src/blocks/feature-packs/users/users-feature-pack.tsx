@@ -122,11 +122,14 @@ export type UsersSection =
 
 const sectionTriggerClass = cn(
   'relative h-10 shrink-0 rounded-none border-0 border-b-2 border-transparent bg-transparent px-3',
-  'text-muted-foreground shadow-none',
+  'text-muted-foreground',
   'hover:text-foreground data-[active]:text-foreground',
-  'data-[active]:border-foreground data-[active]:bg-transparent data-[active]:shadow-none',
-  'focus-visible:ring-0 focus-visible:outline-none'
+  'data-[active]:border-foreground data-[active]:bg-transparent',
+  'focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-ring'
 );
+
+const focusedRecordClass =
+  'bg-muted/60 outline outline-2 outline-offset-[-2px] outline-ring';
 
 const NO_PROFILE_VALUE = '__no_profile__';
 
@@ -287,6 +290,12 @@ export type UsersFeaturePackProps = Readonly<{
   section?: UsersSection;
   defaultSection?: UsersSection;
   onSectionChange?: (section: UsersSection) => void;
+  /** Highlights and moves focus to a route-selected application membership. */
+  focusedMemberId?: string;
+  /** Highlights and moves focus to a route-selected pending invitation. */
+  focusedInvitationId?: string;
+  /** Highlights and moves focus to a route-selected access profile. */
+  focusedProfileId?: string;
   title?: string;
   description?: string;
   onError?: (error: FeaturePackError) => void;
@@ -854,6 +863,7 @@ function MembersDirectory({
   emptyAction,
   profiles,
   permissions,
+  focusedMemberId,
   policy,
   actions,
   onError
@@ -864,10 +874,23 @@ function MembersDirectory({
   emptyAction?: React.ReactNode;
   profiles: readonly AppAccessProfile[];
   permissions: readonly AppPermission[];
+  focusedMemberId?: string;
   policy?: UsersFeaturePackProps['policy'];
   actions?: UsersFeatureActions;
   onError?: UsersFeaturePackProps['onError'];
 }>) {
+  const focusedMemberRef = React.useRef<HTMLLIElement>(null);
+  const focusedMemberPresent = Boolean(
+    focusedMemberId && members.some((member) => member.id === focusedMemberId)
+  );
+
+  React.useEffect(() => {
+    if (!focusedMemberPresent) return;
+    const element = focusedMemberRef.current;
+    element?.focus({ preventScroll: true });
+    element?.scrollIntoView?.({ block: 'nearest' });
+  }, [focusedMemberId, focusedMemberPresent]);
+
   if (members.length === 0 && query.trim()) {
     return (
       <FeaturePackFilteredEmpty
@@ -898,10 +921,18 @@ function MembersDirectory({
       aria-label='Application members'
       className='border-border/70 divide-border/60 divide-y overflow-hidden rounded-xl border'
     >
-      {members.map((member) => (
+      {members.map((member) => {
+        const focused = member.id === focusedMemberId;
+        return (
         <li
-          className='flex flex-col gap-3 px-3 py-3 sm:flex-row sm:items-center sm:gap-4 sm:px-4'
+          aria-current={focused ? 'true' : undefined}
+          className={cn(
+            'flex flex-col gap-3 px-3 py-3 sm:flex-row sm:items-center sm:gap-4 sm:px-4',
+            focused && focusedRecordClass
+          )}
           key={member.id}
+          ref={focused ? focusedMemberRef : undefined}
+          tabIndex={focused ? -1 : undefined}
         >
           <div className='flex min-w-0 flex-1 items-center gap-3'>
             <Avatar className='ring-border/50 size-10 shrink-0 ring-1 ring-inset'>
@@ -934,7 +965,8 @@ function MembersDirectory({
             <MemberActions actions={actions} member={member} onError={onError} policy={policy} />
           </div>
         </li>
-      ))}
+        );
+      })}
     </ul>
   );
 }
@@ -991,6 +1023,7 @@ function InvitationsDirectory({
   invitations,
   canInvite,
   inviteAction,
+  focusedInvitationId,
   policy,
   actions,
   onError
@@ -998,12 +1031,24 @@ function InvitationsDirectory({
   invitations: readonly AppInvite[];
   canInvite: boolean;
   inviteAction: React.ReactNode;
+  focusedInvitationId?: string;
   policy?: UsersFeaturePackProps['policy'];
   actions?: UsersFeatureActions;
   onError?: UsersFeaturePackProps['onError'];
 }>) {
   const [error, setError] = React.useState<string>();
   const [pendingInviteId, setPendingInviteId] = React.useState<string>();
+  const focusedInvitationRef = React.useRef<HTMLLIElement>(null);
+  const focusedInvitationPresent = Boolean(
+    focusedInvitationId && invitations.some((invite) => invite.id === focusedInvitationId)
+  );
+
+  React.useEffect(() => {
+    if (!focusedInvitationPresent) return;
+    const element = focusedInvitationRef.current;
+    element?.focus({ preventScroll: true });
+    element?.scrollIntoView?.({ block: 'nearest' });
+  }, [focusedInvitationId, focusedInvitationPresent]);
 
   if (invitations.length === 0) {
     return (
@@ -1025,10 +1070,18 @@ function InvitationsDirectory({
         aria-label='Application invitations'
         className='border-border/70 divide-border/60 divide-y overflow-hidden rounded-xl border'
       >
-        {invitations.map((invite) => (
+        {invitations.map((invite) => {
+          const focused = invite.id === focusedInvitationId;
+          return (
           <li
-            className='flex flex-col gap-3 px-3 py-3 sm:flex-row sm:items-center sm:gap-4 sm:px-4'
+            aria-current={focused ? 'true' : undefined}
+            className={cn(
+              'flex flex-col gap-3 px-3 py-3 sm:flex-row sm:items-center sm:gap-4 sm:px-4',
+              focused && focusedRecordClass
+            )}
             key={invite.id}
+            ref={focused ? focusedInvitationRef : undefined}
+            tabIndex={focused ? -1 : undefined}
           >
             <div className='min-w-0 flex-1'>
               <p className='truncate text-sm font-medium'>{invite.recipient}</p>
@@ -1073,7 +1126,8 @@ function InvitationsDirectory({
               ) : null}
             </div>
           </li>
-        ))}
+          );
+        })}
       </ul>
     </div>
   );
@@ -1232,12 +1286,14 @@ function ProfileRow({
   permissions,
   policy,
   actions,
+  focused,
   onError
 }: Readonly<{
   profile: AppAccessProfile;
   permissions: readonly AppPermission[];
   policy?: UsersFeaturePackProps['policy'];
   actions?: UsersFeatureActions;
+  focused?: boolean;
   onError?: UsersFeaturePackProps['onError'];
 }>) {
   const [pendingKey, setPendingKey] = React.useState<string>();
@@ -1253,6 +1309,14 @@ function ProfileRow({
     canPerform(profilePolicy, 'setProfilePermission') && Boolean(actions?.setProfilePermission);
   const profilePermissionIds = new Set(profile.permissionIds);
   const fieldId = React.useId();
+  const focusedProfileRef = React.useRef<HTMLLIElement>(null);
+
+  React.useEffect(() => {
+    if (!focused) return;
+    const element = focusedProfileRef.current;
+    element?.focus({ preventScroll: true });
+    element?.scrollIntoView?.({ block: 'nearest' });
+  }, [focused]);
 
   const run = async (key: string, action: () => FeatureActionResult, fallback: string) => {
     setPendingKey(key);
@@ -1267,7 +1331,12 @@ function ProfileRow({
   };
 
   return (
-    <li className='flex flex-col gap-4 px-4 py-4'>
+    <li
+      aria-current={focused ? 'true' : undefined}
+      className={cn('flex flex-col gap-4 px-4 py-4', focused && focusedRecordClass)}
+      ref={focused ? focusedProfileRef : undefined}
+      tabIndex={focused ? -1 : undefined}
+    >
       <div className='flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between'>
         <div className='min-w-0'>
           <div className='flex flex-wrap items-center gap-2'>
@@ -1378,12 +1447,14 @@ function ProfileRow({
 function ProfilesDirectory({
   profiles,
   permissions,
+  focusedProfileId,
   policy,
   actions,
   onError
 }: Readonly<{
   profiles: readonly AppAccessProfile[];
   permissions: readonly AppPermission[];
+  focusedProfileId?: string;
   policy?: UsersFeaturePackProps['policy'];
   actions?: UsersFeatureActions;
   onError?: UsersFeaturePackProps['onError'];
@@ -1408,6 +1479,7 @@ function ProfilesDirectory({
           {profiles.map((profile) => (
             <ProfileRow
               actions={actions}
+              focused={profile.id === focusedProfileId}
               key={profile.id}
               onError={onError}
               permissions={permissions}
@@ -1569,6 +1641,9 @@ export function UsersFeaturePack({
   section: controlledSection,
   defaultSection = 'members',
   onSectionChange,
+  focusedMemberId,
+  focusedInvitationId,
+  focusedProfileId,
   title = 'App access',
   description,
   onError
@@ -1577,6 +1652,10 @@ export function UsersFeaturePack({
   const [internalSection, setInternalSection] = React.useState<UsersSection>(defaultSection);
   const normalizedQuery = query.trim().toLowerCase();
   const canInvite = canPerform(policy, 'invite') && Boolean(actions?.invite);
+
+  React.useEffect(() => {
+    if (focusedMemberId) setQuery('');
+  }, [focusedMemberId]);
 
   return (
     <FeaturePackBoundary
@@ -1704,6 +1783,7 @@ export function UsersFeaturePack({
                 <MembersDirectory
                   actions={actions}
                   emptyAction={inviteAction}
+                  focusedMemberId={focusedMemberId}
                   members={members}
                   onClearSearch={() => setQuery('')}
                   onError={onError}
@@ -1718,6 +1798,7 @@ export function UsersFeaturePack({
                   <InvitationsDirectory
                     actions={actions}
                     canInvite={canInvite}
+                    focusedInvitationId={focusedInvitationId}
                     invitations={invitations}
                     inviteAction={inviteAction}
                     onError={onError}
@@ -1738,6 +1819,7 @@ export function UsersFeaturePack({
                     permissions={permissions}
                     policy={policy}
                     profiles={profiles}
+                    focusedProfileId={focusedProfileId}
                   />
                 </TabsContent>
               ) : null}

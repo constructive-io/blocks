@@ -30,13 +30,14 @@ Kit architecture while doing that work.
 
 ## Start here
 
-- Continue in the isolated worktree at
-  `/Users/phathag/workspace/constructive/blocks-feature-packs`.
+- Set `CONSTRUCTIVE_WORKSPACE` to the parent Constructive workspace and
+  `PROJECTS_WORKSPACE` to the workspace containing the Supabase checkout, then
+  continue in `${CONSTRUCTIVE_WORKSPACE}/blocks-feature-packs`.
 - The branch is `feat/feature-packs-console-kit`.
-- The completed implementation baseline is commit `5c676fb`.
+- The completed tenant-administration baseline is commit `30cd653`.
 - Do not accidentally switch to or edit the separate
-  `/Users/phathag/workspace/constructive/blocks` worktree.
-- `/Users/phathag/workspace/constructive/constructive-db` is the backend source
+  `${CONSTRUCTIVE_WORKSPACE}/blocks` worktree.
+- `${CONSTRUCTIVE_WORKSPACE}/constructive-db` is the backend source
   of truth. It was clean at handoff and must remain read-only in this wave.
 - Read `AGENTS.md`, `CLAUDE.md`,
   `docs/CONSOLE_KIT_BACKEND_COMPATIBILITY.md`, and
@@ -236,17 +237,15 @@ sidecar to `.constructive/feature-packs/<id>.json` in the consumer.
 Use these for comparison and extraction, not blind copying:
 
 - Supabase Platform Kit source:
-  `/Users/phathag/workspace/projects/supabase/apps/ui-library/registry/default/platform/platform-kit-nextjs/`
+  `${PROJECTS_WORKSPACE}/supabase/apps/ui-library/registry/default/platform/platform-kit-nextjs/`
 - Supabase manager composition:
   `components/supabase-manager/` inside that directory
 - Supabase Platform Kit docs:
-  `/Users/phathag/workspace/projects/supabase/apps/ui-library/content/docs/platform/platform-kit.mdx`
-- Constructive dashboard's application-database UI:
-  `/Users/phathag/workspace/constructive/dashboard/apps/admin/src/components/user-db/`
-- Dashboard application-database hooks:
-  `/Users/phathag/workspace/constructive/dashboard/apps/admin/src/lib/gql/hooks/user-db/`
-- Dashboard tenant routes:
-  `/Users/phathag/workspace/constructive/dashboard/apps/admin/src/app/db/[dbId]/`
+  `${PROJECTS_WORKSPACE}/supabase/apps/ui-library/content/docs/platform/platform-kit.mdx`
+- Constructive Dashboard repository: `${CONSTRUCTIVE_WORKSPACE}/dashboard`.
+  Its application-database UI is under `apps/admin/src/components/user-db/`,
+  hooks are under `apps/admin/src/lib/gql/hooks/user-db/`, and tenant routes
+  are under `apps/admin/src/app/db/[dbId]/`.
 
 In the dashboard, `user-db` and `app/db/[dbId]` are the relevant application
 database scope. The `platform` and `schema-builder` paths are operator scope and
@@ -380,7 +379,7 @@ of treating one failed route as evidence about another capability.
 
 The retained exact-ID journal is ignored at:
 
-`/Users/phathag/workspace/constructive/blocks-feature-packs/.local/console-kit-native-fixture.json`
+`${CONSTRUCTIVE_WORKSPACE}/blocks-feature-packs/.local/console-kit-native-fixture.json`
 
 It owns four native tenant databases: the three official profiles and one
 supported custom `storage-routed` profile. Do not clean it while it is being
@@ -389,16 +388,16 @@ used for visual review.
 If the backend runtime is no longer running:
 
 ```bash
-cd /Users/phathag/workspace/constructive/constructive-db/functions
+cd "${CONSTRUCTIVE_WORKSPACE}/constructive-db/functions"
 fun up --local --db consolekitblocks
 ```
 
 Start Blocks with the live integration route enabled:
 
 ```bash
-cd /Users/phathag/workspace/constructive/blocks-feature-packs
+cd "${CONSTRUCTIVE_WORKSPACE}/blocks-feature-packs"
 CONSOLE_KIT_INTEGRATION=1 \
-CONSOLE_KIT_TENANT_MANIFEST=/Users/phathag/workspace/constructive/blocks-feature-packs/.local/console-kit-native-fixture.json \
+CONSOLE_KIT_TENANT_MANIFEST="${CONSTRUCTIVE_WORKSPACE}/blocks-feature-packs/.local/console-kit-native-fixture.json" \
 pnpm --filter blocks dev
 ```
 
@@ -406,7 +405,7 @@ Run the live proof:
 
 ```bash
 CONSOLE_KIT_BASE_URL=http://localhost:3005/__integration/console-kit \
-CONSOLE_KIT_TENANT_MANIFEST=/Users/phathag/workspace/constructive/blocks-feature-packs/.local/console-kit-native-fixture.json \
+CONSOLE_KIT_TENANT_MANIFEST="${CONSTRUCTIVE_WORKSPACE}/blocks-feature-packs/.local/console-kit-native-fixture.json" \
 pnpm --filter blocks test:e2e:live
 ```
 
@@ -419,7 +418,7 @@ ending the retained proof environment:
 ```bash
 pnpm fixture:console-kit cleanup \
   --database consolekitblocks \
-  --manifest /Users/phathag/workspace/constructive/blocks-feature-packs/.local/console-kit-native-fixture.json
+  --manifest "${CONSTRUCTIVE_WORKSPACE}/blocks-feature-packs/.local/console-kit-native-fixture.json"
 ```
 
 ## Verification workflow
@@ -501,7 +500,7 @@ use browser review for spacing, typography, composition, and responsive polish.
 ## Harness follow-up, after Blocks settles
 
 The app-building harness is in
-`/Users/phathag/workspace/constructive/constructive-skills/.agents/skills/constructive-builder/`.
+`${CONSTRUCTIVE_WORKSPACE}/constructive-skills/.agents/skills/constructive-builder/`.
 It still contains older assumptions about per-flow Blocks, generated SDK
 aliases, `BlocksRuntime`, and a previous registry location. Do not mix that
 migration into the first UI polish commit.

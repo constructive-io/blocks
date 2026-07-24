@@ -93,7 +93,8 @@ function discovery(schemas: ConstructiveSchemaMap): ConstructiveCapabilityDiscov
 
 function runtime(
   responder: (call: GraphQLCall) => unknown,
-  deniedOperations: readonly string[] = []
+  deniedOperations: readonly string[] = [],
+  subjectId = 'user-owner'
 ): ConsoleKitAdapterContext {
   const endpoints = {
     auth: { id: 'auth-endpoint', kind: 'auth', url: '/auth/graphql' },
@@ -109,7 +110,7 @@ function runtime(
       identity: {
         kind: 'authenticated',
         cachePartition: 'session-1',
-        subjectId: 'user-owner'
+        subjectId
       }
     },
     metadata: { status: 'checking' },
@@ -122,7 +123,7 @@ function runtime(
           identity: {
             kind: 'authenticated',
             cachePartition: 'session-1',
-            subjectId: 'user-owner'
+            subjectId
           },
           getAccessToken: () => null
         },
@@ -169,7 +170,8 @@ function organizationSchemas(): ConstructiveSchemaMap {
         'orgPermissions',
         'orgMembershipSettings',
         'orgMembershipDefaults',
-        'orgChartEdges'
+        'orgChartEdges',
+        'orgInvites'
       ],
       mutations: {
         updateOrgMembership: 'UpdateOrgMembershipInput',
@@ -186,7 +188,9 @@ function organizationSchemas(): ConstructiveSchemaMap {
         updateOrgMemberProfile: 'UpdateOrgMemberProfileInput',
         updateOrgMembershipSetting: 'UpdateOrgMembershipSettingInput',
         updateOrgMembershipDefault: 'UpdateOrgMembershipDefaultInput',
-        createOrgChartEdgeGrant: 'CreateOrgChartEdgeGrantInput'
+        createOrgChartEdgeGrant: 'CreateOrgChartEdgeGrantInput',
+        createOrgInvite: 'CreateOrgInviteInput',
+        deleteOrgInvite: 'DeleteOrgInviteInput'
       },
       types: [
         objectType('OrgMembership', [
@@ -228,6 +232,23 @@ function organizationSchemas(): ConstructiveSchemaMap {
         objectType('OrgMembershipDefault', ['id', 'entityId', 'isApproved']),
         objectType('OrgChartEdge', [
           'id', 'entityId', 'childId', 'parentId', 'positionTitle', 'positionLevel'
+        ]),
+        objectType('OrgInvite', [
+          'id',
+          'entityId',
+          'channel',
+          'email',
+          'phone',
+          'senderId',
+          'receiverId',
+          'inviteToken',
+          'inviteValid',
+          'inviteLimit',
+          'inviteCount',
+          'multiple',
+          'isReadOnly',
+          'expiresAt',
+          'profileId'
         ]),
         inputType('UpdateOrgMembershipInput', {
           id: 'UUID',
@@ -333,7 +354,24 @@ function organizationSchemas(): ConstructiveSchemaMap {
             positionTitle: 'String',
             positionLevel: 'Int'
           }
-        )
+        ),
+        ...nestedMutationTypes(
+          'CreateOrgInvite',
+          'orgInvite',
+          'OrgInviteInput',
+          {
+            entityId: 'UUID',
+            channel: 'String',
+            email: 'String',
+            phone: 'String',
+            expiresAt: 'Datetime',
+            profileId: 'UUID',
+            multiple: 'Boolean',
+            inviteLimit: 'Int',
+            isReadOnly: 'Boolean'
+          }
+        ),
+        inputType('DeleteOrgInviteInput', { id: 'UUID' })
       ]
     }),
     auth: snapshot({
@@ -355,7 +393,7 @@ function organizationSchemas(): ConstructiveSchemaMap {
         ]),
         objectType('PrincipalEntity', ['id', 'principalId', 'entityId']),
         objectType('Principal', [
-          'id', 'name', 'useAdminOwner', 'isReadOnly', 'bypassStepUp'
+          'id', 'userId', 'name', 'useAdminOwner', 'isReadOnly', 'bypassStepUp'
         ]),
         inputType('UpdateUserInput', { id: 'UUID', userPatch: 'UserPatch' }),
         inputType('UserPatch', { displayName: 'String', username: 'String' }),
@@ -382,9 +420,49 @@ function organizationSchemas(): ConstructiveSchemaMap {
   };
 }
 
-function organizationResponder(calls: GraphQLCall[]) {
+type OrganizationResponderOverride = (call: GraphQLCall) => unknown | undefined;
+
+function organizationMembership(
+  id: string,
+  actorId: string,
+  permissions: string,
+  overrides: Readonly<Record<string, unknown>> = {}
+): Record<string, unknown> {
+  return {
+    id,
+    actorId,
+    entityId: 'org-1',
+    isOwner: false,
+    isAdmin: false,
+    isActive: true,
+    isApproved: true,
+    isBanned: false,
+    isDisabled: false,
+    isExternal: false,
+    isReadOnly: false,
+    permissions,
+    granted: permissions,
+    ...overrides
+  };
+}
+
+function membershipOverride(
+  nodes: readonly Record<string, unknown>[]
+): OrganizationResponderOverride {
+  return (call) => call.document.includes('ConsoleKitOrganizationMembershipsPage')
+    ? { orgMemberships: { nodes } }
+    : undefined;
+}
+
+function organizationResponder(
+  calls: GraphQLCall[],
+  override?: OrganizationResponderOverride
+) {
+  let hasCreatedPrincipal = false;
   return (call: GraphQLCall): unknown => {
     calls.push(call);
+    const overridden = override?.(call);
+    if (overridden !== undefined) return overridden;
     if (call.document.includes('ConsoleKitOrganizationMembershipsPage')) {
       return {
         orgMemberships: {
@@ -511,6 +589,18 @@ function organizationResponder(calls: GraphQLCall[]) {
               name: 'admin_permissions',
               description: 'Manage permissions',
               bitstr: '0010'
+            },
+            {
+              id: 'permission-3',
+              name: 'admin_invites',
+              description: 'Manage invitations',
+              bitstr: '0100'
+            },
+            {
+              id: 'permission-4',
+              name: 'manage_hierarchy',
+              description: 'Manage hierarchy',
+              bitstr: '1000'
             }
           ]
         }
@@ -555,6 +645,9 @@ function organizationResponder(calls: GraphQLCall[]) {
         }
       };
     }
+    if (call.document.includes('ConsoleKitOrganizationInvitesPage')) {
+      return { orgInvites: { nodes: [] } };
+    }
     if (call.document.includes('ConsoleKitOrganizationApiKeysPage')) {
       return {
         orgApiKeyLists: {
@@ -563,7 +656,7 @@ function organizationResponder(calls: GraphQLCall[]) {
               id: 'key-row-1',
               keyId: 'key-1',
               name: 'Existing key',
-              principalId: 'principal-1',
+              principalId: 'principal-user-1',
               orgId: 'org-1',
               createdAt: '2026-07-01T00:00:00Z'
             },
@@ -571,7 +664,7 @@ function organizationResponder(calls: GraphQLCall[]) {
               id: 'key-row-foreign',
               keyId: 'key-foreign',
               name: 'Foreign key',
-              principalId: 'principal-foreign',
+              principalId: 'principal-user-foreign',
               orgId: 'org-foreign'
             }
           ]
@@ -579,37 +672,46 @@ function organizationResponder(calls: GraphQLCall[]) {
       };
     }
     if (call.document.includes('ConsoleKitOrganizationPrincipalEntitiesPage')) {
-      return {
-        principalEntities: {
-          nodes: [
-            { id: 'principal-entity-1', principalId: 'principal-1', entityId: 'org-1' },
-            {
-              id: 'principal-entity-foreign',
-              principalId: 'principal-foreign',
-              entityId: 'org-foreign'
-            }
-          ]
-        }
-      };
+      return { principalEntities: { nodes: [] } };
     }
     if (call.document.includes('ConsoleKitOrganizationPrincipalsPage')) {
       return {
         principals: {
           nodes: [
             {
-              id: 'principal-1',
+              id: 'principal-row-1',
+              userId: 'principal-user-1',
               name: 'Automation',
               useAdminOwner: true,
               isReadOnly: false,
               bypassStepUp: false
             },
             {
-              id: 'principal-foreign',
+              id: 'principal-row-unscoped',
+              userId: 'principal-user-unscoped',
+              name: 'Unscoped automation',
+              useAdminOwner: true,
+              isReadOnly: false,
+              bypassStepUp: false
+            },
+            {
+              id: 'principal-row-foreign',
+              userId: 'principal-user-foreign',
               name: 'Foreign automation',
               useAdminOwner: true,
               isReadOnly: false,
               bypassStepUp: false
-            }
+            },
+            ...(hasCreatedPrincipal
+              ? [{
+                  id: 'principal-row-created',
+                  userId: 'principal-created-user',
+                  name: 'Deploy bot',
+                  useAdminOwner: false,
+                  isReadOnly: true,
+                  bypassStepUp: false
+                }]
+              : [])
           ]
         }
       };
@@ -654,7 +756,8 @@ function organizationResponder(calls: GraphQLCall[]) {
       };
     }
     if (call.document.includes('ConsoleKitCreateOrgPrincipal')) {
-      return { createOrgPrincipal: { result: 'principal-created' } };
+      hasCreatedPrincipal = true;
+      return { createOrgPrincipal: { result: 'principal-created-user' } };
     }
     return {};
   };
@@ -669,13 +772,23 @@ function mutationCall(calls: readonly GraphQLCall[], operationName: string): Gra
   return call!;
 }
 
-async function loadedOrganizations(calls: GraphQLCall[]) {
+async function loadedOrganizations(
+  calls: GraphQLCall[],
+  options: Readonly<{
+    subjectId?: string;
+    override?: OrganizationResponderOverride;
+  }> = {}
+) {
   const store = createConsoleKitStore('organizations');
   const adapter = createConstructiveOrganizationsAdapter({
     store,
     discovery: discovery(organizationSchemas())
   });
-  const adapterRuntime = runtime(organizationResponder(calls));
+  const adapterRuntime = runtime(
+    organizationResponder(calls, options.override),
+    [],
+    options.subjectId
+  );
   const loaded = await adapter.load(adapterRuntime, new AbortController().signal);
   return { adapter, adapterRuntime, loaded, store };
 }
@@ -896,6 +1009,209 @@ describe('Constructive organizations semantic mutation contract', () => {
     });
   });
 
+  it('gates direct member grants by admin_members rather than admin_permissions', async () => {
+    const memberAdminCalls: GraphQLCall[] = [];
+    const memberAdmin = await loadedOrganizations(memberAdminCalls, {
+      subjectId: 'user-member',
+      override: membershipOverride([
+        organizationMembership('membership-member', 'user-member', '0001'),
+        organizationMembership('membership-third', 'user-third', '0000')
+      ])
+    });
+
+    expect(memberAdmin.loaded.policy?.grantPermission).toBe(true);
+    expect(memberAdmin.loaded.resource.status).toBe('ready');
+    if (memberAdmin.loaded.resource.status === 'ready') {
+      expect(memberAdmin.loaded.resource.data.members.find(
+        (member) => member.id === 'membership-third'
+      )?.actionPolicy?.grantPermission).toBe(true);
+    }
+    await memberAdmin.loaded.actions?.setMemberPermission?.({
+      organizationId: 'org-1',
+      actorId: 'user-third',
+      permissions: '0001',
+      isGrant: true
+    });
+    expect(mutationCall(memberAdminCalls, 'ConsoleKitCreateOrgGrant').variables).toEqual({
+      input: {
+        orgGrant: {
+          entityId: 'org-1',
+          actorId: 'user-third',
+          permissions: '0001',
+          isGrant: true
+        }
+      }
+    });
+
+    const permissionAdmin = await loadedOrganizations([], {
+      subjectId: 'user-member',
+      override: membershipOverride([
+        organizationMembership('membership-member', 'user-member', '0010'),
+        organizationMembership('membership-third', 'user-third', '0000')
+      ])
+    });
+    expect(permissionAdmin.loaded.policy?.grantPermission).toBe(false);
+    expect(permissionAdmin.loaded.actions?.setMemberPermission).toBeUndefined();
+  });
+
+  it('gates hierarchy writes by manage_hierarchy and rejects inactive actors', async () => {
+    const hierarchyCalls: GraphQLCall[] = [];
+    const hierarchyManager = await loadedOrganizations(hierarchyCalls, {
+      subjectId: 'user-member',
+      override: membershipOverride([
+        organizationMembership('membership-member', 'user-member', '1000'),
+        organizationMembership('membership-third', 'user-third', '0000'),
+        organizationMembership('membership-owner', 'user-owner', '0000', {
+          isOwner: true,
+          isAdmin: true
+        })
+      ])
+    });
+    expect(hierarchyManager.loaded.policy?.setHierarchyEdge).toBe(true);
+    await hierarchyManager.loaded.actions?.setHierarchyEdge?.({
+      organizationId: 'org-1',
+      childId: 'user-third',
+      parentId: 'user-member'
+    });
+    expect(mutationCall(hierarchyCalls, 'ConsoleKitCreateOrgChartEdgeGrant')).toBeDefined();
+
+    const memberAdmin = await loadedOrganizations([], {
+      subjectId: 'user-member',
+      override: membershipOverride([
+        organizationMembership('membership-member', 'user-member', '0001'),
+        organizationMembership('membership-third', 'user-third', '0000')
+      ])
+    });
+    expect(memberAdmin.loaded.policy?.setHierarchyEdge).toBe(false);
+    expect(memberAdmin.loaded.actions?.setHierarchyEdge).toBeUndefined();
+
+    const inactiveCalls: GraphQLCall[] = [];
+    const inactiveTargets = await loadedOrganizations(inactiveCalls, {
+      override: membershipOverride([
+        organizationMembership('membership-owner', 'user-owner', '1111', {
+          isOwner: true,
+          isAdmin: true
+        }),
+        organizationMembership('membership-member', 'user-member', '0000', {
+          isActive: false,
+          isApproved: false
+        }),
+        organizationMembership('membership-third', 'user-third', '0000', {
+          isActive: false,
+          isDisabled: true
+        }),
+        organizationMembership('membership-foreign', 'user-foreign', '0000', {
+          isActive: false,
+          isBanned: true
+        })
+      ])
+    });
+    const beforeRejectedActions = inactiveCalls.filter(
+      (call) => call.document.includes('mutation ')
+    ).length;
+    for (const childId of ['user-member', 'user-third', 'user-foreign']) {
+      await expect(inactiveTargets.loaded.actions?.setHierarchyEdge?.({
+        organizationId: 'org-1',
+        childId,
+        parentId: 'user-owner'
+      })).rejects.toThrow('not in the current authorized resource');
+    }
+    expect(inactiveCalls.filter((call) => call.document.includes('mutation '))).toHaveLength(
+      beforeRejectedActions
+    );
+  });
+
+  it('does not let admin_invites cancel an invitation sent by another actor', async () => {
+    const calls: GraphQLCall[] = [];
+    const { loaded } = await loadedOrganizations(calls, {
+      subjectId: 'user-member',
+      override: (call) => {
+        if (call.document.includes('ConsoleKitOrganizationMembershipsPage')) {
+          return {
+            orgMemberships: {
+              nodes: [
+                organizationMembership('membership-member', 'user-member', '0100'),
+                organizationMembership('membership-third', 'user-third', '0000')
+              ]
+            }
+          };
+        }
+        if (call.document.includes('ConsoleKitOrganizationInvitesPage')) {
+          return {
+            orgInvites: {
+              nodes: [{
+                id: 'invite-other-sender',
+                entityId: 'org-1',
+                channel: 'email',
+                email: 'new@example.com',
+                senderId: 'user-third',
+                inviteValid: true,
+                multiple: false
+              }]
+            }
+          };
+        }
+        return undefined;
+      }
+    });
+
+    expect(loaded.policy?.cancelInvite).toBe(false);
+    expect(loaded.actions?.cancelInvite).toBeUndefined();
+    expect(loaded.resource.status).toBe('ready');
+    if (loaded.resource.status === 'ready') {
+      expect(loaded.resource.data.invites?.[0]?.actionPolicy?.cancelInvite).not.toBe(true);
+    }
+  });
+
+  it('only sends profile-bearing invitations through the backend-supported email mode', async () => {
+    const calls: GraphQLCall[] = [];
+    const { loaded } = await loadedOrganizations(calls);
+    expect(loaded.policy?.inviteMember).toBe(true);
+    const beforeRejectedActions = calls.filter(
+      (call) => call.document.includes('mutation ')
+    ).length;
+
+    await expect(loaded.actions?.inviteMember?.({
+      organizationId: 'org-1',
+      channel: 'sms',
+      recipient: '+15555550123',
+      profileId: 'profile-1'
+    })).rejects.toThrow('single-recipient email invitation');
+    await expect(loaded.actions?.inviteMember?.({
+      organizationId: 'org-1',
+      channel: 'link',
+      profileId: 'profile-1'
+    })).rejects.toThrow('single-recipient email invitation');
+    await expect(loaded.actions?.inviteMember?.({
+      organizationId: 'org-1',
+      channel: 'email',
+      recipient: 'new@example.com',
+      profileId: 'profile-1',
+      multiple: true
+    })).rejects.toThrow('single-recipient email invitation');
+    expect(calls.filter((call) => call.document.includes('mutation '))).toHaveLength(
+      beforeRejectedActions
+    );
+
+    await loaded.actions?.inviteMember?.({
+      organizationId: 'org-1',
+      channel: 'email',
+      recipient: 'new@example.com',
+      profileId: 'profile-1'
+    });
+    expect(mutationCall(calls, 'ConsoleKitCreateOrgInvite').variables).toMatchObject({
+      input: {
+        orgInvite: {
+          entityId: 'org-1',
+          channel: 'email',
+          email: 'new@example.com',
+          profileId: 'profile-1',
+          multiple: false
+        }
+      }
+    });
+  });
+
   it('validates hierarchy targets and cycles locally before submitting an edge grant', async () => {
     const calls: GraphQLCall[] = [];
     const { loaded } = await loadedOrganizations(calls);
@@ -935,16 +1251,28 @@ describe('Constructive organizations semantic mutation contract', () => {
     });
   });
 
-  it('uses semantic principal and API-key procedures without retaining the one-time token', async () => {
+  it('keeps API-key creation fail closed while exposing safe principal and revocation procedures', async () => {
     const calls: GraphQLCall[] = [];
-    const { adapter, adapterRuntime, loaded, store } = await loadedOrganizations(calls);
+    const { adapter, adapterRuntime, loaded } = await loadedOrganizations(calls);
 
     expect(loaded.policy).toMatchObject({
       createOrganizationPrincipal: true,
       revokeOrganizationPrincipal: true,
-      createOrganizationApiKey: true,
+      createOrganizationApiKey: false,
       revokeOrganizationApiKey: true
     });
+    expect(loaded.actions?.createOrganizationApiKey).toBeUndefined();
+    expect(loaded.resource.status).toBe('ready');
+    if (loaded.resource.status !== 'ready') return;
+    expect(loaded.resource.data.principals).toEqual([
+      expect.objectContaining({ id: 'principal-user-1', name: 'Automation' })
+    ]);
+    expect(loaded.resource.limitations).toEqual(expect.arrayContaining([
+      expect.objectContaining({ code: 'constructive.org-principal-scope-unavailable' }),
+      expect.objectContaining({
+        code: 'constructive.org-api-key-creation-unavailable'
+      })
+    ]));
 
     const principal = await loaded.actions?.createOrganizationPrincipal?.({
       organizationId: 'org-1',
@@ -953,29 +1281,16 @@ describe('Constructive organizations semantic mutation contract', () => {
       isReadOnly: true,
       bypassStepUp: false
     });
-    const key = await loaded.actions?.createOrganizationApiKey?.({
-      organizationId: 'org-1',
-      principalId: 'principal-1',
-      name: '  Production deploy  ',
-      accessLevel: 'read_only',
-      mfaLevel: 'verified',
-      expiresIn: '30 days'
-    });
     await loaded.actions?.revokeOrganizationApiKey?.({
       organizationId: 'org-1',
       apiKeyId: 'key-1'
     });
     await loaded.actions?.revokeOrganizationPrincipal?.({
       organizationId: 'org-1',
-      principalId: 'principal-1'
+      principalId: 'principal-user-1'
     });
 
-    expect(principal).toEqual({ id: 'principal-created' });
-    expect(key).toEqual({
-      token: 'ck_once_secret',
-      id: 'key-created',
-      expiresAt: '2026-08-23T00:00:00Z'
-    });
+    expect(principal).toEqual({ id: 'principal-created-user' });
     expect(mutationCall(calls, 'ConsoleKitCreateOrgPrincipal').variables).toEqual({
       input: {
         orgId: 'org-1',
@@ -985,26 +1300,21 @@ describe('Constructive organizations semantic mutation contract', () => {
         bypassStepUp: false
       }
     });
-    expect(mutationCall(calls, 'ConsoleKitCreateOrgApiKey').variables).toEqual({
-      input: {
-        orgId: 'org-1',
-        principalId: 'principal-1',
-        keyName: 'Production deploy',
-        accessLevel: 'read_only',
-        mfaLevel: 'verified',
-        expiresIn: '30 days'
-      }
-    });
+    expect(calls.some((call) => call.document.includes('ConsoleKitCreateOrgApiKey'))).toBe(false);
     expect(mutationCall(calls, 'ConsoleKitRevokeOrgApiKey').variables).toEqual({
       input: { orgId: 'org-1', keyId: 'key-1' }
     });
     expect(mutationCall(calls, 'ConsoleKitDeleteOrgPrincipal').variables).toEqual({
-      input: { principalId: 'principal-1' }
+      input: { principalId: 'principal-user-1' }
     });
 
     const reloaded = await adapter.load(adapterRuntime, new AbortController().signal);
-    expect(JSON.stringify(reloaded.resource)).not.toContain('ck_once_secret');
-    expect(JSON.stringify(store.getState())).not.toContain('ck_once_secret');
+    expect(reloaded.resource.status).toBe('ready');
+    if (reloaded.resource.status === 'ready') {
+      expect(reloaded.resource.data.principals).toEqual(expect.arrayContaining([
+        expect.objectContaining({ id: 'principal-created-user', name: 'Deploy bot' })
+      ]));
+    }
   });
 
   it('fails closed for foreign mutation targets before either endpoint receives a mutation', async () => {
@@ -1039,18 +1349,14 @@ describe('Constructive organizations semantic mutation contract', () => {
       settingsId: 'settings-foreign',
       patch: { allowExternalMembers: true }
     })).rejects.toThrow('not active');
-    await expect(loaded.actions?.createOrganizationApiKey?.({
-      organizationId: 'org-1',
-      principalId: 'principal-foreign',
-      name: 'Foreign key'
-    })).rejects.toThrow('not in the current authorized resource');
+    expect(loaded.actions?.createOrganizationApiKey).toBeUndefined();
     await expect(loaded.actions?.revokeOrganizationApiKey?.({
       organizationId: 'org-1',
       apiKeyId: 'key-foreign'
     })).rejects.toThrow('not in the current authorized resource');
     await expect(loaded.actions?.revokeOrganizationPrincipal?.({
       organizationId: 'org-1',
-      principalId: 'principal-foreign'
+      principalId: 'principal-user-foreign'
     })).rejects.toThrow('not in the current authorized resource');
 
     expect(calls.filter((call) => call.document.includes('mutation '))).toHaveLength(

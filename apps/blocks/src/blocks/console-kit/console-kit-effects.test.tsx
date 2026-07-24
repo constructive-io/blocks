@@ -7,7 +7,10 @@ import type {
   ConsoleKitConfig,
   ConsoleKitFeaturePropsMap
 } from './console-kit-contracts';
-import type { ConsoleKitFeatureModule } from './feature-module';
+import type {
+  ConsoleKitFeatureComponentProps,
+  ConsoleKitFeatureModule
+} from './feature-module';
 
 const runtimeMocks = vi.hoisted(() => ({
   useConsoleKitRuntime: vi.fn()
@@ -629,6 +632,80 @@ describe('Console Kit observational callbacks', () => {
     expect(await screen.findByLabelText('Credential draft')).toHaveValue('');
   });
 
+  it('removes organization actions immediately when the active organization changes', async () => {
+    runtimeMocks.useConsoleKitRuntime.mockReturnValue(runtime);
+    const store = createFullConsoleKitStore('organizations');
+    store.getState().setContext({
+      databaseId: 'database-1',
+      organizationId: 'organization-a'
+    });
+    const oldAction = vi.fn();
+    const nextLoad = deferred<Readonly<{ action: () => void }>>();
+    const organizationsModule = {
+      ...fullFeatureModules.find((module) => module.id === 'organizations')!,
+      Component: ({ adapterProps }: ConsoleKitFeatureComponentProps) => {
+        const props = adapterProps as Readonly<{ action?: () => void }> | undefined;
+        return props?.action
+          ? <button onClick={props.action} type='button'>Mutate active organization</button>
+          : null;
+      }
+    } satisfies ConsoleKitFeatureModule;
+    const adapter = {
+      capabilities: [
+        'organizations.memberships',
+        'organizations.permissions',
+        'organizations.limits',
+        'organizations.profiles',
+        'organizations.hierarchy',
+        'organizations.invites'
+      ] as const,
+      load: vi.fn()
+        .mockResolvedValueOnce({ action: oldAction })
+        .mockImplementationOnce(() => nextLoad.promise)
+    };
+    const session = {
+      mode: 'embedded',
+      getSnapshot: () => snapshot,
+      subscribe: () => () => undefined,
+      getAccessToken: () => null
+    } as const;
+
+    render(
+      <ConsoleKit
+        config={{
+          adapters: { organizations: adapter },
+          databaseId: 'database-1',
+          endpoints: { auth: '/auth/graphql' },
+          order: ['organizations'],
+          session
+        }}
+        featureModules={[organizationsModule]}
+        store={store}
+      />
+    );
+
+    fireEvent.click(await screen.findByRole('button', {
+      name: 'Mutate active organization'
+    }));
+    expect(oldAction).toHaveBeenCalledTimes(1);
+
+    act(() => store.getState().setContext({
+      databaseId: 'database-1',
+      organizationId: 'organization-b'
+    }));
+
+    await waitFor(() => expect(adapter.load).toHaveBeenCalledTimes(2));
+    expect(screen.queryByRole('button', {
+      name: 'Mutate active organization'
+    })).not.toBeInTheDocument();
+
+    act(() => nextLoad.resolve({ action: vi.fn() }));
+    expect(await screen.findByRole('button', {
+      name: 'Mutate active organization'
+    })).toBeVisible();
+    expect(oldAction).toHaveBeenCalledTimes(1);
+  });
+
   it('does not retain actions across a transport authorization change', async () => {
     const firstExecute = vi.fn().mockResolvedValue({ ok: true, data: {} });
     const secondExecute = vi.fn().mockResolvedValue({ ok: true, data: {} });
@@ -900,6 +977,11 @@ describe('Console Kit observational callbacks', () => {
   it('reports semantic routes without overriding a host-controlled route', async () => {
     runtimeMocks.useConsoleKitRuntime.mockReturnValue(runtime);
     const onRouteChange = vi.fn();
+    const store = createFullConsoleKitStore({
+      feature: 'users',
+      screen: 'member',
+      membershipId: 'membership-1'
+    });
     const session = {
       mode: 'embedded',
       getSnapshot: () => snapshot,
@@ -925,6 +1007,7 @@ describe('Console Kit observational callbacks', () => {
           session,
           showUnavailable: true
         }}
+        store={store}
       />
     );
     await screen.findByRole('heading', { level: 1, name: 'App access is unavailable' });
@@ -937,6 +1020,12 @@ describe('Console Kit observational callbacks', () => {
     });
     expect(screen.getByRole('heading', { level: 1, name: 'App access is unavailable' }))
       .toBeVisible();
+    expect(store.getState().route).toEqual({
+      feature: 'users',
+      screen: 'member',
+      membershipId: 'membership-1'
+    });
+    expect(window.location.hash).toBe('');
   });
 
   it('does not mutate the active console for a modified link click', async () => {

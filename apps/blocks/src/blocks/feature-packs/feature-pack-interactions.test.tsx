@@ -1,12 +1,14 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 
 import { AuthEntryPanel } from './auth/auth-entry-panel';
 import { AuthFeaturePack } from './auth/auth-feature-pack';
 import { NotificationsFeaturePack } from './notifications/notifications-feature-pack';
+import { organizationsConsoleModule } from './organizations/organizations-console-module';
 import { OrganizationsFeaturePack } from './organizations/organizations-feature-pack';
 import { StorageFeaturePack } from './storage/storage-feature-pack';
+import { usersConsoleModule } from './users/users-console-module';
 import { UsersFeaturePack } from './users/users-feature-pack';
 
 describe('feature-pack interaction policy', () => {
@@ -394,7 +396,7 @@ describe('feature-pack interaction policy', () => {
 
   it('confirms organization invitation cancellation before calling the host action', async () => {
     const user = userEvent.setup();
-    const cancelInvite = vi.fn().mockResolvedValue(undefined);
+    const cancelInvite = vi.fn().mockRejectedValue(new Error('Cancellation rejected'));
     render(
       <OrganizationsFeaturePack
         actions={{ cancelInvite }}
@@ -432,6 +434,42 @@ describe('feature-pack interaction policy', () => {
       organizationId: 'org-1',
       inviteId: 'invite-2'
     }));
+    expect(screen.getByRole('alert')).toHaveTextContent('Cancellation rejected');
+  });
+
+  it('recovers when an organization confirmation action throws synchronously', async () => {
+    const user = userEvent.setup();
+    const deleteOrganization = vi.fn(() => {
+      throw new Error('Deletion rejected');
+    });
+    const onError = vi.fn();
+    render(
+      <OrganizationsFeaturePack
+        actions={{ deleteOrganization }}
+        onError={onError}
+        policy={{ deleteOrganization: true }}
+        resource={{
+          status: 'ready',
+          data: {
+            organizations: [{ id: 'org-1', name: 'Research' }],
+            activeOrganizationId: 'org-1',
+            members: [],
+            invites: []
+          }
+        }}
+        section='settings'
+      />
+    );
+
+    await user.click(screen.getByRole('button', { name: 'Delete organization' }));
+    await user.click(screen.getByRole('button', { name: 'Delete organization' }));
+
+    await waitFor(() => expect(onError).toHaveBeenCalledWith(
+      expect.objectContaining({ message: 'Deletion rejected' })
+    ));
+    expect(screen.getByRole('alertdialog')).toBeInTheDocument();
+    expect(screen.getByRole('alert')).toHaveTextContent('Deletion rejected');
+    expect(screen.getByRole('button', { name: 'Delete organization' })).toBeEnabled();
   });
 
   it('hides invitation profiles when policy only grants invitation creation', async () => {
@@ -753,5 +791,360 @@ describe('feature-pack interaction policy', () => {
     await user.type(email!, 'ada@example.com');
     await user.click(screen.getByRole('button', { name: 'Sign in' }));
     expect(screen.getByRole('button', { name: 'Signing in…' })).toBeDisabled();
+  });
+
+  it('visibly targets and focuses a route-selected App access member', async () => {
+    render(
+      <UsersFeaturePack
+        focusedMemberId='membership-2'
+        resource={{
+          status: 'ready',
+          data: {
+            members: [
+              {
+                id: 'membership-1',
+                userId: 'user-1',
+                name: 'Ada Lovelace',
+                email: 'ada@example.com',
+                lifecycle: { approved: true, verified: true, banned: false, disabled: false, active: true },
+                governance: { owner: true, admin: true },
+                directPermissionIds: [],
+                effectivePermissionIds: []
+              },
+              {
+                id: 'membership-2',
+                userId: 'user-2',
+                name: 'Grace Hopper',
+                email: 'grace@example.com',
+                lifecycle: { approved: true, verified: true, banned: false, disabled: false, active: true },
+                governance: { owner: false, admin: false },
+                directPermissionIds: [],
+                effectivePermissionIds: []
+              }
+            ]
+          }
+        }}
+      />
+    );
+
+    const target = screen.getByText('Grace Hopper').closest('li');
+    expect(target).toHaveAttribute('aria-current', 'true');
+    await waitFor(() => expect(target).toHaveFocus());
+  });
+
+  it('clears an organization invite profile when delivery is not a single-use email', async () => {
+    const user = userEvent.setup();
+    const inviteMember = vi.fn().mockResolvedValue(undefined);
+    render(
+      <OrganizationsFeaturePack
+        actions={{ inviteMember }}
+        policy={{ assignInviteProfile: true, inviteMember: true }}
+        resource={{
+          status: 'ready',
+          data: {
+            activeOrganizationId: 'organization-1',
+            organizations: [{ id: 'organization-1', name: 'Acme' }],
+            members: [],
+            invites: [],
+            profiles: [{
+              id: 'profile-admin',
+              name: 'Administrator',
+              permissions: '',
+              permissionIds: [],
+              isSystem: false,
+              isDefault: false
+            }],
+            assignableInviteProfileIds: ['profile-admin']
+          }
+        }}
+        section='invitations'
+      />
+    );
+
+    await user.click(screen.getByRole('button', { name: 'Invite member' }));
+    fireEvent.click(screen.getByRole('combobox', { name: 'Access profile' }));
+    const profile = screen.getByText('Administrator').closest('[role="option"]');
+    fireEvent.pointerDown(profile as HTMLElement, { pointerType: 'mouse' });
+    fireEvent.click(profile as HTMLElement);
+
+    fireEvent.click(screen.getByRole('combobox', { name: 'Delivery channel' }));
+    const sms = screen.getByText('SMS').closest('[role="option"]');
+    fireEvent.pointerDown(sms as HTMLElement, { pointerType: 'mouse' });
+    fireEvent.click(sms as HTMLElement);
+
+    expect(screen.getByText(/only to single-use email invitations/)).toBeVisible();
+    expect(screen.getByRole('combobox', { name: 'Access profile' })).toBeDisabled();
+    await user.type(screen.getByRole('textbox', { name: 'Phone number' }), '+15551234567');
+    await user.click(screen.getByRole('button', { name: 'Send invitation' }));
+
+    await waitFor(() => expect(inviteMember).toHaveBeenCalledWith(expect.objectContaining({
+      channel: 'sms',
+      profileId: undefined
+    })));
+  });
+
+  it('creates organization credentials with least privilege and protects the one-time key', async () => {
+    const user = userEvent.setup();
+    const createOrganizationApiKey = vi.fn().mockResolvedValue({ token: 'secret-once' });
+    render(
+      <OrganizationsFeaturePack
+        actions={{ createOrganizationApiKey }}
+        policy={{ createOrganizationApiKey: true }}
+        resource={{
+          status: 'ready',
+          data: {
+            activeOrganizationId: 'organization-1',
+            organizations: [{ id: 'organization-1', name: 'Acme' }],
+            members: [],
+            principals: [{
+              id: 'principal-1',
+              name: 'Reporting integration',
+              useAdminOwner: false,
+              isReadOnly: true,
+              bypassStepUp: false
+            }],
+            apiKeys: []
+          }
+        }}
+        section='developer'
+      />
+    );
+
+    await user.click(screen.getByRole('button', { name: 'Create API key' }));
+    const creationDialog = screen.getByRole('dialog');
+    expect(within(creationDialog).getByRole('combobox', { name: 'Access level' })).toHaveTextContent('Read only');
+    expect(within(creationDialog).getByRole('combobox', { name: 'MFA requirement' })).toHaveTextContent('Verified');
+    await user.type(within(creationDialog).getByRole('textbox', { name: 'Key name' }), 'Read-only reporting');
+    await user.click(within(creationDialog).getByRole('button', { name: 'Create API key' }));
+
+    await screen.findByDisplayValue('secret-once');
+    expect(createOrganizationApiKey).toHaveBeenCalledWith(expect.objectContaining({
+      accessLevel: 'read_only',
+      mfaLevel: 'verified'
+    }));
+    expect(screen.queryByRole('button', { name: 'Close' })).toBeNull();
+    expect(screen.getByRole('button', { name: 'Done' })).toBeDisabled();
+    await user.keyboard('{Escape}');
+    expect(screen.getByRole('dialog')).toBeInTheDocument();
+    await user.click(screen.getByRole('checkbox', { name: 'I stored this API key securely' }));
+    await user.click(screen.getByRole('button', { name: 'Done' }));
+    await waitFor(() => expect(screen.queryByDisplayValue('secret-once')).toBeNull());
+  });
+
+  it('maps semantic App access detail routes to the focused record', async () => {
+    const UsersConsoleFeature = usersConsoleModule.Component;
+    render(
+      <UsersConsoleFeature
+        adapterProps={{
+          resource: {
+            status: 'ready',
+            data: {
+              members: [{
+                id: 'membership-1',
+                userId: 'user-1',
+                name: 'Ada Lovelace',
+                email: 'ada@example.com',
+                lifecycle: { approved: true, verified: true, banned: false, disabled: false, active: true },
+                governance: { owner: true, admin: true },
+                directPermissionIds: [],
+                effectivePermissionIds: []
+              }]
+            }
+          }
+        }}
+        config={{} as never}
+        onError={vi.fn()}
+        onRouteChange={vi.fn()}
+        route={{ feature: 'users', screen: 'member', membershipId: 'membership-1' }}
+        runtime={{} as never}
+      />
+    );
+
+    const target = screen.getByText('Ada Lovelace').closest('li');
+    expect(target).toHaveAttribute('aria-current', 'true');
+    await waitFor(() => expect(target).toHaveFocus());
+  });
+
+  it('selects the organization named by a controlled route before rendering tenant data', async () => {
+    const OrganizationsConsoleFeature = organizationsConsoleModule.Component;
+    const selectOrganization = vi.fn().mockResolvedValue(undefined);
+    const organizations = [
+      { id: 'organization-a', name: 'Alpha' },
+      { id: 'organization-b', name: 'Bravo' }
+    ];
+    const adapterProps = {
+      actions: { selectOrganization },
+      policy: { selectOrganization: true },
+      resource: {
+        status: 'ready' as const,
+        data: {
+          activeOrganizationId: 'organization-a',
+          organizations,
+          members: [{
+            id: 'membership-a',
+            userId: 'user-a',
+            name: 'Alpha member',
+            email: 'alpha@example.com',
+            governance: 'owner' as const,
+            status: 'active' as const,
+            isApproved: true,
+            isBanned: false,
+            isDisabled: false,
+            isActive: true,
+            isExternal: false,
+            isReadOnly: false
+          }]
+        }
+      }
+    };
+    const view = render(
+      <OrganizationsConsoleFeature
+        adapterProps={adapterProps}
+        config={{} as never}
+        onError={vi.fn()}
+        onRouteChange={vi.fn()}
+        route={{
+          feature: 'organizations',
+          screen: 'members',
+          organizationId: 'organization-b'
+        }}
+        runtime={{} as never}
+      />
+    );
+
+    await waitFor(() => expect(selectOrganization).toHaveBeenCalledWith({
+      organizationId: 'organization-b'
+    }));
+    expect(screen.getByLabelText('Loading content')).toBeVisible();
+    expect(screen.queryByText('Alpha member')).toBeNull();
+
+    view.rerender(
+      <OrganizationsConsoleFeature
+        adapterProps={{
+          actions: { selectOrganization },
+          policy: { selectOrganization: true },
+          resource: {
+            status: 'ready',
+            data: {
+              activeOrganizationId: 'organization-b',
+              organizations,
+              members: []
+            }
+          }
+        }}
+        config={{} as never}
+        onError={vi.fn()}
+        onRouteChange={vi.fn()}
+        route={{
+          feature: 'organizations',
+          screen: 'members',
+          organizationId: 'organization-b'
+        }}
+        runtime={{} as never}
+      />
+    );
+
+    expect(screen.getByRole('heading', { name: 'Bravo' })).toBeVisible();
+    expect(selectOrganization).toHaveBeenCalledTimes(1);
+  });
+
+  it('opens organization creation from its semantic route and reports dismissal', async () => {
+    const user = userEvent.setup();
+    const OrganizationsConsoleFeature = organizationsConsoleModule.Component;
+    const onRouteChange = vi.fn();
+    render(
+      <OrganizationsConsoleFeature
+        adapterProps={{
+          actions: { createOrganization: vi.fn() },
+          policy: { createOrganization: true },
+          resource: {
+            status: 'ready',
+            data: {
+              activeOrganizationId: 'organization-a',
+              organizations: [{ id: 'organization-a', name: 'Alpha' }],
+              members: []
+            }
+          }
+        }}
+        config={{} as never}
+        onError={vi.fn()}
+        onRouteChange={onRouteChange}
+        route={{ feature: 'organizations', screen: 'create' }}
+        runtime={{} as never}
+      />
+    );
+
+    expect(screen.getByRole('dialog')).toHaveTextContent('Create an organization');
+    await user.keyboard('{Escape}');
+    await waitFor(() => expect(onRouteChange).toHaveBeenCalledWith({
+      feature: 'organizations',
+      screen: 'organizations'
+    }));
+  });
+
+  it('maps organization profile and developer routes to precise destinations', async () => {
+    const OrganizationsConsoleFeature = organizationsConsoleModule.Component;
+    const adapterProps = {
+      resource: {
+        status: 'ready' as const,
+        data: {
+          activeOrganizationId: 'organization-1',
+          organizations: [{ id: 'organization-1', name: 'Acme' }],
+          members: [],
+          profiles: [{
+            id: 'profile-support',
+            name: 'Support',
+            permissions: '',
+            permissionIds: [],
+            isSystem: false,
+            isDefault: false
+          }],
+          principals: [{
+            id: 'principal-1',
+            name: 'Reporting integration',
+            useAdminOwner: false,
+            isReadOnly: true,
+            bypassStepUp: false
+          }],
+          apiKeys: []
+        }
+      }
+    };
+    const view = render(
+      <OrganizationsConsoleFeature
+        adapterProps={adapterProps}
+        config={{} as never}
+        onError={vi.fn()}
+        onRouteChange={vi.fn()}
+        route={{
+          feature: 'organizations',
+          screen: 'profile',
+          organizationId: 'organization-1',
+          profileId: 'profile-support'
+        }}
+        runtime={{} as never}
+      />
+    );
+
+    const profile = screen.getByRole('heading', { name: 'Support' }).closest('section');
+    expect(profile).toHaveAttribute('aria-current', 'true');
+    await waitFor(() => expect(profile).toHaveFocus());
+
+    view.rerender(
+      <OrganizationsConsoleFeature
+        adapterProps={adapterProps}
+        config={{} as never}
+        onError={vi.fn()}
+        onRouteChange={vi.fn()}
+        route={{
+          feature: 'organizations',
+          screen: 'api-keys',
+          organizationId: 'organization-1'
+        }}
+        runtime={{} as never}
+      />
+    );
+    expect(screen.getByText('Organization API keys')).toBeVisible();
+    expect(screen.queryByText('Machine principals')).toBeNull();
   });
 });

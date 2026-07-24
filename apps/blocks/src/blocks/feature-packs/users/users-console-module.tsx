@@ -47,9 +47,20 @@ function UsersConsoleFeature({
   onRouteChange,
   route
 }: ConsoleKitFeatureComponentProps) {
+  const appAccessRoute = route.feature === 'users' ? route : undefined;
+
   return (
     <UsersFeaturePack
       {...(adapterProps as UsersFeaturePackProps)}
+      focusedInvitationId={appAccessRoute?.screen === 'invitation'
+        ? appAccessRoute.invitationId
+        : undefined}
+      focusedMemberId={appAccessRoute?.screen === 'member'
+        ? appAccessRoute.membershipId
+        : undefined}
+      focusedProfileId={appAccessRoute?.screen === 'profile'
+        ? appAccessRoute.profileId
+        : undefined}
       onError={onError}
       onSectionChange={(nextSection) => onRouteChange({
         feature: 'users',

@@ -71,6 +71,13 @@ export type AuthChallengeContribution = Readonly<{
   label: string;
   start: (input: Readonly<{ email?: string; returnTo?: string }>) =>
     Promise<AuthChallengeDescriptor>;
+  /**
+   * Provider-owned response acquisition for redirect, WebAuthn, and custom
+   * challenges. Code challenges are collected by the feature pack itself.
+   */
+  respond?: (input: Readonly<{
+    challenge: AuthChallengeDescriptor;
+  }>) => AuthChallengeResponse | Promise<AuthChallengeResponse>;
   complete: (input: Readonly<{
     challengeId: string;
     response: AuthChallengeResponse;
@@ -164,6 +171,12 @@ export type AuthFeatureNotice = Readonly<{
   message: string;
 }>;
 
+export type AuthAccountSection =
+  | 'profile'
+  | 'security'
+  | 'connected-accounts'
+  | 'sessions';
+
 export type AuthFeaturePackProps = Readonly<{
   view: 'entry' | 'account';
   account?: FeaturePackResource<AuthAccountData>;
@@ -179,3 +192,12 @@ export type AuthFeaturePackProps = Readonly<{
   onAuthenticated?: () => void;
   onError?: (error: FeaturePackError) => void;
 }>;
+
+export type AuthAccountNavigationProps = Readonly<{
+  accountSection?: AuthAccountSection;
+  defaultAccountSection?: AuthAccountSection;
+  onAccountSectionChange?: (section: AuthAccountSection) => void;
+}>;
+
+export type AuthFeaturePackComponentProps = AuthFeaturePackProps &
+  AuthAccountNavigationProps;

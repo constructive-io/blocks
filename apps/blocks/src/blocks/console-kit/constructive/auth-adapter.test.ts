@@ -26,6 +26,7 @@ type GraphQLCall = Readonly<{
   endpoint: ConsoleEndpointKind;
   document: string;
   variables?: Record<string, unknown>;
+  signal?: AbortSignal;
 }>;
 
 function field(
@@ -168,9 +169,9 @@ function runtime(
           identity: sessionSnapshot.identity,
           getAccessToken: () => null
         },
-        execute: async ({ document, variables }) => ({
+        execute: async ({ document, variables, signal }) => ({
           ok: true,
-          data: await responder({ endpoint: kind, document, variables })
+          data: await responder({ endpoint: kind, document, variables, signal })
         })
       } as IdentityScopedConsoleTransport;
     }
@@ -383,6 +384,207 @@ describe('Constructive authentication operation chains', () => {
       phase: 'success',
       message: 'Your account has been permanently deleted.'
     });
+  });
+
+  it('deduplicates concurrent account-deletion loads and keeps the request alive for an active waiter', async () => {
+    const schema = authSchema({ mutations: { ConfirmDeleteAccount: ['userId', 'token'] } });
+    const vault = createConstructiveCallbackCredentialVault();
+    const credentialRef = vault.put('one-time-deletion-token');
+    const currentSession = session(false);
+    const callback = {
+      kind: 'account-deletion',
+      databaseId: 'database-1',
+      userId: 'user-1',
+      credentialRef
+    } satisfies ConstructiveConsoleCallback;
+    let releaseRequest: (() => void) | undefined;
+    const requestGate = new Promise<void>((resolve) => {
+      releaseRequest = resolve;
+    });
+    const calls: GraphQLCall[] = [];
+    const adapter = createConstructiveAuthAdapter({
+      store: createConsoleKitStore('auth'),
+      session: currentSession,
+      discovery: discovery({ auth: schema }),
+      callback,
+      callbackCredentials: vault
+    });
+    const currentRuntime = runtime(async (call) => {
+      calls.push(call);
+      await requestGate;
+      return { confirmDeleteAccount: { result: true } };
+    }, false);
+    const firstController = new AbortController();
+    const secondController = new AbortController();
+
+    const first = adapter.load(currentRuntime, firstController.signal);
+    const second = adapter.load(currentRuntime, secondController.signal);
+    await vi.waitFor(() => expect(calls).toHaveLength(1));
+    expect(calls[0]?.signal).toBeInstanceOf(AbortSignal);
+
+    firstController.abort();
+    await expect(first).rejects.toMatchObject({ name: 'AbortError' });
+    expect(calls[0]?.signal?.aborted).toBe(false);
+    releaseRequest?.();
+
+    const loaded = await second;
+    expect(loaded.notice).toEqual({
+      status: 'success',
+      message: 'Your account has been permanently deleted.'
+    });
+    expect(vault.status(credentialRef)).toBe('consumed');
+    expect(currentSession.signOut).toHaveBeenCalledOnce();
+  });
+
+  it('keeps a submitted account deletion shared across adapter recreation', async () => {
+    const schema = authSchema({ mutations: { ConfirmDeleteAccount: ['userId', 'token'] } });
+    const vault = createConstructiveCallbackCredentialVault();
+    const credentialRef = vault.put('one-time-deletion-token');
+    const currentSession = session(false);
+    const store = createConsoleKitStore('auth');
+    const callback = {
+      kind: 'account-deletion',
+      databaseId: 'database-1',
+      userId: 'user-1',
+      credentialRef
+    } satisfies ConstructiveConsoleCallback;
+    let releaseRequest: (() => void) | undefined;
+    const requestGate = new Promise<void>((resolve) => {
+      releaseRequest = resolve;
+    });
+    const calls: GraphQLCall[] = [];
+    const firstAdapter = createConstructiveAuthAdapter({
+      store,
+      session: currentSession,
+      discovery: discovery({ auth: schema }),
+      callback,
+      callbackCredentials: vault
+    });
+    const currentRuntime = runtime(async (call) => {
+      calls.push(call);
+      await requestGate;
+      return { confirmDeleteAccount: { result: true } };
+    }, false);
+    const firstController = new AbortController();
+
+    const first = firstAdapter.load(currentRuntime, firstController.signal);
+    await vi.waitFor(() => expect(calls).toHaveLength(1));
+    firstController.abort();
+    await expect(first).rejects.toMatchObject({ name: 'AbortError' });
+
+    const replayedAdapter = createConstructiveAuthAdapter({
+      store,
+      session: currentSession,
+      discovery: discovery({ auth: schema }),
+      callback,
+      callbackCredentials: vault
+    });
+    const second = replayedAdapter.load(
+      currentRuntime,
+      new AbortController().signal
+    );
+    await Promise.resolve();
+    expect(calls).toHaveLength(1);
+    expect(calls[0]?.signal?.aborted).toBe(false);
+    releaseRequest?.();
+    const loaded = await second;
+    expect(loaded.notice?.status).toBe('success');
+
+    expect(store.getState().authFlow).toMatchObject({
+      status: 'callback',
+      kind: 'account-deletion',
+      phase: 'success'
+    });
+    expect(vault.status(credentialRef)).toBe('consumed');
+    expect(currentSession.signOut).toHaveBeenCalledOnce();
+  });
+
+  it('cancels account deletion before submission and lets a replay submit once', async () => {
+    const schema = authSchema({ mutations: { ConfirmDeleteAccount: ['userId', 'token'] } });
+    const vault = createConstructiveCallbackCredentialVault();
+    const credentialRef = vault.put('one-time-deletion-token');
+    const currentSession = session(false);
+    const callback = {
+      kind: 'account-deletion',
+      databaseId: 'database-1',
+      userId: 'user-1',
+      credentialRef
+    } satisfies ConstructiveConsoleCallback;
+    const calls: GraphQLCall[] = [];
+    const currentRuntime = runtime((call) => {
+      calls.push(call);
+      return { confirmDeleteAccount: { result: true } };
+    }, false);
+    const firstAdapter = createConstructiveAuthAdapter({
+      store: createConsoleKitStore('auth'),
+      session: currentSession,
+      discovery: discovery({ auth: schema }),
+      callback,
+      callbackCredentials: vault
+    });
+    const firstController = new AbortController();
+
+    const first = firstAdapter.load(currentRuntime, firstController.signal);
+    firstController.abort();
+    await expect(first).rejects.toMatchObject({ name: 'AbortError' });
+    await Promise.resolve();
+    expect(calls).toHaveLength(0);
+    expect(vault.status(credentialRef)).toBe('available');
+
+    const replayedAdapter = createConstructiveAuthAdapter({
+      store: createConsoleKitStore('auth'),
+      session: currentSession,
+      discovery: discovery({ auth: schema }),
+      callback,
+      callbackCredentials: vault
+    });
+    const loaded = await replayedAdapter.load(
+      currentRuntime,
+      new AbortController().signal
+    );
+
+    expect(calls).toHaveLength(1);
+    expect(loaded.notice?.status).toBe('success');
+    expect(vault.status(credentialRef)).toBe('consumed');
+    expect(currentSession.signOut).toHaveBeenCalledOnce();
+  });
+
+  it('does not retry an account deletion after an ambiguous transport failure', async () => {
+    const schema = authSchema({ mutations: { ConfirmDeleteAccount: ['userId', 'token'] } });
+    const vault = createConstructiveCallbackCredentialVault();
+    const credentialRef = vault.put('one-time-deletion-token');
+    const currentSession = session(false);
+    const store = createConsoleKitStore('auth');
+    const callback = {
+      kind: 'account-deletion',
+      databaseId: 'database-1',
+      userId: 'user-1',
+      credentialRef
+    } satisfies ConstructiveConsoleCallback;
+    const calls: GraphQLCall[] = [];
+    const currentRuntime = runtime((call) => {
+      calls.push(call);
+      throw new Error('The response was lost.');
+    }, false);
+    const createAdapter = () => createConstructiveAuthAdapter({
+      store,
+      session: currentSession,
+      discovery: discovery({ auth: schema }),
+      callback,
+      callbackCredentials: vault
+    });
+
+    await expect(createAdapter().load(
+      currentRuntime,
+      new AbortController().signal
+    )).rejects.toThrow('The response was lost.');
+    await expect(createAdapter().load(
+      currentRuntime,
+      new AbortController().signal
+    )).rejects.toThrow('The response was lost.');
+
+    expect(calls).toHaveLength(1);
+    expect(vault.status(credentialRef)).toBe('available');
   });
 
   it('records a successful email-verification callback phase', async () => {

@@ -36,6 +36,12 @@ export type ConstructiveCapabilityDiscovery = Readonly<{
   invalidate(): void;
 }>;
 
+// A host may deliberately reuse one Console Kit store while remounting the
+// wrapper for another tenant or endpoint set. Only the newest discovery
+// instance may publish into that store; otherwise a slower, already-unmounted
+// instance can replace the new tenant's capability assessment.
+const activeDiscoveryOwners = new WeakMap<ConsoleKitStoreApi, object>();
+
 export type ConstructiveCapabilityRule = Readonly<{
   capability: AtomicCapabilityId;
   endpoint: ConsoleEndpointKind;
@@ -297,6 +303,7 @@ export function createConstructiveCapabilityDiscovery(
   store: ConsoleKitStoreApi,
   features: readonly ConstructiveCapabilityFeature[]
 ): ConstructiveCapabilityDiscovery {
+  const owner = {};
   const listeners = new Set<() => void>();
   let currentKey: string | null = null;
   let currentSchemas: ConstructiveSchemaMap = {};
@@ -311,8 +318,25 @@ export function createConstructiveCapabilityDiscovery(
   return {
     getSchemas: () => currentSchemas,
     subscribe(listener) {
+      if (listeners.size === 0) {
+        // Subscription happens from the committed adapter effect. Claiming
+        // here keeps a speculative render from disabling the mounted tenant.
+        activeDiscoveryOwners.set(store, owner);
+      }
       listeners.add(listener);
-      return () => listeners.delete(listener);
+      return () => {
+        listeners.delete(listener);
+        if (listeners.size > 0) return;
+        currentGeneration += 1;
+        currentController?.abort();
+        currentController = null;
+        currentKey = null;
+        currentSchemas = {};
+        currentPromise = null;
+        if (activeDiscoveryOwners.get(store) === owner) {
+          activeDiscoveryOwners.delete(store);
+        }
+      };
     },
     invalidate() {
       currentGeneration += 1;
@@ -321,10 +345,20 @@ export function createConstructiveCapabilityDiscovery(
       currentKey = null;
       currentSchemas = {};
       currentPromise = null;
-      store.getState().clearPackCapabilities();
+      if (activeDiscoveryOwners.get(store) === owner) {
+        store.getState().clearPackCapabilities();
+      }
       emit();
     },
     ensure(runtime) {
+      // Direct consumers can use discovery without subscribing. They may
+      // claim an otherwise idle store, but cannot replace a committed owner.
+      if (!activeDiscoveryOwners.has(store)) {
+        activeDiscoveryOwners.set(store, owner);
+      }
+      if (activeDiscoveryOwners.get(store) !== owner) {
+        return Promise.resolve(currentSchemas);
+      }
       const key = discoveryKey(runtime);
       if (currentKey === key && currentPromise) return currentPromise;
       if (currentKey === key && Object.keys(currentSchemas).length > 0) {
@@ -369,7 +403,8 @@ export function createConstructiveCapabilityDiscovery(
         if (
           controller.signal.aborted ||
           currentGeneration !== generation ||
-          currentKey !== key
+          currentKey !== key ||
+          activeDiscoveryOwners.get(store) !== owner
         ) {
           return currentSchemas;
         }

@@ -38,6 +38,7 @@ import {
   authPasswordPolicyError,
   normalizedPasswordLength
 } from './auth-password-policy';
+import { AuthChallengePanel } from './auth-challenge-panel';
 
 const modeCopy: Record<
   AuthEntryMode,
@@ -83,6 +84,7 @@ export function AuthEntryPanel({
   notice,
   verificationNotice,
   passwordPolicy,
+  challengeContributions = [],
   onModeChange,
   onAuthenticated,
   onError
@@ -338,6 +340,14 @@ export function AuthEntryPanel({
             </Button>
           </CardContent>
         </form>
+        {mode === 'sign-in' ? (
+          <AuthChallengePanel
+            contributions={challengeContributions}
+            email={email}
+            onAuthenticated={onAuthenticated}
+            onError={onError}
+          />
+        ) : null}
         {mode === 'sign-in' && (canRecoverPassword || canSignUp) ? (
           <CardFooter className='mt-6 flex flex-wrap justify-between gap-2 border-t'>
             {canRecoverPassword ? (

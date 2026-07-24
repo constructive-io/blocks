@@ -347,13 +347,15 @@ async function requireSuccessfulBoolean(
   operation: string,
   input: Readonly<Record<string, unknown>>,
   failureMessage: string,
-  failureCode: string
+  failureCode: string,
+  signal?: AbortSignal
 ): Promise<void> {
   const result = await executeConstructiveGraphQL<Record<string, unknown>>(
     runtime,
     endpoint,
     document,
-    { input }
+    { input },
+    signal
   );
   if (!asBoolean(asRecord(result[operation])?.result)) {
     throw new ConstructiveAuthActionError(failureMessage, failureCode);
@@ -390,6 +392,69 @@ type InvitationCallback = Extract<
   { kind: 'app-invite' | 'organization-invite' }
 >;
 
+type AccountDeletionOutcome = Readonly<{
+  notice: AuthFeatureNotice;
+  phase: 'success' | 'invalid' | 'error';
+}>;
+
+type AccountDeletionRedemption = {
+  controller: AbortController;
+  started: boolean;
+  waiters: Set<symbol>;
+  promise: Promise<AccountDeletionOutcome>;
+};
+
+const accountDeletionRedemptions = new WeakMap<
+  ConstructiveCallbackCredentialVault,
+  WeakMap<object, AccountDeletionRedemption>
+>();
+
+function accountDeletionRedemption(
+  options: ConstructiveAuthAdapterOptions,
+  callback: Extract<ConstructiveConsoleCallback, { kind: 'account-deletion' }>
+): AccountDeletionRedemption | undefined {
+  const vault = options.callbackCredentials;
+  return vault
+    ? accountDeletionRedemptions.get(vault)?.get(callback.credentialRef)
+    : undefined;
+}
+
+function setAccountDeletionRedemption(
+  options: ConstructiveAuthAdapterOptions,
+  callback: Extract<ConstructiveConsoleCallback, { kind: 'account-deletion' }>,
+  pending: AccountDeletionRedemption
+): void {
+  const vault = options.callbackCredentials;
+  if (!vault) return;
+  let redemptions = accountDeletionRedemptions.get(vault);
+  if (!redemptions) {
+    redemptions = new WeakMap<object, AccountDeletionRedemption>();
+    accountDeletionRedemptions.set(vault, redemptions);
+  }
+  redemptions.set(callback.credentialRef, pending);
+}
+
+function clearAccountDeletionRedemption(
+  options: ConstructiveAuthAdapterOptions,
+  callback: Extract<ConstructiveConsoleCallback, { kind: 'account-deletion' }>,
+  pending: AccountDeletionRedemption
+): void {
+  const vault = options.callbackCredentials;
+  const redemptions = vault
+    ? accountDeletionRedemptions.get(vault)
+    : undefined;
+  if (redemptions?.get(callback.credentialRef) === pending) {
+    redemptions.delete(callback.credentialRef);
+  }
+}
+
+function abortError(signal: AbortSignal): Error {
+  if (signal.reason instanceof Error) return signal.reason;
+  const error = new Error('The authentication request was aborted.');
+  error.name = 'AbortError';
+  return error;
+}
+
 function invitationMutation(callback: InvitationCallback): Readonly<{
   field: 'submitAppInviteCode' | 'submitOrgInviteCode';
   document: string;
@@ -414,12 +479,10 @@ function setCallbackFlow(
   phase: AuthCallbackFlowPhase,
   message?: string
 ): void {
-  options.store.getState().setAuthFlow({
-    status: 'callback',
-    kind,
-    phase,
-    ...(message ? { message } : {})
-  });
+  const flow: AuthFlowState = message
+    ? { status: 'callback', kind, phase, message }
+    : { status: 'callback', kind, phase };
+  options.store.getState().setAuthFlow(flow);
 }
 
 export function createConstructiveAuthAdapter(
@@ -524,6 +587,167 @@ export function createConstructiveAuthAdapter(
       if (invitationRedemption === pending) invitationRedemption = null;
       throw cause;
     }
+  };
+
+  const waitForDeletionRedemption = (
+    pending: AccountDeletionRedemption,
+    callback: Extract<ConstructiveConsoleCallback, { kind: 'account-deletion' }>,
+    signal: AbortSignal
+  ): Promise<AccountDeletionOutcome> => {
+    if (signal.aborted) return Promise.reject(abortError(signal));
+    const waiter = Symbol('account-deletion-load');
+    pending.waiters.add(waiter);
+
+    return new Promise<AccountDeletionOutcome>((resolve, reject) => {
+      let settled = false;
+      const cleanup = () => {
+        signal.removeEventListener('abort', onAbort);
+        pending.waiters.delete(waiter);
+      };
+      const onAbort = () => {
+        if (settled) return;
+        settled = true;
+        cleanup();
+        if (!pending.started && pending.waiters.size === 0) {
+          pending.controller.abort(signal.reason);
+          clearAccountDeletionRedemption(options, callback, pending);
+        }
+        reject(abortError(signal));
+      };
+
+      signal.addEventListener('abort', onAbort, { once: true });
+      pending.promise.then(
+        (notice) => {
+          if (settled) return;
+          settled = true;
+          cleanup();
+          resolve(notice);
+        },
+        (cause) => {
+          if (settled) return;
+          settled = true;
+          cleanup();
+          reject(cause);
+        }
+      );
+    });
+  };
+
+  const redeemAccountDeletion = async (
+    runtime: ConsoleKitAdapterContext,
+    callback: Extract<ConstructiveConsoleCallback, { kind: 'account-deletion' }>,
+    userId: string,
+    signal: AbortSignal
+  ): Promise<void> => {
+    if (deletionNotice) return;
+    if (signal.aborted) throw abortError(signal);
+
+    let pending = accountDeletionRedemption(options, callback);
+    if (!pending) {
+      const controller = new AbortController();
+      pending = {
+        controller,
+        started: false,
+        waiters: new Set(),
+        promise: Promise.resolve({
+          phase: 'error',
+          notice: {
+            status: 'error',
+            message: 'Account deletion could not be completed.'
+          }
+        })
+      };
+      setAccountDeletionRedemption(options, callback, pending);
+      pending.promise = (async (): Promise<AccountDeletionOutcome> => {
+        // React Strict Mode can abort the first effect before its replay. Give
+        // that cleanup a chance to run before submitting the one-time mutation.
+        await Promise.resolve();
+        if (
+          accountDeletionRedemption(options, callback) !== pending ||
+          controller.signal.aborted
+        ) {
+          throw abortError(controller.signal);
+        }
+        pending.started = true;
+
+        const deletionToken = callbackCredential(options, callback);
+        if (!deletionToken) {
+          return {
+            phase: 'error',
+            notice: {
+              status: 'error',
+              message: 'The account deletion credential is no longer available.'
+            }
+          };
+        }
+
+        setCallbackFlow(options, 'account-deletion', 'processing');
+        try {
+          await requireSuccessfulBoolean(
+            runtime,
+            'auth',
+            CONFIRM_DELETE_ACCOUNT_MUTATION,
+            'confirmDeleteAccount',
+            { userId, token: deletionToken },
+            'The account deletion credential is invalid or expired.',
+            'ACCOUNT_DELETION_FAILED',
+            controller.signal
+          );
+
+          consumeCallbackCredential(options, callback);
+          try {
+            await options.session.signOut();
+          } catch {
+            // Account deletion invalidates the bearer before sign-out can
+            // revoke it. The standalone session clears local state first.
+          }
+          return {
+            phase: 'success',
+            notice: {
+              status: 'success',
+              message: 'Your account has been permanently deleted.'
+            }
+          };
+        } catch (cause) {
+          if (
+            cause instanceof ConstructiveAuthActionError &&
+            cause.code === 'ACCOUNT_DELETION_FAILED'
+          ) {
+            consumeCallbackCredential(options, callback);
+            return {
+              phase: 'invalid',
+              notice: {
+                status: 'error',
+                message: cause.message
+              }
+            };
+          }
+          if (controller.signal.aborted) throw cause;
+
+          setCallbackFlow(
+            options,
+            'account-deletion',
+            'error',
+            cause instanceof Error
+              ? cause.message
+              : 'Account deletion could not be completed.'
+          );
+          // Once submitted, a transport failure cannot prove that the
+          // destructive mutation did not commit. Retain the shared outcome so
+          // another adapter cannot retry the one-time credential ambiguously.
+          throw cause;
+        }
+      })();
+    }
+
+    const outcome = await waitForDeletionRedemption(pending, callback, signal);
+    deletionNotice = outcome.notice;
+    setCallbackFlow(
+      options,
+      'account-deletion',
+      outcome.phase,
+      outcome.notice.message
+    );
   };
 
   return {
@@ -841,10 +1065,27 @@ export function createConstructiveAuthAdapter(
       }
 
       const deletionUserId = accountDeletionCallback?.userId;
+      const sharedDeletionRedemption = accountDeletionCallback
+        ? accountDeletionRedemption(options, accountDeletionCallback)
+        : undefined;
       const deletionCredentialAvailable = callbackCredentialAvailable(
         options,
         accountDeletionCallback
       );
+
+      if (
+        !deletionNotice &&
+        accountDeletionCallback &&
+        deletionUserId &&
+        sharedDeletionRedemption
+      ) {
+        await redeemAccountDeletion(
+          runtime,
+          accountDeletionCallback,
+          deletionUserId,
+          signal
+        );
+      }
 
       if (
         !deletionNotice &&
@@ -892,92 +1133,13 @@ export function createConstructiveAuthAdapter(
             );
           }
         } else {
-          const deletionToken = callbackCredential(
-            options,
-            accountDeletionCallback
-          );
-          if (!deletionToken) {
-            deletionNotice = {
-              status: 'error',
-              message: 'The account deletion credential is no longer available.'
-            };
-            if (accountDeletionCallback) {
-              setCallbackFlow(
-                options,
-                'account-deletion',
-                'error',
-                deletionNotice.message
-              );
-            }
-          } else {
-            try {
-              if (accountDeletionCallback) {
-                setCallbackFlow(options, 'account-deletion', 'processing');
-              }
-              await requireSuccessfulBoolean(
-                runtime,
-                'auth',
-                CONFIRM_DELETE_ACCOUNT_MUTATION,
-                'confirmDeleteAccount',
-                {
-                  userId: deletionUserId,
-                  token: deletionToken
-                },
-                'The account deletion credential is invalid or expired.',
-                'ACCOUNT_DELETION_FAILED'
-              );
-              consumeCallbackCredential(options, accountDeletionCallback);
-              deletionNotice = {
-                status: 'success',
-                message: 'Your account has been permanently deleted.'
-              };
-              if (accountDeletionCallback) {
-                setCallbackFlow(
-                  options,
-                  'account-deletion',
-                  'success',
-                  deletionNotice.message
-                );
-              }
-              try {
-                await options.session.signOut();
-              } catch {
-                // Account deletion invalidates the bearer before sign-out can
-                // revoke it. The standalone session clears local state first.
-              }
-            } catch (cause) {
-              if (signal.aborted) throw cause;
-              if (
-                cause instanceof ConstructiveAuthActionError &&
-                cause.code === 'ACCOUNT_DELETION_FAILED'
-              ) {
-                consumeCallbackCredential(options, accountDeletionCallback);
-                deletionNotice = {
-                  status: 'error',
-                  message: cause.message
-                };
-                if (accountDeletionCallback) {
-                  setCallbackFlow(
-                    options,
-                    'account-deletion',
-                    'invalid',
-                    cause.message
-                  );
-                }
-              } else {
-                if (accountDeletionCallback) {
-                  setCallbackFlow(
-                    options,
-                    'account-deletion',
-                    'error',
-                    cause instanceof Error
-                      ? cause.message
-                      : 'Account deletion could not be completed.'
-                  );
-                }
-                throw cause;
-              }
-            }
+          if (accountDeletionCallback) {
+            await redeemAccountDeletion(
+              runtime,
+              accountDeletionCallback,
+              deletionUserId,
+              signal
+            );
           }
         }
       }

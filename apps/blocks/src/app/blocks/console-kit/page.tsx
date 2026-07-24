@@ -228,6 +228,52 @@ export function VerificationConsole({
   return <ConstructiveConsoleKit database={database} />;
 }`;
 
+const ROUTING_EXAMPLE = `'use client';
+
+import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import {
+  ConstructiveConsoleKit,
+  type ConsoleKitRoute,
+  type ConstructiveTenantDatabase
+} from '@/blocks/console-kit/constructive';
+
+const getConsoleHref = (route: ConsoleKitRoute) =>
+  \`/console?route=\${encodeURIComponent(JSON.stringify(route))}\`;
+
+export function RoutedConsole({
+  database,
+  route
+}: Readonly<{
+  database: ConstructiveTenantDatabase;
+  route: ConsoleKitRoute;
+}>) {
+  const router = useRouter();
+  return (
+    <ConstructiveConsoleKit
+      database={database}
+      routes={{
+        route,
+        getHref: getConsoleHref,
+        onRouteChange: (nextRoute) => router.push(getConsoleHref(nextRoute)),
+        renderLink: ({ href, ...props }) => <Link href={href} {...props} />
+      }}
+    />
+  );
+}
+
+export function InternalConsole({
+  database
+}: Readonly<{ database: ConstructiveTenantDatabase }>) {
+  // Omit routes.route so Console Kit owns its per-instance route.
+  return (
+    <ConstructiveConsoleKit
+      database={database}
+      routes={{ defaultRoute: { feature: 'users', screen: 'members' } }}
+    />
+  );
+}`;
+
 export default function ConsoleKitPage() {
   return (
     <article className="registry-page">
@@ -518,7 +564,7 @@ export default function ConsoleKitPage() {
 
           <div className="mt-6 max-w-3xl">
             <h3 className="text-sm font-medium text-foreground">
-              Complete email verification in the host route
+              Complete email verification without exposing the token
             </h3>
             <p className="mt-1.5 text-pretty text-sm leading-7 text-muted-foreground">
               Unverified signed-in accounts can send a fresh verification
@@ -530,8 +576,12 @@ export default function ConsoleKitPage() {
               <code className="rounded bg-muted px-1 py-0.5 font-mono text-[12px]">
                 verification_token
               </code>{' '}
-              values from a URL fragment and passes them to Console Kit; the auth
-              adapter calls{' '}
+              values from a URL fragment. When{' '}
+              <code className="rounded bg-muted px-1 py-0.5 font-mono text-[12px]">
+                callback
+              </code>{' '}
+              is omitted, Console Kit captures those credentials into its closure-owned
+              vault, scrubs the fragment, and then the auth adapter calls{' '}
               <code className="rounded bg-muted px-1 py-0.5 font-mono text-[12px]">
                 verifyEmail
               </code>{' '}
@@ -542,8 +592,11 @@ export default function ConsoleKitPage() {
               <code className="rounded bg-muted px-1 py-0.5 font-mono text-[12px]">
                 #
               </code>{' '}
-              fragment so they stay out of the HTTP request, then scrub that
-              fragment before mounting Console Kit.
+              fragment so they stay out of the HTTP request. Pass{' '}
+              <code className="rounded bg-muted px-1 py-0.5 font-mono text-[12px]">
+                callback={'{false}'}
+              </code>{' '}
+              only when the host owns the complete callback lifecycle.
             </p>
             <CodeBlock
               className="mt-3"
@@ -681,7 +734,17 @@ export default function ConsoleKitPage() {
               links remain plain anchors until your host supplies a Next.js or
               other framework renderer.
             </p>
+            <p className="mt-2 text-pretty text-sm leading-7 text-muted-foreground">
+              Omit a controlled route to let Console Kit own navigation, optionally
+              starting from <code className="rounded bg-muted px-1 py-0.5 font-mono text-[12px]">defaultRoute</code>.
+              For URL-owned navigation, parse the current URL into a typed semantic
+              route and provide the route, href encoder, change callback, and link renderer together.
+            </p>
           </div>
+
+          <CodeBlock className="mb-4 max-w-3xl" label="Controlled and uncontrolled semantic routing" language="tsx">
+            {ROUTING_EXAMPLE}
+          </CodeBlock>
 
           <div className="grid gap-3 md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
             <CodeBlock label="Install the shell without Console Kit">

@@ -193,6 +193,8 @@ export type OrganizationsSection =
   | 'settings'
   | 'developer';
 
+export type OrganizationsDeveloperView = 'all' | 'principals' | 'api-keys';
+
 export type OrganizationsFeatureAction =
   | 'createOrganization'
   | 'selectOrganization'
@@ -375,5 +377,16 @@ export type OrganizationsFeaturePackProps = Readonly<{
   section?: OrganizationsSection;
   defaultSection?: OrganizationsSection;
   onSectionChange?: (section: OrganizationsSection) => void;
+  /** Controls the create-organization dialog from a semantic route. */
+  createOrganizationOpen?: boolean;
+  onCreateOrganizationOpenChange?: (open: boolean) => void;
+  /** Highlights and moves focus to a route-selected organization membership. */
+  focusedMemberId?: string;
+  /** Highlights and moves focus to a route-selected pending invitation. */
+  focusedInvitationId?: string;
+  /** Highlights and moves focus to a route-selected access profile. */
+  focusedProfileId?: string;
+  /** Narrows the developer destination for semantic API-key or principal routes. */
+  developerView?: OrganizationsDeveloperView;
   onError?: (error: FeaturePackError) => void;
 }>;
