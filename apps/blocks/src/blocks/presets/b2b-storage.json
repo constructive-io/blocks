@@ -1,0 +1,9 @@
+{
+  "schemaVersion": 1,
+  "id": "b2b-storage",
+  "presetSlug": "b2b:storage",
+  "title": "B2B with storage",
+  "description": "Data, authentication, users, organizations, and storage feature packs.",
+  "stability": "stable",
+  "featurePacks": ["data", "auth", "users", "organizations", "storage"]
+}

@@ -1,4 +1,5 @@
 import { createHash } from 'node:crypto';
+import { execFileSync } from 'node:child_process';
 import { createServer, type IncomingMessage, type ServerResponse } from 'node:http';
 import { readFile } from 'node:fs/promises';
 import { dirname, join, resolve } from 'node:path';
@@ -6,9 +7,23 @@ import { fileURLToPath } from 'node:url';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const host = process.env.LOCAL_NPM_REGISTRY_HOST ?? '127.0.0.1';
-const port = Number(process.env.LOCAL_NPM_REGISTRY_PORT ?? 4873);
+const requestedPort = Number(process.env.LOCAL_NPM_REGISTRY_PORT ?? 4873);
+let listeningPort = requestedPort;
 const artifacts = join(root, '.artifacts', 'npm');
-const packageDirectories = ['packages/ui', 'packages/schema-builder'];
+const defaultPackageDirectories = [
+  'packages/ui',
+  'packages/data',
+  'packages/sheets',
+  'packages/schema-builder'
+];
+const packageDirectories = process.env.LOCAL_NPM_REGISTRY_PACKAGE_DIRECTORIES
+  ? process.env.LOCAL_NPM_REGISTRY_PACKAGE_DIRECTORIES.split(',').map((value) => value.trim())
+  : defaultPackageDirectories;
+for (const packageDirectory of packageDirectories) {
+  if (!defaultPackageDirectories.includes(packageDirectory)) {
+    throw new Error(`Unsupported local package directory: ${packageDirectory}`);
+  }
+}
 interface PackageManifest {
   name: string;
   version: string;
@@ -27,12 +42,18 @@ interface LocalPackage {
 const packages = new Map<string, LocalPackage>();
 
 for (const packageDirectory of packageDirectories) {
-  const manifest = JSON.parse(
+  const sourceManifest = JSON.parse(
     await readFile(join(root, packageDirectory, 'package.json'), 'utf8'),
   ) as PackageManifest;
-  const tarballName = `${manifest.name.slice(1).replace('/', '-')}-${manifest.version}.tgz`;
+  const tarballName = `${sourceManifest.name.slice(1).replace('/', '-')}-${sourceManifest.version}.tgz`;
   const tarballPath = join(artifacts, tarballName);
   const tarball = await readFile(tarballPath);
+  const manifest = JSON.parse(
+    execFileSync('tar', ['-xOf', tarballPath, 'package/package.json'], { encoding: 'utf8' }),
+  ) as PackageManifest;
+  if (manifest.name !== sourceManifest.name || manifest.version !== sourceManifest.version) {
+    throw new Error(`Packed manifest mismatch for ${sourceManifest.name}`);
+  }
   const integrity = `sha512-${createHash('sha512').update(tarball).digest('base64')}`;
   const shasum = createHash('sha1').update(tarball).digest('hex');
   const unscopedName = manifest.name.slice(manifest.name.lastIndexOf('/') + 1);
@@ -79,7 +100,7 @@ const server = createServer(async (request, response) => {
       return;
     }
 
-    const url = new URL(request.url ?? '/', `http://${host}:${port}`);
+    const url = new URL(request.url ?? '/', `http://${host}:${listeningPort}`);
     const decodedPath = decodeURIComponent(url.pathname);
     if ([...packages.values()].some((candidate) => candidate.registryTarballPath === decodedPath)) {
       const entry = [...packages.values()].find(
@@ -112,7 +133,7 @@ const server = createServer(async (request, response) => {
       dist: {
         integrity,
         shasum,
-        tarball: `http://${host}:${port}${registryTarballPath}`
+        tarball: `http://${host}:${listeningPort}${registryTarballPath}`
       }
     };
     sendJson(response, 200, {
@@ -126,8 +147,13 @@ const server = createServer(async (request, response) => {
   }
 });
 
-server.listen(port, host, () => {
-  console.log(`Local package registry listening on http://${host}:${port}`);
+server.listen(requestedPort, host, () => {
+  const address = server.address();
+  if (!address || typeof address === 'string') {
+    throw new Error('Unable to resolve the local package registry address');
+  }
+  listeningPort = address.port;
+  console.log(`Local package registry listening on http://${host}:${listeningPort}`);
   console.log(`Serving ${[...packages.keys()].join(', ')} from .artifacts/npm`);
 });
 

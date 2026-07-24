@@ -1,6 +1,6 @@
 const isPages = process.env.BLOCKS_PAGES === '1';
 
-export const SITE_NAME = 'Constructive UI';
+export const SITE_NAME = 'Constructive Blocks';
 export const SITE_ORIGIN = isPages ? 'https://constructive-io.github.io' : 'http://localhost:3005';
 export const BASE_PATH = isPages ? '/blocks' : '';
 
@@ -34,5 +34,5 @@ export const OG_IMAGE = {
   width: 1200,
   height: 630,
   type: 'image/png',
-  alt: 'Constructive UI — base React primitives for npm and shadcn.',
+  alt: 'Constructive Blocks — React primitives, feature packs, and Console Kit for npm and shadcn.',
 };

@@ -1,0 +1,18 @@
+{
+  "schemaVersion": 1,
+  "id": "organizations",
+  "title": "Organizations",
+  "description": "Tenant membership governance, invitations, access policy, hierarchy, settings, and developer credentials.",
+  "dependencies": [],
+  "endpoints": { "required": [], "optional": ["admin", "auth", "billing", "data"] },
+  "capabilities": {
+    "required": ["organizations.memberships"],
+    "optional": ["organizations.permissions", "organizations.limits", "organizations.profiles", "organizations.hierarchy", "organizations.invites"]
+  },
+  "metadata": {
+    "requiredMetaSections": ["tables", "fields", "constraints", "relations", "query", "scope"],
+    "optionalMetaSections": ["encoding"],
+    "requiredIntrospectionSections": ["root-operations", "types", "input-objects"],
+    "optionalIntrospectionSections": ["enums", "directives"]
+  }
+}

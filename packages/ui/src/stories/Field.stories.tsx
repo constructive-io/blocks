@@ -2,7 +2,15 @@ import type { Meta, StoryObj } from '@storybook/react-vite';
 import { AtSign, DollarSign, Lock, Mail, Search, User } from 'lucide-react';
 import { useState } from 'react';
 
-import { Field, FieldRow } from '../components/field';
+import {
+	Field,
+	FieldDescription,
+	FieldGroup,
+	FieldLabel,
+	FieldLegend,
+	FieldRow,
+	FieldSet,
+} from '../components/field';
 import {
 	InputGroup,
 	InputGroupAddon,
@@ -257,7 +265,7 @@ export const FieldRowLabelStart: Story = {
 
 export const FormExample: Story = {
 	render: () => (
-		<div className='w-[320px] space-y-4'>
+		<div className='flex w-[320px] flex-col gap-4'>
 			<Field label='Email' required>
 				<InputGroup>
 					<InputGroupAddon>
@@ -299,7 +307,7 @@ export const FormExample: Story = {
 
 export const AllStates: Story = {
 	render: () => (
-		<div className='w-[320px] space-y-4'>
+		<div className='flex w-[320px] flex-col gap-4'>
 			<Field label='Normal'>
 				<InputGroup>
 					<InputGroupAddon>
@@ -350,5 +358,25 @@ export const AllStates: Story = {
 				</InputGroup>
 			</Field>
 		</div>
+	),
+};
+
+export const ComposedFields: Story = {
+	render: () => (
+		<FieldSet className='w-[360px]'>
+			<FieldLegend>Profile</FieldLegend>
+			<FieldDescription>These fields use the composable shadcn field contract.</FieldDescription>
+			<FieldGroup>
+				<Field>
+					<FieldLabel htmlFor='composed-name'>Display name</FieldLabel>
+					<Input id='composed-name' placeholder='Ada Lovelace' />
+				</Field>
+				<Field data-invalid>
+					<FieldLabel htmlFor='composed-handle'>Handle</FieldLabel>
+					<Input id='composed-handle' aria-invalid placeholder='ada' />
+					<FieldDescription>Choose a unique handle.</FieldDescription>
+				</Field>
+			</FieldGroup>
+		</FieldSet>
 	),
 };

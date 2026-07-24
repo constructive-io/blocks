@@ -4,12 +4,9 @@ import { Suspense } from 'react';
 
 import { BillingShowcaseEmbed } from '@/components/billing-showcase/billing-showcase-embed';
 import { BILLING_BLOCKS, getBillingBlock } from '@/lib/billing-blocks';
+import { withBase } from '@/lib/site';
 
 type PageProps = { params: Promise<{ name: string }> };
-
-export const metadata: Metadata = {
-  robots: { follow: false, index: false }
-};
 
 export default async function BillingBlockPreviewPage({ params }: PageProps) {
   const { name } = await params;
@@ -33,4 +30,16 @@ export default async function BillingBlockPreviewPage({ params }: PageProps) {
 
 export function generateStaticParams() {
   return BILLING_BLOCKS.map(({ name }) => ({ name }));
+}
+
+export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
+  const { name } = await params;
+  const block = getBillingBlock(name);
+
+  return {
+    alternates: block
+      ? { canonical: withBase(`/blocks/billing/${block.name}`) }
+      : undefined,
+    robots: { follow: false, index: false }
+  };
 }

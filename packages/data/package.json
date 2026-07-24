@@ -1,0 +1,58 @@
+{
+  "name": "@constructive-io/data",
+  "version": "0.2.0",
+  "description": "Runtime PostGraphile query builder and data utilities",
+  "private": false,
+  "license": "MIT",
+  "homepage": "https://constructive-io.github.io/blocks/",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/constructive-io/blocks.git",
+    "directory": "packages/data"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "type": "module",
+  "sideEffects": false,
+  "exports": {
+    ".": {
+      "import": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.js"
+      },
+      "require": {
+        "types": "./dist/index.d.cts",
+        "default": "./dist/index.cjs"
+      }
+    }
+  },
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsup --watch",
+    "lint:types": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "clean": "rm -rf dist"
+  },
+  "dependencies": {
+    "ajv": "^8.20.0",
+    "graphql": "^16.9.0",
+    "inflekt": "^0.5.1"
+  },
+  "devDependencies": {
+    "@constructive-io/graphql-query": "^3.12.15",
+    "tsup": "^8.5.1",
+    "typescript": "^5.9.3",
+    "vitest": "^3.2.4"
+  },
+  "engines": {
+    "node": ">=24.0.0"
+  }
+}

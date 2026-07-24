@@ -1,0 +1,496 @@
+[
+  {
+    "copyText": "hello world",
+    "displayText": "hello world",
+    "intendedKind": "text",
+    "label": "text — string",
+    "typeKey": "text",
+    "value": "hello world"
+  },
+  {
+    "copyText": "line one\nline two",
+    "displayText": "line one\nline two",
+    "intendedKind": "text",
+    "label": "textarea — multiline string",
+    "typeKey": "textarea",
+    "value": "line one\nline two"
+  },
+  {
+    "copyText": "mailto:ada@example.com",
+    "displayText": "ada@example.com",
+    "intendedKind": "uri",
+    "label": "email — address (mailto data)",
+    "typeKey": "email",
+    "value": "ada@example.com"
+  },
+  {
+    "copyText": "https://example.com/path",
+    "displayText": "https://example.com/path",
+    "intendedKind": "uri",
+    "label": "url — http link",
+    "typeKey": "url",
+    "value": "https://example.com/path"
+  },
+  {
+    "copyText": "+1 555 0100",
+    "displayText": "+1 555 0100",
+    "intendedKind": "text",
+    "label": "phone — digits string",
+    "typeKey": "phone",
+    "value": "+1 555 0100"
+  },
+  {
+    "copyText": "MixedCase",
+    "displayText": "MixedCase",
+    "intendedKind": "text",
+    "label": "citext — case-insensitive text",
+    "typeKey": "citext",
+    "value": "MixedCase"
+  },
+  {
+    "copyText": "AB ",
+    "displayText": "AB ",
+    "intendedKind": "text",
+    "label": "bpchar — padded char",
+    "typeKey": "bpchar",
+    "value": "AB "
+  },
+  {
+    "copyText": "42.5",
+    "displayText": "42.5",
+    "intendedKind": "number",
+    "label": "number — float",
+    "typeKey": "number",
+    "value": 42.5
+  },
+  {
+    "copyText": "17",
+    "displayText": "17",
+    "intendedKind": "number",
+    "label": "integer — int",
+    "typeKey": "integer",
+    "value": 17
+  },
+  {
+    "copyText": "7",
+    "displayText": "7",
+    "intendedKind": "number",
+    "label": "smallint — small int",
+    "typeKey": "smallint",
+    "value": 7
+  },
+  {
+    "copyText": "123.45",
+    "displayText": "123.45",
+    "intendedKind": "number",
+    "label": "decimal — string coerced",
+    "typeKey": "decimal",
+    "value": "123.45"
+  },
+  {
+    "copyText": "1999.99",
+    "displayText": "1999.99",
+    "intendedKind": "number",
+    "label": "currency — number",
+    "typeKey": "currency",
+    "value": 1999.99
+  },
+  {
+    "copyText": "0.42",
+    "displayText": "0.42",
+    "intendedKind": "number",
+    "label": "percentage — number",
+    "typeKey": "percentage",
+    "value": 0.42
+  },
+  {
+    "copyText": "2026-06-11",
+    "displayText": "2026-06-11",
+    "intendedKind": "text",
+    "label": "date — iso date",
+    "typeKey": "date",
+    "value": "2026-06-11"
+  },
+  {
+    "copyText": "2026-06-11T10:00:00",
+    "displayText": "2026-06-11T10:00:00",
+    "intendedKind": "text",
+    "label": "datetime — iso datetime",
+    "typeKey": "datetime",
+    "value": "2026-06-11T10:00:00"
+  },
+  {
+    "copyText": "10:00:00",
+    "displayText": "10:00:00",
+    "intendedKind": "text",
+    "label": "time — clock",
+    "typeKey": "time",
+    "value": "10:00:00"
+  },
+  {
+    "copyText": "2026-06-11T10:00:00Z",
+    "displayText": "2026-06-11T10:00:00Z",
+    "intendedKind": "text",
+    "label": "timestamptz — iso tz",
+    "typeKey": "timestamptz",
+    "value": "2026-06-11T10:00:00Z"
+  },
+  {
+    "copyText": "{\"years\":1,\"months\":6}",
+    "displayText": "1y 6mo",
+    "intendedKind": "text",
+    "label": "interval — object formatted",
+    "typeKey": "interval",
+    "value": {
+      "months": 6,
+      "years": 1
+    }
+  },
+  {
+    "copyText": "true",
+    "displayText": "",
+    "intendedKind": "boolean",
+    "label": "boolean — true",
+    "typeKey": "boolean",
+    "value": true
+  },
+  {
+    "copyText": "true",
+    "displayText": "",
+    "intendedKind": "boolean",
+    "label": "toggle — truthy coercion",
+    "typeKey": "toggle",
+    "value": 1
+  },
+  {
+    "copyText": "true",
+    "displayText": "",
+    "intendedKind": "boolean",
+    "label": "bit — string coercion (truthy)",
+    "typeKey": "bit",
+    "value": "1"
+  },
+  {
+    "copyText": "{\"a\":1,\"b\":\"two\"}",
+    "displayText": "{\"a\":1,\"b\":\"two\"}",
+    "intendedKind": "text",
+    "label": "json — object preview",
+    "typeKey": "json",
+    "value": {
+      "a": 1,
+      "b": "two"
+    }
+  },
+  {
+    "copyText": "{\"nested\":{\"x\":[1,2]}}",
+    "displayText": "{\"nested\":{\"x\":[1,2]}}",
+    "intendedKind": "text",
+    "label": "jsonb — nested object preview",
+    "typeKey": "jsonb",
+    "value": {
+      "nested": {
+        "x": [
+          1,
+          2
+        ]
+      }
+    }
+  },
+  {
+    "copyText": "[\"a\",\"b\",\"c\"]",
+    "displayText": "",
+    "intendedKind": "badges",
+    "label": "array — generic list",
+    "typeKey": "array",
+    "value": [
+      "a",
+      "b",
+      "c"
+    ]
+  },
+  {
+    "copyText": "[\"x\",\"y\"]",
+    "displayText": "",
+    "intendedKind": "badges",
+    "label": "text-array — strings",
+    "typeKey": "text-array",
+    "value": [
+      "x",
+      "y"
+    ]
+  },
+  {
+    "copyText": "[\"11111111-1111\",\"22222222-2222\"]",
+    "displayText": "",
+    "intendedKind": "badges",
+    "label": "uuid-array — uuids",
+    "typeKey": "uuid-array",
+    "value": [
+      "11111111-1111",
+      "22222222-2222"
+    ]
+  },
+  {
+    "copyText": "[\"1\",\"2\",\"3\"]",
+    "displayText": "",
+    "intendedKind": "badges",
+    "label": "number-array — numbers",
+    "typeKey": "number-array",
+    "value": [
+      1,
+      2,
+      3
+    ]
+  },
+  {
+    "copyText": "[\"10\",\"20\"]",
+    "displayText": "",
+    "intendedKind": "badges",
+    "label": "integer-array — ints",
+    "typeKey": "integer-array",
+    "value": [
+      10,
+      20
+    ]
+  },
+  {
+    "copyText": "[\"2026-01-01\",\"2026-02-02\"]",
+    "displayText": "",
+    "intendedKind": "badges",
+    "label": "date-array — date strings",
+    "typeKey": "date-array",
+    "value": [
+      "2026-01-01",
+      "2026-02-02"
+    ]
+  },
+  {
+    "copyText": "geo:{\"type\":\"Point\",\"coordinates\":[1,2]}",
+    "displayText": "geo:{\"type\":\"Point\",\"coordinates\":[1,2]}",
+    "intendedKind": "geometry",
+    "label": "geometry — point geojson",
+    "typeKey": "geometry",
+    "value": {
+      "coordinates": [
+        1,
+        2
+      ],
+      "type": "Point"
+    }
+  },
+  {
+    "copyText": "geo:{\"x\":1,\"y\":2}",
+    "displayText": "geo:{\"x\":1,\"y\":2}",
+    "intendedKind": "geometry",
+    "label": "geometry-point — bare xy",
+    "typeKey": "geometry-point",
+    "value": {
+      "x": 1,
+      "y": 2
+    }
+  },
+  {
+    "copyText": "geo:{\"type\":\"GeometryCollection\",\"geometries\":[]}",
+    "displayText": "geo:{\"type\":\"GeometryCollection\",\"geometries\":[]}",
+    "intendedKind": "geometry",
+    "label": "geometry-collection — collection",
+    "typeKey": "geometry-collection",
+    "value": {
+      "geometries": [],
+      "type": "GeometryCollection"
+    }
+  },
+  {
+    "copyText": "192.168.0.1",
+    "displayText": "192.168.0.1",
+    "intendedKind": "text",
+    "label": "inet — ip address",
+    "typeKey": "inet",
+    "value": "192.168.0.1"
+  },
+  {
+    "copyText": "[\"https://example.com/a.png\"]",
+    "displayText": "[\"https://example.com/a.png\"]",
+    "intendedKind": "image",
+    "label": "image — url string",
+    "typeKey": "image",
+    "value": "https://example.com/a.png"
+  },
+  {
+    "copyText": "[\"https://example.com/doc.pdf\"]",
+    "displayText": "[\"https://example.com/doc.pdf\"]",
+    "intendedKind": "image",
+    "label": "file — object with url",
+    "typeKey": "file",
+    "value": {
+      "url": "https://example.com/doc.pdf"
+    }
+  },
+  {
+    "copyText": "[\"https://example.com/v.mp4\"]",
+    "displayText": "[\"https://example.com/v.mp4\"]",
+    "intendedKind": "image",
+    "label": "video — url string",
+    "typeKey": "video",
+    "value": "https://example.com/v.mp4"
+  },
+  {
+    "copyText": "[\"https://example.com/a.mp3\"]",
+    "displayText": "[\"https://example.com/a.mp3\"]",
+    "intendedKind": "image",
+    "label": "audio — url string",
+    "typeKey": "audio",
+    "value": "https://example.com/a.mp3"
+  },
+  {
+    "copyText": "[\"/uploads/file.bin\"]",
+    "displayText": "[\"/uploads/file.bin\"]",
+    "intendedKind": "image",
+    "label": "upload — object with path",
+    "typeKey": "upload",
+    "value": {
+      "path": "/uploads/file.bin"
+    }
+  },
+  {
+    "copyText": "550e8400-e29b-41d4-a716-446655440000",
+    "displayText": "550e8400-e29b-41d4-a716-446655440000",
+    "intendedKind": "text",
+    "label": "uuid — string",
+    "typeKey": "uuid",
+    "value": "550e8400-e29b-41d4-a716-446655440000"
+  },
+  {
+    "copyText": "#3b82f6",
+    "displayText": "#3b82f6",
+    "intendedKind": "text",
+    "label": "color — hex string",
+    "typeKey": "color",
+    "value": "#3b82f6"
+  },
+  {
+    "copyText": "4",
+    "displayText": "4",
+    "intendedKind": "number",
+    "label": "rating — number (NUMBER_TYPES quirk)",
+    "typeKey": "rating",
+    "value": 4
+  },
+  {
+    "copyText": "[\"red\",\"green\",\"blue\"]",
+    "displayText": "",
+    "intendedKind": "badges",
+    "label": "tags — comma string split",
+    "typeKey": "tags",
+    "value": "red, green, blue"
+  },
+  {
+    "copyText": "[\"cat A\",\"sat B\",\"mat\"]",
+    "displayText": "",
+    "intendedKind": "badges",
+    "label": "tsvector — lexeme preview",
+    "typeKey": "tsvector",
+    "value": "'cat':1A 'sat':2B,3 'mat':4"
+  },
+  {
+    "copyText": "system",
+    "displayText": "system",
+    "intendedKind": "text",
+    "label": "origin — string fallback",
+    "typeKey": "origin",
+    "value": "system"
+  },
+  {
+    "copyText": "Ada Lovelace",
+    "displayText": "Ada Lovelace",
+    "intendedKind": "relation",
+    "label": "relation — belongsTo object (displayName)",
+    "typeKey": "relation",
+    "value": {
+      "displayName": "Ada Lovelace",
+      "id": "u1"
+    }
+  },
+  {
+    "copyText": "mystery",
+    "displayText": "mystery",
+    "intendedKind": "text",
+    "label": "unknown — string fallback",
+    "typeKey": "unknown",
+    "value": "mystery"
+  },
+  {
+    "copyText": "",
+    "displayText": "",
+    "intendedKind": "number",
+    "label": "number — NaN string -> empty",
+    "typeKey": "number",
+    "value": "not-a-number"
+  },
+  {
+    "copyText": "{\"a\":1,\"b\":2}",
+    "displayText": "{\"a\":1,\"b\":2}",
+    "intendedKind": "text",
+    "label": "text — object -> JSON preview",
+    "typeKey": "text",
+    "value": {
+      "a": 1,
+      "b": 2
+    }
+  },
+  {
+    "copyText": "[\"alpha\",\"beta\"]",
+    "displayText": "",
+    "intendedKind": "badges",
+    "label": "tags — array form",
+    "typeKey": "tags",
+    "value": [
+      "alpha",
+      "beta"
+    ]
+  },
+  {
+    "copyText": "[\"{\\\"k\\\":1}\",\"{\\\"k\\\":2}\"]",
+    "displayText": "",
+    "intendedKind": "badges",
+    "label": "array — object items JSON-stringified",
+    "typeKey": "array",
+    "value": [
+      {
+        "k": 1
+      },
+      {
+        "k": 2
+      }
+    ]
+  },
+  {
+    "copyText": "[\"https://example.com/s.png\"]",
+    "displayText": "[\"https://example.com/s.png\"]",
+    "intendedKind": "image",
+    "label": "image — object src key precedence",
+    "typeKey": "image",
+    "value": {
+      "src": "https://example.com/s.png"
+    }
+  },
+  {
+    "copyText": "1 day",
+    "displayText": "1 day",
+    "intendedKind": "text",
+    "label": "interval — string passthrough",
+    "typeKey": "interval",
+    "value": "1 day"
+  },
+  {
+    "copyText": "{\"years\":0,\"months\":0}",
+    "displayText": "0s",
+    "intendedKind": "text",
+    "label": "interval — zero object -> 0s",
+    "typeKey": "interval",
+    "value": {
+      "months": 0,
+      "years": 0
+    }
+  }
+]

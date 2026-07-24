@@ -1,6 +1,0 @@
-{
-  "namespace": "public",
-  "mutations": ["markNotificationRead", "markAllNotificationsRead", "dismissNotification"],
-  "queries": ["notifications"],
-  "models": []
-}

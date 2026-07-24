@@ -1,0 +1,18 @@
+{
+  "schemaVersion": 1,
+  "id": "auth",
+  "title": "Authentication",
+  "description": "Consumer sign-in, account profile, password, and session-management surfaces.",
+  "dependencies": [],
+  "endpoints": { "required": ["auth"], "optional": [] },
+  "capabilities": {
+    "required": ["auth.sessions", "auth.credentials", "auth.password"],
+    "optional": ["auth.email", "auth.connected-accounts", "auth.identity-providers", "auth.passkeys", "auth.phone", "auth.devices"]
+  },
+  "metadata": {
+    "requiredMetaSections": [],
+    "optionalMetaSections": ["tables", "fields", "constraints", "relations", "query", "scope", "encoding"],
+    "requiredIntrospectionSections": ["root-operations", "types", "input-objects"],
+    "optionalIntrospectionSections": ["enums", "directives"]
+  }
+}

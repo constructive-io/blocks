@@ -1,0 +1,293 @@
+{
+  "draft": [
+    {
+      "after": {
+        "copyText": "",
+        "displayText": ""
+      },
+      "before": {
+        "copyText": "draft:k-001",
+        "displayText": "draft:k-001"
+      },
+      "cellType": "text",
+      "colKey": "id",
+      "isDraftRow": true,
+      "label": "draft id column — draft: key blanked",
+      "rawValue": "draft:k-001",
+      "rowKeys": [
+        "id"
+      ],
+      "suppressed": true
+    },
+    {
+      "after": {
+        "copyText": "",
+        "displayText": ""
+      },
+      "before": {
+        "copyText": "draft:k-001",
+        "displayText": "draft:k-001"
+      },
+      "cellType": "text",
+      "colKey": "parentId",
+      "isDraftRow": true,
+      "label": "draft non-id column equal to draft id — blanked",
+      "rawValue": "draft:k-001",
+      "rowKeys": [
+        "id",
+        "parentId"
+      ],
+      "suppressed": true
+    },
+    {
+      "after": {
+        "copyText": "Hello draft",
+        "displayText": "Hello draft"
+      },
+      "before": {
+        "copyText": "Hello draft",
+        "displayText": "Hello draft"
+      },
+      "cellType": "text",
+      "colKey": "name",
+      "isDraftRow": true,
+      "label": "draft normal column — untouched",
+      "rawValue": "Hello draft",
+      "rowKeys": [
+        "id",
+        "name"
+      ],
+      "suppressed": false
+    },
+    {
+      "after": {
+        "copyText": "Working title",
+        "displayText": "Working title"
+      },
+      "before": {
+        "copyText": "Working title",
+        "displayText": "Working title"
+      },
+      "cellType": "text",
+      "colKey": "title",
+      "isDraftRow": true,
+      "label": "draft error-status column — untouched",
+      "rawValue": "Working title",
+      "rowKeys": [
+        "id",
+        "title"
+      ],
+      "suppressed": false
+    },
+    {
+      "after": {
+        "copyText": "server-id-42",
+        "displayText": "server-id-42"
+      },
+      "before": {
+        "copyText": "server-id-42",
+        "displayText": "server-id-42"
+      },
+      "cellType": "text",
+      "colKey": "id",
+      "isDraftRow": true,
+      "label": "draft id column with server id — not blanked",
+      "rawValue": "server-id-42",
+      "rowKeys": [
+        "id"
+      ],
+      "suppressed": false
+    }
+  ],
+  "relation": [
+    {
+      "copyText": "Ada Lovelace",
+      "displayText": "Ada Lovelace",
+      "kind": "belongsTo",
+      "label": "belongsTo — label from displayName",
+      "relationOptions": {},
+      "typeKey": "relation",
+      "value": {
+        "displayName": "Ada Lovelace",
+        "id": "u1"
+      }
+    },
+    {
+      "copyText": "Grace Hopper",
+      "displayText": "Grace Hopper",
+      "kind": "belongsTo",
+      "label": "belongsTo — fallback to name candidate",
+      "relationOptions": {},
+      "typeKey": "relation",
+      "value": {
+        "id": "u2",
+        "name": "Grace Hopper"
+      }
+    },
+    {
+      "copyText": "u3",
+      "displayText": "u3",
+      "kind": "belongsTo",
+      "label": "belongsTo — id last resort",
+      "relationOptions": {},
+      "typeKey": "relation",
+      "value": {
+        "id": "u3"
+      }
+    },
+    {
+      "copyText": "",
+      "displayText": "",
+      "kind": "belongsTo",
+      "label": "belongsTo — null value",
+      "relationOptions": {},
+      "typeKey": "relation",
+      "value": null
+    },
+    {
+      "copyText": "plain-id",
+      "displayText": "plain-id",
+      "kind": "belongsTo",
+      "label": "belongsTo — scalar string value",
+      "relationOptions": {},
+      "typeKey": "relation",
+      "value": "plain-id"
+    },
+    {
+      "copyText": "",
+      "displayText": "",
+      "kind": "belongsTo",
+      "label": "belongsTo — draft: placeholder suppressed",
+      "relationOptions": {},
+      "typeKey": "relation",
+      "value": "draft:abc123"
+    },
+    {
+      "copyText": "",
+      "displayText": "",
+      "kind": "belongsTo",
+      "label": "belongsTo — object id draft: suppressed",
+      "relationOptions": {},
+      "typeKey": "relation",
+      "value": {
+        "id": "draft:xyz"
+      }
+    },
+    {
+      "copyText": "A very long author disp…",
+      "displayText": "A very long author disp…",
+      "kind": "belongsTo",
+      "label": "belongsTo — label truncated at default max",
+      "relationOptions": {},
+      "typeKey": "relation",
+      "value": {
+        "displayName": "A very long author display name that exceeds the limit"
+      }
+    },
+    {
+      "copyText": "A very …",
+      "displayText": "A very …",
+      "kind": "belongsTo",
+      "label": "belongsTo — label truncated at explicit max 8",
+      "relationOptions": {
+        "relationLabelMaxLength": 8
+      },
+      "typeKey": "relation",
+      "value": {
+        "displayName": "A very long author display name that exceeds the limit"
+      }
+    },
+    {
+      "copyText": "[\"one\",\"two\"]",
+      "displayText": "",
+      "kind": "hasMany",
+      "label": "hasMany — within chip limit",
+      "relationOptions": {},
+      "typeKey": "relation",
+      "value": [
+        {
+          "title": "one"
+        },
+        {
+          "title": "two"
+        }
+      ]
+    },
+    {
+      "copyText": "[\"one\",\"two\",\"three\",\"+2\"]",
+      "displayText": "",
+      "kind": "hasMany",
+      "label": "hasMany — overflow +N at default chip limit",
+      "relationOptions": {},
+      "typeKey": "relation",
+      "value": [
+        {
+          "title": "one"
+        },
+        {
+          "title": "two"
+        },
+        {
+          "title": "three"
+        },
+        {
+          "title": "four"
+        },
+        {
+          "title": "five"
+        }
+      ]
+    },
+    {
+      "copyText": "[\"one\",\"two\",\"+2\"]",
+      "displayText": "",
+      "kind": "hasMany",
+      "label": "hasMany — overflow +N at explicit chip limit 2",
+      "relationOptions": {
+        "relationChipLimit": 2
+      },
+      "typeKey": "relation",
+      "value": [
+        {
+          "title": "one"
+        },
+        {
+          "title": "two"
+        },
+        {
+          "title": "three"
+        },
+        {
+          "title": "four"
+        }
+      ]
+    },
+    {
+      "copyText": "[]",
+      "displayText": "",
+      "kind": "hasMany",
+      "label": "hasMany — empty list",
+      "relationOptions": {},
+      "typeKey": "relation",
+      "value": []
+    },
+    {
+      "copyText": "[\"A ver…\",\"short\"]",
+      "displayText": "",
+      "kind": "hasMany",
+      "label": "hasMany — per-chip truncation at explicit max 6",
+      "relationOptions": {
+        "relationLabelMaxLength": 6
+      },
+      "typeKey": "relation",
+      "value": [
+        {
+          "title": "A very long author display name that exceeds the limit"
+        },
+        {
+          "title": "short"
+        }
+      ]
+    }
+  ]
+}

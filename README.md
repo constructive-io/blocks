@@ -8,7 +8,9 @@ component documentation, and published React packages.
 - `apps/blocks` — primitive documentation and canonical block source.
 - `apps/registry` — private builder for the `@constructive` shadcn registry.
 - `packages/ui` — the `@constructive-io/ui` npm package and UI registry source.
-- `packages/schema-builder` — the shared schema-builder npm package and registry source.
+- `packages/data` — runtime GraphQL generation and the strict July 2026 `_meta` contract.
+- `packages/sheets` — the metadata-driven application CRUD grid.
+- `packages/schema-builder` — retained platform/operator tooling that is delisted from the public registry.
 
 The documentation site is published at
 <https://constructive-io.github.io/blocks/>. Registry JSON is served from
@@ -21,9 +23,10 @@ its own:
 ```bash
 pnpm add @constructive-io/ui
 pnpm dlx shadcn@4.13.1 add @constructive/button
+pnpm dlx shadcn@4.13.1 add @constructive/console-kit-nextjs
 ```
 
-The package exposes its Tailwind foundation at
+The UI package exposes its Tailwind foundation at
 `@constructive-io/ui/globals.css`. Registry installs copy the required UI
 source and Constructive theme into the consumer and do not install the npm
 package. Registry consumers require shadcn CLI 4.13.1 or newer.
@@ -41,6 +44,13 @@ Development and release verification use Node 24 LTS and pnpm 10.28.0. All
 first-party executable tooling is TypeScript and runs through `tsx`.
 Use `pnpm check:full` when validating Storybook, registry installation, and
 publishable package artifacts together.
+
+Console Kit and the feature packs are source-installed blocks. They accept
+database-scoped endpoints, a host-owned session, and provider-neutral adapters;
+they do not require generated SDKs or environment-specific global clients. A
+Console Kit instance owns one Zustand store composed from separate navigation,
+runtime, and adapter slices, which keeps state isolated across mounts and
+server requests.
 
 `pnpm pack:local` builds the public packages and writes publishable tarballs to
 the ignored `.artifacts/npm` directory. Consume those tarballs from downstream

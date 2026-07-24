@@ -14,16 +14,6 @@
     "jsx": "react-jsx",
     "incremental": true,
     "paths": {
-      "@/generated/auth": ["./src/generated/auth"],
-      "@/generated/auth/*": ["./src/generated/auth/*"],
-      "@/generated/admin": ["./src/generated/admin"],
-      "@/generated/admin/*": ["./src/generated/admin/*"],
-      "@/generated/schema-builder": ["./src/generated/schema-builder"],
-      "@/generated/schema-builder/*": ["./src/generated/schema-builder/*"],
-      "@/generated/modules": ["./src/generated/modules"],
-      "@/generated/modules/*": ["./src/generated/modules/*"],
-      "@/components/chat": ["./src/blocks/chat/index.ts"],
-      "@/components/chat/*": ["./src/blocks/chat/*"],
       "@/components/ui/*": ["../../packages/ui/src/components/*"],
       "@/*": ["./src/*"]
     },

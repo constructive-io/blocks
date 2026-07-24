@@ -23,8 +23,11 @@ const sourceFilePattern = /\.[cm]?[jt]sx?$/;
 const clientFiles = new Set([
 	'alert-dialog.tsx',
 	'alert.tsx',
+	'app-bar.tsx',
+	'app-shell.tsx',
 	'autocomplete.tsx',
 	'avatar.tsx',
+	'breadcrumb.tsx',
 	'calendar-rac.tsx',
 	'checkbox-group.tsx',
 	'checkbox.tsx',
@@ -36,6 +39,7 @@ const clientFiles = new Set([
 	'drawer.tsx',
 	'dropdown-menu.tsx',
 	'flickering-grid.tsx',
+	'field.tsx',
 	'flow-zoom-panel.tsx',
 	'form-control.tsx',
 	'form.tsx',
@@ -79,20 +83,6 @@ const clientFiles = new Set([
 	'toast-info.tsx',
 	'toast-success.tsx',
 	'toast-warning.tsx',
-	'org-chart.tsx',
-	'org-chart-context.tsx',
-	'org-chart-edge.tsx',
-	'org-chart-empty.tsx',
-	'org-chart-node.tsx',
-	'bucket-config-sheet.tsx',
-	'bucket-rail.tsx',
-	'object-detail-sheet.tsx',
-	'object-table.tsx',
-	'object-toolbar.tsx',
-	'storage-breadcrumb.tsx',
-	'storage-browser.tsx',
-	'storage-empty-state.tsx',
-	'upload-dropzone.tsx',
 	'use-mobile.ts',
 ]);
 
@@ -181,13 +171,6 @@ for (const file of files) {
 	let source = readFileSync(sourcePath, 'utf8');
 	if (sourceFilePattern.test(sourcePath)) source = rewriteRelativeImports(source, sourcePath);
 	source = ensureUseClient(source, sourcePath);
-
-	if (sourcePath === path.join(sourceRoot, 'components/org-chart/org-chart.tsx')) {
-		const styleImport = "import '@xyflow/react/dist/style.css';";
-		if (!source.includes(styleImport)) {
-			source = source.replace(/(['"]use client['"];?)/, `$1\n\n${styleImport}`);
-		}
-	}
 
 	mkdirSync(path.dirname(outputPath), { recursive: true });
 	writeFileSync(outputPath, source, 'utf8');

@@ -1,0 +1,2243 @@
+[
+  {
+    "fieldMeta": {
+      "name": "col",
+      "type": {
+        "gqlType": "String"
+      }
+    },
+    "fieldName": "name",
+    "label": "gql String -> text",
+    "resolution": {
+      "activationBehavior": "double-click",
+      "canActivate": true,
+      "canEdit": true,
+      "cellType": "text",
+      "isReadonly": false
+    }
+  },
+  {
+    "fieldMeta": {
+      "name": "col",
+      "type": {
+        "gqlType": "Int"
+      }
+    },
+    "fieldName": "count",
+    "label": "gql Int -> integer",
+    "resolution": {
+      "activationBehavior": "double-click",
+      "canActivate": true,
+      "canEdit": true,
+      "cellType": "integer",
+      "isReadonly": false
+    }
+  },
+  {
+    "fieldMeta": {
+      "name": "col",
+      "type": {
+        "gqlType": "Float"
+      }
+    },
+    "fieldName": "ratio",
+    "label": "gql Float -> number",
+    "resolution": {
+      "activationBehavior": "double-click",
+      "canActivate": true,
+      "canEdit": true,
+      "cellType": "number",
+      "isReadonly": false
+    }
+  },
+  {
+    "fieldMeta": {
+      "name": "col",
+      "type": {
+        "gqlType": "Boolean"
+      }
+    },
+    "fieldName": "active",
+    "label": "gql Boolean -> boolean",
+    "resolution": {
+      "activationBehavior": "double-click",
+      "canActivate": true,
+      "canEdit": true,
+      "cellType": "boolean",
+      "isReadonly": false
+    }
+  },
+  {
+    "fieldMeta": {
+      "name": "col",
+      "type": {
+        "gqlType": "ID"
+      }
+    },
+    "fieldName": "ref",
+    "label": "gql ID -> uuid",
+    "resolution": {
+      "activationBehavior": "double-click",
+      "canActivate": true,
+      "canEdit": true,
+      "cellType": "uuid",
+      "isReadonly": false
+    }
+  },
+  {
+    "fieldMeta": {
+      "name": "col",
+      "type": {
+        "gqlType": "DateTime"
+      }
+    },
+    "fieldName": "at",
+    "label": "gql DateTime -> datetime",
+    "resolution": {
+      "activationBehavior": "double-click",
+      "canActivate": true,
+      "canEdit": true,
+      "cellType": "datetime",
+      "isReadonly": false
+    }
+  },
+  {
+    "fieldMeta": {
+      "name": "col",
+      "type": {
+        "gqlType": "Datetime"
+      }
+    },
+    "fieldName": "at2",
+    "label": "gql Datetime -> datetime",
+    "resolution": {
+      "activationBehavior": "double-click",
+      "canActivate": true,
+      "canEdit": true,
+      "cellType": "datetime",
+      "isReadonly": false
+    }
+  },
+  {
+    "fieldMeta": {
+      "name": "col",
+      "type": {
+        "gqlType": "Date"
+      }
+    },
+    "fieldName": "day",
+    "label": "gql Date -> date",
+    "resolution": {
+      "activationBehavior": "double-click",
+      "canActivate": true,
+      "canEdit": true,
+      "cellType": "date",
+      "isReadonly": false
+    }
+  },
+  {
+    "fieldMeta": {
+      "name": "col",
+      "type": {
+        "gqlType": "Time"
+      }
+    },
+    "fieldName": "clock",
+    "label": "gql Time -> time",
+    "resolution": {
+      "activationBehavior": "double-click",
+      "canActivate": true,
+      "canEdit": true,
+      "cellType": "time",
+      "isReadonly": false
+    }
+  },
+  {
+    "fieldMeta": {
+      "name": "col",
+      "type": {
+        "gqlType": "JSON"
+      }
+    },
+    "fieldName": "blob",
+    "label": "gql JSON -> json",
+    "resolution": {
+      "activationBehavior": "double-click",
+      "canActivate": true,
+      "canEdit": true,
+      "cellType": "json",
+      "isReadonly": false
+    }
+  },
+  {
+    "fieldMeta": {
+      "name": "col",
+      "type": {
+        "gqlType": "JSONObject"
+      }
+    },
+    "fieldName": "obj",
+    "label": "gql JSONObject -> json",
+    "resolution": {
+      "activationBehavior": "double-click",
+      "canActivate": true,
+      "canEdit": true,
+      "cellType": "json",
+      "isReadonly": false
+    }
+  },
+  {
+    "fieldMeta": {
+      "name": "col",
+      "type": {
+        "gqlType": "Upload"
+      }
+    },
+    "fieldName": "doc",
+    "label": "gql Upload -> file",
+    "resolution": {
+      "activationBehavior": "double-click",
+      "canActivate": true,
+      "canEdit": true,
+      "cellType": "file",
+      "isReadonly": false
+    }
+  },
+  {
+    "fieldMeta": {
+      "name": "col",
+      "type": {
+        "gqlType": "URL"
+      }
+    },
+    "fieldName": "link",
+    "label": "gql URL -> url",
+    "resolution": {
+      "activationBehavior": "double-click",
+      "canActivate": true,
+      "canEdit": true,
+      "cellType": "url",
+      "isReadonly": false
+    }
+  },
+  {
+    "fieldMeta": {
+      "name": "col",
+      "type": {
+        "gqlType": "EmailAddress"
+      }
+    },
+    "fieldName": "mail",
+    "label": "gql EmailAddress -> email",
+    "resolution": {
+      "activationBehavior": "double-click",
+      "canActivate": true,
+      "canEdit": true,
+      "cellType": "email",
+      "isReadonly": false
+    }
+  },
+  {
+    "fieldMeta": {
+      "name": "col",
+      "type": {
+        "gqlType": "PhoneNumber"
+      }
+    },
+    "fieldName": "tel",
+    "label": "gql PhoneNumber -> phone",
+    "resolution": {
+      "activationBehavior": "double-click",
+      "canActivate": true,
+      "canEdit": true,
+      "cellType": "phone",
+      "isReadonly": false
+    }
+  },
+  {
+    "fieldMeta": {
+      "name": "col",
+      "type": {
+        "gqlType": "UUID"
+      }
+    },
+    "fieldName": "guid",
+    "label": "gql UUID -> uuid",
+    "resolution": {
+      "activationBehavior": "double-click",
+      "canActivate": true,
+      "canEdit": true,
+      "cellType": "uuid",
+      "isReadonly": false
+    }
+  },
+  {
+    "fieldMeta": {
+      "name": "col",
+      "type": {
+        "gqlType": "BigFloat"
+      }
+    },
+    "fieldName": "big",
+    "label": "gql BigFloat -> number",
+    "resolution": {
+      "activationBehavior": "double-click",
+      "canActivate": true,
+      "canEdit": true,
+      "cellType": "number",
+      "isReadonly": false
+    }
+  },
+  {
+    "fieldMeta": {
+      "name": "col",
+      "type": {
+        "gqlType": "BigInt"
+      }
+    },
+    "fieldName": "bigi",
+    "label": "gql BigInt -> integer",
+    "resolution": {
+      "activationBehavior": "double-click",
+      "canActivate": true,
+      "canEdit": true,
+      "cellType": "integer",
+      "isReadonly": false
+    }
+  },
+  {
+    "fieldMeta": {
+      "name": "col",
+      "type": {
+        "gqlType": "Relation"
+      }
+    },
+    "fieldName": "owner",
+    "label": "gql Relation -> relation",
+    "resolution": {
+      "activationBehavior": "double-click",
+      "canActivate": true,
+      "canEdit": true,
+      "cellType": "relation",
+      "isReadonly": false
+    }
+  },
+  {
+    "fieldMeta": {
+      "name": "col",
+      "type": {
+        "gqlType": "Interval"
+      }
+    },
+    "fieldName": "dur",
+    "label": "gql Interval -> interval",
+    "resolution": {
+      "activationBehavior": "double-click",
+      "canActivate": true,
+      "canEdit": true,
+      "cellType": "interval",
+      "isReadonly": false
+    }
+  },
+  {
+    "fieldMeta": {
+      "name": "col",
+      "type": {
+        "gqlType": "GeometryGeometryCollection"
+      }
+    },
+    "fieldName": "shapes",
+    "label": "gql GeometryGeometryCollection -> geometry-collection",
+    "resolution": {
+      "activationBehavior": "double-click",
+      "canActivate": true,
+      "canEdit": true,
+      "cellType": "geometry-collection",
+      "isReadonly": false
+    }
+  },
+  {
+    "fieldMeta": {
+      "name": "col",
+      "type": {
+        "gqlType": "Mystery"
+      }
+    },
+    "fieldName": "weird",
+    "label": "gql unknown -> text (default)",
+    "resolution": {
+      "activationBehavior": "double-click",
+      "canActivate": true,
+      "canEdit": true,
+      "cellType": "text",
+      "isReadonly": false
+    }
+  },
+  {
+    "fieldMeta": {
+      "name": "col",
+      "type": {
+        "gqlType": "String!"
+      }
+    },
+    "fieldName": "req",
+    "label": "gql non-null String! -> text (modifier stripped)",
+    "resolution": {
+      "activationBehavior": "double-click",
+      "canActivate": true,
+      "canEdit": true,
+      "cellType": "text",
+      "isReadonly": false
+    }
+  },
+  {
+    "fieldMeta": {
+      "name": "col",
+      "type": {
+        "gqlType": ""
+      }
+    },
+    "fieldName": "empty",
+    "label": "gql empty string -> text",
+    "resolution": {
+      "activationBehavior": "double-click",
+      "canActivate": true,
+      "canEdit": true,
+      "cellType": "text",
+      "isReadonly": false
+    }
+  },
+  {
+    "fieldMeta": {
+      "name": "col",
+      "type": {
+        "gqlType": "GeoJSON",
+        "subtype": "GeometryPoint"
+      }
+    },
+    "fieldName": "pt",
+    "label": "GeoJSON GeometryPoint -> geometry-point",
+    "resolution": {
+      "activationBehavior": "double-click",
+      "canActivate": true,
+      "canEdit": true,
+      "cellType": "geometry-point",
+      "isReadonly": false
+    }
+  },
+  {
+    "fieldMeta": {
+      "name": "col",
+      "type": {
+        "gqlType": "GeoJSON",
+        "subtype": "GeometryPolygon"
+      }
+    },
+    "fieldName": "poly",
+    "label": "GeoJSON GeometryPolygon -> geometry-collection",
+    "resolution": {
+      "activationBehavior": "double-click",
+      "canActivate": true,
+      "canEdit": true,
+      "cellType": "geometry-collection",
+      "isReadonly": false
+    }
+  },
+  {
+    "fieldMeta": {
+      "name": "col",
+      "type": {
+        "gqlType": "GeoJSON"
+      }
+    },
+    "fieldName": "geo",
+    "label": "GeoJSON default -> geometry",
+    "resolution": {
+      "activationBehavior": "double-click",
+      "canActivate": true,
+      "canEdit": true,
+      "cellType": "geometry",
+      "isReadonly": false
+    }
+  },
+  {
+    "fieldMeta": {
+      "name": "col",
+      "type": {
+        "gqlType": "GeoJSON",
+        "subtype": "GeometryLine"
+      }
+    },
+    "fieldName": "geo2",
+    "label": "GeoJSON unrecognized subtype -> geometry",
+    "resolution": {
+      "activationBehavior": "double-click",
+      "canActivate": true,
+      "canEdit": true,
+      "cellType": "geometry",
+      "isReadonly": false
+    }
+  },
+  {
+    "fieldMeta": {
+      "name": "col",
+      "type": {
+        "gqlType": "JSON",
+        "pgAlias": "image"
+      }
+    },
+    "fieldName": "pic",
+    "label": "alias image -> image",
+    "resolution": {
+      "activationBehavior": "double-click",
+      "canActivate": true,
+      "canEdit": true,
+      "cellType": "image",
+      "isReadonly": false
+    }
+  },
+  {
+    "fieldMeta": {
+      "name": "col",
+      "type": {
+        "gqlType": "JSON",
+        "pgAlias": "file"
+      }
+    },
+    "fieldName": "att",
+    "label": "alias file -> file",
+    "resolution": {
+      "activationBehavior": "double-click",
+      "canActivate": true,
+      "canEdit": true,
+      "cellType": "file",
+      "isReadonly": false
+    }
+  },
+  {
+    "fieldMeta": {
+      "name": "col",
+      "type": {
+        "gqlType": "JSON",
+        "pgAlias": "video"
+      }
+    },
+    "fieldName": "clip",
+    "label": "alias video -> video",
+    "resolution": {
+      "activationBehavior": "double-click",
+      "canActivate": true,
+      "canEdit": true,
+      "cellType": "video",
+      "isReadonly": false
+    }
+  },
+  {
+    "fieldMeta": {
+      "name": "col",
+      "type": {
+        "gqlType": "JSON",
+        "pgAlias": "audio"
+      }
+    },
+    "fieldName": "snd",
+    "label": "alias audio -> audio",
+    "resolution": {
+      "activationBehavior": "double-click",
+      "canActivate": true,
+      "canEdit": true,
+      "cellType": "audio",
+      "isReadonly": false
+    }
+  },
+  {
+    "fieldMeta": {
+      "name": "col",
+      "type": {
+        "gqlType": "JSON",
+        "pgAlias": "upload"
+      }
+    },
+    "fieldName": "up",
+    "label": "alias upload -> upload",
+    "resolution": {
+      "activationBehavior": "double-click",
+      "canActivate": true,
+      "canEdit": true,
+      "cellType": "upload",
+      "isReadonly": false
+    }
+  },
+  {
+    "fieldMeta": {
+      "name": "col",
+      "type": {
+        "gqlType": "String",
+        "pgAlias": "relation"
+      }
+    },
+    "fieldName": "rel",
+    "label": "alias relation -> relation",
+    "resolution": {
+      "activationBehavior": "double-click",
+      "canActivate": true,
+      "canEdit": true,
+      "cellType": "relation",
+      "isReadonly": false
+    }
+  },
+  {
+    "fieldMeta": {
+      "name": "col",
+      "type": {
+        "gqlType": "String",
+        "pgAlias": "email"
+      }
+    },
+    "fieldName": "em",
+    "label": "alias email -> email",
+    "resolution": {
+      "activationBehavior": "double-click",
+      "canActivate": true,
+      "canEdit": true,
+      "cellType": "email",
+      "isReadonly": false
+    }
+  },
+  {
+    "fieldMeta": {
+      "name": "col",
+      "type": {
+        "gqlType": "String",
+        "pgAlias": "url"
+      }
+    },
+    "fieldName": "u",
+    "label": "alias url -> url",
+    "resolution": {
+      "activationBehavior": "double-click",
+      "canActivate": true,
+      "canEdit": true,
+      "cellType": "url",
+      "isReadonly": false
+    }
+  },
+  {
+    "fieldMeta": {
+      "name": "col",
+      "type": {
+        "gqlType": "String",
+        "pgAlias": "phone"
+      }
+    },
+    "fieldName": "ph",
+    "label": "alias phone -> phone",
+    "resolution": {
+      "activationBehavior": "double-click",
+      "canActivate": true,
+      "canEdit": true,
+      "cellType": "phone",
+      "isReadonly": false
+    }
+  },
+  {
+    "fieldMeta": {
+      "name": "col",
+      "type": {
+        "gqlType": "String",
+        "pgAlias": "citext"
+      }
+    },
+    "fieldName": "ci",
+    "label": "alias citext -> citext",
+    "resolution": {
+      "activationBehavior": "double-click",
+      "canActivate": true,
+      "canEdit": true,
+      "cellType": "citext",
+      "isReadonly": false
+    }
+  },
+  {
+    "fieldMeta": {
+      "name": "col",
+      "type": {
+        "gqlType": "String",
+        "pgAlias": "textarea"
+      }
+    },
+    "fieldName": "ta",
+    "label": "alias textarea -> textarea",
+    "resolution": {
+      "activationBehavior": "double-click",
+      "canActivate": true,
+      "canEdit": true,
+      "cellType": "textarea",
+      "isReadonly": false
+    }
+  },
+  {
+    "fieldMeta": {
+      "name": "col",
+      "type": {
+        "gqlType": "Float",
+        "pgAlias": "number"
+      }
+    },
+    "fieldName": "n",
+    "label": "alias number -> number",
+    "resolution": {
+      "activationBehavior": "double-click",
+      "canActivate": true,
+      "canEdit": true,
+      "cellType": "number",
+      "isReadonly": false
+    }
+  },
+  {
+    "fieldMeta": {
+      "name": "col",
+      "type": {
+        "gqlType": "Float",
+        "pgAlias": "currency"
+      }
+    },
+    "fieldName": "price",
+    "label": "alias currency -> currency",
+    "resolution": {
+      "activationBehavior": "double-click",
+      "canActivate": true,
+      "canEdit": true,
+      "cellType": "currency",
+      "isReadonly": false
+    }
+  },
+  {
+    "fieldMeta": {
+      "name": "col",
+      "type": {
+        "gqlType": "Float",
+        "pgAlias": "percentage"
+      }
+    },
+    "fieldName": "pct",
+    "label": "alias percentage -> percentage",
+    "resolution": {
+      "activationBehavior": "double-click",
+      "canActivate": true,
+      "canEdit": true,
+      "cellType": "percentage",
+      "isReadonly": false
+    }
+  },
+  {
+    "fieldMeta": {
+      "name": "col",
+      "type": {
+        "gqlType": "Float",
+        "pgAlias": "numeric"
+      }
+    },
+    "fieldName": "num",
+    "label": "alias numeric -> decimal",
+    "resolution": {
+      "activationBehavior": "double-click",
+      "canActivate": true,
+      "canEdit": true,
+      "cellType": "decimal",
+      "isReadonly": false
+    }
+  },
+  {
+    "fieldMeta": {
+      "name": "col",
+      "type": {
+        "gqlType": "Float",
+        "pgAlias": "decimal"
+      }
+    },
+    "fieldName": "dec",
+    "label": "alias decimal -> decimal",
+    "resolution": {
+      "activationBehavior": "double-click",
+      "canActivate": true,
+      "canEdit": true,
+      "cellType": "decimal",
+      "isReadonly": false
+    }
+  },
+  {
+    "fieldMeta": {
+      "name": "col",
+      "type": {
+        "gqlType": "Int",
+        "pgAlias": "int"
+      }
+    },
+    "fieldName": "i",
+    "label": "alias int -> integer",
+    "resolution": {
+      "activationBehavior": "double-click",
+      "canActivate": true,
+      "canEdit": true,
+      "cellType": "integer",
+      "isReadonly": false
+    }
+  },
+  {
+    "fieldMeta": {
+      "name": "col",
+      "type": {
+        "gqlType": "Int",
+        "pgAlias": "integer"
+      }
+    },
+    "fieldName": "i2",
+    "label": "alias integer -> integer",
+    "resolution": {
+      "activationBehavior": "double-click",
+      "canActivate": true,
+      "canEdit": true,
+      "cellType": "integer",
+      "isReadonly": false
+    }
+  },
+  {
+    "fieldMeta": {
+      "name": "col",
+      "type": {
+        "gqlType": "Int",
+        "pgAlias": "smallint"
+      }
+    },
+    "fieldName": "si",
+    "label": "alias smallint -> smallint",
+    "resolution": {
+      "activationBehavior": "double-click",
+      "canActivate": true,
+      "canEdit": true,
+      "cellType": "smallint",
+      "isReadonly": false
+    }
+  },
+  {
+    "fieldMeta": {
+      "name": "col",
+      "type": {
+        "gqlType": "Boolean",
+        "pgAlias": "boolean"
+      }
+    },
+    "fieldName": "b",
+    "label": "alias boolean -> boolean",
+    "resolution": {
+      "activationBehavior": "double-click",
+      "canActivate": true,
+      "canEdit": true,
+      "cellType": "boolean",
+      "isReadonly": false
+    }
+  },
+  {
+    "fieldMeta": {
+      "name": "col",
+      "type": {
+        "gqlType": "Boolean",
+        "pgAlias": "toggle"
+      }
+    },
+    "fieldName": "tg",
+    "label": "alias toggle -> toggle",
+    "resolution": {
+      "activationBehavior": "double-click",
+      "canActivate": true,
+      "canEdit": true,
+      "cellType": "toggle",
+      "isReadonly": false
+    }
+  },
+  {
+    "fieldMeta": {
+      "name": "col",
+      "type": {
+        "gqlType": "Date",
+        "pgAlias": "date"
+      }
+    },
+    "fieldName": "d",
+    "label": "alias date -> date",
+    "resolution": {
+      "activationBehavior": "double-click",
+      "canActivate": true,
+      "canEdit": true,
+      "cellType": "date",
+      "isReadonly": false
+    }
+  },
+  {
+    "fieldMeta": {
+      "name": "col",
+      "type": {
+        "gqlType": "DateTime",
+        "pgAlias": "datetime"
+      }
+    },
+    "fieldName": "dt",
+    "label": "alias datetime -> datetime",
+    "resolution": {
+      "activationBehavior": "double-click",
+      "canActivate": true,
+      "canEdit": true,
+      "cellType": "datetime",
+      "isReadonly": false
+    }
+  },
+  {
+    "fieldMeta": {
+      "name": "col",
+      "type": {
+        "gqlType": "Time",
+        "pgAlias": "time"
+      }
+    },
+    "fieldName": "t",
+    "label": "alias time -> time",
+    "resolution": {
+      "activationBehavior": "double-click",
+      "canActivate": true,
+      "canEdit": true,
+      "cellType": "time",
+      "isReadonly": false
+    }
+  },
+  {
+    "fieldMeta": {
+      "name": "col",
+      "type": {
+        "gqlType": "DateTime",
+        "pgAlias": "timestamptz"
+      }
+    },
+    "fieldName": "tstz",
+    "label": "alias timestamptz -> timestamptz",
+    "resolution": {
+      "activationBehavior": "double-click",
+      "canActivate": true,
+      "canEdit": true,
+      "cellType": "timestamptz",
+      "isReadonly": false
+    }
+  },
+  {
+    "fieldMeta": {
+      "name": "col",
+      "type": {
+        "gqlType": "Interval",
+        "pgAlias": "interval"
+      }
+    },
+    "fieldName": "iv",
+    "label": "alias interval -> interval",
+    "resolution": {
+      "activationBehavior": "double-click",
+      "canActivate": true,
+      "canEdit": true,
+      "cellType": "interval",
+      "isReadonly": false
+    }
+  },
+  {
+    "fieldMeta": {
+      "name": "col",
+      "type": {
+        "gqlType": "JSON",
+        "pgAlias": "json"
+      }
+    },
+    "fieldName": "j",
+    "label": "alias json -> json",
+    "resolution": {
+      "activationBehavior": "double-click",
+      "canActivate": true,
+      "canEdit": true,
+      "cellType": "json",
+      "isReadonly": false
+    }
+  },
+  {
+    "fieldMeta": {
+      "name": "col",
+      "type": {
+        "gqlType": "JSON",
+        "pgAlias": "jsonb"
+      }
+    },
+    "fieldName": "jb",
+    "label": "alias jsonb -> jsonb",
+    "resolution": {
+      "activationBehavior": "double-click",
+      "canActivate": true,
+      "canEdit": true,
+      "cellType": "jsonb",
+      "isReadonly": false
+    }
+  },
+  {
+    "fieldMeta": {
+      "name": "col",
+      "type": {
+        "gqlType": "String",
+        "pgAlias": "inet"
+      }
+    },
+    "fieldName": "ip",
+    "label": "alias inet -> inet",
+    "resolution": {
+      "activationBehavior": "double-click",
+      "canActivate": true,
+      "canEdit": true,
+      "cellType": "inet",
+      "isReadonly": false
+    }
+  },
+  {
+    "fieldMeta": {
+      "name": "col",
+      "type": {
+        "gqlType": "GeoJSON",
+        "pgAlias": "geometry"
+      }
+    },
+    "fieldName": "g",
+    "label": "alias geometry -> geometry",
+    "resolution": {
+      "activationBehavior": "double-click",
+      "canActivate": true,
+      "canEdit": true,
+      "cellType": "geometry",
+      "isReadonly": false
+    }
+  },
+  {
+    "fieldMeta": {
+      "name": "col",
+      "type": {
+        "gqlType": "GeoJSON",
+        "pgAlias": "geometry-point"
+      }
+    },
+    "fieldName": "gp",
+    "label": "alias geometry-point -> geometry-point",
+    "resolution": {
+      "activationBehavior": "double-click",
+      "canActivate": true,
+      "canEdit": true,
+      "cellType": "geometry-point",
+      "isReadonly": false
+    }
+  },
+  {
+    "fieldMeta": {
+      "name": "col",
+      "type": {
+        "gqlType": "GeoJSON",
+        "pgAlias": "geometry-collection"
+      }
+    },
+    "fieldName": "gc",
+    "label": "alias geometry-collection -> geometry-collection",
+    "resolution": {
+      "activationBehavior": "double-click",
+      "canActivate": true,
+      "canEdit": true,
+      "cellType": "geometry-collection",
+      "isReadonly": false
+    }
+  },
+  {
+    "fieldMeta": {
+      "name": "col",
+      "type": {
+        "gqlType": "String",
+        "pgAlias": "color"
+      }
+    },
+    "fieldName": "c",
+    "label": "alias color -> color",
+    "resolution": {
+      "activationBehavior": "double-click",
+      "canActivate": true,
+      "canEdit": true,
+      "cellType": "color",
+      "isReadonly": false
+    }
+  },
+  {
+    "fieldMeta": {
+      "name": "col",
+      "type": {
+        "gqlType": "Int",
+        "pgAlias": "rating"
+      }
+    },
+    "fieldName": "r",
+    "label": "alias rating -> rating",
+    "resolution": {
+      "activationBehavior": "double-click",
+      "canActivate": true,
+      "canEdit": true,
+      "cellType": "rating",
+      "isReadonly": false
+    }
+  },
+  {
+    "fieldMeta": {
+      "name": "col",
+      "type": {
+        "gqlType": "String",
+        "pgAlias": "tags"
+      }
+    },
+    "fieldName": "tg2",
+    "label": "alias tags -> tags",
+    "resolution": {
+      "activationBehavior": "double-click",
+      "canActivate": true,
+      "canEdit": true,
+      "cellType": "tags",
+      "isReadonly": false
+    }
+  },
+  {
+    "fieldMeta": {
+      "name": "col",
+      "type": {
+        "gqlType": "UUID",
+        "pgAlias": "uuid"
+      }
+    },
+    "fieldName": "uu",
+    "label": "alias uuid -> uuid",
+    "resolution": {
+      "activationBehavior": "double-click",
+      "canActivate": true,
+      "canEdit": true,
+      "cellType": "uuid",
+      "isReadonly": false
+    }
+  },
+  {
+    "fieldMeta": {
+      "name": "col",
+      "type": {
+        "gqlType": "String",
+        "pgAlias": "tsvector"
+      }
+    },
+    "fieldName": "search",
+    "label": "alias tsvector -> tsvector (NON_EDITABLE + VIEWER_ONLY)",
+    "resolution": {
+      "activationBehavior": "double-click",
+      "canActivate": true,
+      "canEdit": false,
+      "cellType": "tsvector",
+      "isReadonly": false
+    }
+  },
+  {
+    "fieldMeta": {
+      "name": "col",
+      "type": {
+        "gqlType": "String",
+        "pgAlias": "origin"
+      }
+    },
+    "fieldName": "og",
+    "label": "alias origin -> origin",
+    "resolution": {
+      "activationBehavior": "double-click",
+      "canActivate": true,
+      "canEdit": true,
+      "cellType": "origin",
+      "isReadonly": false
+    }
+  },
+  {
+    "fieldMeta": {
+      "name": "col",
+      "type": {
+        "gqlType": "String",
+        "pgAlias": "char"
+      }
+    },
+    "fieldName": "ch",
+    "label": "alias char -> bpchar",
+    "resolution": {
+      "activationBehavior": "double-click",
+      "canActivate": true,
+      "canEdit": true,
+      "cellType": "bpchar",
+      "isReadonly": false
+    }
+  },
+  {
+    "fieldMeta": {
+      "name": "col",
+      "type": {
+        "gqlType": "String",
+        "pgAlias": "bpchar"
+      }
+    },
+    "fieldName": "bp",
+    "label": "alias bpchar -> bpchar",
+    "resolution": {
+      "activationBehavior": "double-click",
+      "canActivate": true,
+      "canEdit": true,
+      "cellType": "bpchar",
+      "isReadonly": false
+    }
+  },
+  {
+    "fieldMeta": {
+      "name": "col",
+      "type": {
+        "gqlType": "String",
+        "pgAlias": "text"
+      }
+    },
+    "fieldName": "tx",
+    "label": "alias text -> text",
+    "resolution": {
+      "activationBehavior": "double-click",
+      "canActivate": true,
+      "canEdit": true,
+      "cellType": "text",
+      "isReadonly": false
+    }
+  },
+  {
+    "fieldMeta": {
+      "name": "col",
+      "type": {
+        "gqlType": "String",
+        "pgAlias": "bit"
+      }
+    },
+    "fieldName": "bt",
+    "label": "alias bit -> bit",
+    "resolution": {
+      "activationBehavior": "double-click",
+      "canActivate": true,
+      "canEdit": true,
+      "cellType": "bit",
+      "isReadonly": false
+    }
+  },
+  {
+    "fieldMeta": {
+      "name": "col",
+      "type": {
+        "gqlType": "JSON",
+        "pgAlias": "IMAGE"
+      }
+    },
+    "fieldName": "pic2",
+    "label": "alias UPPERCASE IMAGE -> image (case-insensitive)",
+    "resolution": {
+      "activationBehavior": "double-click",
+      "canActivate": true,
+      "canEdit": true,
+      "cellType": "image",
+      "isReadonly": false
+    }
+  },
+  {
+    "fieldMeta": {
+      "name": "col",
+      "type": {
+        "gqlType": "Int",
+        "pgAlias": "zzz-not-real"
+      }
+    },
+    "fieldName": "fall",
+    "label": "alias unknown -> falls through to gqlType",
+    "resolution": {
+      "activationBehavior": "double-click",
+      "canActivate": true,
+      "canEdit": true,
+      "cellType": "integer",
+      "isReadonly": false
+    }
+  },
+  {
+    "fieldMeta": {
+      "name": "col",
+      "type": {
+        "gqlType": "String",
+        "pgAlias": "zzz",
+        "pgType": "uuid"
+      }
+    },
+    "fieldName": "fall2",
+    "label": "alias unknown -> falls through to pgType",
+    "resolution": {
+      "activationBehavior": "double-click",
+      "canActivate": true,
+      "canEdit": true,
+      "cellType": "uuid",
+      "isReadonly": false
+    }
+  },
+  {
+    "fieldMeta": {
+      "name": "col",
+      "type": {
+        "gqlType": "String",
+        "isArray": true,
+        "pgAlias": "array"
+      }
+    },
+    "fieldName": "arr",
+    "label": "alias array -> array",
+    "resolution": {
+      "activationBehavior": "double-click",
+      "canActivate": true,
+      "canEdit": true,
+      "cellType": "array",
+      "isReadonly": false
+    }
+  },
+  {
+    "fieldMeta": {
+      "name": "col",
+      "type": {
+        "gqlType": "String",
+        "isArray": true,
+        "pgAlias": "text-array"
+      }
+    },
+    "fieldName": "ta_arr",
+    "label": "alias text-array -> text-array",
+    "resolution": {
+      "activationBehavior": "double-click",
+      "canActivate": true,
+      "canEdit": true,
+      "cellType": "text-array",
+      "isReadonly": false
+    }
+  },
+  {
+    "fieldMeta": {
+      "name": "col",
+      "type": {
+        "gqlType": "Int",
+        "isArray": true,
+        "pgAlias": "integer-array"
+      }
+    },
+    "fieldName": "i_arr",
+    "label": "alias integer-array -> integer-array",
+    "resolution": {
+      "activationBehavior": "double-click",
+      "canActivate": true,
+      "canEdit": true,
+      "cellType": "integer-array",
+      "isReadonly": false
+    }
+  },
+  {
+    "fieldMeta": {
+      "name": "col",
+      "type": {
+        "gqlType": "BigFloat",
+        "isArray": true,
+        "pgAlias": "number-array"
+      }
+    },
+    "fieldName": "n_arr",
+    "label": "alias number-array -> number-array",
+    "resolution": {
+      "activationBehavior": "double-click",
+      "canActivate": true,
+      "canEdit": true,
+      "cellType": "number-array",
+      "isReadonly": false
+    }
+  },
+  {
+    "fieldMeta": {
+      "name": "col",
+      "type": {
+        "gqlType": "UUID",
+        "isArray": true,
+        "pgAlias": "uuid-array"
+      }
+    },
+    "fieldName": "u_arr",
+    "label": "alias uuid-array -> uuid-array",
+    "resolution": {
+      "activationBehavior": "double-click",
+      "canActivate": true,
+      "canEdit": true,
+      "cellType": "uuid-array",
+      "isReadonly": false
+    }
+  },
+  {
+    "fieldMeta": {
+      "name": "col",
+      "type": {
+        "gqlType": "Date",
+        "isArray": true,
+        "pgAlias": "date-array"
+      }
+    },
+    "fieldName": "d_arr",
+    "label": "alias date-array -> date-array",
+    "resolution": {
+      "activationBehavior": "double-click",
+      "canActivate": true,
+      "canEdit": true,
+      "cellType": "date-array",
+      "isReadonly": false
+    }
+  },
+  {
+    "fieldMeta": {
+      "name": "col",
+      "type": {
+        "gqlType": "String",
+        "isArray": true,
+        "pgAlias": "image"
+      }
+    },
+    "fieldName": "pics",
+    "label": "alias image WINS over isArray -> image",
+    "resolution": {
+      "activationBehavior": "double-click",
+      "canActivate": true,
+      "canEdit": true,
+      "cellType": "image",
+      "isReadonly": false
+    }
+  },
+  {
+    "fieldMeta": {
+      "name": "col",
+      "type": {
+        "gqlType": "String",
+        "isArray": true
+      }
+    },
+    "fieldName": "sarr",
+    "label": "array String -> text-array",
+    "resolution": {
+      "activationBehavior": "double-click",
+      "canActivate": true,
+      "canEdit": true,
+      "cellType": "text-array",
+      "isReadonly": false
+    }
+  },
+  {
+    "fieldMeta": {
+      "name": "col",
+      "type": {
+        "gqlType": "UUID",
+        "isArray": true
+      }
+    },
+    "fieldName": "uarr",
+    "label": "array UUID -> uuid-array",
+    "resolution": {
+      "activationBehavior": "double-click",
+      "canActivate": true,
+      "canEdit": true,
+      "cellType": "uuid-array",
+      "isReadonly": false
+    }
+  },
+  {
+    "fieldMeta": {
+      "name": "col",
+      "type": {
+        "gqlType": "BigFloat",
+        "isArray": true
+      }
+    },
+    "fieldName": "narr",
+    "label": "array BigFloat -> number-array",
+    "resolution": {
+      "activationBehavior": "double-click",
+      "canActivate": true,
+      "canEdit": true,
+      "cellType": "number-array",
+      "isReadonly": false
+    }
+  },
+  {
+    "fieldMeta": {
+      "name": "col",
+      "type": {
+        "gqlType": "Int",
+        "isArray": true
+      }
+    },
+    "fieldName": "iarr",
+    "label": "array Int -> integer-array",
+    "resolution": {
+      "activationBehavior": "double-click",
+      "canActivate": true,
+      "canEdit": true,
+      "cellType": "integer-array",
+      "isReadonly": false
+    }
+  },
+  {
+    "fieldMeta": {
+      "name": "col",
+      "type": {
+        "gqlType": "Date",
+        "isArray": true
+      }
+    },
+    "fieldName": "darr",
+    "label": "array Date -> date-array",
+    "resolution": {
+      "activationBehavior": "double-click",
+      "canActivate": true,
+      "canEdit": true,
+      "cellType": "date-array",
+      "isReadonly": false
+    }
+  },
+  {
+    "fieldMeta": {
+      "name": "col",
+      "type": {
+        "gqlType": "Foo",
+        "isArray": true
+      }
+    },
+    "fieldName": "garr",
+    "label": "array unknown base -> array (generic)",
+    "resolution": {
+      "activationBehavior": "double-click",
+      "canActivate": true,
+      "canEdit": true,
+      "cellType": "array",
+      "isReadonly": false
+    }
+  },
+  {
+    "fieldMeta": {
+      "name": "col",
+      "type": {
+        "gqlType": "[String]",
+        "isArray": true
+      }
+    },
+    "fieldName": "barr",
+    "label": "array bracket notation [String] -> text-array",
+    "resolution": {
+      "activationBehavior": "double-click",
+      "canActivate": true,
+      "canEdit": true,
+      "cellType": "text-array",
+      "isReadonly": false
+    }
+  },
+  {
+    "fieldMeta": {
+      "name": "col",
+      "type": {
+        "gqlType": "[Int!]!",
+        "isArray": true
+      }
+    },
+    "fieldName": "barr2",
+    "label": "array bracket non-null [Int!]! -> integer-array",
+    "resolution": {
+      "activationBehavior": "double-click",
+      "canActivate": true,
+      "canEdit": true,
+      "cellType": "integer-array",
+      "isReadonly": false
+    }
+  },
+  {
+    "fieldMeta": {
+      "name": "col",
+      "type": {
+        "gqlType": "String",
+        "pgType": "varchar"
+      }
+    },
+    "fieldName": "vc",
+    "label": "pgType varchar -> text",
+    "resolution": {
+      "activationBehavior": "double-click",
+      "canActivate": true,
+      "canEdit": true,
+      "cellType": "text",
+      "isReadonly": false
+    }
+  },
+  {
+    "fieldMeta": {
+      "name": "col",
+      "type": {
+        "gqlType": "String",
+        "pgType": "citext"
+      }
+    },
+    "fieldName": "pgci",
+    "label": "pgType citext -> citext",
+    "resolution": {
+      "activationBehavior": "double-click",
+      "canActivate": true,
+      "canEdit": true,
+      "cellType": "citext",
+      "isReadonly": false
+    }
+  },
+  {
+    "fieldMeta": {
+      "name": "col",
+      "type": {
+        "gqlType": "String",
+        "pgType": "bpchar"
+      }
+    },
+    "fieldName": "pgbp",
+    "label": "pgType bpchar -> bpchar",
+    "resolution": {
+      "activationBehavior": "double-click",
+      "canActivate": true,
+      "canEdit": true,
+      "cellType": "bpchar",
+      "isReadonly": false
+    }
+  },
+  {
+    "fieldMeta": {
+      "name": "col",
+      "type": {
+        "gqlType": "Int",
+        "pgType": "int4"
+      }
+    },
+    "fieldName": "i4",
+    "label": "pgType int4 -> integer",
+    "resolution": {
+      "activationBehavior": "double-click",
+      "canActivate": true,
+      "canEdit": true,
+      "cellType": "integer",
+      "isReadonly": false
+    }
+  },
+  {
+    "fieldMeta": {
+      "name": "col",
+      "type": {
+        "gqlType": "Int",
+        "pgType": "int2"
+      }
+    },
+    "fieldName": "i2pg",
+    "label": "pgType int2 -> smallint",
+    "resolution": {
+      "activationBehavior": "double-click",
+      "canActivate": true,
+      "canEdit": true,
+      "cellType": "smallint",
+      "isReadonly": false
+    }
+  },
+  {
+    "fieldMeta": {
+      "name": "col",
+      "type": {
+        "gqlType": "String",
+        "pgType": "bigint"
+      }
+    },
+    "fieldName": "bi",
+    "label": "pgType bigint -> integer",
+    "resolution": {
+      "activationBehavior": "double-click",
+      "canActivate": true,
+      "canEdit": true,
+      "cellType": "integer",
+      "isReadonly": false
+    }
+  },
+  {
+    "fieldMeta": {
+      "name": "col",
+      "type": {
+        "gqlType": "String",
+        "pgType": "numeric"
+      }
+    },
+    "fieldName": "pgnum",
+    "label": "pgType numeric -> decimal",
+    "resolution": {
+      "activationBehavior": "double-click",
+      "canActivate": true,
+      "canEdit": true,
+      "cellType": "decimal",
+      "isReadonly": false
+    }
+  },
+  {
+    "fieldMeta": {
+      "name": "col",
+      "type": {
+        "gqlType": "Float",
+        "pgType": "real"
+      }
+    },
+    "fieldName": "rl",
+    "label": "pgType real -> number",
+    "resolution": {
+      "activationBehavior": "double-click",
+      "canActivate": true,
+      "canEdit": true,
+      "cellType": "number",
+      "isReadonly": false
+    }
+  },
+  {
+    "fieldMeta": {
+      "name": "col",
+      "type": {
+        "gqlType": "Float",
+        "pgType": "double precision"
+      }
+    },
+    "fieldName": "dp",
+    "label": "pgType double precision -> number",
+    "resolution": {
+      "activationBehavior": "double-click",
+      "canActivate": true,
+      "canEdit": true,
+      "cellType": "number",
+      "isReadonly": false
+    }
+  },
+  {
+    "fieldMeta": {
+      "name": "col",
+      "type": {
+        "gqlType": "String",
+        "pgType": "money"
+      }
+    },
+    "fieldName": "mny",
+    "label": "pgType money -> currency",
+    "resolution": {
+      "activationBehavior": "double-click",
+      "canActivate": true,
+      "canEdit": true,
+      "cellType": "currency",
+      "isReadonly": false
+    }
+  },
+  {
+    "fieldMeta": {
+      "name": "col",
+      "type": {
+        "gqlType": "Boolean",
+        "pgType": "bool"
+      }
+    },
+    "fieldName": "bl",
+    "label": "pgType bool -> boolean",
+    "resolution": {
+      "activationBehavior": "double-click",
+      "canActivate": true,
+      "canEdit": true,
+      "cellType": "boolean",
+      "isReadonly": false
+    }
+  },
+  {
+    "fieldMeta": {
+      "name": "col",
+      "type": {
+        "gqlType": "String",
+        "pgType": "bit varying"
+      }
+    },
+    "fieldName": "bv",
+    "label": "pgType bit varying -> bit",
+    "resolution": {
+      "activationBehavior": "double-click",
+      "canActivate": true,
+      "canEdit": true,
+      "cellType": "bit",
+      "isReadonly": false
+    }
+  },
+  {
+    "fieldMeta": {
+      "name": "col",
+      "type": {
+        "gqlType": "String",
+        "pgType": "timestamp"
+      }
+    },
+    "fieldName": "ts",
+    "label": "pgType timestamp -> datetime",
+    "resolution": {
+      "activationBehavior": "double-click",
+      "canActivate": true,
+      "canEdit": true,
+      "cellType": "datetime",
+      "isReadonly": false
+    }
+  },
+  {
+    "fieldMeta": {
+      "name": "col",
+      "type": {
+        "gqlType": "String",
+        "pgType": "timestamptz"
+      }
+    },
+    "fieldName": "tstz2",
+    "label": "pgType timestamptz -> timestamptz",
+    "resolution": {
+      "activationBehavior": "double-click",
+      "canActivate": true,
+      "canEdit": true,
+      "cellType": "timestamptz",
+      "isReadonly": false
+    }
+  },
+  {
+    "fieldMeta": {
+      "name": "col",
+      "type": {
+        "gqlType": "String",
+        "pgType": "timetz"
+      }
+    },
+    "fieldName": "ttz",
+    "label": "pgType timetz -> time",
+    "resolution": {
+      "activationBehavior": "double-click",
+      "canActivate": true,
+      "canEdit": true,
+      "cellType": "time",
+      "isReadonly": false
+    }
+  },
+  {
+    "fieldMeta": {
+      "name": "col",
+      "type": {
+        "gqlType": "String",
+        "pgType": "interval"
+      }
+    },
+    "fieldName": "ivpg",
+    "label": "pgType interval -> interval",
+    "resolution": {
+      "activationBehavior": "double-click",
+      "canActivate": true,
+      "canEdit": true,
+      "cellType": "interval",
+      "isReadonly": false
+    }
+  },
+  {
+    "fieldMeta": {
+      "name": "col",
+      "type": {
+        "gqlType": "JSON",
+        "pgType": "jsonb"
+      }
+    },
+    "fieldName": "jbpg",
+    "label": "pgType jsonb -> jsonb",
+    "resolution": {
+      "activationBehavior": "double-click",
+      "canActivate": true,
+      "canEdit": true,
+      "cellType": "jsonb",
+      "isReadonly": false
+    }
+  },
+  {
+    "fieldMeta": {
+      "name": "col",
+      "type": {
+        "gqlType": "String",
+        "pgType": "uuid"
+      }
+    },
+    "fieldName": "uupg",
+    "label": "pgType uuid -> uuid",
+    "resolution": {
+      "activationBehavior": "double-click",
+      "canActivate": true,
+      "canEdit": true,
+      "cellType": "uuid",
+      "isReadonly": false
+    }
+  },
+  {
+    "fieldMeta": {
+      "name": "col",
+      "type": {
+        "gqlType": "String",
+        "pgType": "tsvector"
+      }
+    },
+    "fieldName": "tsv",
+    "label": "pgType tsvector -> tsvector (NON_EDITABLE)",
+    "resolution": {
+      "activationBehavior": "double-click",
+      "canActivate": true,
+      "canEdit": false,
+      "cellType": "tsvector",
+      "isReadonly": false
+    }
+  },
+  {
+    "fieldMeta": {
+      "name": "col",
+      "type": {
+        "gqlType": "String",
+        "pgType": "cidr"
+      }
+    },
+    "fieldName": "cidr",
+    "label": "pgType cidr -> inet",
+    "resolution": {
+      "activationBehavior": "double-click",
+      "canActivate": true,
+      "canEdit": true,
+      "cellType": "inet",
+      "isReadonly": false
+    }
+  },
+  {
+    "fieldMeta": {
+      "name": "col",
+      "type": {
+        "gqlType": "String",
+        "pgType": "macaddr"
+      }
+    },
+    "fieldName": "mac",
+    "label": "pgType macaddr -> text",
+    "resolution": {
+      "activationBehavior": "double-click",
+      "canActivate": true,
+      "canEdit": true,
+      "cellType": "text",
+      "isReadonly": false
+    }
+  },
+  {
+    "fieldMeta": {
+      "name": "col",
+      "type": {
+        "gqlType": "String",
+        "pgType": "point"
+      }
+    },
+    "fieldName": "ptpg",
+    "label": "pgType point -> geometry-point",
+    "resolution": {
+      "activationBehavior": "double-click",
+      "canActivate": true,
+      "canEdit": true,
+      "cellType": "geometry-point",
+      "isReadonly": false
+    }
+  },
+  {
+    "fieldMeta": {
+      "name": "col",
+      "type": {
+        "gqlType": "String",
+        "pgType": "polygon"
+      }
+    },
+    "fieldName": "polypg",
+    "label": "pgType polygon -> geometry",
+    "resolution": {
+      "activationBehavior": "double-click",
+      "canActivate": true,
+      "canEdit": true,
+      "cellType": "geometry",
+      "isReadonly": false
+    }
+  },
+  {
+    "fieldMeta": {
+      "name": "col",
+      "type": {
+        "gqlType": "String",
+        "pgType": "geography"
+      }
+    },
+    "fieldName": "geog",
+    "label": "pgType geography -> geometry",
+    "resolution": {
+      "activationBehavior": "double-click",
+      "canActivate": true,
+      "canEdit": true,
+      "cellType": "geometry",
+      "isReadonly": false
+    }
+  },
+  {
+    "fieldMeta": {
+      "name": "col",
+      "type": {
+        "gqlType": "String",
+        "pgType": "email"
+      }
+    },
+    "fieldName": "empg",
+    "label": "pgType email -> email",
+    "resolution": {
+      "activationBehavior": "double-click",
+      "canActivate": true,
+      "canEdit": true,
+      "cellType": "email",
+      "isReadonly": false
+    }
+  },
+  {
+    "fieldMeta": {
+      "name": "col",
+      "type": {
+        "gqlType": "String",
+        "pgType": "origin"
+      }
+    },
+    "fieldName": "ogpg",
+    "label": "pgType origin -> origin",
+    "resolution": {
+      "activationBehavior": "double-click",
+      "canActivate": true,
+      "canEdit": true,
+      "cellType": "origin",
+      "isReadonly": false
+    }
+  },
+  {
+    "fieldMeta": {
+      "name": "col",
+      "type": {
+        "gqlType": "String",
+        "pgType": "_text"
+      }
+    },
+    "fieldName": "txtarr",
+    "label": "pgType _text -> array",
+    "resolution": {
+      "activationBehavior": "double-click",
+      "canActivate": true,
+      "canEdit": true,
+      "cellType": "array",
+      "isReadonly": false
+    }
+  },
+  {
+    "fieldMeta": {
+      "name": "col",
+      "type": {
+        "gqlType": "Boolean",
+        "pgType": "zzz-not-real"
+      }
+    },
+    "fieldName": "pgfall",
+    "label": "pgType unknown -> falls through to gqlType",
+    "resolution": {
+      "activationBehavior": "double-click",
+      "canActivate": true,
+      "canEdit": true,
+      "cellType": "boolean",
+      "isReadonly": false
+    }
+  },
+  {
+    "fieldMeta": {
+      "name": "col",
+      "type": {
+        "gqlType": "UUID"
+      }
+    },
+    "fieldName": "id",
+    "label": "readonly: id WITH gqlType UUID -> readonly uuid",
+    "resolution": {
+      "activationBehavior": "double-click",
+      "canActivate": false,
+      "canEdit": false,
+      "cellType": "uuid",
+      "isReadonly": true
+    }
+  },
+  {
+    "fieldMeta": {
+      "name": "col",
+      "type": {
+        "gqlType": "Int"
+      }
+    },
+    "fieldName": "id",
+    "label": "readonly: id WITHOUT UUID (Int) -> NOT readonly integer",
+    "resolution": {
+      "activationBehavior": "double-click",
+      "canActivate": true,
+      "canEdit": true,
+      "cellType": "integer",
+      "isReadonly": false
+    }
+  },
+  {
+    "fieldMeta": {
+      "name": "col",
+      "type": {
+        "gqlType": "String"
+      }
+    },
+    "fieldName": "id",
+    "label": "readonly: id String -> NOT readonly text",
+    "resolution": {
+      "activationBehavior": "double-click",
+      "canActivate": true,
+      "canEdit": true,
+      "cellType": "text",
+      "isReadonly": false
+    }
+  },
+  {
+    "fieldMeta": null,
+    "fieldName": "id",
+    "label": "readonly: id with NO fieldMeta -> NOT readonly, text",
+    "resolution": {
+      "activationBehavior": "double-click",
+      "canActivate": true,
+      "canEdit": true,
+      "cellType": "text",
+      "isReadonly": false
+    }
+  },
+  {
+    "fieldMeta": {
+      "name": "col",
+      "type": {
+        "gqlType": "DateTime"
+      }
+    },
+    "fieldName": "createdAt",
+    "label": "readonly: createdAt -> readonly (always)",
+    "resolution": {
+      "activationBehavior": "double-click",
+      "canActivate": false,
+      "canEdit": false,
+      "cellType": "datetime",
+      "isReadonly": true
+    }
+  },
+  {
+    "fieldMeta": null,
+    "fieldName": "createdAt",
+    "label": "readonly: createdAt with NO fieldMeta -> readonly text",
+    "resolution": {
+      "activationBehavior": "double-click",
+      "canActivate": false,
+      "canEdit": false,
+      "cellType": "text",
+      "isReadonly": true
+    }
+  },
+  {
+    "fieldMeta": {
+      "name": "col",
+      "type": {
+        "gqlType": "DateTime"
+      }
+    },
+    "fieldName": "updatedAt",
+    "label": "readonly: updatedAt -> readonly (always)",
+    "resolution": {
+      "activationBehavior": "double-click",
+      "canActivate": false,
+      "canEdit": false,
+      "cellType": "datetime",
+      "isReadonly": true
+    }
+  },
+  {
+    "fieldMeta": {
+      "name": "col",
+      "type": {
+        "gqlType": "String"
+      }
+    },
+    "fieldName": "title",
+    "label": "editable: normal field -> NOT readonly",
+    "resolution": {
+      "activationBehavior": "double-click",
+      "canActivate": true,
+      "canEdit": true,
+      "cellType": "text",
+      "isReadonly": false
+    }
+  },
+  {
+    "fieldMeta": {
+      "name": "col",
+      "type": {
+        "gqlType": "String",
+        "pgType": "tsvector"
+      }
+    },
+    "fieldName": "updatedAt",
+    "label": "tsvector readonly-name interplay: updatedAt+tsvector",
+    "resolution": {
+      "activationBehavior": "double-click",
+      "canActivate": true,
+      "canEdit": false,
+      "cellType": "tsvector",
+      "isReadonly": true
+    }
+  },
+  {
+    "fieldMeta": null,
+    "fieldName": "whatever",
+    "label": "undefined fieldMeta -> text default",
+    "resolution": {
+      "activationBehavior": "double-click",
+      "canActivate": true,
+      "canEdit": true,
+      "cellType": "text",
+      "isReadonly": false
+    }
+  },
+  {
+    "fieldMeta": {
+      "name": "whatever2"
+    },
+    "fieldName": "whatever2",
+    "label": "fieldMeta present but no .type -> text default",
+    "resolution": {
+      "activationBehavior": "double-click",
+      "canActivate": true,
+      "canEdit": true,
+      "cellType": "text",
+      "isReadonly": false
+    }
+  }
+]
