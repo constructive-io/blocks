@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, type Ref } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { Check, Menu, Terminal } from 'lucide-react';
@@ -89,9 +89,11 @@ function installActionFor(path: string) {
 
 type SiteTopbarProps = {
   onMenuClick?: () => void;
+  menuButtonRef?: Ref<HTMLButtonElement>;
+  menuExpanded?: boolean;
 };
 
-export function SiteTopbar({ onMenuClick }: SiteTopbarProps) {
+export function SiteTopbar({ onMenuClick, menuButtonRef, menuExpanded }: SiteTopbarProps) {
   const pathname = usePathname() ?? '';
   const crumb = crumbFor(pathname);
   const installAction = installActionFor(pathname);
@@ -117,11 +119,14 @@ export function SiteTopbar({ onMenuClick }: SiteTopbarProps) {
     <header className="registry-topbar">
       <div className="registry-topbar-inner">
         <Button
+          ref={menuButtonRef}
           type="button"
           variant="outline"
           size="icon"
           className="size-9 shrink-0 min-[861px]:hidden"
-          aria-label="Open navigation"
+          aria-label={menuExpanded ? 'Close navigation' : 'Open navigation'}
+          aria-expanded={menuExpanded ?? false}
+          aria-controls="registry-mobile-nav"
           onClick={onMenuClick}
         >
           <Menu aria-hidden />

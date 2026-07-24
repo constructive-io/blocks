@@ -1,6 +1,13 @@
 'use client';
 
-import { useEffect, useId, useState, type ReactNode } from 'react';
+import {
+  forwardRef,
+  useEffect,
+  useId,
+  useState,
+  type AriaRole,
+  type ReactNode,
+} from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { ChevronRight } from 'lucide-react';
@@ -113,9 +120,15 @@ type SiteSidebarProps = {
   open?: boolean;
   onNavigate?: () => void;
   className?: string;
+  role?: AriaRole;
+  'aria-modal'?: boolean | 'true' | 'false';
+  'aria-labelledby'?: string;
 };
 
-export function SiteSidebar({ open, onNavigate, className }: SiteSidebarProps) {
+export const SiteSidebar = forwardRef<HTMLElement, SiteSidebarProps>(function SiteSidebar(
+  { open, onNavigate, className, role, 'aria-modal': ariaModal, 'aria-labelledby': ariaLabelledBy },
+  ref,
+) {
   const pathname = normalizePath(usePathname() ?? '');
   const onComponents = pathname.startsWith('/blocks/ui/');
   const onBilling = pathname === '/blocks/billing' || pathname.startsWith('/blocks/billing/');
@@ -153,8 +166,13 @@ export function SiteSidebar({ open, onNavigate, className }: SiteSidebarProps) {
 
   return (
     <aside
+      ref={ref}
+      id="registry-mobile-nav"
       className={cn('registry-side', open && 'registry-side-open', className)}
       data-open={open ? 'true' : undefined}
+      role={role}
+      aria-modal={ariaModal}
+      aria-labelledby={ariaLabelledBy}
     >
       <div className="registry-side-brand">
         <Link
@@ -267,4 +285,4 @@ export function SiteSidebar({ open, onNavigate, className }: SiteSidebarProps) {
       </footer>
     </aside>
   );
-}
+});
