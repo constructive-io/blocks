@@ -159,13 +159,13 @@ test('signs up, opens _meta-discovered data, signs out, and signs back in throug
   await page.getByLabel('Password').fill(credentials.password);
   await page.getByRole('button', { name: 'Create account', exact: true }).click();
 
-  await expect(page.getByRole('heading', { name: 'Account security', exact: true }))
+  await expect(page.getByRole('heading', { name: 'Account', exact: true }))
     .toBeVisible();
   await expect(page.getByRole('button', { name: 'Sign out', exact: true }))
     .toBeVisible();
 
   await page.reload();
-  await expect(page.getByRole('heading', { name: 'Account security', exact: true }))
+  await expect(page.getByRole('heading', { name: 'Account', exact: true }))
     .toBeVisible();
   await expect(page.getByRole('button', { name: 'Sign out', exact: true }))
     .toBeVisible();
@@ -174,7 +174,7 @@ test('signs up, opens _meta-discovered data, signs out, and signs back in throug
   await expect(page.getByRole('heading', { name: 'Users', exact: true })).toBeVisible();
 
   await page.getByRole('link', { name: 'Data', exact: true }).click();
-  await expect(page.getByRole('heading', { name: 'Data explorer', exact: true }))
+  await expect(page.getByRole('heading', { name: 'Data', exact: true }))
     .toBeVisible();
   await expect(page.getByTestId('table-item').filter({ hasText: /projects?/iu }))
     .toBeVisible();
@@ -186,7 +186,7 @@ test('signs up, opens _meta-discovered data, signs out, and signs back in throug
   await page.getByLabel('Email address').fill(credentials.email);
   await page.getByLabel('Password').fill(credentials.password);
   await page.getByRole('button', { name: 'Sign in', exact: true }).click();
-  await expect(page.getByRole('heading', { name: 'Account security', exact: true }))
+  await expect(page.getByRole('heading', { name: 'Account', exact: true }))
     .toBeVisible();
   await page.getByRole('button', { name: 'Sign out', exact: true }).click();
   await expect(page.getByRole('heading', { name: 'Sign in', exact: true })).toBeVisible();
@@ -356,7 +356,7 @@ test('discovers routed Storage tables in _meta and keeps unsupported writes unav
     await page.getByLabel('Email address').fill(actor.credentials.email);
     await page.getByLabel('Password').fill(actor.credentials.password);
     await page.getByRole('button', { name: 'Sign in', exact: true }).click();
-    await expect(page.getByRole('heading', { name: 'Account security', exact: true }))
+    await expect(page.getByRole('heading', { name: 'Account', exact: true }))
       .toBeVisible();
     await page.getByRole('link', { name: 'Organizations', exact: true }).click();
     await expect(page.getByRole('heading', { name: 'Organizations', exact: true }))

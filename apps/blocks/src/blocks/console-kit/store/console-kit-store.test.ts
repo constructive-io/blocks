@@ -51,6 +51,7 @@ describe('Console Kit store', () => {
       'documents'
     );
 
+    const revisionAfterAuth = first.getState().metadataRevision;
     expect(first.getState()).toMatchObject({
       activeFeature: 'organizations',
       authEntryMode: 'sign-up',
@@ -70,6 +71,15 @@ describe('Console Kit store', () => {
           requestKey: 'database-1:user-1:users'
         }
       }
+    });
+    expect(revisionAfterAuth).toBeGreaterThanOrEqual(1);
+
+    first.getState().retryMetadata();
+    expect(first.getState()).toMatchObject({
+      metadataRevision: revisionAfterAuth + 1,
+      metadataKey: null,
+      metadata: { status: 'checking' },
+      metadataByEndpoint: {}
     });
     expect(second.getState()).toMatchObject({
       activeFeature: 'auth',

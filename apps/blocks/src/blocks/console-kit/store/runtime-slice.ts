@@ -9,6 +9,8 @@ export type ConsoleKitRuntimeSlice = {
     Partial<Record<ConsoleEndpointKind, ConsoleKitMetadataState>>
   >;
   metadataKey: string | null;
+  /** Bumped to re-run endpoint metadata discovery for the current scope. */
+  metadataRevision: number;
   setMetadata: (key: string, metadata: ConsoleKitMetadataState) => void;
   setMetadataByEndpoint: (
     key: string,
@@ -16,6 +18,7 @@ export type ConsoleKitRuntimeSlice = {
       Partial<Record<ConsoleEndpointKind, ConsoleKitMetadataState>>
     >
   ) => void;
+  retryMetadata: () => void;
 };
 
 export const createConsoleKitRuntimeSlice: StateCreator<
@@ -27,6 +30,7 @@ export const createConsoleKitRuntimeSlice: StateCreator<
   metadata: { status: 'checking' },
   metadataByEndpoint: {},
   metadataKey: null,
+  metadataRevision: 0,
   setMetadata: (metadataKey, metadata) => set({
     metadataKey,
     metadata,
@@ -40,5 +44,11 @@ export const createConsoleKitRuntimeSlice: StateCreator<
       message: 'A data endpoint is required to inspect application tables.',
       missing: ['data endpoint']
     }
-  })
+  }),
+  retryMetadata: () => set((state) => ({
+    metadataRevision: state.metadataRevision + 1,
+    metadataKey: null,
+    metadataByEndpoint: {},
+    metadata: { status: 'checking' }
+  }))
 });

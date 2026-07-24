@@ -49,6 +49,9 @@ export type ConstructiveConsoleKitCoreProps = Readonly<{
   order?: readonly FeaturePackId[];
   routes?: ConsoleKitRouteConfig;
   showUnavailable?: boolean;
+  /** Expose connection/endpoint diagnostics in the shell (default false). */
+  showDiagnostics?: boolean;
+  brand?: ConsoleKitConfig['brand'];
   /**
    * Host-owned session for an existing database identity. This is required for
    * data-only tenants because Console Kit cannot mint authority without an auth
@@ -290,10 +293,10 @@ function ConstructiveConsoleKitInstance(props: ConstructiveConsoleKitCoreProps) 
         order: props.order,
         routes: props.routes,
         showUnavailable: props.showUnavailable ?? true,
+        showDiagnostics: props.showDiagnostics,
         featureOptions: props.featureOptions,
-        brand: {
-          name: props.database.name ?? 'Constructive',
-          description: props.database.id
+        brand: props.brand ?? {
+          name: props.database.name?.trim() || 'Application'
         },
         onError: reportError
       }}

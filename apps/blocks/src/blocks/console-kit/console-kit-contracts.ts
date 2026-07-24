@@ -98,6 +98,11 @@ export type ConsoleKitConfig = Readonly<{
   order?: readonly FeaturePackId[];
   labels?: Partial<Record<FeaturePackId, string>>;
   showUnavailable?: boolean;
+  /**
+   * When true, expose connection/endpoint/_meta diagnostics in the shell.
+   * Default false — those belong in host config and degraded-state details.
+   */
+  showDiagnostics?: boolean;
   routes?: ConsoleKitRouteConfig;
   /** Pack-owned configuration keyed by an installed feature module id. */
   featureOptions?: Readonly<Partial<Record<FeaturePackId, unknown>>>;

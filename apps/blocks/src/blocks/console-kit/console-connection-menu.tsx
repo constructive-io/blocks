@@ -18,12 +18,14 @@ import {
   type ConsoleEndpoint,
   type ConsoleEndpointKind
 } from '../console-runtime';
+import type { ConsoleKitMetadataState } from './console-kit-contracts';
 import { cn } from '@/lib/utils';
 
 type ConsoleConnectionMenuProps = Readonly<{
   databaseId: string;
   databaseLabel?: React.ReactNode;
   endpoints: Readonly<Partial<Record<ConsoleEndpointKind, ConsoleEndpoint>>>;
+  metadataStatus?: ConsoleKitMetadataState['status'];
 }>;
 
 type CopyFeedback = Readonly<{
@@ -36,16 +38,37 @@ function endpointLabel(kind: ConsoleEndpointKind): string {
   return kind.charAt(0).toUpperCase() + kind.slice(1);
 }
 
+function metadataBadge(status: ConsoleKitMetadataState['status'] | undefined) {
+  if (!status || status === 'compatible') {
+    return { label: '_meta ready', variant: 'outline' as const };
+  }
+  if (status === 'checking') {
+    return { label: 'Checking _meta', variant: 'secondary' as const };
+  }
+  if (status === 'incompatible') {
+    return { label: 'Incompatible _meta', variant: 'destructive' as const };
+  }
+  return { label: 'Metadata issue', variant: 'destructive' as const };
+}
+
 export function ConsoleConnectionMenu({
   databaseId,
   databaseLabel,
-  endpoints
+  endpoints,
+  metadataStatus
 }: ConsoleConnectionMenuProps) {
   const [feedback, setFeedback] = React.useState<CopyFeedback | null>(null);
   const resolvedEndpoints = CONSOLE_ENDPOINT_KINDS.flatMap((kind) => {
     const endpoint = endpoints[kind];
     return endpoint ? [{ endpoint, kind }] : [];
   });
+  const meta = metadataBadge(metadataStatus);
+  const triggerLabel = metadataStatus === 'compatible' || !metadataStatus
+    ? 'Connection'
+    : metadataStatus === 'checking'
+      ? 'Checking…'
+      : 'Connection issue';
+
   const copy = async (target: string, label: string, value: string) => {
     try {
       if (!navigator.clipboard?.writeText) {
@@ -68,15 +91,38 @@ export function ConsoleConnectionMenu({
 
   return (
     <Popover>
-      <PopoverTrigger render={<Button size='sm' variant='outline' />}>
+      <PopoverTrigger
+        render={
+          <Button
+            aria-label={`${triggerLabel}. Open connection details.`}
+            className='max-w-[11rem] sm:max-w-none'
+            size='sm'
+            variant='outline'
+          />
+        }
+      >
         <DatabaseIcon aria-hidden='true' data-icon='inline-start' />
-        Connection
+        <span className='truncate'>{triggerLabel}</span>
+        <Badge
+          className='hidden max-w-24 truncate sm:inline-flex'
+          size='sm'
+          variant={meta.variant}
+        >
+          {meta.label}
+        </Badge>
       </PopoverTrigger>
       <PopoverContent align='end' className='w-[calc(100vw-1rem)] max-w-96 sm:w-96'>
-        <PopoverTitle className='text-balance'>Database connection</PopoverTitle>
-        <PopoverDescription className='mt-1 text-pretty'>
-          Resolved tenant identity and GraphQL routes for this console.
-        </PopoverDescription>
+        <div className='flex items-start justify-between gap-3'>
+          <div className='min-w-0'>
+            <PopoverTitle className='text-balance'>Database connection</PopoverTitle>
+            <PopoverDescription className='mt-1 text-pretty'>
+              Resolved tenant identity, metadata status, and GraphQL routes for this console.
+            </PopoverDescription>
+          </div>
+          <Badge className='shrink-0' size='sm' variant={meta.variant}>
+            {meta.label}
+          </Badge>
+        </div>
 
         <div className='mt-4 grid gap-4'>
           <div className='grid gap-2'>

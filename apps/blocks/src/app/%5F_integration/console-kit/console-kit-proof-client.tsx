@@ -111,6 +111,8 @@ function PresetConsoleKit({
   const props = {
     className: 'min-h-svh',
     database: tenant.database,
+    // Product chrome stays neutral; profile/preset live in proof controls only.
+    brand: { name: 'Application' },
     showUnavailable: true,
     verificationEmailId: verification?.databaseId === tenant.database.id
       ? verification.emailId

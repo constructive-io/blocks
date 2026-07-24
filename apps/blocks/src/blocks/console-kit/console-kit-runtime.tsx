@@ -148,6 +148,7 @@ function useConsoleKitMetadataByEndpoint(
 }> {
   const storedState = useConsoleKitStore((store) => store.metadataByEndpoint);
   const storedKey = useConsoleKitStore((store) => store.metadataKey);
+  const metadataRevision = useConsoleKitStore((store) => store.metadataRevision);
   const setState = useConsoleKitStore((store) => store.setMetadataByEndpoint);
   const requestKey = metadataRequestKey(context);
   const state = storedKey === requestKey ? storedState : {};
@@ -281,7 +282,13 @@ function useConsoleKitMetadataByEndpoint(
       controller.abort();
       if (requestGeneration.current === generation) requestGeneration.current += 1;
     };
-  }, [context.endpoints, context.transportFor, requestKey, setState]);
+  }, [
+    context.endpoints,
+    context.transportFor,
+    metadataRevision,
+    requestKey,
+    setState
+  ]);
 
   return React.useMemo(() => ({
     metadata: state.data ?? {

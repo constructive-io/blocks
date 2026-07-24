@@ -243,6 +243,7 @@ export function createConsoleKitStore(
         metadata: { status: 'checking' },
         metadataByEndpoint: {},
         metadataKey: null,
+        metadataRevision: state.metadataRevision + 1,
         adapterRevision: state.adapterRevision + 1,
         adapterAttempts: {},
         adapterLoads: {},

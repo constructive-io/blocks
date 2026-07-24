@@ -11,10 +11,9 @@ import {
 import { Alert, AlertDescription, AlertTitle } from '@constructive-io/ui/alert';
 import { AppShell, type AppAccount, type AppNavigationGroup } from '@constructive-io/ui/app-shell';
 import type { AppLinkRenderProps } from '@constructive-io/ui/app-bar';
-import { Badge } from '@constructive-io/ui/badge';
 import { Button } from '@constructive-io/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@constructive-io/ui/card';
 import { Skeleton } from '@constructive-io/ui/skeleton';
+import { cn } from '@/lib/utils';
 
 import type { FeaturePackId } from '../../feature-packs';
 import type { ConsoleRuntimeError } from '../console-runtime';
@@ -24,6 +23,10 @@ import {
   getConsoleSessionIdentity,
   type ConsolePackCapabilityState
 } from '../console-runtime';
+
+import {
+  FeaturePackDiagnosticPanel
+} from '../feature-packs/shared/feature-pack-ui';
 
 import type {
   ConsoleKitAdapterContext,
@@ -210,15 +213,17 @@ export function getConsoleKitFeatureAvailability(
 
 function FeatureLoadingState() {
   return (
-    <Card aria-busy='true' aria-label='Loading feature' variant='flat'>
-      <CardHeader>
-        <Skeleton className='h-6 w-40' />
-        <Skeleton className='h-4 w-72 max-w-full' />
-      </CardHeader>
-      <CardContent className='flex flex-col gap-3'>
-        {Array.from({ length: 5 }, (_, index) => <Skeleton className='h-12 w-full' key={index} />)}
-      </CardContent>
-    </Card>
+    <div aria-busy='true' aria-label='Loading feature' className='flex max-w-4xl flex-col gap-4'>
+      <div className='flex flex-col gap-2'>
+        <Skeleton className='h-5 w-32 lg:h-6 lg:w-40' />
+        <Skeleton className='hidden h-4 w-72 max-w-full lg:block' />
+      </div>
+      <div className='flex flex-col gap-3'>
+        {Array.from({ length: 5 }, (_, index) => (
+          <Skeleton className='h-11 w-full' key={index} />
+        ))}
+      </div>
+    </div>
   );
 }
 
@@ -348,48 +353,111 @@ function AdapterFeature({
   );
 }
 
+function unavailableGuidance(status: ConsoleKitFeatureAvailability['status']): string {
+  switch (status) {
+    case 'unauthorized':
+      return 'Authenticate with this tenant to load its policy-visible records and actions. An unavailable public route is not a backend defect.';
+    case 'incompatible':
+      return 'The connected endpoint answered, but its contract does not satisfy this module. Confirm the tenant exposes the expected _meta sections and GraphQL operations.';
+    case 'error':
+      return 'Retry after checking network access and the endpoint URL. If the route is intentionally private, configure a routable public endpoint for this pack.';
+    case 'checking':
+      return 'Console Kit is still discovering endpoints and capabilities for this database.';
+    case 'unavailable':
+    default:
+      return 'A missing public endpoint, capability, or host adapter is expected degraded behavior—not proof that the backend module is absent. Configure the routable endpoint, install the matching adapter, then reload.';
+  }
+}
+
 function UnavailableFeature({
   module,
   availability,
-  render
+  render,
+  databaseId,
+  endpoints,
+  showDiagnostics
 }: Readonly<{
   module: ConsoleKitFeatureModule;
   availability: ConsoleKitFeatureAvailability;
   render?: ConsoleKitConfig['renderUnavailableFeature'];
+  databaseId?: string;
+  endpoints?: ConsoleKitAdapterContext['endpoints'];
+  showDiagnostics?: boolean;
 }>) {
   const feature = module.id;
-  if (render) return render(feature, availability);
+  const retryMetadata = useConsoleKitStore((store) => store.retryMetadata);
+  const retryAdapter = useConsoleKitStore((store) => store.retryAdapter);
+  const clearPackCapabilities = useConsoleKitStore(
+    (store) => store.clearPackCapabilities
+  );
+  const notifyAdapterChange = useConsoleKitStore(
+    (store) => store.notifyAdapterChange
+  );
+
+  if (render) {
+    return render(feature, availability);
+  }
   const manifest = module.manifest;
+  const title = manifest?.title ?? feature;
   const reason = availability.status === 'checking'
     ? 'Console Kit is checking this database.'
     : availability.status === 'available'
       ? ''
       : availability.reason;
   const requiresSignIn = availability.status === 'unauthorized';
+  const canRetry =
+    availability.status === 'error' ||
+    availability.status === 'incompatible' ||
+    availability.status === 'unavailable';
+  // Endpoint URLs stay host config. Only dump technical evidence when diagnostics are on.
+  const requiredEndpoints = manifest?.endpoints.required ?? [];
+  const diagnostics = showDiagnostics
+    ? [
+        { label: 'Feature', value: feature },
+        { label: 'Status', value: availability.status },
+        ...(databaseId ? [{ label: 'Database', value: databaseId }] : []),
+        ...requiredEndpoints.map((kind) => ({
+          label: `${kind} endpoint`,
+          value: endpoints?.[kind]?.url
+            ? endpoints[kind]!.url
+            : 'Not configured (public route missing or not routable)'
+        })),
+        ...(reason ? [{ label: 'Reason', value: reason }] : [])
+      ]
+    : undefined;
 
   return (
-    <Card className='max-w-2xl' variant='flat'>
-      <CardHeader>
-        <div className='bg-muted text-muted-foreground mb-2 flex size-10 items-center justify-center rounded-lg'>
-          <LockKeyholeIcon aria-hidden='true' />
-        </div>
-        <CardTitle>
-          <h1>
-            {requiresSignIn
-              ? `Sign in to use ${manifest?.title ?? feature}`
-              : `${manifest?.title ?? feature} is unavailable`}
-          </h1>
-        </CardTitle>
-        <CardDescription>{reason}</CardDescription>
-      </CardHeader>
-      <CardContent>
-        <p className='text-muted-foreground text-sm'>
-          {requiresSignIn
-            ? 'Authenticate with this tenant to load its policy-visible records and actions.'
-            : 'Install the matching database feature pack or update the host adapter, then reload this view.'}
-        </p>
-      </CardContent>
-    </Card>
+    <FeaturePackDiagnosticPanel
+      description={reason || `${title} cannot be opened for this tenant session.`}
+      diagnostics={diagnostics}
+      guidance={unavailableGuidance(availability.status)}
+      icon={
+        requiresSignIn
+          ? <LockKeyholeIcon aria-hidden='true' />
+          : <CircleAlertIcon aria-hidden='true' />
+      }
+      onRetry={
+        canRetry
+          ? () => {
+              clearPackCapabilities();
+              retryMetadata();
+              retryAdapter(feature);
+              notifyAdapterChange();
+            }
+          : undefined
+      }
+      retryLabel='Try again'
+      title={
+        requiresSignIn
+          ? `Sign in to use ${title}`
+          : `${title} is unavailable`
+      }
+      tone={
+        availability.status === 'error' || availability.status === 'incompatible'
+          ? 'warning'
+          : 'muted'
+      }
+    />
   );
 }
 
@@ -637,31 +705,87 @@ function ConsoleKitContent({ config, featureModules, className }: ConsoleKitProp
     const status = availability[module.id]?.status;
     return config.showUnavailable || status === 'available' || status === 'checking';
   });
+  const navigationItems = React.useMemo(() => visibleModules.map((module) => {
+    const feature = module.id;
+    const state = availability[module.id];
+    return {
+      id: feature,
+      label: config.labels?.[feature] ?? module.manifest.title,
+      href: featureHref(feature),
+      icon: module.icon,
+      isActive: feature === activeFeature,
+      disabled: state?.status === 'unauthorized',
+      badge: state?.status === 'checking'
+        ? '…'
+        : state?.status === 'unauthorized'
+          ? 'Sign in'
+        : discoveredCapabilities[feature]?.status === 'partial'
+          ? 'Partial'
+          : state?.status !== 'available'
+            ? 'Setup'
+            : undefined
+    };
+  }), [activeFeature, availability, config.labels, discoveredCapabilities, featureHref, visibleModules]);
+
+  // Platform Kit uses a quiet section label above icon+text manager links.
   const navigation = React.useMemo<AppNavigationGroup[]>(() => [{
     id: 'features',
-    label: 'Application',
-    items: visibleModules.map((module) => {
-      const feature = module.id;
-      const state = availability[module.id];
-      return {
-        id: feature,
-        label: config.labels?.[feature] ?? module.manifest.title,
-        href: featureHref(feature),
-        icon: module.icon,
-        isActive: feature === activeFeature,
-        disabled: state?.status === 'unauthorized',
-        badge: state?.status === 'checking'
-          ? '…'
-          : state?.status === 'unauthorized'
-            ? 'Sign in'
-          : discoveredCapabilities[feature]?.status === 'partial'
-            ? 'Partial'
-            : state?.status !== 'available'
-              ? 'Setup'
-              : undefined
-      };
-    })
-  }], [activeFeature, availability, config.labels, discoveredCapabilities, featureHref, visibleModules]);
+    label: 'Manage application',
+    items: navigationItems
+  }], [navigationItems]);
+
+  const mobileFeatureNav = navigationItems.length > 1 ? (
+    <nav
+      aria-label='Application features'
+      className='bg-background/95 supports-backdrop-filter:bg-background/80 fixed inset-x-0 bottom-0 z-40 border-t backdrop-blur md:hidden'
+      style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
+    >
+      <div className='flex gap-0.5 overflow-x-auto p-1.5'>
+        {navigationItems.map((item) => {
+          const Icon = item.icon;
+          const label = typeof item.label === 'string' ? item.label : item.id;
+          const shortLabel =
+            label === 'Organizations'
+              ? 'Orgs'
+              : label === 'Notifications'
+                ? 'Alerts'
+                : label === 'Authentication'
+                  ? 'Auth'
+                  : label;
+          return (
+            <Button
+              key={item.id}
+              aria-current={item.isActive ? 'page' : undefined}
+              aria-label={
+                item.badge ? `${label} (${String(item.badge)})` : label
+              }
+              className={cn(
+                'relative h-14 min-w-[4.25rem] flex-1 flex-col gap-1 px-1 text-[10px] leading-tight',
+                item.disabled && 'opacity-60'
+              )}
+              disabled={item.disabled}
+              onClick={() => {
+                if (item.disabled) return;
+                navigate(item.id as FeaturePackId);
+              }}
+              size='sm'
+              type='button'
+              variant={item.isActive ? 'secondary' : 'ghost'}
+            >
+              {Icon ? <Icon aria-hidden='true' className='size-4 shrink-0' /> : null}
+              <span className='max-w-16 truncate'>{shortLabel}</span>
+              {item.badge ? (
+                <span
+                  aria-hidden='true'
+                  className='bg-primary absolute top-1.5 right-1.5 size-1.5 rounded-full'
+                />
+              ) : null}
+            </Button>
+          );
+        })}
+      </div>
+    </nav>
+  ) : null;
 
   const identity = runtime.session.status === 'authenticated' ? runtime.session.identity : undefined;
   const account = React.useMemo<AppAccount | undefined>(() => {
@@ -745,8 +869,11 @@ function ConsoleKitContent({ config, featureModules, className }: ConsoleKitProp
     content = (
       <UnavailableFeature
         availability={activeAvailability}
+        databaseId={runtime.databaseId}
+        endpoints={runtime.endpoints}
         module={activeModule}
         render={config.renderUnavailableFeature}
+        showDiagnostics={config.showDiagnostics}
       />
     );
   } else {
@@ -789,48 +916,51 @@ function ConsoleKitContent({ config, featureModules, className }: ConsoleKitProp
       content = (
         <UnavailableFeature
           availability={{ status: 'unavailable', reason: 'No adapter is configured.' }}
+          databaseId={runtime.databaseId}
+          endpoints={runtime.endpoints}
           module={activeModule}
+          showDiagnostics={config.showDiagnostics}
         />
       );
     }
   }
 
-  const metadataBadge = runtime.metadata.status === 'compatible'
-    ? <Badge variant='outline'>_meta 2026-07</Badge>
-    : runtime.metadata.status === 'checking'
-      ? <Badge variant='secondary'>Checking _meta</Badge>
-      : <Badge variant='destructive'>Metadata issue</Badge>;
+  // Top-level features own the page title. The bar stays free of endpoint/_meta chrome
+  // and only shows nested trail when the host supplies multi-segment breadcrumbs later.
+  const barActions = config.showDiagnostics ? (
+    <ConsoleConnectionMenu
+      databaseId={runtime.databaseId}
+      databaseLabel={config.brand?.name}
+      endpoints={runtime.endpoints}
+      metadataStatus={runtime.metadata.status}
+    />
+  ) : undefined;
 
   return (
     <AppShell
       account={account}
-      barActions={(
-        <div className='flex items-center gap-2'>
-          <ConsoleConnectionMenu
-            databaseId={runtime.databaseId}
-            databaseLabel={config.brand?.name}
-            endpoints={runtime.endpoints}
-          />
-          {metadataBadge}
-        </div>
-      )}
+      barActions={barActions}
+      barPlacement='content'
       brand={config.brand ?? {
-        name: 'Constructive',
-        description: config.databaseId,
+        name: 'Application',
         logo: <DatabaseIcon aria-hidden='true' />
       }}
-      breadcrumbs={[{
-        id: activeFeature,
-        label: config.labels?.[activeFeature] ?? activeModule?.manifest.title ?? activeFeature,
-        current: true
-      }]}
       className={className}
-      contentClassName='bg-muted/20'
+      contentClassName='bg-background'
+      contentFooter={mobileFeatureNav}
       contentProps={{ id: 'main-content', tabIndex: -1 }}
+      headerHeight='3rem'
       navigation={navigation}
       renderLink={renderLink}
+      sidebarProps={{
+        collapsible: 'offcanvas',
+        className: 'border-r'
+      }}
+      sidebarWidth='15rem'
     >
-      <div className='flex min-h-full min-w-0 flex-col p-4 sm:p-6'>{content}</div>
+      <div className='flex min-h-full min-w-0 flex-col p-4 pt-4 sm:p-6 lg:p-8 lg:pt-8'>
+        {content}
+      </div>
     </AppShell>
   );
 }
