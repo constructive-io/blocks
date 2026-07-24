@@ -1,5 +1,5 @@
 import type { BillingFeaturePackProps } from '@/blocks/feature-packs/billing/billing-feature-pack';
-import type { AuthFeaturePackComponentProps } from '@/blocks/feature-packs/auth/auth-contracts';
+import type { AuthFeaturePackProps } from '@/blocks/feature-packs/auth/auth-contracts';
 import type { DataFeaturePackProps } from '@/blocks/feature-packs/data/data-feature-pack';
 import type { NotificationsFeaturePackProps } from '@/blocks/feature-packs/notifications/notifications-feature-pack';
 import type { OrganizationsFeaturePackProps } from '@/blocks/feature-packs/organizations/organizations-feature-pack';
@@ -172,7 +172,7 @@ export const FEATURE_PACK_DOCS = [
       'Pending authentication and account actions disable their initiating control, which prevents duplicate submission without hiding the action label.',
       'Session status, verification, and unavailable actions use text in addition to visual treatment, so their meaning does not depend on color.',
     ],
-    apiProps: featurePackApiProps<AuthFeaturePackComponentProps>()([
+    apiProps: featurePackApiProps<AuthFeaturePackProps>()([
       'view',
       'account',
       'notice',
@@ -293,7 +293,7 @@ export const FEATURE_PACK_DOCS = [
       'Semantic membership and grant controls that reflect append-only Constructive actions and final-owner policy.',
     ],
     accessibility: [
-      'Member and invitation tables use scoped headers, readable status labels, and named action triggers for each row.',
+      'Member and invitation directories use named lists, readable status labels, and row-specific action controls.',
       'The member search keeps a visible placeholder and an assistive label, while available sections and counts are exposed through one named tab list.',
       'Invitation, lifecycle, governance, and profile deletion dialogs state their consequences and preserve dialog focus behavior.',
     ],

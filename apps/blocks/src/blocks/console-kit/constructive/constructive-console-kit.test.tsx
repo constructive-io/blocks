@@ -8,6 +8,7 @@ import type {
   ConsoleTransport,
   DatabaseScopedStandaloneConsoleSession
 } from '../../console-runtime';
+import type { ConstructiveFeatureAdapterFactoryContext } from '../feature-module';
 import { createConsoleKitStore } from '../store';
 
 const consoleKitCaptures = vi.hoisted(() => ({ props: [] as unknown[] }));
@@ -199,6 +200,106 @@ describe('ConstructiveConsoleKit external ownership', () => {
       'data',
       'auth'
     ]);
+  });
+
+  it('initializes its wrapper-owned store from a valid semantic default route', async () => {
+    const defaultRoute = {
+      feature: 'data',
+      screen: 'table',
+      tableId: 'orders'
+    } as const;
+
+    render(
+      <ConstructiveConsoleKitCore
+        database={{
+          id: 'database-1',
+          endpoints: {
+            auth: { id: 'auth-1', url: 'https://tenant.example/auth/graphql' },
+            data: { id: 'data-1', url: 'https://tenant.example/data/graphql' }
+          }
+        }}
+        featureModules={[authConsoleModule, dataConsoleModule]}
+        routes={{ defaultRoute }}
+        session={session('default-route')}
+        transport={transport('default-route')}
+      />
+    );
+
+    await screen.findByText('Console Kit mounted');
+    const props = consoleKitCaptures.props.at(-1) as Readonly<{
+      store: ReturnType<typeof createConsoleKitStore>;
+    }>;
+    expect(props.store.getState().route).toEqual(defaultRoute);
+  });
+
+  it.each([
+    {
+      name: 'URL',
+      source: () => new URL(
+        'https://tenant.example/delete-account?database_id=database-1&user_id=user-1&account_deletion_token=secret'
+      )
+    },
+    {
+      name: 'URLSearchParams',
+      source: () => new URLSearchParams({
+        callback: 'account-deletion',
+        database_id: 'database-1',
+        user_id: 'user-1',
+        account_deletion_token: 'secret'
+      })
+    }
+  ])('reuses callback credentials for equivalent new $name values', async ({ source }) => {
+    const authFactory = vi.fn((_context: ConstructiveFeatureAdapterFactoryContext) => ({
+      capabilities: [],
+      load: async () => ({})
+    }));
+    const authModule = { ...authConsoleModule, createAdapter: authFactory };
+    const featureModules = [authModule];
+    const database = {
+      id: 'database-1',
+      endpoints: {
+        auth: { id: 'auth-1', url: 'https://tenant.example/auth/graphql' }
+      }
+    } as const;
+    const hostSession = session('callback-source');
+    const hostTransport = transport('callback-source');
+    const view = render(
+      <ConstructiveConsoleKitCore
+        authMethods={{ password: true }}
+        callback={source()}
+        database={database}
+        featureModules={featureModules}
+        session={hostSession}
+        transport={hostTransport}
+      />
+    );
+
+    await waitFor(() => {
+      expect(authFactory).toHaveBeenCalledWith(expect.objectContaining({
+        callback: expect.objectContaining({ kind: 'account-deletion' })
+      }));
+    });
+    const firstContext = authFactory.mock.calls.at(-1)?.[0];
+    const firstCallback = firstContext?.callback;
+    expect(firstCallback).toBeDefined();
+
+    view.rerender(
+      <ConstructiveConsoleKitCore
+        authMethods={{ password: false }}
+        callback={source()}
+        database={database}
+        featureModules={featureModules}
+        session={hostSession}
+        transport={hostTransport}
+      />
+    );
+
+    await waitFor(() => {
+      expect(authFactory.mock.calls.at(-1)?.[0]?.authMethods?.password).toBe(false);
+    });
+    const secondCallback = authFactory.mock.calls.at(-1)?.[0]?.callback;
+    expect(secondCallback).toBe(firstCallback);
+    expect(secondCallback?.credentialRef).toBe(firstCallback?.credentialRef);
   });
 
   it('renders a configuration error for a relative internal auth endpoint', () => {

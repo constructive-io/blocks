@@ -485,6 +485,26 @@ function setCallbackFlow(
   options.store.getState().setAuthFlow(flow);
 }
 
+function accountDeletionScopeIsCurrent(
+  options: ConstructiveAuthAdapterOptions,
+  runtime: ConsoleKitAdapterContext,
+  userId: string
+): boolean {
+  if (options.session.databaseId !== runtime.databaseId) return false;
+  const state = options.store.getState();
+  if (state.context && state.context.databaseId !== runtime.databaseId) {
+    return false;
+  }
+  const identity = state.session.status === 'authenticated'
+    ? state.session.identity
+    : state.session.status === 'error'
+      ? state.session.identity
+      : undefined;
+  return identity?.kind === 'authenticated'
+    ? identity.subjectId === userId
+    : true;
+}
+
 export function createConstructiveAuthAdapter(
   options: ConstructiveAuthAdapterOptions
 ): ConsoleKitFeatureAdapter<AuthFeaturePackProps> {
@@ -681,7 +701,9 @@ export function createConstructiveAuthAdapter(
           };
         }
 
-        setCallbackFlow(options, 'account-deletion', 'processing');
+        if (accountDeletionScopeIsCurrent(options, runtime, userId)) {
+          setCallbackFlow(options, 'account-deletion', 'processing');
+        }
         try {
           await requireSuccessfulBoolean(
             runtime,
@@ -724,14 +746,6 @@ export function createConstructiveAuthAdapter(
           }
           if (controller.signal.aborted) throw cause;
 
-          setCallbackFlow(
-            options,
-            'account-deletion',
-            'error',
-            cause instanceof Error
-              ? cause.message
-              : 'Account deletion could not be completed.'
-          );
           // Once submitted, a transport failure cannot prove that the
           // destructive mutation did not commit. Retain the shared outcome so
           // another adapter cannot retry the one-time credential ambiguously.
@@ -740,14 +754,34 @@ export function createConstructiveAuthAdapter(
       })();
     }
 
-    const outcome = await waitForDeletionRedemption(pending, callback, signal);
+    let outcome: AccountDeletionOutcome;
+    try {
+      outcome = await waitForDeletionRedemption(pending, callback, signal);
+    } catch (cause) {
+      if (
+        !signal.aborted &&
+        accountDeletionScopeIsCurrent(options, runtime, userId)
+      ) {
+        setCallbackFlow(
+          options,
+          'account-deletion',
+          'error',
+          cause instanceof Error
+            ? cause.message
+            : 'Account deletion could not be completed.'
+        );
+      }
+      throw cause;
+    }
     deletionNotice = outcome.notice;
-    setCallbackFlow(
-      options,
-      'account-deletion',
-      outcome.phase,
-      outcome.notice.message
-    );
+    if (accountDeletionScopeIsCurrent(options, runtime, userId)) {
+      setCallbackFlow(
+        options,
+        'account-deletion',
+        outcome.phase,
+        outcome.notice.message
+      );
+    }
   };
 
   return {

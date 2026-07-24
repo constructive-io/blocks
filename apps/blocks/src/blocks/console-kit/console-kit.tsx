@@ -265,7 +265,9 @@ function AdapterFeature({
   const organizationId = useConsoleKitStore(
     (store) => store.context?.organizationId ?? null
   );
-  const contextKey = feature === 'organizations' ? organizationId : null;
+  const contextKey = feature === 'organizations' || feature === 'billing'
+    ? organizationId
+    : null;
   const requestKey = adapterLoadRequestKey(
     feature,
     adapter,
@@ -666,8 +668,13 @@ function ConsoleKitContent({ config, featureModules, className }: ConsoleKitProp
   const activeFeature = activeRoute.feature;
   const activeModule = moduleById.get(activeFeature);
   React.useEffect(() => {
-    if (activeRouteKey !== internalRouteKey) setInternalRoute(activeRoute);
-  }, [activeRoute, activeRouteKey, internalRouteKey, setInternalRoute]);
+    if (
+      config.routes?.route === undefined &&
+      activeRouteKey !== internalRouteKey
+    ) {
+      setInternalRoute(activeRoute);
+    }
+  }, [activeRoute, activeRouteKey, config.routes?.route, internalRouteKey, setInternalRoute]);
   const activeAvailability = availability[activeModule?.id ?? activeFeature]
     ?? { status: 'unavailable', reason: 'This feature is not in the configured Console Kit order.' };
 

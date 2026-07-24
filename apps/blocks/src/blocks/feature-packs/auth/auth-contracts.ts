@@ -50,10 +50,8 @@ export type AuthMethod =
  */
 export type AuthChallengeDescriptor = Readonly<{
   id: string;
-  method: Exclude<AuthMethod, 'password'>;
   title: string;
   description?: string;
-  response: 'code' | 'redirect' | 'webauthn' | 'custom';
 }>;
 
 export type AuthChallengeResponse =
@@ -62,28 +60,54 @@ export type AuthChallengeResponse =
   | Readonly<{ kind: 'webauthn'; credential: unknown }>
   | Readonly<{ kind: 'custom'; value: unknown }>;
 
-/**
- * A contribution is complete by construction: a method cannot be advertised
- * unless one trusted adapter owns both the start and completion lifecycle.
- */
-export type AuthChallengeContribution = Readonly<{
+type AuthChallengeResponseKind = AuthChallengeResponse['kind'];
+type ProviderChallengeResponseKind = Exclude<AuthChallengeResponseKind, 'code'>;
+
+type AuthChallengeResponseFor<
+  Kind extends AuthChallengeResponseKind
+> = Extract<AuthChallengeResponse, { kind: Kind }>;
+
+type AuthChallengeContributionBase = Readonly<{
   method: Exclude<AuthMethod, 'password'>;
   label: string;
   start: (input: Readonly<{ email?: string; returnTo?: string }>) =>
     Promise<AuthChallengeDescriptor>;
-  /**
-   * Provider-owned response acquisition for redirect, WebAuthn, and custom
-   * challenges. Code challenges are collected by the feature pack itself.
-   */
-  respond?: (input: Readonly<{
-    challenge: AuthChallengeDescriptor;
-  }>) => AuthChallengeResponse | Promise<AuthChallengeResponse>;
-  complete: (input: Readonly<{
-    challengeId: string;
-    response: AuthChallengeResponse;
-  }>) => FeatureActionResult;
   cancel?: (input: Readonly<{ challengeId: string }>) => FeatureActionResult;
 }>;
+
+type AuthCodeChallengeContribution = AuthChallengeContributionBase & Readonly<{
+  response: 'code';
+  complete: (input: Readonly<{
+    challengeId: string;
+    response: AuthChallengeResponseFor<'code'>;
+  }>) => FeatureActionResult;
+}>;
+
+type AuthProviderChallengeContribution<
+  Kind extends ProviderChallengeResponseKind
+> = AuthChallengeContributionBase & Readonly<{
+  response: Kind;
+  /** Provider-owned response acquisition for redirect, WebAuthn, or custom challenges. */
+  respond: (input: Readonly<{
+    challenge: AuthChallengeDescriptor;
+  }>) => AuthChallengeResponseFor<Kind> | Promise<AuthChallengeResponseFor<Kind>>;
+  complete: (input: Readonly<{
+    challengeId: string;
+    response: AuthChallengeResponseFor<Kind>;
+  }>) => FeatureActionResult;
+}>;
+
+/**
+ * A contribution is complete by construction: code challenges are collected
+ * by the feature pack, while every provider-owned response kind requires its
+ * matching response handler and completion callback.
+ */
+export type AuthChallengeContribution =
+  | AuthCodeChallengeContribution
+  | {
+      [Kind in ProviderChallengeResponseKind]:
+        AuthProviderChallengeContribution<Kind>;
+    }[ProviderChallengeResponseKind];
 
 export type AuthPasswordPolicy = Readonly<{
   minLength?: number;
@@ -190,14 +214,8 @@ export type AuthFeaturePackProps = Readonly<{
   actions?: AuthFeatureActions;
   onModeChange?: (mode: AuthEntryMode) => void;
   onAuthenticated?: () => void;
-  onError?: (error: FeaturePackError) => void;
-}>;
-
-export type AuthAccountNavigationProps = Readonly<{
   accountSection?: AuthAccountSection;
   defaultAccountSection?: AuthAccountSection;
   onAccountSectionChange?: (section: AuthAccountSection) => void;
+  onError?: (error: FeaturePackError) => void;
 }>;
-
-export type AuthFeaturePackComponentProps = AuthFeaturePackProps &
-  AuthAccountNavigationProps;

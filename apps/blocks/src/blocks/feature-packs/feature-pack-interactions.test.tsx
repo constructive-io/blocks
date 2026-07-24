@@ -437,6 +437,157 @@ describe('feature-pack interaction policy', () => {
     expect(screen.getByRole('alert')).toHaveTextContent('Cancellation rejected');
   });
 
+  it('reports reusable organization invitation copy success and failure', async () => {
+    const user = userEvent.setup();
+    const clipboardDescriptor = Object.getOwnPropertyDescriptor(navigator, 'clipboard');
+    const writeText = vi.fn()
+      .mockResolvedValueOnce(undefined)
+      .mockRejectedValueOnce(new Error('Clipboard permission denied'));
+
+    try {
+      Object.defineProperty(navigator, 'clipboard', {
+        configurable: true,
+        value: { writeText }
+      });
+
+      render(
+        <OrganizationsFeaturePack
+          resource={{
+            status: 'ready',
+            data: {
+              organizations: [{ id: 'org-1', name: 'Research' }],
+              activeOrganizationId: 'org-1',
+              members: [],
+              invites: [
+                {
+                  id: 'invite-success',
+                  channel: 'link',
+                  recipient: 'Reusable success link',
+                  token: 'success-token',
+                  status: 'pending',
+                  multiple: true,
+                  isReadOnly: false
+                },
+                {
+                  id: 'invite-failure',
+                  channel: 'link',
+                  recipient: 'Reusable failure link',
+                  token: 'failure-token',
+                  status: 'pending',
+                  multiple: true,
+                  isReadOnly: false
+                }
+              ]
+            }
+          }}
+          section='invitations'
+        />
+      );
+
+      const copyButtons = screen.getAllByRole('button', { name: 'Copy token' });
+      await user.click(copyButtons[0]!);
+
+      await waitFor(() => expect(writeText).toHaveBeenCalledWith('success-token'));
+      expect(screen.getByRole('button', { name: 'Copied' })).toBeEnabled();
+      expect(screen.getByRole('status')).toHaveTextContent('Invitation token copied.');
+
+      await user.click(screen.getByRole('button', { name: 'Copy token' }));
+
+      await waitFor(() => expect(writeText).toHaveBeenCalledWith('failure-token'));
+      expect(screen.getByRole('alert')).toHaveTextContent(
+        'The invitation token could not be copied.'
+      );
+    } finally {
+      if (clipboardDescriptor) {
+        Object.defineProperty(navigator, 'clipboard', clipboardDescriptor);
+      } else {
+        Reflect.deleteProperty(navigator, 'clipboard');
+      }
+    }
+  });
+
+  it('requires organization row policy for identity and danger-zone actions', async () => {
+    const user = userEvent.setup();
+    const updateOrganization = vi.fn().mockResolvedValue(undefined);
+    const leaveOrganization = vi.fn().mockResolvedValue(undefined);
+    const deleteOrganization = vi.fn().mockResolvedValue(undefined);
+    const actions = { deleteOrganization, leaveOrganization, updateOrganization };
+    const policy = {
+      deleteOrganization: true,
+      leaveOrganization: true,
+      updateOrganization: true
+    } as const;
+    const member = {
+      id: 'membership-1',
+      userId: 'user-1',
+      name: 'Ada Lovelace',
+      email: 'ada@example.com',
+      governance: 'owner',
+      status: 'active',
+      isApproved: true,
+      isBanned: false,
+      isDisabled: false,
+      isActive: true,
+      isExternal: false,
+      isReadOnly: false
+    } as const;
+    const resource = (allowed: boolean) => ({
+      status: 'ready' as const,
+      data: {
+        organizations: [{
+          id: 'org-1',
+          name: 'Research',
+          actionPolicy: {
+            deleteOrganization: allowed,
+            leaveOrganization: allowed,
+            updateOrganization: allowed
+          }
+        }],
+        activeOrganizationId: 'org-1',
+        currentActorId: 'user-1',
+        members: [member],
+        invites: []
+      }
+    });
+    const { rerender } = render(
+      <OrganizationsFeaturePack
+        actions={actions}
+        policy={policy}
+        resource={resource(false)}
+        section='settings'
+      />
+    );
+
+    expect(screen.getByRole('textbox', { name: 'Organization name' })).toBeDisabled();
+    expect(screen.queryByRole('button', { name: 'Save organization' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Leave organization' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Delete organization' })).toBeNull();
+
+    rerender(
+      <OrganizationsFeaturePack
+        actions={actions}
+        policy={policy}
+        resource={resource(true)}
+        section='settings'
+      />
+    );
+
+    const name = screen.getByRole('textbox', { name: 'Organization name' });
+    expect(name).toBeEnabled();
+    expect(screen.getByRole('button', { name: 'Leave organization' })).toBeEnabled();
+    expect(screen.getByRole('button', { name: 'Delete organization' })).toBeEnabled();
+
+    await user.clear(name);
+    await user.type(name, 'Research Lab');
+    await user.click(screen.getByRole('button', { name: 'Save organization' }));
+
+    await waitFor(() => expect(updateOrganization).toHaveBeenCalledWith({
+      organizationId: 'org-1',
+      name: 'Research Lab',
+      slug: undefined
+    }));
+  });
+
   it('recovers when an organization confirmation action throws synchronously', async () => {
     const user = userEvent.setup();
     const deleteOrganization = vi.fn(() => {
@@ -451,7 +602,11 @@ describe('feature-pack interaction policy', () => {
         resource={{
           status: 'ready',
           data: {
-            organizations: [{ id: 'org-1', name: 'Research' }],
+            organizations: [{
+              id: 'org-1',
+              name: 'Research',
+              actionPolicy: { deleteOrganization: true }
+            }],
             activeOrganizationId: 'org-1',
             members: [],
             invites: []
@@ -830,6 +985,66 @@ describe('feature-pack interaction policy', () => {
     const target = screen.getByText('Grace Hopper').closest('li');
     expect(target).toHaveAttribute('aria-current', 'true');
     await waitFor(() => expect(target).toHaveFocus());
+  });
+
+  it('focuses a route-selected organization member after clearing a hiding filter', async () => {
+    const user = userEvent.setup();
+    const resource = {
+      status: 'ready' as const,
+      data: {
+        activeOrganizationId: 'organization-1',
+        organizations: [{ id: 'organization-1', name: 'Acme' }],
+        members: [
+          {
+            id: 'membership-1',
+            userId: 'user-1',
+            name: 'Ada Lovelace',
+            email: 'ada@example.com',
+            governance: 'owner' as const,
+            status: 'active' as const,
+            isApproved: true,
+            isBanned: false,
+            isDisabled: false,
+            isActive: true,
+            isExternal: false,
+            isReadOnly: false
+          },
+          {
+            id: 'membership-2',
+            userId: 'user-2',
+            name: 'Grace Hopper',
+            email: 'grace@example.com',
+            governance: 'member' as const,
+            status: 'active' as const,
+            isApproved: true,
+            isBanned: false,
+            isDisabled: false,
+            isActive: true,
+            isExternal: false,
+            isReadOnly: false
+          }
+        ]
+      }
+    };
+    const view = render(<OrganizationsFeaturePack resource={resource} />);
+
+    await user.type(
+      screen.getByRole('searchbox', { name: 'Search organization members' }),
+      'Ada'
+    );
+    expect(screen.queryByText('Grace Hopper')).toBeNull();
+
+    view.rerender(
+      <OrganizationsFeaturePack
+        focusedMemberId='membership-2'
+        resource={resource}
+      />
+    );
+
+    const target = await screen.findByText('Grace Hopper');
+    const row = target.closest('tr');
+    expect(row).toHaveAttribute('aria-current', 'true');
+    await waitFor(() => expect(row).toHaveFocus());
   });
 
   it('clears an organization invite profile when delivery is not a single-use email', async () => {

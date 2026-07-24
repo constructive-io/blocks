@@ -19,7 +19,6 @@ import { AuthFeaturePack } from './auth-feature-pack';
 import type {
   AuthAccountSection,
   AuthEntryMode,
-  AuthFeaturePackComponentProps,
   AuthFeaturePackProps
 } from './auth-contracts';
 
@@ -148,7 +147,7 @@ function AuthConsoleFeature({
   onError
 }: ConsoleKitFeatureComponentProps) {
   if (adapterProps) {
-    const authProps = adapterProps as AuthFeaturePackComponentProps;
+    const authProps = adapterProps as AuthFeaturePackProps;
     const routeSection = route.feature === 'auth'
       ? accountSectionFromRoute(route)
       : undefined;

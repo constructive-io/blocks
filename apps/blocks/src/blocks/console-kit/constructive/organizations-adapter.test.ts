@@ -1251,6 +1251,47 @@ describe('Constructive organizations semantic mutation contract', () => {
     });
   });
 
+  it('does not report principals with foreign scope evidence as unscoped', async () => {
+    const { loaded } = await loadedOrganizations([], {
+      override: (call) => call.document.includes(
+        'ConsoleKitOrganizationPrincipalsPage'
+      )
+        ? {
+            principals: {
+              nodes: [
+                {
+                  id: 'principal-row-1',
+                  userId: 'principal-user-1',
+                  name: 'Automation',
+                  useAdminOwner: false,
+                  isReadOnly: true,
+                  bypassStepUp: false
+                },
+                {
+                  id: 'principal-row-foreign',
+                  userId: 'principal-user-foreign',
+                  name: 'Foreign automation',
+                  useAdminOwner: false,
+                  isReadOnly: true,
+                  bypassStepUp: false
+                }
+              ]
+            }
+          }
+        : undefined
+    });
+
+    expect(loaded.resource.status).toBe('ready');
+    if (loaded.resource.status !== 'ready') return;
+    expect(loaded.resource.data.principals).toEqual([
+      expect.objectContaining({ id: 'principal-user-1' })
+    ]);
+    expect(loaded.resource.limitations?.some(
+      (limitation) => limitation.code ===
+        'constructive.org-principal-scope-unavailable'
+    )).toBe(false);
+  });
+
   it('keeps API-key creation fail closed while exposing safe principal and revocation procedures', async () => {
     const calls: GraphQLCall[] = [];
     const { adapter, adapterRuntime, loaded } = await loadedOrganizations(calls);
@@ -1276,10 +1317,7 @@ describe('Constructive organizations semantic mutation contract', () => {
 
     const principal = await loaded.actions?.createOrganizationPrincipal?.({
       organizationId: 'org-1',
-      name: '  Deploy bot  ',
-      useAdminOwner: false,
-      isReadOnly: true,
-      bypassStepUp: false
+      name: '  Deploy bot  '
     });
     await loaded.actions?.revokeOrganizationApiKey?.({
       organizationId: 'org-1',

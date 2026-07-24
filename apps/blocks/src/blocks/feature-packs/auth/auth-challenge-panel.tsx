@@ -12,21 +12,18 @@ import { normalizeFeaturePackError } from '../shared/feature-pack-contracts';
 import type {
   AuthChallengeContribution,
   AuthChallengeDescriptor,
-  AuthChallengeResponse,
   AuthFeaturePackProps
 } from './auth-contracts';
 
+type CodeChallengeContribution = Extract<
+  AuthChallengeContribution,
+  { response: 'code' }
+>;
+
 type ActiveChallenge = Readonly<{
-  contribution: AuthChallengeContribution;
+  contribution: CodeChallengeContribution;
   descriptor: AuthChallengeDescriptor;
 }>;
-
-function responseMatchesChallenge(
-  descriptor: AuthChallengeDescriptor,
-  response: AuthChallengeResponse
-): boolean {
-  return descriptor.response === response.kind;
-}
 
 export function AuthChallengePanel({
   contributions,
@@ -54,19 +51,14 @@ export function AuthChallengePanel({
     onError?.(normalized);
   };
 
-  const complete = async (
-    contribution: AuthChallengeContribution,
+  const completeCodeChallenge = async (
+    contribution: CodeChallengeContribution,
     descriptor: AuthChallengeDescriptor,
-    response: AuthChallengeResponse
+    codeResponse: string
   ) => {
-    if (!responseMatchesChallenge(descriptor, response)) {
-      throw new Error(
-        `${contribution.label} returned a ${response.kind} response for a ${descriptor.response} challenge.`
-      );
-    }
     await contribution.complete({
       challengeId: descriptor.id,
-      response
+      response: { kind: 'code', code: codeResponse }
     });
     setActive(undefined);
     setCode('');
@@ -84,23 +76,24 @@ export function AuthChallengePanel({
         email: email.trim() || undefined,
         returnTo: typeof window === 'undefined' ? undefined : window.location.href
       });
-      if (descriptor.method !== contribution.method) {
-        throw new Error(
-          `${contribution.label} returned a ${descriptor.method} challenge for its ${contribution.method} contribution.`
-        );
-      }
-      if (descriptor.response === 'code') {
+      if (contribution.response === 'code') {
         setActive({ contribution, descriptor });
         setCode('');
         return;
       }
-      if (!contribution.respond) {
-        throw new Error(
-          `${contribution.label} must provide a response handler for ${descriptor.response} challenges.`
-        );
+
+      if (contribution.response === 'redirect') {
+        const response = await contribution.respond({ challenge: descriptor });
+        await contribution.complete({ challengeId: descriptor.id, response });
+      } else if (contribution.response === 'webauthn') {
+        const response = await contribution.respond({ challenge: descriptor });
+        await contribution.complete({ challengeId: descriptor.id, response });
+      } else {
+        const response = await contribution.respond({ challenge: descriptor });
+        await contribution.complete({ challengeId: descriptor.id, response });
       }
-      const response = await contribution.respond({ challenge: descriptor });
-      await complete(contribution, descriptor, response);
+      setFeedback(`${contribution.label} authentication completed.`);
+      onAuthenticated?.();
     } catch (cause) {
       reportError(cause, `${contribution.label} authentication could not be started.`);
     } finally {
@@ -110,7 +103,7 @@ export function AuthChallengePanel({
 
   const submitCode = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    if (!active || active.descriptor.response !== 'code' || pending) return;
+    if (!active || pending) return;
     const responseCode = code.trim();
     if (!responseCode) {
       setError('Enter the verification code.');
@@ -120,10 +113,11 @@ export function AuthChallengePanel({
     setError(undefined);
     setFeedback(undefined);
     try {
-      await complete(active.contribution, active.descriptor, {
-        kind: 'code',
-        code: responseCode
-      });
+      await completeCodeChallenge(
+        active.contribution,
+        active.descriptor,
+        responseCode
+      );
     } catch (cause) {
       reportError(cause, `${active.contribution.label} authentication could not be completed.`);
     } finally {

@@ -590,6 +590,47 @@ function CancelOrganizationInviteAction({
   );
 }
 
+function CopyOrganizationInviteTokenAction({ token }: Readonly<{ token: string }>) {
+  const [state, setState] = React.useState<'idle' | 'copying' | 'copied' | 'error'>('idle');
+
+  const copy = async () => {
+    setState('copying');
+    try {
+      if (!navigator.clipboard?.writeText) {
+        throw new Error('Clipboard access is unavailable.');
+      }
+      await navigator.clipboard.writeText(token);
+      setState('copied');
+    } catch {
+      setState('error');
+    }
+  };
+
+  return (
+    <div className='flex flex-col items-end gap-1'>
+      <Button
+        disabled={state === 'copying'}
+        onClick={() => void copy()}
+        size='sm'
+        variant='outline'
+      >
+        <CopyIcon data-icon='inline-start' />
+        {state === 'copying' ? 'Copying…' : state === 'copied' ? 'Copied' : 'Copy token'}
+      </Button>
+      {state === 'copied' ? (
+        <span className='text-muted-foreground text-pretty text-xs' role='status'>
+          Invitation token copied.
+        </span>
+      ) : null}
+      {state === 'error' ? (
+        <span className='text-destructive text-pretty text-xs' role='alert'>
+          The invitation token could not be copied.
+        </span>
+      ) : null}
+    </div>
+  );
+}
+
 export function OrganizationsFeaturePack({
   resource,
   policy,
@@ -610,11 +651,15 @@ export function OrganizationsFeaturePack({
   const [internalSection, setInternalSection] = React.useState<OrganizationsSection>(
     defaultSection
   );
-  const focusedMemberRef = React.useRef<HTMLTableRowElement>(null);
-  const focusedInvitationRef = React.useRef<HTMLTableRowElement>(null);
-  const focusedMemberPresent = resource.status === 'ready' && Boolean(
-    focusedMemberId && resource.data.members.some((member) => member.id === focusedMemberId)
+  const focusedMemberRef = React.useCallback(
+    (element: HTMLTableRowElement | null) => {
+      if (!element || !focusedMemberId) return;
+      element.focus({ preventScroll: true });
+      element.scrollIntoView?.({ block: 'nearest' });
+    },
+    [focusedMemberId]
   );
+  const focusedInvitationRef = React.useRef<HTMLTableRowElement>(null);
   const focusedInvitationPresent = resource.status === 'ready' && Boolean(
     focusedInvitationId && resource.data.invites?.some(
       (invite) => invite.id === focusedInvitationId
@@ -624,13 +669,6 @@ export function OrganizationsFeaturePack({
   React.useEffect(() => {
     if (focusedMemberId) setQuery('');
   }, [focusedMemberId]);
-
-  React.useEffect(() => {
-    if (!focusedMemberPresent) return;
-    const element = focusedMemberRef.current;
-    element?.focus({ preventScroll: true });
-    element?.scrollIntoView?.({ block: 'nearest' });
-  }, [focusedMemberId, focusedMemberPresent]);
 
   React.useEffect(() => {
     if (!focusedInvitationPresent) return;
@@ -972,13 +1010,7 @@ export function OrganizationsFeaturePack({
                                     <TableCell>
                                       <div className='flex justify-end gap-2'>
                                         {invite.token ? (
-                                          <Button
-                                            onClick={() => void navigator.clipboard?.writeText(invite.token!)}
-                                            size='sm'
-                                            variant='outline'
-                                          >
-                                            <CopyIcon data-icon='inline-start' />Copy token
-                                          </Button>
+                                          <CopyOrganizationInviteTokenAction token={invite.token} />
                                         ) : null}
                                         {active &&
                                         canPerform(policy, 'cancelInvite') &&

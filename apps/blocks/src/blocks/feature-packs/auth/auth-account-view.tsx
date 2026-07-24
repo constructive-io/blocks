@@ -53,7 +53,6 @@ import type {
   AuthAccountSection,
   AuthConnectedAccount,
   AuthFeatureActions,
-  AuthFeaturePackComponentProps,
   AuthFeaturePackProps,
   AuthIdentity,
   AuthPasswordPolicy,
@@ -97,10 +96,7 @@ export function AuthAccountView({
   defaultAccountSection = 'profile',
   onAccountSectionChange,
   onError
-}: Omit<
-  AuthFeaturePackComponentProps,
-  'view' | 'mode' | 'onModeChange' | 'onAuthenticated'
->) {
+}: Omit<AuthFeaturePackProps, 'view' | 'mode' | 'onModeChange' | 'onAuthenticated'>) {
   const [displayName, setDisplayName] = React.useState('');
   const [currentPassword, setCurrentPassword] = React.useState('');
   const [newPassword, setNewPassword] = React.useState('');

@@ -173,6 +173,22 @@ const useCallbackBoundaryEffect = typeof window === 'undefined'
   ? React.useEffect
   : React.useLayoutEffect;
 
+function callbackSourceKey(
+  source: ConstructiveConsoleCallbackSource | false | undefined
+): string {
+  if (source === false) return 'disabled';
+  if (source === undefined) return 'browser-location';
+  if (source instanceof URLSearchParams) {
+    return `parameters:${source.toString()}`;
+  }
+  if (source instanceof URL) return `url:${source.href}`;
+  try {
+    return `url:${new URL(source, 'https://constructive.invalid').href}`;
+  } catch {
+    return `string:${source}`;
+  }
+}
+
 function useConstructiveCallbackBoundary(
   databaseId: string,
   source: ConstructiveConsoleCallbackSource | false | undefined
@@ -185,9 +201,10 @@ function useConstructiveCallbackBoundary(
     credentialsRef.current = createConstructiveCallbackCredentialVault();
   }
   const credentials = credentialsRef.current;
+  const sourceKey = callbackSourceKey(source);
   const captureRef = React.useRef<Readonly<{
     databaseId: string;
-    source: ConstructiveConsoleCallbackSource | false | undefined;
+    sourceKey: string;
     state: ConstructiveConsoleCallbackResult;
   }> | null>(null);
   const effectGenerationRef = React.useRef(0);
@@ -208,7 +225,7 @@ function useConstructiveCallbackBoundary(
     const captured = captureRef.current;
     if (
       captured?.databaseId === databaseId &&
-      Object.is(captured.source, source)
+      captured.sourceKey === sourceKey
     ) {
       setState(captured.state);
       return releaseAfterEffect;
@@ -217,13 +234,13 @@ function useConstructiveCallbackBoundary(
     credentials.clear();
     if (source === false) {
       const result = { status: 'none' } as const;
-      captureRef.current = { databaseId, source, state: result };
+      captureRef.current = { databaseId, sourceKey, state: result };
       setState(result);
       return releaseAfterEffect;
     }
     if (source === undefined && typeof window === 'undefined') {
       const result = { status: 'none' } as const;
-      captureRef.current = { databaseId, source, state: result };
+      captureRef.current = { databaseId, sourceKey, state: result };
       setState(result);
       return releaseAfterEffect;
     }
@@ -240,10 +257,10 @@ function useConstructiveCallbackBoundary(
         window.history
       );
     }
-    captureRef.current = { databaseId, source, state: result };
+    captureRef.current = { databaseId, sourceKey, state: result };
     setState(result);
     return releaseAfterEffect;
-  }, [credentials, databaseId, source]);
+  }, [credentials, databaseId, source, sourceKey]);
 
   return { state, credentials };
 }
@@ -268,13 +285,19 @@ function ConstructiveConsoleKitInstance(props: ConstructiveConsoleKitCoreProps) 
   const internalStoreRef = React.useRef<ConsoleKitStoreApi | null>(null);
   if (!props.store && !internalStoreRef.current) {
     const installed = new Set(props.featureModules.map((module) => module.id));
-    const startsWithAuth = installed.has('auth') && Boolean(authEndpoint) &&
+    const ordered = [...new Set(
+      props.order ?? props.featureModules.map((module) => module.id)
+    )].filter((feature) => installed.has(feature));
+    const startsWithAuth = ordered.includes('auth') && Boolean(authEndpoint) &&
       (!props.session || Boolean(externalAuthSession));
-    const initialFeature = startsWithAuth
-      ? 'auth'
-      : props.featureModules[0]?.id ?? 'data';
+    const preferredRoute = props.routes?.defaultRoute;
+    const initialRoute = preferredRoute && ordered.includes(preferredRoute.feature)
+      ? preferredRoute
+      : startsWithAuth
+        ? 'auth'
+        : ordered[0] ?? 'data';
     internalStoreRef.current = createConsoleKitStore(
-      initialFeature,
+      initialRoute,
       {
         databaseId: props.database.id,
         organizationId: null

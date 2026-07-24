@@ -587,6 +587,54 @@ describe('Constructive authentication operation chains', () => {
     expect(vault.status(credentialRef)).toBe('available');
   });
 
+  it('does not publish a detached deletion failure into a reused tenant store', async () => {
+    const schema = authSchema({ mutations: { ConfirmDeleteAccount: ['userId', 'token'] } });
+    const vault = createConstructiveCallbackCredentialVault();
+    const credentialRef = vault.put('one-time-deletion-token');
+    const store = createConsoleKitStore('auth');
+    const callback = {
+      kind: 'account-deletion',
+      databaseId: 'database-1',
+      userId: 'user-1',
+      credentialRef
+    } satisfies ConstructiveConsoleCallback;
+    let rejectRequest: ((cause: Error) => void) | undefined;
+    const request = new Promise<Record<string, unknown>>((_resolve, reject) => {
+      rejectRequest = reject;
+    });
+    let submitted = false;
+    const adapter = createConstructiveAuthAdapter({
+      store,
+      session: session(false),
+      discovery: discovery({ auth: schema }),
+      callback,
+      callbackCredentials: vault
+    });
+    const currentRuntime = runtime(() => {
+      submitted = true;
+      return request;
+    }, false);
+    const controller = new AbortController();
+
+    const first = adapter.load(currentRuntime, controller.signal);
+    await vi.waitFor(() => expect(submitted).toBe(true));
+    controller.abort();
+    await expect(first).rejects.toMatchObject({ name: 'AbortError' });
+    store.getState().setContext({
+      databaseId: 'database-2',
+      organizationId: null
+    });
+
+    const replay = adapter.load(currentRuntime, new AbortController().signal);
+    rejectRequest?.(new Error('The old tenant response was lost.'));
+    await expect(replay).rejects.toThrow('The old tenant response was lost.');
+
+    expect(store.getState().authFlow).toEqual({
+      status: 'entry',
+      mode: 'sign-in'
+    });
+  });
+
   it('records a successful email-verification callback phase', async () => {
     const schema = authSchema({ mutations: { VerifyEmail: ['emailId', 'token'] } });
     const vault = createConstructiveCallbackCredentialVault();

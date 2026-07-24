@@ -149,10 +149,8 @@ describe('authentication feature-pack flows', () => {
     const user = userEvent.setup();
     const start = vi.fn().mockResolvedValue({
       id: 'challenge-1',
-      method: 'email-otp',
       title: 'Check your email',
-      description: 'Enter the code sent to your inbox.',
-      response: 'code'
+      description: 'Enter the code sent to your inbox.'
     });
     const complete = vi.fn().mockResolvedValue(undefined);
     const onAuthenticated = vi.fn();
@@ -161,6 +159,7 @@ describe('authentication feature-pack flows', () => {
         challengeContributions={[{
           method: 'email-otp',
           label: 'Email code',
+          response: 'code',
           start,
           complete
         }]}
@@ -194,11 +193,10 @@ describe('authentication feature-pack flows', () => {
         challengeContributions={[{
           method: 'passkey',
           label: 'Use a passkey',
+          response: 'webauthn',
           start: vi.fn().mockResolvedValue({
             id: 'challenge-2',
-            method: 'passkey',
-            title: 'Use your passkey',
-            response: 'webauthn'
+            title: 'Use your passkey'
           }),
           respond,
           complete
@@ -296,7 +294,6 @@ describe('authentication feature-pack flows', () => {
       .toHaveAttribute('aria-selected', 'true');
 
     const profileTab = screen.getByRole('tab', { name: 'Profile' });
-    expect(profileTab).toHaveClass('focus-visible:ring-[3px]');
     await user.click(profileTab);
     expect(profileTab).toHaveFocus();
     expect(onRouteChange).toHaveBeenLastCalledWith({

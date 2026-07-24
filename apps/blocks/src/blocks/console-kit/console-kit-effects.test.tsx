@@ -632,17 +632,21 @@ describe('Console Kit observational callbacks', () => {
     expect(await screen.findByLabelText('Credential draft')).toHaveValue('');
   });
 
-  it('removes organization actions immediately when the active organization changes', async () => {
+  it.each(['organizations', 'billing'] as const)(
+    'removes %s actions immediately when the active organization changes',
+    async (feature) => {
     runtimeMocks.useConsoleKitRuntime.mockReturnValue(runtime);
-    const store = createFullConsoleKitStore('organizations');
+    const store = createFullConsoleKitStore(feature);
     store.getState().setContext({
       databaseId: 'database-1',
       organizationId: 'organization-a'
     });
     const oldAction = vi.fn();
     const nextLoad = deferred<Readonly<{ action: () => void }>>();
-    const organizationsModule = {
-      ...fullFeatureModules.find((module) => module.id === 'organizations')!,
+    const baseModule = fullFeatureModules.find((module) => module.id === feature);
+    if (!baseModule) throw new Error(`Missing ${feature} test module.`);
+    const scopedModule = {
+      ...baseModule,
       Component: ({ adapterProps }: ConsoleKitFeatureComponentProps) => {
         const props = adapterProps as Readonly<{ action?: () => void }> | undefined;
         return props?.action
@@ -651,14 +655,7 @@ describe('Console Kit observational callbacks', () => {
       }
     } satisfies ConsoleKitFeatureModule;
     const adapter = {
-      capabilities: [
-        'organizations.memberships',
-        'organizations.permissions',
-        'organizations.limits',
-        'organizations.profiles',
-        'organizations.hierarchy',
-        'organizations.invites'
-      ] as const,
+      capabilities: baseModule.manifest.capabilities.required,
       load: vi.fn()
         .mockResolvedValueOnce({ action: oldAction })
         .mockImplementationOnce(() => nextLoad.promise)
@@ -673,13 +670,13 @@ describe('Console Kit observational callbacks', () => {
     render(
       <ConsoleKit
         config={{
-          adapters: { organizations: adapter },
+          adapters: { [feature]: adapter },
           databaseId: 'database-1',
           endpoints: { auth: '/auth/graphql' },
-          order: ['organizations'],
+          order: [feature],
           session
         }}
-        featureModules={[organizationsModule]}
+        featureModules={[scopedModule]}
         store={store}
       />
     );
@@ -977,11 +974,7 @@ describe('Console Kit observational callbacks', () => {
   it('reports semantic routes without overriding a host-controlled route', async () => {
     runtimeMocks.useConsoleKitRuntime.mockReturnValue(runtime);
     const onRouteChange = vi.fn();
-    const store = createFullConsoleKitStore({
-      feature: 'users',
-      screen: 'member',
-      membershipId: 'membership-1'
-    });
+    const store = createFullConsoleKitStore('auth');
     const session = {
       mode: 'embedded',
       getSnapshot: () => snapshot,
@@ -1020,11 +1013,7 @@ describe('Console Kit observational callbacks', () => {
     });
     expect(screen.getByRole('heading', { level: 1, name: 'App access is unavailable' }))
       .toBeVisible();
-    expect(store.getState().route).toEqual({
-      feature: 'users',
-      screen: 'member',
-      membershipId: 'membership-1'
-    });
+    expect(store.getState().route).toEqual({ feature: 'auth', screen: 'entry' });
     expect(window.location.hash).toBe('');
   });
 

@@ -1214,39 +1214,60 @@ async function loadOrganizations(
         actionPolicy: { revokeOrganizationApiKey: hasAdministrativeRole }
       }];
     });
-  const activePrincipalRowIds = new Set(principalEntityRows
-    .filter((row) => asString(row.entityId) === activeOrganizationId)
-    .flatMap((row) => {
-      const principalId = asString(row.principalId);
-      return principalId ? [principalId] : [];
-    }));
-  const activePrincipalUserIdsFromCredentials = new Set(apiKeyRows
-    .filter((row) => asString(row.orgId) === activeOrganizationId)
-    .flatMap((row) => {
-      const principalId = asString(row.principalId);
-      return principalId ? [principalId] : [];
-    }));
-  const activeMembershipActorIds = new Set(activeMembershipRows.flatMap((membership) => {
-    const membershipActorId = asString(membership.actorId);
-    return membershipActorId ? [membershipActorId] : [];
-  }));
+  const principalRowScopes = new Map<string, Set<string>>();
+  const principalUserScopes = new Map<string, Set<string>>();
+  const addPrincipalScope = (
+    scopes: Map<string, Set<string>>,
+    principalId: string | null,
+    organizationId: string | null
+  ) => {
+    if (!principalId || !organizationId) return;
+    const organizations = scopes.get(principalId) ?? new Set<string>();
+    organizations.add(organizationId);
+    scopes.set(principalId, organizations);
+  };
+  for (const row of principalEntityRows) {
+    addPrincipalScope(
+      principalRowScopes,
+      asString(row.principalId),
+      asString(row.entityId)
+    );
+  }
+  for (const row of apiKeyRows) {
+    addPrincipalScope(
+      principalUserScopes,
+      asString(row.principalId),
+      asString(row.orgId)
+    );
+  }
+  for (const membership of memberships) {
+    addPrincipalScope(
+      principalUserScopes,
+      asString(membership.actorId),
+      asString(membership.entityId)
+    );
+  }
   let hasUnscopedPrincipalRows = false;
   const principals: OrganizationPrincipal[] = principalRows
     .flatMap((row) => {
       const rowId = asString(row.id);
       const userId = asString(row.userId);
-      const belongsToActiveOrganization = Boolean(
-        rowId && userId && (
-          activePrincipalRowIds.has(rowId) ||
-          activePrincipalUserIdsFromCredentials.has(userId) ||
-          activeMembershipActorIds.has(userId) ||
-          knownPrincipalOrganizations.get(
+      const scopedOrganizationIds = new Set<string>([
+        ...(rowId ? principalRowScopes.get(rowId) ?? [] : []),
+        ...(userId ? principalUserScopes.get(userId) ?? [] : [])
+      ]);
+      const knownOrganizationId = userId
+        ? knownPrincipalOrganizations.get(
             principalOrganizationKey(runtime.databaseId, userId)
-          ) === activeOrganizationId
-        )
+          )
+        : undefined;
+      if (knownOrganizationId) scopedOrganizationIds.add(knownOrganizationId);
+      const belongsToActiveOrganization = Boolean(
+        rowId && userId && activeOrganizationId &&
+        scopedOrganizationIds.has(activeOrganizationId)
       );
       const name = asString(row.name);
-      if (rowId && (!userId || !belongsToActiveOrganization)) {
+      if (rowId && scopedOrganizationIds.size === 0) {
         hasUnscopedPrincipalRows = true;
       }
       return belongsToActiveOrganization && userId && name
@@ -2575,8 +2596,8 @@ export function createConstructiveOrganizationsAdapter(
                     input: {
                       orgId: organizationId,
                       name: principalName,
-                      useAdminOwner: useAdminOwner ?? true,
-                      isReadOnly: isReadOnly ?? false,
+                      useAdminOwner: useAdminOwner ?? false,
+                      isReadOnly: isReadOnly ?? true,
                       bypassStepUp: bypassStepUp ?? false
                     }
                   }

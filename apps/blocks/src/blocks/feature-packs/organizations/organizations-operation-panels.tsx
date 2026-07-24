@@ -183,7 +183,15 @@ export function OrganizationSettingsPanel({
   const [settingError, setSettingError] = React.useState<string>();
   const fieldId = React.useId();
   const canUpdateOrganization = canPerform(policy, 'updateOrganization') &&
+    canPerform(organization.actionPolicy, 'updateOrganization') &&
     Boolean(actions?.updateOrganization);
+  const canLeaveOrganization = canPerform(policy, 'leaveOrganization') &&
+    canPerform(organization.actionPolicy, 'leaveOrganization') &&
+    Boolean(currentMembership) &&
+    Boolean(actions?.leaveOrganization);
+  const canDeleteOrganization = canPerform(policy, 'deleteOrganization') &&
+    canPerform(organization.actionPolicy, 'deleteOrganization') &&
+    Boolean(actions?.deleteOrganization);
   const canUpdateSettings = canPerform(policy, 'updateMembershipSettings') &&
     Boolean(actions?.updateMembershipSettings) && Boolean(settings);
 
@@ -269,7 +277,7 @@ export function OrganizationSettingsPanel({
           className='flex flex-col gap-4'
           onSubmit={(event) => {
             event.preventDefault();
-            if (!actions?.updateOrganization) return;
+            if (!canUpdateOrganization || !actions?.updateOrganization) return;
             setPendingGeneral(true);
             setError(undefined);
             void Promise.resolve(actions.updateOrganization({
@@ -399,7 +407,7 @@ export function OrganizationSettingsPanel({
           </p>
         </div>
         <div className='flex flex-wrap gap-2'>
-          {currentMembership && canPerform(policy, 'leaveOrganization') && actions?.leaveOrganization ? (
+          {canLeaveOrganization && currentMembership && actions?.leaveOrganization ? (
             <ConfirmAction
               confirmLabel='Leave organization'
               description='Your organization membership and tenant access will be removed. Another owner must remain when other members exist.'
@@ -413,7 +421,7 @@ export function OrganizationSettingsPanel({
               trigger={<Button variant='outline'>Leave organization</Button>}
             />
           ) : null}
-          {canPerform(policy, 'deleteOrganization') && actions?.deleteOrganization ? (
+          {canDeleteOrganization && actions?.deleteOrganization ? (
             <ConfirmAction
               confirmLabel='Delete organization'
               description='This deletes the organization identity. The operation cannot be undone from Console Kit.'
