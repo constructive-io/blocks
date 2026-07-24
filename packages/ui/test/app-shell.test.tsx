@@ -103,4 +103,31 @@ describe('AppShell', () => {
 		await act(async () => trigger?.click());
 		expect(sidebar?.getAttribute('data-state')).toBe('collapsed');
 	});
+
+	it('places the app bar over the content column in manager layout', async () => {
+		const container = await render(
+			<AppShell
+				barPlacement='content'
+				headerHeight='3rem'
+				navigation={[
+					{
+						id: 'main',
+						label: 'Manage application',
+						items: [{ id: 'users', label: 'Users', href: '/users', isActive: true }],
+					},
+				]}
+				sidebarWidth='15rem'
+			>
+				<section data-manager-content>Members</section>
+			</AppShell>,
+		);
+
+		const shell = container.querySelector('[data-slot="app-shell"]') as HTMLElement;
+		const bar = container.querySelector('[data-slot="app-bar"]');
+		const wrapper = container.querySelector('[data-slot="sidebar-wrapper"]') as HTMLElement;
+		expect(shell?.style.getPropertyValue('--app-bar-height')).toBe('3rem');
+		expect(wrapper?.style.getPropertyValue('--sidebar-width')).toBe('15rem');
+		// Content-column bar lives beside the sidebar, not as a full-width top sibling only.
+		expect(bar?.parentElement?.querySelector('[data-manager-content]')).not.toBeNull();
+	});
 });

@@ -125,9 +125,19 @@ type AppShellProps = Omit<AppShellRootProps, 'children'> & {
 	barSearch?: React.ReactNode;
 	barActions?: React.ReactNode;
 	barProps?: Omit<AppBarProps, 'breadcrumbs' | 'renderLink' | 'leading' | 'search' | 'actions'>;
+	/**
+	 * Where the app bar sits relative to the sidebar.
+	 * - `top` (default): full-width sticky bar above the sidebar + content row
+	 * - `content`: bar only over the main column (manager-panel composition)
+	 */
+	barPlacement?: 'top' | 'content';
 	headerHeight?: string;
+	/** CSS length for the expanded desktop sidebar (default upstream token). */
+	sidebarWidth?: string;
 	sidebarProps?: Omit<SidebarProps, 'children'>;
 	sidebarFooter?: React.ReactNode;
+	/** Optional sticky footer below main content (e.g. mobile feature tabs). */
+	contentFooter?: React.ReactNode;
 	defaultSidebarOpen?: boolean;
 	sidebarOpen?: boolean;
 	onSidebarOpenChange?: (open: boolean) => void;
@@ -358,13 +368,15 @@ function Brand({ brand, renderLink }: { brand: AppShellBrand; renderLink?: AppLi
 	const content = (
 		<>
 			{brand.logo && (
-				<div className='flex size-8 shrink-0 items-center justify-center rounded-lg bg-sidebar-primary text-sidebar-primary-foreground'>
+				<div className='bg-sidebar-primary text-sidebar-primary-foreground flex size-8 shrink-0 items-center justify-center rounded-lg'>
 					{brand.logo}
 				</div>
 			)}
 			<div className='grid min-w-0 flex-1 text-left text-sm leading-tight'>
 				<span className='truncate font-medium'>{brand.name}</span>
-				{brand.description && <span className='truncate text-xs'>{brand.description}</span>}
+				{brand.description && (
+					<span className='text-muted-foreground truncate text-xs'>{brand.description}</span>
+				)}
 			</div>
 		</>
 	);
@@ -396,9 +408,12 @@ function AppShell({
 	barSearch,
 	barActions,
 	barProps,
+	barPlacement = 'top',
 	headerHeight = '3.5rem',
+	sidebarWidth,
 	sidebarProps,
 	sidebarFooter,
+	contentFooter,
 	defaultSidebarOpen = true,
 	sidebarOpen,
 	onSidebarOpenChange,
@@ -412,7 +427,75 @@ function AppShell({
 	const mainGroups = navigation.filter((group) => group.placement !== 'footer');
 	const footerGroups = navigation.filter((group) => group.placement === 'footer');
 	const hasFooter = footerGroups.length > 0 || Boolean(account) || Boolean(sidebarFooter);
-	const { className: sidebarClassName, ...resolvedSidebarProps } = sidebarProps ?? {};
+	const { className: sidebarClassName, collapsible, ...resolvedSidebarProps } = sidebarProps ?? {};
+	const contentBar = barPlacement === 'content';
+
+	const appBar = (
+		<AppBar
+			breadcrumbs={breadcrumbs}
+			renderLink={renderLink}
+			leading={barLeading}
+			search={barSearch}
+			actions={barActions}
+			{...barProps}
+		/>
+	);
+
+	const sidebar = (
+		<Sidebar
+			collapsible={collapsible ?? 'icon'}
+			{...resolvedSidebarProps}
+			className={cn(
+				contentBar
+					? 'h-svh!'
+					: 'top-(--app-bar-height) h-[calc(100svh-var(--app-bar-height))]!',
+				sidebarClassName,
+			)}
+		>
+			{brand && (
+				<SidebarHeader className={contentBar ? 'pt-5 pb-2' : undefined}>
+					<Brand brand={brand} renderLink={renderLink} />
+				</SidebarHeader>
+			)}
+			<SidebarContent className={contentBar ? 'px-1' : undefined}>
+				{mainGroups.map((group) => (
+					<NavigationGroup key={group.id} group={group} renderLink={renderLink} />
+				))}
+			</SidebarContent>
+			{hasFooter && (
+				<SidebarFooter className={contentBar ? 'p-0' : undefined}>
+					{!contentBar ? <SidebarSeparator /> : null}
+					{footerGroups.map((group) => (
+						<NavigationGroup key={group.id} group={group} renderLink={renderLink} />
+					))}
+					{sidebarFooter}
+					{account && (
+						<div className={contentBar ? 'border-t p-2' : undefined}>
+							<AccountMenu account={account} renderLink={renderLink} />
+						</div>
+					)}
+				</SidebarFooter>
+			)}
+			<SidebarRail />
+		</Sidebar>
+	);
+
+	const mainColumn = (
+		<div className='flex min-h-0 min-w-0 flex-1 flex-col'>
+			{contentBar ? appBar : null}
+			<SidebarInset
+				{...contentProps}
+				className={cn(
+					'min-w-0 flex-1 overflow-auto',
+					contentFooter && 'pb-[calc(4.5rem+env(safe-area-inset-bottom))] md:pb-0',
+					contentClassName,
+				)}
+			>
+				{children}
+			</SidebarInset>
+			{contentFooter}
+		</div>
+	);
 
 	const content = (
 		<SidebarProvider
@@ -420,52 +503,16 @@ function AppShell({
 			defaultOpen={defaultSidebarOpen}
 			open={sidebarOpen}
 			onOpenChange={onSidebarOpenChange}
+			style={
+				sidebarWidth
+					? ({ '--sidebar-width': sidebarWidth } as React.CSSProperties)
+					: undefined
+			}
 		>
-			<AppBar
-				breadcrumbs={breadcrumbs}
-				renderLink={renderLink}
-				leading={barLeading}
-				search={barSearch}
-				actions={barActions}
-				{...barProps}
-			/>
+			{!contentBar ? appBar : null}
 			<div className='flex min-h-0 flex-1'>
-				<Sidebar
-					collapsible='icon'
-					{...resolvedSidebarProps}
-					className={cn(
-						'top-(--app-bar-height) h-[calc(100svh-var(--app-bar-height))]!',
-						sidebarClassName,
-					)}
-				>
-					{brand && (
-						<SidebarHeader>
-							<Brand brand={brand} renderLink={renderLink} />
-						</SidebarHeader>
-					)}
-					<SidebarContent>
-						{mainGroups.map((group) => (
-							<NavigationGroup key={group.id} group={group} renderLink={renderLink} />
-						))}
-					</SidebarContent>
-					{hasFooter && (
-						<SidebarFooter>
-							<SidebarSeparator />
-							{footerGroups.map((group) => (
-								<NavigationGroup key={group.id} group={group} renderLink={renderLink} />
-							))}
-							{sidebarFooter}
-							{account && <AccountMenu account={account} renderLink={renderLink} />}
-						</SidebarFooter>
-					)}
-					<SidebarRail />
-				</Sidebar>
-				<SidebarInset
-					{...contentProps}
-					className={cn('min-w-0 overflow-auto', contentClassName)}
-				>
-					{children}
-				</SidebarInset>
+				{sidebar}
+				{mainColumn}
 			</div>
 		</SidebarProvider>
 	);

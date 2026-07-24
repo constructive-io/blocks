@@ -56,19 +56,22 @@ function AppBar({
 	...props
 }: AppBarProps) {
 	const content = (
-		<div className='flex h-[var(--app-bar-height,3.5rem)] w-full min-w-0 items-center gap-2 px-4'>
-			<SidebarTrigger aria-label={toggleLabel} />
-			<Separator orientation='vertical' className='mr-2 h-4 self-center' />
+		<div className='flex h-[var(--app-bar-height,3.5rem)] w-full min-w-0 items-center gap-2 px-3 sm:px-4'>
+			<SidebarTrigger aria-label={toggleLabel} className='shrink-0' />
+			<Separator orientation='vertical' className='mr-1 hidden h-4 self-center sm:block' />
 			{leading}
 			{breadcrumbs.length > 0 && (
-				<Breadcrumb className='hidden min-w-0 sm:block'>
-					<BreadcrumbList className='flex-nowrap'>
+				<Breadcrumb className='min-w-0'>
+					<BreadcrumbList className='flex-nowrap text-sm text-muted-foreground'>
 						{breadcrumbs.map((item, index) => {
 							const current = item.current ?? index === breadcrumbs.length - 1;
 							const breadcrumbContent = current || !item.href ? (
-								<BreadcrumbPage className='block max-w-56 truncate'>{item.label}</BreadcrumbPage>
+								<BreadcrumbPage className='block max-w-48 truncate font-semibold text-foreground sm:max-w-56'>
+									{item.label}
+								</BreadcrumbPage>
 							) : (
 								<BreadcrumbLink
+									className='hover:text-foreground'
 									render={createAppLink(renderLink, {
 										href: item.href,
 										children: item.label,
@@ -78,7 +81,7 @@ function AppBar({
 
 							return (
 								<React.Fragment key={item.id}>
-									{index > 0 && <BreadcrumbSeparator />}
+									{index > 0 && <BreadcrumbSeparator className='text-muted-foreground/70' />}
 									<BreadcrumbItem className='min-w-0'>{breadcrumbContent}</BreadcrumbItem>
 								</React.Fragment>
 							);
@@ -87,7 +90,11 @@ function AppBar({
 				</Breadcrumb>
 			)}
 			{search && <div className='ml-auto min-w-0'>{search}</div>}
-			{actions && <div className={cn('flex items-center gap-2', !search && 'ml-auto')}>{actions}</div>}
+			{actions && (
+				<div className={cn('flex shrink-0 items-center gap-2', !search && 'ml-auto')}>
+					{actions}
+				</div>
+			)}
 		</div>
 	);
 
