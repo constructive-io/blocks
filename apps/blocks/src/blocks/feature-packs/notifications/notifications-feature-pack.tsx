@@ -28,6 +28,7 @@ import {
 } from '../shared/feature-pack-contracts';
 import {
   FeaturePackBoundary,
+  FeaturePackFilteredEmpty,
   FeaturePackPageHeader,
   FeaturePackTimestamp
 } from '../shared/feature-pack-ui';
@@ -159,8 +160,6 @@ export function NotificationsFeaturePack({
             </Button>
           ) : null
         }
-        description='Review in-app notifications exposed by the application database.'
-        eyebrow='Inbox'
         title='Notifications'
       />
       <FeaturePackBoundary
@@ -183,6 +182,20 @@ export function NotificationsFeaturePack({
               </Tabs>
               <Card variant='flat'>
                 <CardContent className='flex flex-col px-0'>
+                  {visible.length === 0 ? (
+                    <div className='p-4'>
+                      <FeaturePackFilteredEmpty
+                        clearLabel='Show all'
+                        description={
+                          filter === 'unread'
+                            ? 'You have no unread notifications right now.'
+                            : 'Nothing matches this filter.'
+                        }
+                        onClear={filter === 'unread' ? () => setFilter('all') : undefined}
+                        title={filter === 'unread' ? 'No unread notifications' : 'No notifications'}
+                      />
+                    </div>
+                  ) : null}
                   {visible.map((notification, index) => (
                     <React.Fragment key={notification.id}>
                       {index > 0 ? <Separator /> : null}

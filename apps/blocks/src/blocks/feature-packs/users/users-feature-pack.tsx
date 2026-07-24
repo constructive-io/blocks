@@ -62,15 +62,8 @@ import {
   SelectTrigger,
   SelectValue
 } from '@constructive-io/ui/select';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow
-} from '@constructive-io/ui/table';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@constructive-io/ui/tabs';
+import { cn } from '@/lib/utils';
 
 import {
   canPerform,
@@ -82,10 +75,20 @@ import {
 } from '../shared/feature-pack-contracts';
 import {
   FeaturePackBoundary,
-  FeaturePackPageHeader,
+  FeaturePackFilteredEmpty,
   FeatureStatusBadge,
   FeaturePackTimestamp
 } from '../shared/feature-pack-ui';
+
+type UsersSection = 'members' | 'invites';
+
+const sectionTriggerClass = cn(
+  'relative h-10 rounded-none border-0 border-b-2 border-transparent bg-transparent px-3',
+  'text-muted-foreground shadow-none',
+  'hover:text-foreground data-[active]:text-foreground',
+  'data-[active]:border-foreground data-[active]:bg-transparent data-[active]:shadow-none',
+  'focus-visible:ring-0 focus-visible:outline-none'
+);
 
 const NO_ROLE_VALUE = '__no_role__';
 
@@ -213,7 +216,7 @@ function InviteMemberDialog({
             <div className='flex flex-col gap-4'>
               <Field error={error} htmlFor={`${fieldId}-email`} label='Email address' required>
                 <Input
-                  aria-invalid={Boolean(error)}
+                  aria-invalid={error ? true : undefined}
                   autoComplete='email'
                   id={`${fieldId}-email`}
                   onChange={(event) => setEmail(event.currentTarget.value)}
@@ -465,15 +468,20 @@ function CancelAppInviteAction({
   );
 }
 
+/**
+ * People directory: hero + underline sections + open list rows.
+ * Same principles as the account identity hub — no nested tab/card chrome.
+ */
 export function UsersFeaturePack({
   resource,
   policy,
   actions,
   title = 'Users',
-  description = 'Review application members and profiles, then manage invitations, roles, and access status without taking ownership of personal credentials.',
+  description,
   onError
 }: UsersFeaturePackProps) {
   const [query, setQuery] = React.useState('');
+  const [section, setSection] = React.useState<UsersSection>('members');
   const normalizedQuery = query.trim().toLowerCase();
   const canInvite = canPerform(policy, 'invite') && Boolean(actions?.invite);
   const inviteRoles = resource.status === 'ready' && canPerform(policy, 'assignInviteRole')
@@ -482,20 +490,6 @@ export function UsersFeaturePack({
 
   return (
     <div className='flex flex-col gap-6'>
-      <FeaturePackPageHeader
-        actions={
-          canInvite && actions?.invite && resource.status === 'ready' ? (
-            <InviteMemberDialog
-              onError={onError}
-              onInvite={actions.invite}
-              roles={inviteRoles}
-            />
-          ) : null
-        }
-        description={description}
-        eyebrow='Application access'
-        title={title}
-      />
       <FeaturePackBoundary
         emptyDescription='Invite the first person when the app is ready for collaborators.'
         emptyAction={
@@ -514,178 +508,341 @@ export function UsersFeaturePack({
               .includes(normalizedQuery);
           });
           const invites = data.invites ?? [];
+          const showInvites = data.invites !== undefined;
+          const activeCount = data.members.filter(
+            (member) => member.status.trim().toLowerCase() === 'active'
+          ).length;
+          const multiSection = showInvites;
+          const activeSection =
+            multiSection && section === 'invites' ? 'invites' : 'members';
+
+          const inviteAction =
+            canInvite && actions?.invite ? (
+              <InviteMemberDialog
+                onError={onError}
+                onInvite={actions.invite}
+                roles={inviteRoles}
+              />
+            ) : null;
 
           return (
-            <Tabs defaultValue='members'>
-              <div className='flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between'>
-                <TabsList>
-                  <TabsTrigger value='members'>Members ({data.members.length})</TabsTrigger>
-                  {data.invites ? (
-                    <TabsTrigger value='invites'>Invitations ({invites.length})</TabsTrigger>
-                  ) : null}
-                </TabsList>
-                <label className='block w-full sm:max-w-xs'>
-                  <span className='sr-only'>Search members</span>
-                  <InputGroup>
-                    <InputGroupAddon>
-                      <SearchIcon aria-hidden='true' />
-                    </InputGroupAddon>
-                    <InputGroupInput
-                      onChange={(event) => setQuery(event.currentTarget.value)}
-                      placeholder='Search members'
-                      type='search'
-                      value={query}
-                    />
-                  </InputGroup>
-                </label>
-              </div>
-              <TabsContent value='members'>
-                <p className='text-muted-foreground mb-2 text-xs sm:hidden'>Swipe horizontally to see every member field and action.</p>
-                <Table
-                  containerClassName='[scrollbar-gutter:stable]'
-                  containerProps={{
-                    'aria-label': 'Application members table. Scroll horizontally for more columns.',
-                    tabIndex: 0
-                  }}
+            <div className='flex flex-col gap-6'>
+              <header className='flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between'>
+                <div className='min-w-0'>
+                  <h1 className='text-balance text-lg font-semibold tracking-tight lg:text-xl'>
+                    {title}
+                  </h1>
+                  <p className='text-muted-foreground mt-1 text-pretty text-sm'>
+                    {description ?? (
+                      <>
+                        <span className='tabular-nums'>{data.members.length}</span>
+                        {' '}
+                        {data.members.length === 1 ? 'member' : 'members'}
+                        {activeCount !== data.members.length ? (
+                          <>
+                            {' · '}
+                            <span className='tabular-nums'>{activeCount}</span>
+                            {' active'}
+                          </>
+                        ) : null}
+                        {showInvites && invites.length > 0 ? (
+                          <>
+                            {' · '}
+                            <span className='tabular-nums'>{invites.length}</span>
+                            {' pending'}
+                          </>
+                        ) : null}
+                      </>
+                    )}
+                  </p>
+                </div>
+                {inviteAction ? (
+                  <div className='flex shrink-0 items-center gap-2'>{inviteAction}</div>
+                ) : null}
+              </header>
+
+              {multiSection ? (
+                <Tabs
+                  onValueChange={(value) => setSection(value as UsersSection)}
+                  value={activeSection}
                 >
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Member</TableHead>
-                      <TableHead>Role</TableHead>
-                      <TableHead>Profile</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead className='w-12'><span className='sr-only'>Actions</span></TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {members.map((member) => (
-                      <TableRow key={member.id}>
-                        <TableCell>
-                          <div className='flex min-w-52 items-center gap-3'>
-                            <Avatar>
-                              {member.avatarUrl ? <AvatarImage alt='' src={member.avatarUrl} /> : null}
-                              <AvatarFallback>{initials(member.name)}</AvatarFallback>
-                            </Avatar>
-                            <div className='min-w-0'>
-                              <div className='truncate font-medium'>{member.name}</div>
-                              <div className='text-muted-foreground truncate text-sm'>{member.email}</div>
-                            </div>
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          {canPerform(policy, 'updateRole') && actions?.updateRole && (data.roles?.length ?? 0) > 0 ? (
-                            <MemberRoleSelect
-                              member={member}
-                              onError={onError}
-                              roles={data.roles ?? []}
-                              updateRole={actions.updateRole}
-                            />
-                          ) : member.role ?? 'Member'}
-                        </TableCell>
-                        <TableCell>{member.profile ?? '—'}</TableCell>
-                        <TableCell><FeatureStatusBadge status={member.status} /></TableCell>
-                        <TableCell>
-                          <MemberActions actions={actions} member={member} onError={onError} policy={policy} />
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </TabsContent>
-              {data.invites ? (
-                <TabsContent value='invites'>
-                  {invites.length === 0 ? (
-                    <Empty className='min-h-52 border'>
-                      <EmptyHeader>
-                        <EmptyMedia variant='icon'>
-                          <MailPlusIcon aria-hidden='true' />
-                        </EmptyMedia>
-                        <EmptyTitle>No pending invitations</EmptyTitle>
-                        <EmptyDescription>
-                          Invite a collaborator when they are ready to join this application.
-                        </EmptyDescription>
-                      </EmptyHeader>
-                      {canInvite && actions?.invite ? (
-                        <EmptyContent>
-                          <InviteMemberDialog
-                            onError={onError}
-                            onInvite={actions.invite}
-                            roles={inviteRoles}
+                  <div className='flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between'>
+                    <TabsList
+                      aria-label='People sections'
+                      className='bg-transparent h-auto w-full justify-start gap-1 rounded-none border-b border-border/60 p-0 sm:w-auto'
+                    >
+                      <TabsTrigger className={sectionTriggerClass} value='members'>
+                        Members
+                        <span className='text-muted-foreground ml-1.5 tabular-nums text-xs'>
+                          {data.members.length}
+                        </span>
+                      </TabsTrigger>
+                      <TabsTrigger className={sectionTriggerClass} value='invites'>
+                        Invitations
+                        <span className='text-muted-foreground ml-1.5 tabular-nums text-xs'>
+                          {invites.length}
+                        </span>
+                      </TabsTrigger>
+                    </TabsList>
+                    {activeSection === 'members' ? (
+                      <label className='block w-full sm:max-w-xs'>
+                        <span className='sr-only'>Search members</span>
+                        <InputGroup>
+                          <InputGroupAddon>
+                            <SearchIcon aria-hidden='true' />
+                          </InputGroupAddon>
+                          <InputGroupInput
+                            onChange={(event) => setQuery(event.currentTarget.value)}
+                            placeholder='Search members'
+                            type='search'
+                            value={query}
                           />
-                        </EmptyContent>
-                      ) : null}
-                    </Empty>
-                  ) : (
-                    <>
-                      <p className='text-muted-foreground mb-2 text-xs sm:hidden'>Swipe horizontally to see every invitation field and action.</p>
-                      <Table
-                        containerClassName='[scrollbar-gutter:stable]'
-                        containerProps={{
-                          'aria-label': 'Application invitations table. Scroll horizontally for more columns.',
-                          tabIndex: 0
-                        }}
-                      >
-                        <TableHeader>
-                          <TableRow>
-                            <TableHead>Email</TableHead>
-                            <TableHead>Role</TableHead>
-                            <TableHead>Status</TableHead>
-                            <TableHead>Expires</TableHead>
-                            <TableHead className='text-right'>Actions</TableHead>
-                          </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                          {invites.map((invite) => (
-                            <TableRow key={invite.id}>
-                              <TableCell className='font-medium'>{invite.email}</TableCell>
-                              <TableCell>{invite.role ?? 'Member'}</TableCell>
-                              <TableCell><FeatureStatusBadge status={invite.status} /></TableCell>
-                              <TableCell><FeaturePackTimestamp value={invite.expiresAt} /></TableCell>
-                              <TableCell>
-                                <div className='flex justify-end gap-2'>
-                                  {canPerform(policy, 'extendInvite') &&
-                                  canPerform(invite.actionPolicy, 'extendInvite') &&
-                                  actions?.extendInvite ? (
-                                    <Button
-                                      aria-label={`Extend invitation for ${invite.email}`}
-                                      onClick={() => {
-                                        void (async () => {
-                                          try {
-                                            await actions.extendInvite!({ inviteId: invite.id });
-                                          } catch (cause) {
-                                            onError?.(normalizeFeaturePackError(cause, 'The invitation could not be extended.'));
-                                          }
-                                        })();
-                                      }}
-                                      size='icon'
-                                      variant='ghost'
-                                    >
-                                      <RefreshCwIcon />
-                                    </Button>
-                                  ) : null}
-                                  {canPerform(policy, 'cancelInvite') &&
-                                  canPerform(invite.actionPolicy, 'cancelInvite') &&
-                                  actions?.cancelInvite ? (
-                                    <CancelAppInviteAction
-                                      cancelInvite={actions.cancelInvite}
-                                      invite={invite}
-                                      onError={onError}
-                                    />
-                                  ) : null}
-                                </div>
-                              </TableCell>
-                            </TableRow>
-                          ))}
-                        </TableBody>
-                      </Table>
-                    </>
-                  )}
-                </TabsContent>
-              ) : null}
-            </Tabs>
+                        </InputGroup>
+                      </label>
+                    ) : null}
+                  </div>
+
+                  <TabsContent className='mt-5 outline-none' value='members'>
+                    <MembersDirectory
+                      actions={actions}
+                      members={members}
+                      onClearSearch={() => setQuery('')}
+                      onError={onError}
+                      policy={policy}
+                      query={query}
+                      roles={data.roles ?? []}
+                    />
+                  </TabsContent>
+
+                  <TabsContent className='mt-5 outline-none' value='invites'>
+                    <InvitationsDirectory
+                      actions={actions}
+                      canInvite={canInvite}
+                      inviteAction={inviteAction}
+                      invites={invites}
+                      onError={onError}
+                      policy={policy}
+                    />
+                  </TabsContent>
+                </Tabs>
+              ) : (
+                <div className='flex flex-col gap-4'>
+                  <div className='flex justify-end'>
+                    <label className='block w-full sm:max-w-xs'>
+                      <span className='sr-only'>Search members</span>
+                      <InputGroup>
+                        <InputGroupAddon>
+                          <SearchIcon aria-hidden='true' />
+                        </InputGroupAddon>
+                        <InputGroupInput
+                          onChange={(event) => setQuery(event.currentTarget.value)}
+                          placeholder='Search members'
+                          type='search'
+                          value={query}
+                        />
+                      </InputGroup>
+                    </label>
+                  </div>
+                  <MembersDirectory
+                    actions={actions}
+                    members={members}
+                    onClearSearch={() => setQuery('')}
+                    onError={onError}
+                    policy={policy}
+                    query={query}
+                    roles={data.roles ?? []}
+                  />
+                </div>
+              )}
+            </div>
           );
         }}
       </FeaturePackBoundary>
     </div>
+  );
+}
+
+function MembersDirectory({
+  members,
+  query,
+  onClearSearch,
+  roles,
+  policy,
+  actions,
+  onError
+}: Readonly<{
+  members: readonly AppMember[];
+  query: string;
+  onClearSearch: () => void;
+  roles: readonly string[];
+  policy?: UsersFeaturePackProps['policy'];
+  actions?: UsersFeatureActions;
+  onError?: UsersFeaturePackProps['onError'];
+}>) {
+  if (members.length === 0 && query.trim()) {
+    return (
+      <FeaturePackFilteredEmpty
+        clearLabel='Clear search'
+        description='Try a different name, email, or role, or clear the search to see every member.'
+        onClear={onClearSearch}
+        query={query}
+        title='No members match'
+      />
+    );
+  }
+
+  if (members.length === 0) {
+    return (
+      <Empty className='min-h-40 border border-dashed'>
+        <EmptyHeader>
+          <EmptyMedia variant='icon'>
+            <SearchIcon aria-hidden='true' />
+          </EmptyMedia>
+          <EmptyTitle>No members to show</EmptyTitle>
+          <EmptyDescription>People with access to this app will appear here.</EmptyDescription>
+        </EmptyHeader>
+      </Empty>
+    );
+  }
+
+  return (
+    <ul
+      aria-label='Application members'
+      className='border-border/70 divide-border/60 divide-y overflow-hidden rounded-xl border'
+    >
+      {members.map((member) => (
+        <li
+          className='flex flex-col gap-3 px-3 py-3 sm:flex-row sm:items-center sm:gap-4 sm:px-4'
+          key={member.id}
+        >
+          <div className='flex min-w-0 flex-1 items-center gap-3'>
+            <Avatar className='ring-border/50 size-10 shrink-0 ring-1 ring-inset'>
+              {member.avatarUrl ? <AvatarImage alt='' src={member.avatarUrl} /> : null}
+              <AvatarFallback>{initials(member.name)}</AvatarFallback>
+            </Avatar>
+            <div className='min-w-0'>
+              <p className='truncate text-sm font-medium'>{member.name}</p>
+              <p className='text-muted-foreground truncate text-xs sm:text-sm'>{member.email}</p>
+              {member.profile ? (
+                <p className='text-muted-foreground mt-0.5 truncate text-xs'>{member.profile}</p>
+              ) : null}
+            </div>
+          </div>
+          <div className='flex flex-wrap items-center gap-2 sm:justify-end'>
+            {canPerform(policy, 'updateRole') && actions?.updateRole && roles.length > 0 ? (
+              <MemberRoleSelect
+                member={member}
+                onError={onError}
+                roles={roles}
+                updateRole={actions.updateRole}
+              />
+            ) : (
+              <span className='text-muted-foreground text-sm'>{member.role ?? 'Member'}</span>
+            )}
+            <FeatureStatusBadge status={member.status} />
+            <MemberActions
+              actions={actions}
+              member={member}
+              onError={onError}
+              policy={policy}
+            />
+          </div>
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+function InvitationsDirectory({
+  invites,
+  canInvite,
+  inviteAction,
+  policy,
+  actions,
+  onError
+}: Readonly<{
+  invites: readonly AppInvite[];
+  canInvite: boolean;
+  inviteAction: React.ReactNode;
+  policy?: UsersFeaturePackProps['policy'];
+  actions?: UsersFeatureActions;
+  onError?: UsersFeaturePackProps['onError'];
+}>) {
+  if (invites.length === 0) {
+    return (
+      <Empty className='min-h-48 border border-dashed'>
+        <EmptyHeader>
+          <EmptyMedia variant='icon'>
+            <MailPlusIcon aria-hidden='true' />
+          </EmptyMedia>
+          <EmptyTitle>No pending invitations</EmptyTitle>
+          <EmptyDescription>
+            Invite a collaborator when they are ready to join this application.
+          </EmptyDescription>
+        </EmptyHeader>
+        {canInvite && inviteAction ? <EmptyContent>{inviteAction}</EmptyContent> : null}
+      </Empty>
+    );
+  }
+
+  return (
+    <ul
+      aria-label='Application invitations'
+      className='border-border/70 divide-border/60 divide-y overflow-hidden rounded-xl border'
+    >
+      {invites.map((invite) => (
+        <li
+          className='flex flex-col gap-3 px-3 py-3 sm:flex-row sm:items-center sm:gap-4 sm:px-4'
+          key={invite.id}
+        >
+          <div className='min-w-0 flex-1'>
+            <p className='truncate text-sm font-medium'>{invite.email}</p>
+            <p className='text-muted-foreground mt-0.5 text-xs'>
+              {invite.role ?? 'Member'}
+              {invite.expiresAt ? (
+                <>
+                  {' · Expires '}
+                  <FeaturePackTimestamp value={invite.expiresAt} />
+                </>
+              ) : null}
+            </p>
+          </div>
+          <div className='flex flex-wrap items-center gap-2 sm:justify-end'>
+            <FeatureStatusBadge status={invite.status} />
+            {canPerform(policy, 'extendInvite') &&
+            canPerform(invite.actionPolicy, 'extendInvite') &&
+            actions?.extendInvite ? (
+              <Button
+                aria-label={`Extend invitation for ${invite.email}`}
+                onClick={() => {
+                  void (async () => {
+                    try {
+                      await actions.extendInvite!({ inviteId: invite.id });
+                    } catch (cause) {
+                      onError?.(
+                        normalizeFeaturePackError(cause, 'The invitation could not be extended.')
+                      );
+                    }
+                  })();
+                }}
+                size='icon-sm'
+                variant='ghost'
+              >
+                <RefreshCwIcon />
+              </Button>
+            ) : null}
+            {canPerform(policy, 'cancelInvite') &&
+            canPerform(invite.actionPolicy, 'cancelInvite') &&
+            actions?.cancelInvite ? (
+              <CancelAppInviteAction
+                cancelInvite={actions.cancelInvite}
+                invite={invite}
+                onError={onError}
+              />
+            ) : null}
+          </div>
+        </li>
+      ))}
+    </ul>
   );
 }

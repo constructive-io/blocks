@@ -177,7 +177,7 @@ function CreateBucketDialog({
           <DialogPanel className='flex flex-col gap-4'>
             <Field error={error} htmlFor={`${fieldId}-name`} label='Bucket name' required>
               <Input
-                aria-invalid={Boolean(error)}
+                aria-invalid={error ? true : undefined}
                 id={`${fieldId}-name`}
                 onChange={(event) => setName(event.currentTarget.value)}
                 required
@@ -310,8 +310,6 @@ export function StorageFeaturePack({
             <CreateBucketDialog onCreate={(input) => run(() => createBucket(input), 'The bucket could not be created.')} />
           ) : null
         }
-        description='Browse buckets and objects through host-injected storage actions and database-scoped access.'
-        eyebrow='Application files'
         title='Storage'
       />
       <FeaturePackLimitations

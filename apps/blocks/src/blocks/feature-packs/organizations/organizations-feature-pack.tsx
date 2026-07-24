@@ -46,6 +46,13 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger
 } from '@constructive-io/ui/dropdown-menu';
+import {
+  Empty,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle
+} from '@constructive-io/ui/empty';
 import { Field } from '@constructive-io/ui/field';
 import { Input } from '@constructive-io/ui/input';
 import {
@@ -76,6 +83,7 @@ import {
 } from '../shared/feature-pack-contracts';
 import {
   FeaturePackBoundary,
+  FeaturePackFilteredEmpty,
   FeaturePackLimitations,
   FeaturePackPageHeader,
   FeatureStatusBadge,
@@ -244,7 +252,7 @@ function TextActionDialog({
               required
             >
               <Input
-                aria-invalid={Boolean(error)}
+                aria-invalid={error ? true : undefined}
                 id={`${fieldId}-value`}
                 onChange={(event) => setValue(event.currentTarget.value)}
                 required
@@ -479,8 +487,6 @@ export function OrganizationsFeaturePack({
             />
           ) : null
         }
-        description='Switch tenant context and manage organization memberships without bypassing database policy.'
-        eyebrow='Tenant access'
         title='Organizations'
       />
       <FeaturePackLimitations
@@ -583,6 +589,15 @@ export function OrganizationsFeaturePack({
                     </label>
                   </div>
                   <TabsContent value='members'>
+                    {members.length === 0 && normalized ? (
+                      <FeaturePackFilteredEmpty
+                        clearLabel='Clear search'
+                        description='Try a different name, email, or role, or clear the search to see every member.'
+                        onClear={() => setQuery('')}
+                        query={query}
+                        title='No members match'
+                      />
+                    ) : (
                     <Table>
                       <TableHeader>
                         <TableRow>
@@ -633,9 +648,23 @@ export function OrganizationsFeaturePack({
                         ))}
                       </TableBody>
                     </Table>
+                    )}
                   </TabsContent>
                   {data.invites ? (
                     <TabsContent value='invites'>
+                      {data.invites.length === 0 ? (
+                        <Empty className='min-h-52 border' role='status'>
+                          <EmptyHeader>
+                            <EmptyMedia variant='icon'>
+                              <MailPlusIcon aria-hidden='true' />
+                            </EmptyMedia>
+                            <EmptyTitle>No pending invitations</EmptyTitle>
+                            <EmptyDescription>
+                              Invite a collaborator when they are ready to join this organization.
+                            </EmptyDescription>
+                          </EmptyHeader>
+                        </Empty>
+                      ) : (
                       <Table>
                         <TableHeader>
                           <TableRow>
@@ -670,6 +699,7 @@ export function OrganizationsFeaturePack({
                           ))}
                         </TableBody>
                       </Table>
+                      )}
                     </TabsContent>
                   ) : null}
                 </Tabs>

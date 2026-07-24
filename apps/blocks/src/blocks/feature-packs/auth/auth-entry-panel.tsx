@@ -1,7 +1,14 @@
 'use client';
 
 import * as React from 'react';
-import { ArrowLeftIcon, KeyRoundIcon, LockKeyholeIcon, MailIcon } from 'lucide-react';
+import {
+  ArrowLeftIcon,
+  EyeIcon,
+  EyeOffIcon,
+  KeyRoundIcon,
+  LockKeyholeIcon,
+  MailIcon
+} from 'lucide-react';
 
 import { Alert, AlertDescription } from '@constructive-io/ui/alert';
 import { Button } from '@constructive-io/ui/button';
@@ -14,34 +21,44 @@ import {
   CardTitle
 } from '@constructive-io/ui/card';
 import { Field } from '@constructive-io/ui/field';
-import { Input } from '@constructive-io/ui/input';
+import {
+  InputGroup,
+  InputGroupAddon,
+  InputGroupInput
+} from '@constructive-io/ui/input-group';
 
 import { canPerform, normalizeFeaturePackError } from '../shared/feature-pack-contracts';
 import type { AuthEntryMode, AuthFeaturePackProps } from './auth-contracts';
 
+const MIN_PASSWORD_LENGTH = 12;
+
 const modeCopy: Record<
   AuthEntryMode,
-  Readonly<{ title: string; description: string; submit: string }>
+  Readonly<{ title: string; description: string; submit: string; pending: string }>
 > = {
   'sign-in': {
     title: 'Sign in',
     description: 'Use your account to continue to this application.',
-    submit: 'Sign in'
+    submit: 'Sign in',
+    pending: 'Signing in…'
   },
   'sign-up': {
     title: 'Create an account',
     description: 'Create credentials for your personal Constructive identity.',
-    submit: 'Create account'
+    submit: 'Create account',
+    pending: 'Creating account…'
   },
   'recover-password': {
     title: 'Recover your account',
     description: 'We will send recovery instructions when an account can receive them.',
-    submit: 'Send recovery email'
+    submit: 'Send recovery email',
+    pending: 'Sending recovery email…'
   },
   'reset-password': {
     title: 'Choose a new password',
     description: 'Set a new password to finish recovering your account.',
-    submit: 'Reset password'
+    submit: 'Reset password',
+    pending: 'Resetting password…'
   }
 };
 
@@ -50,6 +67,14 @@ function actionForMode(mode: AuthEntryMode) {
   if (mode === 'sign-up') return 'signUp' as const;
   if (mode === 'recover-password') return 'recoverPassword' as const;
   return 'resetPassword' as const;
+}
+
+function passwordRequirementMessage(password: string): string | undefined {
+  if (!password) return undefined;
+  if (password.length < MIN_PASSWORD_LENGTH) {
+    return `Use at least ${MIN_PASSWORD_LENGTH} characters (${password.length} so far).`;
+  }
+  return undefined;
 }
 
 export function AuthEntryPanel({
@@ -64,10 +89,15 @@ export function AuthEntryPanel({
 }: Omit<AuthFeaturePackProps, 'view' | 'account'>) {
   const [email, setEmail] = React.useState('');
   const [password, setPassword] = React.useState('');
+  const [showPassword, setShowPassword] = React.useState(false);
   const [pending, setPending] = React.useState(false);
   const [feedback, setFeedback] = React.useState<string>();
   const [error, setError] = React.useState<string>();
+  const [emailError, setEmailError] = React.useState<string>();
+  const [passwordError, setPasswordError] = React.useState<string>();
   const fieldId = React.useId();
+  const emailRef = React.useRef<HTMLInputElement>(null);
+  const passwordRef = React.useRef<HTMLInputElement>(null);
   const copy = modeCopy[mode];
   const modeAvailable = (candidate: AuthEntryMode) => {
     const action = actionForMode(candidate);
@@ -77,19 +107,57 @@ export function AuthEntryPanel({
   const canRecoverPassword = Boolean(onModeChange) && modeAvailable('recover-password');
   const canSignUp = Boolean(onModeChange) && modeAvailable('sign-up');
   const canSignIn = Boolean(onModeChange) && modeAvailable('sign-in');
+  const requiresPassword = mode !== 'recover-password';
+  const requiresStrongPassword = mode === 'sign-up' || mode === 'reset-password';
+  const passwordHint = requiresStrongPassword
+    ? passwordRequirementMessage(password) ?? `Use at least ${MIN_PASSWORD_LENGTH} characters.`
+    : undefined;
 
   React.useEffect(() => {
     setError(undefined);
     setFeedback(undefined);
+    setEmailError(undefined);
+    setPasswordError(undefined);
+    setShowPassword(false);
   }, [mode]);
+
+  const focusFirstError = (next: Readonly<{ email?: string; password?: string }>) => {
+    if (next.email) {
+      emailRef.current?.focus();
+      return;
+    }
+    if (next.password) {
+      passwordRef.current?.focus();
+    }
+  };
 
   const submit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (!allowed) return;
 
-    setPending(true);
+    const nextEmailError =
+      mode !== 'reset-password' && !email.trim()
+        ? 'Enter an email address.'
+        : undefined;
+    const nextPasswordError = requiresPassword
+      ? !password
+        ? 'Enter a password.'
+        : requiresStrongPassword && password.length < MIN_PASSWORD_LENGTH
+          ? `Password must be at least ${MIN_PASSWORD_LENGTH} characters.`
+          : undefined
+      : undefined;
+
+    setEmailError(nextEmailError);
+    setPasswordError(nextPasswordError);
     setError(undefined);
     setFeedback(undefined);
+
+    if (nextEmailError || nextPasswordError) {
+      focusFirstError({ email: nextEmailError, password: nextPasswordError });
+      return;
+    }
+
+    setPending(true);
 
     try {
       if (mode === 'sign-in') {
@@ -116,24 +184,32 @@ export function AuthEntryPanel({
       const normalized = normalizeFeaturePackError(cause, 'Authentication could not be completed.');
       setError(normalized.message);
       onError?.(normalized);
+      // Keep focus near the credentials so the alert is announced next to the action.
+      if (requiresPassword) {
+        passwordRef.current?.focus();
+      } else {
+        emailRef.current?.focus();
+      }
     } finally {
       setPending(false);
     }
   };
 
   return (
-    <div className='bg-muted/30 flex min-h-[36rem] items-center justify-center p-4 sm:p-8'>
-      <Card className='w-full max-w-md' variant='flat'>
-        <CardHeader>
-          <div className='bg-primary text-primary-foreground mb-2 flex size-10 items-center justify-center rounded-lg'>
+    <div className='flex min-h-[min(36rem,calc(100dvh-8rem))] items-center justify-center py-2 sm:py-6'>
+      <Card className='w-full max-w-md border-border/70 shadow-sm' variant='flat'>
+        <CardHeader className='pb-2'>
+          <div className='bg-primary text-primary-foreground mb-3 flex size-10 items-center justify-center rounded-lg'>
             <KeyRoundIcon aria-hidden='true' />
           </div>
-          <CardTitle className='text-xl'>
-            <h1>{copy.title}</h1>
+          <CardTitle>
+            <h1 className='text-balance text-base font-semibold tracking-tight lg:text-xl'>
+              {copy.title}
+            </h1>
           </CardTitle>
-          <CardDescription>{copy.description}</CardDescription>
+          <CardDescription className='text-pretty'>{copy.description}</CardDescription>
         </CardHeader>
-        <form onSubmit={(event) => void submit(event)}>
+        <form noValidate onSubmit={(event) => void submit(event)}>
           <CardContent className='flex flex-col gap-4'>
             {verificationNotice ? (
               <Alert variant={verificationNotice.status === 'error' ? 'destructive' : 'default'}>
@@ -141,49 +217,82 @@ export function AuthEntryPanel({
               </Alert>
             ) : null}
             {mode !== 'reset-password' ? (
-              <Field htmlFor={`${fieldId}-email`} label='Email address' required>
-                <div className='relative'>
-                  <MailIcon className='text-muted-foreground pointer-events-none absolute left-3 top-1/2 -translate-y-1/2' />
-                  <Input
+              <Field
+                error={emailError}
+                htmlFor={`${fieldId}-email`}
+                label='Email address'
+                required
+              >
+                <InputGroup>
+                  <InputGroupAddon>
+                    <MailIcon aria-hidden='true' />
+                  </InputGroupAddon>
+                  <InputGroupInput
+                    aria-invalid={emailError ? true : undefined}
                     autoComplete='email'
                     autoCapitalize='none'
-                    className='pl-10'
                     id={`${fieldId}-email`}
                     name='email'
-                    onChange={(event) => setEmail(event.currentTarget.value)}
+                    onChange={(event) => {
+                      setEmail(event.currentTarget.value);
+                      if (emailError) setEmailError(undefined);
+                    }}
+                    ref={emailRef}
                     required
                     spellCheck={false}
                     type='email'
                     value={email}
                   />
-                </div>
+                </InputGroup>
               </Field>
             ) : null}
-            {mode !== 'recover-password' ? (
+            {requiresPassword ? (
               <Field
-                description={mode === 'sign-up' || mode === 'reset-password' ? 'Use at least 12 characters.' : undefined}
+                description={passwordHint}
+                error={passwordError}
                 htmlFor={`${fieldId}-password`}
                 label={mode === 'reset-password' ? 'New password' : 'Password'}
                 required
               >
-                <div className='relative'>
-                  <LockKeyholeIcon className='text-muted-foreground pointer-events-none absolute left-3 top-1/2 -translate-y-1/2' />
-                  <Input
+                <InputGroup>
+                  <InputGroupAddon>
+                    <LockKeyholeIcon aria-hidden='true' />
+                  </InputGroupAddon>
+                  <InputGroupInput
+                    aria-invalid={passwordError ? true : undefined}
                     autoComplete={mode === 'sign-in' ? 'current-password' : 'new-password'}
-                    className='pl-10'
                     id={`${fieldId}-password`}
-                    minLength={mode === 'sign-in' ? undefined : 12}
+                    minLength={requiresStrongPassword ? MIN_PASSWORD_LENGTH : undefined}
                     name='password'
-                    onChange={(event) => setPassword(event.currentTarget.value)}
+                    onChange={(event) => {
+                      setPassword(event.currentTarget.value);
+                      if (passwordError) setPasswordError(undefined);
+                    }}
+                    ref={passwordRef}
                     required
-                    type='password'
+                    type={showPassword ? 'text' : 'password'}
                     value={password}
                   />
-                </div>
+                  <InputGroupAddon align='inline-end'>
+                    <Button
+                      aria-label={showPassword ? 'Hide password' : 'Show password'}
+                      aria-pressed={showPassword}
+                      className='size-7 p-0'
+                      onClick={() => setShowPassword((value) => !value)}
+                      size='sm'
+                      type='button'
+                      variant='ghost'
+                    >
+                      {showPassword
+                        ? <EyeOffIcon aria-hidden='true' className='size-4' />
+                        : <EyeIcon aria-hidden='true' className='size-4' />}
+                    </Button>
+                  </InputGroupAddon>
+                </InputGroup>
               </Field>
             ) : null}
             {error ? (
-              <Alert variant='destructive'>
+              <Alert role='alert' variant='destructive'>
                 <AlertDescription>{error}</AlertDescription>
               </Alert>
             ) : null}
@@ -193,10 +302,16 @@ export function AuthEntryPanel({
               </Alert>
             ) : null}
             {!allowed ? (
-              <p className='text-muted-foreground text-sm'>This authentication action is unavailable for the current app.</p>
+              <p className='text-muted-foreground text-pretty text-sm'>
+                This authentication action is unavailable for the current app.
+              </p>
             ) : null}
-            <Button disabled={!allowed || pending} type='submit'>
-              {pending ? 'Working…' : copy.submit}
+            <Button
+              aria-busy={pending}
+              disabled={!allowed || pending}
+              type='submit'
+            >
+              {pending ? copy.pending : copy.submit}
             </Button>
           </CardContent>
         </form>

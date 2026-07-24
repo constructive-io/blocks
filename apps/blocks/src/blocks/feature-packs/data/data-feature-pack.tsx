@@ -141,11 +141,7 @@ function DataExplorer({
 export function DataFeaturePack({ config, ...props }: DataFeaturePackProps) {
   return (
     <div className='flex min-h-0 flex-1 flex-col gap-6'>
-      <FeaturePackPageHeader
-        description='Explore and edit application tables discovered from the current Constructive _meta contract.'
-        eyebrow='Database'
-        title='Data explorer'
-      />
+      <FeaturePackPageHeader title='Data' />
       <SheetsProvider config={config}>
         <DataExplorer {...props} />
       </SheetsProvider>

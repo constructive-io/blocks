@@ -56,6 +56,11 @@ describe('feature-pack interaction policy', () => {
       </>
     );
 
+    // Security section holds password fields; open both instances first.
+    const securityTabs = screen.getAllByRole('tab', { name: 'Security' });
+    await user.click(securityTabs[0]!);
+    await user.click(securityTabs[1]!);
+
     const currentPasswords = screen.getAllByLabelText(/Current password/);
     const newPasswords = screen.getAllByLabelText(/New password/);
     expect(new Set(currentPasswords.map((input) => input.id)).size).toBe(2);
@@ -130,6 +135,7 @@ describe('feature-pack interaction policy', () => {
       />
     );
 
+    await user.click(screen.getByRole('tab', { name: /Sessions/ }));
     await user.click(screen.getByRole('button', { name: 'Revoke' }));
     expect(revokeSession).not.toHaveBeenCalled();
     expect(screen.getByRole('alertdialog')).toHaveTextContent('Revoke Firefox on Linux?');
@@ -294,7 +300,7 @@ describe('feature-pack interaction policy', () => {
       />
     );
 
-    await user.click(screen.getByRole('tab', { name: 'Invitations (1)' }));
+    await user.click(screen.getByRole('tab', { name: /Invitations/ }));
     await user.click(screen.getByRole('button', { name: 'Cancel' }));
     expect(cancelInvite).not.toHaveBeenCalled();
     expect(screen.getByRole('alertdialog')).toHaveTextContent(
@@ -362,7 +368,7 @@ describe('feature-pack interaction policy', () => {
       />
     );
 
-    await user.click(screen.getByRole('tab', { name: 'Invitations (1)' }));
+    await user.click(screen.getByRole('tab', { name: /Invitations/ }));
     await user.click(screen.getByRole('button', { name: 'Cancel' }));
     expect(cancelInvite).not.toHaveBeenCalled();
     expect(screen.getByRole('alertdialog')).toHaveTextContent(
@@ -571,5 +577,61 @@ describe('feature-pack interaction policy', () => {
 
     expect(screen.queryByRole('button', { name: 'Reports' })).toBeNull();
     expect(screen.getByRole('button', { name: /Images/ })).toBeDisabled();
+  });
+
+  it('explains filtered-empty member searches without treating the resource as empty', async () => {
+    const user = userEvent.setup();
+    render(
+      <UsersFeaturePack
+        resource={{
+          status: 'ready',
+          data: {
+            members: [{
+              id: 'membership-1',
+              userId: 'user-1',
+              name: 'Ada Lovelace',
+              email: 'ada@example.com',
+              status: 'active',
+              role: 'Owner'
+            }],
+            roles: ['Owner']
+          }
+        }}
+      />
+    );
+
+    await user.type(screen.getByRole('searchbox', { name: 'Search members' }), 'grace');
+    expect(screen.getByText('No members match')).toBeVisible();
+    expect(screen.getByText(/No results for “grace”/)).toBeVisible();
+
+    await user.click(screen.getByRole('button', { name: 'Clear search' }));
+    expect(screen.getByText('Ada Lovelace')).toBeVisible();
+    expect(screen.queryByText('No members match')).toBeNull();
+  });
+
+  it('toggles password visibility and uses mode-specific pending labels on auth entry', async () => {
+    const user = userEvent.setup();
+    const signIn = vi.fn(() => new Promise<void>(() => undefined));
+    render(
+      <AuthEntryPanel
+        actions={{ signIn }}
+        policy={{ signIn: true }}
+      />
+    );
+
+    const password = document.querySelector<HTMLInputElement>('input[name="password"]');
+    expect(password).not.toBeNull();
+    expect(password).toHaveAttribute('type', 'password');
+    await user.type(password!, 'super-secret-pass');
+    await user.click(screen.getByRole('button', { name: 'Show password' }));
+    expect(password).toHaveAttribute('type', 'text');
+    await user.click(screen.getByRole('button', { name: 'Hide password' }));
+    expect(password).toHaveAttribute('type', 'password');
+
+    const email = document.querySelector<HTMLInputElement>('input[name="email"]');
+    expect(email).not.toBeNull();
+    await user.type(email!, 'ada@example.com');
+    await user.click(screen.getByRole('button', { name: 'Sign in' }));
+    expect(screen.getByRole('button', { name: 'Signing in…' })).toBeDisabled();
   });
 });

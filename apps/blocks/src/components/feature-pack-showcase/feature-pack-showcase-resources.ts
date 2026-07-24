@@ -23,7 +23,7 @@ type FeaturePackShowcaseVariantOption = Readonly<{
 const FEATURE_PACK_SHOWCASE_VARIANTS = {
   data: [{ value: 'tables', label: 'Application tables' }],
   auth: [
-    { value: 'account', label: 'Account security' },
+    { value: 'account', label: 'Account' },
     { value: 'sign-in', label: 'Sign in' },
     { value: 'sign-up', label: 'Create account' },
     { value: 'recover-password', label: 'Recover password' },
