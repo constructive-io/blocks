@@ -15,8 +15,6 @@ import {
   type ConsoleKitProofTenant
 } from './console-kit-proof-client';
 
-export const dynamic = 'force-dynamic';
-
 const API_NAME_TO_KIND = {
   api: 'data',
   auth: 'auth',
