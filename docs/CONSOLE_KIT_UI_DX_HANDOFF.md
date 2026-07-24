@@ -1,8 +1,8 @@
 # Console Kit UI and DX polish handoff
 
-Status: 2026-07-23  
-Audience: AI agents continuing the Blocks and Console Kit frontend work  
-Implementation baseline: `5c676fb feat(console-kit): align blocks with feature packs`
+Status: 2026-07-24
+Audience: AI agents continuing the Blocks and Console Kit frontend work
+Implementation baseline: `4cbe7a4 fix(console-kit): close adversarial review gaps`
 
 This handoff starts after the feature-pack architecture, Console Kit runtime,
 native tenant fixture, and RLS verification were completed. The next wave is a
@@ -34,7 +34,7 @@ Kit architecture while doing that work.
   `PROJECTS_WORKSPACE` to the workspace containing the Supabase checkout, then
   continue in `${CONSTRUCTIVE_WORKSPACE}/blocks-feature-packs`.
 - The branch is `feat/feature-packs-console-kit`.
-- The completed tenant-administration baseline is commit `30cd653`.
+- The completed tenant-administration baseline is commit `4cbe7a4`.
 - Do not accidentally switch to or edit the separate
   `${CONSTRUCTIVE_WORKSPACE}/blocks` worktree.
 - `${CONSTRUCTIVE_WORKSPACE}/constructive-db` is the backend source
@@ -251,58 +251,31 @@ In the dashboard, `user-db` and `app/db/[dbId]` are the relevant application
 database scope. The `platform` and `schema-builder` paths are operator scope and
 must not be imported into Console Kit's tenant trust boundary.
 
-## Prioritized polish backlog
+## Current baseline and remaining polish
 
-### P0: first successful install and honest diagnostics
+The completed baseline now includes the deterministic Console Kit showcase,
+endpoint-specific diagnostics with retry and copy affordances, the install
+matrix, tenant-descriptor integration, clean shadcn CLI install coverage, and
+responsive shell and documentation navigation. The feature packs share
+resource and action-state language, while Auth, Users, and Organizations expose
+routed workflows that fail closed against capability, pack-policy, and
+row-policy evidence.
 
-1. Add a real deterministic Console Kit showcase to the documentation page.
-   It should switch presets and show signed-out, discovering, partial, ready,
-   incompatible, and unavailable states without requiring the live fixture.
-2. Replace generic unavailable copy with endpoint-specific evidence. Provide a
-   retry action where one can work, a copyable diagnostic, and a link to the
-   relevant setup guidance. Do not imply that an unavailable public route is a
-   backend defect.
-3. Publish one compact install matrix covering core, standalone pack, Console
-   module, each preset, and the umbrella. Show what each choice installs, what
-   public evidence it expects, and how it degrades when that evidence is absent.
-4. Reduce the common integration to a tenant descriptor plus feature-module
-   list. Keep endpoint resolver and semantic binding overrides available for
-   ambiguous custom schemas without making them mandatory boilerplate.
-5. Exercise every documented command through the real shadcn CLI in a clean
-   consumer. A pretty snippet that does not install is a release blocker.
+The next visual/DX pass should concentrate on the remaining product work:
 
-### P0: current workflow polish
-
-1. Normalize visual hierarchy, spacing, control density, status language, and
-   action feedback across all seven packs. Reuse shared resource-state and
-   action-state primitives instead of fixing each pack independently.
-2. Improve filtered-empty states in Users and Organizations. A resource can be
-   populated while a local search or tab has no matches; an empty table body is
-   not sufficient feedback.
-3. Improve auth ergonomics with password visibility, action-specific pending
-   labels, useful requirement feedback, and focus movement to the first form
-   error. Keep the provider-neutral action contract intact.
-4. Reduce narrow app-bar density. Connection and metadata status currently
-   compete for mobile width; one compact status entry point should still expose
-   all connection evidence and copy feedback.
-5. Make the docs mobile navigation modal-grade. The current custom drawer needs
-   focus containment, return focus, and body-scroll containment, or should be
-   replaced with the shared Sheet/Sidebar behavior.
-6. Break up large workflow components only where the extraction creates a
-   reusable visual or interaction contract. Users, Organizations, Storage, and
-   `console-kit.tsx` should not become collections of one-off wrappers.
-
-### P1: embedding and navigation, after product confirmation
-
-- Use the existing `AppShell` search slot for command navigation across
-  installed features and discovered tables.
-- Add controlled/default/callback forms for useful Users, Organizations, and
-  Notifications filters so hosts can synchronize them with URLs.
-- Add a dialog/drawer Console Kit composition for embedded management flows.
-- Add host slots for database and environment selection using the same atomic
-  tenant reset already used by Console Kit.
-- Add richer Storage breadcrumbs and provider escape hatches only when the
-  public endpoint supports them.
+1. Improve filtered-empty states anywhere a populated resource can still render
+   an empty local search or tab, and keep the explanation beside the filter that
+   caused it.
+2. Add command navigation across installed features and discovered tables using
+   the existing `AppShell` search slot.
+3. Add controlled/default/callback forms for useful Users, Organizations, and
+   Notifications filters so hosts can synchronize them with URLs.
+4. Add dialog or drawer Console Kit compositions for embedded management flows,
+   plus explicit host slots for database and environment selection.
+5. Add richer Storage breadcrumbs and provider escape hatches only where the
+   selected public endpoint proves the required operations.
+6. Split the largest workflow files when an extraction creates a reusable
+   directory, form, or operation-panel contract; avoid one-off wrapper files.
 
 ### Decision-gated, not part of a general polish pass
 
@@ -461,7 +434,7 @@ pnpm build:pages
 
 At the implementation baseline, these gates passed:
 
-- Blocks: 246 tests
+- Blocks: 320 tests
 - Native fixture safety: 16 tests
 - Data: 256 tests
 - Sheets: 633 tests
