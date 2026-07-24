@@ -19,8 +19,8 @@ const billingBlocks = [
 ] as const;
 
 const featurePacks = [
-  { id: 'data', previewHeading: 'Data explorer', title: 'Data', variant: 'tables' },
-  { id: 'auth', previewHeading: 'Account security', title: 'Authentication', variant: 'account' },
+  { id: 'data', previewHeading: 'Data', title: 'Data', variant: 'tables' },
+  { id: 'auth', previewHeading: 'Account', title: 'Authentication', variant: 'account' },
   { id: 'users', previewHeading: 'Users', title: 'Users', variant: 'directory' },
   {
     id: 'organizations',

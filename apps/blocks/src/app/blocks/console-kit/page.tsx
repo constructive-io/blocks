@@ -2,10 +2,65 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 
 import { Badge } from '@constructive-io/ui/badge';
+import {
+  Table,
+  TableBody,
+  TableCaption,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow
+} from '@constructive-io/ui/table';
 
+import { ConsoleKitShowcasePreview } from '@/components/console-kit-showcase/console-kit-showcase-preview';
 import { CodeBlock } from '@/components/docs/code-block';
 import { registryAdd } from '@/lib/install-mode';
 import { OG_IMAGE, withBase } from '@/lib/site';
+
+const INSTALL_MATRIX = [
+  {
+    surface: 'console-kit-nextjs',
+    installs: 'Core + all seven modules + shell graph',
+    evidence: 'Any tenant with routable endpoints for the modules you open',
+    degrades: 'Unavailable modules stay navigable with diagnostics'
+  },
+  {
+    surface: 'console-kit-core',
+    installs: 'Shell, store, runtime, no feature modules',
+    evidence: 'Host-supplied featureModules list',
+    degrades: 'Empty main until modules are composed'
+  },
+  {
+    surface: 'console-module-*',
+    installs: 'Console integration + matching feature-pack view',
+    evidence: 'Module-required endpoints, capabilities, and _meta',
+    degrades: 'Setup badge + endpoint-specific unavailable panel'
+  },
+  {
+    surface: 'feature-pack-*',
+    installs: 'Standalone provider-neutral view only',
+    evidence: 'Host-supplied resource/actions props',
+    degrades: 'Loading, empty, error, ready resource states only'
+  },
+  {
+    surface: 'preset-auth-hardened',
+    installs: 'Data, Auth, Users',
+    evidence: 'data + auth endpoints; users after sign-in',
+    degrades: 'Signed-out users/data show Sign in'
+  },
+  {
+    surface: 'preset-b2b-storage',
+    installs: 'Data, Auth, Users, Organizations, Storage',
+    evidence: 'auth + data + admin/org contracts; storage route when public',
+    degrades: 'Stock storage often unavailable without a public route'
+  },
+  {
+    surface: 'preset-full',
+    installs: 'All seven modules',
+    evidence: 'Per-module public contracts',
+    degrades: 'Billing/notifications/storage degrade independently'
+  }
+] as const;
 
 const TITLE = 'Console Kit for Next.js';
 const DESCRIPTION =
@@ -215,6 +270,78 @@ export default function ConsoleKitPage() {
       </header>
 
       <div className="flex flex-col gap-12 lg:gap-14">
+        <section aria-labelledby="console-showcase-heading">
+          <div className="mb-4 max-w-3xl">
+            <h2
+              id="console-showcase-heading"
+              className="text-lg font-semibold tracking-tight"
+            >
+              Product states
+            </h2>
+            <p className="mt-1.5 text-pretty text-sm leading-7 text-muted-foreground">
+              Console Kit is a tenant-user console. Switch presets and signed-out,
+              discovering, partial, ready, incompatible, and unavailable states
+              without a live fixture. Missing public routes are expected degraded
+              states, not silent backend failures.
+            </p>
+          </div>
+          <ConsoleKitShowcasePreview />
+        </section>
+
+        <section aria-labelledby="console-install-matrix-heading">
+          <div className="mb-4 max-w-3xl">
+            <h2
+              id="console-install-matrix-heading"
+              className="text-lg font-semibold tracking-tight"
+            >
+              Choose an install surface
+            </h2>
+            <p className="mt-1.5 text-pretty text-sm leading-7 text-muted-foreground">
+              One matrix covers the umbrella, core, Console modules, standalone
+              packs, and official presets. Installed code never grants authority;
+              each surface only becomes interactive when public evidence supports it.
+            </p>
+          </div>
+          <Table
+            containerClassName="[scrollbar-gutter:stable]"
+            containerProps={{
+              tabIndex: 0,
+              'aria-label': 'Console Kit install matrix'
+            }}
+          >
+            <TableCaption className="sr-only">
+              Install surfaces, what they install, expected public evidence, and
+              degradation behavior.
+            </TableCaption>
+            <TableHeader>
+              <TableRow>
+                <TableHead scope="col">Surface</TableHead>
+                <TableHead scope="col">Installs</TableHead>
+                <TableHead scope="col">Public evidence</TableHead>
+                <TableHead scope="col">When evidence is absent</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {INSTALL_MATRIX.map((row) => (
+                <TableRow key={row.surface}>
+                  <TableCell className="font-mono text-xs font-medium whitespace-nowrap">
+                    {row.surface}
+                  </TableCell>
+                  <TableCell className="min-w-44 whitespace-normal text-pretty text-sm text-muted-foreground">
+                    {row.installs}
+                  </TableCell>
+                  <TableCell className="min-w-48 whitespace-normal text-pretty text-sm text-muted-foreground">
+                    {row.evidence}
+                  </TableCell>
+                  <TableCell className="min-w-48 whitespace-normal text-pretty text-sm text-muted-foreground">
+                    {row.degrades}
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </section>
+
         <section aria-labelledby="console-install-heading">
           <div className="mb-4 max-w-3xl">
             <h2
