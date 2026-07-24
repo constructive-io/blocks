@@ -2,7 +2,7 @@
 
 Runtime query generation and metadata utilities for Constructive/PostGraphile data endpoints.
 
-The package combines Constructive's versioned `_meta` contract with standard GraphQL introspection. `_meta` supplies PostgreSQL encodings, exact CRUD inflections, relations, constraints, scope, storage, search, i18n, and realtime metadata; standard introspection supplies input objects, filters, ordering, pagination, enums, and custom root operations.
+The package combines Constructive's versioned `_meta` contract with standard GraphQL introspection. `_meta` supplies PostgreSQL encodings, advisory CRUD inflections, relations, constraints, scope, storage, search, i18n, and realtime metadata; standard introspection supplies the exact executable roots, input objects, filters, ordering, pagination, enums, and custom operations.
 
 ```ts
 import {
@@ -29,6 +29,6 @@ const tables = selectConsoleDataTables(meta._meta?.tables ?? [], {
 });
 ```
 
-`assessSchemaIntrospectionCompatibility` follows the root type names declared by `__schema`, then verifies every `_meta` CRUD operation, the arguments required by the query builders, referenced object/input/enum types, table fields, and declared enum values. An incompatible result reports the exact missing GraphQL paths.
+`assessSchemaIntrospectionCompatibility` follows the root type names declared by `__schema`, then cross-checks `_meta` operation hints, the arguments required by the query builders, referenced object/input/enum types, table fields, and declared enum values. An incompatible result reports the exact missing GraphQL paths. `_meta` can include hidden tables or naive inflections, so callers must use standard introspection as the authority for any operation they execute.
 
 `selectConsoleDataTables` classifies ownership only from the July `_meta` `table.scope.scope` smart tag, with `app` as the default exact scope. It excludes storage-owned tables and every table identified as a many-to-many junction, regardless of extra domain fields; physical schema names are used only for explicit exclusions and deduplication.

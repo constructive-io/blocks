@@ -2,10 +2,12 @@ import type { MetaschemaField, MetaschemaTable } from '@constructive-io/data';
 
 import type { ConsoleKitMetadataState } from '../../console-kit/console-kit-contracts';
 import {
+  canonicalMetaName,
   compatibleMetaTables,
   isConstructiveGraphQLName,
   metaFieldName,
   metaPrimaryKeyField,
+  metaTableNames,
   metaTableNamespace,
   readableMetaTable,
   type ConstructiveMetaTableContract
@@ -74,8 +76,10 @@ function referencedStorageBucket(
     referencedFields?: readonly (string | null)[] | null
   ) => {
     if (!target) return;
+    const canonicalTarget = canonicalMetaName(target);
     const candidates = buckets.filter(({ table }) =>
-      target === table.name || target === metaTableNamespace(table)
+      target === metaTableNamespace(table) ||
+      metaTableNames(table).includes(canonicalTarget)
     );
     const localKeys = (keys ?? []).filter(
       (field): field is MetaschemaField =>

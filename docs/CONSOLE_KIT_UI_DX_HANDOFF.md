@@ -173,8 +173,9 @@ The main workflows are:
 Data's metadata and GraphQL compatibility layer lives in
 `packages/data/src/schema-introspection-compatibility.ts`. Its CRUD grid and
 PostGraphile adapter live in `packages/sheets`, especially
-`packages/sheets/src/adapter/postgraphile-adapter.ts`. UI work must not loosen
-their exact schema compatibility checks or enum normalization.
+`packages/sheets/src/adapter/postgraphile-adapter.ts`. Preserve their
+fail-closed behavior and enum normalization, while treating `_meta` operation
+names as hints that must resolve to exact standard-introspection coordinates.
 
 ### Documentation and previews
 
@@ -335,8 +336,9 @@ These are expected degraded states, not frontend bugs to hide:
 - Stock `b2b:storage` and `full` install Storage UI, but their default public
   APIs do not route storage tables. Show an actionable unavailable state.
 - The custom `storage-routed` fixture maps Storage to the supported `admin` API
-  and proves `_meta` and reads, but it exposes no bucket-create or presigned
-  upload mutations. Write controls must remain hidden.
+  and proves `_meta` and reads. It exposes table CRUD roots, but no
+  object-upload or presigned-URL workflow, so write controls must remain
+  hidden.
 - Stock Notifications has no reachable public inbox domain, so it remains
   unavailable even when the backend module is installed.
 - The native membership fixture uses `auto-approved-and-verified` to isolate
@@ -346,6 +348,33 @@ These are expected degraded states, not frontend bugs to hide:
   navigation, Users, Organizations, and routed read-only Storage. Separate
   public GraphQL helpers prove CRUD and anonymous, peer, cross-tenant, invalid,
   and revoked-token denial. Do not describe that CRUD proof as browser-driven.
+
+## Live `_meta` audit
+
+The 2026-07-24 local audit queried all 32 retained tenant endpoint URLs plus
+the platform Agent and Compute APIs. Every healthy route exposes the same
+`Query._meta: MetaSchema` signature with 26 `Meta*` object types, and
+`packages/data/src/meta-query.ts` requests every live field. Current tenant
+values prove application scope, tsvector search, storage tags, enums, and UUID,
+datetime, inet, bytea, bigint, and interval encodings. Platform routes also
+prove vector, composite, and date encodings. The retained fixtures do not yet
+exercise non-null i18n or realtime metadata.
+
+The response values also establish a critical boundary for follow-up work:
+`_meta` can describe hidden partition tables and can publish naive operation
+inflections such as `principalentitys` when introspection exposes
+`principalEntities`. Standard introspection must filter the executable table
+surface and bind exact read/write coordinates; it must never infer a single-row
+operation such as `currentUser` by return type alone. The current retained Data
+and routed Storage roots resolve, and Storage relation targets now resolve
+through `_meta.inflection` aliases. A future operation-binding pass should make
+the same reconciliation explicit for arbitrary tenant table names.
+
+Seven retained empty-schema routes currently return HTTP 500 even for a minimal
+query: `b2b-storage` agent/compute/config/objects and `storage-routed`
+agent/compute/config. Equivalent empty routes in the full profile return
+`tables: []`, so Console Kit must continue to isolate endpoint errors instead
+of treating one failed route as evidence about another capability.
 
 ## Native proof environment
 

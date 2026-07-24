@@ -60,11 +60,14 @@ Console Kit evaluates each public endpoint independently:
 
 1. **Reachability.** The host-provided endpoint must answer; Console Kit never
    derives sibling hosts or uses private routing headers.
-2. **Schema metadata.** `_meta` supplies exposed tables, fields, primary and
-   foreign keys, relations, GraphQL inflection, scopes, and feature smart tags.
-3. **GraphQL operations.** Standard introspection supplies plugin roots,
-   mutation inputs, pagination, filters, and other shapes that `_meta` does not
-   describe.
+2. **Schema metadata.** `_meta` supplies database tables, fields, primary and
+   foreign keys, relations, advisory GraphQL inflection, scopes, and feature
+   smart tags. It can include tables or operation names that are not exposed by
+   the current public GraphQL schema.
+3. **GraphQL operations.** Standard introspection identifies the exact
+   executable roots, mutation inputs, pagination, filters, and other public
+   shapes. Adapters must reconcile `_meta` hints against this surface before
+   constructing an operation.
 4. **Runtime authority.** Authenticated reads and writes establish the current
    user's effective grants and RLS visibility. `_meta` and introspection are
    schema evidence, not authorization evidence.
@@ -138,9 +141,11 @@ delivery; it does not prove the stock email-verification workflow.
 
 The fixture also creates one custom B2B tenant with Storage routed to `admin`
 so storage-tagged bucket and file metadata plus their public query roots can be
-verified through supported backend configuration. That endpoint does not
-currently expose bucket creation or presigned upload mutations, so the Storage
-adapter intentionally presents a read-only state and hides write controls.
+verified through supported backend configuration. The endpoint exposes table
+CRUD roots such as `createBucket` and `createFile`, but it does not expose the
+object-upload or presigned-URL workflow required by the Storage adapter. The
+adapter therefore intentionally presents a read-only state and hides write
+controls.
 
 The browser path exercises Console Kit signup, persisted-session restoration
 after reload, signout/signin, `_meta`-driven Data navigation, authenticated

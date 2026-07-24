@@ -155,6 +155,43 @@ describe('Constructive _meta feature contracts', () => {
     });
   });
 
+  it('matches live storage relation targets through current _meta inflections', () => {
+    const buckets = table({
+      name: 'Bucket',
+      root: 'buckets',
+      fields: ['id', 'key'],
+      primaryKey: 'id'
+    });
+    buckets.schemaName = 'tenant-storage-public';
+    buckets.inflection = { allRows: 'buckets' };
+    buckets.storage = { isBucketsTable: true, isFilesTable: false };
+    const files = table({
+      name: 'File',
+      root: 'files',
+      fields: ['id', 'key', 'bucketId'],
+      primaryKey: 'id'
+    });
+    files.schemaName = 'tenant-storage-public';
+    files.inflection = { allRows: 'files' };
+    files.storage = { isBucketsTable: false, isFilesTable: true };
+    files.relations = {
+      belongsTo: [{
+        fieldName: 'bucketsByMyBucketId',
+        isUnique: false,
+        keys: [field('bucketId')],
+        references: { name: 'buckets' }
+      }]
+    };
+
+    expect(resolveStorageMetaContract(metadata([buckets, files]))).toMatchObject({
+      families: [{
+        namespace: 'tenant-storage-public.Bucket',
+        bucket: { root: 'buckets', id: 'id', key: 'key' },
+        files: [{ root: 'files', bucketId: 'bucketId' }]
+      }]
+    });
+  });
+
   it('rejects an explicit composite primary key instead of collapsing it to id', () => {
     const organizations = table({
       name: 'organizations',
