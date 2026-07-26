@@ -31,13 +31,13 @@ function normalizePath(path: string) {
 function NavLink({
   href,
   active,
-  inset,
+  nested,
   onNavigate,
   children,
 }: {
   href: string;
   active: boolean;
-  inset?: boolean;
+  nested?: boolean;
   onNavigate?: () => void;
   children: ReactNode;
 }) {
@@ -45,11 +45,26 @@ function NavLink({
     <Link
       href={href}
       onClick={onNavigate}
-      className={cn(NAV_LINK, inset && 'pl-6 text-[12.5px]', active && 'bg-sidebar-accent font-medium text-foreground')}
+      className={cn(
+        NAV_LINK,
+        nested && 'text-[12.5px] text-muted-foreground',
+        active && 'bg-sidebar-accent font-medium text-foreground',
+      )}
       aria-current={active ? 'page' : undefined}
     >
       {children}
     </Link>
+  );
+}
+
+function NavGroupLabel({ title, count }: { title: string; count: number }) {
+  return (
+    <h2 className="flex min-h-10 items-center gap-1.5 px-2.5 py-1.5 text-[10.5px] font-medium uppercase tracking-[0.12em] text-muted-foreground">
+      <span className="min-w-0 flex-1 truncate">{title}</span>
+      <span className="font-mono text-[10px] font-normal normal-case tracking-normal tabular-nums opacity-70">
+        {count}
+      </span>
+    </h2>
   );
 }
 
@@ -134,25 +149,16 @@ export const SiteSidebar = forwardRef<HTMLElement, SiteSidebarProps>(function Si
 ) {
   const pathname = normalizePath(usePathname() ?? '');
   const onComponents = pathname.startsWith('/blocks/ui/');
-  const onBilling = pathname === '/blocks/billing' || pathname.startsWith('/blocks/billing/');
-  const onApplication =
-    pathname === '/blocks/features' ||
-    pathname.startsWith('/blocks/features/') ||
-    pathname === '/blocks/console-kit';
   const onFoundations = pathname === '/' || pathname === '/blocks' || pathname === '/blocks/styling';
 
   const [foundationsOpen, setFoundationsOpen] = useState(true);
-  const [applicationOpen, setApplicationOpen] = useState(onApplication);
-  const [billingOpen, setBillingOpen] = useState(onBilling);
   const [componentsOpen, setComponentsOpen] = useState(true);
 
   // Expand the section that owns the active route so deep links stay visible
   useEffect(() => {
     if (onComponents) setComponentsOpen(true);
-    if (onApplication) setApplicationOpen(true);
-    if (onBilling) setBillingOpen(true);
     if (onFoundations) setFoundationsOpen(true);
-  }, [onApplication, onBilling, onComponents, onFoundations]);
+  }, [onComponents, onFoundations]);
 
   const componentLinks = BASE_PRIMITIVES.map((p) => ({
     href: `/blocks/ui/${p.name}`,
@@ -220,56 +226,55 @@ export const SiteSidebar = forwardRef<HTMLElement, SiteSidebarProps>(function Si
         </NavSection>
 
         <div className="mt-3">
-          <NavSection
+          <NavGroupLabel
             title="Application"
-            open={applicationOpen}
-            onToggle={() => setApplicationOpen((value) => !value)}
-            count={featurePackLinks.length + 2}
-          >
-            <ul className="flex flex-col gap-0.5">
-              <li>
-                <NavLink href="/blocks/features" active={pathname === '/blocks/features'} onNavigate={onNavigate}>
-                  Feature packs
+            count={featurePackLinks.length + billingLinks.length + 3}
+          />
+          <ul className="flex flex-col gap-0.5 pb-0.5 pt-0.5">
+            <li>
+              <NavLink href="/blocks/features" active={pathname === '/blocks/features'} onNavigate={onNavigate}>
+                Feature packs
+              </NavLink>
+            </li>
+            {featurePackLinks.map(({ href, label }) => (
+              <li key={href}>
+                <NavLink active={pathname === href} href={href} onNavigate={onNavigate}>
+                  {label}
                 </NavLink>
+                {href === '/blocks/features/billing' ? (
+                  <ul className="ml-6 flex flex-col gap-0.5 border-l border-sidebar-border pl-2">
+                    <li>
+                      <NavLink
+                        href="/blocks/billing"
+                        active={pathname === '/blocks/billing'}
+                        nested
+                        onNavigate={onNavigate}
+                      >
+                        Blocks overview
+                      </NavLink>
+                    </li>
+                    {billingLinks.map((billingLink) => (
+                      <li key={billingLink.href}>
+                        <NavLink
+                          href={billingLink.href}
+                          active={pathname === billingLink.href}
+                          nested
+                          onNavigate={onNavigate}
+                        >
+                          {billingLink.label}
+                        </NavLink>
+                      </li>
+                    ))}
+                  </ul>
+                ) : null}
               </li>
-              {featurePackLinks.map(({ href, label }) => (
-                <li key={href}>
-                  <NavLink active={pathname === href} href={href} inset onNavigate={onNavigate}>
-                    {label}
-                  </NavLink>
-                </li>
-              ))}
-              <li>
-                <NavLink href="/blocks/console-kit" active={pathname === '/blocks/console-kit'} onNavigate={onNavigate}>
-                  Console Kit
-                </NavLink>
-              </li>
-            </ul>
-          </NavSection>
-        </div>
-
-        <div className="mt-3">
-          <NavSection
-            title="Billing"
-            open={billingOpen}
-            onToggle={() => setBillingOpen((value) => !value)}
-            count={billingLinks.length + 1}
-          >
-            <ul className="flex flex-col gap-0.5">
-              <li>
-                <NavLink href="/blocks/billing" active={pathname === '/blocks/billing'} onNavigate={onNavigate}>
-                  Overview
-                </NavLink>
-              </li>
-              {billingLinks.map(({ href, label }) => (
-                <li key={href}>
-                  <NavLink href={href} active={pathname === href} onNavigate={onNavigate}>
-                    {label}
-                  </NavLink>
-                </li>
-              ))}
-            </ul>
-          </NavSection>
+            ))}
+            <li>
+              <NavLink href="/blocks/console-kit" active={pathname === '/blocks/console-kit'} onNavigate={onNavigate}>
+                Console Kit
+              </NavLink>
+            </li>
+          </ul>
         </div>
 
         <div className="mt-3">
