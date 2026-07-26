@@ -100,6 +100,25 @@ function stateBadge(state: ConsoleKitShowcaseState) {
   return { label: 'Unavailable', variant: 'destructive' as const };
 }
 
+function showcaseNavigationState(
+  item: string,
+  activeNav: string,
+  state: ConsoleKitShowcaseState
+) {
+  const setupTarget = state === 'unavailable' && item === activeNav;
+  const signedOutLocked = state === 'signed-out' && item !== 'Auth';
+  const partialTarget =
+    state === 'partial'
+    && (item === 'Storage' || item === 'Notifications' || item === activeNav);
+  return {
+    active: item === activeNav,
+    muted: setupTarget || signedOutLocked || partialTarget,
+    partialTarget,
+    setupTarget,
+    signedOutLocked
+  };
+}
+
 function ShowcaseShell({
   preset,
   state,
@@ -113,9 +132,45 @@ function ShowcaseShell({
 }>) {
   const nav = NAV_BY_PRESET[preset];
   const badge = stateBadge(state);
+  const mobileNavRef = React.useRef<HTMLElement | null>(null);
+  const activeMobileItemRef = React.useRef<HTMLLIElement | null>(null);
+  const [mobileOverflow, setMobileOverflow] = React.useState({
+    start: false,
+    end: false
+  });
+
+  const measureMobileOverflow = React.useCallback(() => {
+    const scroller = mobileNavRef.current;
+    if (!scroller) return;
+    const maxScrollLeft = scroller.scrollWidth - scroller.clientWidth;
+    const start = scroller.scrollLeft > 2;
+    const end = scroller.scrollLeft < maxScrollLeft - 2;
+    setMobileOverflow((previous) => {
+      if (previous.start === start && previous.end === end) return previous;
+      return { start, end };
+    });
+  }, []);
+
+  React.useEffect(() => {
+    const scroller = mobileNavRef.current;
+    if (!scroller) return;
+    measureMobileOverflow();
+    if (typeof ResizeObserver === 'undefined') return;
+    const observer = new ResizeObserver(measureMobileOverflow);
+    observer.observe(scroller);
+    return () => observer.disconnect();
+  }, [measureMobileOverflow, nav]);
+
+  React.useEffect(() => {
+    activeMobileItemRef.current?.scrollIntoView?.({
+      block: 'nearest',
+      inline: 'center'
+    });
+    measureMobileOverflow();
+  }, [activeNav, measureMobileOverflow, nav]);
 
   return (
-    <div className="bg-background grid min-h-[34rem] overflow-hidden rounded-xl border border-border/70 shadow-sm sm:grid-cols-[15rem_minmax(0,1fr)]">
+    <div className="shadow-card bg-background grid min-h-[32rem] overflow-hidden rounded-xl sm:min-h-[34rem] sm:grid-cols-[15rem_minmax(0,1fr)]">
       {/* Platform Kit-style left rail: quiet label + full-width manager links */}
       <aside className="bg-sidebar text-sidebar-foreground hidden flex-col border-r border-border/60 px-3 py-6 pb-3 sm:flex">
         <div className="mb-4 px-3">
@@ -131,35 +186,29 @@ function ShowcaseShell({
         </div>
         <nav aria-label="Showcase features" className="flex grow flex-col gap-0.5">
           {nav.map((item) => {
-            const setupTarget = state === 'unavailable' && item === activeNav;
-            const signedOutLocked = state === 'signed-out' && item !== 'Auth';
-            const partialTarget =
-              state === 'partial'
-              && (item === 'Storage' || item === 'Notifications' || item === activeNav);
-            const muted = setupTarget || signedOutLocked || partialTarget;
-            const active = item === activeNav && state !== 'signed-out';
+            const itemState = showcaseNavigationState(item, activeNav, state);
             return (
               <div
                 className={cn(
                   'flex w-full items-center justify-between rounded-md px-3 py-2 text-sm',
-                  active && 'bg-secondary font-medium text-secondary-foreground',
-                  !active && 'text-foreground',
-                  muted && !active && 'text-muted-foreground'
+                  itemState.active && 'bg-secondary font-medium text-secondary-foreground',
+                  !itemState.active && 'text-foreground',
+                  itemState.muted && !itemState.active && 'text-muted-foreground'
                 )}
                 key={item}
               >
                 <span className="truncate">{item}</span>
-                {signedOutLocked ? (
+                {itemState.signedOutLocked ? (
                   <Badge className="text-[10px]" size="sm" variant="outline">
                     Sign in
                   </Badge>
                 ) : null}
-                {setupTarget ? (
+                {itemState.setupTarget ? (
                   <Badge className="text-[10px]" size="sm" variant="outline">
                     Setup
                   </Badge>
                 ) : null}
-                {state === 'partial' && item === activeNav ? (
+                {itemState.partialTarget && item === activeNav ? (
                   <Badge className="text-[10px]" size="sm" variant="secondary">
                     Partial
                   </Badge>
@@ -178,6 +227,67 @@ function ShowcaseShell({
           <div className="ml-auto flex shrink-0 items-center gap-2">
             <Badge size="sm" variant={badge.variant}>{badge.label}</Badge>
           </div>
+        </div>
+        <div className="relative border-b sm:hidden">
+          <nav
+            aria-label="Showcase features"
+            className="scrollbar-hide snap-x snap-mandatory overflow-x-auto overscroll-x-contain scroll-smooth scroll-px-3 px-2 py-1.5 motion-reduce:scroll-auto"
+            onScroll={measureMobileOverflow}
+            ref={mobileNavRef}
+          >
+            <ul className="flex min-w-max gap-1">
+              {nav.map((item) => {
+                const itemState = showcaseNavigationState(item, activeNav, state);
+                const status = itemState.signedOutLocked
+                  ? 'Sign in'
+                  : itemState.setupTarget
+                    ? 'Setup'
+                    : itemState.partialTarget
+                      ? 'Partial'
+                      : undefined;
+                return (
+                  <li
+                    className="snap-center"
+                    key={item}
+                    ref={itemState.active ? activeMobileItemRef : undefined}
+                  >
+                    <span
+                      aria-current={itemState.active ? 'page' : undefined}
+                      aria-label={status ? `${item} (${status})` : item}
+                      className={cn(
+                        'relative flex min-h-9 items-center rounded-md px-3 text-xs font-medium',
+                        itemState.active
+                          ? 'bg-secondary text-secondary-foreground'
+                          : 'text-muted-foreground'
+                      )}
+                    >
+                      {item}
+                      {status ? (
+                        <span
+                          aria-hidden="true"
+                          className="bg-primary ms-2 size-1.5 rounded-full"
+                        />
+                      ) : null}
+                    </span>
+                  </li>
+                );
+              })}
+            </ul>
+          </nav>
+          <div
+            aria-hidden="true"
+            className={cn(
+              'from-background pointer-events-none absolute inset-y-0 left-0 w-6 bg-linear-to-r to-transparent transition-opacity motion-reduce:transition-none',
+              mobileOverflow.start ? 'opacity-100' : 'opacity-0'
+            )}
+          />
+          <div
+            aria-hidden="true"
+            className={cn(
+              'from-background pointer-events-none absolute inset-y-0 right-0 w-8 bg-linear-to-l to-transparent transition-opacity motion-reduce:transition-none',
+              mobileOverflow.end ? 'opacity-100' : 'opacity-0'
+            )}
+          />
         </div>
         <div className="bg-background min-h-0 flex-1 overflow-auto p-4 sm:p-6 lg:p-8">
           {children}
@@ -280,7 +390,7 @@ function ShowcaseBody({
             </CardHeader>
             <CardContent>
               <div className="bg-muted/50 flex items-center gap-3 rounded-lg p-3 text-sm">
-                <ShieldAlertIcon aria-hidden="true" className="text-amber-600 dark:text-amber-400" />
+                <ShieldAlertIcon aria-hidden="true" className="text-warning-foreground" />
                 <span className="text-pretty">
                   Capability discovery returned partial evidence for{' '}
                   <code className="rounded bg-muted px-1 font-mono text-xs">{preset}</code>.
@@ -357,14 +467,14 @@ export function ConsoleKitShowcasePreview({ className }: Readonly<{ className?: 
             reuse the same pack and diagnostic surfaces Console Kit renders in production.
           </p>
         </div>
-        <div className="flex flex-wrap gap-2">
+        <div className="grid w-full grid-cols-2 gap-2 sm:w-auto">
           <label className="grid gap-1">
             <span className="text-muted-foreground text-xs font-medium">Preset</span>
             <Select
               onValueChange={(value) => setPreset(value as ConsoleKitShowcasePreset)}
               value={preset}
             >
-              <SelectTrigger aria-label="Showcase preset" className="w-44">
+              <SelectTrigger aria-label="Showcase preset" className="w-full sm:w-44">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -384,7 +494,7 @@ export function ConsoleKitShowcasePreview({ className }: Readonly<{ className?: 
               onValueChange={(value) => setState(value as ConsoleKitShowcaseState)}
               value={state}
             >
-              <SelectTrigger aria-label="Showcase state" className="w-40">
+              <SelectTrigger aria-label="Showcase state" className="w-full sm:w-40">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>

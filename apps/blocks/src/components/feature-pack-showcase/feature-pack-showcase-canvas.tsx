@@ -6,13 +6,6 @@ import { Alert, AlertDescription } from '@constructive-io/ui/alert';
 import type { SheetsConfig, SheetsExecuteFn } from '@constructive-io/sheets';
 import { createMockExecute, type MockTable } from '@constructive-io/sheets/testing';
 
-import { BillingFeaturePack } from '@/blocks/feature-packs/billing/billing-feature-pack';
-import { AuthFeaturePack } from '@/blocks/feature-packs/auth/auth-feature-pack';
-import { DataFeaturePack } from '@/blocks/feature-packs/data/data-feature-pack';
-import { NotificationsFeaturePack } from '@/blocks/feature-packs/notifications/notifications-feature-pack';
-import { OrganizationsFeaturePack } from '@/blocks/feature-packs/organizations/organizations-feature-pack';
-import { StorageFeaturePack } from '@/blocks/feature-packs/storage/storage-feature-pack';
-import { UsersFeaturePack } from '@/blocks/feature-packs/users/users-feature-pack';
 import type {
   BillingSettingsActions,
   BillingSettingsSection,
@@ -35,6 +28,42 @@ import {
   getFeaturePackShowcaseResource,
   type FeaturePackShowcaseState,
 } from './feature-pack-showcase-resources';
+import { FeaturePackPreviewLoading } from './feature-pack-preview-loading';
+
+const DataFeaturePack = React.lazy(async () => {
+  const featurePack = await import('@/blocks/feature-packs/data/data-feature-pack');
+  return { default: featurePack.DataFeaturePack };
+});
+
+const AuthFeaturePack = React.lazy(async () => {
+  const featurePack = await import('@/blocks/feature-packs/auth/auth-feature-pack');
+  return { default: featurePack.AuthFeaturePack };
+});
+
+const UsersFeaturePack = React.lazy(async () => {
+  const featurePack = await import('@/blocks/feature-packs/users/users-feature-pack');
+  return { default: featurePack.UsersFeaturePack };
+});
+
+const OrganizationsFeaturePack = React.lazy(async () => {
+  const featurePack = await import('@/blocks/feature-packs/organizations/organizations-feature-pack');
+  return { default: featurePack.OrganizationsFeaturePack };
+});
+
+const StorageFeaturePack = React.lazy(async () => {
+  const featurePack = await import('@/blocks/feature-packs/storage/storage-feature-pack');
+  return { default: featurePack.StorageFeaturePack };
+});
+
+const BillingFeaturePack = React.lazy(async () => {
+  const featurePack = await import('@/blocks/feature-packs/billing/billing-feature-pack');
+  return { default: featurePack.BillingFeaturePack };
+});
+
+const NotificationsFeaturePack = React.lazy(async () => {
+  const featurePack = await import('@/blocks/feature-packs/notifications/notifications-feature-pack');
+  return { default: featurePack.NotificationsFeaturePack };
+});
 
 export const FEATURE_PACK_SHOWCASE_ROOTS = {
   data: DataFeaturePack,
@@ -440,7 +469,9 @@ export function FeaturePackShowcaseCanvas({
 
   return (
     <div className="flex w-full min-w-0 flex-col gap-4 p-3 sm:p-5" data-slot="feature-pack-showcase-canvas">
-      <div className={cn('mx-auto w-full min-w-0', previewWidth(pack))}>{renderPack()}</div>
+      <React.Suspense fallback={<FeaturePackPreviewLoading />}>
+        <div className={cn('mx-auto w-full min-w-0', previewWidth(pack))}>{renderPack()}</div>
+      </React.Suspense>
 
       {delegatedAction ? (
         <Alert className="mx-auto w-full min-w-0 max-w-3xl" role="status" variant="info">

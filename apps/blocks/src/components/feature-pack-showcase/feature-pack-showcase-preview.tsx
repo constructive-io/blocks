@@ -73,6 +73,12 @@ function fitScale(availableWidth: number, viewportWidth: number) {
   return Math.min(1, availableWidth / viewportWidth);
 }
 
+function responsivePreviewViewport(availableWidth: number): FeaturePackPreviewViewport {
+  if (availableWidth < 560) return 'mobile';
+  if (availableWidth < 960) return 'tablet';
+  return 'desktop';
+}
+
 function contentBoxWidth(element: HTMLElement) {
   const styles = window.getComputedStyle(element);
   const paddingInline = (Number.parseFloat(styles.paddingLeft) || 0) + (Number.parseFloat(styles.paddingRight) || 0);
@@ -227,6 +233,7 @@ export function FeaturePackShowcasePreview({
   const inlineStageRef = useRef<HTMLDivElement | null>(null);
   const fullscreenStageRef = useRef<HTMLDivElement | null>(null);
   const fullscreenViewportRef = useRef<HTMLButtonElement | null>(null);
+  const viewportSelectionRef = useRef<'responsive' | 'manual'>('responsive');
   const resizeObserverRef = useRef<ResizeObserver | null>(null);
   const variants = getFeaturePackShowcaseVariants(pack);
   const [variant, setVariant] = useState(getDefaultFeaturePackShowcaseVariant(pack));
@@ -242,6 +249,22 @@ export function FeaturePackShowcasePreview({
   const previewSource = `${previewPath}?variant=${encodeURIComponent(variant)}&state=${resourceState}`;
   const inlineScale = usePreviewFitScale(inlineStageRef, selectedViewport.width);
   const fullscreenScale = usePreviewFitScale(fullscreenStageRef, selectedViewport.width);
+
+  useLayoutEffect(() => {
+    const stage = inlineStageRef.current;
+    if (!stage) return;
+
+    const update = () => {
+      if (viewportSelectionRef.current === 'manual') return;
+      setViewport(responsivePreviewViewport(contentBoxWidth(stage)));
+    };
+
+    update();
+    if (typeof ResizeObserver === 'undefined') return;
+    const observer = new ResizeObserver(update);
+    observer.observe(stage);
+    return () => observer.disconnect();
+  }, []);
 
   useEffect(() => {
     const currentFrame = inlineFrameRef.current;
@@ -318,6 +341,11 @@ export function FeaturePackShowcasePreview({
     setResourceState(value);
   }
 
+  function handleViewportChange(value: FeaturePackPreviewViewport) {
+    viewportSelectionRef.current = 'manual';
+    setViewport(value);
+  }
+
   return (
     <TooltipProvider delay={300}>
       <Dialog open={fullscreen} onOpenChange={setFullscreen}>
@@ -327,7 +355,7 @@ export function FeaturePackShowcasePreview({
             <div className="flex min-w-0 flex-wrap items-center gap-2">
               <FeaturePackPreviewViewportControls
                 label="Inline preview breakpoint"
-                onChange={setViewport}
+                onChange={handleViewportChange}
                 value={viewport}
               />
               <Tooltip>
@@ -428,7 +456,7 @@ export function FeaturePackShowcasePreview({
             </div>
             <FeaturePackPreviewViewportControls
               label="Full-screen preview breakpoint"
-              onChange={setViewport}
+              onChange={handleViewportChange}
               selectedButtonRef={fullscreenViewportRef}
               value={viewport}
             />

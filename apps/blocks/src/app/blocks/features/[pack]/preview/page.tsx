@@ -3,6 +3,7 @@ import { notFound } from 'next/navigation';
 import { Suspense } from 'react';
 
 import { FeaturePackShowcaseEmbed } from '@/components/feature-pack-showcase/feature-pack-showcase-embed';
+import { FeaturePackPreviewLoading } from '@/components/feature-pack-showcase/feature-pack-preview-loading';
 import { FEATURE_PACK_DOCS, getFeaturePackDoc } from '@/lib/feature-packs';
 import { withBase } from '@/lib/site';
 
@@ -14,7 +15,11 @@ export default async function FeaturePackPreviewPage({ params }: PageProps) {
   if (!block) return notFound();
 
   return (
-    <Suspense fallback={<div aria-label="Loading live preview…" className="min-h-dvh bg-background" role="status" />}>
+    <Suspense fallback={(
+      <div className="min-h-dvh bg-background p-3 sm:p-5">
+        <FeaturePackPreviewLoading />
+      </div>
+    )}>
       <FeaturePackShowcaseEmbed pack={block.id} />
     </Suspense>
   );

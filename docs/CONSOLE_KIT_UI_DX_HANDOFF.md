@@ -109,6 +109,32 @@ construct fresh module state, and invalidate old slice action/getter closures.
 Same-scope refreshes preserve state. Do not add per-pack providers, process-wide
 stores, credentials in Zustand, or a second state system alongside this store.
 
+## Known P1 scale boundary
+
+The current first-party directory adapters are correct for the rows they
+finish loading, but their collection strategies are not yet a production
+large-tenant contract. Users and Organizations exhaust independent Relay
+connections in 100-row requests before rendering, so latency, memory, and
+request count grow with every visible RLS row. Storage intentionally stops
+after two 100-row pages per table and surfaces a bounded-window limitation.
+Auth requests at most 50 emails and connected accounts, while Notifications
+and Billing request up to 500 rows per connection without consuming
+`pageInfo`, so those adapters can silently omit later rows. Data already uses
+the Sheets cursor hooks and is not part of this gap.
+
+Address this as one backward-compatible collection wave, not as larger `first`
+values or client-side slicing. Add optional per-collection controllers to the
+standalone pack props, one modular collection slice to the existing Console Kit
+store, and a first-party page executor that discovers `first`/`after`, stable
+ordering, `where` or legacy `condition`, `pageInfo`, and `totalCount` from the
+endpoint schema. Scope pages by database, identity, active organization or
+bucket, query, filter, and order; keep opaque cursors out of URLs; and fetch
+route-focused records by an exact proven filter. The UI should keep loaded rows
+visible while loading, show a touch-safe Load more action with count and inline
+retry state, and describe searches or unread counts as loaded-only whenever the
+endpoint cannot prove an exhaustive value. PostgreSQL grants and RLS remain the
+authorization boundary for every page and mutation.
+
 “Works with any tenant database” means any tenant that supplies an explicit
 semantic endpoint map and exposes the contracts a selected module requires. It
 does not mean every installed backend module is automatically routed publicly,

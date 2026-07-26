@@ -54,6 +54,27 @@ contacting a tenant or reading component source.
 
 ## Prioritized remaining gaps
 
+### P1: large-tenant collection loading
+
+- Add a provider-neutral collection controller for members, invitations,
+  organizations, buckets, objects, notifications, and other growing lists.
+  First-party adapters should request one deterministic Relay page at a time,
+  retain each collection's independent cursor in pack-owned state within a
+  modular slice of the existing Console Kit store, and expose loaded count,
+  RLS-filtered total count, pending, retry, and load-more state to the
+  standalone block.
+- Scope page state by database, session identity, active organization or
+  bucket, query, filter, and order. Keep opaque cursors and in-flight state out
+  of URLs; URLs should contain only semantic routes, filters, sorting, and
+  focused record identifiers. A focused record outside the loaded window must
+  be fetched by an exact, introspection-proven filter before it can receive an
+  action.
+- Preserve truthful collection semantics. Search and unread counts must not
+  claim to cover unloaded rows, mutations must invalidate or reconcile every
+  affected page, and adapters that cannot prove a stable order, filtered
+  lookup, or joined read-state contract must remain bounded with an explicit
+  limitation instead of silently truncating data.
+
 ### P1: embedding and navigation
 
 - Add a dialog/drawer composition for host applications that need an embedded

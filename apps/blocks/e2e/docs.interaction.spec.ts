@@ -160,14 +160,14 @@ test('controlled overlay examples reflect one open and one close request', async
 
 test('supported pointer dismissal closes floating and modal surfaces', async ({ page }) => {
   const cases = [
-    ['dropdown-menu', 'Actions', 'dropdown-menu-content', '[role="presentation"][data-base-ui-inert]'],
-    ['popover', 'Connection limits', 'popover-content', 'main h1'],
-    ['dialog', 'Rename database', 'dialog-popup', '[data-slot="dialog-viewport"]'],
-    ['drawer', 'Open quick actions', 'drawer-content', '[data-slot="drawer-overlay"]'],
-    ['sheet', 'Edit organization', 'sheet-content', '[data-slot="sheet-overlay"]'],
+    ['dropdown-menu', 'Actions', 'dropdown-menu-content', '[role="presentation"][data-base-ui-inert]', 'trigger'],
+    ['popover', 'Connection limits', 'popover-content', 'main h1', 'main'],
+    ['dialog', 'Rename database', 'dialog-popup', '[data-slot="dialog-viewport"]', 'trigger'],
+    ['drawer', 'Open quick actions', 'drawer-content', '[data-slot="drawer-overlay"]', 'trigger'],
+    ['sheet', 'Edit organization', 'sheet-content', '[data-slot="sheet-overlay"]', 'trigger'],
   ] as const;
 
-  for (const [slug, triggerName, contentSlot, outsideSelector] of cases) {
+  for (const [slug, triggerName, contentSlot, outsideSelector, focusTarget] of cases) {
     await test.step(slug, async () => {
       await visitPrimitive(page, slug);
       const trigger = page.getByRole('button', { name: triggerName });
@@ -176,7 +176,12 @@ test('supported pointer dismissal closes floating and modal surfaces', async ({ 
       await expect(content).toBeVisible();
       await page.locator(outsideSelector).click({ position: { x: 2, y: 2 } });
       await expect(content).toBeHidden();
-      await expect(trigger).toBeFocused();
+      if (focusTarget === 'trigger') {
+        await expect(trigger).toBeFocused();
+      } else {
+        // Non-modal popovers preserve intentional pointer focus outside the popup.
+        await expect(page.locator(focusTarget)).toBeFocused();
+      }
     });
   }
 });
@@ -427,7 +432,9 @@ test('billing settings keeps narrow leaf layout inside its desktop rail', async 
     .toBe(1280);
   await expect
     .poll(() =>
-      inlineFrame.evaluate((frame) => frame.getBoundingClientRect().height),
+      inlineFrame.evaluate(
+        (frame) => (frame as HTMLIFrameElement).contentWindow?.innerHeight,
+      ),
     )
     .toBe(960);
 
