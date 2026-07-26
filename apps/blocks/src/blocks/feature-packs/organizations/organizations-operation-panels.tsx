@@ -292,8 +292,10 @@ export function OrganizationSettingsPanel({
           <FieldGroup>
             <Field error={error} htmlFor={`${fieldId}-name`} label='Organization name' required>
               <Input
+                autoComplete='organization'
                 disabled={!canUpdateOrganization}
                 id={`${fieldId}-name`}
+                name='organization-name'
                 onChange={(event) => setName(event.currentTarget.value)}
                 required
                 value={name}
@@ -301,9 +303,13 @@ export function OrganizationSettingsPanel({
             </Field>
             <Field htmlFor={`${fieldId}-slug`} label='Slug'>
               <Input
+                autoCapitalize='none'
+                autoComplete='off'
                 disabled={!canUpdateOrganization}
                 id={`${fieldId}-slug`}
+                name='organization-slug'
                 onChange={(event) => setSlug(event.currentTarget.value)}
+                spellCheck={false}
                 value={slug}
               />
             </Field>
@@ -455,6 +461,7 @@ export function OrganizationHierarchyPanel({
   const [level, setLevel] = React.useState('');
   const [pending, setPending] = React.useState(false);
   const [error, setError] = React.useState<string>();
+  const fieldId = React.useId();
   const memberByActor = new Map(members.map((member) => [member.userId, member]));
   const canSet = canPerform(policy, 'setHierarchyEdge') && Boolean(actions?.setHierarchyEdge);
 
@@ -489,27 +496,27 @@ export function OrganizationHierarchyPanel({
             }).finally(() => setPending(false));
           }}
         >
-          <Field label='Member'>
-            <Select onValueChange={setChildId} value={childId}>
-              <SelectTrigger><SelectValue placeholder='Select member' /></SelectTrigger>
+          <Field htmlFor={`${fieldId}-member`} label='Member'>
+            <Select name='hierarchy-member' onValueChange={setChildId} value={childId}>
+              <SelectTrigger id={`${fieldId}-member`}><SelectValue placeholder='Select member' /></SelectTrigger>
               <SelectContent><SelectGroup>{members.map((member) => (
                 <SelectItem key={member.userId} value={member.userId}>{member.name}</SelectItem>
               ))}</SelectGroup></SelectContent>
             </Select>
           </Field>
-          <Field label='Reports to'>
-            <Select onValueChange={setParentId} value={parentId}>
-              <SelectTrigger><SelectValue placeholder='Select manager' /></SelectTrigger>
+          <Field htmlFor={`${fieldId}-manager`} label='Reports to'>
+            <Select name='hierarchy-manager' onValueChange={setParentId} value={parentId}>
+              <SelectTrigger id={`${fieldId}-manager`}><SelectValue placeholder='Select manager' /></SelectTrigger>
               <SelectContent><SelectGroup>{members.filter((member) => member.userId !== childId).map((member) => (
                 <SelectItem key={member.userId} value={member.userId}>{member.name}</SelectItem>
               ))}</SelectGroup></SelectContent>
             </Select>
           </Field>
-          <Field label='Position title'>
-            <Input onChange={(event) => setTitle(event.currentTarget.value)} value={title} />
+          <Field htmlFor={`${fieldId}-title`} label='Position title'>
+            <Input autoComplete='organization-title' id={`${fieldId}-title`} name='position-title' onChange={(event) => setTitle(event.currentTarget.value)} value={title} />
           </Field>
-          <Field label='Level'>
-            <Input min={0} onChange={(event) => setLevel(event.currentTarget.value)} type='number' value={level} />
+          <Field htmlFor={`${fieldId}-level`} label='Level'>
+            <Input id={`${fieldId}-level`} inputMode='numeric' min={0} name='position-level' onChange={(event) => setLevel(event.currentTarget.value)} type='number' value={level} />
           </Field>
           <div className='flex items-end'>
             <Button className='w-full' disabled={pending || !childId || !parentId} type='submit'>
@@ -524,7 +531,11 @@ export function OrganizationHierarchyPanel({
           <EmptyHeader>
             <EmptyMedia variant='icon'><NetworkIcon aria-hidden='true' /></EmptyMedia>
             <EmptyTitle>No reporting lines</EmptyTitle>
-            <EmptyDescription>Add a manager relationship to begin the organization chart.</EmptyDescription>
+            <EmptyDescription>
+              {canSet
+                ? 'Add a manager relationship to begin the organization chart.'
+                : 'No reporting lines are visible, and this session cannot add one.'}
+            </EmptyDescription>
           </EmptyHeader>
         </Empty>
       ) : (
@@ -622,7 +633,7 @@ function CreatePrincipalDialog({
           <DialogPanel>
             <FieldGroup>
               <Field error={error} htmlFor={`${fieldId}-name`} label='Name' required>
-                <Input id={`${fieldId}-name`} onChange={(event) => setName(event.currentTarget.value)} required value={name} />
+                <Input autoComplete='off' id={`${fieldId}-name`} name='principal-name' onChange={(event) => setName(event.currentTarget.value)} required value={name} />
               </Field>
               {[
                 ['use-admin-owner', 'Use administrator/owner access', useAdminOwner, setUseAdminOwner],
@@ -714,7 +725,7 @@ function CreateApiKeyDialog({
             <DialogPanel>
               <Field htmlFor={`${fieldId}-created-key`} label='API key'>
                 <div className='flex gap-2'>
-                  <Input id={`${fieldId}-created-key`} readOnly value={created.token} />
+                  <Input autoComplete='off' id={`${fieldId}-created-key`} name='created-api-key' readOnly spellCheck={false} translate='no' value={created.token} />
                   <Button
                     onClick={() => {
                       if (!navigator.clipboard) {
@@ -795,10 +806,10 @@ function CreateApiKeyDialog({
             <DialogPanel>
               <FieldGroup>
                 <Field error={error} htmlFor={`${fieldId}-key-name`} label='Key name' required>
-                  <Input id={`${fieldId}-key-name`} onChange={(event) => setName(event.currentTarget.value)} required value={name} />
+                  <Input autoComplete='off' id={`${fieldId}-key-name`} name='api-key-name' onChange={(event) => setName(event.currentTarget.value)} required value={name} />
                 </Field>
                 <Field htmlFor={`${fieldId}-principal`} label='Principal'>
-                  <Select onValueChange={setPrincipalId} value={principalId}>
+                  <Select name='api-key-principal' onValueChange={setPrincipalId} value={principalId}>
                     <SelectTrigger id={`${fieldId}-principal`}><SelectValue placeholder='Select principal' /></SelectTrigger>
                     <SelectContent><SelectGroup>{principals.map((principal) => (
                       <SelectItem key={principal.id} value={principal.id}>{principal.name}</SelectItem>
@@ -806,7 +817,7 @@ function CreateApiKeyDialog({
                   </Select>
                 </Field>
                 <Field htmlFor={`${fieldId}-access-level`} label='Access level'>
-                  <Select onValueChange={(value) => setAccessLevel(value as typeof accessLevel)} value={accessLevel}>
+                  <Select name='api-key-access-level' onValueChange={(value) => setAccessLevel(value as typeof accessLevel)} value={accessLevel}>
                     <SelectTrigger id={`${fieldId}-access-level`}>
                       <SelectValue>
                         {(value: string | null) => value === 'full_access' ? 'Full access' : 'Read only'}
@@ -819,7 +830,7 @@ function CreateApiKeyDialog({
                   </Select>
                 </Field>
                 <Field htmlFor={`${fieldId}-mfa-level`} label='MFA requirement'>
-                  <Select onValueChange={(value) => setMfaLevel(value as typeof mfaLevel)} value={mfaLevel}>
+                  <Select name='api-key-mfa-level' onValueChange={(value) => setMfaLevel(value as typeof mfaLevel)} value={mfaLevel}>
                     <SelectTrigger id={`${fieldId}-mfa-level`}>
                       <SelectValue>
                         {(value: string | null) => value === 'verified' ? 'Verified' : 'None'}
@@ -832,7 +843,7 @@ function CreateApiKeyDialog({
                   </Select>
                 </Field>
                 <Field htmlFor={`${fieldId}-expires`} label='Expires in'>
-                  <Input id={`${fieldId}-expires`} onChange={(event) => setExpiresIn(event.currentTarget.value)} placeholder='30 days' value={expiresIn} />
+                  <Input autoComplete='off' id={`${fieldId}-expires`} name='api-key-expires-in' onChange={(event) => setExpiresIn(event.currentTarget.value)} placeholder='30 days' value={expiresIn} />
                 </Field>
               </FieldGroup>
             </DialogPanel>
@@ -851,6 +862,9 @@ export function OrganizationPrincipalsPanel({
   policy,
   onError
 }: OperationPanelProps & Readonly<{ principals: readonly OrganizationPrincipal[] }>) {
+  const canCreatePrincipal = canPerform(policy, 'createOrganizationPrincipal') &&
+    Boolean(actions?.createOrganizationPrincipal);
+
   return (
     <div className='flex flex-col gap-4'>
       <div className='flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between'>
@@ -858,21 +872,21 @@ export function OrganizationPrincipalsPanel({
           <h3 className='text-sm font-medium'>Machine principals</h3>
           <p className='text-muted-foreground text-pretty text-sm'>Create one principal per integration so access and keys can be revoked independently.</p>
         </div>
-        {canPerform(policy, 'createOrganizationPrincipal') && actions?.createOrganizationPrincipal ? (
+        {canCreatePrincipal && actions?.createOrganizationPrincipal ? (
           <CreatePrincipalDialog action={actions.createOrganizationPrincipal} onError={onError} organizationId={organizationId} />
         ) : null}
       </div>
       {principals.length === 0 ? (
         <Empty className='min-h-52 border' role='status'>
-          <EmptyHeader><EmptyMedia variant='icon'><UserCogIcon aria-hidden='true' /></EmptyMedia><EmptyTitle>No machine principals</EmptyTitle><EmptyDescription>Create a principal before issuing an organization API key.</EmptyDescription></EmptyHeader>
+          <EmptyHeader><EmptyMedia variant='icon'><UserCogIcon aria-hidden='true' /></EmptyMedia><EmptyTitle>No machine principals</EmptyTitle><EmptyDescription>{canCreatePrincipal ? 'Create a principal before issuing an organization API key.' : 'No machine principals are visible, and this session cannot create one.'}</EmptyDescription></EmptyHeader>
         </Empty>
       ) : (
         <Table>
           <TableHeader><TableRow><TableHead>Name</TableHead><TableHead>Access</TableHead><TableHead>Step-up</TableHead><TableHead className='w-12'><span className='sr-only'>Actions</span></TableHead></TableRow></TableHeader>
           <TableBody>{principals.map((principal) => (
             <TableRow key={principal.id}>
-              <TableCell className='font-medium'>{principal.name}</TableCell>
-              <TableCell><Badge variant='secondary'>{principal.type ?? 'Custom'}</Badge></TableCell>
+              <TableCell className='max-w-64 truncate font-medium' title={principal.name}>{principal.name}</TableCell>
+              <TableCell><Badge className='max-w-40' title={principal.type ?? 'Custom'} variant='secondary'><span className='truncate'>{principal.type ?? 'Custom'}</span></Badge></TableCell>
               <TableCell>{principal.bypassStepUp ? 'Bypassed' : 'Required'}</TableCell>
               <TableCell>{canPerform(policy, 'revokeOrganizationPrincipal') && principal.actionPolicy?.revokeOrganizationPrincipal && actions?.revokeOrganizationPrincipal ? (
                 <ConfirmAction
@@ -905,25 +919,32 @@ export function OrganizationApiKeysPanel({
   apiKeys: readonly OrganizationApiKey[];
 }>) {
   const principalNames = new Map(principals.map((principal) => [principal.id, principal.name]));
+  const canCreateKey = canPerform(policy, 'createOrganizationApiKey') &&
+    Boolean(actions?.createOrganizationApiKey) &&
+    principals.length > 0;
   return (
     <div className='flex flex-col gap-4'>
       <div className='flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between'>
         <div><h3 className='text-sm font-medium'>Organization API keys</h3><p className='text-muted-foreground text-pretty text-sm'>Keys are shown once at creation and remain independently revocable.</p></div>
-        {canPerform(policy, 'createOrganizationApiKey') && actions?.createOrganizationApiKey && principals.length > 0 ? (
+        {canCreateKey && actions?.createOrganizationApiKey ? (
           <CreateApiKeyDialog action={actions.createOrganizationApiKey} onError={onError} organizationId={organizationId} principals={principals} />
         ) : null}
       </div>
       {apiKeys.length === 0 ? (
         <Empty className='min-h-52 border' role='status'>
-          <EmptyHeader><EmptyMedia variant='icon'><KeyRoundIcon aria-hidden='true' /></EmptyMedia><EmptyTitle>No active API keys</EmptyTitle><EmptyDescription>{principals.length > 0 ? 'Create a key for one of this organization’s principals.' : 'Create a machine principal before issuing a key.'}</EmptyDescription></EmptyHeader>
+          <EmptyHeader><EmptyMedia variant='icon'><KeyRoundIcon aria-hidden='true' /></EmptyMedia><EmptyTitle>No active API keys</EmptyTitle><EmptyDescription>{canCreateKey ? 'Create a key for one of this organization’s principals.' : principals.length === 0 ? 'Create a machine principal before issuing a key.' : 'No API keys are visible, and this session cannot create one.'}</EmptyDescription></EmptyHeader>
         </Empty>
       ) : (
         <Table>
           <TableHeader><TableRow><TableHead>Name</TableHead><TableHead>Principal</TableHead><TableHead>Last used</TableHead><TableHead>Expires</TableHead><TableHead className='w-12'><span className='sr-only'>Actions</span></TableHead></TableRow></TableHeader>
           <TableBody>{apiKeys.map((apiKey) => (
             <TableRow key={apiKey.id}>
-              <TableCell className='font-medium'>{apiKey.name ?? 'Unnamed key'}</TableCell>
-              <TableCell>{principalNames.get(apiKey.principalId) ?? apiKey.principalId}</TableCell>
+              <TableCell className='max-w-64 truncate font-medium' title={apiKey.name ?? 'Unnamed key'}>{apiKey.name ?? 'Unnamed key'}</TableCell>
+              <TableCell className='max-w-64 break-all'>
+                {principalNames.get(apiKey.principalId) ?? (
+                  <span translate='no'>{apiKey.principalId}</span>
+                )}
+              </TableCell>
               <TableCell><FeaturePackTimestamp value={apiKey.lastUsedAt} /></TableCell>
               <TableCell><FeaturePackTimestamp value={apiKey.expiresAt} /></TableCell>
               <TableCell>{canPerform(policy, 'revokeOrganizationApiKey') && apiKey.actionPolicy?.revokeOrganizationApiKey && actions?.revokeOrganizationApiKey ? (

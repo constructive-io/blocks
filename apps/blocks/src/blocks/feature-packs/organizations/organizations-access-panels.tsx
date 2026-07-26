@@ -160,7 +160,9 @@ function AccessProfileDialog({
               <Field error={error} htmlFor={`${fieldId}-name`} label='Name' required>
                 <Input
                   aria-invalid={error ? true : undefined}
+                  autoComplete='off'
                   id={`${fieldId}-name`}
+                  name='access-profile-name'
                   onChange={(event) => setName(event.currentTarget.value)}
                   required
                   value={name}
@@ -168,7 +170,9 @@ function AccessProfileDialog({
               </Field>
               <Field htmlFor={`${fieldId}-description`} label='Description'>
                 <Textarea
+                  autoComplete='off'
                   id={`${fieldId}-description`}
+                  name='access-profile-description'
                   onChange={(event) => setDescription(event.currentTarget.value)}
                   value={description}
                 />
@@ -198,6 +202,7 @@ function DeleteAccessProfileAction({
   onError?: OrganizationsFeaturePackProps['onError'];
 }>) {
   const [pending, setPending] = React.useState(false);
+  const [error, setError] = React.useState<string>();
   return (
     <AlertDialog>
       <AlertDialogTrigger render={<Button size='icon-sm' variant='ghost' />}>
@@ -211,14 +216,16 @@ function DeleteAccessProfileAction({
             Members assigned to this profile lose its bundled permissions. Direct grants remain unchanged.
           </AlertDialogDescription>
         </AlertDialogHeader>
+        {error ? <p className='text-destructive text-pretty text-sm' role='alert'>{error}</p> : null}
         <AlertDialogFooter>
           <AlertDialogCancel disabled={pending}>Keep profile</AlertDialogCancel>
           <Button
             disabled={pending}
             onClick={() => {
               setPending(true);
+              setError(undefined);
               void Promise.resolve(action({ organizationId, profileId: profile.id })).catch((cause) => {
-                report(cause, 'The access profile could not be deleted.', onError);
+                report(cause, 'The access profile could not be deleted.', onError, setError);
               }).finally(() => setPending(false));
             }}
             variant='destructive'
@@ -245,6 +252,7 @@ export function OrganizationProfilesPanel({
   focusedProfileId?: string;
 }>) {
   const [pendingPermission, setPendingPermission] = React.useState<string>();
+  const canCreateProfile = canPerform(policy, 'createAccessProfile') && Boolean(actions?.createAccessProfile);
   const focusedProfileRef = React.useRef<HTMLElement>(null);
   const focusedProfilePresent = Boolean(
     focusedProfileId && profiles.some((profile) => profile.id === focusedProfileId)
@@ -288,7 +296,7 @@ export function OrganizationProfilesPanel({
             Assign profiles for routine access, then reserve direct grants for exceptions.
           </p>
         </div>
-        {canPerform(policy, 'createAccessProfile') && actions?.createAccessProfile ? (
+        {canCreateProfile && actions?.createAccessProfile ? (
           <AccessProfileDialog
             action={actions.createAccessProfile}
             onError={onError}
@@ -301,7 +309,11 @@ export function OrganizationProfilesPanel({
           <EmptyHeader>
             <EmptyMedia variant='icon'><ShieldIcon aria-hidden='true' /></EmptyMedia>
             <EmptyTitle>No access profiles</EmptyTitle>
-            <EmptyDescription>Create a profile to bundle organization permissions.</EmptyDescription>
+            <EmptyDescription>
+              {canCreateProfile
+                ? 'Create a profile to bundle organization permissions.'
+                : 'No access profiles are visible, and this session cannot create one.'}
+            </EmptyDescription>
           </EmptyHeader>
         </Empty>
       ) : (
@@ -499,6 +511,8 @@ export function OrganizationMemberAccessDialog({
   const [title, setTitle] = React.useState(member.memberProfile?.title ?? '');
   const [bio, setBio] = React.useState(member.memberProfile?.bio ?? '');
   const [error, setError] = React.useState<string>();
+  const [emailError, setEmailError] = React.useState<string>();
+  const emailRef = React.useRef<HTMLInputElement>(null);
   const fieldId = React.useId();
 
   React.useEffect(() => {
@@ -506,7 +520,16 @@ export function OrganizationMemberAccessDialog({
     setEmail(member.memberProfile?.email ?? member.email);
     setTitle(member.memberProfile?.title ?? '');
     setBio(member.memberProfile?.bio ?? '');
-  }, [member]);
+    setEmailError(undefined);
+  }, [
+    member.id,
+    member.email,
+    member.name,
+    member.memberProfile?.bio,
+    member.memberProfile?.displayName,
+    member.memberProfile?.email,
+    member.memberProfile?.title
+  ]);
 
   const run = async (key: string, action: () => void | Promise<void>, fallback: string) => {
     setPending(key);
@@ -541,7 +564,7 @@ export function OrganizationMemberAccessDialog({
             Governance, lifecycle, profile access, and direct exceptions remain separate so effective access is auditable.
           </DialogDescription>
         </DialogHeader>
-        <DialogPanel className='max-h-[65vh] overflow-y-auto'>
+        <DialogPanel className='max-h-[65dvh] overflow-y-auto'>
           <div className='flex flex-col gap-6'>
             <section className='flex flex-col gap-3'>
               <div><h4 className='text-sm font-medium'>Governance</h4><p className='text-muted-foreground text-xs'>Owner and administrator changes use Constructive&apos;s append-only semantic grants.</p></div>
@@ -694,10 +717,32 @@ export function OrganizationMemberAccessDialog({
             <section className='flex flex-col gap-3'>
               <div><h4 className='text-sm font-medium'>Organization profile</h4><p className='text-muted-foreground text-xs'>This tenant-specific profile is separate from the member&apos;s global account.</p></div>
               <FieldGroup>
-                <Field htmlFor={`${fieldId}-display-name`} label='Display name'><Input id={`${fieldId}-display-name`} onChange={(event) => setDisplayName(event.currentTarget.value)} value={displayName} /></Field>
-                <Field htmlFor={`${fieldId}-email`} label='Email'><Input id={`${fieldId}-email`} onChange={(event) => setEmail(event.currentTarget.value)} type='email' value={email} /></Field>
-                <Field htmlFor={`${fieldId}-title`} label='Title'><Input id={`${fieldId}-title`} onChange={(event) => setTitle(event.currentTarget.value)} value={title} /></Field>
-                <Field htmlFor={`${fieldId}-bio`} label='Bio'><Textarea id={`${fieldId}-bio`} onChange={(event) => setBio(event.currentTarget.value)} value={bio} /></Field>
+                <Field htmlFor={`${fieldId}-display-name`} label='Display name'>
+                  <Input autoComplete='name' id={`${fieldId}-display-name`} name='member-display-name' onChange={(event) => setDisplayName(event.currentTarget.value)} value={displayName} />
+                </Field>
+                <Field error={emailError} htmlFor={`${fieldId}-email`} label='Email'>
+                  <Input
+                    aria-invalid={emailError ? true : undefined}
+                    autoCapitalize='none'
+                    autoComplete='email'
+                    id={`${fieldId}-email`}
+                    name='member-email'
+                    onChange={(event) => {
+                      setEmail(event.currentTarget.value);
+                      if (emailError) setEmailError(undefined);
+                    }}
+                    ref={emailRef}
+                    spellCheck={false}
+                    type='email'
+                    value={email}
+                  />
+                </Field>
+                <Field htmlFor={`${fieldId}-title`} label='Title'>
+                  <Input autoComplete='organization-title' id={`${fieldId}-title`} name='member-title' onChange={(event) => setTitle(event.currentTarget.value)} value={title} />
+                </Field>
+                <Field htmlFor={`${fieldId}-bio`} label='Bio'>
+                  <Textarea autoComplete='off' id={`${fieldId}-bio`} name='member-bio' onChange={(event) => setBio(event.currentTarget.value)} value={bio} />
+                </Field>
               </FieldGroup>
               {canPerform(policy, 'updateMemberProfile') &&
               member.actionPolicy?.updateMemberProfile &&
@@ -705,20 +750,29 @@ export function OrganizationMemberAccessDialog({
                 <Button
                   className='self-start'
                   disabled={Boolean(pending)}
-                  onClick={() => void run(
-                    'member-profile',
-                    () => actions.upsertMemberProfile!({
-                      organizationId,
-                      membershipId: member.id,
-                      profile: {
-                        displayName,
-                        email,
-                        title,
-                        bio
-                      }
-                    }),
-                    'The organization member profile could not be saved.'
-                  )}
+                  onClick={() => {
+                    const emailInput = emailRef.current;
+                    if (emailInput && !emailInput.checkValidity()) {
+                      setEmailError('Enter a valid email address.');
+                      emailInput.focus();
+                      return;
+                    }
+                    setEmailError(undefined);
+                    void run(
+                      'member-profile',
+                      () => actions.upsertMemberProfile!({
+                        organizationId,
+                        membershipId: member.id,
+                        profile: {
+                          displayName,
+                          email,
+                          title,
+                          bio
+                        }
+                      }),
+                      'The organization member profile could not be saved.'
+                    );
+                  }}
                   type='button'
                 >
                   Save member profile

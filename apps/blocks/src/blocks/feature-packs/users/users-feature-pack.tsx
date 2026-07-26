@@ -108,6 +108,7 @@ import {
 import {
   FeaturePackBoundary,
   FeaturePackFilteredEmpty,
+  FeaturePackLimitations,
   FeaturePackTimestamp,
   FeatureStatusBadge
 } from '../shared/feature-pack-ui';
@@ -406,10 +407,14 @@ function InviteMemberDialog({
               >
                 <Input
                   aria-invalid={error ? true : undefined}
+                  autoCapitalize='none'
                   autoComplete='email'
                   id={`${fieldId}-recipient`}
+                  name='invite-email'
                   onChange={(event) => setRecipient(event.currentTarget.value)}
                   placeholder='member@example.com'
+                  required
+                  spellCheck={false}
                   type='email'
                   value={recipient}
                 />
@@ -860,7 +865,6 @@ function MembersDirectory({
   members,
   query,
   onClearSearch,
-  emptyAction,
   profiles,
   permissions,
   focusedMemberId,
@@ -871,7 +875,6 @@ function MembersDirectory({
   members: readonly AppMember[];
   query: string;
   onClearSearch: () => void;
-  emptyAction?: React.ReactNode;
   profiles: readonly AppAccessProfile[];
   permissions: readonly AppPermission[];
   focusedMemberId?: string;
@@ -911,7 +914,6 @@ function MembersDirectory({
           <EmptyTitle>No application members to show</EmptyTitle>
           <EmptyDescription>People with access to this application will appear here.</EmptyDescription>
         </EmptyHeader>
-        {emptyAction ? <EmptyContent>{emptyAction}</EmptyContent> : null}
       </Empty>
     );
   }
@@ -940,15 +942,15 @@ function MembersDirectory({
               <AvatarFallback>{initials(member.name)}</AvatarFallback>
             </Avatar>
             <div className='min-w-0'>
-              <p className='truncate text-sm font-medium'>{member.name}</p>
-              <p className='text-muted-foreground truncate text-xs sm:text-sm'>{member.email}</p>
-              <p className='text-muted-foreground mt-0.5 truncate text-xs'>
+              <p className='truncate text-sm font-medium' title={member.name}>{member.name}</p>
+              <p className='text-muted-foreground truncate text-xs sm:text-sm' title={member.email}>{member.email}</p>
+              <p className='text-muted-foreground mt-0.5 line-clamp-2 text-pretty text-xs'>
                 {member.profile?.name ?? 'No access profile'}
                 {member.joinedAt ? <>{' · Joined '}<FeaturePackTimestamp value={member.joinedAt} /></> : null}
               </p>
             </div>
           </div>
-          <div className='flex flex-wrap items-center gap-2 sm:justify-end'>
+          <div className='flex flex-wrap items-center justify-end gap-2'>
             {member.governance.owner ? <Badge>Owner</Badge> : null}
             {!member.governance.owner && member.governance.admin ? <Badge variant='secondary'>Admin</Badge> : null}
             <FeatureStatusBadge status={memberStatus(member)} />
@@ -1021,16 +1023,12 @@ function CancelInviteAction({
 
 function InvitationsDirectory({
   invitations,
-  canInvite,
-  inviteAction,
   focusedInvitationId,
   policy,
   actions,
   onError
 }: Readonly<{
   invitations: readonly AppInvite[];
-  canInvite: boolean;
-  inviteAction: React.ReactNode;
   focusedInvitationId?: string;
   policy?: UsersFeaturePackProps['policy'];
   actions?: UsersFeatureActions;
@@ -1058,7 +1056,6 @@ function InvitationsDirectory({
           <EmptyTitle>No pending invitations</EmptyTitle>
           <EmptyDescription>Invite a collaborator when they are ready to join this application.</EmptyDescription>
         </EmptyHeader>
-        {canInvite && inviteAction ? <EmptyContent>{inviteAction}</EmptyContent> : null}
       </Empty>
     );
   }
@@ -1084,15 +1081,15 @@ function InvitationsDirectory({
             tabIndex={focused ? -1 : undefined}
           >
             <div className='min-w-0 flex-1'>
-              <p className='truncate text-sm font-medium'>{invite.recipient}</p>
-              <p className='text-muted-foreground mt-0.5 text-xs'>
+              <p className='truncate text-sm font-medium' title={invite.recipient}>{invite.recipient}</p>
+              <p className='text-muted-foreground mt-0.5 text-pretty text-xs'>
                 {invite.profile?.name ?? 'No access profile'}
                 {invite.expiresAt ? <>{' · Expires '}<FeaturePackTimestamp value={invite.expiresAt} /></> : null}
                 {invite.useLimit !== undefined ? <>{' · '}<span className='tabular-nums'>{invite.useCount ?? 0}/{invite.useLimit}</span>{' uses'}</> : null}
               </p>
             </div>
             <div className='flex flex-wrap items-center gap-2 sm:justify-end'>
-              {invite.channel ? <Badge variant='outline'>{invite.channel}</Badge> : null}
+              {invite.channel ? <Badge title={invite.channel} variant='outline'>{invite.channel}</Badge> : null}
               <FeatureStatusBadge status={invite.status} />
               {canPerform(policy, 'extendInvite') &&
               canPerform(invite.actionPolicy, 'extendInvite') && actions?.extendInvite ? (
@@ -1149,24 +1146,49 @@ function AcceptedInvitesDirectory({
   }
 
   return (
-    <Table>
-      <TableHeader>
+    <Table
+      className='block sm:table'
+      containerClassName='border-border/70 overflow-hidden rounded-xl border sm:overflow-x-auto sm:rounded-none sm:border-0'
+    >
+      <TableHeader className='sr-only sm:not-sr-only sm:table-header-group'>
         <TableRow>
           <TableHead>Recipient</TableHead>
           <TableHead>Invited by</TableHead>
           <TableHead>Accepted</TableHead>
         </TableRow>
       </TableHeader>
-      <TableBody>
-        {invitations.map((invite) => (
-          <TableRow key={invite.id}>
-            <TableCell>
-              <p className='font-medium'>{invite.receiverName ?? invite.receiverId ?? 'Unknown member'}</p>
-            </TableCell>
-            <TableCell>{invite.senderName ?? invite.senderId ?? 'Unknown sender'}</TableCell>
-            <TableCell><FeaturePackTimestamp value={invite.acceptedAt} /></TableCell>
-          </TableRow>
-        ))}
+      <TableBody className='block sm:table-row-group'>
+        {invitations.map((invite) => {
+          const receiver = invite.receiverName ?? invite.receiverId ?? 'Unknown member';
+          const sender = invite.senderName ?? invite.senderId ?? 'Unknown sender';
+          const receiverIsId = !invite.receiverName && Boolean(invite.receiverId);
+          const senderIsId = !invite.senderName && Boolean(invite.senderId);
+
+          return (
+            <TableRow className='grid grid-cols-2 gap-3 px-3 py-3 sm:table-row sm:px-0 sm:py-0' key={invite.id}>
+              <TableCell className='col-span-2 block min-w-0 whitespace-normal p-0 sm:table-cell sm:px-4 sm:py-3'>
+                <span className='text-muted-foreground block text-xs sm:hidden'>Recipient</span>
+                <span
+                  className='mt-0.5 block max-w-64 break-words font-medium sm:mt-0'
+                  translate={receiverIsId ? 'no' : undefined}
+                >
+                  {receiver}
+                </span>
+              </TableCell>
+              <TableCell
+                className='block min-w-0 whitespace-normal p-0 sm:table-cell sm:max-w-64 sm:px-4 sm:py-3'
+                translate={senderIsId ? 'no' : undefined}
+              >
+                <span className='text-muted-foreground block text-xs sm:hidden'>Invited by</span>
+                <span className='mt-0.5 block break-words sm:mt-0'>{sender}</span>
+              </TableCell>
+              <TableCell className='block min-w-0 whitespace-normal p-0 sm:table-cell sm:px-4 sm:py-3'>
+                <span className='text-muted-foreground block text-xs sm:hidden'>Accepted</span>
+                <span className='mt-0.5 block break-words sm:mt-0'><FeaturePackTimestamp value={invite.acceptedAt} /></span>
+              </TableCell>
+            </TableRow>
+          );
+        })}
       </TableBody>
     </Table>
   );
@@ -1206,18 +1228,22 @@ function ProfileFormDialog({
     setPending(true);
     setError(undefined);
     try {
-      const input = {
-        name: name.trim(),
-        slug: slug.trim(),
-        description: description.trim() || undefined
-      };
+      const nextName = name.trim();
+      const nextSlug = slug.trim();
+      const nextDescription = description.trim() || undefined;
       if (profile) {
         await (action as NonNullable<UsersFeatureActions['updateProfile']>)({
           profileId: profile.id,
-          ...input
+          name: nextName,
+          slug: nextSlug,
+          description: nextDescription
         });
       } else {
-        await (action as NonNullable<UsersFeatureActions['createProfile']>)(input);
+        await (action as NonNullable<UsersFeatureActions['createProfile']>)({
+          name: nextName,
+          slug: nextSlug,
+          description: nextDescription
+        });
       }
       setOpen(false);
     } catch (cause) {
@@ -1246,23 +1272,33 @@ function ProfileFormDialog({
               <Field error={error} htmlFor={`${fieldId}-name`} label='Name' required>
                 <Input
                   aria-invalid={error ? true : undefined}
+                  autoComplete='off'
                   id={`${fieldId}-name`}
+                  name='profile-name'
                   onChange={(event) => setName(event.currentTarget.value)}
                   placeholder='Support agent'
+                  required
                   value={name}
                 />
               </Field>
               <Field htmlFor={`${fieldId}-slug`} label='Slug' required>
                 <Input
+                  autoCapitalize='none'
+                  autoComplete='off'
                   id={`${fieldId}-slug`}
+                  name='profile-slug'
                   onChange={(event) => setSlug(event.currentTarget.value)}
                   placeholder='support-agent'
+                  required
+                  spellCheck={false}
                   value={slug}
                 />
               </Field>
               <Field htmlFor={`${fieldId}-description`} label='Description'>
                 <Textarea
+                  autoComplete='off'
                   id={`${fieldId}-description`}
+                  name='profile-description'
                   onChange={(event) => setDescription(event.currentTarget.value)}
                   placeholder='What members with this profile can do.'
                   value={description}
@@ -1526,22 +1562,30 @@ function PermissionsCatalog({ permissions }: Readonly<{ permissions: readonly Ap
           Console Kit assigns existing permissions through profiles, defaults, and direct grants. It never rewrites the backend catalog.
         </AlertDescription>
       </Alert>
-      <Table>
-        <TableHeader>
+      <Table
+        className='block sm:table'
+        containerClassName='border-border/70 overflow-hidden rounded-xl border sm:overflow-x-auto sm:rounded-none sm:border-0'
+      >
+        <TableHeader className='sr-only sm:not-sr-only sm:table-header-group'>
           <TableRow>
             <TableHead>Permission</TableHead>
             <TableHead>Description</TableHead>
             <TableHead>Bit</TableHead>
           </TableRow>
         </TableHeader>
-        <TableBody>
+        <TableBody className='block sm:table-row-group'>
           {permissions.map((permission) => (
-            <TableRow key={permission.id}>
-              <TableCell className='font-medium'>{permission.name}</TableCell>
-              <TableCell className='max-w-xl whitespace-normal text-pretty text-muted-foreground'>
-                {permission.description ?? '—'}
+            <TableRow className='grid grid-cols-[minmax(0,1fr)_auto] gap-2 px-3 py-3 sm:table-row sm:px-0 sm:py-0' key={permission.id}>
+              <TableCell className='block min-w-0 whitespace-normal p-0 font-medium sm:table-cell sm:px-4 sm:py-3'>
+                <span className='break-words'>{permission.name}</span>
               </TableCell>
-              <TableCell className='tabular-nums'>{permission.bit ?? '—'}</TableCell>
+              <TableCell className='col-span-2 row-start-2 block max-w-xl whitespace-normal p-0 text-pretty text-muted-foreground sm:table-cell sm:px-4 sm:py-3'>
+                {permission.description ?? 'No description'}
+              </TableCell>
+              <TableCell className='col-start-2 row-start-1 block whitespace-normal p-0 tabular-nums sm:table-cell sm:px-4 sm:py-3'>
+                <Badge className='sm:hidden' variant='outline'>Bit {permission.bit ?? '—'}</Badge>
+                <span className='hidden sm:inline'>{permission.bit ?? '—'}</span>
+              </TableCell>
             </TableRow>
           ))}
         </TableBody>
@@ -1652,6 +1696,7 @@ export function UsersFeaturePack({
   const [internalSection, setInternalSection] = React.useState<UsersSection>(defaultSection);
   const normalizedQuery = query.trim().toLowerCase();
   const canInvite = canPerform(policy, 'invite') && Boolean(actions?.invite);
+  const limitations = resource.status === 'ready' ? resource.limitations : undefined;
 
   React.useEffect(() => {
     if (focusedMemberId) setQuery('');
@@ -1684,23 +1729,23 @@ export function UsersFeaturePack({
             .includes(normalizedQuery);
         });
         const sections: Array<Readonly<{ id: UsersSection; label: string; count?: number }>> = [
-          { id: 'members', label: 'Members', count: data.members.length },
-          ...(data.invitations !== undefined
-            ? [{ id: 'invitations' as const, label: 'Invitations', count: invitations.length }]
-            : []),
-          ...(data.acceptedInvites !== undefined
-            ? [{ id: 'accepted-invites' as const, label: 'Accepted', count: acceptedInvites.length }]
-            : []),
-          ...(data.profiles !== undefined
-            ? [{ id: 'profiles' as const, label: 'Profiles', count: profiles.length }]
-            : []),
-          ...(data.permissions !== undefined
-            ? [{ id: 'permissions' as const, label: 'Permissions', count: permissions.length }]
-            : []),
-          ...(data.defaultPermissionIds !== undefined
-            ? [{ id: 'defaults' as const, label: 'Defaults' }]
-            : [])
+          { id: 'members', label: 'Members', count: data.members.length }
         ];
+        if (data.invitations !== undefined) {
+          sections.push({ id: 'invitations', label: 'Invitations', count: invitations.length });
+        }
+        if (data.acceptedInvites !== undefined) {
+          sections.push({ id: 'accepted-invites', label: 'Accepted', count: acceptedInvites.length });
+        }
+        if (data.profiles !== undefined) {
+          sections.push({ id: 'profiles', label: 'Profiles', count: profiles.length });
+        }
+        if (data.permissions !== undefined) {
+          sections.push({ id: 'permissions', label: 'Permissions', count: permissions.length });
+        }
+        if (data.defaultPermissionIds !== undefined) {
+          sections.push({ id: 'defaults', label: 'Defaults' });
+        }
         const requestedSection = controlledSection ?? internalSection;
         const activeSection = sections.some((candidate) => candidate.id === requestedSection)
           ? requestedSection
@@ -1728,8 +1773,8 @@ export function UsersFeaturePack({
           <div className='flex flex-col gap-6'>
             <header className='flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between'>
               <div className='min-w-0'>
-                <h1 className='text-balance text-lg font-semibold lg:text-xl'>{title}</h1>
-                <p className='text-muted-foreground mt-1 text-pretty text-sm'>
+                <h1 className='break-words text-balance text-lg font-semibold lg:text-xl'>{title}</h1>
+                <p className='text-muted-foreground mt-1 break-words text-pretty text-sm'>
                   {description ?? (
                     <>
                       <span className='tabular-nums'>{data.members.length}</span>{' '}
@@ -1741,16 +1786,39 @@ export function UsersFeaturePack({
                   )}
                 </p>
               </div>
-              {activeSection === 'invitations' && invitations.length > 0
-                ? inviteAction
-                : null}
+              {inviteAction}
             </header>
+
+            <FeaturePackLimitations limitations={limitations} />
 
             <Tabs onValueChange={changeSection} value={activeSection}>
               <div className='flex flex-col gap-4'>
+                <Select onValueChange={changeSection} value={activeSection}>
+                  <SelectTrigger aria-label='App access section' className='md:hidden'>
+                    <SelectValue>
+                      {(value: string | null) => {
+                        const selected = sections.find((candidate) => candidate.id === value);
+                        if (!selected) return 'Choose a section';
+                        return selected.count === undefined
+                          ? selected.label
+                          : `${selected.label} (${selected.count})`;
+                      }}
+                    </SelectValue>
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectGroup>
+                      {sections.map((candidate) => (
+                        <SelectItem key={candidate.id} value={candidate.id}>
+                          {candidate.label}
+                          {candidate.count === undefined ? null : ` (${candidate.count})`}
+                        </SelectItem>
+                      ))}
+                    </SelectGroup>
+                  </SelectContent>
+                </Select>
                 <TabsList
                   aria-label='App access sections'
-                  className='h-auto w-full justify-start gap-1 overflow-x-auto rounded-none border-b border-border/60 bg-transparent p-0'
+                  className='hidden h-auto w-full justify-start gap-1 overflow-x-auto rounded-none border-b border-border/60 bg-transparent p-0 md:flex'
                 >
                   {sections.map((candidate) => (
                     <TabsTrigger className={sectionTriggerClass} key={candidate.id} value={candidate.id}>
@@ -1769,8 +1837,10 @@ export function UsersFeaturePack({
                     <InputGroup>
                       <InputGroupAddon><SearchIcon aria-hidden='true' /></InputGroupAddon>
                       <InputGroupInput
+                        autoComplete='off'
+                        name='member-search'
                         onChange={(event) => setQuery(event.currentTarget.value)}
-                        placeholder='Search application members'
+                        placeholder='Search application members…'
                         type='search'
                         value={query}
                       />
@@ -1779,10 +1849,9 @@ export function UsersFeaturePack({
                 ) : null}
               </div>
 
-              <TabsContent className='mt-5 outline-none' value='members'>
+              <TabsContent className='mt-5' value='members'>
                 <MembersDirectory
                   actions={actions}
-                  emptyAction={inviteAction}
                   focusedMemberId={focusedMemberId}
                   members={members}
                   onClearSearch={() => setQuery('')}
@@ -1794,25 +1863,23 @@ export function UsersFeaturePack({
                 />
               </TabsContent>
               {data.invitations !== undefined ? (
-                <TabsContent className='mt-5 outline-none' value='invitations'>
+                <TabsContent className='mt-5' value='invitations'>
                   <InvitationsDirectory
                     actions={actions}
-                    canInvite={canInvite}
                     focusedInvitationId={focusedInvitationId}
                     invitations={invitations}
-                    inviteAction={inviteAction}
                     onError={onError}
                     policy={policy}
                   />
                 </TabsContent>
               ) : null}
               {data.acceptedInvites !== undefined ? (
-                <TabsContent className='mt-5 outline-none' value='accepted-invites'>
+                <TabsContent className='mt-5' value='accepted-invites'>
                   <AcceptedInvitesDirectory invitations={acceptedInvites} />
                 </TabsContent>
               ) : null}
               {data.profiles !== undefined ? (
-                <TabsContent className='mt-5 outline-none' value='profiles'>
+                <TabsContent className='mt-5' value='profiles'>
                   <ProfilesDirectory
                     actions={actions}
                     onError={onError}
@@ -1824,12 +1891,12 @@ export function UsersFeaturePack({
                 </TabsContent>
               ) : null}
               {data.permissions !== undefined ? (
-                <TabsContent className='mt-5 outline-none' value='permissions'>
+                <TabsContent className='mt-5' value='permissions'>
                   <PermissionsCatalog permissions={permissions} />
                 </TabsContent>
               ) : null}
               {data.defaultPermissionIds !== undefined ? (
-                <TabsContent className='mt-5 outline-none' value='defaults'>
+                <TabsContent className='mt-5' value='defaults'>
                   <PermissionDefaults
                     actions={actions}
                     defaultPermissionIds={data.defaultPermissionIds}

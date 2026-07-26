@@ -46,6 +46,7 @@ import {
 } from '../shared/feature-pack-contracts';
 import {
   FeaturePackBoundary,
+  FeaturePackLimitations,
   FeaturePackTimestamp
 } from '../shared/feature-pack-ui';
 import type {
@@ -117,6 +118,8 @@ export function AuthAccountView({
     key: string;
     message: string;
   }>>();
+  const actionGenerationRef = React.useRef(0);
+  const pendingActionRef = React.useRef<string | undefined>(undefined);
   const fieldIdPrefix = React.useId();
   const displayNameId = `${fieldIdPrefix}-display-name`;
   const currentPasswordId = `${fieldIdPrefix}-current-password`;
@@ -132,6 +135,9 @@ export function AuthAccountView({
   };
 
   React.useEffect(() => {
+    actionGenerationRef.current += 1;
+    pendingActionRef.current = undefined;
+    setPendingAction(undefined);
     setCurrentPassword('');
     setNewPassword('');
     setShowCurrentPassword(false);
@@ -147,12 +153,17 @@ export function AuthAccountView({
     onSuccess?: () => void,
     onFailure?: (message: string) => void
   ) => {
+    if (pendingActionRef.current) return;
+    const generation = actionGenerationRef.current;
+    pendingActionRef.current = key;
     setPendingAction(key);
     setActionError(undefined);
     try {
       await action();
+      if (actionGenerationRef.current !== generation) return;
       onSuccess?.();
     } catch (cause) {
+      if (actionGenerationRef.current !== generation) return;
       const error = normalizeFeaturePackError(cause, fallback);
       onError?.(error);
       if (onFailure) {
@@ -161,7 +172,10 @@ export function AuthAccountView({
         setActionError({ key, message: error.message });
       }
     } finally {
-      setPendingAction(undefined);
+      if (actionGenerationRef.current === generation) {
+        pendingActionRef.current = undefined;
+        setPendingAction(undefined);
+      }
     }
   };
 
@@ -169,10 +183,16 @@ export function AuthAccountView({
     <div className='mx-auto flex w-full max-w-2xl flex-col gap-6'>
       <h1 className='sr-only'>Account</h1>
       {activeNotice ? (
-        <Alert variant={activeNotice.status === 'error' ? 'destructive' : 'default'}>
+        <Alert
+          role={activeNotice.status === 'error' ? 'alert' : 'status'}
+          variant={activeNotice.status === 'error' ? 'destructive' : 'default'}
+        >
           <AlertDescription>{activeNotice.message}</AlertDescription>
         </Alert>
       ) : null}
+      <FeaturePackLimitations
+        limitations={account.status === 'ready' ? account.limitations : undefined}
+      />
       <FeaturePackBoundary
         emptyDescription='Sign in before opening your account.'
         emptyTitle='No active account'
@@ -240,7 +260,7 @@ export function AuthAccountView({
                 >
                   <TabsList
                     aria-label='Account sections'
-                    className='bg-transparent h-auto w-full justify-start gap-1 rounded-none border-b border-border/60 p-0'
+                    className='bg-transparent h-auto w-full justify-start gap-1 overflow-x-auto rounded-none border-b border-border/60 p-0'
                   >
                     <TabsTrigger className={sectionTriggerClass} value='profile'>
                       Profile
@@ -268,7 +288,7 @@ export function AuthAccountView({
                     ) : null}
                   </TabsList>
 
-                  <TabsContent className='mt-6 outline-none' value='profile'>
+                  <TabsContent className='mt-6' value='profile'>
                     <ProfileSection
                       data={data}
                       displayName={displayName}
@@ -293,7 +313,7 @@ export function AuthAccountView({
                   </TabsContent>
 
                   {showSecurity ? (
-                    <TabsContent className='mt-6 outline-none' value='security'>
+                    <TabsContent className='mt-6' value='security'>
                       <div className='flex flex-col gap-8'>
                         {canPerform(policy, 'changePassword') && actions?.changePassword ? (
                           <SecuritySection
@@ -345,7 +365,7 @@ export function AuthAccountView({
                   ) : null}
 
                   {showConnections ? (
-                    <TabsContent className='mt-6 outline-none' value='connected-accounts'>
+                    <TabsContent className='mt-6' value='connected-accounts'>
                       <ConnectedAccountsSection
                         accounts={connectedAccounts}
                         disconnect={
@@ -360,7 +380,7 @@ export function AuthAccountView({
                   ) : null}
 
                   {showSessions ? (
-                    <TabsContent className='mt-6 outline-none' value='sessions'>
+                    <TabsContent className='mt-6' value='sessions'>
                       <SessionsSection
                         sessions={sessions}
                         pendingAction={pendingAction}
@@ -475,11 +495,11 @@ function IdentityHero({
           </AvatarFallback>
         </Avatar>
         <div className='min-w-0'>
-          <p className='truncate text-lg font-semibold tracking-tight'>
+          <p className='truncate text-lg font-semibold tracking-tight' title={identity.displayName}>
             {identity.displayName}
           </p>
           <div className='mt-0.5 flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1'>
-            <p className='text-muted-foreground truncate text-sm'>{identity.primaryEmail}</p>
+            <p className='text-muted-foreground truncate text-sm' title={identity.primaryEmail}>{identity.primaryEmail}</p>
             {identity.emailVerified === true ? (
               <Badge size='sm' variant='secondary'>
                 <ShieldCheckIcon data-icon='inline-start' />
@@ -496,6 +516,7 @@ function IdentityHero({
       </div>
       {onSignOut ? (
         <Button
+          aria-busy={signOutPending}
           className='self-start sm:self-center'
           disabled={signOutPending}
           onClick={onSignOut}
@@ -539,6 +560,7 @@ function VerificationBanner({
         ) : null}
       </div>
       <Button
+        aria-busy={pending}
         className='shrink-0 self-start sm:self-auto'
         disabled={pending}
         onClick={onSend}
@@ -546,7 +568,7 @@ function VerificationBanner({
         variant='secondary'
       >
         <MailCheckIcon data-icon='inline-start' />
-        Send verification email
+        {pending ? 'Sending verification…' : 'Send verification email'}
       </Button>
     </div>
   );
@@ -620,19 +642,22 @@ function ProfileSection({
         >
           <Field htmlFor={displayNameId} label='Display name'>
             <Input
+              autoComplete='name'
               id={displayNameId}
+              name='display-name'
               onChange={(event) => onDisplayNameChange(event.currentTarget.value)}
               placeholder={data.identity.displayName}
               value={displayName}
             />
           </Field>
           <Button
+            aria-busy={pending}
             className='self-start'
             disabled={!displayName.trim() || pending}
             size='sm'
             type='submit'
           >
-            Save changes
+            {pending ? 'Saving changes…' : 'Save changes'}
           </Button>
           {error ? <ActionError message={error} /> : null}
         </form>
@@ -681,6 +706,15 @@ function SecuritySection({
     ? authPasswordPolicyError(newPassword, passwordPolicy)
     : undefined;
   const passwordHint = authPasswordHint(newPassword, passwordPolicy);
+  const passwordDescriptionId = `${newPasswordId}-description`;
+  const passwordErrorId = `${newPasswordId}-error`;
+  const passwordDescribedBy = passwordHint && passwordError
+    ? `${passwordDescriptionId} ${passwordErrorId}`
+    : passwordHint
+      ? passwordDescriptionId
+      : passwordError
+        ? passwordErrorId
+        : undefined;
   const minLength = normalizedPasswordLength(passwordPolicy?.minLength);
   const maxLength = normalizedPasswordLength(passwordPolicy?.maxLength);
 
@@ -704,6 +738,7 @@ function SecuritySection({
               <InputGroupInput
                 autoComplete='current-password'
                 id={currentPasswordId}
+                name='current-password'
                 onChange={(event) => onCurrentPasswordChange(event.currentTarget.value)}
                 required
                 type={showCurrentPassword ? 'text' : 'password'}
@@ -728,7 +763,9 @@ function SecuritySection({
           </Field>
           <Field
             description={passwordHint}
+            descriptionId={passwordDescriptionId}
             error={passwordError}
+            errorId={passwordErrorId}
             htmlFor={newPasswordId}
             label='New password'
             required
@@ -736,10 +773,12 @@ function SecuritySection({
             <InputGroup>
               <InputGroupInput
                 autoComplete='new-password'
+                aria-describedby={passwordDescribedBy}
                 aria-invalid={passwordError ? true : undefined}
                 id={newPasswordId}
                 maxLength={maxLength}
                 minLength={minLength}
+                name='new-password'
                 onChange={(event) => onNewPasswordChange(event.currentTarget.value)}
                 required
                 type={showNewPassword ? 'text' : 'password'}
@@ -764,6 +803,7 @@ function SecuritySection({
           </Field>
         </FieldGroup>
         <Button
+          aria-busy={pending}
           className='self-start'
           disabled={!currentPassword || !newPassword || Boolean(passwordError) || pending}
           size='sm'
@@ -834,7 +874,7 @@ function AccountDeletionSection({
         title='Delete account'
       />
       {feedback ? (
-        <Alert className='mb-4'>
+        <Alert className='mb-4' role='status'>
           <AlertDescription>{feedback}</AlertDescription>
         </Alert>
       ) : null}
@@ -866,6 +906,7 @@ function AccountDeletionSection({
                 <Input
                   autoComplete='off'
                   id={`${fieldId}-confirmation`}
+                  name='account-deletion-confirmation'
                   onChange={(event) => setConfirmation(event.currentTarget.value)}
                   required
                   value={confirmation}
@@ -875,6 +916,7 @@ function AccountDeletionSection({
                 <Input
                   autoComplete='current-password'
                   id={`${fieldId}-password`}
+                  name='current-password'
                   onChange={(event) => setPassword(event.currentTarget.value)}
                   required
                   type='password'
@@ -963,12 +1005,12 @@ function ConnectedAccountsSection({
             </div>
             <div className='min-w-0 flex-1'>
               <div className='flex min-w-0 flex-wrap items-center gap-2'>
-                <p className='truncate text-sm font-medium'>{account.service}</p>
+                <p className='truncate text-sm font-medium' title={account.service}>{account.service}</p>
                 {account.isVerified ? (
                   <Badge size='sm' variant='secondary'>Verified</Badge>
                 ) : null}
               </div>
-              <p className='text-muted-foreground mt-0.5 truncate text-xs'>
+              <p className='text-muted-foreground mt-0.5 truncate text-xs' title={account.identifier}>
                 {account.identifier}
               </p>
             </div>
@@ -1006,6 +1048,7 @@ function ConnectedAccountsSection({
                   <Input
                     autoComplete='off'
                     id={`${fieldId}-confirmation`}
+                    name='connected-account-confirmation'
                     onChange={(event) => setConfirmation(event.currentTarget.value)}
                     required
                     value={confirmation}
@@ -1015,6 +1058,7 @@ function ConnectedAccountsSection({
                   <Input
                     autoComplete='current-password'
                     id={`${fieldId}-password`}
+                    name='current-password'
                     onChange={(event) => setPassword(event.currentTarget.value)}
                     required
                     type='password'
@@ -1074,12 +1118,12 @@ function SessionsSection({
             </div>
             <div className='min-w-0 flex-1'>
               <div className='flex min-w-0 flex-wrap items-center gap-2'>
-                <p className='truncate text-sm font-medium'>{session.deviceLabel}</p>
+                <p className='truncate text-sm font-medium' title={session.deviceLabel}>{session.deviceLabel}</p>
                 {session.current ? (
                   <Badge size='sm' variant='secondary'>Current</Badge>
                 ) : null}
               </div>
-              <p className='text-muted-foreground mt-0.5 truncate text-xs'>
+              <p className='text-muted-foreground mt-0.5 truncate text-xs' title={session.location}>
                 {session.location ? (
                   <>
                     {session.location}

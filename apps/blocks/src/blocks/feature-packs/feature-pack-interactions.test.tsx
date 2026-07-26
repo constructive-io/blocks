@@ -148,7 +148,8 @@ describe('feature-pack interaction policy', () => {
     }));
   });
 
-  it('does not render a notification action unless policy and a host action allow it', () => {
+  it('does not render a notification action unless policy and a host action allow it', async () => {
+    const user = userEvent.setup();
     const notification = {
       id: 'notification-1',
       title: 'Export complete',
@@ -191,8 +192,8 @@ describe('feature-pack interaction policy', () => {
         }}
       />
     );
-    fireEvent.click(screen.getByRole('button', { name: 'Open export' }));
-    expect(openNotification).toHaveBeenCalledWith({ notification });
+    await user.click(screen.getByRole('button', { name: 'Open export' }));
+    await waitFor(() => expect(openNotification).toHaveBeenCalledWith({ notification }));
   });
 
   it('confirms notification deletion and keeps a failed action open', async () => {
@@ -1144,6 +1145,49 @@ describe('feature-pack interaction policy', () => {
     await user.click(screen.getByRole('checkbox', { name: 'I stored this API key securely' }));
     await user.click(screen.getByRole('button', { name: 'Done' }));
     await waitFor(() => expect(screen.queryByDisplayValue('secret-once')).toBeNull());
+  });
+
+  it('drops a one-time organization key when the active tenant changes', async () => {
+    const user = userEvent.setup();
+    const createOrganizationApiKey = vi.fn().mockResolvedValue({ token: 'tenant-a-secret' });
+    const renderPack = (activeOrganizationId: string) => (
+      <OrganizationsFeaturePack
+        actions={{ createOrganizationApiKey }}
+        policy={{ createOrganizationApiKey: true }}
+        resource={{
+          status: 'ready',
+          data: {
+            activeOrganizationId,
+            organizations: [
+              { id: 'organization-a', name: 'Alpha' },
+              { id: 'organization-b', name: 'Bravo' }
+            ],
+            members: [],
+            principals: [{
+              id: 'principal-1',
+              name: 'Reporting integration',
+              useAdminOwner: false,
+              isReadOnly: true,
+              bypassStepUp: false
+            }],
+            apiKeys: []
+          }
+        }}
+        section='developer'
+      />
+    );
+    const view = render(renderPack('organization-a'));
+
+    await user.click(screen.getByRole('button', { name: 'Create API key' }));
+    const dialog = screen.getByRole('dialog');
+    await user.type(within(dialog).getByRole('textbox', { name: 'Key name' }), 'Tenant A key');
+    await user.click(within(dialog).getByRole('button', { name: 'Create API key' }));
+    await screen.findByDisplayValue('tenant-a-secret');
+
+    view.rerender(renderPack('organization-b'));
+
+    expect(screen.queryByDisplayValue('tenant-a-secret')).toBeNull();
+    expect(screen.queryByRole('dialog')).toBeNull();
   });
 
   it('maps semantic App access detail routes to the focused record', async () => {

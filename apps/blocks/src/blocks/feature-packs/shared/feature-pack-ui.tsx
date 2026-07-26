@@ -34,11 +34,53 @@ import {
   EmptyTitle
 } from '@constructive-io/ui/empty';
 import { Skeleton } from '@constructive-io/ui/skeleton';
+import { cn } from '@/lib/utils';
 
 import type {
   FeaturePackLimitation,
   FeaturePackResource
 } from './feature-pack-contracts';
+
+function FeaturePackRetryAction({
+  retry
+}: Readonly<{ retry: () => void | Promise<void> }>) {
+  const [pending, setPending] = React.useState(false);
+  const [error, setError] = React.useState<string>();
+
+  const run = async () => {
+    if (pending) return;
+    setPending(true);
+    setError(undefined);
+    try {
+      await retry();
+    } catch (cause) {
+      setError(cause instanceof Error
+        ? cause.message
+        : 'The retry did not complete. Check the connection and try again.');
+    } finally {
+      setPending(false);
+    }
+  };
+
+  return (
+    <div className='flex flex-col items-start gap-2'>
+      <Button
+        aria-busy={pending}
+        disabled={pending}
+        onClick={() => void run()}
+        size='sm'
+        type='button'
+        variant='outline'
+      >
+        <RefreshCwIcon data-icon='inline-start' />
+        {pending ? 'Trying again…' : 'Try again'}
+      </Button>
+      {error ? (
+        <span className='break-words text-pretty text-sm'>{error}</span>
+      ) : null}
+    </div>
+  );
+}
 
 export type FeaturePackBoundaryProps<T> = Readonly<{
   resource: FeaturePackResource<T>;
@@ -81,12 +123,9 @@ export function FeaturePackBoundary<T>({
         <CircleAlertIcon aria-hidden='true' />
         <AlertTitle>{errorTitle}</AlertTitle>
         <AlertDescription className='flex flex-col items-start gap-3'>
-          <span className='text-pretty'>{resource.error.message}</span>
+          <span className='break-words text-pretty'>{resource.error.message}</span>
           {resource.retry ? (
-            <Button onClick={() => void resource.retry?.()} size='sm' variant='outline'>
-              <RefreshCwIcon data-icon='inline-start' />
-              Try again
-            </Button>
+            <FeaturePackRetryAction retry={resource.retry} />
           ) : null}
         </AlertDescription>
       </Alert>
@@ -212,7 +251,7 @@ export function FeaturePackDiagnosticPanel({
   return (
     <Card className='w-full max-w-2xl border-border/70 shadow-sm' variant='flat'>
       <CardHeader className='pb-3'>
-        <div className={`mb-3 flex size-10 items-center justify-center rounded-lg ${iconTone}`}>
+        <div className={cn('mb-3 flex size-10 items-center justify-center rounded-lg', iconTone)}>
           {icon ?? <CircleAlertIcon aria-hidden='true' />}
         </div>
         <CardTitle className='text-balance'>
@@ -285,7 +324,7 @@ export function FeaturePackLimitations({
       <CircleAlertIcon aria-hidden='true' />
       <AlertTitle>Some policy details are unavailable</AlertTitle>
       <AlertDescription>
-        <ul className='list-disc space-y-1 pl-4'>
+        <ul className='flex list-disc flex-col gap-1 pl-4'>
           {limitations.map((limitation) => (
             <li key={limitation.code}>{limitation.message}</li>
           ))}
@@ -323,7 +362,7 @@ export function FeaturePackPageHeader({
         ) : null}
       </div>
       {actions ? (
-        <div className='flex shrink-0 flex-wrap items-center gap-2'>{actions}</div>
+        <div className='flex w-full shrink-0 flex-wrap items-center gap-2 sm:w-auto'>{actions}</div>
       ) : null}
     </div>
   );
@@ -342,7 +381,11 @@ export function FeatureStatusBadge({
           ? 'secondary'
           : 'outline';
 
-  return <Badge variant={variant}>{status}</Badge>;
+  return (
+    <Badge className='max-w-full' title={status} variant={variant}>
+      <span className='truncate'>{status}</span>
+    </Badge>
+  );
 }
 
 export function FeaturePackTimestamp({
@@ -351,7 +394,9 @@ export function FeaturePackTimestamp({
 }: Readonly<{ value: string | undefined; fallback?: string }>) {
   if (!value) return <>{fallback}</>;
   const timestamp = Date.parse(value);
-  if (Number.isNaN(timestamp)) return <>{value}</>;
+  if (Number.isNaN(timestamp)) {
+    return <span className='break-words' title={value}>{value}</span>;
+  }
 
   return (
     <time

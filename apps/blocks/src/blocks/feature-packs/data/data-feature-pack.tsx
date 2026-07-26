@@ -78,10 +78,16 @@ function DataExplorer({
         <CircleAlertIcon aria-hidden='true' />
         <AlertTitle>Application metadata could not be loaded</AlertTitle>
         <AlertDescription className='flex flex-col items-start gap-3'>
-          <span>{metaQuery.error instanceof Error ? metaQuery.error.message : 'The endpoint did not return compatible metadata.'}</span>
-          <Button onClick={() => void metaQuery.refetch()} size='sm' variant='outline'>
+          <span className='break-words text-pretty'>{metaQuery.error instanceof Error ? metaQuery.error.message : 'The endpoint did not return compatible metadata.'}</span>
+          <Button
+            aria-busy={metaQuery.isFetching}
+            disabled={metaQuery.isFetching}
+            onClick={() => void metaQuery.refetch()}
+            size='sm'
+            variant='outline'
+          >
             <RefreshCwIcon data-icon='inline-start' />
-            Try again
+            {metaQuery.isFetching ? 'Trying again…' : 'Try again'}
           </Button>
         </AlertDescription>
       </Alert>
@@ -96,7 +102,7 @@ function DataExplorer({
             <DatabaseIcon aria-hidden='true' />
           </div>
           <CardTitle>No application tables</CardTitle>
-          <CardDescription>
+          <CardDescription className='max-w-xl text-pretty'>
             Console Kit only shows tables explicitly scoped to the application. Feature-owned, private, and junction tables stay hidden.
           </CardDescription>
         </CardHeader>
@@ -110,8 +116,8 @@ function DataExplorer({
   }
 
   return (
-    <div className='grid min-h-[36rem] flex-1 overflow-hidden rounded-xl border bg-background lg:grid-cols-[15rem_minmax(0,1fr)]'>
-      <aside className='min-h-0 border-b px-4 lg:border-b-0 lg:border-r'>
+    <div className='grid min-h-[32rem] flex-1 overflow-hidden rounded-xl border bg-background sm:min-h-[36rem] lg:grid-cols-[15rem_minmax(0,1fr)]'>
+      <aside className='h-72 min-h-0 overflow-hidden border-b px-4 lg:h-auto lg:border-b-0 lg:border-r'>
         <SheetsTableSelector
           activeTable={activeTable}
           isLoading={metaQuery.isLoading}
@@ -123,7 +129,7 @@ function DataExplorer({
       <div className='flex min-h-[28rem] min-w-0 flex-col overflow-hidden p-3'>
         {activeTable ? (
           <>
-            <p className='text-muted-foreground mb-2 text-xs sm:hidden'>Swipe the table horizontally to see more fields and actions.</p>
+            <p className='text-muted-foreground mb-2 text-pretty text-xs sm:hidden'>Swipe the table horizontally to see more fields and actions.</p>
             <Sheets
               {...sheetsProps}
               className='min-h-0 flex-1'

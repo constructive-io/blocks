@@ -5,6 +5,7 @@ import {
   Building2Icon,
   CheckIcon,
   CopyIcon,
+  LoaderCircleIcon,
   MailPlusIcon,
   MoreHorizontalIcon,
   PlusIcon,
@@ -13,6 +14,7 @@ import {
 } from 'lucide-react';
 
 import { Avatar, AvatarFallback, AvatarImage } from '@constructive-io/ui/avatar';
+import { Badge } from '@constructive-io/ui/badge';
 import {
   AlertDialog,
   AlertDialogCancel,
@@ -99,6 +101,7 @@ import type {
   OrganizationInvite,
   OrganizationMember,
   OrganizationAccessProfile,
+  OrganizationPermission,
   OrganizationsFeatureActions,
   OrganizationsFeaturePackProps,
   OrganizationsSection
@@ -204,7 +207,9 @@ function CreateOrganizationDialog({
             >
               <Input
                 aria-invalid={error ? true : undefined}
+                autoComplete='organization'
                 id={`${fieldId}-value`}
+                name='organization-name'
                 onChange={(event) => setValue(event.currentTarget.value)}
                 required
                 type='text'
@@ -348,10 +353,14 @@ function OrganizationInviteDialog({
                 >
                   <Input
                     aria-invalid={error ? true : undefined}
+                    autoCapitalize='none'
+                    autoComplete={channel === 'sms' ? 'tel' : 'email'}
                     id={`${fieldId}-recipient`}
+                    name={channel === 'sms' ? 'invite-phone' : 'invite-email'}
                     onChange={(event) => setRecipient(event.currentTarget.value)}
                     placeholder={channel === 'sms' ? '+15551234567' : 'person@example.com'}
                     required
+                    spellCheck={false}
                     type={channel === 'email' ? 'email' : 'tel'}
                     value={recipient}
                   />
@@ -391,7 +400,9 @@ function OrganizationInviteDialog({
               ) : null}
               <Field htmlFor={`${fieldId}-expires`} label='Expires at'>
                 <Input
+                  autoComplete='off'
                   id={`${fieldId}-expires`}
+                  name='invite-expires-at'
                   onChange={(event) => setExpiresAt(event.currentTarget.value)}
                   type='datetime-local'
                   value={expiresAt}
@@ -428,7 +439,9 @@ function OrganizationInviteDialog({
                     <Field htmlFor={`${fieldId}-limit`} label='Claim limit'>
                       <Input
                         id={`${fieldId}-limit`}
+                        inputMode='numeric'
                         min={1}
+                        name='invite-claim-limit'
                         onChange={(event) => setInviteLimit(event.currentTarget.value)}
                         type='number'
                         value={inviteLimit}
@@ -522,6 +535,48 @@ function OrganizationMemberActions({
         </AlertDialogContent>
       </AlertDialog>
     </>
+  );
+}
+
+function OrganizationMemberControls({
+  actions,
+  member,
+  onError,
+  organizationId,
+  permissions,
+  policy,
+  profiles
+}: Readonly<{
+  actions?: OrganizationsFeatureActions;
+  member: OrganizationMember;
+  onError?: OrganizationsFeaturePackProps['onError'];
+  organizationId: string;
+  permissions: readonly OrganizationPermission[];
+  policy?: OrganizationsFeaturePackProps['policy'];
+  profiles: readonly OrganizationAccessProfile[];
+}>) {
+  return (
+    <div className='flex items-center justify-end gap-1'>
+      <OrganizationMemberAccessDialog
+        actions={actions}
+        member={member}
+        onError={onError}
+        organizationId={organizationId}
+        permissions={permissions}
+        policy={policy}
+        profiles={profiles}
+      />
+      {canPerform(policy, 'removeMember') &&
+      member.actionPolicy?.removeMember &&
+      actions?.removeMember ? (
+        <OrganizationMemberActions
+          member={member}
+          onError={onError}
+          organizationId={organizationId}
+          removeMember={actions.removeMember}
+        />
+      ) : null}
+    </div>
   );
 }
 
@@ -648,34 +703,30 @@ export function OrganizationsFeaturePack({
 }: OrganizationsFeaturePackProps) {
   const [query, setQuery] = React.useState('');
   const [selectionError, setSelectionError] = React.useState<string>();
+  const [selectingOrganizationId, setSelectingOrganizationId] = React.useState<string>();
   const [internalSection, setInternalSection] = React.useState<OrganizationsSection>(
     defaultSection
   );
   const focusedMemberRef = React.useCallback(
-    (element: HTMLTableRowElement | null) => {
+    (element: HTMLElement | null) => {
       if (!element || !focusedMemberId) return;
       element.focus({ preventScroll: true });
       element.scrollIntoView?.({ block: 'nearest' });
     },
     [focusedMemberId]
   );
-  const focusedInvitationRef = React.useRef<HTMLTableRowElement>(null);
-  const focusedInvitationPresent = resource.status === 'ready' && Boolean(
-    focusedInvitationId && resource.data.invites?.some(
-      (invite) => invite.id === focusedInvitationId
-    )
+  const focusedInvitationRef = React.useCallback(
+    (element: HTMLElement | null) => {
+      if (!element || !focusedInvitationId) return;
+      element.focus({ preventScroll: true });
+      element.scrollIntoView?.({ block: 'nearest' });
+    },
+    [focusedInvitationId]
   );
 
   React.useEffect(() => {
     if (focusedMemberId) setQuery('');
   }, [focusedMemberId]);
-
-  React.useEffect(() => {
-    if (!focusedInvitationPresent) return;
-    const element = focusedInvitationRef.current;
-    element?.focus({ preventScroll: true });
-    element?.scrollIntoView?.({ block: 'nearest' });
-  }, [focusedInvitationId, focusedInvitationPresent]);
 
   const run = async (
     action: () => FeatureActionResult,
@@ -718,8 +769,16 @@ export function OrganizationsFeaturePack({
             />
           ) : null
         }
-        emptyDescription='Create the first organization when this app needs tenant-owned data.'
-        emptyTitle='No organizations yet'
+        emptyDescription={
+          canPerform(policy, 'createOrganization') && actions?.createOrganization
+            ? 'Create the first organization when this app needs tenant-owned data.'
+            : 'No organizations are visible to this session, and the current access policy does not allow organization creation.'
+        }
+        emptyTitle={
+          canPerform(policy, 'createOrganization') && actions?.createOrganization
+            ? 'No organizations yet'
+            : 'No organizations available'
+        }
         resource={resource}
       >
         {(data) => {
@@ -734,35 +793,35 @@ export function OrganizationsFeaturePack({
             label: string;
             count?: number;
           }>> = [
-            { id: 'members', label: 'Members', count: data.members.length },
-            ...(data.invites === undefined && data.claimedInvites === undefined
-              ? []
-              : [{
-                  id: 'invitations' as const,
-                  label: 'Invitations',
-                  count: (data.invites?.length ?? 0) + (data.claimedInvites?.length ?? 0)
-                }]),
-            ...(data.profiles === undefined
-              ? []
-              : [{ id: 'profiles' as const, label: 'Profiles', count: data.profiles.length }]),
-            ...(data.permissions === undefined
-              ? []
-              : [{ id: 'permissions' as const, label: 'Permissions', count: data.permissions.length }]),
-            ...(data.membershipDefault === undefined
-              ? []
-              : [{ id: 'defaults' as const, label: 'Defaults' }]),
-            ...(data.hierarchy === undefined
-              ? []
-              : [{ id: 'hierarchy' as const, label: 'Hierarchy', count: data.hierarchy.length }]),
-            { id: 'settings', label: 'Settings' },
-            ...(data.apiKeys === undefined && data.principals === undefined
-              ? []
-              : [{
-                  id: 'developer' as const,
-                  label: 'Developer',
-                  count: (data.apiKeys?.length ?? 0) + (data.principals?.length ?? 0)
-                }])
+            { id: 'members', label: 'Members', count: data.members.length }
           ];
+          if (data.invites !== undefined || data.claimedInvites !== undefined) {
+            sections.push({
+              id: 'invitations',
+              label: 'Invitations',
+              count: (data.invites?.length ?? 0) + (data.claimedInvites?.length ?? 0)
+            });
+          }
+          if (data.profiles !== undefined) {
+            sections.push({ id: 'profiles', label: 'Profiles', count: data.profiles.length });
+          }
+          if (data.permissions !== undefined) {
+            sections.push({ id: 'permissions', label: 'Permissions', count: data.permissions.length });
+          }
+          if (data.membershipDefault !== undefined) {
+            sections.push({ id: 'defaults', label: 'Defaults' });
+          }
+          if (data.hierarchy !== undefined) {
+            sections.push({ id: 'hierarchy', label: 'Hierarchy', count: data.hierarchy.length });
+          }
+          sections.push({ id: 'settings', label: 'Settings' });
+          if (data.apiKeys !== undefined || data.principals !== undefined) {
+            sections.push({
+              id: 'developer',
+              label: 'Developer',
+              count: (data.apiKeys?.length ?? 0) + (data.principals?.length ?? 0)
+            });
+          }
           const requestedSection = controlledSection ?? internalSection;
           const activeSection = sections.some((candidate) => candidate.id === requestedSection)
             ? requestedSection
@@ -781,17 +840,20 @@ export function OrganizationsFeaturePack({
                   <CardTitle className='text-sm'>Your organizations</CardTitle>
                   <CardDescription>Select the tenant whose membership policy you want to manage.</CardDescription>
                 </CardHeader>
-                <CardContent className='flex flex-col gap-1'>
+                <CardContent className='flex max-h-72 flex-col gap-1 overflow-y-auto'>
                   {data.organizations.map((organization) => {
                     const selected = organization.id === active?.id;
                     return (
                       <Button
+                        aria-busy={selectingOrganizationId === organization.id}
+                        aria-pressed={selected}
                         className='h-auto justify-start px-2 py-2 text-left'
-                        disabled={!selected && !(canPerform(policy, 'selectOrganization') && actions?.selectOrganization)}
+                        disabled={Boolean(selectingOrganizationId) || (!selected && !(canPerform(policy, 'selectOrganization') && actions?.selectOrganization))}
                         key={organization.id}
                         onClick={() => {
                           if (!selected && canPerform(policy, 'selectOrganization') && actions?.selectOrganization) {
                             setSelectionError(undefined);
+                            setSelectingOrganizationId(organization.id);
                             void run(
                               () => actions.selectOrganization!({ organizationId: organization.id }),
                               'The organization could not be selected.'
@@ -799,7 +861,7 @@ export function OrganizationsFeaturePack({
                               if ('error' in result) {
                                 setSelectionError(result.error.message);
                               }
-                            });
+                            }).finally(() => setSelectingOrganizationId(undefined));
                           }
                         }}
                         variant={selected ? 'secondary' : 'ghost'}
@@ -809,12 +871,21 @@ export function OrganizationsFeaturePack({
                           <AvatarFallback>{initials(organization.name) || <Building2Icon />}</AvatarFallback>
                         </Avatar>
                         <span className='min-w-0 flex-1'>
-                          <span className='block truncate'>{organization.name}</span>
-                          <span className='text-muted-foreground block truncate text-xs'>
+                          <span className='block truncate' title={organization.name}>{organization.name}</span>
+                          <span
+                            className='text-muted-foreground block truncate text-xs tabular-nums'
+                            title={organization.memberCount === undefined
+                              ? organization.slug
+                              : `${organization.memberCount} members`}
+                          >
                             {organization.memberCount === undefined ? organization.slug : `${organization.memberCount} members`}
                           </span>
                         </span>
-                        {selected ? <CheckIcon aria-hidden='true' /> : null}
+                        {selectingOrganizationId === organization.id
+                          ? <LoaderCircleIcon aria-hidden='true' className='animate-spin motion-reduce:animate-none' />
+                          : selected
+                            ? <CheckIcon aria-hidden='true' />
+                            : null}
                       </Button>
                     );
                   })}
@@ -826,16 +897,15 @@ export function OrganizationsFeaturePack({
                 </CardContent>
               </Card>
 
-              <div className='min-w-0'>
+              <div className='min-w-0' key={active?.id ?? 'no-active-organization'}>
                 <div className='mb-4 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between'>
                   <div>
-                    <h2 className='text-balance text-lg font-semibold'>{active?.name ?? 'Organization'}</h2>
+                    <h2 className='break-words text-balance text-lg font-semibold'>{active?.name ?? 'Organization'}</h2>
                     <p className='text-muted-foreground text-pretty text-sm'>
                       Tenant memberships, access policy, hierarchy, and machine credentials.
                     </p>
                   </div>
                   {active &&
-                  activeSection === 'invitations' &&
                   canPerform(policy, 'inviteMember') &&
                   actions?.inviteMember ? (
                     <OrganizationInviteDialog
@@ -843,7 +913,16 @@ export function OrganizationsFeaturePack({
                         ? data.assignableInviteProfileIds ?? []
                         : []}
                       onSubmit={(input) => run(
-                        () => actions.inviteMember!({ organizationId: active.id, ...input }),
+                        () => actions.inviteMember!({
+                          organizationId: active.id,
+                          channel: input.channel,
+                          recipient: input.recipient,
+                          profileId: input.profileId,
+                          expiresAt: input.expiresAt,
+                          multiple: input.multiple,
+                          inviteLimit: input.inviteLimit,
+                          isReadOnly: input.isReadOnly
+                        }),
                         'The invitation could not be created.'
                       )}
                       profiles={data.profiles ?? []}
@@ -852,9 +931,32 @@ export function OrganizationsFeaturePack({
                 </div>
                 <Tabs onValueChange={changeSection} value={activeSection}>
                   <div className='flex flex-col gap-4'>
+                    <Select onValueChange={changeSection} value={activeSection}>
+                      <SelectTrigger aria-label='Organization management section' className='md:hidden'>
+                        <SelectValue>
+                          {(value: string | null) => {
+                            const selected = sections.find((candidate) => candidate.id === value);
+                            if (!selected) return 'Choose a section';
+                            return selected.count === undefined
+                              ? selected.label
+                              : `${selected.label} (${selected.count})`;
+                          }}
+                        </SelectValue>
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectGroup>
+                          {sections.map((candidate) => (
+                            <SelectItem key={candidate.id} value={candidate.id}>
+                              {candidate.label}
+                              {candidate.count === undefined ? null : ` (${candidate.count})`}
+                            </SelectItem>
+                          ))}
+                        </SelectGroup>
+                      </SelectContent>
+                    </Select>
                     <TabsList
                       aria-label='Organization management sections'
-                      className='h-auto w-full justify-start gap-1 overflow-x-auto rounded-none border-b border-border/60 bg-transparent p-0'
+                      className='hidden h-auto w-full justify-start gap-1 overflow-x-auto rounded-none border-b border-border/60 bg-transparent p-0 md:flex'
                     >
                       {sections.map((candidate) => (
                         <TabsTrigger
@@ -876,9 +978,12 @@ export function OrganizationsFeaturePack({
                         <span className='sr-only'>Search organization members</span>
                         <SearchIcon className='text-muted-foreground pointer-events-none absolute left-3 top-1/2 -translate-y-1/2' />
                         <Input
+                          aria-label='Search organization members'
+                          autoComplete='off'
                           className='pl-10'
+                          name='organization-member-search'
                           onChange={(event) => setQuery(event.currentTarget.value)}
-                          placeholder='Search organization members'
+                          placeholder='Search organization members…'
                           type='search'
                           value={query}
                         />
@@ -896,67 +1001,76 @@ export function OrganizationsFeaturePack({
                         title='No members match'
                       />
                     ) : (
-                      <Table>
-                        <TableHeader><TableRow>
-                          <TableHead>Member</TableHead>
-                          <TableHead>Governance</TableHead>
-                          <TableHead>Access profile</TableHead>
-                          <TableHead>Status</TableHead>
-                          <TableHead className='w-24'><span className='sr-only'>Actions</span></TableHead>
-                        </TableRow></TableHeader>
-                        <TableBody>{members.map((member) => {
-                          const focused = member.id === focusedMemberId;
-                          return (
-                          <TableRow
-                            aria-current={focused ? 'true' : undefined}
-                            className={cn(focused && focusedRecordClass)}
-                            key={member.id}
-                            ref={focused ? focusedMemberRef : undefined}
-                            tabIndex={focused ? -1 : undefined}
-                          >
-                            <TableCell>
-                              <div className='flex min-w-48 items-center gap-3'>
-                                <Avatar>
-                                  {member.avatarUrl ? <AvatarImage alt='' src={member.avatarUrl} /> : null}
-                                  <AvatarFallback>{initials(member.name)}</AvatarFallback>
-                                </Avatar>
-                                <div className='min-w-0'>
-                                  <p className='truncate font-medium'>{member.name}</p>
-                                  <p className='text-muted-foreground truncate text-sm'>{member.email}</p>
-                                </div>
-                              </div>
-                            </TableCell>
-                            <TableCell className='capitalize'>{member.governance}</TableCell>
-                            <TableCell>{member.profileName ?? 'No profile'}</TableCell>
-                            <TableCell><FeatureStatusBadge status={member.status} /></TableCell>
-                            <TableCell>
-                              {active ? (
-                                <div className='flex items-center justify-end gap-1'>
-                                  <OrganizationMemberAccessDialog
-                                    actions={actions}
-                                    member={member}
-                                    onError={onError}
-                                    organizationId={active.id}
-                                    permissions={data.permissions ?? []}
-                                    policy={policy}
-                                    profiles={data.profiles ?? []}
-                                  />
-                                  {canPerform(policy, 'removeMember') &&
-                                  member.actionPolicy?.removeMember &&
-                                  actions?.removeMember ? (
-                                    <OrganizationMemberActions
+                      <Table
+                        className='block lg:table'
+                        containerClassName='border-border/70 overflow-hidden rounded-xl border lg:overflow-x-auto lg:rounded-none lg:border-0'
+                      >
+                        <TableHeader className='sr-only lg:not-sr-only lg:table-header-group'>
+                          <TableRow>
+                            <TableHead>Member</TableHead>
+                            <TableHead>Governance</TableHead>
+                            <TableHead>Access profile</TableHead>
+                            <TableHead>Status</TableHead>
+                            <TableHead className='w-24'>
+                              <span className='sr-only'>Actions</span>
+                            </TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody className='block lg:table-row-group'>
+                          {members.map((member) => {
+                            const focused = member.id === focusedMemberId;
+                            return (
+                              <TableRow
+                                aria-current={focused ? 'true' : undefined}
+                                className={cn(
+                                  'grid grid-cols-2 gap-3 px-3 py-3 lg:table-row lg:px-0 lg:py-0',
+                                  focused && focusedRecordClass
+                                )}
+                                key={member.id}
+                                ref={focused ? focusedMemberRef : undefined}
+                                tabIndex={focused ? -1 : undefined}
+                              >
+                                <TableCell className='col-span-2 block whitespace-normal p-0 lg:table-cell lg:px-4 lg:py-3'>
+                                  <div className='flex min-w-0 items-center gap-3 lg:min-w-48'>
+                                    <Avatar className='size-10 shrink-0'>
+                                      {member.avatarUrl ? <AvatarImage alt='' src={member.avatarUrl} /> : null}
+                                      <AvatarFallback>{initials(member.name)}</AvatarFallback>
+                                    </Avatar>
+                                    <div className='min-w-0'>
+                                      <p className='truncate font-medium' title={member.name}>{member.name}</p>
+                                      <p className='text-muted-foreground truncate text-sm' title={member.email}>{member.email}</p>
+                                    </div>
+                                  </div>
+                                </TableCell>
+                                <TableCell className='block min-w-0 whitespace-normal p-0 lg:table-cell lg:max-w-40 lg:px-4 lg:py-3'>
+                                  <span className='text-muted-foreground block text-xs lg:hidden'>Governance</span>
+                                  <span className='mt-0.5 block truncate capitalize lg:mt-0' title={member.governance}>{member.governance}</span>
+                                </TableCell>
+                                <TableCell className='block min-w-0 whitespace-normal p-0 lg:table-cell lg:max-w-48 lg:px-4 lg:py-3'>
+                                  <span className='text-muted-foreground block text-xs lg:hidden'>Access profile</span>
+                                  <span className='mt-0.5 block truncate lg:mt-0' title={member.profileName ?? 'No profile'}>{member.profileName ?? 'No profile'}</span>
+                                </TableCell>
+                                <TableCell className='block whitespace-normal p-0 lg:table-cell lg:px-4 lg:py-3'>
+                                  <span className='text-muted-foreground mb-1 block text-xs lg:hidden'>Status</span>
+                                  <FeatureStatusBadge status={member.status} />
+                                </TableCell>
+                                <TableCell className='col-span-2 block whitespace-normal p-0 lg:table-cell lg:px-4 lg:py-3'>
+                                  {active ? (
+                                    <OrganizationMemberControls
+                                      actions={actions}
                                       member={member}
                                       onError={onError}
                                       organizationId={active.id}
-                                      removeMember={actions.removeMember}
+                                      permissions={data.permissions ?? []}
+                                      policy={policy}
+                                      profiles={data.profiles ?? []}
                                     />
                                   ) : null}
-                                </div>
-                              ) : null}
-                            </TableCell>
-                          </TableRow>
-                          );
-                        })}</TableBody>
+                                </TableCell>
+                              </TableRow>
+                            );
+                          })}
+                        </TableBody>
                       </Table>
                     )}
                   </TabsContent>
@@ -979,55 +1093,77 @@ export function OrganizationsFeaturePack({
                                 <h3 className='text-sm font-medium'>Active invitations</h3>
                                 <p className='text-muted-foreground text-sm'>Pending delivery and reusable links that can still be claimed.</p>
                               </div>
-                              <Table>
-                                <TableHeader><TableRow>
-                                  <TableHead>Recipient</TableHead><TableHead>Profile</TableHead>
-                                  <TableHead>Status</TableHead><TableHead>Claims</TableHead>
-                                  <TableHead>Expires</TableHead><TableHead className='text-right'>Actions</TableHead>
-                                </TableRow></TableHeader>
-                                <TableBody>{data.invites?.map((invite) => {
-                                  const focused = invite.id === focusedInvitationId;
-                                  return (
-                                  <TableRow
-                                    aria-current={focused ? 'true' : undefined}
-                                    className={cn(focused && focusedRecordClass)}
-                                    key={invite.id}
-                                    ref={focused ? focusedInvitationRef : undefined}
-                                    tabIndex={focused ? -1 : undefined}
-                                  >
-                                    <TableCell>
-                                      <div className='flex items-center gap-2'>
-                                        <span className='font-medium'>{invite.recipient || 'Reusable link'}</span>
-                                        <span className='text-muted-foreground text-xs uppercase'>{invite.channel}</span>
-                                      </div>
-                                    </TableCell>
-                                    <TableCell>{invite.profileName ?? 'No profile'}</TableCell>
-                                    <TableCell><FeatureStatusBadge status={invite.status} /></TableCell>
-                                    <TableCell className='tabular-nums'>
-                                      {invite.inviteCount ?? 0}{invite.inviteLimit ? ` / ${invite.inviteLimit}` : ''}
-                                    </TableCell>
-                                    <TableCell><FeaturePackTimestamp value={invite.expiresAt} /></TableCell>
-                                    <TableCell>
-                                      <div className='flex justify-end gap-2'>
-                                        {invite.token ? (
-                                          <CopyOrganizationInviteTokenAction token={invite.token} />
-                                        ) : null}
-                                        {active &&
-                                        canPerform(policy, 'cancelInvite') &&
-                                        invite.actionPolicy?.cancelInvite &&
-                                        actions?.cancelInvite ? (
-                                          <CancelOrganizationInviteAction
-                                            cancelInvite={actions.cancelInvite}
-                                            invite={invite}
-                                            onError={onError}
-                                            organizationId={active.id}
-                                          />
-                                        ) : null}
-                                      </div>
-                                    </TableCell>
+                              <Table
+                                className='block lg:table'
+                                containerClassName='border-border/70 overflow-hidden rounded-xl border lg:overflow-x-auto lg:rounded-none lg:border-0'
+                              >
+                                <TableHeader className='sr-only lg:not-sr-only lg:table-header-group'>
+                                  <TableRow>
+                                    <TableHead>Recipient</TableHead>
+                                    <TableHead>Profile</TableHead>
+                                    <TableHead>Status</TableHead>
+                                    <TableHead>Claims</TableHead>
+                                    <TableHead>Expires</TableHead>
+                                    <TableHead className='text-right'>Actions</TableHead>
                                   </TableRow>
-                                  );
-                                })}</TableBody>
+                                </TableHeader>
+                                <TableBody className='block lg:table-row-group'>
+                                  {data.invites?.map((invite) => {
+                                    const focused = invite.id === focusedInvitationId;
+                                    return (
+                                      <TableRow
+                                        aria-current={focused ? 'true' : undefined}
+                                        className={cn(
+                                          'grid grid-cols-2 gap-3 px-3 py-3 lg:table-row lg:px-0 lg:py-0',
+                                          focused && focusedRecordClass
+                                        )}
+                                        key={invite.id}
+                                        ref={focused ? focusedInvitationRef : undefined}
+                                        tabIndex={focused ? -1 : undefined}
+                                      >
+                                        <TableCell className='col-span-2 block min-w-0 whitespace-normal p-0 lg:table-cell lg:px-4 lg:py-3'>
+                                          <span className='block max-w-64 break-words font-medium' title={invite.recipient || 'Reusable link'}>
+                                            {invite.recipient || 'Reusable link'}
+                                          </span>
+                                          <Badge className='mt-1 lg:hidden' variant='outline'>{invite.channel}</Badge>
+                                          <span className='text-muted-foreground ml-2 hidden text-xs uppercase lg:inline'>{invite.channel}</span>
+                                        </TableCell>
+                                        <TableCell className='block min-w-0 whitespace-normal p-0 lg:table-cell lg:px-4 lg:py-3'>
+                                          <span className='text-muted-foreground block text-xs lg:hidden'>Profile</span>
+                                          <span className='mt-0.5 block truncate lg:mt-0' title={invite.profileName ?? 'No profile'}>{invite.profileName ?? 'No profile'}</span>
+                                        </TableCell>
+                                        <TableCell className='block whitespace-normal p-0 lg:table-cell lg:px-4 lg:py-3'>
+                                          <span className='text-muted-foreground mb-1 block text-xs lg:hidden'>Status</span>
+                                          <FeatureStatusBadge status={invite.status} />
+                                        </TableCell>
+                                        <TableCell className='block whitespace-normal p-0 tabular-nums lg:table-cell lg:px-4 lg:py-3'>
+                                          <span className='text-muted-foreground block text-xs lg:hidden'>Claims</span>
+                                          <span className='mt-0.5 block lg:mt-0'>{invite.inviteCount ?? 0}{invite.inviteLimit ? ` / ${invite.inviteLimit}` : ''}</span>
+                                        </TableCell>
+                                        <TableCell className='block whitespace-normal p-0 lg:table-cell lg:px-4 lg:py-3'>
+                                          <span className='text-muted-foreground block text-xs lg:hidden'>Expires</span>
+                                          <span className='mt-0.5 block break-words lg:mt-0'><FeaturePackTimestamp value={invite.expiresAt} /></span>
+                                        </TableCell>
+                                        <TableCell className='col-span-2 block whitespace-normal p-0 lg:table-cell lg:px-4 lg:py-3'>
+                                          <div className='flex justify-end gap-2'>
+                                            {invite.token ? <CopyOrganizationInviteTokenAction token={invite.token} /> : null}
+                                            {active &&
+                                            canPerform(policy, 'cancelInvite') &&
+                                            invite.actionPolicy?.cancelInvite &&
+                                            actions?.cancelInvite ? (
+                                              <CancelOrganizationInviteAction
+                                                cancelInvite={actions.cancelInvite}
+                                                invite={invite}
+                                                onError={onError}
+                                                organizationId={active.id}
+                                              />
+                                            ) : null}
+                                          </div>
+                                        </TableCell>
+                                      </TableRow>
+                                    );
+                                  })}
+                                </TableBody>
                               </Table>
                             </section>
                           ) : null}
@@ -1037,19 +1173,35 @@ export function OrganizationsFeaturePack({
                                 <h3 className='text-sm font-medium'>Claim history</h3>
                                 <p className='text-muted-foreground text-sm'>Accepted invitations retained by Constructive for membership audit history.</p>
                               </div>
-                              <Table>
-                                <TableHeader><TableRow>
-                                  <TableHead>Sender</TableHead>
-                                  <TableHead>Receiver</TableHead>
-                                  <TableHead>Claimed</TableHead>
-                                </TableRow></TableHeader>
-                                <TableBody>{data.claimedInvites?.map((invite) => (
-                                  <TableRow key={invite.id}>
-                                    <TableCell className='font-mono text-xs'>{invite.senderId}</TableCell>
-                                    <TableCell className='font-mono text-xs'>{invite.receiverId}</TableCell>
-                                    <TableCell><FeaturePackTimestamp value={invite.createdAt} /></TableCell>
+                              <Table
+                                className='block lg:table'
+                                containerClassName='border-border/70 overflow-hidden rounded-xl border lg:overflow-x-auto lg:rounded-none lg:border-0'
+                              >
+                                <TableHeader className='sr-only lg:not-sr-only lg:table-header-group'>
+                                  <TableRow>
+                                    <TableHead>Sender</TableHead>
+                                    <TableHead>Receiver</TableHead>
+                                    <TableHead>Claimed</TableHead>
                                   </TableRow>
-                                ))}</TableBody>
+                                </TableHeader>
+                                <TableBody className='block lg:table-row-group'>
+                                  {data.claimedInvites?.map((invite) => (
+                                    <TableRow className='grid gap-3 px-3 py-3 sm:grid-cols-2 lg:table-row lg:px-0 lg:py-0' key={invite.id}>
+                                      <TableCell className='block min-w-0 whitespace-normal p-0 font-mono text-xs lg:table-cell lg:max-w-64 lg:px-4 lg:py-3'>
+                                        <span className='text-muted-foreground mb-0.5 block font-sans lg:hidden'>Sender</span>
+                                        <span className='break-all' translate='no'>{invite.senderId}</span>
+                                      </TableCell>
+                                      <TableCell className='block min-w-0 whitespace-normal p-0 font-mono text-xs lg:table-cell lg:max-w-64 lg:px-4 lg:py-3'>
+                                        <span className='text-muted-foreground mb-0.5 block font-sans lg:hidden'>Receiver</span>
+                                        <span className='break-all' translate='no'>{invite.receiverId}</span>
+                                      </TableCell>
+                                      <TableCell className='block whitespace-normal p-0 text-xs sm:col-span-2 lg:table-cell lg:px-4 lg:py-3 lg:text-sm'>
+                                        <span className='text-muted-foreground mr-1 lg:hidden'>Claimed</span>
+                                        <FeaturePackTimestamp value={invite.createdAt} />
+                                      </TableCell>
+                                    </TableRow>
+                                  ))}
+                                </TableBody>
                               </Table>
                             </section>
                           ) : null}

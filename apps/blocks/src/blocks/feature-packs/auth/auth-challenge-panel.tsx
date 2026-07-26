@@ -42,6 +42,7 @@ export function AuthChallengePanel({
   const [error, setError] = React.useState<string>();
   const [feedback, setFeedback] = React.useState<string>();
   const fieldId = React.useId();
+  const errorId = `${fieldId}-code-error`;
 
   if (contributions.length === 0) return null;
 
@@ -145,7 +146,11 @@ export function AuthChallengePanel({
   return (
     <CardContent className='mt-6 flex flex-col gap-4 border-t pt-6'>
       {active ? (
-        <form className='flex flex-col gap-4' onSubmit={(event) => void submitCode(event)}>
+        <form
+          aria-busy={Boolean(pending)}
+          className='flex flex-col gap-4'
+          onSubmit={(event) => void submitCode(event)}
+        >
           <div>
             <h2 className='text-balance text-sm font-semibold'>{active.descriptor.title}</h2>
             {active.descriptor.description ? (
@@ -154,30 +159,40 @@ export function AuthChallengePanel({
               </p>
             ) : null}
           </div>
-          <Field htmlFor={`${fieldId}-code`} label='Verification code' required>
+          <Field
+            error={error}
+            errorId={errorId}
+            htmlFor={`${fieldId}-code`}
+            label='Verification code'
+            required
+          >
             <Input
+              aria-describedby={error ? errorId : undefined}
+              aria-invalid={error ? true : undefined}
+              autoCapitalize='none'
               autoComplete='one-time-code'
-              autoFocus
               id={`${fieldId}-code`}
               inputMode='numeric'
+              name='verification-code'
               onChange={(event) => {
                 setCode(event.currentTarget.value);
                 if (error) setError(undefined);
               }}
               required
+              spellCheck={false}
               value={code}
             />
           </Field>
-          {error ? (
-            <Alert role='alert' variant='destructive'>
-              <AlertDescription>{error}</AlertDescription>
-            </Alert>
-          ) : null}
           <div className='flex flex-wrap gap-2'>
-            <Button disabled={!code.trim() || Boolean(pending)} type='submit'>
+            <Button
+              aria-busy={pending === 'complete'}
+              disabled={!code.trim() || Boolean(pending)}
+              type='submit'
+            >
               {pending === 'complete' ? 'Verifying…' : 'Verify code'}
             </Button>
             <Button
+              aria-busy={pending === 'cancel'}
               disabled={Boolean(pending)}
               onClick={() => void cancel()}
               type='button'

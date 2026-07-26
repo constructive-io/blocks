@@ -115,6 +115,16 @@ export function AuthEntryPanel({
   const passwordHint = requiresStrongPassword
     ? authPasswordHint(password, passwordPolicy)
     : undefined;
+  const emailErrorId = `${fieldId}-email-error`;
+  const passwordDescriptionId = `${fieldId}-password-description`;
+  const passwordErrorId = `${fieldId}-password-error`;
+  const passwordDescribedBy = passwordHint && passwordError
+    ? `${passwordDescriptionId} ${passwordErrorId}`
+    : passwordHint
+      ? passwordDescriptionId
+      : passwordError
+        ? passwordErrorId
+        : undefined;
   const minPasswordLength = normalizedPasswordLength(passwordPolicy?.minLength);
   const maxPasswordLength = normalizedPasswordLength(passwordPolicy?.maxLength);
   const activeNotice = notice ?? verificationNotice;
@@ -221,7 +231,10 @@ export function AuthEntryPanel({
         <form noValidate onSubmit={(event) => void submit(event)}>
           <CardContent className='flex flex-col gap-4'>
             {activeNotice ? (
-              <Alert variant={activeNotice.status === 'error' ? 'destructive' : 'default'}>
+              <Alert
+                role={activeNotice.status === 'error' ? 'alert' : 'status'}
+                variant={activeNotice.status === 'error' ? 'destructive' : 'default'}
+              >
                 <AlertDescription>{activeNotice.message}</AlertDescription>
               </Alert>
             ) : null}
@@ -229,6 +242,7 @@ export function AuthEntryPanel({
               {mode !== 'reset-password' ? (
                 <Field
                   error={emailError}
+                  errorId={emailErrorId}
                   htmlFor={`${fieldId}-email`}
                   label='Email address'
                   required
@@ -238,6 +252,7 @@ export function AuthEntryPanel({
                       <MailIcon aria-hidden='true' />
                     </InputGroupAddon>
                     <InputGroupInput
+                      aria-describedby={emailError ? emailErrorId : undefined}
                       aria-invalid={emailError ? true : undefined}
                       autoComplete='email'
                       autoCapitalize='none'
@@ -259,7 +274,9 @@ export function AuthEntryPanel({
               {requiresPassword ? (
                 <Field
                   description={passwordHint}
+                  descriptionId={passwordDescriptionId}
                   error={passwordError}
+                  errorId={passwordErrorId}
                   htmlFor={`${fieldId}-password`}
                   label={mode === 'reset-password' ? 'New password' : 'Password'}
                   required
@@ -269,6 +286,7 @@ export function AuthEntryPanel({
                       <LockKeyholeIcon aria-hidden='true' />
                     </InputGroupAddon>
                     <InputGroupInput
+                      aria-describedby={passwordDescribedBy}
                       aria-invalid={passwordError ? true : undefined}
                       autoComplete={mode === 'sign-in' ? 'current-password' : 'new-password'}
                       id={`${fieldId}-password`}
@@ -322,7 +340,7 @@ export function AuthEntryPanel({
               </Alert>
             ) : null}
             {feedback ? (
-              <Alert>
+              <Alert role='status'>
                 <AlertDescription>{feedback}</AlertDescription>
               </Alert>
             ) : null}

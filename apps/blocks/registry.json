@@ -671,7 +671,7 @@
       "type": "registry:block",
       "title": "Organizations Feature Pack",
       "description": "Complete tenant administration for selection, member governance, invitations, profiles, permissions, defaults, hierarchy, settings, principals, and API keys.",
-      "docs": "`feature-pack-organizations` installed a provider-neutral view and `.constructive/feature-packs/organizations.json`. Import from `@/blocks/feature-packs/organizations/organizations-feature-pack`. The host must supply the view resource, policy, and actions; add `console-module-organizations` when Console Kit should own discovery and Constructive integration.\n\nDegraded states: Missing or ambiguous tenant scope fails closed; the view never infers an organization, principal, policy grant, or mutation authority.\n\nGuide: https://constructive-io.github.io/blocks/blocks/features/organizations/",
+      "docs": "`feature-pack-organizations` installed a provider-neutral view and `.constructive/feature-packs/organizations.json`. Import from `@/blocks/feature-packs/organizations/organizations-feature-pack`. The host must supply the view resource, policy, and actions; add `console-module-organizations` when Console Kit should own discovery and Constructive integration.\n\nDegraded states: When the active organization is missing or does not match the host-provided list, the view selects the first available organization. It never infers a principal, policy grant, or mutation authority; missing resources and callbacks stay unavailable, while PostgreSQL privileges and RLS remain authoritative.\n\nGuide: https://constructive-io.github.io/blocks/blocks/features/organizations/",
       "dependencies": [
         "lucide-react"
       ],
