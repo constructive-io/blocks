@@ -63,7 +63,24 @@ export {
 	InputGroupInput,
 	InputGroupTextarea,
 } from './components/input-group';
-export { Field, FieldRow, type FieldProps, type FieldRowProps } from './components/field';
+export {
+	Field,
+	FieldContent,
+	FieldDescription,
+	FieldError,
+	FieldGroup,
+	FieldLabel,
+	FieldLegend,
+	FieldRow,
+	FieldSeparator,
+	FieldSet,
+	FieldTitle,
+	type FieldProps,
+	type FieldRowProps,
+	type LegacyFieldProps,
+	type StructuralFieldProps,
+} from './components/field';
+export { Empty, EmptyContent, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from './components/empty';
 
 // Overlay components
 export { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from './components/tooltip';
@@ -264,10 +281,31 @@ export {
 	SidebarMenuSubButton,
 	SidebarMenuSubItem,
 	SidebarProvider,
+	SidebarRail,
 	SidebarSeparator,
 	SidebarTrigger,
 	useSidebar,
 } from './components/sidebar';
+export {
+	AppBar,
+	createAppLink,
+	type AppBarProps,
+	type AppBreadcrumbItem,
+	type AppLinkRenderer,
+	type AppLinkRenderProps,
+} from './components/app-bar';
+export {
+	AppShell,
+	type AppAccount,
+	type AppAccountAction,
+	type AppAccountActionGroup,
+	type AppIcon,
+	type AppNavigationChild,
+	type AppNavigationGroup,
+	type AppNavigationItem,
+	type AppShellBrand,
+	type AppShellProps,
+} from './components/app-shell';
 
 // Specialized components
 export { Calendar, RangeCalendar } from './components/calendar-rac';
@@ -298,5 +336,3 @@ export { UnlinkButton } from './components/unlink-button';
 // Complex subsystems
 export * from './components/stack';
 export * from './components/toast';
-export * from './components/org-chart';
-export * from './components/storage';

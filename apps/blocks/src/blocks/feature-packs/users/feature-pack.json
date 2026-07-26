@@ -1,0 +1,18 @@
+{
+  "schemaVersion": 1,
+  "id": "users",
+  "title": "App access",
+  "description": "Application member governance, lifecycle controls, profiles, permission grants, and invitations.",
+  "dependencies": [],
+  "endpoints": { "required": ["admin"], "optional": ["auth"] },
+  "capabilities": {
+    "required": ["users.directory", "users.memberships"],
+    "optional": ["users.permissions", "users.profiles", "users.invites"]
+  },
+  "metadata": {
+    "requiredMetaSections": [],
+    "optionalMetaSections": ["tables", "fields", "constraints", "relations", "query", "scope", "encoding"],
+    "requiredIntrospectionSections": ["root-operations", "types", "input-objects"],
+    "optionalIntrospectionSections": ["enums", "directives"]
+  }
+}

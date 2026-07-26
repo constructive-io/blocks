@@ -4,6 +4,7 @@ import { fileURLToPath } from 'node:url';
 
 import { BASE_PRIMITIVES } from '../apps/blocks/src/lib/base-primitives.ts';
 import { BILLING_BLOCKS } from '../apps/blocks/src/lib/billing-blocks.ts';
+import { FEATURE_PACK_DOCS } from '../apps/blocks/src/lib/feature-packs.ts';
 
 type Registry = {
   items: Array<{ name: string }>;
@@ -12,6 +13,10 @@ type Registry = {
 const repositoryRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const blocksOutput = path.join(repositoryRoot, 'apps', 'blocks', 'out');
 const registryOutput = path.join(repositoryRoot, 'apps', 'registry', 'public', 'r');
+const canonicalRegistryManifests = [
+  path.join(repositoryRoot, 'packages', 'ui', 'registry.json'),
+  path.join(repositoryRoot, 'apps', 'blocks', 'registry.json'),
+];
 const artifactRoot = path.join(repositoryRoot, '.artifacts', 'pages');
 const artifactRegistry = path.join(artifactRoot, 'r');
 const pagesOrigin = 'https://constructive-io.github.io';
@@ -23,9 +28,23 @@ const pageRoutes = [
   '/',
   '/blocks',
   '/blocks/styling',
+  '/blocks/features',
+  ...FEATURE_PACK_DOCS.map(({ id }) => `/blocks/features/${id}`),
+  '/blocks/console-kit',
   ...BASE_PRIMITIVES.map(({ name }) => `/blocks/ui/${name}`),
   '/blocks/billing',
   ...BILLING_BLOCKS.map(({ name }) => `/blocks/billing/${name}`),
+];
+
+const previewRoutes = [
+  ...FEATURE_PACK_DOCS.map(({ id }) => ({
+    parent: `/blocks/features/${id}`,
+    route: `/blocks/features/${id}/preview`,
+  })),
+  ...BILLING_BLOCKS.map(({ name }) => ({
+    parent: `/blocks/billing/${name}`,
+    route: `/blocks/billing/${name}/preview`,
+  })),
 ];
 
 function routeOutputPath(route: string): string {
@@ -33,9 +52,7 @@ function routeOutputPath(route: string): string {
 }
 
 function deployedUrl(route: string): string {
-  const url = route === '/'
-    ? `${pagesOrigin}${pagesBasePath}`
-    : `${pagesOrigin}${pagesBasePath}${route}`;
+  const url = route === '/' ? `${pagesOrigin}${pagesBasePath}` : `${pagesOrigin}${pagesBasePath}${route}`;
   return `${url}/`;
 }
 
@@ -64,7 +81,9 @@ async function walk(directory: string): Promise<string[]> {
       }
       if (entry.isDirectory()) return walk(absolutePath);
       if (!entry.isFile()) {
-        throw new Error(`Pages artifacts may only contain files and directories: ${path.relative(artifactRoot, absolutePath)}.`);
+        throw new Error(
+          `Pages artifacts may only contain files and directories: ${path.relative(artifactRoot, absolutePath)}.`,
+        );
       }
       return [absolutePath];
     }),
@@ -86,9 +105,7 @@ function referenceOutputPath(reference: string): string | undefined {
 }
 
 async function assertPageReferences(relativePath: string, source: string): Promise<void> {
-  const references = [...source.matchAll(/\b(?:action|href|poster|src)=["'](\/[^"']*)["']/g)].map(
-    (match) => match[1],
-  );
+  const references = [...source.matchAll(/\b(?:action|href|poster|src)=["'](\/[^"']*)["']/g)].map((match) => match[1]);
 
   for (const reference of references) {
     const outputPath = referenceOutputPath(reference);
@@ -124,16 +141,23 @@ await Promise.all([
   assertFile('sitemap.xml'),
   assertFile('opengraph-image.png'),
   ...pageRoutes.map((route) => assertFile(routeOutputPath(route))),
+  ...previewRoutes.map(({ route }) => assertFile(routeOutputPath(route))),
 ]);
 
 const registry = JSON.parse(await readFile(path.join(artifactRegistry, 'registry.json'), 'utf8')) as Registry;
-if (registry.items.length !== 167) {
-  throw new Error(`Pages registry contains ${registry.items.length} items; expected 167.`);
+const expectedRegistryItemCount = (
+  await Promise.all(
+    canonicalRegistryManifests.map(
+      async (manifest) => (JSON.parse(await readFile(manifest, 'utf8')) as Registry).items.length,
+    ),
+  )
+).reduce((total, count) => total + count, 0);
+if (registry.items.length !== expectedRegistryItemCount) {
+  throw new Error(
+    `Pages registry contains ${registry.items.length} items; canonical manifests declare ${expectedRegistryItemCount}.`,
+  );
 }
-const expectedRegistryFiles = new Set([
-  'registry.json',
-  ...registry.items.map(({ name }) => `${name}.json`),
-]);
+const expectedRegistryFiles = new Set(['registry.json', ...registry.items.map(({ name }) => `${name}.json`)]);
 const actualRegistryFiles = new Set(await readdir(artifactRegistry));
 if (!sameSet(actualRegistryFiles, expectedRegistryFiles)) {
   const missing = [...expectedRegistryFiles].filter((file) => !actualRegistryFiles.has(file));
@@ -151,6 +175,33 @@ for (const route of pageRoutes) {
   )?.[0];
   const canonical = canonicalTag?.match(/\bhref=["']([^"']+)["']/)?.[1];
   const expectedCanonical = deployedUrl(route);
+  if (canonical !== expectedCanonical) {
+    throw new Error(`${relativePath} canonical is ${canonical ?? 'missing'}; expected ${expectedCanonical}.`);
+  }
+}
+
+for (const { parent, route } of previewRoutes) {
+  const relativePath = routeOutputPath(route);
+  const source = await readFile(path.join(artifactRoot, relativePath), 'utf8');
+  const robotsTag = [...source.matchAll(/<meta\b[^>]*>/g)].find((match) =>
+    /\bname=["']robots["']/.test(match[0]),
+  )?.[0];
+  const robots = robotsTag?.match(/\bcontent=["']([^"']+)["']/)?.[1];
+  const directives = new Set(
+    (robots ?? '')
+      .split(',')
+      .map((directive) => directive.trim().toLowerCase())
+      .filter(Boolean),
+  );
+  if (!directives.has('noindex') || !directives.has('nofollow')) {
+    throw new Error(`${relativePath} robots metadata is ${robots ?? 'missing'}; expected noindex, nofollow.`);
+  }
+
+  const canonicalTag = [...source.matchAll(/<link\b[^>]*>/g)].find((match) =>
+    /\brel=["']canonical["']/.test(match[0]),
+  )?.[0];
+  const canonical = canonicalTag?.match(/\bhref=["']([^"']+)["']/)?.[1];
+  const expectedCanonical = deployedUrl(parent);
   if (canonical !== expectedCanonical) {
     throw new Error(`${relativePath} canonical is ${canonical ?? 'missing'}; expected ${expectedCanonical}.`);
   }

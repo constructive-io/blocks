@@ -1,0 +1,1054 @@
+[
+  {
+    "name": "empty",
+    "ops": [],
+    "result": {
+      "first": null,
+      "hasIndexProbes": [
+        {
+          "index": 0,
+          "present": false
+        },
+        {
+          "index": 1,
+          "present": false
+        },
+        {
+          "index": -1,
+          "present": false
+        }
+      ],
+      "items": [],
+      "last": null,
+      "length": 0
+    }
+  },
+  {
+    "name": "add-single-index",
+    "ops": [
+      {
+        "index": 5,
+        "op": "add"
+      }
+    ],
+    "result": {
+      "first": 5,
+      "hasIndexProbes": [
+        {
+          "index": 4,
+          "present": false
+        },
+        {
+          "index": 5,
+          "present": true
+        },
+        {
+          "index": 6,
+          "present": false
+        }
+      ],
+      "items": [
+        5
+      ],
+      "last": 5,
+      "length": 1
+    }
+  },
+  {
+    "name": "add-three-single-indices-out-of-order-stay-separate",
+    "ops": [
+      {
+        "index": 5,
+        "op": "add"
+      },
+      {
+        "index": 1,
+        "op": "add"
+      },
+      {
+        "index": 3,
+        "op": "add"
+      }
+    ],
+    "result": {
+      "first": 1,
+      "hasIndexProbes": [
+        {
+          "index": 0,
+          "present": false
+        },
+        {
+          "index": 1,
+          "present": true
+        },
+        {
+          "index": 2,
+          "present": false
+        },
+        {
+          "index": 3,
+          "present": true
+        },
+        {
+          "index": 4,
+          "present": false
+        },
+        {
+          "index": 5,
+          "present": true
+        },
+        {
+          "index": 6,
+          "present": false
+        }
+      ],
+      "items": [
+        1,
+        3,
+        5
+      ],
+      "last": 5,
+      "length": 3
+    }
+  },
+  {
+    "name": "add-range",
+    "ops": [
+      {
+        "end": 5,
+        "op": "addRange",
+        "start": 2
+      }
+    ],
+    "result": {
+      "first": 2,
+      "hasIndexProbes": [
+        {
+          "index": 1,
+          "present": false
+        },
+        {
+          "index": 2,
+          "present": true
+        },
+        {
+          "index": 3,
+          "present": true
+        },
+        {
+          "index": 4,
+          "present": true
+        },
+        {
+          "index": 5,
+          "present": false
+        }
+      ],
+      "items": [
+        2,
+        3,
+        4
+      ],
+      "last": 4,
+      "length": 3
+    }
+  },
+  {
+    "name": "add-adjacent-ranges-merge",
+    "ops": [
+      {
+        "end": 3,
+        "op": "addRange",
+        "start": 0
+      },
+      {
+        "end": 5,
+        "op": "addRange",
+        "start": 3
+      }
+    ],
+    "result": {
+      "first": 0,
+      "hasIndexProbes": [
+        {
+          "index": 0,
+          "present": true
+        },
+        {
+          "index": 2,
+          "present": true
+        },
+        {
+          "index": 3,
+          "present": true
+        },
+        {
+          "index": 4,
+          "present": true
+        },
+        {
+          "index": 5,
+          "present": false
+        }
+      ],
+      "items": [
+        0,
+        1,
+        2,
+        3,
+        4
+      ],
+      "last": 4,
+      "length": 5
+    }
+  },
+  {
+    "name": "add-index-adjacent-to-range-merges",
+    "ops": [
+      {
+        "end": 3,
+        "op": "addRange",
+        "start": 0
+      },
+      {
+        "index": 3,
+        "op": "add"
+      }
+    ],
+    "result": {
+      "first": 0,
+      "hasIndexProbes": [
+        {
+          "index": 0,
+          "present": true
+        },
+        {
+          "index": 3,
+          "present": true
+        },
+        {
+          "index": 4,
+          "present": false
+        }
+      ],
+      "items": [
+        0,
+        1,
+        2,
+        3
+      ],
+      "last": 3,
+      "length": 4
+    }
+  },
+  {
+    "name": "add-overlapping-ranges-merge",
+    "ops": [
+      {
+        "end": 4,
+        "op": "addRange",
+        "start": 0
+      },
+      {
+        "end": 6,
+        "op": "addRange",
+        "start": 2
+      }
+    ],
+    "result": {
+      "first": 0,
+      "hasIndexProbes": [
+        {
+          "index": 0,
+          "present": true
+        },
+        {
+          "index": 3,
+          "present": true
+        },
+        {
+          "index": 5,
+          "present": true
+        },
+        {
+          "index": 6,
+          "present": false
+        }
+      ],
+      "items": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5
+      ],
+      "last": 5,
+      "length": 6
+    }
+  },
+  {
+    "name": "add-contained-range-is-noop",
+    "ops": [
+      {
+        "end": 10,
+        "op": "addRange",
+        "start": 0
+      },
+      {
+        "end": 5,
+        "op": "addRange",
+        "start": 3
+      }
+    ],
+    "result": {
+      "first": 0,
+      "hasIndexProbes": [
+        {
+          "index": 0,
+          "present": true
+        },
+        {
+          "index": 4,
+          "present": true
+        },
+        {
+          "index": 9,
+          "present": true
+        },
+        {
+          "index": 10,
+          "present": false
+        }
+      ],
+      "items": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9
+      ],
+      "last": 9,
+      "length": 10
+    }
+  },
+  {
+    "name": "add-ranges-with-gap-stay-separate",
+    "ops": [
+      {
+        "end": 2,
+        "op": "addRange",
+        "start": 0
+      },
+      {
+        "end": 7,
+        "op": "addRange",
+        "start": 5
+      }
+    ],
+    "result": {
+      "first": 0,
+      "hasIndexProbes": [
+        {
+          "index": 0,
+          "present": true
+        },
+        {
+          "index": 1,
+          "present": true
+        },
+        {
+          "index": 2,
+          "present": false
+        },
+        {
+          "index": 3,
+          "present": false
+        },
+        {
+          "index": 4,
+          "present": false
+        },
+        {
+          "index": 5,
+          "present": true
+        },
+        {
+          "index": 6,
+          "present": true
+        },
+        {
+          "index": 7,
+          "present": false
+        }
+      ],
+      "items": [
+        0,
+        1,
+        5,
+        6
+      ],
+      "last": 6,
+      "length": 4
+    }
+  },
+  {
+    "name": "remove-index-splits-range",
+    "ops": [
+      {
+        "end": 10,
+        "op": "addRange",
+        "start": 0
+      },
+      {
+        "index": 4,
+        "op": "remove"
+      }
+    ],
+    "result": {
+      "first": 0,
+      "hasIndexProbes": [
+        {
+          "index": 3,
+          "present": true
+        },
+        {
+          "index": 4,
+          "present": false
+        },
+        {
+          "index": 5,
+          "present": true
+        },
+        {
+          "index": 9,
+          "present": true
+        },
+        {
+          "index": 10,
+          "present": false
+        }
+      ],
+      "items": [
+        0,
+        1,
+        2,
+        3,
+        5,
+        6,
+        7,
+        8,
+        9
+      ],
+      "last": 9,
+      "length": 9
+    }
+  },
+  {
+    "name": "remove-range-splits-range",
+    "ops": [
+      {
+        "end": 10,
+        "op": "addRange",
+        "start": 0
+      },
+      {
+        "end": 6,
+        "op": "removeRange",
+        "start": 3
+      }
+    ],
+    "result": {
+      "first": 0,
+      "hasIndexProbes": [
+        {
+          "index": 2,
+          "present": true
+        },
+        {
+          "index": 3,
+          "present": false
+        },
+        {
+          "index": 5,
+          "present": false
+        },
+        {
+          "index": 6,
+          "present": true
+        },
+        {
+          "index": 9,
+          "present": true
+        }
+      ],
+      "items": [
+        0,
+        1,
+        2,
+        6,
+        7,
+        8,
+        9
+      ],
+      "last": 9,
+      "length": 7
+    }
+  },
+  {
+    "name": "toggle-index-add-then-remove-empties",
+    "ops": [
+      {
+        "index": 7,
+        "op": "add"
+      },
+      {
+        "index": 7,
+        "op": "remove"
+      }
+    ],
+    "result": {
+      "first": null,
+      "hasIndexProbes": [
+        {
+          "index": 6,
+          "present": false
+        },
+        {
+          "index": 7,
+          "present": false
+        },
+        {
+          "index": 8,
+          "present": false
+        }
+      ],
+      "items": [],
+      "last": null,
+      "length": 0
+    }
+  },
+  {
+    "name": "remove-entire-range-empties",
+    "ops": [
+      {
+        "end": 3,
+        "op": "addRange",
+        "start": 0
+      },
+      {
+        "end": 3,
+        "op": "removeRange",
+        "start": 0
+      }
+    ],
+    "result": {
+      "first": null,
+      "hasIndexProbes": [
+        {
+          "index": 0,
+          "present": false
+        },
+        {
+          "index": 1,
+          "present": false
+        },
+        {
+          "index": 2,
+          "present": false
+        }
+      ],
+      "items": [],
+      "last": null,
+      "length": 0
+    }
+  },
+  {
+    "name": "remove-absent-index-is-noop",
+    "ops": [
+      {
+        "end": 3,
+        "op": "addRange",
+        "start": 0
+      },
+      {
+        "index": 5,
+        "op": "remove"
+      }
+    ],
+    "result": {
+      "first": 0,
+      "hasIndexProbes": [
+        {
+          "index": 0,
+          "present": true
+        },
+        {
+          "index": 2,
+          "present": true
+        },
+        {
+          "index": 5,
+          "present": false
+        }
+      ],
+      "items": [
+        0,
+        1,
+        2
+      ],
+      "last": 2,
+      "length": 3
+    }
+  },
+  {
+    "name": "remove-trims-two-adjacent-ranges",
+    "ops": [
+      {
+        "end": 3,
+        "op": "addRange",
+        "start": 0
+      },
+      {
+        "end": 7,
+        "op": "addRange",
+        "start": 4
+      },
+      {
+        "end": 5,
+        "op": "removeRange",
+        "start": 2
+      }
+    ],
+    "result": {
+      "first": 0,
+      "hasIndexProbes": [
+        {
+          "index": 0,
+          "present": true
+        },
+        {
+          "index": 1,
+          "present": true
+        },
+        {
+          "index": 2,
+          "present": false
+        },
+        {
+          "index": 4,
+          "present": false
+        },
+        {
+          "index": 5,
+          "present": true
+        },
+        {
+          "index": 6,
+          "present": true
+        }
+      ],
+      "items": [
+        0,
+        1,
+        5,
+        6
+      ],
+      "last": 6,
+      "length": 4
+    }
+  },
+  {
+    "name": "remove-spanning-three-ranges",
+    "ops": [
+      {
+        "end": 2,
+        "op": "addRange",
+        "start": 0
+      },
+      {
+        "end": 6,
+        "op": "addRange",
+        "start": 4
+      },
+      {
+        "end": 10,
+        "op": "addRange",
+        "start": 8
+      },
+      {
+        "end": 9,
+        "op": "removeRange",
+        "start": 1
+      }
+    ],
+    "result": {
+      "first": 0,
+      "hasIndexProbes": [
+        {
+          "index": 0,
+          "present": true
+        },
+        {
+          "index": 1,
+          "present": false
+        },
+        {
+          "index": 4,
+          "present": false
+        },
+        {
+          "index": 5,
+          "present": false
+        },
+        {
+          "index": 8,
+          "present": true
+        },
+        {
+          "index": 9,
+          "present": true
+        }
+      ],
+      "items": [
+        0,
+        8,
+        9
+      ],
+      "last": 9,
+      "length": 3
+    }
+  },
+  {
+    "name": "offset-shifts-all-ranges",
+    "ops": [
+      {
+        "end": 5,
+        "op": "addRange",
+        "start": 2
+      },
+      {
+        "amount": 10,
+        "op": "offset"
+      }
+    ],
+    "result": {
+      "first": 12,
+      "hasIndexProbes": [
+        {
+          "index": 11,
+          "present": false
+        },
+        {
+          "index": 12,
+          "present": true
+        },
+        {
+          "index": 14,
+          "present": true
+        },
+        {
+          "index": 15,
+          "present": false
+        }
+      ],
+      "items": [
+        12,
+        13,
+        14
+      ],
+      "last": 14,
+      "length": 3
+    }
+  },
+  {
+    "name": "offset-zero-is-identity",
+    "ops": [
+      {
+        "index": 3,
+        "op": "add"
+      },
+      {
+        "amount": 0,
+        "op": "offset"
+      }
+    ],
+    "result": {
+      "first": 3,
+      "hasIndexProbes": [
+        {
+          "index": 2,
+          "present": false
+        },
+        {
+          "index": 3,
+          "present": true
+        },
+        {
+          "index": 4,
+          "present": false
+        }
+      ],
+      "items": [
+        3
+      ],
+      "last": 3,
+      "length": 1
+    }
+  },
+  {
+    "name": "offset-negative-shift",
+    "ops": [
+      {
+        "end": 15,
+        "op": "addRange",
+        "start": 12
+      },
+      {
+        "amount": -10,
+        "op": "offset"
+      }
+    ],
+    "result": {
+      "first": 2,
+      "hasIndexProbes": [
+        {
+          "index": 1,
+          "present": false
+        },
+        {
+          "index": 2,
+          "present": true
+        },
+        {
+          "index": 4,
+          "present": true
+        },
+        {
+          "index": 5,
+          "present": false
+        }
+      ],
+      "items": [
+        2,
+        3,
+        4
+      ],
+      "last": 4,
+      "length": 3
+    }
+  },
+  {
+    "name": "from-single-index",
+    "ops": [
+      {
+        "index": 7,
+        "op": "fromSingleIndex"
+      }
+    ],
+    "result": {
+      "first": 7,
+      "hasIndexProbes": [
+        {
+          "index": 6,
+          "present": false
+        },
+        {
+          "index": 7,
+          "present": true
+        },
+        {
+          "index": 8,
+          "present": false
+        }
+      ],
+      "items": [
+        7
+      ],
+      "last": 7,
+      "length": 1
+    }
+  },
+  {
+    "name": "from-single-range",
+    "ops": [
+      {
+        "end": 5,
+        "op": "fromSingleRange",
+        "start": 2
+      }
+    ],
+    "result": {
+      "first": 2,
+      "hasIndexProbes": [
+        {
+          "index": 1,
+          "present": false
+        },
+        {
+          "index": 2,
+          "present": true
+        },
+        {
+          "index": 4,
+          "present": true
+        },
+        {
+          "index": 5,
+          "present": false
+        }
+      ],
+      "items": [
+        2,
+        3,
+        4
+      ],
+      "last": 4,
+      "length": 3
+    }
+  },
+  {
+    "name": "from-single-index-then-add-resets-baseline",
+    "ops": [
+      {
+        "index": 99,
+        "op": "add"
+      },
+      {
+        "index": 2,
+        "op": "fromSingleIndex"
+      },
+      {
+        "index": 4,
+        "op": "add"
+      }
+    ],
+    "result": {
+      "first": 2,
+      "hasIndexProbes": [
+        {
+          "index": 2,
+          "present": true
+        },
+        {
+          "index": 3,
+          "present": false
+        },
+        {
+          "index": 4,
+          "present": true
+        },
+        {
+          "index": 99,
+          "present": false
+        }
+      ],
+      "items": [
+        2,
+        4
+      ],
+      "last": 4,
+      "length": 2
+    }
+  },
+  {
+    "name": "large-range-0-to-10000",
+    "ops": [
+      {
+        "end": 10000,
+        "op": "addRange",
+        "start": 0
+      }
+    ],
+    "result": {
+      "first": 0,
+      "hasIndexProbes": [
+        {
+          "index": -1,
+          "present": false
+        },
+        {
+          "index": 0,
+          "present": true
+        },
+        {
+          "index": 1,
+          "present": true
+        },
+        {
+          "index": 5000,
+          "present": true
+        },
+        {
+          "index": 9998,
+          "present": true
+        },
+        {
+          "index": 9999,
+          "present": true
+        },
+        {
+          "index": 10000,
+          "present": false
+        }
+      ],
+      "last": 9999,
+      "length": 10000
+    }
+  },
+  {
+    "name": "large-range-split-by-remove",
+    "ops": [
+      {
+        "end": 10000,
+        "op": "addRange",
+        "start": 0
+      },
+      {
+        "end": 6000,
+        "op": "removeRange",
+        "start": 4000
+      }
+    ],
+    "result": {
+      "first": 0,
+      "hasIndexProbes": [
+        {
+          "index": 0,
+          "present": true
+        },
+        {
+          "index": 3999,
+          "present": true
+        },
+        {
+          "index": 4000,
+          "present": false
+        },
+        {
+          "index": 5000,
+          "present": false
+        },
+        {
+          "index": 5999,
+          "present": false
+        },
+        {
+          "index": 6000,
+          "present": true
+        },
+        {
+          "index": 9999,
+          "present": true
+        }
+      ],
+      "last": 9999,
+      "length": 8000
+    }
+  }
+]

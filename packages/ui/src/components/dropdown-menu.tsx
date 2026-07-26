@@ -116,7 +116,7 @@ function DropdownMenuItem({
 		`data-[highlighted]:bg-accent data-[highlighted]:text-accent-foreground data-[variant=destructive]:text-destructive
 		data-[variant=destructive]:data-[highlighted]:bg-destructive/10 dark:data-[variant=destructive]:data-[highlighted]:bg-destructive/40
 		data-[variant=destructive]:data-[highlighted]:text-destructive
-		data-[variant=destructive]:*:[svg]:!text-destructive relative flex cursor-default items-center gap-2
+		data-[variant=destructive]:*:[svg]:!text-destructive relative flex cursor-default items-center gap-2 pointer-coarse:min-h-11
 		rounded-sm px-2 py-1.5 text-sm outline-hidden select-none data-[disabled]:pointer-events-none
 		data-[disabled]:opacity-50 data-[inset]:pl-8 [&_svg]:pointer-events-none [&_svg]:shrink-0`,
 		className,
@@ -147,7 +147,7 @@ function DropdownMenuCheckboxItem({
 			data-slot="dropdown-menu-checkbox-item"
 			className={cn(
 				`data-[highlighted]:bg-accent data-[highlighted]:text-accent-foreground relative flex cursor-default items-center gap-2 rounded-sm py-1.5
-				pr-2 pl-8 text-sm outline-hidden select-none data-[disabled]:pointer-events-none data-[disabled]:opacity-50
+				pr-2 pl-8 text-sm outline-hidden select-none pointer-coarse:min-h-11 data-[disabled]:pointer-events-none data-[disabled]:opacity-50
 				[&_svg]:pointer-events-none [&_svg]:shrink-0`,
 				className,
 			)}
@@ -181,7 +181,7 @@ function DropdownMenuRadioItem({
 			data-slot="dropdown-menu-radio-item"
 			className={cn(
 				`data-[highlighted]:bg-accent data-[highlighted]:text-accent-foreground relative flex cursor-default items-center gap-2 rounded-sm py-1.5
-				pr-2 pl-8 text-sm outline-hidden select-none data-[disabled]:pointer-events-none data-[disabled]:opacity-50
+				pr-2 pl-8 text-sm outline-hidden select-none pointer-coarse:min-h-11 data-[disabled]:pointer-events-none data-[disabled]:opacity-50
 				[&_svg]:pointer-events-none [&_svg]:shrink-0`,
 				className,
 			)}
@@ -271,7 +271,7 @@ function DropdownMenuSubTrigger({
 			data-inset={inset}
 			className={cn(
 				`data-[highlighted]:bg-accent data-[highlighted]:text-accent-foreground data-[popup-open]:bg-accent
-				data-[popup-open]:text-accent-foreground flex cursor-default items-center rounded-sm px-2 py-1.5 text-sm
+				data-[popup-open]:text-accent-foreground flex cursor-default items-center rounded-sm px-2 py-1.5 text-sm pointer-coarse:min-h-11
 				outline-hidden select-none data-[inset]:pl-8`,
 				className,
 			)}

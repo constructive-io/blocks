@@ -1,6 +1,0 @@
-{
-  "namespace": "auth",
-  "mutations": ["signUp"],
-  "queries": [],
-  "models": []
-}

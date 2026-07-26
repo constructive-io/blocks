@@ -35,6 +35,49 @@ export default function SetupPage() {
         }}
       />
 
+      <section className="mt-12" aria-labelledby="application-blocks">
+        <div className="mb-4">
+          <h2 id="application-blocks" className="text-lg font-semibold tracking-tight">
+            Application blocks
+          </h2>
+          <p className="mt-1 max-w-2xl text-pretty text-sm leading-7 text-muted-foreground">
+            Start with a capability-aligned feature pack or install the full
+            Next.js console with its route-neutral app shell and dynamic data
+            explorer.
+          </p>
+        </div>
+        <ul className="grid gap-2 sm:grid-cols-2">
+          {[
+            {
+              href: '/blocks/features',
+              title: 'Feature packs',
+              description:
+                'Data, authentication, users, organizations, storage, billing, and notifications.'
+            },
+            {
+              href: '/blocks/console-kit',
+              title: 'Console Kit for Next.js',
+              description:
+                'A full-page console driven by injected endpoints, session state, adapters, and versioned _meta.'
+            }
+          ].map((item) => (
+            <li key={item.href} className="min-w-0">
+              <Link
+                href={item.href}
+                className="flex h-full min-h-24 flex-col rounded-xl border border-border/60 bg-card px-4 py-3.5 outline-none transition-[background-color,border-color,box-shadow] duration-150 ease-out hover:border-border hover:bg-accent/40 hover:shadow-card focus-visible:ring-2 focus-visible:ring-ring"
+              >
+                <span className="text-sm font-medium text-foreground">
+                  {item.title}
+                </span>
+                <span className="mt-1 text-pretty text-xs leading-5 text-muted-foreground">
+                  {item.description}
+                </span>
+              </Link>
+            </li>
+          ))}
+        </ul>
+      </section>
+
       <section className="mt-12" aria-labelledby="primitive-catalog">
         <div className="mb-4">
           <h2 id="primitive-catalog" className="text-lg font-semibold tracking-tight">

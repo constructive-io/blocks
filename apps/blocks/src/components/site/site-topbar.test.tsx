@@ -55,14 +55,52 @@ describe('SiteTopbar install command', () => {
     );
   });
 
-  it.each(['/', '/blocks', '/blocks/styling', '/blocks/ui/not-a-registry-item'])(
-    'hides the install command on %s',
-    (pathname) => {
-      mockUsePathname.mockReturnValue(pathname);
-      render(<SiteTopbar />);
+  it('copies the exact feature-pack registry root and exposes its breadcrumb', async () => {
+    mockUsePathname.mockReturnValue('/blocks/features/organizations/');
+    render(<SiteTopbar />);
 
-      expect(screen.queryByRole('button', { name: /install command/i })).not.toBeInTheDocument();
-      expect(screen.queryByText(/shadcn add @constructive\//)).not.toBeInTheDocument();
-    },
-  );
+    expect(screen.getByText('Organizations feature pack')).toBeVisible();
+    const copyButton = screen.getByRole('button', {
+      name: 'Copy Organizations feature pack install command',
+    });
+    expect(copyButton).toHaveTextContent('shadcn add @constructive/feature-pack-organizations');
+
+    fireEvent.click(copyButton);
+    await waitFor(() => {
+      expect(writeText).toHaveBeenCalledWith('pnpm dlx shadcn@4.13.1 add @constructive/feature-pack-organizations');
+    });
+  });
+
+  it('offers install actions for billing leaves and Console Kit', () => {
+    mockUsePathname.mockReturnValue('/blocks/billing/billing-usage-overview');
+    const { unmount } = render(<SiteTopbar />);
+    expect(
+      screen.getByRole('button', {
+        name: 'Copy Usage overview install command',
+      }),
+    ).toHaveTextContent('shadcn add @constructive/billing-usage-overview');
+
+    unmount();
+    mockUsePathname.mockReturnValue('/blocks/console-kit');
+    render(<SiteTopbar />);
+    expect(screen.getByRole('button', { name: 'Copy Console Kit install command' })).toHaveTextContent(
+      'shadcn add @constructive/console-kit-nextjs',
+    );
+  });
+
+  it.each([
+    '/',
+    '/blocks',
+    '/blocks/styling',
+    '/blocks/features',
+    '/blocks/features/not-a-pack',
+    '/blocks/features/data/preview',
+    '/blocks/ui/not-a-registry-item',
+  ])('hides the install command on %s', (pathname) => {
+    mockUsePathname.mockReturnValue(pathname);
+    render(<SiteTopbar />);
+
+    expect(screen.queryByRole('button', { name: /install command/i })).not.toBeInTheDocument();
+    expect(screen.queryByText(/shadcn add @constructive\//)).not.toBeInTheDocument();
+  });
 });

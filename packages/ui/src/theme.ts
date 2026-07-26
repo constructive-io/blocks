@@ -190,11 +190,18 @@ export const constructiveTheme = {
 		'z-layer-toast': '4000',
 	},
 	baseCss: {
+		':root': {
+			'color-scheme': 'light',
+		},
+		'.dark': {
+			'color-scheme': 'dark',
+		},
 		'*': {
 			'@apply border-border/60 outline-ring/50': {},
 		},
 		body: {
 			'@apply bg-background font-sans text-foreground antialiased': {},
+			'font-synthesis': 'none',
 			position: 'relative',
 		},
 		'#__next, [data-nextjs-root-layout]': {

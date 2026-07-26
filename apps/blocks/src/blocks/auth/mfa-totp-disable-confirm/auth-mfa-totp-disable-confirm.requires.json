@@ -1,6 +1,0 @@
-{
-  "namespace": "auth",
-  "mutations": ["disableTotp"],
-  "queries": [],
-  "models": []
-}

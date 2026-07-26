@@ -26,10 +26,10 @@ export function GET() {
             width: 980,
           }}
         >
-          <div style={{ color: '#a3a3a3', display: 'flex', fontSize: 26 }}>@constructive-io/ui</div>
-          <div style={{ display: 'flex', fontSize: 76, fontWeight: 600, marginTop: 28 }}>Constructive UI</div>
+          <div style={{ color: '#a3a3a3', display: 'flex', fontSize: 26 }}>@constructive</div>
+          <div style={{ display: 'flex', fontSize: 76, fontWeight: 600, marginTop: 28 }}>Constructive Blocks</div>
           <div style={{ color: '#d4d4d4', display: 'flex', fontSize: 32, lineHeight: 1.4, marginTop: 28 }}>
-            Base React primitives for npm and the shadcn CLI.
+            UI primitives, feature packs, billing blocks, and Console Kit for the shadcn CLI.
           </div>
         </div>
       </div>

@@ -5,13 +5,11 @@ import { fileURLToPath } from 'node:url';
 import ts from 'typescript';
 
 import { PRIMITIVE_DOCS } from '../src/content/ui';
+import { FEATURE_PACK_IDS, FEATURE_PACK_MANIFESTS } from '../src/feature-packs';
 import { UI_DEMO_SOURCE } from '../src/generated/ui-demo-source';
-import {
-  BASE_PRIMITIVES,
-  packageImport,
-  type BasePrimitiveName,
-} from '../src/lib/base-primitives';
+import { BASE_PRIMITIVES, packageImport, type BasePrimitiveName } from '../src/lib/base-primitives';
 import { packageCommands, registryCommands } from '../src/lib/install-mode';
+import { FEATURE_PACK_DOCS } from '../src/lib/feature-packs';
 import { PRIMITIVE_DOC_SECTION_ORDER, type PrimitiveApiPart } from '../src/lib/primitive-docs';
 
 type PackageManifest = {
@@ -20,7 +18,7 @@ type PackageManifest = {
 };
 
 type RegistryManifest = {
-  items?: Array<{ name?: string }>;
+  items?: Array<{ name?: string; docs?: string }>;
 };
 
 const scriptDirectory = path.dirname(fileURLToPath(import.meta.url));
@@ -31,6 +29,10 @@ const contentDirectory = path.join(appDirectory, 'src', 'content', 'ui');
 
 function readJson<T>(file: string): T {
   return JSON.parse(fs.readFileSync(file, 'utf8')) as T;
+}
+
+function isEmpty(values: readonly unknown[]): boolean {
+  return values.length === 0;
 }
 
 function collectFiles(directory: string): string[] {
@@ -52,9 +54,7 @@ function hasExportModifier(node: ts.Node): boolean {
 
 function bindingNames(name: ts.BindingName): string[] {
   if (ts.isIdentifier(name)) return [name.text];
-  return name.elements.flatMap((element) =>
-    ts.isOmittedExpression(element) ? [] : bindingNames(element.name),
-  );
+  return name.elements.flatMap((element) => (ts.isOmittedExpression(element) ? [] : bindingNames(element.name)));
 }
 
 function runtimeExports(sourceFile: ts.SourceFile): string[] {
@@ -75,9 +75,7 @@ function runtimeExports(sourceFile: ts.SourceFile): string[] {
 
     if (!hasExportModifier(statement)) continue;
     if (
-      (ts.isFunctionDeclaration(statement) ||
-        ts.isClassDeclaration(statement) ||
-        ts.isEnumDeclaration(statement)) &&
+      (ts.isFunctionDeclaration(statement) || ts.isClassDeclaration(statement) || ts.isEnumDeclaration(statement)) &&
       statement.name
     ) {
       exports.add(statement.name.text);
@@ -211,13 +209,12 @@ for (const primitive of BASE_PRIMITIVES) {
     errors.push(`${primitive.name}: expected one to six focused component-specific examples`);
   }
   if (docs.accessibility.length === 0) errors.push(`${primitive.name}: missing accessibility guidance`);
-  if (docs.stateModel === 'stateless' && docs.state) errors.push(`${primitive.name}: stateless docs cannot render state guidance`);
-  if (docs.stateModel !== 'stateless' && !docs.state) errors.push(`${primitive.name}: stateful docs require state guidance`);
+  if (docs.stateModel === 'stateless' && docs.state)
+    errors.push(`${primitive.name}: stateless docs cannot render state guidance`);
+  if (docs.stateModel !== 'stateless' && !docs.state)
+    errors.push(`${primitive.name}: stateful docs require state guidance`);
 
-  const generated = UI_DEMO_SOURCE[primitive.name] as Record<
-    string,
-    { npm: string; registry: string }
-  >;
+  const generated = UI_DEMO_SOURCE[primitive.name] as Record<string, { npm: string; registry: string }>;
   const demoReferences = [
     'BlockDemo',
     docs.usage.demo,
@@ -233,7 +230,10 @@ for (const primitive of BASE_PRIMITIVES) {
       errors.push(`${primitive.name}: missing generated source for ${demo}`);
       continue;
     }
-    if (source.npm.includes('@/components/docs/showcase-kit') || source.registry.includes('@/components/docs/showcase-kit')) {
+    if (
+      source.npm.includes('@/components/docs/showcase-kit') ||
+      source.registry.includes('@/components/docs/showcase-kit')
+    ) {
       errors.push(`${primitive.name}:${demo}: consumer source must omit the docs-only Demo wrapper`);
     }
     if (!source.npm.includes(`@constructive-io/ui/${primitive.name}`)) {
@@ -279,6 +279,76 @@ for (const primitive of BASE_PRIMITIVES) {
   }
 }
 
+const documentedFeaturePackIds = FEATURE_PACK_DOCS.map(({ id }) => id);
+if (JSON.stringify(documentedFeaturePackIds) !== JSON.stringify(FEATURE_PACK_IDS)) {
+  errors.push('Feature-pack docs must match the seven canonical ids in dependency order');
+}
+
+const featurePackRegistry = readJson<RegistryManifest>(path.join(appDirectory, 'registry.json'));
+const featurePackRegistryItems = new Map(
+  (featurePackRegistry.items ?? []).flatMap((item) => (item.name ? [[item.name, item] as const] : [])),
+);
+
+for (const relativePath of [
+  path.join('src', 'app', 'blocks', 'features', '[pack]', 'page.tsx'),
+  path.join('src', 'app', 'blocks', 'features', '[pack]', 'preview', 'page.tsx'),
+]) {
+  if (!fs.existsSync(path.join(appDirectory, relativePath))) {
+    errors.push(`Missing feature-pack route ${relativePath}`);
+  }
+}
+
+for (const block of FEATURE_PACK_DOCS) {
+  const manifest = FEATURE_PACK_MANIFESTS.find(({ id }) => id === block.id);
+  if (!manifest) {
+    errors.push(`${block.id}: missing canonical feature-pack manifest`);
+    continue;
+  }
+
+  const expectedEndpoints = [
+    ...manifest.endpoints.required,
+    ...manifest.endpoints.optional.map((endpoint) => `optional ${endpoint}`),
+  ].join(', ');
+  if (block.registryName !== `feature-pack-${block.id}`) {
+    errors.push(`${block.id}: registry name must be feature-pack-${block.id}`);
+  }
+  if (JSON.stringify(block.dependencies) !== JSON.stringify(manifest.dependencies)) {
+    errors.push(`${block.id}: documented dependencies drifted from its manifest`);
+  }
+  if (block.endpoints !== expectedEndpoints) {
+    errors.push(`${block.id}: documented endpoints drifted from its manifest`);
+  }
+  if (
+    block.whenToUse.length < 2 ||
+    isEmpty(block.surfaces) ||
+    isEmpty(block.accessibility) ||
+    isEmpty(block.api) ||
+    !block.state.description ||
+    !block.state.actionGuidance ||
+    !block.usage.description
+  ) {
+    errors.push(`${block.id}: feature-pack docs are missing required editorial coverage`);
+  }
+
+  const apiLabels = block.api.flatMap(({ name }) => name.split(' / ').map((prop) => prop.trim()));
+  const documentedApiProps = [...block.apiProps];
+  if (
+    new Set(apiLabels).size !== apiLabels.length ||
+    JSON.stringify([...apiLabels].sort()) !== JSON.stringify([...documentedApiProps].sort())
+  ) {
+    errors.push(`${block.id}: API labels must exactly match its typed public property catalog`);
+  }
+
+  const expectedImport = `@/blocks/feature-packs/${block.id}/${block.id}-feature-pack`;
+  if (!block.usage.example.includes(block.exportName) || !block.usage.example.includes(expectedImport)) {
+    errors.push(`${block.id}: basic usage must import and render ${block.exportName}`);
+  }
+  const registryItem = featurePackRegistryItems.get(block.registryName);
+  if (!registryItem?.docs?.includes(expectedImport)) {
+    errors.push(`${block.id}: registry item must document its feature-pack root import`);
+  }
+}
+
 const appPackage = readJson<PackageManifest>(path.join(appDirectory, 'package.json'));
 if (appPackage.devDependencies?.shadcn !== '4.13.1') {
   errors.push('apps/blocks must pin shadcn to 4.13.1');
@@ -296,4 +366,7 @@ if (errors.length > 0) {
 }
 
 console.log('Blocks docs expose exactly 29 source-checked primitive references.');
-console.log('Every page has complete examples, dual install paths, state guidance, accessibility, and API-last coverage.');
+console.log('Feature-pack docs expose seven manifest-aligned live references.');
+console.log(
+  'Every page has complete examples, dual install paths, state guidance, accessibility, and API-last coverage.',
+);

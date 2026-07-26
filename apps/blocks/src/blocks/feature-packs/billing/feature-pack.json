@@ -1,0 +1,18 @@
+{
+  "schemaVersion": 1,
+  "id": "billing",
+  "title": "Billing",
+  "description": "Plans, subscriptions, entitlement meters, usage, credits, and account activity.",
+  "dependencies": [],
+  "endpoints": { "required": [], "optional": ["billing", "admin", "data"] },
+  "capabilities": {
+    "required": ["billing.plans", "billing.subscriptions"],
+    "optional": ["billing.meters"]
+  },
+  "metadata": {
+    "requiredMetaSections": [],
+    "optionalMetaSections": ["tables", "fields", "constraints", "relations", "query", "scope", "encoding"],
+    "requiredIntrospectionSections": ["root-operations", "types", "input-objects"],
+    "optionalIntrospectionSections": ["enums", "directives"]
+  }
+}

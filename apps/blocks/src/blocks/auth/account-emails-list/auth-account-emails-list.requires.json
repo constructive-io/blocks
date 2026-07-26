@@ -1,6 +1,0 @@
-{
-  "namespace": "auth",
-  "mutations": ["createEmail", "sendVerificationEmail", "updateEmail", "deleteEmail"],
-  "queries": ["emails"],
-  "models": ["email"]
-}

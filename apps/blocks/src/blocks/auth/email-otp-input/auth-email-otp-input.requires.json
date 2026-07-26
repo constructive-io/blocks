@@ -1,6 +1,0 @@
-{
-  "namespace": "auth",
-  "mutations": ["signInEmailOtp", "sendEmailOtp"],
-  "queries": [],
-  "models": []
-}

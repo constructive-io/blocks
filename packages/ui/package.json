@@ -1,6 +1,6 @@
 {
   "name": "@constructive-io/ui",
-  "version": "0.4.2",
+  "version": "0.5.0",
   "description": "Shared UI component library built on Base UI and Tailwind CSS v4",
   "keywords": [
     "react",
@@ -228,6 +228,16 @@
       "require": {
         "types": "./dist/components/field.d.cts",
         "default": "./dist/components/field.cjs"
+      }
+    },
+    "./empty": {
+      "import": {
+        "types": "./dist/components/empty.d.ts",
+        "default": "./dist/components/empty.js"
+      },
+      "require": {
+        "types": "./dist/components/empty.d.cts",
+        "default": "./dist/components/empty.cjs"
       }
     },
     "./tooltip": {
@@ -460,6 +470,26 @@
         "default": "./dist/components/sidebar.cjs"
       }
     },
+    "./app-bar": {
+      "import": {
+        "types": "./dist/components/app-bar.d.ts",
+        "default": "./dist/components/app-bar.js"
+      },
+      "require": {
+        "types": "./dist/components/app-bar.d.cts",
+        "default": "./dist/components/app-bar.cjs"
+      }
+    },
+    "./app-shell": {
+      "import": {
+        "types": "./dist/components/app-shell.d.ts",
+        "default": "./dist/components/app-shell.js"
+      },
+      "require": {
+        "types": "./dist/components/app-shell.d.cts",
+        "default": "./dist/components/app-shell.cjs"
+      }
+    },
     "./calendar-rac": {
       "import": {
         "types": "./dist/components/calendar-rac.d.ts",
@@ -608,26 +638,6 @@
       "require": {
         "types": "./dist/components/toast/index.d.cts",
         "default": "./dist/components/toast/index.cjs"
-      }
-    },
-    "./org-chart": {
-      "import": {
-        "types": "./dist/components/org-chart/index.d.ts",
-        "default": "./dist/components/org-chart/index.js"
-      },
-      "require": {
-        "types": "./dist/components/org-chart/index.d.cts",
-        "default": "./dist/components/org-chart/index.cjs"
-      }
-    },
-    "./storage": {
-      "import": {
-        "types": "./dist/components/storage/index.d.ts",
-        "default": "./dist/components/storage/index.js"
-      },
-      "require": {
-        "types": "./dist/components/storage/index.d.cts",
-        "default": "./dist/components/storage/index.cjs"
       }
     }
   },

@@ -7,6 +7,7 @@ import path from 'node:path';
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const artifacts = path.join(root, '.artifacts', 'npm');
 const consumer = path.join(tmpdir(), 'constructive-blocks-package-consumer');
+const sheetsConsumer = path.join(tmpdir(), 'constructive-sheets-package-consumer');
 
 interface PackageManifest {
   name: string;
@@ -38,6 +39,8 @@ function runtimeExportSpecifiers(manifest: PackageManifest): string[] {
 }
 
 const uiManifest = await packageManifest('packages/ui/package.json');
+const dataManifest = await packageManifest('packages/data/package.json');
+const sheetsManifest = await packageManifest('packages/sheets/package.json');
 const schemaBuilderManifest = await packageManifest('packages/schema-builder/package.json');
 if (!uiManifest.peerDependencies?.tailwindcss) {
   throw new Error('@constructive-io/ui must declare Tailwind CSS as a peer');
@@ -45,18 +48,42 @@ if (!uiManifest.peerDependencies?.tailwindcss) {
 if (uiManifest.dependencies?.['tw-animate-css']) {
   throw new Error('@constructive-io/ui must not ship tw-animate-css');
 }
+for (const dependency of ['@remixicon/react', 'lucide-react']) {
+  if (!sheetsManifest.dependencies?.[dependency]) {
+    throw new Error(`@constructive-io/sheets must declare ${dependency} as a runtime dependency`);
+  }
+  if (sheetsManifest.peerDependencies?.[dependency]) {
+    throw new Error(`@constructive-io/sheets must not declare ${dependency} as a peer dependency`);
+  }
+}
+if (sheetsManifest.exports['./styles.css'] !== './dist/styles.css') {
+  throw new Error('@constructive-io/sheets must export ./styles.css from dist');
+}
 const uiVersion = uiManifest.version;
+const dataVersion = dataManifest.version;
+const sheetsVersion = sheetsManifest.version;
 const schemaBuilderVersion = schemaBuilderManifest.version;
 const runtimeSpecifiers = [
   ...runtimeExportSpecifiers(uiManifest),
+  ...runtimeExportSpecifiers(dataManifest),
+  ...runtimeExportSpecifiers(sheetsManifest),
   ...runtimeExportSpecifiers(schemaBuilderManifest)
 ];
 const uiTarball = path.join(artifacts, `constructive-io-ui-${uiVersion}.tgz`);
+const dataTarball = path.join(artifacts, `constructive-io-data-${dataVersion}.tgz`);
+const sheetsTarball = path.join(artifacts, `constructive-io-sheets-${sheetsVersion}.tgz`);
 const schemaBuilderTarball = path.join(
   artifacts,
   `constructive-io-schema-builder-${schemaBuilderVersion}.tgz`
 );
-await Promise.all([access(uiTarball), access(schemaBuilderTarball)]);
+await Promise.all([
+  access(uiTarball),
+  access(dataTarball),
+  access(sheetsTarball),
+  access(schemaBuilderTarball)
+]);
+
+await checkPackedSheets();
 
 await rm(consumer, { recursive: true, force: true });
 await mkdir(consumer, { recursive: true });
@@ -72,7 +99,9 @@ await writeFile(
       private: true,
       type: 'module',
       dependencies: {
+        '@constructive-io/data': `file:${dataTarball}`,
         '@constructive-io/schema-builder': `file:${schemaBuilderTarball}`,
+        '@constructive-io/sheets': `file:${sheetsTarball}`,
         '@constructive-io/ui': `file:${uiTarball}`,
         react: '^19.0.0',
         'react-dom': '^19.0.0'
@@ -116,6 +145,8 @@ await writeFile(
   `import * as UI from '@constructive-io/ui';
 import { Button } from '@constructive-io/ui/button';
 import { FlowZoomPanel } from '@constructive-io/ui/flow-zoom-panel';
+import { META_CONTRACT_VERSION, selectConsoleDataTables } from '@constructive-io/data';
+import { Sheets, SheetsProvider } from '@constructive-io/sheets';
 import { SchemaBuilder, DEFAULT_SCHEMA_BUILDER_PREFERENCES } from '@constructive-io/schema-builder';
 import * as Core from '@constructive-io/schema-builder/core';
 import * as Fields from '@constructive-io/schema-builder/fields';
@@ -125,7 +156,7 @@ import * as Policies from '@constructive-io/schema-builder/policies';
 import * as Tables from '@constructive-io/schema-builder/tables';
 
 const element = <Button>Package consumer</Button>;
-const publicSurface = [UI, FlowZoomPanel, SchemaBuilder, DEFAULT_SCHEMA_BUILDER_PREFERENCES, Core, Fields, Relationships, Indexes, Policies, Tables];
+const publicSurface = [UI, FlowZoomPanel, META_CONTRACT_VERSION, selectConsoleDataTables, Sheets, SheetsProvider, SchemaBuilder, DEFAULT_SCHEMA_BUILDER_PREFERENCES, Core, Fields, Relationships, Indexes, Policies, Tables];
 void element;
 void publicSurface;
 `
@@ -133,6 +164,7 @@ void publicSurface;
 await writeFile(
   path.join(consumer, 'styles.css'),
   `@import '@constructive-io/ui/globals.css';
+@import '@constructive-io/sheets/styles.css';
 @import '@constructive-io/schema-builder/styles.css';
 `
 );
@@ -160,8 +192,11 @@ const specifiers = ${JSON.stringify(runtimeSpecifiers)};
 for (const specifier of specifiers) assert.ok(require(specifier), \`Empty CJS export: \${specifier}\`);
 assert.ok(require('@constructive-io/ui').Button);
 assert.ok(require('@constructive-io/ui/flow-zoom-panel').FlowZoomPanel);
+assert.equal(require('@constructive-io/data').META_CONTRACT_VERSION, '2026-07');
+assert.ok(require('@constructive-io/sheets').Sheets);
 assert.ok(require('@constructive-io/schema-builder').SchemaBuilder);
 assert.ok(require.resolve('@constructive-io/ui/globals.css'));
+assert.ok(require.resolve('@constructive-io/sheets/styles.css'));
 assert.ok(require.resolve('@constructive-io/schema-builder/styles.css'));
 console.log(\`CJS runtime and stylesheet exports resolved (\${specifiers.length} JavaScript entries).\`);
 `
@@ -359,6 +394,8 @@ main().catch((error) => {
 await run('pnpm', ['install', '--ignore-workspace', '--frozen-lockfile=false']);
 await Promise.all([
   access(path.join(consumer, 'node_modules', '@constructive-io', 'ui', 'LICENSE')),
+  access(path.join(consumer, 'node_modules', '@constructive-io', 'data', 'LICENSE')),
+  access(path.join(consumer, 'node_modules', '@constructive-io', 'sheets', 'LICENSE')),
   access(path.join(consumer, 'node_modules', '@constructive-io', 'schema-builder', 'LICENSE'))
 ]);
 await run('pnpm', ['exec', 'tsc', '-p', 'tsconfig.json']);
@@ -369,3 +406,82 @@ await run('pnpm', ['exec', 'tsx', 'check-portal-context.ts']);
 await run('pnpm', ['exec', 'tsx', 'check-portal-context.cts']);
 
 console.log('Packed-package clean consumer passed.');
+
+async function checkPackedSheets(): Promise<void> {
+  // Sheets gets a clean install without schema-builder. This prevents
+  // schema-builder's icon dependencies from hiding an incomplete Sheets
+  // manifest and validates the published Tailwind source contract directly.
+  await rm(sheetsConsumer, { recursive: true, force: true });
+  await mkdir(sheetsConsumer, { recursive: true });
+  await writeFile(
+    path.join(sheetsConsumer, '.npmrc'),
+    'auto-install-peers=false\nstrict-peer-dependencies=false\n'
+  );
+  await writeFile(
+    path.join(sheetsConsumer, 'package.json'),
+    `${JSON.stringify(
+      {
+        name: 'constructive-sheets-package-consumer',
+        private: true,
+        type: 'module',
+        dependencies: {
+          '@constructive-io/data': `file:${dataTarball}`,
+          '@constructive-io/ui': `file:${uiTarball}`,
+          '@constructive-io/sheets': `file:${sheetsTarball}`
+        },
+        devDependencies: {
+          '@tailwindcss/postcss': '^4.1.0',
+          postcss: '^8.5.0',
+          tailwindcss: '^4.1.0',
+          tsx: '4.23.1'
+        }
+      },
+      null,
+      2
+    )}\n`
+  );
+  await writeFile(
+    path.join(sheetsConsumer, 'styles.css'),
+    `@import 'tailwindcss';
+@import '@constructive-io/sheets/styles.css';
+`
+  );
+  await writeFile(
+    path.join(sheetsConsumer, 'check-sheets.ts'),
+    `import assert from 'node:assert/strict';
+import { createRequire } from 'node:module';
+import { readFile } from 'node:fs/promises';
+import postcss from 'postcss';
+import tailwindcss from '@tailwindcss/postcss';
+
+const require = createRequire(import.meta.url);
+const packageJsonPath = require.resolve('@constructive-io/sheets/package.json');
+const manifest = JSON.parse(await readFile(packageJsonPath, 'utf8'));
+assert.ok(manifest.dependencies['@remixicon/react']);
+assert.ok(manifest.dependencies['lucide-react']);
+assert.equal(manifest.exports['./styles.css'], './dist/styles.css');
+
+const requireFromSheets = createRequire(packageJsonPath);
+assert.ok(requireFromSheets.resolve('@remixicon/react'));
+assert.ok(requireFromSheets.resolve('lucide-react'));
+const stylesheetPath = require.resolve('@constructive-io/sheets/styles.css');
+const stylesheet = await readFile(stylesheetPath, 'utf8');
+assert.ok(stylesheet.includes('@source "./**/*.{js,cjs}";'));
+
+const from = new URL('./styles.css', import.meta.url);
+const source = await readFile(from, 'utf8');
+const result = await postcss([tailwindcss()]).process(source, { from: from.pathname });
+assert.ok(result.css.includes('.w-\\\\[52px\\\\]'));
+console.log('Sheets runtime dependencies and Tailwind source contract passed independently.');
+`
+  );
+  await run(
+    'pnpm',
+    ['install', '--ignore-workspace', '--frozen-lockfile=false'],
+    sheetsConsumer
+  );
+  await access(path.join(sheetsConsumer, 'node_modules', '@constructive-io', 'sheets', 'LICENSE'));
+  await run('pnpm', ['exec', 'tsx', 'check-sheets.ts'], sheetsConsumer);
+
+  console.log('Packed Sheets package passed its isolated consumer check.');
+}

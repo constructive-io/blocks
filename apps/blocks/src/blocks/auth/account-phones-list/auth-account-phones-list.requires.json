@@ -1,6 +1,0 @@
-{
-  "namespace": "auth",
-  "mutations": ["createPhoneNumber", "updatePhoneNumber", "deletePhoneNumber", "sendSmsOtp", "verifyPhoneOtp"],
-  "queries": ["phoneNumbers"],
-  "models": ["phoneNumber"]
-}

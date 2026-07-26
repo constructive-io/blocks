@@ -40,7 +40,7 @@ export function RegistryHero() {
             <em>on Constructive.</em>
           </h1>
           <p className="mt-4 max-w-[58ch] text-pretty text-[15px] leading-7 text-muted-foreground sm:text-base">
-            Editable UI primitives and workflows for auth, organizations, app shells, and schema management.
+            Editable UI primitives, capability-aligned feature packs, billing workflows, and a full application console.
           </p>
           <div className="mt-6 flex flex-wrap gap-2.5">
             <Button asChild size="lg">

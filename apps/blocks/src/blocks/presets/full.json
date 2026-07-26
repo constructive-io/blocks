@@ -1,0 +1,9 @@
+{
+  "schemaVersion": 1,
+  "id": "full",
+  "presetSlug": "full",
+  "title": "Full",
+  "description": "Every first-release Constructive feature pack.",
+  "stability": "stable",
+  "featurePacks": ["data", "auth", "users", "organizations", "storage", "billing", "notifications"]
+}

@@ -1,0 +1,18 @@
+{
+  "schemaVersion": 1,
+  "id": "notifications",
+  "title": "Notifications",
+  "description": "User notification inbox and read-state actions with optional settings and realtime capabilities.",
+  "dependencies": [],
+  "endpoints": { "required": [], "optional": ["notifications", "auth", "data"] },
+  "capabilities": {
+    "required": ["notifications.inbox"],
+    "optional": ["notifications.settings", "notifications.realtime"]
+  },
+  "metadata": {
+    "requiredMetaSections": [],
+    "optionalMetaSections": ["tables", "fields", "constraints", "relations", "query", "scope", "encoding", "realtime"],
+    "requiredIntrospectionSections": ["root-operations", "types", "input-objects"],
+    "optionalIntrospectionSections": ["enums", "directives"]
+  }
+}

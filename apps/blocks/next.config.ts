@@ -4,6 +4,9 @@ import type { NextConfig } from 'next';
 const isPagesBuild = process.env.BLOCKS_PAGES === '1';
 
 const nextConfig: NextConfig = {
+  ...(process.env.CONSOLE_KIT_INTEGRATION === '1'
+    ? { allowedDevOrigins: ['127.0.0.1'] }
+    : {}),
   ...(isPagesBuild
     ? {
         output: 'export',

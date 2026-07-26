@@ -5,7 +5,12 @@ import path from 'node:path';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const destination = path.join(root, '.artifacts', 'npm');
-const packages = ['@constructive-io/ui', '@constructive-io/schema-builder'];
+const packages = [
+  '@constructive-io/ui',
+  '@constructive-io/data',
+  '@constructive-io/sheets',
+  '@constructive-io/schema-builder'
+];
 
 function run(command: string, args: string[]): Promise<void> {
   return new Promise((resolve, reject) => {
