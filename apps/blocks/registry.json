@@ -369,6 +369,7 @@
       "type": "registry:block",
       "title": "Constructive Console Kit Core",
       "description": "The leaf-independent Console Kit shell, runtime, discovery, and single modular Zustand store.",
+      "docs": "`console-kit-core` installed the shell, runtime, semantic routing, callback boundary, and one per-instance modular Zustand store. Core intentionally includes no feature view, so add selected `console-module-*` items.\n\nDegraded states: explicit endpoint, current `_meta`, introspection, capability, and adapter evidence fail closed independently; installation never grants authority.\n\nGuide: https://constructive-io.github.io/blocks/blocks/console-kit/",
       "dependencies": [
         "@constructive-io/data",
         "@tanstack/react-query",
@@ -498,7 +499,7 @@
       "type": "registry:block",
       "title": "Data Feature Pack",
       "description": "A current-_meta-only application data explorer with application-table filtering and spreadsheet CRUD.",
-      "docs": "## Usage\n\nPass a Sheets configuration for the active application database. The feature root reads the current `_meta` contract, keeps tables with an exact application smart-tag scope, and delegates table selection, creation, and spreadsheet events to the host.\n\n```tsx\nimport { DataFeaturePack } from '@/blocks/feature-packs/data/data-feature-pack';\n\n<DataFeaturePack\n  config={sheetsConfig}\n  defaultActiveTable=\"projects\"\n  applicationScopes={['app']}\n  onActiveTableChange={setActiveTable}\n  onEvent={recordSheetEvent}\n/>\n```\n\nUse `activeTable` with `onActiveTableChange` when routing owns selection. The installed sidecar describes compatibility for tooling; PostgreSQL privileges and RLS remain authoritative for every query and mutation.\n\nThis `feature-pack-data` item is provider-neutral and works without Console Kit. Install `console-module-data` when Console Kit should supply its navigation, capability discovery, and tenant runtime binding.",
+      "docs": "`feature-pack-data` installed a provider-neutral view and `.constructive/feature-packs/data.json`. Import from `@/blocks/feature-packs/data/data-feature-pack`. The host must supply the view resource, policy, and actions; add `console-module-data` when Console Kit should own discovery and Constructive integration.\n\nDegraded states: The host owns Sheets state and endpoint binding; incompatible metadata stays explicit, and PostgreSQL privileges and RLS decide every query and mutation.\n\nGuide: https://constructive-io.github.io/blocks/blocks/features/data/",
       "dependencies": [
         "@constructive-io/data",
         "@constructive-io/sheets",
@@ -528,7 +529,7 @@
       "type": "registry:block",
       "title": "Data Console Module",
       "description": "Console Kit navigation, capability discovery, and tenant runtime binding for the Data feature pack.",
-      "docs": "## Console Kit integration\n\nInstall this item for Console Kit composition. It installs `console-kit-core` and the standalone `feature-pack-data` view transitively.\n\n```tsx\nimport { dataConsoleModule } from '@/blocks/feature-packs/data/data-console-module';\n\nconst featureModules = [dataConsoleModule];\n```\n\nPass the module to `ConstructiveConsoleKitCore` or `ConsoleKit`; install `feature-pack-data` alone when the host supplies the view props directly.",
+      "docs": "`console-module-data` installed Console Kit core, the provider-neutral data view, and its Constructive integration. Import from `@/blocks/feature-packs/data/data-console-module` and compose the exported module with `ConstructiveConsoleKitCore`; the install inspector reports the exact import targets and transitive closure.\n\nDegraded states: A missing or incompatible data endpoint, current _meta contract, introspection result, or application table scope keeps Data unavailable; RLS remains authoritative.\n\nGuide: https://constructive-io.github.io/blocks/blocks/features/data/",
       "dependencies": [],
       "registryDependencies": [
         "console-kit-core",
@@ -547,7 +548,7 @@
       "type": "registry:block",
       "title": "Authentication Feature Pack",
       "description": "Provider-neutral public authentication flows and personal account/session management.",
-      "docs": "## Usage\n\nChoose the entry or account view, grant each available operation through policy, and provide its matching provider callback.\n\n```tsx\nimport { AuthFeaturePack } from '@/blocks/feature-packs/auth/auth-feature-pack';\n\n<AuthFeaturePack\n  view=\"account\"\n  account={account}\n  notice={notice}\n  passwordPolicy={{ minLength: 12 }}\n  policy={{ signOut: true, changePassword: true, sendVerificationEmail: true }}\n  actions={authActions}\n  onError={reportAuthError}\n/>\n```\n\nAn action appears only when its policy grant and callback are both present. Password policy is host-defined, and complete OTP, passkey, OAuth, or TOTP implementations can be contributed through `challengeContributions` without placing challenge credentials in public component state. Callback credentials stay inside the trusted adapter boundary; the feature pack receives only token-free flow state and notices.\n\nThis `feature-pack-auth` item is provider-neutral and works without Console Kit. Install `console-module-auth` when Console Kit should supply its navigation, capability discovery, session flow, and Constructive adapter.",
+      "docs": "`feature-pack-auth` installed a provider-neutral view and `.constructive/feature-packs/auth.json`. Import from `@/blocks/feature-packs/auth/auth-feature-pack`. The host must supply the view resource, policy, and actions; add `console-module-auth` when Console Kit should own discovery and Constructive integration.\n\nDegraded states: Unsupported policy grants or callbacks stay absent, provider failures remain explicit, and callback credentials never enter the view.\n\nGuide: https://constructive-io.github.io/blocks/blocks/features/auth/",
       "dependencies": [
         "lucide-react"
       ],
@@ -597,7 +598,7 @@
       "type": "registry:block",
       "title": "Authentication Console Module",
       "description": "Console Kit session flow, capability discovery, and Constructive adapter for the Authentication feature pack.",
-      "docs": "## Console Kit integration\n\nInstall this item for Console Kit composition. It installs `console-kit-core` and the standalone `feature-pack-auth` view transitively.\n\n```tsx\nimport { authConsoleModule } from '@/blocks/feature-packs/auth/auth-console-module';\n\nconst featureModules = [authConsoleModule];\n```\n\nPass the module to `ConstructiveConsoleKitCore` or `ConsoleKit`; install `feature-pack-auth` alone when the host supplies the view props and provider actions directly.",
+      "docs": "`console-module-auth` installed Console Kit core, the provider-neutral auth view, and its Constructive integration. Import from `@/blocks/feature-packs/auth/auth-console-module` and compose the exported module with `ConstructiveConsoleKitCore`; the install inspector reports the exact import targets and transitive closure.\n\nDegraded states: Auth requires complete public session, credential, and password flows; pass csrfTokenProvider when required, and keep callback credentials outside Zustand.\n\nGuide: https://constructive-io.github.io/blocks/blocks/features/auth/",
       "dependencies": [],
       "registryDependencies": [
         "console-kit-core",
@@ -621,7 +622,7 @@
       "type": "registry:block",
       "title": "App access Feature Pack",
       "description": "App access governance with member lifecycle controls, invitations, access profiles, direct and effective permissions, and new-member defaults.",
-      "docs": "## Usage\n\nPass application members and any discovered invitation, profile, permission, default, or audit sections through one resource, then grant and inject only the access operations available to the current administrator.\n\n```tsx\nimport { UsersFeaturePack } from '@/blocks/feature-packs/users/users-feature-pack';\n\n<UsersFeaturePack\n  resource={appAccess}\n  policy={{ invite: true, setApproved: true, setDisabled: true, setProfile: true, setDirectPermission: true }}\n  actions={appAccessActions}\n  onError={reportAccessError}\n/>\n```\n\nLifecycle, owner, admin, profile, direct-permission, and default-permission changes use separate semantic actions. Invitation and member rows additionally require their own `actionPolicy`, which lets the resource mirror RLS and final-owner constraints without rendering unusable controls. The permission catalog stays read-only, effective permissions stay separate from direct grants, and `section` plus `onSectionChange` can synchronize nested navigation with a host router.\n\nThis `feature-pack-users` item keeps its stable registry ID, remains provider-neutral, and works without Console Kit. Install `console-module-users` when Console Kit should supply navigation, capability discovery, and the Constructive adapter.",
+      "docs": "`feature-pack-users` installed a provider-neutral view and `.constructive/feature-packs/users.json`. Import from `@/blocks/feature-packs/users/users-feature-pack`. The host must supply the view resource, policy, and actions; add `console-module-users` when Console Kit should own discovery and Constructive integration.\n\nDegraded states: Missing resources or callbacks stay unavailable, while row policy, PostgreSQL privileges, RLS, and final-owner constraints decide mutations.\n\nGuide: https://constructive-io.github.io/blocks/blocks/features/users/",
       "dependencies": [
         "lucide-react"
       ],
@@ -646,7 +647,7 @@
       "type": "registry:block",
       "title": "App access Console Module",
       "description": "Console Kit navigation, capability discovery, and Constructive adapter for the App access feature pack.",
-      "docs": "## Console Kit integration\n\nInstall this item for Console Kit composition. It installs `console-kit-core` and the standalone `feature-pack-users` view transitively.\n\n```tsx\nimport { usersConsoleModule } from '@/blocks/feature-packs/users/users-console-module';\n\nconst featureModules = [usersConsoleModule];\n```\n\nPass the module to `ConstructiveConsoleKitCore` or `ConsoleKit`; install `feature-pack-users` alone when the host supplies App access resources and semantic actions directly. The module maps Console Kit's nested users routes to controlled sections while preserving the stable `users` registry ID.",
+      "docs": "`console-module-users` installed Console Kit core, the provider-neutral users view, and its Constructive integration. Import from `@/blocks/feature-packs/users/users-console-module` and compose the exported module with `ConstructiveConsoleKitCore`; the install inspector reports the exact import targets and transitive closure.\n\nDegraded states: App access requires a compatible admin contract, and every control still depends on pack policy, adapter support, row policy, PostgreSQL privileges, and RLS.\n\nGuide: https://constructive-io.github.io/blocks/blocks/features/users/",
       "dependencies": [],
       "registryDependencies": [
         "console-kit-core",
@@ -670,7 +671,7 @@
       "type": "registry:block",
       "title": "Organizations Feature Pack",
       "description": "Complete tenant administration for selection, member governance, invitations, profiles, permissions, defaults, hierarchy, settings, principals, and API keys.",
-      "docs": "## Usage\n\nPass one policy-filtered organization snapshot and the semantic callbacks supported by the current tenant database. Keep the active organization and optional controlled section in host state.\n\n```tsx\nimport { OrganizationsFeaturePack } from '@/blocks/feature-packs/organizations/organizations-feature-pack';\n\n<OrganizationsFeaturePack\n  resource={organizations}\n  policy={organizationPolicy}\n  actions={organizationActions}\n  section={section}\n  onSectionChange={setSection}\n  onError={reportOrganizationError}\n/>\n```\n\nThe resource can expose members, active and claimed invitations, access profiles, permissions, defaults, membership settings, hierarchy edges, principals, and API keys. Every mutation requires a pack policy grant, a matching callback, and any relevant row policy; PostgreSQL privileges and RLS remain authoritative. Treat reusable invitation tokens as secrets and display a newly created API key only from that mutation's one-time result. Because `create_org_principal` returns `user_id` while public reads may omit organization scope, fail closed and surface a limitation for an unscopable keyless principal; never infer that it belongs to the only visible organization.\n\nThis `feature-pack-organizations` item is provider-neutral and works without Console Kit. Install `console-module-organizations` when Console Kit should supply semantic routing, capability discovery, `_meta` contract resolution, and the Constructive adapter.",
+      "docs": "`feature-pack-organizations` installed a provider-neutral view and `.constructive/feature-packs/organizations.json`. Import from `@/blocks/feature-packs/organizations/organizations-feature-pack`. The host must supply the view resource, policy, and actions; add `console-module-organizations` when Console Kit should own discovery and Constructive integration.\n\nDegraded states: Missing or ambiguous tenant scope fails closed; the view never infers an organization, principal, policy grant, or mutation authority.\n\nGuide: https://constructive-io.github.io/blocks/blocks/features/organizations/",
       "dependencies": [
         "lucide-react"
       ],
@@ -710,7 +711,7 @@
       "type": "registry:block",
       "title": "Organizations Console Module",
       "description": "Console Kit discovery, metadata resolution, and Constructive adapter for the Organizations feature pack.",
-      "docs": "## Console Kit integration\n\nInstall this item for Console Kit composition. It installs `console-kit-core` and the standalone `feature-pack-organizations` view transitively.\n\n```tsx\nimport { organizationsConsoleModule } from '@/blocks/feature-packs/organizations/organizations-console-module';\n\nconst featureModules = [organizationsConsoleModule];\n```\n\nPass the module to `ConstructiveConsoleKitCore` or `ConsoleKit`; install `feature-pack-organizations` alone when the host supplies organization resources and actions directly.",
+      "docs": "`console-module-organizations` installed Console Kit core, the provider-neutral organizations view, and its Constructive integration. Import from `@/blocks/feature-packs/organizations/organizations-console-module` and compose the exported module with `ConstructiveConsoleKitCore`; the install inspector reports the exact import targets and transitive closure.\n\nDegraded states: Incomplete metadata or ambiguous organization and principal scope fails closed; every mutation remains policy and RLS constrained.\n\nGuide: https://constructive-io.github.io/blocks/blocks/features/organizations/",
       "dependencies": [],
       "registryDependencies": [
         "console-kit-core",
@@ -739,7 +740,7 @@
       "type": "registry:block",
       "title": "Storage Feature Pack",
       "description": "Bucket, folder, object, upload, download, and deletion surfaces backed by injected storage actions.",
-      "docs": "## Usage\n\nPass the policy-visible buckets, active path, and objects through resource, then inject only the file operations supported by the current database.\n\n```tsx\nimport { StorageFeaturePack } from '@/blocks/feature-packs/storage/storage-feature-pack';\n\n<StorageFeaturePack\n  resource={storage}\n  policy={{ selectBucket: true, navigate: true, createBucket: true, upload: true, download: true, deleteObject: true }}\n  actions={storageActions}\n  onError={reportStorageError}\n/>\n```\n\nThe host owns bucket and path state. Navigation and mutations report intent through callbacks, and the next resource value reflects the access that remains after storage policy is reapplied.\n\nThis `feature-pack-storage` item is provider-neutral and works without Console Kit. Install `console-module-storage` when Console Kit should supply its navigation, capability discovery, `_meta` contract resolver, Constructive adapter, and storage state slice.",
+      "docs": "`feature-pack-storage` installed a provider-neutral view and `.constructive/feature-packs/storage.json`. Import from `@/blocks/feature-packs/storage/storage-feature-pack`. The host must supply the view resource, policy, and actions; add `console-module-storage` when Console Kit should own discovery and Constructive integration.\n\nDegraded states: An object endpoint alone does not prove bucket or file operations; incomplete and read-only contracts keep write controls hidden.\n\nGuide: https://constructive-io.github.io/blocks/blocks/features/storage/",
       "dependencies": [
         "lucide-react"
       ],
@@ -764,7 +765,7 @@
       "type": "registry:block",
       "title": "Storage Console Module",
       "description": "Console Kit discovery, metadata resolution, adapter, and modular state slice for the Storage feature pack.",
-      "docs": "## Console Kit integration\n\nInstall this item for Console Kit composition. It installs `console-kit-core` and the standalone `feature-pack-storage` view transitively.\n\n```tsx\nimport { storageConsoleModule } from '@/blocks/feature-packs/storage/storage-console-module';\n\nconst featureModules = [storageConsoleModule];\n```\n\nPass the module to `ConstructiveConsoleKitCore` or `ConsoleKit`; install `feature-pack-storage` alone when the host supplies storage resources, policy, and actions directly.",
+      "docs": "`console-module-storage` installed Console Kit core, the provider-neutral storage view, and its Constructive integration. Import from `@/blocks/feature-packs/storage/storage-console-module` and compose the exported module with `ConstructiveConsoleKitCore`; the install inspector reports the exact import targets and transitive closure.\n\nDegraded states: The objects endpoint alone is insufficient; incomplete contracts stay unavailable and read-only contracts hide write controls.\n\nGuide: https://constructive-io.github.io/blocks/blocks/features/storage/",
       "dependencies": [],
       "registryDependencies": [
         "console-kit-core",
@@ -798,7 +799,7 @@
       "type": "registry:block",
       "title": "Billing Feature Pack",
       "description": "The feature-pack root for Constructive billing plans, subscriptions, usage, entitlements, credits, and activity.",
-      "docs": "## Usage\n\nPass one billing account and the independent resources for subscription, entitlements, usage, credits, history, activity, and plans. The feature root preserves the mature Billing settings page contract.\n\n```tsx\nimport { BillingFeaturePack } from '@/blocks/feature-packs/billing/billing-feature-pack';\n\n<BillingFeaturePack\n  account={account}\n  resources={billingResources}\n  actions={billingActions}\n  formatOptions={{ locale: 'en-US', timeZone: 'UTC' }}\n  section={section}\n  onSectionChange={setSection}\n/>\n```\n\nEach resource keeps its own loading, empty, error, ready, and quality state. Omitted callbacks remove their controls, and provider operations remain outside the reusable billing view.\n\nThis `feature-pack-billing` item is provider-neutral and works without Console Kit. Install `console-module-billing` when Console Kit should supply its navigation, capability discovery, and Constructive adapter.",
+      "docs": "`feature-pack-billing` installed a provider-neutral view and `.constructive/feature-packs/billing.json`. Import from `@/blocks/feature-packs/billing/billing-feature-pack`. The host must supply the view resource, policy, and actions; add `console-module-billing` when Console Kit should own discovery and Constructive integration.\n\nDegraded states: Missing resources remain independent degraded states, and unavailable provider callbacks stay absent.\n\nGuide: https://constructive-io.github.io/blocks/blocks/features/billing/",
       "dependencies": [],
       "registryDependencies": [],
       "files": [
@@ -819,7 +820,7 @@
       "type": "registry:block",
       "title": "Billing Console Module",
       "description": "Console Kit navigation, capability discovery, and Constructive adapter for the Billing feature pack.",
-      "docs": "## Console Kit integration\n\nInstall this item for Console Kit composition. It installs `console-kit-core` and the standalone `feature-pack-billing` view transitively.\n\n```tsx\nimport { billingConsoleModule } from '@/blocks/feature-packs/billing/billing-console-module';\n\nconst featureModules = [billingConsoleModule];\n```\n\nPass the module to `ConstructiveConsoleKitCore` or `ConsoleKit`; install `feature-pack-billing` alone when the host supplies billing resources and provider actions directly.",
+      "docs": "`console-module-billing` installed Console Kit core, the provider-neutral billing view, and its Constructive integration. Import from `@/blocks/feature-packs/billing/billing-console-module` and compose the exported module with `ConstructiveConsoleKitCore`; the install inspector reports the exact import targets and transitive closure.\n\nDegraded states: Missing plans or subscriptions keeps Billing unavailable, missing optional meters produces a partial view, and provider writes require an explicit adapter action.\n\nGuide: https://constructive-io.github.io/blocks/blocks/features/billing/",
       "dependencies": [],
       "registryDependencies": [
         "console-kit-core",
@@ -843,7 +844,7 @@
       "type": "registry:block",
       "title": "Notifications Feature Pack",
       "description": "An application notification inbox with read, open, and deletion actions.",
-      "docs": "## Usage\n\nPass notifications and the authoritative unread count through resource, then grant and inject the inbox actions supported by the application.\n\n```tsx\nimport { NotificationsFeaturePack } from '@/blocks/feature-packs/notifications/notifications-feature-pack';\n\n<NotificationsFeaturePack\n  resource={notifications}\n  policy={{ markRead: true, markAllRead: true, openNotification: true, deleteNotification: true }}\n  actions={notificationActions}\n  onError={reportNotificationError}\n/>\n```\n\nThe all and unread filter remains local. Message content and read state stay host-controlled, so refresh the resource after a successful action and let database policy determine the resulting inbox.\n\nThis `feature-pack-notifications` item is provider-neutral and works without Console Kit. Install `console-module-notifications` when Console Kit should supply its navigation, capability discovery, and Constructive adapter.",
+      "docs": "`feature-pack-notifications` installed a provider-neutral view and `.constructive/feature-packs/notifications.json`. Import from `@/blocks/feature-packs/notifications/notifications-feature-pack`. The host must supply the view resource, policy, and actions; add `console-module-notifications` when Console Kit should own discovery and Constructive integration.\n\nDegraded states: The host must provide an authoritative inbox, policy, and callbacks; absent operations stay unavailable and mutations require a refreshed resource.\n\nGuide: https://constructive-io.github.io/blocks/blocks/features/notifications/",
       "dependencies": [
         "lucide-react"
       ],
@@ -868,7 +869,7 @@
       "type": "registry:block",
       "title": "Notifications Console Module",
       "description": "Console Kit navigation, capability discovery, and Constructive adapter for the Notifications feature pack.",
-      "docs": "## Console Kit integration\n\nInstall this item for Console Kit composition. It installs `console-kit-core` and the standalone `feature-pack-notifications` view transitively.\n\n```tsx\nimport { notificationsConsoleModule } from '@/blocks/feature-packs/notifications/notifications-console-module';\n\nconst featureModules = [notificationsConsoleModule];\n```\n\nPass the module to `ConstructiveConsoleKitCore` or `ConsoleKit`; install `feature-pack-notifications` alone when the host supplies notification resources and actions directly.",
+      "docs": "`console-module-notifications` installed Console Kit core, the provider-neutral notifications view, and its Constructive integration. Import from `@/blocks/feature-packs/notifications/notifications-console-module` and compose the exported module with `ConstructiveConsoleKitCore`; the install inspector reports the exact import targets and transitive closure.\n\nDegraded states: A backend module record without a reachable public inbox is not capability evidence, and realtime remains unavailable until the complete flow is proven.\n\nGuide: https://constructive-io.github.io/blocks/blocks/features/notifications/",
       "dependencies": [],
       "registryDependencies": [
         "console-kit-core",
@@ -892,6 +893,7 @@
       "type": "registry:block",
       "title": "Hardened Authentication Preset",
       "description": "Stable Constructive auth-hardened backend preset mapped to its supported Console Kit modules.",
+      "docs": "`preset-auth-hardened` installed the stable `auth:hardened` composition: Data, Authentication, and App access. Render `AuthHardenedConsoleKit` with a secret-free tenant descriptor.\n\nDegraded states: each public endpoint and module fails closed independently, and PostgreSQL privileges and RLS remain authoritative.\n\nGuide: https://constructive-io.github.io/blocks/blocks/console-kit/",
       "dependencies": [],
       "registryDependencies": [
         "console-kit-core",
@@ -917,6 +919,7 @@
       "type": "registry:block",
       "title": "B2B with Storage Preset",
       "description": "Stable Constructive b2b-storage backend preset mapped to its supported Console Kit modules.",
+      "docs": "`preset-b2b-storage` installed the stable `b2b:storage` composition: Data, Authentication, App access, Organizations, and Storage. Render `B2BStorageConsoleKit` with a secret-free tenant descriptor.\n\nDegraded states: stock Storage can remain unavailable when no supported public bucket and file contract is routed; other proven modules continue independently.\n\nGuide: https://constructive-io.github.io/blocks/blocks/console-kit/",
       "dependencies": [],
       "registryDependencies": [
         "console-kit-core",
@@ -944,6 +947,7 @@
       "type": "registry:block",
       "title": "Full Preset",
       "description": "Stable Constructive full backend preset mapped to its supported Console Kit modules.",
+      "docs": "`preset-full` installed all seven Console modules and the stable Full preset component. Render `FullConsoleKit` with a secret-free tenant descriptor.\n\nDegraded states: installed backend modules do not imply public routes or user authority; Storage, Billing, or Notifications can remain partial or unavailable while other modules continue.\n\nGuide: https://constructive-io.github.io/blocks/blocks/console-kit/",
       "dependencies": [],
       "registryDependencies": [
         "console-kit-core",
@@ -973,7 +977,7 @@
       "type": "registry:block",
       "title": "Constructive Console Kit for Next.js",
       "description": "A full-page Next.js tenant console with semantic routing, auth, dynamic endpoint discovery, first-party adapters, and every feature pack.",
-      "docs": "Install with the shadcn CLI, then render `<ConstructiveConsoleKit database={tenant} />` inside any Next.js route. Pass the secret-free database ID and explicit semantic endpoint map returned by provisioning. Omit `routes.route` for internal navigation and optionally set `routes.defaultRoute`; for URL-owned navigation, pass the parsed semantic `route` together with `getHref`, `onRouteChange`, and a Next.js `renderLink`. Install `console-kit-core` plus selected `console-module-*` items for a smaller custom composition; each console module installs its provider-neutral `feature-pack-*` view transitively. Install a `feature-pack-*` item alone when a host wants the standalone view without Console Kit. Navigation, runtime, session, capability, and pack state live in one per-instance Zustand store composed from modular slices.",
+      "docs": "`console-kit-nextjs` installed the full Next.js tenant console. Render `ConstructiveConsoleKit` with a secret-free database ID and explicit semantic endpoint map; use presets or selected Console modules for smaller compositions.\n\nDegraded states: every endpoint and module fails closed independently, diagnostics are development-only, credentials never enter Zustand, and PostgreSQL privileges and RLS remain authoritative.\n\nGuide: https://constructive-io.github.io/blocks/blocks/console-kit/",
       "dependencies": [],
       "registryDependencies": [
         "preset-full"

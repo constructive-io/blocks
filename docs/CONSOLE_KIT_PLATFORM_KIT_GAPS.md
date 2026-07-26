@@ -35,20 +35,24 @@ and tenant changes reset session, discovery, adapters, and pack slices as one
 operation. Stock Constructive presets can therefore mount safely even when a
 pack such as Storage or Notifications is installed but not publicly exposed.
 
+## Completed first-success baseline
+
+The Console Kit documentation now names endpoint and capability failures,
+supports retry and copyable diagnostics, and publishes the install matrix for
+core, standalone packs, Console modules, official presets, and the umbrella.
+The common integration is a secret-free tenant descriptor; custom compositions
+add only a feature-module list.
+
+Repository agents can run
+`pnpm --silent console-kit:inspect --item <registry-root>` to
+receive deterministic JSON derived from the compiled registry and canonical
+feature-pack manifests. The plan reports the exact transitive registry graph,
+npm dependencies, canonical preset profile, alias-aware registry targets with
+source provenance, endpoint/capability/`_meta` requirements, degradation
+semantics, auth/session safety contract, and verification work without
+contacting a tenant or reading component source.
+
 ## Prioritized remaining gaps
-
-### P0: first successful install
-
-- For unreachable endpoints, unexposed contracts, and forbidden operations,
-  name the affected endpoint and missing GraphQL or `_meta` evidence, then offer a
-  retry, a copyable diagnostic, and the relevant setup documentation.
-- Publish a compact install matrix for core-only, each individual pack, all
-  three preset compositions, and the full umbrella. Each row should show the
-  files installed, public capabilities required, and the expected degraded
-  state when a capability is unavailable.
-- Reduce the common integration to a tenant descriptor plus a feature-module
-  list. Explicit endpoint and semantic binding overrides should remain nearby
-  for ambiguous custom schemas without becoming mandatory boilerplate.
 
 ### P1: embedding and navigation
 
@@ -70,6 +74,6 @@ pack such as Storage or Notifications is installed but not publicly exposed.
   AI query generation and charts should wait for the same permission, audit,
   and result-retention contract.
 
-The next Console Kit release should prioritize actionable capability
-diagnostics and the install matrix. Those close the largest DX gap without
-expanding the tenant console into a control-plane product.
+The next Console Kit release should prioritize embedded compositions, host
+selection slots, and command search. Those improve navigation and embedding
+without expanding the tenant console into a control-plane product.

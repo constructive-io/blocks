@@ -1,8 +1,8 @@
 # Console Kit UI and DX polish handoff
 
-Status: 2026-07-24
+Status: 2026-07-26
 Audience: AI agents continuing the Blocks and Console Kit frontend work
-Implementation baseline: `4cbe7a4 fix(console-kit): close adversarial review gaps`
+Starting baseline: `6242a8d docs(console-kit): add visual review screenshots`
 
 This handoff starts after the feature-pack architecture, Console Kit runtime,
 native tenant fixture, and RLS verification were completed. The next wave is a
@@ -34,7 +34,7 @@ Kit architecture while doing that work.
   `PROJECTS_WORKSPACE` to the workspace containing the Supabase checkout, then
   continue in `${CONSTRUCTIVE_WORKSPACE}/blocks-feature-packs`.
 - The branch is `feat/feature-packs-console-kit`.
-- The completed tenant-administration baseline is commit `4cbe7a4`.
+- The current polish wave starts from commit `6242a8d`.
 - Do not accidentally switch to or edit the separate
   `${CONSTRUCTIVE_WORKSPACE}/blocks` worktree.
 - `${CONSTRUCTIVE_WORKSPACE}/constructive-db` is the backend source
@@ -85,6 +85,23 @@ Three public preset items mirror official backend compositions:
 selected `console-module-*` items is the smaller custom composition path.
 The current registry compiler emits 102 items and 103 JSON outputs including
 the registry index.
+
+Before reading implementation source to choose an install, run:
+
+```bash
+pnpm --silent console-kit:inspect --list
+pnpm --silent console-kit:inspect --item preset-b2b-storage
+```
+
+The inspector emits stable JSON derived from the compiled registry and the
+canonical manifests. It includes the exact dependency closure, file targets,
+source provenance, canonical preset profile, endpoint/capability/`_meta`
+requirements, degraded-state and tenant/routing/store/auth contracts, plus
+separate automated and manual verification steps. `shadcn-alias` file targets
+resolve through the consumer's `components.json`; `project-root` targets place
+compatibility manifests outside `src`.
+Unknown roots fail with the full valid choice list, and
+`pnpm check:console-kit-inspector` audits every public root.
 
 Every Console Kit instance has one vanilla Zustand store assembled from core
 and module slices. Database or identity changes clear scoped runtime caches,
@@ -418,8 +435,8 @@ For registry or install-surface changes:
 ```bash
 pnpm --filter @constructive-io/registry test
 pnpm --filter @constructive-io/registry build
-SMOKE_CASE=console-kit-nextjs,console-module-storage \
-  pnpm --filter @constructive-io/registry smoke:install
+pnpm check:console-kit-inspector --no-build
+pnpm --filter @constructive-io/registry smoke:install
 pnpm check:public
 pnpm check:registry-contract
 ```
