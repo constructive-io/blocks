@@ -23,6 +23,7 @@ const SIDEBAR_WIDTH_ICON = '3rem';
 const SIDEBAR_KEYBOARD_SHORTCUT = 'b';
 
 type SidebarContextProps = {
+	sidebarId: string;
 	state: 'expanded' | 'collapsed';
 	open: boolean;
 	setOpen: (open: boolean | ((open: boolean) => boolean)) => void;
@@ -57,6 +58,7 @@ function SidebarProvider({
 	onOpenChange?: (open: boolean) => void;
 }) {
 	const isMobile = useIsMobile();
+	const sidebarId = React.useId();
 	const [openMobile, setOpenMobile] = React.useState(false);
 	const [_open, _setOpen] = React.useState(defaultOpen);
 	const open = openProp ?? _open;
@@ -93,6 +95,7 @@ function SidebarProvider({
 	const state = open ? 'expanded' : 'collapsed';
 	const contextValue = React.useMemo<SidebarContextProps>(
 		() => ({
+			sidebarId,
 			state,
 			open,
 			setOpen,
@@ -101,7 +104,7 @@ function SidebarProvider({
 			setOpenMobile,
 			toggleSidebar,
 		}),
-		[state, open, setOpen, isMobile, openMobile, toggleSidebar],
+		[sidebarId, state, open, setOpen, isMobile, openMobile, toggleSidebar],
 	);
 
 	return (
@@ -116,7 +119,7 @@ function SidebarProvider({
 							...style,
 						} as React.CSSProperties
 					}
-					className={cn('group/sidebar-wrapper flex min-h-svh w-full has-data-[variant=inset]:bg-sidebar', className)}
+					className={cn('group/sidebar-wrapper flex min-h-dvh w-full has-data-[variant=inset]:bg-sidebar', className)}
 					{...props}
 				>
 					{children}
@@ -139,11 +142,12 @@ function Sidebar({
 	variant?: 'sidebar' | 'floating' | 'inset';
 	collapsible?: 'offcanvas' | 'icon' | 'none';
 }) {
-	const { isMobile, state, openMobile, setOpenMobile } = useSidebar();
+	const { isMobile, sidebarId, state, openMobile, setOpenMobile } = useSidebar();
 
 	if (collapsible === 'none') {
 		return (
 			<div
+				id={sidebarId}
 				data-slot='sidebar'
 				className={cn('flex h-full w-(--sidebar-width) flex-col bg-sidebar text-sidebar-foreground', className)}
 				{...props}
@@ -157,11 +161,18 @@ function Sidebar({
 		return (
 			<Sheet open={openMobile} onOpenChange={setOpenMobile} {...props}>
 				<SheetContent
+					id={sidebarId}
 					dir={dir}
 					data-sidebar='sidebar'
 					data-slot='sidebar'
 					data-mobile='true'
-					className='w-(--sidebar-width) bg-sidebar p-0 text-sidebar-foreground [&>button]:hidden'
+					className={`w-(--sidebar-width) bg-sidebar pt-[env(safe-area-inset-top)]
+						pb-[env(safe-area-inset-bottom)] text-sidebar-foreground [&_[data-sidebar=header]]:pr-12
+						[&>[data-slot=sheet-close]]:top-[calc(env(safe-area-inset-top)+0.5rem)]
+						[&>[data-slot=sheet-close]]:right-2 [&>[data-slot=sheet-close]]:flex
+						[&>[data-slot=sheet-close]]:size-10 [&>[data-slot=sheet-close]]:items-center
+						[&>[data-slot=sheet-close]]:justify-center [&>[data-slot=sheet-close]]:rounded-lg
+						[&>[data-slot=sheet-close]]:opacity-100 pointer-coarse:[&>[data-slot=sheet-close]]:size-11`}
 					style={
 						{
 							'--sidebar-width': SIDEBAR_WIDTH_MOBILE,
@@ -181,6 +192,7 @@ function Sidebar({
 
 	return (
 		<div
+			id={sidebarId}
 			className='group peer hidden text-sidebar-foreground md:block'
 			data-state={state}
 			data-collapsible={state === 'collapsed' ? collapsible : ''}
@@ -203,7 +215,7 @@ function Sidebar({
 				data-slot='sidebar-container'
 				data-side={side}
 				className={cn(
-					`fixed inset-y-0 z-10 hidden h-svh w-(--sidebar-width) transition-[left,right,width] duration-200 ease-linear
+					`fixed inset-y-0 z-10 hidden h-dvh w-(--sidebar-width) transition-[left,right,width] duration-200 ease-linear
 					data-[side=left]:left-0 data-[side=left]:group-data-[collapsible=offcanvas]:left-[calc(var(--sidebar-width)*-1)]
 					data-[side=right]:right-0 data-[side=right]:group-data-[collapsible=offcanvas]:right-[calc(var(--sidebar-width)*-1)]
 					motion-reduce:transition-none md:flex`,
@@ -230,10 +242,12 @@ function Sidebar({
 }
 
 function SidebarTrigger({ className, onClick, ...props }: React.ComponentProps<typeof Button>) {
-	const { toggleSidebar } = useSidebar();
+	const { isMobile, open, openMobile, sidebarId, toggleSidebar } = useSidebar();
 
 	return (
 		<Button
+			aria-controls={sidebarId}
+			aria-expanded={isMobile ? openMobile : open}
 			data-sidebar='trigger'
 			data-slot='sidebar-trigger'
 			variant='ghost'
@@ -264,7 +278,7 @@ function SidebarRail({ className, ...props }: React.ComponentProps<'button'>) {
 			onClick={toggleSidebar}
 			title='Toggle Sidebar'
 			className={cn(
-				`absolute inset-y-0 z-20 hidden w-4 transition-all ease-linear group-data-[side=left]:-right-4
+				`absolute inset-y-0 z-20 hidden w-4 transition-[transform,background-color] duration-200 ease-linear group-data-[side=left]:-right-4
 				group-data-[side=right]:left-0 after:absolute after:inset-y-0 after:start-1/2 after:w-px
 				hover:after:bg-sidebar-border motion-reduce:transition-none sm:flex ltr:-translate-x-1/2 rtl:translate-x-1/2`,
 				'in-data-[side=left]:cursor-w-resize in-data-[side=right]:cursor-e-resize',
@@ -461,7 +475,7 @@ const sidebarMenuButtonVariants = cva(
 	active:text-sidebar-accent-foreground disabled:pointer-events-none disabled:opacity-50
 	aria-disabled:pointer-events-none aria-disabled:opacity-50 data-open:hover:bg-sidebar-accent
 	data-open:hover:text-sidebar-accent-foreground data-active:bg-sidebar-accent data-active:font-medium
-	data-active:text-sidebar-accent-foreground motion-reduce:transition-none [&_svg]:size-4 [&_svg]:shrink-0
+	data-active:text-sidebar-accent-foreground pointer-coarse:min-h-11 motion-reduce:transition-none [&_svg]:size-4 [&_svg]:shrink-0
 	[&>span:last-child]:truncate`,
 	{
 		variants: {
@@ -667,7 +681,7 @@ function SidebarMenuSubButton({
 					hover:bg-sidebar-accent hover:text-sidebar-accent-foreground focus-visible:ring-2 active:bg-sidebar-accent
 					active:text-sidebar-accent-foreground aria-disabled:pointer-events-none aria-disabled:opacity-50
 					data-[size=md]:text-sm data-[size=sm]:text-xs data-active:bg-sidebar-accent
-					data-active:text-sidebar-accent-foreground [&>span:last-child]:truncate [&>svg]:size-4
+					data-active:text-sidebar-accent-foreground pointer-coarse:min-h-11 [&>span:last-child]:truncate [&>svg]:size-4
 					[&>svg]:shrink-0 [&>svg]:text-sidebar-accent-foreground`,
 					className,
 				),

@@ -131,15 +131,15 @@ describe('Button asChild', () => {
 		expect(button!.className).toContain('pointer-coarse:min-w-11');
 	});
 
-	it('keeps compact icon controls non-intercepting around neighboring targets', async () => {
+	it('expands compact icon controls to an actual coarse-pointer target', async () => {
 		const view = createTestRoot();
 		await view.render(<Button size="icon-sm" aria-label="Compact action" />);
 
 		const button = view.container.querySelector<HTMLButtonElement>('button');
 		expect(button).not.toBeNull();
 		expect(button!.className).toContain('size-8');
-		expect(button!.className).toContain('pointer-coarse:after:size-11');
-		expect(button!.className).toContain('pointer-coarse:after:pointer-events-none');
+		expect(button!.className).toContain('pointer-coarse:size-11');
+		expect(button!.className).not.toContain('pointer-coarse:after:');
 	});
 
 	it('removes tactile press scaling when static without leaking the prop', async () => {

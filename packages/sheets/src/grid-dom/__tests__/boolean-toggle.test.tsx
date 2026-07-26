@@ -375,7 +375,7 @@ describe('boolean inline-toggle (host activation -> commit !current, NO overlay)
 
 		// The text path edits IN PLACE — a bare inline <input>, NOT an overlay — proving the
 		// boolean (inline-toggle) intent is the only one suppressed, not all activation.
-		expect(document.querySelector('[data-slot="inline-cell-editor"]')).not.toBeNull();
+		expect(document.querySelector('[data-slot="inline-cell-editor"]')?.getAttribute('aria-label')).toBe('Edit name');
 		expect(document.querySelector('[data-slot="text-editor"]')).toBeNull();
 		// And activating the text cell did NOT fire a commit (editing started, nothing saved yet).
 		expect(commitSpy).not.toHaveBeenCalled();

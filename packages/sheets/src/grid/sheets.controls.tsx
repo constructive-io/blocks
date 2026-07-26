@@ -496,7 +496,7 @@ export function SheetsControls(props: SheetsControlsProps) {
         data-part-id="sheets-controls"
         className="flex shrink-0 flex-wrap items-center justify-between gap-4 py-4"
       >
-        <div className="flex items-center gap-2">
+        <div className="flex min-w-0 flex-wrap items-center gap-2">
 		  {readOnlyReason && (
 			<span
 				className="border-border bg-muted text-muted-foreground inline-flex h-8 items-center rounded-md border px-2.5 text-xs"

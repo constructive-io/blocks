@@ -124,7 +124,7 @@ export function SiteTopbar({ onMenuClick, menuButtonRef, menuExpanded }: SiteTop
           variant="outline"
           size="icon"
           className="size-9 shrink-0 min-[861px]:hidden"
-          aria-label={menuExpanded ? 'Close navigation' : 'Open navigation'}
+          aria-label="Navigation menu"
           aria-expanded={menuExpanded ?? false}
           aria-controls="registry-mobile-nav"
           onClick={onMenuClick}
@@ -135,11 +135,11 @@ export function SiteTopbar({ onMenuClick, menuButtonRef, menuExpanded }: SiteTop
         <nav aria-label="Breadcrumb" className="flex min-w-0 items-center gap-2 text-[13px] text-muted-foreground">
           <Link
             href="/"
-            className="shrink-0 outline-none hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring"
+            className="hidden shrink-0 outline-none min-[380px]:inline-flex hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring"
           >
             Registry
           </Link>
-          <span aria-hidden>/</span>
+          <span aria-hidden className="hidden min-[380px]:inline">/</span>
           <b className="truncate font-medium text-foreground">{crumb}</b>
         </nav>
 

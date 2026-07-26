@@ -10,7 +10,9 @@ import {
 } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { ChevronRight } from 'lucide-react';
+import { ChevronRight, X } from 'lucide-react';
+
+import { Button } from '@constructive-io/ui/button';
 
 import { ConstructiveMark } from '@/components/brand/constructive-mark';
 import { BASE_PRIMITIVES } from '@/lib/base-primitives';
@@ -118,6 +120,7 @@ function NavSection({
 
 type SiteSidebarProps = {
   open?: boolean;
+  onClose?: () => void;
   onNavigate?: () => void;
   className?: string;
   role?: AriaRole;
@@ -126,7 +129,7 @@ type SiteSidebarProps = {
 };
 
 export const SiteSidebar = forwardRef<HTMLElement, SiteSidebarProps>(function SiteSidebar(
-  { open, onNavigate, className, role, 'aria-modal': ariaModal, 'aria-labelledby': ariaLabelledBy },
+  { open, onClose, onNavigate, className, role, 'aria-modal': ariaModal, 'aria-labelledby': ariaLabelledBy },
   ref,
 ) {
   const pathname = normalizePath(usePathname() ?? '');
@@ -187,6 +190,18 @@ export const SiteSidebar = forwardRef<HTMLElement, SiteSidebarProps>(function Si
             <span className="shrink-0 text-[15px] font-medium tracking-tight text-muted-foreground">Blocks</span>
           </span>
         </Link>
+        {onClose ? (
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            className="ml-auto shrink-0 min-[861px]:hidden"
+            aria-label="Close navigation"
+            onClick={onClose}
+          >
+            <X aria-hidden />
+          </Button>
+        ) : null}
       </div>
 
       <nav className="flex-1 overflow-y-auto px-3 py-3" aria-label="Registry">

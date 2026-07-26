@@ -22,6 +22,8 @@ import { useLayoutEffect, useRef, useState } from 'react';
 import { cn } from '../utils/cn';
 
 interface InlineCellEditorProps {
+	/** Accessible name derived from the owning column. */
+	ariaLabel: string;
 	/** The cell's committed value — seeds the input unless `initialText` overrides (type-to-edit). */
 	value: unknown;
 	/** Type-to-edit seed (OVERWRITE): a printable char that opened the editor replaces the value. */
@@ -48,7 +50,7 @@ function parseNumeric(text: string): { ok: boolean; value: number | null } {
 	return Number.isFinite(n) ? { ok: true, value: n } : { ok: false, value: null };
 }
 
-export function InlineCellEditor({ value, initialText, numeric, onCommit, onCancel }: InlineCellEditorProps) {
+export function InlineCellEditor({ ariaLabel, value, initialText, numeric, onCommit, onCancel }: InlineCellEditorProps) {
 	const [text, setText] = useState(() => (initialText != null ? initialText : seedText(value)));
 	const inputRef = useRef<HTMLInputElement | null>(null);
 	// The grid root (role=grid, tabIndex=0) — focus returns here on commit/cancel so arrow-key
@@ -105,6 +107,7 @@ export function InlineCellEditor({ value, initialText, numeric, onCommit, onCanc
 
 	return (
 		<input
+			aria-label={ariaLabel}
 			ref={inputRef}
 			value={text}
 			onChange={(e) => setText(e.target.value)}

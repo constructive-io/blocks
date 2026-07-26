@@ -100,8 +100,11 @@ describe('AppShell', () => {
 		const trigger = container.querySelector<HTMLButtonElement>('[data-slot="sidebar-trigger"]');
 
 		expect(sidebar?.getAttribute('data-state')).toBe('expanded');
+		expect(trigger?.getAttribute('aria-expanded')).toBe('true');
+		expect(trigger?.getAttribute('aria-controls')).toBe(sidebar?.id);
 		await act(async () => trigger?.click());
 		expect(sidebar?.getAttribute('data-state')).toBe('collapsed');
+		expect(trigger?.getAttribute('aria-expanded')).toBe('false');
 	});
 
 	it('places the app bar over the content column in manager layout', async () => {

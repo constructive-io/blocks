@@ -64,6 +64,7 @@ describe('NumberEditorDom (native EditorProps)', () => {
 		});
 
 		const input = container.querySelector('input') as HTMLInputElement;
+		expect(input.getAttribute('aria-label')).toBe('Edit amount');
 		expect(input.value).toBe('7');
 
 		await act(async () => {

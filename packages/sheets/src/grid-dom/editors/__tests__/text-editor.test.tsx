@@ -59,6 +59,7 @@ describe('TextEditor (native EditorProps)', () => {
 		});
 
 		const input = container.querySelector('input') as HTMLInputElement;
+		expect(input.getAttribute('aria-label')).toBe('Edit name');
 		expect(input.value).toBe('hi');
 
 		await act(async () => {

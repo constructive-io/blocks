@@ -244,6 +244,7 @@ const SheetsCellHostInner = memo(
 					// shell short-circuits inline-toggle/overlay/none before here), so the cell kind is
 					// always text or number → derive the numeric variant from it.
 					<InlineCellEditor
+						ariaLabel={`Edit ${props.resolution.fieldMeta?.name ?? props.colKey}`}
 						value={props.value}
 						initialText={props.inlineInitialText}
 						numeric={props.resolution.cell.kind === 'number'}

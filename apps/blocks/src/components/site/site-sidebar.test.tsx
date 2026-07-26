@@ -21,6 +21,16 @@ afterEach(() => {
 });
 
 describe('SiteSidebar application routes', () => {
+  it('exposes an explicit close action when used as a mobile dialog', () => {
+    const onClose = vi.fn();
+    render(<SiteSidebar open role="dialog" aria-modal onClose={onClose} />);
+
+    const closeButton = screen.getByRole('button', { name: 'Close navigation' });
+    closeButton.click();
+
+    expect(onClose).toHaveBeenCalledOnce();
+  });
+
   it('expands the application section and marks the current feature pack', () => {
     mockUsePathname.mockReturnValue('/blocks/features/organizations/');
     render(<SiteSidebar />);

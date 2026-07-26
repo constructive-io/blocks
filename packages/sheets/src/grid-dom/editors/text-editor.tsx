@@ -15,7 +15,7 @@ import { OVERLAY_SM } from '../../grid/editors/overlay-presets';
 import { cn } from '../../utils/cn';
 import type { EditorProps } from './editor-props';
 
-export function TextEditor({ value, initialText, onCommit, onCancel }: EditorProps) {
+export function TextEditor({ value, initialText, colKey, fieldMeta, onCommit, onCancel }: EditorProps) {
 	// Type-to-edit seed (OVERWRITE): when opened by typing a printable char, start from that
 	// char instead of the cell value; otherwise seed from the cell value as usual.
 	const [text, setText] = useState(() => (initialText != null ? initialText : String(value ?? '')));
@@ -59,6 +59,7 @@ export function TextEditor({ value, initialText, onCommit, onCancel }: EditorPro
 	return (
 		<div data-slot='text-editor' className={cn('bg-popover flex items-center gap-2 rounded-lg border p-2.5 shadow-lg', OVERLAY_SM)}>
 			<input
+				aria-label={`Edit ${fieldMeta?.name ?? colKey}`}
 				value={text}
 				onChange={(e) => setText(e.target.value)}
 				onKeyDown={handleKeyDown}

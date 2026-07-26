@@ -34,7 +34,7 @@ function parseValue(text: string): number | null {
 	return Number(trimmed);
 }
 
-export function NumberEditorDom({ value, initialText, onCommit, onCancel }: EditorProps) {
+export function NumberEditorDom({ value, initialText, colKey, fieldMeta, onCommit, onCancel }: EditorProps) {
 	// Type-to-edit seed (OVERWRITE): a typed printable char replaces the cell value; the
 	// parse/canSave guard below still rejects non-numeric content (e.g. a typed letter).
 	const [text, setText] = useState(() => (initialText != null ? initialText : seedText(value)));
@@ -88,6 +88,7 @@ export function NumberEditorDom({ value, initialText, onCommit, onCancel }: Edit
 			className={cn('bg-popover flex items-center gap-2 rounded-lg border p-2.5 shadow-lg', OVERLAY_SM)}
 		>
 			<input
+				aria-label={`Edit ${fieldMeta?.name ?? colKey}`}
 				value={text}
 				onChange={(e) => setText(e.target.value)}
 				onKeyDown={handleKeyDown}

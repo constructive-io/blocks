@@ -69,7 +69,9 @@ type StructuralFieldProps = React.ComponentProps<'div'> & VariantProps<typeof fi
 interface LegacyFieldProps {
 	label: string;
 	description?: string;
+	descriptionId?: string;
 	error?: string;
+	errorId?: string;
 	required?: boolean;
 	htmlFor?: string;
 	className?: string;
@@ -101,7 +103,17 @@ function Field(props: FieldProps) {
 		return <FieldContainer {...props} />;
 	}
 
-	const { label, description, error, required, htmlFor, className, children } = props;
+	const {
+		label,
+		description,
+		descriptionId,
+		error,
+		errorId,
+		required,
+		htmlFor,
+		className,
+		children,
+	} = props;
 	return (
 		<FieldContainer className={className} data-invalid={Boolean(error)}>
 			<FieldLabel htmlFor={htmlFor}>
@@ -113,8 +125,8 @@ function Field(props: FieldProps) {
 				)}
 			</FieldLabel>
 			{children}
-			{description && <FieldDescription>{description}</FieldDescription>}
-			{error && <FieldError>{error}</FieldError>}
+			{description && <FieldDescription id={descriptionId}>{description}</FieldDescription>}
+			{error && <FieldError id={errorId}>{error}</FieldError>}
 		</FieldContainer>
 	);
 }

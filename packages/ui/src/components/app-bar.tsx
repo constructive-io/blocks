@@ -57,21 +57,27 @@ function AppBar({
 }: AppBarProps) {
 	const content = (
 		<div className='flex h-[var(--app-bar-height,3.5rem)] w-full min-w-0 items-center gap-2 px-3 sm:px-4'>
-			<SidebarTrigger aria-label={toggleLabel} className='shrink-0' />
-			<Separator orientation='vertical' className='mr-1 hidden h-4 self-center sm:block' />
+			<SidebarTrigger aria-label={toggleLabel} className='-ms-1 shrink-0' />
+			{(leading || breadcrumbs.length > 0) && (
+				<Separator orientation='vertical' className='mr-1 hidden h-4 self-center sm:block' />
+			)}
 			{leading}
 			{breadcrumbs.length > 0 && (
-				<Breadcrumb className='min-w-0'>
+				<Breadcrumb className='min-w-0 flex-1 sm:flex-none'>
 					<BreadcrumbList className='flex-nowrap text-sm text-muted-foreground'>
 						{breadcrumbs.map((item, index) => {
 							const current = item.current ?? index === breadcrumbs.length - 1;
 							const breadcrumbContent = current || !item.href ? (
-								<BreadcrumbPage className='block max-w-48 truncate font-semibold text-foreground sm:max-w-56'>
+								<BreadcrumbPage
+									className='block max-w-48 truncate font-semibold text-foreground sm:max-w-56'
+									title={typeof item.label === 'string' ? item.label : undefined}
+								>
 									{item.label}
 								</BreadcrumbPage>
 							) : (
 								<BreadcrumbLink
 									className='hover:text-foreground'
+									title={typeof item.label === 'string' ? item.label : undefined}
 									render={createAppLink(renderLink, {
 										href: item.href,
 										children: item.label,
@@ -81,8 +87,14 @@ function AppBar({
 
 							return (
 								<React.Fragment key={item.id}>
-									{index > 0 && <BreadcrumbSeparator className='text-muted-foreground/70' />}
-									<BreadcrumbItem className='min-w-0'>{breadcrumbContent}</BreadcrumbItem>
+									{index > 0 && (
+										<BreadcrumbSeparator
+											className='text-muted-foreground/70 hidden sm:block'
+										/>
+									)}
+									<BreadcrumbItem className={cn('min-w-0', !current && 'hidden sm:flex')}>
+										{breadcrumbContent}
+									</BreadcrumbItem>
 								</React.Fragment>
 							);
 						})}

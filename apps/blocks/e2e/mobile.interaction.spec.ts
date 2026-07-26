@@ -54,16 +54,22 @@ async function chooseShowcaseOption(
 test('navigation changes at the shared 860px breakpoint', async ({ page }) => {
   await page.setViewportSize({ width: 861, height: 900 });
   await page.goto('/blocks/blocks/ui/button/', { waitUntil: 'networkidle' });
-  await expect(page.getByRole('button', { name: 'Open navigation' })).toBeHidden();
+  const navigationMenu = page.getByRole('button', { name: 'Navigation menu', exact: true });
+  await expect(navigationMenu).toBeHidden();
 
   await page.setViewportSize({ width: 860, height: 900 });
-  const openNavigation = page.getByRole('button', { name: 'Open navigation' });
-  await expect(openNavigation).toBeVisible();
-  await openNavigation.click();
-  await expect(page.getByRole('button', { name: 'Close navigation' })).toBeVisible();
+  await expect(navigationMenu).toBeVisible();
+  await expect(navigationMenu).toHaveAttribute('aria-expanded', 'false');
+  await navigationMenu.click();
+  await expect(navigationMenu).toHaveAttribute('aria-expanded', 'true');
+  const closeNavigation = page.getByRole('button', { name: 'Close navigation', exact: true });
+  await expect(closeNavigation).toBeVisible();
+  await expect(closeNavigation).toHaveCount(1);
+  await expect(page.getByRole('button', { name: 'Dismiss navigation', exact: true })).toBeVisible();
   await page.getByRole('link', { name: 'Tooltip' }).click();
   await expect(page).toHaveURL(/\/blocks\/blocks\/ui\/tooltip\/$/);
-  await expect(page.getByRole('button', { name: 'Close navigation' })).toHaveCount(0);
+  await expect(closeNavigation).toHaveCount(0);
+  await expect(navigationMenu).toHaveAttribute('aria-expanded', 'false');
 });
 
 test('mobile modal examples open, dismiss, and restore focus without hydration errors', async ({ page }) => {

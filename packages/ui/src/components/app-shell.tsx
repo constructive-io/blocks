@@ -288,8 +288,10 @@ function AccountMenu({ account, renderLink }: { account: AppAccount; renderLink?
 							<AvatarFallback>{account.fallback ?? initials(account.name)}</AvatarFallback>
 						</Avatar>
 						<div className='grid min-w-0 flex-1 text-left text-sm leading-tight'>
-							<span className='truncate font-medium'>{account.name}</span>
-							{account.secondaryLabel && <span className='truncate text-xs'>{account.secondaryLabel}</span>}
+							<span className='truncate font-medium' title={account.name}>{account.name}</span>
+							{account.secondaryLabel && (
+								<span className='truncate text-xs' title={account.secondaryLabel}>{account.secondaryLabel}</span>
+							)}
 						</div>
 						<ChevronsUpDownIcon className='ml-auto' />
 					</DropdownMenuTrigger>
@@ -309,8 +311,10 @@ function AccountMenu({ account, renderLink }: { account: AppAccount; renderLink?
 										<AvatarFallback>{account.fallback ?? initials(account.name)}</AvatarFallback>
 									</Avatar>
 									<div className='grid min-w-0 flex-1 text-left text-sm leading-tight'>
-										<span className='truncate font-medium'>{account.name}</span>
-										{account.secondaryLabel && <span className='truncate text-xs'>{account.secondaryLabel}</span>}
+										<span className='truncate font-medium' title={account.name}>{account.name}</span>
+										{account.secondaryLabel && (
+											<span className='truncate text-xs' title={account.secondaryLabel}>{account.secondaryLabel}</span>
+										)}
 									</div>
 								</div>
 							</DropdownMenuLabel>
@@ -368,14 +372,21 @@ function Brand({ brand, renderLink }: { brand: AppShellBrand; renderLink?: AppLi
 	const content = (
 		<>
 			{brand.logo && (
-				<div className='bg-sidebar-primary text-sidebar-primary-foreground flex size-8 shrink-0 items-center justify-center rounded-lg'>
+				<div className='bg-primary text-primary-foreground flex size-8 shrink-0 items-center justify-center rounded-lg shadow-xs'>
 					{brand.logo}
 				</div>
 			)}
 			<div className='grid min-w-0 flex-1 text-left text-sm leading-tight'>
-				<span className='truncate font-medium'>{brand.name}</span>
+				<span className='truncate font-medium' title={typeof brand.name === 'string' ? brand.name : undefined}>
+					{brand.name}
+				</span>
 				{brand.description && (
-					<span className='text-muted-foreground truncate text-xs'>{brand.description}</span>
+					<span
+						className='text-muted-foreground truncate text-xs'
+						title={typeof brand.description === 'string' ? brand.description : undefined}
+					>
+						{brand.description}
+					</span>
 				)}
 			</div>
 		</>
@@ -447,8 +458,8 @@ function AppShell({
 			{...resolvedSidebarProps}
 			className={cn(
 				contentBar
-					? 'h-svh!'
-					: 'top-(--app-bar-height) h-[calc(100svh-var(--app-bar-height))]!',
+					? 'h-dvh!'
+					: 'top-(--app-bar-height) h-[calc(100dvh-var(--app-bar-height))]!',
 				sidebarClassName,
 			)}
 		>
@@ -521,7 +532,7 @@ function AppShell({
 		defaultTagName: 'div',
 		props: mergeProps<'div'>(
 			{
-				className: cn('flex min-h-svh w-full flex-col bg-background', className),
+				className: cn('flex min-h-dvh w-full flex-col bg-background', className),
 				style: {
 					'--app-bar-height': headerHeight,
 					...style,

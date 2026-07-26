@@ -130,13 +130,14 @@ export function RegistryShell({ children }: { children: ReactNode }) {
         <button
           type="button"
           className="registry-side-backdrop min-[861px]:hidden"
-          aria-label="Close navigation"
+          aria-label="Dismiss navigation"
           onClick={() => setMobileOpen(false)}
         />
       ) : null}
 
       <SiteSidebar
         open={mobileOpen}
+        onClose={() => setMobileOpen(false)}
         onNavigate={() => setMobileOpen(false)}
         ref={sidebarRef}
         aria-labelledby={mobileOpen ? titleId : undefined}
@@ -147,7 +148,7 @@ export function RegistryShell({ children }: { children: ReactNode }) {
         Documentation navigation
       </span>
 
-      <div className="registry-main">
+      <div className="registry-main" inert={mobileOpen ? true : undefined}>
         <SiteTopbar
           onMenuClick={() => setMobileOpen((open) => !open)}
           menuButtonRef={menuButtonRef}
