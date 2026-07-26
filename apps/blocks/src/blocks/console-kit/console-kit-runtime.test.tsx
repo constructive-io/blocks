@@ -7,7 +7,8 @@ import { describe, expect, it, vi } from 'vitest';
 import type {
   ConsoleGraphQLResult,
   IdentityScopedConsoleTransport,
-  ConsoleSession
+  ConsoleSession,
+  ConsoleTransport
 } from '../console-runtime';
 import type { ConsoleKitAdapterContext } from './console-kit-contracts';
 import {
@@ -247,6 +248,47 @@ describe('Console Kit endpoint runtime', () => {
       storage: { kind: 'storage', url: '/objects/graphql' },
       notifications: { kind: 'notifications', url: '/notifications/graphql' }
     }));
+  });
+
+  it('reuses one scoped transport for an unchanged endpoint and identity', async () => {
+    const store = createConsoleKitStore('data');
+    const snapshot = {
+      status: 'authenticated',
+      identity: {
+        kind: 'authenticated',
+        cachePartition: 'login-1',
+        subjectId: 'user-1'
+      }
+    } as const;
+    const session: ConsoleSession = {
+      mode: 'embedded',
+      getSnapshot: () => snapshot,
+      subscribe: () => () => undefined,
+      getAccessToken: () => null
+    };
+    const selectedTransport: ConsoleTransport = {
+      execute: async <TData,>() => ({
+        ok: true,
+        data: {} as TData
+      })
+    };
+    const wrapper = ({ children }: Readonly<{ children: React.ReactNode }>) => (
+      <ConsoleKitStoreProvider initialRoute='data' store={store}>
+        {children}
+      </ConsoleKitStoreProvider>
+    );
+
+    const { result } = renderHook(() => useConsoleKitRuntime({
+      databaseId: 'database-1',
+      endpoints: { data: '/api/graphql' },
+      session,
+      transport: selectedTransport
+    }), { wrapper });
+
+    const first = result.current.transportFor('data');
+    expect(first).not.toBeNull();
+    expect(result.current.transportFor('data')).toBe(first);
+    await waitFor(() => expect(store.getState().metadataKey).not.toBeNull());
   });
 
   it('resets an external store across database and identity scopes', async () => {

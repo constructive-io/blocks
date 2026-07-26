@@ -153,6 +153,45 @@ function schemaTypes(value: unknown): Record<string, ConstructiveSchemaType> {
   }));
 }
 
+function rootFields(
+  schema: Record<string, unknown>,
+  rootKey: 'queryType' | 'mutationType',
+  types: Readonly<Record<string, ConstructiveSchemaType>>
+): ConstructiveSchemaField[] {
+  const root = asRecord(schema[rootKey]);
+  const directFields = schemaFields(root?.fields);
+  if (directFields.length > 0) return directFields;
+  const rootName = typeof root?.name === 'string' ? root.name : null;
+  return rootName ? [...(types[rootName]?.fields ?? [])] : [];
+}
+
+/**
+ * Normalizes either the standard GraphQL introspection response retained by
+ * Console Kit metadata or the smaller discovery query used by older hosts.
+ */
+export function constructiveSchemaSnapshotFromIntrospection(
+  endpointKind: ConsoleEndpointKind,
+  endpointId: string,
+  introspection: unknown
+): ConstructiveSchemaSnapshot {
+  const payload = asRecord(introspection);
+  const schema = asRecord(payload?.__schema);
+  if (!schema) {
+    throw new Error(
+      `The ${endpointKind} endpoint did not return GraphQL schema introspection.`
+    );
+  }
+
+  const types = schemaTypes(schema.types);
+  return {
+    endpointKind,
+    endpointId,
+    queryFields: fieldRecord(rootFields(schema, 'queryType', types)),
+    mutationFields: fieldRecord(rootFields(schema, 'mutationType', types)),
+    types
+  };
+}
+
 export function namedTypeName(type: ConstructiveTypeRef | undefined): string | null {
   let current = type;
   while (current) {
@@ -274,18 +313,11 @@ export async function inspectConstructiveSchema(
       types?: unknown;
     } | null;
   }>(runtime, endpointKind, CONSTRUCTIVE_SCHEMA_QUERY, undefined, signal);
-  const schema = data.__schema;
-  if (!schema) throw new Error(`The ${endpointKind} endpoint did not return GraphQL schema introspection.`);
-
-  const queryFields = schemaFields(schema.queryType?.fields);
-  const mutationFields = schemaFields(schema.mutationType?.fields);
-  return {
+  return constructiveSchemaSnapshotFromIntrospection(
     endpointKind,
-    endpointId: endpoint.id,
-    queryFields: fieldRecord(queryFields),
-    mutationFields: fieldRecord(mutationFields),
-    types: schemaTypes(schema.types)
-  };
+    endpoint.id,
+    data
+  );
 }
 
 export function selectExistingFields(

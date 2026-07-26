@@ -30,6 +30,7 @@ import type { ConstructiveTenantDatabase } from '@/blocks/console-kit/constructi
 import { AuthHardenedConsoleKit } from '@/blocks/presets/auth-hardened-console-kit';
 import { B2BStorageConsoleKit } from '@/blocks/presets/b2b-storage-console-kit';
 import { FullConsoleKit } from '@/blocks/presets/full-console-kit';
+import { cn } from '@/lib/utils';
 
 export type ConsoleKitProofProfile =
   | 'auth-hardened'
@@ -225,24 +226,40 @@ export function ConsoleKitProofClient({
     >
       <aside
         aria-label='Tenant proof controls'
-        className='fixed inset-x-3 bottom-[max(0.75rem,env(safe-area-inset-bottom))] z-40 ml-auto max-w-[30rem] rounded-xl border bg-card p-3 shadow-lg sm:left-auto'
+        className={cn(
+          'fixed bottom-[calc(4.75rem+env(safe-area-inset-bottom))] z-50 ml-auto max-h-[calc(100svh-6.5rem-env(safe-area-inset-bottom))] max-w-[30rem] overflow-y-auto rounded-xl border bg-card shadow-lg md:inset-x-3 md:bottom-[max(0.75rem,env(safe-area-inset-bottom))] md:left-auto md:max-h-[calc(100svh-1.5rem-env(safe-area-inset-bottom))] md:p-3',
+          controlsOpen ? 'inset-x-3 p-3' : 'right-3 size-11 overflow-hidden p-0 md:size-auto md:overflow-y-auto'
+        )}
       >
         <Collapsible onOpenChange={setControlsOpen} open={controlsOpen}>
           <div className='flex min-w-0 items-center gap-2'>
-            <Badge className='shrink-0' variant='secondary'>Native fixture</Badge>
-            <Badge className='shrink-0' variant='success'>
+            <Badge className={cn('shrink-0', !controlsOpen && 'max-md:hidden')} variant='secondary'>Native fixture</Badge>
+            <Badge className={cn('shrink-0', !controlsOpen && 'max-md:hidden')} variant='success'>
               <CheckCircle2Icon aria-hidden='true' data-icon='inline-start' />
               ready
             </Badge>
-            <span className='text-muted-foreground truncate text-xs' title={tenantLabel(tenant)}>
+            <span
+              className={cn('text-muted-foreground truncate text-xs', !controlsOpen && 'max-md:hidden')}
+              title={tenantLabel(tenant)}
+            >
               {tenantLabel(tenant)}
             </span>
             <CollapsibleTrigger
               aria-label={controlsOpen ? 'Hide tenant proof controls' : 'Show tenant proof controls'}
-              className='ml-auto w-auto'
+              className={cn('ml-auto w-auto', !controlsOpen && 'max-md:ml-0 max-md:size-11')}
               render={<Button size='icon' variant='ghost' />}
             >
-              <CollapsibleIcon />
+              {controlsOpen ? (
+                <CollapsibleIcon />
+              ) : (
+                <>
+                  <span className='relative md:hidden'>
+                    <DatabaseIcon aria-hidden='true' />
+                    <span className='absolute -right-1 -top-1 size-2 rounded-full border border-card bg-success' />
+                  </span>
+                  <CollapsibleIcon className='max-md:hidden' />
+                </>
+              )}
             </CollapsibleTrigger>
           </div>
           <CollapsibleContent innerClassName='flex flex-col gap-3 pb-0 pt-3'>

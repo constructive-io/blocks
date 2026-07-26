@@ -19,6 +19,7 @@ import type {
 } from '../console-kit-contracts';
 import type { ConsoleKitStoreApi } from '../store';
 import {
+  constructiveSchemaSnapshotFromIntrospection,
   hasSchemaFields,
   inspectConstructiveSchema,
   namedTypeName,
@@ -194,6 +195,28 @@ function metadataEntries(
       ? discovered
       : [['data', runtime.metadata] as const]
   );
+}
+
+function retainedSchema(
+  runtime: ConsoleKitAdapterContext,
+  kind: ConsoleEndpointKind
+): ConstructiveSchemaSnapshot | null {
+  const metadata = runtime.metadataByEndpoint?.[kind] ??
+    (kind === 'data' ? runtime.metadata : undefined);
+  const endpoint = runtime.endpoints[kind];
+  if (!endpoint || metadata?.status !== 'compatible') return null;
+
+  try {
+    return constructiveSchemaSnapshotFromIntrospection(
+      kind,
+      endpoint.id,
+      metadata.introspection
+    );
+  } catch {
+    // Custom hosts may provide compatibility evidence without retaining the
+    // standard response. Keep the dedicated discovery probe as their fallback.
+    return null;
+  }
 }
 
 /**
@@ -380,10 +403,17 @@ export function createConstructiveCapabilityDiscovery(
 
       const endpointKinds = Object.keys(runtime.endpoints) as ConsoleEndpointKind[];
       currentPromise = Promise.allSettled(
-        endpointKinds.map(async (kind) => [
-          kind,
-          await inspectConstructiveSchema(runtime, kind, controller.signal)
-        ] as const)
+        endpointKinds.map(async (kind) => {
+          const retained = retainedSchema(runtime, kind);
+          return [
+            kind,
+            retained ?? await inspectConstructiveSchema(
+              runtime,
+              kind,
+              controller.signal
+            )
+          ] as const;
+        })
       ).then((results) => {
         const schemas: Partial<Record<ConsoleEndpointKind, ConstructiveSchemaSnapshot>> = {};
         const diagnostics: ConsoleCapabilityEvidence[] = [];

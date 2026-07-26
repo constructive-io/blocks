@@ -39,8 +39,11 @@ function endpointLabel(kind: ConsoleEndpointKind): string {
 }
 
 function metadataBadge(status: ConsoleKitMetadataState['status'] | undefined) {
-  if (!status || status === 'compatible') {
+  if (status === 'compatible') {
     return { label: '_meta ready', variant: 'outline' as const };
+  }
+  if (!status) {
+    return { label: '_meta not checked', variant: 'secondary' as const };
   }
   if (status === 'checking') {
     return { label: 'Checking _meta', variant: 'secondary' as const };
@@ -90,7 +93,9 @@ export function ConsoleConnectionMenu({
   };
 
   return (
-    <Popover>
+    <Popover onOpenChange={(open) => {
+      if (!open) setFeedback(null);
+    }}>
       <PopoverTrigger
         render={
           <Button
@@ -111,7 +116,7 @@ export function ConsoleConnectionMenu({
           {meta.label}
         </Badge>
       </PopoverTrigger>
-      <PopoverContent align='end' className='w-[calc(100vw-1rem)] max-w-96 sm:w-96'>
+      <PopoverContent align='end' className='w-[calc(100vw-1rem)] max-w-96 rounded-xl sm:w-96'>
         <div className='flex items-start justify-between gap-3'>
           <div className='min-w-0'>
             <PopoverTitle className='text-balance'>Database connection</PopoverTitle>
@@ -128,11 +133,14 @@ export function ConsoleConnectionMenu({
           <div className='grid gap-2'>
             <p className='text-muted-foreground text-xs font-medium'>Database</p>
             {databaseLabel ? (
-              <div className='min-w-0 truncate text-sm font-medium'>
+              <div
+                className='min-w-0 truncate text-sm font-medium'
+                title={typeof databaseLabel === 'string' ? databaseLabel : undefined}
+              >
                 {databaseLabel}
               </div>
             ) : null}
-            <div className='bg-muted flex min-w-0 items-center gap-2 rounded-md px-2 py-1.5'>
+            <div className='bg-muted/60 flex min-w-0 items-center gap-2 rounded-md px-2 py-1.5 ring-1 ring-border/60'>
               <code className='min-w-0 flex-1 truncate text-xs' title={databaseId}>
                 {databaseId}
               </code>
@@ -151,15 +159,20 @@ export function ConsoleConnectionMenu({
           </div>
 
           <div className='grid gap-2'>
-            <p className='text-muted-foreground text-xs font-medium'>Endpoints</p>
+            <div className='flex items-center justify-between gap-3'>
+              <p className='text-muted-foreground text-xs font-medium'>Endpoints</p>
+              <span className='text-muted-foreground text-xs tabular-nums'>
+                {resolvedEndpoints.length} routed
+              </span>
+            </div>
             {resolvedEndpoints.length > 0 ? (
-              <div className='grid max-h-72 gap-2 overflow-y-auto'>
+              <div className='scrollbar-neutral-thin grid max-h-72 gap-2 overflow-y-auto pr-0.5'>
                 {resolvedEndpoints.map(({ endpoint, kind }) => {
                   const target = `endpoint-${kind}`;
                   const label = `${endpointLabel(kind)} endpoint URL`;
                   return (
                     <div
-                      className='bg-muted flex min-w-0 items-center gap-2 rounded-md px-2 py-1.5'
+                      className='bg-muted/60 flex min-w-0 items-center gap-2 rounded-md px-2 py-1.5 ring-1 ring-border/60'
                       key={kind}
                     >
                       <Badge className='shrink-0' size='sm' variant='outline'>

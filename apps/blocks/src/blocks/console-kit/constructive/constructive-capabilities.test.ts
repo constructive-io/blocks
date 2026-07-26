@@ -96,6 +96,39 @@ function compatibleMetadata(): ConsoleKitAdapterContext['metadata'] {
   } as unknown as ConsoleKitAdapterContext['metadata'];
 }
 
+function compatibleMetadataWithOperations(
+  queries: readonly string[],
+  mutations: readonly string[]
+): ConsoleKitAdapterContext['metadata'] {
+  const fields = (names: readonly string[]) => names.map((name) => ({
+    name,
+    args: [],
+    type: { kind: 'OBJECT', name: `${name}Payload`, ofType: null }
+  }));
+  return {
+    status: 'compatible',
+    meta: { _meta: { tables: [] } },
+    contractIntrospection: {},
+    introspection: {
+      __schema: {
+        queryType: { name: 'Query' },
+        mutationType: { name: 'Mutation' },
+        types: [{
+          kind: 'OBJECT',
+          name: 'Query',
+          fields: fields(queries),
+          inputFields: null
+        }, {
+          kind: 'OBJECT',
+          name: 'Mutation',
+          fields: fields(mutations),
+          inputFields: null
+        }]
+      }
+    }
+  } as unknown as ConsoleKitAdapterContext['metadata'];
+}
+
 function incompatibleMetadata(message = 'The endpoint metadata is incompatible.'):
 ConsoleKitAdapterContext['metadata'] {
   return {
@@ -126,6 +159,35 @@ describe('Constructive capability discovery lifecycle', () => {
 
     expect(inspectSchema).toHaveBeenCalledTimes(2);
     expect(discovery.getSchemas().auth?.endpointId).toBe('second-schema');
+  });
+
+  it('reuses validated metadata introspection for capability discovery', async () => {
+    const store = createConsoleKitStore('auth');
+    const discovery = createConstructiveCapabilityDiscovery(
+      store,
+      fullFeatureModules
+    );
+    const metadata = compatibleMetadataWithOperations(
+      ['emails'],
+      ['signIn', 'signUp', 'signOut', 'forgotPassword', 'resetPassword']
+    );
+
+    await discovery.ensure({
+      ...runtime('/auth/graphql'),
+      metadata,
+      metadataByEndpoint: { auth: metadata }
+    });
+
+    expect(inspectSchema).not.toHaveBeenCalled();
+    expect(discovery.getSchemas().auth?.queryFields).toHaveProperty('emails');
+    expect(store.getState().packCapabilities.auth).toMatchObject({
+      status: 'ready',
+      supportedCapabilities: expect.arrayContaining([
+        'auth.sessions',
+        'auth.credentials',
+        'auth.password'
+      ])
+    });
   });
 
   it('keeps the current result when an aborted request resolves after it', async () => {

@@ -22,7 +22,7 @@ vi.mock('./console-kit-runtime', async (importOriginal) => ({
 }));
 
 vi.mock('@constructive-io/ui/app-shell', () => ({
-  AppShell: ({ account, children, navigation, renderLink }: Readonly<{
+  AppShell: ({ account, breadcrumbs, children, navigation, renderLink }: Readonly<{
     account?: Readonly<{
       name: string;
       secondaryLabel?: string;
@@ -32,6 +32,11 @@ vi.mock('@constructive-io/ui/app-shell', () => ({
         actions: readonly Readonly<{ id: string; label: string; onSelect: () => void }>[];
       }>[];
     }>;
+    breadcrumbs?: readonly Readonly<{
+      id: string;
+      label: React.ReactNode;
+      current?: boolean;
+    }>[];
     children: React.ReactNode;
     navigation?: readonly Readonly<{
       items: readonly Readonly<{
@@ -49,6 +54,11 @@ vi.mock('@constructive-io/ui/app-shell', () => ({
     }>) => React.ReactNode;
   }>) => (
     <div>
+      {breadcrumbs?.length ? (
+        <nav aria-label='Breadcrumb'>
+          {breadcrumbs.map((item) => <span key={item.id}>{item.label}</span>)}
+        </nav>
+      ) : null}
       <nav>
         {navigation?.flatMap((group) => group.items).map((item) => (
           <React.Fragment key={item.id}>
@@ -962,6 +972,8 @@ describe('Console Kit observational callbacks', () => {
       />
     );
     await screen.findByRole('heading', { level: 1, name: 'Authentication is unavailable' });
+    expect(screen.getByRole('navigation', { name: 'Breadcrumb' }))
+      .toHaveTextContent('Authentication');
 
     act(() => {
       window.history.pushState(null, '', '#console-users');
@@ -969,6 +981,8 @@ describe('Console Kit observational callbacks', () => {
     });
 
     await screen.findByRole('heading', { level: 1, name: 'App access is unavailable' });
+    expect(screen.getByRole('navigation', { name: 'Breadcrumb' }))
+      .toHaveTextContent('App access');
   });
 
   it('reports semantic routes without overriding a host-controlled route', async () => {
@@ -1004,6 +1018,8 @@ describe('Console Kit observational callbacks', () => {
       />
     );
     await screen.findByRole('heading', { level: 1, name: 'App access is unavailable' });
+    expect(screen.getByRole('navigation', { name: 'Breadcrumb' }))
+      .toHaveTextContent('App access');
 
     fireEvent.click(screen.getByRole('link', { name: 'Authentication' }));
 
@@ -1013,6 +1029,8 @@ describe('Console Kit observational callbacks', () => {
     });
     expect(screen.getByRole('heading', { level: 1, name: 'App access is unavailable' }))
       .toBeVisible();
+    expect(screen.getByRole('navigation', { name: 'Breadcrumb' }))
+      .toHaveTextContent('App access');
     expect(store.getState().route).toEqual({ feature: 'auth', screen: 'entry' });
     expect(window.location.hash).toBe('');
   });
@@ -1136,6 +1154,66 @@ describe('Console Kit observational callbacks', () => {
     expect(signOut).toHaveBeenCalledTimes(1);
   });
 
+  it('ignores a stale sign-out completion after the host replaces the tenant session', async () => {
+    runtimeMocks.useConsoleKitRuntime.mockReturnValue(runtime);
+    const store = createFullConsoleKitStore();
+    store.getState().setAuthFlow({ status: 'entry', mode: 'sign-up' });
+    const firstSignOut = deferred<void>();
+    const onError = vi.fn();
+    const session = (signOut: () => Promise<void>) => ({
+      mode: 'standalone' as const,
+      databaseId: 'database-1',
+      beginSignIn: vi.fn(),
+      signIn: vi.fn(),
+      signUp: vi.fn(),
+      signOut,
+      restorePersistedSession: vi.fn(),
+      handleAuthenticationFailure: vi.fn(),
+      getSnapshot: () => snapshot,
+      getServerSnapshot: () => ({ status: 'loading' as const }),
+      subscribe: () => () => undefined,
+      getAccessToken: () => null
+    });
+    const firstSession = session(vi.fn(() => firstSignOut.promise));
+    const secondSession = session(vi.fn(async () => undefined));
+    const view = render(
+      <ConsoleKit
+        featureModules={fullFeatureModules}
+        config={{
+          databaseId: 'database-1',
+          endpoints: { auth: '/auth/graphql' },
+          onError,
+          order: ['auth'],
+          session: firstSession
+        }}
+        store={store}
+      />
+    );
+    fireEvent.click(await screen.findByRole('button', { name: 'Sign out' }));
+    await waitFor(() => expect(firstSession.signOut).toHaveBeenCalledTimes(1));
+
+    view.rerender(
+      <ConsoleKit
+        featureModules={fullFeatureModules}
+        config={{
+          databaseId: 'database-1',
+          endpoints: { auth: '/auth/graphql' },
+          onError,
+          order: ['auth'],
+          session: secondSession
+        }}
+        store={store}
+      />
+    );
+    await act(async () => {
+      firstSignOut.resolve();
+      await firstSignOut.promise;
+    });
+
+    expect(store.getState().authFlow).toEqual({ status: 'entry', mode: 'sign-up' });
+    expect(onError).not.toHaveBeenCalled();
+  });
+
   it('resets create-account mode when remote revocation fails after local sign-out', async () => {
     runtimeMocks.useConsoleKitRuntime.mockReturnValue(runtime);
     const store = createFullConsoleKitStore();
@@ -1193,6 +1271,73 @@ describe('Console Kit observational callbacks', () => {
       status: 'entry',
       mode: 'sign-in'
     });
+  });
+
+  it('preserves hook topology while an adapter loads, fails, retries, and recovers', async () => {
+    runtimeMocks.useConsoleKitRuntime.mockReturnValue(runtime);
+    const initialLoad = deferred<ConsoleKitFeaturePropsMap['auth']>();
+    const failedRefresh = deferred<ConsoleKitFeaturePropsMap['auth']>();
+    const retryLoad = deferred<ConsoleKitFeaturePropsMap['auth']>();
+    let notify: (() => void) | undefined;
+    const adapterLoad = vi.fn()
+      .mockImplementationOnce(() => initialLoad.promise)
+      .mockImplementationOnce(() => failedRefresh.promise)
+      .mockImplementationOnce(() => retryLoad.promise);
+    const adapter = {
+      capabilities: [
+        'auth.sessions',
+        'auth.credentials',
+        'auth.password'
+      ] as const,
+      load: adapterLoad,
+      subscribe: vi.fn((_runtime, listener: () => void) => {
+        notify = listener;
+        return () => undefined;
+      })
+    };
+    const session = {
+      mode: 'embedded',
+      getSnapshot: () => snapshot,
+      subscribe: () => () => undefined,
+      getAccessToken: () => null
+    } as const;
+
+    render(
+      <ConsoleKit
+        config={{
+          adapters: { auth: adapter },
+          databaseId: 'database-1',
+          endpoints: { auth: '/auth/graphql' },
+          order: ['auth'],
+          session
+        }}
+        featureModules={fullFeatureModules}
+      />
+    );
+
+    expect(await screen.findByText('Loading feature…')).toBeInTheDocument();
+    await act(async () => {
+      initialLoad.resolve({ view: 'account' });
+      await initialLoad.promise;
+    });
+    expect(await screen.findByLabelText('Credential draft')).toBeVisible();
+
+    act(() => notify?.());
+    await waitFor(() => expect(adapterLoad).toHaveBeenCalledTimes(2));
+    await act(async () => {
+      failedRefresh.reject(new Error('Refresh failed'));
+      await failedRefresh.promise.catch(() => undefined);
+    });
+    expect(await screen.findByText('The auth feature could not be loaded')).toBeVisible();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Try again' }));
+    await waitFor(() => expect(adapterLoad).toHaveBeenCalledTimes(3));
+    expect(screen.getByText('Loading feature…')).toBeInTheDocument();
+    await act(async () => {
+      retryLoad.resolve({ view: 'account' });
+      await retryLoad.promise;
+    });
+    expect(await screen.findByLabelText('Credential draft')).toBeVisible();
   });
 
   it('adopts the latest error callback without restarting adapter load or subscription work', async () => {

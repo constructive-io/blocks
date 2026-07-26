@@ -282,6 +282,8 @@ describe('ConstructiveConsoleKit external ownership', () => {
     const firstContext = authFactory.mock.calls.at(-1)?.[0];
     const firstCallback = firstContext?.callback;
     expect(firstCallback).toBeDefined();
+    expect(firstContext?.callbackCredentials.peek(firstCallback!.credentialRef))
+      .toBe('secret');
 
     view.rerender(
       <ConstructiveConsoleKitCore
@@ -297,9 +299,12 @@ describe('ConstructiveConsoleKit external ownership', () => {
     await waitFor(() => {
       expect(authFactory.mock.calls.at(-1)?.[0]?.authMethods?.password).toBe(false);
     });
-    const secondCallback = authFactory.mock.calls.at(-1)?.[0]?.callback;
+    const secondContext = authFactory.mock.calls.at(-1)?.[0];
+    const secondCallback = secondContext?.callback;
     expect(secondCallback).toBe(firstCallback);
     expect(secondCallback?.credentialRef).toBe(firstCallback?.credentialRef);
+    expect(secondContext?.callbackCredentials.peek(secondCallback!.credentialRef))
+      .toBe('secret');
   });
 
   it('renders a configuration error for a relative internal auth endpoint', () => {

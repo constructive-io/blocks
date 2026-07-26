@@ -9,9 +9,15 @@ import {
 } from 'lucide-react';
 
 import { Alert, AlertDescription, AlertTitle } from '@constructive-io/ui/alert';
-import { AppShell, type AppAccount, type AppNavigationGroup } from '@constructive-io/ui/app-shell';
+import {
+  AppShell,
+  type AppAccount,
+  type AppNavigationGroup,
+  type AppNavigationItem,
+  type AppShellBrand
+} from '@constructive-io/ui/app-shell';
 import type { AppLinkRenderProps } from '@constructive-io/ui/app-bar';
-import { Button } from '@constructive-io/ui/button';
+import { Button, buttonVariants } from '@constructive-io/ui/button';
 import { Skeleton } from '@constructive-io/ui/skeleton';
 import { cn } from '@/lib/utils';
 
@@ -222,15 +228,37 @@ export function getConsoleKitFeatureAvailability(
 
 function FeatureLoadingState() {
   return (
-    <div aria-busy='true' aria-label='Loading feature' className='flex max-w-4xl flex-col gap-4'>
-      <div className='flex flex-col gap-2'>
-        <Skeleton className='h-5 w-32 lg:h-6 lg:w-40' />
-        <Skeleton className='hidden h-4 w-72 max-w-full lg:block' />
+    <div
+      aria-busy='true'
+      aria-live='polite'
+      className='flex w-full max-w-5xl flex-col gap-5'
+      role='status'
+    >
+      <span className='sr-only'>Loading feature…</span>
+      <div className='flex items-start justify-between gap-4'>
+        <div className='flex min-w-0 flex-1 flex-col gap-2'>
+          <Skeleton className='h-7 w-40 max-w-2/3' />
+          <Skeleton className='h-4 w-80 max-w-full' />
+        </div>
+        <Skeleton className='hidden h-9 w-24 shrink-0 sm:block' />
       </div>
-      <div className='flex flex-col gap-3'>
-        {Array.from({ length: 5 }, (_, index) => (
-          <Skeleton className='h-11 w-full' key={index} />
-        ))}
+      <div className='overflow-hidden rounded-xl border bg-card'>
+        <div className='flex items-center justify-between gap-4 border-b px-4 py-3'>
+          <Skeleton className='h-9 w-64 max-w-2/3' />
+          <Skeleton className='size-9 shrink-0' />
+        </div>
+        <div className='divide-y'>
+          {Array.from({ length: 5 }, (_, index) => (
+            <div className='flex items-center gap-3 px-4 py-3' key={index}>
+              <Skeleton className='size-9 shrink-0 rounded-full' />
+              <div className='flex min-w-0 flex-1 flex-col gap-1.5'>
+                <Skeleton className='h-4 w-40 max-w-2/3' />
+                <Skeleton className='h-3 w-56 max-w-4/5' />
+              </div>
+              <Skeleton className='hidden h-6 w-16 shrink-0 sm:block' />
+            </div>
+          ))}
+        </div>
       </div>
     </div>
   );
@@ -295,6 +323,16 @@ function AdapterFeature({
   const reportError = useLatestCallback((error: ConsoleRuntimeError) => {
     onError?.(error, { phase: 'adapter', feature });
   });
+  const forwardFeatureError = useLatestCallback((cause: unknown) => {
+    const error = normalizeConsoleKitError(
+      cause,
+      `The ${feature} action failed.`
+    );
+    onError?.(
+      error,
+      { phase: 'feature', feature }
+    );
+  });
 
   React.useEffect(() => {
     const controller = new AbortController();
@@ -349,16 +387,6 @@ function AdapterFeature({
     );
   }
 
-  const forwardFeatureError = (cause: unknown) => {
-    const error = normalizeConsoleKitError(
-      cause,
-      `The ${feature} action failed.`
-    );
-    onError?.(
-      error,
-      { phase: 'feature', feature }
-    );
-  };
   const Feature = module.Component;
   const adapterProps = state?.status === 'ready'
     ? state.props
@@ -566,6 +594,137 @@ function useAdapterSubscriptions(
   return revision;
 }
 
+function MobileFeatureNavigation({
+  items,
+  renderLink
+}: Readonly<{
+  items: readonly AppNavigationItem[];
+  renderLink: (props: AppLinkRenderProps) => React.ReactElement;
+}>) {
+  const scrollerRef = React.useRef<HTMLDivElement | null>(null);
+  const activeItemRef = React.useRef<HTMLDivElement | null>(null);
+  const [overflow, setOverflow] = React.useState({ start: false, end: false });
+  const activeItemId = items.find((item) => item.isActive)?.id;
+
+  const measureOverflow = React.useCallback(() => {
+    const scroller = scrollerRef.current;
+    if (!scroller) return;
+    const maxScrollLeft = scroller.scrollWidth - scroller.clientWidth;
+    const start = scroller.scrollLeft > 2;
+    const end = scroller.scrollLeft < maxScrollLeft - 2;
+    setOverflow((previous) => {
+      if (previous.start === start && previous.end === end) return previous;
+      return { start, end };
+    });
+  }, []);
+
+  React.useEffect(() => {
+    const scroller = scrollerRef.current;
+    if (!scroller) return;
+    measureOverflow();
+    if (typeof ResizeObserver === 'undefined') return;
+    const observer = new ResizeObserver(measureOverflow);
+    observer.observe(scroller);
+    return () => observer.disconnect();
+  }, [items, measureOverflow]);
+
+  React.useEffect(() => {
+    activeItemRef.current?.scrollIntoView?.({
+      block: 'nearest',
+      inline: 'center'
+    });
+    measureOverflow();
+  }, [activeItemId, measureOverflow]);
+
+  return (
+    <nav
+      aria-label='Application features'
+      className='bg-background/95 fixed inset-x-0 bottom-0 z-40 border-t pb-[env(safe-area-inset-bottom)] md:hidden'
+    >
+      <div
+        className='scrollbar-hide mx-auto flex max-w-2xl snap-x snap-mandatory gap-1 overflow-x-auto overscroll-x-contain scroll-smooth scroll-px-4 px-4 py-1.5 motion-reduce:scroll-auto'
+        onScroll={measureOverflow}
+        ref={scrollerRef}
+      >
+        {items.map((item) => {
+          const Icon = item.icon;
+          const label = typeof item.label === 'string' ? item.label : item.id;
+          const shortLabel =
+            label === 'Organizations'
+              ? 'Orgs'
+              : label === 'Notifications'
+                ? 'Alerts'
+                : label === 'Authentication'
+                  ? 'Auth'
+                  : label;
+          const itemContent = (
+            <>
+              {Icon ? <Icon aria-hidden='true' /> : null}
+              <span className='max-w-16 truncate'>{shortLabel}</span>
+              {item.badge ? (
+                <span
+                  aria-hidden='true'
+                  className='bg-primary absolute top-1.5 right-1.5 size-1.5 rounded-full'
+                />
+              ) : null}
+              {item.isActive ? (
+                <span
+                  aria-hidden='true'
+                  className='bg-primary absolute inset-x-5 bottom-0 h-0.5 rounded-full'
+                />
+              ) : null}
+            </>
+          );
+          const className = cn(
+            buttonVariants({
+              size: 'sm',
+              variant: item.isActive ? 'secondary' : 'ghost'
+            }),
+            'relative h-14 min-w-18 flex-1 flex-col gap-1 px-2 text-xs leading-tight'
+          );
+          return (
+            <div
+              className='snap-center'
+              key={item.id}
+              ref={item.isActive ? activeItemRef : undefined}
+            >
+              {item.disabled || !item.href ? (
+                <span
+                  aria-disabled='true'
+                  aria-label={item.badge ? `${label} (${String(item.badge)})` : label}
+                  className={cn(className, 'cursor-not-allowed opacity-60')}
+                >
+                  {itemContent}
+                </span>
+              ) : renderLink({
+                  'aria-current': item.isActive ? 'page' : undefined,
+                  'aria-label': item.badge ? `${label} (${String(item.badge)})` : label,
+                  children: itemContent,
+                  className,
+                  href: item.href
+                })}
+            </div>
+          );
+        })}
+      </div>
+      <div
+        aria-hidden='true'
+        className={cn(
+          'from-background pointer-events-none absolute inset-y-0 left-0 w-6 bg-linear-to-r to-transparent transition-opacity motion-reduce:transition-none',
+          overflow.start ? 'opacity-100' : 'opacity-0'
+        )}
+      />
+      <div
+        aria-hidden='true'
+        className={cn(
+          'from-background pointer-events-none absolute inset-y-0 right-0 w-8 bg-linear-to-l to-transparent transition-opacity motion-reduce:transition-none',
+          overflow.end ? 'opacity-100' : 'opacity-0'
+        )}
+      />
+    </nav>
+  );
+}
+
 function ConsoleKitContent({ config, featureModules, className }: ConsoleKitProps) {
   const runtime = useConsoleKitRuntime({
     databaseId: config.databaseId,
@@ -656,7 +815,11 @@ function ConsoleKitContent({ config, featureModules, className }: ConsoleKitProp
   const internalRoute = useConsoleKitStore((store) => store.route);
   const setInternalRoute = useConsoleKitStore((store) => store.setRoute);
   const setAuthFlow = useConsoleKitStore((store) => store.setAuthFlow);
-  const requestedRoute = config.routes?.route ?? internalRoute;
+  const controlledRoute = config.routes?.route;
+  const getRouteHref = config.routes?.getHref;
+  const onRouteChange = config.routes?.onRouteChange;
+  const renderHostLink = config.routes?.renderLink;
+  const requestedRoute = controlledRoute ?? internalRoute;
   const activeRoute = React.useMemo(
     () => featureOrder.includes(requestedRoute.feature)
       ? requestedRoute
@@ -667,21 +830,28 @@ function ConsoleKitContent({ config, featureModules, className }: ConsoleKitProp
   const internalRouteKey = consoleKitRouteKey(internalRoute);
   const activeFeature = activeRoute.feature;
   const activeModule = moduleById.get(activeFeature);
+  const forwardActiveFeatureError = useLatestCallback((cause: unknown) => {
+    const feature = activeModule?.id ?? activeFeature;
+    config.onError?.(
+      normalizeConsoleKitError(cause, `The ${feature} action failed.`),
+      { phase: 'feature', feature }
+    );
+  });
   React.useEffect(() => {
     if (
-      config.routes?.route === undefined &&
+      controlledRoute === undefined &&
       activeRouteKey !== internalRouteKey
     ) {
       setInternalRoute(activeRoute);
     }
-  }, [activeRoute, activeRouteKey, config.routes?.route, internalRouteKey, setInternalRoute]);
+  }, [activeRoute, activeRouteKey, controlledRoute, internalRouteKey, setInternalRoute]);
   const activeAvailability = availability[activeModule?.id ?? activeFeature]
     ?? { status: 'unavailable', reason: 'This feature is not in the configured Console Kit order.' };
 
   const routeHref = React.useCallback(
-    (route: ConsoleKitRoute) => config.routes?.getHref?.(route) ??
+    (route: ConsoleKitRoute) => getRouteHref?.(route) ??
       `#console-${route.feature}`,
-    [config.routes]
+    [getRouteHref]
   );
   const featureRoutes = React.useMemo(
     () => new Map(featureOrder.map((feature) => [
@@ -698,13 +868,13 @@ function ConsoleKitContent({ config, featureModules, className }: ConsoleKitProp
     [featureRoutes, routeHref]
   );
   const navigate = React.useCallback((route: ConsoleKitRoute) => {
-    if (config.routes?.route === undefined) setInternalRoute(route);
-    config.routes?.onRouteChange?.(route);
-  }, [config.routes, setInternalRoute]);
+    if (controlledRoute === undefined) setInternalRoute(route);
+    onRouteChange?.(route);
+  }, [controlledRoute, onRouteChange, setInternalRoute]);
 
   const renderLink = React.useCallback((props: AppLinkRenderProps) => {
     const route = hrefToRoute.get(props.href);
-    if (!route) return config.routes?.renderLink ? config.routes.renderLink(props) : <a {...props} />;
+    if (!route) return renderHostLink ? renderHostLink(props) : <a {...props} />;
     const onClick: React.MouseEventHandler<HTMLAnchorElement> = (event) => {
       props.onClick?.(event);
       if (
@@ -716,15 +886,15 @@ function ConsoleKitContent({ config, featureModules, className }: ConsoleKitProp
         event.altKey ||
         (event.currentTarget.target && event.currentTarget.target !== '_self')
       ) return;
-      if (config.routes?.route !== undefined) event.preventDefault();
+      if (controlledRoute !== undefined) event.preventDefault();
       navigate(route);
     };
     const next = { ...props, onClick };
-    return config.routes?.renderLink ? config.routes.renderLink(next) : <a {...next} />;
-  }, [config.routes, hrefToRoute, navigate]);
+    return renderHostLink ? renderHostLink(next) : <a {...next} />;
+  }, [controlledRoute, hrefToRoute, navigate, renderHostLink]);
 
   React.useEffect(() => {
-    if (config.routes?.route) return;
+    if (controlledRoute) return;
 
     const syncRouteFromHash = () => {
       const route = hrefToRoute.get(window.location.hash);
@@ -747,7 +917,7 @@ function ConsoleKitContent({ config, featureModules, className }: ConsoleKitProp
     window.addEventListener('hashchange', syncRouteFromHash);
     return () => window.removeEventListener('hashchange', syncRouteFromHash);
   }, [
-    config.routes?.route,
+    controlledRoute,
     featureOrder,
     featureRoutes,
     hrefToRoute,
@@ -756,10 +926,10 @@ function ConsoleKitContent({ config, featureModules, className }: ConsoleKitProp
     setInternalRoute
   ]);
 
-  const visibleModules = ordered.filter((module) => {
+  const visibleModules = React.useMemo(() => ordered.filter((module) => {
     const status = availability[module.id]?.status;
     return config.showUnavailable || status === 'available' || status === 'checking';
-  });
+  }), [availability, config.showUnavailable, ordered]);
   const navigationItems = React.useMemo(() => visibleModules.map((module) => {
     const feature = module.id;
     const state = availability[module.id];
@@ -791,62 +961,49 @@ function ConsoleKitContent({ config, featureModules, className }: ConsoleKitProp
   }], [navigationItems]);
 
   const mobileFeatureNav = navigationItems.length > 1 ? (
-    <nav
-      aria-label='Application features'
-      className='bg-background/95 supports-backdrop-filter:bg-background/80 fixed inset-x-0 bottom-0 z-40 border-t backdrop-blur md:hidden'
-      style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
-    >
-      <div className='flex gap-0.5 overflow-x-auto p-1.5'>
-        {navigationItems.map((item) => {
-          const Icon = item.icon;
-          const label = typeof item.label === 'string' ? item.label : item.id;
-          const shortLabel =
-            label === 'Organizations'
-              ? 'Orgs'
-              : label === 'Notifications'
-                ? 'Alerts'
-                : label === 'Authentication'
-                  ? 'Auth'
-                  : label;
-          return (
-            <Button
-              key={item.id}
-              aria-current={item.isActive ? 'page' : undefined}
-              aria-label={
-                item.badge ? `${label} (${String(item.badge)})` : label
-              }
-              className={cn(
-                'relative h-14 min-w-[4.25rem] flex-1 flex-col gap-1 px-1 text-[10px] leading-tight',
-                item.disabled && 'opacity-60'
-              )}
-              disabled={item.disabled}
-              onClick={() => {
-                if (item.disabled) return;
-                navigate(
-                  featureRoutes.get(item.id as FeaturePackId) ??
-                    defaultConsoleKitRoute(item.id as FeaturePackId)
-                );
-              }}
-              size='sm'
-              type='button'
-              variant={item.isActive ? 'secondary' : 'ghost'}
-            >
-              {Icon ? <Icon aria-hidden='true' className='size-4 shrink-0' /> : null}
-              <span className='max-w-16 truncate'>{shortLabel}</span>
-              {item.badge ? (
-                <span
-                  aria-hidden='true'
-                  className='bg-primary absolute top-1.5 right-1.5 size-1.5 rounded-full'
-                />
-              ) : null}
-            </Button>
-          );
-        })}
-      </div>
-    </nav>
+    <MobileFeatureNavigation
+      items={navigationItems}
+      renderLink={renderLink}
+    />
   ) : null;
 
   const identity = runtime.session.status === 'authenticated' ? runtime.session.identity : undefined;
+  const [signOutPending, setSignOutPending] = React.useState(false);
+  const [sessionActionError, setSessionActionError] = React.useState<ConsoleRuntimeError>();
+  const signOutPendingRef = React.useRef(false);
+  const signOutGenerationRef = React.useRef(0);
+  React.useEffect(() => {
+    signOutGenerationRef.current += 1;
+    signOutPendingRef.current = false;
+    setSignOutPending(false);
+    setSessionActionError(undefined);
+  }, [config.databaseId, config.session]);
+  const signOut = useLatestCallback(async () => {
+    const session = config.session;
+    if (session.mode !== 'standalone' || signOutPendingRef.current) return;
+    const generation = signOutGenerationRef.current;
+    signOutPendingRef.current = true;
+    setSignOutPending(true);
+    setSessionActionError(undefined);
+    try {
+      await session.signOut();
+      if (signOutGenerationRef.current !== generation) return;
+      setAuthFlow(authFlowFromEntryMode('sign-in'));
+    } catch (cause) {
+      if (signOutGenerationRef.current !== generation) return;
+      const error = normalizeConsoleKitError(cause, 'You could not be signed out.');
+      setSessionActionError(error);
+      config.onError?.(error, { phase: 'feature', feature: 'auth' });
+      if (session.getSnapshot().status !== 'authenticated') {
+        setAuthFlow(authFlowFromEntryMode('sign-in'));
+      }
+    } finally {
+      if (signOutGenerationRef.current === generation) {
+        signOutPendingRef.current = false;
+        setSignOutPending(false);
+      }
+    }
+  });
   const account = React.useMemo<AppAccount | undefined>(() => {
     if (config.account) return config.account;
     if (!identity) return undefined;
@@ -869,46 +1026,20 @@ function ConsoleKitContent({ config, featureModules, className }: ConsoleKitProp
             id: 'session',
             actions: [{
               id: 'sign-out',
-              label: 'Sign out',
-              onSelect: () => {
-                if (config.session.mode !== 'standalone') return;
-                let completed = false;
-                void Promise.resolve()
-                  .then(async () => {
-                    if (config.session.mode !== 'standalone') return;
-                    await config.session.signOut();
-                    completed = true;
-                  })
-                  .catch((cause) => {
-                    config.onError?.(
-                      normalizeConsoleKitError(
-                        cause,
-                        'You could not be signed out.'
-                      ),
-                      { phase: 'feature', feature: 'auth' }
-                    );
-                  })
-                  .finally(() => {
-                    if (
-                      config.session.mode === 'standalone' &&
-                      (completed ||
-                        config.session.getSnapshot().status !== 'authenticated')
-                    ) {
-                      setAuthFlow(authFlowFromEntryMode('sign-in'));
-                    }
-                  });
-              }
+              disabled: signOutPending,
+              label: signOutPending ? 'Signing out…' : 'Sign out',
+              onSelect: () => void signOut()
             }]
           }]
         : undefined
     };
   }, [
     config.account,
-    config.onError,
     config.session,
     identity,
     loadedAuthIdentity,
-    setAuthFlow
+    signOut,
+    signOutPending
   ]);
 
   let content: React.ReactNode;
@@ -963,14 +1094,7 @@ function ConsoleKitContent({ config, featureModules, className }: ConsoleKitProp
         <Feature
           config={config}
           onRouteChange={navigate}
-          onError={(cause) => config.onError?.(
-            normalizeConsoleKitError(
-              cause,
-              `The ${activeModule.id} action failed.`
-            ), {
-            phase: 'feature',
-            feature: activeModule.id
-          })}
+          onError={forwardActiveFeatureError}
           route={activeRoute}
           runtime={runtime}
         />
@@ -998,16 +1122,27 @@ function ConsoleKitContent({ config, featureModules, className }: ConsoleKitProp
       metadataStatus={runtime.metadata.status}
     />
   ) : undefined;
+  const activeFeatureLabel = config.labels?.[activeFeature]
+    ?? activeModule?.manifest.title
+    ?? activeFeature;
+  const shellBrand: AppShellBrand = {
+    name: config.brand?.name ?? 'Application',
+    description: config.brand?.description,
+    href: config.brand?.href,
+    logo: config.brand?.logo ?? <DatabaseIcon aria-hidden='true' />
+  };
 
   return (
     <AppShell
       account={account}
       barActions={barActions}
       barPlacement='content'
-      brand={config.brand ?? {
-        name: 'Application',
-        logo: <DatabaseIcon aria-hidden='true' />
-      }}
+      brand={shellBrand}
+      breadcrumbs={[{
+        id: `feature-${activeFeature}`,
+        label: activeFeatureLabel,
+        current: true
+      }]}
       className={className}
       contentClassName='bg-background'
       contentFooter={mobileFeatureNav}
@@ -1021,7 +1156,14 @@ function ConsoleKitContent({ config, featureModules, className }: ConsoleKitProp
       }}
       sidebarWidth='15rem'
     >
-      <div className='flex min-h-full min-w-0 flex-col p-4 pt-4 sm:p-6 lg:p-8 lg:pt-8'>
+      <div className='flex min-h-full min-w-0 flex-col gap-4 p-4 pt-4 sm:p-6 lg:p-8 lg:pt-8'>
+        {sessionActionError ? (
+          <Alert className='w-full max-w-5xl' role='alert' variant='destructive'>
+            <CircleAlertIcon aria-hidden='true' />
+            <AlertTitle>Session action failed</AlertTitle>
+            <AlertDescription>{sessionActionError.message}</AlertDescription>
+          </Alert>
+        ) : null}
         {content}
       </div>
     </AppShell>

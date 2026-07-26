@@ -339,16 +339,29 @@ export function useConsoleKitRuntime({
   React.useEffect(() => setEndpoints(endpoints), [endpoints, setEndpoints]);
   const selectedTransport = React.useMemo(() => transport ?? createFetchConsoleTransport(), [transport]);
   const identity = getConsoleSessionIdentity(snapshot);
+  const identityKey = identity ? createConsoleIdentityKey(identity) : null;
+  const scopedTransports = React.useMemo(() => {
+    const next: Partial<Record<
+      ConsoleEndpointKind,
+      ReturnType<typeof createIdentityScopedTransport>
+    >> = {};
+    if (!identity) return next;
 
-  const transportFor = React.useCallback((kind: ConsoleEndpointKind) => {
-    const endpoint = endpoints[kind];
-    if (!endpoint || !identity) return null;
-    return createIdentityScopedTransport(selectedTransport, {
-      endpoint,
-      identity,
-      getAccessToken: session.getAccessToken
-    });
-  }, [endpoints, identity, selectedTransport, session.getAccessToken]);
+    for (const kind of CONSOLE_ENDPOINT_KINDS) {
+      const endpoint = endpoints[kind];
+      if (!endpoint) continue;
+      next[kind] = createIdentityScopedTransport(selectedTransport, {
+        endpoint,
+        identity,
+        getAccessToken: session.getAccessToken
+      });
+    }
+    return next;
+  }, [endpoints, identityKey, selectedTransport, session.getAccessToken]);
+  const transportFor = React.useCallback(
+    (kind: ConsoleEndpointKind) => scopedTransports[kind] ?? null,
+    [scopedTransports]
+  );
 
   const baseContext = React.useMemo(
     () => ({
