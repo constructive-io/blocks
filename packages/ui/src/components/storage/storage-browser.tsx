@@ -1,5 +1,16 @@
 'use client';
 
+import { PlusIcon } from 'lucide-react';
+
+import { Button } from '../button';
+import {
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '../select';
 import { Separator } from '../separator';
 import { cn } from '../../lib/utils';
 import { BucketRail } from './bucket-rail';
@@ -102,6 +113,10 @@ export function StorageBrowser({
   className,
 }: StorageBrowserProps) {
   const selectedBucket = buckets.find((bucket) => bucket.id === selectedBucketId) ?? null;
+  const bucketOptions = buckets.map((bucket) => ({
+    label: bucketDisplayName(bucket),
+    value: bucket.id,
+  }));
 
   // Whole-pane empty states (no toolbar/header context to show).
   const paneTakeover = emptyState === 'no-buckets' || emptyState === 'no-access' || emptyState === 'not-provisioned';
@@ -113,7 +128,7 @@ export function StorageBrowser({
 
   return (
     <div className={cn('flex h-full min-h-0 overflow-hidden rounded-lg border bg-background', className)}>
-      <aside className="flex w-64 shrink-0 flex-col border-r">
+      <aside className="hidden w-64 shrink-0 flex-col border-r sm:flex">
         <div className="flex h-12 items-center px-3">
           <h2 className="text-sm font-semibold">Buckets</h2>
         </div>
@@ -128,6 +143,41 @@ export function StorageBrowser({
       </aside>
 
       <section className="flex min-w-0 flex-1 flex-col">
+        {buckets.length > 0 ? (
+          <div className="flex items-center gap-2 border-b p-3 sm:hidden">
+            <Select
+              items={bucketOptions}
+              onValueChange={onSelectBucket}
+              value={selectedBucketId ?? ''}
+            >
+              <SelectTrigger aria-label="Choose bucket" className="min-w-0 flex-1">
+                <SelectValue placeholder="Choose a bucket">
+                  {selectedBucket ? bucketDisplayName(selectedBucket) : 'Choose a bucket'}
+                </SelectValue>
+              </SelectTrigger>
+              <SelectContent>
+                <SelectGroup>
+                  {bucketOptions.map((option) => (
+                    <SelectItem key={option.value} value={option.value}>
+                      {option.label}
+                    </SelectItem>
+                  ))}
+                </SelectGroup>
+              </SelectContent>
+            </Select>
+            {onNewBucket ? (
+              <Button
+                aria-label="New bucket"
+                onClick={onNewBucket}
+                size="icon"
+                variant="outline"
+              >
+                <PlusIcon data-icon="only" />
+              </Button>
+            ) : null}
+          </div>
+        ) : null}
+
         {showSelectBucketPrompt ? (
           <div className="flex h-full w-full flex-col items-center justify-center px-6 py-12 text-center">
             <p className="text-sm text-muted-foreground">Select a bucket to view its files.</p>
@@ -140,11 +190,12 @@ export function StorageBrowser({
           />
         ) : (
           <>
-            <header className="flex min-h-12 items-center gap-2 px-4 py-2">
-              <h1 className="truncate text-sm font-semibold">{bucketDisplayName(selectedBucket)}</h1>
-              <VisibilityBadge visibility={selectedBucket.visibility} size="sm" />
-              <div className="ml-auto">
+            <header className="flex min-h-12 items-center gap-2 px-3 py-2 sm:px-4">
+              <h1 className="hidden truncate text-sm font-semibold sm:block">{bucketDisplayName(selectedBucket)}</h1>
+              <VisibilityBadge className="hidden sm:inline-flex" visibility={selectedBucket.visibility} size="sm" />
+              <div className="min-w-0 flex-1 sm:ml-auto sm:flex-none">
                 <ObjectToolbar
+                  className="w-full"
                   query={query}
                   onQueryChange={onQueryChange}
                   sort={sort}

@@ -128,14 +128,26 @@ export function ObjectTable({
             />
           </TableHead>
           <SortableHeader column="filename" label="Name" sort={sort} onSortChange={onSortChange} />
-          <SortableHeader column="mimeType" label="Type" sort={sort} onSortChange={onSortChange} />
-          <SortableHeader column="size" label="Size" sort={sort} onSortChange={onSortChange} className="text-right" />
+          <SortableHeader
+            className="hidden sm:table-cell"
+            column="mimeType"
+            label="Type"
+            onSortChange={onSortChange}
+            sort={sort}
+          />
+          <SortableHeader
+            className="hidden text-right sm:table-cell"
+            column="size"
+            label="Size"
+            onSortChange={onSortChange}
+            sort={sort}
+          />
           <SortableHeader
             column="createdAt"
             label="Modified"
             sort={sort}
             onSortChange={onSortChange}
-            className="text-right"
+            className="hidden text-right sm:table-cell"
           />
           <TableHead className="w-10" />
         </TableRow>
@@ -150,58 +162,99 @@ export function ObjectTable({
         ) : (
           objects.map((object) => {
             const isSelected = selected.has(object.id);
+            const displayName = objectDisplayName(object);
+            const mimeLabel = shortMimeLabel(object.mimeType);
+            const formattedSize = humanizeBytes(object.size);
+            const modifiedAt = formatDate(object.createdAt);
+            const hasPrimaryAction = Boolean(onDownload || onCopyLink || onRename);
+            const hasObjectAction = hasPrimaryAction || Boolean(onDelete);
             return (
               <TableRow
                 key={object.id}
                 data-state={isSelected ? 'selected' : undefined}
-                onClick={() => onOpenObject?.(object)}
-                className="cursor-pointer"
+                onClick={onOpenObject ? () => onOpenObject(object) : undefined}
+                className={onOpenObject ? 'cursor-pointer' : undefined}
               >
                 <TableCell onClick={(event) => event.stopPropagation()}>
                   <Checkbox
-                    aria-label={`Select ${objectDisplayName(object)}`}
+                    aria-label={`Select ${displayName}`}
                     checked={isSelected}
                     onCheckedChange={(checked) => toggleOne(object.id, checked === true)}
                   />
                 </TableCell>
                 <TableCell className="max-w-0">
-                  <div className="flex items-center gap-2">
-                    <FileTypeIcon mimeType={object.mimeType} />
-                    <span className="truncate font-medium">{objectDisplayName(object)}</span>
-                  </div>
+                  {onOpenObject ? (
+                    <button
+                      type="button"
+                      aria-label={`Open details for ${displayName}`}
+                      className="flex w-full min-w-0 items-center gap-2 rounded-sm text-left outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        onOpenObject(object);
+                      }}
+                    >
+                      <FileTypeIcon mimeType={object.mimeType} />
+                      <span className="truncate font-medium">{displayName}</span>
+                    </button>
+                  ) : (
+                    <div className="flex items-center gap-2">
+                      <FileTypeIcon mimeType={object.mimeType} />
+                      <span className="truncate font-medium">{displayName}</span>
+                    </div>
+                  )}
+                  <span className="mt-1 block truncate text-xs text-muted-foreground sm:hidden">
+                    <span className="sr-only">Type </span>
+                    {mimeLabel}
+                    <span aria-hidden> · </span>
+                    <span className="sr-only">size </span>
+                    {formattedSize}
+                    <span aria-hidden> · </span>
+                    <span className="sr-only">modified </span>
+                    {modifiedAt}
+                  </span>
                 </TableCell>
-                <TableCell className="text-muted-foreground">{shortMimeLabel(object.mimeType)}</TableCell>
-                <TableCell className="text-right tabular-nums">{humanizeBytes(object.size)}</TableCell>
-                <TableCell className="text-right tabular-nums text-muted-foreground">
-                  {formatDate(object.createdAt)}
+                <TableCell className="hidden text-muted-foreground sm:table-cell">{mimeLabel}</TableCell>
+                <TableCell className="hidden text-right tabular-nums sm:table-cell">{formattedSize}</TableCell>
+                <TableCell className="hidden text-right tabular-nums text-muted-foreground sm:table-cell">
+                  {modifiedAt}
                 </TableCell>
                 <TableCell onClick={(event) => event.stopPropagation()}>
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" size="icon-sm" aria-label={`Actions for ${objectDisplayName(object)}`}>
-                        <MoreHorizontalIcon aria-hidden />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      <DropdownMenuItem onClick={() => onDownload?.(object)}>
-                        <DownloadIcon className="size-4" aria-hidden />
-                        Download
-                      </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => onCopyLink?.(object)}>
-                        <CopyIcon className="size-4" aria-hidden />
-                        Copy link
-                      </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => onRename?.(object)}>
-                        <PencilIcon className="size-4" aria-hidden />
-                        Rename
-                      </DropdownMenuItem>
-                      <DropdownMenuSeparator />
-                      <DropdownMenuItem variant="destructive" onClick={() => onDelete?.(object)}>
-                        <Trash2Icon className="size-4" aria-hidden />
-                        Delete
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
+                  {hasObjectAction ? (
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="icon-sm" aria-label={`Actions for ${displayName}`}>
+                          <MoreHorizontalIcon aria-hidden />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        {onDownload ? (
+                          <DropdownMenuItem onClick={() => onDownload(object)}>
+                            <DownloadIcon className="size-4" aria-hidden />
+                            Download
+                          </DropdownMenuItem>
+                        ) : null}
+                        {onCopyLink ? (
+                          <DropdownMenuItem onClick={() => onCopyLink(object)}>
+                            <CopyIcon className="size-4" aria-hidden />
+                            Copy link
+                          </DropdownMenuItem>
+                        ) : null}
+                        {onRename ? (
+                          <DropdownMenuItem onClick={() => onRename(object)}>
+                            <PencilIcon className="size-4" aria-hidden />
+                            Rename
+                          </DropdownMenuItem>
+                        ) : null}
+                        {hasPrimaryAction && onDelete ? <DropdownMenuSeparator /> : null}
+                        {onDelete ? (
+                          <DropdownMenuItem variant="destructive" onClick={() => onDelete(object)}>
+                            <Trash2Icon className="size-4" aria-hidden />
+                            Delete
+                          </DropdownMenuItem>
+                        ) : null}
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  ) : null}
                 </TableCell>
               </TableRow>
             );
@@ -229,9 +282,9 @@ export function ObjectTableSkeleton({ rows = 6, className }: ObjectTableSkeleton
         <TableRow>
           <TableHead className="w-10" />
           <TableHead>Name</TableHead>
-          <TableHead>Type</TableHead>
-          <TableHead className="text-right">Size</TableHead>
-          <TableHead className="text-right">Modified</TableHead>
+          <TableHead className="hidden sm:table-cell">Type</TableHead>
+          <TableHead className="hidden text-right sm:table-cell">Size</TableHead>
+          <TableHead className="hidden text-right sm:table-cell">Modified</TableHead>
           <TableHead className="w-10" />
         </TableRow>
       </TableHeader>
@@ -248,13 +301,13 @@ export function ObjectTableSkeleton({ rows = 6, className }: ObjectTableSkeleton
                 <Skeleton className="h-4 w-40" />
               </div>
             </TableCell>
-            <TableCell>
+            <TableCell className="hidden sm:table-cell">
               <Skeleton className="h-4 w-10" />
             </TableCell>
-            <TableCell className="flex justify-end">
+            <TableCell className="hidden justify-end sm:flex">
               <Skeleton className="h-4 w-12" />
             </TableCell>
-            <TableCell>
+            <TableCell className="hidden sm:table-cell">
               <Skeleton className="ml-auto h-4 w-20" />
             </TableCell>
             <TableCell>

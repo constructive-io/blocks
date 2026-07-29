@@ -14,6 +14,7 @@ import {
 
 import { ConsoleKitShowcasePreview } from '@/components/console-kit-showcase/console-kit-showcase-preview';
 import { CodeBlock } from '@/components/docs/code-block';
+import { ApplicationDocPagination } from '@/components/docs/application-doc-pagination';
 import { registryAdd } from '@/lib/install-mode';
 import { OG_IMAGE, withBase } from '@/lib/site';
 
@@ -769,6 +770,7 @@ export default function ConsoleKitPage() {
           </div>
         </section>
       </div>
+      <ApplicationDocPagination current="console-kit" />
     </article>
   );
 }

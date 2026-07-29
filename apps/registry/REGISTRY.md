@@ -29,15 +29,15 @@ Then install the full console, a backend-aligned preset, one feature pack, or a
 standalone primitive:
 
 ```bash
-pnpm dlx shadcn@4.13.1 add @constructive/console-kit-nextjs
-pnpm dlx shadcn@4.13.1 add @constructive/preset-b2b-storage
-pnpm dlx shadcn@4.13.1 add @constructive/console-module-users
-pnpm dlx shadcn@4.13.1 add @constructive/feature-pack-users
-pnpm dlx shadcn@4.13.1 add @constructive/command-palette
-pnpm dlx shadcn@4.13.1 add @constructive/sheets
-pnpm dlx shadcn@4.13.1 add @constructive/schema-builder
-pnpm dlx shadcn@4.13.1 add @constructive/app-shell
-pnpm dlx shadcn@4.13.1 add @constructive/billing-settings-page
+pnpm dlx shadcn@latest add @constructive/console-kit-nextjs
+pnpm dlx shadcn@latest add @constructive/preset-b2b-storage
+pnpm dlx shadcn@latest add @constructive/console-module-users
+pnpm dlx shadcn@latest add @constructive/feature-pack-users
+pnpm dlx shadcn@latest add @constructive/command-palette
+pnpm dlx shadcn@latest add @constructive/sheets
+pnpm dlx shadcn@latest add @constructive/schema-builder
+pnpm dlx shadcn@latest add @constructive/app-shell
+pnpm dlx shadcn@latest add @constructive/billing-settings-page
 ```
 
 `feature-pack-*` installs are standalone views and write their machine-readable
@@ -50,12 +50,12 @@ The console uses injected endpoints, session state, and action adapters, so
 installing source does not embed deployment-specific URLs or generated SDK
 fixtures.
 
-The registry requires shadcn 4.13.1 or newer. UI, Sheets, Schema Builder, and
-billing roots copy their visual source and theme into the consumer. Data
-feature packs, presets that include data, and `console-kit-nextjs` install the
-headless `@constructive-io/data` package while Sheets remains editable local
-source. The console also adds Zustand for its local navigation, runtime, and
-adapter store.
+Invoke the registry with the current CLI through `shadcn@latest`. UI, Sheets,
+Schema Builder, and billing roots copy their visual source and theme into the
+consumer. Data feature packs, presets that include data, and
+`console-kit-nextjs` install the headless `@constructive-io/data` package while
+Sheets remains editable local source. The console also adds Zustand for its
+local navigation, runtime, and adapter store.
 The Command Palette follows the same ownership split: its registry item installs
 editable presentation source and `@constructive-io/command-palette` supplies the
 framework-neutral registry, execution, workflow, and background-task state.
@@ -65,7 +65,7 @@ installed directly by URL. The namespace configuration remains required so
 shadcn can resolve nested `@constructive/*` dependencies:
 
 ```bash
-pnpm dlx shadcn@4.13.1 add https://constructive-io.github.io/blocks/r/console-kit-nextjs.json
+pnpm dlx shadcn@latest add https://constructive-io.github.io/blocks/r/console-kit-nextjs.json
 ```
 
 ## Build and validate
@@ -79,7 +79,7 @@ pnpm --filter @constructive-io/registry clean
 The build first generates the UI, Sheets, and Schema Builder registries, copies
 them together with the canonical app block sources into an ignored staging
 directory, merges their manifests, namespaces internal dependencies, and runs
-`shadcn build` into `apps/registry/public/r`.
+`pnpm dlx shadcn@latest build` into `apps/registry/public/r`.
 
 The smoke command performs isolated installs for UI, billing, standalone
 feature-pack, Console Kit module, preset, and full-console roots. Every fixture

@@ -147,7 +147,6 @@ const repositoryRoot = path.resolve(scriptDirectory, '..');
 const aggregateRegistryPath = path.join(repositoryRoot, 'apps', 'registry', 'registry.json');
 
 const CONSTRUCTIVE_REGISTRY_URL = 'https://constructive-io.github.io/blocks/r/{name}.json';
-const SHADCN_VERSION = '4.13.1';
 const METADATA_STATE_MAP = {
   checking: true,
   compatible: true,
@@ -398,7 +397,7 @@ export function buildConsoleKitInstallPlan(
     item: itemName,
     surface,
     install: {
-      command: `pnpm dlx shadcn@${SHADCN_VERSION} add @constructive/${itemName}`,
+      command: `pnpm dlx shadcn@latest add @constructive/${itemName}`,
       prerequisites: [
         'Run from an existing shadcn project root with components.json.',
         'Keep the project aliases in components.json; targets beginning with @ are resolved through those aliases.'

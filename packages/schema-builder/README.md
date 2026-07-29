@@ -6,7 +6,7 @@ Configure the `@constructive` registry in `components.json`, then install the
 source-owned editor:
 
 ```bash
-pnpm dlx shadcn@4.13.1 add @constructive/schema-builder
+pnpm dlx shadcn@latest add @constructive/schema-builder
 ```
 
 ```tsx

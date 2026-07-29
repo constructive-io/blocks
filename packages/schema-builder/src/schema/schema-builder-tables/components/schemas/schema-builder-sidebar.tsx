@@ -10,10 +10,18 @@ import {
 	DropdownMenuTrigger,
 } from '@constructive-io/ui/dropdown-menu';
 import { ProgressiveBlur } from '@constructive-io/ui/progressive-blur';
+import {
+	Select,
+	SelectContent,
+	SelectGroup,
+	SelectItem,
+	SelectTrigger,
+	SelectValue,
+} from '@constructive-io/ui/select';
 import { useCardStack } from '@constructive-io/ui/stack';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@constructive-io/ui/tooltip';
 import { RiDatabaseLine } from '@remixicon/react';
-import { ChevronRight, MoreVertical, Plus, Trash2 } from 'lucide-react';
+import { ChevronRight, Eye, EyeOff, MoreVertical, Plus, Trash2 } from 'lucide-react';
 import { AnimatePresence, motion } from 'motion/react';
 
 import { useSchemaBuilderSelectors } from '@/blocks/schema/schema-builder-core/lib/gql/hooks/schema-builder';
@@ -112,6 +120,92 @@ export function getScrollAffordanceState({
 interface SchemaBuilderSidebarProps {
 	onTableSelect?: (tableId: string) => void;
 	showSystemTables?: boolean;
+}
+
+type CreatedTable = { id: string; name: string };
+
+function openCreateTableCard(
+	stack: ReturnType<typeof useCardStack>,
+	onTableCreated: (table: CreatedTable) => void,
+) {
+	stack.push({
+		id: 'create-table-select-model',
+		title: 'Create Table',
+		description: 'Securely create a new table based on its access model',
+		Component: CreateTableCard,
+		props: { onTableCreated },
+		width: CARD_WIDTHS.extraWide,
+	});
+}
+
+export function SchemaBuilderMobileNavigation({
+	hasSystemTables = false,
+	onShowSystemTablesChange,
+	showSystemTables = false,
+}: Pick<SchemaBuilderSidebarProps, 'showSystemTables'> & {
+	hasSystemTables?: boolean;
+	onShowSystemTablesChange: (show: boolean) => void;
+}) {
+	const stack = useCardStack();
+	const { currentSchema, selectedTableId, selectTable } = useSchemaBuilderSelectors();
+	const tables = currentSchema?.tables ?? [];
+	const selectedTable = tables.find((table) => table.id === selectedTableId) ?? null;
+	const visibleTables = tables.filter(
+		(table) => showSystemTables || table.category === 'APP' || table.id === selectedTableId,
+	);
+	const tableOptions = visibleTables.map((table) => ({
+		label: table.label ?? table.name,
+		value: table.id,
+	}));
+
+	function handleTableSelect(tableId: string) {
+		const table = tables.find((candidate) => candidate.id === tableId);
+		if (table) selectTable(table.id, table.name);
+	}
+
+	function handleCreateTable() {
+		openCreateTableCard(stack, (table) => {
+			selectTable(table.id, table.name);
+		});
+	}
+
+	return (
+		<div
+			className='bg-card flex items-center gap-2 border-b p-2 sm:hidden'
+			data-chat-component='schema-builder-mobile-navigation'
+		>
+			<Select items={tableOptions} onValueChange={handleTableSelect} value={selectedTableId ?? ''}>
+				<SelectTrigger aria-label='Select table' className='min-w-0 flex-1' size='sm'>
+					<SelectValue placeholder='Select a table'>
+						{selectedTable ? selectedTable.label ?? selectedTable.name : 'Select a table'}
+					</SelectValue>
+				</SelectTrigger>
+				<SelectContent>
+					<SelectGroup>
+						{tableOptions.map((option) => (
+							<SelectItem key={option.value} value={option.value}>
+								{option.label}
+							</SelectItem>
+						))}
+					</SelectGroup>
+				</SelectContent>
+			</Select>
+			<Button aria-label='Create table' onClick={handleCreateTable} size='icon-sm' variant='outline'>
+				<Plus aria-hidden />
+			</Button>
+			{hasSystemTables && (
+				<Button
+					aria-label={showSystemTables ? 'Hide system tables' : 'Show system tables'}
+					aria-pressed={showSystemTables}
+					onClick={() => onShowSystemTablesChange(!showSystemTables)}
+					size='icon-sm'
+					variant='ghost'
+				>
+					{showSystemTables ? <Eye aria-hidden /> : <EyeOff aria-hidden />}
+				</Button>
+			)}
+		</div>
+	);
 }
 
 export function SchemaBuilderSidebar({ onTableSelect, showSystemTables = false }: SchemaBuilderSidebarProps) {
@@ -261,17 +355,8 @@ export function SchemaBuilderSidebar({ onTableSelect, showSystemTables = false }
 	};
 
 	const handleCreateTable = () => {
-		stack.push({
-			id: 'create-table-select-model',
-			title: 'Create Table',
-			description: 'Securely create a new table based on its access model',
-			Component: CreateTableCard,
-			props: {
-				onTableCreated: (table: { id: string; name: string }) => {
-					handleTableSelect(table.id);
-				},
-			},
-			width: CARD_WIDTHS.extraWide,
+		openCreateTableCard(stack, (table) => {
+			handleTableSelect(table.id);
 		});
 	};
 
@@ -300,7 +385,7 @@ export function SchemaBuilderSidebar({ onTableSelect, showSystemTables = false }
 				data-chat-component='schema-builder-sidebar'
 				data-chat-table-count={String(tables.length)}
 				className={cn(
-					'border-sidebar-border flex h-full w-64 flex-col overflow-hidden border-r bg-transparent',
+					'border-sidebar-border hidden h-full w-64 flex-col overflow-hidden border-r bg-transparent sm:flex',
 					'px-2 pt-2 2xl:w-72',
 				)}
 			>

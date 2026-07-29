@@ -79,12 +79,12 @@ export function StorageEmptyState({ variant, onAction, onSecondaryAction, classN
 				<h2 className='text-balance text-base font-semibold text-foreground'>{config.title}</h2>
 				<p className='text-pretty text-sm text-muted-foreground'>{config.description}</p>
 			</div>
-			{config.actionLabel && (
+			{config.actionLabel && onAction && (
 				<Button onClick={onAction} size='sm'>
 					{config.actionLabel}
 				</Button>
 			)}
-			{variant === 'no-access' && config.secondaryLabel && (
+			{variant === 'no-access' && config.secondaryLabel && onSecondaryAction && (
 				<Button onClick={onSecondaryAction} size='sm' variant='outline'>
 					{config.secondaryLabel}
 				</Button>

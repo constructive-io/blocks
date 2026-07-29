@@ -23,11 +23,11 @@ export const REGISTRY_COMPONENTS_JSON = `{
     "@constructive": "https://constructive-io.github.io/blocks/r/{name}.json"
   }
 }`;
-export const REGISTRY_ADD_BUTTON = 'pnpm dlx shadcn@4.13.1 add @constructive/button';
-export const REGISTRY_ADD_THEME = 'pnpm dlx shadcn@4.13.1 add @constructive/constructive-theme';
+export const REGISTRY_ADD_BUTTON = 'pnpm dlx shadcn@latest add @constructive/button';
+export const REGISTRY_ADD_THEME = 'pnpm dlx shadcn@latest add @constructive/constructive-theme';
 
 export function registryAdd(name: string): string {
-  return `pnpm dlx shadcn@4.13.1 add @constructive/${name}`;
+  return `pnpm dlx shadcn@latest add @constructive/${name}`;
 }
 
 /** Server-safe helpers to build install command lists for docs pages */

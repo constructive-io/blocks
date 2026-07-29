@@ -21,7 +21,7 @@ complete source-owned grid into your application:
 ```
 
 ```bash
-pnpm dlx shadcn@4.13.1 add @constructive/sheets
+pnpm dlx shadcn@latest add @constructive/sheets
 ```
 
 The command installs editable Sheets source and local Constructive primitives,
@@ -132,17 +132,19 @@ npm install tailwindcss @tailwindcss/postcss
 The shadcn install adds the Constructive theme and places the component source
 under your configured aliases, so Tailwind scans it as application code.
 
-Overlay editors render into a portal. Add this as the last child of `<body>` in your root layout:
+Overlay editors use the shared Constructive portal host. Mount it once as the last child of `<body>` in your root layout:
 
 ```tsx
 // app/layout.tsx
+import { PortalRoot } from '@/components/ui/portal';
+
 <body>
   {children}
-  <div id="portal" />
+  <PortalRoot />
 </body>
 ```
 
-Without this, overlay editors such as date, relation, and JSON editors won't open.
+`PortalRoot` renders the managed `#portal-root` layer used by date, relation, JSON, and other overlay editors. Editors fall back to `document.body` while the host is unavailable, but mounting the shared root keeps application overlays in one predictable stack.
 
 ## Configuration
 

@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Button } from '@constructive-io/ui/button';
 import { Field } from '@constructive-io/ui/field';
 import { Input } from '@constructive-io/ui/input';
@@ -75,7 +75,7 @@ function PolicyTypeCard({ policyType, tableName, isSelected, onSelect, onKnowMor
 			data-chat-policy-description={policyType.description}
 			data-chat-selected={String(isSelected)}
 			className={cn(
-				`relative flex w-full flex-col gap-3 rounded-lg border p-4 text-left
+				`relative flex w-full min-w-0 flex-col gap-3 rounded-lg border p-4 text-left
 				transition-[background-color,border-color,box-shadow,scale] duration-150 ease-out
 				motion-safe:has-[:active]:scale-[0.96]`,
 				isSelected
@@ -138,7 +138,7 @@ function BlankTableCard({ isSelected, onSelect }: { isSelected: boolean; onSelec
 			type='button'
 			onClick={onSelect}
 			className={cn(
-				`relative flex w-full flex-col gap-3 rounded-lg border p-4 text-left
+				`relative flex w-full min-w-0 flex-col gap-3 rounded-lg border p-4 text-left
 				transition-[background-color,border-color,box-shadow,scale] duration-150 ease-out motion-safe:active:scale-[0.96]`,
 				isSelected
 					? 'border-primary bg-primary/5 ring-primary/20 ring-2'
@@ -204,6 +204,7 @@ export const CreateTableCard: CardComponent<CreateTableCardProps> = ({
 	const [selectedModel, setSelectedModel] = useState<string | null>(null);
 	const [wizardStep, setWizardStep] = useState<WizardStep>('select');
 	const [knowMoreCardId, setKnowMoreCardId] = useState<CardId | null>(null);
+	const tableNameInputRef = useRef<HTMLInputElement | null>(null);
 
 	// Track if defaults have been initialized with policyType defaults
 	const [defaultsInitialized, setDefaultsInitialized] = useState(false);
@@ -225,6 +226,12 @@ export const CreateTableCard: CardComponent<CreateTableCardProps> = ({
 
 	// In add-policies mode, use the prop tableName; otherwise use state
 	const effectiveTableName = isAddPoliciesMode ? (propTableName ?? '') : tableNameInput;
+
+	useEffect(() => {
+		if (wizardStep !== 'select' || isAddPoliciesMode || typeof window.matchMedia !== 'function') return;
+		if (!window.matchMedia('(hover: hover) and (pointer: fine)').matches) return;
+		tableNameInputRef.current?.focus({ preventScroll: true });
+	}, [isAddPoliciesMode, wizardStep]);
 
 	const stack = useCardStack();
 
@@ -568,12 +575,12 @@ export const CreateTableCard: CardComponent<CreateTableCardProps> = ({
 						<Input
 							id='table-name'
 							data-testid='table-name-input'
+							ref={tableNameInputRef}
 							value={tableNameInput}
 							onChange={(e) => setTableNameInput(e.target.value)}
 							onBlur={() => setTableNameTouched(true)}
 							placeholder='e.g., posts, comments, orders'
 							autoComplete='off'
-							autoFocus
 							className={cn('font-mono', tableNameTouched && tableNameError && 'border-destructive')}
 						/>
 					</Field>
@@ -595,7 +602,7 @@ export const CreateTableCard: CardComponent<CreateTableCardProps> = ({
 							)}
 
 							{/* Always show policy types (fallback data provides immediate availability) */}
-							<div className='grid gap-3 sm:grid-cols-2'>
+							<div className='grid min-w-0 grid-cols-[minmax(0,1fr)] gap-3 sm:grid-cols-2'>
 								{policyTypes.map((policyType) => (
 									<PolicyTypeCard
 										key={policyType.name}

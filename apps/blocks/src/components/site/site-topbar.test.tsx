@@ -36,12 +36,12 @@ describe('SiteTopbar install command', () => {
     render(<SiteTopbar />);
 
     const copyButton = screen.getByRole('button', { name: 'Copy Breadcrumb install command' });
-    expect(copyButton).toHaveTextContent('shadcn add @constructive/breadcrumb');
+    expect(copyButton).toHaveTextContent('pnpm dlx shadcn@latest add @constructive/breadcrumb');
 
     fireEvent.click(copyButton);
 
     await waitFor(() => {
-      expect(writeText).toHaveBeenCalledWith('pnpm dlx shadcn@4.13.1 add @constructive/breadcrumb');
+      expect(writeText).toHaveBeenCalledWith('pnpm dlx shadcn@latest add @constructive/breadcrumb');
       expect(copyButton).toHaveAccessibleName('Breadcrumb install command copied');
     });
   });
@@ -51,7 +51,7 @@ describe('SiteTopbar install command', () => {
     render(<SiteTopbar />);
 
     expect(screen.getByRole('button', { name: 'Copy Dialog install command' })).toHaveTextContent(
-      'shadcn add @constructive/dialog',
+      'pnpm dlx shadcn@latest add @constructive/dialog',
     );
   });
 
@@ -63,11 +63,11 @@ describe('SiteTopbar install command', () => {
     const copyButton = screen.getByRole('button', {
       name: 'Copy Organizations feature pack install command',
     });
-    expect(copyButton).toHaveTextContent('shadcn add @constructive/feature-pack-organizations');
+    expect(copyButton).toHaveTextContent('pnpm dlx shadcn@latest add @constructive/feature-pack-organizations');
 
     fireEvent.click(copyButton);
     await waitFor(() => {
-      expect(writeText).toHaveBeenCalledWith('pnpm dlx shadcn@4.13.1 add @constructive/feature-pack-organizations');
+      expect(writeText).toHaveBeenCalledWith('pnpm dlx shadcn@latest add @constructive/feature-pack-organizations');
     });
   });
 
@@ -78,7 +78,7 @@ describe('SiteTopbar install command', () => {
       screen.getByRole('button', {
         name: 'Copy Usage overview install command',
       }),
-    ).toHaveTextContent('shadcn add @constructive/billing-usage-overview');
+    ).toHaveTextContent('pnpm dlx shadcn@latest add @constructive/billing-usage-overview');
 
     unmount();
     mockUsePathname.mockReturnValue('/blocks/org-chart');
@@ -87,7 +87,7 @@ describe('SiteTopbar install command', () => {
       screen.getByRole('button', {
         name: 'Copy Org Chart install command',
       }),
-    ).toHaveTextContent('shadcn add @constructive/org-chart');
+    ).toHaveTextContent('pnpm dlx shadcn@latest add @constructive/org-chart');
 
     orgChart.unmount();
     mockUsePathname.mockReturnValue('/blocks/storage-browser');
@@ -96,34 +96,34 @@ describe('SiteTopbar install command', () => {
       screen.getByRole('button', {
         name: 'Copy Storage Browser install command',
       }),
-    ).toHaveTextContent('shadcn add @constructive/storage-browser');
+    ).toHaveTextContent('pnpm dlx shadcn@latest add @constructive/storage-browser');
 
     storageBrowser.unmount();
     mockUsePathname.mockReturnValue('/blocks/sheets');
     const sheets = render(<SiteTopbar />);
     expect(screen.getByRole('button', { name: 'Copy Sheets install command' })).toHaveTextContent(
-      'shadcn add @constructive/sheets',
+      'pnpm dlx shadcn@latest add @constructive/sheets',
     );
 
     sheets.unmount();
     mockUsePathname.mockReturnValue('/blocks/schema-builder');
     const schemaBuilder = render(<SiteTopbar />);
     expect(screen.getByRole('button', { name: 'Copy Schema Builder install command' })).toHaveTextContent(
-      'shadcn add @constructive/schema-builder',
+      'pnpm dlx shadcn@latest add @constructive/schema-builder',
     );
 
     schemaBuilder.unmount();
     mockUsePathname.mockReturnValue('/blocks/command-palette');
     const commandPalette = render(<SiteTopbar />);
     expect(screen.getByRole('button', { name: 'Copy Command Palette install command' })).toHaveTextContent(
-      'shadcn add @constructive/command-palette',
+      'pnpm dlx shadcn@latest add @constructive/command-palette',
     );
 
     commandPalette.unmount();
     mockUsePathname.mockReturnValue('/blocks/console-kit');
     render(<SiteTopbar />);
     expect(screen.getByRole('button', { name: 'Copy Console Kit install command' })).toHaveTextContent(
-      'shadcn add @constructive/console-kit-nextjs',
+      'pnpm dlx shadcn@latest add @constructive/console-kit-nextjs',
     );
   });
 
@@ -140,6 +140,6 @@ describe('SiteTopbar install command', () => {
     render(<SiteTopbar />);
 
     expect(screen.queryByRole('button', { name: /install command/i })).not.toBeInTheDocument();
-    expect(screen.queryByText(/shadcn add @constructive\//)).not.toBeInTheDocument();
+    expect(screen.queryByText(/pnpm dlx shadcn@latest add @constructive\//)).not.toBeInTheDocument();
   });
 });

@@ -6,7 +6,7 @@ The visual palette is source-installed from the Constructive registry. This pack
 
 ```bash
 pnpm add @constructive-io/command-palette
-pnpm dlx shadcn@4.13.1 add @constructive/command-palette
+pnpm dlx shadcn@latest add @constructive/command-palette
 ```
 
 ```tsx

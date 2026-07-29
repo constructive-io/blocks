@@ -1,137 +1,193 @@
 import type { Metadata } from 'next';
 
+import {
+  Table,
+  TableBody,
+  TableCaption,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow
+} from '@constructive-io/ui/table';
+
 import { CommandPaletteDemo } from '@/components/command-palette-showcase/command-palette-demo';
+import { ComponentDocPagination } from '@/components/docs/component-doc-pagination';
 import { CodeBlock } from '@/components/docs/code-block';
 import { DocSection } from '@/components/docs/doc-section';
+import { COMMAND_PALETTE_DOC } from '@/lib/command-palette-docs';
 import { registryAdd } from '@/lib/install-mode';
 import { OG_IMAGE, withBase } from '@/lib/site';
 
-const TITLE = 'Command Palette';
-const DESCRIPTION =
-  'An installable command center with page-scoped registration, structured shortcuts, multi-step flows, and cancellable background tasks.';
-
-const BASIC_EXAMPLE = `'use client';
-
-import {
-  createCommandRegistry,
-  kbd
-} from '@constructive-io/command-palette';
-import { useRouter } from 'next/navigation';
-import { CommandPalette } from '@/blocks/command-palette/command-palette';
-
-const registry = createCommandRegistry({
-  groups: [{ id: 'navigation', label: 'Navigation', priority: 1 }],
-  commands: [{
-    id: 'settings',
-    label: 'Open settings',
-    type: 'navigation',
-    group: 'navigation',
-    href: '/settings',
-    shortcut: kbd(',', 'mod')
-  }]
-});
-
-export function ApplicationCommands() {
-  const router = useRouter();
+function GuidanceList({ items }: { items: readonly string[] }) {
   return (
-    <CommandPalette
-      registry={registry}
-      navigate={(href) => router.push(href)}
-    />
+    <ul className="flex max-w-3xl flex-col gap-2 text-pretty text-sm leading-7 text-muted-foreground sm:text-[15px]">
+      {items.map((item) => (
+        <li
+          className="relative pl-5 before:absolute before:left-0 before:text-foreground before:content-['•']"
+          key={item}
+        >
+          {item}
+        </li>
+      ))}
+    </ul>
   );
-}`;
+}
 
-const PAGE_COMMANDS_EXAMPLE = `const pageCommands = useMemo(() => [{
-  id: 'create-record',
-  label: 'Create record',
-  type: 'action' as const,
-  group: 'actions',
-  onSelect: openCreateRecord
-}], [openCreateRecord]);
+function PublicContract() {
+  const caption = `Public properties for ${COMMAND_PALETTE_DOC.title}.`;
 
-usePageCommands(registry, pageCommands);`;
+  return (
+    <Table containerProps={{ tabIndex: 0, 'aria-label': caption }}>
+      <TableCaption className="sr-only">{caption}</TableCaption>
+      <TableHeader>
+        <TableRow>
+          <TableHead scope="col">Prop</TableHead>
+          <TableHead scope="col">Type</TableHead>
+          <TableHead scope="col">Behavior</TableHead>
+        </TableRow>
+      </TableHeader>
+      <TableBody>
+        {COMMAND_PALETTE_DOC.api.map((row) => (
+          <TableRow key={row.name}>
+            <TableCell className="font-mono text-xs font-medium">
+              {row.name}
+            </TableCell>
+            <TableCell className="whitespace-normal font-mono text-xs text-muted-foreground">
+              {row.type}
+            </TableCell>
+            <TableCell className="min-w-64 whitespace-normal text-pretty text-muted-foreground">
+              {row.behavior}
+            </TableCell>
+          </TableRow>
+        ))}
+      </TableBody>
+    </Table>
+  );
+}
 
 export default function CommandPalettePage() {
+  const doc = COMMAND_PALETTE_DOC;
+
   return (
-    <div className="registry-page">
-      <header className="mb-8 max-w-3xl">
-        <p className="registry-eyebrow">Application block</p>
-        <h1 className="mt-2 text-balance text-[22px] font-semibold tracking-tight sm:text-[1.75rem]">
-          {TITLE}
-        </h1>
-        <p className="mt-2 text-pretty text-sm leading-7 text-muted-foreground sm:text-[15px]">
-          {DESCRIPTION}
-        </p>
-      </header>
+    <article aria-labelledby="command-palette-title" className="registry-page">
+      <section
+        aria-labelledby="command-palette-title"
+        className="scroll-mt-20"
+        id="overview"
+      >
+        <header className="mb-6 max-w-2xl">
+          <p className="registry-eyebrow">Components</p>
+          <h1
+            className="mt-2 text-balance text-[22px] font-semibold tracking-tight sm:text-[1.75rem]"
+            id="command-palette-title"
+          >
+            {doc.title}
+          </h1>
+          <p className="mt-2 text-pretty text-sm leading-7 text-muted-foreground sm:text-[15px]">
+            {doc.description}
+          </p>
+        </header>
 
-      <CommandPaletteDemo />
+        <CommandPaletteDemo />
+      </section>
 
       <DocSection
-        description="The CLI installs editable presentation source and its local command, button, badge, separator, portal, and theme dependencies. The headless command engine is the only npm dependency; the npm UI package is never installed."
-        id="install"
-        title="Install"
+        description="Use the registry to copy the component, its complete local source graph, and the Constructive theme into your application. The headless command engine remains the only Constructive npm dependency; shadcn installs its presentation dependencies automatically."
+        id="installation"
+        title="Installation"
       >
-        <CodeBlock label="Terminal">{registryAdd('command-palette')}</CodeBlock>
+        <CodeBlock label="Registry install">
+          {registryAdd(doc.name)}
+        </CodeBlock>
+      </DocSection>
+
+      <DocSection id="when-to-use" title="When to use">
+        <GuidanceList items={doc.whenToUse} />
       </DocSection>
 
       <DocSection
-        description="Create one registry for the shell and adapt routing explicitly. Command visibility can follow application permissions, but backend privileges and RLS still decide whether an action succeeds."
+        description={doc.usage.description}
         id="usage"
-        title="Application setup"
+        title="Basic usage"
       >
-        <CodeBlock label="application-commands.tsx" language="tsx">
-          {BASIC_EXAMPLE}
+        <CodeBlock label="application-command-palette.tsx" language="tsx">
+          {doc.usage.example}
         </CodeBlock>
       </DocSection>
 
       <DocSection
-        description="Register route-specific actions while a page is mounted. Memoizing the array gives registration and cleanup stable identities."
-        id="page-commands"
-        title="Page-scoped commands"
+        description={doc.state.description}
+        id="state"
+        title={doc.state.title}
       >
-        <CodeBlock label="records-page.tsx" language="tsx">
-          {PAGE_COMMANDS_EXAMPLE}
-        </CodeBlock>
+        <GuidanceList items={doc.state.guidance} />
       </DocSection>
 
       <DocSection
-        description="The package owns command state and execution mechanics. Installed source owns the dialog and feedback. The host owns routing, authorization evidence, mutations, error reporting, and workflow-specific step components."
-        id="boundary"
-        title="Ownership boundary"
+        description={doc.composition.description}
+        id="composition"
+        title="Composition"
       >
-        <div className="grid gap-3 md:grid-cols-3">
-          {[
-            {
-              title: 'Headless engine',
-              body: 'Registry snapshots, shortcuts, execution, multi-step state, and background-task lifecycle.'
-            },
-            {
-              title: 'Installed block',
-              body: 'Command dialog, search results, shortcut hints, step navigation, and task feedback.'
-            },
-            {
-              title: 'Host application',
-              body: 'Routes, policies, business actions, mutations, errors, and telemetry.'
-            }
-          ].map((item) => (
-            <article className="rounded-xl border border-border/60 bg-card p-4 shadow-card" key={item.title}>
-              <h3 className="text-sm font-semibold">{item.title}</h3>
-              <p className="mt-1 text-sm leading-6 text-muted-foreground">{item.body}</p>
-            </article>
-          ))}
+        <div className="flex flex-col gap-6">
+          <CodeBlock label="records-page-commands.tsx" language="tsx">
+            {doc.composition.pageCommandsExample}
+          </CodeBlock>
+          <div className="grid gap-3 md:grid-cols-3">
+            {doc.composition.boundaries.map((item) => (
+              <article
+                className="rounded-xl border border-border/60 bg-card p-4 shadow-card"
+                key={item.title}
+              >
+                <h3 className="text-balance text-sm font-semibold">
+                  {item.title}
+                </h3>
+                <p className="mt-1 text-pretty text-sm leading-6 text-muted-foreground">
+                  {item.body}
+                </p>
+              </article>
+            ))}
+          </div>
         </div>
       </DocSection>
-    </div>
+
+      <DocSection
+        description={doc.previewDescription}
+        id="examples"
+        title="Examples"
+      >
+        <GuidanceList
+          items={[
+            'Press Command K or Control K anywhere on this page, or use the Open command palette button in the preview.',
+            'Run Create database to inspect the host-supplied multi-step confirmation flow and layered Escape behavior.',
+            'Run Export application data to inspect task progress, cooperative cancellation, and completion feedback.'
+          ]}
+        />
+      </DocSection>
+
+      <DocSection id="accessibility" title="Accessibility">
+        <GuidanceList items={doc.accessibility} />
+      </DocSection>
+
+      <DocSection
+        description="These public properties define the host boundary. Installed leaf components expose their local TypeScript contracts beside the copied source."
+        id="api-reference"
+        title="API Reference"
+      >
+        <PublicContract />
+      </DocSection>
+
+      <ComponentDocPagination current="command-palette" />
+    </article>
   );
 }
 
 export const metadata: Metadata = {
-  title: TITLE,
-  description: DESCRIPTION,
+  title: COMMAND_PALETTE_DOC.title,
+  description: COMMAND_PALETTE_DOC.description,
   alternates: { canonical: withBase('/blocks/command-palette') },
   openGraph: {
-    title: TITLE,
-    description: DESCRIPTION,
+    title: COMMAND_PALETTE_DOC.title,
+    description: COMMAND_PALETTE_DOC.description,
     url: withBase('/blocks/command-palette'),
     images: [OG_IMAGE]
   }

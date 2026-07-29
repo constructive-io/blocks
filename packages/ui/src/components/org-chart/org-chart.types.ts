@@ -15,6 +15,7 @@ export interface OrgChartEdge {
 export interface OrgChartNodeData extends OrgChartEdge {
 	childCount: number;
 	isRoot: boolean;
+	isCompact: boolean;
 	[key: string]: unknown;
 }
 

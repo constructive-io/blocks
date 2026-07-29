@@ -57,7 +57,10 @@ export function CommandPaletteDemo() {
   const [lastAction, setLastAction] = useState('No command run yet');
   const backgroundTasks = useBackgroundTasks({
     successDismissMs: 5000,
-    cancelledDismissMs: 2500
+    cancelledDismissMs: 2500,
+    onTaskChange: (task) => {
+      setLastAction(`${task.label}: ${task.status}`);
+    }
   });
   const registry = useMemo(() => {
     const createDatabase = multiStepCommand<DemoContext>({
@@ -109,21 +112,36 @@ export function CommandPaletteDemo() {
   }, []);
 
   return (
-    <div className="flex min-h-72 flex-col items-center justify-center gap-5 rounded-xl border border-border/60 bg-card p-6 text-center shadow-card">
-      <div className="flex flex-col items-center gap-2">
-        <Badge variant="secondary">Interactive</Badge>
-        <h2 className="text-lg font-semibold tracking-tight">Application command center</h2>
-        <p className="max-w-md text-pretty text-sm leading-6 text-muted-foreground">
-          Search commands, start a multi-step flow, or run a cancellable export. Press Command K or Control K anywhere on this page.
-        </p>
+    <div className="registry-block min-w-0" data-slot="command-palette-showcase-preview">
+      <div className="registry-block-bar flex-wrap justify-between">
+        <span>Live interactive preview</span>
+        <Badge variant="secondary">Host-controlled</Badge>
       </div>
-      <Button onClick={() => setOpen(true)}>
-        <SparklesIcon data-icon="inline-start" />
-        Open command palette
-      </Button>
-      <p aria-live="polite" className="text-xs text-muted-foreground">
-        {lastAction}
-      </p>
+      <div className="registry-block-stage registry-block-stage-col bg-muted/20 !p-3 sm:!p-5">
+        <section
+          aria-labelledby="command-palette-demo-title"
+          className="flex min-h-72 flex-col items-center justify-center gap-5 rounded-xl border border-border/60 bg-card p-6 text-center shadow-card"
+        >
+          <div className="flex flex-col items-center gap-2">
+            <h2
+              className="text-balance text-lg font-semibold tracking-tight"
+              id="command-palette-demo-title"
+            >
+              Application command center
+            </h2>
+            <p className="max-w-md text-pretty text-sm leading-6 text-muted-foreground">
+              Search commands, start a multi-step flow, or run a cancellable export. Press Command K or Control K anywhere on this page.
+            </p>
+          </div>
+          <Button onClick={() => setOpen(true)}>
+            <SparklesIcon data-icon="inline-start" />
+            Open command palette
+          </Button>
+          <p aria-live="polite" className="text-xs text-muted-foreground">
+            {lastAction}
+          </p>
+        </section>
+      </div>
       <CommandPalette
         backgroundTasks={backgroundTasks}
         label="Constructive documentation commands"

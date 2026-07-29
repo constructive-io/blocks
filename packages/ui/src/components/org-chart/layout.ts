@@ -3,8 +3,12 @@ import type { OrgChartEdge, OrgChartNode } from './org-chart.types';
 
 export const NODE_WIDTH = 260;
 export const NODE_HEIGHT = 100;
+export const COMPACT_NODE_WIDTH = 184;
+const COMPACT_NODE_HEIGHT = 76;
 const RANK_SEP = 80;
 const NODE_SEP = 40;
+const COMPACT_RANK_SEP = 60;
+const COMPACT_NODE_SEP = 12;
 const ROOT_KEY = '__root__';
 
 export interface LayoutResult {
@@ -12,7 +16,12 @@ export interface LayoutResult {
 	edges: Edge[];
 }
 
-export function computeLayout(edges: OrgChartEdge[]): LayoutResult {
+export function computeLayout(edges: OrgChartEdge[], isCompact = false): LayoutResult {
+	const nodeWidth = isCompact ? COMPACT_NODE_WIDTH : NODE_WIDTH;
+	const nodeHeight = isCompact ? COMPACT_NODE_HEIGHT : NODE_HEIGHT;
+	const rankSeparation = isCompact ? COMPACT_RANK_SEP : RANK_SEP;
+	const nodeSeparation = isCompact ? COMPACT_NODE_SEP : NODE_SEP;
+
 	// Single pass builds edgeById, childCountMap, and childrenMap.
 	const edgeById = new Map<string, OrgChartEdge>();
 	const childCountMap = new Map<string, number>();
@@ -40,12 +49,12 @@ export function computeLayout(edges: OrgChartEdge[]): LayoutResult {
 		if (widthCache.has(nodeId)) return widthCache.get(nodeId)!;
 		const children = childrenMap.get(nodeId);
 		if (!children || children.length === 0) {
-			widthCache.set(nodeId, NODE_WIDTH);
-			return NODE_WIDTH;
+			widthCache.set(nodeId, nodeWidth);
+			return nodeWidth;
 		}
 		const totalChildWidth = children.reduce((sum, c) => sum + subtreeWidth(c), 0);
-		const gaps = (children.length - 1) * NODE_SEP;
-		const w = Math.max(NODE_WIDTH, totalChildWidth + gaps);
+		const gaps = (children.length - 1) * nodeSeparation;
+		const w = Math.max(nodeWidth, totalChildWidth + gaps);
 		widthCache.set(nodeId, w);
 		return w;
 	};
@@ -57,13 +66,13 @@ export function computeLayout(edges: OrgChartEdge[]): LayoutResult {
 		const children = childrenMap.get(nodeId);
 		if (!children || children.length === 0) return;
 
-		const totalWidth = children.reduce((sum, c) => sum + subtreeWidth(c), 0) + (children.length - 1) * NODE_SEP;
+		const totalWidth = children.reduce((sum, c) => sum + subtreeWidth(c), 0) + (children.length - 1) * nodeSeparation;
 		let currentX = centerX - totalWidth / 2;
 
 		for (const childId of children) {
 			const childW = subtreeWidth(childId);
-			positionSubtree(childId, currentX + childW / 2, y + NODE_HEIGHT + RANK_SEP);
-			currentX += childW + NODE_SEP;
+			positionSubtree(childId, currentX + childW / 2, y + nodeHeight + rankSeparation);
+			currentX += childW + nodeSeparation;
 		}
 	};
 
@@ -71,12 +80,12 @@ export function computeLayout(edges: OrgChartEdge[]): LayoutResult {
 	if (roots.length === 1) {
 		positionSubtree(roots[0], 0, 0);
 	} else {
-		const totalWidth = roots.reduce((sum, r) => sum + subtreeWidth(r), 0) + (roots.length - 1) * NODE_SEP;
+		const totalWidth = roots.reduce((sum, r) => sum + subtreeWidth(r), 0) + (roots.length - 1) * nodeSeparation;
 		let currentX = -totalWidth / 2;
 		for (const rootId of roots) {
 			const w = subtreeWidth(rootId);
 			positionSubtree(rootId, currentX + w / 2, 0);
-			currentX += w + NODE_SEP;
+			currentX += w + nodeSeparation;
 		}
 	}
 
@@ -85,10 +94,10 @@ export function computeLayout(edges: OrgChartEdge[]): LayoutResult {
 		return {
 			id: e.id,
 			type: 'orgChartNode' as const,
-			width: NODE_WIDTH,
-			height: NODE_HEIGHT,
+			width: nodeWidth,
+			height: nodeHeight,
 			position: {
-				x: pos.x - NODE_WIDTH / 2,
+				x: pos.x - nodeWidth / 2,
 				y: pos.y,
 			},
 			data: {
@@ -99,6 +108,7 @@ export function computeLayout(edges: OrgChartEdge[]): LayoutResult {
 				parentId: e.parentId,
 				childCount: childCountMap.get(e.id) ?? 0,
 				isRoot: !e.parentId,
+				isCompact,
 			},
 		};
 	});

@@ -255,7 +255,8 @@ module, `feature-pack.json`, `apps/blocks/src/feature-packs/catalog.ts`,
 `apps/blocks/src/lib/feature-packs.ts`, and `apps/blocks/registry.json`.
 `pnpm --filter blocks gen:check` catches most contract drift.
 
-Consumers configure the namespace and install with shadcn 4.13.1 or newer:
+Consumers configure the namespace and run the current CLI through
+`shadcn@latest`:
 
 ```json
 {
@@ -266,10 +267,10 @@ Consumers configure the namespace and install with shadcn 4.13.1 or newer:
 ```
 
 ```bash
-pnpm dlx shadcn@4.13.1 add @constructive/console-kit-nextjs
-pnpm dlx shadcn@4.13.1 add @constructive/preset-b2b-storage
-pnpm dlx shadcn@4.13.1 add @constructive/console-module-users
-pnpm dlx shadcn@4.13.1 add @constructive/feature-pack-users
+pnpm dlx shadcn@latest add @constructive/console-kit-nextjs
+pnpm dlx shadcn@latest add @constructive/preset-b2b-storage
+pnpm dlx shadcn@latest add @constructive/console-module-users
+pnpm dlx shadcn@latest add @constructive/feature-pack-users
 ```
 
 Standalone feature-pack installs also write their reviewed compatibility

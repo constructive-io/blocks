@@ -16,7 +16,7 @@ import { Button } from '@constructive-io/ui/button';
 
 import { ConstructiveMark } from '@/components/brand/constructive-mark';
 import { APPLICATION_BLOCKS } from '@/lib/application-blocks';
-import { BASE_PRIMITIVES } from '@/lib/base-primitives';
+import { COMPONENT_DOC_SEQUENCE } from '@/lib/component-doc-navigation';
 import { FEATURE_PACK_DOCS } from '@/lib/feature-packs';
 import { SOURCE_BLOCKS } from '@/lib/source-blocks';
 import { cn } from '@/lib/utils';
@@ -146,7 +146,9 @@ export const SiteSidebar = forwardRef<HTMLElement, SiteSidebarProps>(function Si
   ref,
 ) {
   const pathname = normalizePath(usePathname() ?? '');
-  const onComponents = pathname.startsWith('/blocks/ui/');
+  const onComponents =
+    pathname.startsWith('/blocks/ui/') ||
+    pathname === '/blocks/command-palette';
   const onBillingDocs = pathname === '/blocks/billing' || pathname.startsWith('/blocks/billing/');
   const onFoundations = pathname === '/' || pathname === '/blocks' || pathname === '/blocks/styling';
 
@@ -159,9 +161,9 @@ export const SiteSidebar = forwardRef<HTMLElement, SiteSidebarProps>(function Si
     if (onFoundations) setFoundationsOpen(true);
   }, [onComponents, onFoundations]);
 
-  const componentLinks = BASE_PRIMITIVES.map((p) => ({
-    href: `/blocks/ui/${p.name}`,
-    label: p.title,
+  const componentLinks = COMPONENT_DOC_SEQUENCE.map((component) => ({
+    href: component.href,
+    label: component.title,
   }));
   const featurePackLinks = FEATURE_PACK_DOCS.map((pack) => ({
     href: `/blocks/features/${pack.id}`,
@@ -231,7 +233,7 @@ export const SiteSidebar = forwardRef<HTMLElement, SiteSidebarProps>(function Si
         <div className="mt-3">
           <NavGroupLabel
             title="Application"
-            count={featurePackLinks.length + applicationBlockLinks.length + sourceBlockLinks.length + 3}
+            count={featurePackLinks.length + applicationBlockLinks.length + sourceBlockLinks.length + 2}
           />
           <ul className="flex flex-col gap-0.5 pb-0.5 pt-0.5">
             <li>
@@ -273,15 +275,6 @@ export const SiteSidebar = forwardRef<HTMLElement, SiteSidebarProps>(function Si
                 </NavLink>
               </li>
             ))}
-            <li>
-              <NavLink
-                href="/blocks/command-palette"
-                active={pathname === '/blocks/command-palette'}
-                onNavigate={onNavigate}
-              >
-                Command Palette
-              </NavLink>
-            </li>
             <li>
               <NavLink href="/blocks/console-kit" active={pathname === '/blocks/console-kit'} onNavigate={onNavigate}>
                 Console Kit

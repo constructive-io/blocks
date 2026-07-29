@@ -61,26 +61,50 @@ export function ObjectToolbar({
   onClearSelection,
   className,
 }: ObjectToolbarProps) {
+  const isDeleting = bulkDeleteProgress != null && bulkDeleteProgress.done < bulkDeleteProgress.total;
+  const failedCount = bulkDeleteProgress?.failed.length ?? 0;
+  const itemLabel = selectedCount === 1 ? 'file' : 'files';
+  const deleteProgressStatus = bulkDeleteProgress
+    ? isDeleting
+      ? ` Deleting ${bulkDeleteProgress.done} of ${bulkDeleteProgress.total}.`
+      : ` Deletion finished: ${bulkDeleteProgress.done} of ${bulkDeleteProgress.total} processed.`
+    : '';
+  const failureStatus = failedCount > 0 ? ` ${failedCount} failed.` : '';
+  const statusMessage =
+    selectedCount > 0
+      ? `${selectedCount} ${itemLabel} selected.${deleteProgressStatus}${failureStatus}`
+      : 'No files selected.';
+  const selectionStatus = (
+    <span className="sr-only" role="status" aria-live="polite" aria-atomic="true">
+      {statusMessage}
+    </span>
+  );
+
   if (selectedCount > 0) {
-    const isDeleting = bulkDeleteProgress != null && bulkDeleteProgress.done < bulkDeleteProgress.total;
-    const failedCount = bulkDeleteProgress?.failed.length ?? 0;
     return (
-      <div className={cn('flex h-9 items-center justify-between gap-2 rounded-lg border bg-muted/40 px-2', className)}>
-        <span className="flex items-center gap-2 text-sm font-medium tabular-nums">
-          {selectedCount} selected
-          {failedCount > 0 && <span className="text-xs font-normal text-destructive">{failedCount} failed</span>}
-        </span>
-        <div className="flex items-center gap-1.5">
-          <Button variant="destructive-outline" size="sm" onClick={onBulkDelete} disabled={isDeleting}>
-            <Trash2Icon aria-hidden />
-            {isDeleting ? `Deleting ${bulkDeleteProgress.done}/${bulkDeleteProgress.total}` : 'Delete'}
-          </Button>
-          <Button variant="ghost" size="sm" onClick={onClearSelection} disabled={isDeleting}>
-            <XIcon aria-hidden />
-            Clear
-          </Button>
+      <>
+        {selectionStatus}
+        <div className={cn('flex h-9 items-center justify-between gap-2 rounded-lg border bg-muted/40 px-2', className)}>
+          <span className="flex items-center gap-2 text-sm font-medium tabular-nums">
+            {selectedCount} selected
+            {failedCount > 0 && <span className="text-xs font-normal text-destructive">{failedCount} failed</span>}
+          </span>
+          <div className="flex items-center gap-1.5">
+            {onBulkDelete ? (
+              <Button variant="destructive-outline" size="sm" onClick={onBulkDelete} disabled={isDeleting}>
+                <Trash2Icon aria-hidden />
+                {isDeleting ? `Deleting ${bulkDeleteProgress.done}/${bulkDeleteProgress.total}` : 'Delete'}
+              </Button>
+            ) : null}
+            {onClearSelection ? (
+              <Button variant="ghost" size="sm" onClick={onClearSelection} disabled={isDeleting}>
+                <XIcon aria-hidden />
+                Clear
+              </Button>
+            ) : null}
+          </div>
         </div>
-      </div>
+      </>
     );
   }
 
@@ -88,55 +112,65 @@ export function ObjectToolbar({
   const DirectionIcon = sort.direction === 'asc' ? ArrowUpIcon : ArrowDownIcon;
 
   return (
-    <div className={cn('flex items-center gap-2', className)}>
-      <InputGroup className="max-w-xs flex-1">
-        <InputGroupAddon>
-          <SearchIcon aria-hidden />
-        </InputGroupAddon>
-        <InputGroupInput
-          type="search"
-          placeholder="Search files"
-          value={query}
-          onChange={(event) => onQueryChange(event.target.value)}
-        />
-      </InputGroup>
+    <>
+      {selectionStatus}
+      <div className={cn('flex items-center gap-2', className)}>
+        <InputGroup className="max-w-xs flex-1">
+          <InputGroupAddon>
+            <SearchIcon aria-hidden />
+          </InputGroupAddon>
+          <InputGroupInput
+            aria-label="Search files"
+            type="search"
+            placeholder="Search files"
+            value={query}
+            onChange={(event) => onQueryChange(event.target.value)}
+          />
+        </InputGroup>
 
-      <DropdownMenu>
-        <DropdownMenuTrigger asChild>
-          <Button variant="outline" size="sm">
-            <ArrowUpDownIcon aria-hidden />
-            <span className="max-sm:sr-only">{activeColumn?.label ?? 'Sort'}</span>
-            <DirectionIcon aria-hidden className="opacity-70" />
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button
+              aria-label={`Sort by ${activeColumn?.label ?? 'column'}, ${sort.direction === 'asc' ? 'ascending' : 'descending'}`}
+              variant="outline"
+              size="sm"
+            >
+              <ArrowUpDownIcon aria-hidden data-icon="inline-start" />
+              <span aria-hidden className="hidden sm:inline">{activeColumn?.label ?? 'Sort'}</span>
+              <DirectionIcon aria-hidden className="opacity-70" data-icon="inline-end" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="min-w-44">
+            <DropdownMenuLabel>Sort by</DropdownMenuLabel>
+            <DropdownMenuRadioGroup
+              value={sort.column}
+              onValueChange={(value) => onSortChange({ ...sort, column: value as ObjectSortColumn })}
+            >
+              {SORT_COLUMNS.map((column) => (
+                <DropdownMenuRadioItem key={column.value} value={column.value}>
+                  {column.label}
+                </DropdownMenuRadioItem>
+              ))}
+            </DropdownMenuRadioGroup>
+            <DropdownMenuSeparator />
+            <DropdownMenuLabel>Direction</DropdownMenuLabel>
+            <DropdownMenuRadioGroup
+              value={sort.direction}
+              onValueChange={(value) => onSortChange({ ...sort, direction: value as ObjectSort['direction'] })}
+            >
+              <DropdownMenuRadioItem value="asc">Ascending</DropdownMenuRadioItem>
+              <DropdownMenuRadioItem value="desc">Descending</DropdownMenuRadioItem>
+            </DropdownMenuRadioGroup>
+          </DropdownMenuContent>
+        </DropdownMenu>
+
+        {onUpload ? (
+          <Button aria-label="Upload files" size="sm" onClick={onUpload}>
+            <UploadIcon aria-hidden data-icon="inline-start" />
+            <span className="hidden sm:inline">Upload</span>
           </Button>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent align="end" className="min-w-44">
-          <DropdownMenuLabel>Sort by</DropdownMenuLabel>
-          <DropdownMenuRadioGroup
-            value={sort.column}
-            onValueChange={(value) => onSortChange({ ...sort, column: value as ObjectSortColumn })}
-          >
-            {SORT_COLUMNS.map((column) => (
-              <DropdownMenuRadioItem key={column.value} value={column.value}>
-                {column.label}
-              </DropdownMenuRadioItem>
-            ))}
-          </DropdownMenuRadioGroup>
-          <DropdownMenuSeparator />
-          <DropdownMenuLabel>Direction</DropdownMenuLabel>
-          <DropdownMenuRadioGroup
-            value={sort.direction}
-            onValueChange={(value) => onSortChange({ ...sort, direction: value as ObjectSort['direction'] })}
-          >
-            <DropdownMenuRadioItem value="asc">Ascending</DropdownMenuRadioItem>
-            <DropdownMenuRadioItem value="desc">Descending</DropdownMenuRadioItem>
-          </DropdownMenuRadioGroup>
-        </DropdownMenuContent>
-      </DropdownMenu>
-
-      <Button size="sm" onClick={onUpload}>
-        <UploadIcon aria-hidden />
-        Upload
-      </Button>
-    </div>
+        ) : null}
+      </div>
+    </>
   );
 }

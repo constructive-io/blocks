@@ -662,7 +662,7 @@ async function install(root: string, itemNames: readonly string[]): Promise<void
 		'pnpm',
 		['exec', 'shadcn', 'add', ...itemNames.map((itemName) => `@constructive/${itemName}`), '--cwd', root, '--yes'],
 		appDirectory,
-		`shadcn add ${itemNames.map((itemName) => `@constructive/${itemName}`).join(' ')}`,
+		`pnpm dlx shadcn@latest add ${itemNames.map((itemName) => `@constructive/${itemName}`).join(' ')}`,
 	);
 }
 

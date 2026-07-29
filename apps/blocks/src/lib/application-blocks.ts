@@ -64,12 +64,34 @@ const reportingLines: OrgChartEdge[] = [
   }
 ];
 
-export function CompanyOrgChart() {
+type ReportingLineInput = Readonly<{
+  personId: string;
+  managerId: string;
+  positionTitle?: string | null;
+}>;
+
+type CompanyOrgChartProps = Readonly<{
+  saveReportingLine: (
+    reportingLine: ReportingLineInput
+  ) => void | Promise<void>;
+  openPositionEditor: (personId: string) => void;
+  openRemovalConfirmation: (personId: string) => void;
+}>;
+
+export function CompanyOrgChart({
+  saveReportingLine,
+  openPositionEditor,
+  openRemovalConfirmation
+}: CompanyOrgChartProps) {
   return (
     <OrgChart
       defaultEdges={reportingLines}
-      onReparent={(personId, managerId) =>
-        saveReportingLine({ personId, managerId })
+      onReparent={(personId, managerId, preserve) =>
+        saveReportingLine({
+          personId,
+          managerId,
+          positionTitle: preserve.positionTitle
+        })
       }
       onEditNode={(person) => openPositionEditor(person.id)}
       onRemoveNode={(person) => openRemovalConfirmation(person.id)}
@@ -154,7 +176,7 @@ export function CompanyOrgChart() {
         'Map GraphQL results into the storage domain types and keep selection, search, sort, folders, and actions in the host. The browser performs no fetching or authorization checks.',
       example: `'use client';
 
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 
 import {
   ObjectDetailSheet,
@@ -164,10 +186,43 @@ import {
   type StorageObject
 } from '@/components/ui/storage';
 
+type AssetBrowserActions = Readonly<{
+  confirmDelete: (objectIds: string[]) => void;
+  copyLink: (object: StorageObject) => void;
+  createBucket: () => void;
+  download: (object: StorageObject) => void;
+  rename: (objectId: string, filename?: string) => void;
+  upload: () => void;
+}>;
+
+function compareObjects(
+  left: StorageObject,
+  right: StorageObject,
+  sort: ObjectSort
+) {
+  let comparison = 0;
+  if (sort.column === 'filename') {
+    comparison = (left.filename ?? left.key).localeCompare(
+      right.filename ?? right.key
+    );
+  } else if (sort.column === 'mimeType') {
+    comparison = left.mimeType.localeCompare(right.mimeType);
+  } else if (sort.column === 'size') {
+    comparison = left.size - right.size;
+  } else {
+    comparison =
+      new Date(left.createdAt).getTime() -
+      new Date(right.createdAt).getTime();
+  }
+  return sort.direction === 'asc' ? comparison : -comparison;
+}
+
 export function AssetBrowser({
+  actions,
   buckets,
   objects
 }: Readonly<{
+  actions: AssetBrowserActions;
   buckets: StorageBucket[];
   objects: StorageObject[];
 }>) {
@@ -181,29 +236,61 @@ export function AssetBrowser({
     column: 'createdAt',
     direction: 'desc'
   });
+  const visibleObjects = useMemo(() => {
+    const search = query.trim().toLocaleLowerCase();
+    return objects
+      .filter((object) => {
+        if (object.bucketId !== bucketId) return false;
+        if (!search) return true;
+        const searchable = [
+          object.filename ?? '',
+          object.key,
+          object.mimeType
+        ].join(' ');
+        return searchable.toLocaleLowerCase().includes(search);
+      })
+      .sort((left, right) => compareObjects(left, right, sort));
+  }, [bucketId, objects, query, sort]);
 
   return (
     <>
       <StorageBrowser
         buckets={buckets}
-        objects={objects}
+        objects={visibleObjects}
         query={query}
         selectedBucketId={bucketId}
         selectedIds={selectedIds}
         sort={sort}
+        onBulkDelete={actions.confirmDelete}
+        onClearSelection={() => setSelectedIds([])}
+        onCopyLink={actions.copyLink}
+        onDelete={(object) => actions.confirmDelete([object.id])}
+        onDownload={actions.download}
+        onNewBucket={actions.createBucket}
         onOpenObject={setOpenedObject}
         onQueryChange={setQuery}
-        onSelectBucket={setBucketId}
+        onRename={(object) => actions.rename(object.id)}
+        onSelectBucket={(nextBucketId) => {
+          setBucketId(nextBucketId);
+          setSelectedIds([]);
+        }}
         onSelectionChange={setSelectedIds}
         onSortChange={setSort}
-        onUpload={openUploadWorkflow}
+        onUpload={actions.upload}
       />
       <ObjectDetailSheet
         object={openedObject}
         open={openedObject !== null}
+        onCopyLink={actions.copyLink}
+        onDelete={(objectId) => {
+          actions.confirmDelete([objectId]);
+          setOpenedObject(null);
+        }}
+        onDownload={actions.download}
         onOpenChange={(open) => {
           if (!open) setOpenedObject(null);
         }}
+        onRename={actions.rename}
       />
     </>
   );

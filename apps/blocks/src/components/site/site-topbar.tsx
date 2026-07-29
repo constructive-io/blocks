@@ -61,7 +61,7 @@ function installActionFor(path: string) {
     if (!pack) return null;
     return {
       command: registryAdd(pack.registryName),
-      label: `shadcn add @constructive/${pack.registryName}`,
+      label: registryAdd(pack.registryName),
       title: `${pack.title} feature pack`,
     };
   }
@@ -72,7 +72,7 @@ function installActionFor(path: string) {
     if (!block) return null;
     return {
       command: registryAdd(block.name),
-      label: `shadcn add @constructive/${block.name}`,
+      label: registryAdd(block.name),
       title: block.title,
     };
   }
@@ -80,7 +80,7 @@ function installActionFor(path: string) {
   if (normalizedPath === '/blocks/console-kit') {
     return {
       command: registryAdd('console-kit-nextjs'),
-      label: 'shadcn add @constructive/console-kit-nextjs',
+      label: registryAdd('console-kit-nextjs'),
       title: 'Console Kit',
     };
   }
@@ -88,7 +88,7 @@ function installActionFor(path: string) {
   if (normalizedPath === '/blocks/command-palette') {
     return {
       command: registryAdd('command-palette'),
-      label: 'shadcn add @constructive/command-palette',
+      label: registryAdd('command-palette'),
       title: 'Command Palette',
     };
   }
@@ -100,7 +100,7 @@ function installActionFor(path: string) {
     if (sourceBlock) {
       return {
         command: registryAdd(sourceBlock.name),
-        label: `shadcn add @constructive/${sourceBlock.name}`,
+        label: registryAdd(sourceBlock.name),
         title: sourceBlock.title,
       };
     }
@@ -113,7 +113,7 @@ function installActionFor(path: string) {
     if (block) {
       return {
         command: registryAdd(block.name),
-        label: `shadcn add @constructive/${block.name}`,
+        label: registryAdd(block.name),
         title: block.title,
       };
     }
@@ -127,7 +127,7 @@ function installActionFor(path: string) {
 
   return {
     command: registryInstall(primitive),
-    label: `shadcn add @constructive/${primitive.name}`,
+    label: registryInstall(primitive),
     title: primitive.title,
   };
 }

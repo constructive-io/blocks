@@ -51,13 +51,6 @@ const ORG_CHART_EDGES: OrgChartEdge[] = [
     avatarUrl: null,
   },
   {
-    id: 'imani',
-    parentId: 'alex',
-    displayName: 'Imani Okafor',
-    positionTitle: 'VP of Go-to-Market',
-    avatarUrl: null,
-  },
-  {
     id: 'jordan',
     parentId: 'maya',
     displayName: 'Jordan Lee',
@@ -65,24 +58,10 @@ const ORG_CHART_EDGES: OrgChartEdge[] = [
     avatarUrl: null,
   },
   {
-    id: 'noor',
-    parentId: 'maya',
-    displayName: 'Noor Haddad',
-    positionTitle: 'Product Lead',
-    avatarUrl: null,
-  },
-  {
     id: 'cass',
     parentId: 'theo',
     displayName: 'Cass Taylor',
     positionTitle: 'Platform Lead',
-    avatarUrl: null,
-  },
-  {
-    id: 'diego',
-    parentId: 'theo',
-    displayName: 'Diego Santos',
-    positionTitle: 'Infrastructure Lead',
     avatarUrl: null,
   },
 ];
@@ -224,7 +203,7 @@ function OrgChartPreview() {
             Product organization
           </h1>
           <p className="text-sm text-muted-foreground">
-            Eight people · three reporting groups
+            Five people · two reporting groups
           </p>
         </div>
         <Badge variant="secondary">Editable</Badge>

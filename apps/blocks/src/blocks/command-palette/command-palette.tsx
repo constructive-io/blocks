@@ -83,7 +83,7 @@ export function CommandPalette({
   open: controlledOpen,
   onOpenChange,
   shortcut = kbd('k', 'mod'),
-  placeholder = 'Type a command or search...',
+  placeholder = 'Type a command or search…',
   label = 'Command palette',
   backgroundTasks,
 }: CommandPaletteProps) {

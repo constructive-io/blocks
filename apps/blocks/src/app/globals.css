@@ -1,4 +1,6 @@
 @import '@constructive-io/ui/globals.css';
+@import '@constructive-io/sheets/styles.css';
+@import '@constructive-io/schema-builder/styles.css';
 
 @source '../';
 

@@ -1,5 +1,3 @@
-import Link from 'next/link';
-
 import {
   Table,
   TableBody,
@@ -12,6 +10,7 @@ import {
 
 import { CodeBlock } from '@/components/docs/code-block';
 import { DocSection } from '@/components/docs/doc-section';
+import { ApplicationDocPagination } from '@/components/docs/application-doc-pagination';
 import type { ApplicationBlockDoc } from '@/lib/application-blocks';
 import { registryAdd } from '@/lib/install-mode';
 import { withBase } from '@/lib/site';
@@ -65,34 +64,10 @@ function PublicContract({ block }: { block: ApplicationBlockDoc }) {
   );
 }
 
-function NeighborLink({
-  block,
-  direction,
-}: {
-  block?: ApplicationBlockDoc;
-  direction: 'Previous' | 'Next';
-}) {
-  if (!block) return <span />;
-
-  return (
-    <Link
-      className="inline-flex min-h-10 flex-col justify-center rounded-md text-sm text-muted-foreground outline-none transition-colors duration-150 ease-out hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring"
-      href={`/blocks/${block.name}`}
-    >
-      <span className="block text-xs">{direction}</span>
-      <span className="font-medium text-foreground">{block.title}</span>
-    </Link>
-  );
-}
-
 export function ApplicationBlockDocsPage({
   block,
-  next,
-  previous,
 }: {
   block: ApplicationBlockDoc;
-  next?: ApplicationBlockDoc;
-  previous?: ApplicationBlockDoc;
 }) {
   return (
     <article aria-labelledby="application-block-title" className="registry-page">
@@ -164,7 +139,7 @@ export function ApplicationBlockDocsPage({
       <DocSection
         description={block.previewDescription}
         id="examples"
-        title="Live example"
+        title="Examples"
       >
         <GuidanceList
           items={[
@@ -186,15 +161,7 @@ export function ApplicationBlockDocsPage({
         <PublicContract block={block} />
       </DocSection>
 
-      <nav
-        aria-label="Application block pagination"
-        className="mt-12 grid grid-cols-2 gap-6 border-t border-border pt-6"
-      >
-        <NeighborLink block={previous} direction="Previous" />
-        <div className="text-right">
-          <NeighborLink block={next} direction="Next" />
-        </div>
-      </nav>
+      <ApplicationDocPagination current={block.name} />
     </article>
   );
 }

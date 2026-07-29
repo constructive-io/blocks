@@ -1,5 +1,4 @@
-import Link from 'next/link';
-
+import { ComponentDocPagination } from '@/components/docs/component-doc-pagination';
 import { InstallToggle } from '@/components/docs/install-toggle';
 import { UI_DEMO_SOURCE } from '@/generated/ui-demo-source';
 import type { BasePrimitive } from '@/lib/base-primitives';
@@ -13,8 +12,6 @@ import { DocSection } from './doc-section';
 
 type PrimitiveDocsPageProps = {
   docs: PrimitiveDocs;
-  next?: BasePrimitive;
-  previous?: BasePrimitive;
   primitive: BasePrimitive;
 };
 
@@ -30,20 +27,6 @@ function sourceFor(primitive: BasePrimitive, demo: string) {
   return source;
 }
 
-function NeighborLink({ primitive, direction }: { primitive?: BasePrimitive; direction: 'Previous' | 'Next' }) {
-  if (!primitive) return <span />;
-
-  return (
-    <Link
-      href={`/blocks/ui/${primitive.name}`}
-      className="inline-flex min-h-10 flex-col justify-center rounded-md text-sm text-muted-foreground outline-none transition-colors duration-150 ease-out hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring"
-    >
-      <span className="block text-xs">{direction}</span>
-      <span className="font-medium text-foreground">{primitive.title}</span>
-    </Link>
-  );
-}
-
 function GuidanceList({ items }: { items: readonly string[] }) {
   return (
     <ul className="max-w-3xl space-y-2 text-pretty text-sm leading-7 text-muted-foreground sm:text-[15px]">
@@ -56,7 +39,7 @@ function GuidanceList({ items }: { items: readonly string[] }) {
   );
 }
 
-export function PrimitiveDocsPage({ docs, next, previous, primitive }: PrimitiveDocsPageProps) {
+export function PrimitiveDocsPage({ docs, primitive }: PrimitiveDocsPageProps) {
   const registryImport = `import { ${primitive.exportName} } from '@/components/ui/${primitive.name}';`;
 
   return (
@@ -148,12 +131,7 @@ export function PrimitiveDocsPage({ docs, next, previous, primitive }: Primitive
         <ApiTable parts={docs.api} />
       </DocSection>
 
-      <nav aria-label="Primitive pagination" className="mt-12 grid grid-cols-2 gap-6 border-t border-border pt-6">
-        <NeighborLink primitive={previous} direction="Previous" />
-        <div className="text-right">
-          <NeighborLink primitive={next} direction="Next" />
-        </div>
-      </nav>
+      <ComponentDocPagination current={primitive.name} />
     </article>
   );
 }

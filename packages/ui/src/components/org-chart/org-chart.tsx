@@ -32,6 +32,8 @@ import { OrgChartNodeMemo } from './org-chart-node';
 import type { OrgChartEdge, OrgChartNodeData, OrgChartNode as OrgChartNodeType } from './org-chart.types';
 
 const FIT_VIEW_OPTIONS = { padding: 0.12 } as const;
+const COMPACT_FIT_VIEW_OPTIONS = { padding: 0.02 } as const;
+const COMPACT_LAYOUT_MAX_WIDTH = 639;
 
 /** Walk parent→child graph to collect all descendant IDs (cycle-check on drag drop). */
 function getDescendantIds(nodeId: string, nodes: { id: string; data: { parentId: string | null } }[]): Set<string> {
@@ -55,7 +57,9 @@ function mergeWithMeasured(prev: OrgChartNodeType[], layoutNodes: OrgChartNodeTy
 	return layoutNodes.map((n) => {
 		const existing = prevMap.get(n.id);
 		if (!existing) return n;
-		return existing.data.isRoot !== n.data.isRoot ? n : { ...n, measured: existing.measured };
+		return existing.data.isRoot !== n.data.isRoot || existing.data.isCompact !== n.data.isCompact
+			? n
+			: { ...n, measured: existing.measured };
 	});
 }
 
@@ -115,6 +119,8 @@ function OrgChartInner({
 	} = useOrgChartContext();
 
 	const [internalEdges, setInternalEdges] = useState<OrgChartEdge[]>(defaultEdges ?? []);
+	const [isCompactLayout, setIsCompactLayout] = useState(false);
+	const chartRef = useRef<HTMLDivElement>(null);
 
 	const defaultEdgesHash = useMemo(
 		() => defaultEdges?.map((e) => `${e.id}:${e.parentId}:${e.positionTitle ?? ''}:${e.displayName ?? ''}`).join(',') ?? '',
@@ -129,10 +135,28 @@ function OrgChartInner({
 
 	const apiEdges = controlledEdges ?? internalEdges;
 
-	const layout = useMemo(() => (apiEdges.length > 0 ? computeLayout(apiEdges) : null), [apiEdges]);
+	const layout = useMemo(
+		() => (apiEdges.length > 0 ? computeLayout(apiEdges, isCompactLayout) : null),
+		[apiEdges, isCompactLayout],
+	);
 	const layoutNodes = layout?.nodes ?? [];
 	const layoutEdges = layout?.edges ?? [];
 	const isEmpty = apiEdges.length === 0 && !isLoading;
+	const fitViewOptions = isCompactLayout ? COMPACT_FIT_VIEW_OPTIONS : FIT_VIEW_OPTIONS;
+
+	useEffect(() => {
+		const chart = chartRef.current;
+		if (!chart || typeof ResizeObserver === 'undefined') return;
+
+		const updateLayoutDensity = () => {
+			setIsCompactLayout(chart.clientWidth <= COMPACT_LAYOUT_MAX_WIDTH);
+		};
+		updateLayoutDensity();
+
+		const observer = new ResizeObserver(updateLayoutDensity);
+		observer.observe(chart);
+		return () => observer.disconnect();
+	}, [isEmpty, isLoading]);
 
 	const { fitView, getIntersectingNodes } = useReactFlow();
 
@@ -140,7 +164,7 @@ function OrgChartInner({
 	const [rfEdges, setRfEdges, onEdgesChange] = useEdgesState<Edge>([]);
 
 	const nodesHash = useMemo(
-		() => layoutNodes.map((n) => `${n.id}:${n.data.parentId ?? ''}:${n.data.positionTitle ?? ''}:${n.data.displayName ?? ''}`).join(','),
+		() => layoutNodes.map((n) => `${n.id}:${n.data.parentId ?? ''}:${n.data.positionTitle ?? ''}:${n.data.displayName ?? ''}:${n.data.isCompact}`).join(','),
 		[layoutNodes],
 	);
 	const edgesHash = useMemo(() => layoutEdges.map((e) => `${e.id}:${e.source}:${e.target}`).join(','), [layoutEdges]);
@@ -153,10 +177,10 @@ function OrgChartInner({
 	useEffect(() => {
 		setNodes((prev) => mergeWithMeasured(prev, layoutNodes));
 		setRfEdges(layoutEdges);
-		const raf = requestAnimationFrame(() => fitViewRef.current(FIT_VIEW_OPTIONS));
+		const raf = requestAnimationFrame(() => fitViewRef.current(fitViewOptions));
 		return () => cancelAnimationFrame(raf);
 		// eslint-disable-next-line react-hooks/exhaustive-deps
-	}, [nodesHash, edgesHash]);
+	}, [nodesHash, edgesHash, fitViewOptions]);
 
 	const draggedNodeRef = useRef<string | null>(null);
 	const dropTargetIdRef = useRef<string | null>(null);
@@ -269,8 +293,13 @@ function OrgChartInner({
 
 	if (isLoading) {
 		return (
-			<div className='bg-card border-border/60 flex items-center justify-center rounded-xl border p-16'>
-				<Loader2 className='text-muted-foreground size-6 animate-spin' />
+			<div
+				role='status'
+				aria-live='polite'
+				className='bg-card border-border/60 flex items-center justify-center rounded-xl border p-16'
+			>
+				<Loader2 aria-hidden className='text-muted-foreground size-6 motion-safe:animate-spin' />
+				<span className='sr-only'>Loading organization chart</span>
 			</div>
 		);
 	}
@@ -281,7 +310,7 @@ function OrgChartInner({
 
 	return (
 		<NodeActionsProvider onEditNode={handleEditNode} onRemoveNode={handleRemoveNode}>
-			<div className={cn('border-border/60 h-[600px] overflow-hidden rounded-xl border', className)}>
+			<div ref={chartRef} className={cn('border-border/60 h-[600px] overflow-hidden rounded-xl border', className)}>
 				<ReactFlow
 					nodes={nodes}
 					edges={rfEdges}
@@ -296,7 +325,7 @@ function OrgChartInner({
 					nodeTypes={nodeTypes}
 					edgeTypes={edgeTypes}
 					fitView
-					fitViewOptions={FIT_VIEW_OPTIONS}
+					fitViewOptions={fitViewOptions}
 					minZoom={0.3}
 					maxZoom={1.5}
 					nodesDraggable={editable}
@@ -319,7 +348,7 @@ function OrgChartInner({
 				>
 					<Background variant={BackgroundVariant.Dots} gap={20} size={2} />
 
-					<FlowZoomPanel fitViewOptions={FIT_VIEW_OPTIONS} />
+					<FlowZoomPanel fitViewOptions={fitViewOptions} />
 				</ReactFlow>
 			</div>
 		</NodeActionsProvider>

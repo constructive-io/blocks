@@ -1,6 +1,7 @@
 'use client';
 
 import {
+  useCallback,
   useLayoutEffect,
   useRef,
   useState,
@@ -35,8 +36,13 @@ import {
   TooltipTrigger,
 } from '@constructive-io/ui/tooltip';
 
-import type { ApplicationBlockDoc } from '@/lib/application-blocks';
 import { cn } from '@/lib/utils';
+
+export type LivePreviewBlock = Readonly<{
+  previewDescription: string;
+  previewHeight: number;
+  title: string;
+}>;
 
 type PreviewViewport = 'desktop' | 'tablet' | 'mobile';
 
@@ -72,13 +78,16 @@ function previewViewportForWidth(width: number): PreviewViewport {
 }
 
 function usePreviewScale(
-  measureRef: { current: HTMLElement | null },
+  measureRef: { current: HTMLElement | null } | null,
   viewportWidth: number,
+  mountedElement?: HTMLElement | null,
 ) {
   const [scale, setScale] = useState(1);
 
   useLayoutEffect(() => {
-    const element = measureRef.current;
+    const element = mountedElement === undefined
+      ? measureRef?.current
+      : mountedElement;
     if (!element) return;
 
     const update = () => {
@@ -95,7 +104,7 @@ function usePreviewScale(
     const observer = new ResizeObserver(update);
     observer.observe(element);
     return () => observer.disconnect();
-  }, [measureRef, viewportWidth]);
+  }, [measureRef, mountedElement, viewportWidth]);
 
   return scale;
 }
@@ -152,20 +161,22 @@ function PreviewFrame({
   source,
   viewport,
 }: {
-  block: ApplicationBlockDoc;
+  block: LivePreviewBlock;
   mode: 'full-screen' | 'inline';
   scale: number;
   source: string;
   viewport: PreviewViewport;
 }) {
   const option = viewportOption(viewport);
-  const layoutWidth = option.width * scale;
-  const layoutHeight = block.previewHeight * scale;
   const frameStyle: CSSProperties = {
     width: option.width,
     height: block.previewHeight,
     transform: scale === 1 ? undefined : `scale(${scale})`,
     transformOrigin: 'top left',
+  };
+  const frameContainerStyle: CSSProperties = {
+    aspectRatio: `${option.width} / ${block.previewHeight}`,
+    width: `min(100%, ${option.width}px)`,
   };
 
   return (
@@ -173,10 +184,10 @@ function PreviewFrame({
       className="relative mx-auto shrink-0 overflow-hidden rounded-lg shadow-sm ring-1 ring-border/60"
       data-preview-scale={scale.toFixed(3)}
       data-slot="application-block-preview-frame"
-      style={{ width: layoutWidth, height: layoutHeight }}
+      style={frameContainerStyle}
     >
       <iframe
-        className="block border-0 bg-background"
+        className="absolute left-0 top-0 block border-0 bg-background"
         data-preview-viewport={viewport}
         height={block.previewHeight}
         loading="eager"
@@ -203,7 +214,7 @@ function PreviewStage({
   return (
     <div
       className={cn(
-        'flex w-full min-w-0 justify-center overflow-x-hidden overflow-y-auto p-3 sm:p-5',
+        'flex w-full min-w-0 items-start justify-center overflow-x-hidden overflow-y-auto p-3 sm:p-5',
         className,
       )}
       data-slot="application-block-preview-stage"
@@ -219,24 +230,28 @@ export function ApplicationBlockShowcasePreview({
   block,
   previewPath,
 }: {
-  block: ApplicationBlockDoc;
+  block: LivePreviewBlock;
   previewPath: string;
 }) {
   const inlineStageRef = useRef<HTMLDivElement | null>(null);
-  const fullscreenStageRef = useRef<HTMLDivElement | null>(null);
   const fullscreenViewportRef = useRef<HTMLButtonElement | null>(null);
   const viewportSelectionRef = useRef<'responsive' | 'manual'>('responsive');
+  const [fullscreenStage, setFullscreenStage] = useState<HTMLDivElement | null>(null);
   const [fullscreen, setFullscreen] = useState(false);
-  const [viewport, setViewport] = useState<PreviewViewport>('desktop');
+  const [viewport, setViewport] = useState<PreviewViewport>('mobile');
   const selectedViewport = viewportOption(viewport);
   const inlineScale = usePreviewScale(
     inlineStageRef,
     selectedViewport.width,
   );
   const fullscreenScale = usePreviewScale(
-    fullscreenStageRef,
+    null,
     selectedViewport.width,
+    fullscreenStage,
   );
+  const fullscreenStageRef = useCallback((element: HTMLDivElement | null) => {
+    setFullscreenStage(element);
+  }, []);
 
   useLayoutEffect(() => {
     const stage = inlineStageRef.current;
@@ -263,7 +278,7 @@ export function ApplicationBlockShowcasePreview({
     <TooltipProvider delay={300}>
       <Dialog open={fullscreen} onOpenChange={setFullscreen}>
         <div
-          className="registry-block min-w-0"
+          className="registry-block min-w-0 [overflow-anchor:none]"
           data-slot="application-block-showcase-preview"
         >
           <div className="registry-block-bar flex-wrap justify-between">

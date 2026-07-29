@@ -19,7 +19,7 @@ describe('primitive install mode', () => {
       <>
         <InstallToggle
           npm={[{ code: 'pnpm add @constructive-io/ui' }]}
-          registry={[{ code: 'pnpm dlx shadcn@4.13.1 add @constructive/select' }]}
+          registry={[{ code: 'pnpm dlx shadcn@latest add @constructive/select' }]}
         />
         <DemoSourceBlock source={{ npm: 'npm example source', registry: 'registry example source' }} />
       </>,
@@ -31,7 +31,7 @@ describe('primitive install mode', () => {
     fireEvent.click(screen.getByRole('tab', { name: 'registry' }));
 
     await waitFor(() => {
-      expect(screen.getByText('pnpm dlx shadcn@4.13.1 add @constructive/select')).toBeVisible();
+      expect(screen.getByText('pnpm dlx shadcn@latest add @constructive/select')).toBeVisible();
       expectDisplayedSource('registry', 'registry example source');
     });
     expect(localStorage.getItem('constructive:install-mode')).toBe('registry');

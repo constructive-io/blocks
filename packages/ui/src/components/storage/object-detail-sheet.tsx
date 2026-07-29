@@ -80,6 +80,7 @@ function ObjectDetailBody({
 
   const isImageType = object.mimeType.startsWith('image/');
   const isImage = isImageType && !!object.downloadUrl;
+  const hasFileAction = !!(onDownload || onCopyLink || onDelete);
 
   const commitRename = () => {
     const trimmed = draftName.trim();
@@ -114,35 +115,39 @@ function ObjectDetailBody({
       </div>
 
       {/* Rename (inline draft) */}
-      <div className="py-3">
-        {isRenaming ? (
-          <div className="flex items-center gap-2">
-            <Input
-              autoFocus
-              value={draftName}
-              onChange={(event) => setDraftName(event.target.value)}
-              onKeyDown={(event) => {
-                if (event.key === 'Enter') commitRename();
-                if (event.key === 'Escape') setIsRenaming(false);
-              }}
-              aria-label="New file name"
-            />
-            <Button size="icon-sm" aria-label="Save name" onClick={commitRename}>
-              <CheckIcon aria-hidden />
-            </Button>
-            <Button size="icon-sm" variant="ghost" aria-label="Cancel rename" onClick={() => setIsRenaming(false)}>
-              <XIcon aria-hidden />
-            </Button>
+      {onRename ? (
+        <>
+          <div className="py-3">
+            {isRenaming ? (
+              <div className="flex items-center gap-2">
+                <Input
+                  autoFocus
+                  value={draftName}
+                  onChange={(event) => setDraftName(event.target.value)}
+                  onKeyDown={(event) => {
+                    if (event.key === 'Enter') commitRename();
+                    if (event.key === 'Escape') setIsRenaming(false);
+                  }}
+                  aria-label="New file name"
+                />
+                <Button size="icon-sm" aria-label="Save name" onClick={commitRename}>
+                  <CheckIcon aria-hidden />
+                </Button>
+                <Button size="icon-sm" variant="ghost" aria-label="Cancel rename" onClick={() => setIsRenaming(false)}>
+                  <XIcon aria-hidden />
+                </Button>
+              </div>
+            ) : (
+              <Button variant="outline" size="sm" className="w-full justify-start" onClick={() => setIsRenaming(true)}>
+                <PencilIcon aria-hidden />
+                Rename
+              </Button>
+            )}
           </div>
-        ) : (
-          <Button variant="outline" size="sm" className="w-full justify-start" onClick={() => setIsRenaming(true)}>
-            <PencilIcon aria-hidden />
-            Rename
-          </Button>
-        )}
-      </div>
 
-      <Separator />
+          <Separator />
+        </>
+      ) : null}
 
       {/* Metadata */}
       <dl className="py-2">
@@ -171,44 +176,54 @@ function ObjectDetailBody({
         )}
       </dl>
 
-      <Separator />
+      {hasFileAction ? (
+        <>
+          <Separator />
 
-      {/* Actions */}
-      <div className="flex flex-col gap-2 pt-4">
-        <Button onClick={() => onDownload?.(object)}>
-          <DownloadIcon aria-hidden />
-          Download
-        </Button>
-        <Button variant="outline" onClick={() => onCopyLink?.(object)}>
-          <CopyIcon aria-hidden />
-          Copy link
-        </Button>
-        <AlertDialog>
-          <AlertDialogTrigger asChild>
-            <Button variant="destructive-outline">
-              <Trash2Icon aria-hidden />
-              Delete
-            </Button>
-          </AlertDialogTrigger>
-          <AlertDialogContent>
-            <AlertDialogHeader>
-              <AlertDialogTitle>Delete this file?</AlertDialogTitle>
-              <AlertDialogDescription>
-                {`"${displayName}" will be permanently removed. This action cannot be undone.`}
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogCancel>Cancel</AlertDialogCancel>
-              <AlertDialogAction
-                className={cn('bg-destructive text-destructive-foreground hover:bg-destructive/90')}
-                onClick={() => onDelete?.(object.id)}
-              >
-                Delete
-              </AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
-      </div>
+          {/* Actions */}
+          <div className="flex flex-col gap-2 pt-4">
+            {onDownload ? (
+              <Button onClick={() => onDownload(object)}>
+                <DownloadIcon aria-hidden />
+                Download
+              </Button>
+            ) : null}
+            {onCopyLink ? (
+              <Button variant="outline" onClick={() => onCopyLink(object)}>
+                <CopyIcon aria-hidden />
+                Copy link
+              </Button>
+            ) : null}
+            {onDelete ? (
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <Button variant="destructive-outline">
+                    <Trash2Icon aria-hidden />
+                    Delete
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Delete this file?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      {`"${displayName}" will be permanently removed. This action cannot be undone.`}
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                    <AlertDialogAction
+                      className={cn('bg-destructive text-destructive-foreground hover:bg-destructive/90')}
+                      onClick={() => onDelete(object.id)}
+                    >
+                      Delete
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
+            ) : null}
+          </div>
+        </>
+      ) : null}
     </>
   );
 }

@@ -13,12 +13,9 @@ export default async function PrimitivePage({ params }: PageProps) {
   const primitive = getBasePrimitive(name);
   if (!primitive) return notFound();
 
-  const index = BASE_PRIMITIVES.findIndex((item) => item.name === primitive.name);
-  const previous = index > 0 ? BASE_PRIMITIVES[index - 1] : undefined;
-  const next = index < BASE_PRIMITIVES.length - 1 ? BASE_PRIMITIVES[index + 1] : undefined;
   const docs = getPrimitiveDocs(primitive.name);
 
-  return <PrimitiveDocsPage primitive={primitive} docs={docs} previous={previous} next={next} />;
+  return <PrimitiveDocsPage primitive={primitive} docs={docs} />;
 }
 
 export function generateStaticParams() {

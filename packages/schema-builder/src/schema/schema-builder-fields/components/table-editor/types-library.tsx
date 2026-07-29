@@ -52,7 +52,7 @@ export function TypesLibrary() {
 						<RiSearchLine />
 					</InputGroupAddon>
 					<InputGroupInput
-						placeholder='Search types...'
+						placeholder='Search types…'
 						value={searchQuery}
 						onChange={(e) => {
 							const value = e.target.value;

@@ -22,7 +22,7 @@ expect an existing shadcn project; initialize one if the application does not
 already contain `components.json`:
 
 ```bash
-pnpm dlx shadcn@4.13.1 init
+pnpm dlx shadcn@latest init
 ```
 
 Keep the generated alias configuration, then map the public registry in
@@ -48,7 +48,7 @@ Then choose the smallest surface that owns the workflow you need:
 | Reusable primitive | npm subpath or namespaced primitive registry item |
 
 ```bash
-pnpm dlx shadcn@4.13.1 add @constructive/console-kit-nextjs
+pnpm dlx shadcn@latest add @constructive/console-kit-nextjs
 ```
 
 Render the installed umbrella with a secret-free tenant descriptor returned by
@@ -87,13 +87,14 @@ source through the same namespace:
 
 ```bash
 pnpm add @constructive-io/ui
-pnpm dlx shadcn@4.13.1 add @constructive/button
+pnpm dlx shadcn@latest add @constructive/button
 ```
 
 The UI package exposes its Tailwind foundation at
 `@constructive-io/ui/globals.css`. Registry installs copy the required UI
 source and Constructive theme into the consumer and do not install the npm
-package. Registry consumers require shadcn CLI 4.13.1 or newer.
+package. Registry consumers should invoke the current shadcn CLI through
+`shadcn@latest`.
 
 ## Development
 

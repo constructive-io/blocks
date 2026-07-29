@@ -66,7 +66,7 @@ describe('base primitive catalog', () => {
   it('keeps package and registry examples on their respective distribution paths', () => {
     for (const primitive of BASE_PRIMITIVES) {
       expect(packageImport(primitive)).toContain(`@constructive-io/ui/${primitive.name}`);
-      expect(registryInstall(primitive)).toBe(`pnpm dlx shadcn@4.13.1 add @constructive/${primitive.name}`);
+      expect(registryInstall(primitive)).toBe(`pnpm dlx shadcn@latest add @constructive/${primitive.name}`);
     }
   });
 });

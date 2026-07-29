@@ -14,7 +14,10 @@ import { PoliciesView } from '@/blocks/schema/schema-builder-policies/components
 import { SchemaBuilderHeader } from '../schema-builder-header';
 
 import { ClientOnly } from '../client-only';
-import { SchemaBuilderSidebar } from '@/blocks/schema/schema-builder-tables/components/schemas/schema-builder-sidebar';
+import {
+	SchemaBuilderMobileNavigation,
+	SchemaBuilderSidebar,
+} from '@/blocks/schema/schema-builder-tables/components/schemas/schema-builder-sidebar';
 import { SchemaStateDisplay } from '@/blocks/schema/schema-builder-core/components/schemas/schema-state-display';
 import {
 	useSchemaBuilderRuntime,
@@ -99,6 +102,11 @@ export function SchemasRoute({ emptyState }: { emptyState?: ReactNode } = {}) {
 							{leftPanelVisible && <SchemaBuilderSidebar showSystemTables={showSystemTablesInSidebar} />}
 
 							<div className='flex min-h-0 min-w-0 flex-1 flex-col'>
+								<SchemaBuilderMobileNavigation
+									hasSystemTables={hasSystemTablesInCurrentSchema}
+									onShowSystemTablesChange={setShowSystemTablesInSidebar}
+									showSystemTables={showSystemTablesInSidebar}
+								/>
 								<SchemaBuilderHeader
 									leftPanelVisible={leftPanelVisible}
 									setLeftPanelVisible={setLeftPanelVisible}
