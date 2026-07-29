@@ -3,6 +3,17 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.6.1](https://github.com/constructive-io/blocks/compare/@constructive-io/ui@0.6.0...@constructive-io/ui@0.6.1) (2026-07-29)
+
+
+### Bug Fixes
+
+* **packages:** migrate builds to tsdown ([844c578](https://github.com/constructive-io/blocks/commit/844c5786e0892146805b41638e646307d377661f))
+
+
+
+
+
 # 0.6.0 (2026-07-29)
 
 

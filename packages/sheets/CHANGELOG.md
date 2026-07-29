@@ -3,6 +3,14 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.6.1](https://github.com/constructive-io/blocks/compare/@constructive-io/sheets@0.6.0...@constructive-io/sheets@0.6.1) (2026-07-29)
+
+**Note:** Version bump only for package @constructive-io/sheets
+
+
+
+
+
 # 0.6.0 (2026-07-29)
 
 
