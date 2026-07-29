@@ -16,7 +16,15 @@ const excludedDirectoryNames = new Set(['__golden__', '__tests__', 'stories', 't
 
 export type SourceRegistryOptions = {
 	packageRoot: string;
-	item: Omit<RegistryItem, 'files'>;
+	item: {
+		name: string;
+		type: string;
+		title?: string;
+		description?: string;
+		docs?: string;
+		categories?: string[];
+		registryDependencies?: string[];
+	};
 	registrySubdirectory: string;
 	targetPrefix: string;
 	dependencies: readonly string[];

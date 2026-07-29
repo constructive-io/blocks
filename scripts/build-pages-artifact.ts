@@ -2,9 +2,11 @@ import { cp, lstat, mkdir, readdir, readFile, rm } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
+import { APPLICATION_BLOCKS } from '../apps/blocks/src/lib/application-blocks.ts';
 import { BASE_PRIMITIVES } from '../apps/blocks/src/lib/base-primitives.ts';
 import { BILLING_BLOCKS } from '../apps/blocks/src/lib/billing-blocks.ts';
 import { FEATURE_PACK_DOCS } from '../apps/blocks/src/lib/feature-packs.ts';
+import { SOURCE_BLOCKS } from '../apps/blocks/src/lib/source-blocks.ts';
 
 type Registry = {
   items: Array<{ name: string }>;
@@ -15,6 +17,8 @@ const blocksOutput = path.join(repositoryRoot, 'apps', 'blocks', 'out');
 const registryOutput = path.join(repositoryRoot, 'apps', 'registry', 'public', 'r');
 const canonicalRegistryManifests = [
   path.join(repositoryRoot, 'packages', 'ui', 'registry.json'),
+  path.join(repositoryRoot, 'packages', 'sheets', 'registry.json'),
+  path.join(repositoryRoot, 'packages', 'schema-builder', 'registry.json'),
   path.join(repositoryRoot, 'apps', 'blocks', 'registry.json'),
 ];
 const artifactRoot = path.join(repositoryRoot, '.artifacts', 'pages');
@@ -30,6 +34,9 @@ const pageRoutes = [
   '/blocks/styling',
   '/blocks/features',
   ...FEATURE_PACK_DOCS.map(({ id }) => `/blocks/features/${id}`),
+  '/blocks/command-palette',
+  ...SOURCE_BLOCKS.map(({ name }) => `/blocks/${name}`),
+  ...APPLICATION_BLOCKS.map(({ name }) => `/blocks/${name}`),
   '/blocks/console-kit',
   ...BASE_PRIMITIVES.map(({ name }) => `/blocks/ui/${name}`),
   '/blocks/billing',
@@ -44,6 +51,10 @@ const previewRoutes = [
   ...BILLING_BLOCKS.map(({ name }) => ({
     parent: `/blocks/billing/${name}`,
     route: `/blocks/billing/${name}/preview`,
+  })),
+  ...APPLICATION_BLOCKS.map(({ name }) => ({
+    parent: `/blocks/${name}`,
+    route: `/blocks/${name}/preview`,
   })),
 ];
 
