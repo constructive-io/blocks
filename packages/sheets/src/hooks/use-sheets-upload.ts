@@ -99,7 +99,7 @@ interface PatchMutationResult {
  * `execute`/`executeUpload` (the hooks pass the context functions), those are
  * used verbatim so consumer/mock implementations intercept both steps.
  * Otherwise the same factories that back the provider are used, sourced from
- * `endpoint`/`getToken`/`onAuthError` — guaranteeing DataError normalization
+ * `endpoint`/`getToken`/`onAuthError` — guaranteeing canonical error normalization
  * and onAuthError without any raw fetch in this module.
  */
 function resolveTransport(
@@ -189,7 +189,7 @@ export async function executeFieldUpload(
 		}
 	`.trim();
 
-	// execute() normalizes auth/forbidden/GraphQL errors to DataError and fires
+	// execute() normalizes auth/forbidden/GraphQL errors to ConstructiveError and fires
 	// onAuthError on 401/UNAUTHENTICATED — no manual equivalent needed here.
 	const result = await execute<PatchMutationResult>(mutationString, {
 		input: {

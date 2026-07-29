@@ -8,6 +8,7 @@ const destination = path.join(root, '.artifacts', 'npm');
 const packages = [
   '@constructive-io/ui',
   '@constructive-io/data',
+  '@constructive-io/command-palette',
   '@constructive-io/sheets',
   '@constructive-io/schema-builder'
 ];

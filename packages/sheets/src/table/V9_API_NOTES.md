@@ -1,6 +1,6 @@
 # TanStack Table v9 API notes (GROUND TRUTH)
 
-Pinned: `@tanstack/react-table@9.0.0-beta.17` (`@tanstack/table-core@9.0.0-beta.17`),
+Pinned: `@tanstack/react-table@9.0.0-beta.58` (`@tanstack/table-core@9.0.0-beta.58`),
 `@tanstack/react-virtual@3.14.3`. Verified by the compiling probe at
 `src/table/__probe__/v9-probe.tsx` (S6 deletes it). All snippets below are exactly what
 typechecked — Context7/training data that disagrees is wrong for this pinned beta.
@@ -11,7 +11,7 @@ typechecked — Context7/training data that disagrees is wrong for this pinned b
 import {
 	columnSizingFeature,   // COMMITTED column widths  -> state.columnSizing
 	columnResizingFeature, // transient drag-resize    -> state.columnResizing
-	columnPinningFeature,  // left/right pin            -> state.columnPinning
+	columnPinningFeature,  // logical start/end pin     -> state.columnPinning
 	rowSelectionFeature    // row selection             -> state.rowSelection
 } from '@tanstack/react-table';
 ```
@@ -68,8 +68,8 @@ const table = useTable({
 	columnResizeMode: 'onChange',
 	state: {                  // our reducer is the source of truth
 		columnSizing,           // ColumnSizingState = Record<string, number>
-		columnPinning,          // ColumnPinningState = { left: string[]; right: string[] }
-		rowSelection            // RowSelectionState = Record<string, boolean | undefined>
+		columnPinning,          // ColumnPinningState = { start: string[]; end: string[] }
+		rowSelection            // RowSelectionState = Record<string, true>
 	},
 	onColumnSizingChange,     // OnChangeFn<ColumnSizingState>  (value | (prev)=>next)
 	onColumnPinningChange,    // OnChangeFn<ColumnPinningState>

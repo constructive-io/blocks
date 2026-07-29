@@ -1,5 +1,5 @@
 // Default native DOM view for the `image` SheetsCell kind. Dependency-light: plain
-// JSX + Tailwind v4 + local `cn`, no @constructive-io/ui this phase. Reads the URL
+// JSX + Tailwind v4 + local `cn`, with no shared primitive dependency. Reads the URL
 // from the factory payload (`cell.data` is `[url]`).
 //
 // Mirrors the canvas painter (`grid/draw-image-cell.ts`): a uniform SQUARE

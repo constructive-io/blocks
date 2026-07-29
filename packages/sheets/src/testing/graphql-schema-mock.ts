@@ -331,7 +331,7 @@ export function makeSchemaExecuteWithStats(
 		const res = await graphql({ schema, source, variableValues, rootValue });
 		if (res.errors?.length) {
 			// graphql-js validation/coercion errors (unknown field, bad arg type,
-			// stray input field) surface here as a thrown DataError — failing the
+			// stray input field) surface here as a canonical error — failing the
 			// test loudly. This is the "malformed field/arg now fails" guarantee.
 			throw createError.graphql(res.errors[0].message);
 		}

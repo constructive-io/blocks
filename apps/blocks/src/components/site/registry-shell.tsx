@@ -36,7 +36,7 @@ export function RegistryShell({ children }: { children: ReactNode }) {
   const isConsoleKitProof = pathname === '/__integration/console-kit';
   const isStandalonePreview =
     isConsoleKitProof ||
-    /^\/blocks\/(?:billing\/[^/]+|features\/[^/]+)\/preview\/?$/.test(pathname);
+    /^\/blocks\/(?:billing\/[^/]+|features\/[^/]+|org-chart|storage-browser)\/preview\/?$/.test(pathname);
   const menuButtonRef = useRef<HTMLButtonElement | null>(null);
   const sidebarRef = useRef<HTMLElement | null>(null);
   const previouslyFocusedRef = useRef<HTMLElement | null>(null);

@@ -2,12 +2,45 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 
 import { InstallToggle } from '@/components/docs/install-toggle';
+import { APPLICATION_BLOCKS } from '@/lib/application-blocks';
 import { BASE_PRIMITIVES } from '@/lib/base-primitives';
 import { packageCommands, registryCommands } from '@/lib/install-mode';
 import { OG_IMAGE, withBase } from '@/lib/site';
+import { SOURCE_BLOCKS } from '@/lib/source-blocks';
 
 const TITLE = 'Setup';
 const DESCRIPTION = 'Choose npm package distribution or source installation through the shadcn CLI.';
+
+const APPLICATION_CATALOG = [
+  {
+    href: '/blocks/features',
+    title: 'Feature packs',
+    description:
+      'Data, authentication, users, organizations, storage, billing, and notifications.',
+  },
+  ...APPLICATION_BLOCKS.map((block) => ({
+    href: `/blocks/${block.name}`,
+    title: block.title,
+    description: block.description,
+  })),
+  ...SOURCE_BLOCKS.map((block) => ({
+    href: `/blocks/${block.name}`,
+    title: block.title,
+    description: block.description,
+  })),
+  {
+    href: '/blocks/command-palette',
+    title: 'Command Palette',
+    description:
+      'Search, page-scoped commands, structured shortcuts, guided flows, and background tasks.',
+  },
+  {
+    href: '/blocks/console-kit',
+    title: 'Console Kit for Next.js',
+    description:
+      'A full-page console driven by injected endpoints, session state, adapters, and versioned _meta.',
+  },
+] as const;
 
 export default function SetupPage() {
   return (
@@ -41,26 +74,13 @@ export default function SetupPage() {
             Application blocks
           </h2>
           <p className="mt-1 max-w-2xl text-pretty text-sm leading-7 text-muted-foreground">
-            Start with a capability-aligned feature pack or install the full
-            Next.js console with its route-neutral app shell and dynamic data
-            explorer.
+            Start with a capability-aligned feature pack, add a composed
+            workflow block, or install the full Next.js console with its
+            route-neutral app shell and dynamic data explorer.
           </p>
         </div>
         <ul className="grid gap-2 sm:grid-cols-2">
-          {[
-            {
-              href: '/blocks/features',
-              title: 'Feature packs',
-              description:
-                'Data, authentication, users, organizations, storage, billing, and notifications.'
-            },
-            {
-              href: '/blocks/console-kit',
-              title: 'Console Kit for Next.js',
-              description:
-                'A full-page console driven by injected endpoints, session state, adapters, and versioned _meta.'
-            }
-          ].map((item) => (
+          {APPLICATION_CATALOG.map((item) => (
             <li key={item.href} className="min-w-0">
               <Link
                 href={item.href}

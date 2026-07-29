@@ -150,7 +150,7 @@ Column resize stays a manual window-drag by design (one gesture, not a per-frame
 
 | Area | Feature | Status |
 |------|---------|--------|
-| **Sort** | Single-column header-click cycle (asc→desc→none), `aria-sort` caret, server-side `orderBy`, no page-flash on change (`keepPreviousData`) | ✅ |
+| **Sort** | Single-column header-click cycle (asc→desc→none), `aria-sort` caret, server-side `orderBy`, same-scope page continuity without cross-identity placeholder reuse | ✅ |
 | Sort | Multi-column (`Shift+click`) | 📋 (P5) |
 | **Filter** | Toolbar filter-tree popover: nested AND/OR groups, type-aware operators, live condition badge, clear-all; flows to PostGraphile `where`; clean infinite-scroll reset; filtered-empty state | ✅ |
 | Filter | Operator breadth (~13 → ~60 cell types), `BETWEEN`/`isNotNull`, enum/relation widgets; global quick-search | 📋 (P5) |

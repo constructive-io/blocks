@@ -4,6 +4,7 @@ import { fileURLToPath } from 'node:url';
 
 import {
 	CONSTRUCTIVE_THEME_DEPENDENCY,
+	CONSTRUCTIVE_SHEETS_PACKAGE,
 	CONSTRUCTIVE_UI_PACKAGE,
 	assertFeaturePackRegistryContract,
 	assertUniqueRegistryShape,
@@ -14,14 +15,31 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const registryPath = path.join(root, 'apps', 'registry', 'registry.json');
 const registry = JSON.parse(await readFile(registryPath, 'utf8')) as Registry;
 const ownNames = new Set(registry.items.map((item) => item.name));
+const requiredPackageRanges = new Map([
+	['@constructive-io/data', '@constructive-io/data@^0.4.0'],
+	['@constructive-io/command-palette', '@constructive-io/command-palette@^0.3.0'],
+]);
 
 assertUniqueRegistryShape(registry.items);
 assertFeaturePackRegistryContract(registry.items);
 
 for (const item of registry.items) {
 	for (const dependency of [...(item.dependencies ?? []), ...(item.registryDependencies ?? [])]) {
-		if (dependency === CONSTRUCTIVE_UI_PACKAGE || dependency.startsWith(`${CONSTRUCTIVE_UI_PACKAGE}/`)) {
-			throw new Error(`${item.name} retains ${CONSTRUCTIVE_UI_PACKAGE} in the registry contract.`);
+		for (const [packageName, requiredRange] of requiredPackageRanges) {
+			if (
+				(dependency === packageName || dependency.startsWith(`${packageName}@`)) &&
+				dependency !== requiredRange
+			) {
+				throw new Error(`${item.name} must depend on ${requiredRange}, received ${dependency}.`);
+			}
+		}
+		if (
+			dependency === CONSTRUCTIVE_UI_PACKAGE ||
+			dependency.startsWith(`${CONSTRUCTIVE_UI_PACKAGE}/`) ||
+			dependency === CONSTRUCTIVE_SHEETS_PACKAGE ||
+			dependency.startsWith(`${CONSTRUCTIVE_SHEETS_PACKAGE}/`)
+		) {
+			throw new Error(`${item.name} retains source-owned UI package ${dependency} in the registry contract.`);
 		}
 		if (dependency === 'tw-animate-css') throw new Error(`${item.name} retains tw-animate-css.`);
 	}

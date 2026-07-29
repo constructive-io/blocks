@@ -237,6 +237,8 @@ export interface SchemaBuilderHostOptions {
 export interface SchemaBuilderProps extends SchemaBuilderHostOptions {
   className?: string;
   emptyState?: ReactNode;
+  /** Reuses a host-owned schema data boundary instead of starting block-owned queries. */
+  dataState?: import('./schema/schema-builder-core/lib/gql/hooks/schema-builder').SchemaBuilderDataState;
 }
 
 export function defineSchemaBuilderAdapter<TAdapter extends SchemaBuilderAdapter>(adapter: TAdapter): TAdapter {

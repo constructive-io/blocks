@@ -128,7 +128,7 @@ const LeafletMapInner = lazy(() =>
 		}: {
 			onMapClick: (lat: number, lng: number) => void;
 			position: [number, number] | null;
-		}) {
+		}): React.ReactElement | null {
 			const map = useMap();
 
 			useMapEvents({

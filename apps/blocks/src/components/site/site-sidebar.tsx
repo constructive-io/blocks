@@ -15,8 +15,10 @@ import { ChevronRight, X } from 'lucide-react';
 import { Button } from '@constructive-io/ui/button';
 
 import { ConstructiveMark } from '@/components/brand/constructive-mark';
+import { APPLICATION_BLOCKS } from '@/lib/application-blocks';
 import { BASE_PRIMITIVES } from '@/lib/base-primitives';
 import { FEATURE_PACK_DOCS } from '@/lib/feature-packs';
+import { SOURCE_BLOCKS } from '@/lib/source-blocks';
 import { cn } from '@/lib/utils';
 
 const NAV_LINK =
@@ -165,6 +167,14 @@ export const SiteSidebar = forwardRef<HTMLElement, SiteSidebarProps>(function Si
     href: `/blocks/features/${pack.id}`,
     label: pack.title,
   }));
+  const applicationBlockLinks = APPLICATION_BLOCKS.map((block) => ({
+    href: `/blocks/${block.name}`,
+    label: block.title,
+  }));
+  const sourceBlockLinks = SOURCE_BLOCKS.map((block) => ({
+    href: `/blocks/${block.name}`,
+    label: block.title,
+  }));
 
   return (
     <aside
@@ -221,7 +231,7 @@ export const SiteSidebar = forwardRef<HTMLElement, SiteSidebarProps>(function Si
         <div className="mt-3">
           <NavGroupLabel
             title="Application"
-            count={featurePackLinks.length + 2}
+            count={featurePackLinks.length + applicationBlockLinks.length + sourceBlockLinks.length + 3}
           />
           <ul className="flex flex-col gap-0.5 pb-0.5 pt-0.5">
             <li>
@@ -241,6 +251,37 @@ export const SiteSidebar = forwardRef<HTMLElement, SiteSidebarProps>(function Si
                 </li>
               );
             })}
+            {applicationBlockLinks.map(({ href, label }) => (
+              <li key={href}>
+                <NavLink
+                  active={pathname === href}
+                  href={href}
+                  onNavigate={onNavigate}
+                >
+                  {label}
+                </NavLink>
+              </li>
+            ))}
+            {sourceBlockLinks.map(({ href, label }) => (
+              <li key={href}>
+                <NavLink
+                  active={pathname === href}
+                  href={href}
+                  onNavigate={onNavigate}
+                >
+                  {label}
+                </NavLink>
+              </li>
+            ))}
+            <li>
+              <NavLink
+                href="/blocks/command-palette"
+                active={pathname === '/blocks/command-palette'}
+                onNavigate={onNavigate}
+              >
+                Command Palette
+              </NavLink>
+            </li>
             <li>
               <NavLink href="/blocks/console-kit" active={pathname === '/blocks/console-kit'} onNavigate={onNavigate}>
                 Console Kit

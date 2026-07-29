@@ -69,7 +69,7 @@ function hasDeclaredEnums(meta: MetaQuery): boolean {
 
 function schemaCompatibilityError(missingPaths: readonly string[]): Error {
 	const detail = missingPaths.length > 0 ? ` Missing: ${missingPaths.join(', ')}.` : '';
-	return createError.badRequest(
+	return createError.graphql(
 		`The GraphQL schema does not match the enum values declared by Constructive _meta.${detail}`,
 		'SCHEMA_INTROSPECTION_INCOMPATIBLE',
 	);
@@ -89,7 +89,7 @@ function normalizeMutationEnums(
 
 	const mappings = enumMappings.get(execute);
 	if (!mappings) {
-		throw createError.badRequest(
+		throw createError.graphql(
 			'Enum schema mappings are unavailable. Load table metadata before mutating enum fields.',
 			'ENUM_MAPPING_UNAVAILABLE',
 		);

@@ -1,6 +1,6 @@
 // Native DOM view for the `draft-action` column — the REAL <Button> that replaces
 // the canvas fake-button painter (grid/custom-cells/draft-action-cell.tsx, which
-// snapshot-captured @constructive-io/ui button styles into a canvas paint via
+// snapshot-captured design-system button styles into a canvas paint via
 // captureButtonStyle/BUTTON_STYLE_CACHE). Mirrors that painter's states 1:1:
 //   - idle    -> outline button labelled "Save"
 //   - saving  -> disabled, spinner + "Saving..." (canvas drew an animated arc)

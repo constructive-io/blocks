@@ -40,6 +40,7 @@ function runtimeExportSpecifiers(manifest: PackageManifest): string[] {
 
 const uiManifest = await packageManifest('packages/ui/package.json');
 const dataManifest = await packageManifest('packages/data/package.json');
+const commandPaletteManifest = await packageManifest('packages/command-palette/package.json');
 const sheetsManifest = await packageManifest('packages/sheets/package.json');
 const schemaBuilderManifest = await packageManifest('packages/schema-builder/package.json');
 if (!uiManifest.peerDependencies?.tailwindcss) {
@@ -61,16 +62,22 @@ if (sheetsManifest.exports['./styles.css'] !== './dist/styles.css') {
 }
 const uiVersion = uiManifest.version;
 const dataVersion = dataManifest.version;
+const commandPaletteVersion = commandPaletteManifest.version;
 const sheetsVersion = sheetsManifest.version;
 const schemaBuilderVersion = schemaBuilderManifest.version;
 const runtimeSpecifiers = [
   ...runtimeExportSpecifiers(uiManifest),
   ...runtimeExportSpecifiers(dataManifest),
+  ...runtimeExportSpecifiers(commandPaletteManifest),
   ...runtimeExportSpecifiers(sheetsManifest),
   ...runtimeExportSpecifiers(schemaBuilderManifest)
 ];
 const uiTarball = path.join(artifacts, `constructive-io-ui-${uiVersion}.tgz`);
 const dataTarball = path.join(artifacts, `constructive-io-data-${dataVersion}.tgz`);
+const commandPaletteTarball = path.join(
+  artifacts,
+  `constructive-io-command-palette-${commandPaletteVersion}.tgz`
+);
 const sheetsTarball = path.join(artifacts, `constructive-io-sheets-${sheetsVersion}.tgz`);
 const schemaBuilderTarball = path.join(
   artifacts,
@@ -79,6 +86,7 @@ const schemaBuilderTarball = path.join(
 await Promise.all([
   access(uiTarball),
   access(dataTarball),
+  access(commandPaletteTarball),
   access(sheetsTarball),
   access(schemaBuilderTarball)
 ]);
@@ -99,6 +107,7 @@ await writeFile(
       private: true,
       type: 'module',
       dependencies: {
+        '@constructive-io/command-palette': `file:${commandPaletteTarball}`,
         '@constructive-io/data': `file:${dataTarball}`,
         '@constructive-io/schema-builder': `file:${schemaBuilderTarball}`,
         '@constructive-io/sheets': `file:${sheetsTarball}`,
@@ -145,6 +154,7 @@ await writeFile(
   `import * as UI from '@constructive-io/ui';
 import { Button } from '@constructive-io/ui/button';
 import { FlowZoomPanel } from '@constructive-io/ui/flow-zoom-panel';
+import { createCommandRegistry, kbd } from '@constructive-io/command-palette';
 import { META_CONTRACT_VERSION, selectConsoleDataTables } from '@constructive-io/data';
 import { Sheets, SheetsProvider } from '@constructive-io/sheets';
 import { SchemaBuilder, DEFAULT_SCHEMA_BUILDER_PREFERENCES } from '@constructive-io/schema-builder';
@@ -156,7 +166,8 @@ import * as Policies from '@constructive-io/schema-builder/policies';
 import * as Tables from '@constructive-io/schema-builder/tables';
 
 const element = <Button>Package consumer</Button>;
-const publicSurface = [UI, FlowZoomPanel, META_CONTRACT_VERSION, selectConsoleDataTables, Sheets, SheetsProvider, SchemaBuilder, DEFAULT_SCHEMA_BUILDER_PREFERENCES, Core, Fields, Relationships, Indexes, Policies, Tables];
+const commandRegistry = createCommandRegistry({ groups: [], commands: [] });
+const publicSurface = [UI, FlowZoomPanel, commandRegistry, kbd('k', 'mod'), META_CONTRACT_VERSION, selectConsoleDataTables, Sheets, SheetsProvider, SchemaBuilder, DEFAULT_SCHEMA_BUILDER_PREFERENCES, Core, Fields, Relationships, Indexes, Policies, Tables];
 void element;
 void publicSurface;
 `
@@ -192,6 +203,7 @@ const specifiers = ${JSON.stringify(runtimeSpecifiers)};
 for (const specifier of specifiers) assert.ok(require(specifier), \`Empty CJS export: \${specifier}\`);
 assert.ok(require('@constructive-io/ui').Button);
 assert.ok(require('@constructive-io/ui/flow-zoom-panel').FlowZoomPanel);
+assert.ok(require('@constructive-io/command-palette').createCommandRegistry);
 assert.equal(require('@constructive-io/data').META_CONTRACT_VERSION, '2026-07');
 assert.ok(require('@constructive-io/sheets').Sheets);
 assert.ok(require('@constructive-io/schema-builder').SchemaBuilder);
@@ -395,6 +407,7 @@ await run('pnpm', ['install', '--ignore-workspace', '--frozen-lockfile=false']);
 await Promise.all([
   access(path.join(consumer, 'node_modules', '@constructive-io', 'ui', 'LICENSE')),
   access(path.join(consumer, 'node_modules', '@constructive-io', 'data', 'LICENSE')),
+  access(path.join(consumer, 'node_modules', '@constructive-io', 'command-palette', 'LICENSE')),
   access(path.join(consumer, 'node_modules', '@constructive-io', 'sheets', 'LICENSE')),
   access(path.join(consumer, 'node_modules', '@constructive-io', 'schema-builder', 'LICENSE'))
 ]);

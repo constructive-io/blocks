@@ -1,4 +1,4 @@
-# @constructive-io/sheets
+# Sheets
 
 Portable spreadsheet-like CRUD editor for Constructive/PostGraphile backends. The package provides a native DOM grid with filtering, pagination, cell editing, draft rows, relation handling, and standalone authentication.
 
@@ -7,22 +7,36 @@ Portable spreadsheet-like CRUD editor for Constructive/PostGraphile backends. Th
 - **Backend**: Constructive server (`cnc server`) exposing the `2026-07` `_meta` contract
 - **Frontend**: React 18+, Tailwind CSS v4
 
-## Install
+## Install from the Constructive registry
 
-```bash
-npm install @constructive-io/sheets @constructive-io/data @constructive-io/ui \
-  @tanstack/react-query @tanstack/react-form
+Configure the `@constructive` registry in `components.json`, then copy the
+complete source-owned grid into your application:
+
+```json
+{
+  "registries": {
+    "@constructive": "https://constructive-io.github.io/blocks/r/{name}.json"
+  }
+}
 ```
 
-`lucide-react` and `@remixicon/react` are runtime dependencies of Sheets and
-are installed transitively.
+```bash
+pnpm dlx shadcn@4.13.1 add @constructive/sheets
+```
 
-### Optional peer dependencies
+The command installs editable Sheets source and local Constructive primitives,
+plus the headless `@constructive-io/data` runtime. It does not install the npm
+UI or Sheets packages.
+
+### Editor dependencies
 
 | Package | For |
 |---------|-----|
 | `leaflet` + `react-leaflet` | Geometry/map editors |
 | `react-aria-components` + `@internationalized/date` | Date picker editors |
+
+The registry command installs these so every built-in editor typechecks out of
+the box, even when an application hides those field types.
 
 ## Quick Start
 
@@ -32,7 +46,7 @@ are installed transitively.
 import {
   SheetsProvider, Sheets, SheetsTableSelector,
   SheetsAuthGate, useSheetsMeta,
-} from '@constructive-io/sheets';
+} from '@/components/ui/sheets';
 import { selectConsoleDataTables } from '@constructive-io/data';
 
 function SpreadsheetApp() {
@@ -75,7 +89,7 @@ function App() {
 ### Embedded mode (bring your own auth)
 
 ```tsx
-import { SheetsProvider, Sheets } from '@constructive-io/sheets';
+import { SheetsProvider, Sheets } from '@/components/ui/sheets';
 
 function MySpreadsheet() {
   return (
@@ -113,13 +127,10 @@ npm install tailwindcss @tailwindcss/postcss
 ```css
 /* globals.css */
 @import 'tailwindcss';
-@import '@constructive-io/ui/globals.css';
-@import '@constructive-io/sheets/styles.css';
 ```
 
-The Sheets stylesheet is a Tailwind v4 source contract: it scans the shipped
-JavaScript in `dist`, so consumers do not depend on unpublished package source.
-The UI stylesheet carries its own source and theme contract.
+The shadcn install adds the Constructive theme and places the component source
+under your configured aliases, so Tailwind scans it as application code.
 
 Overlay editors render into a portal. Add this as the last child of `<body>` in your root layout:
 

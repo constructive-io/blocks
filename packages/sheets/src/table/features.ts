@@ -8,7 +8,7 @@
 import {
 	columnSizingFeature, // committed column widths   -> state.columnSizing
 	columnResizingFeature, // transient drag-resize    -> state.columnResizing
-	columnPinningFeature, // left/right pin             -> state.columnPinning
+	columnPinningFeature, // logical start/end pin      -> state.columnPinning
 	rowSelectionFeature, // row selection               -> state.rowSelection
 	tableFeatures
 } from '@tanstack/react-table';

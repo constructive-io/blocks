@@ -17,7 +17,7 @@
  * - Constraints: 5min staleTime (changes rarely)
  * - Databases: 30s staleTime (see use-accessible-databases.ts)
  */
-import { keepPreviousData, useQuery } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
 import {
 	schemaBuilderQueryKey,
 	useSchemaBuilderSdkClient,
@@ -241,9 +241,6 @@ export function useDatabaseConstraints(
 		enabled,
 		staleTime: 5 * 60 * 1000, // 5 minutes - constraints change rarely
 		refetchOnMount: true, // Respect staleTime (NOT 'always' which ignores cache)
-		// Keep previous data during refetch to prevent UI flicker
-		// This prevents constraint arrays from resetting to [] during background refetch
-		placeholderData: keepPreviousData,
 	});
 
 	return {

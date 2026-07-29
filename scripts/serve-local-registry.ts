@@ -13,6 +13,7 @@ const artifacts = join(root, '.artifacts', 'npm');
 const defaultPackageDirectories = [
   'packages/ui',
   'packages/data',
+  'packages/command-palette',
   'packages/sheets',
   'packages/schema-builder'
 ];

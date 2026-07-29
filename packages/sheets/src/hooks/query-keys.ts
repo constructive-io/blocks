@@ -6,6 +6,19 @@ export function isSheetsScopeKey(value: unknown): value is SheetsScopeKey {
 	return 'databaseId' in candidate && 'endpoint' in candidate && 'identityKey' in candidate;
 }
 
+export function reuseSheetsPlaceholderData<T>(
+	previousData: T | undefined,
+	previousQueryKey: readonly unknown[] | undefined,
+	currentScope: SheetsScopeKey,
+): T | undefined {
+	const previousScope = previousQueryKey?.[1];
+	if (!isSheetsScopeKey(previousScope)) return undefined;
+	if (previousScope.databaseId !== currentScope.databaseId) return undefined;
+	if (previousScope.endpoint !== currentScope.endpoint) return undefined;
+	if (previousScope.identityKey !== currentScope.identityKey) return undefined;
+	return previousData;
+}
+
 export const sheetsQueryKeys = {
 	root: ['sheets'] as const,
 	scope: (scope: SheetsScopeKey) => ['sheets', scope] as const,

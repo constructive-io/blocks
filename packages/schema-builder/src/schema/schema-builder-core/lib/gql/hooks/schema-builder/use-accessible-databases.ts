@@ -18,7 +18,7 @@ import {
 	type Field,
 	type Table,
 } from '@/generated/schema-builder';
-import { keepPreviousData, useQuery } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
 import {
 	schemaBuilderQueryKey,
 	useAuthSdkClient,
@@ -346,9 +346,6 @@ export function useAccessibleDatabases(options: UseAccessibleDatabasesOptions = 
 		enabled: enabled && !orgsLoading && ownerIds.length > 0,
 		staleTime: 30 * 1000, // 30 seconds - shorter for fresher data
 		refetchOnMount: true, // Respect staleTime (NOT 'always' which ignores cache)
-		// Keep previous data during refetch to prevent UI flicker
-		// This prevents databases array from resetting during background refetch
-		placeholderData: keepPreviousData,
 	});
 
 	// Extract the data from the response (data is undefined when query is disabled or loading)

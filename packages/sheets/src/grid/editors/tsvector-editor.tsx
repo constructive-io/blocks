@@ -41,7 +41,7 @@ function parseTsvector(tsvectorString: string): ParsedToken[] {
 	return tsvectorString
 		.split(/\s+/)
 		.filter(Boolean)
-		.map((w) => ({ lexeme: w, weights: [] }));
+		.map((w): ParsedToken => ({ lexeme: w, weights: [] }));
 }
 
 export const TsvectorEditor: React.FC<TsvectorEditorProps> = ({ value, onFinishedEditing }) => {

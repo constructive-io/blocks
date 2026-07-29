@@ -242,7 +242,7 @@ export function useCellEditing({
 			try {
 				result = await update(rowIdentifier, { [patchField]: value });
 			} catch (error) {
-				revertOptimisticPatch?.();
+				if (typeof revertOptimisticPatch === 'function') revertOptimisticPatch();
 				throw error;
 			}
 			onCellEdit?.(rowIdentifier, patchField, value);

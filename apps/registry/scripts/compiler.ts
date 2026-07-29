@@ -2,6 +2,7 @@ import { isDeepStrictEqual } from 'node:util';
 import ts from 'typescript';
 
 export const CONSTRUCTIVE_UI_PACKAGE = '@constructive-io/ui';
+export const CONSTRUCTIVE_SHEETS_PACKAGE = '@constructive-io/sheets';
 export const CONSTRUCTIVE_NAMESPACE = '@constructive/';
 export const CONSTRUCTIVE_THEME_DEPENDENCY = '@constructive/constructive-theme';
 
@@ -84,16 +85,6 @@ export const CONSOLE_INSTALL_ROOT_DEPENDENCIES = new Map<string, readonly string
 
 export const REMOVED_REGISTRY_ITEM_NAMES = new Set([
 	'blocks-runtime',
-	'org-chart',
-	'storage',
-	'storage-bucket-config-sheet',
-	'storage-bucket-rail',
-	'storage-browser',
-	'storage-empty-state',
-	'storage-object-detail-sheet',
-	'storage-object-table',
-	'storage-upload-dropzone',
-	'schema-builder',
 	'schema-builder-core',
 	'schema-builder-fields',
 	'schema-builder-indexes',
@@ -441,6 +432,18 @@ export function rewriteConstructiveUiImports(
 	const dependencies = new Set<string>();
 
 	for (const { literal, value } of collectModuleSpecifiers(source, filePath)) {
+		if (value === CONSTRUCTIVE_SHEETS_PACKAGE) {
+			edits.push({
+				start: literal.getStart() + 1,
+				end: literal.getEnd() - 1,
+				replacement: '@/components/ui/sheets',
+			});
+			dependencies.add('sheets');
+			continue;
+		}
+		if (value.startsWith(`${CONSTRUCTIVE_SHEETS_PACKAGE}/`)) {
+			throw new Error(`${filePath} imports unsupported ${CONSTRUCTIVE_SHEETS_PACKAGE} subpath '${value}'.`);
+		}
 		if (value === CONSTRUCTIVE_UI_PACKAGE) {
 			throw new Error(
 				`${filePath} imports the ${CONSTRUCTIVE_UI_PACKAGE} package root; registry sources must use an exact exported subpath.`,
@@ -467,6 +470,9 @@ export function rewriteConstructiveUiImports(
 	}
 
 	for (const { value } of collectModuleSpecifiers(rewritten, filePath)) {
+		if (value === CONSTRUCTIVE_SHEETS_PACKAGE || value.startsWith(`${CONSTRUCTIVE_SHEETS_PACKAGE}/`)) {
+			throw new Error(`${filePath} retains a ${CONSTRUCTIVE_SHEETS_PACKAGE} module specifier after compilation.`);
+		}
 		if (value === CONSTRUCTIVE_UI_PACKAGE || value.startsWith(`${CONSTRUCTIVE_UI_PACKAGE}/`)) {
 			throw new Error(`${filePath} retains a ${CONSTRUCTIVE_UI_PACKAGE} module specifier after compilation.`);
 		}
@@ -711,13 +717,26 @@ export function compileRegistryDependencies(
 
 export function assertNoForbiddenDistributionReferences(item: RegistryItem, sourceByPath: ReadonlyMap<string, string>): void {
 	for (const dependency of [...(item.dependencies ?? []), ...(item.devDependencies ?? [])]) {
-		if (dependency === CONSTRUCTIVE_UI_PACKAGE || dependency.startsWith(`${CONSTRUCTIVE_UI_PACKAGE}/`)) {
-			throw new Error(`${item.name} retains ${CONSTRUCTIVE_UI_PACKAGE} as an npm dependency.`);
+		if (
+			dependency === CONSTRUCTIVE_UI_PACKAGE ||
+			dependency.startsWith(`${CONSTRUCTIVE_UI_PACKAGE}/`) ||
+			dependency === CONSTRUCTIVE_SHEETS_PACKAGE ||
+			dependency.startsWith(`${CONSTRUCTIVE_SHEETS_PACKAGE}/`)
+		) {
+			throw new Error(`${item.name} retains a source-owned UI package as an npm dependency: ${dependency}.`);
 		}
 		if (dependency === 'tw-animate-css') throw new Error(`${item.name} retains forbidden dependency tw-animate-css.`);
 	}
 
 	for (const [filePath, source] of sourceByPath) {
+		for (const moduleSpecifier of collectModuleSpecifiers(source, filePath)) {
+			if (
+				moduleSpecifier.value === CONSTRUCTIVE_SHEETS_PACKAGE ||
+				moduleSpecifier.value.startsWith(`${CONSTRUCTIVE_SHEETS_PACKAGE}/`)
+			) {
+				throw new Error(`${item.name}/${filePath} retains ${CONSTRUCTIVE_SHEETS_PACKAGE} after registry compilation.`);
+			}
+		}
 		if (source.includes(CONSTRUCTIVE_UI_PACKAGE)) {
 			throw new Error(`${item.name}/${filePath} retains ${CONSTRUCTIVE_UI_PACKAGE} after registry compilation.`);
 		}

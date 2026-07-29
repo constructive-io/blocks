@@ -1,13 +1,11 @@
 export { asFieldIds, stripEmpty } from './mutation-input';
 export {
-	DataError,
-	DataErrorType,
-	Errors,
-	createDataError,
+	ConstructiveError,
+	createError,
+	isAuthenticationError,
 	parseError,
 	parseGraphQLError,
-	parseGraphQLErrorCode,
-} from './error-handler';
+} from '@constructive-io/data';
 export {
 	buildNodeData,
 	buildNodeDataForDataNodeType,

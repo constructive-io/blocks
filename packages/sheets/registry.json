@@ -1,0 +1,982 @@
+{
+  "$schema": "https://ui.shadcn.com/schema/registry.json",
+  "name": "constructive-sheets",
+  "homepage": "https://constructive-io.github.io/blocks",
+  "items": [
+    {
+      "name": "sheets",
+      "type": "registry:block",
+      "title": "Sheets",
+      "description": "A metadata-driven, spreadsheet-grade CRUD grid with accessible DOM cells and adapter-owned data access.",
+      "docs": "Install the complete source-owned grid with `pnpm dlx shadcn@latest add @constructive/sheets`, then import `Sheets`, `SheetsProvider`, and the adapter contracts from `@/components/ui/sheets`. The copied source depends on `@constructive-io/data` for the current `_meta` contract and runtime GraphQL operations; your host remains responsible for its endpoint, session, and RLS-aware execution boundary.",
+      "categories": [
+        "blocks",
+        "data"
+      ],
+      "dependencies": [
+        "@constructive-io/data@^0.4.0",
+        "@internationalized/date",
+        "@remixicon/react",
+        "@tanstack/react-form",
+        "@tanstack/react-query",
+        "@tanstack/react-table@9.0.0-beta.58",
+        "@tanstack/react-virtual",
+        "@types/leaflet",
+        "clsx",
+        "graphql",
+        "inflekt",
+        "leaflet",
+        "lucide-react",
+        "motion",
+        "react-aria-components",
+        "react-leaflet",
+        "tailwind-merge",
+        "zod",
+        "zustand"
+      ],
+      "registryDependencies": [],
+      "files": [
+        {
+          "path": "registry/constructive/blocks/sheets/adapter/postgraphile-adapter.ts",
+          "target": "@ui/sheets/adapter/postgraphile-adapter.ts",
+          "type": "registry:lib"
+        },
+        {
+          "path": "registry/constructive/blocks/sheets/adapter/sheets-adapter.ts",
+          "target": "@ui/sheets/adapter/sheets-adapter.ts",
+          "type": "registry:lib"
+        },
+        {
+          "path": "registry/constructive/blocks/sheets/adapter/use-sheets-adapter.ts",
+          "target": "@ui/sheets/adapter/use-sheets-adapter.ts",
+          "type": "registry:lib"
+        },
+        {
+          "path": "registry/constructive/blocks/sheets/advanced.ts",
+          "target": "@ui/sheets/advanced.ts",
+          "type": "registry:lib"
+        },
+        {
+          "path": "registry/constructive/blocks/sheets/auth/auth-execute.ts",
+          "target": "@ui/sheets/auth/auth-execute.ts",
+          "type": "registry:lib"
+        },
+        {
+          "path": "registry/constructive/blocks/sheets/auth/auth-gate.tsx",
+          "target": "@ui/sheets/auth/auth-gate.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/sheets/auth/auth-types.ts",
+          "target": "@ui/sheets/auth/auth-types.ts",
+          "type": "registry:lib"
+        },
+        {
+          "path": "registry/constructive/blocks/sheets/auth/hooks/index.ts",
+          "target": "@ui/sheets/auth/hooks/index.ts",
+          "type": "registry:lib"
+        },
+        {
+          "path": "registry/constructive/blocks/sheets/auth/hooks/use-forgot-password.ts",
+          "target": "@ui/sheets/auth/hooks/use-forgot-password.ts",
+          "type": "registry:lib"
+        },
+        {
+          "path": "registry/constructive/blocks/sheets/auth/hooks/use-login.ts",
+          "target": "@ui/sheets/auth/hooks/use-login.ts",
+          "type": "registry:lib"
+        },
+        {
+          "path": "registry/constructive/blocks/sheets/auth/hooks/use-register.ts",
+          "target": "@ui/sheets/auth/hooks/use-register.ts",
+          "type": "registry:lib"
+        },
+        {
+          "path": "registry/constructive/blocks/sheets/auth/hooks/use-reset-password.ts",
+          "target": "@ui/sheets/auth/hooks/use-reset-password.ts",
+          "type": "registry:lib"
+        },
+        {
+          "path": "registry/constructive/blocks/sheets/auth/index.ts",
+          "target": "@ui/sheets/auth/index.ts",
+          "type": "registry:lib"
+        },
+        {
+          "path": "registry/constructive/blocks/sheets/auth/ui/auth-error-alert.tsx",
+          "target": "@ui/sheets/auth/ui/auth-error-alert.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/sheets/auth/ui/auth-loading-button.tsx",
+          "target": "@ui/sheets/auth/ui/auth-loading-button.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/sheets/auth/ui/auth-screen-header.tsx",
+          "target": "@ui/sheets/auth/ui/auth-screen-header.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/sheets/auth/ui/auth-screen-layout.tsx",
+          "target": "@ui/sheets/auth/ui/auth-screen-layout.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/sheets/auth/ui/forgot-password-form.tsx",
+          "target": "@ui/sheets/auth/ui/forgot-password-form.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/sheets/auth/ui/form-field.tsx",
+          "target": "@ui/sheets/auth/ui/form-field.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/sheets/auth/ui/login-form.tsx",
+          "target": "@ui/sheets/auth/ui/login-form.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/sheets/auth/ui/password-strength.tsx",
+          "target": "@ui/sheets/auth/ui/password-strength.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/sheets/auth/ui/register-form.tsx",
+          "target": "@ui/sheets/auth/ui/register-form.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/sheets/auth/ui/reset-password-form.tsx",
+          "target": "@ui/sheets/auth/ui/reset-password-form.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/sheets/auth/utils/auth-errors.ts",
+          "target": "@ui/sheets/auth/utils/auth-errors.ts",
+          "type": "registry:lib"
+        },
+        {
+          "path": "registry/constructive/blocks/sheets/auth/utils/schemas.ts",
+          "target": "@ui/sheets/auth/utils/schemas.ts",
+          "type": "registry:lib"
+        },
+        {
+          "path": "registry/constructive/blocks/sheets/auth/utils/token-store.ts",
+          "target": "@ui/sheets/auth/utils/token-store.ts",
+          "type": "registry:lib"
+        },
+        {
+          "path": "registry/constructive/blocks/sheets/auth/utils/validators.ts",
+          "target": "@ui/sheets/auth/utils/validators.ts",
+          "type": "registry:lib"
+        },
+        {
+          "path": "registry/constructive/blocks/sheets/cell-model/badge-tones.ts",
+          "target": "@ui/sheets/cell-model/badge-tones.ts",
+          "type": "registry:lib"
+        },
+        {
+          "path": "registry/constructive/blocks/sheets/cell-model/cell-props.ts",
+          "target": "@ui/sheets/cell-model/cell-props.ts",
+          "type": "registry:lib"
+        },
+        {
+          "path": "registry/constructive/blocks/sheets/cell-model/cell-slots.ts",
+          "target": "@ui/sheets/cell-model/cell-slots.ts",
+          "type": "registry:lib"
+        },
+        {
+          "path": "registry/constructive/blocks/sheets/cell-model/create-sheets-cell.ts",
+          "target": "@ui/sheets/cell-model/create-sheets-cell.ts",
+          "type": "registry:lib"
+        },
+        {
+          "path": "registry/constructive/blocks/sheets/cell-model/factories/badges.ts",
+          "target": "@ui/sheets/cell-model/factories/badges.ts",
+          "type": "registry:lib"
+        },
+        {
+          "path": "registry/constructive/blocks/sheets/cell-model/factories/boolean.ts",
+          "target": "@ui/sheets/cell-model/factories/boolean.ts",
+          "type": "registry:lib"
+        },
+        {
+          "path": "registry/constructive/blocks/sheets/cell-model/factories/datetime.ts",
+          "target": "@ui/sheets/cell-model/factories/datetime.ts",
+          "type": "registry:lib"
+        },
+        {
+          "path": "registry/constructive/blocks/sheets/cell-model/factories/geometry.ts",
+          "target": "@ui/sheets/cell-model/factories/geometry.ts",
+          "type": "registry:lib"
+        },
+        {
+          "path": "registry/constructive/blocks/sheets/cell-model/factories/image.ts",
+          "target": "@ui/sheets/cell-model/factories/image.ts",
+          "type": "registry:lib"
+        },
+        {
+          "path": "registry/constructive/blocks/sheets/cell-model/factories/interval.ts",
+          "target": "@ui/sheets/cell-model/factories/interval.ts",
+          "type": "registry:lib"
+        },
+        {
+          "path": "registry/constructive/blocks/sheets/cell-model/factories/number.ts",
+          "target": "@ui/sheets/cell-model/factories/number.ts",
+          "type": "registry:lib"
+        },
+        {
+          "path": "registry/constructive/blocks/sheets/cell-model/factories/relation.ts",
+          "target": "@ui/sheets/cell-model/factories/relation.ts",
+          "type": "registry:lib"
+        },
+        {
+          "path": "registry/constructive/blocks/sheets/cell-model/factories/text.ts",
+          "target": "@ui/sheets/cell-model/factories/text.ts",
+          "type": "registry:lib"
+        },
+        {
+          "path": "registry/constructive/blocks/sheets/cell-model/factories/types.ts",
+          "target": "@ui/sheets/cell-model/factories/types.ts",
+          "type": "registry:lib"
+        },
+        {
+          "path": "registry/constructive/blocks/sheets/cell-model/factories/uri.ts",
+          "target": "@ui/sheets/cell-model/factories/uri.ts",
+          "type": "registry:lib"
+        },
+        {
+          "path": "registry/constructive/blocks/sheets/cell-model/image-cache.ts",
+          "target": "@ui/sheets/cell-model/image-cache.ts",
+          "type": "registry:lib"
+        },
+        {
+          "path": "registry/constructive/blocks/sheets/cell-model/sheets-cell.ts",
+          "target": "@ui/sheets/cell-model/sheets-cell.ts",
+          "type": "registry:lib"
+        },
+        {
+          "path": "registry/constructive/blocks/sheets/cell-model/views/badges-view.tsx",
+          "target": "@ui/sheets/cell-model/views/badges-view.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/sheets/cell-model/views/boolean-view.tsx",
+          "target": "@ui/sheets/cell-model/views/boolean-view.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/sheets/cell-model/views/datetime-view.tsx",
+          "target": "@ui/sheets/cell-model/views/datetime-view.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/sheets/cell-model/views/draft-action-view.tsx",
+          "target": "@ui/sheets/cell-model/views/draft-action-view.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/sheets/cell-model/views/geometry-view.tsx",
+          "target": "@ui/sheets/cell-model/views/geometry-view.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/sheets/cell-model/views/image-view.tsx",
+          "target": "@ui/sheets/cell-model/views/image-view.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/sheets/cell-model/views/interval-view.tsx",
+          "target": "@ui/sheets/cell-model/views/interval-view.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/sheets/cell-model/views/loading-view.tsx",
+          "target": "@ui/sheets/cell-model/views/loading-view.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/sheets/cell-model/views/number-view.tsx",
+          "target": "@ui/sheets/cell-model/views/number-view.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/sheets/cell-model/views/relation-view.tsx",
+          "target": "@ui/sheets/cell-model/views/relation-view.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/sheets/cell-model/views/text-view.tsx",
+          "target": "@ui/sheets/cell-model/views/text-view.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/sheets/cell-model/views/uri-view.tsx",
+          "target": "@ui/sheets/cell-model/views/uri-view.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/sheets/cell-types/cell-registry-defaults.ts",
+          "target": "@ui/sheets/cell-types/cell-registry-defaults.ts",
+          "type": "registry:lib"
+        },
+        {
+          "path": "registry/constructive/blocks/sheets/cell-types/cell-registry.ts",
+          "target": "@ui/sheets/cell-types/cell-registry.ts",
+          "type": "registry:lib"
+        },
+        {
+          "path": "registry/constructive/blocks/sheets/cell-types/cell-type-groups.ts",
+          "target": "@ui/sheets/cell-types/cell-type-groups.ts",
+          "type": "registry:lib"
+        },
+        {
+          "path": "registry/constructive/blocks/sheets/cell-types/cell-type-registry.ts",
+          "target": "@ui/sheets/cell-types/cell-type-registry.ts",
+          "type": "registry:lib"
+        },
+        {
+          "path": "registry/constructive/blocks/sheets/cell-types/cell-type-resolver.ts",
+          "target": "@ui/sheets/cell-types/cell-type-resolver.ts",
+          "type": "registry:lib"
+        },
+        {
+          "path": "registry/constructive/blocks/sheets/cell-types/define-cell-type.ts",
+          "target": "@ui/sheets/cell-types/define-cell-type.ts",
+          "type": "registry:lib"
+        },
+        {
+          "path": "registry/constructive/blocks/sheets/cell-types/type-mapping.ts",
+          "target": "@ui/sheets/cell-types/type-mapping.ts",
+          "type": "registry:lib"
+        },
+        {
+          "path": "registry/constructive/blocks/sheets/cell-types/types.ts",
+          "target": "@ui/sheets/cell-types/types.ts",
+          "type": "registry:lib"
+        },
+        {
+          "path": "registry/constructive/blocks/sheets/commands/context.ts",
+          "target": "@ui/sheets/commands/context.ts",
+          "type": "registry:lib"
+        },
+        {
+          "path": "registry/constructive/blocks/sheets/commands/dispatch.ts",
+          "target": "@ui/sheets/commands/dispatch.ts",
+          "type": "registry:lib"
+        },
+        {
+          "path": "registry/constructive/blocks/sheets/commands/index.ts",
+          "target": "@ui/sheets/commands/index.ts",
+          "type": "registry:lib"
+        },
+        {
+          "path": "registry/constructive/blocks/sheets/commands/keybinding.ts",
+          "target": "@ui/sheets/commands/keybinding.ts",
+          "type": "registry:lib"
+        },
+        {
+          "path": "registry/constructive/blocks/sheets/commands/keymap.ts",
+          "target": "@ui/sheets/commands/keymap.ts",
+          "type": "registry:lib"
+        },
+        {
+          "path": "registry/constructive/blocks/sheets/commands/registry.ts",
+          "target": "@ui/sheets/commands/registry.ts",
+          "type": "registry:lib"
+        },
+        {
+          "path": "registry/constructive/blocks/sheets/commands/types.ts",
+          "target": "@ui/sheets/commands/types.ts",
+          "type": "registry:lib"
+        },
+        {
+          "path": "registry/constructive/blocks/sheets/config/sheets-concurrency.ts",
+          "target": "@ui/sheets/config/sheets-concurrency.ts",
+          "type": "registry:lib"
+        },
+        {
+          "path": "registry/constructive/blocks/sheets/context/sheets-context.ts",
+          "target": "@ui/sheets/context/sheets-context.ts",
+          "type": "registry:lib"
+        },
+        {
+          "path": "registry/constructive/blocks/sheets/context/sheets-execute.ts",
+          "target": "@ui/sheets/context/sheets-execute.ts",
+          "type": "registry:lib"
+        },
+        {
+          "path": "registry/constructive/blocks/sheets/context/sheets-provider.tsx",
+          "target": "@ui/sheets/context/sheets-provider.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/sheets/context/sheets-upload-presigned.ts",
+          "target": "@ui/sheets/context/sheets-upload-presigned.ts",
+          "type": "registry:lib"
+        },
+        {
+          "path": "registry/constructive/blocks/sheets/forms/form-spec-builder.ts",
+          "target": "@ui/sheets/forms/form-spec-builder.ts",
+          "type": "registry:lib"
+        },
+        {
+          "path": "registry/constructive/blocks/sheets/forms/index.ts",
+          "target": "@ui/sheets/forms/index.ts",
+          "type": "registry:lib"
+        },
+        {
+          "path": "registry/constructive/blocks/sheets/forms/metadata-hash.ts",
+          "target": "@ui/sheets/forms/metadata-hash.ts",
+          "type": "registry:lib"
+        },
+        {
+          "path": "registry/constructive/blocks/sheets/forms/mutations.ts",
+          "target": "@ui/sheets/forms/mutations.ts",
+          "type": "registry:lib"
+        },
+        {
+          "path": "registry/constructive/blocks/sheets/forms/types.ts",
+          "target": "@ui/sheets/forms/types.ts",
+          "type": "registry:lib"
+        },
+        {
+          "path": "registry/constructive/blocks/sheets/forms/zod-schema.ts",
+          "target": "@ui/sheets/forms/zod-schema.ts",
+          "type": "registry:lib"
+        },
+        {
+          "path": "registry/constructive/blocks/sheets/grid-dom/editors/array-editor.tsx",
+          "target": "@ui/sheets/grid-dom/editors/array-editor.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/sheets/grid-dom/editors/date-editor.tsx",
+          "target": "@ui/sheets/grid-dom/editors/date-editor.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/sheets/grid-dom/editors/edit-intent.ts",
+          "target": "@ui/sheets/grid-dom/editors/edit-intent.ts",
+          "type": "registry:lib"
+        },
+        {
+          "path": "registry/constructive/blocks/sheets/grid-dom/editors/editor-props.ts",
+          "target": "@ui/sheets/grid-dom/editors/editor-props.ts",
+          "type": "registry:lib"
+        },
+        {
+          "path": "registry/constructive/blocks/sheets/grid-dom/editors/editor-registry-dom.ts",
+          "target": "@ui/sheets/grid-dom/editors/editor-registry-dom.ts",
+          "type": "registry:lib"
+        },
+        {
+          "path": "registry/constructive/blocks/sheets/grid-dom/editors/geometry-editor.tsx",
+          "target": "@ui/sheets/grid-dom/editors/geometry-editor.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/sheets/grid-dom/editors/image-editor.tsx",
+          "target": "@ui/sheets/grid-dom/editors/image-editor.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/sheets/grid-dom/editors/inet-editor.tsx",
+          "target": "@ui/sheets/grid-dom/editors/inet-editor.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/sheets/grid-dom/editors/interval-editor.tsx",
+          "target": "@ui/sheets/grid-dom/editors/interval-editor.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/sheets/grid-dom/editors/json-editor.tsx",
+          "target": "@ui/sheets/grid-dom/editors/json-editor.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/sheets/grid-dom/editors/number-editor.tsx",
+          "target": "@ui/sheets/grid-dom/editors/number-editor.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/sheets/grid-dom/editors/relation-editor.tsx",
+          "target": "@ui/sheets/grid-dom/editors/relation-editor.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/sheets/grid-dom/editors/text-editor.tsx",
+          "target": "@ui/sheets/grid-dom/editors/text-editor.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/sheets/grid-dom/editors/tsvector-editor.tsx",
+          "target": "@ui/sheets/grid-dom/editors/tsvector-editor.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/sheets/grid-dom/editors/upload-editor.tsx",
+          "target": "@ui/sheets/grid-dom/editors/upload-editor.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/sheets/grid-dom/editors/url-editor.tsx",
+          "target": "@ui/sheets/grid-dom/editors/url-editor.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/sheets/grid-dom/inline-cell-editor.tsx",
+          "target": "@ui/sheets/grid-dom/inline-cell-editor.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/sheets/grid-dom/overlay/overlay-manager.tsx",
+          "target": "@ui/sheets/grid-dom/overlay/overlay-manager.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/sheets/grid-dom/overlay/use-overlay-controller.ts",
+          "target": "@ui/sheets/grid-dom/overlay/use-overlay-controller.ts",
+          "type": "registry:lib"
+        },
+        {
+          "path": "registry/constructive/blocks/sheets/grid-dom/sheets-cell-host.tsx",
+          "target": "@ui/sheets/grid-dom/sheets-cell-host.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/sheets/grid-dom/use-sheets-content.ts",
+          "target": "@ui/sheets/grid-dom/use-sheets-content.ts",
+          "type": "registry:lib"
+        },
+        {
+          "path": "registry/constructive/blocks/sheets/grid/cell-routing.ts",
+          "target": "@ui/sheets/grid/cell-routing.ts",
+          "type": "registry:lib"
+        },
+        {
+          "path": "registry/constructive/blocks/sheets/grid/draft-types.ts",
+          "target": "@ui/sheets/grid/draft-types.ts",
+          "type": "registry:lib"
+        },
+        {
+          "path": "registry/constructive/blocks/sheets/grid/editors/array-editor.tsx",
+          "target": "@ui/sheets/grid/editors/array-editor.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/sheets/grid/editors/date-editor.tsx",
+          "target": "@ui/sheets/grid/editors/date-editor.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/sheets/grid/editors/editor-focus-trap.tsx",
+          "target": "@ui/sheets/grid/editors/editor-focus-trap.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/sheets/grid/editors/geometry-editor.tsx",
+          "target": "@ui/sheets/grid/editors/geometry-editor.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/sheets/grid/editors/image-editor.tsx",
+          "target": "@ui/sheets/grid/editors/image-editor.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/sheets/grid/editors/inet-editor.tsx",
+          "target": "@ui/sheets/grid/editors/inet-editor.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/sheets/grid/editors/interval-editor.tsx",
+          "target": "@ui/sheets/grid/editors/interval-editor.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/sheets/grid/editors/json-editor.tsx",
+          "target": "@ui/sheets/grid/editors/json-editor.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/sheets/grid/editors/overlay-presets.ts",
+          "target": "@ui/sheets/grid/editors/overlay-presets.ts",
+          "type": "registry:lib"
+        },
+        {
+          "path": "registry/constructive/blocks/sheets/grid/editors/overlay-viewport-guard.tsx",
+          "target": "@ui/sheets/grid/editors/overlay-viewport-guard.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/sheets/grid/editors/relation-editor.tsx",
+          "target": "@ui/sheets/grid/editors/relation-editor.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/sheets/grid/editors/relation-record-tooltip.tsx",
+          "target": "@ui/sheets/grid/editors/relation-record-tooltip.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/sheets/grid/editors/tsvector-editor.tsx",
+          "target": "@ui/sheets/grid/editors/tsvector-editor.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/sheets/grid/editors/upload-editor.tsx",
+          "target": "@ui/sheets/grid/editors/upload-editor.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/sheets/grid/editors/url-editor.tsx",
+          "target": "@ui/sheets/grid/editors/url-editor.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/sheets/grid/feedback/dock-status-bar.tsx",
+          "target": "@ui/sheets/grid/feedback/dock-status-bar.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/sheets/grid/feedback/editor-error-boundary.tsx",
+          "target": "@ui/sheets/grid/feedback/editor-error-boundary.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/sheets/grid/feedback/feedback-context.tsx",
+          "target": "@ui/sheets/grid/feedback/feedback-context.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/sheets/grid/feedback/feedback-reducer.ts",
+          "target": "@ui/sheets/grid/feedback/feedback-reducer.ts",
+          "type": "registry:lib"
+        },
+        {
+          "path": "registry/constructive/blocks/sheets/grid/feedback/floating-status.tsx",
+          "target": "@ui/sheets/grid/feedback/floating-status.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/sheets/grid/feedback/index.ts",
+          "target": "@ui/sheets/grid/feedback/index.ts",
+          "type": "registry:lib"
+        },
+        {
+          "path": "registry/constructive/blocks/sheets/grid/feedback/sheets-error-boundary.tsx",
+          "target": "@ui/sheets/grid/feedback/sheets-error-boundary.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/sheets/grid/feedback/sheets-error-state.tsx",
+          "target": "@ui/sheets/grid/feedback/sheets-error-state.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/sheets/grid/filter-operators.ts",
+          "target": "@ui/sheets/grid/filter-operators.ts",
+          "type": "registry:lib"
+        },
+        {
+          "path": "registry/constructive/blocks/sheets/grid/grid-cell-types.ts",
+          "target": "@ui/sheets/grid/grid-cell-types.ts",
+          "type": "registry:lib"
+        },
+        {
+          "path": "registry/constructive/blocks/sheets/grid/hooks/use-batch-commit.ts",
+          "target": "@ui/sheets/grid/hooks/use-batch-commit.ts",
+          "type": "registry:lib"
+        },
+        {
+          "path": "registry/constructive/blocks/sheets/grid/hooks/use-cell-editing.ts",
+          "target": "@ui/sheets/grid/hooks/use-cell-editing.ts",
+          "type": "registry:lib"
+        },
+        {
+          "path": "registry/constructive/blocks/sheets/grid/hooks/use-draft-rows.ts",
+          "target": "@ui/sheets/grid/hooks/use-draft-rows.ts",
+          "type": "registry:lib"
+        },
+        {
+          "path": "registry/constructive/blocks/sheets/grid/hooks/use-draft-submission.ts",
+          "target": "@ui/sheets/grid/hooks/use-draft-submission.ts",
+          "type": "registry:lib"
+        },
+        {
+          "path": "registry/constructive/blocks/sheets/grid/hooks/use-filter-grid.ts",
+          "target": "@ui/sheets/grid/hooks/use-filter-grid.ts",
+          "type": "registry:lib"
+        },
+        {
+          "path": "registry/constructive/blocks/sheets/grid/hooks/use-grid-operations.ts",
+          "target": "@ui/sheets/grid/hooks/use-grid-operations.ts",
+          "type": "registry:lib"
+        },
+        {
+          "path": "registry/constructive/blocks/sheets/grid/hooks/use-grid-selection.ts",
+          "target": "@ui/sheets/grid/hooks/use-grid-selection.ts",
+          "type": "registry:lib"
+        },
+        {
+          "path": "registry/constructive/blocks/sheets/grid/hooks/use-grid-state.ts",
+          "target": "@ui/sheets/grid/hooks/use-grid-state.ts",
+          "type": "registry:lib"
+        },
+        {
+          "path": "registry/constructive/blocks/sheets/grid/hooks/use-infinite-grid-data.ts",
+          "target": "@ui/sheets/grid/hooks/use-infinite-grid-data.ts",
+          "type": "registry:lib"
+        },
+        {
+          "path": "registry/constructive/blocks/sheets/grid/hooks/use-load-grid.ts",
+          "target": "@ui/sheets/grid/hooks/use-load-grid.ts",
+          "type": "registry:lib"
+        },
+        {
+          "path": "registry/constructive/blocks/sheets/grid/hooks/use-paginate-grid.ts",
+          "target": "@ui/sheets/grid/hooks/use-paginate-grid.ts",
+          "type": "registry:lib"
+        },
+        {
+          "path": "registry/constructive/blocks/sheets/grid/hooks/use-undo-redo.ts",
+          "target": "@ui/sheets/grid/hooks/use-undo-redo.ts",
+          "type": "registry:lib"
+        },
+        {
+          "path": "registry/constructive/blocks/sheets/grid/row-model.ts",
+          "target": "@ui/sheets/grid/row-model.ts",
+          "type": "registry:lib"
+        },
+        {
+          "path": "registry/constructive/blocks/sheets/grid/sheets.constants.ts",
+          "target": "@ui/sheets/grid/sheets.constants.ts",
+          "type": "registry:lib"
+        },
+        {
+          "path": "registry/constructive/blocks/sheets/grid/sheets.context-menu.tsx",
+          "target": "@ui/sheets/grid/sheets.context-menu.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/sheets/grid/sheets.controls.tsx",
+          "target": "@ui/sheets/grid/sheets.controls.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/sheets/grid/sheets.formatters.ts",
+          "target": "@ui/sheets/grid/sheets.formatters.ts",
+          "type": "registry:lib"
+        },
+        {
+          "path": "registry/constructive/blocks/sheets/grid/sheets.pagination.tsx",
+          "target": "@ui/sheets/grid/sheets.pagination.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/sheets/grid/sheets.table-selector.tsx",
+          "target": "@ui/sheets/grid/sheets.table-selector.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/sheets/grid/sheets.theme.ts",
+          "target": "@ui/sheets/grid/sheets.theme.ts",
+          "type": "registry:lib"
+        },
+        {
+          "path": "registry/constructive/blocks/sheets/grid/sheets.tsx",
+          "target": "@ui/sheets/grid/sheets.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/sheets/grid/sheets.types.ts",
+          "target": "@ui/sheets/grid/sheets.types.ts",
+          "type": "registry:lib"
+        },
+        {
+          "path": "registry/constructive/blocks/sheets/grid/sheets.utils.ts",
+          "target": "@ui/sheets/grid/sheets.utils.ts",
+          "type": "registry:lib"
+        },
+        {
+          "path": "registry/constructive/blocks/sheets/grid/use-sheets.ts",
+          "target": "@ui/sheets/grid/use-sheets.ts",
+          "type": "registry:lib"
+        },
+        {
+          "path": "registry/constructive/blocks/sheets/hooks/orderby-enum-resolution.ts",
+          "target": "@ui/sheets/hooks/orderby-enum-resolution.ts",
+          "type": "registry:lib"
+        },
+        {
+          "path": "registry/constructive/blocks/sheets/hooks/query-keys.ts",
+          "target": "@ui/sheets/hooks/query-keys.ts",
+          "type": "registry:lib"
+        },
+        {
+          "path": "registry/constructive/blocks/sheets/hooks/relation-field-resolution.ts",
+          "target": "@ui/sheets/hooks/relation-field-resolution.ts",
+          "type": "registry:lib"
+        },
+        {
+          "path": "registry/constructive/blocks/sheets/hooks/use-relation-columns.ts",
+          "target": "@ui/sheets/hooks/use-relation-columns.ts",
+          "type": "registry:lib"
+        },
+        {
+          "path": "registry/constructive/blocks/sheets/hooks/use-relation-metadata-cache.ts",
+          "target": "@ui/sheets/hooks/use-relation-metadata-cache.ts",
+          "type": "registry:lib"
+        },
+        {
+          "path": "registry/constructive/blocks/sheets/hooks/use-sheets-infinite-table.ts",
+          "target": "@ui/sheets/hooks/use-sheets-infinite-table.ts",
+          "type": "registry:lib"
+        },
+        {
+          "path": "registry/constructive/blocks/sheets/hooks/use-sheets-meta.ts",
+          "target": "@ui/sheets/hooks/use-sheets-meta.ts",
+          "type": "registry:lib"
+        },
+        {
+          "path": "registry/constructive/blocks/sheets/hooks/use-sheets-table-cursor.ts",
+          "target": "@ui/sheets/hooks/use-sheets-table-cursor.ts",
+          "type": "registry:lib"
+        },
+        {
+          "path": "registry/constructive/blocks/sheets/hooks/use-sheets-table.ts",
+          "target": "@ui/sheets/hooks/use-sheets-table.ts",
+          "type": "registry:lib"
+        },
+        {
+          "path": "registry/constructive/blocks/sheets/hooks/use-sheets-upload.ts",
+          "target": "@ui/sheets/hooks/use-sheets-upload.ts",
+          "type": "registry:lib"
+        },
+        {
+          "path": "registry/constructive/blocks/sheets/index.ts",
+          "target": "@ui/sheets/index.ts",
+          "type": "registry:lib"
+        },
+        {
+          "path": "registry/constructive/blocks/sheets/row-identity.ts",
+          "target": "@ui/sheets/row-identity.ts",
+          "type": "registry:lib"
+        },
+        {
+          "path": "registry/constructive/blocks/sheets/selection/cell-extract.ts",
+          "target": "@ui/sheets/selection/cell-extract.ts",
+          "type": "registry:lib"
+        },
+        {
+          "path": "registry/constructive/blocks/sheets/selection/fill.ts",
+          "target": "@ui/sheets/selection/fill.ts",
+          "type": "registry:lib"
+        },
+        {
+          "path": "registry/constructive/blocks/sheets/selection/range-set.ts",
+          "target": "@ui/sheets/selection/range-set.ts",
+          "type": "registry:lib"
+        },
+        {
+          "path": "registry/constructive/blocks/sheets/selection/selection-model.ts",
+          "target": "@ui/sheets/selection/selection-model.ts",
+          "type": "registry:lib"
+        },
+        {
+          "path": "registry/constructive/blocks/sheets/selection/tsv.ts",
+          "target": "@ui/sheets/selection/tsv.ts",
+          "type": "registry:lib"
+        },
+        {
+          "path": "registry/constructive/blocks/sheets/store/draft-rows-slice.ts",
+          "target": "@ui/sheets/store/draft-rows-slice.ts",
+          "type": "registry:lib"
+        },
+        {
+          "path": "registry/constructive/blocks/sheets/store/relation-info-slice.ts",
+          "target": "@ui/sheets/store/relation-info-slice.ts",
+          "type": "registry:lib"
+        },
+        {
+          "path": "registry/constructive/blocks/sheets/store/sheets-store.ts",
+          "target": "@ui/sheets/store/sheets-store.ts",
+          "type": "registry:lib"
+        },
+        {
+          "path": "registry/constructive/blocks/sheets/table/features.ts",
+          "target": "@ui/sheets/table/features.ts",
+          "type": "registry:lib"
+        },
+        {
+          "path": "registry/constructive/blocks/sheets/table/grid-viewport.tsx",
+          "target": "@ui/sheets/table/grid-viewport.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/sheets/table/use-sheets-table-instance.ts",
+          "target": "@ui/sheets/table/use-sheets-table-instance.ts",
+          "type": "registry:lib"
+        },
+        {
+          "path": "registry/constructive/blocks/sheets/utils/cn.ts",
+          "target": "@ui/sheets/utils/cn.ts",
+          "type": "registry:lib"
+        },
+        {
+          "path": "registry/constructive/blocks/sheets/utils/file.utils.ts",
+          "target": "@ui/sheets/utils/file.utils.ts",
+          "type": "registry:lib"
+        },
+        {
+          "path": "registry/constructive/blocks/sheets/utils/image-with-fallback.tsx",
+          "target": "@ui/sheets/utils/image-with-fallback.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/sheets/utils/map-picker.tsx",
+          "target": "@ui/sheets/utils/map-picker.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/sheets/utils/motion-config.ts",
+          "target": "@ui/sheets/utils/motion-config.ts",
+          "type": "registry:lib"
+        },
+        {
+          "path": "registry/constructive/blocks/sheets/utils/relation-utils.ts",
+          "target": "@ui/sheets/utils/relation-utils.ts",
+          "type": "registry:lib"
+        },
+        {
+          "path": "registry/constructive/blocks/sheets/utils/sheets-i18n.ts",
+          "target": "@ui/sheets/utils/sheets-i18n.ts",
+          "type": "registry:lib"
+        },
+        {
+          "path": "registry/constructive/blocks/sheets/utils/sheets-logger.ts",
+          "target": "@ui/sheets/utils/sheets-logger.ts",
+          "type": "registry:lib"
+        },
+        {
+          "path": "registry/constructive/blocks/sheets/utils/use-color-scheme.ts",
+          "target": "@ui/sheets/utils/use-color-scheme.ts",
+          "type": "registry:lib"
+        },
+        {
+          "path": "registry/constructive/blocks/sheets/utils/use-image-status.ts",
+          "target": "@ui/sheets/utils/use-image-status.ts",
+          "type": "registry:lib"
+        },
+        {
+          "path": "registry/constructive/blocks/sheets/utils/use-resize-observer.ts",
+          "target": "@ui/sheets/utils/use-resize-observer.ts",
+          "type": "registry:lib"
+        }
+      ]
+    }
+  ]
+}

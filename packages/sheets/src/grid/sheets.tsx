@@ -1,6 +1,12 @@
 import { forwardRef, useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState } from 'react';
 import type React from 'react';
-import { functionalUpdate, type ColumnSizingState, type OnChangeFn, type RowSelectionState } from '@tanstack/react-table';
+import {
+	functionalUpdate,
+	type ColumnPinningState,
+	type ColumnSizingState,
+	type OnChangeFn,
+	type RowSelectionState
+} from '@tanstack/react-table';
 import { RiFilterOffLine, RiSearchEyeLine } from '@remixicon/react';
 
 import { useSheetsContext } from '../context/sheets-context';
@@ -129,8 +135,8 @@ export const Sheets = forwardRef(SheetsInnerComponent) as <TRow extends SheetsRo
 
 // Row selection (Phase 6), column sizing + pinning (Stage 2) are all wired to the shell now.
 // Pinning is shell-DERIVED (frozenCount), never edited from the grid, so its onChange is a no-op.
-// EMPTY_OBJ is the stable empty rowSelection map returned when nothing is selected.
-const EMPTY_OBJ = {} as const;
+// Stable empty row-selection map returned when nothing is selected.
+const EMPTY_ROW_SELECTION: RowSelectionState = {};
 const noop = () => {};
 
 // Overlay flip-geometry knobs — MUST match the OverlayManager's private constants so
@@ -213,8 +219,8 @@ function SheetsDomInner<TRow extends SheetsRow = SheetsRow>({
 		return sizing;
 	}, [columnWidths]);
 
-	const columnPinning = useMemo<{ left: string[]; right: string[] }>(
-		() => ({ left: frozenCount > 0 && firstColumnKey ? [firstColumnKey] : [], right: [] }),
+	const columnPinning = useMemo<ColumnPinningState>(
+		() => ({ start: frozenCount > 0 && firstColumnKey ? [firstColumnKey] : [], end: [] }),
 		[frozenCount, firstColumnKey],
 	);
 
@@ -240,9 +246,9 @@ function SheetsDomInner<TRow extends SheetsRow = SheetsRow>({
 	// aria-activedescendant. Derived in render (a plain read, no setState) per the no-setState-in-render rule.
 	const activeCell = selection?.current?.cell;
 
-	const rowSelection = useMemo<Record<string, boolean>>(() => {
-		if (!selection) return EMPTY_OBJ;
-		const map: Record<string, boolean> = {};
+	const rowSelection = useMemo<RowSelectionState>(() => {
+		if (!selection) return EMPTY_ROW_SELECTION;
+		const map: RowSelectionState = {};
 		for (const index of selection.rows.toArray()) {
 			map[getRowId(combinedRows[index], index)] = true;
 		}
@@ -878,7 +884,7 @@ function SheetsDomInner<TRow extends SheetsRow = SheetsRow>({
 	// Surface real error/empty/loading states instead of a blank grid (moved here from
 	// the removed canvas branch). The full-screen error is for INITIAL-load failure only
 	// (no server rows AND no drafts); background-refetch errors keep the populated grid
-	// mounted (keepPreviousData) and surface via the `load:error` onEvent emission instead.
+	// mounted and surface via the `load:error` onEvent emission instead.
 	if (s.dataError && shell.combinedRows.length === 0) {
 		const retry = () => s.refetch();
 		if (slots?.error) {
@@ -887,7 +893,7 @@ function SheetsDomInner<TRow extends SheetsRow = SheetsRow>({
 		return <SheetsErrorState error={s.dataError} onRetry={retry} />;
 	}
 
-	// Initial load only — keepPreviousData means refetches won't trip this.
+	// Initial load only; same-scope refetches retain their current query data.
 	if (s.isInitialLoading) {
 		if (slots?.loading) return <>{slots.loading}</>;
 		return <SheetsLoadingState />;

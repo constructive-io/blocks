@@ -1,5 +1,5 @@
 // Default DOM view for the number SheetsCell family. Dependency-light: plain JSX
-// + Tailwind v4 + a `data-slot` hook, no @constructive-io/ui this phase. Numbers
+// + Tailwind v4 + a `data-slot` hook, with no shared primitive dependency. Numbers
 // render right-aligned with tabular figures so digits line up column-wise. Reads
 // the already-formatted string off `props.cell.displayData` (the factory put
 // String(numValue) | '' there); the view does no numeric formatting itself.

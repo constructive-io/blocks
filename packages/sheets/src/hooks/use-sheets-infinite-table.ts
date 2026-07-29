@@ -15,7 +15,7 @@
  * Ported from apps/admin use-infinite-table.ts with context injection.
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { keepPreviousData, useQueries, useQueryClient } from '@tanstack/react-query';
+import { useQueries, useQueryClient } from '@tanstack/react-query';
 
 import { useSheetsContext } from '../context/sheets-context';
 import type { SheetsScopeKey } from '../context/sheets-context';
@@ -30,6 +30,7 @@ import {
 } from '@constructive-io/data';
 import { createError } from '@constructive-io/data';
 import type { FieldSelection } from '@constructive-io/data';
+import { reuseSheetsPlaceholderData } from './query-keys';
 import { toOrderByEnumValue } from '@constructive-io/data';
 import { useSheetsAdapter } from '../adapter/use-sheets-adapter';
 import { useSheetsMeta } from './use-sheets-meta';
@@ -356,12 +357,13 @@ export function useSheetsInfiniteTable<T extends RowRecord = RowRecord>(
 					return pageData;
 				},
 				enabled: enabled && !!table && canFetch,
-				// Keep the previously-fetched page visible while this page's KEY changes
-				// (sort/filter/pageSize change `stableOptionsKey`, minting a fresh key per
-				// page). Without this the new key has no data → getRowAtIndex returns null
-				// for every index → the whole grid flashes to skeletons until the refetch
-				// lands. Paginated mode already does this in use-sheets-table.ts.
-				placeholderData: keepPreviousData,
+				// Reuse a page across sort/filter/page-size key changes only while the
+				// endpoint, database, and authenticated identity remain unchanged.
+				placeholderData: (
+					previousData: PageData<T> | undefined,
+					previousQuery: { queryKey: readonly unknown[] } | undefined,
+				) =>
+					reuseSheetsPlaceholderData(previousData, previousQuery?.queryKey, scopeKey),
 				staleTime: 5 * 60 * 1000, // 5 minutes
 				gcTime: 10 * 60 * 1000, // 10 minutes
 			};

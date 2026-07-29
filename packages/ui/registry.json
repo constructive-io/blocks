@@ -992,7 +992,7 @@
       "description": "A command palette component.",
       "categories": ["overlay"],
       "docs": "Import: `import { Command } from '@/components/ui/command'`",
-      "dependencies": ["@base-ui/react", "lucide-react"],
+      "dependencies": ["cmdk", "lucide-react"],
       "registryDependencies": ["cn", "portal"],
       "files": [
         {
@@ -1281,6 +1281,205 @@
         {
           "path": "registry/constructive/ui/unlink-button.tsx",
           "type": "registry:ui"
+        }
+      ]
+    },
+    {
+      "name": "org-chart",
+      "type": "registry:block",
+      "title": "Org Chart",
+      "description": "An interactive organizational chart with automatic hierarchy layout, zoom controls, node actions, and drag-to-reparent behavior.",
+      "categories": ["block", "application"],
+      "docs": "Import: `import { OrgChart } from '@/components/ui/org-chart'`",
+      "dependencies": ["@xyflow/react", "@remixicon/react", "lucide-react"],
+      "registryDependencies": ["cn", "button", "tooltip", "avatar", "badge", "dropdown-menu", "flow-zoom-panel"],
+      "files": [
+        {
+          "path": "registry/constructive/blocks/org-chart/index.ts",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/org-chart/org-chart.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/org-chart/org-chart-context.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/org-chart/org-chart-node.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/org-chart/org-chart-edge.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/org-chart/org-chart-empty.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/org-chart/layout.ts",
+          "type": "registry:lib"
+        },
+        {
+          "path": "registry/constructive/blocks/org-chart/org-chart-utils.ts",
+          "type": "registry:lib"
+        },
+        {
+          "path": "registry/constructive/blocks/org-chart/org-chart.types.ts",
+          "type": "registry:lib"
+        }
+      ]
+    },
+    {
+      "name": "storage",
+      "type": "registry:block",
+      "title": "Storage Foundation",
+      "description": "Shared storage types, formatters, file icons, status badges, breadcrumbs, and object-toolbar primitives.",
+      "categories": ["block", "application"],
+      "docs": "Install this transitively through `storage-browser`, or import its files directly from `@/components/ui/storage/*`.",
+      "dependencies": ["lucide-react"],
+      "registryDependencies": ["cn", "badge", "breadcrumb", "button", "dropdown-menu", "input-group"],
+      "files": [
+        {
+          "path": "registry/constructive/blocks/storage/types.ts",
+          "type": "registry:lib"
+        },
+        {
+          "path": "registry/constructive/blocks/storage/utils.ts",
+          "type": "registry:lib"
+        },
+        {
+          "path": "registry/constructive/blocks/storage/file-type-icon.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/storage/visibility-badge.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/storage/storage-breadcrumb.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/storage/object-toolbar.tsx",
+          "type": "registry:component"
+        }
+      ]
+    },
+    {
+      "name": "storage-bucket-rail",
+      "type": "registry:block",
+      "title": "Storage Bucket Rail",
+      "description": "A controlled, scrollable bucket list with visibility, object-count, selection, and create-bucket affordances.",
+      "categories": ["block", "application"],
+      "docs": "Import: `import { BucketRail } from '@/components/ui/storage/bucket-rail'`",
+      "dependencies": ["lucide-react"],
+      "registryDependencies": ["storage", "cn", "badge", "button", "scroll-area", "separator"],
+      "files": [
+        {
+          "path": "registry/constructive/blocks/storage/bucket-rail.tsx",
+          "type": "registry:component"
+        }
+      ]
+    },
+    {
+      "name": "storage-object-table",
+      "type": "registry:block",
+      "title": "Storage Object Table",
+      "description": "A controlled object table with sorting, selection, row actions, skeleton loading, and empty results.",
+      "categories": ["block", "application"],
+      "docs": "Import: `import { ObjectTable } from '@/components/ui/storage/object-table'`",
+      "dependencies": ["lucide-react"],
+      "registryDependencies": ["storage", "button", "checkbox", "dropdown-menu", "skeleton", "table"],
+      "files": [
+        {
+          "path": "registry/constructive/blocks/storage/object-table.tsx",
+          "type": "registry:component"
+        }
+      ]
+    },
+    {
+      "name": "storage-upload-dropzone",
+      "type": "registry:block",
+      "title": "Storage Upload Dropzone",
+      "description": "A drag-and-drop upload target with a browse action and an in-flight upload progress list.",
+      "categories": ["block", "application"],
+      "docs": "Import: `import { UploadDropzone } from '@/components/ui/storage/upload-dropzone'`",
+      "dependencies": ["lucide-react"],
+      "registryDependencies": ["storage", "cn", "button", "progress"],
+      "files": [
+        {
+          "path": "registry/constructive/blocks/storage/upload-dropzone.tsx",
+          "type": "registry:component"
+        }
+      ]
+    },
+    {
+      "name": "storage-object-detail-sheet",
+      "type": "registry:block",
+      "title": "Storage Object Detail Sheet",
+      "description": "A controlled object-detail sheet with preview, metadata, rename, download, link, and confirmed delete actions.",
+      "categories": ["block", "application"],
+      "docs": "Import: `import { ObjectDetailSheet } from '@/components/ui/storage/object-detail-sheet'`",
+      "dependencies": ["lucide-react"],
+      "registryDependencies": ["storage", "cn", "alert-dialog", "button", "input", "separator", "skeleton", "sheet"],
+      "files": [
+        {
+          "path": "registry/constructive/blocks/storage/object-detail-sheet.tsx",
+          "type": "registry:component"
+        }
+      ]
+    },
+    {
+      "name": "storage-bucket-config-sheet",
+      "type": "registry:block",
+      "title": "Storage Bucket Config Sheet",
+      "description": "A create-or-edit bucket form with visibility and optional controls gated by the host schema.",
+      "categories": ["block", "application"],
+      "docs": "Import: `import { BucketConfigSheet } from '@/components/ui/storage/bucket-config-sheet'`",
+      "dependencies": ["lucide-react"],
+      "registryDependencies": ["storage", "cn", "badge", "button", "input", "label", "radio-group", "switch", "textarea", "sheet"],
+      "files": [
+        {
+          "path": "registry/constructive/blocks/storage/bucket-config-sheet.tsx",
+          "type": "registry:component"
+        }
+      ]
+    },
+    {
+      "name": "storage-empty-state",
+      "type": "registry:block",
+      "title": "Storage Empty State",
+      "description": "Accessible empty and unavailable states for missing buckets, unprovisioned storage, empty buckets, and denied access.",
+      "categories": ["block", "application"],
+      "docs": "Import: `import { StorageEmptyState } from '@/components/ui/storage/storage-empty-state'`",
+      "dependencies": ["lucide-react"],
+      "registryDependencies": ["cn", "button"],
+      "files": [
+        {
+          "path": "registry/constructive/blocks/storage/storage-empty-state.tsx",
+          "type": "registry:component"
+        }
+      ]
+    },
+    {
+      "name": "storage-browser",
+      "type": "registry:block",
+      "title": "Storage Browser",
+      "description": "A complete controlled storage workspace with bucket navigation, object discovery, upload, configuration, detail, and empty states.",
+      "categories": ["block", "application"],
+      "docs": "Import: `import { StorageBrowser } from '@/components/ui/storage'`",
+      "registryDependencies": ["storage", "storage-bucket-rail", "storage-object-table", "storage-upload-dropzone", "storage-object-detail-sheet", "storage-bucket-config-sheet", "storage-empty-state", "cn", "separator"],
+      "files": [
+        {
+          "path": "registry/constructive/blocks/storage/index.ts",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/storage/storage-browser.tsx",
+          "type": "registry:component"
         }
       ]
     },

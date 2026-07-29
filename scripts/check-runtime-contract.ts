@@ -46,6 +46,7 @@ function expectIncludes(label: string, contents: string, expected: string): void
 const [
   nodeVersion,
   rootManifest,
+  commandPaletteManifest,
   schemaBuilderManifest,
   uiManifest,
   ciWorkflow,
@@ -57,6 +58,7 @@ const [
 ] = await Promise.all([
   readText('.node-version'),
   readManifest('package.json'),
+  readManifest('packages/command-palette/package.json'),
   readManifest('packages/schema-builder/package.json'),
   readManifest('packages/ui/package.json'),
   readText('.github/workflows/ci.yml'),
@@ -72,6 +74,11 @@ expectEqual('active Node.js major', process.versions.node.split('.')[0], expecte
 expectEqual('active pnpm version', pnpmResult.stdout.trim(), expectedPnpmVersion);
 expectEqual('package.json#packageManager', rootManifest.packageManager, `pnpm@${expectedPnpmVersion}`);
 expectEqual('package.json#engines.node', rootManifest.engines?.node, expectedNodeEngine);
+expectEqual(
+  'packages/command-palette/package.json#engines.node',
+  commandPaletteManifest.engines?.node,
+  expectedNodeEngine
+);
 expectEqual('packages/schema-builder/package.json#engines.node', schemaBuilderManifest.engines?.node, expectedNodeEngine);
 expectEqual('packages/ui/package.json#engines.node', uiManifest.engines?.node, expectedUiNodeEngine);
 expectEqual(

@@ -1,15 +1,17 @@
 # Constructive shadcn registry
 
-The public `@constructive` registry is built from two canonical sources:
+The public `@constructive` registry is built from four canonical sources:
 
 - `packages/ui` provides the Constructive primitives, app bar, and app shell.
-- `apps/blocks` provides billing blocks, provider-neutral feature packs, optional Console Kit modules, preset roots, and `console-kit-nextjs`.
+- `packages/sheets` provides the source-owned data grid and its adapter contracts.
+- `packages/schema-builder` provides the source-owned control-plane schema editor.
+- `apps/blocks` provides billing blocks, the Command Palette presentation,
+  provider-neutral feature packs, optional Console Kit modules, preset roots,
+  and `console-kit-nextjs`.
 
-`packages/schema-builder` remains an npm package for platform-operator tooling,
-but it is deliberately absent from this application-database registry. The
-aggregator validates unique names and install targets, exact feature-pack and
-preset roots, and every feature-pack dependency profile without relying on a
-fragile whole-registry item count.
+The aggregator validates unique names and install targets, exact feature-pack
+and preset roots, and every feature-pack dependency profile without relying on
+a fragile whole-registry item count.
 
 ## Configure and install
 
@@ -31,6 +33,9 @@ pnpm dlx shadcn@4.13.1 add @constructive/console-kit-nextjs
 pnpm dlx shadcn@4.13.1 add @constructive/preset-b2b-storage
 pnpm dlx shadcn@4.13.1 add @constructive/console-module-users
 pnpm dlx shadcn@4.13.1 add @constructive/feature-pack-users
+pnpm dlx shadcn@4.13.1 add @constructive/command-palette
+pnpm dlx shadcn@4.13.1 add @constructive/sheets
+pnpm dlx shadcn@4.13.1 add @constructive/schema-builder
 pnpm dlx shadcn@4.13.1 add @constructive/app-shell
 pnpm dlx shadcn@4.13.1 add @constructive/billing-settings-page
 ```
@@ -45,12 +50,15 @@ The console uses injected endpoints, session state, and action adapters, so
 installing source does not embed deployment-specific URLs or generated SDK
 fixtures.
 
-The registry requires shadcn 4.13.1 or newer. Standalone UI and billing roots
-copy their primitives and theme into the consumer without an npm package. Data
-feature packs, presets that include data, and `console-kit-nextjs` are
-package-backed installs: they add `@constructive-io/data`,
-`@constructive-io/sheets`, and their runtime dependencies. The console also
-adds Zustand for its local navigation, runtime, and adapter store.
+The registry requires shadcn 4.13.1 or newer. UI, Sheets, Schema Builder, and
+billing roots copy their visual source and theme into the consumer. Data
+feature packs, presets that include data, and `console-kit-nextjs` install the
+headless `@constructive-io/data` package while Sheets remains editable local
+source. The console also adds Zustand for its local navigation, runtime, and
+adapter store.
+The Command Palette follows the same ownership split: its registry item installs
+editable presentation source and `@constructive-io/command-palette` supplies the
+framework-neutral registry, execution, workflow, and background-task state.
 
 After configuring the `@constructive` namespace above, a root item may also be
 installed directly by URL. The namespace configuration remains required so
@@ -68,10 +76,10 @@ pnpm --filter @constructive-io/registry smoke:install
 pnpm --filter @constructive-io/registry clean
 ```
 
-The build first generates the UI registry, copies it together with the
-canonical app block sources into an ignored staging directory, merges both
-manifests, namespaces internal dependencies, and runs `shadcn build` into
-`apps/registry/public/r`.
+The build first generates the UI, Sheets, and Schema Builder registries, copies
+them together with the canonical app block sources into an ignored staging
+directory, merges their manifests, namespaces internal dependencies, and runs
+`shadcn build` into `apps/registry/public/r`.
 
 The smoke command performs isolated installs for UI, billing, standalone
 feature-pack, Console Kit module, preset, and full-console roots. Every fixture
@@ -89,12 +97,13 @@ packages; npm releases are performed manually by a maintainer.
 ## Architecture
 
 ```text
-packages/ui/registry.json ─┐
-                          ├─> apps/registry/scripts/build.ts
-apps/blocks/registry.json ─┘          │
-                                     ├─> registry.json (ignored)
-                                     └─> public/r/*.json (ignored)
+packages/ui/registry.json ─────────────┐
+packages/sheets/registry.json ─────────┤
+packages/schema-builder/registry.json ─┼─> apps/registry/scripts/build.ts
+apps/blocks/registry.json ──────────────┘          │
+                                                  ├─> registry.json (ignored)
+                                                  └─> public/r/*.json (ignored)
 ```
 
 Generated staging and output directories are build artifacts. Edit only the
-two canonical source manifests and their source trees.
+canonical source manifests and their source trees.

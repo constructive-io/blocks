@@ -3,7 +3,7 @@
 // Virtual shell that paints it).
 //
 // VERTICAL virtualizer over rows (dynamic height via measureElement), HORIZONTAL
-// virtualizer over columns. The STICKY column (left-pinned via columnPinning, or
+// virtualizer over columns. The STICKY column (start-pinned via columnPinning, or
 // the first column when nothing is pinned) is painted OUTSIDE the horizontal
 // virtual window — a separate `left: 0` element per row — so it stays put under
 // horizontal scroll. The horizontal virtualizer still counts it (so column start
@@ -255,9 +255,9 @@ export function hitTestCell(
 	return [col, row];
 }
 
-/** Index of the left-pinned column, else the first column (sticky-by-default). */
+/** Index of the start-pinned column, else the first column (sticky-by-default). */
 function findStickyColumnIndex(columns: SheetsTableColumn[]): number {
-	const pinned = columns.findIndex((col) => col.getIsPinned() === 'left');
+	const pinned = columns.findIndex((col) => col.getIsPinned() === 'start');
 	return pinned >= 0 ? pinned : columns.length > 0 ? 0 : -1;
 }
 

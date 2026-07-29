@@ -9,6 +9,7 @@ import {
 	CONSOLE_KIT_ITEM_NAME,
 	CONSOLE_MODULE_ITEM_NAME_PREFIX,
 	CONSOLE_INSTALL_ROOT_DEPENDENCIES,
+	CONSTRUCTIVE_SHEETS_PACKAGE,
 	CONSTRUCTIVE_THEME_DEPENDENCY,
 	CONSTRUCTIVE_NAMESPACE,
 	FEATURE_PACK_IDS,
@@ -46,6 +47,25 @@ test('rewrites exact package subpath module specifiers and derives the complete 
 	assert.match(result.source, /from '@\/components\/ui\/button'/);
 	assert.match(result.source, /import\('@\/components\/ui\/card'\)/);
 	assert.deepEqual(result.registryDependencies, ['button', 'card', 'dialog']);
+});
+
+test('rewrites the source-owned Sheets package to the local registry block', () => {
+	const result = rewriteConstructiveUiImports(
+		`import { Sheets, type SheetsConfig } from '${CONSTRUCTIVE_SHEETS_PACKAGE}';`,
+		'feature-pack-data.tsx',
+		new Set(),
+	);
+
+	assert.match(result.source, /from '@\/components\/ui\/sheets'/);
+	assert.deepEqual(result.registryDependencies, ['sheets']);
+	assert.throws(
+		() => rewriteConstructiveUiImports(
+			`import { advanced } from '${CONSTRUCTIVE_SHEETS_PACKAGE}/advanced';`,
+			'unsupported.ts',
+			new Set(),
+		),
+		/unsupported.*subpath/,
+	);
 });
 
 test('rejects package-root, nested, and unknown package imports', () => {
@@ -551,7 +571,7 @@ test('rejects feature-pack dependency profile drift and removed public items', (
 	);
 
 	const removedItem = featurePackContractFixture();
-	removedItem.push({ name: 'schema-builder', type: 'registry:block' });
+	removedItem.push({ name: 'schema-builder-core', type: 'registry:block' });
 	assert.throws(() => assertFeaturePackRegistryContract(removedItem), /still public/);
 
 	const removedPreset = featurePackContractFixture();
@@ -559,8 +579,13 @@ test('rejects feature-pack dependency profile drift and removed public items', (
 	assert.throws(() => assertFeaturePackRegistryContract(removedPreset), /Unexpected: preset-blank/);
 });
 
-test('only UI and Blocks source manifests define the public registry contract', () => {
-	const manifests = ['packages/ui/registry.json', 'apps/blocks/registry.json'].map(
+test('source manifests define one collision-free public registry contract', () => {
+	const manifests = [
+		'packages/ui/registry.json',
+		'packages/sheets/registry.json',
+		'packages/schema-builder/registry.json',
+		'apps/blocks/registry.json',
+	].map(
 		(relativePath) =>
 			JSON.parse(fs.readFileSync(path.join(repositoryRoot, relativePath), 'utf8')) as Registry,
 	);

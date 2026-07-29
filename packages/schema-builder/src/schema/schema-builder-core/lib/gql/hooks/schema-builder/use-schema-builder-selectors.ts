@@ -89,7 +89,20 @@ export interface SchemaBuilderDataState {
 
 const SchemaBuilderDataContext = createContext<SchemaBuilderDataState | null>(null);
 
-export function SchemaBuilderDataProvider({ children }: { children: ReactNode }) {
+export interface SchemaBuilderDataProviderProps {
+	children: ReactNode;
+	value?: SchemaBuilderDataState;
+}
+
+export function SchemaBuilderDataProvider({ children, value }: SchemaBuilderDataProviderProps) {
+	if (value) {
+		return createElement(SchemaBuilderDataContext.Provider, { value }, children);
+	}
+
+	return createElement(SchemaBuilderQueryDataProvider, null, children);
+}
+
+function SchemaBuilderQueryDataProvider({ children }: { children: ReactNode }) {
 	const { databaseId, orgId } = useSchemaBuilderConfig();
 	const shouldLoadFullSchemaData = Boolean(databaseId);
 

@@ -71,7 +71,7 @@ describe('SiteTopbar install command', () => {
     });
   });
 
-  it('offers install actions for billing leaves and Console Kit', () => {
+  it('offers install actions for documented source and application blocks', () => {
     mockUsePathname.mockReturnValue('/blocks/billing/billing-usage-overview');
     const { unmount } = render(<SiteTopbar />);
     expect(
@@ -81,6 +81,45 @@ describe('SiteTopbar install command', () => {
     ).toHaveTextContent('shadcn add @constructive/billing-usage-overview');
 
     unmount();
+    mockUsePathname.mockReturnValue('/blocks/org-chart');
+    const orgChart = render(<SiteTopbar />);
+    expect(
+      screen.getByRole('button', {
+        name: 'Copy Org Chart install command',
+      }),
+    ).toHaveTextContent('shadcn add @constructive/org-chart');
+
+    orgChart.unmount();
+    mockUsePathname.mockReturnValue('/blocks/storage-browser');
+    const storageBrowser = render(<SiteTopbar />);
+    expect(
+      screen.getByRole('button', {
+        name: 'Copy Storage Browser install command',
+      }),
+    ).toHaveTextContent('shadcn add @constructive/storage-browser');
+
+    storageBrowser.unmount();
+    mockUsePathname.mockReturnValue('/blocks/sheets');
+    const sheets = render(<SiteTopbar />);
+    expect(screen.getByRole('button', { name: 'Copy Sheets install command' })).toHaveTextContent(
+      'shadcn add @constructive/sheets',
+    );
+
+    sheets.unmount();
+    mockUsePathname.mockReturnValue('/blocks/schema-builder');
+    const schemaBuilder = render(<SiteTopbar />);
+    expect(screen.getByRole('button', { name: 'Copy Schema Builder install command' })).toHaveTextContent(
+      'shadcn add @constructive/schema-builder',
+    );
+
+    schemaBuilder.unmount();
+    mockUsePathname.mockReturnValue('/blocks/command-palette');
+    const commandPalette = render(<SiteTopbar />);
+    expect(screen.getByRole('button', { name: 'Copy Command Palette install command' })).toHaveTextContent(
+      'shadcn add @constructive/command-palette',
+    );
+
+    commandPalette.unmount();
     mockUsePathname.mockReturnValue('/blocks/console-kit');
     render(<SiteTopbar />);
     expect(screen.getByRole('button', { name: 'Copy Console Kit install command' })).toHaveTextContent(
