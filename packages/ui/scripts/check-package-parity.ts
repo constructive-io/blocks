@@ -83,39 +83,28 @@ function collectRootComponentModules(source: string): string[] {
 	return sorted(modules);
 }
 
-function collectTsupComponentModules(source: string): string[] {
-	const sourceFile = ts.createSourceFile('tsup.config.ts', source, ts.ScriptTarget.Latest, true, ts.ScriptKind.TS);
-	const modules: string[] = [];
-	function visit(node: ts.Node): void {
-		if (ts.isStringLiteral(node) && node.text.startsWith('src/components/')) {
-			modules.push(normalizeComponentModule(node.text));
-		}
-		ts.forEachChild(node, visit);
-	}
-	visit(sourceFile);
-	return sorted(modules);
-}
-
 function isRuntimeExport(target: string | RuntimeExport): target is RuntimeExport {
 	return typeof target === 'object' && 'import' in target && 'require' in target;
+}
+
+function hasUseClientDirective(source: string): boolean {
+	return /^(?:"use client"|'use client');/.test(source.trimStart());
 }
 
 function formatDifference(label: string, values: readonly string[]): string | undefined {
 	return values.length > 0 ? `${label}: ${values.join(', ')}` : undefined;
 }
 
-const [manifestSource, registrySource, indexSource, tsupSource, globalsSource] = await Promise.all([
+const [manifestSource, registrySource, indexSource, globalsSource] = await Promise.all([
 	readFile(path.join(packageRoot, 'package.json'), 'utf8'),
 	readFile(path.join(packageRoot, 'registry.json'), 'utf8'),
 	readFile(path.join(packageRoot, 'src', 'index.ts'), 'utf8'),
-	readFile(path.join(packageRoot, 'tsup.config.ts'), 'utf8'),
 	readFile(path.join(packageRoot, 'src', 'styles', 'globals.css'), 'utf8'),
 ]);
 
 const manifest = JSON.parse(manifestSource) as PackageManifest;
 const registry = JSON.parse(registrySource) as RegistryManifest;
 const rootModules = collectRootComponentModules(indexSource);
-const tsupModules = collectTsupComponentModules(tsupSource);
 const packageModules = sorted(
 	Object.keys(manifest.exports)
 		.filter((subpath) => subpath.startsWith('./') && subpath !== './globals.css')
@@ -130,8 +119,6 @@ const registryModules = sorted(
 const failures = [
 	formatDifference('Root exports missing package subpaths', difference(rootModules, packageModules)),
 	formatDifference('Package subpaths missing root exports', difference(packageModules, rootModules)),
-	formatDifference('Root exports missing tsup entries', difference(rootModules, tsupModules)),
-	formatDifference('Tsup entries missing root exports', difference(tsupModules, rootModules)),
 	formatDifference('Root exports missing registry items', difference(rootModules, registryModules)),
 ].filter((failure): failure is string => Boolean(failure));
 
@@ -162,11 +149,34 @@ const portalConsumerOutputs = [
 	'components/tooltip',
 ] as const;
 
+async function outputReferencesPortal(outputPath: string, visited = new Set<string>()): Promise<boolean> {
+	const normalizedPath = path.resolve(outputPath);
+	if (visited.has(normalizedPath)) return false;
+	visited.add(normalizedPath);
+
+	const builtSource = await readFile(normalizedPath, 'utf8');
+	if (builtSource.includes(portalSpecifier)) return true;
+
+	const distributionRoot = path.join(packageRoot, 'dist');
+	const relativeImport = /(?:from\s+|require\(\s*|import\(\s*|import\s+)['"](\.[^'"]+)['"]/g;
+	for (const match of builtSource.matchAll(relativeImport)) {
+		const referencedPath = path.resolve(path.dirname(normalizedPath), match[1]);
+		if (!referencedPath.startsWith(`${distributionRoot}${path.sep}`)) continue;
+		try {
+			await access(referencedPath);
+		} catch {
+			continue;
+		}
+		if (await outputReferencesPortal(referencedPath, visited)) return true;
+	}
+
+	return false;
+}
+
 for (const output of portalConsumerOutputs) {
 	for (const extension of ['js', 'cjs'] as const) {
 		const outputPath = path.join(packageRoot, 'dist', `${output}.${extension}`);
-		const builtSource = await readFile(outputPath, 'utf8');
-		if (!builtSource.includes(portalSpecifier)) {
+		if (!(await outputReferencesPortal(outputPath))) {
 			failures.push(`${path.relative(packageRoot, outputPath)} embeds or omits the shared portal runtime`);
 		}
 	}
@@ -183,6 +193,17 @@ for (const moduleName of packageModules) {
 			await access(path.join(packageRoot, output.replace(/^\.\//, '')));
 		} catch {
 			failures.push(`Missing built output for ./${moduleName}: ${output}`);
+		}
+	}
+}
+
+for (const [subpath, target] of Object.entries(manifest.exports)) {
+	if (!isRuntimeExport(target)) continue;
+	for (const output of [target.import.default, target.require.default]) {
+		const outputPath = path.join(packageRoot, output.replace(/^\.\//, ''));
+		const source = await readFile(outputPath, 'utf8');
+		if (!hasUseClientDirective(source)) {
+			failures.push(`${subpath} is missing the use client directive in ${path.relative(packageRoot, outputPath)}`);
 		}
 	}
 }

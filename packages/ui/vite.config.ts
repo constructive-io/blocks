@@ -3,7 +3,7 @@ import react from '@vitejs/plugin-react';
 import { resolve } from 'path';
 
 // This config is primarily for shadcn CLI detection
-// The actual build is handled by tsup
+// The package build is handled by tsdown; Vite is only used by Vitest.
 export default defineConfig({
   plugins: [react()],
   resolve: {

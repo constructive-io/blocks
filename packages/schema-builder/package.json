@@ -115,7 +115,7 @@
     "./package.json": "./package.json"
   },
   "scripts": {
-    "build": "tsup && pnpm check:boundaries",
+    "build": "tsdown && pnpm check:boundaries",
     "build:registry": "tsx scripts/build-registry.ts",
     "check:registry": "tsx scripts/build-registry.ts --check",
     "check:boundaries": "tsx scripts/check-boundaries.ts",
@@ -125,7 +125,7 @@
     "prepack": "pnpm build"
   },
   "peerDependencies": {
-    "@constructive-io/ui": "^0.5.0",
+    "@constructive-io/ui": "workspace:*",
     "@tanstack/react-query": "^5.0.0",
     "react": "^18.0.0 || ^19.0.0",
     "react-dom": "^18.0.0 || ^19.0.0"
@@ -140,7 +140,7 @@
     "jsdom": "^26.1.0",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
-    "tsup": "^8.5.1",
+    "tsdown": "^0.22.14",
     "typescript": "^5.9.3",
     "vitest": "^3.2.4"
   },
