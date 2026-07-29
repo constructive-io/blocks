@@ -1,6 +1,6 @@
 {
   "name": "@constructive-io/ui",
-  "version": "0.5.0",
+  "version": "0.6.0",
   "description": "Shared UI component library built on Base UI and Tailwind CSS v4",
   "keywords": [
     "react",

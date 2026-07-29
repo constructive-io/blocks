@@ -3,6 +3,37 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# 0.6.0 (2026-07-29)
+
+
+### Bug Fixes
+
+* **console-kit:** close adversarial integration gaps ([0bd49cf](https://github.com/constructive-io/blocks/commit/0bd49cfe864e6418730437a49d7e49decbc30310))
+* **registry:** preserve complete generated theme ([82aaf7c](https://github.com/constructive-io/blocks/commit/82aaf7c19cb440bf2e138c921b1ce867f2616216))
+* remove UI banner build race ([1f9bdbc](https://github.com/constructive-io/blocks/commit/1f9bdbc012fa563a3544cc972692ef2c195c90a5))
+* **ui:** animate select exit states ([f67522f](https://github.com/constructive-io/blocks/commit/f67522fc71ed3beffb15de9adcf7f92767655c0b))
+* **ui:** harden overlay composition and portals ([29b604c](https://github.com/constructive-io/blocks/commit/29b604cd7d1da17558aa9f0d92185166007d3675))
+* **ui:** honor boolean aria-invalid state ([d0b0e02](https://github.com/constructive-io/blocks/commit/d0b0e027e37e996b06c41dcefa1a0dcd7ed7331d))
+* **ui:** repair Pagination item layout and responsiveness ([cd03953](https://github.com/constructive-io/blocks/commit/cd0395351e8a0a92cb1286374eebc9bd5206850f))
+
+
+### Features
+
+* **console-kit:** align blocks with feature packs ([5c676fb](https://github.com/constructive-io/blocks/commit/5c676fbfb5e8cd0a71841b553746d4ac61e6195c))
+* migrate blocks registry into standalone repository ([2f8fa14](https://github.com/constructive-io/blocks/commit/2f8fa14b4188d74a4a8cd394ad693de7900bda61))
+* polish blocks UI and motion ([74560e0](https://github.com/constructive-io/blocks/commit/74560e0ee69f82c8a9e5e11db1310d2aa1d445f7))
+* **ui:** add application shell blocks ([bc7144b](https://github.com/constructive-io/blocks/commit/bc7144b9c6eadbf4242c69963cc15482e2e2a9ff))
+* **ui:** polish Alert layout and semantic variants ([eefa784](https://github.com/constructive-io/blocks/commit/eefa78492db0859f410671bda2e5378477b31032))
+* **ui:** polish application shell and grid controls ([29213d1](https://github.com/constructive-io/blocks/commit/29213d11d00d9ebb5b944b0c8f3840398dc40179))
+* **ui:** polish Table layout, scroll container, and demo ([7ceba6d](https://github.com/constructive-io/blocks/commit/7ceba6d5e165b04e208d4bffe8712421f9e4319d))
+* **ui:** soft slow shimmer for Skeleton ([e22ab92](https://github.com/constructive-io/blocks/commit/e22ab925b9502e31da03e83e231429e0041a1215))
+* **ui:** support manager-style app shell layouts ([6a45fcb](https://github.com/constructive-io/blocks/commit/6a45fcb01d9f79d2bed630cf4fa1bfa253ddc897))
+* **ui:** unify theme and package distribution ([a3ad2a7](https://github.com/constructive-io/blocks/commit/a3ad2a7b3995000691b61532805eb24406689551))
+
+
+
+
+
 ## [0.4.2](https://github.com/constructive-io/blocks/releases/tag/%40constructive-io%2Fui%400.4.2) (2026-07-14)
 
 ### Changes

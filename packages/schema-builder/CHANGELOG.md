@@ -1,3 +1,22 @@
+# Change Log
+
+All notable changes to this project will be documented in this file.
+See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
+
+# 0.2.0 (2026-07-29)
+
+
+### Features
+
+* migrate blocks registry into standalone repository ([2f8fa14](https://github.com/constructive-io/blocks/commit/2f8fa14b4188d74a4a8cd394ad693de7900bda61))
+* polish blocks UI and motion ([74560e0](https://github.com/constructive-io/blocks/commit/74560e0ee69f82c8a9e5e11db1310d2aa1d445f7))
+* **registry:** compile source-installed dependency closure ([4146c59](https://github.com/constructive-io/blocks/commit/4146c59e99e874c2f9eb869a7c64ae8a44fc36a1))
+* **ui:** unify theme and package distribution ([a3ad2a7](https://github.com/constructive-io/blocks/commit/a3ad2a7b3995000691b61532805eb24406689551))
+
+
+
+
+
 # Changelog
 
 ## 0.1.0
