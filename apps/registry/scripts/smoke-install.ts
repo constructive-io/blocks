@@ -613,16 +613,20 @@ async function startPackageRegistry(): Promise<{
 		);
 	}
 
-	const child = spawn('pnpm', ['local:registry'], {
-		cwd: repositoryRoot,
-		env: {
-			...process.env,
-			LOCAL_NPM_REGISTRY_PORT: '0',
-			LOCAL_NPM_REGISTRY_PACKAGE_DIRECTORIES:
-				'packages/data,packages/command-palette',
+	const child = spawn(
+		process.execPath,
+		['--import', 'tsx', path.join(repositoryRoot, 'scripts', 'serve-local-registry.ts')],
+		{
+			cwd: repositoryRoot,
+			env: {
+				...process.env,
+				LOCAL_NPM_REGISTRY_PORT: '0',
+				LOCAL_NPM_REGISTRY_PACKAGE_DIRECTORIES:
+					'packages/data,packages/command-palette',
+			},
+			stdio: ['ignore', 'pipe', 'pipe'],
 		},
-		stdio: ['ignore', 'pipe', 'pipe'],
-	});
+	);
 	child.stderr.pipe(process.stderr);
 	const exited = new Promise<void>((resolve) => child.once('exit', () => resolve()));
 	let output = '';
