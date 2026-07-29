@@ -201,7 +201,7 @@ export const ImageEditor: React.FC<ImageEditorProps> = ({
 
   // Existing-row upload failure: keep the editor open with the staged file
   // retained so the user can retry or cancel, surface the real error message
-  // (DataError messages pass through), and log at error level. Mirrors the
+  // (canonical error messages pass through), and log at error level. Mirrors the
   // draft-row catch UX — never closes the editor on failure.
   const handleUploadError = useCallback((error: Error) => {
     setUploadState('idle');

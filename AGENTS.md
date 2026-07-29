@@ -2,17 +2,19 @@
 
 This public monorepo owns the Constructive Blocks documentation, the
 `@constructive` shadcn registry, and the `@constructive-io/ui`,
-`@constructive-io/data`, and `@constructive-io/sheets` packages. The local
-schema-builder package remains in the workspace but is not part of the public
-registry.
+`@constructive-io/data`, `@constructive-io/sheets`,
+`@constructive-io/command-palette`, and `@constructive-io/schema-builder`
+packages. Schema Builder is also distributed as editable source through the
+public registry and binds to each host through an explicit adapter.
 
 ## Invariants
 
 - Canonical public source lives in `apps/blocks`, `packages/ui`,
-  `packages/data`, and `packages/sheets`; do not edit generated registry output.
+  `packages/data`, `packages/sheets`, `packages/command-palette`, and
+  `packages/schema-builder`; do not edit generated registry output.
 - Keep the registry collision-free and `@constructive`-namespaced.
-- Preserve the seven feature-pack manifests and four experimental preset
-  profiles installed under `.constructive/feature-packs`.
+- Preserve the reviewed feature-pack manifests and preset profiles installed
+  under `.constructive/feature-packs`.
 - Never auto-discover or mutate sibling repositories from flow tooling.
 - Keep normal CI independent of generated SDKs and live endpoints.
 - Never add automated npm publishing; publish verified tarballs manually.

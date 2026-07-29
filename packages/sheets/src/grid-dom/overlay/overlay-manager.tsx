@@ -140,7 +140,7 @@ export function OverlayManager({ anchorRect, open, presetClass, onCancel, dismis
 		maxHeight,
 		// Hidden until measured to avoid a 1-frame flash at an unclamped position.
 		visibility: positioned ? 'visible' : 'hidden',
-		// Join the shared overlay layer (@constructive-io/ui z-scale) instead of an
+		// Join the shared design-system overlay layer instead of an
 		// arbitrary z, so the editor and any popover/tooltip it opens (e.g. the relation
 		// "Record Data" popover, which portals into #portal-root) stack coherently.
 		zIndex: 'var(--z-layer-floating)',

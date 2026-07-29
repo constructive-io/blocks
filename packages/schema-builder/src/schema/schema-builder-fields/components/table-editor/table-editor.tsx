@@ -113,13 +113,16 @@ export function TableEditor() {
 				>
 					{/* Main content area - add right padding to make room for collapsed panel */}
 					<div
-						className={cn('scrollbar-neutral-thin relative min-h-0 w-full min-w-0 flex-1 overflow-auto')}
+						className={cn(
+							'scrollbar-neutral-thin relative min-h-0 w-full min-w-0 flex-1 overflow-auto !pr-0',
+							currentTable && (panelExpanded ? 'sm:!pr-[380px]' : 'sm:!pr-14'),
+						)}
 						style={{
 							paddingRight: currentTable ? (panelExpanded ? PANEL_WIDTH_EXPANDED : PANEL_WIDTH_COLLAPSED) : 0,
 						}}
 					>
 						{currentTable ? (
-							<div className='min-h-full min-w-full space-y-8 p-6 pb-12'>
+							<div className='min-h-full min-w-full space-y-8 p-3 pb-8 sm:p-6 sm:pb-12'>
 								<TableMetadataSection />
 								<FieldsSection onAddFieldRef={handleAddFieldRef} />
 							</div>
@@ -134,7 +137,7 @@ export function TableEditor() {
 					{currentTable && (
 						<div
 							data-state={panelExpanded ? 'expanded' : 'collapsed'}
-							className='bg-background border-border/60 absolute top-0 right-0 z-10 flex h-full flex-col border-l'
+							className='bg-background border-border/60 absolute top-0 right-0 z-10 hidden h-full flex-col border-l sm:flex'
 							style={{
 								width: panelExpanded ? PANEL_WIDTH_EXPANDED : PANEL_WIDTH_COLLAPSED,
 							}}

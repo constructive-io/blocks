@@ -72,6 +72,18 @@ const sources: RegistrySource[] = [
 		uiPackage: true,
 	},
 	{
+		name: '@constructive-io/sheets',
+		filter: '@constructive-io/sheets',
+		manifestPath: path.join(repositoryRoot, 'packages/sheets/registry.json'),
+		registryDirectory: path.join(repositoryRoot, 'packages/sheets/registry/constructive'),
+	},
+	{
+		name: '@constructive-io/schema-builder',
+		filter: '@constructive-io/schema-builder',
+		manifestPath: path.join(repositoryRoot, 'packages/schema-builder/registry.json'),
+		registryDirectory: path.join(repositoryRoot, 'packages/schema-builder/registry/constructive'),
+	},
+	{
 		name: 'blocks',
 		local: true,
 		manifestPath: path.join(repositoryRoot, 'apps/blocks/registry.json'),
@@ -265,7 +277,7 @@ for (const { source, item } of preparedItems) {
 		deriveAliasDependencies(
 			rewritten.source,
 			`${source.name}/${item.name}/${file.path}`,
-			uiItemNames,
+			ownItemNames,
 		);
 		writeFileSync(stagedPath, rewritten.source, 'utf8');
 		compiledSource.set(file.path, rewritten.source);

@@ -180,7 +180,7 @@ describe('Sheets full-screen error gating', () => {
 	});
 
 	it('keeps the grid mounted on a background error when rows are present', () => {
-		// dataError set, but combinedRows still populated (keepPreviousData) → no blank.
+		// dataError set, but combinedRows still populated from the active scope → no blank.
 		mockResult = makeResult({ dataError: new Error('transient refetch') });
 
 		render(<Sheets tableName='users' slots={{ toolbar: <div /> }} />);

@@ -1,7 +1,7 @@
 import type { DocumentNode } from 'graphql';
 import { print } from 'graphql';
 
-import { createError, DataError, TypedDocumentString } from '@constructive-io/data';
+import { ConstructiveError, createError, TypedDocumentString } from '@constructive-io/data';
 
 import type { SheetsConfig } from './sheets-context';
 import {
@@ -88,7 +88,7 @@ function hasAuthMessage(message: string | undefined): boolean {
 	);
 }
 
-function parseGraphQLResponse(response: GraphQLResponse, onAuthError?: () => void): DataError | null {
+function parseGraphQLResponse(response: GraphQLResponse, onAuthError?: () => void): ConstructiveError | null {
 	if (!response.errors?.length) return null;
 
 	const error = response.errors[0];
@@ -165,7 +165,7 @@ export function createSheetsExecute(
 					throw createError.graphql(body.errors[0].message || `Request failed: ${status}`, body.errors[0].extensions?.code);
 				}
 			} catch (e) {
-				if (e instanceof DataError) throw e;
+				if (e instanceof ConstructiveError) throw e;
 			}
 			throw createError.badRequest(`Request failed: ${status} ${statusText}`);
 		}
@@ -200,7 +200,7 @@ export function createSheetsExecute(
  * `path` is ignored (content-addressed buckets key on `contentHash`).
  */
 export function createSheetsUpload(config: SheetsConfig, getToken: () => string | null): SheetsUploadFn {
-	// Reuse the kept GraphQL executor so DataError normalization + onAuthError
+	// Reuse the kept GraphQL executor so canonical error normalization + onAuthError
 	// (401/UNAUTHENTICATED) apply to introspection, the upload op, and the
 	// downloadUrl query alike.
 	const execute = config.execute ?? createSheetsExecute(config, getToken);
@@ -253,4 +253,4 @@ export function createSheetsUpload(config: SheetsConfig, getToken: () => string 
 	};
 }
 
-export { DataError } from '@constructive-io/data';
+export { ConstructiveError } from '@constructive-io/data';

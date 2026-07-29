@@ -393,4 +393,4 @@ export const THEME_REGISTRY_INSTALL = `// components.json
 }
 
 // Then install the theme (or any component — theme ships as a dependency)
-pnpm dlx shadcn@4.13.1 add @constructive/constructive-theme`;
+pnpm dlx shadcn@latest add @constructive/constructive-theme`;

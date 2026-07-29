@@ -7,10 +7,15 @@ import ts from 'typescript';
 import { PRIMITIVE_DOCS } from '../src/content/ui';
 import { FEATURE_PACK_IDS, FEATURE_PACK_MANIFESTS } from '../src/feature-packs';
 import { UI_DEMO_SOURCE } from '../src/generated/ui-demo-source';
+import { APPLICATION_BLOCKS } from '../src/lib/application-blocks';
+import { APPLICATION_DOC_SEQUENCE } from '../src/lib/application-doc-navigation';
 import { BASE_PRIMITIVES, packageImport, type BasePrimitiveName } from '../src/lib/base-primitives';
+import { COMPONENT_DOC_SEQUENCE } from '../src/lib/component-doc-navigation';
+import { COMMAND_PALETTE_DOC } from '../src/lib/command-palette-docs';
 import { packageCommands, registryCommands } from '../src/lib/install-mode';
 import { FEATURE_PACK_DOCS } from '../src/lib/feature-packs';
 import { PRIMITIVE_DOC_SECTION_ORDER, type PrimitiveApiPart } from '../src/lib/primitive-docs';
+import { SOURCE_BLOCKS } from '../src/lib/source-blocks';
 
 type PackageManifest = {
   devDependencies?: Record<string, string>;
@@ -35,14 +40,134 @@ function isEmpty(values: readonly unknown[]): boolean {
   return values.length === 0;
 }
 
+const APPLICATION_DOC_SECTION_ORDER = [
+  'installation',
+  'when-to-use',
+  'usage',
+  'state',
+  'composition',
+  'examples',
+  'accessibility',
+  'api-reference',
+] as const;
+
+function validateSectionOrder(
+  errors: string[],
+  relativePath: string,
+  label: string,
+): void {
+  const file = path.join(appDirectory, relativePath);
+  if (!fs.existsSync(file)) {
+    errors.push(`${label}: missing documentation template ${relativePath}`);
+    return;
+  }
+
+  const source = fs.readFileSync(file, 'utf8');
+  let previousPosition = -1;
+  for (const section of APPLICATION_DOC_SECTION_ORDER) {
+    const position = source.indexOf(`id="${section}"`);
+    if (position === -1) {
+      errors.push(`${label}: missing ${section} documentation section`);
+      continue;
+    }
+    if (position < previousPosition) {
+      errors.push(`${label}: ${section} is out of canonical documentation order`);
+    }
+    previousPosition = position;
+  }
+}
+
 function collectFiles(directory: string): string[] {
   if (!fs.existsSync(directory)) return [];
 
   return fs.readdirSync(directory, { withFileTypes: true }).flatMap((entry) => {
-    if (entry.name === '.next' || entry.name === 'node_modules' || entry.name === 'out') return [];
+    if (
+      entry.name === '.git' ||
+      entry.name === '.next' ||
+      entry.name === 'dist' ||
+      entry.name === 'node_modules' ||
+      entry.name === 'out'
+    ) {
+      return [];
+    }
     const target = path.join(directory, entry.name);
     return entry.isDirectory() ? collectFiles(target) : [target];
   });
+}
+
+function isPublicDocumentationSource(file: string): boolean {
+  const relativePath = path.relative(repositoryRoot, file).split(path.sep).join('/');
+  const extension = path.extname(file);
+
+  if (extension === '.md' || extension === '.mdx') return true;
+  if (
+    relativePath.startsWith('apps/blocks/src/') &&
+    (extension === '.ts' || extension === '.tsx')
+  ) {
+    return true;
+  }
+  if (relativePath === 'apps/blocks/registry.json') return true;
+  if (relativePath === 'apps/registry/registry.json') return true;
+  if (
+    relativePath.startsWith('apps/registry/public/r/') &&
+    extension === '.json'
+  ) {
+    return true;
+  }
+  if (/^packages\/[^/]+\/registry\.json$/.test(relativePath)) return true;
+  return /^packages\/[^/]+\/scripts\/build-registry\.ts$/.test(relativePath);
+}
+
+function validatePublicShadcnCommands(errors: string[]): void {
+  const rules: ReadonlyArray<{
+    message: string;
+    pattern: RegExp;
+    isViolation?: (match: RegExpMatchArray, source: string) => boolean;
+  }> = [
+    {
+      message: 'use pnpm dlx instead of npx for public shadcn commands',
+      pattern: /\bnpx\s+shadcn(?:@[^\s`"']+)?/g,
+    },
+    {
+      message: 'use pnpm dlx instead of bunx for public shadcn commands',
+      pattern: /\bbunx(?:\s+--bun)?\s+shadcn(?:@[^\s`"']+)?/g,
+    },
+    {
+      message: 'public shadcn references must use shadcn@latest instead of a pinned tag or version',
+      pattern: /\bshadcn@([a-z0-9_-]+(?:\.[a-z0-9_-]+)*)/gi,
+      isViolation: (match) => match[1] !== 'latest',
+    },
+    {
+      message: 'public add commands must use pnpm dlx shadcn@latest',
+      pattern: /\bshadcn\s+add\b/g,
+    },
+    {
+      message: 'public shadcn commands must use the pnpm dlx runner',
+      pattern: /\bshadcn@[a-z0-9_-]+(?:\.[a-z0-9_-]+)*\s+[a-z][a-z0-9:-]*\b/gi,
+      isViolation: (match, source) => {
+        const prefix = source
+          .slice(Math.max(0, (match.index ?? 0) - 200), match.index)
+          .replace(/<[^>]*>/g, ' ')
+          .replace(/\{\s*['"]\s*['"]\s*\}/g, ' ');
+        return !/pnpm\s+dlx\s+$/.test(prefix);
+      },
+    },
+  ] as const;
+
+  const files = collectFiles(repositoryRoot).filter(isPublicDocumentationSource);
+  for (const file of files) {
+    const source = fs.readFileSync(file, 'utf8');
+    for (const rule of rules) {
+      rule.pattern.lastIndex = 0;
+      for (const match of source.matchAll(rule.pattern)) {
+        if (rule.isViolation && !rule.isViolation(match, source)) continue;
+        const line = source.slice(0, match.index).split('\n').length;
+        errors.push(
+          `${path.relative(repositoryRoot, file)}:${line}: ${rule.message} (found "${match[0]}")`,
+        );
+      }
+    }
+  }
 }
 
 function hasExportModifier(node: ts.Node): boolean {
@@ -164,6 +289,8 @@ const componentFiles = BASE_PRIMITIVES.map(({ name }) => path.join(uiDirectory, 
 const { checker, program } = loadUiProgram(componentFiles);
 const errors: string[] = [];
 
+validatePublicShadcnCommands(errors);
+
 const contentFiles = fs
   .readdirSync(contentDirectory)
   .filter((file) => file.endsWith('.ts') && file !== 'index.ts')
@@ -271,7 +398,7 @@ for (const primitive of BASE_PRIMITIVES) {
   if (!npmCommands.some(({ code }) => code === "@import '@constructive-io/ui/globals.css';")) {
     errors.push(`${primitive.name}: npm installation must include globals.css`);
   }
-  if (!shadcnCommands.some(({ code }) => code === `pnpm dlx shadcn@4.13.1 add @constructive/${primitive.name}`)) {
+  if (!shadcnCommands.some(({ code }) => code === `pnpm dlx shadcn@latest add @constructive/${primitive.name}`)) {
     errors.push(`${primitive.name}: registry installation command is incorrect`);
   }
   if (!shadcnCommands.some(({ code }) => code === registryImport)) {
@@ -349,6 +476,227 @@ for (const block of FEATURE_PACK_DOCS) {
   }
 }
 
+validateSectionOrder(
+  errors,
+  path.join('src', 'components', 'application-block-showcase', 'application-block-docs-page.tsx'),
+  'Application blocks',
+);
+validateSectionOrder(
+  errors,
+  path.join('src', 'components', 'source-block-showcase', 'source-block-docs-page.tsx'),
+  'Source blocks',
+);
+validateSectionOrder(
+  errors,
+  path.join('src', 'app', 'blocks', 'command-palette', 'page.tsx'),
+  'Command Palette',
+);
+
+const applicationBlockNames = APPLICATION_BLOCKS.map(({ name }) => name);
+if (
+  APPLICATION_BLOCKS.length !== 2 ||
+  new Set(applicationBlockNames).size !== APPLICATION_BLOCKS.length
+) {
+  errors.push('Application-block docs must contain exactly two unique entries');
+}
+
+for (const block of APPLICATION_BLOCKS) {
+  for (const relativePath of [
+    path.join('src', 'app', 'blocks', block.name, 'page.tsx'),
+    path.join('src', 'app', 'blocks', block.name, 'preview', 'page.tsx'),
+  ]) {
+    if (!fs.existsSync(path.join(appDirectory, relativePath))) {
+      errors.push(`${block.name}: missing application-block route ${relativePath}`);
+    }
+  }
+
+  if (
+    block.whenToUse.length < 2 ||
+    isEmpty(block.composition) ||
+    isEmpty(block.accessibility) ||
+    isEmpty(block.api) ||
+    !block.usage.description ||
+    !block.usage.example ||
+    !block.state.description ||
+    !block.previewDescription ||
+    block.previewHeight < 480
+  ) {
+    errors.push(`${block.name}: application-block docs are missing required editorial coverage`);
+  }
+}
+
+const orgChartDoc = APPLICATION_BLOCKS.find(({ name }) => name === 'org-chart');
+for (const requiredSource of [
+  'type CompanyOrgChartProps',
+  'saveReportingLine:',
+  'openPositionEditor:',
+  'openRemovalConfirmation:',
+  '}: CompanyOrgChartProps)',
+  'positionTitle: preserve.positionTitle',
+]) {
+  if (!orgChartDoc?.usage.example.includes(requiredSource)) {
+    errors.push(`org-chart: basic usage is missing injected host callback ${requiredSource}`);
+  }
+}
+
+const storageBrowserDoc = APPLICATION_BLOCKS.find(
+  ({ name }) => name === 'storage-browser',
+);
+for (const requiredSource of [
+  'useMemo',
+  'const visibleObjects',
+  'object.bucketId !== bucketId',
+  'compareObjects(left, right, sort)',
+  'objects={visibleObjects}',
+  'onBulkDelete={actions.confirmDelete}',
+  'onDelete={(object) => actions.confirmDelete([object.id])}',
+]) {
+  if (!storageBrowserDoc?.usage.example.includes(requiredSource)) {
+    errors.push(`storage-browser: basic usage is missing ${requiredSource}`);
+  }
+}
+if (storageBrowserDoc?.usage.example.includes('onEmptyStateAction=')) {
+  errors.push(
+    'storage-browser: basic usage must not route every empty-state action to one workflow',
+  );
+}
+
+const sourceBlockNames = SOURCE_BLOCKS.map(({ name }) => name);
+if (
+  JSON.stringify(sourceBlockNames) !== JSON.stringify(['sheets', 'schema-builder']) ||
+  new Set(sourceBlockNames).size !== SOURCE_BLOCKS.length
+) {
+  errors.push('Source-block docs must contain Sheets and Schema Builder in navigation order');
+}
+
+const applicationDocIds = APPLICATION_DOC_SEQUENCE.map(({ id }) => id);
+const expectedApplicationDocIds = [
+  'org-chart',
+  'storage-browser',
+  'sheets',
+  'schema-builder',
+  'console-kit',
+];
+if (
+  JSON.stringify(applicationDocIds) !== JSON.stringify(expectedApplicationDocIds) ||
+  new Set(applicationDocIds).size !== APPLICATION_DOC_SEQUENCE.length
+) {
+  errors.push('Application documentation pagination must follow the canonical sidebar sequence');
+}
+
+const componentDocIds = COMPONENT_DOC_SEQUENCE.map(({ id }) => id);
+const expectedComponentDocIds = BASE_PRIMITIVES.map(({ name }) => name) as string[];
+const dialogIndex = expectedComponentDocIds.indexOf('dialog');
+expectedComponentDocIds.splice(dialogIndex, 0, 'command-palette');
+if (
+  JSON.stringify(componentDocIds) !== JSON.stringify(expectedComponentDocIds) ||
+  new Set(componentDocIds).size !== COMPONENT_DOC_SEQUENCE.length
+) {
+  errors.push('Component documentation pagination must include Command Palette in sidebar order');
+}
+
+for (const block of SOURCE_BLOCKS) {
+  for (const relativePath of [
+    path.join('src', 'app', 'blocks', block.name, 'page.tsx'),
+    path.join('src', 'app', 'blocks', block.name, 'preview', 'page.tsx'),
+  ]) {
+    if (!fs.existsSync(path.join(appDirectory, relativePath))) {
+      errors.push(`${block.name}: missing source-block route ${relativePath}`);
+    }
+  }
+
+  if (
+    block.whenToUse.length < 2 ||
+    isEmpty(block.composition) ||
+    isEmpty(block.accessibility) ||
+    isEmpty(block.api) ||
+    !block.usage.description ||
+    !block.usage.example ||
+    !block.state.description ||
+    !block.state.actionGuidance ||
+    !block.previewDescription ||
+    block.previewHeight < 480
+  ) {
+    errors.push(`${block.name}: source-block docs are missing required editorial coverage`);
+  }
+}
+
+const sheetsDoc = SOURCE_BLOCKS.find(({ name }) => name === 'sheets');
+const sheetsSupportingSource = sheetsDoc?.usage.supportingExamples
+  ?.map(({ source }) => source)
+  .join('\n') ?? '';
+if (
+  !sheetsDoc?.usage.example.includes('<SheetsProvider') ||
+  !sheetsDoc.usage.example.includes('<Sheets') ||
+  !sheetsDoc.usage.example.includes('min-h-0') ||
+  !sheetsSupportingSource.includes('<PortalRoot') ||
+  !sheetsSupportingSource.includes("@/components/ui/portal")
+) {
+  errors.push('sheets: basic usage must include the provider, grid, and shared PortalRoot setup');
+}
+
+const schemaBuilderDoc = SOURCE_BLOCKS.find(({ name }) => name === 'schema-builder');
+for (const requiredSource of [
+  'QueryClientProvider',
+  'adapter={adapter}',
+  'scope={scope}',
+  'colorMode={colorMode}',
+  'activeTab={activeTab}',
+  'onActiveTabChange={setActiveTab}',
+  'preferences={preferences}',
+  'onPreferencesChange={setPreferences}',
+  'min-h-0',
+]) {
+  if (!schemaBuilderDoc?.usage.example.includes(requiredSource)) {
+    errors.push(`schema-builder: basic usage is missing ${requiredSource}`);
+  }
+}
+
+const sourcePreview = fs.readFileSync(
+  path.join(appDirectory, 'src', 'components', 'source-block-showcase', 'source-block-showcase-canvas.tsx'),
+  'utf8',
+);
+for (const expectedSource of [
+  "from '@constructive-io/schema-builder'",
+  "from '@constructive-io/sheets'",
+  '<SchemaBuilder',
+  '<Sheets',
+]) {
+  if (!sourcePreview.includes(expectedSource)) {
+    errors.push(`Source-block live preview is missing ${expectedSource}`);
+  }
+}
+
+if (
+  COMMAND_PALETTE_DOC.whenToUse.length < 2 ||
+  isEmpty(COMMAND_PALETTE_DOC.state.guidance) ||
+  isEmpty(COMMAND_PALETTE_DOC.composition.boundaries) ||
+  isEmpty(COMMAND_PALETTE_DOC.accessibility) ||
+  isEmpty(COMMAND_PALETTE_DOC.api) ||
+  !COMMAND_PALETTE_DOC.usage.example.includes('useBackgroundTasks') ||
+  !COMMAND_PALETTE_DOC.usage.example.includes('backgroundTasks={backgroundTasks}') ||
+  !COMMAND_PALETTE_DOC.composition.pageCommandsExample.includes('usePageCommands')
+) {
+  errors.push('command-palette: docs are missing required editorial or integration coverage');
+}
+
+const commandPaletteApi = COMMAND_PALETTE_DOC.api
+  .flatMap(({ name }) => name.split(' / ').map((property) => property.trim()))
+  .sort();
+const expectedCommandPaletteApi = [
+  'backgroundTasks',
+  'label',
+  'navigate',
+  'onOpenChange',
+  'open',
+  'placeholder',
+  'registry',
+  'shortcut',
+].sort();
+if (JSON.stringify(commandPaletteApi) !== JSON.stringify(expectedCommandPaletteApi)) {
+  errors.push('command-palette: API Reference must match CommandPaletteProps');
+}
+
 const appPackage = readJson<PackageManifest>(path.join(appDirectory, 'package.json'));
 if (appPackage.devDependencies?.shadcn !== '4.13.1') {
   errors.push('apps/blocks must pin shadcn to 4.13.1');
@@ -368,5 +716,8 @@ if (errors.length > 0) {
 console.log('Blocks docs expose exactly 29 source-checked primitive references.');
 console.log('Feature-pack docs expose seven manifest-aligned live references.');
 console.log(
-  'Every page has complete examples, dual install paths, state guidance, accessibility, and API-last coverage.',
+  'Application docs expose two composed blocks and two package-backed source blocks.',
 );
+console.log('Component docs include Command Palette in the canonical component sequence.');
+console.log('Every checked docs family has complete integration, state, accessibility, and API-last coverage.');
+console.log('Public docs use pnpm dlx shadcn@latest for every shadcn CLI command.');

@@ -20,7 +20,7 @@ function CommandDialog({
 		"fixed inset-0 z-[var(--z-layer-toast)] bg-black/32 backdrop-blur-sm data-[state=open]:animate-[fade-in_200ms_ease-out] data-[state=closed]:animate-[fade-out_150ms_ease-in] motion-reduce:animate-none",
       )}
       contentClassName={cn(
-        "fixed left-1/2 top-[max(--spacing(4),4vh)] sm:top-[10vh] z-[var(--z-layer-toast)] -translate-x-1/2 flex max-h-100 min-h-0 w-full min-w-0 max-w-xl flex-col rounded-2xl border bg-popover bg-clip-padding text-popover-foreground shadow-lg data-[state=open]:animate-[command-in_200ms_ease-out] data-[state=closed]:animate-[command-out_150ms_ease-in] motion-reduce:animate-none before:pointer-events-none before:absolute before:inset-0 before:rounded-[calc(var(--radius-2xl)-1px)] before:bg-muted/50 before:shadow-[0_1px_--theme(--color-black/4%)] **:data-[slot=scroll-area-viewport]:data-has-overflow-y:pe-1 dark:bg-clip-border dark:before:shadow-[0_-1px_--theme(--color-white/8%)]",
+        "fixed left-1/2 top-[max(--spacing(4),4vh)] sm:top-[10vh] z-[var(--z-layer-toast)] -translate-x-1/2 flex max-h-100 min-h-0 w-full min-w-0 max-w-xl flex-col rounded-2xl border bg-popover bg-clip-padding text-popover-foreground shadow-lg max-sm:right-3 max-sm:left-3 max-sm:w-auto max-sm:translate-x-0 data-[state=open]:animate-[command-in_200ms_ease-out] data-[state=closed]:animate-[command-out_150ms_ease-in] motion-reduce:animate-none before:pointer-events-none before:absolute before:inset-0 before:rounded-[calc(var(--radius-2xl)-1px)] before:bg-muted/50 before:shadow-[0_1px_--theme(--color-black/4%)] **:data-[slot=scroll-area-viewport]:data-has-overflow-y:pe-1 dark:bg-clip-border dark:before:shadow-[0_-1px_--theme(--color-white/8%)]",
         className,
       )}
       loop

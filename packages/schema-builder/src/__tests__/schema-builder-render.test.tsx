@@ -3,7 +3,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { ReactNode } from 'react';
 
 import { createNoopSchemaBuilderAdapter } from '../testing';
-import { DEFAULT_SCHEMA_BUILDER_PREFERENCES } from '../types';
+import { DEFAULT_SCHEMA_BUILDER_PREFERENCES, type SchemaBuilderProps } from '../types';
 
 vi.mock('@constructive-io/ui/stack', () => ({
   CardStackProvider: ({ children }: { children: ReactNode }) => children,
@@ -74,7 +74,7 @@ function setReducedMotionPreference(matches: boolean) {
   });
 }
 
-function renderSchemaBuilder() {
+function renderSchemaBuilder(overrides: Partial<SchemaBuilderProps> = {}) {
   return render(
     <SchemaBuilder
       adapter={createNoopSchemaBuilderAdapter()}
@@ -85,6 +85,7 @@ function renderSchemaBuilder() {
       activeTab='editor'
       onActiveTabChange={vi.fn()}
       emptyState={<p>No database selected by this host</p>}
+      {...overrides}
     />
   );
 }
@@ -107,5 +108,28 @@ describe('SchemaBuilder host boundary', () => {
     renderSchemaBuilder();
 
     expect(screen.getByTestId('schemas-route-boundary').getAttribute('data-reduced-motion')).toBe('true');
+  });
+
+  it('rejects host data from a different database scope', () => {
+    expect(() =>
+      renderSchemaBuilder({
+        dataState: {
+          availableSchemas: [],
+          routeOrgId: 'org-1',
+          routeDatabaseId: 'db-other',
+          selectedSchemaKey: '',
+          currentSchemaInfo: null,
+          currentSchema: null,
+          currentTable: null,
+          selectedTableId: null,
+          hasResolvedDatabaseLookup: true,
+          isLoading: false,
+          isFetching: false,
+          error: null,
+          refetch: vi.fn(async () => undefined),
+          selectTable: vi.fn()
+        }
+      })
+    ).toThrow(/dataState must match/);
   });
 });

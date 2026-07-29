@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { DataError, DataErrorType, createError } from '@constructive-io/data';
+import { ConstructiveError, createError } from '@constructive-io/data';
 
 import { executeFieldUpload } from './use-sheets-upload';
 import type { SheetsExecuteFn, SheetsUploadFn } from '../context/sheets-execute';
@@ -192,7 +192,7 @@ describe('executeFieldUpload through the injected seam', () => {
 		expect(patchValue).not.toHaveProperty('height');
 	});
 
-	it('surfaces a patch-step GraphQL error as a normalized DataError', async () => {
+	it('surfaces a patch-step GraphQL error as a normalized ConstructiveError', async () => {
 		const execute = (async () => {
 			throw createError.graphql('Patch rejected by server', 'INTERNAL_SERVER_ERROR');
 		}) as SheetsExecuteFn;
@@ -202,8 +202,8 @@ describe('executeFieldUpload through the injected seam', () => {
 			{ execute, executeUpload: makeOkUpload() },
 		).catch((e) => e);
 
-		expect(error).toBeInstanceOf(DataError);
-		expect((error as DataError).type).toBe(DataErrorType.GRAPHQL_ERROR);
+		expect(error).toBeInstanceOf(ConstructiveError);
+		expect((error as ConstructiveError).code).toBe('INTERNAL_SERVER_ERROR');
 	});
 });
 
@@ -261,12 +261,12 @@ describe('executeFieldUpload over the factory seam (presigned)', () => {
 			{ onAuthError },
 		).catch((e) => e);
 
-		expect(error).toBeInstanceOf(DataError);
-		expect((error as DataError).type).toBe(DataErrorType.UNAUTHORIZED);
+		expect(error).toBeInstanceOf(ConstructiveError);
+		expect((error as ConstructiveError).code).toBe('UNAUTHENTICATED');
 		expect(onAuthError).toHaveBeenCalledTimes(1);
 	});
 
-	it('surfaces a presigned PUT failure (S3 403) as a DataError', async () => {
+	it('surfaces a presigned PUT failure (S3 403) as a ConstructiveError', async () => {
 		stubDigest();
 		recordingSchemaFetch({
 			onPut: () => new Response('<Error><Code>AccessDenied</Code></Error>', { status: 403, statusText: 'Forbidden' }),
@@ -276,7 +276,7 @@ describe('executeFieldUpload over the factory seam (presigned)', () => {
 			'users', 'avatar', '1', createTestFile(), 'https://example.com/graphql', () => 'token-123', USERS_NAMING,
 		).catch((e) => e);
 
-		expect(error).toBeInstanceOf(DataError);
-		expect(String((error as DataError).message)).toContain('403');
+		expect(error).toBeInstanceOf(ConstructiveError);
+		expect(String((error as ConstructiveError).message)).toContain('403');
 	});
 });

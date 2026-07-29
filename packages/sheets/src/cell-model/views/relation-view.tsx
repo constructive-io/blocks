@@ -1,5 +1,5 @@
 // Default DOM view for the `relation` SheetsCell family. Dependency-light: plain
-// JSX + Tailwind v4 + a local `cn`, no @constructive-io/ui this phase. Reads the
+// JSX + Tailwind v4 + a local `cn`, with no shared primitive dependency. Reads the
 // render payload off `props.cell` (produced by relationSheetsCellFactory):
 //   - list relation  -> cell.data is string[] (chips, possibly a trailing "+N")
 //   - single relation -> cell.data is a string label

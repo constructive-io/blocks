@@ -172,11 +172,12 @@ function forbiddenFeaturePacks(ids: readonly FeaturePackId[]): string[] {
 const standaloneFeaturePackCases: SmokeCase[] = featurePackIds.map((id) => ({
 	name: `feature-pack-${id}`,
 	expectedPackages: id === 'data'
-		? ['@constructive-io/data', '@constructive-io/sheets']
+		? ['@constructive-io/data']
 		: [],
 	forbiddenPackages: [
 		'zustand',
-		...(id === 'data' ? [] : ['@constructive-io/data', '@constructive-io/sheets']),
+		'@constructive-io/sheets',
+		...(id === 'data' ? [] : ['@constructive-io/data']),
 	],
 	expected: featurePackClosure([id]),
 	forbidden: [
@@ -194,10 +195,9 @@ const consoleModuleCases: SmokeCase[] = featurePackIds.map((id) => ({
 	name: `console-module-${id}`,
 	expectedPackages: [
 		'@constructive-io/data',
-		...(id === 'data' ? ['@constructive-io/sheets'] : []),
 		'zustand',
 	],
-	forbiddenPackages: id === 'data' ? [] : ['@constructive-io/sheets'],
+	forbiddenPackages: ['@constructive-io/sheets'],
 	expected: consoleModuleClosure([id]),
 	forbidden: [
 		...featurePackIds
@@ -226,7 +226,8 @@ const presetCases: SmokeCase[] = [
 	},
 ].map(({ id, packs }) => ({
 	name: `preset-${id}`,
-	expectedPackages: ['@constructive-io/data', '@constructive-io/sheets', 'zustand'],
+	expectedPackages: ['@constructive-io/data', 'zustand'],
+	forbiddenPackages: ['@constructive-io/sheets'],
 	expected: [
 		...consoleModuleClosure(packs as readonly FeaturePackId[]),
 		`src/blocks/presets/${id}-console-kit.tsx`,
@@ -281,6 +282,80 @@ const cases: SmokeCase[] = [
 		expected: ['src/components/ui/app-shell.tsx', 'src/components/ui/app-bar.tsx'],
 	},
 	{
+		name: 'org-chart',
+		expected: [
+			'src/components/ui/org-chart/index.ts',
+			'src/components/ui/org-chart/org-chart.tsx',
+			'src/components/ui/org-chart/org-chart-context.tsx',
+			'src/components/ui/org-chart/org-chart-node.tsx',
+			'src/components/ui/org-chart/org-chart-edge.tsx',
+			'src/components/ui/org-chart/org-chart-empty.tsx',
+			'src/components/ui/org-chart/layout.ts',
+			'src/components/ui/org-chart/org-chart-utils.ts',
+			'src/components/ui/org-chart/org-chart.types.ts',
+		],
+	},
+	{
+		name: 'storage-browser',
+		expected: [
+			'src/components/ui/storage/index.ts',
+			'src/components/ui/storage/types.ts',
+			'src/components/ui/storage/utils.ts',
+			'src/components/ui/storage/file-type-icon.tsx',
+			'src/components/ui/storage/visibility-badge.tsx',
+			'src/components/ui/storage/storage-breadcrumb.tsx',
+			'src/components/ui/storage/object-toolbar.tsx',
+			'src/components/ui/storage/bucket-rail.tsx',
+			'src/components/ui/storage/object-table.tsx',
+			'src/components/ui/storage/upload-dropzone.tsx',
+			'src/components/ui/storage/object-detail-sheet.tsx',
+			'src/components/ui/storage/bucket-config-sheet.tsx',
+			'src/components/ui/storage/storage-empty-state.tsx',
+			'src/components/ui/storage/storage-browser.tsx',
+		],
+	},
+	{
+		name: 'sheets',
+		expectedPackages: ['@constructive-io/data'],
+		forbiddenPackages: ['@constructive-io/sheets'],
+		expected: [
+			'src/components/ui/sheets/index.ts',
+			'src/components/ui/sheets/context/sheets-provider.tsx',
+			'src/components/ui/sheets/grid/sheets.tsx',
+		],
+	},
+	{
+		name: 'schema-builder',
+		customAliases: true,
+		expectedPackages: ['@constructive-io/data'],
+		forbiddenPackages: ['@constructive-io/sheets'],
+		expected: [
+			'src/components/schema-builder/index.ts',
+			'src/components/schema-builder/components/schema-builder.tsx',
+			'src/components/schema-builder/core/context.tsx',
+		],
+	},
+	{
+		name: 'command-palette',
+		expectedPackages: ['@constructive-io/command-palette'],
+		expected: [
+			'src/blocks/command-palette/command-palette.tsx',
+			'src/blocks/command-palette/kbd-shortcut.tsx',
+			'src/blocks/command-palette/multi-step/multi-step-view.tsx',
+			'src/blocks/command-palette/multi-step/step-indicator.tsx',
+			'src/blocks/command-palette/background/background-task-stack.tsx',
+			'src/blocks/command-palette/background/inline-task-bar.tsx',
+			'src/blocks/command-palette/background/task-card.tsx',
+			'src/blocks/command-palette/background/task-icons.tsx',
+			'src/components/ui/badge.tsx',
+			'src/components/ui/button.tsx',
+			'src/components/ui/command.tsx',
+			'src/components/ui/portal.tsx',
+			'src/components/ui/separator.tsx',
+			'src/lib/utils.ts',
+		],
+	},
+	{
 		name: 'console-kit-core',
 		expectedPackages: ['@constructive-io/data', 'zustand'],
 		forbiddenPackages: ['@constructive-io/sheets'],
@@ -300,9 +375,9 @@ const cases: SmokeCase[] = [
 		name: 'console-kit-nextjs',
 		expectedPackages: [
 			'@constructive-io/data',
-			'@constructive-io/sheets',
 			'zustand',
 		],
+		forbiddenPackages: ['@constructive-io/sheets'],
 		expected: [
 			...consoleModuleClosure(featurePackIds),
 			'src/blocks/presets/full-console-kit.tsx',
@@ -522,11 +597,7 @@ async function startPackageRegistry(): Promise<{
 }> {
 	const artifacts = path.join(repositoryRoot, '.artifacts', 'npm');
 	fs.mkdirSync(artifacts, { recursive: true });
-	for (const packageName of [
-		'@constructive-io/ui',
-		'@constructive-io/data',
-		'@constructive-io/sheets',
-	]) {
+	for (const packageName of ['@constructive-io/data', '@constructive-io/command-palette']) {
 		await run(
 			'pnpm',
 			['--filter', packageName, 'build'],
@@ -542,16 +613,20 @@ async function startPackageRegistry(): Promise<{
 		);
 	}
 
-	const child = spawn('pnpm', ['local:registry'], {
-		cwd: repositoryRoot,
-		env: {
-			...process.env,
-			LOCAL_NPM_REGISTRY_PORT: '0',
-			LOCAL_NPM_REGISTRY_PACKAGE_DIRECTORIES:
-				'packages/ui,packages/data,packages/sheets',
+	const child = spawn(
+		process.execPath,
+		['--import', 'tsx', path.join(repositoryRoot, 'scripts', 'serve-local-registry.ts')],
+		{
+			cwd: repositoryRoot,
+			env: {
+				...process.env,
+				LOCAL_NPM_REGISTRY_PORT: '0',
+				LOCAL_NPM_REGISTRY_PACKAGE_DIRECTORIES:
+					'packages/data,packages/command-palette',
+			},
+			stdio: ['ignore', 'pipe', 'pipe'],
 		},
-		stdio: ['ignore', 'pipe', 'pipe'],
-	});
+	);
 	child.stderr.pipe(process.stderr);
 	const exited = new Promise<void>((resolve) => child.once('exit', () => resolve()));
 	let output = '';
@@ -587,7 +662,7 @@ async function install(root: string, itemNames: readonly string[]): Promise<void
 		'pnpm',
 		['exec', 'shadcn', 'add', ...itemNames.map((itemName) => `@constructive/${itemName}`), '--cwd', root, '--yes'],
 		appDirectory,
-		`shadcn add ${itemNames.map((itemName) => `@constructive/${itemName}`).join(' ')}`,
+		`pnpm dlx shadcn@latest add ${itemNames.map((itemName) => `@constructive/${itemName}`).join(' ')}`,
 	);
 }
 
@@ -596,13 +671,18 @@ async function typecheck(root: string, itemName: string): Promise<void> {
 }
 
 async function compileTailwind(root: string, testCase: SmokeCase): Promise<void> {
+	const hasSheetsSource = testCase.expected.some((file) => file.includes('/sheets/')) ||
+		testCase.name === 'feature-pack-data' ||
+		testCase.name === 'console-module-data' ||
+		testCase.name.startsWith('preset-') ||
+		testCase.name === 'console-kit-nextjs';
 	const expected = [
 		'.shadow-card-lg',
 		'.scrollbar-hide',
 		'.animate-shimmer',
 		'@keyframes shimmer',
 		'@media (prefers-reduced-motion: reduce)',
-		...(testCase.expectedPackages?.includes('@constructive-io/sheets')
+		...(hasSheetsSource
 			? ['.w-\\[52px\\]']
 			: []),
 	];
@@ -634,6 +714,9 @@ function assertInstalled(root: string, testCase: SmokeCase): void {
 	};
 	if (packageJsonSource.includes('@constructive-io/ui')) {
 		throw new Error(`@constructive/${testCase.name} installed @constructive-io/ui.`);
+	}
+	if (packageJsonSource.includes('@constructive-io/sheets')) {
+		throw new Error(`@constructive/${testCase.name} installed @constructive-io/sheets.`);
 	}
 	if (packageJsonSource.includes('tw-animate-css')) {
 		throw new Error(`@constructive/${testCase.name} installed tw-animate-css.`);
@@ -694,12 +777,6 @@ function assertInstalled(root: string, testCase: SmokeCase): void {
 	}
 
 	const css = fs.readFileSync(path.join(root, 'src/app/globals.css'), 'utf8');
-	if (
-		testCase.expectedPackages?.includes('@constructive-io/sheets') &&
-		!css.includes("@import '@constructive-io/sheets/styles.css'")
-	) {
-		throw new Error(`@constructive/${testCase.name} did not install the Sheets Tailwind source import.`);
-	}
 	if (!css.includes('--background')) {
 		throw new Error(`@constructive/${testCase.name} did not install Constructive theme variables.`);
 	}

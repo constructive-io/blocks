@@ -283,7 +283,7 @@ export function BillingBlockDocsPage({
         title="Installation"
       >
         <CodeBlock label="Registry install">
-          {`pnpm dlx shadcn@4.13.1 add @constructive/${block.name}`}
+          {`pnpm dlx shadcn@latest add @constructive/${block.name}`}
         </CodeBlock>
       </DocSection>
 

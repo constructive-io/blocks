@@ -29,6 +29,10 @@ describe('RegistryShell standalone previews', () => {
     '/blocks/billing/billing-settings-page/preview',
     '/blocks/features/data/preview',
     '/blocks/features/notifications/preview/',
+    '/blocks/org-chart/preview',
+    '/blocks/storage-browser/preview/',
+    '/blocks/sheets/preview',
+    '/blocks/schema-builder/preview/',
   ])('omits recursive documentation chrome on %s', (pathname) => {
     mockUsePathname.mockReturnValue(pathname);
     render(

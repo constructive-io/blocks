@@ -2,7 +2,7 @@
 // infinite-scroll row shows while its page is still in flight (getRowAtIndex is
 // null, so there is no value to render). The native analogue of v1's canvas
 // loading skeleton: a subtle `animate-pulse` placeholder bar filling the cell.
-// Dependency-light: plain JSX + Tailwind v4 + local `cn`, no @constructive-io/ui.
+// Dependency-light: plain JSX + Tailwind v4 + local `cn`, with no shared primitive dependency.
 
 import type { CellProps } from '../cell-props';
 import { cn } from '../../utils/cn';

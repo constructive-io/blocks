@@ -5,8 +5,7 @@ import { RiAlertLine, RiDatabase2Line, RiRefreshLine, RiShieldLine } from '@remi
 
 import { cn } from '@/lib/utils';
 import { AuthErrorBanner, isAuthError } from '../../lib/gql/auth-error-handler';
-import type { DataError } from '../../lib/data';
-import { Button } from '@constructive-io/ui/button';
+import { Button, buttonVariants } from '@constructive-io/ui/button';
 import { useSchemaBuilderRuntime } from '@/blocks/schema/schema-builder-core/context/block-config';
 
 // ============================================================================
@@ -35,7 +34,7 @@ export interface BaseStateConfig {
 	message?: string;
 	onRetry?: () => void;
 	/** Original error object for auth error detection */
-	error?: Error | DataError | null;
+	error?: Error | null;
 }
 
 // ============================================================================
@@ -245,9 +244,12 @@ export function NoDatabaseBanner({
 			{linkText}
 		</Button>
 	) : (
-		<Button variant='outline' size='sm' asChild className='h-8 px-3 text-xs shrink-0'>
-			<a href={linkHref}>{linkText}</a>
-		</Button>
+		<a
+			href={linkHref}
+			className={cn(buttonVariants({ variant: 'outline', size: 'sm' }), 'h-8 shrink-0 px-3 text-xs')}
+		>
+			{linkText}
+		</a>
 	);
 
 	return (

@@ -1,6 +1,13 @@
-# `@constructive-io/schema-builder`
+# Schema Builder
 
 Framework-agnostic React schema builder for Constructive applications. The host owns the TanStack Query client, authenticated data adapter, scope, color mode, navigation, active tab, and persisted preferences.
+
+Configure the `@constructive` registry in `components.json`, then install the
+source-owned editor:
+
+```bash
+pnpm dlx shadcn@latest add @constructive/schema-builder
+```
 
 ```tsx
 import { QueryClientProvider } from '@tanstack/react-query';
@@ -8,8 +15,7 @@ import {
   DEFAULT_SCHEMA_BUILDER_PREFERENCES,
   SchemaBuilder,
   defineSchemaBuilderAdapter
-} from '@constructive-io/schema-builder';
-import '@constructive-io/schema-builder/styles.css';
+} from '@/components/schema-builder';
 
 const adapter = defineSchemaBuilderAdapter({
   // Implement the typed core/fields/relationships/indexes/policies/tables ports.
@@ -30,4 +36,6 @@ const adapter = defineSchemaBuilderAdapter({
 </QueryClientProvider>;
 ```
 
-Feature-level imports are available from `/core`, `/fields`, `/relationships`, `/indexes`, `/policies`, and `/tables`. A hermetic empty-state adapter for documentation and tests is available from `/testing`.
+The installed root exports the full adapter, store, and editor surface. The
+host adapter keeps generated SDKs, endpoints, authenticated operations, and
+cache invalidation in the consuming application.

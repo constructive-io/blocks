@@ -267,7 +267,7 @@ test('documentation order, anchors, and shared install/source mode remain synchr
 
   const install = page.locator('#installation');
   await install.getByRole('tab', { name: 'registry' }).click();
-  await expect(install).toContainText('pnpm dlx shadcn@4.13.1 add @constructive/select');
+  await expect(install).toContainText('pnpm dlx shadcn@latest add @constructive/select');
   await expect(install).toContainText("from '@/components/ui/select'");
   await expect(install).toContainText('The npm package is not required.');
 

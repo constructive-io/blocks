@@ -43,7 +43,7 @@ export interface UseSheetsTableInstanceParams {
 	data: SheetsRow[];
 	/** Committed column widths (caller-owned). */
 	columnSizing: ColumnSizingState;
-	/** Left/right column pins (caller-owned). */
+	/** Logical start/end column pins (caller-owned). */
 	columnPinning: ColumnPinningState;
 	/** Row selection map (caller-owned). */
 	rowSelection: RowSelectionState;
@@ -91,11 +91,11 @@ export function useSheetsTableInstance(params: UseSheetsTableInstanceParams) {
 		return columns.map((col) => helper.accessor((row) => row?.[col.key], { id: col.key, header: col.name, size: col.size }));
 	}, [columns]);
 
-	// The v9 pinning feature reads `state.columnPinning.{left,right}` directly (no defaulting
+	// The v9 pinning feature reads `state.columnPinning.{start,end}` directly (no defaulting
 	// when a partial object is supplied), so `column.getIsPinned()` throws on a bare `{}`.
 	// Normalize to a complete shape so callers may pass `{}` for "nothing pinned".
 	const normalizedPinning = useMemo<ColumnPinningState>(
-		() => ({ left: columnPinning.left ?? [], right: columnPinning.right ?? [] }),
+		() => ({ start: columnPinning.start ?? [], end: columnPinning.end ?? [] }),
 		[columnPinning]
 	);
 
@@ -121,5 +121,5 @@ export function useSheetsTableInstance(params: UseSheetsTableInstanceParams) {
 		// table methods (getRowModel/getSize/getIsPinned), not `table.state`, so no subscription is needed —
 		// the grid already re-renders from the shell's own state. (TanStack production-readiness: prefer
 		// `() => null` + `table.Subscribe` over a broad `() => state` selector.)
-	}, () => null);
+	}, (): null => null);
 }

@@ -10,7 +10,8 @@ component documentation, and published React packages.
 - `packages/ui` — the `@constructive-io/ui` npm package and UI registry source.
 - `packages/data` — runtime GraphQL generation and the strict July 2026 `_meta` contract.
 - `packages/sheets` — the metadata-driven application CRUD grid.
-- `packages/schema-builder` — retained platform/operator tooling that is delisted from the public registry.
+- `packages/command-palette` — the headless command registry, shortcuts, workflows, and background-task engine.
+- `packages/schema-builder` — the source-installable Schema Builder, its host-adapter contract, and its npm package.
 
 The documentation site is published at
 <https://constructive-io.github.io/blocks/>. Registry JSON is served from
@@ -21,7 +22,7 @@ expect an existing shadcn project; initialize one if the application does not
 already contain `components.json`:
 
 ```bash
-pnpm dlx shadcn@4.13.1 init
+pnpm dlx shadcn@latest init
 ```
 
 Keep the generated alias configuration, then map the public registry in
@@ -43,10 +44,11 @@ Then choose the smallest surface that owns the workflow you need:
 | Backend-aligned official composition | `preset-auth-hardened`, `preset-b2b-storage`, or `preset-full` |
 | Custom Console Kit composition | `console-kit-core` plus selected `console-module-*` items |
 | Provider-neutral view with host-owned data and actions | `feature-pack-*` |
+| Application command center with editable presentation | `command-palette` |
 | Reusable primitive | npm subpath or namespaced primitive registry item |
 
 ```bash
-pnpm dlx shadcn@4.13.1 add @constructive/console-kit-nextjs
+pnpm dlx shadcn@latest add @constructive/console-kit-nextjs
 ```
 
 Render the installed umbrella with a secret-free tenant descriptor returned by
@@ -85,13 +87,14 @@ source through the same namespace:
 
 ```bash
 pnpm add @constructive-io/ui
-pnpm dlx shadcn@4.13.1 add @constructive/button
+pnpm dlx shadcn@latest add @constructive/button
 ```
 
 The UI package exposes its Tailwind foundation at
 `@constructive-io/ui/globals.css`. Registry installs copy the required UI
 source and Constructive theme into the consumer and do not install the npm
-package. Registry consumers require shadcn CLI 4.13.1 or newer.
+package. Registry consumers should invoke the current shadcn CLI through
+`shadcn@latest`.
 
 ## Development
 

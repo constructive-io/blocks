@@ -6,7 +6,7 @@ import { RiLockLine } from '@remixicon/react';
 
 import { cn } from '@/lib/utils';
 
-import { DataError, DataErrorType, Errors, parseError } from '../data';
+import { ConstructiveError, isAuthenticationError, parseError } from '../data';
 
 // ============================================================================
 // Auth Error Detection
@@ -16,7 +16,7 @@ import { DataError, DataErrorType, Errors, parseError } from '../data';
  * Check if an error is an authentication error (expired/missing session).
  */
 export function isAuthError(error: unknown): boolean {
-	return Errors.match(error, DataErrorType.UNAUTHORIZED);
+	return isAuthenticationError(error);
 }
 
 // ============================================================================
@@ -24,7 +24,7 @@ export function isAuthError(error: unknown): boolean {
 // ============================================================================
 
 interface AuthErrorBannerProps {
-	error: Error | DataError;
+	error: Error;
 	/** Custom message override; defaults to the parsed error's user message. */
 	message?: string;
 	className?: string;
@@ -42,8 +42,8 @@ export function AuthErrorBanner({ error, message, className }: AuthErrorBannerPr
 		queryClient.clear();
 	}, [queryClient]);
 
-	const dataError = error instanceof DataError ? error : parseError(error);
-	const displayMessage = message || dataError.getUserMessage();
+	const normalizedError = error instanceof ConstructiveError ? error : parseError(error);
+	const displayMessage = message || normalizedError.message;
 
 	return (
 		<div

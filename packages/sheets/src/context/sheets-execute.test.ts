@@ -1,5 +1,4 @@
 import { describe, expect, it, vi, afterEach } from 'vitest';
-import { DataErrorType } from '@constructive-io/data';
 
 import type { SheetsConfig } from './sheets-context';
 import { createSheetsExecute, createSheetsUpload } from './sheets-execute';
@@ -58,7 +57,7 @@ describe('createSheetsExecute auth callbacks', () => {
 
 		const execute = createSheetsExecute(createEmbeddedConfig(onAuthError), () => 'token-123');
 
-		await expect(execute('{ viewer { id } }')).rejects.toMatchObject({ type: DataErrorType.UNAUTHORIZED });
+		await expect(execute('{ viewer { id } }')).rejects.toMatchObject({ code: 'UNAUTHENTICATED' });
 		expect(onAuthError).toHaveBeenCalledTimes(1);
 	});
 
@@ -72,7 +71,7 @@ describe('createSheetsExecute auth callbacks', () => {
 
 		const execute = createSheetsExecute(createEmbeddedConfig(onAuthError), () => 'token-123');
 
-		await expect(execute('{ viewer { id } }')).rejects.toMatchObject({ type: DataErrorType.UNAUTHORIZED });
+		await expect(execute('{ viewer { id } }')).rejects.toMatchObject({ code: 'UNAUTHENTICATED' });
 		expect(onAuthError).toHaveBeenCalledTimes(1);
 	});
 
@@ -86,7 +85,7 @@ describe('createSheetsExecute auth callbacks', () => {
 
 		const execute = createSheetsExecute(createEmbeddedConfig(onAuthError), () => 'token-123');
 
-		await expect(execute('{ viewer { id } }')).rejects.toMatchObject({ type: DataErrorType.UNAUTHORIZED });
+		await expect(execute('{ viewer { id } }')).rejects.toMatchObject({ code: 'UNAUTHENTICATED' });
 		expect(onAuthError).toHaveBeenCalledTimes(1);
 	});
 });
@@ -289,11 +288,11 @@ describe('createSheetsUpload — presigned seam', () => {
 		};
 		const upload = createSheetsUpload(config, () => 'token-123');
 
-		await expect(upload(createTestFile())).rejects.toMatchObject({ type: DataErrorType.UNAUTHORIZED });
+		await expect(upload(createTestFile())).rejects.toMatchObject({ code: 'UNAUTHENTICATED' });
 		expect(onAuthError).toHaveBeenCalledTimes(1);
 	});
 
-	it('PUT failure: S3 403 ⇒ DataError with a non-empty message', async () => {
+	it('PUT failure: S3 403 ⇒ a canonical error with a non-empty message', async () => {
 		stubDigest();
 		vi.spyOn(globalThis, 'fetch').mockResolvedValue(
 			new Response('<Error><Code>AccessDenied</Code></Error>', { status: 403, statusText: 'Forbidden' }),
@@ -308,7 +307,7 @@ describe('createSheetsUpload — presigned seam', () => {
 		const upload = createSheetsUpload(config, () => null);
 
 		const error = await upload(createTestFile()).catch((e) => e);
-		expect(error).toMatchObject({ type: DataErrorType.BAD_REQUEST });
+		expect(error).toMatchObject({ code: 'BAD_USER_INPUT' });
 		expect(String((error as Error).message)).toContain('403');
 		expect((error as Error).message.length).toBeGreaterThan(0);
 	});
@@ -360,7 +359,7 @@ describe('createSheetsUpload — presigned seam', () => {
 		expect(sentHash).toBe('2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824');
 	});
 
-	it('PUT network failure (fetch rejects) ⇒ NETWORK DataError', async () => {
+	it('PUT network failure (fetch rejects) ⇒ a network ConstructiveError', async () => {
 		stubDigest();
 		vi.spyOn(globalThis, 'fetch').mockRejectedValue(new TypeError('Failed to fetch'));
 
@@ -372,7 +371,7 @@ describe('createSheetsUpload — presigned seam', () => {
 		const config: SheetsConfig = { endpoint: 'https://neterr.example.com/graphql', auth: { mode: 'standalone' }, execute };
 		const upload = createSheetsUpload(config, () => null);
 
-		await expect(upload(createTestFile())).rejects.toMatchObject({ type: DataErrorType.NETWORK_ERROR });
+		await expect(upload(createTestFile())).rejects.toMatchObject({ code: 'NETWORK_ERROR' });
 	});
 
 	it('non-deduplicated payload with null uploadUrl ⇒ badRequest, no PUT', async () => {
@@ -387,7 +386,7 @@ describe('createSheetsUpload — presigned seam', () => {
 		const config: SheetsConfig = { endpoint: 'https://badpayload.example.com/graphql', auth: { mode: 'standalone' }, execute };
 		const upload = createSheetsUpload(config, () => null);
 
-		await expect(upload(createTestFile())).rejects.toMatchObject({ type: DataErrorType.BAD_REQUEST });
+		await expect(upload(createTestFile())).rejects.toMatchObject({ code: 'BAD_USER_INPUT' });
 		expect(fetchSpy).not.toHaveBeenCalled();
 	});
 
@@ -561,7 +560,7 @@ describe('createSheetsUpload — presigned seam', () => {
 		const config: SheetsConfig = { endpoint: 'https://no-uploads.example.com/graphql', auth: { mode: 'standalone' }, execute };
 		const upload = createSheetsUpload(config, () => null);
 
-		await expect(upload(createTestFile())).rejects.toMatchObject({ type: DataErrorType.BAD_REQUEST });
+		await expect(upload(createTestFile())).rejects.toMatchObject({ code: 'BAD_USER_INPUT' });
 	});
 });
 

@@ -13,7 +13,7 @@ export type {
 	SheetsScopeKey,
 } from './context/sheets-context';
 export type { SheetsExecuteFn, SheetsUploadFn } from './context/sheets-execute';
-export { createSheetsExecute, createSheetsUpload, DataError } from './context/sheets-execute';
+export { createSheetsExecute, createSheetsUpload, ConstructiveError } from './context/sheets-execute';
 export { resolveDownloadUrl } from './context/sheets-upload-presigned';
 
 // -- Store --------------------------------------------------------------------
@@ -176,9 +176,9 @@ export type { DynamicFormSpec, ScalarFieldSpec, MetaTable, MetaField } from './f
 
 // -- Auth (Standalone Mode) ---------------------------------------------------
 /**
- * @deprecated Import the standalone-auth surface from `@constructive-io/sheets/auth`
- * instead. These root re-exports are retained for back-compat and may be removed
- * in a future major.
+ * @deprecated Import from the dedicated `auth` entry point instead:
+ * `@constructive-io/sheets/auth` for npm or `@/components/ui/sheets/auth` for a
+ * registry source install. These root exports may be removed in a future major.
  */
 export { SheetsAuthGate } from './auth/auth-gate';
 export type { SheetsAuthGateProps } from './auth/auth-gate';

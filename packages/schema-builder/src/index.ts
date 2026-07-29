@@ -51,3 +51,4 @@ export type {
   SchemaBuilderTablesCapabilities,
   SchemaBuilderVariables
 } from './types';
+export type { SchemaBuilderDataState } from './schema/schema-builder-core/lib/gql/hooks/schema-builder';

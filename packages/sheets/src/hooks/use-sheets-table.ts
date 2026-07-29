@@ -5,7 +5,7 @@
  * Ported from apps/admin use-table.ts with context injection.
  */
 import { useMemo } from 'react';
-import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { useSheetsMeta } from './use-sheets-meta';
 import { useSheetsAdapter } from '../adapter/use-sheets-adapter';
@@ -21,7 +21,7 @@ import {
 	toCamelCaseSingular,
 	toOrderByEnumValue,
 } from '@constructive-io/data';
-import { sheetsQueryKeys } from './query-keys';
+import { reuseSheetsPlaceholderData, sheetsQueryKeys } from './query-keys';
 import { resolveRelationFieldMap } from './relation-field-resolution';
 import { validateOrderByVariables } from './orderby-enum-resolution';
 import {
@@ -287,9 +287,10 @@ export function useSheetsTable<TData extends RowRecord = RowRecord>(
 					execute,
 				);
 				return { rows, totalCount };
-			},
+		},
 		enabled: enabled && !!table,
-		placeholderData: keepPreviousData,
+		placeholderData: (previousData, previousQuery) =>
+			reuseSheetsPlaceholderData(previousData, previousQuery?.queryKey, scopeKey),
 		staleTime: 5 * 60 * 1000, // 5 minutes
 	});
 

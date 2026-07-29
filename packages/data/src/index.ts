@@ -174,29 +174,27 @@ export {
 	buildPostGraphileDelete,
 } from '@constructive-io/graphql-query/generators';
 
-// Error handler
+// Error handling — canonical @constructive-io/errors + app-level ergonomics
 export {
-	DataErrorType,
-	DataError,
-	createDataError,
+	ConstructiveError,
+	classify,
+	errors,
+	format,
+	isPublicCode,
+	parse,
+	toError,
 	createError,
-	PG_ERROR_CODES,
-	parseGraphQLErrorCode,
-	Errors,
-	parseGraphQLError,
 	parseError,
-	handleDataError,
+	parseGraphQLError,
+	getErrorCode,
+	isAuthenticationError,
+	isRetryable,
 	withRetry,
 	CONSTRAINT_MESSAGES,
 	getConstraintMessage,
 	getHumanReadableError,
 } from './error-handler';
-export type {
-	DataErrorOptions,
-	GraphQLErrorLocation,
-	GraphQLErrorPath,
-	GraphQLError,
-} from './error-handler';
+export type { ErrorClass, ErrorContext, ParsedError } from './error-handler';
 
 // Mutation input
 export {

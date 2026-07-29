@@ -246,12 +246,12 @@ function buildTableSchema(metaTable: MetaTable | null): TableSchema | null {
 }
 
 // Convenience hooks for accessing specific parts of the context
-export function useTableData() {
+export function useTableData(): null {
 	return null;
 }
-export function useTableOperations() {
+export function useTableOperations(): null {
 	return null;
 }
-export function useTableMeta() {
+export function useTableMeta(): null {
 	return null;
 }

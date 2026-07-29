@@ -1,5 +1,1 @@
-# Local multi-agent audit artifacts (provenance, not for version control)
-.sheets-audit/
-
-# Storybook build output
-storybook-static/
+registry/constructive/

@@ -3,6 +3,7 @@ import { act, cleanup, render, screen } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const dataMocks = vi.hoisted(() => ({
+  accessibleDatabaseCalls: 0,
   refetchDatabases: vi.fn(async () => undefined),
   transformedSchemas: [] as unknown[],
   databases: [] as unknown[],
@@ -15,14 +16,17 @@ const dataMocks = vi.hoisted(() => ({
 vi.mock(
   '../schema/schema-builder-core/lib/gql/hooks/schema-builder/use-accessible-databases',
   () => ({
-    useAccessibleDatabases: () => ({
-      databases: dataMocks.databases,
-      hasResolved: true,
-      isLoading: false,
-      isFetching: false,
-      error: null,
-      refetch: dataMocks.refetchDatabases
-    })
+    useAccessibleDatabases: () => {
+      dataMocks.accessibleDatabaseCalls += 1;
+      return {
+        databases: dataMocks.databases,
+        hasResolved: true,
+        isLoading: false,
+        isFetching: false,
+        error: null,
+        refetch: dataMocks.refetchDatabases
+      };
+    }
   })
 );
 
@@ -53,6 +57,7 @@ import { createNoopSchemaBuilderAdapter } from '../testing';
 import { DEFAULT_SCHEMA_BUILDER_PREFERENCES } from '../types';
 import {
   SchemaBuilderDataProvider,
+  type SchemaBuilderDataState,
   type UseSchemaBuilderSelectorsResult,
   useSchemaBuilderDataSelector,
   useSchemaBuilderSelectors
@@ -126,6 +131,7 @@ function currentSelectors() {
 beforeEach(() => {
   latestSelectors = null;
   dataConsumerRenderCount = 0;
+  dataMocks.accessibleDatabaseCalls = 0;
   dataMocks.refetchDatabases.mockClear();
   onPreferencesChange.mockClear();
   onActiveTabChange.mockClear();
@@ -134,6 +140,40 @@ beforeEach(() => {
 afterEach(cleanup);
 
 describe('schema builder selector identities', () => {
+  it('reuses host data state without mounting block-owned queries', () => {
+    const hostState: SchemaBuilderDataState = {
+      availableSchemas: [],
+      routeOrgId: 'org-host',
+      routeDatabaseId: 'db-host',
+      selectedSchemaKey: 'db-db-host',
+      currentSchemaInfo: null,
+      currentSchema: null,
+      currentTable: null,
+      selectedTableId: 'table-host',
+      hasResolvedDatabaseLookup: true,
+      isLoading: false,
+      isFetching: false,
+      error: null,
+      refetch: vi.fn(async () => undefined),
+      selectTable: vi.fn()
+    };
+
+    function HostStateProbe() {
+      const databaseId = useSchemaBuilderDataSelector((state) => state.routeDatabaseId);
+      const tableId = useSchemaBuilderDataSelector((state) => state.selectedTableId);
+      return <output>{databaseId}:{tableId}</output>;
+    }
+
+    render(
+      <SchemaBuilderDataProvider value={hostState}>
+        <HostStateProbe />
+      </SchemaBuilderDataProvider>
+    );
+
+    expect(screen.getByText('db-host:table-host')).toBeTruthy();
+    expect(dataMocks.accessibleDatabaseCalls).toBe(0);
+  });
+
   it('keeps actions stable across unrelated rerenders and changes only real dependents', () => {
     const firstSelectionHandler = vi.fn();
     const view = render(

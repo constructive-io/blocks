@@ -1,0 +1,71 @@
+{
+  "name": "@constructive-io/command-palette",
+  "version": "0.3.0",
+  "description": "Headless command registry, shortcuts, multi-step flows, and background-task state for Constructive applications",
+  "keywords": [
+    "react",
+    "command-palette",
+    "cmd-k",
+    "keyboard-navigation",
+    "state-machine"
+  ],
+  "author": "Constructive",
+  "license": "MIT",
+  "homepage": "https://constructive-io.github.io/blocks/blocks/command-palette/",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/constructive-io/blocks.git",
+    "directory": "packages/command-palette"
+  },
+  "bugs": {
+    "url": "https://github.com/constructive-io/blocks/issues"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "type": "module",
+  "sideEffects": false,
+  "exports": {
+    ".": {
+      "import": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.js"
+      },
+      "require": {
+        "types": "./dist/index.d.cts",
+        "default": "./dist/index.cjs"
+      }
+    }
+  },
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsup --watch",
+    "lint:types": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "clean": "rm -rf dist"
+  },
+  "peerDependencies": {
+    "react": "^18.0.0 || ^19.0.0"
+  },
+  "devDependencies": {
+    "@testing-library/react": "^16.3.1",
+    "@types/react": "^19.2.7",
+    "@types/react-dom": "^19.2.3",
+    "jsdom": "^26.1.0",
+    "react": "^19.2.3",
+    "react-dom": "^19.2.3",
+    "tsup": "^8.5.1",
+    "typescript": "^5.9.3",
+    "vitest": "^3.2.4"
+  },
+  "engines": {
+    "node": ">=24.0.0"
+  }
+}

@@ -1,5 +1,5 @@
 // Default DOM view for the boolean family. A boolean column IS a checkbox column,
-// so it renders the design-system Checkbox (@constructive-io/ui, Base UI-backed) as a
+// so it renders the design-system Checkbox as a
 // READ-ONLY status indicator: checked for true, unchecked for false, empty cell for
 // null/undefined. `pointer-events-none` keeps the existing double-click-to-toggle model
 // intact — clicks pass through to the host cell wrapper; the checkbox is display only.

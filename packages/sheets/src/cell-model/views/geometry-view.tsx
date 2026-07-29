@@ -8,7 +8,7 @@
 // `deriveGeometry` builder — v1 `createGeometryCell`), else sniff the GeoJSON
 // `"type":"…"` token out of the compact preview string the factory put in
 // `cell.data` / `cell.displayData`. Dependency-light: plain JSX + inline SVG +
-// Tailwind v4 + local `cn`, no @constructive-io/ui this phase.
+// Tailwind v4 + local `cn`, with no shared primitive dependency.
 
 import type { CellProps } from '../cell-props';
 import { cn } from '../../utils/cn';

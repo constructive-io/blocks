@@ -4,7 +4,6 @@ import { memo } from 'react';
 import { RiDatabase2Line } from '@remixicon/react';
 
 import { cn } from '@/lib/utils';
-import type { DataError } from '../../lib/data';
 import { type BaseStateConfig, ErrorBanner, InfoBanner } from '../shared/base-state-display';
 import {
 	SchemaBuilderSkeleton,
@@ -23,7 +22,7 @@ export interface SchemaStateConfig {
 	message?: string;
 	onRetry?: () => void;
 	/** Original error object for auth error detection */
-	error?: Error | DataError | null;
+	error?: Error | null;
 }
 
 // ============================================================================

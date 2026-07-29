@@ -97,8 +97,8 @@ export function createDraftRowsSlice(set: DraftRowsSetState): DraftRowsSlice {
         const existing = state.draftRowsByTable[tableKey];
 
         const nextOrder = existing ? [...existing.order, draftRowId] : [draftRowId];
-        const nextMap = {
-          ...(existing?.map ?? {}),
+	        const nextMap: Record<string, DraftRow> = {
+	          ...(existing?.map ?? {}),
           [draftRowId]: {
             id: draftRowId,
             values,
@@ -154,7 +154,7 @@ export function createDraftRowsSlice(set: DraftRowsSetState): DraftRowsSlice {
 	          }
 	        }
 
-	        const nextMap = {
+	        const nextMap: Record<string, DraftRow> = {
 	          ...tableState.map,
           [draftRowId]: {
             ...existingRow,
@@ -305,7 +305,7 @@ export function createDraftRowsSlice(set: DraftRowsSetState): DraftRowsSlice {
 	        const nextErrors = errors ?? null;
 	        if (row.status === status && shallowEqualRecords(row.errors, nextErrors)) return state;
 
-	        const nextMap = {
+	        const nextMap: Record<string, DraftRow> = {
 	          ...tableState.map,
 	          [draftRowId]: { ...row, status, errors: nextErrors },
 	        };

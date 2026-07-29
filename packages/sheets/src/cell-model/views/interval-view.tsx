@@ -1,5 +1,5 @@
 // Default DOM view for the interval SheetsCell family. Dependency-light: plain
-// JSX + Tailwind v4 + a local `cn`. No @constructive-io/ui this phase. The
+// JSX + Tailwind v4 + a local `cn`, with no shared primitive dependency. The
 // compact interval label already lives in `cell.displayData` (computed by the
 // interval factory), so the view is a pure read of that string.
 

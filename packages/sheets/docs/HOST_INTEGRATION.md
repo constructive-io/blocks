@@ -65,7 +65,7 @@ Both paths also apply to upload requests (`createSheetsUpload`).
 ┌──────────────────────────────┐
 │  sheets-execute.ts           │
 │  1. cfg.onAuthError?.()      │  ← fires callback
-│  2. throw DataError          │  ← error propagates to React Query
+│  2. throw ConstructiveError  │  ← error propagates to React Query
 └──────────────────────────────┘
 ```
 

@@ -195,5 +195,5 @@ export function packageImport(primitive: BasePrimitive): string {
 }
 
 export function registryInstall(primitive: BasePrimitive): string {
-  return `pnpm dlx shadcn@4.13.1 add @constructive/${primitive.name}`;
+  return `pnpm dlx shadcn@latest add @constructive/${primitive.name}`;
 }

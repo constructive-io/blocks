@@ -365,7 +365,7 @@ export function useSheets<TRow extends SheetsRow = SheetsRow>(
 			allRelationFields: ctx.allRelationFields,
 			hasCompletedInitialLoad: !ctx.isLoading,
 			dataError: ctx.error,
-			// isLoading is true only until first data arrives (keepPreviousData keeps rows on refetch).
+			// isLoading is true only until the active scope receives its first result.
 			isInitialLoading: ctx.isLoading && rows.length === 0,
 		};
 	}, [infiniteScroll, infiniteGridData, dataLoadingResult.contextValue]);

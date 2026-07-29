@@ -98,7 +98,7 @@ export function RegistryHero() {
               <div className="hero-blk-body font-mono text-xs leading-7">
                 <div>
                   <span className="text-muted-foreground">$</span>{' '}
-                  <span className="text-primary">pnpm</span> dlx shadcn add{' '}
+                  <span className="text-primary">pnpm</span> dlx shadcn@latest add{' '}
                   <span className="text-emerald-500">@constructive/button</span>
                 </div>
                 <div className="text-muted-foreground">resolving dependencies</div>

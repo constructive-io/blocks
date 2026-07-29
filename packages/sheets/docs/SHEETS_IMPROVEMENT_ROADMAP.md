@@ -8,7 +8,7 @@
 
 ## 1. Executive summary
 
-Sheets has a **surprisingly disciplined data layer** (per-instance Zustand store, scope-keyed React Query, `DataError` normalization, concurrency-bounded bulk workers) wrapped around an **honest single seam** — the injectable GraphQL transport (`config.execute`/`executeUpload`). But everything a consumer would actually want to customize — cells, editors, columns, theming, backend shape — is **hardcoded and unreachable**, and the package _advertises an extension API that does not work_.
+Sheets has a **surprisingly disciplined data layer** (per-instance Zustand store, scope-keyed React Query, canonical `ConstructiveError` normalization, concurrency-bounded bulk workers) wrapped around an **honest single seam** — the injectable GraphQL transport (`config.execute`/`executeUpload`). But everything a consumer would actually want to customize — cells, editors, columns, theming, backend shape — is **hardcoded and unreachable**, and the package _advertises an extension API that does not work_.
 
 The single highest-leverage change: **collapse the three disconnected cell mechanisms into one per-instance `CellTypeDefinition` registry.** Today there are three parallel systems and the public-facing one is dead:
 
@@ -30,7 +30,7 @@ The rest of the roadmap (backend adapter, typed row model, component API, headle
 - Injectable transport `config.execute`/`executeUpload` with per-provider React Query scope isolation (`sheets-execute.ts`, `query-keys.ts`) — the one clean seam.
 - Per-instance Zustand store created in a ref (`sheets-provider.tsx:18`) — already SSR/multi-tenant safe; the pattern to copy for the cell registry.
 - `strict: true` is **on** for this package (`tsconfig.json`, no `strictNullChecks` override). _Correction to the workspace assumption: the 62 `as any` are **deliberate holes**, not compiler-forced._
-- `DataError` normalization + `onAuthError` hook; concurrency-bounded draft submission/bulk delete.
+- Canonical `ConstructiveError` normalization + `onAuthError` hook; concurrency-bounded draft submission/bulk delete.
 
 **Critical weaknesses (release blockers in bold):**
 - **No real extension surface** — the advertised one is dead; the live ones are closed (§4, P0).
@@ -40,7 +40,7 @@ The rest of the roadmap (backend adapter, typed row model, component API, headle
 - **951-line god-component** (`sheets.tsx`) fuses two data modes + drafts + optimistic updates + theming + JSX; no headless core.
 - **Soundness holes at the exact extension seams** — `combinedRows as any[]` (~15×), `__isDraft` magic keys (43 sites), `(cell.data as any)`, the `@ts-expect-error` in `extractCellValue` (`sheets.utils.ts:696`).
 - **Leaky/closed public API** — dead exports advertised; genuinely reusable primitives (`EditorFactory`, `OVERLAY`, `EditorFocusTrap`, `useDataGridTheme`) **not** exported. Single entry point; `private: true`, `0.1.0`, no CHANGELOG.
-- **Bundle/perf** — `splitting: false` defeats the only lazy imports; all overlay editors eagerly imported; a redundant count query per page; no `keepPreviousData`; per-cell allocations in the hot path.
+- **Bundle/perf** — `splitting: false` defeats the only lazy imports; all overlay editors eagerly imported; a redundant count query per page; no scope-safe placeholder continuity; per-cell allocations in the hot path.
 - **Cross-cutting gaps** — no a11y/ARIA on the canvas, no i18n/locale formatting, no keyboard-extension layer, no imperative ref, no consumer test harness.
 
 ---
@@ -60,7 +60,7 @@ Effort: **S**≤1d · **M**≈2-4d · **L**≈1-2wk · **XL**≈3wk+. Impact: �
 | # | Item | Effort | Impact | BC |
 |---|---|---|---|---|
 | 0.1 | **Derive `totalCount` from the rows connection; delete the redundant count query** (`use-sheets-table.ts:277-320`). _Verified: `buildSelect` always emits `totalCount` (select.js:371). Change the rows `queryFn` to return `{rows, totalCount}`; drop the second `useQuery` + its query key; keep `?? 0` fallback. `UseTableResult.totalCount` unchanged ⇒ no caller churn._ | S | ★★ | ✅ |
-| 0.2 | **`placeholderData: keepPreviousData`** on the paginated rows `useQuery` only (`use-sheets-table.ts:231`) so page-flips/filter changes don't blank the grid. _Verified no-op on the relation picker's infinite query — do **not** apply there._ | S | ★★ | ✅ |
+| 0.2 | **Scope-safe placeholder data** on row queries so page/filter changes retain data only when endpoint, database, and identity are unchanged. Identity changes must clear immediately to preserve the RLS boundary. | S | ★★ | ✅ |
 | 0.3 | **ESM-scoped code-splitting + lazy heavy editors.** _Verified: `splitting:true` with `format:['esm','cjs']` **fails** esbuild ("splitting only works with esm"). Split `tsup.config.ts` into two configs — ESM with `splitting:true`, CJS non-split. `React.lazy` the 3 heavy editors (geometry→leaflet, json, image) in `editor-registry.ts`; light editors stay eager._ | M | ★★ | ✅ |
 | 0.4 | **Fix the vendor build.** Drop phantom `noExternal: ['pluralize','sonner']` (not deps); add real dep `'inflekt'`; drop `leaflet`/`react-leaflet` from `noExternal` (already optional peers — removes the ~270KB vendor double-bundle); add the missing `build:vendor` script so CI exercises it (`tsup.vendor.config.ts`). | S | ★★ | ✅ |
 | 0.5 | **Render real error / empty / loading states.** Surface `error` through `SheetsInner`'s memo (`use-load-grid.ts` already returns `{isError,error}`; `sheets.tsx:169` only pulls `hasCompletedInitialLoad`) and branch before `<DataEditor>`. Ship default state components; gate loading on initial load only. _BC note: changes default DOM on error/empty — document it._ | M | ★★★ | ⚠️ behavior |
@@ -154,7 +154,7 @@ export interface SheetsBackendAdapter {
 }
 // SheetsConfig: adapter?: SheetsBackendAdapter
 ```
-*Land incrementally* (`fetchMeta` → `listRows` → mutations) behind the default adapter; add data-hook tests (currently zero) before moving each method. Fold the **redundant-count removal (0.1) into `listRows`** and **route the upload GraphQL patch step through `execute`** (the hand-built `fetch` in `use-sheets-upload.ts` bypasses the `execute`/`DataError` seam) so the adapter boundary doesn't leak.
+*Land incrementally* (`fetchMeta` → `listRows` → mutations) behind the default adapter; add data-hook tests (currently zero) before moving each method. Fold the **redundant-count removal (0.1) into `listRows`** and **route the upload GraphQL patch step through `execute`** (the hand-built `fetch` in `use-sheets-upload.ts` bypasses the canonical error seam) so the adapter boundary doesn't leak.
 
 **2.2 — One resolution authority · M · ★★ · BC**
 Make `mapToFrontendCellType(meta, cfg?)` the single resolver with injectable `aliasOverrides`/`scalarOverrides`/`resolve`. Route `createColumnSchemaFromMeta` and the forms layer through it (they diverge today). *Correction:* the divergence currently has **no visible effect** — `createColumnSchemaFromMeta`'s output (`tableSchema`) has **zero live consumers**; the grid already uses the full cascade. So this is **cleanup + an injection hook**, not a live-bug fix — either route it through the cascade or delete the dead `tableSchema`. Move Constructive-specific scalars (`Relation`/`Interval`/`GeoJSON`) into the PostGraphile adapter's default `scalarOverrides`.
@@ -250,7 +250,7 @@ These are wrong in the obvious first implementation — verified against source/
 - **glide@6 exports no `EditorProps`** — but **does** export `ProvideEditorComponent`/`ProvideEditorCallbackResult`. Type against those.
 - **No public `DataEditor.onKeyDown`** — keymap must be a container capture-listener; can't pre-empt in-canvas nav. `keybindings` only toggles named built-ins.
 - **`drawCell`/`customRenderer` only fire for `GridCellKind.Custom`** cells — useless on a def returning a standard cell.
-- **`keepPreviousData` is a no-op on the relation picker** (infinite query) — paginated `useQuery` only.
+- **Placeholder continuity is scoped** to the same endpoint, database, and identity; relation-picker queries don't use it.
 - **`showSearch`/`showFilters` props are dead, but the same-named local state in `sheets.tsx:83-84` is live** — delete only the props.
 - **`relationInfoCache` is per-instance already** (Zustand per-provider) — the only real issue is multi-DB scoping.
 - **`wrapEditor` is not exported and is under-typed** (`as any`) — wrap it in a typed `defineOverlayEditor` before exposing.

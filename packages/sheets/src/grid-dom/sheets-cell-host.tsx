@@ -14,7 +14,7 @@
 // carry kind 'text' (formatted text in v1), so they route through TextCellView
 // alongside the grid-internal kinds (loading/draft-action/custom); their dedicated
 // DateTimeCellView/IntervalCellView stay exported for per-typeKey use later.
-// Dependency-light: local `cn` only, NO @constructive-io/ui.
+// Dependency-light: local `cn` only, with no shared primitive dependency.
 import { memo, useCallback, useRef } from 'react';
 import type React from 'react';
 import type { Cell } from '@tanstack/react-table';

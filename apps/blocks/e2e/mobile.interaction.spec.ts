@@ -7,10 +7,17 @@ import {
 } from '@playwright/test';
 
 const billingRoute = (name: string) => `/blocks/blocks/billing/${name}/`;
+const applicationRoute = (name: string) => `/blocks/blocks/${name}/`;
 
 function billingPreviewFrame(page: Page): FrameLocator {
   return page.frameLocator(
     '[data-slot="billing-showcase-preview"] iframe[title$="live preview"]',
+  );
+}
+
+function applicationPreviewFrame(page: Page): FrameLocator {
+  return page.frameLocator(
+    '[data-slot="application-block-showcase-preview"] iframe[title$="live preview"]',
   );
 }
 
@@ -172,4 +179,124 @@ test('mobile billing controls expose 44px touch targets and switch account conte
       '[data-slot="tabs-trigger"]:visible, [data-slot="billing-settings-page"] [data-slot="button"]:visible',
     ),
   );
+});
+
+test('mobile application blocks keep their primary workflows inside the viewport', async ({
+  page,
+}) => {
+  await test.step('Org Chart fits every node and action target', async () => {
+    await page.goto(applicationRoute('org-chart'), { waitUntil: 'networkidle' });
+    expect(await page.evaluate(() => window.scrollY)).toBe(0);
+    const frame = applicationPreviewFrame(page);
+    const nodes = frame.locator('.react-flow__node');
+    await expect(nodes).toHaveCount(5);
+
+    await expect
+      .poll(() =>
+        nodes.evaluateAll((elements) =>
+          elements.every((element) => {
+            const bounds = element.getBoundingClientRect();
+            return bounds.left >= 0 && bounds.right <= window.innerWidth;
+          }),
+        ),
+      )
+      .toBe(true);
+
+    const actions = frame.getByRole('button', { name: /^Actions for / });
+    await expect(actions).toHaveCount(5);
+    expect(
+      await actions.evaluateAll((elements) =>
+        elements.every((element) => {
+          const bounds = element.getBoundingClientRect();
+          return bounds.left >= 0 && bounds.right <= window.innerWidth;
+        }),
+      ),
+    ).toBe(true);
+
+    for (const person of ['Maya Chen', 'Theo Brooks']) {
+      await frame
+        .getByRole('button', { name: new RegExp(`^Actions for ${person}`) })
+        .click();
+      const menu = frame.getByRole('menu');
+      await expect(menu).toBeVisible();
+      expect(
+        await menu.evaluate((element) => {
+          const bounds = element.getBoundingClientRect();
+          return bounds.left >= 0 && bounds.right <= window.innerWidth;
+        }),
+      ).toBe(true);
+      await page.keyboard.press('Escape');
+      await expect(menu).toBeHidden();
+    }
+
+    const preview = page.locator(
+      '[data-slot="application-block-showcase-preview"]',
+    );
+    await preview
+      .getByRole('button', { name: 'Desktop preview, 1280 pixels' })
+      .click();
+    const fullscreenTrigger = preview.getByRole('button', {
+      name: 'Open full-screen preview',
+    });
+    await fullscreenTrigger.click();
+    const dialog = page.getByRole('dialog', { name: 'Org Chart preview' });
+    const frameContainer = dialog.locator(
+      '[data-slot="application-block-preview-frame"]',
+    );
+    const fullscreenFrame = dialog.locator('iframe');
+    await expect
+      .poll(async () => Number(await frameContainer.getAttribute('data-preview-scale')))
+      .toBeLessThan(1);
+    expect(
+      await fullscreenFrame.evaluate((element) => {
+        const frameBounds = element.getBoundingClientRect();
+        const containerBounds = element.parentElement!.getBoundingClientRect();
+        return frameBounds.width <= containerBounds.width + 1;
+      }),
+    ).toBe(true);
+    await page.keyboard.press('Escape');
+    await expect(dialog).toBeHidden();
+    await expect(fullscreenTrigger).toBeFocused();
+  });
+
+  await test.step('Storage opens object details from the keyboard', async () => {
+    await page.goto(applicationRoute('storage-browser'), {
+      waitUntil: 'networkidle',
+    });
+    const frame = applicationPreviewFrame(page);
+    const objectLink = frame.getByRole('button', {
+      name: 'Open details for launch-cover.png',
+    });
+    await objectLink.focus();
+    await objectLink.press('Enter');
+    await expect(frame.getByRole('dialog')).toBeVisible();
+    await page.keyboard.press('Escape');
+    await expect(frame.getByRole('dialog')).toBeHidden();
+    await expect(objectLink).toBeFocused();
+  });
+
+  await test.step('Schema Builder create cards do not overflow', async () => {
+    await page.goto(applicationRoute('schema-builder'), {
+      waitUntil: 'networkidle',
+    });
+    expect(await page.evaluate(() => window.scrollY)).toBe(0);
+    const frame = applicationPreviewFrame(page);
+    await frame.getByRole('button', { name: 'Create table' }).first().click();
+    await expect(frame.getByTestId('table-name-input')).not.toBeFocused();
+    const cards = frame.locator('[data-testid^="policy-card-"]');
+    await expect(cards.first()).toBeVisible();
+    expect(
+      await cards.evaluateAll((elements) =>
+        elements.every((element) => {
+          const bounds = element.getBoundingClientRect();
+          return bounds.left >= 0 && bounds.right <= window.innerWidth;
+        }),
+      ),
+    ).toBe(true);
+    expect(
+      await frame.locator('html').evaluate(
+        (element) => element.scrollWidth <= element.clientWidth,
+      ),
+    ).toBe(true);
+  });
 });

@@ -8,10 +8,12 @@ import { Check, Menu, Terminal } from 'lucide-react';
 import { Button } from '@constructive-io/ui/button';
 
 import { ThemeToggle } from '@/components/site/theme-toggle';
+import { getApplicationBlock } from '@/lib/application-blocks';
 import { getBasePrimitive, registryInstall } from '@/lib/base-primitives';
 import { getBillingBlock } from '@/lib/billing-blocks';
 import { getFeaturePackDoc } from '@/lib/feature-packs';
 import { registryAdd } from '@/lib/install-mode';
+import { getSourceBlock } from '@/lib/source-blocks';
 
 function normalizePath(path: string) {
   if (path.length > 1 && path.endsWith('/')) return path.slice(0, -1);
@@ -30,6 +32,15 @@ function crumbFor(path: string): string {
     return pack ? `${pack.title} feature pack` : 'Feature packs';
   }
   if (p === '/blocks/console-kit') return 'Console Kit';
+  if (p === '/blocks/command-palette') return 'Command Palette';
+  if (p.startsWith('/blocks/')) {
+    const sourceBlock = getSourceBlock(p.slice('/blocks/'.length));
+    if (sourceBlock) return sourceBlock.title;
+  }
+  if (p.startsWith('/blocks/')) {
+    const block = getApplicationBlock(p.slice('/blocks/'.length));
+    if (block) return block.title;
+  }
   if (p === '/blocks/billing') return 'Billing';
   if (p.startsWith('/blocks/billing/')) {
     const name = p.slice('/blocks/billing/'.length);
@@ -50,7 +61,7 @@ function installActionFor(path: string) {
     if (!pack) return null;
     return {
       command: registryAdd(pack.registryName),
-      label: `shadcn add @constructive/${pack.registryName}`,
+      label: registryAdd(pack.registryName),
       title: `${pack.title} feature pack`,
     };
   }
@@ -61,7 +72,7 @@ function installActionFor(path: string) {
     if (!block) return null;
     return {
       command: registryAdd(block.name),
-      label: `shadcn add @constructive/${block.name}`,
+      label: registryAdd(block.name),
       title: block.title,
     };
   }
@@ -69,9 +80,43 @@ function installActionFor(path: string) {
   if (normalizedPath === '/blocks/console-kit') {
     return {
       command: registryAdd('console-kit-nextjs'),
-      label: 'shadcn add @constructive/console-kit-nextjs',
+      label: registryAdd('console-kit-nextjs'),
       title: 'Console Kit',
     };
+  }
+
+  if (normalizedPath === '/blocks/command-palette') {
+    return {
+      command: registryAdd('command-palette'),
+      label: registryAdd('command-palette'),
+      title: 'Command Palette',
+    };
+  }
+
+  if (normalizedPath.startsWith('/blocks/')) {
+    const sourceBlock = getSourceBlock(
+      normalizedPath.slice('/blocks/'.length),
+    );
+    if (sourceBlock) {
+      return {
+        command: registryAdd(sourceBlock.name),
+        label: registryAdd(sourceBlock.name),
+        title: sourceBlock.title,
+      };
+    }
+  }
+
+  if (normalizedPath.startsWith('/blocks/')) {
+    const block = getApplicationBlock(
+      normalizedPath.slice('/blocks/'.length),
+    );
+    if (block) {
+      return {
+        command: registryAdd(block.name),
+        label: registryAdd(block.name),
+        title: block.title,
+      };
+    }
   }
 
   if (!normalizedPath.startsWith('/blocks/ui/')) return null;
@@ -82,7 +127,7 @@ function installActionFor(path: string) {
 
   return {
     command: registryInstall(primitive),
-    label: `shadcn add @constructive/${primitive.name}`,
+    label: registryInstall(primitive),
     title: primitive.title,
   };
 }

@@ -52,17 +52,14 @@ export interface SchemaBuilderProviderProps extends SchemaBuilderHostOptions {
   children: ReactNode;
 }
 
-export function SchemaBuilderProvider({
-  children,
-  tabs = EMPTY_TABS,
-  ...host
-}: SchemaBuilderProviderProps) {
+export function SchemaBuilderProvider(props: SchemaBuilderProviderProps) {
+  const { children, tabs = EMPTY_TABS } = props;
   const [store] = useState(() =>
     createSchemaBuilderStore(
-      host.scope,
-      host.preferences,
-      host.activeTab,
-      host.selectedTableId ?? null
+      props.scope,
+      props.preferences,
+      props.activeTab,
+      props.selectedTableId ?? null
     )
   );
 
@@ -72,22 +69,22 @@ export function SchemaBuilderProvider({
   }, [tabs]);
 
   useEffect(() => {
-    store.getState().replaceScope(host.scope);
-  }, [host.scope, store]);
+    store.getState().replaceScope(props.scope);
+  }, [props.scope, store]);
 
   useEffect(() => {
-    store.getState().replacePreferences(host.preferences);
-  }, [host.preferences, store]);
+    store.getState().replacePreferences(props.preferences);
+  }, [props.preferences, store]);
 
   useEffect(() => {
-    store.getState().replaceActiveTab(host.activeTab);
-  }, [host.activeTab, store]);
+    store.getState().replaceActiveTab(props.activeTab);
+  }, [props.activeTab, store]);
 
   useEffect(() => {
-    if (host.selectedTableId !== undefined) {
-      store.getState().setSelectedTableId(host.selectedTableId);
+    if (props.selectedTableId !== undefined) {
+      store.getState().setSelectedTableId(props.selectedTableId);
     }
-  }, [host.scope, host.selectedTableId, store]);
+  }, [props.scope, props.selectedTableId, store]);
 
   const setActiveTab = useCallback(
     (tabId: string) => {
@@ -97,9 +94,9 @@ export function SchemaBuilderProvider({
       }
       void extension?.preload?.();
       store.getState().replaceActiveTab(tabId);
-      host.onActiveTabChange(tabId);
+      props.onActiveTabChange(tabId);
     },
-    [host.onActiveTabChange, store, validatedTabs]
+    [props.onActiveTabChange, store, validatedTabs]
   );
 
   const setPreferences = useCallback(
@@ -111,17 +108,17 @@ export function SchemaBuilderProvider({
       const current = store.getState().preferences;
       const next = typeof update === 'function' ? update(current) : update;
       store.getState().replacePreferences(next);
-      host.onPreferencesChange(next);
+      props.onPreferencesChange(next);
     },
-    [host.onPreferencesChange, store]
+    [props.onPreferencesChange, store]
   );
 
   const selectTable = useCallback(
     (tableId: string | null, tableName?: string | null) => {
       store.getState().setSelectedTableId(tableId);
-      host.onSelectedTableChange?.({ tableId, tableName: tableName ?? null });
+      props.onSelectedTableChange?.({ tableId, tableName: tableName ?? null });
     },
-    [host.onSelectedTableChange, store]
+    [props.onSelectedTableChange, store]
   );
   const selectField = useCallback(
     (fieldId: string | null) => store.getState().setSelectedFieldId(fieldId),
@@ -130,7 +127,17 @@ export function SchemaBuilderProvider({
 
   const value = useMemo<SchemaBuilderContextValue>(
     () => ({
-      ...host,
+      adapter: props.adapter,
+      scope: props.scope,
+      colorMode: props.colorMode,
+      preferences: props.preferences,
+      onPreferencesChange: props.onPreferencesChange,
+      activeTab: props.activeTab,
+      onActiveTabChange: props.onActiveTabChange,
+      selectedTableId: props.selectedTableId,
+      onSelectedTableChange: props.onSelectedTableChange,
+      onNavigate: props.onNavigate,
+      onInvalidate: props.onInvalidate,
       tabs: validatedTabs,
       store,
       setActiveTab,
@@ -138,7 +145,25 @@ export function SchemaBuilderProvider({
       selectTable,
       selectField
     }),
-    [host, selectField, selectTable, setActiveTab, setPreferences, store, validatedTabs]
+    [
+      props.activeTab,
+      props.adapter,
+      props.colorMode,
+      props.onActiveTabChange,
+      props.onInvalidate,
+      props.onNavigate,
+      props.onPreferencesChange,
+      props.onSelectedTableChange,
+      props.preferences,
+      props.scope,
+      props.selectedTableId,
+      selectField,
+      selectTable,
+      setActiveTab,
+      setPreferences,
+      store,
+      validatedTabs
+    ]
   );
 
   return <SchemaBuilderContext.Provider value={value}>{children}</SchemaBuilderContext.Provider>;

@@ -1,85 +1,77 @@
-import { constants } from 'node:fs';
-import { access, mkdir, readFile, readdir, rm, writeFile } from 'node:fs/promises';
+#!/usr/bin/env -S tsx
+
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import type { Registry, RegistryFile } from '../../../apps/registry/scripts/compiler';
+import { collectModuleSpecifiers } from '../../../apps/registry/scripts/compiler';
+import { buildSourceRegistry } from '../../../apps/registry/scripts/build-source-registry';
 
 const packageRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const manifestPath = path.join(packageRoot, 'registry.json');
-const sourceRoot = path.join(packageRoot, 'src/schema');
-const outputRoot = path.join(packageRoot, 'registry/constructive/blocks/schema');
-const outputPrefix = 'registry/constructive/blocks/schema/';
-const checkOnly = process.argv.includes('--check');
-const registry = JSON.parse(await readFile(manifestPath, 'utf8')) as Registry;
-const expectedNames = [
-	'schema-builder-core',
-	'schema-builder-fields',
-	'schema-builder-relationships',
-	'schema-builder-indexes',
-	'schema-builder-policies',
-	'schema-builder-tables',
-	'schema-builder',
-];
+const exactAliases = new Map<string, string>([
+	['@/blocks/schema/schema-builder-core/context/block-config', '@/components/schema-builder/compat/block-config'],
+	[
+		'@/blocks/schema/schema-builder-core/lib/gql/hooks/schema-builder',
+		'@/components/schema-builder/schema/schema-builder-core/lib/gql/hooks/schema-builder/use-schema-builder-selectors',
+	],
+	['@/generated/modules/hooks/queries/useRelationProvisionsQuery', '@/components/schema-builder/compat/relation-provisions'],
+	['@/generated/schema-builder', '@/components/schema-builder/compat/schema-builder-sdk'],
+	['@/generated/auth/hooks', '@/components/schema-builder/compat/auth-sdk'],
+	['@/generated/admin/hooks', '@/components/schema-builder/compat/admin-sdk'],
+	['@/generated/modules', '@/components/schema-builder/compat/modules-sdk'],
+	['@/lib/utils', '@/components/schema-builder/lib/utils'],
+]);
 
-const names = registry.items.map((item) => item.name);
-if (JSON.stringify(names) !== JSON.stringify(expectedNames)) {
-	throw new Error(`Schema registry items changed: ${names.join(', ')}`);
-}
-
-const files = registry.items.flatMap((item) => item.files ?? []);
-if (files.length !== 164) throw new Error(`Expected 164 schema registry files, found ${files.length}.`);
-
-async function walk(root: string): Promise<string[]> {
-	const result: string[] = [];
-	for (const entry of await readdir(root, { withFileTypes: true })) {
-		const entryPath = path.join(root, entry.name);
-		if (entry.isDirectory()) result.push(...await walk(entryPath));
-		else result.push(entryPath);
+function rewriteSchemaBuilderAliases(source: string, relativePath: string): string {
+	const edits: Array<{ start: number; end: number; replacement: string }> = [];
+	for (const moduleSpecifier of collectModuleSpecifiers(source, relativePath)) {
+		const exactAlias = exactAliases.get(moduleSpecifier.value);
+		const replacement = exactAlias ?? (
+			moduleSpecifier.value.startsWith('@/blocks/schema/')
+				? `@/components/schema-builder/schema/${moduleSpecifier.value.slice('@/blocks/schema/'.length)}`
+				: undefined
+		);
+		if (!replacement) continue;
+		edits.push({
+			start: moduleSpecifier.literal.getStart() + 1,
+			end: moduleSpecifier.literal.getEnd() - 1,
+			replacement,
+		});
 	}
-	return result;
-}
 
-function resolvePair(file: RegistryFile): { source: string; output: string } {
-	if (!file.path.startsWith(outputPrefix)) throw new Error(`Unexpected schema registry path: ${file.path}`);
-	const suffix = file.path.slice(outputPrefix.length);
-	return {
-		source: path.join(sourceRoot, suffix),
-		output: path.join(outputRoot, suffix),
-	};
-}
-
-for (const file of files) await access(resolvePair(file).source, constants.R_OK);
-
-if (!checkOnly) {
-	await rm(outputRoot, { recursive: true, force: true });
-	for (const file of files) {
-		const { source, output } = resolvePair(file);
-		await mkdir(path.dirname(output), { recursive: true });
-		await writeFile(output, await readFile(source, 'utf8'));
+	let rewritten = source;
+	for (const edit of edits.sort((left, right) => right.start - left.start)) {
+		rewritten = `${rewritten.slice(0, edit.start)}${edit.replacement}${rewritten.slice(edit.end)}`;
 	}
+	return rewritten;
 }
 
-const expectedOutputs = new Set(files.map((file) => resolvePair(file).output));
-const actualOutputs = new Set(await walk(outputRoot));
-if (expectedOutputs.size !== actualOutputs.size) {
-	throw new Error(`Registry output count mismatch: expected ${expectedOutputs.size}, found ${actualOutputs.size}.`);
-}
-
-for (const output of actualOutputs) {
-	if (!expectedOutputs.has(output)) {
-		throw new Error(`Unexpected registry output: ${path.relative(packageRoot, output).split(path.sep).join('/')}`);
-	}
-	const manifestFile = files.find((file) => resolvePair(file).output === output);
-	if (!manifestFile) throw new Error(`Missing manifest entry for ${path.relative(outputRoot, output)}.`);
-	const source = resolvePair(manifestFile).source;
-	const [sourceContent, outputContent] = await Promise.all([
-		readFile(source, 'utf8'),
-		readFile(output, 'utf8'),
-	]);
-	if (sourceContent !== outputContent) {
-		throw new Error(`Registry output drifted from canonical source: ${path.relative(outputRoot, output)}.`);
-	}
-}
-
-console.log(`${checkOnly ? 'Checked' : 'Built'} ${registry.items.length} schema items (${files.length} files).`);
+buildSourceRegistry({
+	packageRoot,
+	item: {
+		name: 'schema-builder',
+		type: 'registry:block',
+		title: 'Schema Builder',
+		description: 'An adapter-driven PostgreSQL schema editor for tables, fields, relationships, indexes, and RLS policies.',
+		categories: ['blocks', 'schema'],
+		docs: "Install the complete source-owned editor with `pnpm dlx shadcn@latest add @constructive/schema-builder`, then import `SchemaBuilder` and `defineSchemaBuilderAdapter` from `@/components/schema-builder`. The host supplies its generated-SDK adapter, control-plane scope, navigation, preferences, and invalidation behavior; the block never owns backend endpoints or credentials.",
+	},
+	registrySubdirectory: 'blocks/schema-builder',
+	targetPrefix: '@components/schema-builder',
+	dependencies: [
+		'@constructive-io/data@^0.4.0',
+		'@dnd-kit/core',
+		'@dnd-kit/utilities',
+		'@fluentui/react-context-selector',
+		'@pgsql/types@17.6.2',
+		'@remixicon/react',
+		'@tanstack/react-query',
+		'clsx',
+		'lucide-react',
+		'motion',
+		'node-type-registry@0.48.0',
+		'pg-ast@2.11.3',
+		'tailwind-merge',
+		'zustand',
+	],
+	rewriteSource: rewriteSchemaBuilderAliases,
+});

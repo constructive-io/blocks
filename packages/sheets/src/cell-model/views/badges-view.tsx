@@ -1,6 +1,6 @@
 // Default DOM view for the `badges` SheetsCell family — the native analogue of
 // v1's glide BubbleCell render. Dependency-light: plain JSX + Tailwind v4 + a
-// local `cn`, no @constructive-io/ui this phase. Reads the string[] off
+// local `cn`, with no shared primitive dependency. Reads the string[] off
 // `props.cell.data` (the badges payload) and renders one tonal chip per item per
 // DESIGN_SPEC §7; an empty array renders an empty cell.
 //
