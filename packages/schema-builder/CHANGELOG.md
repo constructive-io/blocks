@@ -3,6 +3,17 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.4.1](https://github.com/constructive-io/blocks/compare/@constructive-io/schema-builder@0.4.0...@constructive-io/schema-builder@0.4.1) (2026-07-30)
+
+
+### Bug Fixes
+
+* **registry:** align published dependency contracts ([e013f58](https://github.com/constructive-io/blocks/commit/e013f58d0755754ad8aa063e13bb1ad5f338781a))
+
+
+
+
+
 # [0.4.0](https://github.com/constructive-io/blocks/compare/@constructive-io/schema-builder@0.2.1...@constructive-io/schema-builder@0.4.0) (2026-07-30)
 
 

@@ -3,6 +3,17 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.8.1](https://github.com/constructive-io/blocks/compare/@constructive-io/sheets@0.8.0...@constructive-io/sheets@0.8.1) (2026-07-30)
+
+
+### Bug Fixes
+
+* **registry:** align published dependency contracts ([e013f58](https://github.com/constructive-io/blocks/commit/e013f58d0755754ad8aa063e13bb1ad5f338781a))
+
+
+
+
+
 # [0.8.0](https://github.com/constructive-io/blocks/compare/@constructive-io/sheets@0.6.1...@constructive-io/sheets@0.8.0) (2026-07-30)
 
 
