@@ -3,6 +3,8 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import {
+	CONSTRUCTIVE_COMMAND_PALETTE_DEPENDENCY,
+	CONSTRUCTIVE_DATA_DEPENDENCY,
 	CONSTRUCTIVE_THEME_DEPENDENCY,
 	CONSTRUCTIVE_SHEETS_PACKAGE,
 	CONSTRUCTIVE_UI_PACKAGE,
@@ -16,8 +18,8 @@ const registryPath = path.join(root, 'apps', 'registry', 'registry.json');
 const registry = JSON.parse(await readFile(registryPath, 'utf8')) as Registry;
 const ownNames = new Set(registry.items.map((item) => item.name));
 const requiredPackageRanges = new Map([
-	['@constructive-io/data', '@constructive-io/data@^0.4.0'],
-	['@constructive-io/command-palette', '@constructive-io/command-palette@^0.3.0'],
+	['@constructive-io/data', CONSTRUCTIVE_DATA_DEPENDENCY],
+	['@constructive-io/command-palette', CONSTRUCTIVE_COMMAND_PALETTE_DEPENDENCY],
 ]);
 
 assertUniqueRegistryShape(registry.items);

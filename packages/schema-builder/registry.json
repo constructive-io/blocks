@@ -14,7 +14,7 @@
         "schema"
       ],
       "dependencies": [
-        "@constructive-io/data@^0.4.0",
+        "@constructive-io/data@^0.5.0",
         "@dnd-kit/core",
         "@dnd-kit/utilities",
         "@fluentui/react-context-selector",
@@ -24,7 +24,7 @@
         "clsx",
         "lucide-react",
         "motion",
-        "node-type-registry@0.48.0",
+        "node-type-registry@^1.11.0",
         "pg-ast@2.11.3",
         "tailwind-merge",
         "zustand"

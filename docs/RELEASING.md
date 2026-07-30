@@ -17,11 +17,11 @@ and tags but has no npm credentials and does not run `npm publish`.
 
 For the repository cutover, the intended releases are:
 
-- `@constructive-io/ui@0.7.0`
-- `@constructive-io/data@0.4.0`
-- `@constructive-io/sheets@0.7.0`
-- `@constructive-io/command-palette@0.3.0`
-- `@constructive-io/schema-builder@0.3.0`
+- `@constructive-io/ui@0.8.0`
+- `@constructive-io/data@0.5.0`
+- `@constructive-io/sheets@0.8.0`
+- `@constructive-io/command-palette@0.4.0`
+- `@constructive-io/schema-builder@0.4.0`
 
 ## Verify the exact publish inputs
 
@@ -53,11 +53,11 @@ Publish the tarballs themselves so npm receives the exact files that passed the
 local checks:
 
 ```bash
-npm publish .artifacts/npm/constructive-io-ui-0.7.0.tgz --access public
-npm publish .artifacts/npm/constructive-io-data-0.4.0.tgz --access public
-npm publish .artifacts/npm/constructive-io-sheets-0.7.0.tgz --access public
-npm publish .artifacts/npm/constructive-io-command-palette-0.3.0.tgz --access public
-npm publish .artifacts/npm/constructive-io-schema-builder-0.3.0.tgz --access public
+npm publish .artifacts/npm/constructive-io-ui-0.8.0.tgz --access public
+npm publish .artifacts/npm/constructive-io-data-0.5.0.tgz --access public
+npm publish .artifacts/npm/constructive-io-sheets-0.8.0.tgz --access public
+npm publish .artifacts/npm/constructive-io-command-palette-0.4.0.tgz --access public
+npm publish .artifacts/npm/constructive-io-schema-builder-0.4.0.tgz --access public
 ```
 
 Verify all five packages with `npm view` and a clean consumer install. Published

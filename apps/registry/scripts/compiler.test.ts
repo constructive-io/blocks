@@ -56,7 +56,7 @@ test('rewrites the source-owned Sheets package to the local registry block', () 
 		new Set(),
 	);
 
-	assert.match(result.source, /from '@\/components\/ui\/sheets'/);
+	assert.match(result.source, /from '@\/components\/ui\/sheets\/index'/);
 	assert.deepEqual(result.registryDependencies, ['sheets']);
 	assert.throws(
 		() => rewriteConstructiveUiImports(
