@@ -3,6 +3,17 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.5.0](https://github.com/constructive-io/blocks/compare/@constructive-io/data@0.3.0...@constructive-io/data@0.5.0) (2026-07-30)
+
+
+### Features
+
+* **registry:** add dashboard source blocks ([11483a0](https://github.com/constructive-io/blocks/commit/11483a0b5dafa501f6962186931ece2f4b02a416))
+
+
+
+
+
 # 0.3.0 (2026-07-29)
 
 

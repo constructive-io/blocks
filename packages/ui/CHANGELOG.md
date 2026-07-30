@@ -3,6 +3,18 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.8.0](https://github.com/constructive-io/blocks/compare/@constructive-io/ui@0.6.1...@constructive-io/ui@0.8.0) (2026-07-30)
+
+
+### Features
+
+* **blocks:** polish application docs and previews ([a00d896](https://github.com/constructive-io/blocks/commit/a00d89629894f89c2063da9632836b992949197c))
+* **registry:** add dashboard source blocks ([11483a0](https://github.com/constructive-io/blocks/commit/11483a0b5dafa501f6962186931ece2f4b02a416))
+
+
+
+
+
 ## [0.6.1](https://github.com/constructive-io/blocks/compare/@constructive-io/ui@0.6.0...@constructive-io/ui@0.6.1) (2026-07-29)
 
 
