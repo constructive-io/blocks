@@ -3,7 +3,11 @@
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { collectModuleSpecifiers } from '../../../apps/registry/scripts/compiler';
+import {
+	CONSTRUCTIVE_DATA_DEPENDENCY,
+	NODE_TYPE_REGISTRY_DEPENDENCY,
+	collectModuleSpecifiers,
+} from '../../../apps/registry/scripts/compiler';
 import { buildSourceRegistry } from '../../../apps/registry/scripts/build-source-registry';
 
 const packageRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -58,7 +62,7 @@ buildSourceRegistry({
 	registrySubdirectory: 'blocks/schema-builder',
 	targetPrefix: '@components/schema-builder',
 	dependencies: [
-		'@constructive-io/data@^0.4.0',
+		CONSTRUCTIVE_DATA_DEPENDENCY,
 		'@dnd-kit/core',
 		'@dnd-kit/utilities',
 		'@fluentui/react-context-selector',
@@ -68,7 +72,7 @@ buildSourceRegistry({
 		'clsx',
 		'lucide-react',
 		'motion',
-		'node-type-registry@0.48.0',
+		NODE_TYPE_REGISTRY_DEPENDENCY,
 		'pg-ast@2.11.3',
 		'tailwind-merge',
 		'zustand',

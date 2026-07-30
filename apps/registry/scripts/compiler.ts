@@ -5,6 +5,9 @@ export const CONSTRUCTIVE_UI_PACKAGE = '@constructive-io/ui';
 export const CONSTRUCTIVE_SHEETS_PACKAGE = '@constructive-io/sheets';
 export const CONSTRUCTIVE_NAMESPACE = '@constructive/';
 export const CONSTRUCTIVE_THEME_DEPENDENCY = '@constructive/constructive-theme';
+export const CONSTRUCTIVE_DATA_DEPENDENCY = '@constructive-io/data@^0.5.0';
+export const CONSTRUCTIVE_COMMAND_PALETTE_DEPENDENCY = '@constructive-io/command-palette@^0.4.0';
+export const NODE_TYPE_REGISTRY_DEPENDENCY = 'node-type-registry@^1.11.0';
 
 export const FEATURE_PACK_IDS = [
 	'data',
@@ -436,7 +439,11 @@ export function rewriteConstructiveUiImports(
 			edits.push({
 				start: literal.getStart() + 1,
 				end: literal.getEnd() - 1,
-				replacement: '@/components/ui/sheets',
+				// Keep the barrel explicit. shadcn treats an exact
+				// `@/components/ui/<registry item>` import as an item alias and
+				// rewrites it to that item's primary file during installation.
+				// Sheets exports its public surface from index.ts, not grid/sheets.tsx.
+				replacement: '@/components/ui/sheets/index',
 			});
 			dependencies.add('sheets');
 			continue;

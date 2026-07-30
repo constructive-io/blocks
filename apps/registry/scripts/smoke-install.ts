@@ -172,10 +172,10 @@ function forbiddenFeaturePacks(ids: readonly FeaturePackId[]): string[] {
 const standaloneFeaturePackCases: SmokeCase[] = featurePackIds.map((id) => ({
 	name: `feature-pack-${id}`,
 	expectedPackages: id === 'data'
-		? ['@constructive-io/data']
+		? ['@constructive-io/data', 'zustand']
 		: [],
 	forbiddenPackages: [
-		'zustand',
+		...(id === 'data' ? [] : ['zustand']),
 		'@constructive-io/sheets',
 		...(id === 'data' ? [] : ['@constructive-io/data']),
 	],
