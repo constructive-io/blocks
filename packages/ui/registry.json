@@ -7,7 +7,7 @@
       "name": "constructive-theme",
       "type": "registry:theme",
       "title": "Constructive Theme",
-      "description": "Constructive design system theme — OKLCH colors, z-index layers, shadow utilities, and animations.",
+      "description": "Constructive design system theme \u2014 OKLCH colors, z-index layers, shadow utilities, and animations.",
       "cssVars": {
         "theme": {
           "--color-background": "var(--background)",
@@ -2267,12 +2267,12 @@
       "name": "ai",
       "type": "registry:block",
       "title": "AI Kit",
-      "description": "Presentational primitives for AI and agentic chat UIs: composer, messages, loaders, markdown, code blocks, and transcript scroll.",
+      "description": "Presentational primitives for AI and agentic chat UIs: composer, messages, reasoning, tools, HITL approval, plan tracker, loaders, and streaming surfaces.",
       "categories": [
         "block",
         "ai"
       ],
-      "docs": "Import: `import { PromptInput, Message, AgentLoader, ChatContainer } from '@constructive-io/ui/ai'` or `@/components/ui/ai`.",
+      "docs": "Import: `import { PromptInput, Message, Tool, Reasoning, PlanTracker } from '@constructive-io/ui/ai'`",
       "dependencies": [
         "lucide-react"
       ],
@@ -2281,39 +2281,17 @@
         "button",
         "avatar",
         "tooltip",
-        "alert"
+        "alert",
+        "collapsible",
+        "badge"
       ],
       "files": [
-        {
-          "path": "registry/constructive/blocks/ai/index.ts",
-          "type": "registry:component"
-        },
-        {
-          "path": "registry/constructive/blocks/ai/text-shimmer.tsx",
-          "type": "registry:component"
-        },
         {
           "path": "registry/constructive/blocks/ai/agent-loader.tsx",
           "type": "registry:component"
         },
         {
-          "path": "registry/constructive/blocks/ai/prompt-input.tsx",
-          "type": "registry:component"
-        },
-        {
-          "path": "registry/constructive/blocks/ai/message.tsx",
-          "type": "registry:component"
-        },
-        {
-          "path": "registry/constructive/blocks/ai/markdown.tsx",
-          "type": "registry:component"
-        },
-        {
-          "path": "registry/constructive/blocks/ai/code-block.tsx",
-          "type": "registry:component"
-        },
-        {
-          "path": "registry/constructive/blocks/ai/response-stream.tsx",
+          "path": "registry/constructive/blocks/ai/approval-card.tsx",
           "type": "registry:component"
         },
         {
@@ -2321,11 +2299,111 @@
           "type": "registry:component"
         },
         {
+          "path": "registry/constructive/blocks/ai/code-block.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/ai/context-card.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/ai/context-ring.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/ai/feedback-bar.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/ai/file-upload.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/ai/format-duration.ts",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/ai/image.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/ai/index.ts",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/ai/inline-diff.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/ai/markdown.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/ai/message.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/ai/plan-tracker.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/ai/prompt-input.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/ai/prompt-suggestion.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/ai/reasoning.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/ai/recommendation-card.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/ai/response-stream.tsx",
+          "type": "registry:component"
+        },
+        {
           "path": "registry/constructive/blocks/ai/scroll-button.tsx",
           "type": "registry:component"
         },
         {
+          "path": "registry/constructive/blocks/ai/source.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/ai/steps.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/ai/streaming-text.tsx",
+          "type": "registry:component"
+        },
+        {
           "path": "registry/constructive/blocks/ai/system-message.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/ai/task-row.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/ai/text-shimmer.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/ai/thinking-trace.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/ai/tool.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/ai/types.ts",
           "type": "registry:component"
         },
         {

@@ -125,7 +125,7 @@ function Markdown({ className, children, streaming = false, ...props }: Markdown
 			className={cn(
 				'ai-markdown max-w-none space-y-3 break-words text-sm leading-relaxed text-foreground',
 				'[&_.ai-md-p]:my-0',
-				'[&_.ai-md-h]:font-semibold [&_.ai-md-h]:tracking-tight',
+				'[&_.ai-md-h]:font-semibold',
 				'[&_h1.ai-md-h]:text-lg [&_h2.ai-md-h]:text-base [&_h3.ai-md-h]:text-sm',
 				'[&_.ai-md-list]:my-1 [&_.ai-md-list]:list-disc [&_.ai-md-list]:space-y-1 [&_.ai-md-list]:pl-5',
 				'[&_ol.ai-md-list]:list-decimal',

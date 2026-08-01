@@ -14,39 +14,68 @@ pnpm dlx shadcn@latest add @constructive/ai
 
 ```ts
 import {
-  AgentLoader,
-  ChatContainer,
-  Message,
   PromptInput,
-  PromptInputTextarea,
-  PromptInputActions,
+  Message,
+  Reasoning,
+  Tool,
+  PlanTracker,
+  ApprovalCard,
+  AgentLoader,
 } from '@constructive-io/ui/ai';
 ```
 
-## Phase 0 surface
+## Surface map
 
+### Foundation
 | Export | Role |
 | --- | --- |
-| `TextShimmer` | Status text with sweeping gradient |
-| `AgentLoader` / `Loader` | Pixel grid (drive/dots/orbit) + simple spinners |
-| `PromptInput` family | Compound composer shell |
-| `Message` family | User/assistant message layout |
-| `Markdown` | Throttled zero-dep markdown subset |
-| `CodeBlock` | Code surface with copy |
-| `ResponseStream` | Client typewriter for fixtures |
+| `TextShimmer` | Status text shimmer |
+| `AgentLoader` / `Loader` | Pixel grid + simple spinners |
+| `PromptInput` family | Compound composer |
+| `Message` family | User/assistant layout |
+| `Markdown` | Throttled markdown subset |
+| `CodeBlock` | Code + copy |
+| `ResponseStream` | Client typewriter |
 | `ChatContainer` + `ScrollButton` | Stick-to-bottom transcript |
-| `SystemMessage` | Banner notice via Alert |
-| `useThrottledText` | Shared stream throttle (66ms) |
+| `SystemMessage` | Banner notice |
+| `useThrottledText` | 66ms stream throttle |
+
+### Agent traces & tools
+| Export | Role |
+| --- | --- |
+| `Reasoning` / `ThinkingBar` | Collapsible thinking |
+| `ThinkingTrace` | Steps / reasoning / search / coding modes |
+| `Steps` / `Step` / `ChainOfThought` | Vertical step list |
+| `Tool` / `ToolGroup` | card · chip · row densities |
+| `ApprovalCard` | HITL confirm or multi-question |
+| `Source` / `Sources` | Citation chips |
+| `InlineDiff` | +/− file diff |
+| `StreamingText` | Blur-resolve answer + follow-ups |
+
+### Planning & chrome
+| Export | Role |
+| --- | --- |
+| `PlanTracker` | Plan checklist above composer |
+| `ContextRing` | Token window ring |
+| `TaskRow` / `TaskList` | Live agent tasks |
+| `ContextCard` / `ContextCards` | RAG chunks |
+| `RecommendationCard` | Confidence + alternatives |
+| `FeedbackBar` | Copy / thumbs / regenerate |
+| `PromptSuggestion(s)` | Follow-up chips |
+| `FileUpload` | Attachments |
+| `AiImage` | Base64 / bytes image |
+
+### Types
+`ToolStatus`, `normalizeToolStatus`, `Plan`, `PlanStep`, `ContextUsage`, `formatDuration`
 
 ## Design rules
 
-- Constructive OKLCH tokens only (no hard-coded brand hex)
-- Continuous loaders use CSS keyframes (`ai-shimmer-text`, `ai-pixel-on`, …)
-- Respect `prefers-reduced-motion` (package globals already clamp animations)
-- Composer default shape is `rounded-xl`; pass `shape="pill"` for rounder shells
-- Markdown skips full GFM tables; hosts can replace with marked+DOMPurify when needed
+- Constructive OKLCH tokens only
+- Continuous loaders: CSS keyframes (`ai-shimmer-text`, `ai-pixel-on`, …)
+- Enter rows: `ai-fade-up` with stagger; respect `prefers-reduced-motion`
+- Composer default `rounded-xl`; `shape="pill"` optional
+- Tool status maps AI SDK part states and desktop enums via `normalizeToolStatus`
 
-## Planned next
+## Storybook
 
-Reasoning / thinking traces, tool chips, approval cards, plan tracker, context
-ring — see the session plan for AI agentic components.
+`AI/Overview` — loaders, composer+plan, reasoning/tools, HITL, tasks/context, streaming, full transcript.
