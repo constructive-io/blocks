@@ -154,13 +154,13 @@ export const SiteSidebar = forwardRef<HTMLElement, SiteSidebarProps>(function Si
   const onFoundations = pathname === '/' || pathname === '/blocks' || pathname === '/blocks/styling';
 
   const [foundationsOpen, setFoundationsOpen] = useState(true);
-  const [componentsOpen, setComponentsOpen] = useState(true);
-  const [aiOpen, setAiOpen] = useState(true);
+  // Collapse Components while browsing AI so the AI group is not buried under 30 primitives.
+  const [componentsOpen, setComponentsOpen] = useState(() => !onAi);
 
   // Expand the section that owns the active route so deep links stay visible
   useEffect(() => {
     if (onComponents) setComponentsOpen(true);
-    if (onAi) setAiOpen(true);
+    if (onAi) setComponentsOpen(false);
     if (onFoundations) setFoundationsOpen(true);
   }, [onComponents, onAi, onFoundations]);
 
@@ -315,26 +315,21 @@ export const SiteSidebar = forwardRef<HTMLElement, SiteSidebarProps>(function Si
           </NavSection>
         </div>
 
+        {/* Master AI group — same weight as Application, always listed after Components */}
         <div className="mt-3">
-          <NavSection
-            title="AI"
-            open={aiOpen}
-            onToggle={() => setAiOpen((v) => !v)}
-            count={aiLinks.length}
-          >
-            <ul className="flex flex-col gap-0.5">
-              {aiLinks.map(({ href, label }) => {
-                const active = pathname === href;
-                return (
-                  <li key={href}>
-                    <NavLink href={href} active={active} onNavigate={onNavigate}>
-                      {label}
-                    </NavLink>
-                  </li>
-                );
-              })}
-            </ul>
-          </NavSection>
+          <NavGroupLabel title="AI" count={aiLinks.length} />
+          <ul className="flex flex-col gap-0.5 pb-0.5 pt-0.5">
+            {aiLinks.map(({ href, label }) => {
+              const active = pathname === href;
+              return (
+                <li key={href}>
+                  <NavLink href={href} active={active} onNavigate={onNavigate}>
+                    {label}
+                  </NavLink>
+                </li>
+              );
+            })}
+          </ul>
         </div>
       </nav>
 
