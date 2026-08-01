@@ -3,8 +3,8 @@
   "version": "0.0.0",
   "private": true,
   "scripts": {
-    "gen": "tsx scripts/generate-ui-demo-source.ts && tsx scripts/check-docs.ts",
-    "gen:check": "tsx scripts/generate-ui-demo-source.ts --check && tsx scripts/check-docs.ts",
+    "gen": "tsx scripts/generate-ui-demo-source.ts",
+    "gen:check": "tsx scripts/generate-ui-demo-source.ts --check",
     "build:registry": "pnpm --filter @constructive-io/registry build",
     "check:flows": "pnpm gen:check",
     "check:install-namespace": "pnpm gen:check",

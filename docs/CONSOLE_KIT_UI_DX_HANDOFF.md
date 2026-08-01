@@ -253,7 +253,7 @@ Do not hand-edit `apps/registry/registry/**` or
 pack-facing change commonly requires coordinated edits to its component or
 module, `feature-pack.json`, `apps/blocks/src/feature-packs/catalog.ts`,
 `apps/blocks/src/lib/feature-packs.ts`, and `apps/blocks/registry.json`.
-`pnpm --filter blocks gen:check` catches most contract drift.
+`pnpm --filter blocks gen:check` checks generated UI demo source freshness.
 
 Consumers configure the namespace and run the current CLI through
 `shadcn@latest`:

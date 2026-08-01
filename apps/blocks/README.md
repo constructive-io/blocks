@@ -20,8 +20,7 @@ pnpm --filter blocks build:pages
 
 `src/lib/base-primitives.ts`, `src/lib/billing-blocks.ts`, and
 `src/lib/feature-packs.ts` are the documentation catalogs. `pnpm gen:check`
-validates primitive distribution and keeps the feature-pack docs aligned with
-their manifests, registry roots, and live previews.
+regenerates (or checks) generated UI demo source used by the docs app.
 
 From the repository root,
 `pnpm --silent console-kit:inspect --item <registry-root>`
