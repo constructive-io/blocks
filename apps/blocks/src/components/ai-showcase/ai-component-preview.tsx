@@ -49,7 +49,16 @@ import { Button } from '@constructive-io/ui/button';
 
 import type { AiComponentName } from '@/lib/ai-components';
 
-function Frame({ children, className }: { children: React.ReactNode; className?: string }) {
+function Frame({
+  children,
+  className,
+  /** Skip the centered max-w-xl shell (full-bleed demos like chat). */
+  fullBleed = false,
+}: {
+  children: React.ReactNode;
+  className?: string;
+  fullBleed?: boolean;
+}) {
   return (
     <div
       className={
@@ -58,7 +67,11 @@ function Frame({ children, className }: { children: React.ReactNode; className?:
       }
       data-slot="ai-component-preview"
     >
-      <div className="w-full max-w-xl">{children}</div>
+      {fullBleed ? (
+        children
+      ) : (
+        <div className="mx-auto w-full max-w-xl">{children}</div>
+      )}
     </div>
   );
 }
@@ -272,34 +285,36 @@ export function AiComponentPreview({ name }: { name: AiComponentName }) {
       );
     case 'chat-container':
       return (
-        <Frame className="registry-block p-0">
-          <div className="relative mx-auto h-72 w-full max-w-xl">
-            <ChatContainer className="h-full rounded-xl border border-border">
-              <ChatContainerContent>
-                <Message from="user">
-                  <MessageContent>Hello</MessageContent>
-                </Message>
-                <Message from="assistant">
-                  <MessageContent>Scroll up to reveal the jump control, then return.</MessageContent>
-                </Message>
-                {Array.from({ length: 8 }).map((_, i) => (
-                  <Message key={i} from="assistant">
-                    <MessageContent>Line {i + 1} of filler transcript content.</MessageContent>
-                  </Message>
-                ))}
-              </ChatContainerContent>
-              <ScrollButton />
-            </ChatContainer>
-          </div>
-        </Frame>
-      );
-    case 'scroll-button':
-      return (
-        <Frame>
-          <p className="text-sm text-muted-foreground">
-            ScrollButton only appears inside ChatContainer when not pinned to the bottom. See Chat
-            Container for the interactive demo.
+        <Frame
+          fullBleed
+          className="registry-block flex h-[28rem] w-full flex-col overflow-hidden p-0"
+        >
+          <p className="shrink-0 border-b border-border bg-muted/30 px-4 py-2 text-center text-[12px] text-muted-foreground">
+            Scroll up in the transcript — the jump-to-latest control appears over the messages.
           </p>
+          <ChatContainer className="min-h-0 w-full flex-1">
+            <ChatContainerContent className="max-w-none gap-3 px-4 py-4 sm:px-6">
+              <Message from="user">
+                <MessageContent>Compare mint chip to last summer.</MessageContent>
+              </Message>
+              <Message from="assistant">
+                <MessageContent>
+                  Mint chip is up 12% with stronger weekend peaks. Scroll this panel to inspect the
+                  history, then use the floating control to jump back to the latest message.
+                </MessageContent>
+              </Message>
+              {Array.from({ length: 10 }).map((_, i) => (
+                <Message key={i} from={i % 3 === 0 ? 'user' : 'assistant'}>
+                  <MessageContent>
+                    {i % 3 === 0
+                      ? `Follow-up ${i + 1}: any stockout risk on cones?`
+                      : `Update ${i + 1}: waffle cone inventory looks healthy through next week.`}
+                  </MessageContent>
+                </Message>
+              ))}
+            </ChatContainerContent>
+            <ScrollButton />
+          </ChatContainer>
         </Frame>
       );
     case 'system-message':

@@ -190,41 +190,55 @@ export const AI_COMPONENTS: readonly AiComponentDoc[] = [
     name: 'chat-container',
     title: 'Chat Container',
     exportName: 'ChatContainer',
-    description: 'Stick-to-bottom scroll region for transcripts, with ScrollButton jump-to-latest.',
+    description:
+      'Stick-to-bottom transcript scroll region with ScrollButton jump-to-latest. ScrollButton is documented here (not as a separate page).',
     whenToUse: [
-      'Use as the scroll parent of a message list.',
-      'Render ScrollButton as a child so it can read pin state.',
+      'Use ChatContainer as the scroll parent of a message list.',
+      'Render ScrollButton as a child of ChatContainer so it can read pin state and appear when the user scrolls up.',
+      'Pair with Message, Reasoning, Tool, and PromptInput for a full chat shell.',
     ],
     importExample: `import {
   ChatContainer,
   ChatContainerContent,
   ScrollButton,
+  Message,
+  MessageContent,
 } from '@constructive-io/ui/ai';
 
 <ChatContainer className="h-full">
-  <ChatContainerContent>{/* messages */}</ChatContainerContent>
+  <ChatContainerContent>
+    <Message from="user">
+      <MessageContent>Hello</MessageContent>
+    </Message>
+  </ChatContainerContent>
   <ScrollButton />
 </ChatContainer>`,
     api: [
-      { name: 'autoScroll / bottomThreshold', type: 'boolean / number', behavior: 'Pin-follow behavior.' },
-      { name: 'useChatContainer', type: 'hook', behavior: 'Access scrollToBottom and isAtBottom.' },
-    ],
-  },
-  {
-    name: 'scroll-button',
-    title: 'Scroll Button',
-    exportName: 'ScrollButton',
-    description: 'Floating control that appears when the transcript is scrolled up.',
-    whenToUse: [
-      'Must render inside ChatContainer.',
-      'Use to restore follow-along after the user scrolls away.',
-    ],
-    importExample: `import { ScrollButton } from '@constructive-io/ui/ai';
-
-<ScrollButton />`,
-    api: [
-      { name: 'visible', type: 'boolean', behavior: 'Override auto visibility from pin state.' },
-      { name: 'label', type: 'string', behavior: 'Accessible name.' },
+      {
+        name: 'ChatContainer autoScroll',
+        type: 'boolean',
+        behavior: 'Follow new content while pinned to the bottom (default true).',
+      },
+      {
+        name: 'ChatContainer bottomThreshold',
+        type: 'number',
+        behavior: 'Pixels from bottom that still count as pinned (default 48).',
+      },
+      {
+        name: 'useChatContainer()',
+        type: 'hook',
+        behavior: 'Returns { scrollRef, isAtBottom, scrollToBottom }. Throws outside ChatContainer.',
+      },
+      {
+        name: 'ScrollButton visible',
+        type: 'boolean',
+        behavior: 'Override auto visibility from pin state. Default is !isAtBottom.',
+      },
+      {
+        name: 'ScrollButton label',
+        type: 'string',
+        behavior: 'Accessible name for the control (default “Scroll to latest”).',
+      },
     ],
   },
   {

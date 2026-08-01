@@ -36,7 +36,7 @@ import {
 | `Markdown` | Throttled markdown subset |
 | `CodeBlock` | Code + copy + lightweight sugar-high highlighting |
 | `ResponseStream` | Client typewriter |
-| `ChatContainer` + `ScrollButton` | Stick-to-bottom transcript |
+| `ChatContainer` + `ScrollButton` | Stick-to-bottom transcript + jump-to-latest (docs under Chat Container) |
 | `SystemMessage` | Banner notice |
 | `useThrottledText` | 66ms stream throttle |
 
