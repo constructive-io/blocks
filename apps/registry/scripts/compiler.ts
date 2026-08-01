@@ -777,3 +777,77 @@ export function assertUniqueRegistryShape(items: readonly RegistryItem[]): void 
 		}
 	}
 }
+
+function referencesPackage(dependency: string, packageName: string): boolean {
+	return (
+		dependency === packageName ||
+		dependency.startsWith(`${packageName}@`) ||
+		dependency.startsWith(`${packageName}/`)
+	);
+}
+
+export function assertRegistryDistributionContract(items: readonly RegistryItem[]): void {
+	const ownNames = new Set(items.map((item) => item.name));
+	const requiredPackageRanges = new Map([
+		['@constructive-io/data', CONSTRUCTIVE_DATA_DEPENDENCY],
+		['@constructive-io/command-palette', CONSTRUCTIVE_COMMAND_PALETTE_DEPENDENCY],
+	]);
+
+	for (const item of items) {
+		const dependencies = [
+			...(item.dependencies ?? []),
+			...(item.devDependencies ?? []),
+			...(item.registryDependencies ?? []),
+		];
+		for (const dependency of dependencies) {
+			for (const [packageName, requiredRange] of requiredPackageRanges) {
+				if (referencesPackage(dependency, packageName) && dependency !== requiredRange) {
+					throw new Error(`${item.name} must depend on ${requiredRange}, received ${dependency}.`);
+				}
+			}
+			if (
+				referencesPackage(dependency, CONSTRUCTIVE_UI_PACKAGE) ||
+				referencesPackage(dependency, CONSTRUCTIVE_SHEETS_PACKAGE)
+			) {
+				throw new Error(`${item.name} retains source-owned UI package ${dependency} in the registry contract.`);
+			}
+			if (referencesPackage(dependency, 'tw-animate-css')) {
+				throw new Error(`${item.name} retains tw-animate-css.`);
+			}
+		}
+
+		if (
+			(item.type === 'registry:ui' || item.type === 'registry:block') &&
+			!(item.registryDependencies ?? []).includes(CONSTRUCTIVE_THEME_DEPENDENCY)
+		) {
+			throw new Error(`${item.name} is missing the Constructive theme dependency.`);
+		}
+
+		for (const dependency of item.registryDependencies ?? []) {
+			const dependencyName = dependency.startsWith(CONSTRUCTIVE_NAMESPACE)
+				? dependency.slice(CONSTRUCTIVE_NAMESPACE.length)
+				: undefined;
+			if (dependencyName && !ownNames.has(dependencyName)) {
+				throw new Error(`${item.name} references unknown dependency ${dependency}.`);
+			}
+		}
+	}
+
+	for (const itemName of ['stack', 'toast']) {
+		const item = items.find((candidate) => candidate.name === itemName);
+		if (!item) throw new Error(`Missing multi-file registry item ${itemName}.`);
+		if (!item.docs?.includes(`@/components/ui/${itemName}`)) {
+			throw new Error(`${itemName} documents an import that does not match its @ui/${itemName} install target.`);
+		}
+		for (const file of item.files ?? []) {
+			if (!file.target?.startsWith(`@ui/${itemName}/`)) {
+				throw new Error(`${itemName} has incoherent install target ${file.target ?? '(missing)'}.`);
+			}
+		}
+	}
+
+	const stack = items.find((item) => item.name === 'stack');
+	if (!stack?.files?.some((file) => file.target === '@ui/stack/deferred-card-content.tsx')) {
+		throw new Error('Stack registry closure is missing deferred-card-content.tsx.');
+	}
+}

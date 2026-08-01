@@ -336,3 +336,6 @@ export { UnlinkButton } from './components/unlink-button';
 // Complex subsystems
 export * from './components/stack';
 export * from './components/toast';
+
+// AI / agentic surfaces
+export * from './components/ai';

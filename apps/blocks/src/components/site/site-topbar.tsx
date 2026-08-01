@@ -8,6 +8,7 @@ import { Check, Menu, Terminal } from 'lucide-react';
 import { Button } from '@constructive-io/ui/button';
 
 import { ThemeToggle } from '@/components/site/theme-toggle';
+import { getAiComponent } from '@/lib/ai-components';
 import { getApplicationBlock } from '@/lib/application-blocks';
 import { getBasePrimitive, registryInstall } from '@/lib/base-primitives';
 import { getBillingBlock } from '@/lib/billing-blocks';
@@ -33,6 +34,11 @@ function crumbFor(path: string): string {
   }
   if (p === '/blocks/console-kit') return 'Console Kit';
   if (p === '/blocks/command-palette') return 'Command Palette';
+  if (p === '/blocks/ai') return 'AI';
+  if (p.startsWith('/blocks/ai/')) {
+    const name = p.slice('/blocks/ai/'.length);
+    return getAiComponent(name)?.title ?? 'AI';
+  }
   if (p.startsWith('/blocks/')) {
     const sourceBlock = getSourceBlock(p.slice('/blocks/'.length));
     if (sourceBlock) return sourceBlock.title;
@@ -90,6 +96,14 @@ function installActionFor(path: string) {
       command: registryAdd('command-palette'),
       label: registryAdd('command-palette'),
       title: 'Command Palette',
+    };
+  }
+
+  if (normalizedPath === '/blocks/ai' || normalizedPath.startsWith('/blocks/ai/')) {
+    return {
+      command: registryAdd('ai'),
+      label: registryAdd('ai'),
+      title: 'AI',
     };
   }
 

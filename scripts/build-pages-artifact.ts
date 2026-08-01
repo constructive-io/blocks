@@ -2,14 +2,16 @@ import { cp, lstat, mkdir, readdir, readFile, rm } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { APPLICATION_BLOCKS } from '../apps/blocks/src/lib/application-blocks.ts';
-import { BASE_PRIMITIVES } from '../apps/blocks/src/lib/base-primitives.ts';
-import { BILLING_BLOCKS } from '../apps/blocks/src/lib/billing-blocks.ts';
-import { FEATURE_PACK_DOCS } from '../apps/blocks/src/lib/feature-packs.ts';
-import { SOURCE_BLOCKS } from '../apps/blocks/src/lib/source-blocks.ts';
-
 type Registry = {
   items: Array<{ name: string }>;
+};
+
+type ArtifactRoute = {
+  directives: ReadonlySet<string>;
+  relativePath: string;
+  robots: string | undefined;
+  route: string;
+  source: string;
 };
 
 const repositoryRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -28,36 +30,6 @@ const pagesBasePath = '/blocks';
 const maximumArtifactBytes = 1024 * 1024 * 1024;
 const obsoletePagesUrl = ['constructive-io.github.io', 'dashboard'].join('/');
 
-const pageRoutes = [
-  '/',
-  '/blocks',
-  '/blocks/styling',
-  '/blocks/features',
-  ...FEATURE_PACK_DOCS.map(({ id }) => `/blocks/features/${id}`),
-  '/blocks/command-palette',
-  ...SOURCE_BLOCKS.map(({ name }) => `/blocks/${name}`),
-  ...APPLICATION_BLOCKS.map(({ name }) => `/blocks/${name}`),
-  '/blocks/console-kit',
-  ...BASE_PRIMITIVES.map(({ name }) => `/blocks/ui/${name}`),
-  '/blocks/billing',
-  ...BILLING_BLOCKS.map(({ name }) => `/blocks/billing/${name}`),
-];
-
-const previewRoutes = [
-  ...FEATURE_PACK_DOCS.map(({ id }) => ({
-    parent: `/blocks/features/${id}`,
-    route: `/blocks/features/${id}/preview`,
-  })),
-  ...BILLING_BLOCKS.map(({ name }) => ({
-    parent: `/blocks/billing/${name}`,
-    route: `/blocks/billing/${name}/preview`,
-  })),
-  ...APPLICATION_BLOCKS.map(({ name }) => ({
-    parent: `/blocks/${name}`,
-    route: `/blocks/${name}/preview`,
-  })),
-];
-
 function routeOutputPath(route: string): string {
   return route === '/' ? 'index.html' : path.join(route.slice(1), 'index.html');
 }
@@ -65,6 +37,85 @@ function routeOutputPath(route: string): string {
 function deployedUrl(route: string): string {
   const url = route === '/' ? `${pagesOrigin}${pagesBasePath}` : `${pagesOrigin}${pagesBasePath}${route}`;
   return `${url}/`;
+}
+
+function publicRoutesFromSitemap(source: string): Array<{ route: string; url: string }> {
+  const urls = [...source.matchAll(/<loc>([^<]+)<\/loc>/g)].map((match) => match[1]);
+  if (urls.length === 0) throw new Error('Pages sitemap does not contain any public routes.');
+  if (new Set(urls).size !== urls.length) throw new Error('Pages sitemap contains duplicate URLs.');
+
+  const routes = urls.map((url) => {
+    const parsed = new URL(url);
+    if (parsed.origin !== pagesOrigin || parsed.search || parsed.hash) {
+      throw new Error(`Pages sitemap contains an invalid deployment URL: ${url}.`);
+    }
+    if (!parsed.pathname.startsWith(`${pagesBasePath}/`) || !parsed.pathname.endsWith('/')) {
+      throw new Error(`Pages sitemap URL is outside ${pagesBasePath} or lacks a trailing slash: ${url}.`);
+    }
+
+    const deployedPath = parsed.pathname.slice(pagesBasePath.length, -1);
+    const route = deployedPath || '/';
+    if (deployedUrl(route) !== url) {
+      throw new Error(`Pages sitemap URL is not canonical for its route: ${url}.`);
+    }
+    return { route, url };
+  });
+
+  if (!routes.some(({ route }) => route === '/')) {
+    throw new Error('Pages sitemap is missing the deployment root.');
+  }
+  return routes;
+}
+
+function robotsMetadata(source: string): Pick<ArtifactRoute, 'directives' | 'robots'> {
+  const robotsTag = [...source.matchAll(/<meta\b[^>]*>/g)].find((match) =>
+    /\bname=["']robots["']/.test(match[0]),
+  )?.[0];
+  const robots = robotsTag?.match(/\bcontent=["']([^"']+)["']/)?.[1];
+  const directives = new Set(
+    (robots ?? '')
+      .split(',')
+      .map((directive) => directive.trim().toLowerCase())
+      .filter(Boolean),
+  );
+  return { directives, robots };
+}
+
+async function routesFromArtifact(files: readonly string[]): Promise<ArtifactRoute[]> {
+  const routes = await Promise.all(
+    files
+      .map((absolutePath) => ({
+        absolutePath,
+        segments: path.relative(artifactRoot, absolutePath).split(path.sep),
+      }))
+      .filter(({ segments }) => segments.at(-1) === 'index.html')
+      .map(async ({ absolutePath, segments }) => {
+        const routeSegments = segments.slice(0, -1);
+        const route = routeSegments.length === 0 ? '/' : `/${routeSegments.join('/')}`;
+        const source = await readFile(absolutePath, 'utf8');
+        return {
+          ...robotsMetadata(source),
+          relativePath: path.relative(artifactRoot, absolutePath),
+          route,
+          source,
+        };
+      }),
+  );
+  if (new Set(routes.map(({ route }) => route)).size !== routes.length) {
+    throw new Error('Pages artifact contains duplicate HTML routes.');
+  }
+  return routes.sort((left, right) => left.route.localeCompare(right.route));
+}
+
+function previewRoutesFromArtifact(routes: readonly ArtifactRoute[]): Array<{ parent: string; route: string }> {
+  return routes
+    .filter(({ route }) => route.endsWith('/preview'))
+    .map(({ route }) => {
+      const parent = route.slice(0, -'/preview'.length);
+      if (!parent) throw new Error(`Preview route has no public parent: ${route}.`);
+      return { parent, route };
+    })
+    .sort((left, right) => left.route.localeCompare(right.route));
 }
 
 function sameSet(left: ReadonlySet<string>, right: ReadonlySet<string>): boolean {
@@ -145,15 +196,48 @@ await Promise.all([
   cp(registryOutput, artifactRegistry, { recursive: true }),
 ]);
 
+const artifactFiles = await walk(artifactRoot);
+const artifactRoutes = await routesFromArtifact(artifactFiles);
+const artifactRoutesByPath = new Map(artifactRoutes.map((page) => [page.route, page]));
+const previewRoutes = previewRoutesFromArtifact(artifactRoutes);
+if (previewRoutes.length === 0) throw new Error('Pages artifact does not contain any preview routes.');
+
 await Promise.all([
   assertFile('index.html'),
   assertFile('404.html'),
   assertFile('robots.txt'),
   assertFile('sitemap.xml'),
   assertFile('opengraph-image.png'),
-  ...pageRoutes.map((route) => assertFile(routeOutputPath(route))),
   ...previewRoutes.map(({ route }) => assertFile(routeOutputPath(route))),
 ]);
+
+const sitemap = await readFile(path.join(artifactRoot, 'sitemap.xml'), 'utf8');
+const publicRoutes = publicRoutesFromSitemap(sitemap);
+await Promise.all(publicRoutes.map(({ route }) => assertFile(routeOutputPath(route))));
+
+const publicSitemapRoutes = new Set(publicRoutes.map(({ route }) => route));
+const indexableArtifactRoutes = new Set(
+  artifactRoutes.filter(({ directives }) => !directives.has('noindex')).map(({ route }) => route),
+);
+if (!sameSet(indexableArtifactRoutes, publicSitemapRoutes)) {
+  const missingFromSitemap = [...indexableArtifactRoutes].filter((route) => !publicSitemapRoutes.has(route));
+  const missingOrNoindex = [...publicSitemapRoutes].filter((route) => !indexableArtifactRoutes.has(route));
+  throw new Error(
+    `Pages public route inventory drifted. Indexable output missing from sitemap: ${missingFromSitemap.join(', ') || 'none'}. Sitemap entries missing or noindex: ${missingOrNoindex.join(', ') || 'none'}.`,
+  );
+}
+
+const publicSitemapUrls = new Set(publicRoutes.map(({ url }) => url));
+for (const { route } of previewRoutes) {
+  if (publicSitemapUrls.has(deployedUrl(route))) {
+    throw new Error(`Preview route must not appear in the public sitemap: ${route}.`);
+  }
+}
+for (const { parent, route } of previewRoutes) {
+  if (!publicSitemapUrls.has(deployedUrl(parent))) {
+    throw new Error(`Preview route ${route} has no public parent in the sitemap: ${parent}.`);
+  }
+}
 
 const registry = JSON.parse(await readFile(path.join(artifactRegistry, 'registry.json'), 'utf8')) as Registry;
 const expectedRegistryItemCount = (
@@ -178,32 +262,23 @@ if (!sameSet(actualRegistryFiles, expectedRegistryFiles)) {
   );
 }
 
-for (const route of pageRoutes) {
-  const relativePath = routeOutputPath(route);
-  const source = await readFile(path.join(artifactRoot, relativePath), 'utf8');
+for (const { route, url: expectedCanonical } of publicRoutes) {
+  const page = artifactRoutesByPath.get(route);
+  if (!page) throw new Error(`Pages artifact is missing public HTML route ${route}.`);
+  const { relativePath, source } = page;
   const canonicalTag = [...source.matchAll(/<link\b[^>]*>/g)].find((match) =>
     /\brel=["']canonical["']/.test(match[0]),
   )?.[0];
   const canonical = canonicalTag?.match(/\bhref=["']([^"']+)["']/)?.[1];
-  const expectedCanonical = deployedUrl(route);
   if (canonical !== expectedCanonical) {
     throw new Error(`${relativePath} canonical is ${canonical ?? 'missing'}; expected ${expectedCanonical}.`);
   }
 }
 
 for (const { parent, route } of previewRoutes) {
-  const relativePath = routeOutputPath(route);
-  const source = await readFile(path.join(artifactRoot, relativePath), 'utf8');
-  const robotsTag = [...source.matchAll(/<meta\b[^>]*>/g)].find((match) =>
-    /\bname=["']robots["']/.test(match[0]),
-  )?.[0];
-  const robots = robotsTag?.match(/\bcontent=["']([^"']+)["']/)?.[1];
-  const directives = new Set(
-    (robots ?? '')
-      .split(',')
-      .map((directive) => directive.trim().toLowerCase())
-      .filter(Boolean),
-  );
+  const page = artifactRoutesByPath.get(route);
+  if (!page) throw new Error(`Pages artifact is missing preview HTML route ${route}.`);
+  const { directives, relativePath, robots, source } = page;
   if (!directives.has('noindex') || !directives.has('nofollow')) {
     throw new Error(`${relativePath} robots metadata is ${robots ?? 'missing'}; expected noindex, nofollow.`);
   }
@@ -218,20 +293,12 @@ for (const { parent, route } of previewRoutes) {
   }
 }
 
-const sitemap = await readFile(path.join(artifactRoot, 'sitemap.xml'), 'utf8');
-const actualSitemapUrls = new Set([...sitemap.matchAll(/<loc>([^<]+)<\/loc>/g)].map((match) => match[1]));
-const expectedSitemapUrls = new Set(pageRoutes.map(deployedUrl));
-if (!sameSet(actualSitemapUrls, expectedSitemapUrls)) {
-  throw new Error('Pages sitemap does not exactly match the exported route catalog.');
-}
-
 const robots = await readFile(path.join(artifactRoot, 'robots.txt'), 'utf8');
 const expectedSitemap = `Sitemap: ${pagesOrigin}${pagesBasePath}/sitemap.xml`;
 if (!robots.includes(expectedSitemap)) {
   throw new Error(`Pages robots.txt is missing ${expectedSitemap}.`);
 }
 
-const artifactFiles = await walk(artifactRoot);
 let artifactBytes = 0;
 for (const absolutePath of artifactFiles) {
   const entry = await lstat(absolutePath);
@@ -260,5 +327,5 @@ if (artifactBytes >= maximumArtifactBytes) {
 }
 
 console.log(
-  `Pages artifact verified: ${pageRoutes.length} routes, ${actualRegistryFiles.size} registry files, ${(artifactBytes / 1024 / 1024).toFixed(1)} MiB.`,
+  `Pages artifact verified: ${publicRoutes.length} public routes, ${previewRoutes.length} preview routes, ${actualRegistryFiles.size} registry files, ${(artifactBytes / 1024 / 1024).toFixed(1)} MiB.`,
 );
