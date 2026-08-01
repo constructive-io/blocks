@@ -41,8 +41,10 @@ function Steps({
 				<span className="font-medium">{title}</span>
 				<ChevronDown data-slot="collapsible-icon" className="size-3.5 opacity-60" />
 			</CollapsibleTrigger>
-			<CollapsiblePanel innerClassName="py-1">
-				<ol className="flex flex-col">{children}</ol>
+			<CollapsiblePanel innerClassName="py-1.5">
+				<ol className="flex flex-col" data-slot="steps-list">
+					{children}
+				</ol>
 			</CollapsiblePanel>
 		</Collapsible>
 	);
@@ -59,44 +61,65 @@ type StepProps = {
 };
 
 /**
- * Timeline step: icon sits in a fixed-width rail, connector is centered under the icon.
- * Avoid absolute -left offsets against border-l (they drift by icon size).
+ * Timeline step with a flex-column rail:
+ *   [ marker ]
+ *   [  | line flex-1  ]  ← always centered under marker via items-center
+ * No absolute -left offsets against border-l (those drift by icon size).
  */
 function Step({ children, title, description, status = 'pending', className }: StepProps) {
 	return (
 		<li
 			data-slot="step"
 			data-status={status}
-			className={cn('group/step relative flex gap-3', className)}
+			className={cn('group/step flex items-stretch gap-3', className)}
 		>
-			{/* Rail: fixed width, icon + vertical connector share the same center axis */}
-			<div className="relative flex w-3.5 shrink-0 flex-col items-center">
+			{/* Rail column stretches to the full step height; line fills below the marker */}
+			<div
+				className="flex w-4 shrink-0 flex-col items-center"
+				data-slot="step-rail"
+			>
+				<span
+					data-slot="step-marker"
+					className={cn(
+						'relative z-10 flex size-4 shrink-0 items-center justify-center rounded-full',
+						'bg-background',
+						// Soft ring so the marker sits cleanly on top of the connector
+						'ring-2 ring-background',
+					)}
+				>
+					{status === 'running' ? (
+						<Loader2 className="size-3.5 animate-spin text-primary motion-reduce:animate-none" />
+					) : status === 'done' ? (
+						<Check className="size-3.5 text-success" strokeWidth={2.5} />
+					) : status === 'error' ? (
+						<span className="size-2 rounded-full bg-destructive" />
+					) : (
+						<span className="size-2 rounded-full border-2 border-muted-foreground/45 bg-background" />
+					)}
+				</span>
+				{/* Connector: flex-1 under the marker → perfectly centered by parent items-center */}
 				<span
 					aria-hidden
+					data-slot="step-connector"
 					className={cn(
-						'absolute top-3.5 bottom-0 left-1/2 w-px -translate-x-1/2 bg-border/70',
-						// Hide connector under the last step
+						'w-px flex-1 bg-border',
+						// Keep a little line under the last marker? No — stop at last icon.
 						'group-last/step:hidden',
 					)}
 				/>
-				<span className="relative z-10 flex size-3.5 shrink-0 items-center justify-center bg-background">
-					{status === 'running' ? (
-						<Loader2 className="size-3 animate-spin text-primary motion-reduce:animate-none" />
-					) : status === 'done' ? (
-						<Check className="size-3 text-success" strokeWidth={2.5} />
-					) : status === 'error' ? (
-						<Circle className="size-2.5 fill-destructive text-destructive" />
-					) : (
-						<Circle className="size-2.5 text-muted-foreground/50" />
-					)}
-				</span>
 			</div>
 
-			<div className="min-w-0 flex-1 pb-3 text-[13px] group-last/step:pb-0">
-				{/* Match first-line cap height to the 14px rail icon for optical vertical align */}
+			<div
+				className={cn(
+					'min-w-0 flex-1 text-[13px]',
+					// Spacing between steps lives on content so the rail can stretch full height
+					'pb-4 group-last/step:pb-0',
+				)}
+			>
+				{/* Cap-height matches 16px marker for optical vertical alignment */}
 				<div
 					className={cn(
-						'flex min-h-3.5 items-center font-medium leading-none',
+						'flex min-h-4 items-center font-medium leading-none',
 						status === 'done' && 'text-muted-foreground',
 						status === 'pending' && 'text-muted-foreground',
 						status === 'running' && 'text-foreground',
