@@ -18,7 +18,9 @@ const nextConfig: NextConfig = {
     : {}),
   transpilePackages: ['@constructive-io/ui'],
   experimental: {
-    optimizePackageImports: ['@base-ui/react', '@constructive-io/ui', 'lucide-react'],
+    // Do not include @constructive-io/ui: subpath exports like /ai, /tabs, /button
+    // break under optimizePackageImports (client components resolve to undefined → blank page).
+    optimizePackageImports: ['@base-ui/react', 'lucide-react'],
   },
   turbopack: {
     root: path.join(__dirname, '..', '..'),
