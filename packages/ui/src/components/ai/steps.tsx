@@ -6,9 +6,12 @@ import * as React from 'react';
 import { cn } from '../../lib/utils';
 import { Collapsible, CollapsiblePanel, CollapsibleTrigger } from '../collapsible';
 
-/** Marker / rail box edge in px. Line is centered with left: (SIZE - 1) / 2 — no transforms. */
-const SIZE = 16;
-const LINE_LEFT = (SIZE - 1) / 2; // 7.5 → crisp 1px on the rail mid-axis
+/**
+ * Rail geometry — integer-friendly px, no transforms on the 1px rule.
+ * Marker is a solid disk filling the rail; the rule is centered under it.
+ */
+const RAIL = 14;
+const LINE_LEFT = (RAIL - 1) / 2; // 6.5
 
 type StepsProps = {
 	children: React.ReactNode;
@@ -64,17 +67,33 @@ type StepProps = {
 	className?: string;
 };
 
+function StepMarker({ status }: { status: StepStatus }) {
+	return (
+		<span
+			data-slot="step-marker"
+			className={cn(
+				'absolute top-0 left-0 z-10 flex items-center justify-center rounded-full',
+				status === 'done' && 'bg-success text-white',
+				status === 'running' && 'bg-primary/15 text-primary',
+				status === 'error' && 'bg-destructive text-white',
+				status === 'pending' && 'border-2 border-border bg-background',
+			)}
+			style={{ width: RAIL, height: RAIL }}
+		>
+			{status === 'running' ? (
+				<Loader2 className="size-2.5 animate-spin motion-reduce:animate-none" strokeWidth={2.5} />
+			) : status === 'done' ? (
+				<Check className="size-2.5" strokeWidth={3} />
+			) : null}
+		</span>
+	);
+}
+
 /**
- * Timeline step with a continuous rail:
+ * Timeline step: solid disk markers + 1px rule on a shared mid-axis.
  *
- * ```
- *   |          ← 1px line, left: 7.5px in a 16px rail (no translate)
- *   ●          ← marker absolute left:0 top:0 size 16, bg punches the line
- *   |
- *   ●
- *   |
- *   ●          ← last: line height only to marker center
- * ```
+ * Both the connector and the marker are positioned from the rail origin
+ * without translateX, so a 1px line stays crisp and centered through every disk.
  */
 function Step({ children, title, description, status = 'pending', className }: StepProps) {
 	return (
@@ -86,38 +105,19 @@ function Step({ children, title, description, status = 'pending', className }: S
 			<div
 				data-slot="step-rail"
 				className="relative shrink-0 self-stretch"
-				style={{ width: SIZE }}
+				style={{ width: RAIL }}
 			>
-				{/* Vertical rule — same axis as marker center, no -translate-x (avoids half-pixel drift) */}
 				<span
 					aria-hidden
 					data-slot="step-connector"
 					className={cn(
 						'pointer-events-none absolute top-0 w-px bg-border',
-						// Full row height, except last step stops at marker midpoint
-						'bottom-0 group-last/step:bottom-auto group-last/step:h-2',
+						// Full row… last step stops at disk center (half of RAIL)
+						'bottom-0 group-last/step:bottom-auto group-last/step:h-[7px]',
 					)}
 					style={{ left: LINE_LEFT }}
 				/>
-				{/* Marker fills the rail width; line runs through its center behind the fill */}
-				<span
-					data-slot="step-marker"
-					className="absolute top-0 left-0 z-10 flex items-center justify-center bg-background"
-					style={{ width: SIZE, height: SIZE }}
-				>
-					{status === 'running' ? (
-						<Loader2 className="size-3.5 animate-spin text-primary motion-reduce:animate-none" />
-					) : status === 'done' ? (
-						<Check className="size-3.5 text-success" strokeWidth={2.5} />
-					) : status === 'error' ? (
-						<span className="size-2 rounded-full bg-destructive" />
-					) : (
-						<span
-							className="rounded-full border-2 border-muted-foreground/50 bg-background"
-							style={{ width: 8, height: 8 }}
-						/>
-					)}
-				</span>
+				<StepMarker status={status} />
 			</div>
 
 			<div className={cn('min-w-0 flex-1 pl-3 text-[13px]', 'pb-4 group-last/step:pb-0')}>
@@ -129,7 +129,7 @@ function Step({ children, title, description, status = 'pending', className }: S
 						status === 'running' && 'text-foreground',
 						status === 'error' && 'text-destructive',
 					)}
-					style={{ minHeight: SIZE }}
+					style={{ minHeight: RAIL }}
 				>
 					{title}
 				</div>
