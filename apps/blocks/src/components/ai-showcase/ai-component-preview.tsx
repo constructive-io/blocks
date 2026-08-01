@@ -85,6 +85,28 @@ function StepsDemoBlock({
   );
 }
 
+function CodeBlockDemo({
+  label,
+  description,
+  children,
+}: {
+  label: string;
+  description?: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="min-w-0">
+      <div className="mb-2.5 flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
+        <p className="text-[11px] font-medium tracking-wide text-foreground uppercase">{label}</p>
+        {description ? (
+          <p className="text-[12px] text-muted-foreground">{description}</p>
+        ) : null}
+      </div>
+      {children}
+    </div>
+  );
+}
+
 export function AiComponentPreview({ name }: { name: AiComponentName }) {
   switch (name) {
     case 'text-shimmer':
@@ -141,12 +163,102 @@ export function AiComponentPreview({ name }: { name: AiComponentName }) {
       );
     case 'code-block':
       return (
-        <Frame>
-          <CodeBlock
-            language="TypeScript"
-            filename="reorder.ts"
-            code={`export function buildOrder(skus: string[]) {\n  return skus.filter((s) => s !== 'rocky-road')\n}\n`}
-          />
+        <Frame className="registry-block flex w-full items-start justify-center overflow-auto p-6">
+          <div className="flex w-full max-w-xl flex-col gap-6">
+            <CodeBlockDemo label="TypeScript" description="Default JS/TS tokenizer with filename.">
+              <CodeBlock
+                language="TypeScript"
+                filename="reorder.ts"
+                code={`export function buildOrder(skus: string[]) {\n  // drop discontinued flavors\n  return skus.filter((s) => s !== 'rocky-road')\n}\n`}
+              />
+            </CodeBlockDemo>
+            <CodeBlockDemo label="Python" description="Preset keywords for Python.">
+              <CodeBlock
+                language="Python"
+                filename="score.py"
+                code={`from dataclasses import dataclass\n\n@dataclass\nclass Risk:\n    sku: str\n    score: float\n\ndef score_stockout(rows: list[dict]) -> list[Risk]:\n    \"\"\"Rank SKUs by stockout probability.\"\"\"\n    return [Risk(r[\"sku\"], r[\"prob\"]) for r in rows if r[\"prob\"] > 0.4]\n`}
+              />
+            </CodeBlockDemo>
+            <CodeBlockDemo label="Rust" description="Preset for systems / tool output.">
+              <CodeBlock
+                language="Rust"
+                filename="main.rs"
+                code={`fn main() {\n    let skus = vec![\"mint\", \"pistachio\"];\n    for sku in skus {\n        println!(\"checking {sku}\");\n    }\n}\n`}
+              />
+            </CodeBlockDemo>
+            <CodeBlockDemo label="Go" description="Preset for service snippets.">
+              <CodeBlock
+                language="Go"
+                filename="handler.go"
+                code={`package api\n\nfunc Score(ctx context.Context, sku string) (float64, error) {\n    // TODO: call inventory service\n    return 0.68, nil\n}\n`}
+              />
+            </CodeBlockDemo>
+            <CodeBlockDemo label="SQL" description="Heuristic highlight for query plans.">
+              <CodeBlock
+                language="SQL"
+                filename="reorder.sql"
+                code={`SELECT store_id, sku, SUM(qty) AS units\nFROM pos.line_items\nWHERE sold_at >= now() - interval '90 days'\nGROUP BY 1, 2\nORDER BY units DESC\nLIMIT 50;\n`}
+              />
+            </CodeBlockDemo>
+            <CodeBlockDemo label="Bash" description="Shell scripts and CLI traces.">
+              <CodeBlock
+                language="Bash"
+                filename="deploy.sh"
+                code={`#!/usr/bin/env bash\nset -euo pipefail\n\npnpm build\npnpm pack:local\necho \"artifact ready\"\n`}
+              />
+            </CodeBlockDemo>
+            <CodeBlockDemo label="CSS" description="Preset for stylesheets.">
+              <CodeBlock
+                language="CSS"
+                filename="tokens.css"
+                code={`:root {\n  --radius: 0.5rem;\n  --primary: oklch(0.69 0.18 245);\n}\n\n.card {\n  border-radius: var(--radius);\n  border: 1px solid var(--border);\n}\n`}
+              />
+            </CodeBlockDemo>
+            <CodeBlockDemo label="JSON" description="Config / tool JSON payloads.">
+              <CodeBlock
+                language="JSON"
+                filename="plan.json"
+                code={`{\n  "steps": [\n    { "id": "read", "status": "done" },\n    { "id": "score", "status": "running" }\n  ],\n  "confidence": 0.86\n}\n`}
+              />
+            </CodeBlockDemo>
+            <CodeBlockDemo label="Diff" description="Preset for patch-style output.">
+              <CodeBlock
+                language="Diff"
+                filename="reorder.ts"
+                code={`- return skus\n+ return skus.filter((s) => s !== 'rocky-road')\n`}
+              />
+            </CodeBlockDemo>
+            <CodeBlockDemo label="Streaming lines" description="Progressive reveal (demo / fixtures).">
+              <CodeBlock
+                language="TypeScript"
+                filename="stream.ts"
+                streamingLines
+                lineIntervalMs={180}
+                code={`const lines = ['one', 'two', 'three']\nfor (const line of lines) {\n  console.log(line)\n}\n`}
+              />
+            </CodeBlockDemo>
+            <CodeBlockDemo
+              label="Long source"
+              description="Collapses past 12 lines with fade + show more; expand scrolls inside the block."
+            >
+              <CodeBlock
+                language="TypeScript"
+                filename="inventory-sync.ts"
+                code={`import type { Store, Sku } from './types'\n\nexport type SyncOptions = {\n  dryRun?: boolean\n  region?: string\n  since?: Date\n}\n\nexport async function syncInventory(\n  stores: Store[],\n  skus: Sku[],\n  options: SyncOptions = {},\n): Promise<{ updated: number; skipped: number }> {\n  const { dryRun = false, region = 'us-west', since } = options\n  let updated = 0\n  let skipped = 0\n\n  for (const store of stores) {\n    if (region && store.region !== region) {\n      skipped += 1\n      continue\n    }\n\n    for (const sku of skus) {\n      const qty = await fetchOnHand(store.id, sku.id, since)\n      if (qty === null) {\n        skipped += 1\n        continue\n      }\n      if (!dryRun) {\n        await writeSnapshot(store.id, sku.id, qty)\n      }\n      updated += 1\n    }\n  }\n\n  return { updated, skipped }\n}\n\nasync function fetchOnHand(\n  storeId: string,\n  skuId: string,\n  since?: Date,\n): Promise<number | null> {\n  // Host wires the data client; this is illustrative only.\n  void storeId\n  void skuId\n  void since\n  return 12\n}\n\nasync function writeSnapshot(\n  storeId: string,\n  skuId: string,\n  qty: number,\n): Promise<void> {\n  void storeId\n  void skuId\n  void qty\n}\n`}
+              />
+            </CodeBlockDemo>
+            <CodeBlockDemo
+              label="Always expanded"
+              description="maxCollapsedLines={false} keeps long code fully open."
+            >
+              <CodeBlock
+                language="JSON"
+                filename="small-config.json"
+                maxCollapsedLines={false}
+                code={`{\n  "region": "us-west",\n  "dryRun": true,\n  "stores": ["sfo", "sea", "pdx"]\n}\n`}
+              />
+            </CodeBlockDemo>
+          </div>
         </Frame>
       );
     case 'response-stream':

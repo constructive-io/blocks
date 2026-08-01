@@ -34,7 +34,7 @@ import {
 | `PromptInput` family | Compound composer |
 | `Message` family | User/assistant layout |
 | `Markdown` | Throttled markdown subset |
-| `CodeBlock` | Code + copy |
+| `CodeBlock` | Code + copy + lightweight sugar-high highlighting |
 | `ResponseStream` | Client typewriter |
 | `ChatContainer` + `ScrollButton` | Stick-to-bottom transcript |
 | `SystemMessage` | Banner notice |

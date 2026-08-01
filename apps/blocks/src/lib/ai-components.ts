@@ -121,18 +121,52 @@ export const AI_COMPONENTS: readonly AiComponentDoc[] = [
     name: 'code-block',
     title: 'Code Block',
     exportName: 'CodeBlock',
-    description: 'Agent code surface with language label, copy control, and optional line-by-line reveal.',
+    description:
+      'Agent code surface with lightweight sugar-high highlighting, elegant header, copy, and collapse/expand for long sources.',
     whenToUse: [
       'Use for fenced code in tool results or assistant replies.',
-      'Leave streamingLines for demos; hosts usually pass the full code string.',
+      'Pass language for presets (TS/JS default; Python, Rust, Go, Java, C, CSS, Diff) or free-form labels (SQL, Bash, JSON).',
+      'Long sources collapse after 12 lines with a fade and “Show N more lines”; expand keeps an inner scroll cap by default.',
+      'Leave streamingLines for demos; hosts usually pass the full code string. Set highlight={false} only on ultra-hot paths.',
     ],
     importExample: `import { CodeBlock } from '@constructive-io/ui/ai';
 
-<CodeBlock language="TypeScript" filename="app.ts" code={source} />`,
+<CodeBlock language="TypeScript" filename="app.ts" code={source} />
+<CodeBlock language="Python" filename="score.py" code={py} />
+{/* Never collapse */}
+<CodeBlock language="SQL" code={query} maxCollapsedLines={false} />`,
     api: [
-      { name: 'code', type: 'string', behavior: 'Full source.' },
-      { name: 'language / filename', type: 'string', behavior: 'Header labels.' },
-      { name: 'showCopy / streamingLines', type: 'boolean', behavior: 'Copy button and progressive reveal.' },
+      { name: 'code', type: 'string', behavior: 'Full source (copy always uses the full string).' },
+      {
+        name: 'language / filename',
+        type: 'string',
+        behavior: 'Header: filename + language pill (or language alone).',
+      },
+      {
+        name: 'highlight',
+        type: 'boolean',
+        behavior: 'Syntax highlight with sugar-high (default true).',
+      },
+      {
+        name: 'maxCollapsedLines',
+        type: 'number | false',
+        behavior: 'Lines shown while collapsed (default 12). false disables collapse.',
+      },
+      {
+        name: 'maxExpandedHeight',
+        type: 'string | false',
+        behavior: 'CSS max-height when expanded (default min(28rem, 70vh)). false = unconstrained.',
+      },
+      {
+        name: 'expanded / defaultExpanded / onExpandedChange',
+        type: 'boolean / boolean / callback',
+        behavior: 'Controlled or uncontrolled expand state.',
+      },
+      {
+        name: 'showCopy / streamingLines / lineIntervalMs',
+        type: 'boolean / boolean / number',
+        behavior: 'Copy button and progressive line reveal for demos.',
+      },
     ],
   },
   {

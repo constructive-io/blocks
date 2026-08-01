@@ -2274,7 +2274,8 @@
       ],
       "docs": "Import: `import { PromptInput, Message, Tool, Reasoning, PlanTracker } from '@constructive-io/ui/ai'`",
       "dependencies": [
-        "lucide-react"
+        "lucide-react",
+        "sugar-high"
       ],
       "registryDependencies": [
         "cn",
