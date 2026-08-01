@@ -6,6 +6,9 @@ import * as React from 'react';
 import { cn } from '../../lib/utils';
 import { Collapsible, CollapsiblePanel, CollapsibleTrigger } from '../collapsible';
 
+/** Rail width (px). Marker and line both center on left: 50% of this. */
+const RAIL_W = 16;
+
 type StepsProps = {
 	children: React.ReactNode;
 	className?: string;
@@ -61,30 +64,43 @@ type StepProps = {
 };
 
 /**
- * Timeline step with a flex-column rail:
- *   [ marker ]
- *   [  | line flex-1  ]  ← always centered under marker via items-center
- * No absolute -left offsets against border-l (those drift by icon size).
+ * Timeline step — continuous vertical line + marker share one center axis:
+ *
+ *   absolute left-1/2 -translate-x-1/2  on BOTH the line and the marker
+ *   line runs the full row height (through the marker); marker bg covers it
+ *   last step: line only reaches the marker center
  */
 function Step({ children, title, description, status = 'pending', className }: StepProps) {
 	return (
 		<li
 			data-slot="step"
 			data-status={status}
-			className={cn('group/step flex items-stretch gap-3', className)}
+			className={cn('group/step relative flex', className)}
 		>
-			{/* Rail column stretches to the full step height; line fills below the marker */}
+			{/* Rail: establishes width; line + marker are absolutely centered on it */}
 			<div
-				className="flex w-4 shrink-0 flex-col items-center"
 				data-slot="step-rail"
+				className="relative shrink-0 self-stretch"
+				style={{ width: RAIL_W }}
 			>
+				{/* Continuous connector through the marker center */}
+				<span
+					aria-hidden
+					data-slot="step-connector"
+					className={cn(
+						'pointer-events-none absolute left-1/2 w-px -translate-x-1/2 bg-border',
+						// Full height of the step row…
+						'top-0 bottom-0',
+						// …except on the last step, stop at the marker midpoint (8px of 16px)
+						'group-last/step:bottom-auto group-last/step:h-2',
+					)}
+				/>
+				{/* Marker sits on the same left-1/2 axis; background punches the line */}
 				<span
 					data-slot="step-marker"
 					className={cn(
-						'relative z-10 flex size-4 shrink-0 items-center justify-center rounded-full',
-						'bg-background',
-						// Soft ring so the marker sits cleanly on top of the connector
-						'ring-2 ring-background',
+						'absolute left-1/2 top-0 z-10 flex size-4 -translate-x-1/2 items-center justify-center',
+						'rounded-full bg-background',
 					)}
 				>
 					{status === 'running' ? (
@@ -94,31 +110,22 @@ function Step({ children, title, description, status = 'pending', className }: S
 					) : status === 'error' ? (
 						<span className="size-2 rounded-full bg-destructive" />
 					) : (
-						<span className="size-2 rounded-full border-2 border-muted-foreground/45 bg-background" />
+						// Hollow ring — border centers cleanly on the axis
+						<span className="size-2 rounded-full border-2 border-muted-foreground/50 bg-background" />
 					)}
 				</span>
-				{/* Connector: flex-1 under the marker → perfectly centered by parent items-center */}
-				<span
-					aria-hidden
-					data-slot="step-connector"
-					className={cn(
-						'w-px flex-1 bg-border',
-						// Keep a little line under the last marker? No — stop at last icon.
-						'group-last/step:hidden',
-					)}
-				/>
 			</div>
 
+			{/* Gutter between rail and copy */}
 			<div
 				className={cn(
-					'min-w-0 flex-1 text-[13px]',
-					// Spacing between steps lives on content so the rail can stretch full height
+					'min-w-0 flex-1 pl-3 text-[13px]',
 					'pb-4 group-last/step:pb-0',
 				)}
 			>
-				{/* Cap-height matches 16px marker for optical vertical alignment */}
 				<div
 					className={cn(
+						// 16px min-height matches the marker so the title caps on the same line
 						'flex min-h-4 items-center font-medium leading-none',
 						status === 'done' && 'text-muted-foreground',
 						status === 'pending' && 'text-muted-foreground',
