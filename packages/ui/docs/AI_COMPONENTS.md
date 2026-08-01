@@ -50,6 +50,7 @@ import {
 | `ApprovalCard` | HITL confirm or multi-question |
 | `Source` / `Sources` | Citation chips |
 | `InlineDiff` | +/− file diff |
+| `DiffTable` | Proposed row add/remove in tabular data |
 | `StreamingText` | Blur-resolve answer + follow-ups |
 
 ### Planning & chrome

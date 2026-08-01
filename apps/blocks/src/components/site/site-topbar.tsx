@@ -33,6 +33,7 @@ function crumbFor(path: string): string {
   }
   if (p === '/blocks/console-kit') return 'Console Kit';
   if (p === '/blocks/command-palette') return 'Command Palette';
+  if (p === '/blocks/ai') return 'AI';
   if (p.startsWith('/blocks/')) {
     const sourceBlock = getSourceBlock(p.slice('/blocks/'.length));
     if (sourceBlock) return sourceBlock.title;
@@ -90,6 +91,14 @@ function installActionFor(path: string) {
       command: registryAdd('command-palette'),
       label: registryAdd('command-palette'),
       title: 'Command Palette',
+    };
+  }
+
+  if (normalizedPath === '/blocks/ai') {
+    return {
+      command: registryAdd('ai-kit'),
+      label: registryAdd('ai-kit'),
+      title: 'AI',
     };
   }
 

@@ -11,6 +11,7 @@ import {
 	ContextCard,
 	ContextCards,
 	ContextRing,
+	DiffTable,
 	FeedbackBar,
 	FileUpload,
 	InlineDiff,
@@ -367,6 +368,19 @@ export const StreamingDemo: Story = {
 				text={`Summer demand spikes for stone-fruit flavors — peach and apricot lead.\n\nI should check **cone inventory** before promoting a waffle-bowl special.`}
 			/>
 			<Markdown>{`Inline \`code\` and a [link](https://constructive.io).`}</Markdown>
+			<DiffTable
+				title="Proposed menu cleanup"
+				animate
+				columns={[
+					{ id: 'f', header: 'Flavor', cell: (r) => r.flavor },
+					{ id: 'c', header: 'Category', cell: (r) => r.category },
+				]}
+				rows={[
+					{ id: '1', flavor: 'Rocky Road', category: 'Classic', removed: true },
+					{ id: '2', flavor: 'Mint Chip', category: 'Classic' },
+				]}
+				addedRows={[{ id: 'a', cells: ['Pistachio', 'Seasonal'] }]}
+			/>
 		</div>
 	),
 };

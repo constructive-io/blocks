@@ -10,6 +10,7 @@ import { UI_DEMO_SOURCE } from '../src/generated/ui-demo-source';
 import { APPLICATION_BLOCKS } from '../src/lib/application-blocks';
 import { APPLICATION_DOC_SEQUENCE } from '../src/lib/application-doc-navigation';
 import { BASE_PRIMITIVES, packageImport, type BasePrimitiveName } from '../src/lib/base-primitives';
+import { AI_DOC } from '../src/lib/ai-docs';
 import { COMPONENT_DOC_SEQUENCE } from '../src/lib/component-doc-navigation';
 import { COMMAND_PALETTE_DOC } from '../src/lib/command-palette-docs';
 import { packageCommands, registryCommands } from '../src/lib/install-mode';
@@ -491,6 +492,11 @@ validateSectionOrder(
   path.join('src', 'app', 'blocks', 'command-palette', 'page.tsx'),
   'Command Palette',
 );
+validateSectionOrder(
+  errors,
+  path.join('src', 'app', 'blocks', 'ai', 'page.tsx'),
+  'AI',
+);
 
 const applicationBlockNames = APPLICATION_BLOCKS.map(({ name }) => name);
 if (
@@ -587,12 +593,12 @@ if (
 const componentDocIds = COMPONENT_DOC_SEQUENCE.map(({ id }) => id);
 const expectedComponentDocIds = BASE_PRIMITIVES.map(({ name }) => name) as string[];
 const dialogIndex = expectedComponentDocIds.indexOf('dialog');
-expectedComponentDocIds.splice(dialogIndex, 0, 'command-palette');
+expectedComponentDocIds.splice(dialogIndex, 0, 'command-palette', 'ai');
 if (
   JSON.stringify(componentDocIds) !== JSON.stringify(expectedComponentDocIds) ||
   new Set(componentDocIds).size !== COMPONENT_DOC_SEQUENCE.length
 ) {
-  errors.push('Component documentation pagination must include Command Palette in sidebar order');
+  errors.push('Component documentation pagination must include Command Palette and AI in sidebar order');
 }
 
 for (const block of SOURCE_BLOCKS) {
@@ -680,6 +686,46 @@ if (
   errors.push('command-palette: docs are missing required editorial or integration coverage');
 }
 
+if (
+  AI_DOC.whenToUse.length < 2 ||
+  isEmpty(AI_DOC.state.guidance) ||
+  isEmpty(AI_DOC.composition.boundaries) ||
+  isEmpty(AI_DOC.accessibility) ||
+  isEmpty(AI_DOC.api) ||
+  !AI_DOC.usage.example.includes('PromptInput') ||
+  !AI_DOC.usage.example.includes('PlanTracker') ||
+  !AI_DOC.npmImport.includes("@constructive-io/ui/ai") ||
+  !fs.existsSync(path.join(appDirectory, 'src', 'app', 'blocks', 'ai', 'page.tsx')) ||
+  !fs.existsSync(
+    path.join(appDirectory, 'src', 'components', 'ai-showcase', 'ai-showcase-demo.tsx'),
+  )
+) {
+  errors.push('ai: docs are missing required editorial or showcase coverage');
+}
+
+const aiPage = fs.readFileSync(
+  path.join(appDirectory, 'src', 'app', 'blocks', 'ai', 'page.tsx'),
+  'utf8',
+);
+const aiShowcase = fs.readFileSync(
+  path.join(appDirectory, 'src', 'components', 'ai-showcase', 'ai-showcase-demo.tsx'),
+  'utf8',
+);
+for (const expected of [
+  "from '@constructive-io/ui/ai'",
+  'AiShowcaseDemo',
+  'registryAdd(doc.kitName)',
+  'PromptInput',
+  'Tool',
+  'PlanTracker',
+  'ApprovalCard',
+  'DiffTable',
+]) {
+  if (!`${aiPage}\n${aiShowcase}`.includes(expected)) {
+    errors.push(`ai: docs or showcase is missing ${expected}`);
+  }
+}
+
 const commandPaletteApi = COMMAND_PALETTE_DOC.api
   .flatMap(({ name }) => name.split(' / ').map((property) => property.trim()))
   .sort();
@@ -718,6 +764,6 @@ console.log('Feature-pack docs expose seven manifest-aligned live references.');
 console.log(
   'Application docs expose two composed blocks and two package-backed source blocks.',
 );
-console.log('Component docs include Command Palette in the canonical component sequence.');
+console.log('Component docs include Command Palette and AI in the canonical component sequence.');
 console.log('Every checked docs family has complete integration, state, accessibility, and API-last coverage.');
 console.log('Public docs use pnpm dlx shadcn@latest for every shadcn CLI command.');

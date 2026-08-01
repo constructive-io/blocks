@@ -2,9 +2,10 @@ import {
   BASE_PRIMITIVES,
   type BasePrimitiveName,
 } from '@/lib/base-primitives';
+import { AI_DOC } from '@/lib/ai-docs';
 import { COMMAND_PALETTE_DOC } from '@/lib/command-palette-docs';
 
-export type ComponentDocId = BasePrimitiveName | 'command-palette';
+export type ComponentDocId = BasePrimitiveName | 'command-palette' | 'ai';
 
 export type ComponentDocLink = Readonly<{
   description: string;
@@ -31,6 +32,12 @@ export const COMPONENT_DOC_SEQUENCE: readonly ComponentDocLink[] = [
     href: '/blocks/command-palette',
     id: 'command-palette',
     title: COMMAND_PALETTE_DOC.title,
+  },
+  {
+    description: AI_DOC.description,
+    href: '/blocks/ai',
+    id: 'ai',
+    title: AI_DOC.title,
   },
   ...primitiveLinks.slice(dialogIndex),
 ];

@@ -117,6 +117,7 @@ const clientFiles = new Set([
 	'approval-card.tsx',
 	'source.tsx',
 	'inline-diff.tsx',
+	'diff-table.tsx',
 	'streaming-text.tsx',
 	'plan-tracker.tsx',
 	'context-ring.tsx',

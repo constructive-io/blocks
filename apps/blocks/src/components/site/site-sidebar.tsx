@@ -148,7 +148,8 @@ export const SiteSidebar = forwardRef<HTMLElement, SiteSidebarProps>(function Si
   const pathname = normalizePath(usePathname() ?? '');
   const onComponents =
     pathname.startsWith('/blocks/ui/') ||
-    pathname === '/blocks/command-palette';
+    pathname === '/blocks/command-palette' ||
+    pathname === '/blocks/ai';
   const onBillingDocs = pathname === '/blocks/billing' || pathname.startsWith('/blocks/billing/');
   const onFoundations = pathname === '/' || pathname === '/blocks' || pathname === '/blocks/styling';
 

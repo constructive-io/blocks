@@ -17,6 +17,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
     '/blocks/features',
     ...FEATURE_PACK_DOCS.map(({ id }) => `/blocks/features/${id}`),
     '/blocks/command-palette',
+    '/blocks/ai',
     ...SOURCE_BLOCKS.map(({ name }) => `/blocks/${name}`),
     ...APPLICATION_BLOCKS.map(({ name }) => `/blocks/${name}`),
     '/blocks/console-kit',
@@ -36,6 +37,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
             path === '/blocks/styling' ||
             path === '/blocks/features' ||
             path === '/blocks/command-palette' ||
+            path === '/blocks/ai' ||
             SOURCE_BLOCKS.some(({ name }) => path === `/blocks/${name}`) ||
             path === '/blocks/console-kit' ||
             path === '/blocks/billing'

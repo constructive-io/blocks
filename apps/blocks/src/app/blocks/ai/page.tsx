@@ -1,0 +1,169 @@
+import type { Metadata } from 'next';
+
+import {
+  Table,
+  TableBody,
+  TableCaption,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@constructive-io/ui/table';
+
+import { AiShowcaseDemo } from '@/components/ai-showcase/ai-showcase-demo';
+import { CodeBlock } from '@/components/docs/code-block';
+import { ComponentDocPagination } from '@/components/docs/component-doc-pagination';
+import { DocSection } from '@/components/docs/doc-section';
+import { AI_DOC } from '@/lib/ai-docs';
+import { registryAdd } from '@/lib/install-mode';
+import { OG_IMAGE, withBase } from '@/lib/site';
+
+function GuidanceList({ items }: { items: readonly string[] }) {
+  return (
+    <ul className="flex max-w-3xl flex-col gap-2 text-pretty text-sm leading-7 text-muted-foreground sm:text-[15px]">
+      {items.map((item) => (
+        <li
+          className="relative pl-5 before:absolute before:left-0 before:text-foreground before:content-['•']"
+          key={item}
+        >
+          {item}
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+function ApiTable() {
+  const caption = `Primary exports for ${AI_DOC.title}.`;
+  return (
+    <Table containerProps={{ tabIndex: 0, 'aria-label': caption }}>
+      <TableCaption className="sr-only">{caption}</TableCaption>
+      <TableHeader>
+        <TableRow>
+          <TableHead scope="col">Export</TableHead>
+          <TableHead scope="col">Kind</TableHead>
+          <TableHead scope="col">Behavior</TableHead>
+        </TableRow>
+      </TableHeader>
+      <TableBody>
+        {AI_DOC.api.map((row) => (
+          <TableRow key={row.name}>
+            <TableCell className="font-mono text-xs font-medium">{row.name}</TableCell>
+            <TableCell className="whitespace-normal font-mono text-xs text-muted-foreground">
+              {row.type}
+            </TableCell>
+            <TableCell className="min-w-64 whitespace-normal text-pretty text-muted-foreground">
+              {row.behavior}
+            </TableCell>
+          </TableRow>
+        ))}
+      </TableBody>
+    </Table>
+  );
+}
+
+export default function AiPage() {
+  const doc = AI_DOC;
+
+  return (
+    <article aria-labelledby="ai-title" className="registry-page">
+      <section aria-labelledby="ai-title" className="scroll-mt-20" id="overview">
+        <header className="mb-6 max-w-2xl">
+          <p className="registry-eyebrow">Components</p>
+          <h1
+            className="mt-2 text-balance text-[22px] font-semibold tracking-tight sm:text-[1.75rem]"
+            id="ai-title"
+          >
+            {doc.title}
+          </h1>
+          <p className="mt-2 text-pretty text-sm leading-7 text-muted-foreground sm:text-[15px]">
+            {doc.description}
+          </p>
+        </header>
+
+        <AiShowcaseDemo />
+      </section>
+
+      <DocSection
+        description="Install the full kit, or only the ai block. Registry installs copy source into your app; the npm surface is @constructive-io/ui/ai."
+        id="installation"
+        title="Installation"
+      >
+        <CodeBlock label="Registry — full kit">{registryAdd(doc.kitName)}</CodeBlock>
+        <div className="mt-3">
+          <CodeBlock label="Registry — block">{registryAdd(doc.name)}</CodeBlock>
+        </div>
+        <div className="mt-3">
+          <CodeBlock label="npm">
+            {`pnpm add @constructive-io/ui\n\n${doc.npmImport}`}
+          </CodeBlock>
+        </div>
+      </DocSection>
+
+      <DocSection id="when-to-use" title="When to use">
+        <GuidanceList items={doc.whenToUse} />
+      </DocSection>
+
+      <DocSection description={doc.usage.description} id="usage" title="Basic usage">
+        <CodeBlock label="agent-pane.tsx" language="tsx">
+          {doc.usage.example}
+        </CodeBlock>
+      </DocSection>
+
+      <DocSection description={doc.state.description} id="state" title={doc.state.title}>
+        <GuidanceList items={doc.state.guidance} />
+      </DocSection>
+
+      <DocSection description={doc.composition.description} id="composition" title="Composition">
+        <div className="grid gap-3 md:grid-cols-3">
+          {doc.composition.boundaries.map((item) => (
+            <article
+              className="rounded-xl border border-border/60 bg-card p-4 shadow-card"
+              key={item.title}
+            >
+              <h3 className="text-balance text-sm font-semibold">{item.title}</h3>
+              <p className="mt-1 text-pretty text-sm leading-6 text-muted-foreground">{item.body}</p>
+            </article>
+          ))}
+        </div>
+      </DocSection>
+
+      <DocSection description={doc.previewDescription} id="examples" title="Examples">
+        <GuidanceList
+          items={[
+            'Open the Composer tab to stack PlanTracker on PromptInput with a context ring.',
+            'Open Transcript for reasoning, tools, markdown, feedback, and follow-ups in a scroll region.',
+            'Open HITL for approval, recommendations, and DiffTable proposed row edits.',
+            'Open Context for task rows, RAG cards, streaming text, and citation chips.',
+          ]}
+        />
+      </DocSection>
+
+      <DocSection id="accessibility" title="Accessibility">
+        <GuidanceList items={doc.accessibility} />
+      </DocSection>
+
+      <DocSection
+        description="Primary public exports. Installed source and package types are the full contract."
+        id="api-reference"
+        title="API Reference"
+      >
+        <ApiTable />
+      </DocSection>
+
+      <ComponentDocPagination current="ai" />
+    </article>
+  );
+}
+
+export const metadata: Metadata = {
+  title: AI_DOC.title,
+  description: AI_DOC.description,
+  alternates: { canonical: withBase('/blocks/ai') },
+  openGraph: {
+    title: AI_DOC.title,
+    description: AI_DOC.description,
+    url: withBase('/blocks/ai'),
+    images: [OG_IMAGE],
+  },
+};

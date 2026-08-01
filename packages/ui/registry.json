@@ -2267,7 +2267,7 @@
       "name": "ai",
       "type": "registry:block",
       "title": "AI Kit",
-      "description": "Presentational primitives for AI and agentic chat UIs: composer, messages, reasoning, tools, HITL approval, plan tracker, loaders, and streaming surfaces.",
+      "description": "Presentational primitives for AI and agentic chat UIs: composer, messages, reasoning, tools, HITL approval, plan tracker, diff tables, and streaming surfaces.",
       "categories": [
         "block",
         "ai"
@@ -2308,6 +2308,10 @@
         },
         {
           "path": "registry/constructive/blocks/ai/context-ring.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/ai/diff-table.tsx",
           "type": "registry:component"
         },
         {
@@ -2411,6 +2415,21 @@
           "type": "registry:component"
         }
       ]
+    },
+    {
+      "name": "ai-kit",
+      "type": "registry:ui",
+      "title": "AI Kit",
+      "description": "Full AI/agentic surface: installs the @constructive/ai block with all chat, tool, and planning primitives.",
+      "categories": [
+        "bundle",
+        "ai"
+      ],
+      "docs": "Install: `pnpm dlx shadcn@latest add @constructive/ai-kit`",
+      "registryDependencies": [
+        "ai"
+      ],
+      "files": []
     },
     {
       "name": "form-kit",

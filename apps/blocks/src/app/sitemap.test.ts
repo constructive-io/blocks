@@ -18,7 +18,7 @@ describe('sitemap', () => {
         BILLING_BLOCKS.length +
         APPLICATION_BLOCKS.length +
         SOURCE_BLOCKS.length +
-        7,
+        8,
     );
     expect(entries.map(({ url }) => url)).toEqual([
       'http://localhost:3005/',
@@ -27,6 +27,7 @@ describe('sitemap', () => {
       'http://localhost:3005/blocks/features',
       ...FEATURE_PACK_DOCS.map(({ id }) => `http://localhost:3005/blocks/features/${id}`),
       'http://localhost:3005/blocks/command-palette',
+      'http://localhost:3005/blocks/ai',
       ...SOURCE_BLOCKS.map(({ name }) => `http://localhost:3005/blocks/${name}`),
       ...APPLICATION_BLOCKS.map(({ name }) => `http://localhost:3005/blocks/${name}`),
       'http://localhost:3005/blocks/console-kit',

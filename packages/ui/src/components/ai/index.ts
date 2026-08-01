@@ -80,6 +80,13 @@ export {
 export { Source, Sources, type SourceProps, type SourcesProps } from './source';
 export { InlineDiff, lineDiff, type InlineDiffProps } from './inline-diff';
 export { StreamingText, type StreamingTextProps, type StreamingTextSource, type StreamToken } from './streaming-text';
+export {
+	DiffTable,
+	type DiffTableProps,
+	type DiffTableColumn,
+	type DiffTableRowBase,
+	type DiffTableAddedRow,
+} from './diff-table';
 
 // Phase 2 — planning chrome & suggestions
 export { PlanTracker, type PlanTrackerProps } from './plan-tracker';

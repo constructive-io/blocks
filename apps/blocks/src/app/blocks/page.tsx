@@ -34,6 +34,12 @@ const APPLICATION_CATALOG = [
     description:
       'A full-page console driven by injected endpoints, session state, adapters, and versioned _meta.',
   },
+  {
+    href: '/blocks/ai',
+    title: 'AI',
+    description:
+      'Chat, agent traces, tools, HITL approval, and plan chrome for AI-native apps.',
+  },
 ] as const;
 
 export default function SetupPage() {
