@@ -4,15 +4,26 @@ Presentational primitives for AI and agentic chat UIs. Runtime-agnostic: hosts
 wire streaming state (AI SDK, pi, custom) and pass props — no IPC, GraphQL, or
 model client lives in this package.
 
-## Install
+## Install from the Constructive registry
+
+Add the namespace to `components.json`:
+
+```json
+{
+  "registries": {
+    "@constructive": "https://constructive-io.github.io/blocks/r/{name}.json"
+  }
+}
+```
+
+Then install the aggregate AI block and import it through the configured `ui`
+alias. With the default shadcn aliases:
 
 ```bash
-pnpm add @constructive-io/ui
-# or registry source install
 pnpm dlx shadcn@latest add @constructive/ai
 ```
 
-```ts
+```tsx
 import {
   PromptInput,
   Message,
@@ -21,7 +32,7 @@ import {
   PlanTracker,
   ApprovalCard,
   AgentLoader,
-} from '@constructive-io/ui/ai';
+} from '@/components/ui/ai';
 ```
 
 ## Surface map

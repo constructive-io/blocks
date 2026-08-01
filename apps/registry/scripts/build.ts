@@ -27,6 +27,7 @@ import {
 	assertExactInternalDependencyEdges,
 	assertFeaturePackRegistryContract,
 	assertNoForbiddenDistributionReferences,
+	assertRegistryDistributionContract,
 	assertUniqueRegistryShape,
 	compileRegistryDependencies,
 	createRegistryModuleOwnership,
@@ -304,18 +305,9 @@ for (const { source, item } of preparedItems) {
 	compiledItems.push(item);
 }
 
-for (const item of compiledItems) {
-	for (const dependency of item.registryDependencies ?? []) {
-		if (dependency.startsWith('@constructive/')) {
-			const dependencyName = dependency.slice('@constructive/'.length);
-			if (!ownItemNames.has(dependencyName)) {
-				throw new Error(`${item.name} references unknown registry dependency ${dependency}.`);
-			}
-		}
-	}
-}
 assertUniqueRegistryShape(compiledItems);
 assertFeaturePackRegistryContract(compiledItems);
+assertRegistryDistributionContract(compiledItems);
 
 const combined: Registry = {
 	$schema: 'https://ui.shadcn.com/schema/registry.json',

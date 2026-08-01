@@ -14,12 +14,18 @@ const temporaryRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'constructive-regist
 
 type SmokeCase = {
 	name: string;
+	assertExactPackages?: boolean;
+	assertExactSource?: boolean;
+	consumer?: string;
 	customAliases?: boolean;
 	expected: string[];
+	expectedCss?: string[];
 	expectedPackages?: string[];
+	expectedServerFiles?: string[];
 	forbidden?: string[];
 	forbiddenPackages?: string[];
 	items?: string[];
+	strictNullChecks?: boolean;
 };
 
 const overlayItems = [
@@ -31,6 +37,50 @@ const overlayItems = [
 	'select',
 	'sheet',
 	'tooltip',
+] as const;
+
+const aiFiles = [
+	'agent-loader.tsx',
+	'approval-card.tsx',
+	'chat-container.tsx',
+	'code-block.tsx',
+	'context-card.tsx',
+	'context-ring.tsx',
+	'diff-table.tsx',
+	'feedback-bar.tsx',
+	'file-upload.tsx',
+	'format-duration.ts',
+	'image.tsx',
+	'index.ts',
+	'inline-diff.tsx',
+	'markdown.tsx',
+	'message.tsx',
+	'plan-tracker.tsx',
+	'prompt-input.tsx',
+	'prompt-suggestion.tsx',
+	'reasoning.tsx',
+	'recommendation-card.tsx',
+	'response-stream.tsx',
+	'scroll-button.tsx',
+	'source.tsx',
+	'steps.tsx',
+	'streaming-text.tsx',
+	'system-message.tsx',
+	'task-row.tsx',
+	'text-shimmer.tsx',
+	'thinking-trace.tsx',
+	'tool.tsx',
+	'types.ts',
+	'use-throttled-text.ts',
+] as const;
+
+const aiCssFragments = [
+	'@keyframes ai-shimmer-text',
+	'@keyframes ai-pixel-on',
+	'@keyframes ai-fade-up',
+	'.animate-ai-shimmer-text',
+	'.animate-ai-pixel-on',
+	'.animate-ai-fade-up',
 ] as const;
 
 const featurePackIds = [
@@ -267,6 +317,54 @@ const cases: SmokeCase[] = [
 			...overlayItems.map((item) => `src/design-system/primitives/${item}.tsx`),
 			'src/design-system/primitives/portal.tsx',
 		],
+	},
+	{
+		name: 'ai',
+		assertExactPackages: true,
+		assertExactSource: true,
+		consumer: `'use client';
+
+import { Message, MessageContent, PromptInput, Tool } from '~/design-system/primitives/ai';
+
+export function AiRegistrySmokeConsumer() {
+	return (
+		<PromptInput onSubmit={() => undefined}>
+			<Message from="assistant">
+				<MessageContent>Installed from the Constructive registry.</MessageContent>
+			</Message>
+			<Tool name="registry-smoke" status="completed" />
+		</PromptInput>
+	);
+}
+`,
+		customAliases: true,
+		expected: [
+			...aiFiles.map((file) => `src/design-system/primitives/ai/${file}`),
+			'src/design-system/primitives/alert.tsx',
+			'src/design-system/primitives/avatar.tsx',
+			'src/design-system/primitives/badge.tsx',
+			'src/design-system/primitives/button.tsx',
+			'src/design-system/primitives/collapsible.tsx',
+			'src/design-system/primitives/portal.tsx',
+			'src/design-system/primitives/tooltip.tsx',
+			'src/shared/slot.tsx',
+			'src/shared/utils.ts',
+		],
+		expectedCss: [...aiCssFragments],
+		expectedPackages: [
+			'@base-ui/react',
+			'class-variance-authority',
+			'clsx',
+			'lucide-react',
+			'sugar-high',
+			'tailwind-merge',
+		],
+		expectedServerFiles: [
+			'src/design-system/primitives/ai/format-duration.ts',
+			'src/design-system/primitives/ai/index.ts',
+			'src/design-system/primitives/ai/types.ts',
+		],
+		strictNullChecks: true,
 	},
 	{
 		name: 'stack',
@@ -525,7 +623,7 @@ function prepareConsumer(
 					resolveJsonModule: true,
 					skipLibCheck: true,
 					strict: true,
-					strictNullChecks: false,
+					strictNullChecks: testCase.strictNullChecks ?? false,
 					target: 'ES2022',
 				},
 				include: ['src/**/*.ts', 'src/**/*.tsx'],
@@ -535,6 +633,7 @@ function prepareConsumer(
 		)}\n`,
 	);
 	write(root, 'src/app/globals.css', '@import "tailwindcss";\n');
+	if (testCase.consumer) write(root, 'src/registry-smoke-consumer.tsx', testCase.consumer);
 
 	const aliases = testCase.customAliases
 		? {
@@ -597,20 +696,36 @@ async function startPackageRegistry(): Promise<{
 }> {
 	const artifacts = path.join(repositoryRoot, '.artifacts', 'npm');
 	fs.mkdirSync(artifacts, { recursive: true });
-	for (const packageName of ['@constructive-io/data', '@constructive-io/command-palette']) {
-		await run(
-			'pnpm',
-			['--filter', packageName, 'build'],
-			repositoryRoot,
-			`${packageName} local registry build`,
-		);
-		await run(
-			'pnpm',
-			['--filter', packageName, 'pack', '--pack-destination', artifacts],
-			repositoryRoot,
-			`${packageName} local registry pack`,
-			{ ...process.env, npm_config_ignore_scripts: 'true' },
-		);
+	const packageDirectories = ['packages/data', 'packages/command-palette'] as const;
+	if (process.env.SMOKE_REUSE_PACKED_ARTIFACTS === '1') {
+		for (const packageDirectory of packageDirectories) {
+			const manifest = JSON.parse(
+				fs.readFileSync(path.join(repositoryRoot, packageDirectory, 'package.json'), 'utf8'),
+			) as { name: string; version: string };
+			const tarballName = `${manifest.name.slice(1).replace('/', '-')}-${manifest.version}.tgz`;
+			if (!fs.existsSync(path.join(artifacts, tarballName))) {
+				throw new Error(`Missing verified package artifact ${tarballName}; run pnpm pack:check first.`);
+			}
+		}
+	} else {
+		for (const packageDirectory of packageDirectories) {
+			const manifest = JSON.parse(
+				fs.readFileSync(path.join(repositoryRoot, packageDirectory, 'package.json'), 'utf8'),
+			) as { name: string };
+			await run(
+				'pnpm',
+				['--filter', manifest.name, 'build'],
+				repositoryRoot,
+				`${manifest.name} local registry build`,
+			);
+			await run(
+				'pnpm',
+				['--filter', manifest.name, 'pack', '--pack-destination', artifacts],
+				repositoryRoot,
+				`${manifest.name} local registry pack`,
+				{ ...process.env, npm_config_ignore_scripts: 'true' },
+			);
+		}
 	}
 
 	const child = spawn(
@@ -622,7 +737,7 @@ async function startPackageRegistry(): Promise<{
 				...process.env,
 				LOCAL_NPM_REGISTRY_PORT: '0',
 				LOCAL_NPM_REGISTRY_PACKAGE_DIRECTORIES:
-					'packages/data,packages/command-palette',
+					packageDirectories.join(','),
 			},
 			stdio: ['ignore', 'pipe', 'pipe'],
 		},
@@ -685,6 +800,7 @@ async function compileTailwind(root: string, testCase: SmokeCase): Promise<void>
 		...(hasSheetsSource
 			? ['.w-\\[52px\\]']
 			: []),
+		...(testCase.expectedCss ?? []),
 	];
 	const program = [
 		"const fs = require('node:fs')",
@@ -731,15 +847,53 @@ function assertInstalled(root: string, testCase: SmokeCase): void {
 			throw new Error(`@constructive/${testCase.name} unexpectedly installed ${packageName}.`);
 		}
 	}
+	if (testCase.assertExactPackages) {
+		const actualPackages = new Set(
+			Object.keys(packageJson.dependencies ?? {}).filter(
+				(packageName) => packageName !== 'react' && packageName !== 'react-dom',
+			),
+		);
+		const expectedPackages = new Set(testCase.expectedPackages ?? []);
+		const missing = [...expectedPackages].filter((packageName) => !actualPackages.has(packageName));
+		const unexpected = [...actualPackages].filter((packageName) => !expectedPackages.has(packageName));
+		if (missing.length > 0 || unexpected.length > 0) {
+			throw new Error(
+				`@constructive/${testCase.name} dependency closure drifted. Missing: ${missing.join(', ') || 'none'}. Unexpected: ${unexpected.join(', ') || 'none'}.`,
+			);
+		}
+	}
 
 	for (const relativePath of testCase.expected) {
 		if (!fs.existsSync(path.join(root, relativePath))) {
 			throw new Error(`@constructive/${testCase.name} did not create ${relativePath}.`);
 		}
 	}
+	for (const relativePath of testCase.expectedServerFiles ?? []) {
+		const source = fs.readFileSync(path.join(root, relativePath), 'utf8');
+		if (/^\s*['"]use client['"];?/.test(source)) {
+			throw new Error(`@constructive/${testCase.name} made pure module ${relativePath} client-only.`);
+		}
+	}
 	for (const relativePath of testCase.forbidden ?? []) {
 		if (fs.existsSync(path.join(root, relativePath))) {
 			throw new Error(`@constructive/${testCase.name} unexpectedly created ${relativePath}.`);
+		}
+	}
+	if (testCase.assertExactSource) {
+		const expectedSource = new Set([
+			...testCase.expected.filter((relativePath) => relativePath.startsWith('src/')),
+			'src/app/globals.css',
+			...(testCase.consumer ? ['src/registry-smoke-consumer.tsx'] : []),
+		]);
+		const actualSource = new Set(
+			walk(path.join(root, 'src')).map((file) => path.relative(root, file)),
+		);
+		const missing = [...expectedSource].filter((file) => !actualSource.has(file));
+		const unexpected = [...actualSource].filter((file) => !expectedSource.has(file));
+		if (missing.length > 0 || unexpected.length > 0) {
+			throw new Error(
+				`@constructive/${testCase.name} source closure drifted. Missing: ${missing.join(', ') || 'none'}. Unexpected: ${unexpected.join(', ') || 'none'}.`,
+			);
 		}
 	}
 	if (fs.existsSync(path.join(root, 'src', '.constructive'))) {
@@ -787,6 +941,7 @@ function assertInstalled(root: string, testCase: SmokeCase): void {
 		'.shadow-card-lg {',
 		'.scrollbar-hide {',
 		'@media (prefers-reduced-motion: reduce) {',
+		...(testCase.expectedCss ?? []),
 	]) {
 		if (!css.includes(fragment)) {
 			throw new Error(`@constructive/${testCase.name} installed an incomplete theme missing ${fragment}.`);
@@ -808,7 +963,9 @@ const server = http.createServer((request, response) => {
 	fs.createReadStream(filePath).pipe(response);
 });
 
-const packageRegistry = selectedCases.some((testCase) => testCase.expectedPackages?.length)
+const packageRegistry = selectedCases.some((testCase) =>
+	testCase.expectedPackages?.some((packageName) => packageName.startsWith('@constructive-io/')),
+)
 	? await startPackageRegistry()
 	: undefined;
 await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve));

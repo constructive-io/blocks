@@ -18,7 +18,7 @@ import {
   type AiComponentName,
   getAiComponentNeighbors,
 } from '@/lib/ai-components';
-import { PACKAGE_INSTALL, registryAdd } from '@/lib/install-mode';
+import { REGISTRY_COMPONENTS_JSON, registryAdd } from '@/lib/install-mode';
 
 function GuidanceList({ items }: { items: readonly string[] }) {
   return (
@@ -63,15 +63,13 @@ export function AiComponentDocsPage({ component }: { component: AiComponentDoc }
       </section>
 
       <DocSection
-        description="Registry installs the full AI block (all primitives). npm imports a single package subpath."
+        description="Every AI component page installs the same aggregate @constructive/ai entry. Examples use the default @/components/ui alias; use your configured ui alias if it differs."
         id="installation"
         title="Installation"
       >
-        <CodeBlock label="Registry">{registryAdd('ai')}</CodeBlock>
+        <CodeBlock label="components.json">{REGISTRY_COMPONENTS_JSON}</CodeBlock>
         <div className="mt-3">
-          <CodeBlock label="npm">
-            {[PACKAGE_INSTALL, '', component.importExample].join('\n')}
-          </CodeBlock>
+          <CodeBlock label="Install aggregate">{registryAdd('ai')}</CodeBlock>
         </div>
       </DocSection>
 
@@ -86,7 +84,7 @@ export function AiComponentDocsPage({ component }: { component: AiComponentDoc }
       </DocSection>
 
       <DocSection
-        description="Primary props for this surface. The package types are the full contract."
+        description="Primary props for this surface. The installed source types are the full contract."
         id="api"
         title="API"
       >

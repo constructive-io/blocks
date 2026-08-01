@@ -17,7 +17,7 @@ import { CodeBlock } from '@/components/docs/code-block';
 import { DocSection } from '@/components/docs/doc-section';
 import { AI_COMPONENTS } from '@/lib/ai-components';
 import { AI_DOC } from '@/lib/ai-docs';
-import { registryAdd } from '@/lib/install-mode';
+import { REGISTRY_COMPONENTS_JSON, registryAdd } from '@/lib/install-mode';
 import { OG_IMAGE, withBase } from '@/lib/site';
 
 function GuidanceList({ items }: { items: readonly string[] }) {
@@ -87,18 +87,13 @@ export default function AiPage() {
       </section>
 
       <DocSection
-        description="Install the full kit, or only the ai block. Registry installs copy source into your app; the npm surface is @constructive-io/ui/ai."
+        description="Configure the Constructive registry once, then install the single aggregate @constructive/ai entry. Examples use the default @/components/ui alias; use your configured ui alias if it differs."
         id="installation"
         title="Installation"
       >
-        <CodeBlock label="Registry — full kit">{registryAdd(doc.kitName)}</CodeBlock>
+        <CodeBlock label="components.json">{REGISTRY_COMPONENTS_JSON}</CodeBlock>
         <div className="mt-3">
-          <CodeBlock label="Registry — block">{registryAdd(doc.name)}</CodeBlock>
-        </div>
-        <div className="mt-3">
-          <CodeBlock label="npm">
-            {`pnpm add @constructive-io/ui\n\n${doc.npmImport}`}
-          </CodeBlock>
+          <CodeBlock label="Install aggregate">{registryAdd(doc.name)}</CodeBlock>
         </div>
       </DocSection>
 
@@ -148,7 +143,7 @@ export default function AiPage() {
       </DocSection>
 
       <DocSection
-        description="Primary public exports. Installed source and package types are the full contract."
+        description="Primary public exports. The installed source types are the full contract."
         id="api-reference"
         title="API Reference"
       >
@@ -156,7 +151,7 @@ export default function AiPage() {
       </DocSection>
 
       <DocSection
-        description="Every surface in the AI kit has its own page under this section."
+        description="Every surface in the aggregate AI block has its own page under this section."
         id="components"
         title="Components"
       >

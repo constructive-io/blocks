@@ -1,7 +1,7 @@
 export type AiComponentDoc = Readonly<{
   name: string;
   title: string;
-  /** Primary package export(s) */
+  /** Primary installed-source export(s) */
   exportName: string;
   description: string;
   whenToUse: readonly string[];
@@ -25,7 +25,7 @@ export const AI_COMPONENTS: readonly AiComponentDoc[] = [
       'Use TextShimmer while a model is thinking, searching, or streaming a long job label.',
       'Prefer static muted text once the run settles.',
     ],
-    importExample: `import { TextShimmer } from '@constructive-io/ui/ai';
+    importExample: `import { TextShimmer } from '@/components/ui/ai';
 
 <TextShimmer>Thinking</TextShimmer>`,
     api: [
@@ -43,7 +43,7 @@ export const AI_COMPONENTS: readonly AiComponentDoc[] = [
       'Use pixel variants for long-running agent work that needs a status label.',
       'Use circular, typing, or wave for compact inline chat spinners.',
     ],
-    importExample: `import { AgentLoader } from '@constructive-io/ui/ai';
+    importExample: `import { AgentLoader } from '@/components/ui/ai';
 
 <AgentLoader variant="drive" label="Working" />`,
     api: [
@@ -69,7 +69,7 @@ export const AI_COMPONENTS: readonly AiComponentDoc[] = [
   PromptInput,
   PromptInputTextarea,
   PromptInputActions,
-} from '@constructive-io/ui/ai';
+} from '@/components/ui/ai';
 
 <PromptInput value={v} onValueChange={setV} onSubmit={send} isLoading={streaming}>
   <PromptInputTextarea placeholder="Message…" />
@@ -90,7 +90,7 @@ export const AI_COMPONENTS: readonly AiComponentDoc[] = [
       'Use Message for chat turns in a transcript list.',
       'Use FeedbackBar under settled MessageContent when the turn is complete.',
     ],
-    importExample: `import { Message, MessageContent } from '@constructive-io/ui/ai';
+    importExample: `import { Message, MessageContent } from '@/components/ui/ai';
 
 <Message from="user">
   <MessageContent>Hello</MessageContent>
@@ -109,7 +109,7 @@ export const AI_COMPONENTS: readonly AiComponentDoc[] = [
       'Use Markdown for assistant prose that may stream.',
       'Prefer a host marked and DOMPurify pipeline when you need full GFM tables.',
     ],
-    importExample: `import { Markdown } from '@constructive-io/ui/ai';
+    importExample: `import { Markdown } from '@/components/ui/ai';
 
 <Markdown streaming={streaming}>{text}</Markdown>`,
     api: [
@@ -127,7 +127,7 @@ export const AI_COMPONENTS: readonly AiComponentDoc[] = [
       'Use CodeBlock for tool results or assistant replies that need a language label, copy, or long source handling.',
       'Prefer Markdown fenced blocks for short inline snippets that do not need copy or collapse.',
     ],
-    importExample: `import { CodeBlock } from '@constructive-io/ui/ai';
+    importExample: `import { CodeBlock } from '@/components/ui/ai';
 
 <CodeBlock language="TypeScript" filename="app.ts" code={source} />
 <CodeBlock language="Python" filename="score.py" code={py} />
@@ -176,7 +176,7 @@ export const AI_COMPONENTS: readonly AiComponentDoc[] = [
       'Use ResponseStream for docs and demos when you do not have a live token stream.',
       'Prefer streaming tokens into Markdown or MessageContent in production hosts.',
     ],
-    importExample: `import { ResponseStream } from '@constructive-io/ui/ai';
+    importExample: `import { ResponseStream } from '@/components/ui/ai';
 
 <ResponseStream text={demo} markdown />`,
     api: [
@@ -199,7 +199,7 @@ export const AI_COMPONENTS: readonly AiComponentDoc[] = [
   ScrollButton,
   Message,
   MessageContent,
-} from '@constructive-io/ui/ai';
+} from '@/components/ui/ai';
 
 <ChatContainer className="h-full">
   <ChatContainerContent>
@@ -246,7 +246,7 @@ export const AI_COMPONENTS: readonly AiComponentDoc[] = [
       'Use SystemMessage for non-assistant notices such as missing credentials.',
       'Use Message for model replies instead of SystemMessage.',
     ],
-    importExample: `import { SystemMessage } from '@constructive-io/ui/ai';
+    importExample: `import { SystemMessage } from '@/components/ui/ai';
 
 <SystemMessage title="No API key" variant="warning">
   Add a provider key in settings.
@@ -266,7 +266,7 @@ export const AI_COMPONENTS: readonly AiComponentDoc[] = [
       'Use Reasoning for chain-of-thought or extended thinking text on assistant turns.',
       'Use ThinkingBar for a one-line status without expandable content.',
     ],
-    importExample: `import { Reasoning } from '@constructive-io/ui/ai';
+    importExample: `import { Reasoning } from '@/components/ui/ai';
 
 <Reasoning isStreaming={streaming} durationMs={elapsed} content={text} />`,
     api: [
@@ -284,7 +284,7 @@ export const AI_COMPONENTS: readonly AiComponentDoc[] = [
       'Use ThinkingTrace when the agent should show structured intermediate steps, not free prose alone.',
       'Drive rows and visibleCount from the host rather than internal demo timers.',
     ],
-    importExample: `import { ThinkingTrace } from '@constructive-io/ui/ai';
+    importExample: `import { ThinkingTrace } from '@/components/ui/ai';
 
 <ThinkingTrace
   mode="coding"
@@ -305,7 +305,7 @@ export const AI_COMPONENTS: readonly AiComponentDoc[] = [
       'Use Steps for ordered agent operations that each have a clear status.',
       'Prefer title and description for dense traces; put payloads or tool output in Step children.',
     ],
-    importExample: `import { Steps, Step } from '@constructive-io/ui/ai';
+    importExample: `import { Steps, Step } from '@/components/ui/ai';
 
 <Steps title="Plan">
   <Step status="done" title="Read files" description="12 paths" />
@@ -357,7 +357,7 @@ export const AI_COMPONENTS: readonly AiComponentDoc[] = [
       'Use Tool row or chip for live agent traces; use card when JSON payloads should expand.',
       'Use normalizeToolStatus to map AI SDK part states and desktop enums into ToolStatus.',
     ],
-    importExample: `import { Tool, ToolGroup } from '@constructive-io/ui/ai';
+    importExample: `import { Tool, ToolGroup } from '@/components/ui/ai';
 
 <ToolGroup label="2 tool calls">
   <Tool name="edit" status="success" summary="app.ts" variant="row" />
@@ -378,7 +378,7 @@ export const AI_COMPONENTS: readonly AiComponentDoc[] = [
       'Use ApprovalCard title and description mode for tool-confirm gates.',
       'Use questions when the agent needs a multi-step questionnaire.',
     ],
-    importExample: `import { ApprovalCard } from '@constructive-io/ui/ai';
+    importExample: `import { ApprovalCard } from '@/components/ui/ai';
 
 <ApprovalCard
   title="Delete table customers?"
@@ -400,7 +400,7 @@ export const AI_COMPONENTS: readonly AiComponentDoc[] = [
       'Use Source under streamed answers that cite the web or a knowledge base.',
       'Group chips in Sources when you need a labeled row.',
     ],
-    importExample: `import { Source, Sources } from '@constructive-io/ui/ai';
+    importExample: `import { Source, Sources } from '@/components/ui/ai';
 
 <Sources label="2 sources">
   <Source title="Docs" href="https://example.com" />
@@ -419,7 +419,7 @@ export const AI_COMPONENTS: readonly AiComponentDoc[] = [
       'Use InlineDiff under edit or write tools when a unified diff is available.',
       'Prefer DiffTable for structural row changes in grids.',
     ],
-    importExample: `import { InlineDiff } from '@constructive-io/ui/ai';
+    importExample: `import { InlineDiff } from '@/components/ui/ai';
 
 <InlineDiff source={{ fileName: 'a.ts', before, after }} />`,
     api: [
@@ -436,7 +436,7 @@ export const AI_COMPONENTS: readonly AiComponentDoc[] = [
       'Use DiffTable when the agent proposes spreadsheet-like row cleanup.',
       'Prefer Sheets for full CRUD grids.',
     ],
-    importExample: `import { DiffTable } from '@constructive-io/ui/ai';
+    importExample: `import { DiffTable } from '@/components/ui/ai';
 
 <DiffTable title="Proposed cleanup" columns={cols} rows={rows} addedRows={added} />`,
     api: [
@@ -454,7 +454,7 @@ export const AI_COMPONENTS: readonly AiComponentDoc[] = [
       'Use StreamingText for demo streams or composed answer chrome.',
       'Pass text with streaming false when a real token stream has already completed.',
     ],
-    importExample: `import { StreamingText } from '@constructive-io/ui/ai';
+    importExample: `import { StreamingText } from '@/components/ui/ai';
 
 <StreamingText text={answer} sources={sources} followUps={ups} />`,
     api: [
@@ -471,7 +471,7 @@ export const AI_COMPONENTS: readonly AiComponentDoc[] = [
       'Use PlanTracker when the agent exposes multi-step plans.',
       'Stack with PromptInput using flushBottom and rounded-t-none for a single shell.',
     ],
-    importExample: `import { PlanTracker } from '@constructive-io/ui/ai';
+    importExample: `import { PlanTracker } from '@/components/ui/ai';
 
 <PlanTracker plan={plan} streaming={streaming} />`,
     api: [
@@ -489,7 +489,7 @@ export const AI_COMPONENTS: readonly AiComponentDoc[] = [
       'Use ContextRing near PromptInput actions to show token budget.',
       'Tone shifts to warning at 80 percent and destructive at 95 percent. Pass tokens null while recomputing.',
     ],
-    importExample: `import { ContextRing } from '@constructive-io/ui/ai';
+    importExample: `import { ContextRing } from '@/components/ui/ai';
 
 <ContextRing usage={{ tokens: 48_000, percent: 42, contextWindow: 128_000 }} />`,
     api: [
@@ -514,7 +514,7 @@ export const AI_COMPONENTS: readonly AiComponentDoc[] = [
       'Use TaskRow for multi-task agent runs outside the transcript or in a side panel.',
       'Prefer the command-palette background task model for app-wide background work.',
     ],
-    importExample: `import { TaskList, TaskRow } from '@constructive-io/ui/ai';
+    importExample: `import { TaskList, TaskRow } from '@/components/ui/ai';
 
 <TaskList>
   <TaskRow status="running" label="Index files" progress={40} />
@@ -533,7 +533,7 @@ export const AI_COMPONENTS: readonly AiComponentDoc[] = [
       'Use ContextCard for RAG chunk previews in the agent UI.',
       'Group cards in ContextCards when you need a labeled list.',
     ],
-    importExample: `import { ContextCard, ContextCards } from '@constructive-io/ui/ai';
+    importExample: `import { ContextCard, ContextCards } from '@/components/ui/ai';
 
 <ContextCards count={1}>
   <ContextCard title="Policy" body="…" sourceType="PDF" sourceName="sop.pdf" />
@@ -552,7 +552,7 @@ export const AI_COMPONENTS: readonly AiComponentDoc[] = [
       'Use RecommendationCard when the agent proposes a primary action with optional alternatives.',
       'Handle onAccept with the selected option id in the host.',
     ],
-    importExample: `import { RecommendationCard } from '@constructive-io/ui/ai';
+    importExample: `import { RecommendationCard } from '@/components/ui/ai';
 
 <RecommendationCard body="Reorder cones" confidence={0.86} onAccept={accept} />`,
     api: [
@@ -569,7 +569,7 @@ export const AI_COMPONENTS: readonly AiComponentDoc[] = [
       'Use FeedbackBar under settled MessageContent.',
       'Pass copyText when the clipboard should receive the full answer.',
     ],
-    importExample: `import { FeedbackBar } from '@constructive-io/ui/ai';
+    importExample: `import { FeedbackBar } from '@/components/ui/ai';
 
 <FeedbackBar copyText={text} onRegenerate={regen} onFeedback={rate} />`,
     api: [
@@ -586,7 +586,7 @@ export const AI_COMPONENTS: readonly AiComponentDoc[] = [
       'Use PromptSuggestion after an assistant turn for next-step prompts.',
       'Group chips in PromptSuggestions when you need a labeled row.',
     ],
-    importExample: `import { PromptSuggestion, PromptSuggestions } from '@constructive-io/ui/ai';
+    importExample: `import { PromptSuggestion, PromptSuggestions } from '@/components/ui/ai';
 
 <PromptSuggestions>
   <PromptSuggestion onClick={() => send('Summarize')}>Summarize</PromptSuggestion>
@@ -605,7 +605,7 @@ export const AI_COMPONENTS: readonly AiComponentDoc[] = [
       'Use the dropzone variant for dedicated attachment UI and the button variant for composer chrome.',
       'Keep uploads in the host; FileUpload only manages local File state when uncontrolled.',
     ],
-    importExample: `import { FileUpload } from '@constructive-io/ui/ai';
+    importExample: `import { FileUpload } from '@/components/ui/ai';
 
 <FileUpload multiple onFilesChange={setFiles} />`,
     api: [
@@ -622,7 +622,7 @@ export const AI_COMPONENTS: readonly AiComponentDoc[] = [
       'Use AiImage for vision inputs and generated image outputs.',
       'Pass a meaningful alt string for every image.',
     ],
-    importExample: `import { AiImage } from '@constructive-io/ui/ai';
+    importExample: `import { AiImage } from '@/components/ui/ai';
 
 <AiImage data={base64} mimeType="image/png" alt="Generated chart" />`,
     api: [

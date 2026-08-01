@@ -2272,7 +2272,7 @@
         "block",
         "ai"
       ],
-      "docs": "Import: `import { PromptInput, Message, Tool, Reasoning, PlanTracker } from '@/components/ui/ai'`",
+      "docs": "Import PromptInput, Message, Tool, Reasoning, and PlanTracker from the installed ai directory under your configured shadcn ui alias.",
       "dependencies": [
         "lucide-react",
         "sugar-high"
@@ -2416,21 +2416,6 @@
           "type": "registry:component"
         }
       ]
-    },
-    {
-      "name": "ai-kit",
-      "type": "registry:ui",
-      "title": "AI Kit",
-      "description": "Installs the @constructive/ai block with chat, tool, and planning primitives.",
-      "categories": [
-        "bundle",
-        "ai"
-      ],
-      "docs": "Install: `pnpm dlx shadcn@latest add @constructive/ai-kit`",
-      "registryDependencies": [
-        "ai"
-      ],
-      "files": []
     },
     {
       "name": "form-kit",

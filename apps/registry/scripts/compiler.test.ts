@@ -9,6 +9,9 @@ import {
 	CONSOLE_KIT_ITEM_NAME,
 	CONSOLE_MODULE_ITEM_NAME_PREFIX,
 	CONSOLE_INSTALL_ROOT_DEPENDENCIES,
+	CONSTRUCTIVE_COMMAND_PALETTE_DEPENDENCY,
+	CONSTRUCTIVE_DATA_DEPENDENCY,
+	CONSTRUCTIVE_UI_PACKAGE,
 	CONSTRUCTIVE_SHEETS_PACKAGE,
 	CONSTRUCTIVE_THEME_DEPENDENCY,
 	CONSTRUCTIVE_NAMESPACE,
@@ -17,6 +20,7 @@ import {
 	assertCanonicalFeaturePackSidecar,
 	assertExactInternalDependencyEdges,
 	assertFeaturePackRegistryContract,
+	assertRegistryDistributionContract,
 	assertUniqueRegistryShape,
 	compileRegistryDependencies,
 	createRegistryModuleOwnership,
@@ -343,6 +347,78 @@ test('rejects duplicate item names and install targets', () => {
 		]),
 		/missing an explicit install target/,
 	);
+});
+
+function distributionContractFixture(): RegistryItem[] {
+	return [
+		{ name: 'constructive-theme', type: 'registry:style' },
+		{
+			name: 'consumer',
+			type: 'registry:block',
+			dependencies: [CONSTRUCTIVE_DATA_DEPENDENCY, CONSTRUCTIVE_COMMAND_PALETTE_DEPENDENCY],
+			registryDependencies: [CONSTRUCTIVE_THEME_DEPENDENCY],
+		},
+		{
+			name: 'stack',
+			type: 'registry:ui',
+			docs: "Import from '@/components/ui/stack'.",
+			registryDependencies: [CONSTRUCTIVE_THEME_DEPENDENCY],
+			files: [
+				{
+					path: 'registry/stack/index.ts',
+					target: '@ui/stack/index.ts',
+					type: 'registry:component',
+				},
+				{
+					path: 'registry/stack/deferred-card-content.tsx',
+					target: '@ui/stack/deferred-card-content.tsx',
+					type: 'registry:component',
+				},
+			],
+		},
+		{
+			name: 'toast',
+			type: 'registry:ui',
+			docs: "Import from '@/components/ui/toast'.",
+			registryDependencies: [CONSTRUCTIVE_THEME_DEPENDENCY],
+			files: [
+				{
+					path: 'registry/toast/index.ts',
+					target: '@ui/toast/index.ts',
+					type: 'registry:component',
+				},
+			],
+		},
+	];
+}
+
+test('enforces the compiled registry distribution contract', () => {
+	assert.doesNotThrow(() => assertRegistryDistributionContract(distributionContractFixture()));
+
+	const wrongRange = structuredClone(distributionContractFixture());
+	wrongRange.find((item) => item.name === 'consumer')!.dependencies = ['@constructive-io/data@^1.0.0'];
+	assert.throws(() => assertRegistryDistributionContract(wrongRange), /must depend on @constructive-io\/data@\^0\.5\.0/);
+
+	const sourceOwnedPackage = structuredClone(distributionContractFixture());
+	sourceOwnedPackage.find((item) => item.name === 'consumer')!.dependencies = [CONSTRUCTIVE_UI_PACKAGE];
+	assert.throws(() => assertRegistryDistributionContract(sourceOwnedPackage), /retains source-owned UI package/);
+
+	const missingTheme = structuredClone(distributionContractFixture());
+	missingTheme.find((item) => item.name === 'consumer')!.registryDependencies = [];
+	assert.throws(() => assertRegistryDistributionContract(missingTheme), /missing the Constructive theme dependency/);
+
+	const unknownDependency = structuredClone(distributionContractFixture());
+	unknownDependency.find((item) => item.name === 'consumer')!.registryDependencies = [
+		CONSTRUCTIVE_THEME_DEPENDENCY,
+		'@constructive/missing',
+	];
+	assert.throws(() => assertRegistryDistributionContract(unknownDependency), /references unknown dependency/);
+
+	const incompleteStack = structuredClone(distributionContractFixture());
+	incompleteStack.find((item) => item.name === 'stack')!.files = [
+		{ path: 'registry/stack/index.ts', target: '@ui/stack/index.ts', type: 'registry:component' },
+	];
+	assert.throws(() => assertRegistryDistributionContract(incompleteStack), /missing deferred-card-content/);
 });
 
 function featurePackContractFixture(): RegistryItem[] {

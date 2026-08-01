@@ -464,8 +464,6 @@ pnpm --filter @constructive-io/registry test
 pnpm --filter @constructive-io/registry build
 pnpm check:console-kit-inspector --no-build
 pnpm --filter @constructive-io/registry smoke:install
-pnpm check:public
-pnpm check:registry-contract
 ```
 
 Before final handoff or release:

@@ -13,9 +13,15 @@ const packages = [
   '@constructive-io/schema-builder'
 ];
 
-function run(command: string, args: string[]): Promise<void> {
+function run(command: string, args: string[], options?: { ignoreLifecycleScripts?: boolean }): Promise<void> {
   return new Promise((resolve, reject) => {
-    const child = spawn(command, args, { cwd: root, stdio: 'inherit' });
+    const child = spawn(command, args, {
+      cwd: root,
+      env: options?.ignoreLifecycleScripts
+        ? { ...process.env, npm_config_ignore_scripts: 'true' }
+        : process.env,
+      stdio: 'inherit'
+    });
     child.on('error', reject);
     child.on('exit', (code) => {
       if (code === 0) resolve();
@@ -29,7 +35,12 @@ await mkdir(destination, { recursive: true });
 
 for (const packageName of packages) {
   await run('pnpm', ['--filter', packageName, 'build']);
-  await run('pnpm', ['--filter', packageName, 'pack', '--pack-destination', destination]);
+  // The verified build already exists; suppress package prepack hooks so UI and Schema Builder are not built twice.
+  await run(
+    'pnpm',
+    ['--filter', packageName, 'pack', '--pack-destination', destination],
+    { ignoreLifecycleScripts: true }
+  );
 }
 
 console.log(`Packed ${packages.length} packages into ${path.relative(root, destination)}`);
