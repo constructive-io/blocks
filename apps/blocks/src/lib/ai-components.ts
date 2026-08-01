@@ -22,7 +22,7 @@ export const AI_COMPONENTS: readonly AiComponentDoc[] = [
     exportName: 'TextShimmer',
     description: 'Sweeping-gradient status text for in-flight agent states.',
     whenToUse: [
-      'Use while a model is thinking, searching, or streaming a long job label.',
+      'Use TextShimmer while a model is thinking, searching, or streaming a long job label.',
       'Prefer static muted text once the run settles.',
     ],
     importExample: `import { TextShimmer } from '@constructive-io/ui/ai';
@@ -40,8 +40,8 @@ export const AI_COMPONENTS: readonly AiComponentDoc[] = [
     description:
       'Loading indicator with pixel-grid variants (drive, dots, orbit), elapsed timer, and simple spinners.',
     whenToUse: [
-      'Use pixel variants for long-running agent work with a status label.',
-      'Use circular/typing/wave for compact inline chat spinners.',
+      'Use pixel variants for long-running agent work that needs a status label.',
+      'Use circular, typing, or wave for compact inline chat spinners.',
     ],
     importExample: `import { AgentLoader } from '@constructive-io/ui/ai';
 
@@ -62,8 +62,8 @@ export const AI_COMPONENTS: readonly AiComponentDoc[] = [
     exportName: 'PromptInput',
     description: 'Compound chat composer with autosize textarea, action slots, and submit/stop patterns.',
     whenToUse: [
-      'Use as the shell for send/stop, attachments, and model chrome.',
-      'Host owns streaming and network; this only presents layout and controlled value.',
+      'Use PromptInput as the shell for send, stop, attachments, and model chrome.',
+      'Keep streaming and network in the host; this surface only owns layout and controlled value.',
     ],
     importExample: `import {
   PromptInput,
@@ -87,8 +87,8 @@ export const AI_COMPONENTS: readonly AiComponentDoc[] = [
     exportName: 'Message',
     description: 'User and assistant transcript rows with optional avatar, markdown content, and actions.',
     whenToUse: [
-      'Use for chat turns in a transcript list.',
-      'Pair MessageContent markdown + streaming with FeedbackBar for settled turns.',
+      'Use Message for chat turns in a transcript list.',
+      'Use FeedbackBar under settled MessageContent when the turn is complete.',
     ],
     importExample: `import { Message, MessageContent } from '@constructive-io/ui/ai';
 
@@ -106,8 +106,8 @@ export const AI_COMPONENTS: readonly AiComponentDoc[] = [
     exportName: 'Markdown',
     description: 'Zero-dependency markdown subset with stream throttling for assistant text.',
     whenToUse: [
-      'Use for assistant prose that may stream.',
-      'Swap for a host marked+DOMPurify pipeline when you need full GFM tables.',
+      'Use Markdown for assistant prose that may stream.',
+      'Prefer a host marked and DOMPurify pipeline when you need full GFM tables.',
     ],
     importExample: `import { Markdown } from '@constructive-io/ui/ai';
 
@@ -122,12 +122,10 @@ export const AI_COMPONENTS: readonly AiComponentDoc[] = [
     title: 'Code Block',
     exportName: 'CodeBlock',
     description:
-      'Agent code surface with lightweight sugar-high highlighting, elegant header, copy, and collapse/expand for long sources.',
+      'Code surface with syntax highlighting, optional filename header, copy, and collapse for long sources.',
     whenToUse: [
-      'Use for fenced code in tool results or assistant replies.',
-      'Pass language for presets (TS/JS default; Python, Rust, Go, Java, C, CSS, Diff) or free-form labels (SQL, Bash, JSON).',
-      'Long sources collapse after 12 lines with a fade and “Show N more lines”; expand keeps an inner scroll cap by default.',
-      'Leave streamingLines for demos; hosts usually pass the full code string. Set highlight={false} only on ultra-hot paths.',
+      'Use CodeBlock for tool results or assistant replies that need a language label, copy, or long source handling.',
+      'Prefer Markdown fenced blocks for short inline snippets that do not need copy or collapse.',
     ],
     importExample: `import { CodeBlock } from '@constructive-io/ui/ai';
 
@@ -136,16 +134,16 @@ export const AI_COMPONENTS: readonly AiComponentDoc[] = [
 {/* Never collapse */}
 <CodeBlock language="SQL" code={query} maxCollapsedLines={false} />`,
     api: [
-      { name: 'code', type: 'string', behavior: 'Full source (copy always uses the full string).' },
+      { name: 'code', type: 'string', behavior: 'Full source. Copy always uses the complete string.' },
       {
         name: 'language / filename',
         type: 'string',
-        behavior: 'Header: filename + language pill (or language alone).',
+        behavior: 'Header label and optional language pill. Presets cover TS/JS, Python, Rust, Go, Java, C, CSS, and Diff; other labels stay free-form.',
       },
       {
         name: 'highlight',
         type: 'boolean',
-        behavior: 'Syntax highlight with sugar-high (default true).',
+        behavior: 'Enables syntax highlighting (default true). Set false on ultra-hot paths.',
       },
       {
         name: 'maxCollapsedLines',
@@ -155,7 +153,7 @@ export const AI_COMPONENTS: readonly AiComponentDoc[] = [
       {
         name: 'maxExpandedHeight',
         type: 'string | false',
-        behavior: 'CSS max-height when expanded (default min(28rem, 70vh)). false = unconstrained.',
+        behavior: 'CSS max-height when expanded (default min(28rem, 70vh)). false removes the cap.',
       },
       {
         name: 'expanded / defaultExpanded / onExpandedChange',
@@ -165,7 +163,7 @@ export const AI_COMPONENTS: readonly AiComponentDoc[] = [
       {
         name: 'showCopy / streamingLines / lineIntervalMs',
         type: 'boolean / boolean / number',
-        behavior: 'Copy button and progressive line reveal for demos.',
+        behavior: 'Copy control and progressive line reveal for demos. Hosts usually pass the full code string.',
       },
     ],
   },
@@ -175,8 +173,8 @@ export const AI_COMPONENTS: readonly AiComponentDoc[] = [
     exportName: 'ResponseStream',
     description: 'Client-side progressive text reveal for fixtures and offline demos.',
     whenToUse: [
-      'Use for docs and demos when you do not have a live token stream.',
-      'Production hosts should stream tokens into Markdown or MessageContent instead.',
+      'Use ResponseStream for docs and demos when you do not have a live token stream.',
+      'Prefer streaming tokens into Markdown or MessageContent in production hosts.',
     ],
     importExample: `import { ResponseStream } from '@constructive-io/ui/ai';
 
@@ -190,12 +188,10 @@ export const AI_COMPONENTS: readonly AiComponentDoc[] = [
     name: 'chat-container',
     title: 'Chat Container',
     exportName: 'ChatContainer',
-    description:
-      'Stick-to-bottom transcript scroll region with ScrollButton jump-to-latest. ScrollButton is documented here (not as a separate page).',
+    description: 'Stick-to-bottom transcript scroll region with a jump-to-latest ScrollButton.',
     whenToUse: [
       'Use ChatContainer as the scroll parent of a message list.',
-      'Render ScrollButton as a child of ChatContainer so it can read pin state and appear when the user scrolls up.',
-      'Pair with Message, Reasoning, Tool, and PromptInput for a full chat shell.',
+      'Render ScrollButton inside ChatContainer so it can read pin state and appear when the user scrolls up.',
     ],
     importExample: `import {
   ChatContainer,
@@ -247,8 +243,8 @@ export const AI_COMPONENTS: readonly AiComponentDoc[] = [
     exportName: 'SystemMessage',
     description: 'Banner-style notice for app-injected transcript messages (errors, hints).',
     whenToUse: [
-      'Use for non-assistant notices such as missing credentials.',
-      'Do not use for model replies — use Message instead.',
+      'Use SystemMessage for non-assistant notices such as missing credentials.',
+      'Use Message for model replies instead of SystemMessage.',
     ],
     importExample: `import { SystemMessage } from '@constructive-io/ui/ai';
 
@@ -267,7 +263,7 @@ export const AI_COMPONENTS: readonly AiComponentDoc[] = [
     description:
       'Collapsible model thinking with auto-open while streaming and duration labels when settled.',
     whenToUse: [
-      'Use for chain-of-thought or extended thinking text on assistant turns.',
+      'Use Reasoning for chain-of-thought or extended thinking text on assistant turns.',
       'Use ThinkingBar for a one-line status without expandable content.',
     ],
     importExample: `import { Reasoning } from '@constructive-io/ui/ai';
@@ -285,8 +281,8 @@ export const AI_COMPONENTS: readonly AiComponentDoc[] = [
     description:
       'Expandable agent trace with modes: steps, reasoning, search, and coding tool rows.',
     whenToUse: [
-      'Use when the agent should show structured intermediate steps, not free prose alone.',
-      'Drive rows and visibleCount from the host; do not rely on internal demo timers.',
+      'Use ThinkingTrace when the agent should show structured intermediate steps, not free prose alone.',
+      'Drive rows and visibleCount from the host rather than internal demo timers.',
     ],
     importExample: `import { ThinkingTrace } from '@constructive-io/ui/ai';
 
@@ -304,11 +300,10 @@ export const AI_COMPONENTS: readonly AiComponentDoc[] = [
     title: 'Steps',
     exportName: 'Steps',
     description:
-      'Collapsible vertical step list with quiet status icons, gapped connectors, and room for long titles, descriptions, and nested body content.',
+      'Collapsible vertical step list with status icons, gapped connectors, and nested body content.',
     whenToUse: [
-      'Use for ordered agent operations where each step has a clear status.',
-      'Prefer title + description for dense traces; put payloads, SQL, or tool output in Step children.',
-      'ChainOfThought / ChainOfThoughtStep are aliases for the same compound API.',
+      'Use Steps for ordered agent operations that each have a clear status.',
+      'Prefer title and description for dense traces; put payloads or tool output in Step children.',
     ],
     importExample: `import { Steps, Step } from '@constructive-io/ui/ai';
 
@@ -343,7 +338,12 @@ export const AI_COMPONENTS: readonly AiComponentDoc[] = [
       {
         name: 'Step children',
         type: 'ReactNode',
-        behavior: 'Optional body under the description. pre/code get compact agent-output styling.',
+        behavior: 'Optional body under the description. pre and code get compact agent-output styling.',
+      },
+      {
+        name: 'ChainOfThought / ChainOfThoughtStep',
+        type: 'alias',
+        behavior: 'Aliases for Steps and Step with the same compound API.',
       },
     ],
   },
@@ -354,8 +354,8 @@ export const AI_COMPONENTS: readonly AiComponentDoc[] = [
     description:
       'Tool call presentation in card, chip, or compact row density with input/output, errors, and diff chips.',
     whenToUse: [
-      'Use row/chip for live agent traces; card when JSON payloads should expand.',
-      'normalizeToolStatus maps AI SDK part states and desktop enums.',
+      'Use Tool row or chip for live agent traces; use card when JSON payloads should expand.',
+      'Use normalizeToolStatus to map AI SDK part states and desktop enums into ToolStatus.',
     ],
     importExample: `import { Tool, ToolGroup } from '@constructive-io/ui/ai';
 
@@ -375,8 +375,8 @@ export const AI_COMPONENTS: readonly AiComponentDoc[] = [
     description:
       'Human-in-the-loop confirm/skip or multi-question approval before the agent acts.',
     whenToUse: [
-      'Use simple title/description mode for tool-confirm gates.',
-      'Use questions for multi-step agent questionnaires.',
+      'Use ApprovalCard title and description mode for tool-confirm gates.',
+      'Use questions when the agent needs a multi-step questionnaire.',
     ],
     importExample: `import { ApprovalCard } from '@constructive-io/ui/ai';
 
@@ -397,8 +397,8 @@ export const AI_COMPONENTS: readonly AiComponentDoc[] = [
     exportName: 'Source',
     description: 'Citation chips for retrieved sources with hover details.',
     whenToUse: [
-      'Use under streamed answers that cite the web or knowledge base.',
-      'Wrap groups in Sources for a labeled chip row.',
+      'Use Source under streamed answers that cite the web or a knowledge base.',
+      'Group chips in Sources when you need a labeled row.',
     ],
     importExample: `import { Source, Sources } from '@constructive-io/ui/ai';
 
@@ -416,7 +416,7 @@ export const AI_COMPONENTS: readonly AiComponentDoc[] = [
     exportName: 'InlineDiff',
     description: 'Line-oriented before/after file diff for tool edits.',
     whenToUse: [
-      'Use under edit/write tools when a unified diff is available.',
+      'Use InlineDiff under edit or write tools when a unified diff is available.',
       'Prefer DiffTable for structural row changes in grids.',
     ],
     importExample: `import { InlineDiff } from '@constructive-io/ui/ai';
@@ -433,8 +433,8 @@ export const AI_COMPONENTS: readonly AiComponentDoc[] = [
     exportName: 'DiffTable',
     description: 'Tabular proposed edits with removed-row tint and added-row reveal.',
     whenToUse: [
-      'Use when the agent proposes spreadsheet-like cleanup.',
-      'Do not use as a full CRUD grid — use Sheets for that.',
+      'Use DiffTable when the agent proposes spreadsheet-like row cleanup.',
+      'Prefer Sheets for full CRUD grids.',
     ],
     importExample: `import { DiffTable } from '@constructive-io/ui/ai';
 
@@ -449,10 +449,10 @@ export const AI_COMPONENTS: readonly AiComponentDoc[] = [
     title: 'Streaming Text',
     exportName: 'StreamingText',
     description:
-      'Streamed answer with blur-resolve words, citation chips, feedback actions, and follow-ups.',
+      'Streamed answer with blur-resolve on the newest word, then citation chips, feedback, and follow-ups.',
     whenToUse: [
-      'Use for demo streams or composed answer chrome.',
-      'Hosts with real token streams can still pass text + streaming=false when complete.',
+      'Use StreamingText for demo streams or composed answer chrome.',
+      'Pass text with streaming false when a real token stream has already completed.',
     ],
     importExample: `import { StreamingText } from '@constructive-io/ui/ai';
 
@@ -468,8 +468,8 @@ export const AI_COMPONENTS: readonly AiComponentDoc[] = [
     exportName: 'PlanTracker',
     description: 'Live agent plan checklist, typically pinned above the composer.',
     whenToUse: [
-      'Use when the agent exposes multi-step plans.',
-      'Stack with PromptInput using flushBottom + rounded-t-none for a single shell.',
+      'Use PlanTracker when the agent exposes multi-step plans.',
+      'Stack with PromptInput using flushBottom and rounded-t-none for a single shell.',
     ],
     importExample: `import { PlanTracker } from '@constructive-io/ui/ai';
 
@@ -483,17 +483,26 @@ export const AI_COMPONENTS: readonly AiComponentDoc[] = [
     name: 'context-ring',
     title: 'Context Ring',
     exportName: 'ContextRing',
-    description: 'Compact context-window usage ring for composer chrome.',
+    description:
+      'Compact context-window meter: dense radial tick bars (circular segmented bar) with a soft glow on used capacity.',
     whenToUse: [
-      'Place near PromptInput actions to show token budget.',
-      'percent ≥ 80 warning, ≥ 95 destructive stroke colors.',
+      'Use ContextRing near PromptInput actions to show token budget.',
+      'Tone shifts to warning at 80 percent and destructive at 95 percent. Pass tokens null while recomputing.',
     ],
     importExample: `import { ContextRing } from '@constructive-io/ui/ai';
 
 <ContextRing usage={{ tokens: 48_000, percent: 42, contextWindow: 128_000 }} />`,
     api: [
-      { name: 'usage', type: 'ContextUsage', behavior: 'tokens, percent, contextWindow; tokens null while recomputing.' },
-      { name: 'size / stroke', type: 'number', behavior: 'SVG dimensions.' },
+      {
+        name: 'usage',
+        type: 'ContextUsage',
+        behavior: 'tokens, percent, contextWindow. tokens null while recomputing after compaction.',
+      },
+      {
+        name: 'size / stroke',
+        type: 'number',
+        behavior: 'Drawn diameter (default 24) and progress stroke width (default 2).',
+      },
     ],
   },
   {
@@ -502,8 +511,8 @@ export const AI_COMPONENTS: readonly AiComponentDoc[] = [
     exportName: 'TaskRow',
     description: 'Live agent task status with progress ring, details, and retry.',
     whenToUse: [
-      'Use for multi-task agent runs outside the transcript (or as a side panel).',
-      'Distinct from command-palette background tasks.',
+      'Use TaskRow for multi-task agent runs outside the transcript or in a side panel.',
+      'Prefer the command-palette background task model for app-wide background work.',
     ],
     importExample: `import { TaskList, TaskRow } from '@constructive-io/ui/ai';
 
@@ -521,8 +530,8 @@ export const AI_COMPONENTS: readonly AiComponentDoc[] = [
     exportName: 'ContextCard',
     description: 'Retrieved knowledge chunk card with source type badge.',
     whenToUse: [
-      'Use for RAG chunk previews in the agent UI.',
-      'Group with ContextCards for a labeled list.',
+      'Use ContextCard for RAG chunk previews in the agent UI.',
+      'Group cards in ContextCards when you need a labeled list.',
     ],
     importExample: `import { ContextCard, ContextCards } from '@constructive-io/ui/ai';
 
@@ -540,8 +549,8 @@ export const AI_COMPONENTS: readonly AiComponentDoc[] = [
     exportName: 'RecommendationCard',
     description: 'Agent suggestion with confidence meter and alternatives drawer.',
     whenToUse: [
-      'Use when the agent proposes a primary action with optional alternatives.',
-      'onAccept receives the selected option id.',
+      'Use RecommendationCard when the agent proposes a primary action with optional alternatives.',
+      'Handle onAccept with the selected option id in the host.',
     ],
     importExample: `import { RecommendationCard } from '@constructive-io/ui/ai';
 
@@ -557,8 +566,8 @@ export const AI_COMPONENTS: readonly AiComponentDoc[] = [
     exportName: 'FeedbackBar',
     description: 'Copy, regenerate, and thumbs actions for assistant turns.',
     whenToUse: [
-      'Place under settled MessageContent.',
-      'Pass copyText when clipboard should receive the full answer.',
+      'Use FeedbackBar under settled MessageContent.',
+      'Pass copyText when the clipboard should receive the full answer.',
     ],
     importExample: `import { FeedbackBar } from '@constructive-io/ui/ai';
 
@@ -574,8 +583,8 @@ export const AI_COMPONENTS: readonly AiComponentDoc[] = [
     exportName: 'PromptSuggestion',
     description: 'Follow-up chip the user can click to send a suggested prompt.',
     whenToUse: [
-      'Use after an assistant turn for next-step prompts.',
-      'Group with PromptSuggestions for a labeled row.',
+      'Use PromptSuggestion after an assistant turn for next-step prompts.',
+      'Group chips in PromptSuggestions when you need a labeled row.',
     ],
     importExample: `import { PromptSuggestion, PromptSuggestions } from '@constructive-io/ui/ai';
 
@@ -593,8 +602,8 @@ export const AI_COMPONENTS: readonly AiComponentDoc[] = [
     exportName: 'FileUpload',
     description: 'Drag-and-drop or button-triggered attachments for chat.',
     whenToUse: [
-      'Use dropzone for dedicated attachment UI; button for composer chrome.',
-      'Host uploads files; this only manages local File[] state if uncontrolled.',
+      'Use the dropzone variant for dedicated attachment UI and the button variant for composer chrome.',
+      'Keep uploads in the host; FileUpload only manages local File state when uncontrolled.',
     ],
     importExample: `import { FileUpload } from '@constructive-io/ui/ai';
 
@@ -610,8 +619,8 @@ export const AI_COMPONENTS: readonly AiComponentDoc[] = [
     exportName: 'AiImage',
     description: 'Display AI-generated or uploaded images from base64, bytes, or URL.',
     whenToUse: [
-      'Use for vision inputs and generated image outputs.',
-      'Always pass a meaningful alt string.',
+      'Use AiImage for vision inputs and generated image outputs.',
+      'Pass a meaningful alt string for every image.',
     ],
     importExample: `import { AiImage } from '@constructive-io/ui/ai';
 

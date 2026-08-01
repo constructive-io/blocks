@@ -133,10 +133,12 @@ export default function AiPage() {
       <DocSection description={doc.previewDescription} id="examples" title="Examples">
         <GuidanceList
           items={[
-            'Open the Composer tab to stack PlanTracker on PromptInput with a context ring.',
-            'Open Transcript for reasoning, tools, markdown, feedback, and follow-ups in a scroll region.',
-            'Open HITL for approval, recommendations, and DiffTable proposed row edits.',
-            'Open Context for task rows, RAG cards, streaming text, and citation chips.',
+            'Composer — plan band, prompt input, context ring, and light status chrome.',
+            'Chat — stick-to-bottom transcript with feedback and follow-ups.',
+            'Reasoning — Reasoning, ThinkingTrace, and Steps for intermediate work.',
+            'Tools — tool rows, diff chips, and CodeBlock results.',
+            'HITL — approval, recommendations, and DiffTable proposed edits.',
+            'Workspace — tasks, RAG cards, and streamed answer chrome with citations.',
           ]}
         />
       </DocSection>

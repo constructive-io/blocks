@@ -57,6 +57,7 @@ function StreamingText({
 		return text.split(/(\s+)/).filter(Boolean);
 	}, [text, tokens]);
 
+	const total = tokens?.length ?? words?.length ?? 0;
 	const [visible, setVisible] = React.useState(streaming ? 0 : Number.MAX_SAFE_INTEGER);
 
 	React.useEffect(() => {
@@ -65,7 +66,6 @@ function StreamingText({
 			return;
 		}
 		setVisible(0);
-		const total = tokens ? tokens.length : (words?.length ?? 0);
 		if (total === 0) return;
 		const id = window.setInterval(() => {
 			setVisible((v) => {
@@ -77,9 +77,11 @@ function StreamingText({
 			});
 		}, wordIntervalMs);
 		return () => window.clearInterval(id);
-	}, [streaming, tokens, words, wordIntervalMs, text]);
+	}, [streaming, tokens, words, wordIntervalMs, text, total]);
 
-	const done = !streaming || visible >= (tokens?.length ?? words?.length ?? 0);
+	const done = !streaming || visible >= total;
+	/** Blur only the newest token while still revealing — not after the run settles. */
+	const revealing = streaming && visible < total;
 
 	return (
 		<div data-slot="streaming-text" className={cn('flex w-full flex-col gap-3', className)}>
@@ -104,7 +106,7 @@ function StreamingText({
 									key={i}
 									className={cn(
 										'transition-[filter,opacity] duration-200 ease-out motion-reduce:transition-none',
-										i === visible - 1 && streaming
+										i === visible - 1 && revealing
 											? 'opacity-90 blur-[2px] motion-reduce:blur-0'
 											: 'opacity-100 blur-0',
 									)}
@@ -118,7 +120,7 @@ function StreamingText({
 								key={i}
 								className={cn(
 									'transition-[filter,opacity] duration-200 ease-out motion-reduce:transition-none',
-									i === visible - 1 && streaming && !/^\s+$/.test(w)
+									i === visible - 1 && revealing && !/^\s+$/.test(w)
 										? 'opacity-90 blur-[2px] motion-reduce:blur-0'
 										: 'opacity-100 blur-0',
 								)}

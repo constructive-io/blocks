@@ -524,10 +524,27 @@ GROUP BY 1, 2`}</pre>
     case 'context-ring':
       return (
         <Frame>
-          <div className="flex items-center gap-6">
-            <ContextRing usage={{ tokens: 48_000, percent: 42, contextWindow: 128_000 }} size={32} />
-            <ContextRing usage={{ tokens: 110_000, percent: 88, contextWindow: 128_000 }} size={32} />
-            <ContextRing usage={{ tokens: 124_000, percent: 97, contextWindow: 128_000 }} size={32} />
+          <div className="flex items-end justify-center gap-10 py-4">
+            {(
+              [
+                { label: 'Healthy', percent: 42, tokens: 48_000 as number | null },
+                { label: 'High', percent: 88, tokens: 110_000 },
+                { label: 'Critical', percent: 97, tokens: 124_000 },
+              ] as const
+            ).map((state) => (
+              <div key={state.label} className="flex flex-col items-center gap-2.5">
+                <ContextRing
+                  size={40}
+                  stroke={2.25}
+                  usage={{
+                    tokens: state.tokens,
+                    percent: state.percent,
+                    contextWindow: 128_000,
+                  }}
+                />
+                <p className="text-[11px] text-muted-foreground">{state.label}</p>
+              </div>
+            ))}
           </div>
         </Frame>
       );

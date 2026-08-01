@@ -2267,12 +2267,12 @@
       "name": "ai",
       "type": "registry:block",
       "title": "AI Kit",
-      "description": "Presentational primitives for AI and agentic chat UIs: composer, messages, reasoning, tools, HITL approval, plan tracker, diff tables, and streaming surfaces.",
+      "description": "Presentational primitives for AI and agentic chat UIs: composer, messages, reasoning, tools, HITL approval, plan tracking, and streaming surfaces.",
       "categories": [
         "block",
         "ai"
       ],
-      "docs": "Import: `import { PromptInput, Message, Tool, Reasoning, PlanTracker } from '@constructive-io/ui/ai'`",
+      "docs": "Import: `import { PromptInput, Message, Tool, Reasoning, PlanTracker } from '@/components/ui/ai'`",
       "dependencies": [
         "lucide-react",
         "sugar-high"
@@ -2421,7 +2421,7 @@
       "name": "ai-kit",
       "type": "registry:ui",
       "title": "AI Kit",
-      "description": "Full AI/agentic surface: installs the @constructive/ai block with all chat, tool, and planning primitives.",
+      "description": "Installs the @constructive/ai block with chat, tool, and planning primitives.",
       "categories": [
         "bundle",
         "ai"

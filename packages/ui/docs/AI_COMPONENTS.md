@@ -34,9 +34,9 @@ import {
 | `PromptInput` family | Compound composer |
 | `Message` family | User/assistant layout |
 | `Markdown` | Throttled markdown subset |
-| `CodeBlock` | Code + copy + lightweight sugar-high highlighting |
+| `CodeBlock` | Code + copy + syntax highlighting + collapse |
 | `ResponseStream` | Client typewriter |
-| `ChatContainer` + `ScrollButton` | Stick-to-bottom transcript + jump-to-latest (docs under Chat Container) |
+| `ChatContainer` + `ScrollButton` | Stick-to-bottom transcript + jump-to-latest |
 | `SystemMessage` | Banner notice |
 | `useThrottledText` | 66ms stream throttle |
 
@@ -57,7 +57,7 @@ import {
 | Export | Role |
 | --- | --- |
 | `PlanTracker` | Plan checklist above composer |
-| `ContextRing` | Token window ring |
+| `ContextRing` | Circular segmented capacity bar + glow |
 | `TaskRow` / `TaskList` | Live agent tasks |
 | `ContextCard` / `ContextCards` | RAG chunks |
 | `RecommendationCard` | Confidence + alternatives |

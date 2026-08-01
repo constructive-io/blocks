@@ -3,15 +3,15 @@ export const AI_DOC = {
   kitName: 'ai-kit',
   title: 'AI',
   description:
-    'Presentational primitives for AI and agentic chat UIs — composer, messages, reasoning, tools, human-in-the-loop approval, plan tracking, and streaming surfaces. Runtime-agnostic: hosts own models, IPC, and persistence.',
+    'Presentational primitives for AI and agentic chat UIs: composer, messages, reasoning, tools, human-in-the-loop approval, plan tracking, and streaming surfaces. Hosts own models, IPC, and persistence.',
   whenToUse: [
-    'Use the AI kit when building chat, agent, or tool-calling experiences that need Constructive density and motion.',
-    'Keep model runtimes (AI SDK, pi, custom) in the host; pass streaming state and tool results as props.',
-    'Prefer Sheets or Table for dense data work — DiffTable is for agent-proposed row edits, not full CRUD.',
+    'Use the AI kit for chat, agent, or tool-calling experiences that need Constructive density and motion.',
+    'Keep model runtimes (AI SDK, pi, custom) in the host and pass streaming state and tool results as props.',
+    'Prefer Sheets or Table for dense data work. DiffTable is only for agent-proposed row edits.',
   ],
   usage: {
     description:
-      'Install the kit, then compose the transcript from presentational pieces. The host owns send/stop, streaming reducers, and tool execution.',
+      'Install the kit, then compose the transcript from presentational pieces. The host owns send, stop, streaming reducers, and tool execution.',
     example: `'use client';
 
 import { useState } from 'react';
@@ -111,10 +111,10 @@ export function AgentPane({
     description:
       'Every streaming, tool, and plan signal is a prop. The kit never opens network connections or owns chat history.',
     guidance: [
-      'Throttle markdown while tokens arrive (MessageContent streaming / useThrottledText) so long answers stay responsive.',
-      'Keep tool status referentially stable when possible; normalizeToolStatus accepts both AI SDK part states and desktop enums.',
-      'PlanTracker is independent of streaming open/close — do not force-expand it when a run starts.',
-      'ApprovalCard is presentational: onConfirm / onSkip must gate real tool execution in the host.',
+      'Throttle markdown while tokens arrive with MessageContent streaming or useThrottledText so long answers stay responsive.',
+      'Keep tool status referentially stable when possible. normalizeToolStatus accepts AI SDK part states and desktop enums.',
+      'PlanTracker is independent of streaming open and close. Do not force-expand it when a run starts.',
+      'ApprovalCard is presentational. onConfirm and onSkip must gate real tool execution in the host.',
     ],
   },
   composition: {
@@ -127,21 +127,21 @@ export function AgentPane({
       },
       {
         title: 'Composer stack',
-        body: 'PlanTracker flushBottom + PromptInput rounded-t-none reads as one shell above the input.',
+        body: 'PlanTracker flushBottom with PromptInput rounded-t-none reads as one shell above the input.',
       },
       {
         title: 'Tool densities',
-        body: 'Use row/chip for live agent traces and card when input/output JSON must expand.',
+        body: 'Use row or chip for live agent traces and card when input or output JSON must expand.',
       },
     ],
   },
   previewDescription:
-    'Tab through composer, transcript, tools, HITL, and context demos — all driven by static fixtures.',
+    'Tabbed use cases ordered simple to complex: composer, chat, reasoning, tools, HITL, and workspace.',
   accessibility: [
     'Keep streaming regions polite: use aria-live on loaders and status labels, not on every token.',
-    'Icon-only composer and feedback controls require accessible names (Button size icon-* already defaults type="button").',
-    'Confirm destructive ApprovalCard actions with clear copy; destructive styling is not enough alone.',
-    'DiffTable removal/add state is not color-only — removed rows also use line-through and success/destructive text.',
+    'Give icon-only composer and feedback controls accessible names. Button size icon-* defaults type to button.',
+    'Confirm destructive ApprovalCard actions with clear copy. Destructive styling alone is not enough.',
+    'DiffTable add and remove state is not color-only. Removed rows also use line-through and success or destructive text.',
   ],
   npmImport: `import {
   PromptInput,
