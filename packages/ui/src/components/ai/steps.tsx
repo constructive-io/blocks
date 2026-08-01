@@ -42,7 +42,7 @@ function Steps({
 				<ChevronDown data-slot="collapsible-icon" className="size-3.5 opacity-60" />
 			</CollapsibleTrigger>
 			<CollapsiblePanel innerClassName="py-1">
-				<ol className="relative ml-2 space-y-0 border-l border-border/70 pl-4">{children}</ol>
+				<ol className="flex flex-col">{children}</ol>
 			</CollapsiblePanel>
 		</Collapsible>
 	);
@@ -58,28 +58,45 @@ type StepProps = {
 	className?: string;
 };
 
+/**
+ * Timeline step: icon sits in a fixed-width rail, connector is centered under the icon.
+ * Avoid absolute -left offsets against border-l (they drift by icon size).
+ */
 function Step({ children, title, description, status = 'pending', className }: StepProps) {
 	return (
 		<li
 			data-slot="step"
 			data-status={status}
-			className={cn('relative pb-3 last:pb-0', className)}
+			className={cn('group/step relative flex gap-3', className)}
 		>
-			<span className="absolute -left-[1.35rem] top-0.5 flex size-3.5 items-center justify-center bg-background">
-				{status === 'running' ? (
-					<Loader2 className="size-3 animate-spin text-primary motion-reduce:animate-none" />
-				) : status === 'done' ? (
-					<Check className="size-3 text-success" />
-				) : status === 'error' ? (
-					<Circle className="size-2.5 fill-destructive text-destructive" />
-				) : (
-					<Circle className="size-2.5 text-muted-foreground/50" />
-				)}
-			</span>
-			<div className="min-w-0 text-[13px]">
+			{/* Rail: fixed width, icon + vertical connector share the same center axis */}
+			<div className="relative flex w-3.5 shrink-0 flex-col items-center">
+				<span
+					aria-hidden
+					className={cn(
+						'absolute top-3.5 bottom-0 left-1/2 w-px -translate-x-1/2 bg-border/70',
+						// Hide connector under the last step
+						'group-last/step:hidden',
+					)}
+				/>
+				<span className="relative z-10 flex size-3.5 shrink-0 items-center justify-center bg-background">
+					{status === 'running' ? (
+						<Loader2 className="size-3 animate-spin text-primary motion-reduce:animate-none" />
+					) : status === 'done' ? (
+						<Check className="size-3 text-success" strokeWidth={2.5} />
+					) : status === 'error' ? (
+						<Circle className="size-2.5 fill-destructive text-destructive" />
+					) : (
+						<Circle className="size-2.5 text-muted-foreground/50" />
+					)}
+				</span>
+			</div>
+
+			<div className="min-w-0 flex-1 pb-3 text-[13px] group-last/step:pb-0">
+				{/* Match first-line cap height to the 14px rail icon for optical vertical align */}
 				<div
 					className={cn(
-						'font-medium leading-snug',
+						'flex min-h-3.5 items-center font-medium leading-none',
 						status === 'done' && 'text-muted-foreground',
 						status === 'pending' && 'text-muted-foreground',
 						status === 'running' && 'text-foreground',
@@ -89,7 +106,7 @@ function Step({ children, title, description, status = 'pending', className }: S
 					{title}
 				</div>
 				{description ? (
-					<div className="mt-0.5 text-xs text-muted-foreground">{description}</div>
+					<div className="mt-1 text-xs leading-snug text-muted-foreground">{description}</div>
 				) : null}
 				{children ? <div className="mt-1.5 text-muted-foreground">{children}</div> : null}
 			</div>
