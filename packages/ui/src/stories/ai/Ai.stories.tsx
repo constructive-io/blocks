@@ -300,6 +300,60 @@ export const TasksAndContext: Story = {
 	),
 };
 
+export const StepsEdgeCases: Story = {
+	name: 'Steps / edge cases',
+	render: () => (
+		<div className="mx-auto flex max-w-xl flex-col gap-8">
+			<div>
+				<p className="mb-2 text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
+					All statuses
+				</p>
+				<Steps title="Status catalog" defaultOpen>
+					<Step status="done" title="Resolved inventory snapshot" description="Cached 12m ago" />
+					<Step status="running" title="Scoring stockout risk" description="68%" />
+					<Step status="error" title="Push reorder to ERP" description="HTTP 503" />
+					<Step status="pending" title="Notify store managers" />
+				</Steps>
+			</div>
+			<div>
+				<p className="mb-2 text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
+					Long content
+				</p>
+				<Steps title="Reconciliation run" defaultOpen>
+					<Step
+						status="done"
+						title="Fetch last 90 days of POS line items for every store in the Pacific region"
+						description="Joined sales.line_items with inventory.snapshots across 48 stores. 1.2M rows after dedupe."
+					>
+						<pre>{`SELECT store_id, sku, SUM(qty)\nFROM pos.line_items\nGROUP BY 1, 2`}</pre>
+					</Step>
+					<Step
+						status="running"
+						title="Build a multi-week replenishment plan that respects lead times and case packs"
+					/>
+					<Step status="pending" title="Open a draft PR with migration + runbook" />
+				</Steps>
+			</div>
+			<div>
+				<p className="mb-2 text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
+					Short + single
+				</p>
+				<div className="flex flex-col gap-6">
+					<Steps title="Quick path" defaultOpen>
+						<Step status="done" title="Parse" />
+						<Step status="done" title="Validate" />
+						<Step status="running" title="Apply" />
+						<Step status="pending" title="Verify" />
+					</Steps>
+					<Steps title="One-shot" defaultOpen>
+						<Step status="running" title="Generating summary" description="Streaming…" />
+					</Steps>
+				</div>
+			</div>
+		</div>
+	),
+};
+
 export const StreamingAndSources: Story = {
 	render: () => (
 		<div className="mx-auto max-w-xl space-y-6">

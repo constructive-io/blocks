@@ -255,20 +255,48 @@ export const AI_COMPONENTS: readonly AiComponentDoc[] = [
     name: 'steps',
     title: 'Steps',
     exportName: 'Steps',
-    description: 'Collapsible vertical step list with pending, running, done, and error status.',
+    description:
+      'Collapsible vertical step list with quiet status icons, gapped connectors, and room for long titles, descriptions, and nested body content.',
     whenToUse: [
-      'Use for ordered agent operations with status icons.',
-      'ChainOfThought is an alias for the same compound API.',
+      'Use for ordered agent operations where each step has a clear status.',
+      'Prefer title + description for dense traces; put payloads, SQL, or tool output in Step children.',
+      'ChainOfThought / ChainOfThoughtStep are aliases for the same compound API.',
     ],
     importExample: `import { Steps, Step } from '@constructive-io/ui/ai';
 
 <Steps title="Plan">
-  <Step status="done" title="Read files" />
-  <Step status="running" title="Edit schema" />
+  <Step status="done" title="Read files" description="12 paths" />
+  <Step status="running" title="Edit schema">
+    <pre>{"ALTER TABLE reorder_queue …"}</pre>
+  </Step>
+  <Step status="pending" title="Open PR" />
 </Steps>`,
     api: [
-      { name: 'title / open', type: 'ReactNode / boolean', behavior: 'Header and collapsible state.' },
-      { name: 'Step status', type: 'pending | running | done | error', behavior: 'Icon and emphasis.' },
+      {
+        name: 'Steps title',
+        type: 'ReactNode',
+        behavior: 'Collapsible header label. Truncates on overflow.',
+      },
+      {
+        name: 'Steps open / defaultOpen / onOpenChange',
+        type: 'boolean / boolean / (open) => void',
+        behavior: 'Controlled or uncontrolled disclosure. defaultOpen defaults to true.',
+      },
+      {
+        name: 'Step status',
+        type: 'pending | running | done | error',
+        behavior: 'Icon, title emphasis, aria-current on running, and sr-only status prefix.',
+      },
+      {
+        name: 'Step title / description',
+        type: 'ReactNode / ReactNode',
+        behavior: 'Primary label (wraps) and optional secondary line. Both break long strings.',
+      },
+      {
+        name: 'Step children',
+        type: 'ReactNode',
+        behavior: 'Optional body under the description. pre/code get compact agent-output styling.',
+      },
     ],
   },
   {

@@ -63,6 +63,28 @@ function Frame({ children, className }: { children: React.ReactNode; className?:
   );
 }
 
+function StepsDemoBlock({
+  label,
+  description,
+  children,
+}: {
+  label: string;
+  description?: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="min-w-0">
+      <div className="mb-2.5 flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
+        <p className="text-[11px] font-medium tracking-wide text-foreground uppercase">{label}</p>
+        {description ? (
+          <p className="text-[12px] text-muted-foreground">{description}</p>
+        ) : null}
+      </div>
+      {children}
+    </div>
+  );
+}
+
 export function AiComponentPreview({ name }: { name: AiComponentName }) {
   switch (name) {
     case 'text-shimmer':
@@ -202,12 +224,83 @@ export function AiComponentPreview({ name }: { name: AiComponentName }) {
       );
     case 'steps':
       return (
-        <Frame>
-          <Steps title="Agent steps" defaultOpen>
-            <Step status="done" title="Read POS export" description="3 files" />
-            <Step status="running" title="Score stockout risk" description="68%" />
-            <Step status="pending" title="Draft supplier emails" />
-          </Steps>
+        <Frame className="registry-block flex w-full items-start justify-center overflow-auto p-6">
+          <div className="flex w-full max-w-xl flex-col gap-8">
+            <StepsDemoBlock label="Default" description="Mixed status mid-run.">
+              <Steps title="Agent steps" defaultOpen>
+                <Step status="done" title="Read POS export" description="3 files" />
+                <Step status="running" title="Score stockout risk" description="68%" />
+                <Step status="pending" title="Draft supplier emails" />
+              </Steps>
+            </StepsDemoBlock>
+
+            <StepsDemoBlock label="All statuses" description="Pending, running, done, and error.">
+              <Steps title="Status catalog" defaultOpen>
+                <Step status="done" title="Resolved inventory snapshot" description="Cached 12m ago" />
+                <Step status="running" title="Scoring stockout risk" description="68%" />
+                <Step status="error" title="Push reorder to ERP" description="HTTP 503 from vendor gateway" />
+                <Step status="pending" title="Notify store managers" />
+              </Steps>
+            </StepsDemoBlock>
+
+            <StepsDemoBlock
+              label="Long content"
+              description="Wrapped titles, long descriptions, and nested body output."
+            >
+              <Steps title="Reconciliation run" defaultOpen>
+                <Step
+                  status="done"
+                  title="Fetch last 90 days of POS line items for every store in the Pacific region"
+                  description="Joined sales.line_items with inventory.snapshots across 48 stores and three warehouses. 1.2M rows after dedupe."
+                >
+                  <pre>{`SELECT store_id, sku, SUM(qty)
+FROM pos.line_items
+WHERE sold_at >= now() - interval '90 days'
+GROUP BY 1, 2`}</pre>
+                </Step>
+                <Step
+                  status="running"
+                  title="Build a multi-week replenishment plan that respects lead times, case packs, and cold-chain constraints"
+                  description="Optimizing against service-level targets while keeping total outbound under carrier capacity."
+                />
+                <Step
+                  status="pending"
+                  title="Open a draft PR with migration + runbook"
+                  description="Includes rollback notes and on-call checklist."
+                />
+              </Steps>
+            </StepsDemoBlock>
+
+            <StepsDemoBlock label="Short steps" description="Title-only rows still keep a readable connector.">
+              <Steps title="Quick path" defaultOpen>
+                <Step status="done" title="Parse" />
+                <Step status="done" title="Validate" />
+                <Step status="running" title="Apply" />
+                <Step status="pending" title="Verify" />
+              </Steps>
+            </StepsDemoBlock>
+
+            <StepsDemoBlock label="Single step" description="No connector when only one item.">
+              <Steps title="One-shot" defaultOpen>
+                <Step status="running" title="Generating summary" description="Streaming…" />
+              </Steps>
+            </StepsDemoBlock>
+
+            <StepsDemoBlock label="Completed" description="All steps done.">
+              <Steps title="Nightly import" defaultOpen>
+                <Step status="done" title="Download feed" description="ok" />
+                <Step status="done" title="Normalize rows" description="14,208" />
+                <Step status="done" title="Upsert warehouse" description="2.1s" />
+              </Steps>
+            </StepsDemoBlock>
+
+            <StepsDemoBlock label="Collapsed" description="defaultOpen={false} — expand to inspect.">
+              <Steps title="Hidden detail" defaultOpen={false}>
+                <Step status="done" title="Warm cache" />
+                <Step status="done" title="Prefetch schema" />
+              </Steps>
+            </StepsDemoBlock>
+          </div>
         </Frame>
       );
     case 'tool':
