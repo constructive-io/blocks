@@ -15,6 +15,7 @@ import { ChevronRight, X } from 'lucide-react';
 import { Button } from '@constructive-io/ui/button';
 
 import { ConstructiveMark } from '@/components/brand/constructive-mark';
+import { AI_COMPONENTS } from '@/lib/ai-components';
 import { APPLICATION_BLOCKS } from '@/lib/application-blocks';
 import { COMPONENT_DOC_SEQUENCE } from '@/lib/component-doc-navigation';
 import { FEATURE_PACK_DOCS } from '@/lib/feature-packs';
@@ -147,25 +148,33 @@ export const SiteSidebar = forwardRef<HTMLElement, SiteSidebarProps>(function Si
 ) {
   const pathname = normalizePath(usePathname() ?? '');
   const onComponents =
-    pathname.startsWith('/blocks/ui/') ||
-    pathname === '/blocks/command-palette' ||
-    pathname === '/blocks/ai';
+    pathname.startsWith('/blocks/ui/') || pathname === '/blocks/command-palette';
+  const onAi = pathname === '/blocks/ai' || pathname.startsWith('/blocks/ai/');
   const onBillingDocs = pathname === '/blocks/billing' || pathname.startsWith('/blocks/billing/');
   const onFoundations = pathname === '/' || pathname === '/blocks' || pathname === '/blocks/styling';
 
   const [foundationsOpen, setFoundationsOpen] = useState(true);
   const [componentsOpen, setComponentsOpen] = useState(true);
+  const [aiOpen, setAiOpen] = useState(true);
 
   // Expand the section that owns the active route so deep links stay visible
   useEffect(() => {
     if (onComponents) setComponentsOpen(true);
+    if (onAi) setAiOpen(true);
     if (onFoundations) setFoundationsOpen(true);
-  }, [onComponents, onFoundations]);
+  }, [onComponents, onAi, onFoundations]);
 
   const componentLinks = COMPONENT_DOC_SEQUENCE.map((component) => ({
     href: component.href,
     label: component.title,
   }));
+  const aiLinks = [
+    { href: '/blocks/ai', label: 'Overview' },
+    ...AI_COMPONENTS.map((component) => ({
+      href: `/blocks/ai/${component.name}`,
+      label: component.title,
+    })),
+  ];
   const featurePackLinks = FEATURE_PACK_DOCS.map((pack) => ({
     href: `/blocks/features/${pack.id}`,
     label: pack.title,
@@ -293,6 +302,28 @@ export const SiteSidebar = forwardRef<HTMLElement, SiteSidebarProps>(function Si
           >
             <ul className="flex flex-col gap-0.5">
               {componentLinks.map(({ href, label }) => {
+                const active = pathname === href;
+                return (
+                  <li key={href}>
+                    <NavLink href={href} active={active} onNavigate={onNavigate}>
+                      {label}
+                    </NavLink>
+                  </li>
+                );
+              })}
+            </ul>
+          </NavSection>
+        </div>
+
+        <div className="mt-3">
+          <NavSection
+            title="AI"
+            open={aiOpen}
+            onToggle={() => setAiOpen((v) => !v)}
+            count={aiLinks.length}
+          >
+            <ul className="flex flex-col gap-0.5">
+              {aiLinks.map(({ href, label }) => {
                 const active = pathname === href;
                 return (
                   <li key={href}>

@@ -1,5 +1,6 @@
 import type { MetadataRoute } from 'next';
 
+import { AI_COMPONENTS } from '@/lib/ai-components';
 import { APPLICATION_BLOCKS } from '@/lib/application-blocks';
 import { BASE_PRIMITIVES } from '@/lib/base-primitives';
 import { BILLING_BLOCKS } from '@/lib/billing-blocks';
@@ -18,6 +19,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
     ...FEATURE_PACK_DOCS.map(({ id }) => `/blocks/features/${id}`),
     '/blocks/command-palette',
     '/blocks/ai',
+    ...AI_COMPONENTS.map(({ name }) => `/blocks/ai/${name}`),
     ...SOURCE_BLOCKS.map(({ name }) => `/blocks/${name}`),
     ...APPLICATION_BLOCKS.map(({ name }) => `/blocks/${name}`),
     '/blocks/console-kit',

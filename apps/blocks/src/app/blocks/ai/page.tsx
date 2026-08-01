@@ -10,10 +10,12 @@ import {
   TableRow,
 } from '@constructive-io/ui/table';
 
+import Link from 'next/link';
+
 import { AiShowcaseDemo } from '@/components/ai-showcase/ai-showcase-demo';
 import { CodeBlock } from '@/components/docs/code-block';
-import { ComponentDocPagination } from '@/components/docs/component-doc-pagination';
 import { DocSection } from '@/components/docs/doc-section';
+import { AI_COMPONENTS } from '@/lib/ai-components';
 import { AI_DOC } from '@/lib/ai-docs';
 import { registryAdd } from '@/lib/install-mode';
 import { OG_IMAGE, withBase } from '@/lib/site';
@@ -151,7 +153,27 @@ export default function AiPage() {
         <ApiTable />
       </DocSection>
 
-      <ComponentDocPagination current="ai" />
+      <DocSection
+        description="Every surface in the AI kit has its own page under this section."
+        id="components"
+        title="Components"
+      >
+        <ul className="grid gap-2 sm:grid-cols-2">
+          {AI_COMPONENTS.map((component) => (
+            <li key={component.name} className="min-w-0">
+              <Link
+                href={`/blocks/ai/${component.name}`}
+                className="flex min-h-16 flex-col rounded-xl border border-border/60 bg-card p-3 shadow-card outline-none transition-colors duration-150 hover:bg-accent/40 focus-visible:ring-2 focus-visible:ring-ring"
+              >
+                <span className="text-sm font-semibold text-foreground">{component.title}</span>
+                <span className="mt-1 line-clamp-2 text-pretty text-xs leading-5 text-muted-foreground">
+                  {component.description}
+                </span>
+              </Link>
+            </li>
+          ))}
+        </ul>
+      </DocSection>
     </article>
   );
 }
