@@ -6,12 +6,8 @@ import * as React from 'react';
 import { cn } from '../../lib/utils';
 import { Collapsible, CollapsiblePanel, CollapsibleTrigger } from '../collapsible';
 
-/**
- * Rail geometry — integer-friendly px, no transforms on the 1px rule.
- * Marker is a solid disk filling the rail; the rule is centered under it.
- */
+/** Marker diameter / rail width (px). */
 const RAIL = 14;
-const LINE_LEFT = (RAIL - 1) / 2; // 6.5
 
 type StepsProps = {
 	children: React.ReactNode;
@@ -72,11 +68,12 @@ function StepMarker({ status }: { status: StepStatus }) {
 		<span
 			data-slot="step-marker"
 			className={cn(
-				'absolute top-0 left-0 z-10 flex items-center justify-center rounded-full',
+				// relative so it participates in rail layout; z-10 sits above the absolute rule
+				'relative z-10 flex shrink-0 items-center justify-center rounded-full',
 				status === 'done' && 'bg-success text-white',
 				status === 'running' && 'bg-primary/15 text-primary',
 				status === 'error' && 'bg-destructive text-white',
-				status === 'pending' && 'border-2 border-border bg-background',
+				status === 'pending' && 'border-2 border-muted-foreground/40 bg-background',
 			)}
 			style={{ width: RAIL, height: RAIL }}
 		>
@@ -90,37 +87,55 @@ function StepMarker({ status }: { status: StepStatus }) {
 }
 
 /**
- * Timeline step: solid disk markers + 1px rule on a shared mid-axis.
+ * Continuous timeline:
  *
- * Both the connector and the marker are positioned from the rail origin
- * without translateX, so a 1px line stays crisp and centered through every disk.
+ * ```
+ *   ┃   absolute rule: left: calc(50% - 0.5px)  ← crisp 1px mid-axis
+ *   ●   relative disk (same rail, items-center)
+ *   ┃   flex-1 under the disk (hidden on last)
+ *   ●
+ *   ┃
+ *   ○
+ * ```
+ *
+ * The rule is drawn behind the disks and spans the full rail height so it
+ * threads every marker center. Disks punch a hole with their own fill.
  */
 function Step({ children, title, description, status = 'pending', className }: StepProps) {
 	return (
 		<li
 			data-slot="step"
 			data-status={status}
-			className={cn('group/step relative flex', className)}
+			className={cn('group/step flex items-stretch gap-3', className)}
 		>
+			{/* Rail stretches to full step height; children stack on a centered axis */}
 			<div
 				data-slot="step-rail"
-				className="relative shrink-0 self-stretch"
+				className="relative flex shrink-0 flex-col items-center"
 				style={{ width: RAIL }}
 			>
+				{/* Full-height rule, pixel-snapped to the rail mid-axis */}
 				<span
 					aria-hidden
 					data-slot="step-connector"
 					className={cn(
 						'pointer-events-none absolute top-0 w-px bg-border',
-						// Full row… last step stops at disk center (half of RAIL)
+						// Through every marker… stop at last disk’s center
 						'bottom-0 group-last/step:bottom-auto group-last/step:h-[7px]',
 					)}
-					style={{ left: LINE_LEFT }}
+					style={{ left: 'calc(50% - 0.5px)' }}
 				/>
+
 				<StepMarker status={status} />
+
+				{/* Flex spacer keeps rail height when content is short; line is absolute so this is layout only */}
+				<span
+					aria-hidden
+					className="min-h-0 w-px flex-1 group-last/step:hidden"
+				/>
 			</div>
 
-			<div className={cn('min-w-0 flex-1 pl-3 text-[13px]', 'pb-4 group-last/step:pb-0')}>
+			<div className={cn('min-w-0 flex-1 text-[13px]', 'pb-4 group-last/step:pb-0')}>
 				<div
 					className={cn(
 						'flex items-center font-medium leading-none',
