@@ -639,6 +639,16 @@
         "types": "./dist/components/toast/index.d.cts",
         "default": "./dist/components/toast/index.cjs"
       }
+    },
+    "./ai": {
+      "import": {
+        "types": "./dist/components/ai/index.d.ts",
+        "default": "./dist/components/ai/index.js"
+      },
+      "require": {
+        "types": "./dist/components/ai/index.d.cts",
+        "default": "./dist/components/ai/index.cjs"
+      }
     }
   },
   "main": "./dist/index.cjs",

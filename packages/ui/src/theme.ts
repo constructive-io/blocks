@@ -252,6 +252,15 @@ export const constructiveTheme = {
 		'.animate-shimmer': {
 			animation: 'shimmer 2s ease-in-out infinite',
 		},
+		'.animate-ai-shimmer-text': {
+			animation: 'ai-shimmer-text 1.4s linear infinite',
+		},
+		'.animate-ai-pixel-on': {
+			animation: 'ai-pixel-on 650ms ease-in-out infinite',
+		},
+		'.animate-ai-fade-up': {
+			animation: 'ai-fade-up 300ms cubic-bezier(0.23, 1, 0.32, 1) both',
+		},
 	},
 	keyframes: {
 		'pulse-glow': {
@@ -302,6 +311,40 @@ export const constructiveTheme = {
 		},
 		'shimmer-slide': {
 			to: { transform: 'translateX(100%)' },
+		},
+		// AI / agentic surfaces (Beautiful UI motion craft, Constructive tokens)
+		'ai-shimmer-text': {
+			'0%': { 'background-position': '100% 0' },
+			'100%': { 'background-position': '-100% 0' },
+		},
+		'ai-pixel-on': {
+			'0%, 100%': { opacity: '0.15' },
+			'40%, 60%': { opacity: '0.95' },
+		},
+		'ai-fade-up': {
+			from: { opacity: '0', transform: 'translateY(6px)' },
+			to: { opacity: '1', transform: 'translateY(0)' },
+		},
+		'ai-bounce-dots': {
+			'0%, 80%, 100%': { transform: 'scale(0.6)', opacity: '0.4' },
+			'40%': { transform: 'scale(1)', opacity: '1' },
+		},
+		'ai-typing': {
+			'0%, 60%, 100%': { transform: 'translateY(0)', opacity: '0.4' },
+			'30%': { transform: 'translateY(-3px)', opacity: '1' },
+		},
+		'ai-wave': {
+			'0%, 100%': { transform: 'scaleY(0.5)' },
+			'50%': { transform: 'scaleY(1)' },
+		},
+		'ai-pulse-dot': {
+			'0%, 100%': { transform: 'scale(0.85)', opacity: '0.5' },
+			'50%': { transform: 'scale(1.1)', opacity: '1' },
+		},
+		'ai-loading-dots': {
+			'0%, 20%': { opacity: '0' },
+			'40%': { opacity: '1' },
+			'100%': { opacity: '0' },
 		},
 	},
 	globalCss: {

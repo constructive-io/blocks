@@ -98,6 +98,18 @@ const clientFiles = new Set([
 	'storage-empty-state.tsx',
 	'upload-dropzone.tsx',
 	'use-mobile.ts',
+	// AI / agentic
+	'text-shimmer.tsx',
+	'agent-loader.tsx',
+	'prompt-input.tsx',
+	'message.tsx',
+	'markdown.tsx',
+	'code-block.tsx',
+	'response-stream.tsx',
+	'chat-container.tsx',
+	'scroll-button.tsx',
+	'system-message.tsx',
+	'use-throttled-text.ts',
 ]);
 
 function sourcePathForRegistryPath(registryPath: string): string {
