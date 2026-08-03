@@ -1051,6 +1051,370 @@
           "type": "registry:lib"
         }
       ]
+    },
+    {
+      "name": "app-kit-core",
+      "type": "registry:block",
+      "title": "Constructive App Kit Core",
+      "description": "Typed, server-safe application resources, queries, actions, scope partitioning, schema validation, and opt-in client runtime.",
+      "docs": "Install this root to define Constructive-native application contracts without choosing a view family. Import the client runtime explicitly when a connected view needs TanStack Query. Credentials never belong in definitions or AppScope.\n\nGuide: https://constructive-io.github.io/blocks/blocks/app-kit/",
+      "dependencies": [
+        "@tanstack/react-query"
+      ],
+      "meta": {
+        "constructive": {
+          "version": 1,
+          "family": "app-kit",
+          "kind": "runtime",
+          "boundary": "mixed",
+          "provider": "app-kit",
+          "dataShapes": ["record", "collection", "aggregate", "temporal"],
+          "intents": ["define-resources", "load-data", "execute-actions", "validate-schema"],
+          "capabilities": ["resource-contracts", "query-contracts", "action-contracts", "scoped-cache", "schema-validation", "navigation-adapters"],
+          "slots": ["record-opener", "url-state-adapter"],
+          "events": ["query-settled", "action-settled", "scope-changed"],
+          "compatibleWith": ["app-kit-data", "app-kit-board", "app-kit-dashboard", "app-kit-calendar", "app-kit-workflow", "app-kit-event-studio"]
+        }
+      },
+      "files": [
+        {
+          "path": "registry/constructive/blocks/app-kit/core/contracts.ts",
+          "target": "src/blocks/app-kit/core/contracts.ts",
+          "type": "registry:lib"
+        },
+        {
+          "path": "registry/constructive/blocks/app-kit/core/navigation.ts",
+          "target": "src/blocks/app-kit/core/navigation.ts",
+          "type": "registry:lib"
+        },
+        {
+          "path": "registry/constructive/blocks/app-kit/core/schema-validation.ts",
+          "target": "src/blocks/app-kit/core/schema-validation.ts",
+          "type": "registry:lib"
+        },
+        {
+          "path": "registry/constructive/blocks/app-kit/core/scope.ts",
+          "target": "src/blocks/app-kit/core/scope.ts",
+          "type": "registry:lib"
+        },
+        {
+          "path": "registry/constructive/blocks/app-kit/core/runtime.tsx",
+          "target": "src/blocks/app-kit/core/runtime.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/app-kit/core/index.ts",
+          "target": "src/blocks/app-kit/core/index.ts",
+          "type": "registry:lib"
+        }
+      ]
+    },
+    {
+      "name": "app-kit-data",
+      "type": "registry:block",
+      "title": "Constructive App Kit Data Views",
+      "description": "Controlled and connected tables, lists, cards, record details, forms, relations, collection controls, and action bars.",
+      "docs": "Use this root for record and collection applications. Loaders stay server-driven, relation pickers search remotely, ambiguous identities fail read-only, and every view distinguishes loading, empty, denied, and error states.\n\nGuide: https://constructive-io.github.io/blocks/blocks/app-kit/",
+      "dependencies": [
+        "@tanstack/react-query",
+        "lucide-react"
+      ],
+      "meta": {
+        "constructive": {
+          "version": 1,
+          "family": "app-kit",
+          "kind": "view",
+          "boundary": "client",
+          "provider": "app-kit",
+          "dataShapes": ["record", "collection"],
+          "intents": ["browse", "search", "filter", "sort", "edit", "relate", "bulk-act"],
+          "capabilities": ["table", "list", "cards", "record-detail", "generated-form", "relation-picker", "relation-panel", "pagination", "bulk-actions"],
+          "slots": ["cell-renderer", "record-renderer", "form-field", "toolbar", "footer"],
+          "events": ["state-change", "open-record", "submit", "link-record", "unlink-record", "bulk-action"],
+          "compatibleWith": ["app-kit-core", "app-kit-board", "app-kit-dashboard", "app-kit-calendar", "app-kit-workflow", "app-kit-event-studio"]
+        }
+      },
+      "files": [
+        {
+          "path": "registry/constructive/blocks/app-kit/data/types.ts",
+          "target": "src/blocks/app-kit/data/types.ts",
+          "type": "registry:lib"
+        },
+        {
+          "path": "registry/constructive/blocks/app-kit/data/states.tsx",
+          "target": "src/blocks/app-kit/data/states.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/app-kit/data/controls.tsx",
+          "target": "src/blocks/app-kit/data/controls.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/app-kit/data/collections.tsx",
+          "target": "src/blocks/app-kit/data/collections.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/app-kit/data/detail-form.tsx",
+          "target": "src/blocks/app-kit/data/detail-form.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/app-kit/data/relations.tsx",
+          "target": "src/blocks/app-kit/data/relations.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/app-kit/data/action-bars.tsx",
+          "target": "src/blocks/app-kit/data/action-bars.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/app-kit/data/index.ts",
+          "target": "src/blocks/app-kit/data/index.ts",
+          "type": "registry:lib"
+        }
+      ]
+    },
+    {
+      "name": "app-kit-board",
+      "type": "registry:block",
+      "title": "Constructive App Kit Board",
+      "description": "A typed controlled board and connected resource wrapper with semantic moves, keyboard alternatives, and mutation rollback.",
+      "docs": "Board movement is disabled until the host supplies an explicit semantic action. Pointer and keyboard moves use the same action contract, restore focus, and roll back optimistic state on denial or failure.\n\nGuide: https://constructive-io.github.io/blocks/blocks/app-kit/",
+      "dependencies": [
+        "lucide-react"
+      ],
+      "meta": {
+        "constructive": {
+          "version": 1,
+          "family": "app-kit",
+          "kind": "view",
+          "boundary": "client",
+          "provider": "app-kit",
+          "dataShapes": ["collection", "board"],
+          "intents": ["plan", "prioritize", "move-records", "inspect"],
+          "capabilities": ["board", "typed-columns", "semantic-move", "keyboard-move", "optimistic-rollback"],
+          "slots": ["card"],
+          "events": ["open-record", "move-record", "move-denied"],
+          "compatibleWith": ["app-kit-core", "app-kit-data", "app-kit-dashboard", "app-kit-calendar", "app-kit-workflow", "app-kit-event-studio"]
+        }
+      },
+      "files": [
+        {
+          "path": "registry/constructive/blocks/app-kit/board/board.tsx",
+          "target": "src/blocks/app-kit/board/board.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/app-kit/board/connected-board.tsx",
+          "target": "src/blocks/app-kit/board/connected-board.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/app-kit/board/index.ts",
+          "target": "src/blocks/app-kit/board/index.ts",
+          "type": "registry:lib"
+        }
+      ]
+    },
+    {
+      "name": "app-kit-dashboard",
+      "type": "registry:block",
+      "title": "Constructive App Kit Dashboard",
+      "description": "Explicit analytical widgets and a versioned, replaceable layout store on the accessible SVG and SSR foundation from TanStack Charts.",
+      "docs": "Dashboard widgets always use explicit analytical loaders; they never derive totals from a paginated collection page. Runtime customization is limited to an approved typed catalog, while layout persistence is replaceable.\n\nGuide: https://constructive-io.github.io/blocks/blocks/app-kit/",
+      "dependencies": [
+        "@tanstack/charts@0.6.4",
+        "@tanstack/charts-scales@0.6.4",
+        "@tanstack/react-charts@0.6.4",
+        "d3-scale@4.0.2",
+        "lucide-react"
+      ],
+      "meta": {
+        "constructive": {
+          "version": 1,
+          "family": "app-kit",
+          "kind": "view",
+          "boundary": "client",
+          "provider": "app-kit",
+          "dataShapes": ["aggregate", "series", "breakdown"],
+          "intents": ["monitor", "analyze", "compare", "configure-layout"],
+          "capabilities": ["kpi", "bar-chart", "line-chart", "breakdown-table", "widget-catalog", "layout-store", "layout-persistence"],
+          "slots": ["widget"],
+          "events": ["layout-change"],
+          "compatibleWith": ["app-kit-core", "app-kit-data", "app-kit-board", "app-kit-calendar", "app-kit-workflow", "app-kit-event-studio"]
+        }
+      },
+      "files": [
+        {
+          "path": "registry/constructive/blocks/app-kit/dashboard/widgets.tsx",
+          "target": "src/blocks/app-kit/dashboard/widgets.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/app-kit/dashboard/layout-store.ts",
+          "target": "src/blocks/app-kit/dashboard/layout-store.ts",
+          "type": "registry:lib"
+        },
+        {
+          "path": "registry/constructive/blocks/app-kit/dashboard/dashboard.tsx",
+          "target": "src/blocks/app-kit/dashboard/dashboard.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/app-kit/dashboard/connected-dashboard.tsx",
+          "target": "src/blocks/app-kit/dashboard/connected-dashboard.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/app-kit/dashboard/persisted-dashboard.tsx",
+          "target": "src/blocks/app-kit/dashboard/persisted-dashboard.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/app-kit/dashboard/index.ts",
+          "target": "src/blocks/app-kit/dashboard/index.ts",
+          "type": "registry:lib"
+        }
+      ]
+    },
+    {
+      "name": "app-kit-calendar",
+      "type": "registry:block",
+      "title": "Constructive App Kit Calendar",
+      "description": "Localized controlled month and agenda views with explicit timezones and connected range-query loading.",
+      "docs": "The host owns record opening and editing, while the connected wrapper loads only the visible range. Recurrence, resource scheduling, and drag rescheduling are intentionally outside V1.\n\nGuide: https://constructive-io.github.io/blocks/blocks/app-kit/",
+      "dependencies": [
+        "lucide-react"
+      ],
+      "meta": {
+        "constructive": {
+          "version": 1,
+          "family": "app-kit",
+          "kind": "view",
+          "boundary": "client",
+          "provider": "app-kit",
+          "dataShapes": ["temporal", "collection"],
+          "intents": ["schedule", "browse-by-date", "inspect"],
+          "capabilities": ["temporal", "month", "agenda", "range-query", "localization", "timezone"],
+          "events": ["range-change", "view-change", "open-record"],
+          "compatibleWith": ["app-kit-core", "app-kit-data", "app-kit-board", "app-kit-dashboard", "app-kit-workflow", "app-kit-event-studio"]
+        }
+      },
+      "files": [
+        {
+          "path": "registry/constructive/blocks/app-kit/calendar/calendar.tsx",
+          "target": "src/blocks/app-kit/calendar/calendar.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/app-kit/calendar/connected-calendar.tsx",
+          "target": "src/blocks/app-kit/calendar/connected-calendar.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/app-kit/calendar/index.ts",
+          "target": "src/blocks/app-kit/calendar/index.ts",
+          "type": "registry:lib"
+        }
+      ]
+    },
+    {
+      "name": "app-kit-workflow",
+      "type": "registry:block",
+      "title": "Constructive App Kit Workflow UI",
+      "description": "Controlled and connected action surfaces, confirmation and input dialogs, bulk execution, and a multi-step stepper.",
+      "docs": "This root composes application and server actions into accessible interaction surfaces; it is not a durable workflow engine. Validation, permission failures, cancellation, and partial errors remain explicit.\n\nGuide: https://constructive-io.github.io/blocks/blocks/app-kit/",
+      "dependencies": [
+        "lucide-react"
+      ],
+      "meta": {
+        "constructive": {
+          "version": 1,
+          "family": "app-kit",
+          "kind": "composition",
+          "boundary": "client",
+          "provider": "app-kit",
+          "dataShapes": ["record", "collection", "action-input"],
+          "intents": ["execute-action", "confirm", "collect-input", "bulk-execute", "guide-steps"],
+          "capabilities": ["action-button", "action-menu", "input-dialog", "confirmation-dialog", "bulk-execution", "stepper"],
+          "slots": ["action-input", "confirmation-body", "step-content"],
+          "events": ["action-start", "action-settled", "step-change", "cancel"],
+          "compatibleWith": ["app-kit-core", "app-kit-data", "app-kit-board", "app-kit-dashboard", "app-kit-calendar", "app-kit-event-studio"]
+        }
+      },
+      "files": [
+        {
+          "path": "registry/constructive/blocks/app-kit/workflow/actions.tsx",
+          "target": "src/blocks/app-kit/workflow/actions.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/app-kit/workflow/connected-actions.tsx",
+          "target": "src/blocks/app-kit/workflow/connected-actions.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/app-kit/workflow/stepper.tsx",
+          "target": "src/blocks/app-kit/workflow/stepper.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/app-kit/workflow/index.ts",
+          "target": "src/blocks/app-kit/workflow/index.ts",
+          "type": "registry:lib"
+        }
+      ]
+    },
+    {
+      "name": "app-kit-event-studio",
+      "type": "registry:block",
+      "title": "Constructive App Kit Event Studio",
+      "description": "An opt-in page-scale proof starter combining analytical, collection, board, calendar, relation, form, and action views.",
+      "docs": "Event Studio pairs with the supported b2b:storage blueprint recipe and demonstrates explicit analytical loaders, semantic board movement, localized range queries, searchable relations, permission-aware actions, and host-controlled URL state. Supply adapters generated from the final executable GraphQL schema.\n\nGuide: https://constructive-io.github.io/blocks/blocks/app-kit/",
+      "dependencies": [
+        "lucide-react",
+        "zod"
+      ],
+      "meta": {
+        "constructive": {
+          "version": 1,
+          "family": "app-kit",
+          "kind": "starter",
+          "boundary": "mixed",
+          "provider": "app-kit",
+          "dataShapes": ["record", "collection", "aggregate", "temporal", "board"],
+          "intents": ["manage-events", "analyze", "schedule", "publish", "relate-people", "configure-views"],
+          "capabilities": ["event-studio", "dashboard", "collections", "record-detail", "generated-form", "relations", "board", "calendar", "actions", "url-state"],
+          "slots": ["record-opener", "dashboard-layout-store", "url-state-adapter"],
+          "events": ["view-change", "open-record", "move-session", "publish-session", "schedule-session", "link-person"],
+          "compatibleWith": ["app-kit-core", "app-kit-data", "app-kit-board", "app-kit-dashboard", "app-kit-calendar", "app-kit-workflow"]
+        }
+      },
+      "files": [
+        {
+          "path": "registry/constructive/blocks/app-kit/event-studio/definitions.ts",
+          "target": "src/blocks/app-kit/event-studio/definitions.ts",
+          "type": "registry:lib"
+        },
+        {
+          "path": "registry/constructive/blocks/app-kit/event-studio/state.ts",
+          "target": "src/blocks/app-kit/event-studio/state.ts",
+          "type": "registry:lib"
+        },
+        {
+          "path": "registry/constructive/blocks/app-kit/event-studio/event-studio.tsx",
+          "target": "src/blocks/app-kit/event-studio/event-studio.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/app-kit/event-studio/index.ts",
+          "target": "src/blocks/app-kit/event-studio/index.ts",
+          "type": "registry:lib"
+        }
+      ]
     }
   ]
 }

@@ -6,7 +6,8 @@
   "scripts": {
     "build": "tsx scripts/build.ts",
     "smoke:install": "tsx scripts/smoke-install.ts",
-    "test": "tsx --test scripts/compiler.test.ts",
+    "smoke:install:pinned": "tsx scripts/smoke-install.ts --shadcn=pinned",
+    "test": "tsx --test scripts/compiler.test.ts scripts/shadcn-cli.test.ts",
     "clean": "rm -rf public/r registry"
   },
   "devDependencies": {

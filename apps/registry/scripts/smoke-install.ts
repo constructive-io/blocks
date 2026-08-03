@@ -7,10 +7,19 @@ import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
+import {
+	createShadcnAddCommand,
+	createShadcnCli,
+	parseShadcnCliMode,
+	parseShadcnVersion,
+	type ShadcnCli,
+} from './shadcn-cli';
+
 const appDirectory = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const repositoryRoot = path.resolve(appDirectory, '..', '..');
 const publicDirectory = path.join(appDirectory, 'public');
 const temporaryRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'constructive-registry-smoke-'));
+const shadcnCliMode = parseShadcnCliMode(process.argv.slice(2));
 
 type SmokeCase = {
 	name: string;
@@ -21,10 +30,12 @@ type SmokeCase = {
 	expected: string[];
 	expectedCss?: string[];
 	expectedPackages?: string[];
+	expectedPackageVersions?: Readonly<Record<string, string>>;
 	expectedServerFiles?: string[];
 	forbidden?: string[];
 	forbiddenPackages?: string[];
 	items?: string[];
+	nextApp?: boolean;
 	strictNullChecks?: boolean;
 };
 
@@ -191,6 +202,132 @@ const consoleModuleFiles: Record<FeaturePackId, readonly string[]> = {
 	],
 };
 
+const appKitFiles = {
+	'app-kit-core': [
+		'src/blocks/app-kit/core/contracts.ts',
+		'src/blocks/app-kit/core/navigation.ts',
+		'src/blocks/app-kit/core/schema-validation.ts',
+		'src/blocks/app-kit/core/scope.ts',
+		'src/blocks/app-kit/core/runtime.tsx',
+		'src/blocks/app-kit/core/index.ts',
+	],
+	'app-kit-data': [
+		'src/blocks/app-kit/data/types.ts',
+		'src/blocks/app-kit/data/states.tsx',
+		'src/blocks/app-kit/data/controls.tsx',
+		'src/blocks/app-kit/data/collections.tsx',
+		'src/blocks/app-kit/data/detail-form.tsx',
+		'src/blocks/app-kit/data/relations.tsx',
+		'src/blocks/app-kit/data/action-bars.tsx',
+		'src/blocks/app-kit/data/index.ts',
+	],
+	'app-kit-board': [
+		'src/blocks/app-kit/board/board.tsx',
+		'src/blocks/app-kit/board/connected-board.tsx',
+		'src/blocks/app-kit/board/index.ts',
+	],
+	'app-kit-dashboard': [
+		'src/blocks/app-kit/dashboard/widgets.tsx',
+		'src/blocks/app-kit/dashboard/layout-store.ts',
+		'src/blocks/app-kit/dashboard/dashboard.tsx',
+		'src/blocks/app-kit/dashboard/connected-dashboard.tsx',
+		'src/blocks/app-kit/dashboard/persisted-dashboard.tsx',
+		'src/blocks/app-kit/dashboard/index.ts',
+	],
+	'app-kit-calendar': [
+		'src/blocks/app-kit/calendar/calendar.tsx',
+		'src/blocks/app-kit/calendar/connected-calendar.tsx',
+		'src/blocks/app-kit/calendar/index.ts',
+	],
+	'app-kit-workflow': [
+		'src/blocks/app-kit/workflow/actions.tsx',
+		'src/blocks/app-kit/workflow/connected-actions.tsx',
+		'src/blocks/app-kit/workflow/stepper.tsx',
+		'src/blocks/app-kit/workflow/index.ts',
+	],
+	'app-kit-event-studio': [
+		'src/blocks/app-kit/event-studio/definitions.ts',
+		'src/blocks/app-kit/event-studio/state.ts',
+		'src/blocks/app-kit/event-studio/event-studio.tsx',
+		'src/blocks/app-kit/event-studio/index.ts',
+	],
+} as const;
+
+type AppKitRoot = keyof typeof appKitFiles;
+
+const appKitCapabilityRoots = [
+	'app-kit-core',
+	'app-kit-data',
+	'app-kit-board',
+	'app-kit-dashboard',
+	'app-kit-calendar',
+	'app-kit-workflow',
+] as const satisfies readonly AppKitRoot[];
+
+const forbiddenAppKitPackages = [
+	'@constructive-io/sheets',
+	'recharts',
+	'zustand',
+] as const;
+
+function appKitExpectedPackages(root: AppKitRoot): string[] {
+	return [
+		'@tanstack/react-query',
+		...(root === 'app-kit-core' ? [] : ['lucide-react']),
+		...(root === 'app-kit-dashboard' || root === 'app-kit-event-studio'
+			? ['@tanstack/charts', '@tanstack/charts-scales', '@tanstack/react-charts', 'd3-scale']
+			: []),
+		...(root === 'app-kit-event-studio' ? ['zod'] : []),
+	];
+}
+
+function appKitExpectedPackageVersions(root: AppKitRoot): Readonly<Record<string, string>> | undefined {
+	return root === 'app-kit-dashboard' || root === 'app-kit-event-studio'
+		? {
+			'@tanstack/charts': '0.6.4',
+			'@tanstack/charts-scales': '0.6.4',
+			'@tanstack/react-charts': '0.6.4',
+			'd3-scale': '4.0.2',
+		}
+		: undefined;
+}
+
+function forbiddenAppKitFiles(root: AppKitRoot): string[] {
+	return Object.entries(appKitFiles)
+		.filter(([candidate]) => candidate !== root && candidate !== 'app-kit-core')
+		.flatMap(([, files]) => [...files]);
+}
+
+const appKitCapabilityCases: SmokeCase[] = appKitCapabilityRoots.flatMap((root) => [
+	{
+		name: `${root}-default`,
+		items: [root],
+		expected: [...appKitFiles[root]],
+		expectedPackages: appKitExpectedPackages(root),
+		expectedPackageVersions: appKitExpectedPackageVersions(root),
+		expectedServerFiles: root === 'app-kit-core'
+			? appKitFiles['app-kit-core'].filter((file) => !file.endsWith('runtime.tsx'))
+			: undefined,
+		forbidden: forbiddenAppKitFiles(root),
+		forbiddenPackages: [...forbiddenAppKitPackages],
+		strictNullChecks: true,
+	},
+	{
+		name: `${root}-custom`,
+		items: [root],
+		customAliases: true,
+		expected: [...appKitFiles[root]],
+		expectedPackages: appKitExpectedPackages(root),
+		expectedPackageVersions: appKitExpectedPackageVersions(root),
+		expectedServerFiles: root === 'app-kit-core'
+			? appKitFiles['app-kit-core'].filter((file) => !file.endsWith('runtime.tsx'))
+			: undefined,
+		forbidden: forbiddenAppKitFiles(root),
+		forbiddenPackages: [...forbiddenAppKitPackages],
+		strictNullChecks: true,
+	},
+]);
+
 const featurePackManifest = (id: FeaturePackId): string =>
 	`.constructive/feature-packs/${id}.json`;
 
@@ -291,6 +428,163 @@ const presetCases: SmokeCase[] = [
 			.map(presetManifest),
 	],
 }));
+
+const eventStudioNextConsumer = `'use client';
+
+import * as React from 'react';
+import { QueryClient } from '@tanstack/react-query';
+
+import { appSuccess, type AppResourceSource, type AppScope } from '@/blocks/app-kit/core';
+import { AppKitProvider, createAppQueryKey } from '@/blocks/app-kit/core/runtime';
+import { DEFAULT_APP_COLLECTION_STATE } from '@/blocks/app-kit/data';
+import { createDefaultAppDashboardLayout } from '@/blocks/app-kit/dashboard';
+import {
+  createEventStudioDefinitions,
+  EventStudio,
+  type EventStudioAdapter,
+  type EventStudioResourceSources,
+} from '@/blocks/app-kit/event-studio';
+import type { EventStudioViewState } from '@/blocks/app-kit/event-studio/state';
+
+const scope: AppScope = {
+  endpointId: 'data',
+  databaseId: 'registry-smoke',
+  sessionPartition: 'anonymous-build-fixture',
+  organizationId: 'org-smoke',
+  schemaRevision: 'schema-v1',
+  securityRevision: 'security-v1',
+};
+
+function resourceSource(tableName: string, graphQLTypeName: string): AppResourceSource {
+  return {
+    schemaName: 'app_public',
+    tableName,
+    graphQLTypeName,
+    listFieldName: tableName.replace(/_([a-z])/g, (_, letter: string) => letter.toUpperCase()),
+    detailFieldName: graphQLTypeName[0]!.toLowerCase() + graphQLTypeName.slice(1),
+    createMutationName: 'create' + graphQLTypeName,
+    updateMutationName: 'update' + graphQLTypeName,
+  };
+}
+
+const sources: EventStudioResourceSources = {
+  programs: resourceSource('programs', 'Program'),
+  sessions: resourceSource('sessions', 'Session'),
+  people: resourceSource('people', 'Person'),
+  venues: resourceSource('venues', 'Venue'),
+  sessionPeople: resourceSource('session_people', 'SessionPerson'),
+};
+
+const emptyPage = {
+  items: [],
+  pageInfo: { page: 1, pageSize: 25, totalCount: 0, hasNextPage: false, hasPreviousPage: false },
+};
+const success = (data: unknown) => appSuccess(data) as never;
+const adapter: EventStudioAdapter = {
+  listPrograms: async () => success(emptyPage),
+  getProgram: async () => success(null),
+  searchPrograms: async () => success({ items: [], hasMore: false }),
+  createProgram: async () => success(null),
+  updateProgram: async () => success(null),
+  listSessions: async () => success(emptyPage),
+  getSession: async () => success(null),
+  createSession: async () => success(null),
+  listPeople: async () => success(emptyPage),
+  getPerson: async () => success(null),
+  createPerson: async () => success(null),
+  updatePerson: async () => success(null),
+  searchPeople: async () => success({ items: [], hasMore: false }),
+  listVenues: async () => success(emptyPage),
+  getVenue: async () => success(null),
+  createVenue: async () => success(null),
+  updateVenue: async () => success(null),
+  listSessionPeople: async () => success([]),
+  listSessionPersonLinks: async () => success([]),
+  loadBoard: async () => success([]),
+  loadCalendar: async () => success([]),
+  loadSessionCount: async () => success({ value: 4 }),
+  loadPublishedCount: async () => success({ value: 2 }),
+  loadSessionsByStatus: async () => success({
+    rows: [
+      { status: 'Draft', count: 2 },
+      { status: 'Published', count: 2 },
+    ],
+  }),
+  loadSessionsOverTime: async () => success({
+    rows: [
+      { date: '2026-08-01', count: 1 },
+      { date: '2026-08-02', count: 3 },
+    ],
+  }),
+  moveSession: async () => success(null),
+  updateSession: async () => success(null),
+  publishSession: async () => success(null),
+  scheduleSession: async () => success(null),
+  cancelSession: async () => success(null),
+  linkPerson: async () => success(null),
+  unlinkPerson: async () => success(null),
+};
+const definitions = createEventStudioDefinitions(sources, adapter);
+const analyticsInput = { timeZone: 'UTC' };
+
+function createFixtureQueryClient() {
+  const queryClient = new QueryClient();
+  const fixtureData = [
+    [definitions.queries.sessionCount.id, { value: 4 }],
+    [definitions.queries.publishedCount.id, { value: 2 }],
+    [definitions.queries.sessionsByStatus.id, {
+      rows: [
+        { status: 'Draft', count: 2 },
+        { status: 'Published', count: 2 },
+      ],
+    }],
+    [definitions.queries.sessionsOverTime.id, {
+      rows: [
+        { date: '2026-08-01', count: 1 },
+        { date: '2026-08-02', count: 3 },
+      ],
+    }],
+  ] as const;
+  for (const [queryId, data] of fixtureData) {
+    queryClient.setQueryData(createAppQueryKey(scope, queryId, analyticsInput), data);
+  }
+  return queryClient;
+}
+
+const initialState: EventStudioViewState = {
+  view: 'dashboard',
+  collection: 'sessions',
+  collectionState: DEFAULT_APP_COLLECTION_STATE,
+  calendarMonth: { year: 2026, month: 8 },
+  calendarView: 'month',
+};
+const initialLayout = createDefaultAppDashboardLayout([
+  'session-count',
+  'published-count',
+  'sessions-by-status',
+  'sessions-over-time',
+]);
+
+export function EventStudioRegistrySmokeConsumer() {
+  const [queryClient] = React.useState(createFixtureQueryClient);
+  const [state, setState] = React.useState(initialState);
+  const [layout, setLayout] = React.useState(initialLayout);
+
+  return (
+    <AppKitProvider queryClient={queryClient} scope={scope}>
+      <EventStudio
+        analyticsInput={analyticsInput}
+        dashboardLayout={layout}
+        definitions={definitions}
+        onDashboardLayoutChange={setLayout}
+        onStateChange={setState}
+        state={state}
+        timeZone="UTC"
+      />
+    </AppKitProvider>
+  );
+}
+`;
 
 const cases: SmokeCase[] = [
 	{
@@ -466,6 +760,22 @@ export function AiRegistrySmokeConsumer() {
 			presetManifest('full'),
 		],
 	},
+	...appKitCapabilityCases,
+	{
+		name: 'app-kit-event-studio-next16',
+		items: ['app-kit-event-studio'],
+		consumer: eventStudioNextConsumer,
+		expected: [...appKitFiles['app-kit-event-studio']],
+		expectedPackages: appKitExpectedPackages('app-kit-event-studio'),
+		expectedPackageVersions: appKitExpectedPackageVersions('app-kit-event-studio'),
+		expectedServerFiles: [
+			'src/blocks/app-kit/event-studio/definitions.ts',
+			'src/blocks/app-kit/event-studio/state.ts',
+		],
+		forbiddenPackages: [...forbiddenAppKitPackages],
+		nextApp: true,
+		strictNullChecks: true,
+	},
 	...standaloneFeaturePackCases,
 	...consoleModuleCases,
 	...presetCases,
@@ -578,10 +888,14 @@ function prepareConsumer(
 		private: true,
 		version: '0.0.0',
 		dependencies: {
+			...(testCase.nextApp ? { next: '16.2.12' } : {}),
 			react: '19.2.0',
 			'react-dom': '19.2.0',
 		},
 		devDependencies: {
+			...(testCase.nextApp
+				? { '@axe-core/playwright': '4.12.1', '@playwright/test': '1.61.1' }
+				: {}),
 			'@tailwindcss/postcss': '4.1.18',
 			'@types/node': '^24.10.1',
 			'@types/react': '^19.2.0',
@@ -634,6 +948,89 @@ function prepareConsumer(
 	);
 	write(root, 'src/app/globals.css', '@import "tailwindcss";\n');
 	if (testCase.consumer) write(root, 'src/registry-smoke-consumer.tsx', testCase.consumer);
+	if (testCase.nextApp) {
+		write(
+			root,
+			'src/app/layout.tsx',
+			`import type { Metadata } from 'next';
+import type { ReactNode } from 'react';
+import './globals.css';
+
+export const metadata: Metadata = { title: 'Event Studio registry smoke' };
+
+export default function RootLayout({ children }: { children: ReactNode }) {
+	return <html lang="en"><body>{children}</body></html>;
+}
+`,
+		);
+		write(
+			root,
+			'src/app/page.tsx',
+			`import { EventStudioRegistrySmokeConsumer } from '../registry-smoke-consumer';
+
+export default function Page() {
+	return <EventStudioRegistrySmokeConsumer />;
+}
+`,
+		);
+		write(root, 'next-env.d.ts', '/// <reference types="next" />\n/// <reference types="next/image-types/global" />\n');
+		write(
+			root,
+			'playwright.config.ts',
+			`export default {
+	testDir: './e2e',
+	use: { baseURL: process.env.BASE_URL },
+};
+`,
+		);
+		write(
+			root,
+			'e2e/hydration.spec.ts',
+			`import AxeBuilder from '@axe-core/playwright';
+import { expect, test } from '@playwright/test';
+
+test('Event Studio hydrates in a production App Router build', async ({ page }) => {
+	const errors: string[] = [];
+	page.on('console', (message) => {
+		if (message.type() === 'error') errors.push(message.text());
+	});
+	page.on('pageerror', (error) => errors.push(error.message));
+
+	const serverResponse = await page.request.get('/');
+	expect(serverResponse.ok()).toBe(true);
+	const serverMarkup = await serverResponse.text();
+	expect(serverMarkup).toContain('aria-roledescription="chart"');
+
+	await page.goto('/');
+	await expect(page.locator('[data-app-kit-starter="event-studio"]')).toBeVisible();
+	await expect(page.getByRole('heading', { name: 'Event Studio' })).toBeVisible();
+	await expect(page.getByText('Explicit count query')).toBeVisible();
+	await expect(page.getByRole('img', { name: 'Sessions by status' })).toBeVisible();
+	await expect(page.getByRole('img', { name: 'Sessions over time' })).toBeVisible();
+	const dashboardA11y = await new AxeBuilder({ page }).analyze();
+	expect(dashboardA11y.violations).toEqual([]);
+	await page.getByRole('tab', { name: 'Collections' }).click();
+	await expect(page.getByRole('tab', { name: 'Collections' })).toHaveAttribute('aria-selected', 'true');
+	const collectionA11y = await new AxeBuilder({ page }).analyze();
+	expect(collectionA11y.violations).toEqual([]);
+	expect(errors).toEqual([]);
+});
+
+test('Event Studio keeps primary navigation usable on mobile with reduced motion', async ({ page }) => {
+	await page.setViewportSize({ width: 390, height: 844 });
+	await page.emulateMedia({ reducedMotion: 'reduce' });
+	await page.goto('/');
+	await page.getByRole('tab', { name: 'Schedule' }).click();
+	await expect(page.getByRole('tab', { name: 'Schedule' })).toHaveAttribute('aria-selected', 'true');
+	await expect(page.getByLabel('Schedule').getByText('UTC', { exact: true })).toBeVisible();
+	const hasDocumentOverflow = await page.evaluate(() =>
+		document.documentElement.scrollWidth > window.innerWidth
+	);
+	expect(hasDocumentOverflow).toBe(false);
+});
+`,
+		);
+	}
 
 	const aliases = testCase.customAliases
 		? {
@@ -688,6 +1085,54 @@ async function run(
 		child.on('exit', (code) => resolve(code ?? 1));
 	});
 	if (exitCode !== 0) throw new Error(`${description} exited with code ${exitCode}.`);
+}
+
+async function capture(
+	command: string,
+	arguments_: string[],
+	cwd: string,
+	description: string,
+): Promise<string> {
+	return await new Promise<string>((resolve, reject) => {
+		const child = spawn(command, arguments_, {
+			cwd,
+			env: process.env,
+			stdio: ['ignore', 'pipe', 'pipe'],
+		});
+		let stdout = '';
+		let stderr = '';
+		child.stdout.on('data', (chunk: Buffer) => {
+			stdout += chunk.toString();
+		});
+		child.stderr.on('data', (chunk: Buffer) => {
+			stderr += chunk.toString();
+		});
+		child.on('error', reject);
+		child.on('close', (code) => {
+			if (code === 0) {
+				resolve(stdout);
+				return;
+			}
+			reject(
+				new Error(
+					`${description} exited with code ${code ?? 1}.${stderr.trim() ? `\n${stderr.trim()}` : ''}`,
+				),
+			);
+		});
+	});
+}
+
+async function resolveShadcnCli(): Promise<ShadcnCli> {
+	const arguments_ = shadcnCliMode === 'latest'
+		? ['dlx', 'shadcn@latest', '--version']
+		: ['exec', 'shadcn', '--version'];
+	const output = await capture(
+		'pnpm',
+		arguments_,
+		appDirectory,
+		`shadcn ${shadcnCliMode} version probe`,
+	);
+	return createShadcnCli(shadcnCliMode, parseShadcnVersion(output));
 }
 
 async function startPackageRegistry(): Promise<{
@@ -772,17 +1217,89 @@ async function startPackageRegistry(): Promise<{
 	};
 }
 
-async function install(root: string, itemNames: readonly string[]): Promise<void> {
+async function install(
+	root: string,
+	itemNames: readonly string[],
+	shadcnCli: ShadcnCli,
+): Promise<void> {
+	const command = createShadcnAddCommand(shadcnCli, itemNames, root);
 	await run(
-		'pnpm',
-		['exec', 'shadcn', 'add', ...itemNames.map((itemName) => `@constructive/${itemName}`), '--cwd', root, '--yes'],
+		command.command,
+		command.arguments,
 		appDirectory,
-		`pnpm dlx shadcn@latest add ${itemNames.map((itemName) => `@constructive/${itemName}`).join(' ')}`,
+		command.display,
 	);
 }
 
 async function typecheck(root: string, itemName: string): Promise<void> {
 	await run('pnpm', ['exec', 'tsc', '--pretty', 'false', '-p', 'tsconfig.json'], root, `${itemName} typecheck`);
+}
+
+async function reservePort(): Promise<number> {
+	const probe = http.createServer();
+	await new Promise<void>((resolve) => probe.listen(0, '127.0.0.1', resolve));
+	const address = probe.address();
+	if (!address || typeof address === 'string') throw new Error('Unable to reserve a Next.js smoke port.');
+	await new Promise<void>((resolve) => probe.close(() => resolve()));
+	return address.port;
+}
+
+async function waitForHttp(origin: string, exited: Promise<never>): Promise<void> {
+	for (let attempt = 0; attempt < 120; attempt += 1) {
+		const ready = await Promise.race([
+			new Promise<boolean>((resolve) => {
+				const request = http.get(origin, (response) => {
+					response.resume();
+					resolve(response.statusCode === 200);
+				});
+				request.on('error', () => resolve(false));
+			}),
+			exited,
+		]);
+		if (ready) return;
+		await new Promise((resolve) => setTimeout(resolve, 250));
+	}
+	throw new Error(`Next.js smoke server did not become ready at ${origin}.`);
+}
+
+async function verifyNextApp(root: string, testCase: SmokeCase): Promise<void> {
+	await run(
+		'pnpm',
+		['exec', 'next', 'build'],
+		root,
+		`${testCase.name} Next.js 16 production build`,
+		{ ...process.env, NEXT_TELEMETRY_DISABLED: '1' },
+	);
+	const port = await reservePort();
+	const origin = `http://127.0.0.1:${port}`;
+	const child = spawn(
+		'pnpm',
+		['exec', 'next', 'start', '--hostname', '127.0.0.1', '--port', String(port)],
+		{
+			cwd: root,
+			env: { ...process.env, NEXT_TELEMETRY_DISABLED: '1' },
+			stdio: ['ignore', 'pipe', 'pipe'],
+		},
+	);
+	child.stdout.pipe(process.stdout);
+	child.stderr.pipe(process.stderr);
+	const exited = new Promise<never>((_, reject) => {
+		child.once('error', reject);
+		child.once('exit', (code) => reject(new Error(`Next.js smoke server exited with code ${code ?? 'unknown'}.`)));
+	});
+
+	try {
+		await waitForHttp(origin, exited);
+		await run(
+			'pnpm',
+			['exec', 'playwright', 'test', '--reporter=line'],
+			root,
+			`${testCase.name} production hydration`,
+			{ ...process.env, BASE_URL: origin },
+		);
+	} finally {
+		if (child.exitCode === null) child.kill('SIGTERM');
+	}
 }
 
 async function compileTailwind(root: string, testCase: SmokeCase): Promise<void> {
@@ -840,6 +1357,15 @@ function assertInstalled(root: string, testCase: SmokeCase): void {
 	for (const packageName of testCase.expectedPackages ?? []) {
 		if (!packageJson.dependencies?.[packageName] && !packageJson.devDependencies?.[packageName]) {
 			throw new Error(`@constructive/${testCase.name} did not install ${packageName}.`);
+		}
+	}
+	for (const [packageName, expectedVersion] of Object.entries(testCase.expectedPackageVersions ?? {})) {
+		const installedVersion = packageJson.dependencies?.[packageName]
+			?? packageJson.devDependencies?.[packageName];
+		if (installedVersion !== expectedVersion) {
+			throw new Error(
+				`@constructive/${testCase.name} expected ${packageName}@${expectedVersion}, received ${installedVersion ?? 'missing'}.`,
+			);
 		}
 	}
 	for (const packageName of testCase.forbiddenPackages ?? []) {
@@ -963,6 +1489,12 @@ const server = http.createServer((request, response) => {
 	fs.createReadStream(filePath).pipe(response);
 });
 
+const shadcnCli = await resolveShadcnCli();
+const shadcnSource = shadcnCli.mode === 'latest' ? 'npm latest' : 'workspace pin';
+console.log(
+	`Registry smoke CLI: ${shadcnSource} resolved to shadcn@${shadcnCli.version}; installs use this exact executable for the complete run.`,
+);
+
 const packageRegistry = selectedCases.some((testCase) =>
 	testCase.expectedPackages?.some((packageName) => packageName.startsWith('@constructive-io/')),
 )
@@ -978,10 +1510,11 @@ try {
 		const root = path.join(temporaryRoot, testCase.name);
 		const itemNames = testCase.items ?? [testCase.name];
 		prepareConsumer(root, origin, testCase, packageRegistry?.origin);
-		await install(root, itemNames);
+		await install(root, itemNames, shadcnCli);
 		assertInstalled(root, testCase);
 		await typecheck(root, testCase.name);
 		await compileTailwind(root, testCase);
+		if (testCase.nextApp) await verifyNextApp(root, testCase);
 		const installKind = testCase.expectedPackages?.length ? 'package-backed' : 'package-free';
 		console.log(`Clean ${installKind} install passed: ${itemNames.map((itemName) => `@constructive/${itemName}`).join(', ')}.`);
 	}

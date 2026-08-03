@@ -8,16 +8,22 @@ interface RuntimeExport {
 	require: { default: string };
 }
 
+interface ImportOnlyRuntimeExport {
+	import: { default: string };
+}
+
 interface PackageManifest {
-	exports: Record<string, string | RuntimeExport>;
+	exports: Record<string, string | RuntimeExport | ImportOnlyRuntimeExport>;
 }
 
 const packageRoot = dirname(fileURLToPath(import.meta.url));
 const manifest = JSON.parse(readFileSync(resolve(packageRoot, 'package.json'), 'utf8')) as PackageManifest;
 const useClientDirective = /^(?:\uFEFF)?(["'])use client\1;?/;
 
-function isRuntimeExport(target: string | RuntimeExport): target is RuntimeExport {
-	return typeof target === 'object' && 'import' in target && 'require' in target;
+function isImportableRuntimeExport(
+	target: string | RuntimeExport | ImportOnlyRuntimeExport,
+): target is RuntimeExport | ImportOnlyRuntimeExport {
+	return typeof target === 'object' && 'import' in target;
 }
 
 function resolveSourceEntry(output: string): string {
@@ -37,7 +43,7 @@ function resolveSourceEntry(output: string): string {
 
 const entries = Object.fromEntries(
 	Object.values(manifest.exports)
-		.filter(isRuntimeExport)
+		.filter(isImportableRuntimeExport)
 		.map((target) => {
 			const output = target.import.default;
 			const entryName = output.replace(/^\.\/dist\//, '').replace(/\.js$/, '');

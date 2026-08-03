@@ -14,6 +14,7 @@ interface PackageManifest {
   version: string;
   dependencies?: Record<string, string>;
   peerDependencies?: Record<string, string>;
+  peerDependenciesMeta?: Record<string, { optional?: boolean }>;
   exports: Record<string, unknown>;
 }
 
@@ -32,9 +33,16 @@ async function packageManifest(relativePackageJson: string): Promise<PackageMani
   return JSON.parse(await readFile(path.join(root, relativePackageJson), 'utf8')) as PackageManifest;
 }
 
-function runtimeExportSpecifiers(manifest: PackageManifest): string[] {
+function runtimeExportSpecifiers(
+  manifest: PackageManifest,
+  condition: 'import' | 'require'
+): string[] {
   return Object.entries(manifest.exports)
-    .filter(([subpath, target]) => subpath !== './package.json' && typeof target === 'object')
+    .filter(([, target]) => (
+      typeof target === 'object'
+      && target !== null
+      && condition in target
+    ))
     .map(([subpath]) => subpath === '.' ? manifest.name : `${manifest.name}/${subpath.slice(2)}`);
 }
 
@@ -45,6 +53,18 @@ const sheetsManifest = await packageManifest('packages/sheets/package.json');
 const schemaBuilderManifest = await packageManifest('packages/schema-builder/package.json');
 if (!uiManifest.peerDependencies?.tailwindcss) {
   throw new Error('@constructive-io/ui must declare Tailwind CSS as a peer');
+}
+for (const [dependency, version] of Object.entries({
+  '@tanstack/charts': '0.6.4',
+  '@tanstack/react-charts': '0.6.4',
+  'd3-scale': '4.0.2'
+})) {
+  if (uiManifest.peerDependencies?.[dependency] !== version) {
+    throw new Error(`@constructive-io/ui must pin ${dependency}@${version} for its chart subpath`);
+  }
+  if (!uiManifest.peerDependenciesMeta?.[dependency]?.optional) {
+    throw new Error(`@constructive-io/ui must keep ${dependency} optional for React 18 consumers`);
+  }
 }
 if (uiManifest.dependencies?.['tw-animate-css']) {
   throw new Error('@constructive-io/ui must not ship tw-animate-css');
@@ -65,12 +85,19 @@ const dataVersion = dataManifest.version;
 const commandPaletteVersion = commandPaletteManifest.version;
 const sheetsVersion = sheetsManifest.version;
 const schemaBuilderVersion = schemaBuilderManifest.version;
-const runtimeSpecifiers = [
-  ...runtimeExportSpecifiers(uiManifest),
-  ...runtimeExportSpecifiers(dataManifest),
-  ...runtimeExportSpecifiers(commandPaletteManifest),
-  ...runtimeExportSpecifiers(sheetsManifest),
-  ...runtimeExportSpecifiers(schemaBuilderManifest)
+const esmRuntimeSpecifiers = [
+  ...runtimeExportSpecifiers(uiManifest, 'import'),
+  ...runtimeExportSpecifiers(dataManifest, 'import'),
+  ...runtimeExportSpecifiers(commandPaletteManifest, 'import'),
+  ...runtimeExportSpecifiers(sheetsManifest, 'import'),
+  ...runtimeExportSpecifiers(schemaBuilderManifest, 'import')
+];
+const cjsRuntimeSpecifiers = [
+  ...runtimeExportSpecifiers(uiManifest, 'require'),
+  ...runtimeExportSpecifiers(dataManifest, 'require'),
+  ...runtimeExportSpecifiers(commandPaletteManifest, 'require'),
+  ...runtimeExportSpecifiers(sheetsManifest, 'require'),
+  ...runtimeExportSpecifiers(schemaBuilderManifest, 'require')
 ];
 const uiTarball = path.join(artifacts, `constructive-io-ui-${uiVersion}.tgz`);
 const dataTarball = path.join(artifacts, `constructive-io-data-${dataVersion}.tgz`);
@@ -112,6 +139,9 @@ await writeFile(
         '@constructive-io/schema-builder': `file:${schemaBuilderTarball}`,
         '@constructive-io/sheets': `file:${sheetsTarball}`,
         '@constructive-io/ui': `file:${uiTarball}`,
+        '@tanstack/charts': '0.6.4',
+        '@tanstack/react-charts': '0.6.4',
+        'd3-scale': '4.0.2',
         react: '^19.0.0',
         'react-dom': '^19.0.0'
       },
@@ -153,6 +183,7 @@ await writeFile(
   path.join(consumer, 'consumer.tsx'),
   `import * as UI from '@constructive-io/ui';
 import { Button } from '@constructive-io/ui/button';
+import { Chart, CONSTRUCTIVE_CHART_THEME } from '@constructive-io/ui/chart';
 import { FlowZoomPanel } from '@constructive-io/ui/flow-zoom-panel';
 import { createCommandRegistry, kbd } from '@constructive-io/command-palette';
 import { META_CONTRACT_VERSION, selectConsoleDataTables } from '@constructive-io/data';
@@ -167,7 +198,7 @@ import * as Tables from '@constructive-io/schema-builder/tables';
 
 const element = <Button>Package consumer</Button>;
 const commandRegistry = createCommandRegistry({ groups: [], commands: [] });
-const publicSurface = [UI, FlowZoomPanel, commandRegistry, kbd('k', 'mod'), META_CONTRACT_VERSION, selectConsoleDataTables, Sheets, SheetsProvider, SchemaBuilder, DEFAULT_SCHEMA_BUILDER_PREFERENCES, Core, Fields, Relationships, Indexes, Policies, Tables];
+const publicSurface = [UI, Chart, CONSTRUCTIVE_CHART_THEME, FlowZoomPanel, commandRegistry, kbd('k', 'mod'), META_CONTRACT_VERSION, selectConsoleDataTables, Sheets, SheetsProvider, SchemaBuilder, DEFAULT_SCHEMA_BUILDER_PREFERENCES, Core, Fields, Relationships, Indexes, Policies, Tables];
 void element;
 void publicSurface;
 `
@@ -181,7 +212,7 @@ await writeFile(
 );
 await writeFile(
   path.join(consumer, 'check-css.ts'),
-  `import assert from 'node:assert/strict';
+    `import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import postcss from 'postcss';
 import tailwindcss from '@tailwindcss/postcss';
@@ -199,8 +230,13 @@ console.log('Published stylesheets processed with Tailwind CSS.');
 await writeFile(
   path.join(consumer, 'check.cts'),
   `const assert = require('node:assert/strict');
-const specifiers = ${JSON.stringify(runtimeSpecifiers)};
+const specifiers = ${JSON.stringify(cjsRuntimeSpecifiers)};
 for (const specifier of specifiers) assert.ok(require(specifier), \`Empty CJS export: \${specifier}\`);
+assert.throws(
+  () => require.resolve('@constructive-io/ui/chart'),
+  (error) => error && error.code === 'ERR_PACKAGE_PATH_NOT_EXPORTED',
+  '@constructive-io/ui/chart must remain unavailable to CommonJS consumers because TanStack Charts is ESM-only',
+);
 assert.ok(require('@constructive-io/ui').Button);
 assert.ok(require('@constructive-io/ui/flow-zoom-panel').FlowZoomPanel);
 assert.ok(require('@constructive-io/command-palette').createCommandRegistry);
@@ -216,8 +252,9 @@ console.log(\`CJS runtime and stylesheet exports resolved (\${specifiers.length}
 await writeFile(
   path.join(consumer, 'check.ts'),
   `import assert from 'node:assert/strict';
-const specifiers = ${JSON.stringify(runtimeSpecifiers)};
+const specifiers = ${JSON.stringify(esmRuntimeSpecifiers)};
 for (const specifier of specifiers) assert.ok(await import(specifier), \`Empty ESM export: \${specifier}\`);
+assert.ok((await import('@constructive-io/ui/chart')).Chart);
 console.log(\`ESM runtime exports resolved (\${specifiers.length} JavaScript entries).\`);
 `
 );
@@ -440,7 +477,9 @@ async function checkPackedSheets(): Promise<void> {
         dependencies: {
           '@constructive-io/data': `file:${dataTarball}`,
           '@constructive-io/ui': `file:${uiTarball}`,
-          '@constructive-io/sheets': `file:${sheetsTarball}`
+          '@constructive-io/sheets': `file:${sheetsTarball}`,
+          react: '18.3.1',
+          'react-dom': '18.3.1'
         },
         devDependencies: {
           '@tailwindcss/postcss': '^4.1.0',
@@ -463,13 +502,29 @@ async function checkPackedSheets(): Promise<void> {
     path.join(sheetsConsumer, 'check-sheets.ts'),
     `import assert from 'node:assert/strict';
 import { createRequire } from 'node:module';
-import { readFile } from 'node:fs/promises';
+import { readFile, readdir } from 'node:fs/promises';
 import postcss from 'postcss';
 import tailwindcss from '@tailwindcss/postcss';
 
 const require = createRequire(import.meta.url);
 const packageJsonPath = require.resolve('@constructive-io/sheets/package.json');
 const manifest = JSON.parse(await readFile(packageJsonPath, 'utf8'));
+const uiPackageJsonPath = new URL('./node_modules/@constructive-io/ui/package.json', import.meta.url);
+const uiManifest = JSON.parse(await readFile(uiPackageJsonPath, 'utf8'));
+assert.equal(uiManifest.peerDependencies['@tanstack/charts'], '0.6.4');
+assert.equal(uiManifest.peerDependencies['@tanstack/react-charts'], '0.6.4');
+assert.equal(uiManifest.peerDependencies['d3-scale'], '4.0.2');
+assert.equal(uiManifest.peerDependenciesMeta['@tanstack/charts'].optional, true);
+assert.equal(uiManifest.peerDependenciesMeta['@tanstack/react-charts'].optional, true);
+assert.equal(uiManifest.peerDependenciesMeta['d3-scale'].optional, true);
+const installedPackageDirs = await readdir(new URL('./node_modules/.pnpm/', import.meta.url));
+for (const dependencyPrefix of ['@tanstack+charts@', '@tanstack+react-charts@', 'd3-scale@']) {
+  assert.equal(installedPackageDirs.some((entry) => entry.startsWith(dependencyPrefix)), false);
+}
+const uiRootSource = await readFile(new URL('./node_modules/@constructive-io/ui/dist/index.js', import.meta.url), 'utf8');
+assert.doesNotMatch(uiRootSource, /@tanstack\\/(?:react-)?charts/);
+const { Button } = await import('@constructive-io/ui/button');
+assert.ok(Button);
 assert.ok(manifest.dependencies['@remixicon/react']);
 assert.ok(manifest.dependencies['lucide-react']);
 assert.equal(manifest.exports['./styles.css'], './dist/styles.css');
@@ -485,7 +540,7 @@ const from = new URL('./styles.css', import.meta.url);
 const source = await readFile(from, 'utf8');
 const result = await postcss([tailwindcss()]).process(source, { from: from.pathname });
 assert.ok(result.css.includes('.w-\\\\[52px\\\\]'));
-console.log('Sheets runtime dependencies and Tailwind source contract passed independently.');
+console.log('Sheets dependencies, React 18 UI isolation, and Tailwind source contract passed independently.');
 `
   );
   await run(

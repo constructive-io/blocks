@@ -24,6 +24,7 @@ import {
 	CONSOLE_INSTALL_ROOT_DEPENDENCIES,
 	FEATURE_PACK_MANIFEST_TARGETS,
 	assertCanonicalFeaturePackSidecar,
+	assertConstructiveRegistryMetadata,
 	assertExactInternalDependencyEdges,
 	assertFeaturePackRegistryContract,
 	assertNoForbiddenDistributionReferences,
@@ -307,6 +308,7 @@ for (const { source, item } of preparedItems) {
 
 assertUniqueRegistryShape(compiledItems);
 assertFeaturePackRegistryContract(compiledItems);
+assertConstructiveRegistryMetadata(compiledItems);
 assertRegistryDistributionContract(compiledItems);
 
 const combined: Registry = {

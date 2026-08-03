@@ -18,6 +18,7 @@ import {
 	FEATURE_PACK_IDS,
 	FEATURE_PACK_MANIFEST_TARGETS,
 	assertCanonicalFeaturePackSidecar,
+	assertConstructiveRegistryMetadata,
 	assertExactInternalDependencyEdges,
 	assertFeaturePackRegistryContract,
 	assertRegistryDistributionContract,
@@ -32,7 +33,95 @@ import {
 	type RegistryItem,
 } from './compiler';
 
+function appKitMetadataFixture(): RegistryItem[] {
+	const create = (
+		name: string,
+		kind: 'runtime' | 'resource' | 'view' | 'composition' | 'starter',
+	): RegistryItem => ({
+		name,
+		type: 'registry:block',
+		meta: {
+			constructive: {
+				version: 1,
+				family: 'app-kit',
+				kind,
+				boundary: name === 'app-kit-core' ? 'mixed' : 'client',
+				provider: 'app-kit',
+				dataShapes: ['record'],
+				intents: ['act'],
+				capabilities: ['typed-resources'],
+				compatibleWith: name === 'app-kit-core' ? undefined : ['app-kit-core'],
+			},
+		},
+	});
+
+	return [
+		create('app-kit-core', 'runtime'),
+		create('app-kit-data', 'resource'),
+		create('app-kit-board', 'view'),
+		create('app-kit-dashboard', 'view'),
+		create('app-kit-calendar', 'view'),
+		create('app-kit-workflow', 'composition'),
+		create('app-kit-event-studio', 'starter'),
+	];
+}
+
+test('validates the complete versioned App Kit metadata contract', () => {
+	assert.doesNotThrow(() => assertConstructiveRegistryMetadata(appKitMetadataFixture()));
+
+	const missing = appKitMetadataFixture().filter((item) => item.name !== 'app-kit-board');
+	assert.throws(() => assertConstructiveRegistryMetadata(missing), /Missing App Kit registry root app-kit-board/);
+
+	const wrongVersion = appKitMetadataFixture();
+	(wrongVersion[0]!.meta as { constructive: { version: number } }).constructive.version = 2;
+	assert.throws(() => assertConstructiveRegistryMetadata(wrongVersion), /version must be 1/);
+
+	const missingProvider = appKitMetadataFixture();
+	delete (missingProvider[0]!.meta as { constructive: { provider?: string } }).constructive.provider;
+	assert.throws(() => assertConstructiveRegistryMetadata(missingProvider), /provider must be app-kit/);
+
+	const unknownField = appKitMetadataFixture();
+	(unknownField[0]!.meta as { constructive: Record<string, unknown> }).constructive.department = 'operations';
+	assert.throws(() => assertConstructiveRegistryMetadata(unknownField), /unknown fields: department/);
+
+	const unknownCompatibility = appKitMetadataFixture();
+	(unknownCompatibility[1]!.meta as { constructive: { compatibleWith: string[] } }).constructive.compatibleWith = ['app-kit-map'];
+	assert.throws(() => assertConstructiveRegistryMetadata(unknownCompatibility), /unknown App Kit root app-kit-map/);
+});
+
 const repositoryRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..', '..');
+
+test('App Kit composition metadata names only implemented slots and events', () => {
+	const sourceRegistry = JSON.parse(
+		fs.readFileSync(path.join(repositoryRoot, 'apps/blocks/registry.json'), 'utf8'),
+	) as Registry;
+	const metadata = (itemName: string) => {
+		const item = sourceRegistry.items.find((candidate) => candidate.name === itemName);
+		assert.ok(item, `Missing ${itemName}`);
+		return (item.meta as { constructive: { slots?: string[]; events?: string[] } }).constructive;
+	};
+	const source = (relativePath: string) => fs.readFileSync(
+		path.join(repositoryRoot, 'apps/blocks/src/blocks/app-kit', relativePath),
+		'utf8',
+	);
+
+	assert.deepEqual(metadata('app-kit-board').slots, ['card']);
+	assert.match(source('board/board.tsx'), /renderCard\?:/u);
+	assert.deepEqual(metadata('app-kit-board').events, ['open-record', 'move-record', 'move-denied']);
+	assert.match(source('board/board.tsx'), /onOpenRecord\?:/u);
+	assert.match(source('board/board.tsx'), /onMove\?:/u);
+
+	assert.deepEqual(metadata('app-kit-dashboard').slots, ['widget']);
+	assert.deepEqual(metadata('app-kit-dashboard').events, ['layout-change']);
+	assert.match(source('dashboard/dashboard.tsx'), /renderWidget\?:/u);
+	assert.match(source('dashboard/dashboard.tsx'), /onLayoutChange\?:/u);
+
+	assert.equal(metadata('app-kit-calendar').slots, undefined);
+	assert.deepEqual(metadata('app-kit-calendar').events, ['range-change', 'view-change', 'open-record']);
+	assert.match(source('calendar/calendar.tsx'), /onMonthChange:/u);
+	assert.match(source('calendar/calendar.tsx'), /onViewChange:/u);
+	assert.match(source('calendar/calendar.tsx'), /onOpenRecord\?:/u);
+});
 
 test('rewrites exact package subpath module specifiers and derives the complete dependency set', () => {
 	const input = [

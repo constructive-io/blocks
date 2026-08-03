@@ -72,6 +72,13 @@ describe('SiteTopbar install command', () => {
   });
 
   it('offers install actions for documented source and application blocks', () => {
+    mockUsePathname.mockReturnValue('/blocks/app-kit');
+    const appKit = render(<SiteTopbar />);
+    expect(screen.getByRole('button', { name: 'Copy App Kit Core install command' })).toHaveTextContent(
+      'pnpm dlx shadcn@latest add @constructive/app-kit-core',
+    );
+
+    appKit.unmount();
     mockUsePathname.mockReturnValue('/blocks/billing/billing-usage-overview');
     const { unmount } = render(<SiteTopbar />);
     expect(

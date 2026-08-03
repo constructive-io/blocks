@@ -27,6 +27,7 @@ function crumbFor(path: string): string {
   if (p === '/blocks') return 'Setup';
   if (p === '/blocks/styling') return 'Styling';
   if (p === '/blocks/features') return 'Feature packs';
+  if (p === '/blocks/app-kit') return 'App Kit';
   if (p.startsWith('/blocks/features/')) {
     const id = p.slice('/blocks/features/'.length);
     const pack = getFeaturePackDoc(id);
@@ -80,6 +81,14 @@ function installActionFor(path: string) {
       command: registryAdd(block.name),
       label: registryAdd(block.name),
       title: block.title,
+    };
+  }
+
+  if (normalizedPath === '/blocks/app-kit') {
+    return {
+      command: registryAdd('app-kit-core'),
+      label: registryAdd('app-kit-core'),
+      title: 'App Kit Core',
     };
   }
 

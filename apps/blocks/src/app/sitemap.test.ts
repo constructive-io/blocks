@@ -20,13 +20,14 @@ describe('sitemap', () => {
         APPLICATION_BLOCKS.length +
         SOURCE_BLOCKS.length +
         AI_COMPONENTS.length +
-        8,
+        9,
     );
     expect(entries.map(({ url }) => url)).toEqual([
       'http://localhost:3005/',
       'http://localhost:3005/blocks',
       'http://localhost:3005/blocks/styling',
       'http://localhost:3005/blocks/features',
+      'http://localhost:3005/blocks/app-kit',
       ...FEATURE_PACK_DOCS.map(({ id }) => `http://localhost:3005/blocks/features/${id}`),
       'http://localhost:3005/blocks/command-palette',
       'http://localhost:3005/blocks/ai',
