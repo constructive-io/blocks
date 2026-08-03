@@ -1,3 +1,4 @@
+import * as React from 'react';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { QueryClient } from '@tanstack/react-query';
@@ -51,6 +52,117 @@ describe('AppBoard', () => {
     await waitFor(() => expect(trigger).toHaveFocus());
   });
 
+  it('restores focus to the moved record after an async controlled update', async () => {
+    const user = userEvent.setup();
+    let finishMove!: () => void;
+    const moveFinished = new Promise<void>((resolve) => {
+      finishMove = resolve;
+    });
+
+    function ControlledBoard() {
+      const [records, setRecords] = React.useState<readonly Ticket[]>([ticket]);
+      return (
+        <AppBoard
+          columns={columns}
+          getColumnId={(record) => record.status}
+          getRecordId={(record) => record.id}
+          getRecordLabel={(record) => record.title}
+          onMove={async ({ recordId, toColumnId }) => {
+            setRecords((current) => current.map((record) => (
+              record.id === recordId ? { ...record, status: toColumnId } : record
+            )));
+            await moveFinished;
+          }}
+          records={records}
+        />
+      );
+    }
+
+    render(<ControlledBoard />);
+    const originalTrigger = screen.getByRole('button', { name: 'Move Opening keynote' });
+    originalTrigger.focus();
+    await user.keyboard('{Enter}');
+    await user.keyboard('{ArrowDown}{Enter}');
+
+    await waitFor(() => expect(
+      screen.getByRole('heading', { name: 'Live' }).closest('section')
+    ).toHaveTextContent('Opening keynote'));
+    expect(originalTrigger.isConnected).toBe(false);
+
+    finishMove();
+    await waitFor(() => expect(
+      screen.getByRole('button', { name: 'Move Opening keynote' })
+    ).toHaveFocus());
+  });
+
+  it('restores focus to the destination column when a successful move removes the record', async () => {
+    const user = userEvent.setup();
+
+    function FilteredBoard() {
+      const [records, setRecords] = React.useState<readonly Ticket[]>([ticket]);
+      return (
+        <>
+          <button onClick={() => setRecords([ticket])} type='button'>Restore record</button>
+          <AppBoard
+            columns={columns}
+            getColumnId={(record) => record.status}
+            getRecordId={(record) => record.id}
+            getRecordLabel={(record) => record.title}
+            onMove={async ({ recordId }) => {
+              setRecords((current) => current.filter((record) => record.id !== recordId));
+            }}
+            records={records}
+          />
+        </>
+      );
+    }
+
+    render(<FilteredBoard />);
+    await user.click(screen.getByRole('button', { name: 'Move Opening keynote' }));
+    await user.click(await screen.findByRole('menuitem', { name: /Live/ }));
+
+    const destinationColumn = screen.getByRole('heading', { name: 'Live' }).closest('section');
+    await waitFor(() => expect(destinationColumn).toHaveFocus());
+    expect(screen.queryByText('Opening keynote')).not.toBeInTheDocument();
+
+    const restore = screen.getByRole('button', { name: 'Restore record' });
+    await user.click(restore);
+    expect(await screen.findByText('Opening keynote')).toBeInTheDocument();
+    expect(restore).toHaveFocus();
+  });
+
+  it('keeps the multi-column loading state inside its own mobile scroll boundary', () => {
+    const query = defineQuery<void, readonly Ticket[]>({
+      id: 'tickets.loading-board',
+      execute: () => new Promise<readonly Ticket[]>(() => undefined)
+    });
+    const scope: AppScope = {
+      databaseId: 'events',
+      endpointId: 'graphql',
+      schemaRevision: 'schema-1',
+      securityRevision: 'security-1',
+      sessionPartition: 'user-1'
+    };
+
+    render(
+      <AppKitProvider queryClient={new QueryClient()} scope={scope}>
+        <ConnectedAppBoard
+          columns={columns}
+          getColumnId={(record: Ticket) => record.status}
+          getRecordId={(record) => record.id}
+          getRecordLabel={(record) => record.title}
+          query={query}
+          queryInput={undefined}
+        />
+      </AppKitProvider>
+    );
+
+    expect(screen.getByRole('status', { name: 'Loading board' })).toHaveClass(
+      'max-w-full',
+      'overflow-x-auto'
+    );
+  });
+
   it('keeps the controlled record in place and reports a rejected optimistic move', async () => {
     const user = userEvent.setup();
     const onMove = vi.fn().mockRejectedValue(new Error('Move denied by policy'));
@@ -64,6 +176,9 @@ describe('AppBoard', () => {
       .toHaveTextContent('Opening keynote');
     expect(screen.getByRole('heading', { name: 'Live' }).closest('section'))
       .not.toHaveTextContent('Opening keynote');
+    await waitFor(() => expect(
+      screen.getByRole('button', { name: 'Move Opening keynote' })
+    ).toHaveFocus());
   });
 
   it('does not expose move affordances without an explicit move action', () => {

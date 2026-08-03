@@ -231,10 +231,15 @@ function graphQLScalarSupportsKind(kind: AppFieldKind, scalar: string) {
 function normalizedPgType(value: string | null | undefined) {
   return (value ?? '')
     .replace(/\[\]$/u, '')
+    .replace(/Array$/u, '')
     .split('.')
     .at(-1)
     ?.replace(/^"|"$/gu, '')
     .toLowerCase() ?? '';
+}
+
+function normalizedIdentifier(value: string | null | undefined) {
+  return (value ?? '').replace(/[^a-z0-9]/giu, '').toLowerCase();
 }
 
 function pgTypeSupportsKind(kind: AppFieldKind, pgType: string) {
@@ -304,6 +309,7 @@ function primaryKeyNames(table: AppMetaTable): Readonly<{
 function indexedRelations(table: AppMetaTable | undefined): IndexedMetaRelation[] {
   if (!table?.relations) return [];
   const result: IndexedMetaRelation[] = [];
+  const seen = new Set<string>();
   const kinds: readonly AppMetaRelationKind[] = [
     'belongsTo',
     'has',
@@ -313,7 +319,11 @@ function indexedRelations(table: AppMetaTable | undefined): IndexedMetaRelation[
   ];
   for (const kind of kinds) {
     for (const relation of table.relations[kind] ?? []) {
-      if (relation) result.push({ kind, relation });
+      if (!relation) continue;
+      const key = `${relation.fieldName ?? ''}:${metaRelationTarget({ kind, relation }) ?? ''}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      result.push({ kind, relation });
     }
   }
   return result;
@@ -334,11 +344,40 @@ function metaRelationTarget({ kind, relation }: IndexedMetaRelation) {
   return relation.referencedBy?.name ?? null;
 }
 
-function isConnectionType(type: AppIntrospectionType | undefined) {
-  return Boolean(
-    type?.kind === 'OBJECT' &&
-      type.fields?.some((field) => field.name === 'nodes' || field.name === 'edges')
-  );
+function connectionNodeTypeName(
+  type: AppIntrospectionType | undefined,
+  types: ReadonlyMap<string, AppIntrospectionType>
+) {
+  if (type?.kind !== 'OBJECT') return null;
+  const pageInfoField = type.fields?.find((field) => field.name === 'pageInfo');
+  const pageInfoTypeName = baseTypeName(pageInfoField?.type);
+  const pageInfoType = pageInfoTypeName ? types.get(pageInfoTypeName) : undefined;
+  const pageInfoFields = new Set(pageInfoType?.fields?.map((field) => field.name));
+  if (
+    listType(pageInfoField?.type) ||
+    pageInfoType?.kind !== 'OBJECT' ||
+    !pageInfoFields.has('hasNextPage') ||
+    !pageInfoFields.has('hasPreviousPage')
+  ) {
+    return null;
+  }
+
+  const nodes = type.fields?.find((field) => field.name === 'nodes');
+  if (nodes && listType(nodes.type)) return baseTypeName(nodes.type);
+
+  const edges = type.fields?.find((field) => field.name === 'edges');
+  if (!edges || !listType(edges.type)) return null;
+  const edgeTypeName = baseTypeName(edges.type);
+  const edgeType = edgeTypeName ? types.get(edgeTypeName) : undefined;
+  const node = edgeType?.fields?.find((field) => field.name === 'node');
+  return node ? baseTypeName(node.type) : null;
+}
+
+function isConnectionType(
+  type: AppIntrospectionType | undefined,
+  types: ReadonlyMap<string, AppIntrospectionType>
+) {
+  return connectionNodeTypeName(type, types) !== null;
 }
 
 function relationTargetTypeName(
@@ -348,13 +387,7 @@ function relationTargetTypeName(
   const returnedName = baseTypeName(field.type);
   if (listType(field.type)) return returnedName;
   const returnedType = returnedName ? types.get(returnedName) : undefined;
-  const nodes = returnedType?.fields?.find((candidate) => candidate.name === 'nodes');
-  if (nodes) return baseTypeName(nodes.type);
-  const edges = returnedType?.fields?.find((candidate) => candidate.name === 'edges');
-  const edgeTypeName = baseTypeName(edges?.type);
-  const edgeType = edgeTypeName ? types.get(edgeTypeName) : undefined;
-  const node = edgeType?.fields?.find((candidate) => candidate.name === 'node');
-  return node ? baseTypeName(node.type) : returnedName;
+  return connectionNodeTypeName(returnedType, types) ?? returnedName;
 }
 
 /**
@@ -389,18 +422,40 @@ export function validateAppResource<
     severity: 'error' | 'warning' = 'error'
   ) => issues.push({ code, message, path, severity });
 
-  const tables = evidence.meta._meta?.tables ?? [];
-  const table = tables.find(
+  const tables = (evidence.meta._meta?.tables ?? []).filter(
+    (candidate): candidate is AppMetaTable =>
+      Boolean(candidate) &&
+      (candidate?.schemaName ?? 'public') === resource.source.schemaName
+  );
+  // Current Constructive `_meta` exposes the inflected GraphQL table type as
+  // `name`. Older snapshots exposed the physical PostgreSQL table name. Prefer
+  // the current contract while retaining legacy evidence compatibility.
+  const currentTableMatches = tables.filter(
     (candidate) =>
-      candidate?.name === resource.source.tableName &&
-      (candidate.schemaName ?? 'public') === resource.source.schemaName
-  ) ?? undefined;
+      candidate.name === resource.source.graphQLTypeName ||
+      candidate.inflection?.tableType === resource.source.graphQLTypeName
+  );
+  const legacyTableMatches = tables.filter(
+    (candidate) => candidate.name === resource.source.tableName
+  );
+  const tableMatches =
+    currentTableMatches.length > 0 ? currentTableMatches : legacyTableMatches;
+  const table = tableMatches.length === 1 ? tableMatches[0] : undefined;
+  const metaTableName = table?.name ?? resource.source.graphQLTypeName;
 
-  if (!table) {
+  if (tableMatches.length > 1) {
+    addIssue(
+      'META_TABLE_AMBIGUOUS',
+      `_meta.tables.${resource.source.schemaName}.${resource.source.graphQLTypeName}`,
+      `More than one _meta table matches ${resource.source.graphQLTypeName}; the database source cannot be reconciled safely.`
+    );
+  }
+
+  if (!table && tableMatches.length === 0) {
     addIssue(
       'META_TABLE_MISSING',
-      `_meta.tables.${resource.source.schemaName}.${resource.source.tableName}`,
-      `The table ${resource.source.schemaName}.${resource.source.tableName} is absent from _meta.`
+      `_meta.tables.${resource.source.schemaName}.${resource.source.graphQLTypeName}`,
+      `The resource ${resource.source.schemaName}.${resource.source.tableName} (${resource.source.graphQLTypeName}) is absent from _meta.`
     );
   }
 
@@ -410,15 +465,17 @@ export function validateAppResource<
   ) {
     addIssue(
       'META_TYPE_INFLECTION_MISMATCH',
-      `_meta.tables.${resource.source.tableName}.inflection.tableType`,
-      `The resource uses ${resource.source.graphQLTypeName}, but _meta inflects the database table to ${table.inflection.tableType}.`
+      `_meta.tables.${metaTableName}.inflection.tableType`,
+      `The resource uses ${resource.source.graphQLTypeName}, while the advisory _meta inflection is ${table.inflection.tableType}; the final executable schema is authoritative.`,
+      'warning'
     );
   }
   if (table?.query?.all && table.query.all !== resource.source.listFieldName) {
     addIssue(
       'META_LIST_INFLECTION_MISMATCH',
-      `_meta.tables.${resource.source.tableName}.query.all`,
-      `The resource uses ${resource.source.listFieldName}, but _meta exposes the list root as ${table.query.all}.`
+      `_meta.tables.${metaTableName}.query.all`,
+      `The resource uses ${resource.source.listFieldName}, while the advisory _meta list root is ${table.query.all}; the final executable schema is authoritative.`,
+      'warning'
     );
   }
 
@@ -456,20 +513,23 @@ export function validateAppResource<
     );
   } else {
     const returnedName = baseTypeName(listField.type);
-    const expectedConnection = table?.inflection?.connection;
     const returnsRecordList =
       listType(listField.type) && returnedName === resource.source.graphQLTypeName;
     const returnsConnection = isConnectionType(
-      returnedName ? types.get(returnedName) : undefined
+      returnedName ? types.get(returnedName) : undefined,
+      types
     );
+    const returnedRecordType = returnsConnection
+      ? relationTargetTypeName(listField, types)
+      : returnedName;
     if (
-      (expectedConnection && returnedName !== expectedConnection) ||
-      (!returnsRecordList && !returnsConnection)
+      !returnsRecordList &&
+      (!returnsConnection || returnedRecordType !== resource.source.graphQLTypeName)
     ) {
       addIssue(
         'GRAPHQL_LIST_TYPE_MISMATCH',
         `__schema.types.${queryRootName}.fields.${resource.source.listFieldName}.type`,
-        `The list field returns ${returnedName ?? 'an unknown type'}, which is neither the final record list nor the _meta connection ${expectedConnection ?? 'for this resource'}.`
+        `The list field resolves to ${returnedRecordType ?? returnedName ?? 'an unknown record type'} instead of ${resource.source.graphQLTypeName}.`
       );
     }
   }
@@ -481,8 +541,9 @@ export function validateAppResource<
     ) {
       addIssue(
         'META_DETAIL_INFLECTION_MISMATCH',
-        `_meta.tables.${resource.source.tableName}.query.one`,
-        `The resource uses ${resource.source.detailFieldName}, but _meta exposes the detail root as ${table.query.one}.`
+        `_meta.tables.${metaTableName}.query.one`,
+        `The resource uses ${resource.source.detailFieldName}, while the advisory _meta detail root is ${table.query.one}; the final executable schema is authoritative.`,
+        'warning'
       );
     }
     const detailField = queryRoot?.fields?.find(
@@ -525,8 +586,9 @@ export function validateAppResource<
     if (table?.query && table.query[kind] !== mutationName) {
       addIssue(
         'META_MUTATION_INFLECTION_MISMATCH',
-        `_meta.tables.${resource.source.tableName}.query.${kind}`,
-        `The configured ${kind} mutation ${mutationName} does not match the _meta operation ${table.query[kind] ?? '<absent>'}.`
+        `_meta.tables.${metaTableName}.query.${kind}`,
+        `The configured ${kind} mutation ${mutationName} differs from the advisory _meta operation ${table.query[kind] ?? '<absent>'}; the final executable schema is authoritative.`,
+        'warning'
       );
     }
     if (!mutationRoot?.fields?.some((field) => field.name === mutationName)) {
@@ -552,23 +614,25 @@ export function validateAppResource<
     );
   }
 
-  const metaFields = new Map(
-    (table?.fields ?? [])
-      .filter((field): field is AppMetaField => Boolean(field?.name))
-      .map((field) => [field.name as string, field] as const)
+  const metaFields = (table?.fields ?? []).filter(
+    (field): field is AppMetaField => Boolean(field?.name)
   );
   const graphQLFields = new Map(
     (recordType?.fields ?? []).map((field) => [field.name, field] as const)
   );
 
   const fields: AppValidatedField[] = resource.fields.map((field) => {
-    const metaField = metaFields.get(field.databaseName);
+    // Current `_meta` field names are GraphQL-facing; legacy evidence used
+    // physical PostgreSQL names. Prefer the final-facing name when both exist.
+    const metaField =
+      metaFields.find((candidate) => candidate.name === field.graphQLName) ??
+      metaFields.find((candidate) => candidate.name === field.databaseName);
     const graphQLField = graphQLFields.get(field.graphQLName);
     if (!metaField) {
       addIssue(
         'META_FIELD_MISSING',
-        `_meta.tables.${resource.source.tableName}.fields.${field.databaseName}`,
-        `Database field ${field.databaseName} is absent from _meta.`
+        `_meta.tables.${metaTableName}.fields.${field.graphQLName}`,
+        `Neither current _meta field ${field.graphQLName} nor legacy database field ${field.databaseName} is present.`
       );
     }
     if (!graphQLField) {
@@ -586,9 +650,10 @@ export function validateAppResource<
       graphQLTypeName !== metaField.type.gqlType
     ) {
       addIssue(
-        'GRAPHQL_FIELD_TYPE_MISMATCH',
+        'META_FIELD_GRAPHQL_TYPE_HINT_MISMATCH',
         `__schema.types.${resource.source.graphQLTypeName}.fields.${field.graphQLName}.type`,
-        `Field ${field.graphQLName} resolves to ${graphQLTypeName ?? 'an unknown type'} instead of the _meta type ${metaField.type.gqlType}.`
+        `Field ${field.graphQLName} resolves to ${graphQLTypeName ?? 'an unknown type'}, while the advisory _meta GraphQL type is ${metaField.type.gqlType}; the final executable schema is authoritative.`,
+        'warning'
       );
     }
 
@@ -700,16 +765,43 @@ export function validateAppResource<
   const metaRelations = indexedRelations(table);
   for (const relation of resource.relations ?? []) {
     const finalFieldName = relation.graphQLName ?? relation.fieldName;
-    const metaRelation = metaRelations.find(
-      (candidate) => candidate.relation.fieldName === finalFieldName
+    const exactMetaRelation = metaRelations.find(
+      (candidate) =>
+        candidate.relation.fieldName === finalFieldName ||
+        candidate.relation.fieldName === relation.fieldName
     );
+    const targetMetaRelations = relation.targetTableName
+      ? metaRelations.filter(
+          (candidate) =>
+            normalizedIdentifier(metaRelationTarget(candidate)) ===
+            normalizedIdentifier(relation.targetTableName)
+        )
+      : [];
+    const metaRelation =
+      exactMetaRelation ??
+      (targetMetaRelations.length === 1 ? targetMetaRelations[0] : undefined);
+    if (!exactMetaRelation && targetMetaRelations.length > 1) {
+      addIssue(
+        'META_RELATION_AMBIGUOUS',
+        `_meta.tables.${metaTableName}.relations.${finalFieldName}`,
+        `More than one _meta relation targets ${relation.targetTableName}; relation ${finalFieldName} cannot be reconciled safely.`
+      );
+    }
     if (!metaRelation) {
       addIssue(
         'META_RELATION_MISSING',
-        `_meta.tables.${resource.source.tableName}.relations.${finalFieldName}`,
+        `_meta.tables.${metaTableName}.relations.${finalFieldName}`,
         `Relation ${finalFieldName} is absent from _meta relation facts.`
       );
     } else {
+      if (metaRelation.relation.fieldName !== finalFieldName) {
+        addIssue(
+          'META_RELATION_FIELD_HINT_MISMATCH',
+          `_meta.tables.${metaTableName}.relations.${metaRelation.relation.fieldName ?? '<unknown>'}`,
+          `The advisory _meta relation field is ${metaRelation.relation.fieldName ?? '<absent>'}, while the final executable field is ${finalFieldName}.`,
+          'warning'
+        );
+      }
       if (metaRelationCardinality(metaRelation) !== relation.cardinality) {
         addIssue(
           'META_RELATION_CARDINALITY_MISMATCH',
@@ -721,7 +813,8 @@ export function validateAppResource<
       if (
         relation.targetTableName &&
         targetTable &&
-        targetTable !== relation.targetTableName
+        normalizedIdentifier(targetTable) !==
+          normalizedIdentifier(relation.targetTableName)
       ) {
         addIssue(
           'META_RELATION_TARGET_MISMATCH',
@@ -743,18 +836,21 @@ export function validateAppResource<
     const relationTypeName = baseTypeName(graphQLRelation.type);
     const relationTargetType = relationTargetTypeName(graphQLRelation, types);
     if (
-      metaRelation?.relation.type &&
-      relationTargetType !== metaRelation.relation.type
+      relation.targetGraphQLTypeName &&
+      relationTargetType !== relation.targetGraphQLTypeName
     ) {
       addIssue(
         'GRAPHQL_RELATION_TYPE_MISMATCH',
         `__schema.types.${resource.source.graphQLTypeName}.fields.${finalFieldName}.type`,
-        `Relation ${finalFieldName} targets ${relationTargetType ?? 'an unknown type'} instead of the _meta target type ${metaRelation.relation.type}.`
+        `Relation ${finalFieldName} targets ${relationTargetType ?? 'an unknown type'} instead of ${relation.targetGraphQLTypeName}.`
       );
     }
     const relationReturnsMany =
       listType(graphQLRelation.type) ||
-      isConnectionType(relationTypeName ? types.get(relationTypeName) : undefined);
+      isConnectionType(
+        relationTypeName ? types.get(relationTypeName) : undefined,
+        types
+      );
     if (
       (relation.cardinality === 'many' && !relationReturnsMany) ||
       (relation.cardinality === 'one' && relationReturnsMany)
@@ -776,17 +872,32 @@ export function validateAppResource<
       'warning'
     );
   } else {
-    const configuredIdentity = resource.identity.fields.map((key) => {
+    const configuredIdentityFields = resource.identity.fields.map((key) => {
       const field = resource.fields.find((candidate) => candidate.key === key);
-      return field?.databaseName ?? key;
+      return {
+        databaseName: field?.databaseName ?? key,
+        graphQLName: field?.graphQLName ?? key
+      };
     });
     const expected = [...primaryKey.names].sort();
-    const actual = [...configuredIdentity].sort();
+    const configuredDatabaseNames = configuredIdentityFields
+      .map((field) => field.databaseName)
+      .sort();
+    const configuredGraphQLNames = configuredIdentityFields
+      .map((field) => field.graphQLName)
+      .sort();
+    const matchesDatabaseNames =
+      expected.length === configuredDatabaseNames.length &&
+      expected.every(
+        (name, index) => name === configuredDatabaseNames[index]
+      );
+    const matchesGraphQLNames =
+      expected.length === configuredGraphQLNames.length &&
+      expected.every((name, index) => name === configuredGraphQLNames[index]);
     if (
       primaryKey.ambiguous ||
       expected.length === 0 ||
-      expected.length !== actual.length ||
-      expected.some((name, index) => name !== actual[index])
+      (!matchesDatabaseNames && !matchesGraphQLNames)
     ) {
       addIssue(
         'IDENTITY_PRIMARY_KEY_MISMATCH',
@@ -807,10 +918,10 @@ export function validateAppResource<
     'GRAPHQL_FIELD_KIND_MISMATCH',
     'GRAPHQL_FIELD_MISSING',
     'GRAPHQL_FIELD_NULLABILITY_MISMATCH',
-    'GRAPHQL_FIELD_TYPE_MISMATCH',
     'GRAPHQL_TYPE_MISSING',
     'IDENTITY_PRIMARY_KEY_MISMATCH',
     'META_FIELD_ARRAY_MISMATCH',
+    'META_FIELD_GRAPHQL_TYPE_HINT_MISMATCH',
     'META_FIELD_KIND_MISMATCH',
     'META_FIELD_MISSING',
     'META_TABLE_MISSING',

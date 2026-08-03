@@ -1,5 +1,7 @@
 import * as React from 'react';
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { renderToStaticMarkup } from 'react-dom/server';
+import { hydrateRoot, type Root } from 'react-dom/client';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { QueryClient } from '@tanstack/react-query';
 import { describe, expect, it, vi } from 'vitest';
 
@@ -13,7 +15,12 @@ vi.mock('@constructive-io/ui/combobox', () => ({
     </div>
   ),
   ComboboxEmpty: ({ children }: Readonly<{ children: React.ReactNode }>) => <div>{children}</div>,
-  ComboboxInput: () => <input aria-label='relation search' />,
+  ComboboxInput: ({
+    showClear: _showClear,
+    ...props
+  }: React.ComponentProps<'input'> & { showClear?: boolean }) => (
+    <input role='combobox' {...props} />
+  ),
   ComboboxItem: ({ children }: Readonly<{ children: React.ReactNode }>) => <div>{children}</div>,
   ComboboxList: () => null,
   ComboboxPopup: ({ children }: Readonly<{ children: React.ReactNode }>) => <div>{children}</div>
@@ -32,6 +39,7 @@ import {
   AppCollectionToolbar,
   AppPagination,
   AppRecordForm,
+  AppRelationPicker,
   ConnectedAppRecordForm,
   ConnectedAppRelationPicker,
   toAppDateTimeLocalValue
@@ -48,6 +56,41 @@ type Session = Record<string, unknown> & {
 const list = defineQuery<unknown, readonly Session[]>({
   id: 'sessions.list',
   execute: () => []
+});
+
+type Appointment = Record<string, unknown> & {
+  id: string;
+  startsAt: string;
+};
+
+const appointmentResource = defineResource<Appointment, string>({
+  id: 'appointments',
+  label: 'Appointment',
+  pluralLabel: 'Appointments',
+  source: {
+    graphQLTypeName: 'Appointment',
+    listFieldName: 'appointmentsConnection',
+    schemaName: 'events',
+    tableName: 'appointments',
+    updateMutationName: 'updateAppointment'
+  },
+  fields: [
+    { databaseName: 'id', graphQLName: 'id', key: 'id', kind: 'string', label: 'ID', readOnly: true },
+    { databaseName: 'starts_at', graphQLName: 'startsAt', key: 'startsAt', kind: 'datetime', label: 'Starts at' }
+  ],
+  displayField: 'startsAt',
+  forms: { update: { fields: [{ field: 'startsAt', required: true }] } },
+  identity: {
+    fields: ['id'],
+    read: (record) => record.id,
+    serialize: String
+  },
+  queries: {
+    list: defineQuery<unknown, readonly Appointment[]>({
+      id: 'appointments.list',
+      execute: () => []
+    })
+  }
 });
 
 const sessionResource = defineResource<Session, string>({
@@ -245,6 +288,68 @@ describe('App Kit data views', () => {
     );
   });
 
+  it('defers browser-local datetime values until after hydration', () => {
+    const markup = renderToStaticMarkup(
+      <AppRecordForm
+        mode='update'
+        onChange={vi.fn()}
+        onSubmit={vi.fn()}
+        resource={sessionResource}
+        values={page.items[0]}
+      />
+    );
+    const container = document.createElement('div');
+    container.innerHTML = markup;
+
+    expect(container.querySelector('input[type="datetime-local"]')).toHaveValue('');
+    expect(markup).not.toContain(toAppDateTimeLocalValue(page.items[0].startsAt));
+  });
+
+  it('hydrates datetime-local values without mismatch in a non-UTC browser timezone', async () => {
+    const previousTimeZone = process.env.TZ;
+    const value = { id: 'appointment-1', startsAt: '2026-08-03T12:30:00.000Z' };
+    const form = (
+      <AppRecordForm
+        mode='update'
+        onChange={vi.fn()}
+        onSubmit={vi.fn()}
+        resource={appointmentResource}
+        values={value}
+      />
+    );
+    let root: Root | undefined;
+    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    const container = document.createElement('div');
+    document.body.append(container);
+
+    try {
+      process.env.TZ = 'UTC';
+      container.innerHTML = renderToStaticMarkup(form);
+      expect(container.querySelector('input[type="datetime-local"]')).toHaveValue('');
+
+      process.env.TZ = 'America/Los_Angeles';
+      await act(async () => {
+        root = hydrateRoot(container, form);
+      });
+
+      await waitFor(() => expect(
+        container
+          .querySelector<HTMLInputElement>('input[type="datetime-local"]')
+          ?.getAttribute('value')
+      ).toBe(toAppDateTimeLocalValue(value.startsAt)));
+      expect(toAppDateTimeLocalValue(value.startsAt)).toBe('2026-08-03T05:30:00.000');
+      expect(
+        consoleError.mock.calls.flat().map(String).join('\n').toLocaleLowerCase()
+      ).not.toContain('hydration');
+    } finally {
+      await act(async () => root?.unmount());
+      container.remove();
+      consoleError.mockRestore();
+      if (previousTimeZone === undefined) delete process.env.TZ;
+      else process.env.TZ = previousTimeZone;
+    }
+  });
+
   it('allows decimal values in generated float inputs', () => {
     type Measurement = Record<string, unknown> & { id: string; ratio: number };
     const resource = defineResource<Measurement, string>({
@@ -420,6 +525,21 @@ describe('ConnectedAppRecordForm', () => {
 });
 
 describe('ConnectedAppRelationPicker scope safety', () => {
+  it('keeps an embedded picker named when no external input id is supplied', () => {
+    render(
+      <AppRelationPicker
+        embedded
+        label='People'
+        onSearchChange={vi.fn()}
+        onValueChange={vi.fn()}
+        options={[]}
+        search=''
+      />
+    );
+
+    expect(screen.getByRole('combobox', { name: 'People' })).toBeInTheDocument();
+  });
+
   it('drops accumulated options synchronously when scope changes with the same search', async () => {
     const queryClient = new QueryClient({
       defaultOptions: { queries: { retry: false } }

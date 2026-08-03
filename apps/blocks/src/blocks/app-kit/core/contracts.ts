@@ -1,5 +1,3 @@
-import type { QueryClient } from '@tanstack/react-query';
-
 export type AppErrorKind =
   | 'authentication'
   | 'authorization'
@@ -25,24 +23,61 @@ export type AppError = Readonly<{
   details?: Readonly<Record<string, unknown>>;
 }>;
 
-export type AppResult<T> =
+export const APP_RESULT_DISCRIMINATOR = 'constructive.app-kit/result' as const;
+export const APP_RESULT_VERSION = 1 as const;
+
+export type AppResultMetadata = Readonly<{
+  kind: typeof APP_RESULT_DISCRIMINATOR;
+  version: typeof APP_RESULT_VERSION;
+}>;
+
+export type AppResult<T> = (
   | Readonly<{ ok: true; data: T }>
-  | Readonly<{ ok: false; error: AppError }>;
+  | Readonly<{ ok: false; error: AppError }>
+) &
+  Readonly<{ __constructiveAppKitResult: AppResultMetadata }>;
 
 export type AppExecutorResult<T> = T | AppResult<T>;
 
+function appResultMetadata(): AppResultMetadata {
+  return {
+    kind: APP_RESULT_DISCRIMINATOR,
+    version: APP_RESULT_VERSION
+  };
+}
+
 export function appSuccess<T>(data: T): AppResult<T> {
-  return { ok: true, data };
+  return {
+    __constructiveAppKitResult: appResultMetadata(),
+    data,
+    ok: true
+  };
 }
 
 export function appFailure(error: AppError): AppResult<never> {
-  return { ok: false, error };
+  return {
+    __constructiveAppKitResult: appResultMetadata(),
+    error,
+    ok: false
+  };
 }
 
-export function isAppResult<T>(value: AppExecutorResult<T>): value is AppResult<T> {
+export function isAppResult<T = unknown>(value: unknown): value is AppResult<T> {
   if (!value || typeof value !== 'object') return false;
+  const metadata = (value as Readonly<Record<string, unknown>>)
+    .__constructiveAppKitResult;
+  if (!metadata || typeof metadata !== 'object') return false;
+  const candidate = metadata as Readonly<Record<string, unknown>>;
+  if (
+    candidate.kind !== APP_RESULT_DISCRIMINATOR ||
+    candidate.version !== APP_RESULT_VERSION
+  ) {
+    return false;
+  }
   if (!('ok' in value) || typeof value.ok !== 'boolean') return false;
-  return value.ok ? 'data' in value : 'error' in value;
+  return value.ok
+    ? 'data' in value
+    : 'error' in value && isAppError(value.error);
 }
 
 export function normalizeAppError(
@@ -118,6 +153,7 @@ export type AppScope = Readonly<{
 }>;
 
 export type AppExecutionContext<TInput> = Readonly<{
+  /** Plain credential-free input; authentication belongs in the executor closure. */
   input: TInput;
   scope: AppScope;
   signal: AbortSignal;
@@ -178,14 +214,39 @@ export type AppInvalidationTarget = Readonly<{
 export type AppOptimisticContext<TInput> = Readonly<{
   input: TInput;
   scope: AppScope;
-  /** TanStack QueryClient, kept structural so this contract stays server-safe. */
+  /** Scope-bound cache access; foreign AppScope keys are rejected at runtime. */
   queryClient: AppQueryCache;
 }>;
 
-export type AppQueryCache = Pick<
-  QueryClient,
-  'cancelQueries' | 'getQueryData' | 'setQueryData'
->;
+declare const appScopedQueryKeyBrand: unique symbol;
+
+/** A key produced by App Kit's scope-aware key factories. */
+export type AppScopedQueryKey = readonly unknown[] &
+  Readonly<{ [appScopedQueryKeyBrand]: true }>;
+
+export type AppQueryCacheFilters = Readonly<{
+  exact?: boolean;
+  queryKey?: AppScopedQueryKey;
+}>;
+
+export type AppQueryCacheUpdater<TData> =
+  | TData
+  | ((current: TData | undefined) => TData | undefined);
+
+/**
+ * The optimistic cache surface deliberately excludes raw QueryClient access.
+ * Implementations bind every operation to the AppScope that started the action.
+ */
+export type AppQueryCache = Readonly<{
+  cancelQueries: (filters?: AppQueryCacheFilters) => Promise<void>;
+  getQueryData: <TData = unknown>(
+    queryKey: AppScopedQueryKey
+  ) => TData | undefined;
+  setQueryData: <TData = unknown>(
+    queryKey: AppScopedQueryKey,
+    updater: AppQueryCacheUpdater<TData>
+  ) => unknown;
+}>;
 
 export type AppActionDefinition<
   TInput,
@@ -208,6 +269,11 @@ export type AppActionDefinition<
         scope: AppScope;
       }>) => readonly AppInvalidationTarget[]);
   optimistic?: Readonly<{
+    /**
+     * App Kit journals scope-bound setQueryData writes until this resolves and
+     * restores them automatically if it throws. Treat cached values as
+     * immutable and make every optimistic change through setQueryData.
+     */
     apply: (
       context: AppOptimisticContext<TInput>
     ) => TOptimistic | Promise<TOptimistic>;
@@ -281,6 +347,8 @@ export type AppRelationDefinition = Readonly<{
   graphQLName?: string;
   /** Database target used to reconcile the relation with `_meta`. */
   targetTableName?: string;
+  /** Final executable GraphQL target type for strict relation validation. */
+  targetGraphQLTypeName: string;
   targetResourceId: string;
   cardinality: AppRelationCardinality;
   linkActionId?: string;

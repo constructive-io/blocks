@@ -181,16 +181,19 @@ describe('Event Studio definitions', () => {
         id: 'program',
         graphQLName: 'program',
         targetTableName: 'programs',
+        targetGraphQLTypeName: 'Program',
       }),
       expect.objectContaining({
         id: 'venue',
         graphQLName: 'venue',
         targetTableName: 'venues',
+        targetGraphQLTypeName: 'Venue',
       }),
       expect.objectContaining({
         id: 'people',
         graphQLName: 'sessionPeople',
         targetTableName: 'session_people',
+        targetGraphQLTypeName: 'SessionPerson',
       }),
     ]));
 

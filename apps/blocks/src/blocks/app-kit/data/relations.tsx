@@ -79,6 +79,9 @@ export function AppRelationPicker<TRecord>({
   placeholder
 }: AppRelationPickerProps<TRecord>) {
   const labelId = React.useId();
+  const generatedControlId = React.useId();
+  const resolvedInputId = inputId ?? generatedControlId;
+  const ownsLabel = !embedded || !inputId;
   const control = (
     <>
       <Combobox
@@ -94,9 +97,9 @@ export function AppRelationPicker<TRecord>({
         <ComboboxInput
           aria-describedby={ariaDescribedBy}
           aria-invalid={invalid || Boolean(error)}
-          aria-labelledby={inputId ? undefined : labelId}
+          aria-labelledby={ownsLabel ? labelId : undefined}
           aria-required={required}
-          id={inputId}
+          id={resolvedInputId}
           placeholder={placeholder ?? `Search ${label.toLocaleLowerCase()}`}
           showClear
         />
@@ -143,6 +146,11 @@ export function AppRelationPicker<TRecord>({
   if (embedded) {
     return (
       <div className='flex flex-col gap-1.5'>
+        {!inputId ? (
+          <FieldLabel className='sr-only' htmlFor={resolvedInputId} id={labelId}>
+            {label}
+          </FieldLabel>
+        ) : null}
         {control}
         {description ? <FieldDescription>{description}</FieldDescription> : null}
       </div>
@@ -154,7 +162,7 @@ export function AppRelationPicker<TRecord>({
       data-disabled={disabled || undefined}
       data-invalid={invalid || Boolean(error) || undefined}
     >
-      <FieldLabel htmlFor={inputId} id={labelId}>{label}</FieldLabel>
+      <FieldLabel htmlFor={resolvedInputId} id={labelId}>{label}</FieldLabel>
       {control}
       {description ? <FieldDescription>{description}</FieldDescription> : null}
     </Field>

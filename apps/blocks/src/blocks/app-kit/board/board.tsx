@@ -48,6 +48,11 @@ export interface AppBoardProps<TRecord, TColumnId extends string> {
   className?: string;
 }
 
+interface AppBoardFocusRequest<TColumnId extends string> {
+  recordId: string;
+  columnId: TColumnId;
+}
+
 function errorMessage(error: unknown) {
   return error instanceof Error ? error.message : 'The record could not be moved.';
 }
@@ -77,11 +82,37 @@ export function AppBoard<TRecord, TColumnId extends string>({
     () => new Set()
   );
   const [moveError, setMoveError] = React.useState<string | null>(null);
+  const [focusRequest, setFocusRequest] = React.useState<AppBoardFocusRequest<TColumnId> | null>(null);
+  const boardRef = React.useRef<HTMLElement>(null);
+  const columnRefs = React.useRef(new Map<TColumnId, HTMLElement>());
+  const moveTriggerRefs = React.useRef(new Map<string, HTMLButtonElement>());
+  const recordCardRefs = React.useRef(new Map<string, HTMLDivElement>());
 
   const recordsById = React.useMemo(
     () => new Map(records.map((record) => [getRecordId(record), record])),
     [getRecordId, records]
   );
+
+  React.useLayoutEffect(() => {
+    if (!focusRequest || pendingRecordIds.has(focusRequest.recordId)) return;
+    const record = recordsById.get(focusRequest.recordId);
+    const trigger = record
+      ? moveTriggerRefs.current.get(focusRequest.recordId)
+      : undefined;
+    const target =
+      (trigger && !trigger.disabled ? trigger : undefined) ??
+      (record
+        ? recordCardRefs.current.get(focusRequest.recordId)
+        : undefined) ??
+      columnRefs.current.get(focusRequest.columnId) ??
+      boardRef.current;
+    if (!target) {
+      setFocusRequest(null);
+      return;
+    }
+    target.focus();
+    setFocusRequest(null);
+  }, [focusRequest, pendingRecordIds, recordsById]);
 
   const moveRecord = React.useCallback(async (
     record: TRecord,
@@ -96,8 +127,10 @@ export function AppBoard<TRecord, TColumnId extends string>({
 
     setMoveError(null);
     setPendingRecordIds((current) => new Set(current).add(recordId));
+    let completed = false;
     try {
       await onMove(move);
+      completed = true;
     } catch (error) {
       // The connected action owns optimistic cache rollback. This local error
       // stays next to the board so a rejected drop is never silent.
@@ -108,6 +141,10 @@ export function AppBoard<TRecord, TColumnId extends string>({
         next.delete(recordId);
         return next;
       });
+      setFocusRequest({
+        columnId: completed ? toColumnId : fromColumnId,
+        recordId
+      });
     }
   }, [canMove, getColumnId, getRecordId, onMove]);
 
@@ -117,6 +154,8 @@ export function AppBoard<TRecord, TColumnId extends string>({
       className={className}
       data-density={density}
       data-surface={surface}
+      ref={boardRef}
+      tabIndex={-1}
     >
       {moveError ? (
         <Alert className="mb-4" variant="destructive">
@@ -135,7 +174,7 @@ export function AppBoard<TRecord, TColumnId extends string>({
           return (
             <section
               aria-labelledby={headingId}
-              className="bg-muted/30 flex min-h-52 flex-col gap-3 rounded-xl border p-3"
+              className="bg-muted/30 focus-visible:ring-ring flex min-h-52 flex-col gap-3 rounded-xl border p-3 focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
               key={column.id}
               onDragOver={onMove ? (event) => event.preventDefault() : undefined}
               onDrop={onMove ? (event) => {
@@ -145,6 +184,11 @@ export function AppBoard<TRecord, TColumnId extends string>({
                 setDraggedRecordId(null);
                 if (record) void moveRecord(record, column.id);
               } : undefined}
+              ref={(node) => {
+                if (node) columnRefs.current.set(column.id, node);
+                else columnRefs.current.delete(column.id);
+              }}
+              tabIndex={-1}
             >
               <header className="flex items-start justify-between gap-3 px-1">
                 <div className="flex min-w-0 flex-col gap-1">
@@ -187,6 +231,7 @@ export function AppBoard<TRecord, TColumnId extends string>({
                   return (
                     <Card
                       aria-busy={pending || undefined}
+                      className="focus-visible:ring-ring focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
                       data-record-id={recordId}
                       draggable={Boolean(onMove) && !pending}
                       key={recordId}
@@ -196,6 +241,11 @@ export function AppBoard<TRecord, TColumnId extends string>({
                         event.dataTransfer.effectAllowed = 'move';
                         event.dataTransfer.setData('text/plain', recordId);
                       } : undefined}
+                      ref={(node) => {
+                        if (node) recordCardRefs.current.set(recordId, node);
+                        else recordCardRefs.current.delete(recordId);
+                      }}
+                      tabIndex={-1}
                       variant="flat"
                     >
                       <CardHeader className={density === 'compact' ? 'px-4' : undefined}>
@@ -219,6 +269,10 @@ export function AppBoard<TRecord, TColumnId extends string>({
                                 <Button
                                   aria-label={`Move ${label}`}
                                   disabled={pending || movableColumns.length === 0}
+                                  ref={(node) => {
+                                    if (node) moveTriggerRefs.current.set(recordId, node);
+                                    else moveTriggerRefs.current.delete(recordId);
+                                  }}
                                   size="icon-xs"
                                   variant="ghost"
                                 >

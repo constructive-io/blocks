@@ -4,9 +4,12 @@ import { QueryClient } from '@tanstack/react-query';
 import { describe, expect, it, vi } from 'vitest';
 
 import {
+  APP_RESULT_DISCRIMINATOR,
   appFailure,
+  appSuccess,
   defineAction,
   defineQuery,
+  isAppResult,
   type AppScope
 } from './contracts';
 import {
@@ -16,6 +19,10 @@ import {
   useAppAction,
   useAppQuery
 } from './runtime';
+import {
+  createAppQueryInputFingerprint,
+  findAppCredentialInputPath
+} from './scope';
 
 const scope: AppScope = {
   databaseId: 'db-a',
@@ -53,7 +60,116 @@ function deferred<T>() {
   return { promise, reject, resolve };
 }
 
+describe('AppResult transport boundaries', () => {
+  it('recognizes helper results after structured clone and JSON round trips', () => {
+    const success = appSuccess({ id: 'record-1' });
+    const failure = appFailure({
+      code: 'FORBIDDEN',
+      kind: 'authorization',
+      message: 'Denied.'
+    });
+
+    const roundTrips = [
+      structuredClone(success),
+      JSON.parse(JSON.stringify(success)) as unknown,
+      structuredClone(failure),
+      JSON.parse(JSON.stringify(failure)) as unknown
+    ];
+    expect(roundTrips.every((result) => isAppResult(result))).toBe(true);
+  });
+
+  it('keeps unversioned and wrong-version lookalikes as ordinary records', () => {
+    const ordinary = { data: { id: 'record-1' }, ok: true as const };
+    const wrongVersion = {
+      __constructiveAppKitResult: {
+        kind: APP_RESULT_DISCRIMINATOR,
+        version: 2
+      },
+      data: { id: 'record-2' },
+      ok: true as const
+    };
+
+    expect(isAppResult(ordinary)).toBe(false);
+    expect(isAppResult(wrongVersion)).toBe(false);
+  });
+});
+
 describe('useAppQuery', () => {
+  it('keeps the canonical query-input fingerprint stable', () => {
+    expect(createAppQueryInputFingerprint(undefined)).toBe(
+      '660b96a3639b8562f6c34e81b90d7ac6b6fde3df6cc3374d63e9bf03b110b00c'
+    );
+    expect(createAppQueryInputFingerprint('abc')).toBe(
+      '7f31e07e6f698baf333bc71b2d9637187996447d51e260566c373788381a9340'
+    );
+    expect(createAppQueryInputFingerprint('Hồ Chí Minh')).toBe(
+      'd2de482d75e1304fb488e476bc3f068db77d16da6f619d3917c6842e0b18691a'
+    );
+    expect(createAppQueryInputFingerprint('a'.repeat(100))).toBe(
+      '7f888f7324cc8601671ced1dd7f5b8b0a019546bf58c73173b7d4daa77e62e4e'
+    );
+  });
+
+  it('keeps complete and credential-shaped input values out of cache keys', () => {
+    const first = createAppQueryKey(scope, 'records.secure', {
+      authorization: 'Bearer first-secret',
+      filter: { status: 'open' },
+      nested: { password: 'first-password' }
+    });
+    const rotated = createAppQueryKey(scope, 'records.secure', {
+      authorization: 'Bearer rotated-secret',
+      filter: { status: 'open' },
+      nested: { password: 'rotated-password' }
+    });
+    const differentFilter = createAppQueryKey(scope, 'records.secure', {
+      authorization: 'Bearer first-secret',
+      filter: { status: 'closed' },
+      nested: { password: 'first-password' }
+    });
+
+    expect(first).toEqual(rotated);
+    expect(first).not.toEqual(differentFilter);
+    expect(JSON.stringify(first)).not.toMatch(
+      /first-secret|first-password|authorization|status|open/u
+    );
+  });
+
+  it('rejects sparse arrays and hidden or symbolic query-input properties', () => {
+    const sparse = Array<string>(1);
+    const hidden = Object.defineProperty({}, 'hidden', {
+      enumerable: false,
+      value: 'value'
+    });
+    const symbolic = { visible: 'value' } as Record<PropertyKey, unknown>;
+    symbolic[Symbol('hidden')] = 'value';
+    const decoratedArray = ['value'] as string[] & { label?: string };
+    decoratedArray.label = 'extra';
+
+    expect(() => createAppQueryInputFingerprint(sparse)).toThrow(/sparse/u);
+    expect(() => createAppQueryInputFingerprint(hidden)).toThrow(
+      /non-enumerable/u
+    );
+    expect(() => createAppQueryInputFingerprint(symbolic)).toThrow(/symbol/u);
+    expect(() => createAppQueryInputFingerprint(decoratedArray)).toThrow(
+      /dense indexed entries/u
+    );
+    expect(createAppQueryInputFingerprint([])).not.toBe(
+      createAppQueryInputFingerprint([undefined])
+    );
+  });
+
+  it('recognizes common transport credential field spellings', () => {
+    expect(
+      findAppCredentialInputPath({ headers: { 'x-api-key': 'secret' } })
+    ).toBe('headers.x-api-key');
+    expect(findAppCredentialInputPath({ csrf_token: 'secret' })).toBe(
+      'csrf_token'
+    );
+    expect(findAppCredentialInputPath({ private_key: 'secret' })).toBe(
+      'private_key'
+    );
+  });
+
   it('does not reuse cached data across database or session partitions', async () => {
     const queryClient = createClient();
     const execute = vi.fn(({ scope: currentScope }: { scope: AppScope }) =>
@@ -128,9 +244,253 @@ describe('useAppQuery', () => {
     await waitFor(() => expect(screen.getByText('db-b')).toBeInTheDocument());
     expect(aborted).toHaveBeenCalledTimes(1);
   });
+
+  it('rejects credential-shaped inputs before the query executor runs', async () => {
+    const execute = vi.fn(() => 'should-not-run');
+    const query = defineQuery<Readonly<{ headers: { authorization: string } }>, string>({
+      id: 'records.credential-input',
+      execute
+    });
+    const hook = renderHook(
+      () =>
+        useAppQuery(query, {
+          headers: { authorization: 'Bearer secret-query-token' }
+        }),
+      { wrapper: wrapper() }
+    );
+
+    await waitFor(() => expect(hook.result.current.isError).toBe(true));
+    expect(hook.result.current.error?.appError).toMatchObject({
+      code: 'CREDENTIAL_IN_INPUT',
+      fieldErrors: [{ field: 'headers.authorization' }],
+      kind: 'validation'
+    });
+    expect(execute).not.toHaveBeenCalled();
+  });
+
+  it('does not unwrap ordinary records that happen to use ok and data fields', async () => {
+    const record = {
+      data: { id: 'record-1' },
+      ok: true as const
+    };
+    const query = defineQuery<void, typeof record>({
+      id: 'records.result-shaped',
+      execute: () => record
+    });
+    const hook = renderHook(() => useAppQuery(query, undefined), {
+      wrapper: wrapper()
+    });
+
+    await waitFor(() => expect(hook.result.current.data).toBe(record));
+  });
 });
 
 describe('useAppAction', () => {
+  it('keeps a successful result when its host observer throws', async () => {
+    const onResult = vi.fn(() => {
+      throw new Error('Host result observer failed.');
+    });
+    const action = defineAction<void, string>({
+      id: 'records.throwing-success-observer',
+      execute: () => 'saved'
+    });
+    const hook = renderHook(() => useAppAction(action, { onResult }), {
+      wrapper: wrapper()
+    });
+
+    const result = await act(() => hook.result.current.execute(undefined));
+
+    expect(result).toMatchObject({ data: 'saved', ok: true });
+    expect(onResult).toHaveBeenCalledOnce();
+    expect(onResult).toHaveBeenCalledWith(result, undefined);
+    await waitFor(() =>
+      expect(hook.result.current.mutation.status).toBe('success')
+    );
+  });
+
+  it('keeps a preflight failure when its host observer throws', async () => {
+    const onResult = vi.fn(() => {
+      throw new Error('Host result observer failed.');
+    });
+    const execute = vi.fn(() => 'should-not-run');
+    const action = defineAction<Readonly<{ accessToken: string }>, string>({
+      id: 'records.throwing-preflight-observer',
+      execute
+    });
+    const hook = renderHook(() => useAppAction(action, { onResult }), {
+      wrapper: wrapper()
+    });
+
+    const result = await act(() =>
+      hook.result.current.execute({ accessToken: 'secret-action-token' })
+    );
+
+    expect(result).toMatchObject({
+      error: { code: 'CREDENTIAL_IN_INPUT', kind: 'validation' },
+      ok: false
+    });
+    expect(onResult).toHaveBeenCalledOnce();
+    expect(onResult).toHaveBeenCalledWith(result, {
+      accessToken: 'secret-action-token'
+    });
+    expect(execute).not.toHaveBeenCalled();
+    expect(hook.result.current.mutation.status).toBe('idle');
+  });
+
+  it('rejects credential-shaped inputs before TanStack creates a mutation', async () => {
+    const queryClient = createClient();
+    const execute = vi.fn(() => 'should-not-run');
+    const action = defineAction<
+      Readonly<{ recordId: string; accessToken: string }>,
+      string
+    >({
+      id: 'records.credential-input',
+      execute
+    });
+    const hook = renderHook(() => useAppAction(action), {
+      wrapper: wrapper(queryClient)
+    });
+
+    const result = await act(() =>
+      hook.result.current.execute({
+        accessToken: 'secret-action-token',
+        recordId: 'record-1'
+      })
+    );
+
+    expect(result).toMatchObject({
+      error: {
+        code: 'CREDENTIAL_IN_INPUT',
+        fieldErrors: [{ field: 'accessToken' }],
+        kind: 'validation'
+      },
+      ok: false
+    });
+    expect(execute).not.toHaveBeenCalled();
+    expect(queryClient.getMutationCache().getAll()).toHaveLength(0);
+  });
+
+  it('fails closed on containers and hidden properties the credential scanner cannot inspect', async () => {
+    class CredentialContainer {
+      authorization = 'Bearer class-secret';
+    }
+    const formData = new FormData();
+    formData.set('authorization', 'Bearer form-secret');
+    const hidden = Object.defineProperty({}, 'authorization', {
+      enumerable: false,
+      value: 'Bearer hidden-secret'
+    });
+    const symbolic = {} as Record<PropertyKey, unknown>;
+    symbolic[Symbol('authorization')] = 'Bearer symbol-secret';
+    const inputs: readonly unknown[] = [
+      formData,
+      new Map([['authorization', 'Bearer map-secret']]),
+      new CredentialContainer(),
+      hidden,
+      symbolic
+    ];
+    const queryClient = createClient();
+    const execute = vi.fn(() => 'should-not-run');
+    const action = defineAction<unknown, string>({
+      id: 'records.unsupported-credential-container',
+      execute
+    });
+    const hook = renderHook(() => useAppAction(action), {
+      wrapper: wrapper(queryClient)
+    });
+
+    for (const input of inputs) {
+      expect(await act(() => hook.result.current.execute(input))).toMatchObject({
+        error: { code: 'UNSUPPORTED_INPUT', kind: 'validation' },
+        ok: false
+      });
+    }
+    expect(execute).not.toHaveBeenCalled();
+    expect(queryClient.getMutationCache().getAll()).toHaveLength(0);
+  });
+
+  it('rejects credentials introduced by action input parsing', async () => {
+    const queryClient = createClient();
+    const execute = vi.fn(() => 'should-not-run');
+    const action = defineAction<Readonly<{ recordId: string }>, string>({
+      id: 'records.transformed-credential-input',
+      execute,
+      inputSchema: {
+        safeParse: () => ({
+          data: {
+            authorization: 'Bearer transformed-secret',
+            recordId: 'record-1'
+          } as unknown as Readonly<{ recordId: string }>,
+          success: true
+        })
+      }
+    });
+    const hook = renderHook(() => useAppAction(action), {
+      wrapper: wrapper(queryClient)
+    });
+
+    expect(
+      await act(() => hook.result.current.execute({ recordId: 'record-1' }))
+    ).toMatchObject({
+      error: {
+        code: 'CREDENTIAL_IN_INPUT',
+        fieldErrors: [{ field: 'authorization' }],
+        kind: 'validation'
+      },
+      ok: false
+    });
+    expect(execute).not.toHaveBeenCalled();
+    expect(queryClient.getMutationCache().getAll()).toHaveLength(0);
+  });
+
+  it('keeps full action inputs out of TanStack mutation variables and context', async () => {
+    const queryClient = createClient();
+    const action = defineAction<Readonly<{ note: string; recordId: string }>, string>({
+      id: 'records.cache-safe-input',
+      execute: ({ input }) => input.recordId
+    });
+    const hook = renderHook(() => useAppAction(action), {
+      wrapper: wrapper(queryClient)
+    });
+
+    expect(
+      await act(() =>
+        hook.result.current.execute({
+          note: 'private-domain-value',
+          recordId: 'record-1'
+        })
+      )
+    ).toMatchObject({ data: 'record-1', ok: true });
+
+    const mutationState = queryClient.getMutationCache().getAll()[0]?.state;
+    expect(mutationState?.variables).toEqual({ executionId: 1 });
+    expect(
+      JSON.stringify({
+        context: mutationState?.context,
+        variables: mutationState?.variables
+      })
+    ).not.toMatch(
+      /private-domain-value|record-1|note|recordId/u
+    );
+  });
+
+  it('treats an ordinary error-shaped record as successful action data', async () => {
+    const record = {
+      error: { kind: 'domain', message: 'This is record data.' },
+      ok: false as const
+    };
+    const action = defineAction<void, typeof record>({
+      id: 'records.error-shaped',
+      execute: () => record
+    });
+    const hook = renderHook(() => useAppAction(action), { wrapper: wrapper() });
+
+    expect(await act(() => hook.result.current.execute(undefined))).toMatchObject({
+      data: record,
+      ok: true
+    });
+  });
+
   it('evaluates typed presentation policy with input, scope, and host context', () => {
     const action = defineAction<
       { ownerId: string },
@@ -222,6 +582,31 @@ describe('useAppAction', () => {
       pending.resolve('published');
       await first;
     });
+  });
+
+  it('never inherits host mutation retries for non-idempotent actions', async () => {
+    const queryClient = new QueryClient({
+      defaultOptions: {
+        mutations: { retry: 1 },
+        queries: { retry: false }
+      }
+    });
+    const execute = vi.fn(() => {
+      throw new Error('Network failed after submission.');
+    });
+    const action = defineAction<void, string>({
+      id: 'sessions.non-idempotent',
+      execute
+    });
+    const hook = renderHook(() => useAppAction(action), {
+      wrapper: wrapper(queryClient)
+    });
+
+    expect(await act(() => hook.result.current.execute(undefined))).toMatchObject({
+      error: { message: 'Network failed after submission.' },
+      ok: false
+    });
+    expect(execute).toHaveBeenCalledTimes(1);
   });
 
   it('normalizes cancellation before TanStack callbacks observe the error', async () => {
@@ -318,6 +703,152 @@ describe('useAppAction', () => {
     expect(result.ok).toBe(false);
     expect(rollback).toHaveBeenCalledTimes(1);
     expect(queryClient.getQueryData(queryKey)).toEqual(['draft']);
+  });
+
+  it('rolls back and settles when a completed optimistic apply returns void', async () => {
+    const apply = vi.fn(() => undefined);
+    const rollback = vi.fn();
+    const settle = vi.fn();
+    const action = defineAction<void, string, void>({
+      id: 'sessions.void-optimistic-context',
+      execute: () =>
+        appFailure({ kind: 'authorization', message: 'Denied by RLS.' }),
+      optimistic: { apply, rollback, settle }
+    });
+    const hook = renderHook(() => useAppAction(action), { wrapper: wrapper() });
+
+    expect(await act(() => hook.result.current.execute(undefined))).toMatchObject({
+      error: { kind: 'authorization' },
+      ok: false
+    });
+    expect(apply).toHaveBeenCalledTimes(1);
+    expect(rollback).toHaveBeenCalledWith(
+      expect.objectContaining({ optimisticContext: undefined })
+    );
+    expect(settle).toHaveBeenCalledWith(
+      expect.objectContaining({
+        optimisticContext: undefined,
+        result: expect.objectContaining({ ok: false })
+      })
+    );
+  });
+
+  it('restores every touched cache entry when optimistic apply throws', async () => {
+    const queryClient = createClient();
+    const firstKey = createAppQueryKey(scope, 'sessions.detail', { id: 'first' });
+    const secondKey = createAppQueryKey(scope, 'sessions.detail', { id: 'second' });
+    queryClient.setQueryData(firstKey, 'first-baseline');
+    queryClient.setQueryData(secondKey, 'second-baseline');
+    const execute = vi.fn(() => 'should-not-run');
+    const rollback = vi.fn();
+    const settle = vi.fn();
+    const action = defineAction<void, string, void>({
+      id: 'sessions.partial-optimistic-apply',
+      execute,
+      optimistic: {
+        apply: ({ queryClient: cache }) => {
+          cache.setQueryData(firstKey, 'first-optimistic');
+          cache.setQueryData(secondKey, 'second-optimistic');
+          throw new Error('Optimistic projection failed.');
+        },
+        rollback,
+        settle
+      }
+    });
+    const hook = renderHook(() => useAppAction(action), {
+      wrapper: wrapper(queryClient)
+    });
+
+    expect(await act(() => hook.result.current.execute(undefined))).toMatchObject({
+      error: { message: 'Optimistic projection failed.' },
+      ok: false
+    });
+    expect(queryClient.getQueryData(firstKey)).toBe('first-baseline');
+    expect(queryClient.getQueryData(secondKey)).toBe('second-baseline');
+    expect(execute).not.toHaveBeenCalled();
+    expect(rollback).not.toHaveBeenCalled();
+    expect(settle).not.toHaveBeenCalled();
+  });
+
+  it('restores local optimistic writes when a later foreign-scope guard throws', async () => {
+    const queryClient = createClient();
+    const foreignScope: AppScope = {
+      ...scope,
+      organizationId: 'org-b',
+      securityRevision: 'security-b'
+    };
+    const localKey = createAppQueryKey(scope, 'sessions.list', { page: 1 });
+    const foreignKey = createAppQueryKey(foreignScope, 'sessions.list', {
+      page: 1
+    });
+    queryClient.setQueryData(localKey, ['local-baseline']);
+    queryClient.setQueryData(foreignKey, ['foreign-baseline']);
+    const execute = vi.fn(() => 'should-not-run');
+    const action = defineAction<void, string, void>({
+      id: 'sessions.partial-foreign-scope-apply',
+      execute,
+      optimistic: {
+        apply: ({ queryClient: cache }) => {
+          cache.setQueryData(localKey, ['local-optimistic']);
+          cache.setQueryData(foreignKey, ['foreign-breach']);
+        },
+        rollback: vi.fn()
+      }
+    });
+    const hook = renderHook(() => useAppAction(action), {
+      wrapper: wrapper(queryClient)
+    });
+
+    expect(await act(() => hook.result.current.execute(undefined))).toMatchObject({
+      error: { message: expect.stringMatching(/AppScope/u) },
+      ok: false
+    });
+    expect(queryClient.getQueryData(localKey)).toEqual(['local-baseline']);
+    expect(queryClient.getQueryData(foreignKey)).toEqual(['foreign-baseline']);
+    expect(execute).not.toHaveBeenCalled();
+  });
+
+  it('rejects optimistic reads, writes, and cancellation outside the action scope', async () => {
+    const queryClient = createClient();
+    const foreignScope: AppScope = {
+      ...scope,
+      organizationId: 'org-b',
+      securityRevision: 'security-b'
+    };
+    const localKey = createAppQueryKey(scope, 'sessions.list', { page: 1 });
+    const foreignKey = createAppQueryKey(foreignScope, 'sessions.list', {
+      page: 1
+    });
+    queryClient.setQueryData(localKey, ['local']);
+    queryClient.setQueryData(foreignKey, ['foreign']);
+    const action = defineAction<void, string, void>({
+      id: 'sessions.scope-bound-cache',
+      execute: () => 'saved',
+      optimistic: {
+        apply: ({ queryClient: cache }) => {
+          expect(cache.getQueryData(localKey)).toEqual(['local']);
+          expect(() => cache.getQueryData(foreignKey)).toThrow(/AppScope/u);
+          expect(() => cache.setQueryData(foreignKey, ['breach'])).toThrow(
+            /AppScope/u
+          );
+          expect(() => cache.cancelQueries({ queryKey: foreignKey })).toThrow(
+            /AppScope/u
+          );
+          cache.setQueryData(localKey, ['optimistic-local']);
+        },
+        rollback: vi.fn()
+      }
+    });
+    const hook = renderHook(() => useAppAction(action), {
+      wrapper: wrapper(queryClient)
+    });
+
+    expect(await act(() => hook.result.current.execute(undefined))).toMatchObject({
+      data: 'saved',
+      ok: true
+    });
+    expect(queryClient.getQueryData(localKey)).toEqual(['optimistic-local']);
+    expect(queryClient.getQueryData(foreignKey)).toEqual(['foreign']);
   });
 
   it('keeps optimistic writes and invalidation in the scope that started the action', async () => {
@@ -427,6 +958,84 @@ describe('useAppAction', () => {
     });
   });
 
+  it('reports invalidation failure without rolling back a committed action', async () => {
+    const queryClient = createClient();
+    vi.spyOn(queryClient, 'invalidateQueries').mockRejectedValueOnce(
+      new Error('Cache refresh failed.')
+    );
+    const queryKey = createAppQueryKey(scope, 'sessions.detail', {
+      id: 'session-1'
+    });
+    queryClient.setQueryData(queryKey, 'baseline');
+    const rollback = vi.fn();
+    const onPostCommitError = vi.fn();
+    const action = defineAction<void, string, string>({
+      id: 'sessions.committed-invalidation-failure',
+      execute: () => 'server-committed',
+      invalidate: [{ queryId: 'sessions.detail' }],
+      optimistic: {
+        apply: ({ queryClient: cache }) => {
+          const previous = cache.getQueryData<string>(queryKey) ?? 'baseline';
+          cache.setQueryData(queryKey, 'optimistic');
+          return previous;
+        },
+        rollback
+      }
+    });
+    const hook = renderHook(
+      () => useAppAction(action, { onPostCommitError }),
+      { wrapper: wrapper(queryClient) }
+    );
+
+    expect(await act(() => hook.result.current.execute(undefined))).toMatchObject({
+      data: 'server-committed',
+      ok: true
+    });
+    expect(rollback).not.toHaveBeenCalled();
+    expect(queryClient.getQueryData(queryKey)).toBe('optimistic');
+    expect(onPostCommitError).toHaveBeenCalledWith(
+      expect.objectContaining({
+        error: expect.objectContaining({ message: 'Cache refresh failed.' }),
+        phase: 'invalidation'
+      })
+    );
+    await waitFor(() => expect(hook.result.current.mutation.isSuccess).toBe(true));
+  });
+
+  it('reports settle failure without changing a committed action to failure', async () => {
+    const queryClient = createClient();
+    const rollback = vi.fn();
+    const onPostCommitError = vi.fn();
+    const action = defineAction<void, string, void>({
+      id: 'sessions.committed-settle-failure',
+      execute: () => 'server-committed',
+      optimistic: {
+        apply: () => undefined,
+        rollback,
+        settle: () => {
+          throw new Error('Optimistic settle failed.');
+        }
+      }
+    });
+    const hook = renderHook(
+      () => useAppAction(action, { onPostCommitError }),
+      { wrapper: wrapper(queryClient) }
+    );
+
+    expect(await act(() => hook.result.current.execute(undefined))).toMatchObject({
+      data: 'server-committed',
+      ok: true
+    });
+    expect(rollback).not.toHaveBeenCalled();
+    expect(onPostCommitError).toHaveBeenCalledWith(
+      expect.objectContaining({
+        error: expect.objectContaining({ message: 'Optimistic settle failed.' }),
+        phase: 'settle'
+      })
+    );
+    await waitFor(() => expect(hook.result.current.mutation.isSuccess).toBe(true));
+  });
+
   it('finishes a replaced optimistic transaction before applying its replacement', async () => {
     const firstRollback = deferred<void>();
     const queryClient = createClient();
@@ -501,4 +1110,60 @@ describe('useAppAction', () => {
     expect(queryClient.getQueryData(queryKey)).toBe('baseline');
     expect(settle).toHaveBeenCalledTimes(2);
   });
+
+  it('cancels a pending action before starting a replacement in another AppScope', async () => {
+    const queryClient = createClient();
+    const secondScope: AppScope = {
+      ...scope,
+      organizationId: 'org-b',
+      securityRevision: 'security-b'
+    };
+    const execute = vi.fn(
+      ({ scope: actionScope, signal }: { scope: AppScope; signal: AbortSignal }) => {
+        if (actionScope.organizationId === 'org-b') return 'saved-in-org-b';
+        return new Promise<string>((_resolve, reject) => {
+          signal.addEventListener('abort', () =>
+            reject(new DOMException('Aborted', 'AbortError'))
+          );
+        });
+      }
+    );
+    const action = defineAction<void, string>({
+      id: 'sessions.scope-transition',
+      execute
+    });
+    let activeScope = scope;
+    const dynamicWrapper = ({ children }: Readonly<{ children: React.ReactNode }>) => (
+      <AppKitProvider queryClient={queryClient} scope={activeScope}>
+        {children}
+      </AppKitProvider>
+    );
+    const hook = renderHook(() => useAppAction(action), {
+      wrapper: dynamicWrapper
+    });
+
+    let first!: Promise<Awaited<ReturnType<typeof hook.result.current.execute>>>;
+    act(() => {
+      first = hook.result.current.execute(undefined);
+    });
+    await waitFor(() => expect(execute).toHaveBeenCalledTimes(1));
+
+    activeScope = secondScope;
+    hook.rerender();
+    let second!: Promise<Awaited<ReturnType<typeof hook.result.current.execute>>>;
+    act(() => {
+      second = hook.result.current.execute(undefined);
+    });
+
+    expect(await act(() => first)).toMatchObject({
+      error: { kind: 'cancelled' },
+      ok: false
+    });
+    expect(await act(() => second)).toMatchObject({
+      data: 'saved-in-org-b',
+      ok: true
+    });
+    expect(execute).toHaveBeenCalledTimes(2);
+  });
+
 });

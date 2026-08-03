@@ -592,9 +592,9 @@ export function createEventStudioDefinitions(
         { key: 'tags', databaseName: 'tags', graphQLName: 'tags', label: 'Tags', kind: 'string-array' },
       ],
       relations: [
-        { id: 'program', label: 'Program', fieldName: 'program', graphQLName: 'program', targetTableName: 'programs', targetResourceId: 'event-studio.programs', cardinality: 'one' },
-        { id: 'venue', label: 'Venue', fieldName: 'venue', graphQLName: 'venue', targetTableName: 'venues', targetResourceId: 'event-studio.venues', cardinality: 'one' },
-        { id: 'people', label: 'People', fieldName: 'sessionPeople', graphQLName: 'sessionPeople', targetTableName: 'session_people', targetResourceId: 'event-studio.people', cardinality: 'many', linkActionId: 'event-studio.session-people.link', unlinkActionId: 'event-studio.session-people.unlink' },
+        { id: 'program', label: 'Program', fieldName: 'program', graphQLName: 'program', targetTableName: 'programs', targetGraphQLTypeName: 'Program', targetResourceId: 'event-studio.programs', cardinality: 'one' },
+        { id: 'venue', label: 'Venue', fieldName: 'venue', graphQLName: 'venue', targetTableName: 'venues', targetGraphQLTypeName: 'Venue', targetResourceId: 'event-studio.venues', cardinality: 'one' },
+        { id: 'people', label: 'People', fieldName: 'sessionPeople', graphQLName: 'sessionPeople', targetTableName: 'session_people', targetGraphQLTypeName: 'SessionPerson', targetResourceId: 'event-studio.people', cardinality: 'many', linkActionId: 'event-studio.session-people.link', unlinkActionId: 'event-studio.session-people.unlink' },
       ],
       forms: {
         create: {

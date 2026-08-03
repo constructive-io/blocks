@@ -4,7 +4,7 @@ import userEvent from '@testing-library/user-event';
 import { QueryClient } from '@tanstack/react-query';
 import { describe, expect, it, vi } from 'vitest';
 
-import type { AppResourceSource, AppScope } from '../core';
+import { appFailure, type AppResourceSource, type AppScope } from '../core';
 import { AppKitProvider } from '../core/runtime';
 import type { AppCollectionPage } from '../data';
 import {
@@ -236,13 +236,11 @@ describe('Event Studio controlled starter', () => {
   });
 
   it('keeps a create permission denial visible in the generated form dialog', async () => {
-    const deniedCreate = vi.fn((_context: Parameters<EventStudioAdapter['createProgram']>[0]) => ({
-      ok: false as const,
-      error: {
+    const deniedCreate = vi.fn((_context: Parameters<EventStudioAdapter['createProgram']>[0]) =>
+      appFailure({
         kind: 'authorization' as const,
         message: 'Only organization admins can create programs.',
-      },
-    }));
+      }));
     const definitions = createEventStudioDefinitions(sources, {
       ...adapter(),
       createProgram: deniedCreate,
@@ -337,13 +335,11 @@ describe('Event Studio controlled starter', () => {
   });
 
   it('renders a denied session update inside the existing edit form', async () => {
-    const deniedUpdate = vi.fn((_context: Parameters<EventStudioAdapter['updateSession']>[0]) => ({
-      ok: false as const,
-      error: {
+    const deniedUpdate = vi.fn((_context: Parameters<EventStudioAdapter['updateSession']>[0]) =>
+      appFailure({
         kind: 'authorization' as const,
         message: 'This session is read-only for your organization role.',
-      },
-    }));
+      }));
     const definitions = createEventStudioDefinitions(sources, {
       ...adapter(),
       updateSession: deniedUpdate,

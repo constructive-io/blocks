@@ -205,6 +205,18 @@ function padMilliseconds(value: number): string {
   return String(value).padStart(3, '0');
 }
 
+function subscribeToClientSnapshot() {
+  return () => undefined;
+}
+
+function getClientSnapshot() {
+  return true;
+}
+
+function getServerSnapshot() {
+  return false;
+}
+
 /** Converts an instant-bearing ISO value to the browser's datetime-local wall time. */
 export function toAppDateTimeLocalValue(value: unknown): string {
   if (typeof value !== 'string' || value.length === 0) return '';
@@ -241,6 +253,11 @@ function GeneratedField<TRecord extends Record<string, unknown>>({
   onChange: (value: unknown) => void;
 }>) {
   const id = React.useId();
+  const canRenderBrowserLocalTime = React.useSyncExternalStore(
+    subscribeToClientSnapshot,
+    getClientSnapshot,
+    getServerSnapshot
+  );
   const descriptionId = field.description ? `${id}-description` : undefined;
   const errorId = error ? `${id}-error` : undefined;
   const describedBy = [descriptionId, errorId].filter(Boolean).join(' ') || undefined;
@@ -376,7 +393,9 @@ function GeneratedField<TRecord extends Record<string, unknown>>({
         type={inputType}
         value={
           inputType === 'datetime-local'
-            ? toAppDateTimeLocalValue(value)
+            ? canRenderBrowserLocalTime
+              ? toAppDateTimeLocalValue(value)
+              : ''
             : typeof value === 'string' || typeof value === 'number'
               ? value
               : ''

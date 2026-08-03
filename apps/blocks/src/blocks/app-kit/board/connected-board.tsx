@@ -42,7 +42,11 @@ export interface ConnectedAppBoardProps<
 
 function BoardLoading({ columns }: { columns: number }) {
   return (
-    <div aria-label="Loading board" className="grid grid-flow-col auto-cols-[minmax(17rem,1fr)] gap-4" role="status">
+    <div
+      aria-label="Loading board"
+      className="grid max-w-full grid-flow-col auto-cols-[minmax(17rem,1fr)] gap-4 overflow-x-auto pb-4"
+      role="status"
+    >
       {Array.from({ length: Math.max(columns, 1) }, (_, index) => (
         <Skeleton className="h-64 w-full" key={index} />
       ))}

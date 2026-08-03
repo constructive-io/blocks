@@ -7,6 +7,7 @@ import {
   useMutation,
   useQuery,
   useQueryClient,
+  type QueryState,
   type UseQueryResult
 } from '@tanstack/react-query';
 
@@ -19,15 +20,21 @@ import {
   type AppError,
   type AppExecutorResult,
   type AppInputSchema,
+  type AppQueryCache,
+  type AppQueryCacheFilters,
+  type AppQueryCacheUpdater,
   type AppQueryDefinition,
   type AppResult,
+  type AppScopedQueryKey,
   type AppScope
 } from './contracts';
 import {
   createAppScopeFingerprint,
   createAppQueryKey,
   createAppQueryRootKey,
-  createAppScopeQueryKey
+  createAppScopeQueryKey,
+  findAppCredentialInputPath,
+  type AppScopeQueryKey
 } from './scope';
 
 const AppScopeContext = React.createContext<AppScope | null>(null);
@@ -109,6 +116,157 @@ async function executeWithAbortSignal<T>(
   }
 }
 
+function credentialInputError(path: string): AppRuntimeError {
+  return new AppRuntimeError({
+    code: 'CREDENTIAL_IN_INPUT',
+    fieldErrors: [
+      {
+        field: path,
+        message: 'Capture credentials in the query or action executor closure.'
+      }
+    ],
+    kind: 'validation',
+    message:
+      'App Kit inputs must be credential-free. Capture authentication in the executor closure instead.'
+  });
+}
+
+function inspectCredentialFreeInput(input: unknown): string | undefined {
+  try {
+    return findAppCredentialInputPath(input);
+  } catch (error) {
+    throw new AppRuntimeError({
+      code: 'UNSUPPORTED_INPUT',
+      kind: 'validation',
+      message:
+        error instanceof Error
+          ? error.message
+          : 'App Kit inputs must use supported plain values.'
+    });
+  }
+}
+
+function assertCredentialFreeInput(input: unknown): void {
+  const credentialPath = inspectCredentialFreeInput(input);
+  if (credentialPath) throw credentialInputError(credentialPath);
+}
+
+function queryKeyStartsWithScope(
+  queryKey: readonly unknown[],
+  scopeKey: AppScopeQueryKey
+): boolean {
+  return scopeKey.every((part, index) => Object.is(queryKey[index], part));
+}
+
+type ScopeBoundQueryCacheObserver = Readonly<{
+  beforeSet?: (queryKey: AppScopedQueryKey) => void;
+}>;
+
+function createScopeBoundQueryCache(
+  queryClient: QueryClient,
+  scope: AppScope,
+  observer: ScopeBoundQueryCacheObserver = {}
+): AppQueryCache {
+  const scopeKey = createAppScopeQueryKey(scope);
+  const assertScopedKey = (queryKey: readonly unknown[]) => {
+    if (!queryKeyStartsWithScope(queryKey, scopeKey)) {
+      throw new Error(
+        'Optimistic cache access must use a key created for the AppScope that started the action.'
+      );
+    }
+  };
+
+  const cache: AppQueryCache = {
+    cancelQueries: (filters: AppQueryCacheFilters = {}) => {
+      const queryKey = filters.queryKey ?? scopeKey;
+      assertScopedKey(queryKey);
+      return queryClient.cancelQueries({
+        exact: filters.exact,
+        queryKey
+      });
+    },
+    getQueryData: <TData = unknown>(queryKey: AppScopedQueryKey) => {
+      assertScopedKey(queryKey);
+      return queryClient.getQueryData<TData>(queryKey);
+    },
+    setQueryData: <TData = unknown>(
+      queryKey: AppScopedQueryKey,
+      updater: AppQueryCacheUpdater<TData>
+    ) => {
+      assertScopedKey(queryKey);
+      observer.beforeSet?.(queryKey);
+      return queryClient.setQueryData<TData>(queryKey, updater);
+    }
+  };
+  return Object.freeze(cache);
+}
+
+type OptimisticCacheSnapshot = Readonly<{
+  queryKey: AppScopedQueryKey;
+  state: QueryState<unknown, Error> | null;
+}>;
+
+type OptimisticCacheTransaction = Readonly<{
+  commit: () => void;
+  queryCache: AppQueryCache;
+  restore: () => void;
+}>;
+
+function createOptimisticCacheTransaction(
+  queryClient: QueryClient,
+  scope: AppScope
+): OptimisticCacheTransaction {
+  const snapshots = new Map<string, OptimisticCacheSnapshot>();
+  let active = true;
+  const snapshotQuery = (queryKey: AppScopedQueryKey) => {
+    if (!active) return;
+    const fingerprint = JSON.stringify(queryKey);
+    if (snapshots.has(fingerprint)) return;
+    const query = queryClient.getQueryCache().find({ exact: true, queryKey });
+    snapshots.set(fingerprint, {
+      queryKey,
+      state: query?.state ?? null
+    });
+  };
+  const queryCache = createScopeBoundQueryCache(queryClient, scope, {
+    beforeSet: snapshotQuery
+  });
+
+  return {
+    commit: () => {
+      active = false;
+      snapshots.clear();
+    },
+    queryCache,
+    restore: () => {
+      try {
+        for (const snapshot of [...snapshots.values()].reverse()) {
+          if (!snapshot.state) {
+            queryClient.removeQueries({
+              exact: true,
+              queryKey: snapshot.queryKey
+            });
+            continue;
+          }
+          const query = queryClient.getQueryCache().find({
+            exact: true,
+            queryKey: snapshot.queryKey
+          });
+          if (!query) {
+            throw new Error(
+              'App Kit could not restore an optimistic cache entry that was removed during apply.'
+            );
+          }
+          query.setState(snapshot.state);
+        }
+      } finally {
+        active = false;
+        snapshots.clear();
+      }
+    }
+  };
+}
+
 export type UseAppQueryOptions = Readonly<{
   enabled?: boolean;
   staleTime?: number;
@@ -120,11 +278,14 @@ export function useAppQuery<TInput, TOutput>(
   options: UseAppQueryOptions = {}
 ): UseQueryResult<TOutput, AppRuntimeError> {
   const scope = useAppScope();
+  const credentialPath = inspectCredentialFreeInput(input);
   return useQuery<TOutput, AppRuntimeError>({
     enabled: options.enabled,
     queryKey: createAppQueryKey(scope, definition.id, input),
-    queryFn: ({ signal }) =>
-      executeApp(() => definition.execute({ input, scope, signal })),
+    queryFn: ({ signal }) => {
+      if (credentialPath) throw credentialInputError(credentialPath);
+      return executeApp(() => definition.execute({ input, scope, signal }));
+    },
     refetchInterval: false,
     refetchOnReconnect: true,
     refetchOnWindowFocus: true,
@@ -155,7 +316,16 @@ function parseInput<TInput>(
 }
 
 export type UseAppActionOptions<TInput, TOutput, TContext = unknown> = Readonly<{
+  /** Observes the final result; callback failures never change action execution. */
   onResult?: (result: AppResult<TOutput>, input: TInput) => void;
+  /** Reports UI synchronization failures after the server action committed. */
+  onPostCommitError?: (context: Readonly<{
+    error: AppError;
+    input: TInput;
+    output: TOutput;
+    phase: 'invalidation' | 'settle';
+    scope: AppScope;
+  }>) => void;
   presentationInput?: TInput;
   presentationContext?: TContext;
 }>;
@@ -177,7 +347,6 @@ export type AppActionMutationState<TInput, TOutput> = Readonly<{
   isSuccess: boolean;
   status: 'error' | 'idle' | 'pending' | 'success';
   submittedAt: number;
-  variables: TInput | undefined;
 }>;
 
 export type UseAppActionResult<
@@ -201,17 +370,80 @@ export type UseAppActionResult<
   mutation: AppActionMutationState<TInput, TOutput>;
 }>;
 
-type AppActionMutationVariables<TInput> = Readonly<{
-  controller: AbortController;
+type AppActionMutationVariables = Readonly<{
   executionId: number;
-  input: TInput;
 }>;
 
-type AppActionMutationContext<TInput, TOptimistic> = Readonly<{
+type AppActionOptimisticMutationContext<TOptimistic> =
+  | Readonly<{ applied: false }>
+  | Readonly<{ applied: true; value: TOptimistic }>;
+
+type AppActionMutationContext<TOptimistic> = Readonly<{
   executionId: number;
-  input: TInput;
-  optimisticContext: TOptimistic | undefined;
+  optimistic: AppActionOptimisticMutationContext<TOptimistic>;
 }>;
+
+type AppActionExecution<
+  TInput,
+  TOutput,
+  TOptimistic,
+  TContext
+> = Readonly<{
+  controller: AbortController;
+  definition: AppActionDefinition<TInput, TOutput, TOptimistic, TContext>;
+  input: TInput;
+  onPostCommitError?: UseAppActionOptions<
+    TInput,
+    TOutput,
+    TContext
+  >['onPostCommitError'];
+  queryCache: AppQueryCache;
+  runtimeQueryClient: QueryClient;
+  scope: AppScope;
+  scopeKey: string;
+}>;
+
+function reportPostCommitError<
+  TInput,
+  TOutput,
+  TOptimistic,
+  TContext
+>(
+  execution: AppActionExecution<TInput, TOutput, TOptimistic, TContext>,
+  output: TOutput,
+  phase: 'invalidation' | 'settle',
+  error: unknown
+): void {
+  const appError = normalizeAppError(
+    error,
+    phase === 'invalidation'
+      ? 'The action committed, but related cached views could not be refreshed.'
+      : 'The action committed, but optimistic cleanup could not be completed.'
+  );
+  try {
+    execution.onPostCommitError?.({
+      error: appError,
+      input: execution.input,
+      output,
+      phase,
+      scope: execution.scope
+    });
+  } catch {
+    // A host diagnostic callback must never change the committed action result.
+  }
+}
+
+function notifyActionResult<TInput, TOutput>(
+  onResult: UseAppActionOptions<TInput, TOutput>['onResult'],
+  result: AppResult<TOutput>,
+  input: TInput
+): void {
+  try {
+    onResult?.(result, input);
+  } catch {
+    // A host observer must never change or duplicate the action result.
+  }
+}
 
 export function useAppAction<
   TInput,
@@ -224,87 +456,172 @@ export function useAppAction<
 ): UseAppActionResult<TInput, TOutput, TOptimistic, TContext> {
   const scope = useAppScope();
   const queryClient = useQueryClient();
+  const scopeKey = createAppScopeFingerprint(scope);
+  const queryCache = React.useMemo(
+    () => createScopeBoundQueryCache(queryClient, scope),
+    [queryClient, scopeKey]
+  );
   const executionCounterRef = React.useRef(0);
   const currentExecutionRef = React.useRef<Readonly<{
     completion: Promise<void>;
     controller: AbortController;
     id: number;
+    scopeKey: string;
   }> | null>(null);
+  const executionsRef = React.useRef(
+    new Map<
+      number,
+      AppActionExecution<TInput, TOutput, TOptimistic, TContext>
+    >()
+  );
   const pendingRef = React.useRef(false);
+
+  React.useEffect(
+    () => () => currentExecutionRef.current?.controller.abort(),
+    []
+  );
+
+  const getExecution = React.useCallback((executionId: number) => {
+    const execution = executionsRef.current.get(executionId);
+    if (!execution) {
+      throw new AppRuntimeError({
+        code: 'ACTION_EXECUTION_MISSING',
+        kind: 'unknown',
+        message: 'The action execution context is no longer available.'
+      });
+    }
+    return execution;
+  }, []);
 
   const mutation = useMutation<
     TOutput,
     AppRuntimeError,
-    AppActionMutationVariables<TInput>,
-    AppActionMutationContext<TInput, TOptimistic>
+    AppActionMutationVariables,
+    AppActionMutationContext<TOptimistic>
   >({
     mutationKey: [...createAppScopeQueryKey(scope), 'action', definition.id],
-    mutationFn: async ({ controller, input }) => {
+    retry: false,
+    mutationFn: async ({ executionId }) => {
+      const execution = getExecution(executionId);
       return executeApp(() =>
-        executeWithAbortSignal(controller.signal, () =>
-          definition.execute({
-            input,
-            scope,
-            signal: controller.signal
+        executeWithAbortSignal(execution.controller.signal, () =>
+          execution.definition.execute({
+            input: execution.input,
+            scope: execution.scope,
+            signal: execution.controller.signal
           })
         )
       );
     },
-    onMutate: async ({ executionId, input }) => {
-      const optimisticContext = await definition.optimistic?.apply({
-        input,
-        queryClient,
-        scope
-      });
-      return { executionId, input, optimisticContext };
+    onMutate: async ({ executionId }) => {
+      const execution = getExecution(executionId);
+      if (!execution.definition.optimistic) {
+        return { executionId, optimistic: { applied: false } };
+      }
+      const transaction = createOptimisticCacheTransaction(
+        execution.runtimeQueryClient,
+        execution.scope
+      );
+      try {
+        const value = await execution.definition.optimistic.apply({
+          input: execution.input,
+          queryClient: transaction.queryCache,
+          scope: execution.scope
+        });
+        transaction.commit();
+        return { executionId, optimistic: { applied: true, value } };
+      } catch (error) {
+        try {
+          transaction.restore();
+        } catch (recoveryError) {
+          throw new AppRuntimeError({
+            code: 'OPTIMISTIC_RECOVERY_FAILED',
+            details: {
+              applyError: normalizeAppError(error),
+              recoveryError: normalizeAppError(recoveryError)
+            },
+            kind: 'unknown',
+            message:
+              'The optimistic update failed and App Kit could not restore its cache snapshot.'
+          });
+        }
+        if (error instanceof AppRuntimeError) throw error;
+        throw new AppRuntimeError(normalizeAppError(error));
+      }
     },
     onError: async (runtimeError, variables, context) => {
-      if (
-        definition.optimistic &&
-        context?.optimisticContext !== undefined
-      ) {
-        await definition.optimistic.rollback({
-          error: runtimeError.appError,
-          input: context.input,
-          optimisticContext: context.optimisticContext,
-          queryClient,
-          scope
+      const execution = getExecution(variables.executionId);
+      if (execution.definition.optimistic && context?.optimistic.applied) {
+        await execution.definition.optimistic.rollback({
+          error:
+            runtimeError instanceof AppRuntimeError
+              ? runtimeError.appError
+              : normalizeAppError(runtimeError),
+          input: execution.input,
+          optimisticContext: context.optimistic.value,
+          queryClient: execution.queryCache,
+          scope: execution.scope
         });
       }
     },
     onSuccess: async (output, variables, context) => {
-      const input = context?.input ?? variables.input;
-      const targets =
-        typeof definition.invalidate === 'function'
-          ? definition.invalidate({ input, output, scope })
-          : definition.invalidate ?? [];
-      await Promise.all(
-        targets.map((target) =>
-          queryClient.invalidateQueries({
-            exact: target.exact ?? target.input !== undefined,
-            queryKey:
-              target.input === undefined
-                ? createAppQueryRootKey(scope, target.queryId)
-                : createAppQueryKey(scope, target.queryId, target.input)
-          })
-        )
-      );
+      const execution = getExecution(variables.executionId);
+      try {
+        const targets =
+          typeof execution.definition.invalidate === 'function'
+            ? execution.definition.invalidate({
+                input: execution.input,
+                output,
+                scope: execution.scope
+              })
+            : execution.definition.invalidate ?? [];
+        await Promise.all(
+          targets.map((target) =>
+            execution.runtimeQueryClient.invalidateQueries({
+              exact: target.exact ?? target.input !== undefined,
+              queryKey:
+                target.input === undefined
+                  ? createAppQueryRootKey(execution.scope, target.queryId)
+                  : createAppQueryKey(
+                      execution.scope,
+                      target.queryId,
+                      target.input
+                    )
+            })
+          )
+        );
+      } catch (error) {
+        reportPostCommitError(execution, output, 'invalidation', error);
+      }
     },
     onSettled: async (output, runtimeError, variables, context) => {
-      if (
-        definition.optimistic?.settle &&
-        context?.optimisticContext !== undefined
-      ) {
+      const execution = getExecution(variables.executionId);
+      if (execution.definition.optimistic?.settle && context?.optimistic.applied) {
         const result = runtimeError
-          ? appFailure(runtimeError.appError)
+          ? appFailure(
+              runtimeError instanceof AppRuntimeError
+                ? runtimeError.appError
+                : normalizeAppError(runtimeError)
+            )
           : appSuccess(output as TOutput);
-        await definition.optimistic.settle({
-          input: context.input,
-          optimisticContext: context.optimisticContext,
-          queryClient,
-          result,
-          scope
-        });
+        try {
+          await execution.definition.optimistic.settle({
+            input: execution.input,
+            optimisticContext: context.optimistic.value,
+            queryClient: execution.queryCache,
+            result,
+            scope: execution.scope
+          });
+        } catch (error) {
+          if (!runtimeError) {
+            reportPostCommitError(
+              execution,
+              output as TOutput,
+              'settle',
+              error
+            );
+          }
+        }
       }
     }
   });
@@ -326,19 +643,22 @@ export function useAppAction<
     async (input: TInput): Promise<AppResult<TOutput>> => {
       let parsedInput: TInput;
       try {
+        assertCredentialFreeInput(input);
         parsedInput = parseInput(definition.inputSchema, input);
+        assertCredentialFreeInput(parsedInput);
       } catch (error) {
         const appError =
           error instanceof AppRuntimeError
             ? error.appError
             : normalizeAppError(error);
         const result = appFailure(appError);
-        options.onResult?.(result, input);
+        notifyActionResult(options.onResult, result, input);
         return result;
       }
 
       const previousExecution = currentExecutionRef.current;
-      if (pendingRef.current) {
+      const previousIsSameScope = previousExecution?.scopeKey === scopeKey;
+      if (pendingRef.current && previousIsSameScope) {
         if ((definition.concurrency ?? 'block') !== 'replace') {
           const result = appFailure({
             code: 'ACTION_IN_PROGRESS',
@@ -346,7 +666,7 @@ export function useAppAction<
             message: 'This action is already in progress.',
             retryable: true
           });
-          options.onResult?.(result, input);
+          notifyActionResult(options.onResult, result, input);
           return result;
         }
       }
@@ -360,10 +680,16 @@ export function useAppAction<
       currentExecutionRef.current = {
         completion,
         controller,
-        id: executionId
+        id: executionId,
+        scopeKey
       };
       pendingRef.current = true;
-      previousExecution?.controller.abort();
+      if (
+        previousExecution &&
+        (!previousIsSameScope || (definition.concurrency ?? 'block') === 'replace')
+      ) {
+        previousExecution.controller.abort();
+      }
       try {
         // Finish the replaced optimistic transaction before applying the next
         // one so its rollback cannot overwrite the newer optimistic state.
@@ -371,13 +697,19 @@ export function useAppAction<
         if (controller.signal.aborted) {
           throw new DOMException('Aborted', 'AbortError');
         }
-        const data = await mutation.mutateAsync({
+        executionsRef.current.set(executionId, {
           controller,
-          executionId,
-          input: parsedInput
+          definition,
+          input: parsedInput,
+          onPostCommitError: options.onPostCommitError,
+          queryCache,
+          runtimeQueryClient: queryClient,
+          scope,
+          scopeKey
         });
+        const data = await mutation.mutateAsync({ executionId });
         const result = appSuccess(data);
-        options.onResult?.(result, parsedInput);
+        notifyActionResult(options.onResult, result, parsedInput);
         return result;
       } catch (error) {
         const appError =
@@ -385,9 +717,10 @@ export function useAppAction<
             ? error.appError
             : normalizeAppError(error);
         const result = appFailure(appError);
-        options.onResult?.(result, parsedInput);
+        notifyActionResult(options.onResult, result, parsedInput);
         return result;
       } finally {
+        executionsRef.current.delete(executionId);
         completeExecution();
         if (currentExecutionRef.current?.id === executionId) {
           currentExecutionRef.current = null;
@@ -395,7 +728,7 @@ export function useAppAction<
         }
       }
     },
-    [definition.concurrency, definition.inputSchema, mutation, options]
+    [definition, mutation, options, queryCache, queryClient, scope, scopeKey]
   );
 
   const hasPresentationInput = Object.prototype.hasOwnProperty.call(
@@ -426,8 +759,7 @@ export function useAppAction<
       isPending: mutation.isPending,
       isSuccess: mutation.isSuccess,
       status: mutation.status,
-      submittedAt: mutation.submittedAt,
-      variables: mutation.variables?.input
+      submittedAt: mutation.submittedAt
     },
     reset: mutation.reset,
     visible: presentationState.visible

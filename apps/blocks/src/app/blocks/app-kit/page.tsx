@@ -43,7 +43,8 @@ const SCOPE_EXAMPLE = `const scope: AppScope = {
 }
 
 // Tokens, cookies, headers, and CSRF values stay in the injected transport.
-// They never belong in AppScope, definitions, URLs, stores, or query keys.`;
+// They never belong in AppScope, definitions, URLs, stores, or query keys.
+// Query keys retain an opaque deterministic input fingerprint, not raw input.`;
 
 const VIEW_CONTRACTS = [
   ['Records', 'AppDataTable · AppDataList · AppDataCards · AppRecordDetail · AppRecordForm', 'ConnectedAppDataTable · ConnectedAppDataList · ConnectedAppDataCards · ConnectedAppRecordDetail · ConnectedAppRecordForm'],
@@ -113,7 +114,7 @@ export default function AppKitPage() {
 
           <ol className="grid gap-2 md:grid-cols-3">
             {[
-              ['01', 'Validate', 'Reconcile _meta database facts with final executable GraphQL introspection during generation or build.'],
+              ['01', 'Validate', 'Use _meta for database facts and final executable GraphQL introspection for names, types, relations, and operation roots during generation or build.'],
               ['02', 'Bind', 'Partition loaders and mutations with endpoint, database, session, organization, and schema revision scope.'],
               ['03', 'Compose', 'Choose controlled view geometry from the data shape and workflow, then let the host own routing and shareable state.'],
             ].map(([step, title, body]) => (
@@ -170,8 +171,8 @@ export default function AppKitPage() {
               <p className="mt-1 text-pretty text-xs leading-5 text-muted-foreground">
                 <code className="font-mono text-foreground">defineResource()</code>{' '}
                 binds database and final GraphQL names, ordered identity fields,
-                display fields, relations, list/detail queries, operation-specific
-                forms, and semantic actions.
+                display fields, physical and final relation targets, list/detail
+                queries, operation-specific forms, and semantic actions.
               </p>
             </div>
             <div className="rounded-xl border border-border/60 bg-card p-4">
@@ -180,7 +181,8 @@ export default function AppKitPage() {
                 <code className="font-mono text-foreground">defineQuery()</code>{' '}
                 receives typed input, the active scope, and an AbortSignal. It may
                 return a record, collection page, relation search page, range, total,
-                or purpose-built analytical payload.
+                or purpose-built analytical payload. Raw input is fingerprinted for
+                cache identity, and credential-shaped fields fail closed.
               </p>
             </div>
             <div className="rounded-xl border border-border/60 bg-card p-4">
@@ -189,7 +191,8 @@ export default function AppKitPage() {
                 <code className="font-mono text-foreground">defineAction()</code>{' '}
                 owns transformed validation, input-aware presentation policy,
                 confirmation, abortable execution, targeted invalidation, and
-                optional optimistic apply, settle, and rollback behavior.
+                optional optimistic apply, settle, and rollback behavior. Transport
+                credentials stay in the injected executor closure.
               </p>
             </div>
           </div>

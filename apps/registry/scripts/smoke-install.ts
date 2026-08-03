@@ -255,6 +255,12 @@ const appKitCapabilityRoots = [
 	'app-kit-workflow',
 ] as const satisfies readonly AppKitRoot[];
 
+const forbiddenAppKitPackages = [
+	'@constructive-io/sheets',
+	'recharts',
+	'zustand',
+] as const;
+
 function appKitExpectedPackages(root: AppKitRoot): string[] {
 	return [
 		'@tanstack/react-query',
@@ -294,7 +300,7 @@ const appKitCapabilityCases: SmokeCase[] = appKitCapabilityRoots.flatMap((root) 
 			? appKitFiles['app-kit-core'].filter((file) => !file.endsWith('runtime.tsx'))
 			: undefined,
 		forbidden: forbiddenAppKitFiles(root),
-		forbiddenPackages: ['@constructive-io/sheets', 'zustand'],
+		forbiddenPackages: [...forbiddenAppKitPackages],
 		strictNullChecks: true,
 	},
 	{
@@ -308,7 +314,7 @@ const appKitCapabilityCases: SmokeCase[] = appKitCapabilityRoots.flatMap((root) 
 			? appKitFiles['app-kit-core'].filter((file) => !file.endsWith('runtime.tsx'))
 			: undefined,
 		forbidden: forbiddenAppKitFiles(root),
-		forbiddenPackages: ['@constructive-io/sheets', 'zustand'],
+		forbiddenPackages: [...forbiddenAppKitPackages],
 		strictNullChecks: true,
 	},
 ]);
@@ -420,7 +426,7 @@ import * as React from 'react';
 import { QueryClient } from '@tanstack/react-query';
 
 import { appSuccess, type AppResourceSource, type AppScope } from '@/blocks/app-kit/core';
-import { AppKitProvider } from '@/blocks/app-kit/core/runtime';
+import { AppKitProvider, createAppQueryKey } from '@/blocks/app-kit/core/runtime';
 import { DEFAULT_APP_COLLECTION_STATE } from '@/blocks/app-kit/data';
 import { createDefaultAppDashboardLayout } from '@/blocks/app-kit/dashboard';
 import {
@@ -487,10 +493,20 @@ const adapter: EventStudioAdapter = {
   listSessionPersonLinks: async () => success([]),
   loadBoard: async () => success([]),
   loadCalendar: async () => success([]),
-  loadSessionCount: async () => success({ value: 0 }),
-  loadPublishedCount: async () => success({ value: 0 }),
-  loadSessionsByStatus: async () => success({ rows: [] }),
-  loadSessionsOverTime: async () => success({ rows: [] }),
+  loadSessionCount: async () => success({ value: 4 }),
+  loadPublishedCount: async () => success({ value: 2 }),
+  loadSessionsByStatus: async () => success({
+    rows: [
+      { status: 'Draft', count: 2 },
+      { status: 'Published', count: 2 },
+    ],
+  }),
+  loadSessionsOverTime: async () => success({
+    rows: [
+      { date: '2026-08-01', count: 1 },
+      { date: '2026-08-02', count: 3 },
+    ],
+  }),
   moveSession: async () => success(null),
   updateSession: async () => success(null),
   publishSession: async () => success(null),
@@ -500,6 +516,32 @@ const adapter: EventStudioAdapter = {
   unlinkPerson: async () => success(null),
 };
 const definitions = createEventStudioDefinitions(sources, adapter);
+const analyticsInput = { timeZone: 'UTC' };
+
+function createFixtureQueryClient() {
+  const queryClient = new QueryClient();
+  const fixtureData = [
+    [definitions.queries.sessionCount.id, { value: 4 }],
+    [definitions.queries.publishedCount.id, { value: 2 }],
+    [definitions.queries.sessionsByStatus.id, {
+      rows: [
+        { status: 'Draft', count: 2 },
+        { status: 'Published', count: 2 },
+      ],
+    }],
+    [definitions.queries.sessionsOverTime.id, {
+      rows: [
+        { date: '2026-08-01', count: 1 },
+        { date: '2026-08-02', count: 3 },
+      ],
+    }],
+  ] as const;
+  for (const [queryId, data] of fixtureData) {
+    queryClient.setQueryData(createAppQueryKey(scope, queryId, analyticsInput), data);
+  }
+  return queryClient;
+}
+
 const initialState: EventStudioViewState = {
   view: 'dashboard',
   collection: 'sessions',
@@ -515,14 +557,14 @@ const initialLayout = createDefaultAppDashboardLayout([
 ]);
 
 export function EventStudioRegistrySmokeConsumer() {
-  const [queryClient] = React.useState(() => new QueryClient());
+  const [queryClient] = React.useState(createFixtureQueryClient);
   const [state, setState] = React.useState(initialState);
   const [layout, setLayout] = React.useState(initialLayout);
 
   return (
     <AppKitProvider queryClient={queryClient} scope={scope}>
       <EventStudio
-        analyticsInput={{ timeZone: 'UTC' }}
+        analyticsInput={analyticsInput}
         dashboardLayout={layout}
         definitions={definitions}
         onDashboardLayoutChange={setLayout}
@@ -721,7 +763,7 @@ export function AiRegistrySmokeConsumer() {
 			'src/blocks/app-kit/event-studio/definitions.ts',
 			'src/blocks/app-kit/event-studio/state.ts',
 		],
-		forbiddenPackages: ['@constructive-io/sheets', 'zustand'],
+		forbiddenPackages: [...forbiddenAppKitPackages],
 		nextApp: true,
 		strictNullChecks: true,
 	},
@@ -945,10 +987,17 @@ test('Event Studio hydrates in a production App Router build', async ({ page }) 
 	});
 	page.on('pageerror', (error) => errors.push(error.message));
 
+	const serverResponse = await page.request.get('/');
+	expect(serverResponse.ok()).toBe(true);
+	const serverMarkup = await serverResponse.text();
+	expect(serverMarkup).toContain('aria-roledescription="chart"');
+
 	await page.goto('/');
 	await expect(page.locator('[data-app-kit-starter="event-studio"]')).toBeVisible();
 	await expect(page.getByRole('heading', { name: 'Event Studio' })).toBeVisible();
 	await expect(page.getByText('Explicit count query')).toBeVisible();
+	await expect(page.getByRole('img', { name: 'Sessions by status' })).toBeVisible();
+	await expect(page.getByRole('img', { name: 'Sessions over time' })).toBeVisible();
 	const dashboardA11y = await new AxeBuilder({ page }).analyze();
 	expect(dashboardA11y.violations).toEqual([]);
 	await page.getByRole('tab', { name: 'Collections' }).click();

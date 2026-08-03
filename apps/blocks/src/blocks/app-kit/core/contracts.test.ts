@@ -7,6 +7,7 @@ import {
   defineResource,
   validateAppResource,
   type AppGraphQLIntrospection,
+  type AppIntrospectionTypeRef,
   type AppMetaQuery,
   type AppScope
 } from './index';
@@ -87,6 +88,7 @@ function programResource(identity = true) {
         id: 'sessions',
         label: 'Sessions',
         targetTableName: 'sessions',
+        targetGraphQLTypeName: 'Session',
         targetResourceId: 'sessions'
       }
     ]
@@ -179,12 +181,26 @@ const introspection: AppGraphQLIntrospection = {
       {
         kind: 'OBJECT',
         name: 'EventProgramConnection',
-        fields: [{ name: 'nodes', type: { kind: 'LIST', ofType: { name: 'EventProgram' } } }]
+        fields: [
+          { name: 'nodes', type: { kind: 'LIST', ofType: { name: 'EventProgram' } } },
+          { name: 'pageInfo', type: { kind: 'OBJECT', name: 'PageInfo' } }
+        ]
       },
       {
         kind: 'OBJECT',
         name: 'SessionConnection',
-        fields: [{ name: 'nodes', type: { kind: 'LIST', ofType: { name: 'Session' } } }]
+        fields: [
+          { name: 'nodes', type: { kind: 'LIST', ofType: { name: 'Session' } } },
+          { name: 'pageInfo', type: { kind: 'OBJECT', name: 'PageInfo' } }
+        ]
+      },
+      {
+        kind: 'OBJECT',
+        name: 'PageInfo',
+        fields: [
+          { name: 'hasNextPage', type: scalar('Boolean') },
+          { name: 'hasPreviousPage', type: scalar('Boolean') }
+        ]
       },
       {
         enumValues: [{ name: 'DRAFT' }, { name: 'PUBLISHED' }],
@@ -213,6 +229,317 @@ describe('App Kit resource contracts', () => {
       reason: expect.stringContaining('renderer')
     });
     expect(result.fields.find((field) => field.key === 'metric')?.editable).toBe(false);
+  });
+
+  it('does not mistake a one-to-one domain object with a nodes field for a connection', () => {
+    const base = programResource();
+    const resource = defineResource({
+      ...base,
+      id: 'programs-with-session-summary',
+      relations: [{
+        ...base.relations![0]!,
+        cardinality: 'one' as const,
+        fieldName: 'sessionSummary',
+        graphQLName: 'sessionSummary',
+        targetGraphQLTypeName: 'SessionSummary'
+      }]
+    });
+    const originalTable = meta._meta?.tables?.[0];
+    const domainMeta: AppMetaQuery = {
+      _meta: {
+        tables: originalTable ? [{
+          ...originalTable,
+          relations: {
+            hasOne: [{
+              fieldName: 'sessionSummary',
+              isUnique: true,
+              referencedBy: { name: 'sessions' },
+              type: 'SessionSummary'
+            }]
+          }
+        }] : []
+      }
+    };
+    const domainIntrospection: AppGraphQLIntrospection = {
+      __schema: {
+        ...introspection.__schema,
+        types: [
+          ...(introspection.__schema?.types ?? []).map((type) => (
+            type.name === 'EventProgram'
+              ? {
+                  ...type,
+                  fields: type.fields?.map((field) => (
+                    field.name === 'sessionsByProgramIdAndLocale'
+                      ? {
+                          name: 'sessionSummary',
+                          type: { kind: 'OBJECT', name: 'SessionSummary' }
+                        }
+                      : field
+                  ))
+                }
+              : type
+          )),
+          {
+            kind: 'OBJECT',
+            name: 'SessionSummary',
+            fields: [
+              { name: 'nodes', type: { kind: 'LIST', ofType: scalar('String') } },
+              { name: 'summary', type: scalar('String') }
+            ]
+          }
+        ]
+      }
+    };
+
+    const result = validateAppResource(resource, {
+      introspection: domainIntrospection,
+      meta: domainMeta
+    });
+
+    expect(result.compatible).toBe(true);
+    expect(result.issues.map((issue) => issue.code)).not.toEqual(
+      expect.arrayContaining([
+        'GRAPHQL_RELATION_TYPE_MISMATCH',
+        'GRAPHQL_RELATION_CARDINALITY_MISMATCH'
+      ])
+    );
+  });
+
+  it('accepts provisioned _meta names while treating executable GraphQL names as authoritative', () => {
+    type PropagationBatch = Record<string, unknown> & {
+      accessionId: string;
+      batchCode: string;
+      id: string;
+      organizationId: string;
+    };
+    type Person = Record<string, unknown> & {
+      displayName: string;
+      email: string | null;
+      id: string;
+    };
+    const batches = defineResource<PropagationBatch, string>({
+      id: 'propagation-batches',
+      label: 'Propagation batch',
+      pluralLabel: 'Propagation batches',
+      source: {
+        schemaName: 'tenant-app-public',
+        tableName: 'propagation_batches',
+        graphQLTypeName: 'PropagationBatch',
+        listFieldName: 'propagationBatches',
+        createMutationName: 'createPropagationBatch',
+        updateMutationName: 'updatePropagationBatch',
+        deleteMutationName: 'deletePropagationBatch'
+      },
+      fields: [
+        { key: 'id', databaseName: 'id', graphQLName: 'id', kind: 'string', label: 'ID' },
+        { key: 'organizationId', databaseName: 'org_id', graphQLName: 'orgId', kind: 'string', label: 'Organization' },
+        { key: 'batchCode', databaseName: 'batch_code', graphQLName: 'batchCode', kind: 'string', label: 'Batch code' },
+        { key: 'accessionId', databaseName: 'accession_id', graphQLName: 'accessionId', kind: 'string', label: 'Accession' }
+      ],
+      displayField: 'batchCode',
+      identity: {
+        fields: ['id'],
+        read: (record) => record.id,
+        serialize: String
+      },
+      queries: {
+        list: defineQuery<unknown, readonly PropagationBatch[]>({
+          id: 'propagation-batches.list',
+          execute: () => []
+        })
+      },
+      relations: [
+        {
+          id: 'accession',
+          label: 'Accession',
+          fieldName: 'accession',
+          graphQLName: 'accession',
+          targetTableName: 'accessions',
+          targetGraphQLTypeName: 'Accession',
+          targetResourceId: 'accessions',
+          cardinality: 'one'
+        }
+      ]
+    });
+    const people = defineResource<Person, string>({
+      id: 'people-current-meta',
+      label: 'Person',
+      pluralLabel: 'People',
+      source: {
+        schemaName: 'tenant-app-public',
+        tableName: 'people',
+        graphQLTypeName: 'Person',
+        listFieldName: 'persons'
+      },
+      fields: [
+        { key: 'id', databaseName: 'id', graphQLName: 'id', kind: 'string', label: 'ID' },
+        { key: 'displayName', databaseName: 'display_name', graphQLName: 'displayName', kind: 'string', label: 'Name' },
+        { key: 'email', databaseName: 'email', graphQLName: 'email', kind: 'string', label: 'Email', nullable: true }
+      ],
+      displayField: 'displayName',
+      identity: {
+        fields: ['id'],
+        read: (record) => record.id,
+        serialize: String
+      },
+      queries: {
+        list: defineQuery<unknown, readonly Person[]>({
+          id: 'people-current-meta.list',
+          execute: () => []
+        })
+      }
+    });
+    const currentMeta: AppMetaQuery = {
+      _meta: {
+        tables: [
+          {
+            name: 'PropagationBatch',
+            schemaName: 'tenant-app-public',
+            query: {
+              all: 'propagationbatchs',
+              one: 'propagationBatch',
+              create: 'createPropagationBatch',
+              update: 'updatePropagationBatch',
+              delete: 'deletePropagationBatch'
+            },
+            inflection: {
+              tableType: 'PropagationBatch',
+              connection: 'PropagationBatchConnection'
+            },
+            fields: [
+              { name: 'id', isNotNull: true, type: { gqlType: 'UUID', pgType: 'uuid', isNotNull: true } },
+              { name: 'orgId', isNotNull: true, type: { gqlType: 'UUID', pgType: 'uuid', isNotNull: true } },
+              { name: 'batchCode', isNotNull: true, type: { gqlType: 'String', pgType: 'text', isNotNull: true } },
+              { name: 'accessionId', isNotNull: true, type: { gqlType: 'UUID', pgType: 'uuid', isNotNull: true } }
+            ],
+            constraints: { primaryKey: { fields: [{ name: 'id' }] } },
+            relations: {
+              belongsTo: [
+                {
+                  fieldName: 'accessionsByMyAccessionId',
+                  type: 'accessions',
+                  references: { name: 'accessions' }
+                }
+              ]
+            }
+          },
+          {
+            name: 'Person',
+            schemaName: 'tenant-app-public',
+            query: { all: 'persons', one: 'person' },
+            inflection: { tableType: 'Person', connection: 'PersonConnection' },
+            fields: [
+              { name: 'id', isNotNull: true, type: { gqlType: 'UUID', pgType: 'uuid', isNotNull: true } },
+              { name: 'displayName', isNotNull: true, type: { gqlType: 'String', pgType: 'text', isNotNull: true } },
+              { name: 'email', isNotNull: false, type: { gqlType: 'citext', pgType: 'citext', isNotNull: false } }
+            ],
+            constraints: { primaryKey: { fields: [{ name: 'id' }] } }
+          }
+        ]
+      }
+    };
+    const nonNull = (type: AppIntrospectionTypeRef): AppIntrospectionTypeRef => ({
+      kind: 'NON_NULL',
+      ofType: type
+    });
+    const currentIntrospection: AppGraphQLIntrospection = {
+      __schema: {
+        queryType: { name: 'Query' },
+        mutationType: { name: 'Mutation' },
+        types: [
+          {
+            name: 'Query',
+            kind: 'OBJECT',
+            fields: [
+              { name: 'propagationBatches', type: { name: 'PropagationBatchConnection' } },
+              { name: 'persons', type: { name: 'PersonConnection' } }
+            ]
+          },
+          {
+            name: 'Mutation',
+            kind: 'OBJECT',
+            fields: [
+              { name: 'createPropagationBatch' },
+              { name: 'updatePropagationBatch' },
+              { name: 'deletePropagationBatch' }
+            ]
+          },
+          {
+            name: 'PropagationBatch',
+            kind: 'OBJECT',
+            fields: [
+              { name: 'id', type: nonNull(scalar('UUID')) },
+              { name: 'orgId', type: nonNull(scalar('UUID')) },
+              { name: 'batchCode', type: nonNull(scalar('String')) },
+              { name: 'accessionId', type: nonNull(scalar('UUID')) },
+              { name: 'accession', type: { kind: 'OBJECT', name: 'Accession' } }
+            ]
+          },
+          { name: 'Accession', kind: 'OBJECT', fields: [] },
+          {
+            name: 'PropagationBatchConnection',
+            kind: 'OBJECT',
+            fields: [
+              { name: 'nodes', type: { kind: 'LIST', ofType: { kind: 'OBJECT', name: 'PropagationBatch' } } },
+              { name: 'pageInfo', type: { kind: 'OBJECT', name: 'PageInfo' } }
+            ]
+          },
+          {
+            name: 'Person',
+            kind: 'OBJECT',
+            fields: [
+              { name: 'id', type: nonNull(scalar('UUID')) },
+              { name: 'displayName', type: nonNull(scalar('String')) },
+              { name: 'email', type: scalar('String') }
+            ]
+          },
+          {
+            name: 'PersonConnection',
+            kind: 'OBJECT',
+            fields: [
+              { name: 'nodes', type: { kind: 'LIST', ofType: { kind: 'OBJECT', name: 'Person' } } },
+              { name: 'pageInfo', type: { kind: 'OBJECT', name: 'PageInfo' } }
+            ]
+          },
+          {
+            name: 'PageInfo',
+            kind: 'OBJECT',
+            fields: [
+              { name: 'hasNextPage', type: scalar('Boolean') },
+              { name: 'hasPreviousPage', type: scalar('Boolean') }
+            ]
+          }
+        ]
+      }
+    };
+
+    const batchResult = validateAppResource(batches, {
+      introspection: currentIntrospection,
+      meta: currentMeta
+    });
+    expect(batchResult.compatible).toBe(true);
+    expect(batchResult.capabilities).toEqual({
+      create: true,
+      delete: true,
+      read: true,
+      update: true
+    });
+    expect(batchResult.issues).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ code: 'META_LIST_INFLECTION_MISMATCH', severity: 'warning' }),
+        expect.objectContaining({ code: 'META_RELATION_FIELD_HINT_MISMATCH', severity: 'warning' })
+      ])
+    );
+    expect(batchResult.issues.some((issue) => issue.severity === 'error')).toBe(false);
+
+    const personResult = validateAppResource(people, {
+      introspection: currentIntrospection,
+      meta: currentMeta
+    });
+    expect(personResult.compatible).toBe(true);
+    expect(personResult.issues).toContainEqual(
+      expect.objectContaining({ code: 'META_FIELD_GRAPHQL_TYPE_HINT_MISMATCH', severity: 'warning' })
+    );
   });
 
   it('keeps resources without identity read-only without rejecting their read contract', () => {
@@ -312,7 +639,7 @@ describe('App Kit resource contracts', () => {
     expect(result.issues.map((issue) => issue.code)).toEqual(
       expect.arrayContaining([
         'GRAPHQL_LIST_TYPE_MISMATCH',
-        'GRAPHQL_FIELD_TYPE_MISMATCH',
+        'META_FIELD_GRAPHQL_TYPE_HINT_MISMATCH',
         'GRAPHQL_FIELD_KIND_MISMATCH',
         'GRAPHQL_FIELD_NULLABILITY_MISMATCH',
         'META_RELATION_CARDINALITY_MISMATCH',
