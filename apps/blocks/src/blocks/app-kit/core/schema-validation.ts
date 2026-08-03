@@ -182,6 +182,30 @@ function listType(type: AppIntrospectionTypeRef | null | undefined) {
   return current?.kind === 'LIST';
 }
 
+function listDepth(type: AppIntrospectionTypeRef | null | undefined) {
+  let current = type;
+  let depth = 0;
+  while (current) {
+    if (current.kind === 'NON_NULL') {
+      current = current.ofType;
+      continue;
+    }
+    if (current.kind !== 'LIST') break;
+    depth += 1;
+    current = current.ofType;
+  }
+  return depth;
+}
+
+function listElementNullable(
+  type: AppIntrospectionTypeRef | null | undefined
+): boolean | null {
+  let current = type;
+  while (current?.kind === 'NON_NULL') current = current.ofType;
+  if (current?.kind !== 'LIST') return null;
+  return current.ofType?.kind !== 'NON_NULL';
+}
+
 function namedTypeKind(
   type: AppIntrospectionTypeRef | null | undefined,
   types: ReadonlyMap<string, AppIntrospectionType>
@@ -200,6 +224,10 @@ function scalarKind(kind: AppFieldKind): AppFieldKind {
   if (kind === 'string-array') return 'string';
   if (kind === 'integer-array') return 'integer';
   if (kind === 'float-array') return 'float';
+  if (kind === 'boolean-array') return 'boolean';
+  if (kind === 'date-array') return 'date';
+  if (kind === 'datetime-array') return 'datetime';
+  if (kind === 'enum-array') return 'enum';
   return kind;
 }
 
@@ -658,6 +686,13 @@ export function validateAppResource<
     }
 
     const definitionIsArray = field.kind.endsWith('-array');
+    if (!definitionIsArray && field.arrayElementNullable !== undefined) {
+      addIssue(
+        'RESOURCE_ARRAY_ELEMENT_NULLABILITY_INVALID',
+        `fields.${field.key}.arrayElementNullable`,
+        `Field ${field.key} is not an array, so it cannot declare array element nullability.`
+      );
+    }
     if (
       metaField?.type?.isArray !== undefined &&
       metaField.type.isArray !== null &&
@@ -669,11 +704,54 @@ export function validateAppResource<
         `Field ${field.key} does not agree with the _meta array shape.`
       );
     }
-    if (graphQLField && listType(graphQLField.type) !== definitionIsArray) {
+    const graphQLListDepth = listDepth(graphQLField?.type);
+    const graphQLArrayShapeMatches = definitionIsArray
+      ? graphQLListDepth === 1
+      : graphQLListDepth === 0;
+    if (graphQLField && !graphQLArrayShapeMatches) {
       addIssue(
         'GRAPHQL_FIELD_ARRAY_MISMATCH',
         `__schema.types.${resource.source.graphQLTypeName}.fields.${field.graphQLName}.type`,
-        `Field ${field.graphQLName} does not agree with the final GraphQL list shape.`
+        `Field ${field.graphQLName} does not agree with the final GraphQL one-dimensional list shape.`
+      );
+    }
+    const graphQLElementNullable = listElementNullable(graphQLField?.type);
+    const declaredElementNullable = field.arrayElementNullable ?? false;
+    if (
+      definitionIsArray &&
+      graphQLListDepth === 1 &&
+      graphQLElementNullable !== null &&
+      graphQLElementNullable !== declaredElementNullable
+    ) {
+      addIssue(
+        'GRAPHQL_ARRAY_ELEMENT_NULLABILITY_MISMATCH',
+        `fields.${field.key}.arrayElementNullable`,
+        `Field ${field.graphQLName} ${graphQLElementNullable ? 'allows' : 'rejects'} null array elements in the final GraphQL schema, but the resource contract ${declaredElementNullable ? 'allows' : 'rejects'} them.`
+      );
+    }
+
+    const enumOptions = field.options ?? [];
+    const enumOptionValues = enumOptions.map((option) => option.value);
+    const enumOptionsMissing =
+      scalarKind(field.kind) === 'enum' &&
+      field.readOnly !== true &&
+      enumOptions.length === 0;
+    const enumOptionsDuplicate =
+      scalarKind(field.kind) === 'enum' &&
+      field.readOnly !== true &&
+      new Set(enumOptionValues).size !== enumOptionValues.length;
+    if (enumOptionsMissing) {
+      addIssue(
+        'RESOURCE_ENUM_OPTIONS_MISSING',
+        `fields.${field.key}.options`,
+        `Enum field ${field.key} needs at least one declared option before it can be edited.`
+      );
+    }
+    if (enumOptionsDuplicate) {
+      addIssue(
+        'RESOURCE_ENUM_OPTIONS_DUPLICATE',
+        `fields.${field.key}.options`,
+        `Enum field ${field.key} has duplicate option values and cannot be reconciled safely.`
       );
     }
 
@@ -688,7 +766,7 @@ export function validateAppResource<
 
     if (graphQLField && graphQLTypeName) {
       const finalKind = namedTypeKind(graphQLField.type, types);
-      if (field.kind === 'enum') {
+      if (scalarKind(field.kind) === 'enum') {
         if (finalKind !== 'ENUM') {
           addIssue(
             'GRAPHQL_FIELD_KIND_MISMATCH',
@@ -749,13 +827,16 @@ export function validateAppResource<
     }
 
     const customReadOnly = fieldRequiresCustomRenderer(field.kind);
+    const enumReadOnly = enumOptionsMissing || enumOptionsDuplicate;
     return {
       key: field.key,
       databaseName: field.databaseName,
       graphQLName: field.graphQLName,
-      editable: !field.readOnly && !customReadOnly,
+      editable: !field.readOnly && !customReadOnly && !enumReadOnly,
       reason: customReadOnly
         ? `${field.kind} fields require an explicit input renderer.`
+        : enumReadOnly
+          ? 'Enum fields require non-empty, unique declared options.'
         : field.readOnly
           ? 'The resource marks this field read-only.'
           : undefined

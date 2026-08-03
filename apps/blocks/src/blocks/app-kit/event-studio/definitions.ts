@@ -47,7 +47,7 @@ export type EventStudioSession = Readonly<{
   startsAt: string | null;
   endsAt: string | null;
   capacity: number | null;
-  tags: readonly string[];
+  tags: readonly (string | null)[];
 }>;
 
 export type EventStudioPerson = Readonly<{
@@ -115,7 +115,7 @@ export type EventStudioCreateSessionInput = Readonly<{
   startsAt?: string | null;
   endsAt?: string | null;
   capacity?: number | null;
-  tags?: readonly string[];
+  tags?: readonly (string | null)[];
 }>;
 
 export type EventStudioUpdateSessionInput = Readonly<{
@@ -127,7 +127,7 @@ export type EventStudioUpdateSessionInput = Readonly<{
   startsAt?: string | null;
   endsAt?: string | null;
   capacity?: number | null;
-  tags?: readonly string[];
+  tags?: readonly (string | null)[];
 }>;
 
 export type EventStudioScheduleSessionInput = Readonly<{
@@ -260,7 +260,7 @@ const createSessionSchema = z.object({
   startsAt: z.iso.datetime().nullable().optional(),
   endsAt: z.iso.datetime().nullable().optional(),
   capacity: z.number().int().nonnegative().nullable().optional(),
-  tags: z.array(z.string().trim().min(1)).optional(),
+  tags: z.array(z.string().trim().min(1).nullable()).optional(),
 });
 const sessionPersonSchema = z.object({
   sessionId: EVENT_STUDIO_ID_SCHEMA,
@@ -284,7 +284,7 @@ const updateSessionSchema = z.object({
   startsAt: z.iso.datetime().nullable().optional(),
   endsAt: z.iso.datetime().nullable().optional(),
   capacity: z.number().int().nonnegative().nullable().optional(),
-  tags: z.array(z.string().trim().min(1)).optional(),
+  tags: z.array(z.string().trim().min(1).nullable()).optional(),
 });
 const scheduleSessionSchema = z.object({
   sessionId: EVENT_STUDIO_ID_SCHEMA,
@@ -589,7 +589,7 @@ export function createEventStudioDefinitions(
         { key: 'startsAt', databaseName: 'starts_at', graphQLName: 'startsAt', label: 'Starts at', kind: 'datetime', nullable: true },
         { key: 'endsAt', databaseName: 'ends_at', graphQLName: 'endsAt', label: 'Ends at', kind: 'datetime', nullable: true },
         { key: 'capacity', databaseName: 'capacity', graphQLName: 'capacity', label: 'Capacity', kind: 'integer', nullable: true },
-        { key: 'tags', databaseName: 'tags', graphQLName: 'tags', label: 'Tags', kind: 'string-array' },
+        { key: 'tags', databaseName: 'tags', graphQLName: 'tags', label: 'Tags', kind: 'string-array', arrayElementNullable: true },
       ],
       relations: [
         { id: 'program', label: 'Program', fieldName: 'program', graphQLName: 'program', targetTableName: 'programs', targetGraphQLTypeName: 'Program', targetResourceId: 'event-studio.programs', cardinality: 'one' },

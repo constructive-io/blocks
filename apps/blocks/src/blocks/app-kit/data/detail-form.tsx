@@ -174,17 +174,176 @@ export function ConnectedAppRecordDetail<
 }
 
 function arrayValue(value: unknown) {
-  return Array.isArray(value) ? value.join('\n') : '';
+  return JSON.stringify(value === null ? null : Array.isArray(value) ? value : [], null, 2);
 }
 
-function parseArray(kind: AppFieldDefinition<Record<string, unknown>>['kind'], value: string) {
-  const items = value
-    .split(/[\n,]/u)
-    .map((item) => item.trim())
-    .filter(Boolean);
-  if (kind === 'integer-array') return items.map(Number);
-  if (kind === 'float-array') return items.map(Number);
-  return items;
+type ParsedArray =
+  | Readonly<{ success: true; value: readonly unknown[] | null }>
+  | Readonly<{ success: false; error: string }>;
+
+function invalidArrayItems(
+  items: readonly unknown[],
+  accepts: (item: unknown) => boolean
+) {
+  return items.filter((item) => !accepts(item));
+}
+
+function validDate(item: unknown) {
+  if (typeof item !== 'string') return false;
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/u.exec(item);
+  if (!match) return false;
+  const year = Number(match[1]);
+  const month = Number(match[2]);
+  const day = Number(match[3]);
+  const date = new Date(Date.UTC(year, month - 1, day));
+  return (
+    date.getUTCFullYear() === year &&
+    date.getUTCMonth() === month - 1 &&
+    date.getUTCDate() === day
+  );
+}
+
+function validDateTime(item: unknown) {
+  if (typeof item !== 'string') return false;
+  const match = /^(\d{4}-\d{2}-\d{2})T(\d{2}):(\d{2})(?::(\d{2})(?:\.\d{1,9})?)?(?:Z|([+-])(\d{2}):(\d{2}))?$/u.exec(item);
+  if (!match || !validDate(match[1])) return false;
+  const hour = Number(match[2]);
+  const minute = Number(match[3]);
+  const second = match[4] === undefined ? 0 : Number(match[4]);
+  const offsetHour = match[6] === undefined ? 0 : Number(match[6]);
+  const offsetMinute = match[7] === undefined ? 0 : Number(match[7]);
+  return (
+    hour <= 23 &&
+    minute <= 59 &&
+    second <= 59 &&
+    offsetHour <= 23 &&
+    offsetMinute <= 59
+  );
+}
+
+function arrayItemLabel(item: unknown) {
+  const serialized = JSON.stringify(item);
+  return serialized === undefined ? String(item) : serialized;
+}
+
+function invalidArrayError(label: string, items: readonly unknown[]) {
+  return `Invalid ${label} values: ${items.map(arrayItemLabel).join(', ')}.`;
+}
+
+function parseArray<TRecord extends Record<string, unknown>>(
+  field: AppFieldDefinition<TRecord>,
+  value: string,
+  required: boolean
+): ParsedArray {
+  let parsed: unknown;
+  try {
+    parsed = value.trim() ? JSON.parse(value) : [];
+  } catch {
+    return { success: false, error: 'Enter a valid JSON array.' };
+  }
+  if (parsed === null) {
+    return field.nullable === true && !required
+      ? { success: true, value: null }
+      : { success: false, error: 'This array cannot be null.' };
+  }
+  if (!Array.isArray(parsed)) {
+    return { success: false, error: 'Enter a JSON array.' };
+  }
+  const items = parsed;
+  if (required && items.length === 0) {
+    return { success: false, error: 'Add at least one array element.' };
+  }
+  const nullItems = items.filter((item) => item === null);
+  const nonNullItems = items.filter((item) => item !== null);
+  if (field.arrayElementNullable !== true && nullItems.length > 0) {
+    return {
+      success: false,
+      error: 'Null array elements are not allowed for this field.'
+    };
+  }
+  if (field.kind === 'integer-array') {
+    const invalid = invalidArrayItems(
+      nonNullItems,
+      (item) =>
+        typeof item === 'number' &&
+        Number.isInteger(item) &&
+        item >= -2_147_483_648 &&
+        item <= 2_147_483_647
+    );
+    if (invalid.length > 0) {
+      return {
+        success: false,
+        error: invalidArrayError('integer', invalid)
+      };
+    }
+  }
+  if (field.kind === 'float-array') {
+    const invalid = invalidArrayItems(
+      nonNullItems,
+      (item) => typeof item === 'number' && Number.isFinite(item)
+    );
+    if (invalid.length > 0) {
+      return {
+        success: false,
+        error: invalidArrayError('number', invalid)
+      };
+    }
+  }
+  if (field.kind === 'boolean-array') {
+    const invalid = invalidArrayItems(
+      nonNullItems,
+      (item) => typeof item === 'boolean'
+    );
+    if (invalid.length > 0) {
+      return {
+        success: false,
+        error: `${invalidArrayError('boolean', invalid)} Use only true or false.`
+      };
+    }
+  }
+  if (field.kind === 'enum-array') {
+    const allowed = new Set(field.options?.map((option) => option.value) ?? []);
+    const invalid = nonNullItems.filter(
+      (item) => typeof item !== 'string' || !allowed.has(item)
+    );
+    if (invalid.length > 0) {
+      return {
+        success: false,
+        error: `Unknown option values: ${invalid.map(arrayItemLabel).join(', ')}. Use only declared options.`
+      };
+    }
+  }
+  if (field.kind === 'string-array') {
+    const invalid = invalidArrayItems(
+      nonNullItems,
+      (item) => typeof item === 'string'
+    );
+    if (invalid.length > 0) {
+      return { success: false, error: invalidArrayError('string', invalid) };
+    }
+  }
+  if (field.kind === 'date-array') {
+    const invalid = invalidArrayItems(nonNullItems, validDate);
+    if (invalid.length > 0) {
+      return {
+        success: false,
+        error: `${invalidArrayError('date', invalid)} Use YYYY-MM-DD.`
+      };
+    }
+  }
+  if (field.kind === 'datetime-array') {
+    const invalid = invalidArrayItems(nonNullItems, validDateTime);
+    if (invalid.length > 0) {
+      return {
+        success: false,
+        error: `${invalidArrayError('datetime', invalid)} Use an ISO date and time.`
+      };
+    }
+  }
+  // Scalar arrays use JSON so nulls, empty strings, commas, and embedded
+  // newlines round-trip without inventing a lossy delimiter format. Date and
+  // datetime values stay as strings so offsets and date-only values survive.
+  return { success: true, value: items };
 }
 
 function structuredInputValue(value: unknown): string {
@@ -253,16 +412,58 @@ function GeneratedField<TRecord extends Record<string, unknown>>({
   onChange: (value: unknown) => void;
 }>) {
   const id = React.useId();
+  const serializedArrayValue = field.kind.endsWith('-array')
+    ? arrayValue(value)
+    : '';
+  const arrayInputRef = React.useRef<HTMLTextAreaElement>(null);
+  const [arrayDraft, setArrayDraft] = React.useState(serializedArrayValue);
+  const [arrayValidationError, setArrayValidationError] =
+    React.useState<string>();
+  const arrayValidationSignature = [
+    field.kind,
+    renderer ? 'custom-renderer' : 'generated-renderer',
+    field.nullable === true ? 'outer-null' : 'outer-required',
+    field.arrayElementNullable === true ? 'inner-null' : 'inner-required',
+    field.options?.map((option) => option.value).join('\u0000') ?? ''
+  ].join('\u0001');
+  React.useEffect(() => {
+    setArrayDraft(serializedArrayValue);
+    if (renderer || !field.kind.endsWith('-array')) {
+      setArrayValidationError(undefined);
+      arrayInputRef.current?.setCustomValidity('');
+      return;
+    }
+    const parsed = parseArray(field, serializedArrayValue, required);
+    const message = parsed.success ? '' : parsed.error;
+    setArrayValidationError(message || undefined);
+    arrayInputRef.current?.setCustomValidity(message);
+  }, [arrayValidationSignature, required, serializedArrayValue]);
   const canRenderBrowserLocalTime = React.useSyncExternalStore(
     subscribeToClientSnapshot,
     getClientSnapshot,
     getServerSnapshot
   );
+  const enumOptions = field.options?.map((option) => option.value) ?? [];
+  const enumOptionsUsable =
+    !field.kind.startsWith('enum') ||
+    (enumOptions.length > 0 && new Set(enumOptions).size === enumOptions.length);
   const descriptionId = field.description ? `${id}-description` : undefined;
-  const errorId = error ? `${id}-error` : undefined;
-  const describedBy = [descriptionId, errorId].filter(Boolean).join(' ') || undefined;
-  const invalid = Boolean(error);
-  const fieldDisabled = disabled || field.readOnly === true;
+  const arrayDescriptionId =
+    !renderer && field.kind.endsWith('-array')
+      ? `${id}-array-description`
+      : undefined;
+  const enumDescriptionId =
+    !renderer && !enumOptionsUsable ? `${id}-enum-description` : undefined;
+  const resolvedError = error ?? arrayValidationError;
+  const errorId = resolvedError ? `${id}-error` : undefined;
+  const describedBy = [
+    descriptionId,
+    arrayDescriptionId,
+    enumDescriptionId,
+    errorId
+  ].filter(Boolean).join(' ') || undefined;
+  const invalid = Boolean(resolvedError);
+  const fieldDisabled = disabled || field.readOnly === true || !enumOptionsUsable;
 
   let control: React.ReactNode;
   if (renderer) {
@@ -333,17 +534,23 @@ function GeneratedField<TRecord extends Record<string, unknown>>({
         aria-invalid={invalid}
         disabled={fieldDisabled}
         id={id}
-        onChange={(event) =>
-          onChange(
-            parseArray(
-              field.kind as AppFieldDefinition<Record<string, unknown>>['kind'],
-              event.currentTarget.value
-            )
-          )
-        }
-        placeholder='One value per line'
+        ref={arrayInputRef}
+        onChange={(event) => {
+          const nextDraft = event.currentTarget.value;
+          setArrayDraft(nextDraft);
+          const parsed = parseArray(field, nextDraft, required);
+          if (!parsed.success) {
+            event.currentTarget.setCustomValidity(parsed.error);
+            setArrayValidationError(parsed.error);
+            return;
+          }
+          event.currentTarget.setCustomValidity('');
+          setArrayValidationError(undefined);
+          onChange(parsed.value);
+        }}
+        placeholder='["value"]'
         required={required}
-        value={arrayValue(value)}
+        value={arrayDraft}
       />
     );
   } else if (field.kind === 'json' || field.kind === 'custom') {
@@ -416,7 +623,20 @@ function GeneratedField<TRecord extends Record<string, unknown>>({
           Add an explicit input renderer to edit this structured field.
         </FieldDescription>
       ) : null}
-      {error ? <FieldError id={errorId}>{error}</FieldError> : null}
+      {!renderer && field.kind.endsWith('-array') ? (
+        <FieldDescription id={arrayDescriptionId}>
+          Enter a JSON array. Use <code>null</code> for a nullable array; null
+          elements are {field.arrayElementNullable === true ? 'allowed' : 'not allowed'}.
+        </FieldDescription>
+      ) : null}
+      {!renderer && !enumOptionsUsable ? (
+        <FieldDescription id={enumDescriptionId}>
+          Add non-empty, unique enum options before editing this field.
+        </FieldDescription>
+      ) : null}
+      {resolvedError ? (
+        <FieldError id={errorId}>{resolvedError}</FieldError>
+      ) : null}
     </Field>
   );
 }
@@ -442,6 +662,8 @@ export type AppRecordFormProps<
   submitLabel?: string;
   error?: AppError;
   actions?: React.ReactNode;
+  /** Remounts field-local drafts when the host switches records or workflows. */
+  resetKey?: string | number;
   className?: string;
 }>;
 
@@ -461,6 +683,7 @@ export function AppRecordForm<
   submitLabel = 'Save changes',
   error,
   actions,
+  resetKey,
   className
 }: AppRecordFormProps<TRecord, TIdentity>) {
   const formDefinition = resource.forms?.[mode];
@@ -513,10 +736,12 @@ export function AppRecordForm<
             disabled={disabled || readOnly}
             error={resolvedErrors[field.key]}
             field={field}
-            key={field.key}
+            key={`${field.key}:${String(resetKey ?? '')}`}
             onChange={(value) => onChange({ ...values, [field.key]: value })}
             renderer={resolvedInputRenderers[field.key]}
-            required={required ?? !field.nullable}
+            required={
+              required ?? (!field.nullable && !field.kind.endsWith('-array'))
+            }
             value={values[field.key]}
           />
         ))}
@@ -546,8 +771,6 @@ export type ConnectedAppRecordFormProps<
     action: AppActionDefinition<TInput, TOutput>;
     toInput: (values: Partial<TRecord>) => TInput;
     onCompleted?: (output: TOutput, values: Partial<TRecord>) => void;
-    /** Change this when the host selects a different record. */
-    resetKey?: string | number;
   }>;
 
 export function ConnectedAppRecordForm<
@@ -622,6 +845,7 @@ export function ConnectedAppRecordForm<
         }
         else setError(result.error);
       }}
+      resetKey={resetKey}
       submitting={runner.mutation.isPending}
       values={values}
     />

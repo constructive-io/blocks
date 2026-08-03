@@ -112,6 +112,7 @@ describe('Event Studio definitions', () => {
           databaseName: 'tags',
           graphQLName: 'tags',
           kind: 'string-array',
+          arrayElementNullable: true,
         }),
       ]),
     );

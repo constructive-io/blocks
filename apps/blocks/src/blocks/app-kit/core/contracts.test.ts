@@ -13,11 +13,15 @@ import {
 } from './index';
 
 type Program = Record<string, unknown> & {
+  flags: (boolean | null)[];
   id: string;
+  importantDates: (string | null)[];
   locale: string;
+  milestones: (string | null)[];
+  stageHistory: (string | null)[];
   title: string;
   stage: string;
-  tags: string[];
+  tags: (string | null)[];
   settings: Record<string, unknown>;
   metric: unknown;
 };
@@ -56,7 +60,36 @@ function programResource(identity = true) {
           { label: 'Published', value: 'PUBLISHED' }
         ]
       },
-      { key: 'tags', databaseName: 'tags', graphQLName: 'tags', kind: 'string-array', label: 'Tags' },
+      { key: 'tags', databaseName: 'tags', graphQLName: 'tags', kind: 'string-array', label: 'Tags', arrayElementNullable: true },
+      { key: 'flags', databaseName: 'flags', graphQLName: 'flags', kind: 'boolean-array', label: 'Flags', arrayElementNullable: true },
+      {
+        key: 'importantDates',
+        databaseName: 'important_dates',
+        graphQLName: 'importantDates',
+        kind: 'date-array',
+        label: 'Important dates',
+        arrayElementNullable: true
+      },
+      {
+        key: 'milestones',
+        databaseName: 'milestones',
+        graphQLName: 'milestones',
+        kind: 'datetime-array',
+        label: 'Milestones',
+        arrayElementNullable: true
+      },
+      {
+        key: 'stageHistory',
+        databaseName: 'stage_history',
+        graphQLName: 'stageHistory',
+        kind: 'enum-array',
+        label: 'Stage history',
+        arrayElementNullable: true,
+        options: [
+          { label: 'Draft', value: 'DRAFT' },
+          { label: 'Published', value: 'PUBLISHED' }
+        ]
+      },
       { key: 'settings', databaseName: 'settings', graphQLName: 'settings', kind: 'json', label: 'Settings' },
       { key: 'metric', databaseName: 'metric', graphQLName: 'metric', kind: 'custom', label: 'Metric' }
     ],
@@ -121,6 +154,14 @@ const meta: AppMetaQuery = {
             type: { gqlType: 'ProgramStage', pgType: 'program_stage' }
           },
           { name: 'tags', type: { gqlType: 'String', isArray: true, pgType: 'text[]' } },
+          { name: 'flags', type: { gqlType: 'Boolean', isArray: true, pgType: 'boolean[]' } },
+          { name: 'important_dates', type: { gqlType: 'Date', isArray: true, pgType: 'date[]' } },
+          { name: 'milestones', type: { gqlType: 'DateTime', isArray: true, pgType: 'timestamptz[]' } },
+          {
+            name: 'stage_history',
+            enumValues: { name: 'program_stage', values: ['draft', 'published'] },
+            type: { gqlType: 'ProgramStage', isArray: true, pgType: 'program_stage[]' }
+          },
           { name: 'settings', type: { gqlType: 'JSON', pgType: 'jsonb' } },
           { name: 'metric', type: { gqlType: 'EventMetric', pgType: 'event_metric' } }
         ],
@@ -173,6 +214,25 @@ const introspection: AppGraphQLIntrospection = {
             name: 'tags',
             type: { kind: 'LIST', ofType: scalar('String') }
           },
+          {
+            name: 'flags',
+            type: { kind: 'LIST', ofType: scalar('Boolean') }
+          },
+          {
+            name: 'importantDates',
+            type: { kind: 'LIST', ofType: scalar('Date') }
+          },
+          {
+            name: 'milestones',
+            type: { kind: 'LIST', ofType: scalar('DateTime') }
+          },
+          {
+            name: 'stageHistory',
+            type: {
+              kind: 'LIST',
+              ofType: { kind: 'ENUM', name: 'ProgramStage' }
+            }
+          },
           { name: 'settings', type: scalar('JSON') },
           { name: 'metric', type: scalar('EventMetric') },
           { name: 'sessionsByProgramIdAndLocale', type: { name: 'SessionConnection' } }
@@ -223,12 +283,183 @@ describe('App Kit resource contracts', () => {
       update: true
     });
     expect(result.issues).toEqual([]);
-    expect(result.fields.find((field) => field.key === 'tags')?.editable).toBe(true);
+    for (const key of [
+      'tags',
+      'flags',
+      'importantDates',
+      'milestones',
+      'stageHistory'
+    ]) {
+      expect(result.fields.find((field) => field.key === key)?.editable).toBe(
+        true
+      );
+    }
     expect(result.fields.find((field) => field.key === 'settings')).toMatchObject({
       editable: false,
       reason: expect.stringContaining('renderer')
     });
     expect(result.fields.find((field) => field.key === 'metric')?.editable).toBe(false);
+  });
+
+  it('rejects mismatched, nested, and unknown enum values inside scalar arrays', () => {
+    const base = programResource();
+    const resource = defineResource({
+      ...base,
+      id: 'programs-invalid-arrays',
+      fields: base.fields.map((field) =>
+        field.key === 'stageHistory'
+          ? {
+              ...field,
+              options: [
+                ...(field.options ?? []),
+                { label: 'Archived', value: 'ARCHIVED' }
+              ]
+            }
+          : field
+      )
+    });
+    const driftedIntrospection: AppGraphQLIntrospection = {
+      __schema: {
+        ...introspection.__schema,
+        types: (introspection.__schema?.types ?? []).map((type) =>
+          type.name === 'EventProgram'
+            ? {
+                ...type,
+                fields: type.fields?.map((field) => {
+                  if (field.name === 'flags') {
+                    return {
+                      ...field,
+                      type: { kind: 'LIST', ofType: scalar('String') }
+                    };
+                  }
+                  if (field.name === 'importantDates') {
+                    return {
+                      ...field,
+                      type: {
+                        kind: 'LIST',
+                        ofType: {
+                          kind: 'LIST',
+                          ofType: scalar('Date')
+                        }
+                      }
+                    };
+                  }
+                  return field;
+                })
+              }
+            : type
+        )
+      }
+    };
+
+    const result = validateAppResource(resource, {
+      introspection: driftedIntrospection,
+      meta
+    });
+
+    expect(result.compatible).toBe(false);
+    expect(result.issues).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          code: 'GRAPHQL_FIELD_KIND_MISMATCH',
+          path: '__schema.types.EventProgram.fields.flags.type'
+        }),
+        expect.objectContaining({
+          code: 'GRAPHQL_FIELD_ARRAY_MISMATCH',
+          path: '__schema.types.EventProgram.fields.importantDates.type'
+        }),
+        expect.objectContaining({
+          code: 'GRAPHQL_ENUM_VALUE_MISSING',
+          path: '__schema.types.ProgramStage.enumValues.ARCHIVED'
+        })
+      ])
+    );
+  });
+
+  it('reconciles array element nullability with the final GraphQL list', () => {
+    const base = programResource();
+    const resource = defineResource({
+      ...base,
+      id: 'programs-non-null-array-elements',
+      fields: base.fields.map((field) =>
+        field.key === 'tags'
+          ? { ...field, arrayElementNullable: false }
+          : field
+      )
+    });
+
+    const result = validateAppResource(resource, { introspection, meta });
+
+    expect(result.compatible).toBe(false);
+    expect(result.issues).toContainEqual(
+      expect.objectContaining({
+        code: 'GRAPHQL_ARRAY_ELEMENT_NULLABILITY_MISMATCH',
+        path: 'fields.tags.arrayElementNullable'
+      })
+    );
+  });
+
+  it('rejects missing or duplicate enum options and marks those fields read-only', () => {
+    const base = programResource();
+    const resource = defineResource({
+      ...base,
+      id: 'programs-invalid-enum-options',
+      fields: base.fields.map((field) => {
+        if (field.key === 'stage') return { ...field, options: [] };
+        if (field.key === 'stageHistory') {
+          return {
+            ...field,
+            options: [
+              { label: 'Draft', value: 'DRAFT' },
+              { label: 'Draft again', value: 'DRAFT' }
+            ]
+          };
+        }
+        return field;
+      })
+    });
+
+    const result = validateAppResource(resource, { introspection, meta });
+
+    expect(result.compatible).toBe(false);
+    expect(result.issues).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          code: 'RESOURCE_ENUM_OPTIONS_MISSING',
+          path: 'fields.stage.options'
+        }),
+        expect.objectContaining({
+          code: 'RESOURCE_ENUM_OPTIONS_DUPLICATE',
+          path: 'fields.stageHistory.options'
+        })
+      ])
+    );
+    expect(result.fields.find((field) => field.key === 'stage')?.editable).toBe(false);
+    expect(
+      result.fields.find((field) => field.key === 'stageHistory')?.editable
+    ).toBe(false);
+  });
+
+  it('allows an explicitly read-only enum to omit edit options', () => {
+    const base = programResource();
+    const resource = defineResource({
+      ...base,
+      id: 'programs-read-only-enum',
+      fields: base.fields.map((field) =>
+        field.key === 'stage'
+          ? { ...field, options: [], readOnly: true }
+          : field
+      )
+    });
+
+    const result = validateAppResource(resource, { introspection, meta });
+
+    expect(result.compatible).toBe(true);
+    expect(result.issues).toEqual([]);
+    expect(result.fields.find((field) => field.key === 'stage')).toMatchObject({
+      editable: false,
+      reason: 'The resource marks this field read-only.'
+    });
   });
 
   it('does not mistake a one-to-one domain object with a nodes field for a connection', () => {

@@ -7,6 +7,7 @@ import { Badge } from '@constructive-io/ui/badge';
 import { Button } from '@constructive-io/ui/button';
 import {
   Card,
+  CardAction,
   CardContent,
   CardDescription,
   CardFooter,
@@ -356,6 +357,8 @@ export function AppDataCards<TRecord extends Record<string, unknown>>({
   getRowKey,
   density = 'comfortable',
   surface = 'page',
+  selectedKeys,
+  onSelectionChange,
   onOpenRecord,
   onRetry,
   toolbar,
@@ -380,12 +383,26 @@ export function AppDataCards<TRecord extends Record<string, unknown>>({
             data-density={density}
           >
             {page.items.map((record) => {
+              const rowKey = getRowKey(record);
               const title = String(record[resource.displayField] ?? resource.label);
               return (
-                <Card key={getRowKey(record)} variant={onOpenRecord ? 'interactive' : 'flat'}>
+                <Card key={rowKey} variant={onOpenRecord ? 'interactive' : 'flat'}>
                   <CardHeader>
                     <CardTitle>{title}</CardTitle>
                     <CardDescription>{resource.label}</CardDescription>
+                    {onSelectionChange ? (
+                      <CardAction>
+                        <Checkbox
+                          aria-label={`Select ${title}`}
+                          checked={selectedKeys?.includes(rowKey) ?? false}
+                          onCheckedChange={(checked) =>
+                            onSelectionChange(
+                              selectionFor(selectedKeys, rowKey, checked)
+                            )
+                          }
+                        />
+                      </CardAction>
+                    ) : null}
                   </CardHeader>
                   <CardContent>
                     {renderRecord

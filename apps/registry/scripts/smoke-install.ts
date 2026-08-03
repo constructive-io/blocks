@@ -7,10 +7,19 @@ import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
+import {
+	createShadcnAddCommand,
+	createShadcnCli,
+	parseShadcnCliMode,
+	parseShadcnVersion,
+	type ShadcnCli,
+} from './shadcn-cli';
+
 const appDirectory = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const repositoryRoot = path.resolve(appDirectory, '..', '..');
 const publicDirectory = path.join(appDirectory, 'public');
 const temporaryRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'constructive-registry-smoke-'));
+const shadcnCliMode = parseShadcnCliMode(process.argv.slice(2));
 
 type SmokeCase = {
 	name: string;
@@ -1078,6 +1087,54 @@ async function run(
 	if (exitCode !== 0) throw new Error(`${description} exited with code ${exitCode}.`);
 }
 
+async function capture(
+	command: string,
+	arguments_: string[],
+	cwd: string,
+	description: string,
+): Promise<string> {
+	return await new Promise<string>((resolve, reject) => {
+		const child = spawn(command, arguments_, {
+			cwd,
+			env: process.env,
+			stdio: ['ignore', 'pipe', 'pipe'],
+		});
+		let stdout = '';
+		let stderr = '';
+		child.stdout.on('data', (chunk: Buffer) => {
+			stdout += chunk.toString();
+		});
+		child.stderr.on('data', (chunk: Buffer) => {
+			stderr += chunk.toString();
+		});
+		child.on('error', reject);
+		child.on('close', (code) => {
+			if (code === 0) {
+				resolve(stdout);
+				return;
+			}
+			reject(
+				new Error(
+					`${description} exited with code ${code ?? 1}.${stderr.trim() ? `\n${stderr.trim()}` : ''}`,
+				),
+			);
+		});
+	});
+}
+
+async function resolveShadcnCli(): Promise<ShadcnCli> {
+	const arguments_ = shadcnCliMode === 'latest'
+		? ['dlx', 'shadcn@latest', '--version']
+		: ['exec', 'shadcn', '--version'];
+	const output = await capture(
+		'pnpm',
+		arguments_,
+		appDirectory,
+		`shadcn ${shadcnCliMode} version probe`,
+	);
+	return createShadcnCli(shadcnCliMode, parseShadcnVersion(output));
+}
+
 async function startPackageRegistry(): Promise<{
 	origin: string;
 	close: () => Promise<void>;
@@ -1160,12 +1217,17 @@ async function startPackageRegistry(): Promise<{
 	};
 }
 
-async function install(root: string, itemNames: readonly string[]): Promise<void> {
+async function install(
+	root: string,
+	itemNames: readonly string[],
+	shadcnCli: ShadcnCli,
+): Promise<void> {
+	const command = createShadcnAddCommand(shadcnCli, itemNames, root);
 	await run(
-		'pnpm',
-		['exec', 'shadcn', 'add', ...itemNames.map((itemName) => `@constructive/${itemName}`), '--cwd', root, '--yes'],
+		command.command,
+		command.arguments,
 		appDirectory,
-		`pnpm dlx shadcn@latest add ${itemNames.map((itemName) => `@constructive/${itemName}`).join(' ')}`,
+		command.display,
 	);
 }
 
@@ -1427,6 +1489,12 @@ const server = http.createServer((request, response) => {
 	fs.createReadStream(filePath).pipe(response);
 });
 
+const shadcnCli = await resolveShadcnCli();
+const shadcnSource = shadcnCli.mode === 'latest' ? 'npm latest' : 'workspace pin';
+console.log(
+	`Registry smoke CLI: ${shadcnSource} resolved to shadcn@${shadcnCli.version}; installs use this exact executable for the complete run.`,
+);
+
 const packageRegistry = selectedCases.some((testCase) =>
 	testCase.expectedPackages?.some((packageName) => packageName.startsWith('@constructive-io/')),
 )
@@ -1442,7 +1510,7 @@ try {
 		const root = path.join(temporaryRoot, testCase.name);
 		const itemNames = testCase.items ?? [testCase.name];
 		prepareConsumer(root, origin, testCase, packageRegistry?.origin);
-		await install(root, itemNames);
+		await install(root, itemNames, shadcnCli);
 		assertInstalled(root, testCase);
 		await typecheck(root, testCase.name);
 		await compileTailwind(root, testCase);

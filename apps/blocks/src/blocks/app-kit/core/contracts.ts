@@ -305,6 +305,10 @@ export type AppFieldKind =
   | 'string-array'
   | 'integer-array'
   | 'float-array'
+  | 'boolean-array'
+  | 'date-array'
+  | 'datetime-array'
+  | 'enum-array'
   | 'json'
   | 'custom';
 
@@ -324,6 +328,11 @@ export type AppFieldDefinition<
   description?: string;
   kind: AppFieldKind;
   nullable?: boolean;
+  /**
+   * Defaults to false. Set true only for a final `[T]` list and include null
+   * in the corresponding record-property element type.
+   */
+  arrayElementNullable?: boolean;
   readOnly?: boolean;
   options?: readonly AppFieldOption[];
 }>;
