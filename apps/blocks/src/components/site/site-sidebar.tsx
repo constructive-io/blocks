@@ -247,9 +247,14 @@ export const SiteSidebar = forwardRef<HTMLElement, SiteSidebarProps>(function Si
         <div className="mt-3">
           <NavGroupLabel
             title="Application"
-            count={featurePackLinks.length + applicationBlockLinks.length + sourceBlockLinks.length + 2}
+            count={featurePackLinks.length + applicationBlockLinks.length + sourceBlockLinks.length + 3}
           />
           <ul className="flex flex-col gap-0.5 pb-0.5 pt-0.5">
+            <li>
+              <NavLink href="/blocks/app-kit" active={pathname === '/blocks/app-kit'} onNavigate={onNavigate}>
+                App Kit
+              </NavLink>
+            </li>
             <li>
               <NavLink href="/blocks/features" active={pathname === '/blocks/features'} onNavigate={onNavigate}>
                 Feature packs

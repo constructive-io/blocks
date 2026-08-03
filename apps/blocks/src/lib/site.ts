@@ -34,5 +34,5 @@ export const OG_IMAGE = {
   width: 1200,
   height: 630,
   type: 'image/png',
-  alt: 'Constructive Blocks — React primitives, feature packs, and Console Kit for npm and shadcn.',
+  alt: 'Constructive Blocks — App Kit, React primitives, feature packs, and Console Kit for shadcn.',
 };

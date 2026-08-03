@@ -638,6 +638,27 @@
       ]
     },
     {
+      "name": "chart",
+      "type": "registry:ui",
+      "title": "Chart",
+      "description": "Accessible TanStack Charts React adapter with a theme-adaptive semantic token configuration.",
+      "categories": [
+        "data-display"
+      ],
+      "docs": "Import: `import { Chart, CONSTRUCTIVE_CHART_THEME } from '@/components/ui/chart'`",
+      "dependencies": [
+        "@tanstack/charts@0.6.4",
+        "@tanstack/react-charts@0.6.4",
+        "d3-scale@4.0.2"
+      ],
+      "files": [
+        {
+          "path": "registry/constructive/ui/chart.tsx",
+          "type": "registry:ui"
+        }
+      ]
+    },
+    {
       "name": "separator",
       "type": "registry:ui",
       "title": "Separator",

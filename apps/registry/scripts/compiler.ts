@@ -123,6 +123,135 @@ export type Registry = {
 	items: RegistryItem[];
 };
 
+export const CONSTRUCTIVE_REGISTRY_META_VERSION = 1;
+
+const APP_KIT_ITEM_NAMES = new Set([
+	'app-kit-core',
+	'app-kit-data',
+	'app-kit-board',
+	'app-kit-dashboard',
+	'app-kit-calendar',
+	'app-kit-workflow',
+	'app-kit-event-studio',
+]);
+
+const APP_KIT_META_KINDS = new Set([
+	'runtime',
+	'resource',
+	'view',
+	'composition',
+	'starter',
+]);
+
+const APP_KIT_META_BOUNDARIES = new Set(['server-safe', 'client', 'mixed']);
+
+const APP_KIT_META_FIELDS = new Set([
+	'version',
+	'family',
+	'kind',
+	'boundary',
+	'provider',
+	'dataShapes',
+	'intents',
+	'capabilities',
+	'slots',
+	'events',
+	'compatibleWith',
+]);
+
+export type ConstructiveRegistryMetadata = {
+	version: typeof CONSTRUCTIVE_REGISTRY_META_VERSION;
+	family: 'app-kit';
+	kind: 'runtime' | 'resource' | 'view' | 'composition' | 'starter';
+	boundary: 'server-safe' | 'client' | 'mixed';
+	provider: 'app-kit';
+	dataShapes: string[];
+	intents: string[];
+	capabilities: string[];
+	slots?: string[];
+	events?: string[];
+	compatibleWith?: string[];
+};
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+	return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+function assertNonEmptyStringList(itemName: string, field: string, value: unknown): asserts value is string[] {
+	if (
+		!Array.isArray(value) ||
+		value.length === 0 ||
+		value.some((entry) => typeof entry !== 'string' || entry.trim().length === 0)
+	) {
+		throw new Error(`${itemName} meta.constructive.${field} must be a non-empty string array.`);
+	}
+	if (new Set(value).size !== value.length) {
+		throw new Error(`${itemName} meta.constructive.${field} contains duplicate values.`);
+	}
+}
+
+function assertOptionalStringList(itemName: string, field: string, value: unknown): void {
+	if (value === undefined) return;
+	assertNonEmptyStringList(itemName, field, value);
+}
+
+/**
+ * App Kit registry metadata is a public, machine-readable selection contract.
+ * Keep it strict and versioned so skills can query capabilities without
+ * reverse-engineering component names or prose.
+ */
+export function assertConstructiveRegistryMetadata(items: readonly RegistryItem[]): void {
+	const itemNames = new Set(items.map((item) => item.name));
+
+	for (const item of items) {
+		const meta = isRecord(item.meta) ? item.meta.constructive : undefined;
+		if (!APP_KIT_ITEM_NAMES.has(item.name) && meta === undefined) continue;
+		if (!APP_KIT_ITEM_NAMES.has(item.name)) {
+			throw new Error(`${item.name} declares App Kit metadata without being an App Kit install root.`);
+		}
+		if (!isRecord(meta)) {
+			throw new Error(`${item.name} is missing versioned meta.constructive.`);
+		}
+		const unknownFields = Object.keys(meta).filter((field) => !APP_KIT_META_FIELDS.has(field));
+		if (unknownFields.length > 0) {
+			throw new Error(`${item.name} meta.constructive contains unknown fields: ${unknownFields.join(', ')}.`);
+		}
+		if (meta.version !== CONSTRUCTIVE_REGISTRY_META_VERSION) {
+			throw new Error(`${item.name} meta.constructive.version must be ${CONSTRUCTIVE_REGISTRY_META_VERSION}.`);
+		}
+		if (meta.family !== 'app-kit') {
+			throw new Error(`${item.name} meta.constructive.family must be app-kit.`);
+		}
+		if (typeof meta.kind !== 'string' || !APP_KIT_META_KINDS.has(meta.kind)) {
+			throw new Error(`${item.name} meta.constructive.kind is invalid.`);
+		}
+		if (typeof meta.boundary !== 'string' || !APP_KIT_META_BOUNDARIES.has(meta.boundary)) {
+			throw new Error(`${item.name} meta.constructive.boundary is invalid.`);
+		}
+		if (meta.provider !== 'app-kit') {
+			throw new Error(`${item.name} meta.constructive.provider must be app-kit.`);
+		}
+		assertNonEmptyStringList(item.name, 'dataShapes', meta.dataShapes);
+		assertNonEmptyStringList(item.name, 'intents', meta.intents);
+		assertNonEmptyStringList(item.name, 'capabilities', meta.capabilities);
+		assertOptionalStringList(item.name, 'slots', meta.slots);
+		assertOptionalStringList(item.name, 'events', meta.events);
+		assertOptionalStringList(item.name, 'compatibleWith', meta.compatibleWith);
+
+		for (const compatibleItem of (meta.compatibleWith as string[] | undefined) ?? []) {
+			if (!APP_KIT_ITEM_NAMES.has(compatibleItem) || !itemNames.has(compatibleItem)) {
+				throw new Error(`${item.name} meta.constructive.compatibleWith references unknown App Kit root ${compatibleItem}.`);
+			}
+		}
+	}
+
+	for (const itemName of APP_KIT_ITEM_NAMES) {
+		if (!itemNames.has(itemName)) {
+			throw new Error(`Missing App Kit registry root ${itemName}.`);
+		}
+	}
+}
+
 /**
  * Keeps the JSON sidecar installed for a feature pack or preset identical to
  * the typed catalog used by Console Kit and the Blocks documentation.

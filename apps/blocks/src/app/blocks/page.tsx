@@ -13,6 +13,12 @@ const DESCRIPTION = 'Choose npm package distribution or source installation thro
 
 const APPLICATION_CATALOG = [
   {
+    href: '/blocks/app-kit',
+    title: 'App Kit',
+    description:
+      'Compose arbitrary Constructive-native apps from typed resources, queries, actions, and domain-neutral views.',
+  },
+  {
     href: '/blocks/features',
     title: 'Feature packs',
     description:
@@ -74,9 +80,9 @@ export default function SetupPage() {
             Application blocks
           </h2>
           <p className="mt-1 max-w-2xl text-pretty text-sm leading-7 text-muted-foreground">
-            Start with a capability-aligned feature pack, add a composed
-            workflow block, or install the full Next.js console with its
-            route-neutral app shell and dynamic data explorer.
+            Start with App Kit for application composition, then add focused
+            feature packs, workflow blocks, or Console Kit when the application
+            needs those platform capabilities.
           </p>
         </div>
         <ul className="grid gap-2 sm:grid-cols-2">

@@ -14,10 +14,16 @@ interface RuntimeExport {
 	require: ConditionalTarget;
 }
 
+interface ImportOnlyRuntimeExport {
+	import: ConditionalTarget;
+}
+
+type PackageExport = string | RuntimeExport | ImportOnlyRuntimeExport;
+
 interface PackageManifest {
 	name: string;
 	dependencies?: Record<string, string>;
-	exports: Record<string, string | RuntimeExport>;
+	exports: Record<string, PackageExport>;
 }
 
 interface RegistryManifest {
@@ -26,6 +32,8 @@ interface RegistryManifest {
 
 const packageRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const portalSpecifier = '@constructive-io/ui/portal';
+const rootBarrelExclusions = new Set(['chart']);
+const importOnlySubpaths = new Set(['chart']);
 
 async function sourceFiles(root: string): Promise<string[]> {
 	const entries = await readdir(root, { withFileTypes: true });
@@ -83,8 +91,12 @@ function collectRootComponentModules(source: string): string[] {
 	return sorted(modules);
 }
 
-function isRuntimeExport(target: string | RuntimeExport): target is RuntimeExport {
+function isRuntimeExport(target: PackageExport): target is RuntimeExport {
 	return typeof target === 'object' && 'import' in target && 'require' in target;
+}
+
+function isImportOnlyRuntimeExport(target: PackageExport): target is ImportOnlyRuntimeExport {
+	return typeof target === 'object' && 'import' in target && !('require' in target);
 }
 
 function hasUseClientDirective(source: string): boolean {
@@ -110,6 +122,7 @@ const packageModules = sorted(
 		.filter((subpath) => subpath.startsWith('./') && subpath !== './globals.css')
 		.map((subpath) => subpath.slice(2)),
 );
+const packageRootModules = packageModules.filter((moduleName) => !rootBarrelExclusions.has(moduleName));
 const registryModules = sorted(
 	registry.items
 		.filter((item) => item.type === 'registry:ui' || item.type === 'registry:block')
@@ -118,9 +131,13 @@ const registryModules = sorted(
 
 const failures = [
 	formatDifference('Root exports missing package subpaths', difference(rootModules, packageModules)),
-	formatDifference('Package subpaths missing root exports', difference(packageModules, rootModules)),
+	formatDifference('Package subpaths missing root exports', difference(packageRootModules, rootModules)),
 	formatDifference('Root exports missing registry items', difference(rootModules, registryModules)),
 ].filter((failure): failure is string => Boolean(failure));
+
+if (rootModules.some((moduleName) => rootBarrelExclusions.has(moduleName))) {
+	failures.push('Chart must remain an opt-in subpath so ordinary UI consumers do not load React-19-only peers');
+}
 
 if (manifest.dependencies?.['tw-animate-css']) failures.push('tw-animate-css must not be a UI runtime dependency');
 if (globalsSource.includes('tw-animate-css')) failures.push('globals.css must not import tw-animate-css');
@@ -184,11 +201,28 @@ for (const output of portalConsumerOutputs) {
 
 for (const moduleName of packageModules) {
 	const target = manifest.exports[`./${moduleName}`];
-	if (!target || !isRuntimeExport(target)) {
+	if (!target) {
+		failures.push(`./${moduleName} must define a package export`);
+		continue;
+	}
+	const importOnly = importOnlySubpaths.has(moduleName);
+	if (importOnly && !isImportOnlyRuntimeExport(target)) {
+		failures.push(`./${moduleName} must remain import-only because its upstream runtime is ESM-only`);
+		continue;
+	}
+	if (!importOnly && !isRuntimeExport(target)) {
 		failures.push(`./${moduleName} must define import and require targets`);
 		continue;
 	}
-	for (const output of [target.import.types, target.import.default, target.require.types, target.require.default]) {
+	let outputs: string[];
+	if (isRuntimeExport(target)) {
+		outputs = [target.import.types, target.import.default, target.require.types, target.require.default];
+	} else if (isImportOnlyRuntimeExport(target)) {
+		outputs = [target.import.types, target.import.default];
+	} else {
+		continue;
+	}
+	for (const output of outputs) {
 		try {
 			await access(path.join(packageRoot, output.replace(/^\.\//, '')));
 		} catch {
@@ -198,8 +232,11 @@ for (const moduleName of packageModules) {
 }
 
 for (const [subpath, target] of Object.entries(manifest.exports)) {
-	if (!isRuntimeExport(target)) continue;
-	for (const output of [target.import.default, target.require.default]) {
+	if (!isRuntimeExport(target) && !isImportOnlyRuntimeExport(target)) continue;
+	const outputs = isRuntimeExport(target)
+		? [target.import.default, target.require.default]
+		: [target.import.default];
+	for (const output of outputs) {
 		const outputPath = path.join(packageRoot, output.replace(/^\.\//, ''));
 		const source = await readFile(outputPath, 'utf8');
 		if (!hasUseClientDirective(source)) {

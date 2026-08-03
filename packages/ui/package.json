@@ -90,6 +90,12 @@
         "default": "./dist/components/card.cjs"
       }
     },
+    "./chart": {
+      "import": {
+        "types": "./dist/components/chart.d.ts",
+        "default": "./dist/components/chart.js"
+      }
+    },
     "./separator": {
       "import": {
         "types": "./dist/components/separator.d.ts",
@@ -682,10 +688,13 @@
     "@base-ui/react": "^1.0.0",
     "@internationalized/date": "^3.0.0",
     "@remixicon/react": "^4.0.0",
+    "@tanstack/charts": "0.6.4",
+    "@tanstack/react-charts": "0.6.4",
     "@use-gesture/react": "^10.0.0",
     "@xyflow/react": "^12.0.0",
     "ace-builds": "^1.0.0",
     "cmdk": "^1.0.0",
+    "d3-scale": "4.0.2",
     "lucide-react": ">=0.400.0 <1.0.0",
     "match-sorter": "^6.0.0 || ^7.0.0 || ^8.0.0",
     "motion": "^11.0.0 || ^12.0.0",
@@ -700,6 +709,15 @@
     "vaul": "^1.0.0"
   },
   "peerDependenciesMeta": {
+    "@tanstack/charts": {
+      "optional": true
+    },
+    "@tanstack/react-charts": {
+      "optional": true
+    },
+    "d3-scale": {
+      "optional": true
+    },
     "ace-builds": {
       "optional": true
     },
@@ -714,6 +732,8 @@
     "@remixicon/react": "^4.8.0",
     "@storybook/addon-a11y": "^10.1.11",
     "@storybook/react-vite": "^10.1.11",
+    "@tanstack/charts": "0.6.4",
+    "@tanstack/react-charts": "0.6.4",
     "@tailwindcss/postcss": "^4.1.18",
     "@types/node": "^20.19.27",
     "@types/react": "^19.2.7",
@@ -723,6 +743,7 @@
     "@xyflow/react": "^12.10.0",
     "ace-builds": "^1.43.5",
     "cmdk": "^1.1.1",
+    "d3-scale": "4.0.2",
     "jsdom": "^26.1.0",
     "lucide-react": "^0.525.0",
     "match-sorter": "^8.2.0",

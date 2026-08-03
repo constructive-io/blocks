@@ -29,6 +29,7 @@ const clientFiles = new Set([
 	'avatar.tsx',
 	'breadcrumb.tsx',
 	'calendar-rac.tsx',
+	'chart.tsx',
 	'checkbox-group.tsx',
 	'checkbox.tsx',
 	'collapsible.tsx',

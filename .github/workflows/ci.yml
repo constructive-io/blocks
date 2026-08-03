@@ -72,9 +72,12 @@ jobs:
       - name: Build shadcn registry
         run: pnpm build:registry
 
+      - name: Install Chromium for App Kit hydration smoke
+        run: pnpm --filter blocks exec playwright install --with-deps chromium
+
       - name: Verify representative registry installs
         env:
-          SMOKE_CASE: ai,schema-builder,command-palette
+          SMOKE_CASE: ai,schema-builder,command-palette,app-kit-data-default,app-kit-data-custom,app-kit-event-studio-next16
           SMOKE_REUSE_PACKED_ARTIFACTS: '1'
         run: pnpm --filter @constructive-io/registry smoke:install
 
