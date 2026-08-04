@@ -1,13 +1,13 @@
 ---
-name: adding-blocks
-description: How to add Constructive Blocks into a consumer app — register the @constructive shadcn registry, pick the right install root (console-kit-nextjs, a preset, console-kit-core + console-module-*, a standalone feature-pack, command-palette, or a primitive), run the shadcn add command, and render Console Kit with a secret-free tenant descriptor. Use when asked to "add a block", "install console kit", "add a feature pack", "use the @constructive registry", or "resolve an install with the inspector".
+name: constructive-blocks
+description: Overview of Constructive Blocks and how to consume them — the two distributions (npm packages and the @constructive shadcn registry), picking the right install root (console-kit-nextjs, a preset, console-kit-core + console-module-*, a standalone feature-pack, command-palette, or a primitive), running the shadcn add command, and rendering Console Kit with a secret-free tenant descriptor. Use when asked about Constructive Blocks, or to "add a block", "install console kit", "add a feature pack", "use the @constructive registry", or "resolve an install with the inspector".
 compatibility: Node 24 LTS, pnpm 10.28.0; consumer must be a shadcn project (components.json)
 metadata:
   author: constructive-io
   version: "1.0.0"
 ---
 
-# Adding Constructive Blocks
+# Constructive Blocks
 
 Constructive Blocks are distributed two independent ways:
 
@@ -17,8 +17,9 @@ Constructive Blocks are distributed two independent ways:
 - **The `@constructive` shadcn registry** — editable source copied into the
   consumer app (Console Kit, feature packs, presets, and primitives).
 
-This skill is about the **registry / "add a block" path**. The registry is
-served from `https://constructive-io.github.io/blocks/r/{name}.json`.
+This skill covers consuming Blocks, focused on the **registry / "add a block"
+path**. The registry is served from
+`https://constructive-io.github.io/blocks/r/{name}.json`.
 
 ## 1. One-time consumer setup
 
