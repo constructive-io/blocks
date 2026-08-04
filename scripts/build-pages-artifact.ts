@@ -205,11 +205,28 @@ if (previewRoutes.length === 0) throw new Error('Pages artifact does not contain
 await Promise.all([
   assertFile('index.html'),
   assertFile('404.html'),
+  assertFile('llms.txt'),
   assertFile('robots.txt'),
   assertFile('sitemap.xml'),
   assertFile('opengraph-image.png'),
   ...previewRoutes.map(({ route }) => assertFile(routeOutputPath(route))),
 ]);
+
+const llms = await readFile(path.join(artifactRoot, 'llms.txt'), 'utf8');
+for (const requiredEntry of [
+  'npx skills add constructive-io/blocks',
+  `${pagesOrigin}${pagesBasePath}/r/registry.json`,
+  `${pagesOrigin}${pagesBasePath}/blocks/ai/`,
+  `${pagesOrigin}${pagesBasePath}/blocks/sheets/`,
+  `${pagesOrigin}${pagesBasePath}/blocks/schema-builder/`,
+  `${pagesOrigin}${pagesBasePath}/blocks/storage-browser/`,
+  `${pagesOrigin}${pagesBasePath}/blocks/billing/`,
+  `${pagesOrigin}${pagesBasePath}/blocks/console-kit/`,
+]) {
+  if (!llms.includes(requiredEntry)) {
+    throw new Error(`Pages llms.txt is missing ${requiredEntry}.`);
+  }
+}
 
 const sitemap = await readFile(path.join(artifactRoot, 'sitemap.xml'), 'utf8');
 const publicRoutes = publicRoutesFromSitemap(sitemap);

@@ -39,15 +39,21 @@ jobs:
           node-version: '24'
           cache: pnpm
 
+      - name: Setup uv for Agent Skills validation
+        uses: astral-sh/setup-uv@v7
+
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
+
+      - name: Validate Agent Skills specification
+        run: pnpm check:agent-skill-spec
 
       - name: Check types and tests
         run: pnpm check
 
   delivery:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 45
     steps:
       - name: Checkout
         uses: actions/checkout@v7
@@ -74,8 +80,10 @@ jobs:
 
       - name: Verify representative registry installs
         env:
-          SMOKE_CASE: ai,schema-builder,command-palette
+          SMOKE_CASE: ai,command-palette,sheets,schema-builder,storage-browser,billing-settings-page,feature-pack-data,preset-full
+          SMOKE_DISCOVERY: '1'
           SMOKE_REUSE_PACKED_ARTIFACTS: '1'
+          SMOKE_SHADCN_LATEST: '1'
         run: pnpm --filter @constructive-io/registry smoke:install
 
       - name: Build static Blocks site
@@ -104,6 +112,14 @@ jobs:
       - name: Deploy GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v5
+
+      - name: Verify public registry and agent entrypoint
+        env:
+          BLOCKS_PAGES_URL: ${{ steps.deployment.outputs.page_url }}
+        run: |
+          blocks_pages_base="${BLOCKS_PAGES_URL%/}"
+          curl --fail --silent --show-error --retry 8 --retry-all-errors --retry-delay 5 "$blocks_pages_base/r/registry.json" | grep -q '"items"'
+          curl --fail --silent --show-error --retry 8 --retry-all-errors --retry-delay 5 "$blocks_pages_base/llms.txt" | grep -q 'npx skills add constructive-io/blocks'
 
 # Package tags validate publishable tarballs and Pages inputs, but npm
 # publication remains a manual maintainer action.
