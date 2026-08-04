@@ -1,0 +1,89 @@
+{
+  "skill_name": "constructive-blocks",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "Add a streaming agent chat surface to my existing shadcn application using Constructive Blocks. It needs messages, reasoning, tool progress, a plan, and a composer, while my application keeps ownership of the model and conversation persistence.",
+      "expected_output": "A live-registry-driven installation and composition of the Constructive AI block with host-owned streaming, tools, and persistence.",
+      "files": [],
+      "expectations": [
+        "Inspects the project with shadcn info before choosing aliases or file locations",
+        "Searches and views the live @constructive registry before installing @constructive/ai",
+        "Uses dry-run before installation or update and does not require a Blocks commit or fixed package version",
+        "Imports AI presentation from the installed source target rather than an invented npm AI package",
+        "Keeps model execution, tool execution, streaming reduction, and persistence in the host",
+        "Runs typecheck and the production build after reading the installed files"
+      ]
+    },
+    {
+      "id": 2,
+      "prompt": "Give my tenant application a spreadsheet-style editor for arbitrary tables discovered from Constructive metadata. The host already has the database endpoint and signed-in user session.",
+      "expected_output": "A current @constructive/sheets source installation with the documented provider boundary, host-owned endpoint and session, and authorization-aware verification.",
+      "files": [],
+      "expectations": [
+        "Discovers and inspects @constructive/sheets through the live registry",
+        "Uses the installed Sheets and SheetsProvider source imports resolved from project aliases",
+        "Keeps endpoint discovery and token lifecycle in the host configuration",
+        "Does not add @constructive-io/sheets when the editable source item is selected",
+        "Treats _meta as capability evidence rather than RLS authorization",
+        "Tests both allowed and denied mutations and verifies persistence independently"
+      ]
+    },
+    {
+      "id": 3,
+      "prompt": "Add a PostgreSQL schema editor to our control plane. Our app owns routing, QueryClient, organization/database scope, generated GraphQL clients, and destructive confirmations.",
+      "expected_output": "A source-installed Schema Builder wired through its current adapter and controlled host contracts without leaking control-plane concerns into Blocks.",
+      "files": [],
+      "expectations": [
+        "Searches and views @constructive/schema-builder before installation",
+        "Uses the installed SchemaBuilder source target and a host-owned adapter",
+        "Keeps generated GraphQL clients, scope, routing, QueryClient, and confirmations in the host",
+        "Uses current controlled properties discovered from live docs instead of copied stale APIs",
+        "Exercises invalidation, permission failures, and destructive-operation confirmation",
+        "Runs typecheck, focused tests, and a production build"
+      ]
+    },
+    {
+      "id": 4,
+      "prompt": "Build a storage workspace for buckets and objects in my application. I already have GraphQL queries and mutations and want editable Constructive presentation source.",
+      "expected_output": "Selection of @constructive/storage-browser or focused storage leaves based on intent, with controlled data and actions retained by the host.",
+      "files": [],
+      "expectations": [
+        "Searches the live registry and chooses storage-browser versus focused storage leaves deliberately",
+        "Uses the installed storage source imports reported by shadcn",
+        "Keeps fetching, authorization, upload, download, and mutation behavior in the host",
+        "Distinguishes empty bucket, unavailable storage, and denied access states",
+        "Confirms destructive actions outside the presentation block",
+        "Reloads and reads back data when claiming mutations persist"
+      ]
+    },
+    {
+      "id": 5,
+      "prompt": "Add a customer billing settings experience and expose its actions through a global Constructive command palette. Our router, billing provider, and authorization remain application-owned.",
+      "expected_output": "A live installation of appropriate billing roots and command-palette presentation with correct headless-package and installed-source import ownership.",
+      "files": [],
+      "expectations": [
+        "Inspects billing-settings-page and command-palette through live search and view",
+        "Chooses a billing composition or focused leaves based on the requested workflow",
+        "Imports command registry hooks from @constructive-io/command-palette",
+        "Imports CommandPalette and task presentation from installed source rather than the npm package",
+        "Keeps routing, billing mutations, provider errors, and authorization in the host",
+        "Verifies pending, failed, permission-denied, and successful action states"
+      ]
+    },
+    {
+      "id": 6,
+      "prompt": "Create a Constructive tenant console with data, users, organizations, and storage. Pick the smallest supported current composition and connect it to the tenant descriptor returned by provisioning.",
+      "expected_output": "A live-registry-selected preset or Console Kit module composition with explicit endpoints, host session ownership, and complete static and authorization verification.",
+      "files": [],
+      "expectations": [
+        "Searches and views current Console Kit, module, and preset roots instead of recalling a snapshot",
+        "Chooses the smallest current root whose live dependency closure owns the requested modules",
+        "Does not require a Blocks commit, branch, or fixed package version",
+        "Passes explicit database-scoped endpoints and a host-owned session without storing credentials in UI state",
+        "Treats installed feature manifests and capability discovery as evidence rather than authorization",
+        "Verifies isolation, routing, allowed and denied operations, typecheck, and the production build"
+      ]
+    }
+  ]
+}

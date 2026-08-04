@@ -555,6 +555,9 @@ const requestedCases = process.env.SMOKE_CASE?.split(',').map((value) => value.t
 const selectedCases = requestedCases
 	? cases.filter((testCase) => requestedCases.includes(testCase.name))
 	: cases;
+const shadcnRunnerArguments = process.env.SMOKE_SHADCN_LATEST === '1'
+	? ['dlx', 'shadcn@latest']
+	: ['exec', 'shadcn'];
 if (requestedCases && selectedCases.length !== new Set(requestedCases).size) {
 	const knownCases = new Set(cases.map((testCase) => testCase.name));
 	const unknownCases = requestedCases.filter((name) => !knownCases.has(name));
@@ -690,6 +693,48 @@ async function run(
 	if (exitCode !== 0) throw new Error(`${description} exited with code ${exitCode}.`);
 }
 
+async function capture(
+	command: string,
+	arguments_: string[],
+	cwd: string,
+	description: string,
+): Promise<string> {
+	const result = await new Promise<{
+		exitCode: number;
+		stderr: string;
+		stdout: string;
+	}>((resolve, reject) => {
+		const child = spawn(command, arguments_, {
+			cwd,
+			env: process.env,
+			stdio: ['ignore', 'pipe', 'pipe'],
+		});
+		let stderr = '';
+		let stdout = '';
+		child.stdout.on('data', (chunk: Buffer) => {
+			stdout += chunk.toString();
+		});
+		child.stderr.on('data', (chunk: Buffer) => {
+			stderr += chunk.toString();
+		});
+		child.on('error', reject);
+		child.on('exit', (code) =>
+			resolve({ exitCode: code ?? 1, stderr, stdout }),
+		);
+	});
+
+	if (result.exitCode !== 0) {
+		throw new Error(
+			`${description} exited with code ${result.exitCode}.\n${result.stderr}${result.stdout}`,
+		);
+	}
+	return result.stdout;
+}
+
+function shadcnArguments(arguments_: readonly string[]): string[] {
+	return [...shadcnRunnerArguments, ...arguments_];
+}
+
 async function startPackageRegistry(): Promise<{
 	origin: string;
 	close: () => Promise<void>;
@@ -775,10 +820,90 @@ async function startPackageRegistry(): Promise<{
 async function install(root: string, itemNames: readonly string[]): Promise<void> {
 	await run(
 		'pnpm',
-		['exec', 'shadcn', 'add', ...itemNames.map((itemName) => `@constructive/${itemName}`), '--cwd', root, '--yes'],
+		shadcnArguments([
+			'add',
+			...itemNames.map((itemName) => `@constructive/${itemName}`),
+			'--cwd',
+			root,
+			'--yes',
+		]),
 		appDirectory,
 		`pnpm dlx shadcn@latest add ${itemNames.map((itemName) => `@constructive/${itemName}`).join(' ')}`,
 	);
+}
+
+async function verifyAgentDiscovery(root: string): Promise<void> {
+	const searchSource = await capture(
+		'pnpm',
+		shadcnArguments([
+			'search',
+			'@constructive',
+			'--query',
+			'AI chat',
+			'--limit',
+			'5',
+			'--json',
+			'--cwd',
+			root,
+		]),
+		appDirectory,
+		'shadcn live registry search',
+	);
+	const search = JSON.parse(searchSource) as {
+		items?: Array<{ name?: string; registry?: string }>;
+	};
+	if (!search.items?.some(({ name, registry }) => name === 'ai' && registry === '@constructive')) {
+		throw new Error('shadcn search did not discover @constructive/ai.');
+	}
+
+	const viewSource = await capture(
+		'pnpm',
+		shadcnArguments([
+			'view',
+			'@constructive/command-palette',
+			'--cwd',
+			root,
+		]),
+		appDirectory,
+		'shadcn live registry view',
+	);
+	const viewed = JSON.parse(viewSource) as Array<{
+		dependencies?: string[];
+		docs?: string;
+		files?: Array<{ target?: string }>;
+		name?: string;
+	}>;
+	const commandPalette = viewed[0];
+	if (commandPalette?.name !== 'command-palette' || !commandPalette.docs) {
+		throw new Error('shadcn view did not return current command-palette docs.');
+	}
+	if (
+		!commandPalette.dependencies?.some((dependency) =>
+			dependency.startsWith('@constructive-io/command-palette@'),
+		) ||
+		!commandPalette.files?.some(
+			({ target }) => target === 'src/blocks/command-palette/command-palette.tsx',
+		)
+	) {
+		throw new Error(
+			'command-palette no longer exposes the expected headless-package and installed-source split.',
+		);
+	}
+
+	await run(
+		'pnpm',
+		shadcnArguments([
+			'add',
+			'@constructive/button',
+			'--cwd',
+			root,
+			'--yes',
+			'--dry-run',
+		]),
+		appDirectory,
+		'shadcn registry dry run',
+	);
+	console.log('Agent discovery passed: search, view, and dry-run against the current shadcn CLI.');
 }
 
 async function typecheck(root: string, itemName: string): Promise<void> {
@@ -974,6 +1099,16 @@ if (!address || typeof address === 'string') throw new Error('Unable to start re
 const origin = `http://127.0.0.1:${address.port}`;
 
 try {
+	if (process.env.SMOKE_DISCOVERY === '1') {
+		const discoveryRoot = path.join(temporaryRoot, 'agent-discovery');
+		prepareConsumer(
+			discoveryRoot,
+			origin,
+			{ name: 'agent-discovery', expected: [], customAliases: true },
+			packageRegistry?.origin,
+		);
+		await verifyAgentDiscovery(discoveryRoot);
+	}
 	for (const testCase of selectedCases) {
 		const root = path.join(temporaryRoot, testCase.name);
 		const itemNames = testCase.items ?? [testCase.name];

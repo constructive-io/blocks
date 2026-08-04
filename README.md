@@ -36,6 +36,48 @@ Keep the generated alias configuration, then map the public registry in
 }
 ```
 
+## Build with an AI agent
+
+Install the repository's canonical Agent Skill from the latest default branch:
+
+```bash
+npx skills add constructive-io/blocks
+```
+
+The skill teaches agents to inspect the consumer, search the live registry,
+preview the dependency closure, install the smallest useful root, and verify
+the result without relying on a Blocks commit or catalog snapshot. It works
+with the shadcn CLI alone:
+
+```bash
+pnpm dlx shadcn@latest info --json
+pnpm dlx shadcn@latest search @constructive -q "AI chat"
+pnpm dlx shadcn@latest view @constructive/ai
+pnpm dlx shadcn@latest add @constructive/ai --dry-run
+pnpm dlx shadcn@latest add @constructive/ai
+```
+
+Agents with MCP support can use the official shadcn registry server after the
+`@constructive` namespace is present in `components.json`:
+
+```bash
+pnpm dlx shadcn@latest mcp init --client codex
+```
+
+Use the client value for the agent being configured. The public
+[`llms.txt`](https://constructive-io.github.io/blocks/llms.txt) links the live
+registry and every major Blocks documentation surface for agents that begin
+from the deployed site.
+
+Example requests:
+
+- “Add a streaming agent chat with tool and approval states using Constructive
+  Blocks; keep model execution and persistence in my host.”
+- “Inspect the current registry and add a spreadsheet CRUD surface for my
+  tenant endpoint.”
+- “Choose the smallest current Console Kit composition for data, users,
+  organizations, and storage, then verify allowed and denied operations.”
+
 Then choose the smallest surface that owns the workflow you need:
 
 | Goal | Install root |
@@ -112,10 +154,11 @@ publishable package artifacts together.
 
 Console Kit and the feature packs are source-installed blocks. They accept
 database-scoped endpoints, a host-owned session, and provider-neutral adapters;
-they do not require generated SDKs or environment-specific global clients. A
-Console Kit instance owns one Zustand store composed from separate navigation,
-runtime, and adapter slices, which keeps state isolated across mounts and
-server requests.
+they do not require generated SDKs or environment-specific global clients.
+Console Kit core owns an isolated modular store, while installed feature
+surfaces may mount their documented providers. Read the installed source before
+composing roots instead of assuming every Blocks surface shares one store or
+provider.
 
 ## Agent inspection
 
