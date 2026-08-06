@@ -87,6 +87,16 @@ jobs:
           SMOKE_DISCOVERY: '1'
           SMOKE_REUSE_PACKED_ARTIFACTS: '1'
           SMOKE_SHADCN_LATEST: '1'
+          # This step installs into throwaway consumer projects outside the
+          # workspace, so it gets no exemption list and the bare wait applies to
+          # our own packages. @constructive-io/data's registry metadata has no
+          # `time` field, which the age check needs, so it fails with
+          # ERR_PNPM_MISSING_TIME rather than any real staleness.
+          #
+          # The quarantine belongs to the install that writes our lockfile, not
+          # to a smoke test that throws its tree away — same reasoning the
+          # rollout issue applies to `pnpm deploy --legacy`.
+          npm_config_minimum_release_age: '0'
         run: pnpm --filter @constructive-io/registry smoke:install
 
       - name: Build static Blocks site
