@@ -8,12 +8,18 @@ importers:
 
   .:
     devDependencies:
+      '@constructive-io/pnpm-policy':
+        specifier: 0.2.1
+        version: 0.2.1
       '@types/node':
         specifier: ^24.10.1
         version: 24.13.3
       lerna:
         specifier: ^8.2.4
         version: 8.2.4(@types/node@24.13.3)(encoding@0.1.13)
+      pnpm-policy:
+        specifier: ^0.2.2
+        version: 0.2.2
       tsx:
         specifier: 4.23.1
         version: 4.23.1
@@ -887,6 +893,9 @@ packages:
 
   '@constructive-io/llm-env@0.3.0':
     resolution: {integrity: sha512-E/PisqM4wMThQ5ZUE6RNpNfd5IKxJQKvc5VGPe4/9lWJCJC3aJ5Wd+dRbiI8HV3H+uupLlAcJVE8P5r1PxrwVw==}
+
+  '@constructive-io/pnpm-policy@0.2.1':
+    resolution: {integrity: sha512-tAgH3Zgwn2shQXGlfl5zxmtY/tyZw9jYX7QAOFMp5ALKSrxO5xsxZQmckwMqOeHyyV/MZJWzIZ4t/QYznJeVmw==}
 
   '@constructive-io/s3-streamer@2.29.2':
     resolution: {integrity: sha512-GJ9ph8i3NfgfddAOlIAoj/455Q7XuNrCT2S29xhUi78TijRmBgteU5syE+jPFUAGYHgqEISDJYuMwI+fkCreQQ==}
@@ -5819,6 +5828,11 @@ packages:
     engines: {node: '>=10'}
     hasBin: true
 
+  mkdirp@3.0.1:
+    resolution: {integrity: sha512-+NsyUUAZDmo6YVHzL/stxSu3t9YS1iljliy3BSDrXJ/dkn1KYdmtZODGGjLcc9XLgVVpH4KshHB8XmZgMhaBXg==}
+    engines: {node: '>=10'}
+    hasBin: true
+
   mlly@1.8.2:
     resolution: {integrity: sha512-d+ObxMQFmbt10sretNDytwt85VrbkhhUA/JBGm1MPaWJ65Cl4wOgLaB1NYvJSZ0Ef03MMEU/0xpPMXUIQ29UfA==}
 
@@ -5905,6 +5919,9 @@ packages:
 
   nested-obj@0.2.2:
     resolution: {integrity: sha512-M1etu+T6Ai9Bo06L3K3nWD0ytZWltggBGsrxJlOGvMNGlCA4fokUVlbPKoWzsiiRX+PXq6Cb1xFEn4chiyC7MQ==}
+
+  nested-obj@0.2.3:
+    resolution: {integrity: sha512-Py9HdJ/qECkQHvryUaPcaIou6t+U/mkpT66jG8al7jh8Opt3wAuTSSXdPDyY8r1ljEH8a0EH6M4YR28b+RQ8zg==}
 
   next-themes@0.4.6:
     resolution: {integrity: sha512-pZvgD5L0IEvX5/9GWyHMf3m8BKiVQwsCMHfoFosXtXBMnaS0ZnIJ9ST4b4NqLVKDEm8QBxoNNGNaBv2JNF6XNA==}
@@ -6363,6 +6380,10 @@ packages:
   pluralize@7.0.0:
     resolution: {integrity: sha512-ARhBOdzS3e41FbkW/XWrTEtukqqLoK5+Z/4UeDaLuSW+39JPeFgs4gCGqsrJHVZX0fUrx//4OF0K1CUGwlIFow==}
     engines: {node: '>=4'}
+
+  pnpm-policy@0.2.2:
+    resolution: {integrity: sha512-Fj5/ACIZG/AGynTvhT8/7fJTf8ya3jG/Mkq/OMNVZhfTTJ1oniRTsKBHlXGF4sSecvIFqkmeHpn8CsQFwGcENA==}
+    hasBin: true
 
   postcss-load-config@6.0.1:
     resolution: {integrity: sha512-oPtTM4oerL+UXmx+93ytZVN82RrlY/wPUV8IeDxFrzIjXOLF1pN+EmKPLbubvKHT2HC20xXsCAH2Z+CKV6Oz/g==}
@@ -7774,6 +7795,9 @@ packages:
     engines: {node: '>= 14.6'}
     hasBin: true
 
+  yamlize@0.12.1:
+    resolution: {integrity: sha512-rU2BN+gmyr0A4yK5i/Ps9JO1MjQGIGUelkaFglc9i4QqEDKU5HfDMdHhNhGMoeNeVw7nJqWpmDiFnxGb6FR5zA==}
+
   yanse@0.2.1:
     resolution: {integrity: sha512-SMi3ZO1IqsvPLLXuy8LBCP1orqcjOT8VygiuyAlplaGeH2g+n4ZSSyWlA/BZjuUuN58TyOcz89mVkflSqIPxxQ==}
 
@@ -8443,6 +8467,8 @@ snapshots:
       - supports-color
 
   '@constructive-io/llm-env@0.3.0': {}
+
+  '@constructive-io/pnpm-policy@0.2.1': {}
 
   '@constructive-io/s3-streamer@2.29.2':
     dependencies:
@@ -13476,6 +13502,8 @@ snapshots:
 
   mkdirp@1.0.4: {}
 
+  mkdirp@3.0.1: {}
+
   mlly@1.8.2:
     dependencies:
       acorn: 8.17.0
@@ -13594,6 +13622,8 @@ snapshots:
   neo-async@2.6.2: {}
 
   nested-obj@0.2.2: {}
+
+  nested-obj@0.2.3: {}
 
   next-themes@0.4.6(react-dom@19.2.7(react@19.2.7))(react@19.2.7):
     dependencies:
@@ -14186,6 +14216,11 @@ snapshots:
       fsevents: 2.3.2
 
   pluralize@7.0.0: {}
+
+  pnpm-policy@0.2.2:
+    dependencies:
+      yaml: 2.9.0
+      yamlize: 0.12.1
 
   postcss-load-config@6.0.1(jiti@2.7.0)(postcss@8.5.19)(tsx@4.23.1)(yaml@2.9.0):
     dependencies:
@@ -15740,6 +15775,12 @@ snapshots:
   yallist@4.0.0: {}
 
   yaml@2.9.0: {}
+
+  yamlize@0.12.1:
+    dependencies:
+      mkdirp: 3.0.1
+      nested-obj: 0.2.3
+      yaml: 2.9.0
 
   yanse@0.2.1: {}
 

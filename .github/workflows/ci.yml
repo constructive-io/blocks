@@ -45,6 +45,9 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Check supply-chain policy
+        run: pnpm run policy:check
+
       - name: Validate Agent Skills specification
         run: pnpm check:agent-skill-spec
 
