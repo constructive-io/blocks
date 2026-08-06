@@ -32,11 +32,15 @@
     "local:registry": "tsx scripts/serve-local-registry.ts",
     "release:version": "lerna version --conventional-commits --no-push",
     "clean": "lerna run clean --if-present",
-    "bootstrap": "pnpm install"
+    "bootstrap": "pnpm install",
+    "policy": "pnpm-policy generate",
+    "policy:check": "pnpm-policy check"
   },
   "devDependencies": {
+    "@constructive-io/pnpm-policy": "0.2.1",
     "@types/node": "^24.10.1",
     "lerna": "^8.2.4",
+    "pnpm-policy": "^0.2.2",
     "tsx": "4.23.1",
     "typescript": "^5.9.3"
   }

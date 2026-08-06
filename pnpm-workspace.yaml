@@ -2,7 +2,65 @@ packages:
   - apps/*
   - packages/*
 
-onlyBuiltDependencies:
-  - '@tailwindcss/oxide'
-  - sharp
-  - unrs-resolver
+# Managed by pnpm-policy — run `pnpm-policy generate` after editing pnpm-policy.yaml.
+
+# A third-party release must be 2d old before it can be installed.
+# Most malicious releases are found and yanked well inside that window.
+minimumReleaseAge: 2880
+
+# Exempt from the wait: 6 scope glob(s), 35 first-party package(s).
+# First-party membership comes from what pyramation publishes on npm — waiting on your own release protects nothing.
+minimumReleaseAgeExclude:
+  - "@constructive-db/*"
+  - "@constructive-io/*"
+  - "@launchql/*"
+  - "@pgpm/*"
+  - "@pgpmjs/*"
+  - "@pgsql/*"
+  - 12factor-env
+  - "@agentic-kit/ollama"
+  - "@agentic-kit/protocol"
+  - etag-hash
+  - gql-ast
+  - graphile-bucket-provisioner-plugin
+  - graphile-bulk-mutations
+  - graphile-cache
+  - graphile-connection-filter
+  - graphile-i18n
+  - graphile-llm
+  - graphile-ltree
+  - graphile-pg-aggregates
+  - graphile-plugin-utils
+  - graphile-postgis
+  - graphile-presigned-url-plugin
+  - graphile-realtime-subscriptions
+  - graphile-search
+  - graphile-settings
+  - graphile-upload-plugin
+  - inflekt
+  - komoji
+  - mime-bytes
+  - nested-obj
+  - node-type-registry
+  - pg-ast
+  - pg-cache
+  - pg-env
+  - pg-query-context
+  - pgsql-deparser
+  - pnpm-policy
+  - schema-typescript
+  - uuid-hash
+  - yamlize
+  - yanse
+
+# The only dependencies permitted to run install scripts.
+allowBuilds:
+  "@tailwindcss/oxide": true # native binary, downloaded at install time
+  esbuild: true # native binary, fetched by its install script
+  msw: true # generates the mock service worker script used by tests
+  nx: true # native task-runner binary
+  sharp: true # libvips bindings
+  unrs-resolver: true # native resolver binary
+
+# Transitive dependencies must come from the registry, not from git or a URL.
+blockExoticSubdeps: true
