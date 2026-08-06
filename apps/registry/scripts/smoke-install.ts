@@ -1,6 +1,6 @@
 #!/usr/bin/env -S tsx
 
-import { spawn } from 'node:child_process';
+import { execFileSync, spawn } from 'node:child_process';
 import fs from 'node:fs';
 import http from 'node:http';
 import os from 'node:os';
@@ -558,6 +558,11 @@ const selectedCases = requestedCases
 const shadcnRunnerArguments = process.env.SMOKE_SHADCN_LATEST === '1'
 	? ['dlx', 'shadcn@latest']
 	: ['exec', 'shadcn'];
+const minimumReleaseAge = execFileSync(
+	'pnpm',
+	['config', 'get', 'minimumReleaseAge', '--json'],
+	{ cwd: repositoryRoot, encoding: 'utf8' },
+).trim();
 if (requestedCases && selectedCases.length !== new Set(requestedCases).size) {
 	const knownCases = new Set(cases.map((testCase) => testCase.name));
 	const unknownCases = requestedCases.filter((name) => !knownCases.has(name));
@@ -596,6 +601,17 @@ function prepareConsumer(
 	};
 	write(root, 'package.json', `${JSON.stringify(packageJson, null, 2)}\n`);
 	write(root, 'pnpm-lock.yaml', 'lockfileVersion: 9.0\n');
+	if (minimumReleaseAge) {
+		write(
+			root,
+			'pnpm-workspace.yaml',
+			`# Keep the repository quarantine while allowing the local tarballs under test.
+minimumReleaseAge: ${minimumReleaseAge}
+minimumReleaseAgeExclude:
+  - "@constructive-io/*"
+`,
+		);
+	}
 	if (packageRegistryOrigin) {
 		write(
 			root,
