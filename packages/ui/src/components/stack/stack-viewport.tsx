@@ -268,7 +268,9 @@ export function CardStackViewport({
 
 	const content = (
 		<div data-slot="stack-viewport" className={cn('pointer-events-none fixed inset-0', className)}>
-			<AnimatePresence initial={false} mode="popLayout" onExitComplete={handleExitComplete}>
+			{/* initial must stay true: viewport unmounts when empty, so first open remounts
+			    AnimatePresence with cards already present. initial={false} skips enter. */}
+			<AnimatePresence mode="popLayout" onExitComplete={handleExitComplete}>
 				{/* Backdrop - only when cards exist and first card wants it */}
 				{shouldShowBackdrop && hasCards && renderBackdropNode(resolvedBackdrop.config)}
 

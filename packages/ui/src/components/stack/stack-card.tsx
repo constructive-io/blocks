@@ -6,7 +6,13 @@ import { motion, useReducedMotion } from 'motion/react';
 
 import { cn } from '../../lib/utils';
 
-import { createOffsetTransition, peekHoverSpring, peekDragSpring, lastCardExitTransition } from './stack-animations';
+import {
+	createEnterTransition,
+	createExitTransition,
+	createOffsetTransition,
+	peekHoverSpring,
+	peekDragSpring,
+} from './stack-animations';
 import { CardReadyProvider, useCardInjectedProps, useStackContext } from './stack-context';
 import { StackHeader } from './stack-header';
 import type { AnimationConfig, CardSpec, CardStackApi, GestureConfig, PeekGestureConfig } from './stack.types';
@@ -16,6 +22,7 @@ import type { StackGestureBind } from './use-stack-gestures';
 
 /** Default hover expansion in pixels */
 const DEFAULT_HOVER_EXPANSION = 48;
+const reducedMotionTransition = { duration: 0 } as const;
 
 export type StackCardProps = {
 	/** The card specification */
@@ -131,8 +138,10 @@ function StackCardInner({
 	// Card width
 	const cardWidth = isMobile ? '100%' : normalizeWidth(card.width, config.defaultWidth);
 
-	// Animation transition
+	// Animation transitions: enter/exit tweens, offset spring after settle
 	const offsetTransition = createOffsetTransition(animation);
+	const enterTransition = createEnterTransition(animation);
+	const exitTransition = createExitTransition(animation);
 
 	// Close handler
 	const handleClose = useCallback(() => {
@@ -216,18 +225,27 @@ function StackCardInner({
 	// Last card fades out as it slides for smoother exit when backdrop is also fading
 	const exitOpacity = prefersReducedMotion ? 0 : (isLastCard ? 0 : 1);
 
-	// Choose transition based on interaction state
-	let activeTransition = offsetTransition;
-	if (peekGestures.isDragging || peekDragOffset > 0) {
-		activeTransition = peekDragSpring;
-	} else if (isPeekHovered) {
-		activeTransition = peekHoverSpring;
+	// Enter uses snappy tween until first settle; then spring for offset/peek.
+	// Peek/drag always win while interacting.
+	let activeTransition = prefersReducedMotion
+		? reducedMotionTransition
+		: isAnimationComplete
+			? offsetTransition
+			: enterTransition;
+	if (!prefersReducedMotion) {
+		if (peekGestures.isDragging || peekDragOffset > 0) {
+			activeTransition = peekDragSpring;
+		} else if (isPeekHovered) {
+			activeTransition = peekHoverSpring;
+		}
 	}
 
-	// Build exit animation object - last card uses tween for smooth fade, others use spring
-	const exitAnimation = isLastCard && !prefersReducedMotion
-		? { x: exitX, opacity: exitOpacity, transition: lastCardExitTransition }
-		: { x: exitX, opacity: exitOpacity };
+	// Exit always honors the configured tween; reduced motion settles immediately.
+	const exitAnimation = {
+		x: exitX,
+		opacity: exitOpacity,
+		transition: prefersReducedMotion ? reducedMotionTransition : exitTransition,
+	};
 
 	return (
 		<motion.div
@@ -236,7 +254,7 @@ function StackCardInner({
 			data-card-index={index}
 			data-is-top={isTopCard}
 			data-offset={baseOffset}
-			initial={{ x: initialX, opacity: prefersReducedMotion ? 0 : 1 }}
+			initial={{ x: initialX, opacity: 1 }}
 			animate={{ x: animateX, opacity: 1 }}
 			exit={exitAnimation}
 			transition={activeTransition}
