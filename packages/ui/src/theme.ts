@@ -24,17 +24,27 @@ const sharedTypographyAndShape = {
 	radius: '0.5rem',
 } as const;
 
-const transparentShadow = '0px 2px 0px 0px hsl(202.8169 89.1213% 53.1373% / 0)';
+/** Elevation shadows — were fully transparent (`/ 0`), so shadow-* utilities did nothing. */
+const lightElevationShadows = {
+	'shadow-2xs': '0 1px rgb(0 0 0 / 0.05)',
+	'shadow-xs': '0 1px 2px 0 rgb(0 0 0 / 0.05)',
+	'shadow-sm': '0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1)',
+	shadow: '0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1)',
+	'shadow-md': '0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1)',
+	'shadow-lg': '0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1)',
+	'shadow-xl': '0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1)',
+	'shadow-2xl': '0 25px 50px -12px rgb(0 0 0 / 0.25)',
+} as const;
 
-const sharedShadows = {
-	'shadow-2xs': transparentShadow,
-	'shadow-xs': transparentShadow,
-	'shadow-sm': `${transparentShadow}, 0px 1px 2px -1px hsl(202.8169 89.1213% 53.1373% / 0)`,
-	shadow: `${transparentShadow}, 0px 1px 2px -1px hsl(202.8169 89.1213% 53.1373% / 0)`,
-	'shadow-md': `${transparentShadow}, 0px 2px 4px -1px hsl(202.8169 89.1213% 53.1373% / 0)`,
-	'shadow-lg': `${transparentShadow}, 0px 4px 6px -1px hsl(202.8169 89.1213% 53.1373% / 0)`,
-	'shadow-xl': `${transparentShadow}, 0px 8px 10px -1px hsl(202.8169 89.1213% 53.1373% / 0)`,
-	'shadow-2xl': transparentShadow,
+const darkElevationShadows = {
+	'shadow-2xs': '0 1px rgb(0 0 0 / 0.2)',
+	'shadow-xs': '0 1px 2px 0 rgb(0 0 0 / 0.25)',
+	'shadow-sm': '0 1px 3px 0 rgb(0 0 0 / 0.3), 0 1px 2px -1px rgb(0 0 0 / 0.25)',
+	shadow: '0 1px 3px 0 rgb(0 0 0 / 0.3), 0 1px 2px -1px rgb(0 0 0 / 0.25)',
+	'shadow-md': '0 4px 6px -1px rgb(0 0 0 / 0.35), 0 2px 4px -2px rgb(0 0 0 / 0.3)',
+	'shadow-lg': '0 10px 15px -3px rgb(0 0 0 / 0.4), 0 4px 6px -4px rgb(0 0 0 / 0.3)',
+	'shadow-xl': '0 20px 25px -5px rgb(0 0 0 / 0.45), 0 8px 10px -6px rgb(0 0 0 / 0.35)',
+	'shadow-2xl': '0 25px 50px -12px rgb(0 0 0 / 0.55)',
 } as const;
 
 export const constructiveTheme = {
@@ -85,7 +95,7 @@ export const constructiveTheme = {
 			'0 0 0 1px oklch(0 0 0 / 0.06), 0 1px 1px -0.5px rgb(35 35 35 / 0.08), 0 1px 2px -1px rgb(35 35 35 / 0.04), 0 2px 4px -1px rgb(35 35 35 / 0.03)',
 		'shadow-border-hover':
 			'0 0 0 1px oklch(0 0 0 / 0.08), 0 1px 2px -1px rgb(35 35 35 / 0.08), 0 2px 4px -2px rgb(35 35 35 / 0.06), 0 4px 8px -2px rgb(35 35 35 / 0.04), 0 8px 16px -4px rgb(35 35 35 / 0.03)',
-		...sharedShadows,
+		...lightElevationShadows,
 	},
 	dark: {
 		background: 'oklch(0.21 0.006 285.885)',
@@ -131,7 +141,7 @@ export const constructiveTheme = {
 			'0 0 0 1px oklch(1 0 0 / 0.08), 0 1px 1px -0.5px rgb(0 0 0 / 0.25), 0 1px 2px -1px rgb(0 0 0 / 0.15), 0 2px 4px -1px rgb(0 0 0 / 0.10)',
 		'shadow-border-hover':
 			'0 0 0 1px oklch(1 0 0 / 0.13), 0 1px 2px -1px rgb(0 0 0 / 0.30), 0 2px 4px -2px rgb(0 0 0 / 0.20), 0 4px 8px -2px rgb(0 0 0 / 0.15), 0 8px 16px -4px rgb(0 0 0 / 0.10)',
-		...sharedShadows,
+		...darkElevationShadows,
 	},
 	tailwind: {
 		'--color-background': 'var(--background)',
