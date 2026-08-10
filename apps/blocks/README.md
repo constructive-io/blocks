@@ -18,6 +18,9 @@ pnpm --filter blocks test
 pnpm --filter blocks build:pages
 ```
 
+The development command builds the local package outputs before Next.js starts,
+so it also works from a fresh worktree.
+
 `src/lib/base-primitives.ts`, `src/lib/billing-blocks.ts`, and
 `src/lib/feature-packs.ts` are the documentation catalogs. `pnpm gen:check`
 regenerates (or checks) generated UI demo source used by the docs app.

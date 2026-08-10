@@ -8,7 +8,7 @@
     "build:registry": "pnpm --workspace-root build:registry",
     "check:generated": "pnpm gen:check",
     "check:selections": "tsx scripts/check-mutation-selections.ts",
-    "predev": "pnpm gen:check",
+    "predev": "pnpm --workspace-root build:packages && pnpm gen:check",
     "prebuild": "pnpm gen:check",
     "dev": "next dev --turbopack --port 3005",
     "build": "next build",
