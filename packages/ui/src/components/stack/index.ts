@@ -49,6 +49,8 @@ export {
 export {
 	DEFAULT_ANIMATION_CONFIG,
 	createCardVariants,
+	createEnterTransition,
+	createExitTransition,
 	createOffsetTransition,
 	backdropVariants,
 	snapBackSpring,

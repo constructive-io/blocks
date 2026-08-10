@@ -62,6 +62,39 @@ export function createOffsetTransition(_config: AnimationConfig = {}): Transitio
 	};
 }
 
+/**
+ * Enter transition for card slide-in (x: 100% → offset).
+ * Tween + snappy ease — distinct from offset springs used after settle.
+ */
+export function createEnterTransition(config: AnimationConfig = {}): Transition {
+	const { duration, enterEase } = {
+		...DEFAULT_ANIMATION_CONFIG,
+		...config,
+	};
+
+	return {
+		type: 'tween',
+		duration,
+		ease: enterEase as [number, number, number, number],
+	};
+}
+
+/**
+ * Exit transition for card slide-out (offset → x: 100%).
+ */
+export function createExitTransition(config: AnimationConfig = {}): Transition {
+	const { duration, exitEase } = {
+		...DEFAULT_ANIMATION_CONFIG,
+		...config,
+	};
+
+	return {
+		type: 'tween',
+		duration,
+		ease: exitEase as [number, number, number, number],
+	};
+}
+
 // =============================================================================
 // Backdrop Variants
 // =============================================================================
