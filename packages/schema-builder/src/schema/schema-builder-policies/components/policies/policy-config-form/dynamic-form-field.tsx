@@ -295,7 +295,9 @@ function CapabilitySelectField({
 			defaultValue={selected}
 			onValueChange={(next) => {
 				setIsTouched(true);
-				onChange(next.length > 0 ? next : undefined);
+				// An empty list is a real value: the parser folds it to the zero
+				// mask, so clearing the picker clears the stored requirement.
+				onChange(next);
 			}}
 			disabled={disabled}
 			placeholder={isLoading ? 'Loading...' : `Select ${scope} ${noun}`}
