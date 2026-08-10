@@ -269,7 +269,7 @@
       ],
       "docs": "## Usage\n\nCreate one registry for the application, adapt navigation at the host boundary, and render the palette near the root layout. Pages can register commands while mounted with `usePageCommands`.\n\n```tsx\nimport { createCommandRegistry, kbd } from '@constructive-io/command-palette';\nimport { CommandPalette } from '@/blocks/command-palette/command-palette';\n\nconst registry = createCommandRegistry({\n  groups: [{ id: 'navigation', label: 'Navigation', priority: 1 }],\n  commands: [{\n    id: 'settings',\n    label: 'Open settings',\n    type: 'navigation',\n    group: 'navigation',\n    href: '/settings',\n    shortcut: kbd(',', 'mod')\n  }]\n});\n\n<CommandPalette registry={registry} navigate={(href) => router.push(href)} />;\n```\n\nThe installed block owns presentation and keyboard interaction. The headless package owns command registration, execution, multi-step state, and background-task lifecycle. Route authorization, action permissions, errors, and business workflows remain the host application's responsibility.",
       "dependencies": [
-        "@constructive-io/command-palette@^0.4.0",
+        "@constructive-io/command-palette@^0.5.0",
         "lucide-react",
         "motion"
       ],
@@ -436,7 +436,7 @@
       "description": "The leaf-independent Console Kit shell, runtime, discovery, and single modular Zustand store.",
       "docs": "`console-kit-core` installed the shell, runtime, semantic routing, callback boundary, and one per-instance modular Zustand store. Core intentionally includes no feature view, so add selected `console-module-*` items.\n\nDegraded states: explicit endpoint, current `_meta`, introspection, capability, and adapter evidence fail closed independently; installation never grants authority.\n\nGuide: https://constructive-io.github.io/blocks/blocks/console-kit/",
       "dependencies": [
-        "@constructive-io/data@^0.5.0",
+        "@constructive-io/data@^0.7.0",
         "@tanstack/react-query",
         "graphql",
         "lucide-react",
@@ -566,7 +566,7 @@
       "description": "A current-_meta-only application data explorer with application-table filtering and spreadsheet CRUD.",
       "docs": "`feature-pack-data` installed a provider-neutral view and `.constructive/feature-packs/data.json`. Import from `@/blocks/feature-packs/data/data-feature-pack`. The host must supply the view resource, policy, and actions; add `console-module-data` when Console Kit should own discovery and Constructive integration.\n\nDegraded states: The host owns Sheets state and endpoint binding; incompatible metadata stays explicit, and PostgreSQL privileges and RLS decide every query and mutation.\n\nGuide: https://constructive-io.github.io/blocks/blocks/features/data/",
       "dependencies": [
-        "@constructive-io/data@^0.5.0",
+        "@constructive-io/data@^0.7.0",
         "lucide-react"
       ],
       "registryDependencies": [

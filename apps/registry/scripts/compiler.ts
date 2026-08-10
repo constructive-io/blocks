@@ -5,8 +5,8 @@ export const CONSTRUCTIVE_UI_PACKAGE = '@constructive-io/ui';
 export const CONSTRUCTIVE_SHEETS_PACKAGE = '@constructive-io/sheets';
 export const CONSTRUCTIVE_NAMESPACE = '@constructive/';
 export const CONSTRUCTIVE_THEME_DEPENDENCY = '@constructive/constructive-theme';
-export const CONSTRUCTIVE_DATA_DEPENDENCY = '@constructive-io/data@^0.5.0';
-export const CONSTRUCTIVE_COMMAND_PALETTE_DEPENDENCY = '@constructive-io/command-palette@^0.4.0';
+export const CONSTRUCTIVE_DATA_DEPENDENCY = '@constructive-io/data@^0.7.0';
+export const CONSTRUCTIVE_COMMAND_PALETTE_DEPENDENCY = '@constructive-io/command-palette@^0.5.0';
 export const NODE_TYPE_REGISTRY_DEPENDENCY = 'node-type-registry@^1.11.0';
 
 export const FEATURE_PACK_IDS = [

@@ -397,7 +397,10 @@ test('enforces the compiled registry distribution contract', () => {
 
 	const wrongRange = structuredClone(distributionContractFixture());
 	wrongRange.find((item) => item.name === 'consumer')!.dependencies = ['@constructive-io/data@^1.0.0'];
-	assert.throws(() => assertRegistryDistributionContract(wrongRange), /must depend on @constructive-io\/data@\^0\.5\.0/);
+	assert.throws(
+		() => assertRegistryDistributionContract(wrongRange),
+		new RegExp(`must depend on ${CONSTRUCTIVE_DATA_DEPENDENCY.replace(/[.^]/g, '\\$&')}`),
+	);
 
 	const sourceOwnedPackage = structuredClone(distributionContractFixture());
 	sourceOwnedPackage.find((item) => item.name === 'consumer')!.dependencies = [CONSTRUCTIVE_UI_PACKAGE];
