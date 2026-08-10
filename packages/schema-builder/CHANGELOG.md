@@ -3,6 +3,19 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.6.1](https://github.com/constructive-io/blocks/compare/@constructive-io/schema-builder@0.6.0...@constructive-io/schema-builder@0.6.1) (2026-08-10)
+
+
+### Bug Fixes
+
+* **policies:** decode the capability mask when reopening a policy ([96c2451](https://github.com/constructive-io/blocks/commit/96c2451270afc99fa5fa04ee2cc382392bf36337))
+* **policies:** send the empty list when the picker is cleared ([a987bf9](https://github.com/constructive-io/blocks/commit/a987bf9d49918eadb8a88907bc6baa9c06a93efb))
+* **registry:** pin the published data and command-palette ranges ([df773db](https://github.com/constructive-io/blocks/commit/df773db8fabc40bc64078f0d7ca6e4594e9bfbfc))
+
+
+
+
+
 # [0.6.0](https://github.com/constructive-io/blocks/compare/@constructive-io/schema-builder@0.5.1...@constructive-io/schema-builder@0.6.0) (2026-08-10)
 
 **Note:** Version bump only for package @constructive-io/schema-builder
