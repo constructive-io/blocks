@@ -3,6 +3,17 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.5.0](https://github.com/constructive-io/blocks/compare/@constructive-io/schema-builder@0.4.1...@constructive-io/schema-builder@0.5.0) (2026-08-10)
+
+
+### Features
+
+* rename the permissions platform concept to capabilities ([aceda0b](https://github.com/constructive-io/blocks/commit/aceda0b03c5bc4ae2d25fc04b4592df68fd0b9b6))
+
+
+
+
+
 ## [0.4.1](https://github.com/constructive-io/blocks/compare/@constructive-io/schema-builder@0.4.0...@constructive-io/schema-builder@0.4.1) (2026-07-30)
 
 

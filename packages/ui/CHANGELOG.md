@@ -3,6 +3,34 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.9.0](https://github.com/constructive-io/blocks/compare/@constructive-io/ui@0.8.0...@constructive-io/ui@0.9.0) (2026-08-10)
+
+
+### Bug Fixes
+
+* harden AI registry delivery pipeline ([fae324d](https://github.com/constructive-io/blocks/commit/fae324d06a759759e052713f7690be2a6cab2f6a))
+* **ui:** align Steps markers with flex-column timeline rail ([12fe307](https://github.com/constructive-io/blocks/commit/12fe307bb0df00d99f606ccbc5b2052d95f87ced))
+* **ui:** center Steps timeline icons on the connector rail ([bca3eab](https://github.com/constructive-io/blocks/commit/bca3eab804896f9c6f3a3d99704c5fb5e7a3963f))
+* **ui:** crisp Steps rail with calc(50% - 0.5px) connector ([35eb8da](https://github.com/constructive-io/blocks/commit/35eb8da207db6061d332035a1d53923bba059bd1))
+* **ui:** pixel-snap Steps timeline axis without transforms ([9ae6561](https://github.com/constructive-io/blocks/commit/9ae6561d7f1de5dd32fd4c3e95324d08094a2e4c))
+* **ui:** polish AI docs overview, ContextRing, and stream settle ([be34b31](https://github.com/constructive-io/blocks/commit/be34b3162663be5fe769d6ba9ee3fb2ae8699041))
+* **ui:** polish ScrollButton and consolidate chat docs layout ([66b02b5](https://github.com/constructive-io/blocks/commit/66b02b5bf9be6606cfb5059c6dbc13a462938060))
+* **ui:** polish Steps timeline and expand docs edge-case demos ([8118417](https://github.com/constructive-io/blocks/commit/8118417443588ae274684cad19ff6a32057278dd))
+* **ui:** run Steps connector through marker centers ([c1d3583](https://github.com/constructive-io/blocks/commit/c1d3583b16c7e10e0b50c5e6ef654fe7ecac2e58))
+* **ui:** use solid disk markers on Steps timeline rail ([290c1f2](https://github.com/constructive-io/blocks/commit/290c1f29ed0d6f2fbc55be619d3b62cc3322fee0))
+
+
+### Features
+
+* **ai:** DiffTable, ai-kit registry, and docs showcase ([40810eb](https://github.com/constructive-io/blocks/commit/40810ebb6185eaec767290b0bcc35a4860cf53b4))
+* **ui:** add Phase 0 AI/agentic chat primitives ([705b77b](https://github.com/constructive-io/blocks/commit/705b77b634f7408a1aefaf4c739034a01e2ed03a))
+* **ui:** add sugar-high CodeBlock highlighting, header, and collapse ([a205d95](https://github.com/constructive-io/blocks/commit/a205d95b709ec44de085c1f7bee7c42f978fa879))
+* **ui:** complete AI kit phases 1–2 with visual polish ([e87e4a7](https://github.com/constructive-io/blocks/commit/e87e4a7967eb64e1a59b6f30df13d18c63660387))
+
+
+
+
+
 # [0.8.0](https://github.com/constructive-io/blocks/compare/@constructive-io/ui@0.6.1...@constructive-io/ui@0.8.0) (2026-07-30)
 
 
