@@ -1,6 +1,6 @@
 {
   "name": "@constructive-io/data",
-  "version": "0.6.1",
+  "version": "0.7.0",
   "description": "Runtime PostGraphile query builder and data utilities",
   "private": false,
   "license": "MIT",
