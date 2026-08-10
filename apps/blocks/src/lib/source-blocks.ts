@@ -111,7 +111,7 @@ export default function RootLayout({
       description:
         'Sheets scopes TanStack Query state by database, endpoint, and a stable non-secret identity. Its modular Zustand store owns interaction state, while renamed and composite primary-key objects remain intact across reads and writes.',
       actionGuidance:
-        'Treat _meta as capability evidence, not permission. The host supplies the active session and reports errors, while PostgreSQL privileges and RLS authorize every query and mutation at the tenant endpoint.',
+        'Treat _meta as capability evidence, not capability. The host supplies the active session and reports errors, while PostgreSQL privileges and RLS authorize every query and mutation at the tenant endpoint.',
     },
     composition: [
       'The installed source owns the grid, editors, selection, draft rows, commands, feedback, and metadata-aware row identity.',
@@ -253,7 +253,7 @@ export function DatabaseSchema({
       description:
         'Each mounted editor owns an isolated modular Zustand store for its active tab, table and field selection, and presentation preferences. TanStack Query owns server state; a matching dataState can reuse a host-owned schema query boundary.',
       actionGuidance:
-        'The adapter receives explicit control-plane scope and operation context. Keep endpoints, generated SDKs, credentials, permission evidence, destructive confirmations, and business workflows in the host; PostgreSQL permissions remain authoritative.',
+        'The adapter receives explicit control-plane scope and operation context. Keep endpoints, generated SDKs, credentials, capability evidence, destructive confirmations, and business workflows in the host; PostgreSQL capabilities remain authoritative.',
     },
     composition: [
       'The installed source owns schema navigation, editors, diagrams, validation, mutation intent, loading states, and accessible interaction.',

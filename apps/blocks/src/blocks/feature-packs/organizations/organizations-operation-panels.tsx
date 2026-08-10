@@ -356,7 +356,7 @@ export function OrganizationSettingsPanel({
               <div className='min-w-0 flex-1'>
                 <FieldLabel htmlFor={`${fieldId}-profile-mode`}>Invite profile assignment</FieldLabel>
                 <FieldDescription>
-                  Controls whether inviters need assignment permission, a subset of their own access, or both.
+                  Controls whether inviters need assignment capability, a subset of their own access, or both.
                 </FieldDescription>
               </div>
               <Select
@@ -370,8 +370,8 @@ export function OrganizationSettingsPanel({
                 <SelectTrigger id={`${fieldId}-profile-mode`}><SelectValue /></SelectTrigger>
                 <SelectContent>
                   <SelectGroup>
-                    <SelectItem value='strict'>Permission and subset</SelectItem>
-                    <SelectItem value='permission_only'>Permission only</SelectItem>
+                    <SelectItem value='strict'>Capability and subset</SelectItem>
+                    <SelectItem value='capability_only'>Capability only</SelectItem>
                     <SelectItem value='subset_only'>Subset only</SelectItem>
                   </SelectGroup>
                 </SelectContent>

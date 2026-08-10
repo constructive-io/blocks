@@ -1,5 +1,5 @@
 /**
- * Hook for managing table grants (permissions)
+ * Hook for managing table grants (capabilities)
  * Tier 4 wrapper: orchestrates table lookup + grant creation using SDK hooks
  */
 import { useMutation, useQueryClient } from '@tanstack/react-query';
@@ -106,7 +106,7 @@ function resolveFieldIds(table: TableWithFields, fieldNames: string[]): string[]
 // ============================================================================
 
 /**
- * Hook for creating table grants (permissions).
+ * Hook for creating table grants (capabilities).
  * Supports both table-level grants (all fields) and field-level grants (specific fields).
  *
  * @example
@@ -196,7 +196,7 @@ export function useCreateTableGrant() {
 
 /**
  * Hook for creating multiple table grants in batch.
- * Useful when setting up a new table with standard permissions.
+ * Useful when setting up a new table with standard capabilities.
  *
  * @example
  * batchCreateGrants({

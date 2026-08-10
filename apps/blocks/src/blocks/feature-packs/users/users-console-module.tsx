@@ -19,7 +19,7 @@ export const usersCapabilityDiscovery = {
   rules: [
     { capability: 'users.directory', endpoint: 'auth', operation: 'query', fields: ['users'] },
     { capability: 'users.memberships', endpoint: 'admin', operation: 'query', fields: ['appMemberships'] },
-    { capability: 'users.permissions', endpoint: 'admin', operation: 'query', fields: ['appPermissions'] },
+    { capability: 'users.capabilities', endpoint: 'admin', operation: 'query', fields: ['appCapabilities'] },
     { capability: 'users.profiles', endpoint: 'admin', operation: 'query', fields: ['appProfiles'] },
     { capability: 'users.invites', endpoint: 'admin', operation: 'query', fields: ['appInvites'] }
   ]

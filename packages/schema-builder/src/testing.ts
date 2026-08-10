@@ -47,14 +47,14 @@ export function createNoopSchemaBuilderAdapter(
       updateIndex: operation
     },
     policies: {
-      appPermissions: operation,
+      appCapabilities: operation,
       createField: operation,
       createSecureTableProvision: operation,
       createTable: operation,
       createTableGrant: operation,
       deletePolicy: operation,
       fields: operation,
-      orgPermissions: operation,
+      orgCapabilities: operation,
       tables: operation,
       updatePolicy: operation
     },

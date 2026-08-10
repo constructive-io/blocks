@@ -248,23 +248,23 @@ export const FEATURE_PACK_DOCS = [
     title: 'App access',
     exportName: 'UsersFeaturePack',
     description:
-      'Application member governance, lifecycle controls, access profiles, permission grants, and invitations.',
+      'Application member governance, lifecycle controls, access profiles, capability grants, and invitations.',
     endpoints: 'admin, optional auth',
     dependencies: [],
     resource: 'FeaturePackResource<UsersFeatureData>',
     actions: [
       'invite({ recipient, profileId? }) / cancelInvite / extendInvite',
       'setApproved / setVerified / setBanned / setDisabled',
-      'setOwner / setAdmin / setProfile / setDirectPermission',
+      'setOwner / setAdmin / setProfile / setDirectCapability',
       'profile CRUD / profile composition / new-member defaults',
     ],
     whenToUse: [
-      'Use App access when administrators need to govern access to one application, including invitations, membership lifecycle, ownership, administration, profiles, and permission grants.',
+      'Use App access when administrators need to govern access to one application, including invitations, membership lifecycle, ownership, administration, profiles, and capability grants.',
       'Use the Authentication feature pack for personal credentials and sessions, or Organizations when membership must be scoped to a selected tenant.',
     ],
     usage: {
       description:
-        'Pass members and any discovered invitation, profile, permission, default, or audit sections through resource. Grant each administrative operation through policy and provide the matching host action.',
+        'Pass members and any discovered invitation, profile, capability, default, or audit sections through resource. Grant each administrative operation through policy and provide the matching host action.',
       example: `import { UsersFeaturePack } from '@/blocks/feature-packs/users/users-feature-pack';
 
 <UsersFeaturePack
@@ -274,7 +274,7 @@ export const FEATURE_PACK_DOCS = [
     setApproved: true,
     setDisabled: true,
     setProfile: true,
-    setDirectPermission: true
+    setDirectCapability: true
   }}
   actions={userActions}
   onError={reportMembershipError}
@@ -283,13 +283,13 @@ export const FEATURE_PACK_DOCS = [
     state: {
       title: 'Application access state',
       description:
-        'Members and discovered access surfaces arrive as one resource so every section describes the same application boundary. Search and section selection remain local by default, while lifecycle, governance, invitation, profile, and permission operations stay controlled by the host resource and actions.',
+        'Members and discovered access surfaces arrive as one resource so every section describes the same application boundary. Search and section selection remain local by default, while lifecycle, governance, invitation, profile, and capability operations stay controlled by the host resource and actions.',
       actionGuidance:
         'A policy grant, matching callback, and row actionPolicy enable each administrative action. Adapters can mirror RLS and final-owner constraints without exposing controls that the current actor cannot use.',
     },
     surfaces: [
-      'Searchable application member directory with separate lifecycle, governance, profile, direct-grant, and effective-permission context.',
-      'Capability-gated invitations, accepted-invite history, access profiles, permission catalog, and new-member defaults.',
+      'Searchable application member directory with separate lifecycle, governance, profile, direct-grant, and effective-capability context.',
+      'Capability-gated invitations, accepted-invite history, access profiles, capability catalog, and new-member defaults.',
       'Semantic membership and grant controls that reflect append-only Constructive actions and final-owner policy.',
     ],
     accessibility: [
@@ -316,7 +316,7 @@ export const FEATURE_PACK_DOCS = [
         name: 'resource',
         type: 'FeaturePackResource<UsersFeatureData>',
         behavior:
-          'Supplies members and optional invitations, accepted-invite history, profiles, permissions, defaults, and their loading, empty, error, or ready state.',
+          'Supplies members and optional invitations, accepted-invite history, profiles, capabilities, defaults, and their loading, empty, error, or ready state.',
       },
       {
         name: 'policy / actions',
@@ -359,8 +359,8 @@ export const FEATURE_PACK_DOCS = [
       'createOrganization / selectOrganization / updateOrganization / leaveOrganization / deleteOrganization',
       'inviteMember / cancelInvite',
       'updateMemberLifecycle / removeMember / setMemberAdmin / setMemberOwner',
-      'setMemberProfile / setMemberPermission / upsertMemberProfile',
-      'createAccessProfile / updateAccessProfile / deleteAccessProfile / setProfilePermission',
+      'setMemberProfile / setMemberCapability / upsertMemberProfile',
+      'createAccessProfile / updateAccessProfile / deleteAccessProfile / setProfileCapability',
       'updateMembershipDefault / updateMembershipSettings',
       'setHierarchyEdge / removeHierarchyEdge',
       'createOrganizationPrincipal / revokeOrganizationPrincipal',
@@ -387,15 +387,15 @@ export const FEATURE_PACK_DOCS = [
     state: {
       title: 'Tenant, section, and authorization state',
       description:
-        'Use defaultSection when the page can remember its own organization-management section. Pass section and onSectionChange when routing or application state owns the selection. The resource keeps the visible organization directory and active tenant data in one snapshot; optional data controls invitations, profiles, permissions, defaults, hierarchy, and developer sections, while membership settings extend the tenant settings section when readable.',
+        'Use defaultSection when the page can remember its own organization-management section. Pass section and onSectionChange when routing or application state owns the selection. The resource keeps the visible organization directory and active tenant data in one snapshot; optional data controls invitations, profiles, capabilities, defaults, hierarchy, and developer sections, while membership settings extend the tenant settings section when readable.',
       actionGuidance:
         'A pack policy grant, matching callback, and any row policy enable each action; PostgreSQL privileges and RLS remain authoritative after the control is shown. Refresh the resource after a successful mutation, treat reusable invitation tokens as secrets, and expose new API keys only for the response that creates them. Because create_org_principal returns user_id while public reads may omit its organization scope, Console Kit must fail closed and surface a limitation for an unscopable keyless principal rather than guessing the only visible organization.',
     },
     surfaces: [
       'Organization selection and creation, plus tenant identity settings, leave, and deletion controls.',
-      'Members with governance, lifecycle status, access-profile assignment, direct permission exceptions, and organization member profiles.',
+      'Members with governance, lifecycle status, access-profile assignment, direct capability exceptions, and organization member profiles.',
       'Invitations by email, SMS, or reusable link with profile assignment, expiry, reusable claim limits and counts, token copying, cancellation, and accepted-invite history.',
-      'Access-profile creation, editing, deletion, and permission grants alongside a readable permission catalog.',
+      'Access-profile creation, editing, deletion, and capability grants alongside a readable capability catalog.',
       'Membership defaults and tenant-wide membership settings for approval, inheritance, external access, invitation assignment, and limit allocation.',
       'Organization hierarchy edges with position metadata and cycle-safe creation and removal controls.',
       'Developer credentials with service-principal creation and revocation, one-time API-key issuance, and key revocation.',
@@ -425,7 +425,7 @@ export const FEATURE_PACK_DOCS = [
         name: 'resource',
         type: 'FeaturePackResource<OrganizationsFeatureData>',
         behavior:
-          'Supplies organizations and active tenant context, members, invitations and claim history, access profiles, permissions, defaults, settings, hierarchy, principals, API keys, and any fail-closed limitations.',
+          'Supplies organizations and active tenant context, members, invitations and claim history, access profiles, capabilities, defaults, settings, hierarchy, principals, API keys, and any fail-closed limitations.',
       },
       {
         name: 'policy / actions',
@@ -437,7 +437,7 @@ export const FEATURE_PACK_DOCS = [
         name: 'section / defaultSection / onSectionChange',
         type: 'OrganizationsSection / callback',
         behavior:
-          'Uses either a controlled section or an initial selection across members, invitations, profiles, permissions, defaults, hierarchy, settings, and developer credentials, then reports section changes to the host.',
+          'Uses either a controlled section or an initial selection across members, invitations, profiles, capabilities, defaults, hierarchy, settings, and developer credentials, then reports section changes to the host.',
       },
       {
         name: 'focusedMemberId / focusedInvitationId / focusedProfileId',

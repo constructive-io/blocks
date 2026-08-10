@@ -18,7 +18,7 @@ export type ConsoleKitAppAccessRoute =
   | Readonly<{ feature: 'users'; screen: 'accepted-invites' }>
   | Readonly<{ feature: 'users'; screen: 'profiles' }>
   | Readonly<{ feature: 'users'; screen: 'profile'; profileId: string }>
-  | Readonly<{ feature: 'users'; screen: 'permissions' }>
+  | Readonly<{ feature: 'users'; screen: 'capabilities' }>
   | Readonly<{ feature: 'users'; screen: 'defaults' }>;
 
 type OrganizationRouteBase = Readonly<{
@@ -36,7 +36,7 @@ export type ConsoleKitOrganizationsRoute =
         | 'members'
         | 'invitations'
         | 'profiles'
-        | 'permissions'
+        | 'capabilities'
         | 'defaults'
         | 'hierarchy'
         | 'developer'

@@ -70,7 +70,7 @@ interface CreatedField {
 }
 
 function fieldDefinitionToCreateInput(field: FieldDefinition, tableId: string, databaseId: string) {
-	// CRITICAL: Auto-set UUID default value for primary keys to prevent "permission denied" errors
+	// CRITICAL: Auto-set UUID default value for primary keys to prevent "capability denied" errors
 	let defaultValue = field.constraints.defaultValue?.toString() || undefined;
 
 	const backendType = cellTypeToBackendType(field.type);

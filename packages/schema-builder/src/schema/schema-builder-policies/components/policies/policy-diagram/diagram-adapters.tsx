@@ -106,7 +106,7 @@ export function MembershipDiagram({ tableName, config }: DiagramProps) {
 	const mode = useMode();
 	const accessParts: string[] = [];
 	if (config.is_admin) accessParts.push('Admin');
-	if (config.permission) accessParts.push(config.permission as string);
+	if (config.capability) accessParts.push(config.capability as string);
 	const access = accessParts.length > 0 ? accessParts.join(' / ') : 'access';
 	const C = mode === 'dark' ? AuthzAppMembershipDark : AuthzAppMembershipLight;
 	return <C table={tableName} scope='App' access={access} />;

@@ -127,10 +127,10 @@ export interface CreateTableWithPoliciesInput {
 	/**
 	 * Shared policy data that applies to all operations.
 	 * Contains field references, table references, and structural params.
-	 * Per-op params (permission, is_admin, is_owner) are taken from each operation.
+	 * Per-op params (capability, is_admin, is_owner) are taken from each operation.
 	 */
 	sharedPolicyData: Record<string, unknown>;
-	/** Per-operation configs (roleName, isPermissive, per-op policyData like permission) */
+	/** Per-operation configs (roleName, isPermissive, per-op policyData like capability) */
 	operations: CrudPolicyConfigs;
 	/** Which operations to create policies for. Defaults to all 4 if not specified. */
 	enabledOperations?: CrudOperation[];
@@ -152,7 +152,7 @@ export type FieldType = 'string' | 'boolean' | 'integer' | 'uuid' | 'uuid[]';
 /**
  * Specialized form component override. Takes priority over type-based resolution.
  */
-export type FieldComponent = 'table-select' | 'membership-type-select' | 'permission-select';
+export type FieldComponent = 'table-select' | 'membership-type-select' | 'capability-select';
 
 /**
  * Field override for customizing how a policy parameter is displayed in the form.
@@ -264,7 +264,7 @@ export type FormFieldType =
 	| 'field-multi-select'
 	| 'table-select'
 	| 'membership-type-select'
-	| 'permission-select'
+	| 'capability-select'
 	| 'boolean'
 	| 'number';
 

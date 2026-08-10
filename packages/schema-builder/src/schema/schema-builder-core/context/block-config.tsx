@@ -26,7 +26,7 @@ import {
 	fetchUniqueConstraintsQuery,
 } from '@/generated/schema-builder';
 import { fetchUsersQuery } from '@/generated/auth/hooks';
-import { fetchAppPermissionsQuery, fetchOrgPermissionsQuery } from '@/generated/admin/hooks';
+import { fetchAppCapabilitiesQuery, fetchOrgCapabilitiesQuery } from '@/generated/admin/hooks';
 
 export interface SchemaBuilderScope {
 	orgId: string;
@@ -299,5 +299,5 @@ export function useAuthSdkClient() {
 }
 
 export function useAdminSdkClient() {
-	return { fetchAppPermissionsQuery, fetchOrgPermissionsQuery };
+	return { fetchAppCapabilitiesQuery, fetchOrgCapabilitiesQuery };
 }

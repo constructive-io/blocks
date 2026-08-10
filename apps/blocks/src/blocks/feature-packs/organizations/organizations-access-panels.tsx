@@ -60,7 +60,7 @@ import type {
   OrganizationAccessProfile,
   OrganizationMember,
   OrganizationMembershipDefault,
-  OrganizationPermission,
+  OrganizationCapability,
   OrganizationsFeatureActions,
   OrganizationsFeaturePackProps
 } from './organizations-contracts';
@@ -152,7 +152,7 @@ function AccessProfileDialog({
           <DialogHeader>
             <DialogTitle>{profile ? `Edit ${profile.name}` : 'Create an access profile'}</DialogTitle>
             <DialogDescription>
-              Profiles bundle organization permissions so access remains understandable as the team grows.
+              Profiles bundle organization capabilities so access remains understandable as the team grows.
             </DialogDescription>
           </DialogHeader>
           <DialogPanel>
@@ -213,7 +213,7 @@ function DeleteAccessProfileAction({
         <AlertDialogHeader>
           <AlertDialogTitle>Delete {profile.name}?</AlertDialogTitle>
           <AlertDialogDescription>
-            Members assigned to this profile lose its bundled permissions. Direct grants remain unchanged.
+            Members assigned to this profile lose its bundled capabilities. Direct grants remain unchanged.
           </AlertDialogDescription>
         </AlertDialogHeader>
         {error ? <p className='text-destructive text-pretty text-sm' role='alert'>{error}</p> : null}
@@ -241,17 +241,17 @@ function DeleteAccessProfileAction({
 export function OrganizationProfilesPanel({
   organizationId,
   profiles,
-  permissions,
+  capabilities,
   actions,
   policy,
   focusedProfileId,
   onError
 }: AccessPanelProps & Readonly<{
   profiles: readonly OrganizationAccessProfile[];
-  permissions: readonly OrganizationPermission[];
+  capabilities: readonly OrganizationCapability[];
   focusedProfileId?: string;
 }>) {
-  const [pendingPermission, setPendingPermission] = React.useState<string>();
+  const [pendingCapability, setPendingCapability] = React.useState<string>();
   const canCreateProfile = canPerform(policy, 'createAccessProfile') && Boolean(actions?.createAccessProfile);
   const focusedProfileRef = React.useRef<HTMLElement>(null);
   const focusedProfilePresent = Boolean(
@@ -265,25 +265,25 @@ export function OrganizationProfilesPanel({
     element?.scrollIntoView?.({ block: 'nearest' });
   }, [focusedProfileId, focusedProfilePresent]);
 
-  const setPermission = async (
+  const setCapability = async (
     profile: OrganizationAccessProfile,
-    permissionId: string,
+    capabilityId: string,
     isGrant: boolean
   ) => {
-    if (!actions?.setProfilePermission) return;
-    const pendingKey = `${profile.id}:${permissionId}`;
-    setPendingPermission(pendingKey);
+    if (!actions?.setProfileCapability) return;
+    const pendingKey = `${profile.id}:${capabilityId}`;
+    setPendingCapability(pendingKey);
     try {
-      await actions.setProfilePermission({
+      await actions.setProfileCapability({
         organizationId,
         profileId: profile.id,
-        permissionId,
+        capabilityId,
         isGrant
       });
     } catch (cause) {
-      report(cause, 'The profile permission could not be changed.', onError);
+      report(cause, 'The profile capability could not be changed.', onError);
     } finally {
-      setPendingPermission(undefined);
+      setPendingCapability(undefined);
     }
   };
 
@@ -311,7 +311,7 @@ export function OrganizationProfilesPanel({
             <EmptyTitle>No access profiles</EmptyTitle>
             <EmptyDescription>
               {canCreateProfile
-                ? 'Create a profile to bundle organization permissions.'
+                ? 'Create a profile to bundle organization capabilities.'
                 : 'No access profiles are visible, and this session cannot create one.'}
             </EmptyDescription>
           </EmptyHeader>
@@ -319,10 +319,10 @@ export function OrganizationProfilesPanel({
       ) : (
         <div className='grid gap-4 xl:grid-cols-2'>
           {profiles.map((profile) => {
-            const assigned = new Set(profile.permissionIds);
-            const canSet = canPerform(policy, 'setProfilePermission') &&
-              profile.actionPolicy?.setProfilePermission === true &&
-              Boolean(actions?.setProfilePermission);
+            const assigned = new Set(profile.capabilityIds);
+            const canSet = canPerform(policy, 'setProfileCapability') &&
+              profile.actionPolicy?.setProfileCapability === true &&
+              Boolean(actions?.setProfileCapability);
             return (
               <section
                 aria-current={profile.id === focusedProfileId ? 'true' : undefined}
@@ -369,31 +369,31 @@ export function OrganizationProfilesPanel({
                     ) : null}
                   </div>
                 </div>
-                {permissions.length > 0 ? (
+                {capabilities.length > 0 ? (
                   <FieldGroup className='mt-4'>
-                    {permissions.map((permission) => {
-                      const key = `${profile.id}:${permission.id}`;
+                    {capabilities.map((capability) => {
+                      const key = `${profile.id}:${capability.id}`;
                       return (
                         <Field
-                          data-disabled={!canSet || Boolean(pendingPermission)}
-                          key={permission.id}
+                          data-disabled={!canSet || Boolean(pendingCapability)}
+                          key={capability.id}
                           orientation='horizontal'
                         >
                           <Checkbox
-                            aria-label={`${assigned.has(permission.id) ? 'Remove' : 'Add'} ${permission.name} ${assigned.has(permission.id) ? 'from' : 'to'} ${profile.name}`}
-                            checked={assigned.has(permission.id)}
-                            disabled={!canSet || Boolean(pendingPermission)}
+                            aria-label={`${assigned.has(capability.id) ? 'Remove' : 'Add'} ${capability.name} ${assigned.has(capability.id) ? 'from' : 'to'} ${profile.name}`}
+                            checked={assigned.has(capability.id)}
+                            disabled={!canSet || Boolean(pendingCapability)}
                             id={key}
-                            onCheckedChange={(checked) => void setPermission(
+                            onCheckedChange={(checked) => void setCapability(
                               profile,
-                              permission.id,
+                              capability.id,
                               checked === true
                             )}
                           />
                           <div className='min-w-0 flex-1'>
-                            <FieldLabel htmlFor={key}>{permission.name}</FieldLabel>
-                            {permission.description ? (
-                              <FieldDescription>{permission.description}</FieldDescription>
+                            <FieldLabel htmlFor={key}>{capability.name}</FieldLabel>
+                            {capability.description ? (
+                              <FieldDescription>{capability.description}</FieldDescription>
                             ) : null}
                           </div>
                         </Field>
@@ -402,7 +402,7 @@ export function OrganizationProfilesPanel({
                   </FieldGroup>
                 ) : (
                   <p className='text-muted-foreground mt-4 text-sm'>
-                    The organization permission catalog is unavailable.
+                    The organization capability catalog is unavailable.
                   </p>
                 )}
               </section>
@@ -469,7 +469,7 @@ function OrganizationGovernanceControl({
             <AlertDialogDescription>
               {granting
                 ? `${label} access takes effect across this organization. Constructive applies the tenant’s configured authorization and step-up policy before accepting the grant.`
-                : `This removes the ${label.toLowerCase()} grant while preserving the member’s account, membership, profile, and direct permissions.`}
+                : `This removes the ${label.toLowerCase()} grant while preserving the member’s account, membership, profile, and direct capabilities.`}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -495,14 +495,14 @@ export function OrganizationMemberAccessDialog({
   organizationId,
   member,
   profiles,
-  permissions,
+  capabilities,
   actions,
   policy,
   onError
 }: AccessPanelProps & Readonly<{
   member: OrganizationMember;
   profiles: readonly OrganizationAccessProfile[];
-  permissions: readonly OrganizationPermission[];
+  capabilities: readonly OrganizationCapability[];
 }>) {
   const [open, setOpen] = React.useState(false);
   const [pending, setPending] = React.useState<string>();
@@ -639,7 +639,7 @@ export function OrganizationMemberAccessDialog({
 
             {profiles.length > 0 ? (
               <section className='flex flex-col gap-3'>
-                <div><h4 className='text-sm font-medium'>Access profile</h4><p className='text-muted-foreground text-xs'>Profiles are the primary way to assign organization permissions.</p></div>
+                <div><h4 className='text-sm font-medium'>Access profile</h4><p className='text-muted-foreground text-xs'>Profiles are the primary way to assign organization capabilities.</p></div>
                 <Field label='Profile'>
                   <Select
                     disabled={!canPerform(policy, 'assignProfile') ||
@@ -676,36 +676,36 @@ export function OrganizationMemberAccessDialog({
               </section>
             ) : null}
 
-            {permissions.length > 0 ? (
+            {capabilities.length > 0 ? (
               <section className='flex flex-col gap-3'>
-                <div><h4 className='text-sm font-medium'>Direct permission exceptions</h4><p className='text-muted-foreground text-xs'>Use direct grants only when a shared access profile would be too broad.</p></div>
+                <div><h4 className='text-sm font-medium'>Direct capability exceptions</h4><p className='text-muted-foreground text-xs'>Use direct grants only when a shared access profile would be too broad.</p></div>
                 <FieldGroup>
-                  {permissions.map((permission) => {
-                    const checked = maskIncludes(member.directPermissions, permission.bitstr);
-                    const enabled = canPerform(policy, 'grantPermission') &&
-                      member.actionPolicy?.grantPermission === true &&
-                      Boolean(actions?.setMemberPermission);
-                    const id = `${fieldId}-permission-${permission.id}`;
+                  {capabilities.map((capability) => {
+                    const checked = maskIncludes(member.directCapabilities, capability.bitstr);
+                    const enabled = canPerform(policy, 'grantCapability') &&
+                      member.actionPolicy?.grantCapability === true &&
+                      Boolean(actions?.setMemberCapability);
+                    const id = `${fieldId}-capability-${capability.id}`;
                     return (
-                      <Field data-disabled={!enabled || Boolean(pending)} key={permission.id} orientation='horizontal'>
+                      <Field data-disabled={!enabled || Boolean(pending)} key={capability.id} orientation='horizontal'>
                         <Checkbox
                           checked={checked}
                           disabled={!enabled || Boolean(pending)}
                           id={id}
                           onCheckedChange={(value) => void run(
-                            `permission:${permission.id}`,
-                            () => actions!.setMemberPermission!({
+                            `capability:${capability.id}`,
+                            () => actions!.setMemberCapability!({
                               organizationId,
                               actorId: member.userId,
-                              permissions: permission.bitstr,
+                              capabilities: capability.bitstr,
                               isGrant: value === true
                             }),
-                            'The direct permission could not be changed.'
+                            'The direct capability could not be changed.'
                           )}
                         />
                         <div className='min-w-0 flex-1'>
-                          <FieldLabel htmlFor={id}>{permission.name}</FieldLabel>
-                          {permission.description ? <FieldDescription>{permission.description}</FieldDescription> : null}
+                          <FieldLabel htmlFor={id}>{capability.name}</FieldLabel>
+                          {capability.description ? <FieldDescription>{capability.description}</FieldDescription> : null}
                         </div>
                       </Field>
                     );
@@ -787,39 +787,39 @@ export function OrganizationMemberAccessDialog({
   );
 }
 
-export function OrganizationPermissionsPanel({
+export function OrganizationCapabilitiesPanel({
   members,
   profiles,
-  permissions
+  capabilities
 }: Readonly<{
   members: readonly OrganizationMember[];
   profiles: readonly OrganizationAccessProfile[];
-  permissions: readonly OrganizationPermission[];
+  capabilities: readonly OrganizationCapability[];
 }>) {
   return (
     <div className='flex flex-col gap-4'>
       <div>
-        <h3 className='text-sm font-medium'>Permission catalog</h3>
+        <h3 className='text-sm font-medium'>Capability catalog</h3>
         <p className='text-muted-foreground text-pretty text-sm'>
-          Effective access combines profile permissions with the direct grants shown here as exceptions.
+          Effective access combines profile capabilities with the direct grants shown here as exceptions.
         </p>
       </div>
       <div className='grid gap-3 xl:grid-cols-2'>
-        {permissions.map((permission) => {
+        {capabilities.map((capability) => {
           const profileCount = profiles.filter((profile) =>
-            profile.permissionIds.includes(permission.id)
+            profile.capabilityIds.includes(capability.id)
           ).length;
           const directCount = members.filter((member) =>
-            maskIncludes(member.directPermissions, permission.bitstr)
+            maskIncludes(member.directCapabilities, capability.bitstr)
           ).length;
           return (
-            <section className='border-border/70 rounded-xl border p-4' key={permission.id}>
+            <section className='border-border/70 rounded-xl border p-4' key={capability.id}>
               <div className='flex items-start justify-between gap-3'>
                 <div>
-                  <h4 className='font-medium'>{permission.name}</h4>
-                  {permission.description ? (
+                  <h4 className='font-medium'>{capability.name}</h4>
+                  {capability.description ? (
                     <p className='text-muted-foreground mt-1 text-pretty text-sm'>
-                      {permission.description}
+                      {capability.description}
                     </p>
                   ) : null}
                 </div>
@@ -833,8 +833,8 @@ export function OrganizationPermissionsPanel({
           );
         })}
       </div>
-      {permissions.length === 0 ? (
-        <p className='text-muted-foreground text-sm'>No organization permissions are visible.</p>
+      {capabilities.length === 0 ? (
+        <p className='text-muted-foreground text-sm'>No organization capabilities are visible.</p>
       ) : null}
     </div>
   );

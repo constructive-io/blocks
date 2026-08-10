@@ -101,7 +101,7 @@ import type {
   OrganizationInvite,
   OrganizationMember,
   OrganizationAccessProfile,
-  OrganizationPermission,
+  OrganizationCapability,
   OrganizationsFeatureActions,
   OrganizationsFeaturePackProps,
   OrganizationsSection
@@ -109,7 +109,7 @@ import type {
 import {
   OrganizationDefaultsPanel,
   OrganizationMemberAccessDialog,
-  OrganizationPermissionsPanel,
+  OrganizationCapabilitiesPanel,
   OrganizationProfilesPanel
 } from './organizations-access-panels';
 import {
@@ -543,7 +543,7 @@ function OrganizationMemberControls({
   member,
   onError,
   organizationId,
-  permissions,
+  capabilities,
   policy,
   profiles
 }: Readonly<{
@@ -551,7 +551,7 @@ function OrganizationMemberControls({
   member: OrganizationMember;
   onError?: OrganizationsFeaturePackProps['onError'];
   organizationId: string;
-  permissions: readonly OrganizationPermission[];
+  capabilities: readonly OrganizationCapability[];
   policy?: OrganizationsFeaturePackProps['policy'];
   profiles: readonly OrganizationAccessProfile[];
 }>) {
@@ -562,7 +562,7 @@ function OrganizationMemberControls({
         member={member}
         onError={onError}
         organizationId={organizationId}
-        permissions={permissions}
+        capabilities={capabilities}
         policy={policy}
         profiles={profiles}
       />
@@ -805,8 +805,8 @@ export function OrganizationsFeaturePack({
           if (data.profiles !== undefined) {
             sections.push({ id: 'profiles', label: 'Profiles', count: data.profiles.length });
           }
-          if (data.permissions !== undefined) {
-            sections.push({ id: 'permissions', label: 'Permissions', count: data.permissions.length });
+          if (data.capabilities !== undefined) {
+            sections.push({ id: 'capabilities', label: 'Capabilities', count: data.capabilities.length });
           }
           if (data.membershipDefault !== undefined) {
             sections.push({ id: 'defaults', label: 'Defaults' });
@@ -1061,7 +1061,7 @@ export function OrganizationsFeaturePack({
                                       member={member}
                                       onError={onError}
                                       organizationId={active.id}
-                                      permissions={data.permissions ?? []}
+                                      capabilities={data.capabilities ?? []}
                                       policy={policy}
                                       profiles={data.profiles ?? []}
                                     />
@@ -1217,17 +1217,17 @@ export function OrganizationsFeaturePack({
                         onError={onError}
                         focusedProfileId={focusedProfileId}
                         organizationId={active.id}
-                        permissions={data.permissions ?? []}
+                        capabilities={data.capabilities ?? []}
                         policy={policy}
                         profiles={data.profiles}
                       />
                     </TabsContent>
                   ) : null}
-                  {data.permissions !== undefined ? (
-                    <TabsContent className='mt-5' value='permissions'>
-                      <OrganizationPermissionsPanel
+                  {data.capabilities !== undefined ? (
+                    <TabsContent className='mt-5' value='capabilities'>
+                      <OrganizationCapabilitiesPanel
                         members={data.members}
-                        permissions={data.permissions}
+                        capabilities={data.capabilities}
                         profiles={data.profiles ?? []}
                       />
                     </TabsContent>

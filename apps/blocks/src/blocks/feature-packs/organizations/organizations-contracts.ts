@@ -45,7 +45,7 @@ export type OrganizationMemberRowAction =
   | 'grantAdmin'
   | 'grantOwner'
   | 'assignProfile'
-  | 'grantPermission'
+  | 'grantCapability'
   | 'updateMemberProfile';
 
 export type OrganizationMember = Readonly<{
@@ -64,8 +64,8 @@ export type OrganizationMember = Readonly<{
   isReadOnly: boolean;
   profileId?: string;
   profileName?: string;
-  directPermissions?: string;
-  effectivePermissions?: string;
+  directCapabilities?: string;
+  effectiveCapabilities?: string;
   memberProfile?: OrganizationMemberProfile;
   actionPolicy?: FeatureActionPolicy<OrganizationMemberRowAction>;
 }>;
@@ -98,7 +98,7 @@ export type OrganizationClaimedInvite = Readonly<{
   createdAt?: string;
 }>;
 
-export type OrganizationPermission = Readonly<{
+export type OrganizationCapability = Readonly<{
   id: string;
   name: string;
   description?: string;
@@ -110,12 +110,12 @@ export type OrganizationAccessProfile = Readonly<{
   name: string;
   slug?: string;
   description?: string;
-  permissions: string;
-  permissionIds: readonly string[];
+  capabilities: string;
+  capabilityIds: readonly string[];
   isSystem: boolean;
   isDefault: boolean;
   actionPolicy?: FeatureActionPolicy<
-    'updateAccessProfile' | 'deleteAccessProfile' | 'setProfilePermission'
+    'updateAccessProfile' | 'deleteAccessProfile' | 'setProfileCapability'
   >;
 }>;
 
@@ -126,7 +126,7 @@ export type OrganizationMembershipSettings = Readonly<{
   createChildCascadeAdmins: boolean;
   createChildCascadeMembers: boolean;
   allowExternalMembers: boolean;
-  inviteProfileAssignmentMode: 'strict' | 'permission_only' | 'subset_only';
+  inviteProfileAssignmentMode: 'strict' | 'capability_only' | 'subset_only';
   populateMemberEmail: boolean;
   limitAllocationMode: string;
 }>;
@@ -173,7 +173,7 @@ export type OrganizationsFeatureData = Readonly<{
   invites?: readonly OrganizationInvite[];
   claimedInvites?: readonly OrganizationClaimedInvite[];
   profiles?: readonly OrganizationAccessProfile[];
-  permissions?: readonly OrganizationPermission[];
+  capabilities?: readonly OrganizationCapability[];
   membershipSettings?: OrganizationMembershipSettings;
   membershipDefault?: OrganizationMembershipDefault;
   hierarchy?: readonly OrganizationChartEdge[];
@@ -187,7 +187,7 @@ export type OrganizationsSection =
   | 'members'
   | 'invitations'
   | 'profiles'
-  | 'permissions'
+  | 'capabilities'
   | 'defaults'
   | 'hierarchy'
   | 'settings'
@@ -213,12 +213,12 @@ export type OrganizationsFeatureAction =
   | 'grantAdmin'
   | 'grantOwner'
   | 'assignProfile'
-  | 'grantPermission'
+  | 'grantCapability'
   | 'updateMemberProfile'
   | 'createAccessProfile'
   | 'updateAccessProfile'
   | 'deleteAccessProfile'
-  | 'setProfilePermission'
+  | 'setProfileCapability'
   | 'updateMembershipSettings'
   | 'updateMembershipDefault'
   | 'setHierarchyEdge'
@@ -288,10 +288,10 @@ export type OrganizationsFeatureActions = Readonly<{
     profileId: string;
     isGrant: boolean;
   }) => FeatureActionResult;
-  setMemberPermission?: (input: {
+  setMemberCapability?: (input: {
     organizationId: string;
     actorId: string;
-    permissions: string;
+    capabilities: string;
     isGrant: boolean;
   }) => FeatureActionResult;
   upsertMemberProfile?: (input: {
@@ -314,10 +314,10 @@ export type OrganizationsFeatureActions = Readonly<{
     organizationId: string;
     profileId: string;
   }) => FeatureActionResult;
-  setProfilePermission?: (input: {
+  setProfileCapability?: (input: {
     organizationId: string;
     profileId: string;
-    permissionId: string;
+    capabilityId: string;
     isGrant: boolean;
   }) => FeatureActionResult;
   updateMembershipSettings?: (input: {

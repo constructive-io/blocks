@@ -118,7 +118,7 @@ export type UsersSection =
   | 'invitations'
   | 'accepted-invites'
   | 'profiles'
-  | 'permissions'
+  | 'capabilities'
   | 'defaults';
 
 const sectionTriggerClass = cn(
@@ -147,7 +147,7 @@ export type AppMemberGovernance = Readonly<{
   admin: boolean;
 }>;
 
-export type AppPermission = Readonly<{
+export type AppCapability = Readonly<{
   id: string;
   name: string;
   description?: string;
@@ -159,12 +159,12 @@ export type AppAccessProfile = Readonly<{
   name: string;
   slug?: string;
   description?: string;
-  permissionIds: readonly string[];
+  capabilityIds: readonly string[];
   system?: boolean;
   default?: boolean;
   memberCount?: number;
   actionPolicy?: FeatureActionPolicy<
-    'updateProfile' | 'deleteProfile' | 'setDefaultProfile' | 'setProfilePermission'
+    'updateProfile' | 'deleteProfile' | 'setDefaultProfile' | 'setProfileCapability'
   >;
 }>;
 
@@ -177,8 +177,8 @@ export type AppMember = Readonly<{
   lifecycle: AppMemberLifecycle;
   governance: AppMemberGovernance;
   profile?: Readonly<{ id: string; name: string }>;
-  directPermissionIds: readonly string[];
-  effectivePermissionIds: readonly string[];
+  directCapabilityIds: readonly string[];
+  effectiveCapabilityIds: readonly string[];
   joinedAt?: string;
   actionPolicy?: FeatureActionPolicy<
     | 'setApproved'
@@ -188,7 +188,7 @@ export type AppMember = Readonly<{
     | 'setOwner'
     | 'setAdmin'
     | 'setProfile'
-    | 'setDirectPermission'
+    | 'setDirectCapability'
   >;
 }>;
 
@@ -219,8 +219,8 @@ export type UsersFeatureData = Readonly<{
   invitations?: readonly AppInvite[];
   acceptedInvites?: readonly AppClaimedInvite[];
   profiles?: readonly AppAccessProfile[];
-  permissions?: readonly AppPermission[];
-  defaultPermissionIds?: readonly string[];
+  capabilities?: readonly AppCapability[];
+  defaultCapabilityIds?: readonly string[];
   inviteProfileIds?: readonly string[];
 }>;
 
@@ -234,13 +234,13 @@ export type UsersFeatureAction =
   | 'setOwner'
   | 'setAdmin'
   | 'setProfile'
-  | 'setDirectPermission'
+  | 'setDirectCapability'
   | 'createProfile'
   | 'updateProfile'
   | 'deleteProfile'
   | 'setDefaultProfile'
-  | 'setProfilePermission'
-  | 'setDefaultPermission'
+  | 'setProfileCapability'
+  | 'setDefaultCapability'
   | 'cancelInvite'
   | 'extendInvite';
 
@@ -253,9 +253,9 @@ export type UsersFeatureActions = Readonly<{
   setOwner?: (input: { userId: string; owner: boolean }) => FeatureActionResult;
   setAdmin?: (input: { userId: string; admin: boolean }) => FeatureActionResult;
   setProfile?: (input: { membershipId: string; profileId?: string }) => FeatureActionResult;
-  setDirectPermission?: (input: {
+  setDirectCapability?: (input: {
     userId: string;
-    permissionId: string;
+    capabilityId: string;
     granted: boolean;
   }) => FeatureActionResult;
   createProfile?: (input: {
@@ -271,13 +271,13 @@ export type UsersFeatureActions = Readonly<{
   }) => FeatureActionResult;
   deleteProfile?: (input: { profileId: string }) => FeatureActionResult;
   setDefaultProfile?: (input: { profileId: string }) => FeatureActionResult;
-  setProfilePermission?: (input: {
+  setProfileCapability?: (input: {
     profileId: string;
-    permissionId: string;
+    capabilityId: string;
     granted: boolean;
   }) => FeatureActionResult;
-  setDefaultPermission?: (input: {
-    permissionId: string;
+  setDefaultCapability?: (input: {
+    capabilityId: string;
     granted: boolean;
   }) => FeatureActionResult;
   cancelInvite?: (input: { inviteId: string }) => FeatureActionResult;
@@ -476,7 +476,7 @@ type AppMemberRowAction =
   | 'setOwner'
   | 'setAdmin'
   | 'setProfile'
-  | 'setDirectPermission';
+  | 'setDirectCapability';
 
 function MemberActions({
   member,
@@ -627,8 +627,8 @@ function MemberActions({
                     ? `Revoke app admin from ${member.name}?`
                     : `Grant app admin to ${member.name}?`,
                   description: member.governance.admin
-                    ? 'The member will keep only profile and direct permissions.'
-                    : 'App admins receive every application permission.',
+                    ? 'The member will keep only profile and direct capabilities.'
+                    : 'App admins receive every application capability.',
                   confirmLabel: member.governance.admin ? 'Revoke app admin' : 'Grant app admin',
                   destructive: member.governance.admin,
                   run: () => actions.setAdmin!({
@@ -700,14 +700,14 @@ function MemberActions({
 function MemberAccessDialog({
   member,
   profiles,
-  permissions,
+  capabilities,
   policy,
   actions,
   onError
 }: Readonly<{
   member: AppMember;
   profiles: readonly AppAccessProfile[];
-  permissions: readonly AppPermission[];
+  capabilities: readonly AppCapability[];
   policy?: UsersFeaturePackProps['policy'];
   actions?: UsersFeatureActions;
   onError?: UsersFeaturePackProps['onError'];
@@ -719,10 +719,10 @@ function MemberAccessDialog({
   const rowPolicy = member.actionPolicy;
   const canSetProfile = canPerform(policy, 'setProfile') &&
     canPerform(rowPolicy, 'setProfile') && Boolean(actions?.setProfile);
-  const canSetDirectPermission = canPerform(policy, 'setDirectPermission') &&
-    canPerform(rowPolicy, 'setDirectPermission') && Boolean(actions?.setDirectPermission);
-  const directPermissionIds = new Set(member.directPermissionIds);
-  const effectivePermissionIds = new Set(member.effectivePermissionIds);
+  const canSetDirectCapability = canPerform(policy, 'setDirectCapability') &&
+    canPerform(rowPolicy, 'setDirectCapability') && Boolean(actions?.setDirectCapability);
+  const directCapabilityIds = new Set(member.directCapabilityIds);
+  const effectiveCapabilityIds = new Set(member.effectiveCapabilityIds);
 
   const run = async (key: string, action: () => FeatureActionResult, fallback: string) => {
     setPendingKey(key);
@@ -746,7 +746,7 @@ function MemberAccessDialog({
         <DialogHeader>
           <DialogTitle>Access for {member.name}</DialogTitle>
           <DialogDescription>
-            Profiles and direct grants are separate inputs. Effective permissions show the result enforced by the backend.
+            Profiles and direct grants are separate inputs. Effective capabilities show the result enforced by the backend.
           </DialogDescription>
         </DialogHeader>
         <DialogPanel className='flex max-h-[70dvh] flex-col gap-6 overflow-y-auto'>
@@ -786,42 +786,42 @@ function MemberAccessDialog({
 
           <section className='flex flex-col gap-3'>
             <div>
-              <h3 className='text-balance text-sm font-medium'>Direct permission overrides</h3>
+              <h3 className='text-balance text-sm font-medium'>Direct capability overrides</h3>
               <p className='text-muted-foreground text-pretty text-xs'>
                 These grants are independent from the selected profile.
               </p>
             </div>
-            {permissions.length > 0 ? (
+            {capabilities.length > 0 ? (
               <FieldGroup>
-                {permissions.map((permission) => {
-                  const checked = directPermissionIds.has(permission.id);
+                {capabilities.map((capability) => {
+                  const checked = directCapabilityIds.has(capability.id);
                   return (
                     <Field
-                      data-disabled={!canSetDirectPermission || Boolean(pendingKey)}
-                      key={permission.id}
+                      data-disabled={!canSetDirectCapability || Boolean(pendingKey)}
+                      key={capability.id}
                       orientation='horizontal'
                     >
                       <Checkbox
-                        aria-label={`${checked ? 'Revoke' : 'Grant'} ${permission.name} directly`}
+                        aria-label={`${checked ? 'Revoke' : 'Grant'} ${capability.name} directly`}
                         checked={checked}
-                        disabled={!canSetDirectPermission || Boolean(pendingKey)}
-                        id={`${fieldId}-direct-${permission.id}`}
+                        disabled={!canSetDirectCapability || Boolean(pendingKey)}
+                        id={`${fieldId}-direct-${capability.id}`}
                         onCheckedChange={(nextChecked) => void run(
-                          `direct-${permission.id}`,
-                          () => actions!.setDirectPermission!({
+                          `direct-${capability.id}`,
+                          () => actions!.setDirectCapability!({
                             userId: member.userId,
-                            permissionId: permission.id,
+                            capabilityId: capability.id,
                             granted: nextChecked === true
                           }),
-                          'The direct permission could not be changed.'
+                          'The direct capability could not be changed.'
                         )}
                       />
                       <div className='min-w-0 flex-1'>
-                        <FieldLabel htmlFor={`${fieldId}-direct-${permission.id}`}>
-                          {permission.name}
+                        <FieldLabel htmlFor={`${fieldId}-direct-${capability.id}`}>
+                          {capability.name}
                         </FieldLabel>
-                        {permission.description ? (
-                          <FieldDescription className='text-pretty'>{permission.description}</FieldDescription>
+                        {capability.description ? (
+                          <FieldDescription className='text-pretty'>{capability.description}</FieldDescription>
                         ) : null}
                       </div>
                     </Field>
@@ -830,24 +830,24 @@ function MemberAccessDialog({
               </FieldGroup>
             ) : (
               <p className='text-muted-foreground text-pretty text-sm'>
-                The permission catalog is unavailable for this tenant.
+                The capability catalog is unavailable for this tenant.
               </p>
             )}
           </section>
 
           <section className='flex flex-col gap-3'>
             <div>
-              <h3 className='text-balance text-sm font-medium'>Effective permissions</h3>
+              <h3 className='text-balance text-sm font-medium'>Effective capabilities</h3>
               <p className='text-muted-foreground text-pretty text-xs'>
                 This read-only result includes profile, direct, admin, and owner access.
               </p>
             </div>
             <div className='flex flex-wrap gap-2'>
-              {permissions.filter((permission) => effectivePermissionIds.has(permission.id)).map(
-                (permission) => <Badge key={permission.id} variant='outline'>{permission.name}</Badge>
+              {capabilities.filter((capability) => effectiveCapabilityIds.has(capability.id)).map(
+                (capability) => <Badge key={capability.id} variant='outline'>{capability.name}</Badge>
               )}
-              {effectivePermissionIds.size === 0 ? (
-                <span className='text-muted-foreground text-sm'>No effective permissions</span>
+              {effectiveCapabilityIds.size === 0 ? (
+                <span className='text-muted-foreground text-sm'>No effective capabilities</span>
               ) : null}
             </div>
           </section>
@@ -866,7 +866,7 @@ function MembersDirectory({
   query,
   onClearSearch,
   profiles,
-  permissions,
+  capabilities,
   focusedMemberId,
   policy,
   actions,
@@ -876,7 +876,7 @@ function MembersDirectory({
   query: string;
   onClearSearch: () => void;
   profiles: readonly AppAccessProfile[];
-  permissions: readonly AppPermission[];
+  capabilities: readonly AppCapability[];
   focusedMemberId?: string;
   policy?: UsersFeaturePackProps['policy'];
   actions?: UsersFeatureActions;
@@ -954,12 +954,12 @@ function MembersDirectory({
             {member.governance.owner ? <Badge>Owner</Badge> : null}
             {!member.governance.owner && member.governance.admin ? <Badge variant='secondary'>Admin</Badge> : null}
             <FeatureStatusBadge status={memberStatus(member)} />
-            {(profiles.length > 0 || permissions.length > 0) ? (
+            {(profiles.length > 0 || capabilities.length > 0) ? (
               <MemberAccessDialog
                 actions={actions}
                 member={member}
                 onError={onError}
-                permissions={permissions}
+                capabilities={capabilities}
                 policy={policy}
                 profiles={profiles}
               />
@@ -1264,7 +1264,7 @@ function ProfileFormDialog({
           <DialogHeader>
             <DialogTitle>{profile ? `Edit ${profile.name}` : 'Create an access profile'}</DialogTitle>
             <DialogDescription>
-              Profiles bundle permissions. Application ownership and admin governance stay separate.
+              Profiles bundle capabilities. Application ownership and admin governance stay separate.
             </DialogDescription>
           </DialogHeader>
           <DialogPanel>
@@ -1319,14 +1319,14 @@ function ProfileFormDialog({
 
 function ProfileRow({
   profile,
-  permissions,
+  capabilities,
   policy,
   actions,
   focused,
   onError
 }: Readonly<{
   profile: AppAccessProfile;
-  permissions: readonly AppPermission[];
+  capabilities: readonly AppCapability[];
   policy?: UsersFeaturePackProps['policy'];
   actions?: UsersFeatureActions;
   focused?: boolean;
@@ -1341,9 +1341,9 @@ function ProfileRow({
     canPerform(profilePolicy, 'deleteProfile') && Boolean(actions?.deleteProfile);
   const canSetDefault = canPerform(policy, 'setDefaultProfile') &&
     canPerform(profilePolicy, 'setDefaultProfile') && Boolean(actions?.setDefaultProfile);
-  const canCompose = canPerform(policy, 'setProfilePermission') &&
-    canPerform(profilePolicy, 'setProfilePermission') && Boolean(actions?.setProfilePermission);
-  const profilePermissionIds = new Set(profile.permissionIds);
+  const canCompose = canPerform(policy, 'setProfileCapability') &&
+    canPerform(profilePolicy, 'setProfileCapability') && Boolean(actions?.setProfileCapability);
+  const profileCapabilityIds = new Set(profile.capabilityIds);
   const fieldId = React.useId();
   const focusedProfileRef = React.useRef<HTMLLIElement>(null);
 
@@ -1384,7 +1384,7 @@ function ProfileRow({
             {profile.description ?? profile.slug ?? 'No description'}
           </p>
           <p className='text-muted-foreground mt-1 text-xs tabular-nums'>
-            {profile.permissionIds.length} {profile.permissionIds.length === 1 ? 'permission' : 'permissions'}
+            {profile.capabilityIds.length} {profile.capabilityIds.length === 1 ? 'capability' : 'capabilities'}
             {profile.memberCount !== undefined ? ` · ${profile.memberCount} members` : ''}
           </p>
         </div>
@@ -1418,7 +1418,7 @@ function ProfileRow({
                 <AlertDialogHeader>
                   <AlertDialogTitle>Delete {profile.name}?</AlertDialogTitle>
                   <AlertDialogDescription>
-                    Members assigned to this profile may lose profile-based permissions. This cannot be undone.
+                    Members assigned to this profile may lose profile-based capabilities. This cannot be undone.
                   </AlertDialogDescription>
                 </AlertDialogHeader>
                 {error ? <p className='text-destructive text-pretty text-sm' role='alert'>{error}</p> : null}
@@ -1441,34 +1441,34 @@ function ProfileRow({
           ) : null}
         </div>
       </div>
-      {permissions.length > 0 ? (
+      {capabilities.length > 0 ? (
         <FieldGroup className='grid sm:grid-cols-2'>
-          {permissions.map((permission) => {
-            const checked = profilePermissionIds.has(permission.id);
+          {capabilities.map((capability) => {
+            const checked = profileCapabilityIds.has(capability.id);
             return (
               <Field
                 data-disabled={!canCompose || Boolean(pendingKey)}
-                key={permission.id}
+                key={capability.id}
                 orientation='horizontal'
               >
                 <Checkbox
-                  aria-label={`${checked ? 'Remove' : 'Add'} ${permission.name} ${checked ? 'from' : 'to'} ${profile.name}`}
+                  aria-label={`${checked ? 'Remove' : 'Add'} ${capability.name} ${checked ? 'from' : 'to'} ${profile.name}`}
                   checked={checked}
                   disabled={!canCompose || Boolean(pendingKey)}
-                  id={`${fieldId}-${permission.id}`}
+                  id={`${fieldId}-${capability.id}`}
                   onCheckedChange={(nextChecked) => void run(
-                    `permission-${permission.id}`,
-                    () => actions!.setProfilePermission!({
+                    `capability-${capability.id}`,
+                    () => actions!.setProfileCapability!({
                       profileId: profile.id,
-                      permissionId: permission.id,
+                      capabilityId: capability.id,
                       granted: nextChecked === true
                     }),
-                    'The profile permission could not be changed.'
+                    'The profile capability could not be changed.'
                   )}
                 />
                 <div className='min-w-0 flex-1'>
-                  <FieldLabel htmlFor={`${fieldId}-${permission.id}`}>{permission.name}</FieldLabel>
-                  {permission.description ? <FieldDescription>{permission.description}</FieldDescription> : null}
+                  <FieldLabel htmlFor={`${fieldId}-${capability.id}`}>{capability.name}</FieldLabel>
+                  {capability.description ? <FieldDescription>{capability.description}</FieldDescription> : null}
                 </div>
               </Field>
             );
@@ -1482,14 +1482,14 @@ function ProfileRow({
 
 function ProfilesDirectory({
   profiles,
-  permissions,
+  capabilities,
   focusedProfileId,
   policy,
   actions,
   onError
 }: Readonly<{
   profiles: readonly AppAccessProfile[];
-  permissions: readonly AppPermission[];
+  capabilities: readonly AppCapability[];
   focusedProfileId?: string;
   policy?: UsersFeaturePackProps['policy'];
   actions?: UsersFeatureActions;
@@ -1503,7 +1503,7 @@ function ProfilesDirectory({
         <div>
           <h2 className='text-balance text-sm font-medium'>Access profiles</h2>
           <p className='text-muted-foreground text-pretty text-xs'>
-            Named permission bundles for application members. Owner and admin grants remain separate.
+            Named capability bundles for application members. Owner and admin grants remain separate.
           </p>
         </div>
         {canCreate && actions?.createProfile ? (
@@ -1518,7 +1518,7 @@ function ProfilesDirectory({
               focused={profile.id === focusedProfileId}
               key={profile.id}
               onError={onError}
-              permissions={permissions}
+              capabilities={capabilities}
               policy={policy}
               profile={profile}
             />
@@ -1529,7 +1529,7 @@ function ProfilesDirectory({
           <EmptyHeader>
             <EmptyMedia variant='icon'><ShieldIcon aria-hidden='true' /></EmptyMedia>
             <EmptyTitle>No access profiles</EmptyTitle>
-            <EmptyDescription>Create a reusable permission bundle for application members.</EmptyDescription>
+            <EmptyDescription>Create a reusable capability bundle for application members.</EmptyDescription>
           </EmptyHeader>
           {canCreate && actions?.createProfile ? (
             <EmptyContent><ProfileFormDialog action={actions.createProfile} onError={onError} /></EmptyContent>
@@ -1540,14 +1540,14 @@ function ProfilesDirectory({
   );
 }
 
-function PermissionsCatalog({ permissions }: Readonly<{ permissions: readonly AppPermission[] }>) {
-  if (permissions.length === 0) {
+function CapabilitiesCatalog({ capabilities }: Readonly<{ capabilities: readonly AppCapability[] }>) {
+  if (capabilities.length === 0) {
     return (
       <Empty className='min-h-48 border border-dashed'>
         <EmptyHeader>
           <EmptyMedia variant='icon'><KeyRoundIcon aria-hidden='true' /></EmptyMedia>
-          <EmptyTitle>No application permissions</EmptyTitle>
-          <EmptyDescription>This tenant does not expose a permission catalog.</EmptyDescription>
+          <EmptyTitle>No application capabilities</EmptyTitle>
+          <EmptyDescription>This tenant does not expose a capability catalog.</EmptyDescription>
         </EmptyHeader>
       </Empty>
     );
@@ -1557,9 +1557,9 @@ function PermissionsCatalog({ permissions }: Readonly<{ permissions: readonly Ap
     <div className='flex flex-col gap-3'>
       <Alert>
         <ShieldCheckIcon aria-hidden='true' />
-        <AlertTitle>Permission definitions are read-only</AlertTitle>
+        <AlertTitle>Capability definitions are read-only</AlertTitle>
         <AlertDescription>
-          Console Kit assigns existing permissions through profiles, defaults, and direct grants. It never rewrites the backend catalog.
+          Console Kit assigns existing capabilities through profiles, defaults, and direct grants. It never rewrites the backend catalog.
         </AlertDescription>
       </Alert>
       <Table
@@ -1568,23 +1568,23 @@ function PermissionsCatalog({ permissions }: Readonly<{ permissions: readonly Ap
       >
         <TableHeader className='sr-only sm:not-sr-only sm:table-header-group'>
           <TableRow>
-            <TableHead>Permission</TableHead>
+            <TableHead>Capability</TableHead>
             <TableHead>Description</TableHead>
             <TableHead>Bit</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody className='block sm:table-row-group'>
-          {permissions.map((permission) => (
-            <TableRow className='grid grid-cols-[minmax(0,1fr)_auto] gap-2 px-3 py-3 sm:table-row sm:px-0 sm:py-0' key={permission.id}>
+          {capabilities.map((capability) => (
+            <TableRow className='grid grid-cols-[minmax(0,1fr)_auto] gap-2 px-3 py-3 sm:table-row sm:px-0 sm:py-0' key={capability.id}>
               <TableCell className='block min-w-0 whitespace-normal p-0 font-medium sm:table-cell sm:px-4 sm:py-3'>
-                <span className='break-words'>{permission.name}</span>
+                <span className='break-words'>{capability.name}</span>
               </TableCell>
               <TableCell className='col-span-2 row-start-2 block max-w-xl whitespace-normal p-0 text-pretty text-muted-foreground sm:table-cell sm:px-4 sm:py-3'>
-                {permission.description ?? 'No description'}
+                {capability.description ?? 'No description'}
               </TableCell>
               <TableCell className='col-start-2 row-start-1 block whitespace-normal p-0 tabular-nums sm:table-cell sm:px-4 sm:py-3'>
-                <Badge className='sm:hidden' variant='outline'>Bit {permission.bit ?? '—'}</Badge>
-                <span className='hidden sm:inline'>{permission.bit ?? '—'}</span>
+                <Badge className='sm:hidden' variant='outline'>Bit {capability.bit ?? '—'}</Badge>
+                <span className='hidden sm:inline'>{capability.bit ?? '—'}</span>
               </TableCell>
             </TableRow>
           ))}
@@ -1594,34 +1594,34 @@ function PermissionsCatalog({ permissions }: Readonly<{ permissions: readonly Ap
   );
 }
 
-function PermissionDefaults({
-  permissions,
-  defaultPermissionIds,
+function CapabilityDefaults({
+  capabilities,
+  defaultCapabilityIds,
   policy,
   actions,
   onError
 }: Readonly<{
-  permissions: readonly AppPermission[];
-  defaultPermissionIds: readonly string[];
+  capabilities: readonly AppCapability[];
+  defaultCapabilityIds: readonly string[];
   policy?: UsersFeaturePackProps['policy'];
   actions?: UsersFeatureActions;
   onError?: UsersFeaturePackProps['onError'];
 }>) {
   const [pendingId, setPendingId] = React.useState<string>();
   const [error, setError] = React.useState<string>();
-  const canUpdate = canPerform(policy, 'setDefaultPermission') &&
-    Boolean(actions?.setDefaultPermission);
-  const defaults = new Set(defaultPermissionIds);
+  const canUpdate = canPerform(policy, 'setDefaultCapability') &&
+    Boolean(actions?.setDefaultCapability);
+  const defaults = new Set(defaultCapabilityIds);
   const fieldId = React.useId();
 
-  const update = async (permissionId: string, granted: boolean) => {
-    if (!actions?.setDefaultPermission) return;
-    setPendingId(permissionId);
+  const update = async (capabilityId: string, granted: boolean) => {
+    if (!actions?.setDefaultCapability) return;
+    setPendingId(capabilityId);
     setError(undefined);
     try {
-      await actions.setDefaultPermission({ permissionId, granted });
+      await actions.setDefaultCapability({ capabilityId, granted });
     } catch (cause) {
-      reportActionError(cause, 'The default permission could not be changed.', setError, onError);
+      reportActionError(cause, 'The default capability could not be changed.', setError, onError);
     } finally {
       setPendingId(undefined);
     }
@@ -1630,34 +1630,34 @@ function PermissionDefaults({
   return (
     <div className='flex flex-col gap-4'>
       <div>
-        <h2 className='text-balance text-sm font-medium'>New-member permission defaults</h2>
+        <h2 className='text-balance text-sm font-medium'>New-member capability defaults</h2>
         <p className='text-muted-foreground text-pretty text-xs'>
-          These permissions apply to new application memberships. Existing members keep their current grants.
+          These capabilities apply to new application memberships. Existing members keep their current grants.
         </p>
       </div>
-      {permissions.length > 0 ? (
+      {capabilities.length > 0 ? (
         <FieldGroup className='border-border/70 rounded-xl border p-4'>
-          {permissions.map((permission) => {
-            const checked = defaults.has(permission.id);
+          {capabilities.map((capability) => {
+            const checked = defaults.has(capability.id);
             return (
               <Field
                 data-disabled={!canUpdate || Boolean(pendingId)}
-                key={permission.id}
+                key={capability.id}
                 orientation='horizontal'
               >
                 <Checkbox
-                  aria-label={`${checked ? 'Remove' : 'Add'} ${permission.name} ${checked ? 'from' : 'to'} new-member defaults`}
+                  aria-label={`${checked ? 'Remove' : 'Add'} ${capability.name} ${checked ? 'from' : 'to'} new-member defaults`}
                   checked={checked}
                   disabled={!canUpdate || Boolean(pendingId)}
-                  id={`${fieldId}-${permission.id}`}
+                  id={`${fieldId}-${capability.id}`}
                   onCheckedChange={(nextChecked) => void update(
-                    permission.id,
+                    capability.id,
                     nextChecked === true
                   )}
                 />
                 <div className='min-w-0 flex-1'>
-                  <FieldLabel htmlFor={`${fieldId}-${permission.id}`}>{permission.name}</FieldLabel>
-                  {permission.description ? <FieldDescription>{permission.description}</FieldDescription> : null}
+                  <FieldLabel htmlFor={`${fieldId}-${capability.id}`}>{capability.name}</FieldLabel>
+                  {capability.description ? <FieldDescription>{capability.description}</FieldDescription> : null}
                 </div>
               </Field>
             );
@@ -1665,7 +1665,7 @@ function PermissionDefaults({
         </FieldGroup>
       ) : (
         <p className='text-muted-foreground text-pretty text-sm'>
-          Permission defaults require the application permission catalog.
+          Capability defaults require the application capability catalog.
         </p>
       )}
       {error ? <p className='text-destructive text-pretty text-sm' role='alert'>{error}</p> : null}
@@ -1719,7 +1719,7 @@ export function UsersFeaturePack({
     >
       {(data) => {
         const profiles = data.profiles ?? [];
-        const permissions = data.permissions ?? [];
+        const capabilities = data.capabilities ?? [];
         const invitations = data.invitations ?? [];
         const acceptedInvites = data.acceptedInvites ?? [];
         const members = data.members.filter((member) => {
@@ -1740,10 +1740,10 @@ export function UsersFeaturePack({
         if (data.profiles !== undefined) {
           sections.push({ id: 'profiles', label: 'Profiles', count: profiles.length });
         }
-        if (data.permissions !== undefined) {
-          sections.push({ id: 'permissions', label: 'Permissions', count: permissions.length });
+        if (data.capabilities !== undefined) {
+          sections.push({ id: 'capabilities', label: 'Capabilities', count: capabilities.length });
         }
-        if (data.defaultPermissionIds !== undefined) {
+        if (data.defaultCapabilityIds !== undefined) {
           sections.push({ id: 'defaults', label: 'Defaults' });
         }
         const requestedSection = controlledSection ?? internalSection;
@@ -1856,7 +1856,7 @@ export function UsersFeaturePack({
                   members={members}
                   onClearSearch={() => setQuery('')}
                   onError={onError}
-                  permissions={permissions}
+                  capabilities={capabilities}
                   policy={policy}
                   profiles={profiles}
                   query={query}
@@ -1883,25 +1883,25 @@ export function UsersFeaturePack({
                   <ProfilesDirectory
                     actions={actions}
                     onError={onError}
-                    permissions={permissions}
+                    capabilities={capabilities}
                     policy={policy}
                     profiles={profiles}
                     focusedProfileId={focusedProfileId}
                   />
                 </TabsContent>
               ) : null}
-              {data.permissions !== undefined ? (
-                <TabsContent className='mt-5' value='permissions'>
-                  <PermissionsCatalog permissions={permissions} />
+              {data.capabilities !== undefined ? (
+                <TabsContent className='mt-5' value='capabilities'>
+                  <CapabilitiesCatalog capabilities={capabilities} />
                 </TabsContent>
               ) : null}
-              {data.defaultPermissionIds !== undefined ? (
+              {data.defaultCapabilityIds !== undefined ? (
                 <TabsContent className='mt-5' value='defaults'>
-                  <PermissionDefaults
+                  <CapabilityDefaults
                     actions={actions}
-                    defaultPermissionIds={data.defaultPermissionIds}
+                    defaultCapabilityIds={data.defaultCapabilityIds}
                     onError={onError}
-                    permissions={permissions}
+                    capabilities={capabilities}
                     policy={policy}
                   />
                 </TabsContent>

@@ -4,7 +4,7 @@ import type {
   AppClaimedInvite,
   AppInvite,
   AppMember,
-  AppPermission,
+  AppCapability,
   UsersFeatureData,
   UsersFeaturePackProps
 } from '../../feature-packs/users/users-feature-pack';
@@ -23,11 +23,11 @@ import {
   asRecord,
   asString,
   expiresIn,
-  hasEffectivePermission,
+  hasEffectiveCapability,
   imageUrl,
   notifyConsoleAdapters,
   packAvailability,
-  permissionMaskIsSubset
+  capabilityMaskIsSubset
 } from './constructive-adapter-utils';
 import {
   executeConstructiveConnectionQuery,
@@ -79,11 +79,11 @@ const CREATE_PROFILE_DEFINITION_GRANT_MUTATION = /* GraphQL */ `
 `;
 
 const CREATE_PERMISSION_DEFAULT_GRANT_MUTATION = /* GraphQL */ `
-  mutation ConsoleKitCreateAppPermissionDefaultGrant(
-    $input: CreateAppPermissionDefaultGrantInput!
+  mutation ConsoleKitCreateAppCapabilityDefaultGrant(
+    $input: CreateAppCapabilityDefaultGrantInput!
   ) {
-    createAppPermissionDefaultGrant(input: $input) {
-      appPermissionDefaultGrant { id }
+    createAppCapabilityDefaultGrant(input: $input) {
+      appCapabilityDefaultGrant { id }
     }
   }
 `;
@@ -165,7 +165,7 @@ type AppAccessSelections = Readonly<{
   invitations: readonly string[];
   acceptedInvites: readonly string[];
   profiles: readonly string[];
-  permissions: readonly string[];
+  capabilities: readonly string[];
   defaults: readonly string[];
   users: readonly string[];
   emails: readonly string[];
@@ -188,7 +188,7 @@ function adminAccessSelections(
     'isVerified',
     'isBanned',
     'isDisabled',
-    'permissions',
+    'capabilities',
     'granted',
     'profileId'
   ]);
@@ -242,7 +242,7 @@ function adminAccessSelections(
     'name',
     'slug',
     'description',
-    'permissions',
+    'capabilities',
     'isSystem',
     'isDefault',
     'createdAt',
@@ -253,20 +253,20 @@ function adminAccessSelections(
     ? profileFields
     : [];
 
-  const permissionFields = connectionSelection(adminSchema, 'AppPermission', [
+  const capabilityFields = connectionSelection(adminSchema, 'AppCapability', [
     'id', 'name', 'description', 'bitnum', 'bitstr'
   ]);
-  const permissions = supports(options, 'admin', 'query', 'appPermissions') &&
-    permissionFields.includes('id') && permissionFields.includes('name') &&
-    permissionFields.includes('bitstr')
-    ? permissionFields
+  const capabilities = supports(options, 'admin', 'query', 'appCapabilities') &&
+    capabilityFields.includes('id') && capabilityFields.includes('name') &&
+    capabilityFields.includes('bitstr')
+    ? capabilityFields
     : [];
 
-  const defaultFields = connectionSelection(adminSchema, 'AppPermissionDefault', [
-    'id', 'permissions'
+  const defaultFields = connectionSelection(adminSchema, 'AppCapabilityDefault', [
+    'id', 'capabilities'
   ]);
-  const defaults = supports(options, 'admin', 'query', 'appPermissionDefaults') &&
-    defaultFields.includes('permissions')
+  const defaults = supports(options, 'admin', 'query', 'appCapabilityDefaults') &&
+    defaultFields.includes('capabilities')
     ? defaultFields
     : [];
 
@@ -292,20 +292,20 @@ function adminAccessSelections(
     invitations,
     acceptedInvites,
     profiles,
-    permissions,
+    capabilities,
     defaults,
     users,
     emails
   };
 }
 
-function permissionIdsForMask(
+function capabilityIdsForMask(
   mask: unknown,
-  permissionRows: readonly Record<string, unknown>[]
+  capabilityRows: readonly Record<string, unknown>[]
 ): string[] {
-  return permissionRows.flatMap((permission) => {
-    const id = asString(permission.id);
-    return id && permissionMaskIsSubset(permission.bitstr, mask) ? [id] : [];
+  return capabilityRows.flatMap((capability) => {
+    const id = asString(capability.id);
+    return id && capabilityMaskIsSubset(capability.bitstr, mask) ? [id] : [];
   });
 }
 
@@ -329,10 +329,10 @@ type LoadedAppAccess = Readonly<{
   memberByActorId: ReadonlyMap<string, AppMember>;
   profileIds: ReadonlySet<string>;
   mutableProfileIds: ReadonlySet<string>;
-  permissionMasks: ReadonlyMap<string, string>;
+  capabilityMasks: ReadonlyMap<string, string>;
   ownedInviteIds: ReadonlySet<string>;
   canManageMembers: boolean;
-  canManagePermissions: boolean;
+  canManageCapabilities: boolean;
   canCreateInvites: boolean;
   canAssignInviteProfiles: boolean;
   actorIsAdmin: boolean;
@@ -353,10 +353,10 @@ async function loadAccess(
     memberByActorId: new Map(),
     profileIds: new Set(),
     mutableProfileIds: new Set(),
-    permissionMasks: new Map(),
+    capabilityMasks: new Map(),
     ownedInviteIds: new Set(),
     canManageMembers: false,
-    canManagePermissions: false,
+    canManageCapabilities: false,
     canCreateInvites: false,
     canAssignInviteProfiles: false,
     actorIsAdmin: false,
@@ -397,7 +397,7 @@ async function loadAccess(
     invitationRows,
     acceptedInviteRows,
     profileRows,
-    permissionRows,
+    capabilityRows,
     defaultRows,
     userRows,
     emailRows
@@ -428,14 +428,14 @@ async function loadAccess(
     ),
     optionalConnection(
       'admin',
-      'ConsoleKitAppAccessPermissionsPage',
-      'appPermissions',
-      selections.permissions
+      'ConsoleKitAppAccessCapabilitiesPage',
+      'appCapabilities',
+      selections.capabilities
     ),
     optionalConnection(
       'admin',
-      'ConsoleKitAppAccessPermissionDefaultsPage',
-      'appPermissionDefaults',
+      'ConsoleKitAppAccessCapabilityDefaultsPage',
+      'appCapabilityDefaults',
       selections.defaults
     ),
     optionalConnection(
@@ -459,18 +459,18 @@ async function loadAccess(
     if (!emails.has(ownerId) || asBoolean(email.isPrimary)) emails.set(ownerId, value);
   }
 
-  const permissionMasks = new Map<string, string>();
-  const permissions: AppPermission[] = permissionRows.flatMap((permission) => {
-    const id = asString(permission.id);
-    const name = asString(permission.name);
-    const bitstr = asString(permission.bitstr);
+  const capabilityMasks = new Map<string, string>();
+  const capabilities: AppCapability[] = capabilityRows.flatMap((capability) => {
+    const id = asString(capability.id);
+    const name = asString(capability.name);
+    const bitstr = asString(capability.bitstr);
     if (!id || !name || !bitstr) return [];
-    permissionMasks.set(id, bitstr);
+    capabilityMasks.set(id, bitstr);
     return [{
       id,
       name,
-      description: asString(permission.description) ?? undefined,
-      bit: typeof permission.bitnum === 'number' ? permission.bitnum : undefined
+      description: asString(capability.description) ?? undefined,
+      bit: typeof capability.bitnum === 'number' ? capability.bitnum : undefined
     }];
   });
 
@@ -491,7 +491,7 @@ async function loadAccess(
       name,
       slug: asString(profile.slug) ?? undefined,
       description: asString(profile.description) ?? undefined,
-      permissionIds: permissionIdsForMask(profile.permissions, permissionRows),
+      capabilityIds: capabilityIdsForMask(profile.capabilities, capabilityRows),
       system: asBoolean(profile.isSystem),
       default: asBoolean(profile.isDefault),
       memberCount: profileMemberCounts.get(id) ?? 0
@@ -530,8 +530,8 @@ async function loadAccess(
         admin: asBoolean(membership.isAdmin)
       },
       profile,
-      directPermissionIds: permissionIdsForMask(membership.granted, permissionRows),
-      effectivePermissionIds: permissionIdsForMask(membership.permissions, permissionRows),
+      directCapabilityIds: capabilityIdsForMask(membership.granted, capabilityRows),
+      effectiveCapabilityIds: capabilityIdsForMask(membership.capabilities, capabilityRows),
       joinedAt: asString(membership.createdAt) ?? undefined
     }];
   });
@@ -588,22 +588,22 @@ async function loadAccess(
   const hasActiveMembership = asBoolean(actorMembership?.isActive);
   const actorIsOwner = hasActiveMembership && asBoolean(actorMembership?.isOwner);
   const actorIsAdmin = hasActiveMembership && asBoolean(actorMembership?.isAdmin);
-  const hasNamedPermission = (permissionName: string) => hasActiveMembership &&
-    hasEffectivePermission(actorMembership, permissionRows, permissionName);
-  const canManageMembers = actorIsAdmin || hasNamedPermission('admin_members');
-  const canManagePermissions = actorIsAdmin || hasNamedPermission('admin_permissions');
-  const canCreateInvites = actorIsAdmin || hasNamedPermission('create_invites');
-  const canAssignInviteProfiles = actorIsAdmin || hasNamedPermission('assign_profiles');
+  const hasNamedCapability = (capabilityName: string) => hasActiveMembership &&
+    hasEffectiveCapability(actorMembership, capabilityRows, capabilityName);
+  const canManageMembers = actorIsAdmin || hasNamedCapability('admin_members');
+  const canManageCapabilities = actorIsAdmin || hasNamedCapability('admin_capabilities');
+  const canCreateInvites = actorIsAdmin || hasNamedCapability('create_invites');
+  const canAssignInviteProfiles = actorIsAdmin || hasNamedCapability('assign_profiles');
 
   const inviteProfileIds = profiles.flatMap((profile) => {
     const source = profileRows.find((row) => asString(row.id) === profile.id);
     const allowed = hasActiveMembership && (
-      actorIsAdmin || permissionMaskIsSubset(source?.permissions, actorMembership?.permissions)
+      actorIsAdmin || capabilityMaskIsSubset(source?.capabilities, actorMembership?.capabilities)
     );
     return allowed ? [profile.id] : [];
   });
-  const defaultPermissionIds = selections.defaults.length > 0 && selections.permissions.length > 0
-    ? permissionIdsForMask(defaultRows[0]?.permissions, permissionRows)
+  const defaultCapabilityIds = selections.defaults.length > 0 && selections.capabilities.length > 0
+    ? capabilityIdsForMask(defaultRows[0]?.capabilities, capabilityRows)
     : undefined;
 
   return {
@@ -612,8 +612,8 @@ async function loadAccess(
       ...(selections.invitations.length > 0 ? { invitations } : {}),
       ...(selections.acceptedInvites.length > 0 ? { acceptedInvites } : {}),
       ...(selections.profiles.length > 0 ? { profiles } : {}),
-      ...(selections.permissions.length > 0 ? { permissions } : {}),
-      ...(defaultPermissionIds ? { defaultPermissionIds } : {}),
+      ...(selections.capabilities.length > 0 ? { capabilities } : {}),
+      ...(defaultCapabilityIds ? { defaultCapabilityIds } : {}),
       ...(selections.profiles.length > 0 ? { inviteProfileIds } : {})
     },
     membershipRows,
@@ -625,10 +625,10 @@ async function loadAccess(
     mutableProfileIds: new Set(
       profiles.filter((profile) => !profile.system).map((profile) => profile.id)
     ),
-    permissionMasks,
+    capabilityMasks,
     ownedInviteIds,
     canManageMembers,
-    canManagePermissions,
+    canManageCapabilities,
     canCreateInvites,
     canAssignInviteProfiles,
     actorIsAdmin,
@@ -683,7 +683,7 @@ export function createConstructiveUsersAdapter(
   const capabilities: readonly AtomicCapabilityId[] = [
     'users.directory',
     'users.memberships',
-    'users.permissions',
+    'users.capabilities',
     'users.profiles',
     'users.invites'
   ];
@@ -722,12 +722,12 @@ export function createConstructiveUsersAdapter(
         'appAdminGrant',
         ['actorId', 'isGrant']
       );
-      const canSetDirectPermission = directory.canManageMembers &&
-        directory.permissionMasks.size > 0 && supportsObjectMutation(
+      const canSetDirectCapability = directory.canManageMembers &&
+        directory.capabilityMasks.size > 0 && supportsObjectMutation(
           adminSchema,
           'createAppGrant',
           'appGrant',
-          ['actorId', 'permissions', 'isGrant']
+          ['actorId', 'capabilities', 'isGrant']
         );
       const canSetProfile = directory.canManageMembers && directory.profileIds.size > 0 &&
         supportsObjectMutation(
@@ -736,24 +736,24 @@ export function createConstructiveUsersAdapter(
           'appProfileGrant',
           ['membershipId', 'profileId', 'isGrant']
         );
-      const canComposeProfiles = directory.canManagePermissions &&
-        directory.profileIds.size > 0 && directory.permissionMasks.size > 0 &&
+      const canComposeProfiles = directory.canManageCapabilities &&
+        directory.profileIds.size > 0 && directory.capabilityMasks.size > 0 &&
         supportsObjectMutation(
           adminSchema,
           'createAppProfileDefinitionGrant',
           'appProfileDefinitionGrant',
-          ['profileId', 'permissionId', 'isGrant']
+          ['profileId', 'capabilityId', 'isGrant']
         );
-      const canSetDefaultPermission = directory.canManagePermissions &&
-        directory.permissionMasks.size > 0 &&
-        directory.data.defaultPermissionIds !== undefined && supportsObjectMutation(
+      const canSetDefaultCapability = directory.canManageCapabilities &&
+        directory.capabilityMasks.size > 0 &&
+        directory.data.defaultCapabilityIds !== undefined && supportsObjectMutation(
           adminSchema,
-          'createAppPermissionDefaultGrant',
-          'appPermissionDefaultGrant',
-          ['permissionId', 'isGrant']
+          'createAppCapabilityDefaultGrant',
+          'appCapabilityDefaultGrant',
+          ['capabilityId', 'isGrant']
         );
 
-      const canCreateProfile = directory.canManagePermissions && supportsObjectMutation(
+      const canCreateProfile = directory.canManageCapabilities && supportsObjectMutation(
         adminSchema,
         'createAppProfile',
         'appProfile',
@@ -765,7 +765,7 @@ export function createConstructiveUsersAdapter(
         'appProfile',
         ['description']
       );
-      const canUpdateProfile = directory.canManagePermissions &&
+      const canUpdateProfile = directory.canManageCapabilities &&
         directory.mutableProfileIds.size > 0 && supportsConstructiveMutationInput(
           adminSchema,
           'updateAppProfile',
@@ -778,14 +778,14 @@ export function createConstructiveUsersAdapter(
         ['id', 'appProfilePatch'],
         { field: 'appProfilePatch', requiredFields: ['description'] }
       );
-      const canSetDefaultProfile = directory.canManagePermissions &&
+      const canSetDefaultProfile = directory.canManageCapabilities &&
         directory.mutableProfileIds.size > 0 && supportsConstructiveMutationInput(
           adminSchema,
           'updateAppProfile',
           ['id', 'appProfilePatch'],
           { field: 'appProfilePatch', requiredFields: ['isDefault'] }
         );
-      const canDeleteProfile = directory.canManagePermissions &&
+      const canDeleteProfile = directory.canManageCapabilities &&
         directory.mutableProfileIds.size > 0 && supportsConstructiveMutationInput(
           adminSchema,
           'deleteAppProfile',
@@ -838,7 +838,7 @@ export function createConstructiveUsersAdapter(
           ),
           setAdmin: canSetAdmin && !member.governance.owner,
           setProfile: canSetProfile,
-          setDirectPermission: canSetDirectPermission
+          setDirectCapability: canSetDirectCapability
         }
       }));
       const profiles = directory.data.profiles?.map((profile): AppAccessProfile => ({
@@ -847,7 +847,7 @@ export function createConstructiveUsersAdapter(
           updateProfile: canUpdateProfile && !profile.system,
           deleteProfile: canDeleteProfile && !profile.system,
           setDefaultProfile: canSetDefaultProfile && !profile.system,
-          setProfilePermission: canComposeProfiles && !profile.system
+          setProfileCapability: canComposeProfiles && !profile.system
         }
       }));
       const data: UsersFeatureData = {
@@ -857,7 +857,7 @@ export function createConstructiveUsersAdapter(
       };
       const hasVisibleRows = data.members.length > 0 ||
         Boolean(data.invitations?.length) || Boolean(data.acceptedInvites?.length) ||
-        Boolean(data.profiles?.length) || Boolean(data.permissions?.length);
+        Boolean(data.profiles?.length) || Boolean(data.capabilities?.length);
 
       return {
         resource: hasVisibleRows
@@ -874,13 +874,13 @@ export function createConstructiveUsersAdapter(
           setOwner: canSetOwner,
           setAdmin: canSetAdmin,
           setProfile: canSetProfile,
-          setDirectPermission: canSetDirectPermission,
+          setDirectCapability: canSetDirectCapability,
           createProfile: canCreateProfile,
           updateProfile: canUpdateProfile,
           deleteProfile: canDeleteProfile,
           setDefaultProfile: canSetDefaultProfile,
-          setProfilePermission: canComposeProfiles,
-          setDefaultPermission: canSetDefaultPermission,
+          setProfileCapability: canComposeProfiles,
+          setDefaultCapability: canSetDefaultCapability,
           cancelInvite: canDeleteInvite,
           extendInvite: canUpdateInvite
         },
@@ -973,19 +973,19 @@ export function createConstructiveUsersAdapter(
                 reload();
               }
             : undefined,
-          setDirectPermission: canSetDirectPermission
-            ? async ({ userId, permissionId, granted }) => {
+          setDirectCapability: canSetDirectCapability
+            ? async ({ userId, capabilityId, granted }) => {
                 assertAuthorizedTarget(directory.actorIds, userId, 'app member');
                 assertAuthorizedTarget(
-                  new Set(directory.permissionMasks.keys()),
-                  permissionId,
-                  'app permission'
+                  new Set(directory.capabilityMasks.keys()),
+                  capabilityId,
+                  'app capability'
                 );
                 await executeConstructiveGraphQL(runtime, 'admin', CREATE_DIRECT_GRANT_MUTATION, {
                   input: {
                     appGrant: {
                       actorId: userId,
-                      permissions: directory.permissionMasks.get(permissionId),
+                      capabilities: directory.capabilityMasks.get(capabilityId),
                       isGrant: granted
                     }
                   }
@@ -1071,17 +1071,17 @@ export function createConstructiveUsersAdapter(
                 reload();
               }
             : undefined,
-          setProfilePermission: canComposeProfiles
-            ? async ({ profileId, permissionId, granted }) => {
+          setProfileCapability: canComposeProfiles
+            ? async ({ profileId, capabilityId, granted }) => {
                 assertAuthorizedTarget(
                   directory.mutableProfileIds,
                   profileId,
                   'mutable app access profile'
                 );
                 assertAuthorizedTarget(
-                  new Set(directory.permissionMasks.keys()),
-                  permissionId,
-                  'app permission'
+                  new Set(directory.capabilityMasks.keys()),
+                  capabilityId,
+                  'app capability'
                 );
                 await executeConstructiveGraphQL(
                   runtime,
@@ -1091,7 +1091,7 @@ export function createConstructiveUsersAdapter(
                     input: {
                       appProfileDefinitionGrant: {
                         profileId,
-                        permissionId,
+                        capabilityId,
                         isGrant: granted
                       }
                     }
@@ -1100,12 +1100,12 @@ export function createConstructiveUsersAdapter(
                 reload();
               }
             : undefined,
-          setDefaultPermission: canSetDefaultPermission
-            ? async ({ permissionId, granted }) => {
+          setDefaultCapability: canSetDefaultCapability
+            ? async ({ capabilityId, granted }) => {
                 assertAuthorizedTarget(
-                  new Set(directory.permissionMasks.keys()),
-                  permissionId,
-                  'app permission'
+                  new Set(directory.capabilityMasks.keys()),
+                  capabilityId,
+                  'app capability'
                 );
                 await executeConstructiveGraphQL(
                   runtime,
@@ -1113,8 +1113,8 @@ export function createConstructiveUsersAdapter(
                   CREATE_PERMISSION_DEFAULT_GRANT_MUTATION,
                   {
                     input: {
-                      appPermissionDefaultGrant: {
-                        permissionId,
+                      appCapabilityDefaultGrant: {
+                        capabilityId,
                         isGrant: granted
                       }
                     }

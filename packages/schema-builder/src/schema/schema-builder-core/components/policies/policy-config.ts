@@ -86,8 +86,8 @@ export const POLICY_TYPE_UI_CONFIG: Record<string, PolicyTypeUIConfig> = {
 			},
 			permission: {
 				type: 'string',
-				component: 'permission-select',
-				label: 'Required Permission',
+				component: 'capability-select',
+				label: 'Required Capability',
 				description: paramOf(NodeTypes.AuthzEntityMembership)?.permission?.description,
 			},
 			is_admin: {
@@ -132,8 +132,8 @@ export const POLICY_TYPE_UI_CONFIG: Record<string, PolicyTypeUIConfig> = {
 		fieldOverrides: {
 			permission: {
 				type: 'string',
-				component: 'permission-select',
-				label: 'Required Permission',
+				component: 'capability-select',
+				label: 'Required Capability',
 				description: paramOf(NodeTypes.AuthzAppMembership)?.permission?.description,
 			},
 			is_admin: {
@@ -328,8 +328,8 @@ export const POLICY_TYPE_UI_CONFIG: Record<string, PolicyTypeUIConfig> = {
 			},
 			permission: {
 				type: 'string',
-				component: 'permission-select',
-				label: 'Required Permission',
+				component: 'capability-select',
+				label: 'Required Capability',
 				description: paramOf(NodeTypes.AuthzRelatedEntityMembership)?.permission?.description,
 			},
 			is_admin: {

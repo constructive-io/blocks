@@ -271,7 +271,7 @@ describe('feature-pack interaction policy', () => {
             profiles: [{
               id: 'profile-admin',
               name: 'Administrator',
-              permissionIds: []
+              capabilityIds: []
             }],
             inviteProfileIds: ['profile-admin']
           }
@@ -366,8 +366,8 @@ describe('feature-pack interaction policy', () => {
             profiles: [{
               id: 'profile-admin',
               name: 'Administrator',
-              permissions: '',
-              permissionIds: [],
+              capabilities: '',
+              capabilityIds: [],
               isSystem: false,
               isDefault: false
             }],
@@ -443,7 +443,7 @@ describe('feature-pack interaction policy', () => {
     const clipboardDescriptor = Object.getOwnPropertyDescriptor(navigator, 'clipboard');
     const writeText = vi.fn()
       .mockResolvedValueOnce(undefined)
-      .mockRejectedValueOnce(new Error('Clipboard permission denied'));
+      .mockRejectedValueOnce(new Error('Clipboard capability denied'));
 
     try {
       Object.defineProperty(navigator, 'clipboard', {
@@ -642,7 +642,7 @@ describe('feature-pack interaction policy', () => {
             profiles: [{
               id: 'profile-admin',
               name: 'Administrator',
-              permissionIds: []
+              capabilityIds: []
             }],
             inviteProfileIds: ['profile-admin']
           }
@@ -666,7 +666,7 @@ describe('feature-pack interaction policy', () => {
         profiles: [{
           id: 'profile-admin',
           name: 'Administrator',
-          permissionIds: []
+          capabilityIds: []
         }],
         inviteProfileIds: ['profile-admin']
       }
@@ -717,8 +717,8 @@ describe('feature-pack interaction policy', () => {
         profiles: [{
           id: 'profile-admin',
           name: 'Administrator',
-          permissions: '',
-          permissionIds: [],
+          capabilities: '',
+          capabilityIds: [],
           isSystem: false,
           isDefault: false
         }],
@@ -789,8 +789,8 @@ describe('feature-pack interaction policy', () => {
                 active: true
               },
               governance: { owner: false, admin: false },
-              directPermissionIds: [],
-              effectivePermissionIds: [],
+              directCapabilityIds: [],
+              effectiveCapabilityIds: [],
               actionPolicy: { setDisabled: true }
             }]
           }
@@ -821,8 +821,8 @@ describe('feature-pack interaction policy', () => {
           status: 'ready',
           data: {
             profiles: [
-              { id: 'profile-member', name: 'Member', permissionIds: [] },
-              { id: 'profile-admin', name: 'Admin', permissionIds: [] }
+              { id: 'profile-member', name: 'Member', capabilityIds: [] },
+              { id: 'profile-admin', name: 'Admin', capabilityIds: [] }
             ],
             members: [{
               id: 'membership-1',
@@ -838,8 +838,8 @@ describe('feature-pack interaction policy', () => {
               },
               governance: { owner: false, admin: false },
               profile: { id: 'profile-member', name: 'Member' },
-              directPermissionIds: [],
-              effectivePermissionIds: [],
+              directCapabilityIds: [],
+              effectiveCapabilityIds: [],
               actionPolicy: { setProfile: true }
             }]
           }
@@ -903,8 +903,8 @@ describe('feature-pack interaction policy', () => {
                 active: true
               },
               governance: { owner: true, admin: true },
-              directPermissionIds: [],
-              effectivePermissionIds: []
+              directCapabilityIds: [],
+              effectiveCapabilityIds: []
             }]
           }
         }}
@@ -964,8 +964,8 @@ describe('feature-pack interaction policy', () => {
                 email: 'ada@example.com',
                 lifecycle: { approved: true, verified: true, banned: false, disabled: false, active: true },
                 governance: { owner: true, admin: true },
-                directPermissionIds: [],
-                effectivePermissionIds: []
+                directCapabilityIds: [],
+                effectiveCapabilityIds: []
               },
               {
                 id: 'membership-2',
@@ -974,8 +974,8 @@ describe('feature-pack interaction policy', () => {
                 email: 'grace@example.com',
                 lifecycle: { approved: true, verified: true, banned: false, disabled: false, active: true },
                 governance: { owner: false, admin: false },
-                directPermissionIds: [],
-                effectivePermissionIds: []
+                directCapabilityIds: [],
+                effectiveCapabilityIds: []
               }
             ]
           }
@@ -1065,8 +1065,8 @@ describe('feature-pack interaction policy', () => {
             profiles: [{
               id: 'profile-admin',
               name: 'Administrator',
-              permissions: '',
-              permissionIds: [],
+              capabilities: '',
+              capabilityIds: [],
               isSystem: false,
               isDefault: false
             }],
@@ -1205,8 +1205,8 @@ describe('feature-pack interaction policy', () => {
                 email: 'ada@example.com',
                 lifecycle: { approved: true, verified: true, banned: false, disabled: false, active: true },
                 governance: { owner: true, admin: true },
-                directPermissionIds: [],
-                effectivePermissionIds: []
+                directCapabilityIds: [],
+                effectiveCapabilityIds: []
               }]
             }
           }
@@ -1353,8 +1353,8 @@ describe('feature-pack interaction policy', () => {
           profiles: [{
             id: 'profile-support',
             name: 'Support',
-            permissions: '',
-            permissionIds: [],
+            capabilities: '',
+            capabilityIds: [],
             isSystem: false,
             isDefault: false
           }],

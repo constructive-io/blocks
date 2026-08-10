@@ -153,14 +153,14 @@ export interface SchemaBuilderIndexesCapabilities {
 }
 
 export interface SchemaBuilderPoliciesCapabilities {
-  appPermissions: SchemaBuilderOperation;
+  appCapabilities: SchemaBuilderOperation;
   createField: SchemaBuilderOperation;
   createSecureTableProvision: SchemaBuilderOperation;
   createTable: SchemaBuilderOperation;
   createTableGrant: SchemaBuilderOperation;
   deletePolicy: SchemaBuilderOperation;
   fields: SchemaBuilderOperation;
-  orgPermissions: SchemaBuilderOperation;
+  orgCapabilities: SchemaBuilderOperation;
   tables: SchemaBuilderOperation;
   updatePolicy: SchemaBuilderOperation;
 }

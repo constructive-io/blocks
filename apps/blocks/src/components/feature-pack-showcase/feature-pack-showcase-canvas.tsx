@@ -298,8 +298,8 @@ export function FeaturePackShowcaseCanvas({
               recordAction(`setAdmin('${userId}', ${admin})`),
             setProfile: ({ membershipId, profileId }) =>
               recordAction(`setProfile('${membershipId}', '${profileId ?? ''}')`),
-            setDirectPermission: ({ userId, permissionId, granted }) =>
-              recordAction(`setDirectPermission('${userId}', '${permissionId}', ${granted})`),
+            setDirectCapability: ({ userId, capabilityId, granted }) =>
+              recordAction(`setDirectCapability('${userId}', '${capabilityId}', ${granted})`),
             createProfile: ({ name, slug }) =>
               recordAction(`createProfile('${name}', '${slug}')`),
             updateProfile: ({ profileId, name, slug }) =>
@@ -307,10 +307,10 @@ export function FeaturePackShowcaseCanvas({
             deleteProfile: ({ profileId }) => recordAction(`deleteProfile('${profileId}')`),
             setDefaultProfile: ({ profileId }) =>
               recordAction(`setDefaultProfile('${profileId}')`),
-            setProfilePermission: ({ profileId, permissionId, granted }) =>
-              recordAction(`setProfilePermission('${profileId}', '${permissionId}', ${granted})`),
-            setDefaultPermission: ({ permissionId, granted }) =>
-              recordAction(`setDefaultPermission('${permissionId}', ${granted})`),
+            setProfileCapability: ({ profileId, capabilityId, granted }) =>
+              recordAction(`setProfileCapability('${profileId}', '${capabilityId}', ${granted})`),
+            setDefaultCapability: ({ capabilityId, granted }) =>
+              recordAction(`setDefaultCapability('${capabilityId}', ${granted})`),
             cancelInvite: ({ inviteId }) => recordAction(`cancelInvite('${inviteId}')`),
             extendInvite: ({ inviteId }) => recordAction(`extendInvite('${inviteId}')`),
           }}
@@ -325,13 +325,13 @@ export function FeaturePackShowcaseCanvas({
             setOwner: true,
             setAdmin: true,
             setProfile: true,
-            setDirectPermission: true,
+            setDirectCapability: true,
             createProfile: true,
             updateProfile: true,
             deleteProfile: true,
             setDefaultProfile: true,
-            setProfilePermission: true,
-            setDefaultPermission: true,
+            setProfileCapability: true,
+            setDefaultCapability: true,
             cancelInvite: true,
             extendInvite: true,
           }}
@@ -357,8 +357,8 @@ export function FeaturePackShowcaseCanvas({
               recordAction(`setMemberOwner('${organizationId}', '${actorId}', ${isGrant})`),
             setMemberProfile: ({ organizationId, membershipId, profileId, isGrant }) =>
               recordAction(`setMemberProfile('${organizationId}', '${membershipId}', '${profileId}', ${isGrant})`),
-            setMemberPermission: ({ organizationId, actorId, permissions, isGrant }) =>
-              recordAction(`setMemberPermission('${organizationId}', '${actorId}', '${permissions}', ${isGrant})`),
+            setMemberCapability: ({ organizationId, actorId, capabilities, isGrant }) =>
+              recordAction(`setMemberCapability('${organizationId}', '${actorId}', '${capabilities}', ${isGrant})`),
             removeMember: ({ organizationId, membershipId }) =>
               recordAction(`removeMember('${organizationId}', '${membershipId}')`),
             cancelInvite: ({ organizationId, inviteId }) =>
@@ -378,7 +378,7 @@ export function FeaturePackShowcaseCanvas({
             grantAdmin: true,
             grantOwner: true,
             assignProfile: true,
-            grantPermission: true,
+            grantCapability: true,
             removeMember: true,
             cancelInvite: true,
           }}

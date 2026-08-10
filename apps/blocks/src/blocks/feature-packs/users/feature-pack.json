@@ -2,12 +2,12 @@
   "schemaVersion": 1,
   "id": "users",
   "title": "App access",
-  "description": "Application member governance, lifecycle controls, profiles, permission grants, and invitations.",
+  "description": "Application member governance, lifecycle controls, profiles, capability grants, and invitations.",
   "dependencies": [],
   "endpoints": { "required": ["admin"], "optional": ["auth"] },
   "capabilities": {
     "required": ["users.directory", "users.memberships"],
-    "optional": ["users.permissions", "users.profiles", "users.invites"]
+    "optional": ["users.capabilities", "users.profiles", "users.invites"]
   },
   "metadata": {
     "requiredMetaSections": [],

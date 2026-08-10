@@ -27,22 +27,22 @@ export function connectionNodes(value: unknown): Record<string, unknown>[] {
   return nodes;
 }
 
-export function hasEffectivePermission(
+export function hasEffectiveCapability(
   membership: Record<string, unknown> | undefined,
-  permissionRows: readonly Record<string, unknown>[],
-  permissionName: string
+  capabilityRows: readonly Record<string, unknown>[],
+  capabilityName: string
 ): boolean {
-  const effectiveMask = asString(membership?.permissions);
-  const requiredMask = asString(permissionRows.find(
-    (permission) => asString(permission.name) === permissionName
+  const effectiveMask = asString(membership?.capabilities);
+  const requiredMask = asString(capabilityRows.find(
+    (capability) => asString(capability.name) === capabilityName
   )?.bitstr);
-  return Boolean(requiredMask?.includes('1')) && permissionMaskIsSubset(
+  return Boolean(requiredMask?.includes('1')) && capabilityMaskIsSubset(
     requiredMask,
     effectiveMask
   );
 }
 
-export function permissionMaskIsSubset(
+export function capabilityMaskIsSubset(
   requiredValue: unknown,
   effectiveValue: unknown
 ): boolean {
