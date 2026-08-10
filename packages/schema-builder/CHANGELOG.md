@@ -3,6 +3,17 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.5.1](https://github.com/constructive-io/blocks/compare/@constructive-io/schema-builder@0.5.0...@constructive-io/schema-builder@0.5.1) (2026-08-10)
+
+
+### Bug Fixes
+
+* **policies:** bind the capability picker to the array parameters ([ce2eb4c](https://github.com/constructive-io/blocks/commit/ce2eb4c8bb4615f8588b800bfb51636467639f79))
+
+
+
+
+
 # [0.5.0](https://github.com/constructive-io/blocks/compare/@constructive-io/schema-builder@0.4.1...@constructive-io/schema-builder@0.5.0) (2026-08-10)
 
 
