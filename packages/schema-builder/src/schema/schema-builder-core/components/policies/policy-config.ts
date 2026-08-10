@@ -84,11 +84,17 @@ export const POLICY_TYPE_UI_CONFIG: Record<string, PolicyTypeUIConfig> = {
 				hidden: true,
 				defaultValue: MEMBERSHIP_TYPES.ORGANIZATION,
 			},
-			permission: {
-				type: 'string',
+			capabilities: {
+				type: 'string[]',
 				component: 'capability-select',
-				label: 'Required Capability',
-				description: paramOf(NodeTypes.AuthzEntityMembership)?.permission?.description,
+				label: 'Required Capabilities',
+				description: paramOf(NodeTypes.AuthzEntityMembership)?.capabilities?.description,
+			},
+			levels: {
+				type: 'string[]',
+				component: 'level-select',
+				label: 'Required Levels',
+				description: paramOf(NodeTypes.AuthzEntityMembership)?.levels?.description,
 			},
 			is_admin: {
 				type: 'boolean',
@@ -130,11 +136,17 @@ export const POLICY_TYPE_UI_CONFIG: Record<string, PolicyTypeUIConfig> = {
 		category: 'no-fields',
 		hasDataNode: false,
 		fieldOverrides: {
-			permission: {
-				type: 'string',
+			capabilities: {
+				type: 'string[]',
 				component: 'capability-select',
-				label: 'Required Capability',
-				description: paramOf(NodeTypes.AuthzAppMembership)?.permission?.description,
+				label: 'Required Capabilities',
+				description: paramOf(NodeTypes.AuthzAppMembership)?.capabilities?.description,
+			},
+			levels: {
+				type: 'string[]',
+				component: 'level-select',
+				label: 'Required Levels',
+				description: paramOf(NodeTypes.AuthzAppMembership)?.levels?.description,
 			},
 			is_admin: {
 				type: 'boolean',
@@ -326,11 +338,17 @@ export const POLICY_TYPE_UI_CONFIG: Record<string, PolicyTypeUIConfig> = {
 				description: paramOf(NodeTypes.AuthzRelatedEntityMembership)?.obj_field?.description,
 				dependsOn: 'obj_table',
 			},
-			permission: {
-				type: 'string',
+			capabilities: {
+				type: 'string[]',
 				component: 'capability-select',
-				label: 'Required Capability',
-				description: paramOf(NodeTypes.AuthzRelatedEntityMembership)?.permission?.description,
+				label: 'Required Capabilities',
+				description: paramOf(NodeTypes.AuthzRelatedEntityMembership)?.capabilities?.description,
+			},
+			levels: {
+				type: 'string[]',
+				component: 'level-select',
+				label: 'Required Levels',
+				description: paramOf(NodeTypes.AuthzRelatedEntityMembership)?.levels?.description,
 			},
 			is_admin: {
 				type: 'boolean',

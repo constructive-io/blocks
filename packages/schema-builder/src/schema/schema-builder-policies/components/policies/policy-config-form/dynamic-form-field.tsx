@@ -19,11 +19,13 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from '@constructive-io/ui/select';
+import { MultiSelect } from '@constructive-io/ui/multi-select';
 import { Switch } from '@constructive-io/ui/switch';
 import { Info } from 'lucide-react';
 
 import { MEMBERSHIP_TYPES } from '@/blocks/schema/schema-builder-core/lib/constants/membership-types';
 import type { PolicyTableData } from '@/blocks/schema/schema-builder-core/lib/gql/hooks/schema-builder/policies/use-database-policies';
+import type { CapabilityKind } from '../../../lib/gql/hooks/schema-builder/policies/use-capabilities';
 import { useCapabilities } from '../../../lib/gql/hooks/schema-builder/policies/use-capabilities';
 
 import { MultiValueFieldEditor } from '../multi-value-field-editor';
@@ -211,7 +213,13 @@ function DependentFieldSelectField({
 }
 
 /**
- * Capability select dropdown, populated from useCapabilities
+ * Multi-select over the capability catalog, populated from useCapabilities.
+ *
+ * The platform merges every selected name into a single bitmask, so both the
+ * `capabilities` and `levels` parameters are string arrays. `kind` splits the one
+ * catalog into the two: trust-ladder levels are not operator-grantable
+ * capabilities, so gating a policy on one from the capability picker is never
+ * what an operator means.
  */
 function CapabilitySelectField({
 	field,
@@ -219,38 +227,44 @@ function CapabilitySelectField({
 	onChange,
 	disabled,
 	formData,
+	kind,
 }: {
 	field: FormFieldSchema;
-	value: string | undefined;
+	value: string[] | undefined;
 	onChange: (value: unknown) => void;
 	disabled?: boolean;
 	formData?: Record<string, unknown>;
+	kind: CapabilityKind;
 }) {
 	const { data: capabilities, isLoading } = useCapabilities();
 	const membershipType = formData?.membership_type as number | null | undefined;
 	const isAppLevel = membershipType === MEMBERSHIP_TYPES.APP;
 	const capabilitiesList = isAppLevel ? capabilities?.appCapabilities || [] : capabilities?.membershipCapabilities || [];
 
+	const options = useMemo(
+		() =>
+			capabilitiesList
+				.filter((capability) => capability.name && capability.kind === kind)
+				.map((capability) => ({
+					value: capability.name,
+					label: capability.name,
+					description: capability.description,
+				})),
+		[capabilitiesList, kind],
+	);
+
+	const noun = kind === 'level' ? 'levels' : 'capabilities';
+	const scope = isAppLevel ? 'app' : 'membership';
+
 	return (
-		<Select value={value || ''} onValueChange={(v) => onChange(v || undefined)} disabled={disabled}>
-			<SelectTrigger>
-				<SelectValue
-					placeholder={isLoading ? 'Loading...' : `Select ${isAppLevel ? 'app' : 'membership'} capability`}
-				/>
-			</SelectTrigger>
-			<SelectContent className='max-h-48'>
-				{capabilitiesList
-					.filter((p) => p.name)
-					.map((capability) => (
-						<SelectRichItem
-							key={capability.id}
-							value={capability.name!}
-							label={capability.name ?? undefined}
-							description={capability.description}
-						/>
-					))}
-			</SelectContent>
-		</Select>
+		<MultiSelect
+			options={options}
+			defaultValue={value ?? []}
+			onValueChange={(next) => onChange(next.length > 0 ? next : undefined)}
+			disabled={disabled}
+			placeholder={isLoading ? 'Loading...' : `Select ${scope} ${noun}`}
+			emptyIndicator={`No ${scope} ${noun} defined`}
+		/>
 	);
 }
 
@@ -343,13 +357,15 @@ export function DynamicFormField({ field, value, onChange, disabled, tables, for
 				);
 
 			case 'capability-select':
+			case 'level-select':
 				return (
 					<CapabilitySelectField
 						field={field}
-						value={(value as string) ?? undefined}
+						value={(value as string[]) ?? undefined}
 						onChange={onChange}
 						disabled={disabled}
 						formData={formData}
+						kind={field.type === 'level-select' ? 'level' : 'permission'}
 					/>
 				);
 

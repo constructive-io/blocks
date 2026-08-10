@@ -147,12 +147,12 @@ export interface CreateTableWithPoliciesInput {
 /**
  * Primitive data type for a field override. Determines the default form component.
  */
-export type FieldType = 'string' | 'boolean' | 'integer' | 'uuid' | 'uuid[]';
+export type FieldType = 'string' | 'string[]' | 'boolean' | 'integer' | 'uuid' | 'uuid[]';
 
 /**
  * Specialized form component override. Takes priority over type-based resolution.
  */
-export type FieldComponent = 'table-select' | 'membership-type-select' | 'capability-select';
+export type FieldComponent = 'table-select' | 'membership-type-select' | 'capability-select' | 'level-select';
 
 /**
  * Field override for customizing how a policy parameter is displayed in the form.
@@ -265,6 +265,7 @@ export type FormFieldType =
 	| 'table-select'
 	| 'membership-type-select'
 	| 'capability-select'
+	| 'level-select'
 	| 'boolean'
 	| 'number';
 
