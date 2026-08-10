@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import {
 	Combobox,
 	ComboboxEmpty,
@@ -25,7 +25,7 @@ import { Info } from 'lucide-react';
 
 import { MEMBERSHIP_TYPES } from '@/blocks/schema/schema-builder-core/lib/constants/membership-types';
 import type { PolicyTableData } from '@/blocks/schema/schema-builder-core/lib/gql/hooks/schema-builder/policies/use-database-policies';
-import type { CapabilityKind } from '../../../lib/gql/hooks/schema-builder/policies/use-capabilities';
+import type { CapabilityKind, CapabilityNode } from '../../../lib/gql/hooks/schema-builder/policies/use-capabilities';
 import { useCapabilities } from '../../../lib/gql/hooks/schema-builder/policies/use-capabilities';
 
 import { MultiValueFieldEditor } from '../multi-value-field-editor';
@@ -212,6 +212,28 @@ function DependentFieldSelectField({
 	);
 }
 
+/** Whether two bitstrings of possibly different widths share a set bit. */
+function bitsIntersect(a: string, b: string) {
+	for (let i = 1; i <= Math.min(a.length, b.length); i += 1) {
+		if (a[a.length - i] === '1' && b[b.length - i] === '1') return true;
+	}
+	return false;
+}
+
+/**
+ * The names a mask requires, per the catalog it was compiled against.
+ *
+ * A saved policy stores only the compiled mask, so reopening one has to decode
+ * it: each catalog row owns one bit, and a name is required when its bit is set.
+ * Nothing is persisted twice — the mask stays the single source of truth.
+ */
+export function decodeMask(mask: string, capabilities: CapabilityNode[], kind: CapabilityKind) {
+	return capabilities
+		.filter((capability) => capability.name && capability.kind === kind && capability.bitstr)
+		.filter((capability) => bitsIntersect(mask, capability.bitstr as string))
+		.map((capability) => capability.name);
+}
+
 /**
  * Multi-select over the capability catalog, populated from useCapabilities.
  *
@@ -253,14 +275,28 @@ function CapabilitySelectField({
 		[capabilitiesList, kind],
 	);
 
+	// An unedited policy carries no names, only the mask the parser compiled.
+	// Once the operator has touched the picker their selection wins, so clearing
+	// it does not snap back to the mask it was opened with.
+	const [isTouched, setIsTouched] = useState(false);
+	const selected = useMemo(() => {
+		if (value) return value;
+		const mask = formData?.mask;
+		if (isTouched || typeof mask !== 'string') return [];
+		return decodeMask(mask, capabilitiesList, kind);
+	}, [value, formData?.mask, isTouched, capabilitiesList, kind]);
+
 	const noun = kind === 'level' ? 'levels' : 'capabilities';
 	const scope = isAppLevel ? 'app' : 'membership';
 
 	return (
 		<MultiSelect
 			options={options}
-			defaultValue={value ?? []}
-			onValueChange={(next) => onChange(next.length > 0 ? next : undefined)}
+			defaultValue={selected}
+			onValueChange={(next) => {
+				setIsTouched(true);
+				onChange(next.length > 0 ? next : undefined);
+			}}
 			disabled={disabled}
 			placeholder={isLoading ? 'Loading...' : `Select ${scope} ${noun}`}
 			emptyIndicator={`No ${scope} ${noun} defined`}
