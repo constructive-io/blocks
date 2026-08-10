@@ -6,8 +6,12 @@ const MEMBERSHIP_TYPES = {
 	GROUP: 3,
 } as const;
 
-export type PolicyFieldType = 'string' | 'boolean' | 'integer' | 'uuid' | 'uuid[]';
-export type PolicyFieldComponent = 'table-select' | 'membership-type-select' | 'capability-select';
+export type PolicyFieldType = 'string' | 'string[]' | 'boolean' | 'integer' | 'uuid' | 'uuid[]';
+export type PolicyFieldComponent =
+	| 'table-select'
+	| 'membership-type-select'
+	| 'capability-select'
+	| 'level-select';
 export type PolicyProvisioningCategory = 'has-module' | 'needs-fields' | 'needs-table' | 'no-fields';
 
 export interface PolicyFieldOverride {
@@ -73,11 +77,17 @@ export const POLICY_PROVISIONING_CONFIG: Record<string, PolicyProvisioningConfig
 				hidden: true,
 				defaultValue: MEMBERSHIP_TYPES.ORGANIZATION,
 			},
-			permission: {
-				type: 'string',
+			capabilities: {
+				type: 'string[]',
 				component: 'capability-select',
-				label: 'Required Capability',
-				description: 'Optional capability the user must have',
+				label: 'Required Capabilities',
+				description: 'Capabilities the user must have (merged into a single mask)',
+			},
+			levels: {
+				type: 'string[]',
+				component: 'level-select',
+				label: 'Required Levels',
+				description: 'Trust-ladder level names to require (merged into the same mask)',
 			},
 			is_admin: {
 				type: 'boolean',
@@ -109,11 +119,17 @@ export const POLICY_PROVISIONING_CONFIG: Record<string, PolicyProvisioningConfig
 		category: 'no-fields',
 		hasDataNode: false,
 		fieldOverrides: {
-			permission: {
-				type: 'string',
+			capabilities: {
+				type: 'string[]',
 				component: 'capability-select',
-				label: 'Required Capability',
-				description: 'Optional capability the user must have',
+				label: 'Required Capabilities',
+				description: 'Capabilities the user must have (merged into a single mask)',
+			},
+			levels: {
+				type: 'string[]',
+				component: 'level-select',
+				label: 'Required Levels',
+				description: 'Trust-ladder level names to require (merged into the same mask)',
 			},
 			is_admin: {
 				type: 'boolean',
@@ -276,10 +292,17 @@ export const POLICY_PROVISIONING_CONFIG: Record<string, PolicyProvisioningConfig
 				description: 'Field containing entity ID for membership check',
 				dependsOn: 'obj_table',
 			},
-			permission: {
-				type: 'string',
+			capabilities: {
+				type: 'string[]',
 				component: 'capability-select',
-				label: 'Required Capability',
+				label: 'Required Capabilities',
+				description: 'Capabilities the user must have (merged into a single mask)',
+			},
+			levels: {
+				type: 'string[]',
+				component: 'level-select',
+				label: 'Required Levels',
+				description: 'Trust-ladder level names to require (merged into the same mask)',
 			},
 			is_admin: {
 				type: 'boolean',
