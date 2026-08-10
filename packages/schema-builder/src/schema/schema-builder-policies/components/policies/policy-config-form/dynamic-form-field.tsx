@@ -24,7 +24,7 @@ import { Info } from 'lucide-react';
 
 import { MEMBERSHIP_TYPES } from '@/blocks/schema/schema-builder-core/lib/constants/membership-types';
 import type { PolicyTableData } from '@/blocks/schema/schema-builder-core/lib/gql/hooks/schema-builder/policies/use-database-policies';
-import { usePermissions } from '../../../lib/gql/hooks/schema-builder/policies/use-permissions';
+import { useCapabilities } from '../../../lib/gql/hooks/schema-builder/policies/use-capabilities';
 
 import { MultiValueFieldEditor } from '../multi-value-field-editor';
 import type { FormFieldSchema } from '@/blocks/schema/schema-builder-core/components/policies/policy-types';
@@ -211,9 +211,9 @@ function DependentFieldSelectField({
 }
 
 /**
- * Permission select dropdown, populated from usePermissions
+ * Capability select dropdown, populated from useCapabilities
  */
-function PermissionSelectField({
+function CapabilitySelectField({
 	field,
 	value,
 	onChange,
@@ -226,27 +226,27 @@ function PermissionSelectField({
 	disabled?: boolean;
 	formData?: Record<string, unknown>;
 }) {
-	const { data: permissions, isLoading } = usePermissions();
+	const { data: capabilities, isLoading } = useCapabilities();
 	const membershipType = formData?.membership_type as number | null | undefined;
 	const isAppLevel = membershipType === MEMBERSHIP_TYPES.APP;
-	const permissionsList = isAppLevel ? permissions?.appPermissions || [] : permissions?.membershipPermissions || [];
+	const capabilitiesList = isAppLevel ? capabilities?.appCapabilities || [] : capabilities?.membershipCapabilities || [];
 
 	return (
 		<Select value={value || ''} onValueChange={(v) => onChange(v || undefined)} disabled={disabled}>
 			<SelectTrigger>
 				<SelectValue
-					placeholder={isLoading ? 'Loading...' : `Select ${isAppLevel ? 'app' : 'membership'} permission`}
+					placeholder={isLoading ? 'Loading...' : `Select ${isAppLevel ? 'app' : 'membership'} capability`}
 				/>
 			</SelectTrigger>
 			<SelectContent className='max-h-48'>
-				{permissionsList
+				{capabilitiesList
 					.filter((p) => p.name)
-					.map((permission) => (
+					.map((capability) => (
 						<SelectRichItem
-							key={permission.id}
-							value={permission.name!}
-							label={permission.name ?? undefined}
-							description={permission.description}
+							key={capability.id}
+							value={capability.name!}
+							label={capability.name ?? undefined}
+							description={capability.description}
 						/>
 					))}
 			</SelectContent>
@@ -342,9 +342,9 @@ export function DynamicFormField({ field, value, onChange, disabled, tables, for
 					</Select>
 				);
 
-			case 'permission-select':
+			case 'capability-select':
 				return (
-					<PermissionSelectField
+					<CapabilitySelectField
 						field={field}
 						value={(value as string) ?? undefined}
 						onChange={onChange}

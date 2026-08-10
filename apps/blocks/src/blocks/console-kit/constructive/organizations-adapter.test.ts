@@ -133,7 +133,7 @@ function runtime(
           ? {
               ok: false,
               errors: [{
-                message: 'permission denied for table optional_organization_surface',
+                message: 'capability denied for table optional_organization_surface',
                 extensions: { code: '42501' }
               }]
             }
@@ -166,8 +166,8 @@ function organizationSchemas(): ConstructiveSchemaMap {
         'orgMemberships',
         'orgMemberProfiles',
         'orgProfiles',
-        'orgProfilePermissions',
-        'orgPermissions',
+        'orgProfileCapabilities',
+        'orgCapabilities',
         'orgMembershipSettings',
         'orgMembershipDefaults',
         'orgChartEdges',
@@ -205,7 +205,7 @@ function organizationSchemas(): ConstructiveSchemaMap {
           'isDisabled',
           'isExternal',
           'isReadOnly',
-          'permissions',
+          'capabilities',
           'granted',
           'profileId'
         ]),
@@ -213,10 +213,10 @@ function organizationSchemas(): ConstructiveSchemaMap {
           'id', 'membershipId', 'entityId', 'actorId', 'displayName', 'email', 'title', 'bio'
         ]),
         objectType('OrgProfile', [
-          'id', 'name', 'slug', 'description', 'entityId', 'permissions', 'isSystem', 'isDefault'
+          'id', 'name', 'slug', 'description', 'entityId', 'capabilities', 'isSystem', 'isDefault'
         ]),
-        objectType('OrgProfilePermission', ['id', 'profileId', 'permissionId']),
-        objectType('OrgPermission', ['id', 'name', 'description', 'bitstr']),
+        objectType('OrgProfileCapability', ['id', 'profileId', 'capabilityId']),
+        objectType('OrgCapability', ['id', 'name', 'description', 'bitstr']),
         objectType('OrgMembershipSetting', [
           'id',
           'entityId',
@@ -278,7 +278,7 @@ function organizationSchemas(): ConstructiveSchemaMap {
           'CreateOrgGrant',
           'orgGrant',
           'OrgGrantInput',
-          { entityId: 'UUID', actorId: 'UUID', permissions: 'BitString', isGrant: 'Boolean' }
+          { entityId: 'UUID', actorId: 'UUID', capabilities: 'BitString', isGrant: 'Boolean' }
         ),
         ...nestedMutationTypes(
           'CreateOrgProfileGrant',
@@ -290,7 +290,7 @@ function organizationSchemas(): ConstructiveSchemaMap {
           'CreateOrgProfileDefinitionGrant',
           'orgProfileDefinitionGrant',
           'OrgProfileDefinitionGrantInput',
-          { profileId: 'UUID', permissionId: 'UUID', isGrant: 'Boolean' }
+          { profileId: 'UUID', capabilityId: 'UUID', isGrant: 'Boolean' }
         ),
         ...nestedMutationTypes(
           'CreateOrgProfile',
@@ -425,7 +425,7 @@ type OrganizationResponderOverride = (call: GraphQLCall) => unknown | undefined;
 function organizationMembership(
   id: string,
   actorId: string,
-  permissions: string,
+  capabilities: string,
   overrides: Readonly<Record<string, unknown>> = {}
 ): Record<string, unknown> {
   return {
@@ -440,8 +440,8 @@ function organizationMembership(
     isDisabled: false,
     isExternal: false,
     isReadOnly: false,
-    permissions,
-    granted: permissions,
+    capabilities,
+    granted: capabilities,
     ...overrides
   };
 }
@@ -479,7 +479,7 @@ function organizationResponder(
               isDisabled: false,
               isExternal: false,
               isReadOnly: false,
-              permissions: '1111',
+              capabilities: '1111',
               granted: '1111'
             },
             {
@@ -494,7 +494,7 @@ function organizationResponder(
               isDisabled: false,
               isExternal: false,
               isReadOnly: false,
-              permissions: '0001',
+              capabilities: '0001',
               granted: '0001',
               profileId: 'profile-1'
             },
@@ -510,7 +510,7 @@ function organizationResponder(
               isDisabled: false,
               isExternal: false,
               isReadOnly: false,
-              permissions: '0000',
+              capabilities: '0000',
               granted: '0000'
             },
             {
@@ -520,7 +520,7 @@ function organizationResponder(
               isOwner: false,
               isAdmin: false,
               isActive: true,
-              permissions: '0000'
+              capabilities: '0000'
             }
           ]
         }
@@ -551,7 +551,7 @@ function organizationResponder(
               name: 'Member',
               description: 'Member access',
               entityId: 'org-1',
-              permissions: '0001',
+              capabilities: '0001',
               isSystem: false,
               isDefault: true
             },
@@ -559,7 +559,7 @@ function organizationResponder(
               id: 'profile-foreign',
               name: 'Foreign',
               entityId: 'org-foreign',
-              permissions: '1111',
+              capabilities: '1111',
               isSystem: false,
               isDefault: false
             }
@@ -567,37 +567,37 @@ function organizationResponder(
         }
       };
     }
-    if (call.document.includes('ConsoleKitOrganizationProfilePermissionsPage')) {
+    if (call.document.includes('ConsoleKitOrganizationProfileCapabilitiesPage')) {
       return {
-        orgProfilePermissions: {
-          nodes: [{ id: 'profile-permission-1', profileId: 'profile-1', permissionId: 'permission-1' }]
+        orgProfileCapabilities: {
+          nodes: [{ id: 'profile-capability-1', profileId: 'profile-1', capabilityId: 'capability-1' }]
         }
       };
     }
-    if (call.document.includes('ConsoleKitOrganizationMembershipsPermissionsPage')) {
+    if (call.document.includes('ConsoleKitOrganizationMembershipsCapabilitiesPage')) {
       return {
-        orgPermissions: {
+        orgCapabilities: {
           nodes: [
             {
-              id: 'permission-1',
+              id: 'capability-1',
               name: 'admin_members',
               description: 'Manage members',
               bitstr: '0001'
             },
             {
-              id: 'permission-2',
-              name: 'admin_permissions',
-              description: 'Manage permissions',
+              id: 'capability-2',
+              name: 'admin_capabilities',
+              description: 'Manage capabilities',
               bitstr: '0010'
             },
             {
-              id: 'permission-3',
+              id: 'capability-3',
               name: 'admin_invites',
               description: 'Manage invitations',
               bitstr: '0100'
             },
             {
-              id: 'permission-4',
+              id: 'capability-4',
               name: 'manage_hierarchy',
               description: 'Manage hierarchy',
               bitstr: '1000'
@@ -835,12 +835,12 @@ describe('Constructive organizations semantic mutation contract', () => {
       approveMember: true,
       grantAdmin: true,
       grantOwner: true,
-      grantPermission: true,
+      grantCapability: true,
       assignProfile: true,
       createAccessProfile: true,
       updateAccessProfile: true,
       deleteAccessProfile: true,
-      setProfilePermission: true,
+      setProfileCapability: true,
       updateMemberProfile: true,
       updateMembershipSettings: true,
       updateMembershipDefault: true
@@ -865,10 +865,10 @@ describe('Constructive organizations semantic mutation contract', () => {
       actorId: 'user-member',
       isGrant: true
     });
-    await loaded.actions?.setMemberPermission?.({
+    await loaded.actions?.setMemberCapability?.({
       organizationId: 'org-1',
       actorId: 'user-member',
-      permissions: '0001',
+      capabilities: '0001',
       isGrant: true
     });
     await loaded.actions?.setMemberProfile?.({
@@ -877,10 +877,10 @@ describe('Constructive organizations semantic mutation contract', () => {
       profileId: 'profile-1',
       isGrant: true
     });
-    await loaded.actions?.setProfilePermission?.({
+    await loaded.actions?.setProfileCapability?.({
       organizationId: 'org-1',
       profileId: 'profile-1',
-      permissionId: 'permission-2',
+      capabilityId: 'capability-2',
       isGrant: true
     });
     await loaded.actions?.upsertMemberProfile?.({
@@ -941,7 +941,7 @@ describe('Constructive organizations semantic mutation contract', () => {
         orgGrant: {
           entityId: 'org-1',
           actorId: 'user-member',
-          permissions: '0001',
+          capabilities: '0001',
           isGrant: true
         }
       }
@@ -960,7 +960,7 @@ describe('Constructive organizations semantic mutation contract', () => {
       input: {
         orgProfileDefinitionGrant: {
           profileId: 'profile-1',
-          permissionId: 'permission-2',
+          capabilityId: 'capability-2',
           isGrant: true
         }
       }
@@ -1009,7 +1009,7 @@ describe('Constructive organizations semantic mutation contract', () => {
     });
   });
 
-  it('gates direct member grants by admin_members rather than admin_permissions', async () => {
+  it('gates direct member grants by admin_members rather than admin_capabilities', async () => {
     const memberAdminCalls: GraphQLCall[] = [];
     const memberAdmin = await loadedOrganizations(memberAdminCalls, {
       subjectId: 'user-member',
@@ -1019,17 +1019,17 @@ describe('Constructive organizations semantic mutation contract', () => {
       ])
     });
 
-    expect(memberAdmin.loaded.policy?.grantPermission).toBe(true);
+    expect(memberAdmin.loaded.policy?.grantCapability).toBe(true);
     expect(memberAdmin.loaded.resource.status).toBe('ready');
     if (memberAdmin.loaded.resource.status === 'ready') {
       expect(memberAdmin.loaded.resource.data.members.find(
         (member) => member.id === 'membership-third'
-      )?.actionPolicy?.grantPermission).toBe(true);
+      )?.actionPolicy?.grantCapability).toBe(true);
     }
-    await memberAdmin.loaded.actions?.setMemberPermission?.({
+    await memberAdmin.loaded.actions?.setMemberCapability?.({
       organizationId: 'org-1',
       actorId: 'user-third',
-      permissions: '0001',
+      capabilities: '0001',
       isGrant: true
     });
     expect(mutationCall(memberAdminCalls, 'ConsoleKitCreateOrgGrant').variables).toEqual({
@@ -1037,21 +1037,21 @@ describe('Constructive organizations semantic mutation contract', () => {
         orgGrant: {
           entityId: 'org-1',
           actorId: 'user-third',
-          permissions: '0001',
+          capabilities: '0001',
           isGrant: true
         }
       }
     });
 
-    const permissionAdmin = await loadedOrganizations([], {
+    const capabilityAdmin = await loadedOrganizations([], {
       subjectId: 'user-member',
       override: membershipOverride([
         organizationMembership('membership-member', 'user-member', '0010'),
         organizationMembership('membership-third', 'user-third', '0000')
       ])
     });
-    expect(permissionAdmin.loaded.policy?.grantPermission).toBe(false);
-    expect(permissionAdmin.loaded.actions?.setMemberPermission).toBeUndefined();
+    expect(capabilityAdmin.loaded.policy?.grantCapability).toBe(false);
+    expect(capabilityAdmin.loaded.actions?.setMemberCapability).toBeUndefined();
   });
 
   it('gates hierarchy writes by manage_hierarchy and rejects inactive actors', async () => {
@@ -1376,10 +1376,10 @@ describe('Constructive organizations semantic mutation contract', () => {
       profileId: 'profile-foreign',
       isGrant: true
     })).rejects.toThrow('not in the current authorized resource');
-    await expect(loaded.actions?.setProfilePermission?.({
+    await expect(loaded.actions?.setProfileCapability?.({
       organizationId: 'org-1',
       profileId: 'profile-1',
-      permissionId: 'permission-foreign',
+      capabilityId: 'capability-foreign',
       isGrant: true
     })).rejects.toThrow('not in the current authorized resource');
     await expect(loaded.actions?.updateMembershipSettings?.({

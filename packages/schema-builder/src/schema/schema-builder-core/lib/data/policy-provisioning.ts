@@ -7,7 +7,7 @@ const MEMBERSHIP_TYPES = {
 } as const;
 
 export type PolicyFieldType = 'string' | 'boolean' | 'integer' | 'uuid' | 'uuid[]';
-export type PolicyFieldComponent = 'table-select' | 'membership-type-select' | 'permission-select';
+export type PolicyFieldComponent = 'table-select' | 'membership-type-select' | 'capability-select';
 export type PolicyProvisioningCategory = 'has-module' | 'needs-fields' | 'needs-table' | 'no-fields';
 
 export interface PolicyFieldOverride {
@@ -75,9 +75,9 @@ export const POLICY_PROVISIONING_CONFIG: Record<string, PolicyProvisioningConfig
 			},
 			permission: {
 				type: 'string',
-				component: 'permission-select',
-				label: 'Required Permission',
-				description: 'Optional permission the user must have',
+				component: 'capability-select',
+				label: 'Required Capability',
+				description: 'Optional capability the user must have',
 			},
 			is_admin: {
 				type: 'boolean',
@@ -111,9 +111,9 @@ export const POLICY_PROVISIONING_CONFIG: Record<string, PolicyProvisioningConfig
 		fieldOverrides: {
 			permission: {
 				type: 'string',
-				component: 'permission-select',
-				label: 'Required Permission',
-				description: 'Optional permission the user must have',
+				component: 'capability-select',
+				label: 'Required Capability',
+				description: 'Optional capability the user must have',
 			},
 			is_admin: {
 				type: 'boolean',
@@ -278,8 +278,8 @@ export const POLICY_PROVISIONING_CONFIG: Record<string, PolicyProvisioningConfig
 			},
 			permission: {
 				type: 'string',
-				component: 'permission-select',
-				label: 'Required Permission',
+				component: 'capability-select',
+				label: 'Required Capability',
 			},
 			is_admin: {
 				type: 'boolean',

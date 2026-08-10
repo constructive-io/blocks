@@ -1,6 +1,6 @@
 /**
  * Hook for creating a table
- * Tier 4 wrapper: adds auto-grant permissions and table selection
+ * Tier 4 wrapper: adds auto-grant capabilities and table selection
  */
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useCreateTableMutation } from '@/generated/schema-builder';
@@ -57,7 +57,7 @@ export function useCreateTable() {
 				throw new Error('Failed to create table');
 			}
 
-			// Step 2: Auto-grant basic permissions to make table immediately usable
+			// Step 2: Auto-grant basic capabilities to make table immediately usable
 			// Default strategy: Grant all CRUD operations to authenticated users (no RLS)
 			// This ensures the table is accessible via the application GraphQL endpoint
 			if (input.databaseId && table.name) {
@@ -71,9 +71,9 @@ export function useCreateTable() {
 				} catch (error) {
 					// Log warning but don't fail table creation
 					console.warn(
-						`⚠️ Table created successfully but failed to grant permissions: ${error instanceof Error ? error.message : 'Unknown error'}`,
+						`⚠️ Table created successfully but failed to grant capabilities: ${error instanceof Error ? error.message : 'Unknown error'}`,
 					);
-					console.warn(`You may need to manually grant permissions for table: ${table.name}`);
+					console.warn(`You may need to manually grant capabilities for table: ${table.name}`);
 				}
 			}
 

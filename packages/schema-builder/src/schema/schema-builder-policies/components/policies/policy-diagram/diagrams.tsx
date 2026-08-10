@@ -158,13 +158,13 @@ export function MembershipDiagram({ tableName, config }: DiagramProps) {
 	const theme = useResolvedTheme('AuthzAppMembership');
 	const scopeLabel = 'App';
 	const isAdmin = config.is_admin as boolean;
-	const permission = config.permission as string;
+	const capability = config.capability as string;
 
 	const accessParts: string[] = [];
 	if (isAdmin) accessParts.push('Admin');
-	if (permission) accessParts.push(permission);
+	if (capability) accessParts.push(capability);
 	const accessLabel = accessParts.length > 0 ? accessParts.join(' / ') : 'access';
-	const hasFilled = isAdmin || !!permission;
+	const hasFilled = isAdmin || !!capability;
 
 	const scopeW = 80;
 	const scopeH = 56;

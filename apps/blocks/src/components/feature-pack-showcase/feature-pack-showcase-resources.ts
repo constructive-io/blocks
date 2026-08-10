@@ -103,21 +103,21 @@ export const FEATURE_PACK_SHOWCASE_AUTH_ACCOUNT: AuthAccountData = {
 };
 
 export const FEATURE_PACK_SHOWCASE_USERS: UsersFeatureData = {
-  permissions: [
+  capabilities: [
     {
-      id: 'permission_admin_members',
+      id: 'capability_admin_members',
       name: 'admin_members',
       description: 'Manage application member lifecycle and access grants.',
       bit: 2,
     },
     {
-      id: 'permission_create_invites',
+      id: 'capability_create_invites',
       name: 'create_invites',
       description: 'Create invitations to this application.',
       bit: 4,
     },
     {
-      id: 'permission_create_entity',
+      id: 'capability_create_entity',
       name: 'create_entity',
       description: 'Create application-owned records.',
       bit: 8,
@@ -129,10 +129,10 @@ export const FEATURE_PACK_SHOWCASE_USERS: UsersFeatureData = {
       name: 'Operator',
       slug: 'operator',
       description: 'Manage members and day-to-day application records.',
-      permissionIds: [
-        'permission_admin_members',
-        'permission_create_invites',
-        'permission_create_entity',
+      capabilityIds: [
+        'capability_admin_members',
+        'capability_create_invites',
+        'capability_create_entity',
       ],
       default: true,
       memberCount: 1,
@@ -140,7 +140,7 @@ export const FEATURE_PACK_SHOWCASE_USERS: UsersFeatureData = {
         updateProfile: true,
         deleteProfile: true,
         setDefaultProfile: true,
-        setProfilePermission: true,
+        setProfileCapability: true,
       },
     },
     {
@@ -148,17 +148,17 @@ export const FEATURE_PACK_SHOWCASE_USERS: UsersFeatureData = {
       name: 'Contributor',
       slug: 'contributor',
       description: 'Create records without membership administration access.',
-      permissionIds: ['permission_create_entity'],
+      capabilityIds: ['capability_create_entity'],
       memberCount: 1,
       actionPolicy: {
         updateProfile: true,
         deleteProfile: true,
         setDefaultProfile: true,
-        setProfilePermission: true,
+        setProfileCapability: true,
       },
     },
   ],
-  defaultPermissionIds: ['permission_create_entity'],
+  defaultCapabilityIds: ['capability_create_entity'],
   inviteProfileIds: ['profile_operator', 'profile_contributor'],
   members: [
     {
@@ -175,11 +175,11 @@ export const FEATURE_PACK_SHOWCASE_USERS: UsersFeatureData = {
       },
       governance: { owner: true, admin: true },
       profile: { id: 'profile_operator', name: 'Operator' },
-      directPermissionIds: [],
-      effectivePermissionIds: [
-        'permission_admin_members',
-        'permission_create_invites',
-        'permission_create_entity',
+      directCapabilityIds: [],
+      effectiveCapabilityIds: [
+        'capability_admin_members',
+        'capability_create_invites',
+        'capability_create_entity',
       ],
       joinedAt: 'Jan 12, 2025',
       actionPolicy: {
@@ -190,7 +190,7 @@ export const FEATURE_PACK_SHOWCASE_USERS: UsersFeatureData = {
         setOwner: false,
         setAdmin: false,
         setProfile: true,
-        setDirectPermission: true,
+        setDirectCapability: true,
       },
     },
     {
@@ -207,11 +207,11 @@ export const FEATURE_PACK_SHOWCASE_USERS: UsersFeatureData = {
       },
       governance: { owner: false, admin: true },
       profile: { id: 'profile_operator', name: 'Operator' },
-      directPermissionIds: [],
-      effectivePermissionIds: [
-        'permission_admin_members',
-        'permission_create_invites',
-        'permission_create_entity',
+      directCapabilityIds: [],
+      effectiveCapabilityIds: [
+        'capability_admin_members',
+        'capability_create_invites',
+        'capability_create_entity',
       ],
       joinedAt: 'Mar 8, 2025',
       actionPolicy: {
@@ -222,7 +222,7 @@ export const FEATURE_PACK_SHOWCASE_USERS: UsersFeatureData = {
         setOwner: true,
         setAdmin: true,
         setProfile: true,
-        setDirectPermission: true,
+        setDirectCapability: true,
       },
     },
     {
@@ -239,8 +239,8 @@ export const FEATURE_PACK_SHOWCASE_USERS: UsersFeatureData = {
       },
       governance: { owner: false, admin: false },
       profile: { id: 'profile_contributor', name: 'Contributor' },
-      directPermissionIds: ['permission_create_invites'],
-      effectivePermissionIds: ['permission_create_invites', 'permission_create_entity'],
+      directCapabilityIds: ['capability_create_invites'],
+      effectiveCapabilityIds: ['capability_create_invites', 'capability_create_entity'],
       joinedAt: 'Jun 18, 2025',
       actionPolicy: {
         setApproved: true,
@@ -250,7 +250,7 @@ export const FEATURE_PACK_SHOWCASE_USERS: UsersFeatureData = {
         setOwner: true,
         setAdmin: true,
         setProfile: true,
-        setDirectPermission: true,
+        setDirectCapability: true,
       },
     },
   ],
@@ -325,7 +325,7 @@ export const FEATURE_PACK_SHOWCASE_ORGANIZATIONS: OrganizationsFeatureData = {
       actionPolicy: {
         grantOwner: true,
         assignProfile: true,
-        grantPermission: true,
+        grantCapability: true,
         updateMemberProfile: true,
       },
     },
@@ -354,7 +354,7 @@ export const FEATURE_PACK_SHOWCASE_ORGANIZATIONS: OrganizationsFeatureData = {
         grantAdmin: true,
         grantOwner: true,
         assignProfile: true,
-        grantPermission: true,
+        grantCapability: true,
         updateMemberProfile: true,
       },
     },
@@ -383,7 +383,7 @@ export const FEATURE_PACK_SHOWCASE_ORGANIZATIONS: OrganizationsFeatureData = {
         grantAdmin: true,
         grantOwner: true,
         assignProfile: true,
-        grantPermission: true,
+        grantCapability: true,
         updateMemberProfile: true,
       },
     },
@@ -403,37 +403,37 @@ export const FEATURE_PACK_SHOWCASE_ORGANIZATIONS: OrganizationsFeatureData = {
       actionPolicy: { cancelInvite: true },
     },
   ],
-  permissions: [
-    { id: 'org_permission_members', name: 'Manage members', bitstr: '01' },
-    { id: 'org_permission_billing', name: 'View billing', bitstr: '10' },
+  capabilities: [
+    { id: 'org_capability_members', name: 'Manage members', bitstr: '01' },
+    { id: 'org_capability_billing', name: 'View billing', bitstr: '10' },
   ],
   profiles: [
     {
       id: 'org_profile_admin',
       name: 'Administrator',
       description: 'Manages organization members and billing.',
-      permissions: '11',
-      permissionIds: ['org_permission_members', 'org_permission_billing'],
+      capabilities: '11',
+      capabilityIds: ['org_capability_members', 'org_capability_billing'],
       isSystem: false,
       isDefault: false,
       actionPolicy: {
         updateAccessProfile: true,
         deleteAccessProfile: true,
-        setProfilePermission: true,
+        setProfileCapability: true,
       },
     },
     {
       id: 'org_profile_member',
       name: 'Member',
       description: 'Standard organization access.',
-      permissions: '00',
-      permissionIds: [],
+      capabilities: '00',
+      capabilityIds: [],
       isSystem: false,
       isDefault: true,
       actionPolicy: {
         updateAccessProfile: true,
         deleteAccessProfile: true,
-        setProfilePermission: true,
+        setProfileCapability: true,
       },
     },
   ],

@@ -87,7 +87,7 @@ export const USERS_FEATURE_PACK = {
   id: 'users',
   title: 'App access',
   description:
-    'Application member governance, lifecycle controls, profiles, permission grants, and invitations.',
+    'Application member governance, lifecycle controls, profiles, capability grants, and invitations.',
   dependencies: [] as FeaturePackManifestV1['dependencies'],
   endpoints: {
     required: ['admin'],
@@ -99,7 +99,7 @@ export const USERS_FEATURE_PACK = {
       'users.memberships'
     ],
     optional: [
-      'users.permissions',
+      'users.capabilities',
       'users.profiles',
       'users.invites'
     ]
@@ -121,7 +121,7 @@ export const ORGANIZATIONS_FEATURE_PACK = {
   capabilities: {
     required: ['organizations.memberships'],
     optional: [
-      'organizations.permissions',
+      'organizations.capabilities',
       'organizations.limits',
       'organizations.profiles',
       'organizations.hierarchy',

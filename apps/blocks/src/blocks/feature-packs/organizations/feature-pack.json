@@ -7,7 +7,7 @@
   "endpoints": { "required": [], "optional": ["admin", "auth", "billing", "data"] },
   "capabilities": {
     "required": ["organizations.memberships"],
-    "optional": ["organizations.permissions", "organizations.limits", "organizations.profiles", "organizations.hierarchy", "organizations.invites"]
+    "optional": ["organizations.capabilities", "organizations.limits", "organizations.profiles", "organizations.hierarchy", "organizations.invites"]
   },
   "metadata": {
     "requiredMetaSections": ["tables", "fields", "constraints", "relations", "query", "scope"],

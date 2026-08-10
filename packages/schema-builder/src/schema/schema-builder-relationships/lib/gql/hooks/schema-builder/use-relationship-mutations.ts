@@ -375,14 +375,14 @@ export function useCreateManyToMany() {
 				type: 'u',
 			});
 
-			// Step 7: Grant permissions (non-fatal, after all DDL is complete)
+			// Step 7: Grant capabilities (non-fatal, after all DDL is complete)
 			await createGrant({
 				databaseId,
 				tableName: junctionTableName,
 				privileges: ['select', 'insert', 'update', 'delete'],
 				roleName: 'authenticated',
 			}).catch((error) => {
-				console.warn(`Failed to grant permissions for junction table: ${error instanceof Error ? error.message : 'Unknown error'}`);
+				console.warn(`Failed to grant capabilities for junction table: ${error instanceof Error ? error.message : 'Unknown error'}`);
 			});
 
 			return {

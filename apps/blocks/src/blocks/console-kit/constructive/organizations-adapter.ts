@@ -9,7 +9,7 @@ import type {
   OrganizationMemberRowAction,
   OrganizationMembershipDefault,
   OrganizationMembershipSettings,
-  OrganizationPermission,
+  OrganizationCapability,
   OrganizationPrincipal,
   OrganizationsFeatureData,
   OrganizationsFeaturePackProps,
@@ -37,11 +37,11 @@ import {
   asRecord,
   asString,
   expiresIn,
-  hasEffectivePermission,
+  hasEffectiveCapability,
   imageUrl,
   notifyConsoleAdapters,
   packAvailability,
-  permissionMaskIsSubset
+  capabilityMaskIsSubset
 } from './constructive-adapter-utils';
 import {
   executeConstructiveConnectionQuery,
@@ -212,7 +212,7 @@ const CREATED_OWNER_MEMBERSHIP_FIELDS = [
   'isBanned',
   'isDisabled',
   'isReadOnly',
-  'permissions'
+  'capabilities'
 ] as const;
 
 function createOrganizationMutation(userFields: readonly string[]): string {
@@ -263,30 +263,30 @@ type OrganizationDirectorySelections = Readonly<{
   memberships: readonly string[];
   memberProfiles: readonly string[];
   profiles: readonly string[];
-  profilePermissions: readonly string[];
+  profileCapabilities: readonly string[];
   invites: readonly string[];
   claimedInvites: readonly string[];
-  permissions: readonly string[];
+  capabilities: readonly string[];
   settings: readonly string[];
   defaults: readonly string[];
   hierarchy: readonly string[];
   appMemberships: readonly string[];
-  appPermissions: readonly string[];
+  appCapabilities: readonly string[];
 }>;
 
 const EMPTY_ORGANIZATION_DIRECTORY_SELECTIONS: OrganizationDirectorySelections = {
   memberships: [],
   memberProfiles: [],
   profiles: [],
-  profilePermissions: [],
+  profileCapabilities: [],
   invites: [],
   claimedInvites: [],
-  permissions: [],
+  capabilities: [],
   settings: [],
   defaults: [],
   hierarchy: [],
   appMemberships: [],
-  appPermissions: []
+  appCapabilities: []
 };
 
 function organizationUserFields(
@@ -316,7 +316,7 @@ function adminDirectorySelections(
     'isBanned',
     'isDisabled',
     'isReadOnly',
-    'permissions',
+    'capabilities',
     'granted',
     'profileId'
     ])
@@ -346,17 +346,17 @@ function adminDirectorySelections(
       'slug',
       'description',
       'entityId',
-      'permissions',
+      'capabilities',
       'isSystem',
       'isDefault'
     ]
   );
   const profiles = supports(options, 'admin', 'query', 'orgProfiles') ? profileFields : [];
-  const profilePermissions = supports(options, 'admin', 'query', 'orgProfilePermissions')
-    ? connectionSelection(schema, 'OrgProfilePermission', [
+  const profileCapabilities = supports(options, 'admin', 'query', 'orgProfileCapabilities')
+    ? connectionSelection(schema, 'OrgProfileCapability', [
         'id',
         'profileId',
-        'permissionId'
+        'capabilityId'
       ])
     : [];
   const inviteFields = connectionSelection(schema, 'OrgInvite', [
@@ -386,14 +386,14 @@ function adminDirectorySelections(
         'createdAt'
       ])
     : [];
-  const permissionFields = connectionSelection(
+  const capabilityFields = connectionSelection(
     schema,
-    'OrgPermission',
+    'OrgCapability',
     ['id', 'name', 'description', 'bitstr']
   );
-  const permissions = supports(options, 'admin', 'query', 'orgPermissions') &&
-    permissionFields.includes('name') && permissionFields.includes('bitstr')
-    ? permissionFields
+  const capabilities = supports(options, 'admin', 'query', 'orgCapabilities') &&
+    capabilityFields.includes('name') && capabilityFields.includes('bitstr')
+    ? capabilityFields
     : [];
   const settingFields = connectionSelection(
     schema,
@@ -431,30 +431,30 @@ function adminDirectorySelections(
   const appMembershipFields = connectionSelection(schema, 'AppMembership', [
     'actorId',
     'isActive',
-    'permissions'
+    'capabilities'
   ]);
   const appMemberships = supports(options, 'admin', 'query', 'appMemberships') &&
-    ['actorId', 'isActive', 'permissions'].every((field) => appMembershipFields.includes(field))
+    ['actorId', 'isActive', 'capabilities'].every((field) => appMembershipFields.includes(field))
     ? appMembershipFields
     : [];
-  const appPermissionFields = connectionSelection(schema, 'AppPermission', ['name', 'bitstr']);
-  const appPermissions = supports(options, 'admin', 'query', 'appPermissions') &&
-    appPermissionFields.includes('name') && appPermissionFields.includes('bitstr')
-    ? appPermissionFields
+  const appCapabilityFields = connectionSelection(schema, 'AppCapability', ['name', 'bitstr']);
+  const appCapabilities = supports(options, 'admin', 'query', 'appCapabilities') &&
+    appCapabilityFields.includes('name') && appCapabilityFields.includes('bitstr')
+    ? appCapabilityFields
     : [];
   return {
     memberships: membershipFields,
     memberProfiles,
     profiles,
-    profilePermissions,
+    profileCapabilities,
     invites,
     claimedInvites,
-    permissions,
+    capabilities,
     settings,
     defaults,
     hierarchy,
     appMemberships,
-    appPermissions
+    appCapabilities
   };
 }
 
@@ -465,7 +465,7 @@ function memberStatus(member: Record<string, unknown>): string {
   return asBoolean(member.isActive) ? 'active' : 'inactive';
 }
 
-type InviteProfileAssignmentMode = 'strict' | 'permission_only' | 'subset_only';
+type InviteProfileAssignmentMode = 'strict' | 'capability_only' | 'subset_only';
 
 const INVITE_PROFILE_MODE_LIMITATION: FeaturePackLimitation = {
   code: 'constructive.org-invite-profile-mode-unavailable',
@@ -538,7 +538,7 @@ function inviteProfileAssignmentMode(
   const value = asString(rows.find(
     (row) => asString(row.entityId) === organizationId
   )?.inviteProfileAssignmentMode);
-  if (value === 'strict' || value === 'permission_only' || value === 'subset_only') {
+  if (value === 'strict' || value === 'capability_only' || value === 'subset_only') {
     return { mode: value, known: true };
   }
   return { mode: 'strict', known: false };
@@ -551,7 +551,7 @@ function isOptionalReadDenied(cause: unknown): boolean {
   return code === '42501' ||
     code === 'FORBIDDEN' ||
     code === 'INSUFFICIENT_PRIVILEGE' ||
-    /permission denied for (?:table|relation|schema)|insufficient privilege/iu.test(message);
+    /capability denied for (?:table|relation|schema)|insufficient privilege/iu.test(message);
 }
 
 async function loadOrganizations(
@@ -566,7 +566,7 @@ async function loadOrganizations(
   cancelableInviteIds: ReadonlySet<string>;
   policyLimitations: readonly FeaturePackLimitation[];
   canManageActiveOrganization: boolean;
-  canManagePermissions: boolean;
+  canManageCapabilities: boolean;
   canManageHierarchy: boolean;
   canManageCredentials: boolean;
   profileScopeReadable: boolean;
@@ -584,7 +584,7 @@ async function loadOrganizations(
       cancelableInviteIds: new Set(),
       policyLimitations: [],
       canManageActiveOrganization: false,
-      canManagePermissions: false,
+      canManageCapabilities: false,
       canManageHierarchy: false,
       canManageCredentials: false,
       profileScopeReadable: false,
@@ -650,10 +650,10 @@ async function loadOrganizations(
     memberships,
     memberProfileRows,
     profileRows,
-    profilePermissionRows,
+    profileCapabilityRows,
     inviteRows,
     claimedInviteRows,
-    permissionRows,
+    capabilityRows,
     settingRows,
     defaultRows,
     hierarchyRows,
@@ -661,7 +661,7 @@ async function loadOrganizations(
     principalEntityRows,
     principalRows,
     appMembershipRows,
-    appPermissionRows,
+    appCapabilityRows,
     userRows,
     applicationOrganizationRows,
     applicationMemberRows
@@ -683,9 +683,9 @@ async function loadOrganizations(
         selections.profiles
       ),
       optionalAdminConnection(
-        'ConsoleKitOrganizationProfilePermissionsPage',
-        'orgProfilePermissions',
-        selections.profilePermissions
+        'ConsoleKitOrganizationProfileCapabilitiesPage',
+        'orgProfileCapabilities',
+        selections.profileCapabilities
       ),
       optionalAdminConnection(
         'ConsoleKitOrganizationMembershipsInvitesPage',
@@ -698,9 +698,9 @@ async function loadOrganizations(
         selections.claimedInvites
       ),
       optionalAdminConnection(
-        'ConsoleKitOrganizationMembershipsPermissionsPage',
-        'orgPermissions',
-        selections.permissions
+        'ConsoleKitOrganizationMembershipsCapabilitiesPage',
+        'orgCapabilities',
+        selections.capabilities
       ),
       optionalAdminConnection(
         'ConsoleKitOrganizationMembershipsSettingsPage',
@@ -741,9 +741,9 @@ async function loadOrganizations(
         selections.appMemberships
       ),
       optionalAdminConnection(
-        'ConsoleKitOrganizationAppPermissionsPage',
-        'appPermissions',
-        selections.appPermissions
+        'ConsoleKitOrganizationAppCapabilitiesPage',
+        'appCapabilities',
+        selections.appCapabilities
       ),
       userFields
         ? executeConstructiveConnectionQuery(runtime, 'auth', {
@@ -793,7 +793,7 @@ async function loadOrganizations(
   const actorAppMembership = actorAppMemberships[0];
   const canCreateOrganization = actorAppMemberships.length === 1 &&
     asBoolean(actorAppMembership?.isActive) &&
-    hasEffectivePermission(actorAppMembership, appPermissionRows, 'create_entity');
+    hasEffectiveCapability(actorAppMembership, appCapabilityRows, 'create_entity');
   const actorMemberships = memberships.filter(
     (membership) => asString(membership.actorId) === actorId
   );
@@ -894,16 +894,16 @@ async function loadOrganizations(
   const hasActiveOwnerRole = Boolean(
     hasActiveMembership && actorMembership && asBoolean(actorMembership.isOwner)
   );
-  const hasNamedPermission = (permissionName: string) => hasActiveMembership &&
-    hasEffectivePermission(actorMembership, permissionRows, permissionName);
+  const hasNamedCapability = (capabilityName: string) => hasActiveMembership &&
+    hasEffectiveCapability(actorMembership, capabilityRows, capabilityName);
   const canManageActiveOrganization = !activeIsApplicationOrganization && (
-    hasAdministrativeRole || hasNamedPermission('admin_members')
+    hasAdministrativeRole || hasNamedCapability('admin_members')
   );
-  const canManagePermissions = !activeIsApplicationOrganization && (
-    hasAdministrativeRole || hasNamedPermission('admin_permissions')
+  const canManageCapabilities = !activeIsApplicationOrganization && (
+    hasAdministrativeRole || hasNamedCapability('admin_capabilities')
   );
   const canManageHierarchy = !activeIsApplicationOrganization && (
-    hasAdministrativeRole || hasNamedPermission('manage_hierarchy')
+    hasAdministrativeRole || hasNamedCapability('manage_hierarchy')
   );
   const memberProfilesByMembership = new Map(
     memberProfileRows.flatMap((profile) => {
@@ -953,8 +953,8 @@ async function loadOrganizations(
         isReadOnly: asBoolean(membership.isReadOnly),
         profileId: asString(membership.profileId) ?? undefined,
         profileName: profileNames.get(asString(membership.profileId) ?? ''),
-        directPermissions: asString(membership.granted) ?? undefined,
-        effectivePermissions: asString(membership.permissions) ?? undefined,
+        directCapabilities: asString(membership.granted) ?? undefined,
+        effectiveCapabilities: asString(membership.capabilities) ?? undefined,
         memberProfile: profile
           ? {
               id: asString(profile.id) ?? undefined,
@@ -975,7 +975,7 @@ async function loadOrganizations(
           grantAdmin: hasActiveAdminRole && !targetIsOwner,
           grantOwner: canChangeOwner,
           assignProfile: canManageActiveOrganization,
-          grantPermission: canManageActiveOrganization,
+          grantCapability: canManageActiveOrganization,
           updateMemberProfile: canManageActiveOrganization || userId === actorId
         }
       }];
@@ -1032,7 +1032,7 @@ async function loadOrganizations(
     ? applicationMembers
     : managedMembers;
   const assignmentMode = inviteProfileAssignmentMode(settingRows, activeOrganizationId);
-  const hasAssignProfiles = hasNamedPermission('assign_profiles');
+  const hasAssignProfiles = hasNamedCapability('assign_profiles');
   const canAssignInviteProfiles = !activeIsApplicationOrganization && profileScopeReadable && (
     hasAdministrativeRole ||
     (hasActiveMembership && assignmentMode.mode === 'subset_only') || hasAssignProfiles
@@ -1042,9 +1042,9 @@ async function loadOrganizations(
     const id = asString(profile.id);
     const entityId = asString(profile.entityId);
     const belongsToActiveOrganization = !entityId || entityId === activeOrganizationId;
-    const satisfiesSubset = assignmentMode.mode === 'permission_only' || permissionMaskIsSubset(
-      profile.permissions,
-      actorMembership?.permissions
+    const satisfiesSubset = assignmentMode.mode === 'capability_only' || capabilityMaskIsSubset(
+      profile.capabilities,
+      actorMembership?.capabilities
     );
     if (
       id &&
@@ -1090,24 +1090,24 @@ async function loadOrganizations(
         actionPolicy: { cancelInvite: canCancel }
       }];
     });
-  const permissionIdsByProfile = new Map<string, string[]>();
-  for (const row of profilePermissionRows) {
+  const capabilityIdsByProfile = new Map<string, string[]>();
+  for (const row of profileCapabilityRows) {
     const profileId = asString(row.profileId);
-    const permissionId = asString(row.permissionId);
-    if (!profileId || !permissionId) continue;
-    const existing = permissionIdsByProfile.get(profileId) ?? [];
-    existing.push(permissionId);
-    permissionIdsByProfile.set(profileId, existing);
+    const capabilityId = asString(row.capabilityId);
+    if (!profileId || !capabilityId) continue;
+    const existing = capabilityIdsByProfile.get(profileId) ?? [];
+    existing.push(capabilityId);
+    capabilityIdsByProfile.set(profileId, existing);
   }
-  const permissions: OrganizationPermission[] = permissionRows.flatMap((permission) => {
-    const id = asString(permission.id);
-    const name = asString(permission.name);
-    const bitstr = asString(permission.bitstr);
+  const capabilities: OrganizationCapability[] = capabilityRows.flatMap((capability) => {
+    const id = asString(capability.id);
+    const name = asString(capability.name);
+    const bitstr = asString(capability.bitstr);
     return id && name && bitstr
       ? [{
           id,
           name,
-          description: asString(permission.description) ?? undefined,
+          description: asString(capability.description) ?? undefined,
           bitstr
         }]
       : [];
@@ -1127,14 +1127,14 @@ async function loadOrganizations(
         name,
         slug: asString(profile.slug) ?? undefined,
         description: asString(profile.description) ?? undefined,
-        permissions: asString(profile.permissions) ?? '',
-        permissionIds: permissionIdsByProfile.get(id) ?? [],
+        capabilities: asString(profile.capabilities) ?? '',
+        capabilityIds: capabilityIdsByProfile.get(id) ?? [],
         isSystem,
         isDefault: asBoolean(profile.isDefault),
         actionPolicy: {
-          updateAccessProfile: canManagePermissions && profileScopeReadable && !isSystem,
-          deleteAccessProfile: canManagePermissions && profileScopeReadable && !isSystem,
-          setProfilePermission: canManagePermissions && profileScopeReadable && !isSystem
+          updateAccessProfile: canManageCapabilities && profileScopeReadable && !isSystem,
+          deleteAccessProfile: canManageCapabilities && profileScopeReadable && !isSystem,
+          setProfileCapability: canManageCapabilities && profileScopeReadable && !isSystem
         }
       }];
     });
@@ -1321,7 +1321,7 @@ async function loadOrganizations(
         const owner = active && asBoolean(membership?.isOwner);
         const banned = asBoolean(membership?.isBanned);
         const canAdminAccount = active && Boolean(
-          membership && hasEffectivePermission(membership, permissionRows, 'admin_account')
+          membership && hasEffectiveCapability(membership, capabilityRows, 'admin_account')
         );
         const canLeave = Boolean(membership) && !banned && (
           !owner ||
@@ -1355,9 +1355,9 @@ async function loadOrganizations(
       profiles: selections.profiles.length > 0 && !deniedOptionalReads.has('admin:orgProfiles')
         ? profiles
         : undefined,
-      permissions: selections.permissions.length > 0 &&
-        !deniedOptionalReads.has('admin:orgPermissions')
-        ? permissions
+      capabilities: selections.capabilities.length > 0 &&
+        !deniedOptionalReads.has('admin:orgCapabilities')
+        ? capabilities
         : undefined,
       membershipSettings: deniedOptionalReads.has('admin:orgMembershipSettings')
         ? undefined
@@ -1385,12 +1385,12 @@ async function loadOrganizations(
     cancelableInviteIds,
     policyLimitations,
     canManageActiveOrganization,
-    canManagePermissions,
+    canManageCapabilities,
     canManageHierarchy,
     canManageCredentials: hasAdministrativeRole,
     profileScopeReadable,
     canCreateInvites: !activeIsApplicationOrganization && (
-      hasAdministrativeRole || hasNamedPermission('create_invites')
+      hasAdministrativeRole || hasNamedCapability('create_invites')
     ),
     canAssignInviteProfiles,
     canCreateOrganization,
@@ -1416,7 +1416,7 @@ function isExactCreatedOwnerMembership(
   actorId: string,
   organizationId: string
 ): boolean {
-  const permissions = asString(membership.permissions);
+  const capabilities = asString(membership.capabilities);
   return Boolean(asString(membership.id)) &&
     asString(membership.actorId) === actorId &&
     asString(membership.entityId) === organizationId &&
@@ -1427,7 +1427,7 @@ function isExactCreatedOwnerMembership(
     membership.isBanned === false &&
     membership.isDisabled === false &&
     membership.isReadOnly === false &&
-    Boolean(permissions && /^1+$/u.test(permissions));
+    Boolean(capabilities && /^1+$/u.test(capabilities));
 }
 
 function organizationProvisioningUsername(): string {
@@ -1541,7 +1541,7 @@ export function createConstructiveOrganizationsAdapter(
   const knownPrincipalOrganizations = new Map<string, string>();
   const capabilities: readonly AtomicCapabilityId[] = [
     'organizations.memberships',
-    'organizations.permissions',
+    'organizations.capabilities',
     'organizations.limits',
     'organizations.profiles',
     'organizations.hierarchy',
@@ -1693,29 +1693,29 @@ export function createConstructiveOrganizationsAdapter(
         ['orgOwnerGrant'],
         { field: 'orgOwnerGrant', requiredFields: ['actorId', 'entityId', 'isGrant'] }
       );
-      const canGrantPermission = loaded.data.members.some(
-        (member) => member.actionPolicy?.grantPermission
+      const canGrantCapability = loaded.data.members.some(
+        (member) => member.actionPolicy?.grantCapability
       ) && supportsConstructiveMutationInput(
         adminSchema,
         'createOrgGrant',
         ['orgGrant'],
         {
           field: 'orgGrant',
-          requiredFields: ['actorId', 'entityId', 'permissions', 'isGrant']
+          requiredFields: ['actorId', 'entityId', 'capabilities', 'isGrant']
         }
       );
       const canDefineProfile = loaded.data.profiles?.some(
-        (profile) => profile.actionPolicy?.setProfilePermission
+        (profile) => profile.actionPolicy?.setProfileCapability
       ) === true && supportsConstructiveMutationInput(
         adminSchema,
         'createOrgProfileDefinitionGrant',
         ['orgProfileDefinitionGrant'],
         {
           field: 'orgProfileDefinitionGrant',
-          requiredFields: ['profileId', 'permissionId', 'isGrant']
+          requiredFields: ['profileId', 'capabilityId', 'isGrant']
         }
       );
-      const canCreateProfile = loaded.canManagePermissions &&
+      const canCreateProfile = loaded.canManageCapabilities &&
         supportsConstructiveMutationInput(
         adminSchema,
         'createOrgProfile',
@@ -1814,9 +1814,9 @@ export function createConstructiveOrganizationsAdapter(
         .map((member) => member.userId));
       const membersById = new Map(loaded.data.members.map((member) => [member.id, member]));
       const profileIds = new Set(loaded.data.profiles?.map((profile) => profile.id) ?? []);
-      const permissionIds = new Set(loaded.data.permissions?.map((permission) => permission.id) ?? []);
-      const permissionMasks = new Set(
-        loaded.data.permissions?.map((permission) => permission.bitstr) ?? []
+      const capabilityIds = new Set(loaded.data.capabilities?.map((capability) => capability.id) ?? []);
+      const capabilityMasks = new Set(
+        loaded.data.capabilities?.map((capability) => capability.bitstr) ?? []
       );
       const hierarchyEdgeIds = new Set(loaded.data.hierarchy?.map((edge) => edge.id) ?? []);
       const apiKeyIds = new Set(loaded.data.apiKeys?.map((apiKey) => apiKey.id) ?? []);
@@ -1893,7 +1893,7 @@ export function createConstructiveOrganizationsAdapter(
           grantAdmin: canGrantAdmin,
           grantOwner: canGrantOwner,
           assignProfile: canSetMemberProfile,
-          grantPermission: canGrantPermission,
+          grantCapability: canGrantCapability,
           updateMemberProfile: loaded.data.members.some(
             (member) => member.actionPolicy?.updateMemberProfile && (
               member.memberProfile ? canUpdateMemberProfile : canCreateMemberProfile
@@ -1902,7 +1902,7 @@ export function createConstructiveOrganizationsAdapter(
           createAccessProfile: canCreateProfile,
           updateAccessProfile: canUpdateProfile,
           deleteAccessProfile: canDeleteProfile,
-          setProfilePermission: canDefineProfile,
+          setProfileCapability: canDefineProfile,
           updateMembershipSettings: canUpdateSettings,
           updateMembershipDefault: canUpdateDefault,
           setHierarchyEdge: canManageHierarchy,
@@ -2294,19 +2294,19 @@ export function createConstructiveOrganizationsAdapter(
                 reload();
               }
             : undefined,
-          setMemberPermission: canGrantPermission
-            ? async ({ organizationId, actorId, permissions, isGrant }) => {
+          setMemberCapability: canGrantCapability
+            ? async ({ organizationId, actorId, capabilities, isGrant }) => {
                 assertActiveOrganization(organizationId);
                 assertAuthorizedTarget(activeMemberActorIds, actorId, 'organization member');
-                if (!permissionMasks.has(permissions)) {
-                  throw new Error('The permission mask is not present in the visible catalog.');
+                if (!capabilityMasks.has(capabilities)) {
+                  throw new Error('The capability mask is not present in the visible catalog.');
                 }
                 const member = loaded.data.members.find((candidate) => candidate.userId === actorId);
                 if (!member) throw new Error('The organization member is no longer visible.');
-                assertMemberAction(member.id, 'grantPermission');
+                assertMemberAction(member.id, 'grantCapability');
                 await executeConstructiveGraphQL(runtime, 'admin', CREATE_PERMISSION_GRANT_MUTATION, {
                   input: {
-                    orgGrant: { entityId: organizationId, actorId, permissions, isGrant }
+                    orgGrant: { entityId: organizationId, actorId, capabilities, isGrant }
                   }
                 });
                 reload();
@@ -2419,13 +2419,13 @@ export function createConstructiveOrganizationsAdapter(
                 reload();
               }
             : undefined,
-          setProfilePermission: canDefineProfile
-            ? async ({ organizationId, profileId, permissionId, isGrant }) => {
+          setProfileCapability: canDefineProfile
+            ? async ({ organizationId, profileId, capabilityId, isGrant }) => {
                 assertActiveOrganization(organizationId);
                 assertAuthorizedTarget(profileIds, profileId, 'organization access profile');
-                assertAuthorizedTarget(permissionIds, permissionId, 'organization permission');
+                assertAuthorizedTarget(capabilityIds, capabilityId, 'organization capability');
                 const profile = loaded.data.profiles?.find((candidate) => candidate.id === profileId);
-                if (profile?.actionPolicy?.setProfilePermission !== true) {
+                if (profile?.actionPolicy?.setProfileCapability !== true) {
                   throw new Error('This access profile cannot be changed.');
                 }
                 await executeConstructiveGraphQL(
@@ -2434,7 +2434,7 @@ export function createConstructiveOrganizationsAdapter(
                   CREATE_PROFILE_DEFINITION_GRANT_MUTATION,
                   {
                     input: {
-                      orgProfileDefinitionGrant: { profileId, permissionId, isGrant }
+                      orgProfileDefinitionGrant: { profileId, capabilityId, isGrant }
                     }
                   }
                 );

@@ -462,7 +462,7 @@ export const filterFixtures: Record<string, Filter> = {
 		and: [{ isActive: { equalTo: true } }, { age: { greaterThan: 18 } }],
 		or: [
 			{ role: { equalTo: "admin" } },
-			{ permissions: { contains: ["write"] } },
+			{ capabilities: { contains: ["write"] } },
 		],
 	},
 
@@ -599,7 +599,7 @@ export const errorFixtures = {
 		],
 	},
 
-	graphqlPermissionError: {
+	graphqlCapabilityError: {
 		errors: [
 			{
 				message: 'Access denied for field "sensitiveData"',

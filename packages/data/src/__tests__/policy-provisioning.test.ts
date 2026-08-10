@@ -33,7 +33,7 @@ describe('policy-provisioning', () => {
 		expect(
 			sanitizePolicyData({
 				entity_field: 'owner_id',
-				permission: '',
+				capability: '',
 				extra: undefined,
 				fields: [],
 				is_admin: false,

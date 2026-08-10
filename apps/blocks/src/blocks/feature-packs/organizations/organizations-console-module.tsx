@@ -22,7 +22,7 @@ import { resolveApplicationOrganizationContract } from './organizations-meta-con
 export const organizationsCapabilityDiscovery = {
   rules: [
     { capability: 'organizations.memberships', endpoint: 'admin', operation: 'query', fields: ['orgMemberships'] },
-    { capability: 'organizations.permissions', endpoint: 'admin', operation: 'query', fields: ['orgPermissions'] },
+    { capability: 'organizations.capabilities', endpoint: 'admin', operation: 'query', fields: ['orgCapabilities'] },
     { capability: 'organizations.limits', endpoint: 'billing', operation: 'query', fields: ['orgLimits'] },
     { capability: 'organizations.profiles', endpoint: 'admin', operation: 'query', fields: ['orgProfiles'] },
     { capability: 'organizations.hierarchy', endpoint: 'admin', operation: 'query', fields: ['orgChartEdges'] },
@@ -61,7 +61,7 @@ const sectionForScreen: Partial<Record<
   invitation: 'invitations',
   profiles: 'profiles',
   profile: 'profiles',
-  permissions: 'permissions',
+  capabilities: 'capabilities',
   defaults: 'defaults',
   hierarchy: 'hierarchy',
   settings: 'settings',

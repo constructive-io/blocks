@@ -256,7 +256,7 @@ function appAccessMutationTypes(): ConstructiveSchemaType[] {
     inputType('CreateAppGrantInput', { appGrant: 'AppGrantInput' }),
     inputType('AppGrantInput', {
       actorId: 'UUID',
-      permissions: 'BitString',
+      capabilities: 'BitString',
       isGrant: 'Boolean'
     }),
     inputType('CreateAppProfileGrantInput', {
@@ -272,14 +272,14 @@ function appAccessMutationTypes(): ConstructiveSchemaType[] {
     }),
     inputType('AppProfileDefinitionGrantInput', {
       profileId: 'UUID',
-      permissionId: 'UUID',
+      capabilityId: 'UUID',
       isGrant: 'Boolean'
     }),
-    inputType('CreateAppPermissionDefaultGrantInput', {
-      appPermissionDefaultGrant: 'AppPermissionDefaultGrantInput'
+    inputType('CreateAppCapabilityDefaultGrantInput', {
+      appCapabilityDefaultGrant: 'AppCapabilityDefaultGrantInput'
     }),
-    inputType('AppPermissionDefaultGrantInput', {
-      permissionId: 'UUID',
+    inputType('AppCapabilityDefaultGrantInput', {
+      capabilityId: 'UUID',
       isGrant: 'Boolean'
     }),
     inputType('CreateAppProfileInput', { appProfile: 'AppProfileInput' }),
@@ -640,19 +640,19 @@ describe('Constructive auth adapter RLS contract', () => {
 });
 
 describe('Constructive users adapter RLS contract', () => {
-  it('separates lifecycle, governance, direct grants, effective permissions, and defaults', async () => {
+  it('separates lifecycle, governance, direct grants, effective capabilities, and defaults', async () => {
     const calls: GraphQLCall[] = [];
     const adminSchema = snapshot({
       endpoint: 'admin',
-      queries: ['appMemberships', 'appPermissions', 'appPermissionDefaults'],
+      queries: ['appMemberships', 'appCapabilities', 'appCapabilityDefaults'],
       mutations: { updateAppMembership: 'UpdateAppMembershipInput' },
       types: [
         objectType('AppMembership', [
           'id', 'actorId', 'createdAt', 'isOwner', 'isAdmin', 'isActive',
-          'isApproved', 'isVerified', 'isBanned', 'isDisabled', 'permissions', 'granted'
+          'isApproved', 'isVerified', 'isBanned', 'isDisabled', 'capabilities', 'granted'
         ]),
-        objectType('AppPermission', ['id', 'name', 'description', 'bitnum', 'bitstr']),
-        objectType('AppPermissionDefault', ['id', 'permissions']),
+        objectType('AppCapability', ['id', 'name', 'description', 'bitnum', 'bitstr']),
+        objectType('AppCapabilityDefault', ['id', 'capabilities']),
         ...appAccessMutationTypes()
       ]
     });
@@ -679,7 +679,7 @@ describe('Constructive users adapter RLS contract', () => {
                 isVerified: true,
                 isBanned: false,
                 isDisabled: false,
-                permissions: '0011',
+                capabilities: '0011',
                 granted: '0000'
               },
               {
@@ -692,26 +692,26 @@ describe('Constructive users adapter RLS contract', () => {
                 isVerified: false,
                 isBanned: false,
                 isDisabled: true,
-                permissions: '0011',
+                capabilities: '0011',
                 granted: '0010'
               }
             ]
           }
         };
       }
-      if (call.document.includes('appPermissions(first:')) {
+      if (call.document.includes('appCapabilities(first:')) {
         return {
-          appPermissions: {
+          appCapabilities: {
             nodes: [
               {
-                id: 'permission-admin-members',
+                id: 'capability-admin-members',
                 name: 'admin_members',
                 description: 'Manage member lifecycle.',
                 bitnum: 0,
                 bitstr: '0001'
               },
               {
-                id: 'permission-create-entity',
+                id: 'capability-create-entity',
                 name: 'create_entity',
                 description: 'Create application records.',
                 bitnum: 1,
@@ -721,10 +721,10 @@ describe('Constructive users adapter RLS contract', () => {
           }
         };
       }
-      if (call.document.includes('appPermissionDefaults(first:')) {
+      if (call.document.includes('appCapabilityDefaults(first:')) {
         return {
-          appPermissionDefaults: {
-            nodes: [{ id: 'default-1', permissions: '0010' }]
+          appCapabilityDefaults: {
+            nodes: [{ id: 'default-1', capabilities: '0010' }]
           }
         };
       }
@@ -744,16 +744,16 @@ describe('Constructive users adapter RLS contract', () => {
     expect(loaded.resource).toMatchObject({
       status: 'ready',
       data: {
-        defaultPermissionIds: ['permission-create-entity'],
+        defaultCapabilityIds: ['capability-create-entity'],
         members: [
           {
             id: 'membership-actor',
             governance: { owner: true, admin: true },
             lifecycle: { active: true },
-            directPermissionIds: [],
-            effectivePermissionIds: [
-              'permission-admin-members',
-              'permission-create-entity'
+            directCapabilityIds: [],
+            effectiveCapabilityIds: [
+              'capability-admin-members',
+              'capability-create-entity'
             ]
           },
           {
@@ -765,16 +765,16 @@ describe('Constructive users adapter RLS contract', () => {
               disabled: true,
               active: false
             },
-            directPermissionIds: ['permission-create-entity'],
-            effectivePermissionIds: [
-              'permission-admin-members',
-              'permission-create-entity'
+            directCapabilityIds: ['capability-create-entity'],
+            effectiveCapabilityIds: [
+              'capability-admin-members',
+              'capability-create-entity'
             ]
           }
         ],
-        permissions: [
-          { id: 'permission-admin-members', name: 'admin_members', bit: 0 },
-          { id: 'permission-create-entity', name: 'create_entity', bit: 1 }
+        capabilities: [
+          { id: 'capability-admin-members', name: 'admin_members', bit: 0 },
+          { id: 'capability-create-entity', name: 'create_entity', bit: 1 }
         ]
       }
     });
@@ -814,8 +814,8 @@ describe('Constructive users adapter RLS contract', () => {
         'appInvites',
         'appClaimedInvites',
         'appProfiles',
-        'appPermissions',
-        'appPermissionDefaults'
+        'appCapabilities',
+        'appCapabilityDefaults'
       ],
       mutations: {
         createAppInvite: 'CreateAppInviteInput',
@@ -827,7 +827,7 @@ describe('Constructive users adapter RLS contract', () => {
         createAppGrant: 'CreateAppGrantInput',
         createAppProfileGrant: 'CreateAppProfileGrantInput',
         createAppProfileDefinitionGrant: 'CreateAppProfileDefinitionGrantInput',
-        createAppPermissionDefaultGrant: 'CreateAppPermissionDefaultGrantInput',
+        createAppCapabilityDefaultGrant: 'CreateAppCapabilityDefaultGrantInput',
         createAppProfile: 'CreateAppProfileInput',
         updateAppProfile: 'UpdateAppProfileInput',
         deleteAppProfile: 'DeleteAppProfileInput'
@@ -835,7 +835,7 @@ describe('Constructive users adapter RLS contract', () => {
       types: [
         objectType('AppMembership', [
           'id', 'actorId', 'createdAt', 'isOwner', 'isAdmin', 'isActive',
-          'isApproved', 'isVerified', 'isBanned', 'isDisabled', 'permissions',
+          'isApproved', 'isVerified', 'isBanned', 'isDisabled', 'capabilities',
           'granted', 'profileId'
         ]),
         objectType('AppInvite', [
@@ -844,10 +844,10 @@ describe('Constructive users adapter RLS contract', () => {
         ]),
         objectType('AppClaimedInvite', ['id', 'senderId', 'receiverId', 'createdAt']),
         objectType('AppProfile', [
-          'id', 'name', 'slug', 'description', 'permissions', 'isSystem', 'isDefault'
+          'id', 'name', 'slug', 'description', 'capabilities', 'isSystem', 'isDefault'
         ]),
-        objectType('AppPermission', ['id', 'name', 'description', 'bitnum', 'bitstr']),
-        objectType('AppPermissionDefault', ['id', 'permissions']),
+        objectType('AppCapability', ['id', 'name', 'description', 'bitnum', 'bitstr']),
+        objectType('AppCapabilityDefault', ['id', 'capabilities']),
         ...appAccessMutationTypes()
       ]
     });
@@ -881,7 +881,7 @@ describe('Constructive users adapter RLS contract', () => {
                 isVerified: true,
                 isBanned: false,
                 isDisabled: false,
-                permissions: '1111',
+                capabilities: '1111',
                 granted: '0000',
                 profileId: 'profile-operator'
               },
@@ -895,7 +895,7 @@ describe('Constructive users adapter RLS contract', () => {
                 isVerified: true,
                 isBanned: false,
                 isDisabled: false,
-                permissions: '0101',
+                capabilities: '0101',
                 granted: '0100',
                 profileId: 'profile-operator'
               }
@@ -946,7 +946,7 @@ describe('Constructive users adapter RLS contract', () => {
                 id: 'profile-operator',
                 name: 'Operator',
                 slug: 'operator',
-                permissions: '0001',
+                capabilities: '0001',
                 isSystem: false,
                 isDefault: true
               },
@@ -954,7 +954,7 @@ describe('Constructive users adapter RLS contract', () => {
                 id: 'profile-system',
                 name: 'System',
                 slug: 'system',
-                permissions: '1111',
+                capabilities: '1111',
                 isSystem: true,
                 isDefault: false
               }
@@ -962,22 +962,22 @@ describe('Constructive users adapter RLS contract', () => {
           }
         };
       }
-      if (call.document.includes('appPermissions(first:')) {
+      if (call.document.includes('appCapabilities(first:')) {
         return {
-          appPermissions: {
+          appCapabilities: {
             nodes: [
-              { id: 'permission-members', name: 'admin_members', bitnum: 0, bitstr: '0001' },
-              { id: 'permission-policy', name: 'admin_permissions', bitnum: 1, bitstr: '0010' },
-              { id: 'permission-invites', name: 'create_invites', bitnum: 2, bitstr: '0100' },
-              { id: 'permission-profiles', name: 'assign_profiles', bitnum: 3, bitstr: '1000' }
+              { id: 'capability-members', name: 'admin_members', bitnum: 0, bitstr: '0001' },
+              { id: 'capability-policy', name: 'admin_capabilities', bitnum: 1, bitstr: '0010' },
+              { id: 'capability-invites', name: 'create_invites', bitnum: 2, bitstr: '0100' },
+              { id: 'capability-profiles', name: 'assign_profiles', bitnum: 3, bitstr: '1000' }
             ]
           }
         };
       }
-      if (call.document.includes('appPermissionDefaults(first:')) {
+      if (call.document.includes('appCapabilityDefaults(first:')) {
         return {
-          appPermissionDefaults: {
-            nodes: [{ id: 'default-1', permissions: '0100' }]
+          appCapabilityDefaults: {
+            nodes: [{ id: 'default-1', capabilities: '0100' }]
           }
         };
       }
@@ -1027,13 +1027,13 @@ describe('Constructive users adapter RLS contract', () => {
         profiles: [
           {
             id: 'profile-operator',
-            permissionIds: ['permission-members'],
+            capabilityIds: ['capability-members'],
             memberCount: 2,
             actionPolicy: {
               updateProfile: true,
               deleteProfile: true,
               setDefaultProfile: true,
-              setProfilePermission: true
+              setProfileCapability: true
             }
           },
           {
@@ -1042,11 +1042,11 @@ describe('Constructive users adapter RLS contract', () => {
               updateProfile: false,
               deleteProfile: false,
               setDefaultProfile: false,
-              setProfilePermission: false
+              setProfileCapability: false
             }
           }
         ],
-        defaultPermissionIds: ['permission-invites'],
+        defaultCapabilityIds: ['capability-invites'],
         inviteProfileIds: ['profile-operator', 'profile-system']
       }
     });
@@ -1055,14 +1055,14 @@ describe('Constructive users adapter RLS contract', () => {
       assignInviteProfile: true,
       setOwner: true,
       setAdmin: true,
-      setDirectPermission: true,
+      setDirectCapability: true,
       setProfile: true,
       createProfile: true,
       updateProfile: true,
       deleteProfile: true,
       setDefaultProfile: true,
-      setProfilePermission: true,
-      setDefaultPermission: true,
+      setProfileCapability: true,
+      setDefaultCapability: true,
       cancelInvite: true,
       extendInvite: true
     });
@@ -1073,22 +1073,22 @@ describe('Constructive users adapter RLS contract', () => {
     });
     await loaded.actions?.setOwner?.({ userId: 'user-2', owner: true });
     await loaded.actions?.setAdmin?.({ userId: 'user-2', admin: true });
-    await loaded.actions?.setDirectPermission?.({
+    await loaded.actions?.setDirectCapability?.({
       userId: 'user-2',
-      permissionId: 'permission-invites',
+      capabilityId: 'capability-invites',
       granted: false
     });
     await loaded.actions?.setProfile?.({
       membershipId: 'membership-member',
       profileId: 'profile-operator'
     });
-    await loaded.actions?.setProfilePermission?.({
+    await loaded.actions?.setProfileCapability?.({
       profileId: 'profile-operator',
-      permissionId: 'permission-invites',
+      capabilityId: 'capability-invites',
       granted: true
     });
-    await loaded.actions?.setDefaultPermission?.({
-      permissionId: 'permission-members',
+    await loaded.actions?.setDefaultCapability?.({
+      capabilityId: 'capability-members',
       granted: true
     });
     await loaded.actions?.createProfile?.({
@@ -1123,7 +1123,7 @@ describe('Constructive users adapter RLS contract', () => {
         input: {
           appGrant: {
             actorId: 'user-2',
-            permissions: '0100',
+            capabilities: '0100',
             isGrant: false
           }
         }
@@ -1144,17 +1144,17 @@ describe('Constructive users adapter RLS contract', () => {
       input: {
         appProfileDefinitionGrant: {
           profileId: 'profile-operator',
-          permissionId: 'permission-invites',
+          capabilityId: 'capability-invites',
           isGrant: true
         }
       }
     });
     expect(calls.find((call) =>
-      call.document.includes('ConsoleKitCreateAppPermissionDefaultGrant')
+      call.document.includes('ConsoleKitCreateAppCapabilityDefaultGrant')
     )?.variables).toEqual({
       input: {
-        appPermissionDefaultGrant: {
-          permissionId: 'permission-members',
+        appCapabilityDefaultGrant: {
+          capabilityId: 'capability-members',
           isGrant: true
         }
       }
@@ -1165,7 +1165,7 @@ describe('Constructive users adapter RLS contract', () => {
     const calls: GraphQLCall[] = [];
     const adminSchema = snapshot({
       endpoint: 'admin',
-      queries: ['appMemberships', 'appInvites', 'appProfiles', 'appPermissions'],
+      queries: ['appMemberships', 'appInvites', 'appProfiles', 'appCapabilities'],
       mutations: {
         updateAppMembership: 'UpdateAppMembershipInput',
         createAppOwnerGrant: 'CreateAppOwnerGrantInput',
@@ -1178,13 +1178,13 @@ describe('Constructive users adapter RLS contract', () => {
       types: [
         objectType('AppMembership', [
           'id', 'actorId', 'isOwner', 'isAdmin', 'isActive', 'isApproved',
-          'isVerified', 'isBanned', 'isDisabled', 'permissions', 'granted'
+          'isVerified', 'isBanned', 'isDisabled', 'capabilities', 'granted'
         ]),
         objectType('AppInvite', ['id', 'email', 'senderId', 'inviteValid']),
         objectType('AppProfile', [
-          'id', 'name', 'slug', 'permissions', 'isSystem', 'isDefault'
+          'id', 'name', 'slug', 'capabilities', 'isSystem', 'isDefault'
         ]),
-        objectType('AppPermission', ['id', 'name', 'bitstr']),
+        objectType('AppCapability', ['id', 'name', 'bitstr']),
         ...appAccessMutationTypes()
       ]
     });
@@ -1210,7 +1210,7 @@ describe('Constructive users adapter RLS contract', () => {
               isVerified: true,
               isBanned: false,
               isDisabled: false,
-              permissions: '0001',
+              capabilities: '0001',
               granted: '0000'
             }]
           }
@@ -1244,7 +1244,7 @@ describe('Constructive users adapter RLS contract', () => {
                 id: 'profile-mutable',
                 name: 'Member',
                 slug: 'member',
-                permissions: '0001',
+                capabilities: '0001',
                 isSystem: false,
                 isDefault: false
               },
@@ -1252,7 +1252,7 @@ describe('Constructive users adapter RLS contract', () => {
                 id: 'profile-system',
                 name: 'System',
                 slug: 'system',
-                permissions: '0001',
+                capabilities: '0001',
                 isSystem: true,
                 isDefault: true
               }
@@ -1260,10 +1260,10 @@ describe('Constructive users adapter RLS contract', () => {
           }
         };
       }
-      if (call.document.includes('appPermissions(first:')) {
+      if (call.document.includes('appCapabilities(first:')) {
         return {
-          appPermissions: {
-            nodes: [{ id: 'permission-members', name: 'admin_members', bitstr: '0001' }]
+          appCapabilities: {
+            nodes: [{ id: 'capability-members', name: 'admin_members', bitstr: '0001' }]
           }
         };
       }
@@ -1316,14 +1316,14 @@ describe('Constructive organizations adapter RLS contract', () => {
       discovery: discovery({
         admin: snapshot({
           endpoint: 'admin',
-          queries: ['orgMemberships', 'appMemberships', 'appPermissions'],
+          queries: ['orgMemberships', 'appMemberships', 'appCapabilities'],
           types: [
             objectType('OrgMembership', [
               'id', 'actorId', 'entityId', 'isOwner', 'isAdmin', 'isActive', 'isApproved',
-              'isBanned', 'isDisabled', 'isReadOnly', 'permissions'
+              'isBanned', 'isDisabled', 'isReadOnly', 'capabilities'
             ]),
-            objectType('AppMembership', ['actorId', 'isActive', 'permissions']),
-            objectType('AppPermission', ['name', 'bitstr'])
+            objectType('AppMembership', ['actorId', 'isActive', 'capabilities']),
+            objectType('AppCapability', ['name', 'bitstr'])
           ]
         }),
         auth: snapshot({
@@ -1386,7 +1386,7 @@ describe('Constructive organizations adapter RLS contract', () => {
               isBanned: false,
               isDisabled: false,
               isReadOnly: false,
-              permissions: '111'
+              capabilities: '111'
             }))
           }
         };
@@ -1394,13 +1394,13 @@ describe('Constructive organizations adapter RLS contract', () => {
       if (call.document.includes('appMemberships(first:')) {
         return {
           appMemberships: {
-            nodes: [{ actorId: 'user-1', isActive: true, permissions: '001' }]
+            nodes: [{ actorId: 'user-1', isActive: true, capabilities: '001' }]
           }
         };
       }
-      if (call.document.includes('appPermissions(first:')) {
+      if (call.document.includes('appCapabilities(first:')) {
         return {
-          appPermissions: { nodes: [{ name: 'create_entity', bitstr: '001' }] }
+          appCapabilities: { nodes: [{ name: 'create_entity', bitstr: '001' }] }
         };
       }
       if (call.document.includes('users(first:')) {
@@ -1479,14 +1479,14 @@ describe('Constructive organizations adapter RLS contract', () => {
       discovery: discovery({
         admin: snapshot({
           endpoint: 'admin',
-          queries: ['orgMemberships', 'appMemberships', 'appPermissions'],
+          queries: ['orgMemberships', 'appMemberships', 'appCapabilities'],
           types: [
             objectType('OrgMembership', [
               'id', 'actorId', 'entityId', 'isOwner', 'isAdmin', 'isActive', 'isApproved',
-              'isBanned', 'isDisabled', 'isReadOnly', 'permissions'
+              'isBanned', 'isDisabled', 'isReadOnly', 'capabilities'
             ]),
-            objectType('AppMembership', ['actorId', 'isActive', 'permissions']),
-            objectType('AppPermission', ['name', 'bitstr'])
+            objectType('AppMembership', ['actorId', 'isActive', 'capabilities']),
+            objectType('AppCapability', ['name', 'bitstr'])
           ]
         }),
         auth: snapshot({
@@ -1565,7 +1565,7 @@ describe('Constructive organizations adapter RLS contract', () => {
               isBanned: false,
               isDisabled: false,
               isReadOnly: false,
-              permissions: '111'
+              capabilities: '111'
             }] : []
           }
         };
@@ -1573,13 +1573,13 @@ describe('Constructive organizations adapter RLS contract', () => {
       if (call.document.includes('appMemberships(first:')) {
         return {
           appMemberships: {
-            nodes: [{ actorId: 'user-1', isActive: true, permissions: '001' }]
+            nodes: [{ actorId: 'user-1', isActive: true, capabilities: '001' }]
           }
         };
       }
-      if (call.document.includes('appPermissions(first:')) {
+      if (call.document.includes('appCapabilities(first:')) {
         return {
-          appPermissions: { nodes: [{ name: 'create_entity', bitstr: '001' }] }
+          appCapabilities: { nodes: [{ name: 'create_entity', bitstr: '001' }] }
         };
       }
       if (call.document.includes('users(first:')) {
@@ -1626,14 +1626,14 @@ describe('Constructive organizations adapter RLS contract', () => {
       discovery: discovery({
         admin: snapshot({
           endpoint: 'admin',
-          queries: ['orgMemberships', 'appMemberships', 'appPermissions'],
+          queries: ['orgMemberships', 'appMemberships', 'appCapabilities'],
           types: [
             objectType('OrgMembership', [
               'id', 'actorId', 'entityId', 'isOwner', 'isAdmin', 'isActive', 'isApproved',
-              'isBanned', 'isDisabled', 'isReadOnly', 'permissions'
+              'isBanned', 'isDisabled', 'isReadOnly', 'capabilities'
             ]),
-            objectType('AppMembership', ['actorId', 'isActive', 'permissions']),
-            objectType('AppPermission', ['name', 'bitstr'])
+            objectType('AppMembership', ['actorId', 'isActive', 'capabilities']),
+            objectType('AppCapability', ['name', 'bitstr'])
           ]
         }),
         auth: snapshot({
@@ -1697,7 +1697,7 @@ describe('Constructive organizations adapter RLS contract', () => {
               isBanned: false,
               isDisabled: false,
               isReadOnly: false,
-              permissions: '111'
+              capabilities: '111'
             }] : []
           }
         };
@@ -1705,13 +1705,13 @@ describe('Constructive organizations adapter RLS contract', () => {
       if (call.document.includes('appMemberships(first:')) {
         return {
           appMemberships: {
-            nodes: [{ actorId: 'user-1', isActive: true, permissions: '001' }]
+            nodes: [{ actorId: 'user-1', isActive: true, capabilities: '001' }]
           }
         };
       }
-      if (call.document.includes('appPermissions(first:')) {
+      if (call.document.includes('appCapabilities(first:')) {
         return {
-          appPermissions: { nodes: [{ name: 'create_entity', bitstr: '001' }] }
+          appCapabilities: { nodes: [{ name: 'create_entity', bitstr: '001' }] }
         };
       }
       if (call.document.includes('users(first:')) {
@@ -1790,7 +1790,7 @@ describe('Constructive organizations adapter RLS contract', () => {
         'orgInvites',
         'orgProfiles',
         'appMemberships',
-        'appPermissions'
+        'appCapabilities'
       ],
       mutations: {
         createOrgInvite: 'CreateOrgInviteInput',
@@ -1801,12 +1801,12 @@ describe('Constructive organizations adapter RLS contract', () => {
       types: [
         objectType('OrgMembership', [
           'id', 'actorId', 'entityId', 'isOwner', 'isAdmin', 'isActive', 'isApproved',
-          'isBanned', 'isDisabled', 'isReadOnly', 'permissions', 'profileId'
+          'isBanned', 'isDisabled', 'isReadOnly', 'capabilities', 'profileId'
         ]),
         objectType('OrgInvite', ['id', 'entityId', 'email', 'profileId']),
         objectType('OrgProfile', ['id', 'name', 'entityId']),
-        objectType('AppMembership', ['actorId', 'isActive', 'permissions']),
-        objectType('AppPermission', ['name', 'bitstr']),
+        objectType('AppMembership', ['actorId', 'isActive', 'capabilities']),
+        objectType('AppCapability', ['name', 'bitstr']),
         ...adminMutationTypes('Org')
       ]
     });
@@ -1868,13 +1868,13 @@ describe('Constructive organizations adapter RLS contract', () => {
       if (call.document.includes('ConsoleKitOrganizationAppMemberships')) {
         return {
           appMemberships: {
-            nodes: [{ actorId: 'user-1', isActive: true, permissions: '000' }]
+            nodes: [{ actorId: 'user-1', isActive: true, capabilities: '000' }]
           }
         };
       }
-      if (call.document.includes('ConsoleKitOrganizationAppPermissions')) {
+      if (call.document.includes('ConsoleKitOrganizationAppCapabilities')) {
         return {
-          appPermissions: { nodes: [{ name: 'create_entity', bitstr: '001' }] }
+          appCapabilities: { nodes: [{ name: 'create_entity', bitstr: '001' }] }
         };
       }
       return { createOrgInvite: { orgInvite: { id: 'invite-1' } } };
@@ -1918,7 +1918,7 @@ describe('Constructive organizations adapter RLS contract', () => {
   it('honors admin_members for one active organization without elevating an ordinary role', async () => {
     const adminSchema = snapshot({
       endpoint: 'admin',
-      queries: ['orgMemberships', 'orgProfiles', 'orgPermissions'],
+      queries: ['orgMemberships', 'orgProfiles', 'orgCapabilities'],
       mutations: {
         createOrgInvite: 'CreateOrgInviteInput',
         updateOrgMembership: 'UpdateOrgMembershipInput',
@@ -1927,11 +1927,11 @@ describe('Constructive organizations adapter RLS contract', () => {
       },
       types: [
         objectType('OrgMembership', [
-          'id', 'actorId', 'entityId', 'isOwner', 'isAdmin', 'isActive', 'permissions',
+          'id', 'actorId', 'entityId', 'isOwner', 'isAdmin', 'isActive', 'capabilities',
           'profileId'
         ]),
         objectType('OrgProfile', ['id', 'name', 'entityId']),
-        objectType('OrgPermission', ['name', 'bitstr']),
+        objectType('OrgCapability', ['name', 'bitstr']),
         ...adminMutationTypes('Org')
       ]
     });
@@ -1953,13 +1953,13 @@ describe('Constructive organizations adapter RLS contract', () => {
               isOwner: false,
               isAdmin: false,
               isActive: true,
-              permissions: '0001'
+              capabilities: '0001'
             }]
           },
           orgProfiles: {
             nodes: [{ id: 'profile-1', name: 'Member', entityId: 'org-1' }]
           },
-          orgPermissions: {
+          orgCapabilities: {
             nodes: [
               { name: 'admin_members', bitstr: '0001' },
               { name: 'create_invites', bitstr: '0010' },
@@ -1999,7 +1999,7 @@ describe('Constructive organizations adapter RLS contract', () => {
     });
     const adminSchema = snapshot({
       endpoint: 'admin',
-      queries: ['orgMemberships', 'orgProfiles', 'orgInvites', 'orgPermissions'],
+      queries: ['orgMemberships', 'orgProfiles', 'orgInvites', 'orgCapabilities'],
       mutations: {
         updateOrgMembership: 'UpdateOrgMembershipInput',
         createOrgProfileGrant: 'CreateOrgProfileGrantInput',
@@ -2007,11 +2007,11 @@ describe('Constructive organizations adapter RLS contract', () => {
       },
       types: [
         objectType('OrgMembership', [
-          'id', 'actorId', 'entityId', 'isOwner', 'isAdmin', 'isActive', 'permissions'
+          'id', 'actorId', 'entityId', 'isOwner', 'isAdmin', 'isActive', 'capabilities'
         ]),
         objectType('OrgProfile', ['id', 'name', 'entityId']),
         objectType('OrgInvite', ['id', 'entityId', 'email', 'senderId', 'inviteValid']),
-        objectType('OrgPermission', ['name', 'bitstr']),
+        objectType('OrgCapability', ['name', 'bitstr']),
         ...adminMutationTypes('Org')
       ]
     });
@@ -2036,7 +2036,7 @@ describe('Constructive organizations adapter RLS contract', () => {
                     isOwner: false,
                     isAdmin: false,
                     isActive: true,
-                    permissions: '0001'
+                    capabilities: '0001'
                   },
                   {
                     id: 'membership-member-a',
@@ -2045,7 +2045,7 @@ describe('Constructive organizations adapter RLS contract', () => {
                     isOwner: false,
                     isAdmin: false,
                     isActive: true,
-                    permissions: '0000'
+                    capabilities: '0000'
                   }
                 ],
                 pageInfo: { hasNextPage: false, endCursor: 'members-end' }
@@ -2060,7 +2060,7 @@ describe('Constructive organizations adapter RLS contract', () => {
                   isOwner: false,
                   isAdmin: false,
                   isActive: true,
-                  permissions: '0000'
+                  capabilities: '0000'
                 }],
                 pageInfo: { hasNextPage: true, endCursor: 'members-next' }
               }
@@ -2088,11 +2088,11 @@ describe('Constructive organizations adapter RLS contract', () => {
           }
         };
       }
-      if (call.document.includes('orgPermissions(first:')) {
+      if (call.document.includes('orgCapabilities(first:')) {
         return {
-          orgPermissions: {
+          orgCapabilities: {
             nodes: [{ name: 'admin_members', bitstr: '0001' }],
-            pageInfo: { hasNextPage: false, endCursor: 'permissions-end' }
+            pageInfo: { hasNextPage: false, endCursor: 'capabilities-end' }
           }
         };
       }
@@ -2186,7 +2186,7 @@ describe('Constructive organizations adapter RLS contract', () => {
       mutations: { deleteOrgInvite: 'DeleteOrgInviteInput' },
       types: [
         objectType('OrgMembership', [
-          'id', 'actorId', 'entityId', 'isOwner', 'isAdmin', 'isActive', 'permissions'
+          'id', 'actorId', 'entityId', 'isOwner', 'isAdmin', 'isActive', 'capabilities'
         ]),
         objectType('OrgInvite', ['id', 'entityId', 'email', 'senderId', 'inviteValid']),
         ...adminMutationTypes('Org')
@@ -2213,7 +2213,7 @@ describe('Constructive organizations adapter RLS contract', () => {
                 isOwner: false,
                 isAdmin,
                 isActive: true,
-                permissions: '0000'
+                capabilities: '0000'
               }]
             }
           };
@@ -2291,11 +2291,11 @@ describe('Constructive organizations adapter RLS contract', () => {
       },
       types: [
         objectType('OrgMembership', [
-          'id', 'actorId', 'entityId', 'isOwner', 'isAdmin', 'isActive', 'permissions'
+          'id', 'actorId', 'entityId', 'isOwner', 'isAdmin', 'isActive', 'capabilities'
         ]),
         // A profile connection without entityId cannot prove whether a row is
         // global or belongs to another organization visible to this actor.
-        objectType('OrgProfile', ['id', 'name', 'permissions']),
+        objectType('OrgProfile', ['id', 'name', 'capabilities']),
         ...adminMutationTypes('Org')
       ]
     });
@@ -2317,7 +2317,7 @@ describe('Constructive organizations adapter RLS contract', () => {
               isOwner: true,
               isAdmin: false,
               isActive: true,
-              permissions: '1111'
+              capabilities: '1111'
             }]
           }
         };
@@ -2325,7 +2325,7 @@ describe('Constructive organizations adapter RLS contract', () => {
       if (call.document.includes('orgProfiles(first:')) {
         return {
           orgProfiles: {
-            nodes: [{ id: 'profile-from-unknown-scope', name: 'Manager', permissions: '0011' }]
+            nodes: [{ id: 'profile-from-unknown-scope', name: 'Manager', capabilities: '0011' }]
           }
         };
       }
@@ -2368,9 +2368,9 @@ describe('Constructive organizations adapter RLS contract', () => {
       },
       types: [
         objectType('OrgMembership', [
-          'id', 'actorId', 'entityId', 'isOwner', 'isAdmin', 'isActive', 'permissions'
+          'id', 'actorId', 'entityId', 'isOwner', 'isAdmin', 'isActive', 'capabilities'
         ]),
-        objectType('OrgProfile', ['id', 'name', 'entityId', 'permissions']),
+        objectType('OrgProfile', ['id', 'name', 'entityId', 'capabilities']),
         ...adminMutationTypes('Org')
       ]
     });
@@ -2392,7 +2392,7 @@ describe('Constructive organizations adapter RLS contract', () => {
               isOwner: true,
               isAdmin: false,
               isActive: true,
-              permissions: '1111'
+              capabilities: '1111'
             }]
           }
         };
@@ -2401,8 +2401,8 @@ describe('Constructive organizations adapter RLS contract', () => {
         return {
           orgProfiles: {
             nodes: [
-              { id: 'profile-global', name: 'Manager', entityId: null, permissions: '0001' },
-              { id: 'profile-org', name: 'Manager', entityId: 'org-1', permissions: '0011' }
+              { id: 'profile-global', name: 'Manager', entityId: null, capabilities: '0001' },
+              { id: 'profile-org', name: 'Manager', entityId: 'org-1', capabilities: '0011' }
             ]
           }
         };
@@ -2443,23 +2443,23 @@ describe('Constructive organizations adapter RLS contract', () => {
       queries: [
         'orgMemberships',
         'orgProfiles',
-        'orgPermissions',
+        'orgCapabilities',
         'orgMembershipSettings'
       ],
       mutations: { createOrgInvite: 'CreateOrgInviteInput' },
       types: [
         objectType('OrgMembership', [
-          'id', 'actorId', 'entityId', 'isOwner', 'isAdmin', 'isActive', 'permissions'
+          'id', 'actorId', 'entityId', 'isOwner', 'isAdmin', 'isActive', 'capabilities'
         ]),
-        objectType('OrgProfile', ['id', 'name', 'entityId', 'permissions']),
-        objectType('OrgPermission', ['name', 'bitstr']),
+        objectType('OrgProfile', ['id', 'name', 'entityId', 'capabilities']),
+        objectType('OrgCapability', ['name', 'bitstr']),
         objectType('OrgMembershipSetting', ['entityId', 'inviteProfileAssignmentMode']),
         ...adminMutationTypes('Org')
       ]
     });
     const loadForMode = async (
-      mode: 'strict' | 'permission_only' | 'subset_only' | undefined,
-      permissions: string,
+      mode: 'strict' | 'capability_only' | 'subset_only' | undefined,
+      capabilities: string,
       isActive = true
     ) => {
       const adapter = createConstructiveOrganizationsAdapter({
@@ -2480,7 +2480,7 @@ describe('Constructive organizations adapter RLS contract', () => {
                 isOwner: false,
                 isAdmin: false,
                 isActive,
-                permissions
+                capabilities
               }]
             },
             orgProfiles: {
@@ -2489,17 +2489,17 @@ describe('Constructive organizations adapter RLS contract', () => {
                   id: 'profile-subset',
                   name: 'Member',
                   entityId: 'org-1',
-                  permissions: '0010'
+                  capabilities: '0010'
                 },
                 {
                   id: 'profile-elevated',
                   name: 'Owner',
                   entityId: 'org-1',
-                  permissions: '1000'
+                  capabilities: '1000'
                 }
               ]
             },
-            orgPermissions: {
+            orgCapabilities: {
               nodes: [
                 { name: 'admin_members', bitstr: '0001' },
                 { name: 'create_invites', bitstr: '0010' },
@@ -2529,18 +2529,18 @@ describe('Constructive organizations adapter RLS contract', () => {
     };
 
     const strict = await loadForMode('strict', '0111');
-    const permissionOnly = await loadForMode('permission_only', '0111');
+    const capabilityOnly = await loadForMode('capability_only', '0111');
     const subsetOnly = await loadForMode('subset_only', '0011');
     // A create-invites-only member cannot read orgMembershipSettings under the
     // stock RLS policy, even when the database mode would allow assignment.
     const missingSetting = await loadForMode(undefined, '0010');
-    const inactive = await loadForMode('permission_only', '0111', false);
+    const inactive = await loadForMode('capability_only', '0111', false);
 
     expect(strict.resource).toMatchObject({
       status: 'ready',
       data: { assignableInviteProfileIds: ['profile-subset'] }
     });
-    expect(permissionOnly.resource).toMatchObject({
+    expect(capabilityOnly.resource).toMatchObject({
       status: 'ready',
       data: { assignableInviteProfileIds: ['profile-subset', 'profile-elevated'] }
     });
@@ -2728,9 +2728,9 @@ describe('Constructive organizations adapter RLS contract', () => {
         'orgMemberships',
         'orgProfiles',
         'orgInvites',
-        'orgPermissions',
+        'orgCapabilities',
         'appMemberships',
-        'appPermissions'
+        'appCapabilities'
       ],
       mutations: {
         createOrgInvite: 'CreateOrgInviteInput',
@@ -2750,16 +2750,16 @@ describe('Constructive organizations adapter RLS contract', () => {
           'isBanned',
           'isDisabled',
           'isReadOnly',
-          'permissions',
+          'capabilities',
           'profileId'
         ]),
-        objectType('OrgProfile', ['id', 'name', 'entityId', 'permissions']),
+        objectType('OrgProfile', ['id', 'name', 'entityId', 'capabilities']),
         objectType('OrgInvite', [
           'id', 'entityId', 'email', 'senderId', 'inviteValid', 'profileId'
         ]),
-        objectType('OrgPermission', ['name', 'bitstr']),
-        objectType('AppMembership', ['actorId', 'isActive', 'permissions']),
-        objectType('AppPermission', ['name', 'bitstr']),
+        objectType('OrgCapability', ['name', 'bitstr']),
+        objectType('AppMembership', ['actorId', 'isActive', 'capabilities']),
+        objectType('AppCapability', ['name', 'bitstr']),
         ...adminMutationTypes('Org')
       ]
     });
@@ -2801,7 +2801,7 @@ describe('Constructive organizations adapter RLS contract', () => {
                 isBanned: false,
                 isDisabled: false,
                 isReadOnly: false,
-                permissions: '1'
+                capabilities: '1'
               }]
             }
           };
@@ -2826,18 +2826,18 @@ describe('Constructive organizations adapter RLS contract', () => {
             }
           };
         }
-        if (call.document.includes('orgPermissions(first:')) {
-          return { orgPermissions: { nodes: [{ name: 'admin_members', bitstr: '1' }] } };
+        if (call.document.includes('orgCapabilities(first:')) {
+          return { orgCapabilities: { nodes: [{ name: 'admin_members', bitstr: '1' }] } };
         }
         if (call.document.includes('appMemberships(first:')) {
           return {
             appMemberships: {
-              nodes: [{ actorId: 'user-1', isActive: true, permissions: '1' }]
+              nodes: [{ actorId: 'user-1', isActive: true, capabilities: '1' }]
             }
           };
         }
-        if (call.document.includes('appPermissions(first:')) {
-          return { appPermissions: { nodes: [{ name: 'create_entity', bitstr: '1' }] } };
+        if (call.document.includes('appCapabilities(first:')) {
+          return { appCapabilities: { nodes: [{ name: 'create_entity', bitstr: '1' }] } };
         }
         if (call.document.includes('ConsoleKitOrganizationUsersPage')) {
           return {

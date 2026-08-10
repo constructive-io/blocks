@@ -235,8 +235,8 @@ export function hasRequiredFieldsMissing(
 	for (const field of fields) {
 		// Booleans are always valid (false is a valid value)
 		if (field.type === 'boolean') continue;
-		// Permission selects are optional
-		if (field.type === 'permission-select') continue;
+		// Capability selects are optional
+		if (field.type === 'capability-select') continue;
 
 		const value = data[field.key];
 		const isEmpty =
