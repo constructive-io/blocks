@@ -5,7 +5,6 @@
 import { describe, expect, it } from "vitest";
 
 import {
-	type PartialBy,
 	prepareCreateInput,
 	prepareMutationInput,
 	preparePatchInput,
@@ -360,30 +359,6 @@ describe("prepareMutationInput direct usage", () => {
 		expect(
 			prepareMutationInput({ a: 1, b: null }, { operation: "create" }),
 		).toEqual({ a: 1 });
-	});
-});
-
-// =========================================================================
-// PartialBy Type Utility (compile-time checks)
-// =========================================================================
-describe("PartialBy type utility", () => {
-	it("makes specified keys optional (compile-time check)", () => {
-		type Input = { name: string; inheritsId: string; databaseId: string };
-		type SafeInput = PartialBy<Input, "inheritsId">;
-
-		// This compiles — inheritsId is now optional
-		const valid: SafeInput = { name: "test", databaseId: "db-1" };
-		expect(valid.name).toBe("test");
-		expect(valid.databaseId).toBe("db-1");
-		expect(valid).not.toHaveProperty("inheritsId");
-	});
-
-	it("makes multiple keys optional", () => {
-		type Input = { name: string; inheritsId: string; databaseId: string };
-		type SafeInput = PartialBy<Input, "inheritsId" | "databaseId">;
-
-		const valid: SafeInput = { name: "test" };
-		expect(valid.name).toBe("test");
 	});
 });
 

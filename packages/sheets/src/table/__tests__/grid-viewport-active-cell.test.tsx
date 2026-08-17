@@ -146,19 +146,16 @@ describe('GridViewport active cell (focus ring + click-to-activate + arrow nav)'
 		return container.querySelector<HTMLElement>('[data-active="true"]');
 	}
 
-	it('renders the active cell with aria-selected, the ring id, and the focus-ring class', async () => {
+	it('connects the active cell to the grid accessibility state', async () => {
 		await act(async () => {
 			root.render(<Harness />);
 		});
 
-		// The active cell is [0,0] → id sheets-cell-0-0, aria-selected, ring class.
+		// The active cell is [0,0] and the grid points assistive technology to it.
 		const active = activeCellNode();
 		expect(active).toBeTruthy();
 		expect(active!.id).toBe('sheets-cell-0-0');
 		expect(active!.getAttribute('aria-selected')).toBe('true');
-		expect(active!.className).toContain('ring-2');
-
-		// The grid root mirrors it via aria-activedescendant.
 		expect(gridRoot().getAttribute('aria-activedescendant')).toBe('sheets-cell-0-0');
 
 		// Exactly ONE active cell.

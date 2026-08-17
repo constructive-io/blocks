@@ -1,16 +1,13 @@
 // Native cell model — the DOM render payload that replaces glide `GridCell`.
 //
 // Pure types: no @tanstack/* or virtual import. `SheetsCellKind` is the neutral
-// 11-member render vocabulary, frozen by the Phase-0 parity harness
-// (`grid/__golden__/parity.harness.ts` DisplayKind). The type-level guard in
-// `__tests__/kind-parity.test-d.ts` asserts member-for-member equality without
-// importing the harness into production code (it pulls vitest).
+// render vocabulary consumed by the DOM cell host.
 
 import type { CellType } from '../cell-types/types';
 
 /**
- * Neutral RENDER kinds — equal to the frozen `DisplayKind` union. `loading` and
- * `draft-action` originate from grid-internal state, not the `CellType` system.
+ * Neutral render kinds. `loading` and `draft-action` originate from grid-internal
+ * state, not the `CellType` system.
  */
 export type SheetsCellKind =
 	| 'text'

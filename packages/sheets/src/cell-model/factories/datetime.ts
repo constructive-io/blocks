@@ -3,7 +3,7 @@
 // (date, datetime, time, timestamptz) and emits a neutral `text` cell carrying
 // the value's string form. v1 renders the raw value as formatted text: non-null
 // -> data/displayData = String(value); null/undefined -> both ''. This factory
-// mirrors that exactly so projectSheetsCell deep-equals projectGlideCell.
+// preserves that display and copy behavior.
 
 import type { CellType } from '../../cell-types/types';
 import { DATE_TIME_TYPES } from '../../cell-types/cell-type-groups';

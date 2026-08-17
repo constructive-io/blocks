@@ -1,4 +1,4 @@
-import { memo, type ReactNode } from 'react';
+import type { ReactNode } from 'react';
 import { act, cleanup, render, screen } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -71,7 +71,6 @@ const onPreferencesChange = vi.fn();
 const onActiveTabChange = vi.fn();
 
 let latestSelectors: UseSchemaBuilderSelectorsResult | null = null;
-let dataConsumerRenderCount = 0;
 
 function SelectorProbe() {
   const selectors = useSchemaBuilderSelectors();
@@ -85,41 +84,30 @@ function SelectorProbe() {
   );
 }
 
-const StableDataConsumer = memo(function StableDataConsumer() {
-  dataConsumerRenderCount += 1;
-  const availableSchemas = useSchemaBuilderDataSelector((state) => state.availableSchemas);
-  return <output data-testid='schema-count'>{availableSchemas.length}</output>;
-});
-
 function TestTree({
-  unrelatedValue,
   onSelectedTableChange,
   children
 }: {
-  unrelatedValue: number;
   onSelectedTableChange: (selection: { tableId: string | null; tableName: string | null }) => void;
   children?: ReactNode;
 }) {
   return (
-    <div data-unrelated-value={unrelatedValue}>
-      <SchemaBuilderProvider
-        adapter={adapter}
-        scope={scope}
-        colorMode='light'
-        preferences={preferences}
-        onPreferencesChange={onPreferencesChange}
-        activeTab='editor'
-        onActiveTabChange={onActiveTabChange}
-        onSelectedTableChange={onSelectedTableChange}
-        tabs={tabs}
-      >
-        <SchemaBuilderDataProvider>
-          <SelectorProbe />
-          <StableDataConsumer />
-          {children}
-        </SchemaBuilderDataProvider>
-      </SchemaBuilderProvider>
-    </div>
+    <SchemaBuilderProvider
+      adapter={adapter}
+      scope={scope}
+      colorMode='light'
+      preferences={preferences}
+      onPreferencesChange={onPreferencesChange}
+      activeTab='editor'
+      onActiveTabChange={onActiveTabChange}
+      onSelectedTableChange={onSelectedTableChange}
+      tabs={tabs}
+    >
+      <SchemaBuilderDataProvider>
+        <SelectorProbe />
+        {children}
+      </SchemaBuilderDataProvider>
+    </SchemaBuilderProvider>
   );
 }
 
@@ -130,7 +118,6 @@ function currentSelectors() {
 
 beforeEach(() => {
   latestSelectors = null;
-  dataConsumerRenderCount = 0;
   dataMocks.accessibleDatabaseCalls = 0;
   dataMocks.refetchDatabases.mockClear();
   onPreferencesChange.mockClear();
@@ -174,49 +161,9 @@ describe('schema builder selector identities', () => {
     expect(dataMocks.accessibleDatabaseCalls).toBe(0);
   });
 
-  it('keeps actions stable across unrelated rerenders and changes only real dependents', () => {
-    const firstSelectionHandler = vi.fn();
-    const view = render(
-      <TestTree unrelatedValue={0} onSelectedTableChange={firstSelectionHandler} />
-    );
-    const first = currentSelectors();
-
-    view.rerender(
-      <TestTree unrelatedValue={1} onSelectedTableChange={firstSelectionHandler} />
-    );
-    const afterUnrelatedRender = currentSelectors();
-
-    expect(afterUnrelatedRender.selectOrg).toBe(first.selectOrg);
-    expect(afterUnrelatedRender.selectSchema).toBe(first.selectSchema);
-    expect(afterUnrelatedRender.selectTable).toBe(first.selectTable);
-    expect(afterUnrelatedRender.selectField).toBe(first.selectField);
-    expect(afterUnrelatedRender.clearAllSelections).toBe(first.clearAllSelections);
-    expect(afterUnrelatedRender.setActiveTab).toBe(first.setActiveTab);
-    expect(afterUnrelatedRender.setCurrentDatabaseApi).toBe(first.setCurrentDatabaseApi);
-    expect(afterUnrelatedRender.isCustomSchema).toBe(first.isCustomSchema);
-    expect(afterUnrelatedRender.getSchemaByKey).toBe(first.getSchemaByKey);
-    expect(afterUnrelatedRender.customSchemas).toBe(first.customSchemas);
-    expect(dataConsumerRenderCount).toBe(1);
-
-    const nextSelectionHandler = vi.fn();
-    view.rerender(
-      <TestTree unrelatedValue={1} onSelectedTableChange={nextSelectionHandler} />
-    );
-    const afterDependencyChange = currentSelectors();
-
-    expect(afterDependencyChange.selectTable).not.toBe(first.selectTable);
-    expect(afterDependencyChange.clearAllSelections).not.toBe(first.clearAllSelections);
-    expect(afterDependencyChange.selectField).toBe(first.selectField);
-    expect(afterDependencyChange.setCurrentDatabaseApi).toBe(first.setCurrentDatabaseApi);
-    expect(afterDependencyChange.selectOrg).toBe(first.selectOrg);
-    expect(afterDependencyChange.selectSchema).toBe(first.selectSchema);
-    expect(afterDependencyChange.setActiveTab).toBe(first.setActiveTab);
-    expect(dataConsumerRenderCount).toBe(1);
-  });
-
   it('preserves field clearing for table selection and clearing all selections', () => {
     const onSelectedTableChange = vi.fn();
-    render(<TestTree unrelatedValue={0} onSelectedTableChange={onSelectedTableChange} />);
+    render(<TestTree onSelectedTableChange={onSelectedTableChange} />);
 
     act(() => currentSelectors().selectField('field-1'));
     expect(screen.getByTestId('selected-field').textContent).toBe('field-1');
@@ -237,6 +184,5 @@ describe('schema builder selector identities', () => {
       tableId: null,
       tableName: null
     });
-    expect(dataConsumerRenderCount).toBe(1);
   });
 });

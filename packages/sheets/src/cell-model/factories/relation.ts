@@ -6,10 +6,8 @@
 // copied verbatim from v1 (no import from cell-content-factory.ts — that module
 // stays glide-only and is deleted at cutover).
 //
-// PARITY: projectSheetsCell(create(...)) deep-equals projectGlideCell(v1 create).
-//   single — glide Text: data = label, displayData = label.
-//   list   — glide Bubble: data = finalData (chips + "+N"), displayData = '' (Bubble
-//            carries no displayData, so it projects to '' on the display side).
+// Single relations use their label for data and display. List relations keep
+// their final chips in data while the relation view owns their visual display.
 
 import type { CellCreationMetadata } from '../../grid/grid-cell-types';
 import { compactJsonPreview } from '../../grid/sheets.formatters';

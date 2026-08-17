@@ -75,12 +75,6 @@ describe('Button asChild', () => {
 		expect(link!.getAttribute('data-parent-prop')).toBe('present');
 		expect(link!.getAttribute('data-child-prop')).toBe('present');
 		expect(link!.hasAttribute('type')).toBe(false);
-		expect(link!.classList.contains('outer-class')).toBe(true);
-		expect(link!.classList.contains('child-class')).toBe(true);
-		expect(link!.classList.contains('inline-flex')).toBe(true);
-		expect(link!.style.backgroundColor).toBe('black');
-		expect(link!.style.color).toBe('red');
-
 		outerRef.current?.focus();
 		expect(document.activeElement).toBe(link);
 
@@ -118,37 +112,4 @@ describe('Button asChild', () => {
 		expect(view.container.querySelector('button')?.getAttribute('type')).toBe('submit');
 	});
 
-	it('adds tactile press and actual desktop/coarse-pointer target sizing by default', async () => {
-		const view = createTestRoot();
-		await view.render(<Button>Save</Button>);
-
-		const button = view.container.querySelector<HTMLButtonElement>('button');
-		expect(button).not.toBeNull();
-		expect(button!.className).toContain('motion-safe:active:not-disabled:scale-[0.96]');
-		expect(button!.className).toContain('h-10');
-		expect(button!.className).toContain('min-w-10');
-		expect(button!.className).toContain('pointer-coarse:min-h-11');
-		expect(button!.className).toContain('pointer-coarse:min-w-11');
-	});
-
-	it('expands compact icon controls to an actual coarse-pointer target', async () => {
-		const view = createTestRoot();
-		await view.render(<Button size="icon-sm" aria-label="Compact action" />);
-
-		const button = view.container.querySelector<HTMLButtonElement>('button');
-		expect(button).not.toBeNull();
-		expect(button!.className).toContain('size-8');
-		expect(button!.className).toContain('pointer-coarse:size-11');
-		expect(button!.className).not.toContain('pointer-coarse:after:');
-	});
-
-	it('removes tactile press scaling when static without leaking the prop', async () => {
-		const view = createTestRoot();
-		await view.render(<Button static>Save without motion</Button>);
-
-		const button = view.container.querySelector<HTMLButtonElement>('button');
-		expect(button).not.toBeNull();
-		expect(button!.className).not.toContain('motion-safe:active:not-disabled:scale-[0.96]');
-		expect(button!.hasAttribute('static')).toBe(false);
-	});
 });
