@@ -2275,7 +2275,7 @@
       "docs": "Import PromptInput, Message, Tool, Reasoning, and PlanTracker from the installed ai directory under your configured shadcn ui alias.",
       "dependencies": [
         "lucide-react",
-        "sugar-high"
+        "sugar-high@^1.2.1"
       ],
       "registryDependencies": [
         "cn",
