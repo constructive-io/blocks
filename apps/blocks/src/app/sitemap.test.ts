@@ -10,9 +10,9 @@ import { SOURCE_BLOCKS } from '@/lib/source-blocks';
 import sitemap from './sitemap';
 
 describe('sitemap', () => {
-  it('contains foundations, application blocks, seven feature packs, 29 primitives, AI catalog, and the complete billing catalog', () => {
+  it('contains foundations, application blocks, seven feature packs, 30 primitives, AI catalog, and the complete billing catalog', () => {
     const entries = sitemap();
-    expect(BASE_PRIMITIVES).toHaveLength(29);
+    expect(BASE_PRIMITIVES).toHaveLength(30);
     expect(entries).toHaveLength(
       BASE_PRIMITIVES.length +
         FEATURE_PACK_DOCS.length +

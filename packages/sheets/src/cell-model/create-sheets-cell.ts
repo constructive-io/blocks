@@ -4,7 +4,7 @@
 // neutral {@link SheetsCell} render payload. Geometry stays out-of-band: the
 // optional `deriveGeometry` hook is threaded straight through to the geometry
 // factory (v1's `createGeometryCell` mirror) so this module never imports the
-// leaflet-backed geometry view.
+// map-backed geometry view.
 //
 // Precedence MIRRORS v1 CELL_FACTORIES exactly (image, uri, badges, dateTime,
 // interval, geometry, relation, number, boolean, text) — `text` is the universal

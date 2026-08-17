@@ -21,6 +21,7 @@ const expectedNames = [
   'dropdown-menu',
   'input',
   'label',
+  'map',
   'pagination',
   'popover',
   'progress',

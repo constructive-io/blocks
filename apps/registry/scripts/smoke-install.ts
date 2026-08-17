@@ -24,6 +24,7 @@ type SmokeCase = {
 	expectedServerFiles?: string[];
 	forbidden?: string[];
 	forbiddenPackages?: string[];
+	forbiddenSource?: string[];
 	items?: string[];
 	strictNullChecks?: boolean;
 };
@@ -198,7 +199,10 @@ const presetManifest = (id: string): string =>
 	`.constructive/feature-packs/${id}.json`;
 
 function featurePackClosure(ids: readonly FeaturePackId[]): string[] {
-	return ids.flatMap((id) => [...featurePackViewFiles[id], featurePackManifest(id)]);
+	return [
+		...ids.flatMap((id) => [...featurePackViewFiles[id], featurePackManifest(id)]),
+		...(ids.includes('data') ? ['src/components/ui/map.tsx'] : []),
+	];
 }
 
 function consoleModuleClosure(ids: readonly FeaturePackId[]): string[] {
@@ -209,6 +213,7 @@ function consoleModuleClosure(ids: readonly FeaturePackId[]): string[] {
 			...consoleModuleFiles[id],
 			featurePackManifest(id),
 		]),
+		...(ids.includes('data') ? ['src/components/ui/map.tsx'] : []),
 	];
 }
 
@@ -222,12 +227,13 @@ function forbiddenFeaturePacks(ids: readonly FeaturePackId[]): string[] {
 const standaloneFeaturePackCases: SmokeCase[] = featurePackIds.map((id) => ({
 	name: `feature-pack-${id}`,
 	expectedPackages: id === 'data'
-		? ['@constructive-io/data', 'zustand']
+		? ['@constructive-io/data', 'maplibre-gl', 'zustand']
 		: [],
 	forbiddenPackages: [
 		...(id === 'data' ? [] : ['zustand']),
 		'@constructive-io/sheets',
 		...(id === 'data' ? [] : ['@constructive-io/data']),
+		...(id === 'data' ? [] : ['maplibre-gl']),
 	],
 	expected: featurePackClosure([id]),
 	forbidden: [
@@ -245,9 +251,13 @@ const consoleModuleCases: SmokeCase[] = featurePackIds.map((id) => ({
 	name: `console-module-${id}`,
 	expectedPackages: [
 		'@constructive-io/data',
+		...(id === 'data' ? ['maplibre-gl'] : []),
 		'zustand',
 	],
-	forbiddenPackages: ['@constructive-io/sheets'],
+	forbiddenPackages: [
+		'@constructive-io/sheets',
+		...(id === 'data' ? [] : ['maplibre-gl']),
+	],
 	expected: consoleModuleClosure([id]),
 	forbidden: [
 		...featurePackIds
@@ -276,7 +286,7 @@ const presetCases: SmokeCase[] = [
 	},
 ].map(({ id, packs }) => ({
 	name: `preset-${id}`,
-	expectedPackages: ['@constructive-io/data', 'zustand'],
+	expectedPackages: ['@constructive-io/data', 'maplibre-gl', 'zustand'],
 	forbiddenPackages: ['@constructive-io/sheets'],
 	expected: [
 		...consoleModuleClosure(packs as readonly FeaturePackId[]),
@@ -300,6 +310,77 @@ const cases: SmokeCase[] = [
 	{
 		name: 'resizable',
 		expected: ['src/components/ui/resizable.tsx'],
+	},
+	{
+		name: 'map',
+		consumer: `'use client';
+
+import {
+	Map,
+	MapControls,
+	MapMarker,
+	MarkerContent,
+	type MapStyleOption,
+} from '@/components/ui/map';
+
+const previewStyle: MapStyleOption = 'https://demotiles.maplibre.org/style.json';
+
+export function MapRegistrySmokeConsumer() {
+	return (
+		<div className="h-80">
+			<Map styles={{ light: previewStyle }}>
+				<MapMarker longitude={106.7} latitude={10.8}>
+					<MarkerContent />
+				</MapMarker>
+				<MapControls showCompass />
+			</Map>
+		</div>
+	);
+}
+`,
+		expected: [
+			'src/components/ui/map.tsx',
+			'src/components/ui/alert.tsx',
+			'src/components/ui/button.tsx',
+			'src/components/ui/skeleton.tsx',
+			'src/lib/utils.ts',
+		],
+		expectedCss: ['.maplibregl-popup-content', '.maplibregl-ctrl-attrib'],
+		expectedPackages: ['@types/geojson', 'lucide-react', 'maplibre-gl'],
+		forbiddenSource: ['unpkg.com', 'basemaps.cartocdn.com', 'nominatim.openstreetmap.org'],
+		strictNullChecks: true,
+	},
+	{
+		name: 'map-custom',
+		items: ['map'],
+		customAliases: true,
+		consumer: `'use client';
+
+import { Map, MapGeoJSON, type MapStyleOption } from '~/design-system/primitives/map';
+
+const blankStyle: MapStyleOption = { version: 8, sources: {}, layers: [] };
+
+export function CustomAliasMapRegistrySmokeConsumer() {
+	return (
+		<div className="h-80">
+			<Map styles={{ dark: blankStyle }}>
+				<MapGeoJSON data={{ type: 'FeatureCollection', features: [] }} />
+			</Map>
+		</div>
+	);
+}
+`,
+		expected: [
+			'src/design-system/primitives/map.tsx',
+			'src/design-system/primitives/alert.tsx',
+			'src/design-system/primitives/button.tsx',
+			'src/design-system/primitives/skeleton.tsx',
+			'src/shared/utils.ts',
+		],
+		expectedCss: ['.maplibregl-popup-content', '.maplibregl-ctrl-attrib'],
+		expectedPackages: ['@types/geojson', 'lucide-react', 'maplibre-gl'],
+		forbiddenSource: ['@constructive-io/', 'unpkg.com', 'basemaps.cartocdn.com'],
+		strictNullChecks: true,
 	},
 	{
 		name: 'overlays-default',
@@ -414,12 +495,13 @@ export function AiRegistrySmokeConsumer() {
 	},
 	{
 		name: 'sheets',
-		expectedPackages: ['@constructive-io/data'],
+		expectedPackages: ['@constructive-io/data', 'maplibre-gl'],
 		forbiddenPackages: ['@constructive-io/sheets'],
 		expected: [
 			'src/components/ui/sheets/index.ts',
 			'src/components/ui/sheets/context/sheets-provider.tsx',
 			'src/components/ui/sheets/grid/sheets.tsx',
+			'src/components/ui/map.tsx',
 		],
 	},
 	{
@@ -473,6 +555,7 @@ export function AiRegistrySmokeConsumer() {
 		name: 'console-kit-nextjs',
 		expectedPackages: [
 			'@constructive-io/data',
+			'maplibre-gl',
 			'zustand',
 		],
 		forbiddenPackages: ['@constructive-io/sheets'],
@@ -1068,6 +1151,11 @@ function assertInstalled(root: string, testCase: SmokeCase): void {
 		}
 		if (/['"]@schema-builder\//.test(source)) {
 			throw new Error(`@constructive/${testCase.name} left an unshipped @schema-builder alias in ${file}.`);
+		}
+		for (const fragment of testCase.forbiddenSource ?? []) {
+			if (source.includes(fragment)) {
+				throw new Error(`@constructive/${testCase.name} left forbidden source ${fragment} in ${file}.`);
+			}
 		}
 	}
 

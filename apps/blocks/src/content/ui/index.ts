@@ -15,6 +15,7 @@ import { drawerDocs } from './drawer';
 import { dropdownMenuDocs } from './dropdown-menu';
 import { inputDocs } from './input';
 import { labelDocs } from './label';
+import { mapDocs } from './map';
 import { paginationDocs } from './pagination';
 import { popoverDocs } from './popover';
 import { progressDocs } from './progress';
@@ -46,6 +47,7 @@ export const PRIMITIVE_DOCS = {
   'dropdown-menu': dropdownMenuDocs,
   input: inputDocs,
   label: labelDocs,
+  map: mapDocs,
   pagination: paginationDocs,
   popover: popoverDocs,
   progress: progressDocs,

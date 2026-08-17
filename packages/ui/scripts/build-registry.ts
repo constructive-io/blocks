@@ -47,6 +47,7 @@ const clientFiles = new Set([
 	'input.tsx',
 	'json-input.tsx',
 	'label.tsx',
+	'map.tsx',
 	'motion-grid.tsx',
 	'multi-select.tsx',
 	'popover.tsx',

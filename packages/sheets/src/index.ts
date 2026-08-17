@@ -10,6 +10,10 @@ export type {
 	SheetsContextValue,
 	SheetsAuthEmbedded,
 	SheetsAuthStandalone,
+	SheetsMapStyles,
+	SheetsMapConfig,
+	SheetsGeocodeResult,
+	SheetsGeocodeFn,
 	SheetsScopeKey,
 } from './context/sheets-context';
 export type { SheetsExecuteFn, SheetsUploadFn } from './context/sheets-execute';

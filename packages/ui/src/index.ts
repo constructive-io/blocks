@@ -202,6 +202,7 @@ export {
 
 // Complex components
 export { FlowZoomPanel } from './components/flow-zoom-panel';
+export * from './components/map';
 export { Command, CommandInput, CommandList, CommandEmpty, CommandGroup, CommandItem } from './components/command';
 export {
 	Combobox,

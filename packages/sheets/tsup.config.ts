@@ -11,8 +11,7 @@ const external = [
 	'@remixicon/react',
 	'@internationalized/date',
 	'react-aria-components',
-	'react-leaflet',
-	'leaflet',
+	'maplibre-gl',
 ];
 
 const banner = { js: '"use client";' };

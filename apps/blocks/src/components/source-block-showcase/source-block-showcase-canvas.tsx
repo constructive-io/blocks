@@ -18,6 +18,7 @@ import { createNoopSchemaBuilderAdapter } from '@constructive-io/schema-builder/
 import {
   Sheets,
   SheetsProvider,
+  type SheetsGeocodeResult,
   type SheetsConfig,
 } from '@constructive-io/sheets';
 import {
@@ -28,6 +29,13 @@ import { Badge } from '@constructive-io/ui/badge';
 
 import type { SourceBlockDoc } from '@/lib/source-blocks';
 
+const SHEETS_GEOCODE_RESULTS: readonly SheetsGeocodeResult[] = [
+  { label: 'Ho Chi Minh City, Vietnam', longitude: 106.7009, latitude: 10.7769 },
+  { label: 'Hanoi, Vietnam', longitude: 105.8342, latitude: 21.0278 },
+  { label: 'Da Nang, Vietnam', longitude: 108.2022, latitude: 16.0544 },
+  { label: 'Singapore', longitude: 103.8198, latitude: 1.3521 },
+];
+
 function createSheetsTables(): MockTable[] {
   return [
     {
@@ -37,6 +45,12 @@ function createSheetsTables(): MockTable[] {
         { name: 'name', gqlType: 'String', pgType: 'text' },
         { name: 'status', gqlType: 'String', pgType: 'text' },
         { name: 'owner', gqlType: 'String', pgType: 'text' },
+        {
+          name: 'location',
+          gqlType: 'GeoJSON',
+          pgType: 'geometry',
+          subtype: 'GeometryPoint',
+        },
         { name: 'updatedAt', gqlType: 'Datetime', pgType: 'timestamptz' },
       ],
       rows: [
@@ -45,6 +59,7 @@ function createSheetsTables(): MockTable[] {
           name: 'Atlas migration',
           status: 'In progress',
           owner: 'Ada Lovelace',
+          location: { type: 'Point', coordinates: [106.7009, 10.7769] },
           updatedAt: '2026-07-28T09:18Z',
         },
         {
@@ -52,6 +67,7 @@ function createSheetsTables(): MockTable[] {
           name: 'Beacon launch',
           status: 'Review',
           owner: 'Grace Hopper',
+          location: { type: 'Point', coordinates: [105.8342, 21.0278] },
           updatedAt: '2026-07-27T15:42Z',
         },
         {
@@ -59,6 +75,7 @@ function createSheetsTables(): MockTable[] {
           name: 'Compass research',
           status: 'Planned',
           owner: 'Alan Turing',
+          location: { type: 'Point', coordinates: [108.2022, 16.0544] },
           updatedAt: '2026-07-24T11:05Z',
         },
         {
@@ -66,6 +83,7 @@ function createSheetsTables(): MockTable[] {
           name: 'Delta onboarding',
           status: 'In progress',
           owner: 'Katherine Johnson',
+          location: { type: 'Point', coordinates: [103.8198, 1.3521] },
           updatedAt: '2026-07-22T08:30Z',
         },
       ],
@@ -87,6 +105,29 @@ function SheetsShowcase() {
       },
       execute: mock.execute,
       executeUpload: mock.executeUpload,
+      map: {
+        styles: {
+          light: {
+            version: 8,
+            sources: {},
+            layers: [{ id: 'background', type: 'background', paint: { 'background-color': '#f1f5f9' } }],
+          },
+          dark: {
+            version: 8,
+            sources: {},
+            layers: [{ id: 'background', type: 'background', paint: { 'background-color': '#111827' } }],
+          },
+        },
+        geocode: (query, { signal }) => {
+          signal.throwIfAborted();
+          const normalizedQuery = query.trim().toLocaleLowerCase();
+          return Promise.resolve(
+            SHEETS_GEOCODE_RESULTS.filter((result) =>
+              result.label.toLocaleLowerCase().includes(normalizedQuery),
+            ),
+          );
+        },
+      },
     };
   }, []);
 

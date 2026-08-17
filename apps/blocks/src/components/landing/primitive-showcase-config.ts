@@ -29,6 +29,7 @@ export const HOME_SHOWCASE_ORDER = [
   'resizable',
   'scroll-area',
   'table',
+  'map',
   'label',
   'textarea',
 ] as const satisfies readonly BasePrimitiveName[];
@@ -48,6 +49,7 @@ export const HOME_SHOWCASE_DEMOS = {
   'dropdown-menu': getUiDemo('dropdown-menu', 'BasicDropdownMenuDemo'),
   input: getUiDemo('input', 'ControlledInputDemo'),
   label: getUiDemo('label', 'RequiredLabelDemo'),
+  map: getUiDemo('map', 'BasicMapDemo'),
   pagination: getUiDemo('pagination', 'BasicPaginationDemo'),
   popover: getUiDemo('popover', 'BasicPopoverDemo'),
   progress: getUiDemo('progress', 'BlockDemo'),

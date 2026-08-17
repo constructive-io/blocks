@@ -6,6 +6,7 @@ import { BASE_PRIMITIVES } from '@/lib/base-primitives';
 import { UI_DEMOS } from './showcase-ui';
 
 beforeAll(() => {
+  vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue(null);
   if (!Element.prototype.scrollIntoView) Element.prototype.scrollIntoView = function scrollIntoView() {};
   if (!Element.prototype.getAnimations) Element.prototype.getAnimations = () => [];
   if (!window.matchMedia) {

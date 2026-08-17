@@ -17,7 +17,7 @@
  *   3. A golden assert/update helper — {@link assertOrUpdateGolden} — colocated
  *      JSON snapshots with stable key order, switched by `UPDATE_GOLDEN`.
  *
- * Nothing here imports the real `createGeometryCell` (it pulls optional leaflet
+ * Nothing here imports the real `createGeometryCell` (it pulls the lazy map
  * peers); the geometry custom-cell is projected from its `displayData`.
  */
 

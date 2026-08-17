@@ -1,5 +1,6 @@
 import { createContext, useContext } from 'react';
 import type { QueryClient } from '@tanstack/react-query';
+import type { MapStyleOption } from '@constructive-io/ui/map';
 
 import type { SheetsExecuteFn, SheetsUploadFn } from './sheets-execute';
 import type { SheetsLogger } from '../utils/sheets-logger';
@@ -21,6 +22,29 @@ export interface SheetsAuthStandalone {
 	mode: 'standalone';
 }
 
+export interface SheetsMapStyles {
+	light?: MapStyleOption;
+	dark?: MapStyleOption;
+}
+
+export interface SheetsGeocodeResult {
+	label: string;
+	longitude: number;
+	latitude: number;
+}
+
+export type SheetsGeocodeFn = (
+	query: string,
+	context: { signal: AbortSignal; locale: string },
+) => Promise<readonly SheetsGeocodeResult[]>;
+
+export interface SheetsMapConfig {
+	/** Optional production map styles. The MapLibre demo style is used when omitted. */
+	styles?: SheetsMapStyles;
+	/** Optional host geocoder. Search is hidden when this callback is omitted. */
+	geocode?: SheetsGeocodeFn;
+}
+
 export interface SheetsConfig {
 	/** Data endpoint (app-public GraphQL) */
 	endpoint: string;
@@ -34,6 +58,8 @@ export interface SheetsConfig {
 	fieldTypeOverrides?: Record<string, string>;
 	/** Optional: BCP-47 locale for locale-aware date/number formatting (default 'en-US'). */
 	locale?: string;
+	/** Optional map styles and address-search adapter for Point geometry editing. */
+	map?: SheetsMapConfig;
 	/** Optional: inject custom execute function */
 	execute?: SheetsExecuteFn;
 	/** Optional: inject custom upload function */

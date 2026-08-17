@@ -560,6 +560,16 @@
         "default": "./dist/components/flow-zoom-panel.cjs"
       }
     },
+    "./map": {
+      "import": {
+        "types": "./dist/components/map.d.ts",
+        "default": "./dist/components/map.js"
+      },
+      "require": {
+        "types": "./dist/components/map.d.cts",
+        "default": "./dist/components/map.cjs"
+      }
+    },
     "./motion-grid": {
       "import": {
         "types": "./dist/components/motion-grid.d.ts",
@@ -656,7 +666,8 @@
   "types": "./dist/index.d.ts",
   "files": [
     "dist",
-    "src/styles"
+    "src/styles",
+    "THIRD_PARTY_NOTICES.md"
   ],
   "scripts": {
     "build": "pnpm theme:check && tsdown && pnpm check:package",
@@ -687,6 +698,7 @@
     "ace-builds": "^1.0.0",
     "cmdk": "^1.0.0",
     "lucide-react": ">=0.400.0 <1.0.0",
+    "maplibre-gl": "^6.0.0",
     "match-sorter": "^6.0.0 || ^7.0.0 || ^8.0.0",
     "motion": "^11.0.0 || ^12.0.0",
     "react": "^18.0.0 || ^19.0.0",
@@ -715,6 +727,7 @@
     "@storybook/addon-a11y": "^10.1.11",
     "@storybook/react-vite": "^10.1.11",
     "@tailwindcss/postcss": "^4.1.18",
+    "@types/geojson": "^7946.0.16",
     "@types/node": "^20.19.27",
     "@types/react": "^19.2.7",
     "@types/react-dom": "^19.2.3",
@@ -725,6 +738,7 @@
     "cmdk": "^1.1.1",
     "jsdom": "^26.1.0",
     "lucide-react": "^0.525.0",
+    "maplibre-gl": "^6.0.0",
     "match-sorter": "^8.2.0",
     "motion": "^12.18.1",
     "react": "^19.2.3",
