@@ -7,9 +7,8 @@
 // it falls back to a compact JSON preview as both the copy value and the display
 // string — identical to v1's Text fallback.
 //
-// Parity: `projectSheetsCell` special-cases kind `geometry` so copyText ===
-// displayText === displayData. The fallback therefore sets `data` and
-// `displayData` to the SAME `compactJsonPreview(value, 80)` string v1 emits.
+// Copy and display text intentionally use the same compact JSON preview when no
+// geometry-specific builder is available.
 
 import type { CellCreationMetadata } from '../../grid/grid-cell-types';
 import { GEOMETRY_TYPES } from '../../cell-types/cell-type-groups';

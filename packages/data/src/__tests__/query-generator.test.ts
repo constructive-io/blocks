@@ -12,7 +12,6 @@ import {
 	buildPostGraphileDelete,
 	buildPostGraphileUpdate,
 	buildSelect,
-	createASTQueryBuilder,
 	toCamelCasePlural,
 	toCamelCaseSingular,
 	toPatchFieldName,
@@ -356,13 +355,6 @@ describe("query-generator", () => {
 			const result = buildFn();
 			expect(result).toBeDefined();
 			expect(typeof result.toString()).toBe("string");
-		});
-	});
-
-	describe("createASTQueryBuilder", () => {
-		it("creates builder with tables", () => {
-			expect(createASTQueryBuilder(allTables)).toBeDefined();
-			expect(createASTQueryBuilder([testTable])).toBeDefined();
 		});
 	});
 

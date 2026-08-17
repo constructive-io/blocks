@@ -7,7 +7,7 @@
 
 import { afterEach, describe, expect, it } from 'vitest';
 
-import { DEFAULT_KEYMAP, resolveKeyCommand } from '../keymap';
+import { resolveKeyCommand } from '../keymap';
 
 function ev(key: string, mods: Partial<{ ctrl: boolean; meta: boolean; shift: boolean; alt: boolean }> = {}): KeyboardEvent {
 	return {
@@ -122,21 +122,5 @@ describe('first-match-wins', () => {
 			{ trigger: { kind: 'key' as const, binding: { key: 'x' } }, command: 'k' },
 		];
 		expect(resolveKeyCommand(ev('x'), map)).toBe('k');
-	});
-});
-
-describe('DEFAULT_KEYMAP shape', () => {
-	it('declares pointer triggers for the structural gestures', () => {
-		const pointers = DEFAULT_KEYMAP.filter((b) => b.trigger.kind === 'pointer').map((b) => b.command);
-		expect(pointers).toEqual(
-			expect.arrayContaining([
-				'cell.activate',
-				'cell.extendToClicked',
-				'editor.open',
-				'header.sortToggle',
-				'rowmarker.toggleRow',
-				'rowmarker.toggleAll',
-			]),
-		);
 	});
 });

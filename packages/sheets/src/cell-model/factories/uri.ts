@@ -3,9 +3,8 @@
 // render payload. All domain logic (email -> mailto, url passthrough, empty
 // guard) is reproduced here verbatim so this file is glide-free at cutover.
 //
-// PARITY: projectSheetsCell(create(...)) deep-equals projectGlideCell of v1's
-// UriCell — `data`/`displayData` are the SAME strings v1 emits. v1 drops only
-// the `onClickUri` side-effect (the DOM view owns clicks).
+// `data` holds the navigable URI while `displayData` keeps the user-facing
+// string; the DOM view owns click behavior.
 
 import type { CellType } from '../../cell-types/types';
 import type { CellCreationMetadata } from '../../grid/grid-cell-types';

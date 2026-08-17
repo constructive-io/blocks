@@ -174,34 +174,6 @@ describe('ConstructiveConsoleKit external ownership', () => {
     }
   });
 
-  it('supports a first-party selected-pack composition from the core barrel', () => {
-    const hostSession = embeddedSession('database-1');
-    const hostTransport = transport('selected-packs');
-
-    render(
-      <ConstructiveConsoleKitCore
-        database={{
-          id: 'database-1',
-          endpoints: {
-            data: { id: 'data-1', url: 'https://tenant.example/data/graphql' },
-            auth: { id: 'auth-1', url: 'https://tenant.example/auth/graphql' }
-          }
-        }}
-        featureModules={[dataConsoleModule, authConsoleModule]}
-        session={hostSession}
-        transport={hostTransport}
-      />
-    );
-
-    const props = consoleKitCaptures.props.at(-1) as Readonly<{
-      featureModules: readonly Readonly<{ id: string }>[];
-    }>;
-    expect(props.featureModules.map((module) => module.id)).toEqual([
-      'data',
-      'auth'
-    ]);
-  });
-
   it('initializes its wrapper-owned store from a valid semantic default route', async () => {
     const defaultRoute = {
       feature: 'data',

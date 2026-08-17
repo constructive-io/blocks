@@ -1,9 +1,4 @@
-/**
- * SHARED display fixtures — the native (glide-free) case tables + helpers that
- * drive the cell-display golden. The committed `cell-display.golden.json` freezes
- * the expected `{ displayText, copyText }` per case; the cell-display parity test
- * iterates these and asserts the native pipeline reproduces the frozen values.
- */
+/** Shared deterministic display fixtures used by focused editor tests. */
 
 import type { CellType } from '../../cell-types/types';
 import type { SheetsCell } from '../../cell-model/sheets-cell';

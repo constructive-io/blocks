@@ -1862,7 +1862,7 @@
       "description": "Presentational primitives for AI and agentic chat UIs: composer, messages, reasoning, tools, HITL approval, plan tracking, and streaming surfaces.",
       "categories": ["block", "ai"],
       "docs": "Import PromptInput, Message, Tool, Reasoning, and PlanTracker from the installed ai directory under your configured shadcn ui alias.",
-      "dependencies": ["lucide-react", "sugar-high"],
+      "dependencies": ["lucide-react", "sugar-high@^1.2.1"],
       "registryDependencies": ["cn", "button", "avatar", "tooltip", "alert", "collapsible", "badge"],
       "files": [
         {

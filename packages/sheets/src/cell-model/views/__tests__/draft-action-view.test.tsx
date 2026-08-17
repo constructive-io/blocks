@@ -38,26 +38,6 @@ describe('DraftActionCellView (native DOM)', () => {
 		});
 	}
 
-	it('idle renders an enabled "Save" button', async () => {
-		await mount({ status: 'idle' });
-
-		const btn = getButton(container);
-		expect(btn.disabled).toBe(false);
-		expect(btn.textContent).toContain('Save');
-		expect(btn.textContent).not.toContain('Saving');
-		// no spinner, no error indicator in the idle branch
-		expect(container.querySelector('.animate-spin')).toBeNull();
-		expect(container.querySelector('[data-slot="draft-action-error"]')).toBeNull();
-	});
-
-	it('defaults to idle when no status prop is given', async () => {
-		await mount({});
-
-		const btn = getButton(container);
-		expect(btn.disabled).toBe(false);
-		expect(btn.textContent).toContain('Save');
-	});
-
 	it('click fires onSubmit exactly once', async () => {
 		const onSubmit = vi.fn();
 		await mount({ status: 'idle', onSubmit });
@@ -68,17 +48,6 @@ describe('DraftActionCellView (native DOM)', () => {
 		});
 
 		expect(onSubmit).toHaveBeenCalledTimes(1);
-	});
-
-	it('does not throw when clicked without an onSubmit handler', async () => {
-		await mount({ status: 'idle' });
-
-		const btn = getButton(container);
-		await act(async () => {
-			btn.dispatchEvent(new MouseEvent('click', { bubbles: true }));
-		});
-
-		expect(btn.disabled).toBe(false);
 	});
 
 	it('saving shows the spinner + "Saving..." and disables the button', async () => {

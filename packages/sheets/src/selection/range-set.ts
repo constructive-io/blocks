@@ -8,9 +8,8 @@
  * O(#ranges) instead of O(#rows). Every mutator returns a NEW RangeSet; the
  * receiver is never mutated.
  *
- * Behavior is frozen by `src/grid/__golden__/selection.golden.json` (the
- * `CompactSelection` reference) — this class MUST reproduce all 26 cases
- * byte-identically. See `src/selection/__tests__/range-set.golden.test.ts`.
+ * Focused tests protect merging, splitting, offsets, and immutability without
+ * freezing the obsolete grid implementation this class replaced.
  */
 
 type Range = readonly [start: number, end: number];
@@ -61,9 +60,8 @@ function insertRange(ranges: readonly Range[], [s, e]: Range): Range[] {
  * Subtract `[selMin, selMax)` from a sorted, disjoint range list, SPLITTING any
  * covering range (removing the middle of one yields two).
  *
- * This is a FAITHFUL port of glide `CompactSelection.remove` — INCLUDING its two
- * documented quirks (frozen by selection.golden.json), not a clean set
- * difference:
+ * This is a faithful port of glide `CompactSelection.remove`, including its two
+ * documented quirks rather than a clean set difference:
  *
  *   1. Overlap test is `start <= selMax && selMin <= end` — both bounds `<=`, so
  *      a range touching the cut is "intersected" (usually a harmless in-place
