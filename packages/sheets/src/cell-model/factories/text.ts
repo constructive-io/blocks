@@ -6,9 +6,8 @@
 //
 // v1 emits a Text glide cell: null/undefined -> data/displayData ''; string ->
 // data/displayData = value; anything else -> compactJsonPreview(value, 80) for
-// both. This factory mirrors that exactly so projectSheetsCell deep-equals
-// projectGlideCell. `compactJsonPreview` is shared (sheets.formatters), so it is
-// imported rather than copied.
+// both. `compactJsonPreview` is shared (sheets.formatters), so it is imported
+// rather than copied.
 
 import type { CellType } from '../../cell-types/types';
 import type { CellCreationMetadata } from '../../grid/grid-cell-types';

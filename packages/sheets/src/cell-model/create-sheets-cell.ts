@@ -56,8 +56,8 @@ const SHEETS_CELL_FACTORIES: SheetsCellFactory[] = [
  * its type (the host reads `SheetsCellResolution.typeKey`, but the cell carrying
  * `meta.cellType` keeps it self-contained for the editor adapters that already
  * read it — date/geometry). MERGE (not replace) so any factory-set meta key
- * (e.g. geometry's `geometryType`) survives. Parity-safe: `projectSheetsCell`
- * ignores `meta` entirely, so display/copy text is unchanged.
+ * (e.g. geometry's `geometryType`) survives. This does not change display or
+ * copy text because projection ignores `meta`.
  */
 function withTypeKey(cell: SheetsCell, cellType: string): SheetsCell {
 	return { ...cell, meta: { ...cell.meta, cellType: cellType as CellType } };

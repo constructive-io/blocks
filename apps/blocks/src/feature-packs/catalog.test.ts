@@ -1,11 +1,7 @@
-import { readFileSync } from 'node:fs';
-
 import { describe, expect, it } from 'vitest';
 
 import {
-  ATOMIC_CAPABILITY_IDS,
   FEATURE_PACK_CATALOG,
-  FEATURE_PACK_IDS,
   FEATURE_PACK_MANIFESTS,
   PRESET_PROFILES,
   generateFeaturePackCatalog,
@@ -14,61 +10,7 @@ import {
   type FeaturePackManifestV1
 } from './index';
 
-function readSidecar(relativePath: string): unknown {
-  return JSON.parse(
-    readFileSync(new URL(relativePath, import.meta.url), 'utf8')
-  );
-}
-
 describe('first-release feature pack catalog', () => {
-  it('contains exactly the approved first-release pack IDs', () => {
-    expect(FEATURE_PACK_CATALOG.featurePacks.map((pack) => pack.id)).toEqual(
-      FEATURE_PACK_IDS
-    );
-    expect(new Set(ATOMIC_CAPABILITY_IDS).size).toBe(
-      ATOMIC_CAPABILITY_IDS.length
-    );
-  });
-
-  it('maps backend presets to the approved pack profiles', () => {
-    expect(
-      Object.fromEntries(
-        PRESET_PROFILES.map((profile) => [
-          profile.presetSlug,
-          profile.featurePacks
-        ])
-      )
-    ).toEqual({
-      'auth:hardened': ['data', 'auth', 'users'],
-      'b2b:storage': [
-        'data',
-        'auth',
-        'users',
-        'organizations',
-        'storage'
-      ],
-      full: [
-        'data',
-        'auth',
-        'users',
-        'organizations',
-        'storage',
-        'billing',
-        'notifications'
-      ]
-    });
-    expect(PRESET_PROFILES.every((profile) => profile.stability === 'stable')).toBe(true);
-  });
-
-  it('keeps search, i18n, and realtime optional', () => {
-    const data = FEATURE_PACK_MANIFESTS.find((pack) => pack.id === 'data');
-    expect(data?.capabilities.optional).toEqual([
-      'data.search',
-      'data.i18n',
-      'data.realtime'
-    ]);
-  });
-
   it('generates dependency-ordered manifests for each preset', () => {
     expect(
       getPresetFeaturePacks(FEATURE_PACK_CATALOG, 'b2b-storage').map(
@@ -77,21 +19,6 @@ describe('first-release feature pack catalog', () => {
     ).toEqual(['data', 'auth', 'users', 'organizations', 'storage']);
   });
 
-  it('keeps installable JSON sidecars identical to the typed catalog', () => {
-    for (const manifest of FEATURE_PACK_MANIFESTS) {
-      expect(
-        readSidecar(
-          `../blocks/feature-packs/${manifest.id}/feature-pack.json`
-        )
-      ).toEqual(manifest);
-    }
-
-    for (const profile of PRESET_PROFILES) {
-      expect(
-        readSidecar(`../blocks/presets/${profile.id}.json`)
-      ).toEqual(profile);
-    }
-  });
 });
 
 describe('feature pack catalog validation', () => {

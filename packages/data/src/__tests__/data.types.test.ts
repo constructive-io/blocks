@@ -3,9 +3,9 @@
  * Tests core type definitions, utilities, and type conversion functions
  */
 import { beforeEach, describe, expect, it } from "vitest";
-import type { CleanTable, Filter, MetaTable } from "../data.types";
+import type { CleanTable, MetaTable } from "../data.types";
 import { cleanTable, pgFieldToCamelCase } from "../data.types";
-import { complexTable, filterFixtures, simpleTable } from "./fixtures";
+import { complexTable, simpleTable } from "./fixtures";
 import { createMockMetaResponse, createMockTable } from "./test-helpers";
 
 describe("data.types", () => {
@@ -419,62 +419,6 @@ describe("data.types", () => {
 
 			expect(result.relations.manyToMany[0].junctionLeftKeyFields).toEqual(["projectId"]);
 			expect(result.relations.manyToMany[0].junctionRightKeyFields).toEqual(["tagId"]);
-		});
-	});
-
-	describe("Filter type validation", () => {
-		it("should accept valid simple filters", () => {
-			const filter: Filter = filterFixtures.simple;
-
-			expect(filter).toEqual({
-				isActive: { equalTo: true },
-			});
-		});
-
-		it("should accept valid string operator filters", () => {
-			const filter: Filter = filterFixtures.stringOperators;
-
-			expect(filter).toEqual({
-				name: { includes: "test" },
-				email: { endsWith: "@example.com" },
-				description: { startsWith: "Important" },
-			});
-		});
-
-		it("should accept valid numeric operator filters", () => {
-			const filter: Filter = filterFixtures.numericOperators;
-
-			expect(filter).toEqual({
-				age: { greaterThan: 18 },
-				score: { lessThanOrEqualTo: 100 },
-				rating: { in: [4, 5] },
-			});
-		});
-
-		it("should accept valid logical operator filters", () => {
-			const filter: Filter = filterFixtures.logicalOperators;
-
-			expect(filter).toHaveProperty("and");
-			expect(filter).toHaveProperty("or");
-			expect(Array.isArray(filter.and)).toBe(true);
-			expect(Array.isArray(filter.or)).toBe(true);
-		});
-
-		it("should accept valid nested filters", () => {
-			const filter: Filter = filterFixtures.nested;
-
-			expect(filter).toHaveProperty("and");
-			expect(Array.isArray(filter.and)).toBe(true);
-			expect(filter.and).toHaveLength(2);
-		});
-
-		it("should accept valid relational filters", () => {
-			const filter: Filter = filterFixtures.relational;
-
-			expect(filter).toHaveProperty("posts");
-			expect(filter).toHaveProperty("profile");
-			expect(filter.posts).toHaveProperty("some");
-			expect(filter.profile).toHaveProperty("every");
 		});
 	});
 

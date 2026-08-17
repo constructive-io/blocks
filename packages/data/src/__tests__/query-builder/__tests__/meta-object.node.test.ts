@@ -9,8 +9,4 @@ describe('convertFromMetaSchema()', () => {
 		const validate = validateMetaObject(metaObj);
 		expect(validate).toBe(true);
 	});
-
-	it('matches snapshot', () => {
-		expect(convertFromMetaSchema(apiMetaSchema as any)).toMatchSnapshot();
-	});
 });

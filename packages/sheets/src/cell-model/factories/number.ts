@@ -4,13 +4,8 @@
 // the number family wins it before the text fallback; this is a deliberate v1
 // quirk preserved for parity).
 //
-// Parity contract (projectSheetsCell ≡ projectGlideCell):
-//   - null/undefined OR NaN coercion -> data: undefined, displayData: ''
-//     (projects copyText '' + displayText '')
-//   - otherwise -> data: numValue (number), displayData: String(numValue)
-// Mirrors the glide NumberCell branch-for-branch; `data` holds EXACTLY what the
-// glide factory put in `.data`, and `displayData` is the string form of glide's
-// `.displayData`. The glide NumberCell sets no `readonly`, so readonly = false.
+// Null, undefined, and invalid values become an empty cell. Valid values keep
+// the numeric data and a string display value.
 
 import type { CellCreationMetadata } from '../../grid/grid-cell-types';
 import { NUMBER_TYPES } from '../../cell-types/cell-type-groups';

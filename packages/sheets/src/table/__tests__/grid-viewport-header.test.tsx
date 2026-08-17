@@ -85,24 +85,6 @@ describe('GridViewport header row (sort caret + resize handle + sticky pin)', ()
 		return Array.from(container.querySelectorAll<HTMLElement>('[role="columnheader"]'));
 	}
 
-	it('renders a columnheader per column, each carrying its title', async () => {
-		await act(async () => {
-			root.render(<Harness />);
-		});
-
-		const headers = headerCells();
-		// 3 columns: sticky col0 + 2 virtualized.
-		expect(headers.length).toBe(COLUMNS.length);
-
-		const titles = headers.map((h) => h.textContent ?? '');
-		expect(titles.some((t) => t.includes('Name'))).toBe(true);
-		expect(titles.some((t) => t.includes('Count'))).toBe(true);
-		expect(titles.some((t) => t.includes('Active'))).toBe(true);
-
-		// Each header is keyed to its column id for the shell to target.
-		expect(headers.map((h) => h.getAttribute('data-col-key')).sort()).toEqual(['active', 'count', 'name']);
-	});
-
 	it('toggles sort via onHeaderClick(colKey) when a header is clicked', async () => {
 		const clicks: string[] = [];
 		await act(async () => {

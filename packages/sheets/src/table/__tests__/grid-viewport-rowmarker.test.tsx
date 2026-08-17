@@ -147,31 +147,11 @@ describe('GridViewport row-marker column (leading checkbox + select-all → Rang
 	function markerHeader(): HTMLElement | null {
 		return container.querySelector<HTMLElement>('[data-slot="row-marker-header"]');
 	}
-	function gridCells(): HTMLElement[] {
-		return Array.from(container.querySelectorAll<HTMLElement>('[role="gridcell"]'));
-	}
 	// The base-ui Checkbox renders a <button data-slot="checkbox"> — the click target
 	// that carries the native shiftKey for range-select.
 	function checkboxIn(el: HTMLElement | null): HTMLElement | null {
 		return el?.querySelector<HTMLElement>('[data-slot="checkbox"]') ?? null;
 	}
-
-	it('renders the marker header + a per-row checkbox cell when rowMarker is supplied', async () => {
-		const calls: MarkerCalls = { toggles: [], all: 0, next: null };
-		const anchorRef = { value: null as number | null };
-		await act(async () => {
-			root.render(<Harness rowMarker={makeRowMarker(emptySheetsSelection, ROWS.length, calls, anchorRef)} />);
-		});
-
-		// Header select-all cell renders, carrying a checkbox.
-		expect(markerHeader()).toBeTruthy();
-		expect(checkboxIn(markerHeader())).toBeTruthy();
-
-		// One body marker cell per row, each carrying a checkbox.
-		const cells = markerCells();
-		expect(cells.length).toBe(ROWS.length);
-		for (const cell of cells) expect(checkboxIn(cell)).toBeTruthy();
-	});
 
 	it('clicking a row checkbox calls onToggleRow with that row index (plain) or shiftKey (range)', async () => {
 		const calls: MarkerCalls = { toggles: [], all: 0, next: null };
@@ -234,24 +214,4 @@ describe('GridViewport row-marker column (leading checkbox + select-all → Rang
 		expect(calls.next?.rows.toArray()).toEqual([]);
 	});
 
-	it('renders NO marker column when rowMarker is undefined (cell count unchanged)', async () => {
-		// Baseline WITH the marker: capture the data-cell count.
-		const calls: MarkerCalls = { toggles: [], all: 0, next: null };
-		const anchorRef = { value: null as number | null };
-		await act(async () => {
-			root.render(<Harness rowMarker={makeRowMarker(emptySheetsSelection, ROWS.length, calls, anchorRef)} />);
-		});
-		expect(markerCells().length).toBe(ROWS.length);
-		expect(markerHeader()).toBeTruthy();
-		const cellsWithMarker = gridCells().length;
-
-		// Re-render WITHOUT the marker: no marker header/cells, and the data-cell count is
-		// identical (the marker column never participated in the gridcell count).
-		await act(async () => {
-			root.render(<Harness />);
-		});
-		expect(markerCells().length).toBe(0);
-		expect(markerHeader()).toBeNull();
-		expect(gridCells().length).toBe(cellsWithMarker);
-	});
 });

@@ -1,19 +1,12 @@
-/**
- * SHARED display fixtures — the native (glide-free) case tables + helpers that
- * drive the cell-display golden. The committed `cell-display.golden.json` freezes
- * the expected `{ displayText, copyText }` per case; the cell-display parity test
- * iterates these and asserts the native pipeline reproduces the frozen values.
- */
+/** Shared deterministic display fixtures used by focused editor tests. */
 
 import type { CellType } from '../../cell-types/types';
 import type { SheetsCell } from '../../cell-model/sheets-cell';
 import type { CellCreationMetadata } from '../grid-cell-types';
 import type { RelationInfo } from '../../store/relation-info-slice';
 
-// Deterministic geometry SheetsCell — the native render payload a geometry factory
-// emits. We do NOT import the real createGeometryCell (it pulls optional leaflet
-// peers); a stable `geo:<json>` displayText keeps the golden reproducible while
-// exercising projectSheetsCell's geometry branch (display === copy) faithfully.
+// Deterministic geometry SheetsCell. We do not import the real
+// createGeometryCell because it pulls optional Leaflet peers.
 export function fakeGeometrySheetsCell(value: unknown): SheetsCell {
 	return {
 		kind: 'geometry',
