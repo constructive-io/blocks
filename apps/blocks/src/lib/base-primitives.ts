@@ -84,6 +84,12 @@ export const BASE_PRIMITIVES = [
     description: 'An accessible label for form controls.',
   },
   {
+    name: 'map',
+    title: 'Map',
+    exportName: 'Map',
+    description: 'A MapLibre surface for markers, popups, routes, GeoJSON, clusters, and viewport controls.',
+  },
+  {
     name: 'pagination',
     title: 'Pagination',
     exportName: 'Pagination',

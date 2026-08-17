@@ -1,198 +1,154 @@
 'use client';
 
-import React, { lazy, Suspense, useCallback, useEffect, useRef, useState } from 'react';
-import type { LeafletMouseEvent } from 'leaflet';
-import { MapPinIcon, SearchIcon, XIcon, Loader2 } from 'lucide-react';
+import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react';
+import { LoaderCircleIcon, MapPinIcon, SearchIcon, XIcon } from 'lucide-react';
 
+import { Button } from '@constructive-io/ui/button';
+import {
+	Command,
+	CommandEmpty,
+	CommandGroup,
+	CommandItem,
+	CommandList,
+} from '@constructive-io/ui/command';
+import { InputGroup, InputGroupAddon, InputGroupInput } from '@constructive-io/ui/input-group';
+import {
+	Map,
+	MapControls,
+	MapMarker,
+	MarkerContent,
+	useMap,
+} from '@constructive-io/ui/map';
+
+import type {
+	SheetsGeocodeFn,
+	SheetsGeocodeResult,
+	SheetsMapStyles,
+} from '../context/sheets-context';
 import { cn } from './cn';
 import { sheetsLogger } from './sheets-logger';
-import { Button } from '@constructive-io/ui/button';
-import { Card, CardContent } from '@constructive-io/ui/card';
-import { InputGroup, InputGroupAddon, InputGroupInput } from '@constructive-io/ui/input-group';
 
-// TypeScript interfaces
 interface GeoJSONPoint {
 	type: 'Point';
-	coordinates: [number, number]; // [longitude, latitude]
+	coordinates: [number, number];
 }
 
-interface MapPickerValue {
+export interface MapPickerValue {
 	geojson: GeoJSONPoint;
 	srid: number;
 	x: number;
 	y: number;
 }
 
-interface MapPickerProps {
-	value?: MapPickerValue | GeoJSONPoint | any;
+export interface MapPickerProps {
+	value?: unknown;
 	onChange?: (value: MapPickerValue | undefined) => void;
 	className?: string;
 	placeholder?: string;
 	disabled?: boolean;
 	height?: number;
-	markerColor?: string;
+	styles?: SheetsMapStyles;
+	geocode?: SheetsGeocodeFn;
+	locale?: string;
+	onError?: (error: unknown) => void;
 }
 
-interface SearchResult {
-	display_name: string;
-	lat: string;
-	lon: string;
-	place_id: string;
-}
+const DEFAULT_CENTER: [number, number] = [-74.006, 40.7128];
+const SEARCH_DEBOUNCE_MS = 300;
+const SEARCH_MIN_LENGTH = 3;
+const SEARCH_RESULT_LIMIT = 8;
 
-// Utility functions
-const createMapValue = (lat: number, lng: number): MapPickerValue => ({
-	geojson: {
-		type: 'Point',
-		coordinates: [lng, lat],
-	},
-	srid: 4326,
-	x: lng,
-	y: lat,
-});
-
-const extractPosition = (value: any): [number, number] | null => {
-	if (!value) return null;
-
-	let coordinates: [number, number] | undefined;
-
-	if (value.type === 'Point' && Array.isArray(value.coordinates)) {
-		coordinates = value.coordinates;
-	} else if (value.geojson?.type === 'Point' && Array.isArray(value.geojson.coordinates)) {
-		coordinates = value.geojson.coordinates;
-	}
-
-	if (!coordinates || coordinates.length < 2) return null;
-
-	const [lng, lat] = coordinates;
-
-	if (typeof lng !== 'number' || typeof lat !== 'number') return null;
-	if (!isFinite(lng) || !isFinite(lat)) return null;
-
-	return [lat, lng];
-};
-
-const searchLocation = async (query: string): Promise<SearchResult[]> => {
-	if (!query.trim()) return [];
-
-	try {
-		const response = await fetch(
-			`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=5&addressdetails=1`,
-		);
-		const results = await response.json();
-		return results || [];
-	} catch (error) {
-		sheetsLogger().error('Search error:', error);
-		return [];
-	}
-};
-
-/**
- * Inner map component that uses react-leaflet.
- * Lazy-loaded to avoid bundling ~270KB Leaflet in main chunk.
- */
-const LeafletMapInner = lazy(() =>
-	Promise.all([import('react-leaflet'), import('leaflet')]).then(([reactLeaflet, L]) => {
-		const { MapContainer, TileLayer, Marker, useMapEvents, useMap } = reactLeaflet;
-
-		const createCustomIcon = (color: string = '#3b82f6') => {
-			return L.divIcon({
-				html: `
-					<div style="
-						width: 32px;
-						height: 32px;
-						display: flex;
-						align-items: center;
-						justify-content: center;
-						background: ${color};
-						border: 3px solid white;
-						border-radius: 50% 50% 50% 0;
-						transform: rotate(-45deg);
-						box-shadow: 0 2px 8px rgba(0,0,0,0.3);
-					">
-						<svg width="16" height="16" viewBox="0 0 24 24" fill="white" style="transform: rotate(45deg);">
-							<path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/>
-						</svg>
-					</div>
-				`,
-				className: 'custom-marker',
-				iconSize: [32, 32],
-				iconAnchor: [16, 32],
-				popupAnchor: [0, -32],
-			});
-		};
-
-		function MapEventHandler({
-			onMapClick,
-			position,
-		}: {
-			onMapClick: (lat: number, lng: number) => void;
-			position: [number, number] | null;
-		}): React.ReactElement | null {
-			const map = useMap();
-
-			useMapEvents({
-				click(e: LeafletMouseEvent) {
-					onMapClick(e.latlng.lat, e.latlng.lng);
-				},
-			});
-
-			React.useEffect(() => {
-				if (position && map) {
-					map.setView(position, 15);
-				}
-			}, [position, map]);
-
-			return null;
-		}
-
-		function LeafletMap({
-			position,
-			onMapClick,
-			disabled,
-			height,
-			markerColor,
-		}: {
-			position: [number, number] | null;
-			onMapClick: (lat: number, lng: number) => void;
-			disabled: boolean;
-			height: number;
-			markerColor: string;
-		}) {
-			const defaultCenter: [number, number] = [40.7128, -74.006];
-
-			return (
-				<div style={{ height: `${height}px` }} className='relative'>
-					<MapContainer
-						center={position || defaultCenter}
-						zoom={position ? 15 : 10}
-						style={{ height: '100%', width: '100%' }}
-						className={cn('z-0', disabled && 'pointer-events-none opacity-50')}
-					>
-						<TileLayer
-							attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-							url='https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png'
-						/>
-
-						{position && <Marker position={position} icon={createCustomIcon(markerColor)} />}
-
-						<MapEventHandler onMapClick={onMapClick} position={position} />
-					</MapContainer>
-
-					{disabled && <div className='bg-background/50 absolute inset-0 z-10' />}
-				</div>
-			);
-		}
-
-		return { default: LeafletMap };
-	})
-);
-
-function MapLoading({ height }: { height: number }) {
+function isValidPosition(longitude: unknown, latitude: unknown): boolean {
 	return (
-		<div style={{ height: `${height}px` }} className='bg-muted flex items-center justify-center rounded-lg border'>
-			<Loader2 className='h-6 w-6 animate-spin text-muted-foreground' />
-		</div>
+		typeof longitude === 'number' &&
+		typeof latitude === 'number' &&
+		Number.isFinite(longitude) &&
+		Number.isFinite(latitude) &&
+		longitude >= -180 &&
+		longitude <= 180 &&
+		latitude >= -90 &&
+		latitude <= 90
+	);
+}
+
+export function createMapValue(longitude: number, latitude: number): MapPickerValue {
+	if (!isValidPosition(longitude, latitude)) {
+		throw new RangeError('Map coordinates must use longitude from -180 to 180 and latitude from -90 to 90.');
+	}
+	return {
+		geojson: {
+			type: 'Point',
+			coordinates: [longitude, latitude],
+		},
+		srid: 4326,
+		x: longitude,
+		y: latitude,
+	};
+}
+
+export function extractPosition(value: unknown): [number, number] | null {
+	if (!value || typeof value !== 'object') return null;
+
+	const candidate = value as {
+		type?: unknown;
+		coordinates?: unknown;
+		geojson?: { type?: unknown; coordinates?: unknown };
+	};
+	const coordinates = candidate.type === 'Point'
+		? candidate.coordinates
+		: candidate.geojson?.type === 'Point'
+			? candidate.geojson.coordinates
+			: undefined;
+
+	if (!Array.isArray(coordinates) || coordinates.length < 2) return null;
+	const [longitude, latitude] = coordinates;
+	if (!isValidPosition(longitude, latitude)) return null;
+
+	return [Number(longitude), Number(latitude)];
+}
+
+function toError(value: unknown): Error {
+	return value instanceof Error ? value : new Error(String(value));
+}
+
+function MapInteraction({
+	position,
+	disabled,
+	onSelect,
+}: {
+	position: [number, number] | null;
+	disabled: boolean;
+	onSelect: (longitude: number, latitude: number) => void;
+}) {
+	const { map, isLoaded } = useMap();
+
+	useEffect(() => {
+		if (!map || !isLoaded || disabled) return;
+		const handleClick = (event: { lngLat: { lng: number; lat: number } }) => {
+			onSelect(event.lngLat.lng, event.lngLat.lat);
+		};
+		map.on('click', handleClick);
+		return () => {
+			map.off('click', handleClick);
+		};
+	}, [disabled, isLoaded, map, onSelect]);
+
+	useEffect(() => {
+		if (!map || !isLoaded || !position) return;
+		map.flyTo({ center: position, zoom: Math.max(map.getZoom(), 15), duration: 350 });
+	}, [isLoaded, map, position]);
+
+	if (!position) return null;
+
+	return (
+		<MapMarker
+			longitude={position[0]}
+			latitude={position[1]}
+			draggable={!disabled}
+			onDragEnd={({ lng, lat }) => onSelect(lng, lat)}
+		>
+			<MarkerContent />
+		</MapMarker>
 	);
 }
 
@@ -200,177 +156,232 @@ export function MapPicker({
 	value,
 	onChange,
 	className,
-	placeholder = 'Search for a location...',
+	placeholder = 'Search for a location…',
 	disabled = false,
 	height = 300,
-	markerColor = '#3b82f6',
+	styles,
+	geocode,
+	locale = 'en-US',
+	onError,
 }: MapPickerProps) {
 	const [searchQuery, setSearchQuery] = useState('');
-	const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
+	const [searchResults, setSearchResults] = useState<readonly SheetsGeocodeResult[]>([]);
 	const [isSearching, setIsSearching] = useState(false);
-	const [showResults, setShowResults] = useState(false);
-	const searchTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+	const [hasSearched, setHasSearched] = useState(false);
+	const [searchError, setSearchError] = useState<string | null>(null);
+	const [isSearchOpen, setIsSearchOpen] = useState(false);
+	const searchContainerRef = useRef<HTMLDivElement>(null);
+	const skipNextSearchRef = useRef(false);
+	const searchResultsId = useId();
+	const position = useMemo(() => extractPosition(value), [value]);
 
-	const position = extractPosition(value);
-
-	const handleMapClick = useCallback(
-		(lat: number, lng: number) => {
+	const selectCoordinates = useCallback(
+		(longitude: number, latitude: number) => {
 			if (disabled) return;
-			const newValue = createMapValue(lat, lng);
-			onChange?.(newValue);
-			setSearchQuery('');
-			setShowResults(false);
+			try {
+				onChange?.(createMapValue(longitude, latitude));
+			} catch (value) {
+				const error = toError(value);
+				sheetsLogger().error('Invalid map coordinates', error);
+				onError?.(error);
+			}
 		},
-		[disabled, onChange],
+		[disabled, onChange, onError],
 	);
 
-	const handleSearchChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-		const query = e.target.value;
-		setSearchQuery(query);
-
-		if (searchTimeoutRef.current) {
-			clearTimeout(searchTimeoutRef.current);
+	useEffect(() => {
+		if (!geocode || skipNextSearchRef.current) {
+			skipNextSearchRef.current = false;
+			return;
 		}
 
-		searchTimeoutRef.current = setTimeout(async () => {
-			if (query.trim()) {
-				setIsSearching(true);
-				setShowResults(true);
-				const results = await searchLocation(query);
-				setSearchResults(results);
-				setIsSearching(false);
-			} else {
-				setShowResults(false);
-				setSearchResults([]);
+		const query = searchQuery.trim();
+		if (query.length < SEARCH_MIN_LENGTH) {
+			setSearchResults([]);
+			setSearchError(null);
+			setHasSearched(false);
+			setIsSearching(false);
+			return;
+		}
+
+		const controller = new AbortController();
+		setIsSearching(true);
+		setSearchError(null);
+		setIsSearchOpen(true);
+
+		const timeout = setTimeout(() => {
+			void geocode(query, { signal: controller.signal, locale })
+				.then((results) => {
+					if (controller.signal.aborted) return;
+					setSearchResults(results.slice(0, SEARCH_RESULT_LIMIT));
+					setHasSearched(true);
+				})
+				.catch((value: unknown) => {
+					if (controller.signal.aborted) return;
+					const error = toError(value);
+					sheetsLogger().error('Map geocoder failed', error);
+					onError?.(error);
+					setSearchResults([]);
+					setSearchError('Location search is unavailable.');
+					setHasSearched(true);
+				})
+				.finally(() => {
+					if (!controller.signal.aborted) setIsSearching(false);
+				});
+		}, SEARCH_DEBOUNCE_MS);
+
+		return () => {
+			clearTimeout(timeout);
+			controller.abort();
+		};
+	}, [geocode, locale, onError, searchQuery]);
+
+	useEffect(() => {
+		if (!isSearchOpen) return;
+		const handlePointerDown = (event: PointerEvent) => {
+			if (!searchContainerRef.current?.contains(event.target as Node)) {
+				setIsSearchOpen(false);
 			}
-		}, 300);
-	}, []);
+		};
+		document.addEventListener('pointerdown', handlePointerDown);
+		return () => document.removeEventListener('pointerdown', handlePointerDown);
+	}, [isSearchOpen]);
 
 	const handleResultSelect = useCallback(
-		(result: SearchResult) => {
-			if (disabled) return;
-			const lat = parseFloat(result.lat);
-			const lng = parseFloat(result.lon);
-			const newValue = createMapValue(lat, lng);
-			onChange?.(newValue);
-			setSearchQuery(result.display_name);
-			setShowResults(false);
+		(result: SheetsGeocodeResult) => {
+			selectCoordinates(result.longitude, result.latitude);
+			skipNextSearchRef.current = true;
+			setSearchQuery(result.label);
+			setIsSearchOpen(false);
 		},
-		[disabled, onChange],
+		[selectCoordinates],
 	);
 
 	const clearSearch = useCallback(() => {
 		setSearchQuery('');
-		setShowResults(false);
 		setSearchResults([]);
+		setSearchError(null);
+		setHasSearched(false);
+		setIsSearchOpen(false);
 	}, []);
 
 	const clearLocation = useCallback(() => {
 		if (disabled) return;
 		onChange?.(undefined);
-		setSearchQuery('');
 	}, [disabled, onChange]);
 
-	useEffect(() => {
-		return () => {
-			if (searchTimeoutRef.current) {
-				clearTimeout(searchTimeoutRef.current);
-			}
-		};
-	}, []);
-
 	return (
-		<div className={cn('relative w-full', className)}>
-			{/* Search Input */}
-			<div className='relative mb-2'>
-				<InputGroup>
-					<InputGroupAddon>
-						<SearchIcon />
-					</InputGroupAddon>
-					<InputGroupInput
-						type='text'
-						placeholder={placeholder}
-						value={searchQuery}
-						onChange={handleSearchChange}
-						disabled={disabled}
-					/>
-					<InputGroupAddon align='inline-end'>
+		<div className={cn('flex w-full flex-col gap-2', className)}>
+			{geocode && (
+				<div ref={searchContainerRef} className="relative">
+					<InputGroup>
+						<InputGroupAddon>
+							<SearchIcon aria-hidden="true" />
+						</InputGroupAddon>
+						<InputGroupInput
+							type="search"
+							placeholder={placeholder}
+							value={searchQuery}
+							onChange={(event) => setSearchQuery(event.target.value)}
+							onFocus={() => {
+								if (searchQuery.trim().length >= SEARCH_MIN_LENGTH) setIsSearchOpen(true);
+							}}
+							disabled={disabled}
+							aria-expanded={isSearchOpen}
+							aria-controls={searchResultsId}
+						/>
 						{searchQuery && (
-							<Button
-								type='button'
-								variant='ghost'
-								size='sm'
-								onClick={clearSearch}
-								disabled={disabled}
-								className='h-7 w-7 p-0'
-							>
-								<XIcon className='h-3 w-3' />
-							</Button>
+							<InputGroupAddon align="inline-end">
+								<Button
+									type="button"
+									variant="ghost"
+									size="icon-xs"
+									onClick={clearSearch}
+									disabled={disabled}
+									aria-label="Clear location search"
+								>
+									<XIcon />
+								</Button>
+							</InputGroupAddon>
 						)}
-						{position && (
-							<Button
-								type='button'
-								variant='ghost'
-								size='sm'
-								onClick={clearLocation}
-								disabled={disabled}
-								className='h-7 w-7 p-0'
-							>
-								<MapPinIcon className='h-3 w-3' />
-							</Button>
-						)}
-					</InputGroupAddon>
-				</InputGroup>
+					</InputGroup>
 
-				{/* Search Results */}
-				{showResults && (
-					<Card className='absolute top-full right-0 left-0 z-50 mt-1 max-h-60 overflow-y-auto'>
-						<CardContent className='p-0'>
-							{isSearching && <div className='text-muted-foreground px-3 py-2 text-sm'>Searching...</div>}
-							{!isSearching && searchResults.length === 0 && searchQuery && (
-								<div className='text-muted-foreground px-3 py-2 text-sm'>No results found</div>
-							)}
-							{!isSearching &&
-								searchResults.map((result) => (
-									<button
-										key={result.place_id}
-										onClick={() => handleResultSelect(result)}
-										disabled={disabled}
-										className='hover:bg-accent hover:text-accent-foreground w-full px-3 py-2 text-left text-sm
-											disabled:cursor-not-allowed disabled:opacity-50'
-									>
-										{result.display_name}
-									</button>
-								))}
-						</CardContent>
-					</Card>
+					{isSearchOpen && (
+						<Command
+							id={searchResultsId}
+							shouldFilter={false}
+							className="absolute top-full right-0 left-0 z-[var(--z-layer-floating)] mt-1 max-h-60 rounded-lg border bg-popover shadow-md"
+						>
+							<CommandList>
+								{isSearching && (
+									<div className="flex items-center gap-2 px-3 py-2 text-sm text-muted-foreground">
+										<LoaderCircleIcon className="animate-spin" aria-hidden="true" />
+										Searching…
+									</div>
+								)}
+								{!isSearching && searchError && (
+									<div className="px-3 py-2 text-sm text-destructive" role="alert">
+										{searchError}
+									</div>
+								)}
+								{!isSearching && !searchError && hasSearched && searchResults.length === 0 && (
+									<CommandEmpty>No locations found.</CommandEmpty>
+								)}
+								{searchResults.length > 0 && (
+									<CommandGroup heading="Locations">
+										{searchResults.map((result) => (
+											<CommandItem
+												key={`${result.longitude}:${result.latitude}:${result.label}`}
+												value={result.label}
+												onSelect={() => handleResultSelect(result)}
+											>
+												<MapPinIcon aria-hidden="true" />
+												<span className="truncate">{result.label}</span>
+											</CommandItem>
+										))}
+									</CommandGroup>
+								)}
+							</CommandList>
+						</Command>
+					)}
+				</div>
+			)}
+
+			<div
+				className={cn(
+					'relative overflow-hidden rounded-lg border bg-muted/30',
+					disabled && 'pointer-events-none opacity-64',
 				)}
+				style={{ height }}
+			>
+				<Map
+					className="size-full"
+					styles={styles}
+					center={position ?? DEFAULT_CENTER}
+					zoom={position ? 15 : 10}
+					onError={(error) => onError?.(error)}
+				>
+					<MapInteraction position={position} disabled={disabled} onSelect={selectCoordinates} />
+					<MapControls
+						showCompass
+						showLocate={!disabled}
+						onLocate={({ longitude, latitude }) => selectCoordinates(longitude, latitude)}
+					/>
+				</Map>
 			</div>
 
-			{/* Map Container */}
-			<Card className='overflow-hidden'>
-				<CardContent className='p-0'>
-					<Suspense fallback={<MapLoading height={height} />}>
-						<LeafletMapInner
-							position={position}
-							onMapClick={handleMapClick}
-							disabled={disabled}
-							height={height}
-							markerColor={markerColor}
-						/>
-					</Suspense>
-				</CardContent>
-			</Card>
-
-			{/* Current Location Info */}
 			{position && (
-				<div className='text-muted-foreground mt-2 text-xs'>
-					<div className='flex items-center gap-1'>
-						<MapPinIcon className='h-3 w-3' />
-						<span>
-							Latitude: {position[0].toFixed(6)}, Longitude: {position[1].toFixed(6)}
+				<div className="flex items-center justify-between gap-2 text-xs text-muted-foreground">
+					<span className="flex min-w-0 items-center gap-1.5">
+						<MapPinIcon className="size-3.5 shrink-0" aria-hidden="true" />
+						<span className="truncate tabular-nums">
+							{position[1].toFixed(6)}, {position[0].toFixed(6)}
 						</span>
-					</div>
+					</span>
+					<Button type="button" variant="ghost" size="xs" onClick={clearLocation} disabled={disabled}>
+						<XIcon data-icon="inline-start" />
+						Clear
+					</Button>
 				</div>
 			)}
 		</div>

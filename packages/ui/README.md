@@ -19,7 +19,7 @@ package manager does not auto-install peers, add them explicitly:
 ```bash
 pnpm add @base-ui/react @internationalized/date @remixicon/react \
   @use-gesture/react @xyflow/react cmdk lucide-react match-sorter motion \
-  react react-aria-components react-dom react-hook-form \
+  maplibre-gl react react-aria-components react-dom react-hook-form \
   react-resizable-panels sonner tailwindcss vaul
 ```
 
@@ -35,7 +35,7 @@ Tailwind v4 and scans the package's published component output automatically:
 
 ```css
 /* app.css or globals.css */
-@import "@constructive-io/ui/globals.css";
+@import '@constructive-io/ui/globals.css';
 ```
 
 ### 2. Add CSS Variables
@@ -44,7 +44,7 @@ The imported stylesheet includes the default design tokens. Define the same
 variables after the import when your application needs to override them:
 
 ```css
-@import "@constructive-io/ui/globals.css";
+@import '@constructive-io/ui/globals.css';
 
 @custom-variant dark (&:is(.dark *));
 
@@ -131,24 +131,86 @@ function App() {
 }
 ```
 
+### Map
+
+`Map` uses `https://demotiles.maplibre.org/style.json` when no style is supplied. That default is for documentation and
+local previews; production applications must provide licensed styles and tile services, keep the style attribution
+visible, and follow the provider's usage policy.
+
+```tsx
+import { useEffect, useState } from 'react';
+
+import { Map, MapControls, MapMarker, MarkerContent } from '@constructive-io/ui/map';
+
+const NEW_YORK_CENTER: [number, number] = [-73.9857, 40.7484];
+
+function randomNewYorkPosition(): [number, number] {
+  const progress = Math.random();
+  return [
+    -74.013 + progress * 0.073 + (Math.random() - 0.5) * 0.012,
+    40.704 + progress * 0.108 + (Math.random() - 0.5) * 0.01,
+  ];
+}
+
+export function LocationMap() {
+  const [position, setPosition] = useState<[number, number]>(NEW_YORK_CENTER);
+
+  useEffect(() => setPosition(randomNewYorkPosition()), []);
+
+  return (
+    <div className="h-96">
+      <Map
+        center={NEW_YORK_CENTER}
+        zoom={12}
+        styles={{
+          light: '/maps/light/style.json',
+          dark: '/maps/dark/style.json',
+        }}
+      >
+        <MapMarker longitude={position[0]} latitude={position[1]}>
+          <MarkerContent />
+        </MapMarker>
+        <MapControls showCompass />
+      </Map>
+    </div>
+  );
+}
+```
+
+The standard MapLibre bundle uses a blob worker, so the normal CSP needs `worker-src 'self' blob:` (and `child-src
+blob:` for older browsers). A policy that forbids blob workers must alias `maplibre-gl` to MapLibre's CSP bundle and
+configure its separate worker URL before the first map mounts; follow the [MapLibre CSP
+directives](https://maplibre.org/maplibre-gl-js/docs/#csp-directives). The component does not set a CDN worker URL.
+
+MapLibre 6 currently depends on declaration bundles from `@maplibre/geojson-vt` and `@maplibre/vt-pbf` that use
+extensionless internal ESM imports. TypeScript projects using `moduleResolution: "NodeNext"` must enable
+`skipLibCheck` until those upstream packages publish NodeNext-compatible declarations. Bundler resolution can keep
+`skipLibCheck: false`; the package verification suite covers both configurations.
+
 ## Components
 
 ### Layout
+
 - Card, Separator, Tabs, Collapsible, ScrollArea, Resizable
 
 ### Forms
+
 - Button, Input, Textarea, Checkbox, Switch, Select, RadioGroup, Label, Progress
 
 ### Feedback
+
 - Alert, Badge, Skeleton, Toast
 
 ### Overlay
+
 - Dialog, AlertDialog, Sheet, Drawer, Popover, Tooltip, DropdownMenu
 
 ### Data
-- Table, Pagination, Avatar, Breadcrumb
+
+- Table, Pagination, Avatar, Breadcrumb, Map
 
 ### Advanced
+
 - Command, Combobox, Autocomplete, MultiSelect, Stack, Calendar
 
 ## Variants
@@ -180,9 +242,7 @@ Components use [CVA](https://cva.style/) for variant management:
 Add the `dark` class to enable dark mode:
 
 ```tsx
-<html className="dark">
-  {/* Components automatically use dark theme */}
-</html>
+<html className="dark">{/* Components automatically use dark theme */}</html>
 ```
 
 ## TypeScript
@@ -201,11 +261,11 @@ All components use `data-slot` attributes for styling hooks:
 
 ```css
 /* Target specific component parts */
-[data-slot="card-header"] {
+[data-slot='card-header'] {
   /* custom styles */
 }
 
-[data-slot="button"] {
+[data-slot='button'] {
   /* custom styles */
 }
 ```

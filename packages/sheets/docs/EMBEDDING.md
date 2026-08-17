@@ -15,10 +15,7 @@ This guide walks through integrating `@constructive-io/sheets` into a Next.js ap
 npm install @constructive-io/sheets @constructive-io/data @constructive-io/ui
 
 # Required peer dependencies
-npm install @glideapps/glide-data-grid @tanstack/react-query @tanstack/react-form
-
-# Optional — geometry editors
-npm install leaflet react-leaflet @types/leaflet
+npm install @tanstack/react-query @tanstack/react-form maplibre-gl
 
 # Optional — date picker editors
 npm install react-aria-components @internationalized/date

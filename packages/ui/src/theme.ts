@@ -1,367 +1,414 @@
 export type ThemeTokenMap = Readonly<Record<string, string>>;
 export interface ThemeCssObject {
-	readonly [name: string]: string | ThemeCssObject;
+  readonly [name: string]: string | ThemeCssObject;
 }
 
 export interface ConstructiveThemeDefinition {
-	npmImports: readonly string[];
-	npmSource: string;
-	darkVariant: string;
-	light: ThemeTokenMap;
-	dark: ThemeTokenMap;
-	tailwind: ThemeTokenMap;
-	zIndex: ThemeTokenMap;
-	baseCss: ThemeCssObject;
-	utilities: ThemeCssObject;
-	keyframes: Readonly<Record<string, ThemeCssObject>>;
-	globalCss: ThemeCssObject;
+  npmImports: readonly string[];
+  npmSource: string;
+  darkVariant: string;
+  light: ThemeTokenMap;
+  dark: ThemeTokenMap;
+  tailwind: ThemeTokenMap;
+  zIndex: ThemeTokenMap;
+  baseCss: ThemeCssObject;
+  utilities: ThemeCssObject;
+  keyframes: Readonly<Record<string, ThemeCssObject>>;
+  globalCss: ThemeCssObject;
 }
 
 const sharedTypographyAndShape = {
-	'font-sans': 'Open Sans, sans-serif',
-	'font-serif': 'Georgia, serif',
-	'font-mono': 'Menlo, monospace',
-	radius: '0.5rem',
+  'font-sans': 'Open Sans, sans-serif',
+  'font-serif': 'Georgia, serif',
+  'font-mono': 'Menlo, monospace',
+  radius: '0.5rem',
 } as const;
 
 /** Elevation shadows — were fully transparent (`/ 0`), so shadow-* utilities did nothing. */
 const lightElevationShadows = {
-	'shadow-2xs': '0 1px rgb(0 0 0 / 0.05)',
-	'shadow-xs': '0 1px 2px 0 rgb(0 0 0 / 0.05)',
-	'shadow-sm': '0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1)',
-	shadow: '0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1)',
-	'shadow-md': '0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1)',
-	'shadow-lg': '0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1)',
-	'shadow-xl': '0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1)',
-	'shadow-2xl': '0 25px 50px -12px rgb(0 0 0 / 0.25)',
+  'shadow-2xs': '0 1px rgb(0 0 0 / 0.05)',
+  'shadow-xs': '0 1px 2px 0 rgb(0 0 0 / 0.05)',
+  'shadow-sm': '0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1)',
+  shadow: '0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1)',
+  'shadow-md': '0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1)',
+  'shadow-lg': '0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1)',
+  'shadow-xl': '0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1)',
+  'shadow-2xl': '0 25px 50px -12px rgb(0 0 0 / 0.25)',
 } as const;
 
 const darkElevationShadows = {
-	'shadow-2xs': '0 1px rgb(0 0 0 / 0.2)',
-	'shadow-xs': '0 1px 2px 0 rgb(0 0 0 / 0.25)',
-	'shadow-sm': '0 1px 3px 0 rgb(0 0 0 / 0.3), 0 1px 2px -1px rgb(0 0 0 / 0.25)',
-	shadow: '0 1px 3px 0 rgb(0 0 0 / 0.3), 0 1px 2px -1px rgb(0 0 0 / 0.25)',
-	'shadow-md': '0 4px 6px -1px rgb(0 0 0 / 0.35), 0 2px 4px -2px rgb(0 0 0 / 0.3)',
-	'shadow-lg': '0 10px 15px -3px rgb(0 0 0 / 0.4), 0 4px 6px -4px rgb(0 0 0 / 0.3)',
-	'shadow-xl': '0 20px 25px -5px rgb(0 0 0 / 0.45), 0 8px 10px -6px rgb(0 0 0 / 0.35)',
-	'shadow-2xl': '0 25px 50px -12px rgb(0 0 0 / 0.55)',
+  'shadow-2xs': '0 1px rgb(0 0 0 / 0.2)',
+  'shadow-xs': '0 1px 2px 0 rgb(0 0 0 / 0.25)',
+  'shadow-sm': '0 1px 3px 0 rgb(0 0 0 / 0.3), 0 1px 2px -1px rgb(0 0 0 / 0.25)',
+  shadow: '0 1px 3px 0 rgb(0 0 0 / 0.3), 0 1px 2px -1px rgb(0 0 0 / 0.25)',
+  'shadow-md': '0 4px 6px -1px rgb(0 0 0 / 0.35), 0 2px 4px -2px rgb(0 0 0 / 0.3)',
+  'shadow-lg': '0 10px 15px -3px rgb(0 0 0 / 0.4), 0 4px 6px -4px rgb(0 0 0 / 0.3)',
+  'shadow-xl': '0 20px 25px -5px rgb(0 0 0 / 0.45), 0 8px 10px -6px rgb(0 0 0 / 0.35)',
+  'shadow-2xl': '0 25px 50px -12px rgb(0 0 0 / 0.55)',
 } as const;
 
 export const constructiveTheme = {
-	npmImports: ['tailwindcss', '@xyflow/react/dist/style.css'],
-	npmSource: '../../dist',
-	darkVariant: '&:is(.dark *)',
-	light: {
-		background: 'oklch(1 0 0)',
-		foreground: 'oklch(0.3211 0 0)',
-		card: 'oklch(1 0 0)',
-		'card-foreground': 'oklch(0.3211 0 0)',
-		popover: 'oklch(1 0 0)',
-		'popover-foreground': 'oklch(0.3211 0 0)',
-		primary: 'oklch(0.688 0.1754 245.6151)',
-		'primary-foreground': 'oklch(0.979 0.021 166.113)',
-		secondary: 'oklch(0.967 0.001 286.375)',
-		'secondary-foreground': 'oklch(0.21 0.006 285.885)',
-		muted: 'oklch(0.967 0.001 286.375)',
-		'muted-foreground': 'oklch(0.552 0.016 285.938)',
-		accent: 'oklch(0.967 0.001 286.375)',
-		'accent-foreground': 'oklch(0.21 0.006 285.885)',
-		destructive: 'oklch(0.55 0.2 25)',
-		'destructive-foreground': 'oklch(0.985 0 0)',
-		border: 'oklch(0.92 0.004 286.32)',
-		input: 'oklch(0.93 0.004 286.32)',
-		ring: 'oklch(0.871 0.006 286.286)',
-		'chart-1': 'oklch(0.646 0.222 41.116)',
-		'chart-2': 'oklch(0.6 0.118 184.704)',
-		'chart-3': 'oklch(0.398 0.07 227.392)',
-		'chart-4': 'oklch(0.828 0.189 84.429)',
-		'chart-5': 'oklch(0.769 0.188 70.08)',
-		sidebar: 'oklch(0.985 0 0)',
-		'sidebar-foreground': 'oklch(0.37 0.013 285.805)',
-		'sidebar-primary': 'oklch(0.985 0 0)',
-		'sidebar-primary-foreground': 'oklch(0.21 0.006 285.885)',
-		'sidebar-accent': 'oklch(0.967 0.001 286.375)',
-		'sidebar-accent-foreground': 'oklch(0.21 0.006 285.885)',
-		'sidebar-border': 'oklch(0.92 0.004 286.32)',
-		'sidebar-ring': 'oklch(0.871 0.006 286.286)',
-		info: 'var(--color-blue-500)',
-		'info-foreground': 'var(--color-blue-700)',
-		success: 'var(--color-emerald-500)',
-		'success-foreground': 'var(--color-emerald-700)',
-		warning: 'var(--color-amber-500)',
-		'warning-foreground': 'var(--color-amber-700)',
-		...sharedTypographyAndShape,
-		'shadow-border':
-			'0 0 0 1px oklch(0 0 0 / 0.06), 0 1px 1px -0.5px rgb(35 35 35 / 0.08), 0 1px 2px -1px rgb(35 35 35 / 0.04), 0 2px 4px -1px rgb(35 35 35 / 0.03)',
-		'shadow-border-hover':
-			'0 0 0 1px oklch(0 0 0 / 0.08), 0 1px 2px -1px rgb(35 35 35 / 0.08), 0 2px 4px -2px rgb(35 35 35 / 0.06), 0 4px 8px -2px rgb(35 35 35 / 0.04), 0 8px 16px -4px rgb(35 35 35 / 0.03)',
-		...lightElevationShadows,
-	},
-	dark: {
-		background: 'oklch(0.21 0.006 285.885)',
-		foreground: 'oklch(0.985 0 0)',
-		card: 'oklch(0.21 0.006 285.885)',
-		'card-foreground': 'oklch(0.985 0 0)',
-		popover: 'oklch(0.21 0.006 285.885)',
-		'popover-foreground': 'oklch(0.985 0 0)',
-		primary: 'oklch(0.688 0.1754 245.6151)',
-		'primary-foreground': 'oklch(0.979 0.021 166.113)',
-		secondary: 'oklch(0.274 0.006 286.033)',
-		'secondary-foreground': 'oklch(0.985 0 0)',
-		muted: 'oklch(0.244 0.006 285.97)',
-		'muted-foreground': 'oklch(0.705 0.015 286.067)',
-		accent: 'oklch(0.244 0.006 285.97)',
-		'accent-foreground': 'oklch(0.985 0 0)',
-		destructive: 'oklch(0.55 0.2 25)',
-		'destructive-foreground': 'oklch(0.985 0 0)',
-		border: 'oklch(0.29 0.009 285.83)',
-		input: 'oklch(0.29 0.009 285.83)',
-		ring: 'oklch(0.442 0.017 285.786)',
-		'chart-1': 'oklch(0.488 0.243 264.376)',
-		'chart-2': 'oklch(0.696 0.17 162.48)',
-		'chart-3': 'oklch(0.769 0.188 70.08)',
-		'chart-4': 'oklch(0.627 0.265 303.9)',
-		'chart-5': 'oklch(0.645 0.246 16.439)',
-		sidebar: 'oklch(0.244 0.006 285.97)',
-		'sidebar-foreground': 'oklch(0.967 0.001 286.375)',
-		'sidebar-primary': 'oklch(0.596 0.145 163.225)',
-		'sidebar-primary-foreground': 'oklch(1 0 0)',
-		'sidebar-accent': 'oklch(0.274 0.006 286.033)',
-		'sidebar-accent-foreground': 'oklch(0.967 0.001 286.375)',
-		'sidebar-border': 'oklch(0.274 0.006 286.033)',
-		'sidebar-ring': 'oklch(0.442 0.017 285.786)',
-		info: 'var(--color-blue-500)',
-		'info-foreground': 'var(--color-blue-400)',
-		success: 'var(--color-emerald-500)',
-		'success-foreground': 'var(--color-emerald-400)',
-		warning: 'var(--color-amber-500)',
-		'warning-foreground': 'var(--color-amber-400)',
-		...sharedTypographyAndShape,
-		'shadow-border':
-			'0 0 0 1px oklch(1 0 0 / 0.08), 0 1px 1px -0.5px rgb(0 0 0 / 0.25), 0 1px 2px -1px rgb(0 0 0 / 0.15), 0 2px 4px -1px rgb(0 0 0 / 0.10)',
-		'shadow-border-hover':
-			'0 0 0 1px oklch(1 0 0 / 0.13), 0 1px 2px -1px rgb(0 0 0 / 0.30), 0 2px 4px -2px rgb(0 0 0 / 0.20), 0 4px 8px -2px rgb(0 0 0 / 0.15), 0 8px 16px -4px rgb(0 0 0 / 0.10)',
-		...darkElevationShadows,
-	},
-	tailwind: {
-		'--color-background': 'var(--background)',
-		'--color-foreground': 'var(--foreground)',
-		'--font-sans': 'var(--font-geist-sans, "Open Sans", ui-sans-serif, system-ui, sans-serif)',
-		'--font-mono': 'var(--font-geist-mono, Menlo, Monaco, Consolas, "Liberation Mono", monospace)',
-		'--color-sidebar-ring': 'var(--sidebar-ring)',
-		'--color-sidebar-border': 'var(--sidebar-border)',
-		'--color-sidebar-accent-foreground': 'var(--sidebar-accent-foreground)',
-		'--color-sidebar-accent': 'var(--sidebar-accent)',
-		'--color-sidebar-primary-foreground': 'var(--sidebar-primary-foreground)',
-		'--color-sidebar-primary': 'var(--sidebar-primary)',
-		'--color-sidebar-foreground': 'var(--sidebar-foreground)',
-		'--color-sidebar': 'var(--sidebar)',
-		'--color-chart-5': 'var(--chart-5)',
-		'--color-chart-4': 'var(--chart-4)',
-		'--color-chart-3': 'var(--chart-3)',
-		'--color-chart-2': 'var(--chart-2)',
-		'--color-chart-1': 'var(--chart-1)',
-		'--color-ring': 'var(--ring)',
-		'--color-input': 'var(--input)',
-		'--color-border': 'var(--border)',
-		'--color-destructive': 'var(--destructive)',
-		'--color-accent-foreground': 'var(--accent-foreground)',
-		'--color-accent': 'var(--accent)',
-		'--color-muted-foreground': 'var(--muted-foreground)',
-		'--color-muted': 'var(--muted)',
-		'--color-secondary-foreground': 'var(--secondary-foreground)',
-		'--color-secondary': 'var(--secondary)',
-		'--color-primary-foreground': 'var(--primary-foreground)',
-		'--color-primary': 'var(--primary)',
-		'--color-popover-foreground': 'var(--popover-foreground)',
-		'--color-popover': 'var(--popover)',
-		'--color-card-foreground': 'var(--card-foreground)',
-		'--color-card': 'var(--card)',
-		'--radius-xs': 'calc(var(--radius) - 6px)',
-		'--radius-sm': 'calc(var(--radius) - 4px)',
-		'--radius-md': 'var(--radius)',
-		'--radius-lg': 'calc(var(--radius) + 2px)',
-		'--radius-xl': 'calc(var(--radius) + 6px)',
-		'--radius-2xl': 'calc(var(--radius) + 10px)',
-		'--color-warning-foreground': 'var(--warning-foreground)',
-		'--color-warning': 'var(--warning)',
-		'--color-success-foreground': 'var(--success-foreground)',
-		'--color-success': 'var(--success)',
-		'--color-info-foreground': 'var(--info-foreground)',
-		'--color-info': 'var(--info)',
-		'--color-destructive-foreground': 'var(--destructive-foreground)',
-	},
-	zIndex: {
-		'z-layer-portal-root': '9999',
-		'z-layer-floating': '1000',
-		'z-layer-modal-backdrop': '2000',
-		'z-layer-modal-content': '2001',
-		'z-layer-floating-elevated': '3000',
-		'z-layer-toast': '4000',
-	},
-	baseCss: {
-		':root': {
-			'color-scheme': 'light',
-		},
-		'.dark': {
-			'color-scheme': 'dark',
-		},
-		'*': {
-			'@apply border-border/60 outline-ring/50': {},
-		},
-		body: {
-			'@apply bg-background font-sans text-foreground antialiased': {},
-			'font-synthesis': 'none',
-			position: 'relative',
-		},
-		'#__next, [data-nextjs-root-layout]': {
-			isolation: 'isolate',
-		},
-		'@media (prefers-reduced-motion: reduce)': {
-			'*, *::before, *::after': {
-				'scroll-behavior': 'auto !important',
-				'animation-duration': '0.01ms !important',
-				'animation-iteration-count': '1 !important',
-				'transition-duration': '0.01ms !important',
-			},
-		},
-	},
-	utilities: {
-		'.shadow-card': {
-			'box-shadow': 'var(--shadow-border)',
-		},
-		'.shadow-card-lg': {
-			'box-shadow': 'var(--shadow-border-hover)',
-		},
-		'.scrollbar-hide': {
-			'-ms-overflow-style': 'none',
-			'scrollbar-width': 'none',
-		},
-		'.scrollbar-hide::-webkit-scrollbar': {
-			display: 'none',
-		},
-		'.scrollbar-neutral-thin': {
-			'scrollbar-width': 'thin',
-			'scrollbar-color':
-				'color-mix(in oklab, var(--muted-foreground) 30%, transparent) transparent',
-		},
-		'.scrollbar-neutral-thin::-webkit-scrollbar': {
-			height: '6px',
-			width: '6px',
-		},
-		'.scrollbar-neutral-thin::-webkit-scrollbar-track': {
-			background: 'transparent',
-		},
-		'.scrollbar-neutral-thin::-webkit-scrollbar-thumb': {
-			'background-color': 'color-mix(in oklab, var(--muted-foreground) 30%, transparent)',
-			'border-radius': '3px',
-		},
-		'.scrollbar-neutral-thin::-webkit-scrollbar-thumb:hover': {
-			'background-color': 'color-mix(in oklab, var(--muted-foreground) 50%, transparent)',
-		},
-		'.animate-shimmer': {
-			animation: 'shimmer 2s ease-in-out infinite',
-		},
-		'.animate-ai-shimmer-text': {
-			animation: 'ai-shimmer-text 1.4s linear infinite',
-		},
-		'.animate-ai-pixel-on': {
-			animation: 'ai-pixel-on 650ms ease-in-out infinite',
-		},
-		'.animate-ai-fade-up': {
-			animation: 'ai-fade-up 300ms cubic-bezier(0.23, 1, 0.32, 1) both',
-		},
-	},
-	keyframes: {
-		'pulse-glow': {
-			'0%, 100%': {
-				opacity: '0.3',
-				transform: 'translate(-50%, -50%) scale(0.95)',
-			},
-			'50%': {
-				opacity: '0.5',
-				transform: 'translate(-50%, -50%) scale(1.05)',
-			},
-		},
-		'fade-scale-in': {
-			from: { opacity: '0', transform: 'scale(0.9)' },
-			to: { opacity: '1', transform: 'scale(1)' },
-		},
-		'scale-in': {
-			from: { opacity: '0', transform: 'scale(0.8)' },
-			to: { opacity: '1', transform: 'scale(1)' },
-		},
-		'bounce-soft': {
-			'0%, 100%': { transform: 'translateY(0)' },
-			'50%': { transform: 'translateY(-4px)' },
-		},
-		'slide-up': {
-			from: { opacity: '0', transform: 'translateY(20px)' },
-			to: { opacity: '1', transform: 'translateY(0)' },
-		},
-		'fade-in': {
-			from: { opacity: '0' },
-			to: { opacity: '1' },
-		},
-		'fade-out': {
-			from: { opacity: '1' },
-			to: { opacity: '0' },
-		},
-		'command-in': {
-			from: { opacity: '0', scale: '0.98' },
-			to: { opacity: '1', scale: '1' },
-		},
-		'command-out': {
-			from: { opacity: '1', scale: '1' },
-			to: { opacity: '0', scale: '0.98' },
-		},
-		shimmer: {
-			'0%': { 'background-position': '-200% 0' },
-			'100%': { 'background-position': '200% 0' },
-		},
-		'shimmer-slide': {
-			to: { transform: 'translateX(100%)' },
-		},
-		// AI / agentic surfaces (Beautiful UI motion craft, Constructive tokens)
-		'ai-shimmer-text': {
-			'0%': { 'background-position': '100% 0' },
-			'100%': { 'background-position': '-100% 0' },
-		},
-		'ai-pixel-on': {
-			'0%, 100%': { opacity: '0.15' },
-			'40%, 60%': { opacity: '0.95' },
-		},
-		'ai-fade-up': {
-			from: { opacity: '0', transform: 'translateY(6px)' },
-			to: { opacity: '1', transform: 'translateY(0)' },
-		},
-		'ai-bounce-dots': {
-			'0%, 80%, 100%': { transform: 'scale(0.6)', opacity: '0.4' },
-			'40%': { transform: 'scale(1)', opacity: '1' },
-		},
-		'ai-typing': {
-			'0%, 60%, 100%': { transform: 'translateY(0)', opacity: '0.4' },
-			'30%': { transform: 'translateY(-3px)', opacity: '1' },
-		},
-		'ai-wave': {
-			'0%, 100%': { transform: 'scaleY(0.5)' },
-			'50%': { transform: 'scaleY(1)' },
-		},
-		'ai-pulse-dot': {
-			'0%, 100%': { transform: 'scale(0.85)', opacity: '0.5' },
-			'50%': { transform: 'scale(1.1)', opacity: '1' },
-		},
-		'ai-loading-dots': {
-			'0%, 20%': { opacity: '0' },
-			'40%': { opacity: '1' },
-			'100%': { opacity: '0' },
-		},
-	},
-	globalCss: {
-		'[data-slot="portal-root"] > *': {
-			'pointer-events': 'auto',
-		},
-	},
+  npmImports: ['tailwindcss', '@xyflow/react/dist/style.css', 'maplibre-gl/dist/maplibre-gl.css'],
+  npmSource: '../../dist',
+  darkVariant: '&:is(.dark *)',
+  light: {
+    background: 'oklch(1 0 0)',
+    foreground: 'oklch(0.3211 0 0)',
+    card: 'oklch(1 0 0)',
+    'card-foreground': 'oklch(0.3211 0 0)',
+    popover: 'oklch(1 0 0)',
+    'popover-foreground': 'oklch(0.3211 0 0)',
+    primary: 'oklch(0.688 0.1754 245.6151)',
+    'primary-foreground': 'oklch(0.979 0.021 166.113)',
+    secondary: 'oklch(0.967 0.001 286.375)',
+    'secondary-foreground': 'oklch(0.21 0.006 285.885)',
+    muted: 'oklch(0.967 0.001 286.375)',
+    'muted-foreground': 'oklch(0.552 0.016 285.938)',
+    accent: 'oklch(0.967 0.001 286.375)',
+    'accent-foreground': 'oklch(0.21 0.006 285.885)',
+    destructive: 'oklch(0.55 0.2 25)',
+    'destructive-foreground': 'oklch(0.985 0 0)',
+    border: 'oklch(0.92 0.004 286.32)',
+    input: 'oklch(0.93 0.004 286.32)',
+    ring: 'oklch(0.871 0.006 286.286)',
+    'chart-1': 'oklch(0.646 0.222 41.116)',
+    'chart-2': 'oklch(0.6 0.118 184.704)',
+    'chart-3': 'oklch(0.398 0.07 227.392)',
+    'chart-4': 'oklch(0.828 0.189 84.429)',
+    'chart-5': 'oklch(0.769 0.188 70.08)',
+    sidebar: 'oklch(0.985 0 0)',
+    'sidebar-foreground': 'oklch(0.37 0.013 285.805)',
+    'sidebar-primary': 'oklch(0.985 0 0)',
+    'sidebar-primary-foreground': 'oklch(0.21 0.006 285.885)',
+    'sidebar-accent': 'oklch(0.967 0.001 286.375)',
+    'sidebar-accent-foreground': 'oklch(0.21 0.006 285.885)',
+    'sidebar-border': 'oklch(0.92 0.004 286.32)',
+    'sidebar-ring': 'oklch(0.871 0.006 286.286)',
+    info: 'var(--color-blue-500)',
+    'info-foreground': 'var(--color-blue-700)',
+    success: 'var(--color-emerald-500)',
+    'success-foreground': 'var(--color-emerald-700)',
+    warning: 'var(--color-amber-500)',
+    'warning-foreground': 'var(--color-amber-700)',
+    'map-control-filter': 'none',
+    'map-accent': 'hsl(221 83% 53%)',
+    'map-accent-medium': 'hsl(224 76% 48%)',
+    'map-accent-strong': 'hsl(226 71% 40%)',
+    'map-surface': 'hsl(0 0% 83%)',
+    'map-surface-border': 'hsl(0 0% 100%)',
+    'map-on-accent': 'hsl(0 0% 100%)',
+    ...sharedTypographyAndShape,
+    'shadow-border':
+      '0 0 0 1px oklch(0 0 0 / 0.06), 0 1px 1px -0.5px rgb(35 35 35 / 0.08), 0 1px 2px -1px rgb(35 35 35 / 0.04), 0 2px 4px -1px rgb(35 35 35 / 0.03)',
+    'shadow-border-hover':
+      '0 0 0 1px oklch(0 0 0 / 0.08), 0 1px 2px -1px rgb(35 35 35 / 0.08), 0 2px 4px -2px rgb(35 35 35 / 0.06), 0 4px 8px -2px rgb(35 35 35 / 0.04), 0 8px 16px -4px rgb(35 35 35 / 0.03)',
+    ...lightElevationShadows,
+  },
+  dark: {
+    background: 'oklch(0.21 0.006 285.885)',
+    foreground: 'oklch(0.985 0 0)',
+    card: 'oklch(0.21 0.006 285.885)',
+    'card-foreground': 'oklch(0.985 0 0)',
+    popover: 'oklch(0.21 0.006 285.885)',
+    'popover-foreground': 'oklch(0.985 0 0)',
+    primary: 'oklch(0.688 0.1754 245.6151)',
+    'primary-foreground': 'oklch(0.979 0.021 166.113)',
+    secondary: 'oklch(0.274 0.006 286.033)',
+    'secondary-foreground': 'oklch(0.985 0 0)',
+    muted: 'oklch(0.244 0.006 285.97)',
+    'muted-foreground': 'oklch(0.705 0.015 286.067)',
+    accent: 'oklch(0.244 0.006 285.97)',
+    'accent-foreground': 'oklch(0.985 0 0)',
+    destructive: 'oklch(0.55 0.2 25)',
+    'destructive-foreground': 'oklch(0.985 0 0)',
+    border: 'oklch(0.29 0.009 285.83)',
+    input: 'oklch(0.29 0.009 285.83)',
+    ring: 'oklch(0.442 0.017 285.786)',
+    'chart-1': 'oklch(0.488 0.243 264.376)',
+    'chart-2': 'oklch(0.696 0.17 162.48)',
+    'chart-3': 'oklch(0.769 0.188 70.08)',
+    'chart-4': 'oklch(0.627 0.265 303.9)',
+    'chart-5': 'oklch(0.645 0.246 16.439)',
+    sidebar: 'oklch(0.244 0.006 285.97)',
+    'sidebar-foreground': 'oklch(0.967 0.001 286.375)',
+    'sidebar-primary': 'oklch(0.596 0.145 163.225)',
+    'sidebar-primary-foreground': 'oklch(1 0 0)',
+    'sidebar-accent': 'oklch(0.274 0.006 286.033)',
+    'sidebar-accent-foreground': 'oklch(0.967 0.001 286.375)',
+    'sidebar-border': 'oklch(0.274 0.006 286.033)',
+    'sidebar-ring': 'oklch(0.442 0.017 285.786)',
+    info: 'var(--color-blue-500)',
+    'info-foreground': 'var(--color-blue-400)',
+    success: 'var(--color-emerald-500)',
+    'success-foreground': 'var(--color-emerald-400)',
+    warning: 'var(--color-amber-500)',
+    'warning-foreground': 'var(--color-amber-400)',
+    'map-control-filter': 'invert(1)',
+    'map-accent': 'hsl(217 91% 60%)',
+    'map-accent-medium': 'hsl(213 94% 68%)',
+    'map-accent-strong': 'hsl(211 96% 78%)',
+    'map-surface': 'hsl(0 0% 25%)',
+    'map-surface-border': 'hsl(0 0% 9%)',
+    'map-on-accent': 'hsl(222 47% 11%)',
+    ...sharedTypographyAndShape,
+    'shadow-border':
+      '0 0 0 1px oklch(1 0 0 / 0.08), 0 1px 1px -0.5px rgb(0 0 0 / 0.25), 0 1px 2px -1px rgb(0 0 0 / 0.15), 0 2px 4px -1px rgb(0 0 0 / 0.10)',
+    'shadow-border-hover':
+      '0 0 0 1px oklch(1 0 0 / 0.13), 0 1px 2px -1px rgb(0 0 0 / 0.30), 0 2px 4px -2px rgb(0 0 0 / 0.20), 0 4px 8px -2px rgb(0 0 0 / 0.15), 0 8px 16px -4px rgb(0 0 0 / 0.10)',
+    ...darkElevationShadows,
+  },
+  tailwind: {
+    '--color-background': 'var(--background)',
+    '--color-foreground': 'var(--foreground)',
+    '--font-sans': 'var(--font-geist-sans, "Open Sans", ui-sans-serif, system-ui, sans-serif)',
+    '--font-mono': 'var(--font-geist-mono, Menlo, Monaco, Consolas, "Liberation Mono", monospace)',
+    '--color-sidebar-ring': 'var(--sidebar-ring)',
+    '--color-sidebar-border': 'var(--sidebar-border)',
+    '--color-sidebar-accent-foreground': 'var(--sidebar-accent-foreground)',
+    '--color-sidebar-accent': 'var(--sidebar-accent)',
+    '--color-sidebar-primary-foreground': 'var(--sidebar-primary-foreground)',
+    '--color-sidebar-primary': 'var(--sidebar-primary)',
+    '--color-sidebar-foreground': 'var(--sidebar-foreground)',
+    '--color-sidebar': 'var(--sidebar)',
+    '--color-chart-5': 'var(--chart-5)',
+    '--color-chart-4': 'var(--chart-4)',
+    '--color-chart-3': 'var(--chart-3)',
+    '--color-chart-2': 'var(--chart-2)',
+    '--color-chart-1': 'var(--chart-1)',
+    '--color-ring': 'var(--ring)',
+    '--color-input': 'var(--input)',
+    '--color-border': 'var(--border)',
+    '--color-destructive': 'var(--destructive)',
+    '--color-accent-foreground': 'var(--accent-foreground)',
+    '--color-accent': 'var(--accent)',
+    '--color-muted-foreground': 'var(--muted-foreground)',
+    '--color-muted': 'var(--muted)',
+    '--color-secondary-foreground': 'var(--secondary-foreground)',
+    '--color-secondary': 'var(--secondary)',
+    '--color-primary-foreground': 'var(--primary-foreground)',
+    '--color-primary': 'var(--primary)',
+    '--color-popover-foreground': 'var(--popover-foreground)',
+    '--color-popover': 'var(--popover)',
+    '--color-card-foreground': 'var(--card-foreground)',
+    '--color-card': 'var(--card)',
+    '--radius-xs': 'calc(var(--radius) - 6px)',
+    '--radius-sm': 'calc(var(--radius) - 4px)',
+    '--radius-md': 'var(--radius)',
+    '--radius-lg': 'calc(var(--radius) + 2px)',
+    '--radius-xl': 'calc(var(--radius) + 6px)',
+    '--radius-2xl': 'calc(var(--radius) + 10px)',
+    '--color-warning-foreground': 'var(--warning-foreground)',
+    '--color-warning': 'var(--warning)',
+    '--color-success-foreground': 'var(--success-foreground)',
+    '--color-success': 'var(--success)',
+    '--color-info-foreground': 'var(--info-foreground)',
+    '--color-info': 'var(--info)',
+    '--color-destructive-foreground': 'var(--destructive-foreground)',
+  },
+  zIndex: {
+    'z-layer-portal-root': '9999',
+    'z-layer-floating': '1000',
+    'z-layer-modal-backdrop': '2000',
+    'z-layer-modal-content': '2001',
+    'z-layer-floating-elevated': '3000',
+    'z-layer-toast': '4000',
+  },
+  baseCss: {
+    ':root': {
+      'color-scheme': 'light',
+    },
+    '.dark': {
+      'color-scheme': 'dark',
+    },
+    '*': {
+      '@apply border-border/60 outline-ring/50': {},
+    },
+    body: {
+      '@apply bg-background font-sans text-foreground antialiased': {},
+      'font-synthesis': 'none',
+      position: 'relative',
+    },
+    '#__next, [data-nextjs-root-layout]': {
+      isolation: 'isolate',
+    },
+    '@media (prefers-reduced-motion: reduce)': {
+      '*, *::before, *::after': {
+        'scroll-behavior': 'auto !important',
+        'animation-duration': '0.01ms !important',
+        'animation-iteration-count': '1 !important',
+        'transition-duration': '0.01ms !important',
+      },
+    },
+  },
+  utilities: {
+    '.shadow-card': {
+      'box-shadow': 'var(--shadow-border)',
+    },
+    '.shadow-card-lg': {
+      'box-shadow': 'var(--shadow-border-hover)',
+    },
+    '.scrollbar-hide': {
+      '-ms-overflow-style': 'none',
+      'scrollbar-width': 'none',
+    },
+    '.scrollbar-hide::-webkit-scrollbar': {
+      display: 'none',
+    },
+    '.scrollbar-neutral-thin': {
+      'scrollbar-width': 'thin',
+      'scrollbar-color': 'color-mix(in oklab, var(--muted-foreground) 30%, transparent) transparent',
+    },
+    '.scrollbar-neutral-thin::-webkit-scrollbar': {
+      height: '6px',
+      width: '6px',
+    },
+    '.scrollbar-neutral-thin::-webkit-scrollbar-track': {
+      background: 'transparent',
+    },
+    '.scrollbar-neutral-thin::-webkit-scrollbar-thumb': {
+      'background-color': 'color-mix(in oklab, var(--muted-foreground) 30%, transparent)',
+      'border-radius': '3px',
+    },
+    '.scrollbar-neutral-thin::-webkit-scrollbar-thumb:hover': {
+      'background-color': 'color-mix(in oklab, var(--muted-foreground) 50%, transparent)',
+    },
+    '.animate-shimmer': {
+      animation: 'shimmer 2s ease-in-out infinite',
+    },
+    '.animate-ai-shimmer-text': {
+      animation: 'ai-shimmer-text 1.4s linear infinite',
+    },
+    '.animate-ai-pixel-on': {
+      animation: 'ai-pixel-on 650ms ease-in-out infinite',
+    },
+    '.animate-ai-fade-up': {
+      animation: 'ai-fade-up 300ms cubic-bezier(0.23, 1, 0.32, 1) both',
+    },
+  },
+  keyframes: {
+    'pulse-glow': {
+      '0%, 100%': {
+        opacity: '0.3',
+        transform: 'translate(-50%, -50%) scale(0.95)',
+      },
+      '50%': {
+        opacity: '0.5',
+        transform: 'translate(-50%, -50%) scale(1.05)',
+      },
+    },
+    'fade-scale-in': {
+      from: { opacity: '0', transform: 'scale(0.9)' },
+      to: { opacity: '1', transform: 'scale(1)' },
+    },
+    'scale-in': {
+      from: { opacity: '0', transform: 'scale(0.8)' },
+      to: { opacity: '1', transform: 'scale(1)' },
+    },
+    'bounce-soft': {
+      '0%, 100%': { transform: 'translateY(0)' },
+      '50%': { transform: 'translateY(-4px)' },
+    },
+    'slide-up': {
+      from: { opacity: '0', transform: 'translateY(20px)' },
+      to: { opacity: '1', transform: 'translateY(0)' },
+    },
+    'fade-in': {
+      from: { opacity: '0' },
+      to: { opacity: '1' },
+    },
+    'fade-out': {
+      from: { opacity: '1' },
+      to: { opacity: '0' },
+    },
+    'command-in': {
+      from: { opacity: '0', scale: '0.98' },
+      to: { opacity: '1', scale: '1' },
+    },
+    'command-out': {
+      from: { opacity: '1', scale: '1' },
+      to: { opacity: '0', scale: '0.98' },
+    },
+    shimmer: {
+      '0%': { 'background-position': '-200% 0' },
+      '100%': { 'background-position': '200% 0' },
+    },
+    'shimmer-slide': {
+      to: { transform: 'translateX(100%)' },
+    },
+    // AI / agentic surfaces (Beautiful UI motion craft, Constructive tokens)
+    'ai-shimmer-text': {
+      '0%': { 'background-position': '100% 0' },
+      '100%': { 'background-position': '-100% 0' },
+    },
+    'ai-pixel-on': {
+      '0%, 100%': { opacity: '0.15' },
+      '40%, 60%': { opacity: '0.95' },
+    },
+    'ai-fade-up': {
+      from: { opacity: '0', transform: 'translateY(6px)' },
+      to: { opacity: '1', transform: 'translateY(0)' },
+    },
+    'ai-bounce-dots': {
+      '0%, 80%, 100%': { transform: 'scale(0.6)', opacity: '0.4' },
+      '40%': { transform: 'scale(1)', opacity: '1' },
+    },
+    'ai-typing': {
+      '0%, 60%, 100%': { transform: 'translateY(0)', opacity: '0.4' },
+      '30%': { transform: 'translateY(-3px)', opacity: '1' },
+    },
+    'ai-wave': {
+      '0%, 100%': { transform: 'scaleY(0.5)' },
+      '50%': { transform: 'scaleY(1)' },
+    },
+    'ai-pulse-dot': {
+      '0%, 100%': { transform: 'scale(0.85)', opacity: '0.5' },
+      '50%': { transform: 'scale(1.1)', opacity: '1' },
+    },
+    'ai-loading-dots': {
+      '0%, 20%': { opacity: '0' },
+      '40%': { opacity: '1' },
+      '100%': { opacity: '0' },
+    },
+  },
+  globalCss: {
+    '[data-slot="map"]': {
+      '@apply bg-muted/30 text-foreground': {},
+    },
+    '[data-slot="map-loading"]': {
+      '@apply bg-muted/40 text-muted-foreground': {},
+    },
+    '[data-slot="map-fallback"]': {
+      '@apply bg-muted/30 text-foreground': {},
+    },
+    '[data-slot="map-control-group"]': {
+      '@apply border-border bg-background text-foreground': {},
+    },
+    '[data-slot="map-marker"]': {
+      '@apply border-primary-foreground bg-primary text-primary-foreground': {},
+    },
+    '[data-slot="map"] .maplibregl-popup-content': {
+      '@apply rounded-none! bg-transparent! p-0! shadow-none!': {},
+    },
+    '[data-slot="map"] .maplibregl-popup-tip': {
+      '@apply hidden!': {},
+    },
+    '[data-slot="map"] .maplibregl-ctrl-attrib': {
+      '@apply rounded-md! border! border-border! bg-background! text-muted-foreground! shadow-sm!': {},
+    },
+    '[data-slot="map"] .maplibregl-ctrl-attrib a': {
+      '@apply text-muted-foreground!': {},
+    },
+    '[data-slot="map"] .maplibregl-ctrl-attrib a:hover': {
+      '@apply text-foreground!': {},
+    },
+    '[data-slot="map"] .maplibregl-ctrl-attrib-button': {
+      '@apply bg-transparent!': {},
+      filter: 'var(--map-control-filter)',
+    },
+    '[data-slot="portal-root"] > *': {
+      'pointer-events': 'auto',
+    },
+  },
 } as const satisfies ConstructiveThemeDefinition;
 
 export type ConstructiveTheme = typeof constructiveTheme;

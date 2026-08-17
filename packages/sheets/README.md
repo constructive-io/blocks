@@ -32,7 +32,7 @@ UI or Sheets packages.
 
 | Package | For |
 |---------|-----|
-| `leaflet` + `react-leaflet` | Geometry/map editors |
+| `maplibre-gl` | Point geometry map editor |
 | `react-aria-components` + `@internationalized/date` | Date picker editors |
 
 The registry command installs these so every built-in editor typechecks out of
@@ -111,6 +111,41 @@ function MySpreadsheet() {
   );
 }
 ```
+
+## Map configuration
+
+Point geometry fields use the reusable Constructive MapLibre component. With no map configuration, the editor uses
+`https://demotiles.maplibre.org/style.json`; that endpoint is suitable for examples and local previews, not production
+tile traffic. Production hosts should provide licensed light and dark styles:
+
+```tsx
+import type { SheetsConfig, SheetsGeocodeResult } from '@constructive-io/sheets';
+
+const config: SheetsConfig = {
+  endpoint: '/graphql',
+  auth: { mode: 'embedded', getToken: () => session.token },
+  map: {
+    styles: {
+      light: process.env.NEXT_PUBLIC_MAP_STYLE_LIGHT!,
+      dark: process.env.NEXT_PUBLIC_MAP_STYLE_DARK!,
+    },
+    geocode: async (query, { signal, locale }) => {
+      const response = await fetch(
+        `/api/geocode?q=${encodeURIComponent(query)}&locale=${encodeURIComponent(locale)}`,
+        { signal },
+      );
+      if (!response.ok) throw new Error('Geocoder request failed');
+      return response.json() as Promise<SheetsGeocodeResult[]>;
+    },
+  },
+};
+```
+
+Address search is hidden when `map.geocode` is omitted, while clicking and dragging the marker still work. Keep
+provider keys and rate-limit policy in the host endpoint; do not call the public Nominatim autocomplete service from
+the browser. MapLibre normally uses a blob worker, so strict Content Security Policies must follow MapLibre's CSP
+worker setup. Keep the style's required attribution visible and see the [MapLibre CSP
+directives](https://maplibre.org/maplibre-gl-js/docs/#csp-directives) when the host cannot allow `worker-src blob:`.
 
 ## CSS Setup
 

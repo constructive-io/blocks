@@ -3,7 +3,7 @@
 // preview it paints a geo ICON tinted by geometry category (point/line/polygon/
 // collection), plus an ABBREVIATED type label, mirroring the canvas `draw`.
 //
-// The geometry TYPE is derived without a leaflet/geojson dependency: prefer an
+// The geometry TYPE is derived without a map-runtime/geojson dependency: prefer an
 // explicit hint (`cell.meta.geometryType`, or a `{ geometryType }` object set by a
 // `deriveGeometry` builder — v1 `createGeometryCell`), else sniff the GeoJSON
 // `"type":"…"` token out of the compact preview string the factory put in

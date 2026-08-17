@@ -3,7 +3,7 @@
 // Owns GEOMETRY_TYPES (geometry, geometry-point, geometry-collection). Geometry
 // stays out-of-band: when the caller supplies a `deriveGeometry` builder (the
 // native mirror of v1's `createGeometryCell`), this factory delegates to it so
-// this module never imports the leaflet-backed geometry view. Without a builder,
+// this module never imports the map-backed geometry view. Without a builder,
 // it falls back to a compact JSON preview as both the copy value and the display
 // string — identical to v1's Text fallback.
 //

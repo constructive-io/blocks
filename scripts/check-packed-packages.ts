@@ -13,6 +13,7 @@ interface PackageManifest {
   name: string;
   version: string;
   dependencies?: Record<string, string>;
+  devDependencies?: Record<string, string>;
   peerDependencies?: Record<string, string>;
   exports: Record<string, unknown>;
 }
@@ -35,7 +36,7 @@ async function packageManifest(relativePackageJson: string): Promise<PackageMani
 function runtimeExportSpecifiers(manifest: PackageManifest): string[] {
   return Object.entries(manifest.exports)
     .filter(([subpath, target]) => subpath !== './package.json' && typeof target === 'object')
-    .map(([subpath]) => subpath === '.' ? manifest.name : `${manifest.name}/${subpath.slice(2)}`);
+    .map(([subpath]) => (subpath === '.' ? manifest.name : `${manifest.name}/${subpath.slice(2)}`));
 }
 
 const uiManifest = await packageManifest('packages/ui/package.json');
@@ -48,6 +49,24 @@ if (!uiManifest.peerDependencies?.tailwindcss) {
 }
 if (uiManifest.dependencies?.['tw-animate-css']) {
   throw new Error('@constructive-io/ui must not ship tw-animate-css');
+}
+if (uiManifest.peerDependencies?.['maplibre-gl'] !== '^6.0.0') {
+  throw new Error('@constructive-io/ui must declare MapLibre 6 as a peer');
+}
+if (!uiManifest.devDependencies?.['maplibre-gl'] || !uiManifest.devDependencies?.['@types/geojson']) {
+  throw new Error('@constructive-io/ui must build map declarations against MapLibre and GeoJSON types');
+}
+if (sheetsManifest.peerDependencies?.['maplibre-gl'] !== '^6.0.0') {
+  throw new Error('@constructive-io/sheets must declare MapLibre 6 as a peer');
+}
+for (const dependency of ['leaflet', 'react-leaflet', '@types/leaflet']) {
+  if (
+    sheetsManifest.dependencies?.[dependency] ||
+    sheetsManifest.devDependencies?.[dependency] ||
+    sheetsManifest.peerDependencies?.[dependency]
+  ) {
+    throw new Error(`@constructive-io/sheets must not declare ${dependency}`);
+  }
 }
 for (const dependency of ['@remixicon/react', 'lucide-react']) {
   if (!sheetsManifest.dependencies?.[dependency]) {
@@ -70,35 +89,26 @@ const runtimeSpecifiers = [
   ...runtimeExportSpecifiers(dataManifest),
   ...runtimeExportSpecifiers(commandPaletteManifest),
   ...runtimeExportSpecifiers(sheetsManifest),
-  ...runtimeExportSpecifiers(schemaBuilderManifest)
+  ...runtimeExportSpecifiers(schemaBuilderManifest),
 ];
 const uiTarball = path.join(artifacts, `constructive-io-ui-${uiVersion}.tgz`);
 const dataTarball = path.join(artifacts, `constructive-io-data-${dataVersion}.tgz`);
-const commandPaletteTarball = path.join(
-  artifacts,
-  `constructive-io-command-palette-${commandPaletteVersion}.tgz`
-);
+const commandPaletteTarball = path.join(artifacts, `constructive-io-command-palette-${commandPaletteVersion}.tgz`);
 const sheetsTarball = path.join(artifacts, `constructive-io-sheets-${sheetsVersion}.tgz`);
-const schemaBuilderTarball = path.join(
-  artifacts,
-  `constructive-io-schema-builder-${schemaBuilderVersion}.tgz`
-);
+const schemaBuilderTarball = path.join(artifacts, `constructive-io-schema-builder-${schemaBuilderVersion}.tgz`);
 await Promise.all([
   access(uiTarball),
   access(dataTarball),
   access(commandPaletteTarball),
   access(sheetsTarball),
-  access(schemaBuilderTarball)
+  access(schemaBuilderTarball),
 ]);
 
 await checkPackedSheets();
 
 await rm(consumer, { recursive: true, force: true });
 await mkdir(consumer, { recursive: true });
-await writeFile(
-  path.join(consumer, '.npmrc'),
-  'auto-install-peers=true\nstrict-peer-dependencies=false\n'
-);
+await writeFile(path.join(consumer, '.npmrc'), 'auto-install-peers=true\nstrict-peer-dependencies=false\n');
 await writeFile(
   path.join(consumer, 'package.json'),
   `${JSON.stringify(
@@ -113,7 +123,7 @@ await writeFile(
         '@constructive-io/sheets': `file:${sheetsTarball}`,
         '@constructive-io/ui': `file:${uiTarball}`,
         react: '^19.0.0',
-        'react-dom': '^19.0.0'
+        'react-dom': '^19.0.0',
       },
       devDependencies: {
         '@tailwindcss/postcss': '^4.1.0',
@@ -122,12 +132,12 @@ await writeFile(
         jsdom: '^26.1.0',
         postcss: '^8.5.0',
         tsx: '4.23.1',
-        typescript: '^5.9.0'
-      }
+        typescript: '^5.9.0',
+      },
     },
     null,
-    2
-  )}\n`
+    2,
+  )}\n`,
 );
 await writeFile(
   path.join(consumer, 'tsconfig.json'),
@@ -141,19 +151,44 @@ await writeFile(
         jsx: 'react-jsx',
         strict: true,
         noEmit: true,
-        skipLibCheck: false
+        // MapLibre 6 currently pulls extensionless ESM declarations from
+        // @maplibre/geojson-vt and @maplibre/vt-pbf. NodeNext can resolve the
+        // public surface, but checking those upstream declarations fails
+        // TS2834 until those packages add explicit extensions.
+        skipLibCheck: true,
       },
-      include: ['consumer.tsx']
+      include: ['consumer.tsx'],
     },
     null,
-    2
-  )}\n`
+    2,
+  )}\n`,
+);
+await writeFile(
+  path.join(consumer, 'tsconfig.bundler.json'),
+  `${JSON.stringify(
+    {
+      compilerOptions: {
+        target: 'ES2022',
+        lib: ['ES2022', 'DOM'],
+        module: 'ESNext',
+        moduleResolution: 'Bundler',
+        jsx: 'react-jsx',
+        strict: true,
+        noEmit: true,
+        skipLibCheck: false,
+      },
+      include: ['consumer.tsx'],
+    },
+    null,
+    2,
+  )}\n`,
 );
 await writeFile(
   path.join(consumer, 'consumer.tsx'),
   `import * as UI from '@constructive-io/ui';
 import { Button } from '@constructive-io/ui/button';
 import { FlowZoomPanel } from '@constructive-io/ui/flow-zoom-panel';
+import { Map, MapMarker, MarkerContent, type MapStyleOption } from '@constructive-io/ui/map';
 import { createCommandRegistry, kbd } from '@constructive-io/command-palette';
 import { META_CONTRACT_VERSION, selectConsoleDataTables } from '@constructive-io/data';
 import { Sheets, SheetsProvider } from '@constructive-io/sheets';
@@ -166,18 +201,20 @@ import * as Policies from '@constructive-io/schema-builder/policies';
 import * as Tables from '@constructive-io/schema-builder/tables';
 
 const element = <Button>Package consumer</Button>;
+const mapStyle: MapStyleOption = { version: 8, sources: {}, layers: [] };
+const mapElement = <Map styles={{ light: mapStyle }}><MapMarker longitude={0} latitude={0}><MarkerContent /></MapMarker></Map>;
 const commandRegistry = createCommandRegistry({ groups: [], commands: [] });
-const publicSurface = [UI, FlowZoomPanel, commandRegistry, kbd('k', 'mod'), META_CONTRACT_VERSION, selectConsoleDataTables, Sheets, SheetsProvider, SchemaBuilder, DEFAULT_SCHEMA_BUILDER_PREFERENCES, Core, Fields, Relationships, Indexes, Policies, Tables];
+const publicSurface = [UI, FlowZoomPanel, Map, mapElement, commandRegistry, kbd('k', 'mod'), META_CONTRACT_VERSION, selectConsoleDataTables, Sheets, SheetsProvider, SchemaBuilder, DEFAULT_SCHEMA_BUILDER_PREFERENCES, Core, Fields, Relationships, Indexes, Policies, Tables];
 void element;
 void publicSurface;
-`
+`,
 );
 await writeFile(
   path.join(consumer, 'styles.css'),
   `@import '@constructive-io/ui/globals.css';
 @import '@constructive-io/sheets/styles.css';
 @import '@constructive-io/schema-builder/styles.css';
-`
+`,
 );
 await writeFile(
   path.join(consumer, 'check-css.ts'),
@@ -190,11 +227,14 @@ const from = new URL('./styles.css', import.meta.url);
 const source = await readFile(from, 'utf8');
 const installedGlobals = await readFile(new URL('./node_modules/@constructive-io/ui/src/styles/globals.css', import.meta.url), 'utf8');
 assert.doesNotMatch(installedGlobals, /tw-animate-css/);
+assert.match(installedGlobals, /maplibre-gl\\/dist\\/maplibre-gl\\.css/);
+assert.match(installedGlobals, /\\[data-slot="map-fallback"\\]/);
 const result = await postcss([tailwindcss()]).process(source, { from: from.pathname });
 assert.match(result.css, /--background:/);
 assert.match(result.css, /\\.react-flow/);
+assert.match(result.css, /\\.maplibregl-map/);
 console.log('Published stylesheets processed with Tailwind CSS.');
-`
+`,
 );
 await writeFile(
   path.join(consumer, 'check.cts'),
@@ -203,6 +243,7 @@ const specifiers = ${JSON.stringify(runtimeSpecifiers)};
 for (const specifier of specifiers) assert.ok(require(specifier), \`Empty CJS export: \${specifier}\`);
 assert.ok(require('@constructive-io/ui').Button);
 assert.ok(require('@constructive-io/ui/flow-zoom-panel').FlowZoomPanel);
+assert.ok(require('@constructive-io/ui/map').Map);
 assert.ok(require('@constructive-io/command-palette').createCommandRegistry);
 assert.equal(require('@constructive-io/data').META_CONTRACT_VERSION, '2026-07');
 assert.ok(require('@constructive-io/sheets').Sheets);
@@ -211,7 +252,7 @@ assert.ok(require.resolve('@constructive-io/ui/globals.css'));
 assert.ok(require.resolve('@constructive-io/sheets/styles.css'));
 assert.ok(require.resolve('@constructive-io/schema-builder/styles.css'));
 console.log(\`CJS runtime and stylesheet exports resolved (\${specifiers.length} JavaScript entries).\`);
-`
+`,
 );
 await writeFile(
   path.join(consumer, 'check.ts'),
@@ -219,7 +260,7 @@ await writeFile(
 const specifiers = ${JSON.stringify(runtimeSpecifiers)};
 for (const specifier of specifiers) assert.ok(await import(specifier), \`Empty ESM export: \${specifier}\`);
 console.log(\`ESM runtime exports resolved (\${specifiers.length} JavaScript entries).\`);
-`
+`,
 );
 await writeFile(
   path.join(consumer, 'check-portal-context.ts'),
@@ -306,7 +347,7 @@ assert.equal(host.contains(popup), true, 'ESM subpaths did not share the portal 
 await React.act(async () => root.unmount());
 dom.window.close();
 console.log('ESM overlay subpaths shared the packed portal context.');
-`
+`,
 );
 await writeFile(
   path.join(consumer, 'check-portal-context.cts'),
@@ -400,18 +441,20 @@ main().catch((error) => {
   console.error(error);
   process.exitCode = 1;
 });
-`
+`,
 );
 
 await run('pnpm', ['install', '--ignore-workspace', '--frozen-lockfile=false']);
 await Promise.all([
   access(path.join(consumer, 'node_modules', '@constructive-io', 'ui', 'LICENSE')),
+  access(path.join(consumer, 'node_modules', '@constructive-io', 'ui', 'THIRD_PARTY_NOTICES.md')),
   access(path.join(consumer, 'node_modules', '@constructive-io', 'data', 'LICENSE')),
   access(path.join(consumer, 'node_modules', '@constructive-io', 'command-palette', 'LICENSE')),
   access(path.join(consumer, 'node_modules', '@constructive-io', 'sheets', 'LICENSE')),
-  access(path.join(consumer, 'node_modules', '@constructive-io', 'schema-builder', 'LICENSE'))
+  access(path.join(consumer, 'node_modules', '@constructive-io', 'schema-builder', 'LICENSE')),
 ]);
 await run('pnpm', ['exec', 'tsc', '-p', 'tsconfig.json']);
+await run('pnpm', ['exec', 'tsc', '-p', 'tsconfig.bundler.json']);
 await run('pnpm', ['exec', 'tsx', 'check-css.ts']);
 await run('pnpm', ['exec', 'tsx', 'check.ts']);
 await run('pnpm', ['exec', 'tsx', 'check.cts']);
@@ -426,10 +469,7 @@ async function checkPackedSheets(): Promise<void> {
   // manifest and validates the published Tailwind source contract directly.
   await rm(sheetsConsumer, { recursive: true, force: true });
   await mkdir(sheetsConsumer, { recursive: true });
-  await writeFile(
-    path.join(sheetsConsumer, '.npmrc'),
-    'auto-install-peers=false\nstrict-peer-dependencies=false\n'
-  );
+  await writeFile(path.join(sheetsConsumer, '.npmrc'), 'auto-install-peers=false\nstrict-peer-dependencies=false\n');
   await writeFile(
     path.join(sheetsConsumer, 'package.json'),
     `${JSON.stringify(
@@ -440,24 +480,25 @@ async function checkPackedSheets(): Promise<void> {
         dependencies: {
           '@constructive-io/data': `file:${dataTarball}`,
           '@constructive-io/ui': `file:${uiTarball}`,
-          '@constructive-io/sheets': `file:${sheetsTarball}`
+          '@constructive-io/sheets': `file:${sheetsTarball}`,
+          'maplibre-gl': '^6.0.0',
         },
         devDependencies: {
           '@tailwindcss/postcss': '^4.1.0',
           postcss: '^8.5.0',
           tailwindcss: '^4.1.0',
-          tsx: '4.23.1'
-        }
+          tsx: '4.23.1',
+        },
       },
       null,
-      2
-    )}\n`
+      2,
+    )}\n`,
   );
   await writeFile(
     path.join(sheetsConsumer, 'styles.css'),
     `@import 'tailwindcss';
 @import '@constructive-io/sheets/styles.css';
-`
+`,
   );
   await writeFile(
     path.join(sheetsConsumer, 'check-sheets.ts'),
@@ -472,11 +513,18 @@ const packageJsonPath = require.resolve('@constructive-io/sheets/package.json');
 const manifest = JSON.parse(await readFile(packageJsonPath, 'utf8'));
 assert.ok(manifest.dependencies['@remixicon/react']);
 assert.ok(manifest.dependencies['lucide-react']);
+assert.equal(manifest.peerDependencies['maplibre-gl'], '^6.0.0');
+assert.equal(manifest.peerDependencies.leaflet, undefined);
+assert.equal(manifest.peerDependencies['react-leaflet'], undefined);
 assert.equal(manifest.exports['./styles.css'], './dist/styles.css');
 
 const requireFromSheets = createRequire(packageJsonPath);
 assert.ok(requireFromSheets.resolve('@remixicon/react'));
 assert.ok(requireFromSheets.resolve('lucide-react'));
+// MapLibre 6 is ESM-only, so CommonJS resolution of its package root is
+// intentionally unavailable. Its exported manifest still proves that the peer
+// is visible from the installed Sheets package.
+assert.ok(requireFromSheets.resolve('maplibre-gl/package.json'));
 const stylesheetPath = require.resolve('@constructive-io/sheets/styles.css');
 const stylesheet = await readFile(stylesheetPath, 'utf8');
 assert.ok(stylesheet.includes('@source "./**/*.{js,cjs}";'));
@@ -486,13 +534,9 @@ const source = await readFile(from, 'utf8');
 const result = await postcss([tailwindcss()]).process(source, { from: from.pathname });
 assert.ok(result.css.includes('.w-\\\\[52px\\\\]'));
 console.log('Sheets runtime dependencies and Tailwind source contract passed independently.');
-`
+`,
   );
-  await run(
-    'pnpm',
-    ['install', '--ignore-workspace', '--frozen-lockfile=false'],
-    sheetsConsumer
-  );
+  await run('pnpm', ['install', '--ignore-workspace', '--frozen-lockfile=false'], sheetsConsumer);
   await access(path.join(sheetsConsumer, 'node_modules', '@constructive-io', 'sheets', 'LICENSE'));
   await run('pnpm', ['exec', 'tsx', 'check-sheets.ts'], sheetsConsumer);
 

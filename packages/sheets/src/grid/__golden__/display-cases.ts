@@ -5,8 +5,10 @@ import type { SheetsCell } from '../../cell-model/sheets-cell';
 import type { CellCreationMetadata } from '../grid-cell-types';
 import type { RelationInfo } from '../../store/relation-info-slice';
 
-// Deterministic geometry SheetsCell. We do not import the real
-// createGeometryCell because it pulls optional Leaflet peers.
+// Deterministic geometry SheetsCell — the native render payload a geometry factory
+// emits. We do NOT import the real createGeometryCell (it pulls the lazy map
+// peers); a stable `geo:<json>` displayText keeps the golden reproducible while
+// exercising projectSheetsCell's geometry branch (display === copy) faithfully.
 export function fakeGeometrySheetsCell(value: unknown): SheetsCell {
 	return {
 		kind: 'geometry',
