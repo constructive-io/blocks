@@ -1,13 +1,13 @@
-# @constructive-io/block-renderer
+# blocks-renderer
 
-React adapter for `@constructive-io/blocks-schema` UI documents: a recursive
+React adapter for `blocks-schema` UI documents: a recursive
 renderer with layerable widget registries, binding resolution, form state, and
 a visible unknown-block fallback.
 
 ## Usage
 
 ```tsx
-import { DocumentRenderer, composeRegistry } from '@constructive-io/block-renderer';
+import { DocumentRenderer, composeRegistry } from 'blocks-renderer';
 
 const registry = composeRegistry(
   baseRegistry,        // shadcn-style primitives

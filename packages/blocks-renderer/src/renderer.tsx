@@ -8,7 +8,7 @@ import {
 	type UIAction,
 	type UIDocument,
 	type UINode,
-} from '@constructive-io/blocks-schema';
+} from 'blocks-schema';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
 import { resolveNodeProps } from './bindings';

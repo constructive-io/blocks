@@ -1,4 +1,4 @@
-import type { UIDocument, UINode } from '@constructive-io/blocks-schema';
+import type { UIDocument, UINode } from 'blocks-schema';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it } from 'vitest';
 

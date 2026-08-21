@@ -1,6 +1,6 @@
 'use client';
 
-import type { UINode } from '@constructive-io/blocks-schema';
+import type { UINode } from 'blocks-schema';
 
 /**
  * Rendered when no registry layer satisfies a node type. A document may name

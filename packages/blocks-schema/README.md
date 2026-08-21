@@ -1,4 +1,4 @@
-# @constructive-io/blocks-schema
+# blocks-schema
 
 Portable JSON UI document specification for Constructive Blocks: the storage
 format, runtime validators, JSON Schema export, and pure document-manipulation
@@ -15,7 +15,7 @@ API. No React — this package is safe in servers, workers, and agents.
 | **Compose** | Pure fragment/slot/override composition | `compose.ts` |
 | **Fields** | Field collection helpers and constraint validation | `node.ts`, `validation.ts` |
 
-Rendering lives in adapters — `@constructive-io/block-renderer` is the React
+Rendering lives in adapters — `blocks-renderer` is the React
 adapter over this spec.
 
 ## Storage Schema
@@ -69,7 +69,7 @@ import {
   collectFieldNames, collectDefaultValues,
   collectFieldConstraints, validateField,            // form helpers
   walkNodes, findNodeByKey,
-} from '@constructive-io/blocks-schema';
+} from 'blocks-schema';
 
 const composed = composeDocument(document, {
   fragments: { address: addressSubtree },

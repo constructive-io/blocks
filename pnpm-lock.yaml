@@ -172,9 +172,9 @@ importers:
         specifier: 4.13.1
         version: 4.13.1(typescript@5.9.3)
 
-  packages/block-renderer:
+  packages/blocks-renderer:
     dependencies:
-      '@constructive-io/blocks-schema':
+      blocks-schema:
         specifier: workspace:^
         version: link:../blocks-schema
     devDependencies:

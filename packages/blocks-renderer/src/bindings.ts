@@ -1,4 +1,4 @@
-import type { UINode, UINodeProps } from '@constructive-io/blocks-schema';
+import type { UINode, UINodeProps } from 'blocks-schema';
 
 const TEMPLATE = /\{\{\s*([^}\s]+)\s*\}\}/g;
 

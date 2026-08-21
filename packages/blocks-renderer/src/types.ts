@@ -1,4 +1,4 @@
-import type { UIAction, UIDocument, UINode, UINodeProps } from '@constructive-io/blocks-schema';
+import type { UIAction, UIDocument, UINode, UINodeProps } from 'blocks-schema';
 import type { ComponentType, ReactNode } from 'react';
 
 export type RenderMode = 'preview' | 'edit';
