@@ -22,6 +22,9 @@ public registry and binds to each host through an explicit adapter.
   SDK trees or make normal CI depend on live endpoints.
 - npm packages are versioned with Lerna and published manually from locally
   verified tarballs. Do not add automated npm publishing.
+- `packages/blocks-schema` and `packages/blocks-renderer` build with `makage` and
+  publish from `dist` (`publishConfig.directory`). They keep root-level entry
+  points and no `exports` map, so deep imports stay `blocks-schema/compose`.
 
 ## Commands
 

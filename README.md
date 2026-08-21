@@ -12,6 +12,8 @@ component documentation, and published React packages.
 - `packages/sheets` — the metadata-driven application CRUD grid.
 - `packages/command-palette` — the headless command registry, shortcuts, workflows, and background-task engine.
 - `packages/schema-builder` — the source-installable Schema Builder, its host-adapter contract, and its npm package.
+- `packages/blocks-schema` — the `blocks-schema` JSON UI document format, validators, and composition API.
+- `packages/blocks-renderer` — the `blocks-renderer` React adapter for those documents.
 
 The documentation site is published at
 <https://constructive-io.github.io/blocks/>. Registry JSON is served from

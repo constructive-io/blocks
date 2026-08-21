@@ -18,6 +18,8 @@ public registry and binds to each host through an explicit adapter.
 - Never auto-discover or mutate sibling repositories from flow tooling.
 - Keep normal CI independent of generated SDKs and live endpoints.
 - Never add automated npm publishing; publish verified tarballs manually.
+- Keep `packages/blocks-schema` and `packages/blocks-renderer` on the `makage`
+  publish-from-`dist` layout: root-level entry points, no `exports` map.
 
 ## Verification
 
