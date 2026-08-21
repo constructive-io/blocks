@@ -3,6 +3,17 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.2.2](https://github.com/constructive-io/blocks/compare/blocks@0.2.1...blocks@0.2.2) (2026-08-21)
+
+
+### Bug Fixes
+
+* **blocks:** build workspace packages before dev ([1d18e3e](https://github.com/constructive-io/blocks/commit/1d18e3e15d42b830f9418d9dde75a4fab43b0348))
+
+
+
+
+
 ## [0.2.1](https://github.com/constructive-io/blocks/compare/blocks@0.2.0...blocks@0.2.1) (2026-08-10)
 
 

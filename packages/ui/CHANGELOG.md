@@ -3,6 +3,19 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.10.1](https://github.com/constructive-io/blocks/compare/@constructive-io/ui@0.10.0...@constructive-io/ui@0.10.1) (2026-08-21)
+
+
+### Bug Fixes
+
+* **registry:** pin sugar-high v1 for AI installs ([b9d0014](https://github.com/constructive-io/blocks/commit/b9d0014c2f5b95bf00997ad73c92f372f392d051))
+* **ui:** restore elevation shadow tokens ([ff2744a](https://github.com/constructive-io/blocks/commit/ff2744a8f4ce781c564cd61d14948f51ef006465))
+* **ui:** restore stack enter and exit transitions ([1d45d5c](https://github.com/constructive-io/blocks/commit/1d45d5c0ddec879c2e60bb17a00cd30acc31570c))
+
+
+
+
+
 # [0.10.0](https://github.com/constructive-io/blocks/compare/@constructive-io/ui@0.9.0...@constructive-io/ui@0.10.0) (2026-08-10)
 
 **Note:** Version bump only for package @constructive-io/ui
