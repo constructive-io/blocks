@@ -3,6 +3,14 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.4.0](https://github.com/constructive-io/blocks/compare/blocks-schema@0.3.0...blocks-schema@0.4.0) (2026-08-22)
+
+**Note:** Version bump only for package blocks-schema
+
+
+
+
+
 # [0.3.0](https://github.com/constructive-io/blocks/compare/blocks-schema@0.2.1...blocks-schema@0.3.0) (2026-08-22)
 
 

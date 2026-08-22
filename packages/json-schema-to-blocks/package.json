@@ -1,6 +1,6 @@
 {
   "name": "json-schema-to-blocks",
-  "version": "0.2.1",
+  "version": "0.3.0",
   "description": "Lower JSON Schema into blocks-schema UI documents: composable widget rules, constraints, and x-ui overrides",
   "private": false,
   "license": "MIT",

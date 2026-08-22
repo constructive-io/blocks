@@ -1,6 +1,6 @@
 {
   "name": "blocks-renderer",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Recursive React renderer for Constructive Blocks JSON UI documents, with layerable widget registries",
   "private": false,
   "license": "MIT",

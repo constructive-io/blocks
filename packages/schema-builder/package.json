@@ -1,6 +1,6 @@
 {
   "name": "@constructive-io/schema-builder",
-  "version": "0.6.2",
+  "version": "0.7.0",
   "description": "Framework-agnostic React schema builder for Constructive applications",
   "keywords": [
     "react",
