@@ -12,7 +12,8 @@ const packages = [
   '@constructive-io/sheets',
   '@constructive-io/schema-builder',
   'blocks-schema',
-  'blocks-renderer'
+  'blocks-renderer',
+  'json-schema-to-blocks'
 ];
 
 function run(command: string, args: string[], options?: { ignoreLifecycleScripts?: boolean }): Promise<void> {
