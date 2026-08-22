@@ -1,14 +1,14 @@
 {
-  "name": "blocks-renderer",
-  "version": "0.1.2",
-  "description": "Recursive React renderer for Constructive Blocks JSON UI documents, with layerable widget registries",
+  "name": "json-renderer",
+  "version": "0.0.1",
+  "description": "Framework-agnostic JSON UI document core: envelope and node tree, validation, composition, binding resolution, and the renderer adapter contract",
   "private": false,
   "license": "MIT",
   "homepage": "https://constructive-io.github.io/blocks/",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/constructive-io/blocks.git",
-    "directory": "packages/blocks-renderer"
+    "directory": "packages/json-renderer"
   },
   "bugs": {
     "url": "https://github.com/constructive-io/blocks/issues"
@@ -22,26 +22,18 @@
   "module": "esm/index.js",
   "types": "index.d.ts",
   "scripts": {
-    "build": "makage clean && makage build-ts && makage assets",
-    "build:dev": "makage clean && makage build-ts --dev && makage assets",
+    "build": "makage build",
+    "build:dev": "makage build --dev",
     "lint:types": "tsc --noEmit -p tsconfig.lint.json",
     "test": "vitest run",
     "test:watch": "vitest",
     "clean": "makage clean"
   },
   "dependencies": {
-    "blocks-schema": "workspace:^",
-    "json-renderer": "workspace:^"
-  },
-  "peerDependencies": {
-    "react": "^18.0.0 || ^19.0.0"
+    "zod": "^4.3.4"
   },
   "devDependencies": {
-    "@types/react": "^19.2.7",
-    "@types/react-dom": "^19.2.3",
     "makage": "^0.6.0",
-    "react": "^19.2.3",
-    "react-dom": "^19.2.3",
     "typescript": "^5.9.3",
     "vitest": "^3.2.4"
   },

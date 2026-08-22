@@ -12,7 +12,8 @@ component documentation, and published React packages.
 - `packages/sheets` — the metadata-driven application CRUD grid.
 - `packages/command-palette` — the headless command registry, shortcuts, workflows, and background-task engine.
 - `packages/schema-builder` — the source-installable Schema Builder, its host-adapter contract, and its npm package.
-- `packages/blocks-schema` — the `blocks-schema` JSON UI document format, validators, and composition API.
+- `packages/json-renderer` — the framework-agnostic `json-renderer` core: document envelope and node tree, validation, composition, binding resolution, and the renderer adapter contract.
+- `packages/blocks-schema` — the `blocks-schema` JSON UI document format, validators, and composition API, specializing `json-renderer` with the Constructive block vocabulary.
 - `packages/blocks-renderer` — the `blocks-renderer` React adapter for those documents.
 - `packages/json-schema-to-blocks` — the `json-schema-to-blocks` lowering of JSON Schema into those documents.
 - `packages/meta-to-blocks` — the `meta-to-blocks` lowering of database metadata into generated form, list, and detail documents.

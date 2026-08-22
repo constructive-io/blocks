@@ -1,3 +1,14 @@
+/**
+ * Registry layering for the React adapter: `json-renderer`'s generic registry
+ * ops, typed over React block components.
+ */
+import {
+	composeRegistry as composeNodeRegistry,
+	missingTypes as missingRegistryTypes,
+	registeredTypes as registeredNodeTypes,
+	resolveHandler,
+} from 'json-renderer';
+
 import type { BlockComponent, BlockRegistry } from './types';
 
 /**
@@ -6,19 +17,19 @@ import type { BlockComponent, BlockRegistry } from './types';
  * overrides — no forking of the renderer, and no single global map.
  */
 export function composeRegistry(...layers: (BlockRegistry | undefined)[]): BlockRegistry {
-	const composed: BlockRegistry = {};
-	for (const layer of layers) {
-		if (!layer) continue;
-		Object.assign(composed, layer);
-	}
-	return composed;
+	return composeNodeRegistry<BlockComponent>(...layers);
 }
 
 export function resolveBlock(registry: BlockRegistry, type: string): BlockComponent | undefined {
-	return registry[type];
+	return resolveHandler(registry, type);
 }
 
 /** Node types the registry can render, sorted for stable output. */
 export function registeredTypes(registry: BlockRegistry): string[] {
-	return Object.keys(registry).sort();
+	return registeredNodeTypes(registry);
+}
+
+/** Node types a document uses that no registry layer satisfies. */
+export function missingTypes(registry: BlockRegistry, usedTypes: Iterable<string>): string[] {
+	return missingRegistryTypes(registry, usedTypes);
 }

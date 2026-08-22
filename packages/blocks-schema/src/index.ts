@@ -1,4 +1,5 @@
 export * from './compose';
+export * from './core';
 export * from './envelope';
 export * from './json-schema';
 export * from './node';

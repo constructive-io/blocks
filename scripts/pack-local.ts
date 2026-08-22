@@ -11,6 +11,7 @@ const packages = [
   '@constructive-io/command-palette',
   '@constructive-io/sheets',
   '@constructive-io/schema-builder',
+  'json-renderer',
   'blocks-schema',
   'blocks-renderer',
   'json-schema-to-blocks',

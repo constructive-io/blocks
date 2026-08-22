@@ -1,3 +1,11 @@
+/**
+ * Document composition for Constructive documents: the generic ops from
+ * `json-renderer`, typed over this package's `UINode`/`UIDocument` and its
+ * `Fragment`/`Slot` vocabulary.
+ */
+import { composeEnvelope, composeNodeTree as composeGenericNodeTree, mergeEnvelopes, mergeNodeTrees } from 'json-renderer';
+import type { ComposeOptions as GenericComposeOptions, NodeOverride as GenericNodeOverride } from 'json-renderer';
+
 import type { UIDocument } from './envelope';
 import type { UIActions, UIBinding, UINode, UINodeProps, UINodeType } from './node';
 
@@ -6,7 +14,7 @@ import type { UIActions, UIBinding, UINode, UINodeProps, UINodeType } from './no
  * per document, so a generated default can be customized in a few places
  * without giving up generation.
  */
-export interface NodeOverride {
+export interface NodeOverride extends GenericNodeOverride<UINodeType, UINodeProps> {
 	type?: UINodeType;
 	props?: UINodeProps;
 	bindings?: UIBinding;
@@ -29,48 +37,8 @@ export interface ComposeOptions {
 	overrides?: NodeOverrides;
 }
 
-function applyOverride(node: UINode, override: NodeOverride): UINode {
-	return {
-		...node,
-		...(override.type ? { type: override.type } : {}),
-		props: { ...node.props, ...override.props },
-		...(override.bindings ? { bindings: { ...node.bindings, ...override.bindings } } : {}),
-		...(override.actions ? { actions: { ...node.actions, ...override.actions } } : {}),
-	};
-}
-
-function expandChild(node: UINode, options: ComposeOptions): UINode[] {
-	if (node.type === 'Fragment') {
-		const ref = node.props?.ref;
-		const fragment = typeof ref === 'string' ? options.fragments?.[ref] : undefined;
-		// An unresolved reference stays in the tree so the renderer surfaces it
-		// rather than silently dropping content.
-		return fragment ? [composeNode(fragment, options)] : [composeNode({ ...node, children: [] }, options)];
-	}
-
-	if (node.type === 'Slot') {
-		const name = node.props?.name;
-		const filler = typeof name === 'string' ? options.slots?.[name] : undefined;
-		if (filler === undefined) {
-			// No filler: fall back to the slot's own children (its default content).
-			return (node.children ?? []).flatMap((child) => expandChild(child, options));
-		}
-		const nodes = Array.isArray(filler) ? filler : [filler];
-		return nodes.map((filled) => composeNode(filled, options));
-	}
-
-	return [composeNode(node, options)];
-}
-
-function composeNode(node: UINode, options: ComposeOptions): UINode {
-	const override = options.overrides?.[node.key];
-	const base = override ? applyOverride(node, override) : node;
-
-	const children = (base.children ?? [])
-		.filter((child) => !options.overrides?.[child.key]?.remove)
-		.flatMap((child) => expandChild(child, options));
-
-	return { ...base, children };
+function genericOptions(options: ComposeOptions): GenericComposeOptions<UINode> {
+	return options as GenericComposeOptions<UINode>;
 }
 
 /**
@@ -78,9 +46,21 @@ function composeNode(node: UINode, options: ComposeOptions): UINode {
  * apply per-node overrides. Pure — the input document is never mutated.
  */
 export function composeDocument(document: UIDocument, options: ComposeOptions = {}): UIDocument {
-	return { ...document, page: composeNode(document.page, options) };
+	return composeEnvelope(document, genericOptions(options));
 }
 
 export function composeNodeTree(node: UINode, options: ComposeOptions = {}): UINode {
-	return composeNode(node, options);
+	return composeGenericNodeTree(node, genericOptions(options));
+}
+
+/**
+ * Merge an overlay document onto a generated one by node `key`: hand-authored
+ * content wins per node, not per document.
+ */
+export function mergeDocuments(base: UIDocument, overlay: Partial<Omit<UIDocument, 'page'>> & { page?: UINode }): UIDocument {
+	return mergeEnvelopes(base, overlay);
+}
+
+export function mergeNodes(base: UINode, overlay: UINode): UINode {
+	return mergeNodeTrees(base, overlay);
 }

@@ -180,6 +180,9 @@ importers:
       blocks-schema:
         specifier: workspace:^
         version: link:../blocks-schema/dist
+      json-renderer:
+        specifier: workspace:^
+        version: link:../json-renderer/dist
     devDependencies:
       '@types/react':
         specifier: ^19.2.7
@@ -206,6 +209,9 @@ importers:
 
   packages/blocks-schema:
     dependencies:
+      json-renderer:
+        specifier: workspace:^
+        version: link:../json-renderer/dist
       zod:
         specifier: ^4.3.4
         version: 4.4.3
@@ -293,6 +299,23 @@ importers:
       json-schema-to-blocks:
         specifier: workspace:^
         version: link:../json-schema-to-blocks/dist
+    devDependencies:
+      makage:
+        specifier: ^0.6.0
+        version: 0.6.0
+      typescript:
+        specifier: ^5.9.3
+        version: 5.9.3
+      vitest:
+        specifier: ^3.2.4
+        version: 3.2.7(@types/debug@4.1.13)(@types/node@24.13.3)(jiti@2.7.0)(jsdom@26.1.0)(lightningcss@1.32.0)(msw@2.15.0(@types/node@24.13.3)(typescript@5.9.3))(tsx@4.23.1)(yaml@2.9.0)
+    publishDirectory: dist
+
+  packages/json-renderer:
+    dependencies:
+      zod:
+        specifier: ^4.3.4
+        version: 4.4.3
     devDependencies:
       makage:
         specifier: ^0.6.0

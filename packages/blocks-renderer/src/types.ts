@@ -1,4 +1,5 @@
 import type { UIAction, UIDocument, UINode, UINodeProps } from 'blocks-schema';
+import type { BindingScope, NodeRegistry, RenderContext } from 'json-renderer';
 import type { ComponentType, ReactNode } from 'react';
 
 export type RenderMode = 'preview' | 'edit';
@@ -16,9 +17,13 @@ export interface BlockProps {
 export type BlockComponent = ComponentType<BlockProps>;
 
 /** Node type → component. Layered by {@link composeRegistry}. */
-export type BlockRegistry = Record<string, BlockComponent>;
+export type BlockRegistry = NodeRegistry<BlockComponent>;
 
-export interface RendererContextValue {
+/**
+ * The React adapter's render context: `json-renderer`'s generic
+ * {@link RenderContext} plus the field state a form needs while rendering.
+ */
+export interface RendererContextValue extends RenderContext<BlockComponent, UIDocument, UIAction> {
 	document: UIDocument;
 	registry: BlockRegistry;
 	mode: RenderMode;
@@ -27,6 +32,6 @@ export interface RendererContextValue {
 	setValue: (name: string, value: unknown) => void;
 	setError: (name: string, error: string | null) => void;
 	/** Scope for binding expressions (`{{ row.title }}`), merged with `values`. */
-	scope: Record<string, unknown>;
+	scope: BindingScope;
 	onAction?: (action: UIAction, event: string) => void;
 }
