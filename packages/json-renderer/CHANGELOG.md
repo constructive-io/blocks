@@ -3,6 +3,17 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.4.0](https://github.com/constructive-io/blocks/compare/json-renderer@0.3.0...json-renderer@0.4.0) (2026-08-22)
+
+
+### Features
+
+* **json-renderer:** add the shared field descriptor and widget rule pipeline ([5170812](https://github.com/constructive-io/blocks/commit/5170812fa0c93e1b84d835f5f5adc2e0443d4184))
+
+
+
+
+
 # [0.3.0](https://github.com/constructive-io/blocks/compare/json-renderer@0.2.1...json-renderer@0.3.0) (2026-08-22)
 
 **Note:** Version bump only for package json-renderer
