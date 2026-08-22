@@ -6,25 +6,16 @@
  * lowering rules.
  */
 
-import type { UINode, UINodeConstraints, UINodeType } from 'blocks-schema';
+import type { UINode, UINodeType } from 'blocks-schema';
+import type { FieldDescriptor, FieldHints, PartialNode as CorePartialNode, WidgetRule as CoreWidgetRule } from 'json-renderer';
 
 export type JSONSchemaType = 'string' | 'number' | 'integer' | 'boolean' | 'object' | 'array' | 'null';
 
-/** UI hints authored inline on a schema, under the `x-ui` extension keyword. */
-export interface UIAnnotation {
-	/** Force a node type, bypassing widget rules. */
-	widget?: UINodeType;
-	label?: string;
-	description?: string;
-	placeholder?: string;
-	hidden?: boolean;
-	disabled?: boolean;
-	className?: string;
-	/** Sort weight within its group; lower comes first, unset keeps schema order. */
-	order?: number;
-	/** Extra props merged onto the produced node. */
-	props?: Record<string, unknown>;
-}
+/**
+ * UI hints authored inline on a schema, under the `x-ui` extension keyword —
+ * the generic field hints, narrowed to the Constructive node vocabulary.
+ */
+export type UIAnnotation = FieldHints<UINodeType>;
 
 export interface JSONSchema {
 	$id?: string;
@@ -61,19 +52,18 @@ export interface JSONSchema {
 	[keyword: string]: unknown;
 }
 
-/** Everything a rule needs to decide on one schema position. */
-export interface FieldContext {
+/**
+ * Everything a rule needs to decide on one schema position: the generic field
+ * descriptor (`dataType`, `format`, `enumValues`, `constraints`, `hints`, …) plus
+ * the JSON-Schema-specific facts. Rules written against the descriptor fields
+ * work for any document source; rules that need the raw keywords read `schema`.
+ */
+export interface FieldContext extends FieldDescriptor<UINodeType> {
 	/** The schema at this position, with `$ref`s already resolved. */
 	schema: JSONSchema;
-	/** Property name, or `''` for the root schema. */
-	name: string;
-	/** Dot path from the root, e.g. `billing.address.city`. */
-	path: string;
-	/** Declared as required by the parent's `required` list. */
-	required: boolean;
 	/** Normalized primary `type`, or `undefined` when the schema omits it. */
 	type?: JSONSchemaType;
-	/** Merged `x-ui` annotation for this position. */
+	/** Merged `x-ui` annotation for this position; the same object as `hints`. */
 	ui: UIAnnotation;
 	/** Resolve a `$ref` against the root schema's definitions. */
 	resolve: (schema: JSONSchema) => JSONSchema;
@@ -84,21 +74,10 @@ export interface FieldContext {
  * order and the first match wins, so app-specific rules are prepended rather
  * than replacing the defaults.
  */
-export interface WidgetRule {
-	/** Identifies the rule so a consumer can replace exactly one default. */
-	name: string;
-	match: (ctx: FieldContext) => boolean;
-	/** Node type to render, or a partial node merged over the derived one. */
-	node: UINodeType | ((ctx: FieldContext) => UINodeType | PartialNode);
-}
+export type WidgetRule = CoreWidgetRule<FieldContext, UINodeType, UINode>;
 
 /** A rule's contribution to the node built for a schema position. */
-export interface PartialNode {
-	type?: UINodeType;
-	props?: Record<string, unknown>;
-	constraints?: UINodeConstraints;
-	children?: UINode[];
-}
+export type PartialNode = CorePartialNode<UINodeType, UINode>;
 
 export interface ConvertOptions {
 	/** Document id; defaults to the schema `$id` or `'document'`. */

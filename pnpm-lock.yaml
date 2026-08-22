@@ -4,9 +4,6 @@ settings:
   autoInstallPeers: true
   excludeLinksFromLockfile: false
 
-overrides:
-  '@fbp/evaluator>@fbp/types': ^1.4.0
-
 importers:
 
   .:
@@ -288,8 +285,8 @@ importers:
   packages/flow-to-blocks:
     dependencies:
       '@fbp/evaluator':
-        specifier: ^1.3.0
-        version: 1.3.0
+        specifier: ^1.5.0
+        version: 1.5.0
       '@fbp/types':
         specifier: ^1.4.0
         version: 1.4.0
@@ -333,6 +330,9 @@ importers:
       blocks-schema:
         specifier: workspace:^
         version: link:../blocks-schema/dist
+      json-renderer:
+        specifier: workspace:^
+        version: link:../json-renderer/dist
     devDependencies:
       makage:
         specifier: ^0.6.0
@@ -1451,8 +1451,8 @@ packages:
     cpu: [x64]
     os: [win32]
 
-  '@fbp/evaluator@1.3.0':
-    resolution: {integrity: sha512-SHgBQxlrW5nwtdSCvcM3Pe5cY58Qv5os78d2uADa0H1pYaN0uOfacT3kZuewEhg5JR3NeyuYWmx/KgDKxwHY5g==}
+  '@fbp/evaluator@1.5.0':
+    resolution: {integrity: sha512-LL1KaNeJyfhPyfU2n7Kw0yaMro9k7pCQHDfnsmwhrmuX+/8dxAUTs3TBZeeviqKrNo7regTCIVoEmZ7IVu2ZqA==}
 
   '@fbp/types@1.4.0':
     resolution: {integrity: sha512-GcI+ku2gpHePaTt1yjj5aNhxE/Bp823UEh3onabZXol5GSzzAVrglKgUvfbHJNwKER6DyNkHdRXWUtHF8nPGwg==}
@@ -9012,7 +9012,7 @@ snapshots:
   '@esbuild/win32-x64@0.28.1':
     optional: true
 
-  '@fbp/evaluator@1.3.0':
+  '@fbp/evaluator@1.5.0':
     dependencies:
       '@fbp/types': 1.4.0
 

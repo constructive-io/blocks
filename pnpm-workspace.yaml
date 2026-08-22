@@ -66,10 +66,3 @@ allowBuilds:
 
 # Transitive dependencies must come from the registry, not from git or a URL.
 blockExoticSubdeps: true
-
-# @fbp/evaluator@1.3.0 was published with `"@fbp/types": "workspace:*"` in its
-# dependencies — a spec no registry consumer can resolve, so installing it fails
-# outright. Pin the real range until the @fbp packages are republished with
-# resolved dependency ranges, then delete this block.
-overrides:
-  "@fbp/evaluator>@fbp/types": "^1.4.0"

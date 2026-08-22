@@ -7,4 +7,5 @@ export * from './fields';
 export * from './json-schema';
 export * from './node';
 export * from './registry';
+export * from './rules';
 export * from './zod';
