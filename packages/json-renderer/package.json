@@ -1,6 +1,6 @@
 {
   "name": "json-renderer",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "Framework-agnostic JSON UI document core: envelope and node tree, validation, composition, binding resolution, and the renderer adapter contract",
   "private": false,
   "license": "MIT",

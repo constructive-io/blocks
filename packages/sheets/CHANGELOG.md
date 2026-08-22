@@ -3,6 +3,17 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.10.1](https://github.com/constructive-io/blocks/compare/@constructive-io/sheets@0.10.0...@constructive-io/sheets@0.10.1) (2026-08-22)
+
+
+### Bug Fixes
+
+* **registry:** pin published @constructive-io/data and command-palette ranges ([d8875e5](https://github.com/constructive-io/blocks/commit/d8875e56b39cee0f2e551160e5d4196f8f7b1afd))
+
+
+
+
+
 # [0.10.0](https://github.com/constructive-io/blocks/compare/@constructive-io/sheets@0.9.2...@constructive-io/sheets@0.10.0) (2026-08-22)
 
 **Note:** Version bump only for package @constructive-io/sheets

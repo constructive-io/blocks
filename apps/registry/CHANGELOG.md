@@ -3,6 +3,17 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.3.1](https://github.com/constructive-io/blocks/compare/@constructive-io/registry@0.3.0...@constructive-io/registry@0.3.1) (2026-08-22)
+
+
+### Bug Fixes
+
+* **registry:** pin published @constructive-io/data and command-palette ranges ([d8875e5](https://github.com/constructive-io/blocks/commit/d8875e56b39cee0f2e551160e5d4196f8f7b1afd))
+
+
+
+
+
 # [0.3.0](https://github.com/constructive-io/blocks/compare/@constructive-io/registry@0.2.1...@constructive-io/registry@0.3.0) (2026-08-22)
 
 **Note:** Version bump only for package @constructive-io/registry
