@@ -132,6 +132,44 @@ describe('defaultBlockRegistry', () => {
 		expect(document.querySelector('[data-custom="yes"]')).not.toBeNull();
 	});
 
+	it('keeps the stored zone when a minute-precision datetime edit is written back', () => {
+		const onChange = vi.fn();
+		render(
+			<DocumentRenderer
+				document={form(field('DateTimePicker', { name: 'published_at', label: 'Published at' }))}
+				registry={defaultBlockRegistry}
+				initialValues={{ published_at: '2026-08-22T10:30:00+02:00' }}
+				onChange={onChange}
+			/>,
+		);
+
+		const input = screen.getByLabelText(/Published at/) as HTMLInputElement;
+		expect(input.value).toBe('2026-08-22T10:30');
+
+		fireEvent.change(input, { target: { value: '2026-08-22T11:45' } });
+		expect(onChange).toHaveBeenCalledWith({ published_at: '2026-08-22T11:45:00+02:00' });
+	});
+
+	it('stores an absent number as null rather than NaN', () => {
+		const onChange = vi.fn();
+		render(
+			<DocumentRenderer
+				document={form(field('NumberInput', { name: 'reading_time', label: 'Reading time' }))}
+				registry={defaultBlockRegistry}
+				onChange={onChange}
+			/>,
+		);
+
+		const input = screen.getByLabelText(/Reading time/) as HTMLInputElement;
+
+		fireEvent.change(input, { target: { value: '12' } });
+		expect(onChange).toHaveBeenLastCalledWith({ reading_time: 12 });
+
+		// A browser reports an unparseable number as an empty value.
+		fireEvent.change(input, { target: { value: '1e' } });
+		expect(onChange).toHaveBeenLastCalledWith({ reading_time: null });
+	});
+
 	it('leaves data blocks unregistered, so an unsatisfied node stays visible', () => {
 		expect(widgetRegistry.DataTable).toBeUndefined();
 		expect(missingTypes(defaultBlockRegistry, ['DataTable'])).toEqual(['DataTable']);

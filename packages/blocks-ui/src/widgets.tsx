@@ -34,6 +34,23 @@ function numericConstraints(props: UINodeProps) {
 	};
 }
 
+/** An empty number input is absent, and a half-typed one is not yet a number. */
+function numberValue(raw: string): number | string | null {
+	if (raw === '') return null;
+	const parsed = Number(raw);
+	return Number.isFinite(parsed) ? parsed : raw;
+}
+
+const ZONE_SUFFIX = /(?:Z|[+-]\d{2}:?\d{2})$/;
+
+/** Re-attaches the zone the stored value carried to a minute-precision edit. */
+function zonedValue(local: string, zone: string): string | null {
+	if (local === '') return null;
+	if (!zone) return local;
+	const seconds = local.length > 16 ? '' : ':00';
+	return `${local}${seconds}${zone}`;
+}
+
 /** A text-ish input; `inputType` carries the HTML type a format implies. */
 function TextInput({ props, type }: { props: UINodeProps; type?: string }) {
 	const field = useNodeField(props);
@@ -114,8 +131,7 @@ export function NumberInputBlock({ props }: BlockProps) {
 				name={field.name}
 				type="number"
 				value={textValue(field.value)}
-				// An empty number input is absent, not zero.
-				onChange={(event) => field.setValue(event.target.value === '' ? null : Number(event.target.value))}
+				onChange={(event) => field.setValue(numberValue(event.target.value))}
 				disabled={field.disabled}
 				required={field.required}
 				{...(field.placeholder ? { placeholder: field.placeholder } : {})}
@@ -219,12 +235,14 @@ export function DatePickerBlock({ props }: BlockProps) {
 
 /**
  * `datetime-local` needs `YYYY-MM-DDTHH:mm`, while a document (and Postgres)
- * speaks ISO-8601 with a zone, so the value is trimmed for display only.
+ * speaks ISO-8601 with a zone, so the value is trimmed for display and the
+ * incoming zone is reapplied on write-back rather than dropped.
  */
 export function DateTimePickerBlock({ props }: BlockProps) {
 	const field = useNodeField(props);
 	const raw = textValue(field.value);
 	const local = raw.length > 16 ? raw.slice(0, 16) : raw;
+	const zone = ZONE_SUFFIX.exec(raw)?.[0] ?? '';
 
 	return (
 		<FieldShell props={props} id={field.id} error={field.error}>
@@ -233,7 +251,9 @@ export function DateTimePickerBlock({ props }: BlockProps) {
 				name={field.name}
 				type="datetime-local"
 				value={local}
-				onChange={(event) => field.setValue(event.target.value)}
+				onChange={(event) =>
+					field.setValue(zonedValue(event.target.value, zone))
+				}
 				disabled={field.disabled}
 				required={field.required}
 			/>

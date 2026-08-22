@@ -247,7 +247,7 @@ export const SiteSidebar = forwardRef<HTMLElement, SiteSidebarProps>(function Si
         <div className="mt-3">
           <NavGroupLabel
             title="Application"
-            count={featurePackLinks.length + applicationBlockLinks.length + sourceBlockLinks.length + 2}
+            count={featurePackLinks.length + applicationBlockLinks.length + sourceBlockLinks.length + 3}
           />
           <ul className="flex flex-col gap-0.5 pb-0.5 pt-0.5">
             <li>
