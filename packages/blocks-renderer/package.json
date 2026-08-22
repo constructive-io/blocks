@@ -24,6 +24,7 @@
   "scripts": {
     "build": "makage clean && makage build-ts && makage assets",
     "build:dev": "makage clean && makage build-ts --dev && makage assets",
+    "prepack": "npm run build",
     "lint:types": "tsc --noEmit -p tsconfig.lint.json",
     "test": "vitest run",
     "test:watch": "vitest",

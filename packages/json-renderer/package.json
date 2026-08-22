@@ -24,6 +24,7 @@
   "scripts": {
     "build": "makage build",
     "build:dev": "makage build --dev",
+    "prepack": "npm run build",
     "lint:types": "tsc --noEmit -p tsconfig.lint.json",
     "test": "vitest run",
     "test:watch": "vitest",
