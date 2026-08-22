@@ -4,6 +4,14 @@
   <img height="250" src="https://raw.githubusercontent.com/constructive-io/constructive/refs/heads/main/assets/outline-logo.svg" />
 </p>
 
+<p align="center" width="100%">
+  <a href="https://github.com/constructive-io/blocks/actions/workflows/ci.yml">
+    <img height="20" src="https://github.com/constructive-io/blocks/actions/workflows/ci.yml/badge.svg" />
+  </a>
+   <a href="https://github.com/constructive-io/blocks/blob/main/LICENSE"><img height="20" src="https://img.shields.io/badge/license-MIT-blue.svg"/></a>
+   <a href="https://www.npmjs.com/package/blocks-renderer"><img height="20" src="https://img.shields.io/github/package-json/v/constructive-io/blocks?filename=packages%2Fblocks-renderer%2Fpackage.json"/></a>
+</p>
+
 React adapter for `blocks-schema` UI documents: a recursive
 renderer with layerable widget registries, binding resolution, form state, and
 a visible unknown-block fallback.

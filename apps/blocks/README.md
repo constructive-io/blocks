@@ -1,5 +1,16 @@
 # Blocks docs
 
+<p align="center" width="100%">
+  <img height="250" src="https://raw.githubusercontent.com/constructive-io/constructive/refs/heads/main/assets/outline-logo.svg" />
+</p>
+
+<p align="center" width="100%">
+  <a href="https://github.com/constructive-io/blocks/actions/workflows/ci.yml">
+    <img height="20" src="https://github.com/constructive-io/blocks/actions/workflows/ci.yml/badge.svg" />
+  </a>
+   <a href="https://github.com/constructive-io/blocks/blob/main/LICENSE"><img height="20" src="https://img.shields.io/badge/license-MIT-blue.svg"/></a>
+</p>
+
 This Next.js app documents the Constructive Blocks registry: the UI foundation,
 29 base primitives, customer billing blocks, seven capability-aligned feature
 packs, and Console Kit.

@@ -4,6 +4,14 @@
   <img height="250" src="https://raw.githubusercontent.com/constructive-io/constructive/refs/heads/main/assets/outline-logo.svg" />
 </p>
 
+<p align="center" width="100%">
+  <a href="https://github.com/constructive-io/blocks/actions/workflows/ci.yml">
+    <img height="20" src="https://github.com/constructive-io/blocks/actions/workflows/ci.yml/badge.svg" />
+  </a>
+   <a href="https://github.com/constructive-io/blocks/blob/main/LICENSE"><img height="20" src="https://img.shields.io/badge/license-MIT-blue.svg"/></a>
+   <a href="https://www.npmjs.com/package/blocks-schema"><img height="20" src="https://img.shields.io/github/package-json/v/constructive-io/blocks?filename=packages%2Fblocks-schema%2Fpackage.json"/></a>
+</p>
+
 Portable JSON UI document specification for Constructive Blocks: the storage
 format, runtime validators, JSON Schema export, and pure document-manipulation
 API. No React — this package is safe in servers, workers, and agents.

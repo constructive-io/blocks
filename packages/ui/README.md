@@ -1,5 +1,17 @@
 # @constructive-io/ui
 
+<p align="center" width="100%">
+  <img height="250" src="https://raw.githubusercontent.com/constructive-io/constructive/refs/heads/main/assets/outline-logo.svg" />
+</p>
+
+<p align="center" width="100%">
+  <a href="https://github.com/constructive-io/blocks/actions/workflows/ci.yml">
+    <img height="20" src="https://github.com/constructive-io/blocks/actions/workflows/ci.yml/badge.svg" />
+  </a>
+   <a href="https://github.com/constructive-io/blocks/blob/main/LICENSE"><img height="20" src="https://img.shields.io/badge/license-MIT-blue.svg"/></a>
+   <a href="https://www.npmjs.com/package/@constructive-io/ui"><img height="20" src="https://img.shields.io/github/package-json/v/constructive-io/blocks?filename=packages%2Fui%2Fpackage.json"/></a>
+</p>
+
 A modern React component library built on [Base UI](https://base-ui.com/) primitives and [Tailwind CSS v4](https://tailwindcss.com/).
 
 ## Installation
