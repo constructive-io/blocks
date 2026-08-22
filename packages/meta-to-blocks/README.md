@@ -4,6 +4,14 @@
   <img height="250" src="https://raw.githubusercontent.com/constructive-io/constructive/refs/heads/main/assets/outline-logo.svg" />
 </p>
 
+<p align="center" width="100%">
+  <a href="https://github.com/constructive-io/blocks/actions/workflows/ci.yml">
+    <img height="20" src="https://github.com/constructive-io/blocks/actions/workflows/ci.yml/badge.svg" />
+  </a>
+   <a href="https://github.com/constructive-io/blocks/blob/main/LICENSE"><img height="20" src="https://img.shields.io/badge/license-MIT-blue.svg"/></a>
+   <a href="https://www.npmjs.com/package/meta-to-blocks"><img height="20" src="https://img.shields.io/github/package-json/v/constructive-io/blocks?filename=packages%2Fmeta-to-blocks%2Fpackage.json"/></a>
+</p>
+
 Lower Constructive `_meta` database metadata into
 [`blocks-schema`](../blocks-schema) UI documents: generated form, list, and
 detail screens with no hand-authored JSON. Columns lower through JSON Schema, so
