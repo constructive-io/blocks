@@ -18,9 +18,9 @@ interface PackageManifest {
   exports: Record<string, unknown>;
 }
 
-// blocks-schema, blocks-renderer, and json-schema-to-blocks publish from `dist`
-// with makage, so their entry points are plain files at the package root and
-// there is no exports map.
+// json-renderer, blocks-schema, blocks-renderer, and json-schema-to-blocks
+// publish from `dist` with makage, so their entry points are plain files at the
+// package root and there is no exports map.
 interface DocumentPackageManifest {
   name: string;
   version: string;
@@ -438,6 +438,9 @@ async function checkPackedDocumentPackages(): Promise<void> {
   // The document packages publish from `dist`, so this consumer proves the
   // published layout: root entry points, working deep imports without an
   // exports map, and a renderer that resolves its schema dependency.
+  const coreManifest = JSON.parse(
+    await readFile(path.join(root, 'packages/json-renderer/package.json'), 'utf8')
+  ) as DocumentPackageManifest;
   const schemaManifest = JSON.parse(
     await readFile(path.join(root, 'packages/blocks-schema/package.json'), 'utf8')
   ) as DocumentPackageManifest;
@@ -454,6 +457,7 @@ async function checkPackedDocumentPackages(): Promise<void> {
     await readFile(path.join(root, 'packages/flow-to-blocks/package.json'), 'utf8')
   ) as DocumentPackageManifest;
   for (const manifest of [
+    coreManifest,
     schemaManifest,
     rendererManifest,
     jsonSchemaManifest,
@@ -467,6 +471,7 @@ async function checkPackedDocumentPackages(): Promise<void> {
       throw new Error(`${manifest.name} must declare dist-relative entry points`);
     }
   }
+  const coreTarball = path.join(artifacts, `json-renderer-${coreManifest.version}.tgz`);
   const schemaTarball = path.join(artifacts, `blocks-schema-${schemaManifest.version}.tgz`);
   const rendererTarball = path.join(artifacts, `blocks-renderer-${rendererManifest.version}.tgz`);
   const jsonSchemaTarball = path.join(
@@ -476,6 +481,7 @@ async function checkPackedDocumentPackages(): Promise<void> {
   const metaTarball = path.join(artifacts, `meta-to-blocks-${metaManifest.version}.tgz`);
   const flowTarball = path.join(artifacts, `flow-to-blocks-${flowManifest.version}.tgz`);
   await Promise.all([
+    access(coreTarball),
     access(schemaTarball),
     access(rendererTarball),
     access(jsonSchemaTarball),
@@ -499,6 +505,7 @@ async function checkPackedDocumentPackages(): Promise<void> {
         dependencies: {
           'blocks-renderer': `file:${rendererTarball}`,
           'blocks-schema': `file:${schemaTarball}`,
+          'json-renderer': `file:${coreTarball}`,
           'json-schema-to-blocks': `file:${jsonSchemaTarball}`,
           'meta-to-blocks': `file:${metaTarball}`,
           'flow-to-blocks': `file:${flowTarball}`,
@@ -512,6 +519,7 @@ async function checkPackedDocumentPackages(): Promise<void> {
         // The packed dependents resolve the packed schema, not the registry copy.
         pnpm: {
           overrides: {
+            'json-renderer': `file:${coreTarball}`,
             'blocks-schema': `file:${schemaTarball}`,
             'json-schema-to-blocks': `file:${jsonSchemaTarball}`,
             // @fbp/evaluator@1.3.0 shipped `"@fbp/types": "workspace:*"`, which no
@@ -539,6 +547,11 @@ const packedRenderer = JSON.parse(
   await readFile(require.resolve('blocks-renderer/package.json'), 'utf8')
 );
 assert.doesNotMatch(packedRenderer.dependencies['blocks-schema'], /^workspace:/);
+assert.doesNotMatch(packedRenderer.dependencies['json-renderer'], /^workspace:/);
+const packedSchema = JSON.parse(
+  await readFile(require.resolve('blocks-schema/package.json'), 'utf8')
+);
+assert.doesNotMatch(packedSchema.dependencies['json-renderer'], /^workspace:/);
 const packedJsonSchema = JSON.parse(
   await readFile(require.resolve('json-schema-to-blocks/package.json'), 'utf8')
 );
@@ -555,6 +568,9 @@ assert.doesNotMatch(packedFlow.dependencies['blocks-schema'], /^workspace:/);
 assert.doesNotMatch(packedFlow.dependencies['json-schema-to-blocks'], /^workspace:/);
 
 // CJS entry points and deep imports resolve without an exports map.
+assert.ok(require('json-renderer').createEnvelope);
+assert.ok(require('json-renderer/compose').composeEnvelope);
+assert.ok(require('json-renderer/adapter').resolveNode);
 assert.ok(require('blocks-schema').parseDocument);
 assert.ok(require('blocks-schema/compose').composeDocument);
 assert.ok(require('blocks-schema/validation').validateField);
@@ -566,6 +582,28 @@ assert.ok(require('meta-to-blocks').tableToFormDocument);
 assert.ok(require('meta-to-blocks/schema').tableToSchema);
 assert.ok(require('flow-to-blocks').flowToDocument);
 assert.ok(require('flow-to-blocks/definitions').uiNodeDefinitions);
+
+const { DOCUMENT_FORMAT_VERSION, createEnvelope } = await import('json-renderer');
+const { composeEnvelope } = await import('json-renderer/compose');
+assert.equal(DOCUMENT_FORMAT_VERSION, '1.0');
+
+// The generic core is usable on its own, with a vocabulary of its own naming.
+const genericDocument = createEnvelope(
+  { documentType: 'Report', formatVersion: '1.0' },
+  {
+    type: 'Root',
+    key: 'root',
+    props: {},
+    children: [{ type: 'Fragment', key: 'f', props: { ref: 'body' }, children: [] }]
+  },
+  { id: 'packed-generic' }
+);
+assert.equal(
+  composeEnvelope(genericDocument, {
+    fragments: { body: { type: 'Text', key: 'body', props: { value: 'hi' }, children: [] } }
+  }).page.children[0].type,
+  'Text'
+);
 
 const { UI_DOCUMENT_FORMAT_VERSION, parseDocument } = await import('blocks-schema');
 const { composeDocument } = await import('blocks-schema/compose');
@@ -642,6 +680,7 @@ console.log('Packed document packages resolved from root entry points and deep i
     documentConsumer
   );
   await Promise.all([
+    access(path.join(documentConsumer, 'node_modules', 'json-renderer', 'LICENSE')),
     access(path.join(documentConsumer, 'node_modules', 'blocks-schema', 'LICENSE')),
     access(path.join(documentConsumer, 'node_modules', 'blocks-renderer', 'LICENSE')),
     access(path.join(documentConsumer, 'node_modules', 'json-schema-to-blocks', 'LICENSE')),

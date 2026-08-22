@@ -1,4 +1,4 @@
-import { z } from 'zod';
+import { toJsonSchema } from 'json-renderer';
 
 import { uiDocumentSchema, uiNodeSchema } from './zod';
 
@@ -7,9 +7,9 @@ import { uiDocumentSchema, uiNodeSchema } from './zod';
  * output and for registry/editor tooling that validates without importing zod.
  */
 export function toDocumentJsonSchema(): Record<string, unknown> {
-	return z.toJSONSchema(uiDocumentSchema, { io: 'input' }) as Record<string, unknown>;
+	return toJsonSchema(uiDocumentSchema);
 }
 
 export function toNodeJsonSchema(): Record<string, unknown> {
-	return z.toJSONSchema(uiNodeSchema, { io: 'input' }) as Record<string, unknown>;
+	return toJsonSchema(uiNodeSchema);
 }
