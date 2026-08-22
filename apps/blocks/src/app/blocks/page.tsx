@@ -35,6 +35,12 @@ const APPLICATION_CATALOG = [
       'A full-page console driven by injected endpoints, session state, adapters, and versioned _meta.',
   },
   {
+    href: '/blocks/documents',
+    title: 'JSON documents',
+    description:
+      'Declarative JSON UI documents rendered by the default widget registry, generated from JSON Schema or database metadata.',
+  },
+  {
     href: '/blocks/ai',
     title: 'AI',
     description:

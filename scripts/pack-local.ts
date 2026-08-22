@@ -16,7 +16,8 @@ const packages = [
   'blocks-renderer',
   'json-schema-to-blocks',
   'meta-to-blocks',
-  'flow-to-blocks'
+  'flow-to-blocks',
+  '@constructive-io/blocks-ui'
 ];
 
 function run(command: string, args: string[], options?: { ignoreLifecycleScripts?: boolean }): Promise<void> {

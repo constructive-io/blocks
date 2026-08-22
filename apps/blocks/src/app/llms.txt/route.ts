@@ -53,6 +53,12 @@ const surfaceLinks: readonly SurfaceLink[] = [
       'Composable tenant-console roots, modules, presets, endpoint contracts, and integration diagnostics.',
   },
   {
+    title: 'JSON documents',
+    path: '/blocks/documents/',
+    description:
+      'Declarative JSON UI documents plus the default widget registry that renders them, generated from JSON Schema or database metadata.',
+  },
+  {
     title: 'Primitives and bundles',
     path: '/blocks/',
     description:

@@ -23,6 +23,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
     ...SOURCE_BLOCKS.map(({ name }) => `/blocks/${name}`),
     ...APPLICATION_BLOCKS.map(({ name }) => `/blocks/${name}`),
     '/blocks/console-kit',
+    '/blocks/documents',
     ...BASE_PRIMITIVES.map(({ name }) => `/blocks/ui/${name}`),
     '/blocks/billing',
     ...BILLING_BLOCKS.map(({ name }) => `/blocks/billing/${name}`),
@@ -42,6 +43,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
             path === '/blocks/ai' ||
             SOURCE_BLOCKS.some(({ name }) => path === `/blocks/${name}`) ||
             path === '/blocks/console-kit' ||
+            path === '/blocks/documents' ||
             path === '/blocks/billing'
           ? 0.9
           : 0.7,
