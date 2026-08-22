@@ -8,10 +8,11 @@
  */
 
 import { createDocument, type UIDocument, type UINode, type UINodeType } from 'blocks-schema';
+import { applyWidgetRules, compareFieldOrder, fieldNodeProps } from 'json-renderer';
 import { toConstraints } from './constraints';
 import { resolveRules } from './rules';
 import { annotation, createResolver, isNullable, mergeAllOf, primaryType } from './schema';
-import type { ConvertOptions, FieldContext, JSONSchema, PartialNode, WidgetRule } from './types';
+import type { ConvertOptions, FieldContext, JSONSchema, WidgetRule } from './types';
 
 interface Lowering {
 	rules: WidgetRule[];
@@ -44,50 +45,44 @@ function context(
 	required: boolean,
 	lowering: Lowering
 ): FieldContext {
+	const ui = annotation(schema);
+	// The document format only carries scalar defaults, so an object or array
+	// default is dropped rather than emitted as an invalid document.
+	const raw = schema.default ?? schema.const;
+	const constraints = toConstraints(schema);
+
 	return {
-		schema,
 		name,
 		path,
 		required,
+		dataType: primaryType(schema),
+		...(typeof schema.format === 'string' ? { format: schema.format } : {}),
+		label: schema.title ?? titleize(name),
+		...(schema.description !== undefined ? { description: schema.description } : {}),
+		...(schema.enum ? { enumValues: schema.enum } : {}),
+		nullable: isNullable(schema),
+		readOnly: schema.readOnly ?? false,
+		...(isScalar(raw) ? { defaultValue: raw } : {}),
+		...(constraints ? { constraints } : {}),
+		hints: ui,
+		schema,
 		type: primaryType(schema),
-		ui: annotation(schema),
+		ui,
 		resolve: lowering.resolve,
 	};
 }
 
-function applyRules(ctx: FieldContext, rules: WidgetRule[]): PartialNode {
-	for (const rule of rules) {
-		if (!rule.match(ctx)) continue;
-		const result = typeof rule.node === 'function' ? rule.node(ctx) : rule.node;
-		return typeof result === 'string' ? { type: result } : result;
-	}
-	return { type: 'Input' };
-}
-
 function widgetNode(ctx: FieldContext, lowering: Lowering): UINode {
-	const { schema, ui } = ctx;
-	const partial = applyRules(ctx, lowering.rules);
-	const constraints = { ...toConstraints(schema), ...partial.constraints };
-	// The document format only carries scalar defaults, so an object or array
-	// default is dropped rather than emitted as an invalid document.
-	const raw = schema.default ?? schema.const;
-	const defaultValue = isScalar(raw) ? raw : undefined;
+	const { ui } = ctx;
+	const partial = applyWidgetRules<FieldContext, UINodeType, UINode>(ctx, lowering.rules, 'Input');
+	const constraints = { ...ctx.constraints, ...partial.constraints };
 
 	return {
 		type: (partial.type ?? 'Input') as UINodeType,
 		key: ctx.path || 'field',
 		props: {
-			name: ctx.path,
-			label: ui.label ?? schema.title ?? titleize(ctx.name),
-			...(ui.description ?? schema.description ? { description: ui.description ?? schema.description } : {}),
-			...(ui.placeholder ? { placeholder: ui.placeholder } : {}),
-			...(ctx.required ? { required: true } : {}),
-			...(ui.hidden ? { hidden: true } : {}),
-			...(ui.disabled || schema.readOnly ? { disabled: true } : {}),
-			...(ui.className ? { className: ui.className } : {}),
-			...(isNullable(schema) ? { nullable: true } : {}),
-			...(defaultValue !== undefined ? { defaultValue } : {}),
-			...(constraints && Object.keys(constraints).length > 0 ? { constraints } : {}),
+			...fieldNodeProps(ctx),
+			...(Object.keys(constraints).length > 0 ? { constraints } : {}),
 			...partial.props,
 			...ui.props,
 		},
@@ -132,7 +127,7 @@ function cycleNode(ctx: FieldContext): UINode {
 		key: ctx.path || 'field',
 		props: {
 			name: ctx.path,
-			label: ctx.ui.label ?? ctx.schema.title ?? titleize(ctx.name),
+			label: ctx.ui.label ?? ctx.label,
 			...(ctx.required ? { required: true } : {}),
 		},
 		children: [],
@@ -143,7 +138,7 @@ function containerProps(ctx: FieldContext): UINode['props'] {
 	const { schema, ui } = ctx;
 	return {
 		...(ctx.path ? { name: ctx.path } : {}),
-		...(ui.label ?? schema.title ?? ctx.name ? { label: ui.label ?? schema.title ?? titleize(ctx.name) } : {}),
+		...(ui.label ?? ctx.label ? { label: ui.label ?? ctx.label } : {}),
 		...(ui.description ?? schema.description ? { description: ui.description ?? schema.description } : {}),
 		...(ui.className ? { className: ui.className } : {}),
 		...ui.props,
@@ -231,12 +226,7 @@ function childNodes(schema: JSONSchema, parentPath: string, lowering: Lowering):
 			return { name, child, ref: localRef(rawChild), index, order: annotation(child).order };
 		})
 		.filter(({ child }) => lowering.includeReadOnly || !child.readOnly)
-		.sort((left, right) => {
-			if (left.order == null && right.order == null) return left.index - right.index;
-			if (left.order == null) return 1;
-			if (right.order == null) return -1;
-			return left.order - right.order;
-		});
+		.sort(compareFieldOrder);
 
 	return entries.map(({ name, child, ref }) => {
 		const path = parentPath ? `${parentPath}.${name}` : name;

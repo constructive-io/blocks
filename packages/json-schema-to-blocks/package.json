@@ -38,7 +38,8 @@
     "renderer"
   ],
   "dependencies": {
-    "blocks-schema": "workspace:^"
+    "blocks-schema": "workspace:^",
+    "json-renderer": "workspace:^"
   },
   "devDependencies": {
     "makage": "^0.6.0",

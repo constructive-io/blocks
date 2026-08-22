@@ -50,6 +50,7 @@ import { resolveBinding } from 'json-renderer/bindings';
 | **Compose** | Fragment expansion, slot filling, overrides, merge | `compose.ts` |
 | **Bindings** | `{{ scope.path }}` resolution and scope layering | `bindings.ts` |
 | **Registry** | Layered node type → handler resolution | `registry.ts` |
+| **Rules** | `FieldDescriptor` and the ordered field → node rule pipeline | `rules.ts` |
 | **Adapter** | The interface a renderer implements | `adapter.ts` |
 
 ## Document
@@ -94,6 +95,30 @@ composition:
 ```ts
 composeEnvelope(document, { fragments, vocabulary: { fragmentNodeType: 'include' } });
 ```
+
+## Field rules
+
+A document source (a JSON Schema, a database table, a task's input contract)
+describes each field as a `FieldDescriptor` and lets rules decide the widget.
+Rules are data — an ordered list, first match wins, defaults last — so a host
+prepends its own instead of forking the converter, and a rule written once
+applies to every source.
+
+```ts
+import { applyWidgetRules, composeWidgetRules, fieldNodeProps } from 'json-renderer';
+
+const rules = composeWidgetRules(defaults, [
+  { name: 'file', match: (field) => field.format === 'uri', node: 'FileUpload' },
+  { name: 'big-enum', match: (field) => (field.enumValues?.length ?? 0) > 20, node: 'Combobox' },
+]);
+
+const partial = applyWidgetRules(descriptor, rules, 'Input');
+const props = { ...fieldNodeProps(descriptor), ...partial.props };
+```
+
+A source extends the descriptor with its own facts for rules that need them —
+`json-schema-to-blocks`' `FieldContext` adds the raw schema — while every
+source-neutral decision reads the shared fields.
 
 ## Adapter contract
 

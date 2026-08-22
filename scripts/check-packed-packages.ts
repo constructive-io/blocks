@@ -521,10 +521,7 @@ async function checkPackedDocumentPackages(): Promise<void> {
           overrides: {
             'json-renderer': `file:${coreTarball}`,
             'blocks-schema': `file:${schemaTarball}`,
-            'json-schema-to-blocks': `file:${jsonSchemaTarball}`,
-            // @fbp/evaluator@1.3.0 shipped `"@fbp/types": "workspace:*"`, which no
-            // registry consumer can resolve. Drop once @fbp is republished.
-            '@fbp/evaluator>@fbp/types': '^1.4.0'
+            'json-schema-to-blocks': `file:${jsonSchemaTarball}`
           }
         }
       },

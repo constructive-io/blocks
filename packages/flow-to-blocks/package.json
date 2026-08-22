@@ -39,7 +39,7 @@
     "renderer"
   ],
   "dependencies": {
-    "@fbp/evaluator": "^1.3.0",
+    "@fbp/evaluator": "^1.5.0",
     "@fbp/types": "^1.4.0",
     "blocks-schema": "workspace:^",
     "json-schema-to-blocks": "workspace:^"
