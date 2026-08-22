@@ -6,7 +6,6 @@ settings:
 
 overrides:
   '@fbp/evaluator>@fbp/types': ^1.4.0
-  '@fbp/types': ^1.4.0
 
 importers:
 
