@@ -487,9 +487,7 @@ async function checkPackedDocumentPackages(): Promise<void> {
   await mkdir(documentConsumer, { recursive: true });
   await writeFile(
     path.join(documentConsumer, '.npmrc'),
-    // This throwaway consumer installs the just-published @fbp packages, so the
-    // workspace's release-age wait would fail the check rather than protect it.
-    'auto-install-peers=true\nstrict-peer-dependencies=false\nminimum-release-age=0\n'
+    'auto-install-peers=true\nstrict-peer-dependencies=false\n'
   );
   await writeFile(
     path.join(documentConsumer, 'package.json'),
@@ -631,7 +629,16 @@ console.log('Packed document packages resolved from root entry points and deep i
   );
   await run(
     'pnpm',
-    ['install', '--ignore-workspace', '--frozen-lockfile=false'],
+    [
+      'install',
+      '--ignore-workspace',
+      '--frozen-lockfile=false',
+      // This throwaway consumer installs @fbp releases that can be minutes old,
+      // so the workspace's release-age wait would fail the check rather than
+      // protect it. `pnpm run` exports the wait as npm_config_*, which outranks
+      // the consumer's .npmrc — only the CLI flag wins.
+      '--config.minimum-release-age=0'
+    ],
     documentConsumer
   );
   await Promise.all([
