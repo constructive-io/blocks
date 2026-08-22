@@ -13,7 +13,8 @@ const packages = [
   '@constructive-io/schema-builder',
   'blocks-schema',
   'blocks-renderer',
-  'json-schema-to-blocks'
+  'json-schema-to-blocks',
+  'meta-to-blocks'
 ];
 
 function run(command: string, args: string[], options?: { ignoreLifecycleScripts?: boolean }): Promise<void> {

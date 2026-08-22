@@ -1,0 +1,52 @@
+{
+  "name": "meta-to-blocks",
+  "version": "0.1.0",
+  "description": "Lower database metadata into blocks-schema UI documents: generated form, list, and detail screens",
+  "private": false,
+  "license": "MIT",
+  "homepage": "https://constructive-io.github.io/blocks/",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/constructive-io/blocks.git",
+    "directory": "packages/meta-to-blocks"
+  },
+  "bugs": {
+    "url": "https://github.com/constructive-io/blocks/issues"
+  },
+  "publishConfig": {
+    "access": "public",
+    "directory": "dist"
+  },
+  "sideEffects": false,
+  "main": "index.js",
+  "module": "esm/index.js",
+  "types": "index.d.ts",
+  "scripts": {
+    "build": "makage clean && makage build-ts && makage assets",
+    "build:dev": "makage clean && makage build-ts --dev && makage assets",
+    "lint:types": "tsc --noEmit -p tsconfig.lint.json",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "clean": "makage clean"
+  },
+  "keywords": [
+    "metadata",
+    "admin",
+    "form",
+    "ui-schema",
+    "blocks",
+    "renderer"
+  ],
+  "dependencies": {
+    "blocks-schema": "workspace:^",
+    "json-schema-to-blocks": "workspace:^"
+  },
+  "devDependencies": {
+    "makage": "^0.6.0",
+    "typescript": "^5.9.3",
+    "vitest": "^3.2.4"
+  },
+  "engines": {
+    "node": ">=24.0.0"
+  }
+}
