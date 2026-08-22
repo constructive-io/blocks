@@ -18,8 +18,9 @@ interface PackageManifest {
   exports: Record<string, unknown>;
 }
 
-// blocks-schema and blocks-renderer publish from `dist` with makage, so their
-// entry points are plain files at the package root and there is no exports map.
+// blocks-schema, blocks-renderer, and json-schema-to-blocks publish from `dist`
+// with makage, so their entry points are plain files at the package root and
+// there is no exports map.
 interface DocumentPackageManifest {
   name: string;
   version: string;
@@ -443,7 +444,10 @@ async function checkPackedDocumentPackages(): Promise<void> {
   const rendererManifest = JSON.parse(
     await readFile(path.join(root, 'packages/blocks-renderer/package.json'), 'utf8')
   ) as DocumentPackageManifest;
-  for (const manifest of [schemaManifest, rendererManifest]) {
+  const jsonSchemaManifest = JSON.parse(
+    await readFile(path.join(root, 'packages/json-schema-to-blocks/package.json'), 'utf8')
+  ) as DocumentPackageManifest;
+  for (const manifest of [schemaManifest, rendererManifest, jsonSchemaManifest]) {
     if (manifest.exports) {
       throw new Error(`${manifest.name} must publish from dist without an exports map`);
     }
@@ -453,7 +457,11 @@ async function checkPackedDocumentPackages(): Promise<void> {
   }
   const schemaTarball = path.join(artifacts, `blocks-schema-${schemaManifest.version}.tgz`);
   const rendererTarball = path.join(artifacts, `blocks-renderer-${rendererManifest.version}.tgz`);
-  await Promise.all([access(schemaTarball), access(rendererTarball)]);
+  const jsonSchemaTarball = path.join(
+    artifacts,
+    `json-schema-to-blocks-${jsonSchemaManifest.version}.tgz`
+  );
+  await Promise.all([access(schemaTarball), access(rendererTarball), access(jsonSchemaTarball)]);
 
   await rm(documentConsumer, { recursive: true, force: true });
   await mkdir(documentConsumer, { recursive: true });
@@ -471,6 +479,7 @@ async function checkPackedDocumentPackages(): Promise<void> {
         dependencies: {
           'blocks-renderer': `file:${rendererTarball}`,
           'blocks-schema': `file:${schemaTarball}`,
+          'json-schema-to-blocks': `file:${jsonSchemaTarball}`,
           react: '^19.0.0',
           'react-dom': '^19.0.0'
         },
@@ -478,7 +487,7 @@ async function checkPackedDocumentPackages(): Promise<void> {
           '@types/react': '^19.0.0',
           tsx: '4.23.1'
         },
-        // The packed renderer depends on the packed schema, not the registry copy.
+        // The packed dependents resolve the packed schema, not the registry copy.
         pnpm: {
           overrides: {
             'blocks-schema': `file:${schemaTarball}`
@@ -504,6 +513,10 @@ const packedRenderer = JSON.parse(
   await readFile(require.resolve('blocks-renderer/package.json'), 'utf8')
 );
 assert.doesNotMatch(packedRenderer.dependencies['blocks-schema'], /^workspace:/);
+const packedJsonSchema = JSON.parse(
+  await readFile(require.resolve('json-schema-to-blocks/package.json'), 'utf8')
+);
+assert.doesNotMatch(packedJsonSchema.dependencies['blocks-schema'], /^workspace:/);
 
 // CJS entry points and deep imports resolve without an exports map.
 assert.ok(require('blocks-schema').parseDocument);
@@ -511,12 +524,23 @@ assert.ok(require('blocks-schema/compose').composeDocument);
 assert.ok(require('blocks-schema/validation').validateField);
 assert.ok(require('blocks-renderer').DocumentRenderer);
 assert.ok(require('blocks-renderer/registry').composeRegistry);
+assert.ok(require('json-schema-to-blocks').schemaToDocument);
+assert.ok(require('json-schema-to-blocks/rules').defaultWidgetRules);
 
 const { UI_DOCUMENT_FORMAT_VERSION, parseDocument } = await import('blocks-schema');
 const { composeDocument } = await import('blocks-schema/compose');
 const { DocumentRenderer } = await import('blocks-renderer');
+const { schemaToDocument } = await import('json-schema-to-blocks');
 assert.equal(UI_DOCUMENT_FORMAT_VERSION, '1.0');
 assert.ok(composeDocument);
+
+// A lowered JSON Schema must be a document the schema package accepts.
+const lowered = schemaToDocument({
+  type: 'object',
+  required: ['email'],
+  properties: { email: { type: 'string', format: 'email' } }
+});
+assert.equal(parseDocument(lowered).page.type, 'Page');
 
 const document = parseDocument({
   formatVersion: '1.0',
@@ -546,7 +570,8 @@ console.log('Packed document packages resolved from root entry points and deep i
   );
   await Promise.all([
     access(path.join(documentConsumer, 'node_modules', 'blocks-schema', 'LICENSE')),
-    access(path.join(documentConsumer, 'node_modules', 'blocks-renderer', 'LICENSE'))
+    access(path.join(documentConsumer, 'node_modules', 'blocks-renderer', 'LICENSE')),
+    access(path.join(documentConsumer, 'node_modules', 'json-schema-to-blocks', 'LICENSE'))
   ]);
   await run('pnpm', ['exec', 'tsx', 'check-documents.ts'], documentConsumer);
 
