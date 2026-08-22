@@ -95,6 +95,13 @@ export const defaultWidgetRules: WidgetRule[] = [
 		node: 'Input',
 	},
 	{
+		name: 'structural',
+		// Objects and arrays only reach the rules when they carry no fields to
+		// lower, so raw JSON is the honest editor for them.
+		match: (ctx) => ctx.type === 'object' || ctx.type === 'array',
+		node: 'JsonEditor',
+	},
+	{
 		name: 'unresolved',
 		// An unresolved `$ref` or a schema with no lowerable type still needs an
 		// editable surface, so it falls back to raw JSON rather than vanishing.

@@ -99,6 +99,71 @@ describe('schemaToDocument', () => {
 		expect(field.props.constraints).toEqual({ minValue: 1, maxValue: 9 });
 	});
 
+	it('tightens fractional exclusive bounds to the nearest valid integer', () => {
+		const [field] = schemaToNodes({
+			type: 'object',
+			properties: { count: { type: 'integer', exclusiveMinimum: 0.5, exclusiveMaximum: 9.5 } },
+		});
+
+		expect(field.props.constraints).toEqual({ minValue: 1, maxValue: 9 });
+	});
+
+	it('drops non-scalar defaults so the document stays valid', () => {
+		const document = schemaToDocument({
+			type: 'object',
+			properties: {
+				tags: { type: 'array', default: [], items: { type: 'string', maxLength: 20 } },
+				meta: { type: 'object', default: { a: 1 } },
+			},
+		});
+
+		expect(() => parseDocument(document)).not.toThrow();
+		for (const field of fieldsOf(document)) expect(field.props.defaultValue).toBeUndefined();
+	});
+
+	it('terminates recursive $refs at a JsonEditor', () => {
+		const document = schemaToDocument({
+			$id: 'tree',
+			type: 'object',
+			$defs: {
+				node: {
+					type: 'object',
+					properties: {
+						label: { type: 'string', maxLength: 40 },
+						children: { type: 'array', items: { $ref: '#/$defs/node' } },
+					},
+				},
+			},
+			properties: { root: { $ref: '#/$defs/node' } },
+		});
+
+		expect(() => parseDocument(document)).not.toThrow();
+		const children = findNodeByKey(document.page, 'root.children');
+		expect(children?.props.repeatable).toBe(true);
+		expect(children?.children.map((child) => child.type)).toEqual(['JsonEditor']);
+	});
+
+	it('lowers primitive oneOf branches to a widget instead of an empty tab', () => {
+		const [tabs] = schemaToNodes({
+			type: 'object',
+			properties: {
+				limit: {
+					oneOf: [
+						{ title: 'Unlimited', type: 'boolean' },
+						{ title: 'Count', type: 'integer' },
+					],
+				},
+			},
+		});
+
+		expect(tabs.children.map((tab) => tab.children[0]?.type)).toEqual(['Switch', 'NumberInput']);
+	});
+
+	it('lowers a property-less object to a JsonEditor', () => {
+		const [field] = schemaToNodes({ type: 'object', properties: { payload: { type: 'object' } } });
+		expect(field.type).toBe('JsonEditor');
+	});
+
 	it('nests objects as sections with dot-path field names', () => {
 		const document = schemaToDocument({
 			type: 'object',

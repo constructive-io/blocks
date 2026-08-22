@@ -17,6 +17,8 @@ interface Lowering {
 	rules: WidgetRule[];
 	resolve: (schema: JSONSchema) => JSONSchema;
 	includeReadOnly: boolean;
+	/** Local `$ref`s currently being lowered on this path, to break recursion. */
+	visiting: Set<string>;
 }
 
 /**
@@ -66,7 +68,10 @@ function widgetNode(ctx: FieldContext, lowering: Lowering): UINode {
 	const { schema, ui } = ctx;
 	const partial = applyRules(ctx, lowering.rules);
 	const constraints = { ...toConstraints(schema), ...partial.constraints };
-	const defaultValue = schema.default ?? schema.const;
+	// The document format only carries scalar defaults, so an object or array
+	// default is dropped rather than emitted as an invalid document.
+	const raw = schema.default ?? schema.const;
+	const defaultValue = isScalar(raw) ? raw : undefined;
 
 	return {
 		type: (partial.type ?? 'Input') as UINodeType,
@@ -81,12 +86,56 @@ function widgetNode(ctx: FieldContext, lowering: Lowering): UINode {
 			...(ui.disabled || schema.readOnly ? { disabled: true } : {}),
 			...(ui.className ? { className: ui.className } : {}),
 			...(isNullable(schema) ? { nullable: true } : {}),
-			...(defaultValue !== undefined ? { defaultValue: defaultValue as UINode['props']['defaultValue'] } : {}),
+			...(defaultValue !== undefined ? { defaultValue } : {}),
 			...(constraints && Object.keys(constraints).length > 0 ? { constraints } : {}),
 			...partial.props,
 			...ui.props,
 		},
 		children: partial.children ?? [],
+	};
+}
+
+function isScalar(value: unknown): value is string | number | boolean | null {
+	return value === null || typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean';
+}
+
+function localRef(schema: JSONSchema | undefined): string | undefined {
+	const ref = schema?.$ref;
+	return typeof ref === 'string' && ref.startsWith('#/') ? ref : undefined;
+}
+
+/** An object schema only lowers to a group when it has fields to put in it. */
+function hasFields(schema: JSONSchema): boolean {
+	return Object.keys(schema.properties ?? {}).length > 0;
+}
+
+/**
+ * A `$defs` entry that references itself (a tree node, a linked list) would
+ * lower forever, so re-entering the same ref on one path stops at a terminal
+ * JsonEditor instead.
+ */
+function guarded<T>(ref: string | undefined, lowering: Lowering, onCycle: () => T, lower: () => T): T {
+	if (!ref) return lower();
+	if (lowering.visiting.has(ref)) return onCycle();
+
+	lowering.visiting.add(ref);
+	try {
+		return lower();
+	} finally {
+		lowering.visiting.delete(ref);
+	}
+}
+
+function cycleNode(ctx: FieldContext): UINode {
+	return {
+		type: 'JsonEditor',
+		key: ctx.path || 'field',
+		props: {
+			name: ctx.path,
+			label: ctx.ui.label ?? ctx.schema.title ?? titleize(ctx.name),
+			...(ctx.required ? { required: true } : {}),
+		},
+		children: [],
 	};
 }
 
@@ -109,12 +158,19 @@ function variantNode(ctx: FieldContext, variants: JSONSchema[], lowering: Loweri
 		props: containerProps(ctx),
 		children: variants.map((rawVariant, index) => {
 			const variant = mergeAllOf(lowering.resolve(rawVariant), lowering.resolve);
-			const key = `${ctx.path || 'variants'}.variant${index}`;
+			const variantCtx = context(variant, ctx.name, ctx.path, ctx.required, lowering);
 			return {
 				type: 'Tab',
-				key,
+				key: `${ctx.path || 'variants'}.variant${index}`,
 				props: { label: annotation(variant).label ?? variant.title ?? `Option ${index + 1}` },
-				children: childNodes(variant, ctx.path, lowering),
+				children: guarded(
+					localRef(rawVariant),
+					lowering,
+					() => [cycleNode(variantCtx)],
+					// A primitive branch has no properties, so it becomes the tab's
+					// single widget rather than an empty tab.
+					() => (hasFields(variant) ? childNodes(variant, ctx.path, lowering) : [nodeFor(variantCtx, lowering)])
+				),
 			};
 		}),
 	};
@@ -122,7 +178,8 @@ function variantNode(ctx: FieldContext, variants: JSONSchema[], lowering: Loweri
 
 /** Arrays lower to a repeatable section holding the item's own nodes. */
 function arrayNode(ctx: FieldContext, lowering: Lowering): UINode {
-	const items = ctx.schema.items ? mergeAllOf(lowering.resolve(ctx.schema.items), lowering.resolve) : {};
+	const rawItems = ctx.schema.items;
+	const items = rawItems ? mergeAllOf(lowering.resolve(rawItems), lowering.resolve) : {};
 	const itemCtx = context(items, ctx.name, ctx.path, false, lowering);
 	const constraints = ctx.schema;
 
@@ -136,8 +193,12 @@ function arrayNode(ctx: FieldContext, lowering: Lowering): UINode {
 			...(constraints.maxItems != null ? { maxItems: constraints.maxItems } : {}),
 			...(ctx.required ? { required: true } : {}),
 		},
-		children:
-			primaryType(items) === 'object' ? childNodes(items, ctx.path, lowering) : [widgetNode(itemCtx, lowering)],
+		children: guarded(
+			localRef(rawItems),
+			lowering,
+			() => [cycleNode(itemCtx)],
+			() => (hasFields(items) ? childNodes(items, ctx.path, lowering) : [widgetNode(itemCtx, lowering)])
+		),
 	};
 }
 
@@ -146,7 +207,7 @@ function nodeFor(ctx: FieldContext, lowering: Lowering): UINode {
 	const variants = schema.oneOf ?? schema.anyOf;
 
 	if (variants?.length && !ctx.ui.widget) return variantNode(ctx, variants, lowering);
-	if (ctx.type === 'object' && !ctx.ui.widget) {
+	if (ctx.type === 'object' && hasFields(schema) && !ctx.ui.widget) {
 		return {
 			type: 'Section',
 			key: ctx.path || 'group',
@@ -167,7 +228,7 @@ function childNodes(schema: JSONSchema, parentPath: string, lowering: Lowering):
 	const entries = Object.entries(properties)
 		.map(([name, rawChild], index) => {
 			const child = mergeAllOf(lowering.resolve(rawChild), lowering.resolve);
-			return { name, child, index, order: annotation(child).order };
+			return { name, child, ref: localRef(rawChild), index, order: annotation(child).order };
 		})
 		.filter(({ child }) => lowering.includeReadOnly || !child.readOnly)
 		.sort((left, right) => {
@@ -177,9 +238,15 @@ function childNodes(schema: JSONSchema, parentPath: string, lowering: Lowering):
 			return left.order - right.order;
 		});
 
-	return entries.map(({ name, child }) => {
+	return entries.map(({ name, child, ref }) => {
 		const path = parentPath ? `${parentPath}.${name}` : name;
-		return nodeFor(context(child, name, path, required.has(name), lowering), lowering);
+		const ctx = context(child, name, path, required.has(name), lowering);
+		return guarded(
+			ref,
+			lowering,
+			() => cycleNode(ctx),
+			() => nodeFor(ctx, lowering)
+		);
 	});
 }
 
@@ -190,10 +257,11 @@ export function schemaToNodes(schema: JSONSchema, options: ConvertOptions = {}):
 		rules: resolveRules(options.rules, options.replaceDefaultRules),
 		resolve,
 		includeReadOnly: options.includeReadOnly ?? true,
+		visiting: new Set(),
 	};
 
 	const root = mergeAllOf(resolve(schema), resolve);
-	if (primaryType(root) === 'object' && !root.oneOf && !root.anyOf) {
+	if (primaryType(root) === 'object' && hasFields(root) && !root.oneOf && !root.anyOf) {
 		return childNodes(root, '', lowering);
 	}
 	// A non-object root is a single value, so it lowers to one node.
