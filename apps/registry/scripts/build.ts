@@ -33,6 +33,7 @@ import {
 	createRegistryModuleOwnership,
 	deriveAliasDependencies,
 	deriveOwnedRegistryDependencies,
+	pinWorkspaceDependencies,
 	portableTargetForUiFile,
 	rewriteConstructiveUiImports,
 	type Registry,
@@ -283,6 +284,9 @@ for (const { source, item } of preparedItems) {
 		writeFileSync(stagedPath, rewritten.source, 'utf8');
 		compiledSource.set(file.path, rewritten.source);
 	}
+
+	if (item.dependencies) item.dependencies = pinWorkspaceDependencies(item.dependencies);
+	if (item.devDependencies) item.devDependencies = pinWorkspaceDependencies(item.devDependencies);
 
 	const derivedDependencies = new Set(
 		deriveOwnedRegistryDependencies(item, compiledSource, moduleOwnership),

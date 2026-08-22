@@ -4,7 +4,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import {
-	CONSTRUCTIVE_DATA_DEPENDENCY,
+	CONSTRUCTIVE_DATA_PACKAGE,
 	NODE_TYPE_REGISTRY_DEPENDENCY,
 	collectModuleSpecifiers,
 } from '../../../apps/registry/scripts/compiler';
@@ -62,7 +62,7 @@ buildSourceRegistry({
 	registrySubdirectory: 'blocks/schema-builder',
 	targetPrefix: '@components/schema-builder',
 	dependencies: [
-		CONSTRUCTIVE_DATA_DEPENDENCY,
+		CONSTRUCTIVE_DATA_PACKAGE,
 		'@dnd-kit/core',
 		'@dnd-kit/utilities',
 		'@fluentui/react-context-selector',

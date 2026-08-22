@@ -14,7 +14,7 @@
         "schema"
       ],
       "dependencies": [
-        "@constructive-io/data@^0.8.0",
+        "@constructive-io/data",
         "@dnd-kit/core",
         "@dnd-kit/utilities",
         "@fluentui/react-context-selector",
