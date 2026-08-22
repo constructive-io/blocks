@@ -1,6 +1,6 @@
 {
   "name": "@constructive-io/blocks-ui",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Default widget registry for blocks-renderer: Constructive UI document node types wired to @constructive-io/ui components",
   "keywords": [
     "react",
