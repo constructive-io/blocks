@@ -447,7 +447,10 @@ async function checkPackedDocumentPackages(): Promise<void> {
   const jsonSchemaManifest = JSON.parse(
     await readFile(path.join(root, 'packages/json-schema-to-blocks/package.json'), 'utf8')
   ) as DocumentPackageManifest;
-  for (const manifest of [schemaManifest, rendererManifest, jsonSchemaManifest]) {
+  const metaManifest = JSON.parse(
+    await readFile(path.join(root, 'packages/meta-to-blocks/package.json'), 'utf8')
+  ) as DocumentPackageManifest;
+  for (const manifest of [schemaManifest, rendererManifest, jsonSchemaManifest, metaManifest]) {
     if (manifest.exports) {
       throw new Error(`${manifest.name} must publish from dist without an exports map`);
     }
@@ -461,7 +464,13 @@ async function checkPackedDocumentPackages(): Promise<void> {
     artifacts,
     `json-schema-to-blocks-${jsonSchemaManifest.version}.tgz`
   );
-  await Promise.all([access(schemaTarball), access(rendererTarball), access(jsonSchemaTarball)]);
+  const metaTarball = path.join(artifacts, `meta-to-blocks-${metaManifest.version}.tgz`);
+  await Promise.all([
+    access(schemaTarball),
+    access(rendererTarball),
+    access(jsonSchemaTarball),
+    access(metaTarball)
+  ]);
 
   await rm(documentConsumer, { recursive: true, force: true });
   await mkdir(documentConsumer, { recursive: true });
@@ -480,6 +489,7 @@ async function checkPackedDocumentPackages(): Promise<void> {
           'blocks-renderer': `file:${rendererTarball}`,
           'blocks-schema': `file:${schemaTarball}`,
           'json-schema-to-blocks': `file:${jsonSchemaTarball}`,
+          'meta-to-blocks': `file:${metaTarball}`,
           react: '^19.0.0',
           'react-dom': '^19.0.0'
         },
@@ -490,7 +500,8 @@ async function checkPackedDocumentPackages(): Promise<void> {
         // The packed dependents resolve the packed schema, not the registry copy.
         pnpm: {
           overrides: {
-            'blocks-schema': `file:${schemaTarball}`
+            'blocks-schema': `file:${schemaTarball}`,
+            'json-schema-to-blocks': `file:${jsonSchemaTarball}`
           }
         }
       },
@@ -517,6 +528,11 @@ const packedJsonSchema = JSON.parse(
   await readFile(require.resolve('json-schema-to-blocks/package.json'), 'utf8')
 );
 assert.doesNotMatch(packedJsonSchema.dependencies['blocks-schema'], /^workspace:/);
+const packedMeta = JSON.parse(
+  await readFile(require.resolve('meta-to-blocks/package.json'), 'utf8')
+);
+assert.doesNotMatch(packedMeta.dependencies['blocks-schema'], /^workspace:/);
+assert.doesNotMatch(packedMeta.dependencies['json-schema-to-blocks'], /^workspace:/);
 
 // CJS entry points and deep imports resolve without an exports map.
 assert.ok(require('blocks-schema').parseDocument);
@@ -526,6 +542,8 @@ assert.ok(require('blocks-renderer').DocumentRenderer);
 assert.ok(require('blocks-renderer/registry').composeRegistry);
 assert.ok(require('json-schema-to-blocks').schemaToDocument);
 assert.ok(require('json-schema-to-blocks/rules').defaultWidgetRules);
+assert.ok(require('meta-to-blocks').tableToFormDocument);
+assert.ok(require('meta-to-blocks/schema').tableToSchema);
 
 const { UI_DOCUMENT_FORMAT_VERSION, parseDocument } = await import('blocks-schema');
 const { composeDocument } = await import('blocks-schema/compose');
@@ -541,6 +559,17 @@ const lowered = schemaToDocument({
   properties: { email: { type: 'string', format: 'email' } }
 });
 assert.equal(parseDocument(lowered).page.type, 'Page');
+
+// A lowered table must be a document the schema package accepts too.
+const { tableToFormDocument } = await import('meta-to-blocks');
+const generated = tableToFormDocument({
+  name: 'posts',
+  fields: [
+    { name: 'id', type: { gqlType: 'UUID', pgType: 'uuid' }, isPrimaryKey: true },
+    { name: 'title', type: { gqlType: 'String', pgType: 'text' }, isNotNull: true }
+  ]
+});
+assert.equal(parseDocument(generated).page.children[0].type, 'Form');
 
 const document = parseDocument({
   formatVersion: '1.0',
@@ -571,7 +600,8 @@ console.log('Packed document packages resolved from root entry points and deep i
   await Promise.all([
     access(path.join(documentConsumer, 'node_modules', 'blocks-schema', 'LICENSE')),
     access(path.join(documentConsumer, 'node_modules', 'blocks-renderer', 'LICENSE')),
-    access(path.join(documentConsumer, 'node_modules', 'json-schema-to-blocks', 'LICENSE'))
+    access(path.join(documentConsumer, 'node_modules', 'json-schema-to-blocks', 'LICENSE')),
+    access(path.join(documentConsumer, 'node_modules', 'meta-to-blocks', 'LICENSE'))
   ]);
   await run('pnpm', ['exec', 'tsx', 'check-documents.ts'], documentConsumer);
 
