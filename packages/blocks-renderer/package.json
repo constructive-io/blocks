@@ -14,38 +14,20 @@
     "url": "https://github.com/constructive-io/blocks/issues"
   },
   "publishConfig": {
-    "access": "public"
+    "access": "public",
+    "directory": "dist"
   },
-  "type": "module",
   "sideEffects": false,
-  "exports": {
-    ".": {
-      "import": {
-        "types": "./dist/index.d.ts",
-        "default": "./dist/index.js"
-      },
-      "require": {
-        "types": "./dist/index.d.cts",
-        "default": "./dist/index.cjs"
-      }
-    },
-    "./package.json": "./package.json"
-  },
-  "main": "./dist/index.cjs",
-  "module": "./dist/index.js",
-  "types": "./dist/index.d.ts",
-  "files": [
-    "dist",
-    "LICENSE",
-    "README.md"
-  ],
+  "main": "index.js",
+  "module": "esm/index.js",
+  "types": "index.d.ts",
   "scripts": {
-    "build": "tsup",
-    "dev": "tsup --watch",
-    "lint:types": "tsc --noEmit",
+    "build": "makage clean && makage build-ts && makage assets",
+    "build:dev": "makage clean && makage build-ts --dev && makage assets",
+    "lint:types": "tsc --noEmit -p tsconfig.lint.json",
     "test": "vitest run",
     "test:watch": "vitest",
-    "clean": "rm -rf dist"
+    "clean": "makage clean"
   },
   "dependencies": {
     "blocks-schema": "workspace:^"
@@ -56,9 +38,9 @@
   "devDependencies": {
     "@types/react": "^19.2.7",
     "@types/react-dom": "^19.2.3",
+    "makage": "^0.6.0",
     "react": "^19.2.3",
     "react-dom": "^19.2.3",
-    "tsup": "^8.5.1",
     "typescript": "^5.9.3",
     "vitest": "^3.2.4"
   },

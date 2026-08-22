@@ -1,8 +1,27 @@
 # blocks-schema
 
+<p align="center" width="100%">
+  <img height="250" src="https://raw.githubusercontent.com/constructive-io/constructive/refs/heads/main/assets/outline-logo.svg" />
+</p>
+
 Portable JSON UI document specification for Constructive Blocks: the storage
 format, runtime validators, JSON Schema export, and pure document-manipulation
 API. No React — this package is safe in servers, workers, and agents.
+
+## Install
+
+```bash
+pnpm add blocks-schema
+```
+
+The package is built with `makage` and published from `dist`, so every module is
+a root-level entry point and deep imports need no exports map:
+
+```ts
+import { parseDocument } from 'blocks-schema';
+import { composeDocument } from 'blocks-schema/compose';
+import { validateField } from 'blocks-schema/validation';
+```
 
 ## Overview
 

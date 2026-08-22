@@ -23,6 +23,13 @@ For the repository cutover, the intended releases are:
 - `@constructive-io/command-palette@0.4.0`
 - `@constructive-io/schema-builder@0.4.0`
 
+`blocks-schema` and `blocks-renderer` release independently of that cutover set.
+They are built with `makage` and publish from `dist` (`publishConfig.directory`),
+so their entry points are root-level files and consumers get deep imports
+(`blocks-schema/compose`) without an exports map. `pnpm pack:check` verifies that
+layout in an isolated consumer, including a packed renderer resolving the packed
+schema.
+
 ## Verify the exact publish inputs
 
 From the validated tag checkout:
@@ -33,7 +40,7 @@ pnpm check
 pnpm pack:check
 ```
 
-`pnpm pack:check` builds all five packages and installs their tarballs into clean
+`pnpm pack:check` builds every package and installs the tarballs into clean
 consumers, including an isolated Sheets consumer that checks its runtime icon
 dependencies and Tailwind v4 stylesheet export. Before publishing, point a
 temporary downstream checkout at the tarballs in `.artifacts/npm`, install from

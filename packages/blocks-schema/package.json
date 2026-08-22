@@ -14,44 +14,26 @@
     "url": "https://github.com/constructive-io/blocks/issues"
   },
   "publishConfig": {
-    "access": "public"
+    "access": "public",
+    "directory": "dist"
   },
-  "type": "module",
   "sideEffects": false,
-  "exports": {
-    ".": {
-      "import": {
-        "types": "./dist/index.d.ts",
-        "default": "./dist/index.js"
-      },
-      "require": {
-        "types": "./dist/index.d.cts",
-        "default": "./dist/index.cjs"
-      }
-    },
-    "./package.json": "./package.json"
-  },
-  "main": "./dist/index.cjs",
-  "module": "./dist/index.js",
-  "types": "./dist/index.d.ts",
-  "files": [
-    "dist",
-    "LICENSE",
-    "README.md"
-  ],
+  "main": "index.js",
+  "module": "esm/index.js",
+  "types": "index.d.ts",
   "scripts": {
-    "build": "tsup",
-    "dev": "tsup --watch",
-    "lint:types": "tsc --noEmit",
+    "build": "makage build",
+    "build:dev": "makage build --dev",
+    "lint:types": "tsc --noEmit -p tsconfig.lint.json",
     "test": "vitest run",
     "test:watch": "vitest",
-    "clean": "rm -rf dist"
+    "clean": "makage clean"
   },
   "dependencies": {
     "zod": "^4.3.4"
   },
   "devDependencies": {
-    "tsup": "^8.5.1",
+    "makage": "^0.6.0",
     "typescript": "^5.9.3",
     "vitest": "^3.2.4"
   },

@@ -10,7 +10,9 @@ const packages = [
   '@constructive-io/data',
   '@constructive-io/command-palette',
   '@constructive-io/sheets',
-  '@constructive-io/schema-builder'
+  '@constructive-io/schema-builder',
+  'blocks-schema',
+  'blocks-renderer'
 ];
 
 function run(command: string, args: string[], options?: { ignoreLifecycleScripts?: boolean }): Promise<void> {

@@ -1,8 +1,21 @@
 # blocks-renderer
 
+<p align="center" width="100%">
+  <img height="250" src="https://raw.githubusercontent.com/constructive-io/constructive/refs/heads/main/assets/outline-logo.svg" />
+</p>
+
 React adapter for `blocks-schema` UI documents: a recursive
 renderer with layerable widget registries, binding resolution, form state, and
 a visible unknown-block fallback.
+
+## Install
+
+```bash
+pnpm add blocks-renderer blocks-schema react
+```
+
+Built with `makage` and published from `dist`, so deep imports resolve without an
+exports map: `blocks-renderer/registry`, `blocks-renderer/bindings`.
 
 ## Usage
 

@@ -8,6 +8,7 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const artifacts = path.join(root, '.artifacts', 'npm');
 const consumer = path.join(tmpdir(), 'constructive-blocks-package-consumer');
 const sheetsConsumer = path.join(tmpdir(), 'constructive-sheets-package-consumer');
+const documentConsumer = path.join(tmpdir(), 'constructive-document-package-consumer');
 
 interface PackageManifest {
   name: string;
@@ -15,6 +16,17 @@ interface PackageManifest {
   dependencies?: Record<string, string>;
   peerDependencies?: Record<string, string>;
   exports: Record<string, unknown>;
+}
+
+// blocks-schema and blocks-renderer publish from `dist` with makage, so their
+// entry points are plain files at the package root and there is no exports map.
+interface DocumentPackageManifest {
+  name: string;
+  version: string;
+  main: string;
+  module: string;
+  types: string;
+  exports?: Record<string, unknown>;
 }
 
 function run(command: string, args: string[], cwd = consumer): Promise<void> {
@@ -92,6 +104,7 @@ await Promise.all([
 ]);
 
 await checkPackedSheets();
+await checkPackedDocumentPackages();
 
 await rm(consumer, { recursive: true, force: true });
 await mkdir(consumer, { recursive: true });
@@ -419,6 +432,126 @@ await run('pnpm', ['exec', 'tsx', 'check-portal-context.ts']);
 await run('pnpm', ['exec', 'tsx', 'check-portal-context.cts']);
 
 console.log('Packed-package clean consumer passed.');
+
+async function checkPackedDocumentPackages(): Promise<void> {
+  // The document packages publish from `dist`, so this consumer proves the
+  // published layout: root entry points, working deep imports without an
+  // exports map, and a renderer that resolves its schema dependency.
+  const schemaManifest = JSON.parse(
+    await readFile(path.join(root, 'packages/blocks-schema/package.json'), 'utf8')
+  ) as DocumentPackageManifest;
+  const rendererManifest = JSON.parse(
+    await readFile(path.join(root, 'packages/blocks-renderer/package.json'), 'utf8')
+  ) as DocumentPackageManifest;
+  for (const manifest of [schemaManifest, rendererManifest]) {
+    if (manifest.exports) {
+      throw new Error(`${manifest.name} must publish from dist without an exports map`);
+    }
+    if (manifest.main !== 'index.js' || manifest.module !== 'esm/index.js') {
+      throw new Error(`${manifest.name} must declare dist-relative entry points`);
+    }
+  }
+  const schemaTarball = path.join(artifacts, `blocks-schema-${schemaManifest.version}.tgz`);
+  const rendererTarball = path.join(artifacts, `blocks-renderer-${rendererManifest.version}.tgz`);
+  await Promise.all([access(schemaTarball), access(rendererTarball)]);
+
+  await rm(documentConsumer, { recursive: true, force: true });
+  await mkdir(documentConsumer, { recursive: true });
+  await writeFile(
+    path.join(documentConsumer, '.npmrc'),
+    'auto-install-peers=true\nstrict-peer-dependencies=false\n'
+  );
+  await writeFile(
+    path.join(documentConsumer, 'package.json'),
+    `${JSON.stringify(
+      {
+        name: 'constructive-document-package-consumer',
+        private: true,
+        type: 'module',
+        dependencies: {
+          'blocks-renderer': `file:${rendererTarball}`,
+          'blocks-schema': `file:${schemaTarball}`,
+          react: '^19.0.0',
+          'react-dom': '^19.0.0'
+        },
+        devDependencies: {
+          '@types/react': '^19.0.0',
+          tsx: '4.23.1'
+        },
+        // The packed renderer depends on the packed schema, not the registry copy.
+        pnpm: {
+          overrides: {
+            'blocks-schema': `file:${schemaTarball}`
+          }
+        }
+      },
+      null,
+      2
+    )}\n`
+  );
+  await writeFile(
+    path.join(documentConsumer, 'check-documents.ts'),
+    `import assert from 'node:assert/strict';
+import { readFile } from 'node:fs/promises';
+import { createRequire } from 'node:module';
+import { createElement } from 'react';
+import { renderToStaticMarkup } from 'react-dom/server';
+
+const require = createRequire(import.meta.url);
+
+// pnpm pack must resolve the workspace protocol for published consumers.
+const packedRenderer = JSON.parse(
+  await readFile(require.resolve('blocks-renderer/package.json'), 'utf8')
+);
+assert.doesNotMatch(packedRenderer.dependencies['blocks-schema'], /^workspace:/);
+
+// CJS entry points and deep imports resolve without an exports map.
+assert.ok(require('blocks-schema').parseDocument);
+assert.ok(require('blocks-schema/compose').composeDocument);
+assert.ok(require('blocks-schema/validation').validateField);
+assert.ok(require('blocks-renderer').DocumentRenderer);
+assert.ok(require('blocks-renderer/registry').composeRegistry);
+
+const { UI_DOCUMENT_FORMAT_VERSION, parseDocument } = await import('blocks-schema');
+const { composeDocument } = await import('blocks-schema/compose');
+const { DocumentRenderer } = await import('blocks-renderer');
+assert.equal(UI_DOCUMENT_FORMAT_VERSION, '1.0');
+assert.ok(composeDocument);
+
+const document = parseDocument({
+  formatVersion: '1.0',
+  type: 'UISchema',
+  id: 'packed-consumer',
+  page: {
+    type: 'Page',
+    key: 'page',
+    props: { title: 'Packed' },
+    children: []
+  }
+});
+const markup = renderToStaticMarkup(
+  createElement(DocumentRenderer, {
+    document,
+    registry: { Page: ({ props }: { props: { title?: string } }) => props.title ?? null }
+  })
+);
+assert.match(markup, /Packed/);
+console.log('Packed document packages resolved from root entry points and deep imports.');
+`
+  );
+  await run(
+    'pnpm',
+    ['install', '--ignore-workspace', '--frozen-lockfile=false'],
+    documentConsumer
+  );
+  await Promise.all([
+    access(path.join(documentConsumer, 'node_modules', 'blocks-schema', 'LICENSE')),
+    access(path.join(documentConsumer, 'node_modules', 'blocks-renderer', 'LICENSE'))
+  ]);
+  await run('pnpm', ['exec', 'tsx', 'check-documents.ts'], documentConsumer);
+
+  console.log('Packed document packages passed their isolated consumer check.');
+}
 
 async function checkPackedSheets(): Promise<void> {
   // Sheets gets a clean install without schema-builder. This prevents

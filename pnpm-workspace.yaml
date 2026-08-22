@@ -8,7 +8,7 @@ packages:
 # Most malicious releases are found and yanked well inside that window.
 minimumReleaseAge: 2880
 
-# Exempt from the wait: 6 scope glob(s), 35 first-party package(s).
+# Exempt from the wait: 6 scope glob(s), 36 first-party package(s).
 # First-party membership comes from what pyramation publishes on npm — waiting on your own release protects nothing.
 minimumReleaseAgeExclude:
   - "@constructive-db/*"
@@ -39,6 +39,7 @@ minimumReleaseAgeExclude:
   - graphile-upload-plugin
   - inflekt
   - komoji
+  - makage
   - mime-bytes
   - nested-obj
   - node-type-registry
