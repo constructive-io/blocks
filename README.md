@@ -16,6 +16,7 @@ component documentation, and published React packages.
 - `packages/blocks-renderer` — the `blocks-renderer` React adapter for those documents.
 - `packages/json-schema-to-blocks` — the `json-schema-to-blocks` lowering of JSON Schema into those documents.
 - `packages/meta-to-blocks` — the `meta-to-blocks` lowering of database metadata into generated form, list, and detail documents.
+- `packages/flow-to-blocks` — the `flow-to-blocks` evaluation of a flow graph into a computed document.
 
 The documentation site is published at
 <https://constructive-io.github.io/blocks/>. Registry JSON is served from

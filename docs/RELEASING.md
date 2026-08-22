@@ -23,8 +23,8 @@ For the repository cutover, the intended releases are:
 - `@constructive-io/command-palette@0.4.0`
 - `@constructive-io/schema-builder@0.4.0`
 
-`blocks-schema`, `blocks-renderer`, `json-schema-to-blocks`, and `meta-to-blocks` release
-independently of that cutover set.
+`blocks-schema`, `blocks-renderer`, `json-schema-to-blocks`, `meta-to-blocks`, and
+`flow-to-blocks` release independently of that cutover set.
 They are built with `makage` and publish from `dist` (`publishConfig.directory`),
 so their entry points are root-level files and consumers get deep imports
 (`blocks-schema/compose`) without an exports map. `pnpm pack:check` verifies that

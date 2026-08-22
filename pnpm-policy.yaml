@@ -19,6 +19,7 @@ maintainers:
 scopes:
   - "@constructive-io"
   - "@constructive-db"
+  - "@fbp"
   - "@launchql"
   - "@pgpm"
   - "@pgpmjs"
