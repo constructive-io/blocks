@@ -29,6 +29,7 @@ describe('llms.txt', () => {
       '/blocks/billing/',
       '/blocks/features/',
       '/blocks/console-kit/',
+      '/blocks/documents/',
     ]) {
       expect(source).toContain(
         `https://constructive-io.github.io/blocks${route}`,

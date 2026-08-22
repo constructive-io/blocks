@@ -1,0 +1,80 @@
+{
+  "name": "@constructive-io/blocks-ui",
+  "version": "0.1.0",
+  "description": "Default widget registry for blocks-renderer: Constructive UI document node types wired to @constructive-io/ui components",
+  "keywords": [
+    "react",
+    "registry",
+    "ui-schema",
+    "blocks",
+    "renderer",
+    "form"
+  ],
+  "author": "Constructive",
+  "license": "MIT",
+  "homepage": "https://constructive-io.github.io/blocks/",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/constructive-io/blocks.git",
+    "directory": "packages/blocks-ui"
+  },
+  "bugs": {
+    "url": "https://github.com/constructive-io/blocks/issues"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "type": "module",
+  "sideEffects": false,
+  "exports": {
+    ".": {
+      "import": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.js"
+      },
+      "require": {
+        "types": "./dist/index.d.cts",
+        "default": "./dist/index.cjs"
+      }
+    }
+  },
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsup --watch",
+    "lint:types": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "clean": "rm -rf dist"
+  },
+  "peerDependencies": {
+    "@constructive-io/ui": ">=0.12.0",
+    "blocks-renderer": ">=0.4.0",
+    "blocks-schema": ">=0.5.0",
+    "react": "^18.0.0 || ^19.0.0"
+  },
+  "devDependencies": {
+    "@base-ui/react": "^1.0.0",
+    "@constructive-io/ui": "workspace:*",
+    "@testing-library/react": "^16.3.1",
+    "@types/react": "^19.2.7",
+    "@types/react-dom": "^19.2.3",
+    "blocks-renderer": "workspace:^",
+    "blocks-schema": "workspace:^",
+    "jsdom": "^26.1.0",
+    "json-schema-to-blocks": "workspace:^",
+    "react": "^19.2.3",
+    "react-dom": "^19.2.3",
+    "tsup": "^8.5.1",
+    "typescript": "^5.9.3",
+    "vitest": "^3.2.4"
+  },
+  "engines": {
+    "node": ">=24.0.0"
+  }
+}

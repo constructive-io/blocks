@@ -29,6 +29,7 @@ component documentation, and published React packages.
 - `packages/json-schema-to-blocks` — the `json-schema-to-blocks` lowering of JSON Schema into those documents.
 - `packages/meta-to-blocks` — the `meta-to-blocks` lowering of database metadata into generated form, list, and detail documents.
 - `packages/flow-to-blocks` — the `flow-to-blocks` evaluation of a flow graph into a computed document.
+- `packages/blocks-ui` — the `@constructive-io/blocks-ui` default registry: Constructive document node types wired to `@constructive-io/ui` components.
 
 The documentation site is published at
 <https://constructive-io.github.io/blocks/>. Registry JSON is served from

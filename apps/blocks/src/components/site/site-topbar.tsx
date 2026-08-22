@@ -33,6 +33,7 @@ function crumbFor(path: string): string {
     return pack ? `${pack.title} feature pack` : 'Feature packs';
   }
   if (p === '/blocks/console-kit') return 'Console Kit';
+  if (p === '/blocks/documents') return 'JSON documents';
   if (p === '/blocks/command-palette') return 'Command Palette';
   if (p === '/blocks/ai') return 'AI';
   if (p.startsWith('/blocks/ai/')) {

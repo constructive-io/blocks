@@ -32,6 +32,11 @@ so their entry points are root-level files and consumers get deep imports
 layout in an isolated consumer, including packed dependents resolving the packed
 schema.
 
+`@constructive-io/blocks-ui` is a React package built with `tsup`, so it keeps
+the scoped-package layout (`dist` plus an exports map) rather than publishing
+from `dist`. It peer-depends on `@constructive-io/ui`, `blocks-renderer`, and
+`blocks-schema`, so publish those first.
+
 ## Verify the exact publish inputs
 
 From the validated tag checkout:

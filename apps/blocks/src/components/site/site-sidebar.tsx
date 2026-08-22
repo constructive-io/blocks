@@ -294,6 +294,11 @@ export const SiteSidebar = forwardRef<HTMLElement, SiteSidebarProps>(function Si
                 Console Kit
               </NavLink>
             </li>
+            <li>
+              <NavLink href="/blocks/documents" active={pathname === '/blocks/documents'} onNavigate={onNavigate}>
+                JSON documents
+              </NavLink>
+            </li>
           </ul>
         </div>
 

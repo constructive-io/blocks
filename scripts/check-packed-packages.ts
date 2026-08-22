@@ -456,6 +456,9 @@ async function checkPackedDocumentPackages(): Promise<void> {
   const flowManifest = JSON.parse(
     await readFile(path.join(root, 'packages/flow-to-blocks/package.json'), 'utf8')
   ) as DocumentPackageManifest;
+  // blocks-ui is a React package built with tsup, so it keeps an exports map
+  // and is excluded from the publish-from-dist assertions below.
+  const blocksUiManifest = await packageManifest('packages/blocks-ui/package.json');
   for (const manifest of [
     coreManifest,
     schemaManifest,
@@ -480,7 +483,12 @@ async function checkPackedDocumentPackages(): Promise<void> {
   );
   const metaTarball = path.join(artifacts, `meta-to-blocks-${metaManifest.version}.tgz`);
   const flowTarball = path.join(artifacts, `flow-to-blocks-${flowManifest.version}.tgz`);
+  const blocksUiTarball = path.join(
+    artifacts,
+    `constructive-io-blocks-ui-${blocksUiManifest.version}.tgz`
+  );
   await Promise.all([
+    access(blocksUiTarball),
     access(coreTarball),
     access(schemaTarball),
     access(rendererTarball),
@@ -509,6 +517,8 @@ async function checkPackedDocumentPackages(): Promise<void> {
           'json-schema-to-blocks': `file:${jsonSchemaTarball}`,
           'meta-to-blocks': `file:${metaTarball}`,
           'flow-to-blocks': `file:${flowTarball}`,
+          '@constructive-io/blocks-ui': `file:${blocksUiTarball}`,
+          '@constructive-io/ui': `file:${uiTarball}`,
           react: '^19.0.0',
           'react-dom': '^19.0.0'
         },
@@ -659,6 +669,25 @@ const markup = renderToStaticMarkup(
   })
 );
 assert.match(markup, /Packed/);
+
+// The default registry must render a generated document with no host wiring.
+const { defaultBlockRegistry } = await import('@constructive-io/blocks-ui');
+const formMarkup = renderToStaticMarkup(
+  createElement(DocumentRenderer, {
+    document: parseDocument(
+      schemaToDocument({
+        $id: 'packed',
+        type: 'object',
+        required: ['email'],
+        properties: { email: { type: 'string', format: 'email', title: 'Email' } }
+      })
+    ),
+    registry: defaultBlockRegistry
+  })
+);
+assert.match(formMarkup, /<input/);
+assert.match(formMarkup, /Email/);
+assert.doesNotMatch(formMarkup, /Unknown node/i);
 console.log('Packed document packages resolved from root entry points and deep imports.');
 `
   );
@@ -682,7 +711,8 @@ console.log('Packed document packages resolved from root entry points and deep i
     access(path.join(documentConsumer, 'node_modules', 'blocks-renderer', 'LICENSE')),
     access(path.join(documentConsumer, 'node_modules', 'json-schema-to-blocks', 'LICENSE')),
     access(path.join(documentConsumer, 'node_modules', 'meta-to-blocks', 'LICENSE')),
-    access(path.join(documentConsumer, 'node_modules', 'flow-to-blocks', 'LICENSE'))
+    access(path.join(documentConsumer, 'node_modules', 'flow-to-blocks', 'LICENSE')),
+    access(path.join(documentConsumer, 'node_modules', '@constructive-io', 'blocks-ui', 'LICENSE'))
   ]);
   await run('pnpm', ['exec', 'tsx', 'check-documents.ts'], documentConsumer);
 
