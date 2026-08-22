@@ -450,7 +450,16 @@ async function checkPackedDocumentPackages(): Promise<void> {
   const metaManifest = JSON.parse(
     await readFile(path.join(root, 'packages/meta-to-blocks/package.json'), 'utf8')
   ) as DocumentPackageManifest;
-  for (const manifest of [schemaManifest, rendererManifest, jsonSchemaManifest, metaManifest]) {
+  const flowManifest = JSON.parse(
+    await readFile(path.join(root, 'packages/flow-to-blocks/package.json'), 'utf8')
+  ) as DocumentPackageManifest;
+  for (const manifest of [
+    schemaManifest,
+    rendererManifest,
+    jsonSchemaManifest,
+    metaManifest,
+    flowManifest
+  ]) {
     if (manifest.exports) {
       throw new Error(`${manifest.name} must publish from dist without an exports map`);
     }
@@ -465,18 +474,22 @@ async function checkPackedDocumentPackages(): Promise<void> {
     `json-schema-to-blocks-${jsonSchemaManifest.version}.tgz`
   );
   const metaTarball = path.join(artifacts, `meta-to-blocks-${metaManifest.version}.tgz`);
+  const flowTarball = path.join(artifacts, `flow-to-blocks-${flowManifest.version}.tgz`);
   await Promise.all([
     access(schemaTarball),
     access(rendererTarball),
     access(jsonSchemaTarball),
-    access(metaTarball)
+    access(metaTarball),
+    access(flowTarball)
   ]);
 
   await rm(documentConsumer, { recursive: true, force: true });
   await mkdir(documentConsumer, { recursive: true });
   await writeFile(
     path.join(documentConsumer, '.npmrc'),
-    'auto-install-peers=true\nstrict-peer-dependencies=false\n'
+    // This throwaway consumer installs the just-published @fbp packages, so the
+    // workspace's release-age wait would fail the check rather than protect it.
+    'auto-install-peers=true\nstrict-peer-dependencies=false\nminimum-release-age=0\n'
   );
   await writeFile(
     path.join(documentConsumer, 'package.json'),
@@ -490,6 +503,7 @@ async function checkPackedDocumentPackages(): Promise<void> {
           'blocks-schema': `file:${schemaTarball}`,
           'json-schema-to-blocks': `file:${jsonSchemaTarball}`,
           'meta-to-blocks': `file:${metaTarball}`,
+          'flow-to-blocks': `file:${flowTarball}`,
           react: '^19.0.0',
           'react-dom': '^19.0.0'
         },
@@ -501,7 +515,10 @@ async function checkPackedDocumentPackages(): Promise<void> {
         pnpm: {
           overrides: {
             'blocks-schema': `file:${schemaTarball}`,
-            'json-schema-to-blocks': `file:${jsonSchemaTarball}`
+            'json-schema-to-blocks': `file:${jsonSchemaTarball}`,
+            // @fbp/evaluator@1.3.0 shipped `"@fbp/types": "workspace:*"`, which no
+            // registry consumer can resolve. Drop once @fbp is republished.
+            '@fbp/evaluator>@fbp/types': '^1.4.0'
           }
         }
       },
@@ -533,6 +550,11 @@ const packedMeta = JSON.parse(
 );
 assert.doesNotMatch(packedMeta.dependencies['blocks-schema'], /^workspace:/);
 assert.doesNotMatch(packedMeta.dependencies['json-schema-to-blocks'], /^workspace:/);
+const packedFlow = JSON.parse(
+  await readFile(require.resolve('flow-to-blocks/package.json'), 'utf8')
+);
+assert.doesNotMatch(packedFlow.dependencies['blocks-schema'], /^workspace:/);
+assert.doesNotMatch(packedFlow.dependencies['json-schema-to-blocks'], /^workspace:/);
 
 // CJS entry points and deep imports resolve without an exports map.
 assert.ok(require('blocks-schema').parseDocument);
@@ -544,6 +566,8 @@ assert.ok(require('json-schema-to-blocks').schemaToDocument);
 assert.ok(require('json-schema-to-blocks/rules').defaultWidgetRules);
 assert.ok(require('meta-to-blocks').tableToFormDocument);
 assert.ok(require('meta-to-blocks/schema').tableToSchema);
+assert.ok(require('flow-to-blocks').flowToDocument);
+assert.ok(require('flow-to-blocks/definitions').uiNodeDefinitions);
 
 const { UI_DOCUMENT_FORMAT_VERSION, parseDocument } = await import('blocks-schema');
 const { composeDocument } = await import('blocks-schema/compose');
@@ -570,6 +594,19 @@ const generated = tableToFormDocument({
   ]
 });
 assert.equal(parseDocument(generated).page.children[0].type, 'Form');
+
+// A flow-produced document must be a document the schema package accepts.
+const { flowToDocument } = await import('flow-to-blocks');
+const evaluated = await flowToDocument({
+  name: 'packed-flow',
+  context: 'js',
+  nodes: [
+    { name: 'page', type: 'ui:Page', props: [{ name: 'key', type: 'string', value: 'page' }] },
+    { name: 'out', type: 'graphOutput' }
+  ],
+  edges: [{ src: { node: 'page', port: 'node' }, dst: { node: 'out', port: 'value' } }]
+});
+assert.equal(parseDocument(evaluated).page.type, 'Page');
 
 const document = parseDocument({
   formatVersion: '1.0',
@@ -601,7 +638,8 @@ console.log('Packed document packages resolved from root entry points and deep i
     access(path.join(documentConsumer, 'node_modules', 'blocks-schema', 'LICENSE')),
     access(path.join(documentConsumer, 'node_modules', 'blocks-renderer', 'LICENSE')),
     access(path.join(documentConsumer, 'node_modules', 'json-schema-to-blocks', 'LICENSE')),
-    access(path.join(documentConsumer, 'node_modules', 'meta-to-blocks', 'LICENSE'))
+    access(path.join(documentConsumer, 'node_modules', 'meta-to-blocks', 'LICENSE')),
+    access(path.join(documentConsumer, 'node_modules', 'flow-to-blocks', 'LICENSE'))
   ]);
   await run('pnpm', ['exec', 'tsx', 'check-documents.ts'], documentConsumer);
 

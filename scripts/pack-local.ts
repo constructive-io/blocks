@@ -14,7 +14,8 @@ const packages = [
   'blocks-schema',
   'blocks-renderer',
   'json-schema-to-blocks',
-  'meta-to-blocks'
+  'meta-to-blocks',
+  'flow-to-blocks'
 ];
 
 function run(command: string, args: string[], options?: { ignoreLifecycleScripts?: boolean }): Promise<void> {

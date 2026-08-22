@@ -1,0 +1,54 @@
+{
+  "name": "flow-to-blocks",
+  "version": "0.1.0",
+  "description": "Evaluate a flow-based programming graph into a blocks-schema UI document: dynamic, computed screens",
+  "private": false,
+  "license": "MIT",
+  "homepage": "https://constructive-io.github.io/blocks/",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/constructive-io/blocks.git",
+    "directory": "packages/flow-to-blocks"
+  },
+  "bugs": {
+    "url": "https://github.com/constructive-io/blocks/issues"
+  },
+  "publishConfig": {
+    "access": "public",
+    "directory": "dist"
+  },
+  "sideEffects": false,
+  "main": "index.js",
+  "module": "esm/index.js",
+  "types": "index.d.ts",
+  "scripts": {
+    "build": "makage clean && makage build-ts && makage assets",
+    "build:dev": "makage clean && makage build-ts --dev && makage assets",
+    "lint:types": "tsc --noEmit -p tsconfig.lint.json",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "clean": "makage clean"
+  },
+  "keywords": [
+    "flow",
+    "fbp",
+    "graph",
+    "ui-schema",
+    "blocks",
+    "renderer"
+  ],
+  "dependencies": {
+    "@fbp/evaluator": "^1.3.0",
+    "@fbp/types": "^1.4.0",
+    "blocks-schema": "workspace:^",
+    "json-schema-to-blocks": "workspace:^"
+  },
+  "devDependencies": {
+    "makage": "^0.6.0",
+    "typescript": "^5.9.3",
+    "vitest": "^3.2.4"
+  },
+  "engines": {
+    "node": ">=24.0.0"
+  }
+}
