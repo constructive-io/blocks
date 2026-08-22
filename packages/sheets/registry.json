@@ -14,7 +14,7 @@
         "data"
       ],
       "dependencies": [
-        "@constructive-io/data@^0.7.0",
+        "@constructive-io/data@^0.8.0",
         "@internationalized/date",
         "@remixicon/react",
         "@tanstack/react-form",
