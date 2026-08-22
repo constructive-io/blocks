@@ -17,6 +17,7 @@ import {
 	TabBlock,
 	TabsBlock,
 } from './containers';
+import { NavBlock, NavGroupBlock, NavLinkBlock } from './nav';
 import {
 	CheckboxBlock,
 	CodeBlock,
@@ -69,6 +70,9 @@ export const blockRegistry: BlockRegistry = {
 	ActionBar: ActionBarBlock,
 	Markdown: MarkdownBlock,
 	StatCard: StatCardBlock,
+	Nav: NavBlock,
+	NavGroup: NavGroupBlock,
+	NavLink: NavLinkBlock,
 };
 
 /**

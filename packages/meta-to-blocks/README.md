@@ -45,6 +45,23 @@ const detail = tableToDetailDocument(table); // Page > DetailPanel > RelationLis
 Create forms omit the columns the database fills in (primary keys, audit
 timestamps); `mode: 'update'` includes them and disables the primary key.
 
+A console needs a way in before it needs screens, and the table list is already
+in `_meta`:
+
+```ts
+import { metaToNavDocument } from 'meta-to-blocks';
+
+// Page > Nav > NavGroup (one per schema) > NavLink (one per table)
+const nav = metaToNavDocument(meta.tables, {
+  href: (table) => `/admin/${table.schemaName}/${table.name}`
+});
+```
+
+Join tables are dropped (they carry nothing a console can show) unless
+`includeJunctionTables` is set; `tables`, `omitTables`, `tableOrder`, and
+`schemaLabels` cover the rest. Rendering it needs no query runtime —
+`@constructive-io/blocks-ui` registers the three nav types.
+
 ## Customization
 
 ```ts
@@ -76,6 +93,7 @@ Custom `rules` run ahead of the JSON Schema defaults unless
 | array column | repeatable `Section` |
 | foreign key | `Select` with `relation` props, labelled without the id suffix |
 | `hasMany` / `manyToMany` relation | `RelationList` on the detail screen |
+| table list, grouped by `schemaName` | `Nav > NavGroup > NavLink` |
 
 ## API
 
@@ -84,6 +102,8 @@ tableToFormDocument(table, options?): UIDocument
 tableToListDocument(table, options?): UIDocument
 tableToDetailDocument(table, options?): UIDocument
 tableToNodes(table, options?): UINode[]
+metaToNavDocument(tables, options?): UIDocument
+metaToNavNodes(tables, options?): UINode[]
 tableToSchema(table, options?): JSONSchema
 fieldToSchema(table, field, override?): JSONSchema
 typeToSchema(type): JSONSchema

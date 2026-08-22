@@ -158,6 +158,38 @@ export interface DetailOptions extends MetaOptions {
 	rootKey?: string;
 }
 
+/** How a table is presented in generated navigation. */
+export interface NavTableOverride {
+	label?: string;
+	href?: string;
+	/** Drop the table from the generated navigation. */
+	omit?: boolean;
+}
+
+export interface NavOptions {
+	/** Document id; defaults to `nav`. */
+	id?: string;
+	/** Screen title; defaults to `Navigation`. */
+	title?: string;
+	/** Label on the `Nav` node itself. */
+	label?: string;
+	rootKey?: string;
+	/** Route for a table's list screen; defaults to `/<table>`. */
+	href?: (table: MetaTable) => string;
+	/** Group links by schema. Default `true`. */
+	group?: boolean;
+	/** Schema name → group label; defaults to the titleized schema name. */
+	schemaLabels?: Record<string, string>;
+	/** Per-table presentation overrides, keyed by table name. */
+	tables?: Record<string, NavTableOverride>;
+	/** Tables to leave out. */
+	omitTables?: readonly string[];
+	/** Link join tables too; they are omitted by default. */
+	includeJunctionTables?: boolean;
+	/** Explicit table order; unlisted tables keep their `_meta` order after these. */
+	tableOrder?: readonly string[];
+}
+
 /** A column lowered to a JSON Schema fragment, keyed by its column name. */
 export interface LoweredField {
 	name: string;

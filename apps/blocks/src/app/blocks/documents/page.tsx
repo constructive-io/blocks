@@ -3,13 +3,14 @@ import type { Metadata } from 'next';
 import { CodeBlock } from '@/components/docs/code-block';
 import { DocSection } from '@/components/docs/doc-section';
 import { DocumentFormDemo } from '@/components/documents-showcase/document-form-demo';
+import { DocumentNavDemo } from '@/components/documents-showcase/document-nav-demo';
 import { OG_IMAGE, withBase } from '@/lib/site';
 
 const TITLE = 'JSON documents';
 const DESCRIPTION =
   'Render a declarative JSON UI document with the default widget registry: JSON Schema, database metadata, or an agent tool produces the document, and no page hand-writes the form.';
 
-const INSTALL = `pnpm add blocks-schema blocks-renderer json-schema-to-blocks @constructive-io/blocks-ui`;
+const INSTALL = `pnpm add blocks-schema blocks-renderer json-schema-to-blocks meta-to-blocks @constructive-io/blocks-ui`;
 
 const USAGE = `'use client';
 
@@ -33,6 +34,25 @@ export function PostForm() {
       document={document}
       registry={defaultBlockRegistry}
       onSubmit={(values) => save(values)}
+    />
+  );
+}`;
+
+const NAV = `import { DocumentRenderer } from 'blocks-renderer';
+import { defaultBlockRegistry } from '@constructive-io/blocks-ui';
+import { metaToNavDocument } from 'meta-to-blocks';
+
+// One group per schema, one link per table, join tables dropped.
+const nav = metaToNavDocument(meta.tables, {
+  href: (table) => \`/admin/\${table.schemaName}/\${table.name}\`
+});
+
+export function ConsoleSidebar({ pathname }: { pathname: string }) {
+  return (
+    <DocumentRenderer
+      document={nav}
+      registry={defaultBlockRegistry}
+      scope={{ pathname }}
     />
   );
 }`;
@@ -93,6 +113,17 @@ export default function DocumentsPage() {
         title="Live example"
       >
         <DocumentFormDemo />
+      </DocSection>
+
+      <DocSection
+        description="Navigation is a document too: metaToNavDocument lowers a _meta table list to Nav, NavGroup and NavLink nodes, so a console sidebar follows the database rather than a hand-maintained route list. It needs no query runtime, and the current link is whichever href matches scope.pathname."
+        id="navigation"
+        title="Navigation from database metadata"
+      >
+        <DocumentNavDemo />
+        <CodeBlock label="console-sidebar.tsx" language="tsx">
+          {NAV}
+        </CodeBlock>
       </DocSection>
 
       <DocSection

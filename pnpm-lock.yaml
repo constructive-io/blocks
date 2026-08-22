@@ -101,6 +101,9 @@ importers:
       marked:
         specifier: ^16.4.2
         version: 16.4.2
+      meta-to-blocks:
+        specifier: workspace:*
+        version: link:../../packages/meta-to-blocks/dist
       motion:
         specifier: ^12.40.0
         version: 12.42.2(@emotion/is-prop-valid@1.4.0)(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
@@ -265,6 +268,9 @@ importers:
       json-schema-to-blocks:
         specifier: workspace:^
         version: link:../json-schema-to-blocks/dist
+      meta-to-blocks:
+        specifier: workspace:^
+        version: link:../meta-to-blocks/dist
       react:
         specifier: ^19.2.3
         version: 19.2.7

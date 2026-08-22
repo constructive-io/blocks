@@ -69,8 +69,8 @@ const registry = composeRegistry(defaultBlockRegistry, {
 
 Take a subset if the page chrome is yours: `widgetRegistry` (the form
 controls), `containerRegistry` (`Page`, `Form`, `Section`, `Grid`, `Tabs`), and
-`blockRegistry` (`Button`, `ActionBar`, `Markdown`, `StatCard`) are exported
-separately.
+`blockRegistry` (`Button`, `ActionBar`, `Markdown`, `StatCard`, `Nav`,
+`NavGroup`, `NavLink`) are exported separately.
 
 Writing an adapter from scratch needs nothing from this package — a registry is
 `Record<string, ComponentType<BlockProps>>`. `useNodeField` and `FieldShell` are
@@ -88,6 +88,24 @@ data-bound components (for example against `@constructive-io/data`).
 a real editor is a heavy dependency, so it belongs in the host that wants it.
 `FileUpload` records the selected file name only — the byte upload needs your
 storage adapter.
+
+## Navigation
+
+`Nav`, `NavGroup`, and `NavLink` render the navigation documents
+`meta-to-blocks`' `metaToNavDocument` lowers from `_meta`, so a console sidebar
+follows the database rather than a hand-maintained route list:
+
+```tsx
+<DocumentRenderer
+  document={metaToNavDocument(meta.tables)}
+  registry={defaultBlockRegistry}
+  scope={{ pathname }}
+/>
+```
+
+A link is a plain anchor, and the current one is whichever `href` matches
+`scope.pathname`. Give a node a `click` action (or override `NavLink` with your
+framework's `Link`) to keep client-side routing.
 
 ## Form state
 

@@ -11,6 +11,7 @@ export {
 	TabBlock,
 	TabsBlock,
 } from './containers';
+export { NavBlock, NavGroupBlock, NavLinkBlock } from './nav';
 export {
 	CheckboxBlock,
 	CodeBlock,
