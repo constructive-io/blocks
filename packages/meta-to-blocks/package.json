@@ -1,6 +1,6 @@
 {
   "name": "meta-to-blocks",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "Lower database metadata into blocks-schema UI documents: generated form, list, and detail screens",
   "private": false,
   "license": "MIT",

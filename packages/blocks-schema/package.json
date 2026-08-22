@@ -1,6 +1,6 @@
 {
   "name": "blocks-schema",
-  "version": "0.2.1",
+  "version": "0.3.0",
   "description": "Portable JSON UI document format for Constructive Blocks: node types, runtime validation, and JSON Schema export",
   "private": false,
   "license": "MIT",

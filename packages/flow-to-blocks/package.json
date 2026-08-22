@@ -1,6 +1,6 @@
 {
   "name": "flow-to-blocks",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "Evaluate a flow-based programming graph into a blocks-schema UI document: dynamic, computed screens",
   "private": false,
   "license": "MIT",
