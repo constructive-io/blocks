@@ -1,6 +1,6 @@
 {
   "name": "@constructive-io/command-palette",
-  "version": "0.6.0",
+  "version": "0.7.0",
   "description": "Headless command registry, shortcuts, multi-step flows, and background-task state for Constructive applications",
   "keywords": [
     "react",
