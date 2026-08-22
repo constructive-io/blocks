@@ -1,3 +1,6 @@
+import { readFileSync } from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { isDeepStrictEqual } from 'node:util';
 import ts from 'typescript';
 
@@ -5,9 +8,38 @@ export const CONSTRUCTIVE_UI_PACKAGE = '@constructive-io/ui';
 export const CONSTRUCTIVE_SHEETS_PACKAGE = '@constructive-io/sheets';
 export const CONSTRUCTIVE_NAMESPACE = '@constructive/';
 export const CONSTRUCTIVE_THEME_DEPENDENCY = '@constructive/constructive-theme';
-export const CONSTRUCTIVE_DATA_DEPENDENCY = '@constructive-io/data@^0.8.0';
-export const CONSTRUCTIVE_COMMAND_PALETTE_DEPENDENCY = '@constructive-io/command-palette@^0.6.0';
+export const CONSTRUCTIVE_DATA_PACKAGE = '@constructive-io/data';
+export const CONSTRUCTIVE_COMMAND_PALETTE_PACKAGE = '@constructive-io/command-palette';
 export const NODE_TYPE_REGISTRY_DEPENDENCY = 'node-type-registry@^1.11.0';
+
+/** Workspace packages whose registry dependency range follows their published version. */
+export const WORKSPACE_PINNED_PACKAGES = [
+	CONSTRUCTIVE_DATA_PACKAGE,
+	CONSTRUCTIVE_COMMAND_PALETTE_PACKAGE,
+] as const;
+
+const repositoryRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../..');
+
+/** Caret range for a workspace package, read from the manifest Lerna bumps. */
+export function workspaceDependencyRange(packageName: string): string {
+	const directory = packageName.split('/').at(-1);
+	const manifestPath = path.join(repositoryRoot, 'packages', String(directory), 'package.json');
+	const manifest = JSON.parse(readFileSync(manifestPath, 'utf8')) as { name: string; version: string };
+	if (manifest.name !== packageName) {
+		throw new Error(`${manifestPath} declares ${manifest.name}, expected ${packageName}.`);
+	}
+	return `${packageName}@^${manifest.version}`;
+}
+
+/** Stamps the current workspace version onto every pinned dependency reference. */
+export function pinWorkspaceDependencies(dependencies: readonly string[]): string[] {
+	return dependencies.map((dependency) => {
+		const packageName = WORKSPACE_PINNED_PACKAGES.find(
+			(candidate) => dependency === candidate || dependency.startsWith(`${candidate}@`),
+		);
+		return packageName ? workspaceDependencyRange(packageName) : dependency;
+	});
+}
 
 export const FEATURE_PACK_IDS = [
 	'data',
@@ -788,10 +820,9 @@ function referencesPackage(dependency: string, packageName: string): boolean {
 
 export function assertRegistryDistributionContract(items: readonly RegistryItem[]): void {
 	const ownNames = new Set(items.map((item) => item.name));
-	const requiredPackageRanges = new Map([
-		['@constructive-io/data', CONSTRUCTIVE_DATA_DEPENDENCY],
-		['@constructive-io/command-palette', CONSTRUCTIVE_COMMAND_PALETTE_DEPENDENCY],
-	]);
+	const requiredPackageRanges = new Map(
+		WORKSPACE_PINNED_PACKAGES.map((packageName) => [packageName, workspaceDependencyRange(packageName)]),
+	);
 
 	for (const item of items) {
 		const dependencies = [

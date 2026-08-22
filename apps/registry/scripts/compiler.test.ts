@@ -9,8 +9,8 @@ import {
 	CONSOLE_KIT_ITEM_NAME,
 	CONSOLE_MODULE_ITEM_NAME_PREFIX,
 	CONSOLE_INSTALL_ROOT_DEPENDENCIES,
-	CONSTRUCTIVE_COMMAND_PALETTE_DEPENDENCY,
-	CONSTRUCTIVE_DATA_DEPENDENCY,
+	CONSTRUCTIVE_COMMAND_PALETTE_PACKAGE,
+	CONSTRUCTIVE_DATA_PACKAGE,
 	CONSTRUCTIVE_UI_PACKAGE,
 	CONSTRUCTIVE_SHEETS_PACKAGE,
 	CONSTRUCTIVE_THEME_DEPENDENCY,
@@ -26,8 +26,10 @@ import {
 	createRegistryModuleOwnership,
 	deriveAliasDependencies,
 	deriveOwnedRegistryDependencies,
+	pinWorkspaceDependencies,
 	portableTargetForUiFile,
 	rewriteConstructiveUiImports,
+	workspaceDependencyRange,
 	type Registry,
 	type RegistryItem,
 } from './compiler';
@@ -349,13 +351,28 @@ test('rejects duplicate item names and install targets', () => {
 	);
 });
 
+test('derives pinned workspace ranges from the manifests Lerna bumps', () => {
+	const { version } = JSON.parse(
+		fs.readFileSync(path.join(repositoryRoot, 'packages/data/package.json'), 'utf8'),
+	) as { version: string };
+
+	assert.equal(workspaceDependencyRange(CONSTRUCTIVE_DATA_PACKAGE), `@constructive-io/data@^${version}`);
+	assert.deepEqual(
+		pinWorkspaceDependencies([CONSTRUCTIVE_DATA_PACKAGE, '@constructive-io/data@^0.1.0', 'zod']),
+		[`@constructive-io/data@^${version}`, `@constructive-io/data@^${version}`, 'zod'],
+	);
+});
+
 function distributionContractFixture(): RegistryItem[] {
 	return [
 		{ name: 'constructive-theme', type: 'registry:style' },
 		{
 			name: 'consumer',
 			type: 'registry:block',
-			dependencies: [CONSTRUCTIVE_DATA_DEPENDENCY, CONSTRUCTIVE_COMMAND_PALETTE_DEPENDENCY],
+			dependencies: pinWorkspaceDependencies([
+				CONSTRUCTIVE_DATA_PACKAGE,
+				CONSTRUCTIVE_COMMAND_PALETTE_PACKAGE,
+			]),
 			registryDependencies: [CONSTRUCTIVE_THEME_DEPENDENCY],
 		},
 		{
@@ -399,7 +416,9 @@ test('enforces the compiled registry distribution contract', () => {
 	wrongRange.find((item) => item.name === 'consumer')!.dependencies = ['@constructive-io/data@^1.0.0'];
 	assert.throws(
 		() => assertRegistryDistributionContract(wrongRange),
-		new RegExp(`must depend on ${CONSTRUCTIVE_DATA_DEPENDENCY.replace(/[.^]/g, '\\$&')}`),
+		new RegExp(
+			`must depend on ${workspaceDependencyRange(CONSTRUCTIVE_DATA_PACKAGE).replace(/[.^]/g, '\\$&')}`,
+		),
 	);
 
 	const sourceOwnedPackage = structuredClone(distributionContractFixture());

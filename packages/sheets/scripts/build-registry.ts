@@ -3,7 +3,7 @@
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { CONSTRUCTIVE_DATA_DEPENDENCY } from '../../../apps/registry/scripts/compiler';
+import { CONSTRUCTIVE_DATA_PACKAGE } from '../../../apps/registry/scripts/compiler';
 import { buildSourceRegistry } from '../../../apps/registry/scripts/build-source-registry';
 
 const packageRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -21,7 +21,7 @@ buildSourceRegistry({
 	registrySubdirectory: 'blocks/sheets',
 	targetPrefix: '@ui/sheets',
 	dependencies: [
-		CONSTRUCTIVE_DATA_DEPENDENCY,
+		CONSTRUCTIVE_DATA_PACKAGE,
 		'@internationalized/date',
 		'@remixicon/react',
 		'@tanstack/react-form',
