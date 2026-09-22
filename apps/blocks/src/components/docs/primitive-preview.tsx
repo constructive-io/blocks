@@ -28,7 +28,7 @@ export function PrimitivePreview({
   return (
     <div
       className={cn(
-        'flex min-h-64 w-full items-center justify-center overflow-hidden rounded-xl border border-border bg-card p-6 shadow-sm sm:min-h-72 sm:p-10',
+        'flex min-h-64 w-full items-center justify-center overflow-hidden rounded-xl border border-border bg-card p-6 sm:min-h-72 sm:p-10',
       )}
     >
       <Demo />

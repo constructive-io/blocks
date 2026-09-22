@@ -31,10 +31,7 @@ const highlightTheme = {
 
 export function CodeBlock({ children, className, label, language }: CodeBlockProps) {
   const [copied, setCopied] = useState(false);
-  const highlighted = useMemo(
-    () => (language === 'tsx' ? highlight(children) : undefined),
-    [children, language],
-  );
+  const highlighted = useMemo(() => (language === 'tsx' ? highlight(children) : undefined), [children, language]);
 
   async function onCopy() {
     try {
@@ -76,7 +73,7 @@ export function CodeBlock({ children, className, label, language }: CodeBlockPro
     <div
       data-slot="code-block"
       className={cn(
-        'relative min-w-0 max-w-full overflow-hidden rounded-xl border border-border bg-muted/40 shadow-sm',
+        'relative min-w-0 max-w-full overflow-hidden rounded-xl border border-border bg-muted/40',
         className,
       )}
     >
@@ -102,12 +99,7 @@ export function CodeBlock({ children, className, label, language }: CodeBlockPro
           {copyButton}
         </div>
       )}
-      <pre
-        className={cn(
-          'overflow-x-auto p-3 font-mono text-[12.5px] leading-5 tabular-nums',
-          !label && 'pr-20',
-        )}
-      >
+      <pre className={cn('overflow-x-auto p-3 font-mono text-[12.5px] leading-5 tabular-nums', !label && 'pr-20')}>
         {highlighted ? (
           <code
             className="code-highlight whitespace-pre"
@@ -117,7 +109,9 @@ export function CodeBlock({ children, className, label, language }: CodeBlockPro
             dangerouslySetInnerHTML={{ __html: highlighted }}
           />
         ) : (
-          <code className="whitespace-pre" data-slot="code-block-code">{children}</code>
+          <code className="whitespace-pre" data-slot="code-block-code">
+            {children}
+          </code>
         )}
       </pre>
     </div>

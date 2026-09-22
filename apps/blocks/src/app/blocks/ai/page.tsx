@@ -1,14 +1,6 @@
 import type { Metadata } from 'next';
 
-import {
-  Table,
-  TableBody,
-  TableCaption,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@constructive-io/ui/table';
+import { Table, TableBody, TableCaption, TableCell, TableHead, TableHeader, TableRow } from '@constructive-io/ui/table';
 
 import Link from 'next/link';
 
@@ -51,9 +43,7 @@ function ApiTable() {
         {AI_DOC.api.map((row) => (
           <TableRow key={row.name}>
             <TableCell className="font-mono text-xs font-medium">{row.name}</TableCell>
-            <TableCell className="whitespace-normal font-mono text-xs text-muted-foreground">
-              {row.type}
-            </TableCell>
+            <TableCell className="whitespace-normal font-mono text-xs text-muted-foreground">{row.type}</TableCell>
             <TableCell className="min-w-64 whitespace-normal text-pretty text-muted-foreground">
               {row.behavior}
             </TableCell>
@@ -72,15 +62,10 @@ export default function AiPage() {
       <section aria-labelledby="ai-title" className="scroll-mt-20" id="overview">
         <header className="mb-6 max-w-2xl">
           <p className="registry-eyebrow">AI</p>
-          <h1
-            className="mt-2 text-balance text-[22px] font-semibold tracking-tight sm:text-[1.75rem]"
-            id="ai-title"
-          >
+          <h1 className="mt-2 text-balance text-[22px] font-semibold tracking-tight sm:text-[1.75rem]" id="ai-title">
             {doc.title}
           </h1>
-          <p className="mt-2 text-pretty text-sm leading-7 text-muted-foreground sm:text-[15px]">
-            {doc.description}
-          </p>
+          <p className="mt-2 text-pretty text-sm leading-7 text-muted-foreground sm:text-[15px]">{doc.description}</p>
         </header>
 
         <AiShowcaseDemo />
@@ -114,10 +99,7 @@ export default function AiPage() {
       <DocSection description={doc.composition.description} id="composition" title="Composition">
         <div className="grid gap-3 md:grid-cols-3">
           {doc.composition.boundaries.map((item) => (
-            <article
-              className="rounded-xl bg-card p-4 shadow-card"
-              key={item.title}
-            >
+            <article className="rounded-xl border border-border bg-card p-4" key={item.title}>
               <h3 className="text-balance text-sm font-semibold">{item.title}</h3>
               <p className="mt-1 text-pretty text-sm leading-6 text-muted-foreground">{item.body}</p>
             </article>
@@ -160,7 +142,7 @@ export default function AiPage() {
             <li key={component.name} className="min-w-0">
               <Link
                 href={`/blocks/ai/${component.name}`}
-                className="flex min-h-16 flex-col rounded-xl bg-card p-3 shadow-card outline-none transition-[color,background-color,text-decoration-color,fill,stroke,box-shadow] duration-(--duration-moderate) hover:bg-accent/40 focus-visible:ring-[3px] focus-visible:ring-ring/50"
+                className="flex min-h-16 flex-col rounded-xl border border-border bg-card p-3 outline-none transition-[color,background-color,text-decoration-color,fill,stroke,box-shadow] duration-(--duration-moderate) hover:bg-accent/40 focus-visible:ring-[3px] focus-visible:ring-ring/50"
               >
                 <span className="text-sm font-semibold text-foreground">{component.title}</span>
                 <span className="mt-1 line-clamp-2 text-pretty text-xs leading-5 text-muted-foreground">

@@ -6,7 +6,7 @@ export function ThemePresetGrid() {
   return (
     <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
       {THEME_PRESETS.map((preset) => (
-        <div key={preset.id} className="rounded-xl border border-border bg-card p-4 shadow-card">
+        <div key={preset.id} className="rounded-xl border border-border bg-card p-4">
           <div className="flex items-center justify-between gap-3">
             <p className="text-sm font-medium text-foreground">{preset.label}</p>
             <span className="flex gap-1" aria-hidden>
