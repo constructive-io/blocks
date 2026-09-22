@@ -43,7 +43,7 @@ export function FlatConditionList({
 						}}
 						className={cn(
 							`min-h-10 min-w-10 cursor-pointer rounded-md px-2 py-1 transition-[background-color,color,scale]
-							duration-150 ease-out motion-safe:active:scale-[0.96] disabled:pointer-events-none disabled:opacity-50`,
+							duration-(--duration-moderate) ease-out motion-safe:active:scale-[0.96] disabled:pointer-events-none disabled:opacity-64`,
 							isAny ? 'bg-amber-500 text-white' : 'text-muted-foreground bg-transparent',
 						)}
 					>
@@ -58,7 +58,7 @@ export function FlatConditionList({
 						}}
 						className={cn(
 							`min-h-10 min-w-10 cursor-pointer rounded-md px-2 py-1 transition-[background-color,color,scale]
-							duration-150 ease-out motion-safe:active:scale-[0.96] disabled:pointer-events-none disabled:opacity-50`,
+							duration-(--duration-moderate) ease-out motion-safe:active:scale-[0.96] disabled:pointer-events-none disabled:opacity-64`,
 							isAll ? 'bg-primary text-primary-foreground' : 'text-muted-foreground bg-transparent',
 						)}
 					>
@@ -87,8 +87,8 @@ export function FlatConditionList({
 							disabled={disabled}
 							aria-label='Delete condition'
 							className='text-muted-foreground/60 hover:text-destructive hover:bg-destructive/10 grid size-10 shrink-0 cursor-pointer
-								place-items-center rounded-lg transition-[background-color,color,scale] duration-150 ease-out motion-safe:active:scale-[0.96]
-								disabled:pointer-events-none disabled:opacity-50'
+								place-items-center rounded-lg transition-[background-color,color,scale] duration-(--duration-moderate) ease-out motion-safe:active:scale-[0.96]
+								disabled:pointer-events-none disabled:opacity-64'
 						>
 							<RiCloseLine className='size-4' />
 						</button>
@@ -102,7 +102,7 @@ export function FlatConditionList({
 				onClick={onAddCondition}
 				disabled={disabled}
 				className='text-primary hover:text-primary/80 min-h-10 cursor-pointer rounded-lg px-2 text-xs font-medium
-					transition-[color,scale] duration-150 ease-out motion-safe:active:scale-[0.96] disabled:pointer-events-none disabled:opacity-50'
+					transition-[color,scale] duration-(--duration-moderate) ease-out motion-safe:active:scale-[0.96] disabled:pointer-events-none disabled:opacity-64'
 			>
 				+ Add Condition
 			</button>

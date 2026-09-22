@@ -123,8 +123,8 @@ export function InstallToggle({ npm, registry, descriptions, className }: Instal
                       .focus();
                   }}
                   className={cn(
-                    'rounded-md px-2.5 py-1.5 text-[12.5px] font-medium outline-none transition-[background-color,color,box-shadow] duration-150 ease-out',
-                    'focus-visible:ring-2 focus-visible:ring-ring',
+                    'rounded-md px-2.5 py-1.5 text-[12.5px] font-medium outline-none transition-[background-color,color,box-shadow] duration-(--duration-moderate) ease-out',
+                    'focus-visible:ring-[3px] focus-visible:ring-ring/50',
                     active
                       ? 'bg-background text-foreground shadow-sm'
                       : 'text-muted-foreground hover:text-foreground',

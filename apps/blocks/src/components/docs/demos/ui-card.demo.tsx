@@ -81,7 +81,7 @@ export function InteractiveCardDemo() {
     <Demo>
       <Link
         href="/blocks/ui/card"
-        className="block w-full max-w-sm rounded-xl outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+        className="block w-full max-w-sm rounded-xl outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50"
       >
         <Card variant="interactive">
           <CardHeader>

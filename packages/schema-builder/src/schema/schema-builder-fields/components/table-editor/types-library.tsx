@@ -120,7 +120,7 @@ function TypesSection({ title, types, isExpanded, onToggleExpand }: TypesSection
 		<Collapsible open={isExpanded} onOpenChange={onToggleExpand} className='flex min-h-0 shrink-0 flex-col'>
 			<CollapsibleTrigger
 				className='group flex w-full cursor-pointer items-center gap-2 rounded-lg py-1.5 pr-2 pl-1 transition-colors
-					duration-150 bg-card hover:bg-muted/50 data-[state=open]:bg-muted/50'
+					duration-(--duration-moderate) bg-card hover:bg-muted/50 data-[state=open]:bg-muted/50'
 			>
 				<motion.div
 					animate={{ rotate: isExpanded ? 90 : 0 }}

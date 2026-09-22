@@ -98,8 +98,8 @@ function PromptInput({
 					onClick={handleClick}
 					className={cn(
 						'cursor-text border border-input bg-background p-2 shadow-xs',
-						'transition-shadow focus-within:border-primary/60 focus-within:ring-[3px] focus-within:ring-primary/35',
-						shape === 'pill' ? 'rounded-3xl' : 'rounded-xl',
+						'transition-shadow focus-within:border-ring/60 focus-within:ring-[3px] focus-within:ring-ring/35',
+						shape === 'pill' ? 'rounded-3xl' : 'rounded-lg',
 						disabled && 'cursor-not-allowed opacity-60',
 						className,
 					)}
@@ -171,7 +171,7 @@ function PromptInputTextarea({
 			rows={1}
 			className={cn(
 				'min-h-11 w-full resize-none border-none bg-transparent px-2 py-1.5 text-sm outline-none',
-				'placeholder:text-muted-foreground disabled:cursor-not-allowed',
+				'placeholder:text-subtle-foreground disabled:cursor-not-allowed',
 				className,
 			)}
 			{...props}

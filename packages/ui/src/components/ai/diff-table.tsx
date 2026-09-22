@@ -72,7 +72,7 @@ function DiffTable<T extends DiffTableRowBase>({
 		<div
 			data-slot="diff-table"
 			className={cn(
-				'w-full overflow-hidden rounded-xl border border-border bg-card shadow-xs',
+				'w-full overflow-hidden rounded-lg bg-card shadow-card',
 				className,
 			)}
 		>
@@ -108,7 +108,7 @@ function DiffTable<T extends DiffTableRowBase>({
 									data-removed={out ? 'true' : undefined}
 									className={cn(
 										'border-b border-border last:border-0',
-										'transition-colors duration-200 ease-out motion-reduce:transition-none',
+										'transition-colors duration-(--duration-slow) ease-out motion-reduce:transition-none',
 										out && 'bg-destructive/8',
 									)}
 								>
@@ -116,7 +116,7 @@ function DiffTable<T extends DiffTableRowBase>({
 										<td
 											key={col.id}
 											className={cn(
-												'px-3 py-2 align-middle transition-colors duration-200 motion-reduce:transition-none',
+												'px-3 py-2 align-middle transition-colors duration-(--duration-slow) motion-reduce:transition-none',
 												out && 'text-destructive',
 												out && colIndex > 0 && 'line-through decoration-destructive/50',
 												!out && colIndex === 0 && 'font-medium text-foreground',
@@ -135,7 +135,7 @@ function DiffTable<T extends DiffTableRowBase>({
 								<td colSpan={columns.length} className="p-0">
 									<div
 										className={cn(
-											'grid transition-[grid-template-rows,opacity] duration-300 ease-out motion-reduce:transition-none',
+											'grid transition-[grid-template-rows,opacity] duration-(--duration-slow) ease-out motion-reduce:transition-none',
 											showAdded ? 'grid-rows-[1fr] opacity-100' : 'grid-rows-[0fr] opacity-0',
 										)}
 									>

@@ -18,7 +18,7 @@ export function SkipLink() {
   return (
     <a
       href="#main-content"
-      className="sr-only fixed left-4 top-4 z-[var(--z-layer-toast)] rounded-md bg-background px-3 py-2 text-sm focus:fixed focus:not-sr-only focus-visible:ring-2 focus-visible:ring-ring"
+      className="sr-only fixed left-4 top-4 z-[var(--z-layer-toast)] rounded-md bg-background px-3 py-2 text-sm focus:fixed focus:not-sr-only focus-visible:ring-[3px] focus-visible:ring-ring/50"
       onClick={focusMainContent}
     >
       Skip to content

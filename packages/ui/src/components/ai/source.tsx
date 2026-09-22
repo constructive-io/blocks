@@ -21,8 +21,8 @@ function Source({ href, title, description, favicon, domain, className }: Source
 		<span
 			data-slot="source"
 			className={cn(
-				'inline-flex max-w-full items-center gap-1.5 rounded-full border border-border bg-muted/50 px-2 py-0.5 text-[12px]',
-				'text-muted-foreground transition-colors duration-150 hover:bg-accent hover:text-foreground',
+				'inline-flex max-w-full items-center gap-1.5 rounded-full border border-border bg-muted/50 px-2 py-1.5 text-[12px]',
+				'text-muted-foreground hover:bg-accent hover:text-foreground',
 				className,
 			)}
 		>

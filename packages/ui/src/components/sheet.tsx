@@ -6,7 +6,8 @@ import { cva, type VariantProps } from 'class-variance-authority';
 import { X } from 'lucide-react';
 import { AnimatePresence, motion, type HTMLMotionProps, type Transition } from 'motion/react';
 
-import { durations, easings } from '../lib/motion/motion-config';
+import { easings, tierExit, tierSpring } from '../lib/motion/motion-config';
+import { useSpringTiers } from '../lib/motion/tuning';
 import { useControllableState } from '../lib/use-controllable-state';
 import { ModalPortalScope, useRootPortalContainer } from '@constructive-io/ui/portal';
 import { cn } from '../lib/utils';
@@ -313,7 +314,7 @@ function SheetOverlay({ className, asChild: _asChild, forceMount: _forceMount, .
 	return (
 		<SheetPrimitive.Backdrop
 			data-slot="sheet-overlay"
-			className={cn('fixed inset-0 z-[var(--z-layer-modal-backdrop)] bg-black/80', className)}
+			className={cn('fixed inset-0 z-[var(--z-layer-modal-backdrop)] bg-black/32 backdrop-blur-sm', className)}
 			{...props}
 		/>
 	);
@@ -443,17 +444,10 @@ function getExitPosition(side: 'top' | 'bottom' | 'left' | 'right') {
 	}
 }
 
-// Default sheet transition - fast tween for snappy, jank-free animation
-const defaultSheetTransition: Transition = {
-	type: 'tween',
-	duration: durations.normal,
-	ease: [0.32, 0.72, 0, 1], // Custom ease-out for snappy feel
-};
-
 function SheetContent({
 	side = 'right',
 	className,
-	transition = defaultSheetTransition,
+	transition,
 	overlay = true,
 	showClose = true,
 	children,
@@ -465,6 +459,7 @@ function SheetContent({
 	...props
 }: SheetContentProps) {
 	const { isOpen, depth, sheetId } = useSheet();
+	const springTiers = useSpringTiers();
 	const sheetStack = useSheetStack();
 
 	// Calculate sheetsAbove directly from stack to ensure it's always current
@@ -522,12 +517,9 @@ function SheetContent({
 		y: pushOffset.y ?? 0,
 	};
 
-	// Exit transition - slightly faster and snappier for physical feel
-	const exitTransition: Transition = {
-		type: 'tween',
-		duration: durations.normal,
-		ease: easings.physicalExit,
-	};
+	// Enter rides the slow spring tier; exits use the quicker exit tween.
+	const enterTransition = transition ?? tierSpring(springTiers.slow);
+	const exitTransition = tierExit(springTiers.slow);
 
 	return (
 		<AnimatePresence initial={false}>
@@ -540,11 +532,11 @@ function SheetContent({
 							render={
 								<motion.div
 									key='sheet-overlay'
-									className='fixed inset-0 bg-black/80'
+									className='fixed inset-0 bg-black/32 backdrop-blur-sm'
 									initial={{ opacity: 0 }}
 									animate={{ opacity: 1 }}
 									exit={{ opacity: 0 }}
-									transition={{ duration: durations.fast, ease: 'easeOut' }}
+									transition={{ duration: springTiers.moderate.duration, ease: easings.easeOut }}
 									style={{ zIndex: 'var(--z-layer-modal-backdrop)' }}
 								/>
 							}
@@ -570,7 +562,7 @@ function SheetContent({
 								initial='initial'
 								animate='animate'
 								exit='exit'
-								transition={transition}
+								transition={enterTransition}
 								style={{ zIndex }}
 								className={cn(sheetVariants({ side: resolvedSide }), className)}
 							/>
@@ -583,9 +575,9 @@ function SheetContent({
 						{showClose && (
 							<SheetPrimitive.Close
 								data-slot="sheet-close"
-								className='ring-offset-background focus:ring-ring data-[open]:bg-secondary absolute top-4 right-4
-									rounded-sm opacity-70 transition-opacity hover:opacity-100 focus:ring-2 focus:ring-offset-2
-									focus:outline-none disabled:pointer-events-none'
+								className='data-[open]:bg-secondary absolute top-4 right-4
+									rounded-sm opacity-70 transition-opacity hover:opacity-100 focus-visible:ring-[3px] focus-visible:ring-ring/50
+								 disabled:pointer-events-none'
 							>
 								<X className='h-4 w-4' />
 								<span className='sr-only'>Close</span>

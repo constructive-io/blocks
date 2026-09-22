@@ -1,13 +1,6 @@
 'use client';
 
-import {
-  forwardRef,
-  useEffect,
-  useId,
-  useState,
-  type AriaRole,
-  type ReactNode,
-} from 'react';
+import { forwardRef, useEffect, useId, useState, type AriaRole, type ReactNode } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { ChevronRight, X } from 'lucide-react';
@@ -23,7 +16,7 @@ import { SOURCE_BLOCKS } from '@/lib/source-blocks';
 import { cn } from '@/lib/utils';
 
 const NAV_LINK =
-  'flex min-h-10 items-center rounded-[var(--radius)] px-2.5 py-1.5 text-[13px] text-sidebar-foreground outline-none transition-[background-color,color] duration-150 ease-out pointer-coarse:min-h-11 hover:bg-sidebar-accent hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring';
+  'flex min-h-10 items-center rounded-[var(--radius)] px-2.5 py-1.5 text-[13px] text-sidebar-foreground outline-none transition-[box-shadow] duration-(--duration-moderate) ease-out pointer-coarse:min-h-11 hover:bg-overlay-hover hover:text-foreground focus-visible:ring-[3px] focus-visible:ring-ring/50';
 
 function normalizePath(path: string) {
   if (path.length > 1 && path.endsWith('/')) return path.slice(0, -1);
@@ -45,10 +38,7 @@ function NavLink({
     <Link
       href={href}
       onClick={onNavigate}
-      className={cn(
-        NAV_LINK,
-        active && 'bg-sidebar-accent font-medium text-foreground',
-      )}
+      className={cn(NAV_LINK, active && 'bg-overlay-active font-medium text-foreground')}
       aria-current={active ? 'page' : undefined}
     >
       {children}
@@ -94,14 +84,14 @@ function NavSection({
         className={cn(
           'group flex min-h-10 w-full items-center gap-1.5 rounded-[var(--radius)] px-2.5 py-1.5 pointer-coarse:min-h-11',
           'text-left text-[10.5px] font-medium uppercase tracking-[0.12em] text-muted-foreground',
-          'outline-none transition-[background-color,color] duration-150 ease-out',
-          'hover:bg-sidebar-accent/70 hover:text-foreground',
-          'focus-visible:ring-2 focus-visible:ring-ring',
+          'outline-none transition-[box-shadow] duration-(--duration-moderate) ease-out',
+          'hover:bg-overlay-hover hover:text-foreground',
+          'focus-visible:ring-[3px] focus-visible:ring-ring/50',
         )}
       >
         <ChevronRight
           className={cn(
-            'size-3 shrink-0 opacity-70 transition-transform duration-200 ease-[cubic-bezier(0.2,0,0,1)]',
+            'size-3 shrink-0 opacity-70 transition-transform duration-(--duration-slow) ease-out',
             'motion-reduce:transition-none',
             open && 'rotate-90',
           )}
@@ -147,11 +137,11 @@ export const SiteSidebar = forwardRef<HTMLElement, SiteSidebarProps>(function Si
   ref,
 ) {
   const pathname = normalizePath(usePathname() ?? '');
-  const onComponents =
-    pathname.startsWith('/blocks/ui/') || pathname === '/blocks/command-palette';
+  const onComponents = pathname.startsWith('/blocks/ui/') || pathname === '/blocks/command-palette';
   const onAi = pathname === '/blocks/ai' || pathname.startsWith('/blocks/ai/');
   const onBillingDocs = pathname === '/blocks/billing' || pathname.startsWith('/blocks/billing/');
-  const onFoundations = pathname === '/' || pathname === '/blocks' || pathname === '/blocks/styling';
+  const onFoundations =
+    pathname === '/' || pathname === '/blocks' || pathname === '/blocks/styling' || pathname === '/blocks/create';
 
   const [foundationsOpen, setFoundationsOpen] = useState(true);
   // Collapse Components while browsing AI so the AI group is not buried under 30 primitives.
@@ -205,7 +195,7 @@ export const SiteSidebar = forwardRef<HTMLElement, SiteSidebarProps>(function Si
       <div className="registry-side-brand">
         <Link
           href="/"
-          className="flex min-h-10 min-w-0 items-center gap-2.5 outline-none pointer-coarse:min-h-11 focus-visible:ring-2 focus-visible:ring-ring"
+          className="flex min-h-10 min-w-0 items-center gap-2.5 outline-none pointer-coarse:min-h-11 focus-visible:ring-[3px] focus-visible:ring-ring/50"
           onClick={onNavigate}
           aria-label="Constructive Blocks home"
         >
@@ -241,6 +231,9 @@ export const SiteSidebar = forwardRef<HTMLElement, SiteSidebarProps>(function Si
             <NavLink href="/blocks/styling" active={pathname === '/blocks/styling'} onNavigate={onNavigate}>
               Styling
             </NavLink>
+            <NavLink href="/blocks/create" active={pathname === '/blocks/create'} onNavigate={onNavigate}>
+              Create
+            </NavLink>
           </div>
         </NavSection>
 
@@ -256,9 +249,7 @@ export const SiteSidebar = forwardRef<HTMLElement, SiteSidebarProps>(function Si
               </NavLink>
             </li>
             {featurePackLinks.map(({ href, label }) => {
-              const active =
-                pathname === href ||
-                (href === '/blocks/features/billing' && onBillingDocs);
+              const active = pathname === href || (href === '/blocks/features/billing' && onBillingDocs);
               return (
                 <li key={href}>
                   <NavLink active={active} href={href} onNavigate={onNavigate}>
@@ -269,22 +260,14 @@ export const SiteSidebar = forwardRef<HTMLElement, SiteSidebarProps>(function Si
             })}
             {applicationBlockLinks.map(({ href, label }) => (
               <li key={href}>
-                <NavLink
-                  active={pathname === href}
-                  href={href}
-                  onNavigate={onNavigate}
-                >
+                <NavLink active={pathname === href} href={href} onNavigate={onNavigate}>
                   {label}
                 </NavLink>
               </li>
             ))}
             {sourceBlockLinks.map(({ href, label }) => (
               <li key={href}>
-                <NavLink
-                  active={pathname === href}
-                  href={href}
-                  onNavigate={onNavigate}
-                >
+                <NavLink active={pathname === href} href={href} onNavigate={onNavigate}>
                   {label}
                 </NavLink>
               </li>
@@ -325,12 +308,7 @@ export const SiteSidebar = forwardRef<HTMLElement, SiteSidebarProps>(function Si
         </div>
 
         <div className="mt-3">
-          <NavSection
-            title="AI"
-            open={aiOpen}
-            onToggle={() => setAiOpen((v) => !v)}
-            count={aiLinks.length}
-          >
+          <NavSection title="AI" open={aiOpen} onToggle={() => setAiOpen((v) => !v)} count={aiLinks.length}>
             <ul className="flex flex-col gap-0.5">
               {aiLinks.map(({ href, label }) => {
                 const active = pathname === href;

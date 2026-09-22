@@ -42,10 +42,10 @@ const CollapsibleTrigger = React.forwardRef<
   CollapsibleTriggerProps
 >(({ className, asChild, nativeButton, children, render, ...props }, ref) => {
   const triggerClassName = cn(
-    "group/trigger flex w-full cursor-pointer items-center justify-between text-sm font-medium outline-none transition-colors",
-    "focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 focus-visible:ring-offset-background",
-    "disabled:pointer-events-none disabled:opacity-50",
-    "[&_[data-slot=collapsible-icon]]:transition-transform [&_[data-slot=collapsible-icon]]:duration-200",
+    "group/trigger flex w-full cursor-pointer items-center justify-between text-sm font-medium outline-none transition-[color,background-color,border-color,text-decoration-color,fill,stroke,box-shadow]",
+    "focus-visible:ring-[3px] focus-visible:ring-ring/50",
+    "disabled:pointer-events-none disabled:opacity-64",
+    "[&_[data-slot=collapsible-icon]]:transition-transform [&_[data-slot=collapsible-icon]]:duration-(--duration-slow)",
     "[&[data-panel-open]_[data-slot=collapsible-icon]]:rotate-180",
     className
   );
@@ -88,7 +88,7 @@ const CollapsiblePanel = React.forwardRef<HTMLDivElement, CollapsiblePanelProps>
         data-slot="collapsible-panel"
         className={cn(
           "h-[var(--collapsible-panel-height)] overflow-hidden text-sm",
-          "origin-top transition-[opacity,transform] duration-200 ease-out motion-reduce:transition-none",
+          "origin-top transition-[opacity,transform] duration-(--duration-slow) ease-out motion-reduce:transition-none",
           "data-[ending-style]:translate-y-1 data-[ending-style]:opacity-0 data-[starting-style]:translate-y-1 data-[starting-style]:opacity-0",
           className
         )}

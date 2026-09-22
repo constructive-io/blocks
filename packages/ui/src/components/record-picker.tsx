@@ -101,7 +101,7 @@ export function RecordPicker({
 								return (
 									<div
 										key={recordId}
-										className='hover:bg-muted/50 flex items-center space-x-3 rounded-md p-2 transition-colors'
+										className='hover:bg-muted/50 flex items-center space-x-3 rounded-md p-2'
 									>
 										<Checkbox
 											id={`record-${recordId}`}

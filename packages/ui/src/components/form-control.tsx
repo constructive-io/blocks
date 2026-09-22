@@ -43,7 +43,7 @@ function FormControl({ children, label, id, layout = 'stacked', error, className
             // Float label when focused
             'has-[input:focus-visible]:[&_[data-slot=form-control-label]]:translate-y-0',
             'has-[input:focus-visible]:[&_[data-slot=form-control-label]]:scale-[0.7]',
-            'has-[input:focus-visible]:[&_[data-slot=form-control-label]]:text-primary/80',
+            'has-[input:focus-visible]:[&_[data-slot=form-control-label]]:text-link',
             // Float label when there's a value
             'has-[input:not(:placeholder-shown)]:[&_[data-slot=form-control-label]]:translate-y-0',
             'has-[input:not(:placeholder-shown)]:[&_[data-slot=form-control-label]]:scale-[0.7]',
@@ -67,7 +67,7 @@ function FormControl({ children, label, id, layout = 'stacked', error, className
               // Small, subtle typography
               'origin-left text-[13px] leading-none font-normal text-muted-foreground/60 select-none',
               // Snappy transition
-              'transition-[transform,color] duration-200 ease-out motion-reduce:transition-none',
+              'transition-[transform,color] duration-(--duration-slow) ease-out motion-reduce:transition-none',
               // Error state
               error && 'text-destructive',
             )}

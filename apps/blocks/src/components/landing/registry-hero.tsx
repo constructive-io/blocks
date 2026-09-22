@@ -31,6 +31,9 @@ export function RegistryHero() {
 
   return (
     <section className="registry-hero">
+      {/* ::before/::after on .registry-hero carry the dot grid + glow, so the
+          grain overlay gets its own layer below the content (z-2). */}
+      <div className="grain pointer-events-none absolute inset-0" aria-hidden />
       <div className="registry-hero-grid">
         <div className="max-w-[600px]">
           <p className="registry-eyebrow">Constructive Blocks</p>
@@ -97,14 +100,13 @@ export function RegistryHero() {
               </div>
               <div className="hero-blk-body font-mono text-xs leading-7">
                 <div>
-                  <span className="text-muted-foreground">$</span>{' '}
-                  <span className="text-primary">pnpm</span> dlx shadcn@latest add{' '}
-                  <span className="text-emerald-500">@constructive/button</span>
+                  <span className="text-muted-foreground">$</span> <span className="text-primary">pnpm</span> dlx
+                  shadcn@latest add <span className="text-emerald-500">@constructive/button</span>
                 </div>
                 <div className="text-muted-foreground">resolving dependencies</div>
                 <div>
-                  <span className="text-emerald-500">✓</span>{' '}
-                  <span className="text-muted-foreground">added to</span> components/ui
+                  <span className="text-emerald-500">✓</span> <span className="text-muted-foreground">added to</span>{' '}
+                  components/ui
                 </div>
               </div>
             </div>

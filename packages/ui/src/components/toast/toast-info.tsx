@@ -20,18 +20,18 @@ export function showInfoToast(props: ToastInfoProps) {
 
 	return toast.custom((t) => (
 		<div
-			className='bg-background text-foreground border-primary/20 w-full rounded-md border px-4 py-3 shadow-lg
+			className='bg-background text-foreground border-primary/20 w-full rounded-lg border px-4 py-3 shadow-lg
 				sm:w-[var(--width)]'
 		>
 			<div className='flex gap-2'>
 				<div className='flex grow gap-3'>
 					<InfoIcon className='text-primary mt-0.5 shrink-0' size={16} aria-hidden='true' />
 					<div className='flex grow flex-col gap-1'>
-						<p className='text-primary text-sm font-medium'>{message}</p>
+						<p className='text-link text-sm font-medium'>{message}</p>
 						{description && <p className='text-muted-foreground text-sm'>{description}</p>}
 						{action && (
 							<div className='mt-2'>
-								<button className='text-primary text-sm font-medium hover:underline' onClick={action.onClick}>
+								<button className='text-link text-sm font-medium hover:underline' onClick={action.onClick}>
 									{action.label}
 								</button>
 							</div>

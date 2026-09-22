@@ -105,9 +105,19 @@ const [manifestSource, registrySource, indexSource, globalsSource] = await Promi
 const manifest = JSON.parse(manifestSource) as PackageManifest;
 const registry = JSON.parse(registrySource) as RegistryManifest;
 const rootModules = collectRootComponentModules(indexSource);
+// Data/config subpaths ship runtime modules that are not components: they are
+// exported from the package root already but carry no `./components/*` module
+// and have no registry item, so component parity does not apply to them.
+const nonComponentSubpaths = new Set([
+	'./globals.css',
+	'./theme',
+	'./theme-tuning',
+	'./theme-presets',
+	'./theme-dials-config',
+]);
 const packageModules = sorted(
 	Object.keys(manifest.exports)
-		.filter((subpath) => subpath.startsWith('./') && subpath !== './globals.css')
+		.filter((subpath) => subpath.startsWith('./') && !nonComponentSubpaths.has(subpath))
 		.map((subpath) => subpath.slice(2)),
 );
 const registryModules = sorted(

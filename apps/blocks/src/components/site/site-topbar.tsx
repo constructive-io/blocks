@@ -26,6 +26,7 @@ function crumbFor(path: string): string {
   if (p === '/') return 'Overview';
   if (p === '/blocks') return 'Setup';
   if (p === '/blocks/styling') return 'Styling';
+  if (p === '/blocks/create') return 'Create';
   if (p === '/blocks/features') return 'Feature packs';
   if (p.startsWith('/blocks/features/')) {
     const id = p.slice('/blocks/features/'.length);
@@ -195,7 +196,7 @@ export function SiteTopbar({ onMenuClick, menuButtonRef, menuExpanded }: SiteTop
         <nav aria-label="Breadcrumb" className="flex min-w-0 items-center gap-2 text-[13px] text-muted-foreground">
           <Link
             href="/"
-            className="hidden shrink-0 outline-none min-[380px]:inline-flex hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring"
+            className="hidden shrink-0 outline-none min-[380px]:inline-flex hover:text-foreground focus-visible:ring-[3px] focus-visible:ring-ring/50"
           >
             Registry
           </Link>

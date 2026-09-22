@@ -152,7 +152,7 @@ export const InetEditor: React.FC<InetEditorProps> = ({ value, onFinishedEditing
 							value={editingValue}
 							onChange={handleInputChange}
 							placeholder='192.168.1.1 or 10.0.0.0/24'
-							className='bg-muted/40 border-border/40 text-foreground w-full rounded-md border px-3 py-2 font-mono text-sm outline-none focus:border-primary/60 focus:ring-2 focus:ring-primary/20'
+							className='bg-muted/40 border-border/40 text-foreground w-full rounded-md border px-3 py-2 font-mono text-sm outline-none focus-visible:border-ring/60 focus-visible:ring-[3px] focus-visible:ring-ring/35'
 							autoFocus
 						/>
 					</div>

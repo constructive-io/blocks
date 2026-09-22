@@ -58,7 +58,7 @@ function AlertDialogOverlay({ className, ...props }: React.ComponentProps<typeof
 		<AlertDialogPrimitive.Backdrop
 			data-slot="alert-dialog-overlay"
 			className={cn(
-				'fixed inset-0 z-[var(--z-layer-modal-backdrop)] bg-black/80 transition-opacity duration-200 data-[ending-style]:opacity-0 data-[starting-style]:opacity-0',
+				'fixed inset-0 z-[var(--z-layer-modal-backdrop)] bg-black/32 backdrop-blur-sm transition-opacity duration-(--duration-slow) data-[ending-style]:opacity-0 data-[starting-style]:opacity-0',
 				className,
 			)}
 			{...props}
@@ -75,7 +75,7 @@ function AlertDialogContent({ className, children, ...props }: React.ComponentPr
 				className={cn(
 					`bg-background fixed top-1/2 left-1/2 z-[var(--z-layer-modal-content)] grid max-h-[calc(100%-2rem)] w-full max-w-[calc(100%-2rem)]
 					-translate-x-1/2 -translate-y-1/2 gap-4 overflow-y-auto rounded-xl border p-6 shadow-lg
-					transition-[opacity,scale] duration-200 data-[ending-style]:scale-95 data-[starting-style]:scale-95
+					transition-[opacity,scale] duration-(--duration-slow) data-[ending-style]:scale-95 data-[starting-style]:scale-95
 					data-[ending-style]:opacity-0 data-[starting-style]:opacity-0 sm:max-w-100`,
 					className,
 				)}

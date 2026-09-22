@@ -38,10 +38,10 @@ export default function BillingBlocksPage() {
               <Link
                 href={`/blocks/billing/${block.name}`}
                 className={cn(
-                  'group flex h-full min-h-20 flex-col rounded-xl border border-border/60 bg-card px-4 py-3.5',
-                  'outline-none transition-[background-color,border-color,box-shadow] duration-150 ease-out',
-                  'hover:border-border hover:bg-accent/40 hover:shadow-card',
-                  'focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background'
+                  'group flex h-full min-h-20 flex-col rounded-xl bg-card px-4 py-3.5 shadow-card',
+                  'outline-none transition-[background-color,box-shadow] duration-(--duration-moderate) ease-out',
+                  'hover:bg-accent/40 hover:shadow-card-lg',
+                  'focus-visible:ring-[3px] focus-visible:ring-ring/50'
                 )}
               >
                 <span className="flex items-start justify-between gap-3">
@@ -50,7 +50,7 @@ export default function BillingBlocksPage() {
                   </span>
                   <ArrowUpRightIcon
                     aria-hidden="true"
-                    className="mt-0.5 size-3.5 shrink-0 text-muted-foreground opacity-0 transition-opacity duration-150 group-hover:opacity-100 group-focus-visible:opacity-100"
+                    className="mt-0.5 size-3.5 shrink-0 text-muted-foreground opacity-0 transition-opacity duration-(--duration-moderate) group-hover:opacity-100 group-focus-visible:opacity-100"
                   />
                 </span>
                 <span className="mt-1 line-clamp-2 text-pretty text-xs leading-5 text-muted-foreground">

@@ -135,7 +135,7 @@ export default function CommandPalettePage() {
           <div className="grid gap-3 md:grid-cols-3">
             {doc.composition.boundaries.map((item) => (
               <article
-                className="rounded-xl border border-border/60 bg-card p-4 shadow-card"
+                className="rounded-xl bg-card p-4 shadow-card"
                 key={item.title}
               >
                 <h3 className="text-balance text-sm font-semibold">

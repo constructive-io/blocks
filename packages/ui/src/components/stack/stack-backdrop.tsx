@@ -51,7 +51,7 @@ export function StackBackdrop({ className, onClick, config: backdropConfig }: St
 				'fixed inset-0',
 				'cursor-pointer',
 				// Default overlay or custom className
-				backdropConfig?.className ?? 'bg-black/50',
+				backdropConfig?.className ?? 'bg-black/32',
 				// Optional blur
 				useBlur && 'backdrop-blur-sm',
 				className,

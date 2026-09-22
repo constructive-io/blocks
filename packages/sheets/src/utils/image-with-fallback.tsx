@@ -69,7 +69,17 @@ export function ImageWithFallback({
 			}
 
 			case 'loaded': {
-				return <img src={currentSrc!} alt={alt} className={cn('object-cover', className)} {...imgProps} />;
+				return (
+					<img
+						src={currentSrc!}
+						alt={alt}
+						className={cn(
+							'object-cover outline-1 -outline-offset-1 outline-black/10 dark:outline-white/10',
+							className,
+						)}
+						{...imgProps}
+					/>
+				);
 			}
 
 			case 'error': {

@@ -8,12 +8,14 @@ import type { BasePrimitiveName } from '@/lib/base-primitives';
 type DemoModule = Record<string, ComponentType>;
 
 const DEMO_MODULES = {
+  accordion: () => import('./demos/ui-accordion.demo'),
   alert: () => import('./demos/ui-alert.demo'),
   'alert-dialog': () => import('./demos/ui-alert-dialog.demo'),
   avatar: () => import('./demos/ui-avatar.demo'),
   badge: () => import('./demos/ui-badge.demo'),
   breadcrumb: () => import('./demos/ui-breadcrumb.demo'),
   button: () => import('./demos/ui-button.demo'),
+  'button-group': () => import('./demos/ui-button-group.demo'),
   card: () => import('./demos/ui-card.demo'),
   checkbox: () => import('./demos/ui-checkbox.demo'),
   collapsible: () => import('./demos/ui-collapsible.demo'),
@@ -21,6 +23,8 @@ const DEMO_MODULES = {
   drawer: () => import('./demos/ui-drawer.demo'),
   'dropdown-menu': () => import('./demos/ui-dropdown-menu.demo'),
   input: () => import('./demos/ui-input.demo'),
+  item: () => import('./demos/ui-item.demo'),
+  kbd: () => import('./demos/ui-kbd.demo'),
   label: () => import('./demos/ui-label.demo'),
   pagination: () => import('./demos/ui-pagination.demo'),
   popover: () => import('./demos/ui-popover.demo'),
@@ -32,10 +36,14 @@ const DEMO_MODULES = {
   separator: () => import('./demos/ui-separator.demo'),
   sheet: () => import('./demos/ui-sheet.demo'),
   skeleton: () => import('./demos/ui-skeleton.demo'),
+  slider: () => import('./demos/ui-slider.demo'),
+  spinner: () => import('./demos/ui-spinner.demo'),
   switch: () => import('./demos/ui-switch.demo'),
   table: () => import('./demos/ui-table.demo'),
   tabs: () => import('./demos/ui-tabs.demo'),
   textarea: () => import('./demos/ui-textarea.demo'),
+  toggle: () => import('./demos/ui-toggle.demo'),
+  'toggle-group': () => import('./demos/ui-toggle-group.demo'),
   tooltip: () => import('./demos/ui-tooltip.demo'),
 } satisfies Record<BasePrimitiveName, () => Promise<unknown>>;
 
@@ -62,12 +70,14 @@ export function getUiDemo(name: BasePrimitiveName, exportName = 'BlockDemo'): Co
 }
 
 export const UI_DEMOS = {
+  accordion: getUiDemo('accordion'),
   alert: getUiDemo('alert'),
   'alert-dialog': getUiDemo('alert-dialog'),
   avatar: getUiDemo('avatar'),
   badge: getUiDemo('badge'),
   breadcrumb: getUiDemo('breadcrumb'),
   button: getUiDemo('button'),
+  'button-group': getUiDemo('button-group'),
   card: getUiDemo('card'),
   checkbox: getUiDemo('checkbox'),
   collapsible: getUiDemo('collapsible'),
@@ -75,6 +85,8 @@ export const UI_DEMOS = {
   drawer: getUiDemo('drawer'),
   'dropdown-menu': getUiDemo('dropdown-menu'),
   input: getUiDemo('input'),
+  item: getUiDemo('item'),
+  kbd: getUiDemo('kbd'),
   label: getUiDemo('label'),
   pagination: getUiDemo('pagination'),
   popover: getUiDemo('popover'),
@@ -86,9 +98,13 @@ export const UI_DEMOS = {
   separator: getUiDemo('separator'),
   sheet: getUiDemo('sheet'),
   skeleton: getUiDemo('skeleton'),
+  slider: getUiDemo('slider'),
+  spinner: getUiDemo('spinner'),
   switch: getUiDemo('switch'),
   table: getUiDemo('table'),
   tabs: getUiDemo('tabs'),
   textarea: getUiDemo('textarea'),
+  toggle: getUiDemo('toggle'),
+  'toggle-group': getUiDemo('toggle-group'),
   tooltip: getUiDemo('tooltip'),
 } satisfies Record<BasePrimitiveName, ComponentType>;

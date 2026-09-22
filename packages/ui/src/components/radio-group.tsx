@@ -18,7 +18,7 @@ function Radio({ className, ...props }: RadioProps) {
 	return (
 		<RadioPrimitive.Root
 			className={cn(
-				'relative inline-flex size-10 shrink-0 items-center justify-center outline-none transition-transform duration-150 ease-out motion-safe:active:not-data-disabled:scale-[0.96] motion-reduce:transition-none pointer-coarse:size-11 data-disabled:cursor-not-allowed data-disabled:opacity-64 aria-invalid:[&_[data-slot=radio-control]]:border-destructive/36 focus-visible:[&_[data-slot=radio-control]]:ring-2 focus-visible:[&_[data-slot=radio-control]]:ring-ring focus-visible:[&_[data-slot=radio-control]]:ring-offset-1 focus-visible:[&_[data-slot=radio-control]]:ring-offset-background focus-visible:aria-invalid:[&_[data-slot=radio-control]]:border-destructive/64 focus-visible:aria-invalid:[&_[data-slot=radio-control]]:ring-destructive/48 dark:aria-invalid:[&_[data-slot=radio-control]]:ring-destructive/24',
+				'relative inline-flex size-4.5 shrink-0 items-center justify-center outline-none transition-transform duration-(--duration-moderate) ease-out before:absolute before:-inset-2 before:content-[\'\'] motion-safe:active:not-data-disabled:scale-[0.96] motion-reduce:transition-none sm:size-4 pointer-coarse:before:-inset-3 data-disabled:cursor-not-allowed data-disabled:opacity-64 aria-invalid:[&_[data-slot=radio-control]]:border-destructive/36 focus-visible:[&_[data-slot=radio-control]]:ring-[3px] focus-visible:[&_[data-slot=radio-control]]:ring-ring/50 focus-visible:aria-invalid:[&_[data-slot=radio-control]]:border-destructive/64 focus-visible:aria-invalid:[&_[data-slot=radio-control]]:ring-destructive/48 dark:aria-invalid:[&_[data-slot=radio-control]]:ring-destructive/24',
 				className,
 			)}
 			data-slot="radio"
@@ -31,7 +31,7 @@ function Radio({ className, ...props }: RadioProps) {
 			/>
 			<RadioPrimitive.Indicator
 				keepMounted
-				className="absolute flex size-4.5 items-center justify-center rounded-full transition-[opacity,scale,filter] duration-300 ease-[cubic-bezier(0.2,0,0,1)] before:size-2 before:rounded-full before:bg-primary-foreground data-unchecked:scale-[0.25] data-unchecked:opacity-0 data-unchecked:blur-[4px] data-checked:bg-primary motion-reduce:transition-none sm:size-4 sm:before:size-1.5"
+				className="absolute flex size-4.5 items-center justify-center rounded-full transition-[opacity,scale,filter] duration-(--duration-slow) ease-out before:size-2 before:rounded-full before:bg-primary-foreground data-unchecked:scale-[0.25] data-unchecked:opacity-0 data-unchecked:blur-[4px] data-checked:bg-primary motion-reduce:transition-none sm:size-4 sm:before:size-1.5"
 				data-slot="radio-indicator"
 			/>
 		</RadioPrimitive.Root>

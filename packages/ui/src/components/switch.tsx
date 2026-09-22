@@ -18,8 +18,8 @@ function Switch({ className, ...props }: SwitchProps) {
 					before:border-transparent before:bg-input before:shadow-xs before:transition-[background-color,box-shadow]
 					data-[checked]:before:bg-primary dark:data-[unchecked]:before:bg-input/80
 					focus-visible:before:border-ring focus-visible:before:ring-[3px] focus-visible:before:ring-ring/50
-					transition-transform duration-150 ease-out motion-safe:active:not-data-disabled:scale-[0.96]
-					motion-reduce:transition-none pointer-coarse:h-11 data-[disabled]:cursor-not-allowed data-[disabled]:opacity-50`,
+					transition-transform duration-(--duration-moderate) ease-out motion-safe:active:not-data-disabled:scale-[0.96]
+					motion-reduce:transition-none pointer-coarse:h-11 data-[disabled]:cursor-not-allowed data-[disabled]:opacity-64`,
 				className,
 			)}
 			{...props}

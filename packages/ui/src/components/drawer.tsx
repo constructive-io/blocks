@@ -29,7 +29,7 @@ function DrawerOverlay({ className, ...props }: React.ComponentProps<typeof Draw
 		<DrawerPrimitive.Overlay
 			data-slot="drawer-overlay"
 			className={cn(
-				`fixed inset-0 z-[var(--z-layer-modal-backdrop)] bg-black/50
+				`fixed inset-0 z-[var(--z-layer-modal-backdrop)] bg-black/32 backdrop-blur-sm
 				data-[state=open]:animate-[fade-in_200ms_ease-out] data-[state=closed]:animate-[fade-out_150ms_ease-in]
 				motion-reduce:animate-none`,
 				className,
@@ -51,10 +51,10 @@ function DrawerContent({ className, children, ...props }: React.ComponentProps<t
 					'group/drawer-content bg-background fixed z-[var(--z-layer-modal-content)] flex h-auto flex-col',
 					`data-[vaul-drawer-direction=top]:inset-x-0 data-[vaul-drawer-direction=top]:top-0
 					data-[vaul-drawer-direction=top]:mb-24 data-[vaul-drawer-direction=top]:max-h-[80vh]
-					data-[vaul-drawer-direction=top]:rounded-b-lg data-[vaul-drawer-direction=top]:border-b`,
+					data-[vaul-drawer-direction=top]:rounded-b-xl data-[vaul-drawer-direction=top]:border-b`,
 					`data-[vaul-drawer-direction=bottom]:inset-x-0 data-[vaul-drawer-direction=bottom]:bottom-0
 					data-[vaul-drawer-direction=bottom]:mt-24 data-[vaul-drawer-direction=bottom]:max-h-[80vh]
-					data-[vaul-drawer-direction=bottom]:rounded-t-lg data-[vaul-drawer-direction=bottom]:border-t`,
+					data-[vaul-drawer-direction=bottom]:rounded-t-xl data-[vaul-drawer-direction=bottom]:border-t`,
 					`data-[vaul-drawer-direction=right]:inset-y-0 data-[vaul-drawer-direction=right]:right-0
 					data-[vaul-drawer-direction=right]:border-l`,
 					`data-[vaul-drawer-direction=left]:inset-y-0 data-[vaul-drawer-direction=left]:left-0

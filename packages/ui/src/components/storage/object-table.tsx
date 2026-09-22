@@ -64,7 +64,7 @@ function SortableHeader({ column, label, sort, onSortChange, className }: Sortab
         type="button"
         onClick={() => onSortChange({ column, direction: nextDirection })}
         aria-label={`Sort by ${label}`}
-        className="-mx-1 inline-flex items-center gap-1 rounded px-1 outline-none hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring"
+        className="-mx-1 inline-flex items-center gap-1 rounded px-1 outline-none hover:text-foreground focus-visible:ring-[3px] focus-visible:ring-ring/50"
       >
         {label}
         {isActive && <CaretIcon className="size-3.5" aria-hidden />}
@@ -187,7 +187,7 @@ export function ObjectTable({
                     <button
                       type="button"
                       aria-label={`Open details for ${displayName}`}
-                      className="flex w-full min-w-0 items-center gap-2 rounded-sm text-left outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+                      className="flex w-full min-w-0 items-center gap-2 rounded-sm text-left outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50"
                       onClick={(event) => {
                         event.stopPropagation();
                         onOpenObject(object);
@@ -293,7 +293,7 @@ export function ObjectTableSkeleton({ rows = 6, className }: ObjectTableSkeleton
           // Skeleton rows are positional and static; index key is acceptable here.
           <TableRow key={index} className="hover:bg-transparent">
             <TableCell>
-              <Skeleton className="size-4 rounded-[4px]" />
+              <Skeleton className="size-4 rounded-xs" />
             </TableCell>
             <TableCell>
               <div className="flex items-center gap-2">

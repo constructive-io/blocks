@@ -29,10 +29,9 @@ function OrgChartNodeComponent({ id, data, positionAbsoluteX }: NodeProps<OrgCha
 		<div
 			style={{ width: data.isCompact ? COMPACT_NODE_WIDTH : NODE_WIDTH }}
 			className={cn(
-				'group bg-card dark:bg-muted relative rounded-xl border shadow-sm transition-[border-color,box-shadow,scale] duration-200 motion-reduce:transition-none',
-				'border-border/60',
+				'group bg-card dark:bg-muted relative rounded-lg shadow-card transition-[box-shadow,scale] duration-(--duration-slow) motion-reduce:transition-none',
 				isSelected && 'ring-primary ring-2 ring-offset-2 dark:ring-offset-zinc-900',
-				isDropTarget && 'ring-primary/50 border-primary scale-105 ring-2',
+				isDropTarget && 'ring-primary/50 scale-105 ring-2',
 			)}
 		>
 			{!data.isRoot && (
@@ -44,7 +43,7 @@ function OrgChartNodeComponent({ id, data, positionAbsoluteX }: NodeProps<OrgCha
 					{data.avatarUrl && (
 						<AvatarImage src={data.avatarUrl} alt={data.displayName ?? ''} />
 					)}
-					<AvatarFallback className='bg-primary/10 text-primary text-xs font-medium'>
+					<AvatarFallback className='bg-primary/10 text-link text-xs font-medium'>
 						{getInitials(data.displayName)}
 					</AvatarFallback>
 				</Avatar>
@@ -65,7 +64,7 @@ function OrgChartNodeComponent({ id, data, positionAbsoluteX }: NodeProps<OrgCha
 								aria-label={reportCountLabel}
 								variant='secondary'
 								className={cn(
-									'absolute inset-0 flex size-7 items-center justify-center p-0 text-[10px] transition-opacity duration-150 ease-out motion-reduce:transition-none',
+									'absolute inset-0 flex size-7 items-center justify-center p-0 text-[10px] transition-opacity duration-(--duration-moderate) ease-out motion-reduce:transition-none',
 									editable && 'group-hover:opacity-0 group-focus-within:opacity-0 pointer-coarse:opacity-0',
 									isMenuOpen && 'opacity-0',
 								)}
@@ -76,7 +75,7 @@ function OrgChartNodeComponent({ id, data, positionAbsoluteX }: NodeProps<OrgCha
 						{editable && (
 							<div
 								className={cn(
-									'nodrag nopan absolute inset-0 opacity-0 transition-opacity duration-150 ease-out group-hover:opacity-100 group-focus-within:opacity-100 pointer-coarse:opacity-100 motion-reduce:transition-none',
+									'nodrag nopan absolute inset-0 opacity-0 transition-opacity duration-(--duration-moderate) ease-out group-hover:opacity-100 group-focus-within:opacity-100 pointer-coarse:opacity-100 motion-reduce:transition-none',
 									data.isCompact && 'opacity-100',
 									isMenuOpen && 'opacity-100',
 								)}

@@ -20,22 +20,24 @@ export function CatalogCard({ primitive, className, showPreview = true }: Catalo
   return (
     <div
       className={cn(
-        'group/card relative flex h-full flex-col overflow-hidden rounded-[calc(var(--radius)+4px)] border border-border bg-card shadow-sm',
-        'transition-[border-color,box-shadow] duration-150 ease-out',
-        'hover:border-[color:var(--border-strong)] hover:shadow-md',
+        'group/card relative flex h-full flex-col overflow-hidden rounded-xl bg-card shadow-card',
+        'transition-shadow duration-(--duration-fast) ease-out',
+        'hover:shadow-card-lg',
         className,
       )}
     >
-      <div className={cn('flex flex-col gap-1', showPreview ? 'px-3.5 py-3' : 'p-3.5')}>
+      <div className={cn('flex flex-col gap-1 p-5', showPreview ? 'pb-4' : undefined)}>
         <h3 className="text-[13px] font-semibold tracking-tight text-foreground">
           <Link
             href={href}
-            className="outline-none before:absolute before:inset-0 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+            className="outline-none before:absolute before:inset-0 focus-visible:ring-[3px] focus-visible:ring-ring/50"
           >
             {primitive.title}
           </Link>
         </h3>
-        <p className="line-clamp-2 text-pretty text-[12.5px] leading-5 text-muted-foreground">{primitive.description}</p>
+        <p className="line-clamp-2 text-pretty text-[12.5px] leading-5 text-muted-foreground">
+          {primitive.description}
+        </p>
       </div>
 
       {showPreview ? (
@@ -45,7 +47,7 @@ export function CatalogCard({ primitive, className, showPreview = true }: Catalo
             'bg-[color-mix(in_oklch,var(--card),var(--muted)_30%)]',
           )}
         >
-          <div className="origin-center translate-y-0.5 scale-[0.84] transition-transform duration-200 ease-out group-hover/card:translate-y-0">
+          <div className="origin-center translate-y-0.5 scale-[0.84] transition-transform duration-(--duration-slow) ease-out group-hover/card:translate-y-0">
             <Demo />
           </div>
         </div>

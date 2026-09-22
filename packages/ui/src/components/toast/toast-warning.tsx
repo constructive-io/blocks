@@ -20,7 +20,7 @@ export function showWarningToast(props: ToastWarningProps) {
 
 	return toast.custom((t) => (
 		<div
-			className='bg-background text-foreground w-full rounded-md border border-amber-200/60 px-4 py-3 shadow-lg
+			className='bg-background text-foreground w-full rounded-lg border border-amber-200/60 px-4 py-3 shadow-lg
 				sm:w-[var(--width)] dark:border-amber-800/50'
 		>
 			<div className='flex gap-2'>

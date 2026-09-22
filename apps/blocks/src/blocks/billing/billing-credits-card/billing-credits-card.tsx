@@ -156,7 +156,7 @@ function CreditsHeader({
             <TooltipTrigger asChild>
               <button
                 type="button"
-                className="inline-flex size-8 shrink-0 items-center justify-center rounded-md text-muted-foreground outline-none transition-colors hover:bg-muted/60 hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring"
+                className="inline-flex size-8 shrink-0 items-center justify-center rounded-md text-muted-foreground outline-none transition-[color,background-color,border-color,text-decoration-color,fill,stroke,box-shadow] hover:bg-muted/60 hover:text-foreground focus-visible:ring-[3px] focus-visible:ring-ring/50"
                 aria-label={messages.auditTitle}
               >
                 <CircleHelpIcon className="size-3.5" aria-hidden="true" />
@@ -352,7 +352,7 @@ function CreditLotRow({
           <div
             className={cn(
               'group/credit-progress min-w-0 cursor-help py-2 outline-none',
-              'focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background'
+              'focus-visible:ring-[3px] focus-visible:ring-ring/50'
             )}
             tabIndex={0}
             role="progressbar"
@@ -492,9 +492,9 @@ function BalanceGrants({
       <CollapsibleTrigger
         className={cn(
           'min-h-10 rounded-md px-2 py-1.5 text-xs font-medium text-muted-foreground',
-          'transition-colors duration-150 ease-[cubic-bezier(0.23,1,0.32,1)]',
+          'transition-colors duration-(--duration-moderate) ease-[cubic-bezier(0.23,1,0.32,1)]',
           'hover:bg-muted/50 hover:text-foreground',
-          '[&_[data-slot=collapsible-icon]]:duration-200',
+          '[&_[data-slot=collapsible-icon]]:duration-(--duration-slow)',
           '[&_[data-slot=collapsible-icon]]:ease-[cubic-bezier(0.23,1,0.32,1)]',
           'motion-reduce:transition-none'
         )}
@@ -506,10 +506,10 @@ function BalanceGrants({
       <CollapsibleContent
         className={cn(
           'min-w-0 origin-top',
-          'duration-200 ease-[cubic-bezier(0.23,1,0.32,1)]',
+          'duration-(--duration-slow) ease-[cubic-bezier(0.23,1,0.32,1)]',
           'data-[starting-style]:-translate-y-1 data-[starting-style]:opacity-0',
           'data-[ending-style]:-translate-y-1 data-[ending-style]:opacity-0',
-          'motion-reduce:transition-[opacity] motion-reduce:duration-150',
+          'motion-reduce:transition-[opacity] motion-reduce:duration-(--duration-moderate)',
           'motion-reduce:data-[starting-style]:translate-y-0',
           'motion-reduce:data-[ending-style]:translate-y-0'
         )}

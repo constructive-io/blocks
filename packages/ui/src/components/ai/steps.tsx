@@ -67,8 +67,8 @@ function Steps({
 		>
 			<CollapsibleTrigger
 				className={cn(
-					'group flex w-fit max-w-full items-center gap-1.5 rounded-md px-1.5 py-1 text-[13px]',
-					'text-muted-foreground transition-colors duration-150 hover:bg-accent hover:text-foreground',
+					'group flex w-fit max-w-full items-center gap-1.5 rounded-md px-1.5 py-1.5 text-[13px]',
+					'text-muted-foreground hover:bg-accent hover:text-foreground',
 				)}
 			>
 				<span className="min-w-0 truncate font-medium">{title}</span>

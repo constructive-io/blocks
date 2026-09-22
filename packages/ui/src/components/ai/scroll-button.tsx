@@ -42,12 +42,12 @@ function ScrollButton({
 				'absolute bottom-4 left-1/2 z-10 flex size-9 -translate-x-1/2 items-center justify-center',
 				// Single ring — no pseudo inset, no outline Button double-edge
 				'rounded-full border border-border/80 bg-background/95 text-muted-foreground',
-				'shadow-md shadow-black/10 backdrop-blur-md',
+				'shadow-lg backdrop-blur-md',
 				'dark:border-border dark:bg-card/90 dark:shadow-black/40',
 				// Interaction
-				'outline-none transition-[transform,background-color,color,box-shadow,border-color] duration-150 ease-out',
+				'outline-none transition-[transform,background-color,color,box-shadow,border-color] duration-(--duration-moderate) ease-out',
 				'hover:border-border hover:bg-accent hover:text-foreground hover:shadow-lg',
-				'focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background',
+				'focus-visible:ring-[3px] focus-visible:ring-ring/50',
 				'motion-safe:active:scale-[0.96]',
 				// Enter
 				'animate-[fade-in_150ms_ease-out] motion-reduce:animate-none',

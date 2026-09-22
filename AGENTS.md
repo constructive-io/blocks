@@ -26,3 +26,14 @@ public registry and binds to each host through an explicit adapter.
 
 Use Node 24 LTS and pnpm 10.28.0, then run `pnpm check`, `pnpm build:pages`, and
 `pnpm pack:local` before release-related changes.
+
+## Local development
+
+- Docs app: `pnpm --filter blocks dev` serves `http://localhost:3005` (the
+  `predev` hook builds packages and checks generated demo source first).
+- Open the dev server directly. Reverse proxies that do not forward Next's dev
+  WebSocket/streaming requests (e.g. agent browser-preview proxies) return
+  `502` on `/_next/webpack-hmr`, the client never hydrates, and client-only
+  pages such as `/blocks/create` stay on their server-rendered skeleton.
+- Storybook for `@constructive-io/ui`: `pnpm --filter @constructive-io/ui sb`
+  (`http://localhost:6007`; the Kitchen Sink story carries the DialKit tuning panel).

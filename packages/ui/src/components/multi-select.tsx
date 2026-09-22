@@ -5,6 +5,7 @@ import { cva, type VariantProps } from 'class-variance-authority';
 import { CheckIcon, ChevronDown, SearchIcon, XCircle, XIcon } from 'lucide-react';
 
 import { cn } from '../lib/utils';
+import { FluidHighlight } from '../lib/motion/fluid-highlight';
 import { Badge } from './badge';
 import { Input } from './input';
 import { Popover, PopoverContent, PopoverTrigger } from './popover';
@@ -265,8 +266,8 @@ function OptionItem({
 			tabIndex={-1}
 			className={cn(
 				'relative flex cursor-pointer select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none',
-				'data-[highlighted=true]:bg-accent data-[highlighted=true]:text-accent-foreground',
-				'data-[disabled=true]:pointer-events-none data-[disabled=true]:opacity-50',
+				'data-[highlighted=true]:text-accent-foreground',
+				'data-[disabled=true]:pointer-events-none data-[disabled=true]:opacity-64',
 			)}
 			onClick={(e) => {
 				e.preventDefault();
@@ -665,10 +666,11 @@ export const MultiSelect = React.forwardRef<MultiSelectRef, MultiSelectProps>(
 		return (
 			<>
 				<Popover open={isPopoverOpen} onOpenChange={setIsPopoverOpen}>
-					<div id={triggerDescriptionId} className='sr-only'>
+					{/* inline width: Field's `*:w-full` can override sr-only's 1px width and grow ancestor scrollWidth */}
+					<div id={triggerDescriptionId} className='sr-only' style={{ width: 1 }}>
 						Multi-select dropdown. Use arrow keys to navigate, Enter to select, and Escape to close.
 					</div>
-					<div id={selectedCountId} className='sr-only' aria-live='polite'>
+					<div id={selectedCountId} className='sr-only' aria-live='polite' style={{ width: 1 }}>
 						{selectedValues.length === 0
 							? 'No options selected'
 							: `${selectedValues.length} option${selectedValues.length === 1 ? '' : 's'} selected: ${selectedValues
@@ -697,10 +699,10 @@ export const MultiSelect = React.forwardRef<MultiSelectRef, MultiSelectProps>(
 								getAllOptions().length
 							} options selected. ${placeholder}`}
 							className={cn(
-								`border-input/70 focus-visible:border-primary/60 focus-visible:ring-primary/20 flex items-center
+								`border-input/70 focus-visible:border-ring/60 focus-visible:ring-ring/35 flex items-center
 									justify-between rounded-md border bg-transparent pr-1 pl-2 shadow-xs transition-[color,box-shadow,scale]
-									duration-150 ease-out outline-none focus-visible:ring-[3px] motion-safe:active:not-disabled:scale-[0.96]
-									motion-reduce:transition-[color,box-shadow] disabled:pointer-events-none disabled:opacity-50`,
+									duration-(--duration-moderate) ease-out outline-none focus-visible:ring-[3px] motion-safe:active:not-disabled:scale-[0.96]
+									motion-reduce:transition-[color,box-shadow] disabled:pointer-events-none disabled:opacity-64`,
 								singleLine ? 'h-8 min-h-8 py-0.5 text-xs' : 'h-auto min-h-10 py-2 text-sm',
 								autoSize && 'w-auto',
 								!autoSize && 'w-full',
@@ -782,7 +784,7 @@ export const MultiSelect = React.forwardRef<MultiSelectRef, MultiSelectProps>(
 																}
 															}}
 															aria-label={`Remove ${option.label} from selection`}
-															className='-m-0.5 ml-2 h-4 w-4 cursor-pointer rounded-sm p-0.5 hover:bg-white/20 focus:ring-1 focus:ring-white/50 focus:outline-none'
+															className="relative -my-1.5 -mr-1.5 ml-1 flex h-7 w-7 cursor-pointer items-center justify-center rounded-sm p-2 after:absolute after:-inset-1 after:content-[''] hover:bg-white/20 focus-visible:ring-[3px] focus-visible:ring-white/50 focus-visible:outline-none"
 														>
 															<XCircle className={cn('h-3 w-3', responsiveSettings.compactMode && 'h-2.5 w-2.5')} />
 														</div>
@@ -816,8 +818,8 @@ export const MultiSelect = React.forwardRef<MultiSelectRef, MultiSelectProps>(
 														}
 													}}
 													aria-label='Clear extra selected options'
-													className='-m-0.5 ml-2 h-4 w-4 cursor-pointer rounded-sm p-0.5 hover:bg-white/20 focus:ring-1
-														focus:ring-white/50 focus:outline-none'
+													className="relative -my-1.5 -mr-1.5 ml-1 flex h-7 w-7 cursor-pointer items-center justify-center rounded-sm p-2 after:absolute after:-inset-1 after:content-[''] hover:bg-white/20 focus-visible:ring-[3px]
+														focus-visible:ring-white/50 focus-visible:outline-none"
 												>
 													<XCircle className={cn('h-3 w-3', responsiveSettings.compactMode && 'h-2.5 w-2.5')} />
 												</div>
@@ -840,9 +842,9 @@ export const MultiSelect = React.forwardRef<MultiSelectRef, MultiSelectProps>(
 												}
 											}}
 											aria-label={`Clear all ${selectedValues.length} selected options`}
-											className='text-muted-foreground hover:text-foreground focus:ring-ring mx-2 flex h-4 w-4
-												cursor-pointer items-center justify-center rounded-sm focus:ring-2 focus:ring-offset-1
-												focus:outline-none'
+											className="text-muted-foreground hover:text-foreground relative mx-1 -my-1.5 flex h-7 w-7
+												cursor-pointer items-center justify-center rounded-sm after:absolute after:-inset-1 after:content-[''] focus-visible:ring-[3px] focus-visible:ring-ring/50
+												focus-visible:outline-none"
 										>
 											<XIcon className='h-4 w-4' />
 										</div>
@@ -852,7 +854,7 @@ export const MultiSelect = React.forwardRef<MultiSelectRef, MultiSelectProps>(
 								</div>
 							) : (
 								<div className='mx-auto flex w-full items-center justify-between'>
-									<span className='text-muted-foreground mx-1 text-sm'>{placeholder}</span>
+									<span className='text-subtle-foreground mx-1 text-sm'>{placeholder}</span>
 									<ChevronDown className='text-muted-foreground mx-1 h-4 cursor-pointer' />
 								</div>
 							)}
@@ -885,7 +887,7 @@ export const MultiSelect = React.forwardRef<MultiSelectRef, MultiSelectProps>(
 										value={searchValue}
 										onChange={(e) => setSearchValue(e.target.value)}
 										aria-label='Search through available options'
-										className='placeholder:text-muted-foreground flex h-10 w-full rounded-md bg-transparent py-3 text-sm outline-none disabled:cursor-not-allowed disabled:opacity-50'
+										className='placeholder:text-subtle-foreground flex h-10 w-full rounded-md bg-transparent py-3 text-sm outline-none disabled:cursor-not-allowed disabled:opacity-64'
 									/>
 								</div>
 							)}
@@ -895,8 +897,9 @@ export const MultiSelect = React.forwardRef<MultiSelectRef, MultiSelectProps>(
 								ref={listRef}
 								role='listbox'
 								aria-multiselectable='true'
-								className='multiselect-scrollbar scrollbar-neutral-thin overscroll-contain min-h-0 flex-1 overflow-y-auto p-1'
+								className='multiselect-scrollbar scrollbar-neutral-thin relative overscroll-contain min-h-0 flex-1 overflow-y-auto p-1'
 							>
+								<FluidHighlight />
 								{totalFilteredCount === 0 ? (
 									<div className='text-muted-foreground py-6 text-center text-sm'>
 										{emptyIndicator || 'No results found.'}

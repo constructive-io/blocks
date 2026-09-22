@@ -51,7 +51,7 @@ function AiImage({
 			alt={alt}
 			className={cn(
 				'max-h-80 max-w-full rounded-lg object-contain',
-				'outline outline-1 outline-black/10 dark:outline-white/10',
+				'outline outline-1 -outline-offset-1 outline-black/10 dark:outline-white/10',
 				className,
 			)}
 			{...props}

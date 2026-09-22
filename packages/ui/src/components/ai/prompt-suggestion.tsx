@@ -19,10 +19,10 @@ function PromptSuggestion({ children, onClick, className }: PromptSuggestionProp
 			className={cn(
 				'inline-flex max-w-full items-center rounded-full border border-border bg-background px-3 py-1.5',
 				'text-left text-[13px] text-foreground shadow-xs',
-				'transition-[background-color,box-shadow,transform] duration-150 ease-out',
-				'hover:bg-accent hover:shadow-sm',
+				'transition-[background-color,box-shadow,transform] duration-(--duration-moderate) ease-out',
+				'hover:bg-accent hover:shadow-card',
 				'motion-safe:active:scale-[0.98]',
-				'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+				'focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50',
 				className,
 			)}
 		>

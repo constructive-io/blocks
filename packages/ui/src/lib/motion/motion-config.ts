@@ -1,5 +1,7 @@
 import type { Transition } from 'motion/react';
 
+import type { SpringTier } from './tuning';
+
 /**
  * Shared motion configuration for consistent animations across the app.
  * Based on practical animation tips from https://emilkowal.ski/ui/7-practical-animation-tips
@@ -10,7 +12,22 @@ import type { Transition } from 'motion/react';
  * 3. Use custom easing curves for more impactful animations
  * 4. Make animations origin-aware when possible
  * 5. Use blur to smooth transitions when needed
+ * 6. Exits run one tier faster than enters — dismissal should feel instant
  */
+
+// =============================================================================
+// Spring Tiers (tunable via the DialKit panel in Storybook)
+// =============================================================================
+
+/** duration+bounce tier → a motion spring transition. Reads the tuning store so Storybook dials retune live. */
+export function tierSpring(tier: SpringTier): Transition {
+	return { type: 'spring', visualDuration: tier.duration, bounce: tier.bounce };
+}
+
+/** Crisp exit tween for the same tier — always faster than the enter spring. */
+export function tierExit(tier: SpringTier): Transition {
+	return { type: 'tween', duration: tier.exitDuration, ease: easings.physicalExit };
+}
 
 // =============================================================================
 // Easing Curves
@@ -69,12 +86,13 @@ export const durations = {
 } as const;
 
 // =============================================================================
-// Spring Presets
+// Spring Presets (stiffness/damping form)
 // =============================================================================
 
 /**
  * Spring configurations for physics-based animations.
- * These create more natural, organic motion.
+ * Prefer `tierSpring`/`tierExit` for new code — these stiffness/damping presets remain for
+ * consumers that need mass/spring-physics control (e.g. dock magnification).
  */
 export const springs = {
 	/** Snappy spring - good for quick interactions */

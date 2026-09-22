@@ -9,6 +9,7 @@ import {
 } from "lucide-react";
 
 import { useFloatingOverlayPortalProps } from "@constructive-io/ui/portal";
+import { FluidHighlight } from "../lib/motion/fluid-highlight";
 import { cn } from "../lib/utils";
 
 type SelectProps = Omit<SelectPrimitive.Root.Props<string>, "onValueChange"> & {
@@ -44,7 +45,7 @@ const SelectTrigger = React.forwardRef<HTMLButtonElement, SelectTriggerProps>(
       <SelectPrimitive.Trigger
         ref={ref}
         className={cn(
-          "relative inline-flex min-h-9 w-full min-w-36 select-none items-center justify-between gap-2 rounded-lg border border-input bg-background bg-clip-padding px-[calc(--spacing(3)-1px)] text-left text-base outline-none ring-ring/24 transition-shadow before:pointer-events-none before:absolute before:inset-0 before:rounded-[calc(var(--radius-lg)-1px)] not-data-disabled:not-focus-visible:not-aria-invalid:not-data-pressed:before:shadow-[0_1px_--theme(--color-black/4%)] pointer-coarse:min-h-11 sm:pointer-coarse:min-h-11 focus-visible:border-ring focus-visible:ring-[3px] aria-invalid:border-destructive/36 focus-visible:aria-invalid:border-destructive/64 focus-visible:aria-invalid:ring-destructive/16 data-disabled:pointer-events-none data-disabled:opacity-64 sm:min-h-8 sm:text-sm dark:bg-input/32 dark:not-in-data-[slot=group]:bg-clip-border dark:aria-invalid:ring-destructive/24 dark:not-data-disabled:not-focus-visible:not-aria-invalid:not-data-pressed:before:shadow-[0_-1px_--theme(--color-white/8%)] [&_svg:not([class*='opacity-'])]:opacity-80 [&_svg:not([class*='size-'])]:size-4.5 sm:[&_svg:not([class*='size-'])]:size-4 [&_svg]:pointer-events-none [&_svg]:shrink-0 [[data-disabled],:focus-visible,[aria-invalid],[data-pressed]]:shadow-none",
+          "relative inline-flex min-h-9 w-full min-w-36 select-none items-center justify-between gap-2 rounded-md border border-input bg-background bg-clip-padding px-[calc(--spacing(3)-1px)] text-left text-base outline-none ring-ring/35 transition-shadow before:pointer-events-none before:absolute before:inset-0 before:rounded-[calc(var(--radius-md)-1px)] not-data-disabled:not-focus-visible:not-aria-invalid:not-data-pressed:before:shadow-[0_1px_--theme(--color-black/4%)] pointer-coarse:min-h-11 sm:pointer-coarse:min-h-11 focus-visible:border-ring/60 focus-visible:ring-[3px] aria-invalid:border-destructive/36 focus-visible:aria-invalid:border-destructive/64 focus-visible:aria-invalid:ring-destructive/16 data-disabled:pointer-events-none data-disabled:opacity-64 sm:min-h-8 sm:text-sm dark:bg-input/32 dark:not-in-data-[slot=group]:bg-clip-border dark:aria-invalid:ring-destructive/24 dark:not-data-disabled:not-focus-visible:not-aria-invalid:not-data-pressed:before:shadow-[0_-1px_--theme(--color-white/8%)] [&_svg:not([class*='opacity-'])]:opacity-80 [&_svg:not([class*='size-'])]:size-4.5 sm:[&_svg:not([class*='size-'])]:size-4 [&_svg]:pointer-events-none [&_svg]:shrink-0 [[data-disabled],:focus-visible,[aria-invalid],[data-pressed]]:shadow-none",
           size === "sm" &&
             "min-h-8 gap-1.5 px-[calc(--spacing(2.5)-1px)] sm:min-h-7",
           size === "lg" && "min-h-10 sm:min-h-9",
@@ -63,22 +64,20 @@ const SelectTrigger = React.forwardRef<HTMLButtonElement, SelectTriggerProps>(
 );
 SelectTrigger.displayName = "SelectTrigger";
 
-type SelectValueProps = React.ComponentProps<typeof SelectPrimitive.Value> & {
-  /** Text to display when no value is selected */
-  placeholder?: string;
-};
+type SelectValueProps = React.ComponentProps<typeof SelectPrimitive.Value>;
 
 function SelectValue({ className, placeholder, children, ...props }: SelectValueProps) {
   return (
     <SelectPrimitive.Value
       className={cn(
-        "flex-1 truncate data-placeholder:text-muted-foreground",
+        "flex-1 truncate data-placeholder:text-subtle-foreground",
         className,
       )}
       data-slot="select-value"
+      placeholder={placeholder}
       {...props}
     >
-      {children ?? ((value: string | null) => value ?? placeholder ?? "")}
+      {children}
     </SelectPrimitive.Value>
   );
 }
@@ -109,7 +108,7 @@ function SelectPopup({
         sideOffset={sideOffset}
       >
         <SelectPrimitive.Popup
-          className="origin-(--transform-origin) scale-100 opacity-100 transition-[scale,opacity] duration-150 data-[side=none]:transition-none data-starting-style:scale-98 data-ending-style:scale-98 data-starting-style:opacity-0 data-ending-style:opacity-0 motion-reduce:transition-none"
+          className="origin-(--transform-origin) scale-100 opacity-100 transition-[scale,opacity] duration-(--duration-moderate) data-[side=none]:transition-none data-starting-style:scale-98 data-ending-style:scale-98 data-starting-style:opacity-0 data-ending-style:opacity-0 motion-reduce:transition-none"
           data-slot="select-popup"
           {...props}
         >
@@ -122,11 +121,12 @@ function SelectPopup({
           <span className="relative block h-full rounded-lg border bg-popover bg-clip-padding before:pointer-events-none before:absolute before:inset-0 before:rounded-[calc(var(--radius-lg)-1px)] before:shadow-lg dark:not-in-data-[slot=group]:bg-clip-border">
             <SelectPrimitive.List
               className={cn(
-                "max-h-(--available-height) min-w-(--anchor-width) overflow-y-auto p-1",
+                "relative max-h-(--available-height) min-w-(--anchor-width) overflow-y-auto p-1",
                 className,
               )}
               data-slot="select-list"
             >
+              <FluidHighlight />
               {children}
             </SelectPrimitive.List>
           </span>
@@ -150,7 +150,7 @@ function SelectItem({
   return (
     <SelectPrimitive.Item
       className={cn(
-        "grid min-h-8 in-data-[side=none]:min-w-[calc(var(--anchor-width)+1.25rem)] cursor-default grid-cols-[1rem_1fr] items-center gap-2 rounded-sm py-1 ps-2 pe-4 text-base outline-none pointer-coarse:min-h-11 sm:pointer-coarse:min-h-11 data-disabled:pointer-events-none data-highlighted:bg-accent data-highlighted:text-accent-foreground data-disabled:opacity-64 sm:min-h-7 sm:text-sm [&_svg:not([class*='size-'])]:size-4.5 sm:[&_svg:not([class*='size-'])]:size-4 [&_svg]:pointer-events-none [&_svg]:shrink-0",
+        "relative grid min-h-8 in-data-[side=none]:min-w-[calc(var(--anchor-width)+1.25rem)] cursor-default grid-cols-[1rem_1fr] items-center gap-2 rounded-sm py-1 ps-2 pe-4 text-base outline-none pointer-coarse:min-h-11 sm:pointer-coarse:min-h-11 data-disabled:pointer-events-none data-highlighted:text-accent-foreground data-disabled:opacity-64 sm:min-h-7 sm:text-sm [&_svg:not([class*='size-'])]:size-4.5 sm:[&_svg:not([class*='size-'])]:size-4 [&_svg]:pointer-events-none [&_svg]:shrink-0",
         className,
       )}
       data-slot="select-item"
@@ -160,7 +160,7 @@ function SelectItem({
 			keepMounted
 			className={(state) =>
 				cn(
-					'col-start-1 transition-[opacity,scale,filter] duration-300 ease-[cubic-bezier(0.2,0,0,1)] motion-reduce:transition-none',
+					'col-start-1 transition-[opacity,scale,filter] duration-(--duration-slow) ease-out motion-reduce:transition-none',
 					state.selected ? 'scale-100 opacity-100 blur-0' : 'scale-[0.25] opacity-0 blur-[4px]',
 				)
 			}
@@ -233,7 +233,7 @@ function SelectRichItem({
   return (
     <SelectPrimitive.Item
       className={cn(
-        "grid min-h-8 in-data-[side=none]:min-w-[calc(var(--anchor-width)+1.25rem)] cursor-default grid-cols-[1rem_1fr] items-center gap-2 rounded-sm py-1.5 ps-2 pe-4 text-base outline-none pointer-coarse:min-h-11 sm:pointer-coarse:min-h-11 data-disabled:pointer-events-none data-highlighted:bg-accent data-highlighted:text-accent-foreground data-disabled:opacity-64 sm:min-h-7 sm:text-sm [&_svg:not([class*='size-'])]:size-4.5 sm:[&_svg:not([class*='size-'])]:size-4 [&_svg]:pointer-events-none [&_svg]:shrink-0",
+        "relative grid min-h-8 in-data-[side=none]:min-w-[calc(var(--anchor-width)+1.25rem)] cursor-default grid-cols-[1rem_1fr] items-center gap-2 rounded-sm py-1.5 ps-2 pe-4 text-base outline-none pointer-coarse:min-h-11 sm:pointer-coarse:min-h-11 data-disabled:pointer-events-none data-highlighted:text-accent-foreground data-disabled:opacity-64 sm:min-h-7 sm:text-sm [&_svg:not([class*='size-'])]:size-4.5 sm:[&_svg:not([class*='size-'])]:size-4 [&_svg]:pointer-events-none [&_svg]:shrink-0",
         className,
       )}
       data-slot="select-rich-item"
@@ -243,7 +243,7 @@ function SelectRichItem({
 			keepMounted
 			className={(state) =>
 				cn(
-					'col-start-1 mt-0.5 self-start transition-[opacity,scale,filter] duration-300 ease-[cubic-bezier(0.2,0,0,1)] motion-reduce:transition-none',
+					'col-start-1 mt-0.5 self-start transition-[opacity,scale,filter] duration-(--duration-slow) ease-out motion-reduce:transition-none',
 					state.selected ? 'scale-100 opacity-100 blur-0' : 'scale-[0.25] opacity-0 blur-[4px]',
 				)
 			}
@@ -291,7 +291,7 @@ function SelectFieldItem({
   return (
     <SelectPrimitive.Item
       className={cn(
-        "grid min-h-8 in-data-[side=none]:min-w-[calc(var(--anchor-width)+1.25rem)] cursor-default grid-cols-[1rem_1fr] items-center gap-2 rounded-sm py-1 ps-2 pe-4 text-base outline-none pointer-coarse:min-h-11 sm:pointer-coarse:min-h-11 data-disabled:pointer-events-none data-highlighted:bg-accent data-highlighted:text-accent-foreground data-disabled:opacity-64 sm:min-h-7 sm:text-sm [&_svg:not([class*='size-'])]:size-4.5 sm:[&_svg:not([class*='size-'])]:size-4 [&_svg]:pointer-events-none [&_svg]:shrink-0",
+        "relative grid min-h-8 in-data-[side=none]:min-w-[calc(var(--anchor-width)+1.25rem)] cursor-default grid-cols-[1rem_1fr] items-center gap-2 rounded-sm py-1 ps-2 pe-4 text-base outline-none pointer-coarse:min-h-11 sm:pointer-coarse:min-h-11 data-disabled:pointer-events-none data-highlighted:text-accent-foreground data-disabled:opacity-64 sm:min-h-7 sm:text-sm [&_svg:not([class*='size-'])]:size-4.5 sm:[&_svg:not([class*='size-'])]:size-4 [&_svg]:pointer-events-none [&_svg]:shrink-0",
         className,
       )}
       data-slot="select-field-item"
@@ -301,7 +301,7 @@ function SelectFieldItem({
 			keepMounted
 			className={(state) =>
 				cn(
-					'col-start-1 transition-[opacity,scale,filter] duration-300 ease-[cubic-bezier(0.2,0,0,1)] motion-reduce:transition-none',
+					'col-start-1 transition-[opacity,scale,filter] duration-(--duration-slow) ease-out motion-reduce:transition-none',
 					state.selected ? 'scale-100 opacity-100 blur-0' : 'scale-[0.25] opacity-0 blur-[4px]',
 				)
 			}

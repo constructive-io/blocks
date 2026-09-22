@@ -4,6 +4,7 @@ import Link from 'next/link';
 
 import { CodeBlock } from '@/components/docs/code-block';
 import { InstallToggle } from '@/components/docs/install-toggle';
+import { ThemePresetGrid } from '@/components/docs/theme-preset-grid';
 import {
   ColorTokenGallery,
   ContrastPairs,
@@ -18,24 +19,17 @@ import { OG_IMAGE, withBase } from '@/lib/site';
 
 const TITLE = 'Styling';
 const DESCRIPTION =
-  'Constructive theme tokens — OKLCH colors, radius scale, shadows, fonts, and z-index layers for @constructive-io/ui.';
+  'Constructive theme tokens — hsl() neutral ramp + OKLCH accents, radius scale, shadows, fonts, and z-index layers for @constructive-io/ui.';
 
-function DocSection({
-  id,
-  title,
-  children,
-  lead,
-}: {
-  id: string;
-  title: string;
-  lead?: string;
-  children: ReactNode;
-}) {
+function DocSection({ id, title, children, lead }: { id: string; title: string; lead?: string; children: ReactNode }) {
   return (
     <section id={id} aria-labelledby={`${id}-heading`} className="scroll-mt-20">
       <div className="mb-4 max-w-2xl">
         <h2 id={`${id}-heading`} className="text-lg font-semibold tracking-tight">
-          <a href={`#${id}`} className="outline-none hover:text-primary focus-visible:ring-2 focus-visible:ring-ring">
+          <a
+            href={`#${id}`}
+            className="outline-none hover:text-primary focus-visible:ring-[3px] focus-visible:ring-ring/50"
+          >
             {title}
           </a>
         </h2>
@@ -54,8 +48,8 @@ export default function StylingPage() {
         <h1 className="mt-2 text-[22px] font-semibold tracking-tight sm:text-[1.75rem]">Styling</h1>
         <p className="mt-2 text-pretty text-sm leading-7 text-muted-foreground sm:text-[15px]">
           A guide to the Constructive color system and CSS variables. Tokens ship with{' '}
-          <code className="rounded bg-muted px-1 py-0.5 font-mono text-[12.5px]">@constructive-io/ui</code> and
-          the shadcn registry theme — the same values power every primitive on this site.
+          <code className="rounded bg-muted px-1 py-0.5 font-mono text-[12.5px]">@constructive-io/ui</code> and the
+          shadcn registry theme — the same values power every primitive on this site.
         </p>
       </header>
 
@@ -73,8 +67,8 @@ export default function StylingPage() {
               <ul className="divide-y divide-border">
                 {[
                   {
-                    title: 'OKLCH semantic colors',
-                    body: 'Surfaces, brand, feedback, charts, and sidebar tokens in light and dark.',
+                    title: 'hsl() neutral ramp + OKLCH accents',
+                    body: 'Pure-neutral hsl() surfaces and text (strong 16% · default 36% · subtle 50% · selected 96% · border 95%) with OKLCH brand, feedback, and chart tokens in light and dark.',
                   },
                   {
                     title: 'Radius scale',
@@ -102,14 +96,11 @@ export default function StylingPage() {
             </div>
           </div>
           <p className="mt-4 max-w-2xl text-pretty text-sm leading-7 text-muted-foreground">
-            Swatches below resolve against the live document theme — use the theme toggle in the top bar to
-            compare light and dark. Source of truth is{' '}
-            <code className="rounded bg-muted px-1 py-0.5 font-mono text-[12px]">packages/ui/src/theme.ts</code>
-            ; generated CSS is imported as{' '}
-            <code className="rounded bg-muted px-1 py-0.5 font-mono text-[12px]">
-              @constructive-io/ui/globals.css
-            </code>
-            .
+            Swatches below resolve against the live document theme — use the theme toggle in the top bar to compare
+            light and dark. Source of truth is{' '}
+            <code className="rounded bg-muted px-1 py-0.5 font-mono text-[12px]">packages/ui/src/theme.ts</code>;
+            generated CSS is imported as{' '}
+            <code className="rounded bg-muted px-1 py-0.5 font-mono text-[12px]">@constructive-io/ui/globals.css</code>.
           </p>
         </DocSection>
 
@@ -120,9 +111,7 @@ export default function StylingPage() {
         >
           <InstallToggle
             npm={packageCommands({ globals: true })}
-            registry={[
-              ...registryCommands({ item: 'constructive-theme', includeConfig: true }),
-            ]}
+            registry={[...registryCommands({ item: 'constructive-theme', includeConfig: true })]}
             descriptions={{
               npm: 'Install the package, then import the generated globals in your app stylesheet.',
               registry:
@@ -247,8 +236,8 @@ export default function StylingPage() {
               <CodeBlock label="Tailwind v4 dark variant">{`/* from package globals */\n@custom-variant dark (&:is(.dark *));`}</CodeBlock>
               <p className="text-pretty text-sm leading-6 text-muted-foreground">
                 Light values live on <code className="font-mono text-[12px]">:root</code>; dark values on{' '}
-                <code className="font-mono text-[12px]">.dark</code>. Primary brand blue stays consistent across
-                modes; neutrals and surfaces shift for contrast.
+                <code className="font-mono text-[12px]">.dark</code>. Primary brand blue stays consistent across modes;
+                neutrals and surfaces shift for contrast.
               </p>
             </div>
           </div>
@@ -268,19 +257,33 @@ export default function StylingPage() {
               <ul className="list-inside list-disc space-y-1.5 text-sm leading-6 text-muted-foreground">
                 <li>
                   Prefer redefining <code className="font-mono text-[12px]">--primary</code>,{' '}
-                  <code className="font-mono text-[12px]">--radius</code>, and surface tokens over editing
-                  component source.
+                  <code className="font-mono text-[12px]">--radius</code>, and surface tokens over editing component
+                  source.
                 </li>
                 <li>
-                  Always set matching <code className="font-mono text-[12px]">*-foreground</code> pairs when you
-                  change a surface or brand color.
+                  Always set matching <code className="font-mono text-[12px]">*-foreground</code> pairs when you change
+                  a surface or brand color.
                 </li>
-                <li>
-                  For registry installs, overrides still belong in your app CSS after generated theme CSS.
-                </li>
+                <li>For registry installs, overrides still belong in your app CSS after generated theme CSS.</li>
               </ul>
             </div>
           </div>
+        </DocSection>
+
+        <DocSection
+          id="theme-presets"
+          title="Theme presets"
+          lead="Ten editor-classic palettes adapted to Constructive tokens — Ghostty built-ins and iTerm2-Color-Schemes, each AA-checked against its own surfaces. Install one over the base theme, or open Create to tune it further."
+        >
+          <ThemePresetGrid />
+          <p className="mt-4 max-w-2xl text-pretty text-sm leading-7 text-muted-foreground">
+            Presets require the Constructive base theme and merge only color tokens — radius, shadows, and motion stay
+            yours. Try them live on{' '}
+            <Link href="/blocks/create" className="font-medium text-foreground underline-offset-4 hover:underline">
+              Create
+            </Link>
+            , where moving a dial releases just that token family.
+          </p>
         </DocSection>
 
         <nav
@@ -289,14 +292,14 @@ export default function StylingPage() {
         >
           <Link
             href="/blocks"
-            className="inline-flex min-h-10 flex-col justify-center rounded-md text-sm text-muted-foreground outline-none transition-colors duration-150 ease-out hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring"
+            className="inline-flex min-h-10 flex-col justify-center rounded-md text-sm text-muted-foreground outline-none transition-[color,background-color,border-color,text-decoration-color,fill,stroke,box-shadow] duration-(--duration-moderate) ease-out hover:text-foreground focus-visible:ring-[3px] focus-visible:ring-ring/50"
           >
             <span className="block text-xs">Previous</span>
             <span className="font-medium text-foreground">Setup</span>
           </Link>
           <Link
             href="/blocks/ui/button"
-            className="inline-flex min-h-10 flex-col items-end justify-center rounded-md text-sm text-muted-foreground outline-none transition-colors duration-150 ease-out hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring"
+            className="inline-flex min-h-10 flex-col items-end justify-center rounded-md text-sm text-muted-foreground outline-none transition-[color,background-color,border-color,text-decoration-color,fill,stroke,box-shadow] duration-(--duration-moderate) ease-out hover:text-foreground focus-visible:ring-[3px] focus-visible:ring-ring/50"
           >
             <span className="block text-xs">Next</span>
             <span className="font-medium text-foreground">Button</span>

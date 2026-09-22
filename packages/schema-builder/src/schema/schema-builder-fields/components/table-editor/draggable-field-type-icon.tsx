@@ -48,7 +48,7 @@ export function DraggableFieldTypeIcon({ typeInfo, isDragging = false, className
 					className={cn(
 						// Uniform square buttons - fixed aspect ratio for clean grid
 						`group bg-background hover:bg-accent relative aspect-square w-10 cursor-grab rounded-lg border
-						transition-[background-color,border-color,box-shadow,opacity] duration-150 ease-out active:cursor-grabbing`,
+						transition-[background-color,border-color,box-shadow,opacity] duration-(--duration-moderate) ease-out active:cursor-grabbing`,
             'flex items-center justify-center',
 						'touch-none select-none',
 						{

@@ -158,7 +158,7 @@ function Tool({
 			{hasBody ? (
 				<ChevronDown
 					data-slot="collapsible-icon"
-					className="size-3.5 shrink-0 opacity-0 transition-[opacity,transform] duration-150 group-hover/tool:opacity-100 group-data-[panel-open]/collapsible:opacity-100"
+					className="size-3.5 shrink-0 opacity-0 transition-[opacity,transform] duration-(--duration-moderate) group-hover/tool:opacity-100 group-data-[panel-open]/collapsible:opacity-100"
 				/>
 			) : null}
 		</span>
@@ -238,7 +238,7 @@ function Tool({
 				className={cn('overflow-hidden rounded-lg border border-border', className)}
 			>
 				<Collapsible open={open} defaultOpen={defaultOpen} onOpenChange={onOpenChange} className="group/tool group/collapsible">
-					<CollapsibleTrigger className="w-full bg-background px-3 py-2 hover:bg-accent/40">
+					<CollapsibleTrigger className="w-full bg-background px-3 py-2.5 hover:bg-accent/40">
 						{trigger}
 					</CollapsibleTrigger>
 					<CollapsiblePanel className="border-t border-border" innerClassName="px-3 py-2">
@@ -261,7 +261,7 @@ function Tool({
 				<CollapsibleTrigger
 					className={cn(
 						'group/row -mx-1 flex min-h-8 w-[calc(100%+0.5rem)] min-w-0 items-center gap-2 rounded-md px-1 py-1 text-left',
-						'transition-colors duration-150 hover:bg-accent',
+						'hover:bg-accent',
 						'pointer-coarse:min-h-11',
 					)}
 				>
@@ -289,8 +289,8 @@ function ToolGroup({ label, children, defaultOpen = true, className }: ToolGroup
 			<Collapsible defaultOpen={defaultOpen} className="group/collapsible">
 				<CollapsibleTrigger
 					className={cn(
-						'-mx-1.5 flex w-fit items-center gap-1.5 rounded-md px-1.5 py-1 text-[12.5px]',
-						'text-muted-foreground transition-colors duration-150 hover:bg-accent hover:text-foreground',
+						'-mx-1.5 flex w-fit items-center gap-1.5 rounded-md px-1.5 py-1.5 text-[12.5px]',
+						'text-muted-foreground hover:bg-accent hover:text-foreground',
 					)}
 				>
 					<ChevronDown data-slot="collapsible-icon" className="size-3" />

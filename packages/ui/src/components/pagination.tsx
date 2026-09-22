@@ -68,7 +68,7 @@ function PaginationLink({
 					size,
 				}),
 				'tabular-nums',
-				isDisabled && 'pointer-events-none opacity-50',
+				isDisabled && 'pointer-events-none opacity-64',
 				// Slightly denser on small screens; full hit target from button variants
 				size === 'icon' && 'size-8 sm:size-10',
 				className,

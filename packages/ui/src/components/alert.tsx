@@ -11,7 +11,7 @@ import { cn } from '../lib/utils';
  */
 const alertVariants = cva(
 	[
-		'group/alert relative w-full rounded-xl border px-4 py-3.5 text-sm',
+		'group/alert relative w-full rounded-md border px-4 py-3.5 text-sm',
 		'grid grid-cols-[0_minmax(0,1fr)] items-start gap-y-1',
 		'has-[>svg]:grid-cols-[1rem_minmax(0,1fr)] has-[>svg]:gap-x-3',
 		"[&>svg]:col-start-1 [&>svg]:row-span-full [&>svg]:mt-0.5 [&>svg]:size-4 [&>svg]:shrink-0 [&>svg]:text-current",
@@ -24,12 +24,12 @@ const alertVariants = cva(
 				default:
 					'border-border/80 bg-card text-card-foreground [&>svg]:text-foreground',
 				destructive:
-					'border-destructive/30 bg-destructive/8 text-destructive dark:border-destructive/35 dark:bg-destructive/12 [&>svg]:text-destructive',
-				info: 'border-info/30 bg-info/8 text-info-foreground dark:border-info/35 dark:bg-info/12 [&>svg]:text-info',
+					'border-[color-mix(in_oklab,var(--destructive)_30%,var(--card))] bg-[color-mix(in_oklab,var(--destructive)_8%,var(--card))] text-destructive dark:border-[color-mix(in_oklab,var(--destructive)_35%,var(--card))] dark:bg-[color-mix(in_oklab,var(--destructive)_12%,var(--card))] [&>svg]:text-destructive',
+				info: 'border-[color-mix(in_oklab,var(--info)_30%,var(--card))] bg-[color-mix(in_oklab,var(--info)_8%,var(--card))] text-info-foreground dark:border-[color-mix(in_oklab,var(--info)_35%,var(--card))] dark:bg-[color-mix(in_oklab,var(--info)_12%,var(--card))] [&>svg]:text-info',
 				success:
-					'border-success/30 bg-success/8 text-success-foreground dark:border-success/35 dark:bg-success/12 [&>svg]:text-success',
+					'border-[color-mix(in_oklab,var(--success)_30%,var(--card))] bg-[color-mix(in_oklab,var(--success)_8%,var(--card))] text-success-foreground dark:border-[color-mix(in_oklab,var(--success)_35%,var(--card))] dark:bg-[color-mix(in_oklab,var(--success)_12%,var(--card))] [&>svg]:text-success',
 				warning:
-					'border-warning/30 bg-warning/8 text-warning-foreground dark:border-warning/35 dark:bg-warning/12 [&>svg]:text-warning',
+					'border-[color-mix(in_oklab,var(--warning)_30%,var(--card))] bg-[color-mix(in_oklab,var(--warning)_8%,var(--card))] text-warning-foreground dark:border-[color-mix(in_oklab,var(--warning)_35%,var(--card))] dark:bg-[color-mix(in_oklab,var(--warning)_12%,var(--card))] [&>svg]:text-warning',
 			},
 		},
 		defaultVariants: {

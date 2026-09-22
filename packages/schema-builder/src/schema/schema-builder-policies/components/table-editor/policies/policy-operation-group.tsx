@@ -107,9 +107,9 @@ export function PolicyOperationGroup({
 										type='button'
 										aria-label={isOpen ? 'Collapse policies' : 'Expand policies'}
 										className='text-muted-foreground hover:text-foreground hover:bg-muted/60 grid size-10 place-items-center rounded-lg
-											transition-[background-color,color,scale] duration-150 ease-out motion-safe:active:scale-[0.96] focus-visible:outline-none'
+											transition-[background-color,color,scale] duration-(--duration-moderate) ease-out motion-safe:active:scale-[0.96] focus-visible:outline-none'
 									>
-										<ChevronDown className={cn('size-4 transition-transform duration-200', isOpen && 'rotate-180')} />
+										<ChevronDown className={cn('size-4 transition-transform duration-(--duration-slow)', isOpen && 'rotate-180')} />
 									</button>
 								</CollapsibleTrigger>
 							) : (
@@ -121,7 +121,7 @@ export function PolicyOperationGroup({
 					{/* Pills — below the header row, fade out when expanded */}
 					<div
 						className={cn(
-							'mt-2 flex flex-wrap items-center gap-2 pl-11 transition-opacity duration-150',
+							'mt-2 flex flex-wrap items-center gap-2 pl-11 transition-opacity duration-(--duration-moderate)',
 							isOpen && 'pointer-events-none h-0 mt-0 overflow-hidden opacity-0',
 						)}
 					>
@@ -155,9 +155,9 @@ export function PolicyOperationGroup({
 										key={policy.id}
 										className={cn(
 											'group/diagram flex w-full items-stretch rounded-lg border text-left',
-											'transition-[border-color,box-shadow,opacity] duration-150 ease-out',
+											'transition-[border-color,box-shadow,opacity] duration-(--duration-moderate) ease-out',
 											'hover:shadow-sm',
-											`focus-visible:ring-ring focus-visible:ring-2 focus-visible:ring-offset-2
+											`focus-visible:ring-[3px] focus-visible:ring-ring/50
 											focus-visible:outline-none`,
 											isPolicyDisabled && 'opacity-60',
 										)}
@@ -197,7 +197,7 @@ export function PolicyOperationGroup({
 													type='button'
 													onClick={() => onPolicyClick(policy)}
 													className='flex min-h-10 shrink-0 cursor-pointer items-center gap-1 rounded-full px-3 text-xs font-medium opacity-100
-														transition-[opacity,scale] duration-150 ease-out motion-safe:active:scale-[0.96] sm:opacity-0
+														transition-[opacity,scale] duration-(--duration-moderate) ease-out motion-safe:active:scale-[0.96] sm:opacity-0
 														pointer-coarse:opacity-100 group-hover/diagram:opacity-100 focus-visible:opacity-100'
 													style={{ color: theme.primary }}
 												>

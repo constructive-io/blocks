@@ -597,7 +597,7 @@ export const RelationEditor: React.FC<RelationEditorProps> = ({
 										className={cn(
 										'w-full rounded-md px-2 py-1.5 text-left',
 										!disabled && 'hover:bg-accent/50 cursor-pointer',
-										disabled && 'cursor-not-allowed opacity-50',
+										disabled && 'cursor-not-allowed opacity-64',
 											active && 'bg-accent/60',
 										)}
 									>
@@ -605,7 +605,7 @@ export const RelationEditor: React.FC<RelationEditorProps> = ({
 											<RelationRecordTooltip record={row} />
 											<span className='min-w-0 flex-1 truncate text-sm'>{label}</span>
 											{active && <Check className='text-primary h-3.5 w-3.5 shrink-0' />}
-											<Badge variant='outline' className={cn('text-2xs shrink-0', active && 'border-primary/40 text-primary')}>
+											<Badge variant='outline' className={cn('text-2xs shrink-0', active && 'border-primary/40 text-link')}>
 												{String(row?.id ?? '\u2014').slice(0, 8)}
 											</Badge>
 										</div>

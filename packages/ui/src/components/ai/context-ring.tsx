@@ -178,14 +178,16 @@ function ContextRing({ usage, size = 24, stroke = 2, className }: ContextRingPro
 												: 0.28
 									}
 									filter={filled ? `url(#${glowId})` : undefined}
-									className="transition-[stroke,opacity] duration-200 ease-out"
+									className="transition-[stroke,opacity] duration-(--duration-slow) ease-out"
 								/>
 							);
 						})}
 					</svg>
 				</span>
 			</TooltipTrigger>
-			<TooltipContent side="top">{tooltip}</TooltipContent>
+			<TooltipContent side="top" className="tabular-nums">
+				{tooltip}
+			</TooltipContent>
 		</Tooltip>
 	);
 }

@@ -1,5 +1,8 @@
 import type { Preview } from '@storybook/react-vite';
 import React, { useEffect } from 'react';
+import { DialRoot } from 'dialkit';
+import { MotionConfig } from 'motion/react';
+import 'dialkit/styles.css';
 import '../src/styles/globals.css';
 
 const preview: Preview = {
@@ -80,29 +83,40 @@ const preview: Preview = {
       }, [theme]);
 
       return React.createElement(
-        'div',
-        {
-          className: theme,
-          style: { height: '100vh', width: '100vw', backgroundColor: 'var(--background)' },
-        },
-        // Portal root for all overlay components - matches PortalRoot component
+        MotionConfig,
+        { reducedMotion: 'user' },
         React.createElement(
           'div',
           {
-            id: 'portal-root',
-            'data-slot': 'portal-root',
-            style: {
-              position: 'fixed',
-              inset: 0,
-              pointerEvents: 'none',
-              zIndex: 'var(--z-layer-portal-root)',
+            className: theme,
+            style: { height: '100vh', width: '100vw', backgroundColor: 'var(--background)' },
+          },
+          // Portal root for all overlay components - matches PortalRoot component
+          React.createElement(
+            'div',
+            {
+              id: 'portal-root',
+              'data-slot': 'portal-root',
+              style: {
+                position: 'fixed',
+                inset: 0,
+                pointerEvents: 'none',
+                zIndex: 'var(--z-layer-portal-root)',
+              }
             }
-          }
-        ),
-        React.createElement(
-          'div',
-          { className: 'bg-background text-foreground p-4' },
-          React.createElement(Story)
+          ),
+          React.createElement(
+            'div',
+            { className: 'bg-background text-foreground p-4' },
+            React.createElement(Story)
+          ),
+          // Live theme/motion tuning panel (dev tooling; any story can register
+          // a folder via useDialKit — the Kitchen Sink registers "Constructive theme")
+          React.createElement(DialRoot, {
+            position: 'bottom-right',
+            productionEnabled: true,
+            theme,
+          })
         )
       );
     },

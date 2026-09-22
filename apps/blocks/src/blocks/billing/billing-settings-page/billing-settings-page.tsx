@@ -262,7 +262,7 @@ const tabTriggerClassName = cn(
   'text-sm font-medium text-muted-foreground shadow-none',
   'hover:bg-transparent hover:text-foreground',
   'data-[active]:border-foreground data-[active]:bg-transparent data-[active]:text-foreground data-[active]:shadow-none',
-  'focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background',
+  'focus-visible:ring-[3px] focus-visible:ring-ring/50',
   'pointer-coarse:min-h-11'
 );
 
@@ -317,7 +317,7 @@ function SettingsIdentity({
                 <TooltipTrigger asChild>
                   <button
                     type="button"
-                    className="inline-flex size-8 shrink-0 items-center justify-center rounded-md text-muted-foreground outline-none transition-colors hover:bg-muted/60 hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring"
+                    className="inline-flex size-8 shrink-0 items-center justify-center rounded-md text-muted-foreground outline-none transition-[color,background-color,border-color,text-decoration-color,fill,stroke,box-shadow] hover:bg-muted/60 hover:text-foreground focus-visible:ring-[3px] focus-visible:ring-ring/50"
                     aria-label={messages.helpTitle}
                   >
                     <CircleHelpIcon className="size-3.5" aria-hidden="true" />

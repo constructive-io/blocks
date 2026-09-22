@@ -131,7 +131,7 @@ function Markdown({ className, children, streaming = false, ...props }: Markdown
 				'[&_ol.ai-md-list]:list-decimal',
 				'[&_.ai-md-code]:rounded-md [&_.ai-md-code]:bg-muted [&_.ai-md-code]:px-1 [&_.ai-md-code]:py-0.5 [&_.ai-md-code]:font-mono [&_.ai-md-code]:text-[0.85em]',
 				'[&_.ai-md-pre]:overflow-x-auto [&_.ai-md-pre]:rounded-lg [&_.ai-md-pre]:border [&_.ai-md-pre]:border-border [&_.ai-md-pre]:bg-muted/50 [&_.ai-md-pre]:p-3 [&_.ai-md-pre]:font-mono [&_.ai-md-pre]:text-xs',
-				'[&_.ai-md-link]:text-primary [&_.ai-md-link]:underline-offset-2 hover:[&_.ai-md-link]:underline',
+				'[&_.ai-md-link]:text-link [&_.ai-md-link]:underline-offset-2 hover:[&_.ai-md-link]:underline',
 				className,
 			)}
 			// Content is escaped + controlled template — not host HTML.

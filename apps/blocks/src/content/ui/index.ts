@@ -1,12 +1,14 @@
 import type { BasePrimitiveName } from '@/lib/base-primitives';
 import type { PrimitiveDocs } from '@/lib/primitive-docs';
 
+import { accordionDocs } from './accordion';
 import { alertDialogDocs } from './alert-dialog';
 import { alertDocs } from './alert';
 import { avatarDocs } from './avatar';
 import { badgeDocs } from './badge';
 import { breadcrumbDocs } from './breadcrumb';
 import { buttonDocs } from './button';
+import { buttonGroupDocs } from './button-group';
 import { cardDocs } from './card';
 import { checkboxDocs } from './checkbox';
 import { collapsibleDocs } from './collapsible';
@@ -14,6 +16,8 @@ import { dialogDocs } from './dialog';
 import { drawerDocs } from './drawer';
 import { dropdownMenuDocs } from './dropdown-menu';
 import { inputDocs } from './input';
+import { itemDocs } from './item';
+import { kbdDocs } from './kbd';
 import { labelDocs } from './label';
 import { paginationDocs } from './pagination';
 import { popoverDocs } from './popover';
@@ -25,19 +29,25 @@ import { selectDocs } from './select';
 import { separatorDocs } from './separator';
 import { sheetDocs } from './sheet';
 import { skeletonDocs } from './skeleton';
+import { sliderDocs } from './slider';
+import { spinnerDocs } from './spinner';
 import { switchDocs } from './switch';
 import { tableDocs } from './table';
 import { tabsDocs } from './tabs';
 import { textareaDocs } from './textarea';
+import { toggleDocs } from './toggle';
+import { toggleGroupDocs } from './toggle-group';
 import { tooltipDocs } from './tooltip';
 
 export const PRIMITIVE_DOCS = {
+  accordion: accordionDocs,
   alert: alertDocs,
   'alert-dialog': alertDialogDocs,
   avatar: avatarDocs,
   badge: badgeDocs,
   breadcrumb: breadcrumbDocs,
   button: buttonDocs,
+  'button-group': buttonGroupDocs,
   card: cardDocs,
   checkbox: checkboxDocs,
   collapsible: collapsibleDocs,
@@ -45,6 +55,8 @@ export const PRIMITIVE_DOCS = {
   drawer: drawerDocs,
   'dropdown-menu': dropdownMenuDocs,
   input: inputDocs,
+  item: itemDocs,
+  kbd: kbdDocs,
   label: labelDocs,
   pagination: paginationDocs,
   popover: popoverDocs,
@@ -56,10 +68,14 @@ export const PRIMITIVE_DOCS = {
   separator: separatorDocs,
   sheet: sheetDocs,
   skeleton: skeletonDocs,
+  slider: sliderDocs,
+  spinner: spinnerDocs,
   switch: switchDocs,
   table: tableDocs,
   tabs: tabsDocs,
   textarea: textareaDocs,
+  toggle: toggleDocs,
+  'toggle-group': toggleGroupDocs,
   tooltip: tooltipDocs,
 } satisfies Record<BasePrimitiveName, PrimitiveDocs>;
 

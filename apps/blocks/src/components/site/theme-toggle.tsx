@@ -6,8 +6,9 @@ import { Moon, Sun } from 'lucide-react';
 import { useTheme } from 'next-themes';
 
 import { Button } from '@constructive-io/ui/button';
+import { getSpringTiers, tierSpring } from '@constructive-io/ui';
 
-const iconTransition = { type: 'spring' as const, duration: 0.3, bounce: 0 };
+const iconTransition = tierSpring(getSpringTiers().slow);
 
 export function ThemeToggle() {
   const { resolvedTheme, setTheme } = useTheme();
@@ -16,6 +17,22 @@ export function ThemeToggle() {
   useEffect(() => {
     setMounted(true);
   }, []);
+
+  // The media-queried theme-color metas only track the OS preference; sync the
+  // one that currently applies to the app's resolved background.
+  useEffect(() => {
+    const frame = requestAnimationFrame(() => {
+      const background = getComputedStyle(document.documentElement).getPropertyValue('--background').trim();
+      if (!background) return;
+      document.querySelectorAll('meta[name="theme-color"]').forEach((meta) => {
+        const media = meta.getAttribute('media');
+        if (!media || window.matchMedia(media).matches) {
+          meta.setAttribute('content', background);
+        }
+      });
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [resolvedTheme]);
 
   if (!mounted) {
     return (

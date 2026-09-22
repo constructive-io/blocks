@@ -235,6 +235,7 @@ export function ContrastPairs() {
     { bg: 'bg-primary', fg: 'text-primary-foreground', label: 'primary / primary-foreground' },
     { bg: 'bg-secondary', fg: 'text-secondary-foreground', label: 'secondary / secondary-foreground' },
     { bg: 'bg-muted', fg: 'text-muted-foreground', label: 'muted / muted-foreground' },
+    { bg: 'bg-card', fg: 'text-subtle-foreground', label: 'card / subtle-foreground' },
     { bg: 'bg-accent', fg: 'text-accent-foreground', label: 'accent / accent-foreground' },
     { bg: 'bg-destructive', fg: 'text-destructive-foreground', label: 'destructive / destructive-foreground' },
     { bg: 'bg-card', fg: 'text-card-foreground', label: 'card / card-foreground' },

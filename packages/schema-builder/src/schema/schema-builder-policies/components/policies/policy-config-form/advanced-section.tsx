@@ -21,7 +21,7 @@ export function AdvancedSection({ children, defaultOpen = false }: AdvancedSecti
 			<button
 				type='button'
 				className='text-muted-foreground hover:text-foreground flex min-h-10 items-center gap-2 rounded-lg px-2 text-sm font-medium
-					transition-[color,scale] duration-150 ease-out motion-safe:active:scale-[0.96]'
+					transition-[color,scale] duration-(--duration-moderate) ease-out motion-safe:active:scale-[0.96]'
 				aria-expanded={isOpen}
 				onClick={() => setIsOpen(!isOpen)}
 			>

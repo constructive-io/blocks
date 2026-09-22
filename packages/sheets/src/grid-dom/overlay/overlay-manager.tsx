@@ -165,7 +165,7 @@ export function OverlayManager({ anchorRect, open, presetClass, onCancel, dismis
 				// Origin-aware entrance (DESIGN_SPEC §10 / Emil standards): subtle scale + fade from the
 				// cell corner, reusing the UI popover's tw-animate utilities for a consistent feel. Gated
 				// on `positioned` so the overlay animates only after its measured position is applied.
-				positioned && 'animate-in fade-in-0 zoom-in-95 duration-150 ease-out motion-reduce:animate-none',
+				positioned && 'animate-[fade-scale-in_var(--duration-moderate)_ease-out] motion-reduce:animate-none',
 				shouldFlip ? 'origin-bottom-left' : 'origin-top-left'
 			)}
 		>

@@ -62,7 +62,7 @@ function FeedbackBar({
 		<TooltipProvider>
 			<div
 				data-slot="feedback-bar"
-				className={cn('flex items-center gap-0.5 text-muted-foreground', className)}
+				className={cn('flex items-center gap-2 text-muted-foreground', className)}
 			>
 				{showCopy ? (
 					<Action tip={copied ? 'Copied' : 'Copy'} onClick={handleCopy} label={copied ? 'Copied' : 'Copy'}>

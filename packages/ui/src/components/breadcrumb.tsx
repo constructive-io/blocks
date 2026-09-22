@@ -44,7 +44,7 @@ function BreadcrumbLink({
 		defaultTagName: 'a',
 		props: mergeProps<'a'>(
 			{
-				className: cn('text-muted-foreground/60 transition-colors hover:text-foreground', className),
+				className: cn('text-muted-foreground/60 hover:text-foreground', className),
 				children: childRender ? undefined : children,
 			},
 			props,
@@ -71,7 +71,7 @@ function BreadcrumbPage({ className, ...props }: React.ComponentProps<'span'>) {
 
 function BreadcrumbSeparator({ children, className, ...props }: React.ComponentProps<'li'>) {
 	return (
-		<li data-slot="breadcrumb-separator" role='presentation' aria-hidden='true' className={className} {...props}>
+		<li data-slot="breadcrumb-separator" role='presentation' aria-hidden='true' className={cn('text-subtle-foreground', className)} {...props}>
 			{children ?? <ChevronRightIcon size={16} />}
 		</li>
 	);
@@ -83,7 +83,7 @@ function BreadcrumbEllipsis({ className, ...props }: React.ComponentProps<'span'
 			data-slot="breadcrumb-ellipsis"
 			role='presentation'
 			aria-hidden='true'
-			className={cn('flex size-5 items-center justify-center', className)}
+			className={cn('flex size-5 items-center justify-center text-subtle-foreground', className)}
 			{...props}
 		>
 			<MoreHorizontalIcon size={16} />

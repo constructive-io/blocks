@@ -120,6 +120,13 @@ export const COLOR_TOKEN_GROUPS: TokenGroup[] = [
         description: 'Secondary and helper text',
       },
       {
+        name: 'subtle-foreground',
+        cssVar: 'subtle-foreground',
+        bgClass: 'bg-subtle-foreground',
+        textClass: 'text-subtle-foreground',
+        description: 'Subtle — placeholders, shortcuts, tertiary hints',
+      },
+      {
         name: 'accent',
         cssVar: 'accent',
         bgClass: 'bg-accent',
@@ -343,7 +350,7 @@ export const FONT_TOKENS = [
     cssVar: 'font-sans',
     className: 'font-sans',
     sample: 'The quick brown fox jumps over the lazy dog',
-    description: 'Body UI font (Open Sans / Geist Sans when loaded)',
+    description: 'Body UI font (Inter by default)',
   },
   {
     name: 'font-mono',

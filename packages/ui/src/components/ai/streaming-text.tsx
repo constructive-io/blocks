@@ -105,7 +105,7 @@ function StreamingText({
 								<span
 									key={i}
 									className={cn(
-										'transition-[filter,opacity] duration-200 ease-out motion-reduce:transition-none',
+										'transition-[filter,opacity] duration-(--duration-slow) ease-out motion-reduce:transition-none',
 										i === visible - 1 && revealing
 											? 'opacity-90 blur-[2px] motion-reduce:blur-0'
 											: 'opacity-100 blur-0',
@@ -119,7 +119,7 @@ function StreamingText({
 							<span
 								key={i}
 								className={cn(
-									'transition-[filter,opacity] duration-200 ease-out motion-reduce:transition-none',
+									'transition-[filter,opacity] duration-(--duration-slow) ease-out motion-reduce:transition-none',
 									i === visible - 1 && revealing && !/^\s+$/.test(w)
 										? 'opacity-90 blur-[2px] motion-reduce:blur-0'
 										: 'opacity-100 blur-0',
