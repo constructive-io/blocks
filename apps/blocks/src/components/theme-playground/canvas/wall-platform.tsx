@@ -48,6 +48,7 @@ export function WallPlatform() {
         <EgressQuarterCard />
         <AutoscalingCard />
         <SyncingSchemaCard />
+        <SkeletonRowsCard />
       </div>
       <div className={COLUMN_CLASS} style={stagger(1)}>
         <SpendAlertCard />
@@ -59,20 +60,22 @@ export function WallPlatform() {
       <div className={WIDE_COLUMN_CLASS} style={stagger(2)}>
         <MigrationMilestonesCard />
         <AuditEventsCard />
+        {/* Two half-width cards of matching height side by side. (A 2×2 grid here
+            aligned rows to the tallest card and opened a void under the shorter
+            one; the taller half-width cards now live in the narrow columns so
+            every column ends within a card of the others.) */}
         <div className="grid grid-cols-2 items-start gap-6">
-          <SidebarNavCard />
           <FaqCard />
-          <PaymentMethodsCard />
           <PrimaryDatabaseCard />
         </div>
         <FeaturePackCatalogCard />
       </div>
       <div className={COLUMN_CLASS} style={stagger(3)}>
         <RecoveryAccessCard />
+        <SidebarNavCard />
         <ComputeBalanceCard />
         <TransferCreditsCard />
         <ProjectIconCard />
-        <SkeletonRowsCard />
       </div>
       <div className={COLUMN_CLASS} style={stagger(4)}>
         <BackupDestinationCard />
@@ -83,6 +86,7 @@ export function WallPlatform() {
       </div>
       <div className={COLUMN_CLASS} style={stagger(5)}>
         <LatencyHistoryCard />
+        <PaymentMethodsCard />
         <ExploreCatalogEmptyCard />
         <CreateAlertRuleCard />
         <WebhooksCard />

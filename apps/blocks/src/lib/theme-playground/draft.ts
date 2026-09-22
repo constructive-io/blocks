@@ -734,16 +734,27 @@ export function decodeDraft(code: string | null | undefined): ThemeDraft {
 }
 
 /** Random neutral/accent/radius/font/elevation; mode + motion survive. */
+/**
+ * A random but usable look: either one of the theme presets or a combination
+ * of the authored neutral / accent / radius / font / elevation presets (all of
+ * which are contrast-verified). Never hands back the look already applied.
+ */
 export function randomDraft(current: ThemeDraft = DEFAULT_DRAFT, random: () => number = Math.random): ThemeDraft {
   const pick = <T>(items: readonly T[]): T => items[Math.floor(random() * items.length)]!;
-  // One in three shuffles lands on a Ghostty-derived theme preset.
-  if (random() < 1 / 3) {
-    return applyThemePreset(current, pick(THEME_PRESET_IDS));
-  }
-  let draft = applyNeutralPreset({ ...current, theme: null, released: { light: [], dark: [] } }, pick(NEUTRAL_IDS));
-  draft = applyAccentPreset(draft, pick(ACCENT_IDS));
-  draft = applyRadiusPreset(draft, pick(RADIUS_IDS));
-  draft = applyFontPreset(draft, pick(FONT_IDS));
-  draft = applyElevationPreset(draft, pick(ELEVATION_IDS));
-  return draft;
+  const roll = (): ThemeDraft => {
+    // Half the rolls land on a Ghostty-derived theme preset.
+    if (random() < 0.5) {
+      return applyThemePreset(current, pick(THEME_PRESET_IDS));
+    }
+    let draft = applyNeutralPreset({ ...current, theme: null, released: { light: [], dark: [] } }, pick(NEUTRAL_IDS));
+    draft = applyAccentPreset(draft, pick(ACCENT_IDS));
+    draft = applyRadiusPreset(draft, pick(RADIUS_IDS));
+    draft = applyFontPreset(draft, pick(FONT_IDS));
+    draft = applyElevationPreset(draft, pick(ELEVATION_IDS));
+    return draft;
+  };
+  const before = encodeDraft(current);
+  let next = roll();
+  for (let attempt = 0; attempt < 8 && encodeDraft(next) === before; attempt += 1) next = roll();
+  return next;
 }

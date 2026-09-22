@@ -21,7 +21,7 @@ interface ThemeDraftContextValue {
   draft: ThemeDraft;
   setDraft: (patch: Partial<ThemeDraft>) => void;
   reset: () => void;
-  shuffle: () => void;
+  randomize: () => void;
   wall: WallId;
   setWall: (wall: WallId) => void;
   shareUrl: string;
@@ -97,7 +97,7 @@ export function ThemeDraftProvider({ children }: { children: ReactNode }) {
     [],
   );
   const reset = useCallback(() => setDraftState({ ...DEFAULT_DRAFT }), []);
-  const shuffle = useCallback(() => setDraftState((prev) => (prev ? randomDraft(prev) : prev)), []);
+  const randomize = useCallback(() => setDraftState((prev) => (prev ? randomDraft(prev) : prev)), []);
   const setWall = useCallback((next: WallId) => setWallState(next), []);
 
   const value = useMemo<ThemeDraftContextValue | null>(() => {
@@ -109,12 +109,12 @@ export function ThemeDraftProvider({ children }: { children: ReactNode }) {
       draft,
       setDraft,
       reset,
-      shuffle,
+      randomize,
       wall,
       setWall,
       shareUrl: share.toString(),
     };
-  }, [draft, wall, setDraft, reset, shuffle, setWall]);
+  }, [draft, wall, setDraft, reset, randomize, setWall]);
 
   if (!value) {
     // Same two-pane shape as the resolved layout — no empty first paint in the

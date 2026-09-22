@@ -46,7 +46,7 @@ import { UiElementsCard } from './cards/ui-elements-card';
 import { UploadAssetsCard } from './cards/upload-assets-card';
 import { UsageCard } from './cards/usage-card';
 import { YourThemeCard } from './cards/your-theme-card';
-import { COLUMN_CLASS, stagger, WallShell, WIDE_COLUMN_CLASS } from './wall-shell';
+import { COLUMN_CLASS, stagger, SUBCOLUMN_CLASS, WallShell, WIDE_COLUMN_CLASS } from './wall-shell';
 
 /**
  * Wall 02 · workspace — product archetypes. Eight tracks; C3 is the wide
@@ -62,6 +62,7 @@ export function WallWorkspace() {
         <InvoiceCard />
         <YourThemeCard />
         <QueryVolumeCard />
+        <AccountSecurityCard />
       </div>
       <div className={COLUMN_CLASS} style={stagger(1)}>
         <IconGridCard />
@@ -70,15 +71,21 @@ export function WallWorkspace() {
         <BillingAddressCard />
         <DatabaseStatusCard />
         <CreateTableCard />
+        <StorageCard />
       </div>
       <div className={WIDE_COLUMN_CLASS} style={stagger(2)}>
         <DeploymentsCard />
         <UiElementsCard />
+        {/* Independent stacks (see wall-platform): no row alignment, no voids. */}
         <div className="grid grid-cols-2 items-start gap-6">
-          <ShortcutsCard />
-          <AssignIssueCard />
-          <NotFoundCard />
-          <TeamCard />
+          <div className={SUBCOLUMN_CLASS}>
+            <ShortcutsCard />
+            <NotFoundCard />
+          </div>
+          <div className={SUBCOLUMN_CLASS}>
+            <AssignIssueCard />
+            <TeamCard />
+          </div>
         </div>
         <SchemaTabsCard />
         <CommandPaletteCard />
@@ -91,13 +98,13 @@ export function WallWorkspace() {
         <InviteTeammateCard />
         <SetupProjectCard />
         <LabelsCard />
+        <DockCard />
       </div>
       <div className={COLUMN_CLASS} style={stagger(4)}>
         <FeedbackCard />
         <ScheduleMaintenanceCard />
         <LatencyReportCard />
         <ProfileCard />
-        <AccountSecurityCard />
         <NotificationsCard />
         <PlanTierCard />
       </div>
@@ -107,8 +114,6 @@ export function WallWorkspace() {
         <AnalyticsCard />
         <UsageCard />
         <PlanBillingCard />
-        <StorageCard />
-        <DockCard />
       </div>
       <div className={COLUMN_CLASS} style={stagger(6)}>
         <AnomalyAlertCard />

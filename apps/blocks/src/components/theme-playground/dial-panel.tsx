@@ -4,7 +4,7 @@ import dynamic from 'next/dynamic';
 import { memo, useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
 import { Radio } from '@base-ui/react/radio';
 import { RadioGroup } from '@base-ui/react/radio-group';
-import { Code, Monitor, Moon, RotateCcw, Sun } from 'lucide-react';
+import { Check, Code, Dices, Link as LinkIcon, Monitor, Moon, RotateCcw, Sun } from 'lucide-react';
 import { useTheme } from 'next-themes';
 import { useDialKitController, DialRoot, type DialKitValueUpdates } from 'dialkit';
 
@@ -14,7 +14,9 @@ import { THEME_PRESETS, type ThemePresetId } from '@constructive-io/ui/theme-pre
 import { defaultThemeTuning, parseOklch, type ModeTuning } from '@constructive-io/ui/theme-tuning';
 import { Badge } from '@constructive-io/ui/badge';
 import { Button } from '@constructive-io/ui/button';
+import { ButtonGroup } from '@constructive-io/ui/button-group';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@constructive-io/ui/select';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@constructive-io/ui/tooltip';
 
 import { contrastRatio } from '@/lib/theme-playground/color';
 import {
@@ -26,7 +28,6 @@ import {
   applyNeutralPreset,
   applyRadiusPreset,
   applyThemePreset,
-  buildThemeCss,
   clearThemePreset,
   detectAccentPreset,
   detectElevationPreset,
@@ -41,7 +42,6 @@ import {
   MOTION_PRESETS,
   NEUTRAL_PRESETS,
   RADIUS_PRESETS,
-  randomDraft,
   type AccentId,
   type ColorMode,
   type ElevationId,
@@ -69,18 +69,10 @@ const GetCodeDialog = dynamic(() => import('./get-code-dialog').then((m) => m.Ge
 
 const DEFAULTS = defaultThemeTuning();
 
-const DIAL_CONFIG = {
-  ...buildThemeDialConfig(
-    DEFAULTS,
-    FONT_PRESETS.map((preset) => ({ value: preset.exportStack, label: preset.label })),
-  ),
-  actions: {
-    shuffle: { type: 'action' as const, label: 'Shuffle' },
-    reset: { type: 'action' as const, label: 'Reset' },
-    copyCss: { type: 'action' as const, label: 'Copy CSS' },
-    share: { type: 'action' as const, label: 'Copy share link' },
-  },
-};
+const DIAL_CONFIG = buildThemeDialConfig(
+  DEFAULTS,
+  FONT_PRESETS.map((preset) => ({ value: preset.exportStack, label: preset.label })),
+);
 
 /* ------------------------------------------------------------------ */
 /* Host-owned controls                                                  */
@@ -310,10 +302,17 @@ function AccentContrastBadge({ draft }: { draft: ThemeDraft }) {
  *    store converges to the draft rather than the reverse.
  */
 export function DialPanel() {
-  const { draft, setDraft, reset, shareUrl } = useThemeDraft();
+  const { draft, setDraft, reset, randomize, shareUrl } = useThemeDraft();
   const { resolvedTheme } = useTheme();
   const [codeOpen, setCodeOpen] = useState(false);
   const [codeMounted, setCodeMounted] = useState(false);
+  const [shared, setShared] = useState(false);
+  const copyShareLink = useCallback(() => {
+    void navigator.clipboard?.writeText(shareUrl).then(() => {
+      setShared(true);
+      window.setTimeout(() => setShared(false), 1600);
+    });
+  }, [shareUrl]);
   const previewMode: 'light' | 'dark' =
     draft.mode === 'system' ? (resolvedTheme === 'dark' ? 'dark' : 'light') : draft.mode;
   const isDefault = encodeDraft(draft) === DEFAULT_ENCODED;
@@ -343,21 +342,7 @@ export function DialPanel() {
   );
   const onMotion = useCallback((id: MotionId) => setDraft(applyMotionPreset(draftRef.current, id)), [setDraft]);
 
-  const controller = useDialKitController('Constructive theme', DIAL_CONFIG, {
-    onAction: (action) => {
-      if (action === 'shuffle') {
-        setDraft(randomDraft(draftRef.current));
-      } else if (action === 'reset') {
-        reset();
-      } else if (action === 'copyCss') {
-        void navigator.clipboard?.writeText(
-          buildThemeCss(draftRef.current) ?? '/* Draft matches the shipped theme — no overrides needed. */',
-        );
-      } else if (action === 'share') {
-        void navigator.clipboard?.writeText(shareUrl);
-      }
-    },
-  });
+  const controller = useDialKitController('Constructive theme', DIAL_CONFIG);
   const { values, setValues } = controller;
 
   // draft → dials
@@ -417,7 +402,7 @@ export function DialPanel() {
   }, [values, setDraft, setValues]);
 
   return (
-    <aside className="flex min-h-0 flex-col rounded-xl bg-card shadow-card">
+    <aside className="flex min-h-0 flex-col rounded-xl border border-border bg-card">
       <header className="border-b border-border px-4 py-3">
         <div className="flex items-center justify-between gap-2">
           <h2 className="text-sm font-semibold tracking-tight">Create</h2>
@@ -462,18 +447,62 @@ export function DialPanel() {
         />
       </div>
 
+      {/* One action bar: secondary actions as an attached icon group, the
+          primary action fills the rest. Tooltips carry the labels. */}
       <footer className="flex items-center gap-2 border-t border-border p-4">
-        <Button
-          type="button"
-          variant="outline"
-          onClick={reset}
-          disabled={isDefault}
-          aria-label="Reset to the Constructive theme"
-          title="Reset to the Constructive theme"
-        >
-          <RotateCcw data-icon="inline-start" aria-hidden />
-          Reset
-        </Button>
+        <TooltipProvider>
+          <ButtonGroup aria-label="Theme actions">
+            <Tooltip>
+              <TooltipTrigger
+                render={
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="icon"
+                    aria-label="Randomize theme"
+                    onClick={randomize}
+                  />
+                }
+              >
+                <Dices aria-hidden />
+              </TooltipTrigger>
+              <TooltipContent>Randomize</TooltipContent>
+            </Tooltip>
+            <Tooltip>
+              <TooltipTrigger
+                render={
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="icon"
+                    aria-label="Reset to the Constructive theme"
+                    onClick={reset}
+                    disabled={isDefault}
+                  />
+                }
+              >
+                <RotateCcw aria-hidden />
+              </TooltipTrigger>
+              <TooltipContent>Reset</TooltipContent>
+            </Tooltip>
+            <Tooltip>
+              <TooltipTrigger
+                render={
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="icon"
+                    aria-label={shared ? 'Share link copied' : 'Copy share link'}
+                    onClick={copyShareLink}
+                  />
+                }
+              >
+                {shared ? <Check aria-hidden /> : <LinkIcon aria-hidden />}
+              </TooltipTrigger>
+              <TooltipContent>{shared ? 'Copied' : 'Copy share link'}</TooltipContent>
+            </Tooltip>
+          </ButtonGroup>
+        </TooltipProvider>
         <Button
           type="button"
           className="min-w-0 flex-1"
