@@ -124,10 +124,10 @@ function BillingBlockLinks() {
         <li key={block.name}>
           <Link
             className={cn(
-              'flex min-h-16 flex-col justify-center rounded-xl border border-border/60 bg-card px-4 py-3 outline-none',
-              'transition-[background-color,border-color,box-shadow] duration-150 ease-out',
-              'hover:border-border hover:bg-accent/40 hover:shadow-card',
-              'focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background',
+              'flex min-h-16 flex-col justify-center rounded-xl bg-card px-4 py-3 shadow-card outline-none',
+              'transition-[background-color,box-shadow] duration-(--duration-moderate) ease-out',
+              'hover:bg-accent/40 hover:shadow-card-lg',
+              'focus-visible:ring-[3px] focus-visible:ring-ring/50',
             )}
             href={`/blocks/billing/${block.name}`}
           >
@@ -145,7 +145,7 @@ function NeighborLink({ block, direction }: { block?: FeaturePackDoc; direction:
 
   return (
     <Link
-      className="inline-flex min-h-10 flex-col justify-center rounded-md text-sm text-muted-foreground outline-none transition-colors duration-150 ease-out hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring"
+      className="inline-flex min-h-10 flex-col justify-center rounded-md text-sm text-muted-foreground outline-none transition-[color,background-color,border-color,text-decoration-color,fill,stroke,box-shadow] duration-(--duration-moderate) ease-out hover:text-foreground focus-visible:ring-[3px] focus-visible:ring-ring/50"
       href={`/blocks/features/${block.id}`}
     >
       <span className="block text-xs">{direction}</span>

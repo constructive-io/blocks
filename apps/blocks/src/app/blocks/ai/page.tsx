@@ -115,7 +115,7 @@ export default function AiPage() {
         <div className="grid gap-3 md:grid-cols-3">
           {doc.composition.boundaries.map((item) => (
             <article
-              className="rounded-xl border border-border/60 bg-card p-4 shadow-card"
+              className="rounded-xl bg-card p-4 shadow-card"
               key={item.title}
             >
               <h3 className="text-balance text-sm font-semibold">{item.title}</h3>
@@ -160,7 +160,7 @@ export default function AiPage() {
             <li key={component.name} className="min-w-0">
               <Link
                 href={`/blocks/ai/${component.name}`}
-                className="flex min-h-16 flex-col rounded-xl border border-border/60 bg-card p-3 shadow-card outline-none transition-colors duration-150 hover:bg-accent/40 focus-visible:ring-2 focus-visible:ring-ring"
+                className="flex min-h-16 flex-col rounded-xl bg-card p-3 shadow-card outline-none transition-[color,background-color,text-decoration-color,fill,stroke,box-shadow] duration-(--duration-moderate) hover:bg-accent/40 focus-visible:ring-[3px] focus-visible:ring-ring/50"
               >
                 <span className="text-sm font-semibold text-foreground">{component.title}</span>
                 <span className="mt-1 line-clamp-2 text-pretty text-xs leading-5 text-muted-foreground">

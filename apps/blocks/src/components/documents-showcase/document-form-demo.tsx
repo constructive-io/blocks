@@ -1,7 +1,7 @@
 'use client';
 
 import { defaultBlockRegistry } from '@constructive-io/blocks-ui';
-import { Card, CardContent } from '@constructive-io/ui';
+import { Card, CardContent } from '@constructive-io/ui/card';
 import { DocumentRenderer } from 'blocks-renderer';
 import type { JSONSchema } from 'json-schema-to-blocks';
 import { schemaToDocument } from 'json-schema-to-blocks';
@@ -38,23 +38,14 @@ const POST_SCHEMA: JSONSchema = {
 };
 
 export function DocumentFormDemo() {
-  const document = useMemo(
-    () => schemaToDocument(POST_SCHEMA),
-    [],
-  );
-  const [submitted, setSubmitted] = useState<Record<string, unknown> | null>(
-    null,
-  );
+  const document = useMemo(() => schemaToDocument(POST_SCHEMA), []);
+  const [submitted, setSubmitted] = useState<Record<string, unknown> | null>(null);
 
   return (
     <div className="grid gap-6 lg:grid-cols-2">
       <Card>
         <CardContent className="pt-6">
-          <DocumentRenderer
-            document={document}
-            registry={defaultBlockRegistry}
-            onSubmit={setSubmitted}
-          />
+          <DocumentRenderer document={document} registry={defaultBlockRegistry} onSubmit={setSubmitted} />
         </CardContent>
       </Card>
       <div className="flex flex-col gap-4">

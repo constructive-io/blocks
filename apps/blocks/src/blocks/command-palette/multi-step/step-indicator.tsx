@@ -26,7 +26,7 @@ export function StepIndicator({ steps, currentIndex }: StepIndicatorProps) {
           )}
           <div
             className={cn(
-              'size-2 rounded-full transition-all',
+              'size-2 rounded-full transition-[background-color,box-shadow,border-color]',
               step.status === 'complete'
                 ? 'bg-foreground'
                 : step.status === 'error'

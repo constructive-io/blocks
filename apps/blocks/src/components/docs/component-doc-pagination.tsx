@@ -17,7 +17,7 @@ function NeighborLink({
 
   return (
     <Link
-      className="inline-flex min-h-10 flex-col justify-center rounded-md text-sm text-muted-foreground outline-none transition-colors duration-150 ease-out hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring"
+      className="inline-flex min-h-10 flex-col justify-center rounded-md text-sm text-muted-foreground outline-none transition-[color,background-color,border-color,text-decoration-color,fill,stroke,box-shadow] duration-(--duration-moderate) ease-out hover:text-foreground focus-visible:ring-[3px] focus-visible:ring-ring/50"
       href={neighbor.href}
     >
       <span className="block text-xs">{direction}</span>

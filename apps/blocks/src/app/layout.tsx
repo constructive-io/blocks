@@ -1,5 +1,5 @@
 import type { Metadata } from 'next';
-import { Open_Sans } from 'next/font/google';
+import { Inter } from 'next/font/google';
 import type { ReactNode } from 'react';
 
 import { PortalRoot } from '@constructive-io/ui/portal';
@@ -11,7 +11,7 @@ import { OG_IMAGE, SITE_NAME, SITE_ORIGIN, withBase } from '@/lib/site';
 
 import './globals.css';
 
-const openSans = Open_Sans({
+const inter = Inter({
   subsets: ['latin'],
   variable: '--font-sans-loaded',
   display: 'swap',
@@ -40,7 +40,7 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: Readonly<{ children: ReactNode }>) {
   return (
-    <html lang="en" suppressHydrationWarning className={openSans.variable}>
+    <html lang="en" suppressHydrationWarning className={inter.variable}>
       <body className="min-h-dvh bg-background font-sans text-foreground antialiased">
         <ThemeProvider>
           <SkipLink />

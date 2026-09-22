@@ -1,3 +1,6 @@
+/* dialkit first: its stylesheet carries an @import for Geist Mono that must
+   stay ahead of all other rules once imports are inlined. */
+@import 'dialkit/styles.css';
 @import '@constructive-io/ui/globals.css';
 @import '@constructive-io/sheets/styles.css';
 @import '@constructive-io/schema-builder/styles.css';
@@ -8,14 +11,18 @@ html {
   scroll-padding-top: 4.5rem;
 }
 
-body {
-  text-rendering: optimizeLegibility;
-  font-family: var(--font-sans-loaded, var(--font-sans));
-  font-synthesis: none;
+/*
+  Point --font-sans at the locally loaded face once available so the font-sans
+  utility (not just body) picks it up. Falls back to the shipped Inter stack
+  from @theme static.
+*/
+:root {
+  --font-sans: var(--font-sans-loaded, 'Inter'), ui-sans-serif, system-ui, sans-serif;
 }
 
-::selection {
-  background: color-mix(in oklch, var(--primary) 35%, transparent);
+body {
+  text-rendering: optimizeLegibility;
+  font-synthesis: none;
 }
 
 pre {
@@ -109,6 +116,14 @@ pre {
   flex: 1;
 }
 
+/* /blocks/create — fluid canvas, no centered rail so the preview can fill the pane */
+.registry-content-fluid {
+  max-width: none;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
 /* hero */
 .registry-hero {
   position: relative;
@@ -137,10 +152,7 @@ pre {
   inset: 0;
   pointer-events: none;
   opacity: 0.6;
-  background-image: radial-gradient(
-    color-mix(in oklch, var(--muted-foreground) 22%, transparent) 1px,
-    transparent 1px
-  );
+  background-image: radial-gradient(color-mix(in oklch, var(--muted-foreground) 22%, transparent) 1px, transparent 1px);
   background-size: 22px 22px;
   mask-image: radial-gradient(120% 90% at 70% 30%, #000 30%, transparent 78%);
 }
@@ -193,7 +205,7 @@ pre {
 .registry-nav-panel {
   display: grid;
   grid-template-rows: 0fr;
-  transition: grid-template-rows 220ms cubic-bezier(0.2, 0, 0, 1);
+  transition: grid-template-rows var(--duration-slow) var(--ease-out);
 }
 
 .registry-nav-panel[data-open='true'] {
@@ -214,11 +226,10 @@ pre {
 /* preview block frame — layout only; colors from package tokens */
 .registry-block {
   min-width: 0;
-  border: 1px solid var(--border);
-  border-radius: calc(var(--radius) + 6px);
+  border-radius: var(--radius-xl);
   background: var(--card);
   overflow: hidden;
-  box-shadow: var(--shadow-sm);
+  box-shadow: var(--shadow-border);
 }
 
 .registry-block + .registry-block {
@@ -229,10 +240,9 @@ pre {
   display: flex;
   align-items: center;
   gap: 0.625rem;
-  padding: 0.7rem 1rem;
-  border-bottom: 1px solid var(--border);
-  background: color-mix(in oklch, var(--muted) 40%, transparent);
-  font-size: 0.8125rem;
+  padding: 0.75rem 1.25rem;
+  border-bottom: 1px solid color-mix(in oklch, var(--border) 60%, transparent);
+  font-size: 13px;
   font-weight: 500;
 }
 
@@ -242,12 +252,13 @@ pre {
 */
 .registry-block-stage {
   min-width: 0;
-  padding: 2rem 1.5rem;
+  min-height: 200px;
+  padding: 2.5rem 2rem;
   display: flex;
   flex-wrap: wrap;
   gap: 0.875rem;
   align-items: center;
-  background: var(--background);
+  background: color-mix(in oklch, var(--muted) 35%, var(--background));
 }
 
 .registry-block-stage-col {
@@ -291,15 +302,15 @@ pre {
   color: var(--primary);
   transform-origin: center;
   transition-property: transform;
-  transition-duration: 180ms;
-  transition-timing-function: ease-out;
+  transition-duration: var(--duration-moderate);
+  transition-timing-function: var(--ease-out);
 }
 
 .hero-source-fold {
   opacity: 0.5;
   transition-property: opacity;
-  transition-duration: 180ms;
-  transition-timing-function: ease-out;
+  transition-duration: var(--duration-moderate);
+  transition-timing-function: var(--ease-out);
 }
 
 .hero-source-node {
@@ -309,8 +320,8 @@ pre {
   transform-box: fill-box;
   transform-origin: center;
   transition-property: transform, opacity, filter;
-  transition-duration: 180ms;
-  transition-timing-function: ease-out;
+  transition-duration: var(--duration-moderate);
+  transition-timing-function: var(--ease-out);
 }
 
 .hero-source-title,
@@ -512,6 +523,57 @@ pre {
   }
 }
 
+/* ---- Create page: embedded DialKit panel ---- */
+/*
+  DialKit's own theme variables live on .dialkit-root (and a [data-theme]
+  variant at equal specificity), so the override must target the root element
+  from the .create-dials ancestor and come after the dialkit stylesheet.
+*/
+.create-dials .dialkit-root {
+  /* --dial-glass-bg also backs dropdown popups + the sticky folder headers —
+     use the aside's card surface so it blends visually but stays opaque. */
+  --dial-glass-bg: var(--card);
+  --dial-dropdown-bg: var(--popover);
+  --dial-surface: var(--overlay-hover);
+  --dial-surface-hover: var(--overlay-active);
+  --dial-surface-active: var(--overlay-active);
+  --dial-surface-subtle: var(--border);
+  --dial-text-root: var(--foreground);
+  --dial-text-section: var(--foreground);
+  --dial-text-label: var(--muted-foreground);
+  --dial-text-focus: var(--foreground);
+  --dial-text-primary: var(--foreground);
+  --dial-text-secondary: var(--muted-foreground);
+  --dial-text-tertiary: var(--muted-foreground);
+  --dial-border: var(--border);
+  --dial-border-hover: var(--input);
+  --dial-focus-ring: var(--ring);
+  --dial-backdrop-blur: 0px;
+  --dial-radius: var(--radius-md);
+  --dial-color: var(--primary);
+  font-family: inherit;
+}
+
+/* One 16px horizontal gutter for the whole panel — header, controls and the
+   sticky section headers all sit inside it. The data-multiple variant keeps
+   pace with DialKit's own higher-specificity padding rule. */
+.create-dials .dialkit-panel-inner,
+.create-dials .dialkit-panel[data-multiple='true'] .dialkit-panel-inner:not([data-collapsed='true']) {
+  padding: 0 16px 16px;
+}
+
+/* Sticky section headers bleed their backdrop across the gutter (DialKit's
+   ::before is sized for the stock 12px padding — widen it to 16px). */
+.create-dials .dialkit-folder-section > .dialkit-folder-header::before {
+  inset: 0 -16px;
+}
+
+/* The panel root header duplicates the host header ("Create") and only hosts
+   the preset manager + copy affordance — folder headers stay untouched. */
+.create-dials .dialkit-folder-root > .dialkit-panel-header {
+  display: none;
+}
+
 @media (max-width: 860px) {
   .registry-app {
     grid-template-columns: 1fr;
@@ -534,6 +596,7 @@ pre {
     position: fixed;
     inset: 0;
     z-index: 50;
-    background: oklch(0 0 0 / 0.45);
+    background: rgb(0 0 0 / 0.32);
+    backdrop-filter: blur(4px);
   }
 }

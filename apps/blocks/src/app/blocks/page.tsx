@@ -90,7 +90,7 @@ export default function SetupPage() {
             <li key={item.href} className="min-w-0">
               <Link
                 href={item.href}
-                className="flex h-full min-h-24 flex-col rounded-xl border border-border/60 bg-card px-4 py-3.5 outline-none transition-[background-color,border-color,box-shadow] duration-150 ease-out hover:border-border hover:bg-accent/40 hover:shadow-card focus-visible:ring-2 focus-visible:ring-ring"
+                className="flex h-full min-h-24 flex-col rounded-xl bg-card px-4 py-3.5 shadow-card outline-none transition-[background-color,box-shadow] duration-(--duration-moderate) ease-out hover:bg-accent/40 hover:shadow-card-lg focus-visible:ring-[3px] focus-visible:ring-ring/50"
               >
                 <span className="text-sm font-medium text-foreground">
                   {item.title}
@@ -127,7 +127,7 @@ export default function SetupPage() {
                 <li key={component.id} className="min-w-0">
                   <Link
                     href={component.href}
-                    className="flex min-h-14 flex-col rounded-lg border border-border bg-card px-3 py-2.5 outline-none transition-[background-color,border-color] duration-150 ease-out hover:bg-accent/50 focus-visible:ring-2 focus-visible:ring-ring"
+                    className="flex min-h-14 flex-col rounded-lg border border-border bg-card px-3 py-2.5 outline-none transition-[background-color,border-color] duration-(--duration-moderate) ease-out hover:bg-accent/50 focus-visible:ring-[3px] focus-visible:ring-ring/50"
                   >
                     <span className="text-sm font-medium">{component.title}</span>
                     <span className="mt-0.5 line-clamp-2 text-pretty text-xs leading-5 text-muted-foreground">

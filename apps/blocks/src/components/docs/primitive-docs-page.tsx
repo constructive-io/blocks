@@ -105,16 +105,21 @@ export function PrimitiveDocsPage({ docs, primitive }: PrimitiveDocsPageProps) {
       ) : null}
 
       <DocSection id="examples" title="Examples">
-        <div className="space-y-5">
-          {docs.examples.map((example) => (
-            <ComponentExample
+        <div>
+          {docs.examples.map((example, index) => (
+            <div
               key={example.demo}
-              name={primitive.name}
-              demo={example.demo}
-              title={example.title}
-              description={example.description}
-              source={sourceFor(primitive, example.demo)}
-            />
+              className="border-t border-dashed border-border/60 py-8 first:border-t-0 first:pt-0 sm:py-10 sm:first:pt-0"
+            >
+              <ComponentExample
+                index={index}
+                name={primitive.name}
+                demo={example.demo}
+                title={example.title}
+                description={example.description}
+                source={sourceFor(primitive, example.demo)}
+              />
+            </div>
           ))}
         </div>
       </DocSection>

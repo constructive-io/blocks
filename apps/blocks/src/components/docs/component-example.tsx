@@ -1,11 +1,12 @@
 'use client';
 
-import { useId, useState } from 'react';
+import { useState } from 'react';
+
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@constructive-io/ui/tabs';
 
 import type { BasePrimitiveName } from '@/lib/base-primitives';
 import type { InstallMode } from '@/lib/install-mode';
 import { useInstallMode } from '@/hooks/use-install-mode';
-import { cn } from '@/lib/utils';
 
 import { CodeBlock } from './code-block';
 import { PrimitivePreview } from './primitive-preview';
@@ -32,73 +33,54 @@ export function DemoSourceBlock({ source }: { source: DemoSource }) {
 export function ComponentExample({
   demo,
   description,
+  index,
   name,
   source,
   title,
 }: {
   demo: string;
   description?: string;
+  /** 0-based position — renders a numbered eyebrow before the title. */
+  index?: number;
   name: BasePrimitiveName;
   source: DemoSource;
   title: string;
 }) {
   const [view, setView] = useState<'preview' | 'source'>('preview');
-  const tabId = useId();
 
   return (
-    <div className="registry-block min-w-0">
+    <Tabs
+      value={view}
+      onValueChange={(value) => setView(value as 'preview' | 'source')}
+      className="registry-block min-w-0 gap-0"
+    >
       <div className="registry-block-bar flex-wrap">
+        {index !== undefined ? (
+          <span className="font-mono text-[11px] font-normal tabular-nums text-muted-foreground">
+            {String(index + 1).padStart(2, '0')}
+          </span>
+        ) : null}
         <span>{title}</span>
         <span className="min-w-0 flex-1 truncate text-pretty font-normal text-muted-foreground">
           {description}
         </span>
-        <div role="tablist" aria-label={`${title} view`} className="inline-flex rounded-lg bg-muted/70 p-0.5">
-          {(['preview', 'source'] as const).map((option, index, options) => (
-            <button
-              key={option}
-              type="button"
-              role="tab"
-              id={`${tabId}-${option}`}
-              aria-controls={`${tabId}-panel`}
-              aria-selected={view === option}
-              tabIndex={view === option ? 0 : -1}
-              className={cn(
-                'min-h-8 rounded-md px-2.5 py-1 text-xs font-medium capitalize outline-none transition-[background-color,color,box-shadow] duration-150 ease-out focus-visible:ring-2 focus-visible:ring-ring',
-                view === option
-                  ? 'bg-background text-foreground shadow-sm'
-                  : 'text-muted-foreground hover:text-foreground',
-              )}
-              onClick={() => setView(option)}
-              onKeyDown={(event) => {
-                let nextIndex: number | undefined;
-                if (event.key === 'ArrowRight') nextIndex = (index + 1) % options.length;
-                if (event.key === 'ArrowLeft') nextIndex = (index - 1 + options.length) % options.length;
-                if (event.key === 'Home') nextIndex = 0;
-                if (event.key === 'End') nextIndex = options.length - 1;
-                if (nextIndex === undefined) return;
-                event.preventDefault();
-                const nextView = options[nextIndex];
-                if (!nextView) return;
-                setView(nextView);
-                event.currentTarget.parentElement
-                  ?.querySelectorAll<HTMLButtonElement>('[role="tab"]')
-                  .item(nextIndex)
-                  .focus();
-              }}
-            >
+        <TabsList aria-label={`${title} view`} className="bg-muted/70">
+          {(['preview', 'source'] as const).map((option) => (
+            <TabsTrigger key={option} value={option} className="min-h-8 px-2.5 py-1 text-xs capitalize">
               {option}
-            </button>
+            </TabsTrigger>
           ))}
-        </div>
+        </TabsList>
       </div>
-      <div
-        id={`${tabId}-panel`}
-        role="tabpanel"
-        aria-labelledby={`${tabId}-${view}`}
-        className={cn(view === 'preview' ? 'registry-block-stage center min-h-64 justify-center !p-8 sm:!p-10' : 'min-w-0')}
+      <TabsContent
+        value="preview"
+        className="registry-block-stage center min-h-64 justify-center !p-8 sm:!p-10"
       >
-        {view === 'preview' ? <PrimitivePreview name={name} demo={demo} framed={false} /> : <SourcePanel source={source} />}
-      </div>
-    </div>
+        <PrimitivePreview name={name} demo={demo} framed={false} />
+      </TabsContent>
+      <TabsContent value="source" className="min-w-0">
+        <SourcePanel source={source} />
+      </TabsContent>
+    </Tabs>
   );
 }

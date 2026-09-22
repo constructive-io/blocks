@@ -1,5 +1,11 @@
 export const BASE_PRIMITIVES = [
   {
+    name: 'accordion',
+    title: 'Accordion',
+    exportName: 'Accordion',
+    description: 'A vertically stacked set of disclosures for showing and hiding sections.',
+  },
+  {
     name: 'alert',
     title: 'Alert',
     exportName: 'Alert',
@@ -34,6 +40,12 @@ export const BASE_PRIMITIVES = [
     title: 'Button',
     exportName: 'Button',
     description: 'The primary action primitive with semantic variants and sizes.',
+  },
+  {
+    name: 'button-group',
+    title: 'Button Group',
+    exportName: 'ButtonGroup',
+    description: 'A container that joins related buttons into a single control.',
   },
   {
     name: 'card',
@@ -76,6 +88,18 @@ export const BASE_PRIMITIVES = [
     title: 'Input',
     exportName: 'Input',
     description: 'A single-line text input with consistent focus and invalid states.',
+  },
+  {
+    name: 'item',
+    title: 'Item',
+    exportName: 'Item',
+    description: 'A flexible row primitive for lists of entities and their actions.',
+  },
+  {
+    name: 'kbd',
+    title: 'Kbd',
+    exportName: 'Kbd',
+    description: 'A keyboard-style label for shortcuts and key names.',
   },
   {
     name: 'label',
@@ -144,6 +168,18 @@ export const BASE_PRIMITIVES = [
     description: 'A placeholder that preserves layout while content is loading.',
   },
   {
+    name: 'slider',
+    title: 'Slider',
+    exportName: 'Slider',
+    description: 'A control for choosing a numeric value or range along a track.',
+  },
+  {
+    name: 'spinner',
+    title: 'Spinner',
+    exportName: 'Spinner',
+    description: 'A compact indicator for short, indeterminate waits.',
+  },
+  {
     name: 'switch',
     title: 'Switch',
     exportName: 'Switch',
@@ -166,6 +202,18 @@ export const BASE_PRIMITIVES = [
     title: 'Textarea',
     exportName: 'Textarea',
     description: 'A multi-line text input with consistent form states.',
+  },
+  {
+    name: 'toggle',
+    title: 'Toggle',
+    exportName: 'Toggle',
+    description: 'A two-state button for turning an option on or off.',
+  },
+  {
+    name: 'toggle-group',
+    title: 'Toggle Group',
+    exportName: 'ToggleGroup',
+    description: 'A set of related toggles that behave as a single control.',
   },
   {
     name: 'tooltip',

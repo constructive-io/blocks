@@ -47,7 +47,7 @@ export function PrimitiveShowcase() {
                 <Link
                   id={labelId}
                   href={`/blocks/ui/${primitive.name}`}
-                  className="group inline-flex min-h-11 items-center gap-1.5 rounded-md px-2 text-sm font-medium text-muted-foreground outline-none hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring"
+                  className="group inline-flex min-h-11 items-center gap-1.5 rounded-md px-2 text-sm font-medium text-muted-foreground outline-none hover:text-foreground focus-visible:ring-[3px] focus-visible:ring-ring/50"
                 >
                   {primitive.title}
                   <ArrowUpRight

@@ -120,7 +120,7 @@ export function CommandPaletteDemo() {
       <div className="registry-block-stage registry-block-stage-col bg-muted/20 !p-3 sm:!p-5">
         <section
           aria-labelledby="command-palette-demo-title"
-          className="flex min-h-72 flex-col items-center justify-center gap-5 rounded-xl border border-border/60 bg-card p-6 text-center shadow-card"
+          className="flex min-h-72 flex-col items-center justify-center gap-5 rounded-xl bg-card p-6 text-center shadow-card"
         >
           <div className="flex flex-col items-center gap-2">
             <h2

@@ -119,7 +119,7 @@ export function AiComponentDocsPage({ component }: { component: AiComponentDoc }
       >
         {previous ? (
           <Link
-            className="inline-flex min-h-10 flex-col justify-center rounded-md text-sm text-muted-foreground outline-none transition-colors duration-150 ease-out hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring"
+            className="inline-flex min-h-10 flex-col justify-center rounded-md text-sm text-muted-foreground outline-none transition-[color,background-color,border-color,text-decoration-color,fill,stroke,box-shadow] duration-(--duration-moderate) ease-out hover:text-foreground focus-visible:ring-[3px] focus-visible:ring-ring/50"
             href={`/blocks/ai/${previous.name}`}
           >
             <span className="block text-xs">Previous</span>
@@ -130,7 +130,7 @@ export function AiComponentDocsPage({ component }: { component: AiComponentDoc }
         )}
         {next ? (
           <Link
-            className="inline-flex min-h-10 flex-col items-end justify-center rounded-md text-sm text-muted-foreground outline-none transition-colors duration-150 ease-out hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring"
+            className="inline-flex min-h-10 flex-col items-end justify-center rounded-md text-sm text-muted-foreground outline-none transition-[color,background-color,border-color,text-decoration-color,fill,stroke,box-shadow] duration-(--duration-moderate) ease-out hover:text-foreground focus-visible:ring-[3px] focus-visible:ring-ring/50"
             href={`/blocks/ai/${next.name}`}
           >
             <span className="block text-xs">Next</span>

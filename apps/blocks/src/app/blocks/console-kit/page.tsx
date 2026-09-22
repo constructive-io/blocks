@@ -762,7 +762,7 @@ export default function ConsoleKitPage() {
               </p>
               <Link
                 href="/blocks/features"
-                className="mt-3 inline-flex min-h-10 items-center text-sm font-medium text-primary outline-none underline-offset-4 hover:underline focus-visible:ring-2 focus-visible:ring-ring"
+                className="mt-3 inline-flex min-h-10 items-center text-sm font-medium text-primary outline-none underline-offset-4 hover:underline focus-visible:ring-[3px] focus-visible:ring-ring/50"
               >
                 Browse feature packs
               </Link>

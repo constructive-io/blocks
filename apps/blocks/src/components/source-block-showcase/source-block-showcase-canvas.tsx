@@ -105,7 +105,7 @@ function SheetsShowcase() {
       </div>
 
       <SheetsProvider config={config}>
-        <div className="mx-auto flex h-[535px] min-h-0 w-full max-w-5xl flex-col overflow-hidden rounded-xl border border-border/70 bg-background p-3 shadow-card">
+        <div className="mx-auto flex h-[535px] min-h-0 w-full max-w-5xl flex-col overflow-hidden rounded-xl bg-background p-3 shadow-card">
           <Sheets
             className="min-h-0 flex-1"
             onEvent={(event) => {
@@ -326,7 +326,7 @@ function SchemaBuilderShowcase() {
         <Badge variant="secondary">Control plane</Badge>
       </div>
 
-      <div className="h-[650px] min-h-0 overflow-hidden rounded-xl border border-border/70 bg-background shadow-card">
+      <div className="h-[650px] min-h-0 overflow-hidden rounded-xl bg-background shadow-card">
         <QueryClientProvider client={queryClient}>
           <SchemaBuilder
             activeTab={activeTab}
