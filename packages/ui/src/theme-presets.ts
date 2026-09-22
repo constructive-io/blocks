@@ -1,6 +1,7 @@
 import {
 	contrastRatio,
 	formatOklch,
+	linkColorFor,
 	NEUTRAL_CHROMA_WEIGHTS,
 	NEUTRAL_REFERENCE_HUE,
 	parseColor,
@@ -404,6 +405,7 @@ export function schemeToTokens(scheme: GhosttyScheme, accentHex: string, mode: P
 		border: fmt(border),
 		input: fmt(input),
 		ring: fmt(primary),
+		link: fmt(linkColorFor(primary, bg)),
 		'chart-1': charts[0]!,
 		'chart-2': charts[1]!,
 		'chart-3': charts[2]!,
@@ -525,7 +527,7 @@ function NEUTRAL_TOKENS(): readonly string[] {
 }
 
 function ACCENT_TOKENS(): readonly string[] {
-	return ['primary', 'primary-foreground', 'ring', 'sidebar-primary', 'sidebar-primary-foreground', 'sidebar-ring', 'chart-1'];
+	return ['primary', 'primary-foreground', 'ring', 'link', 'sidebar-primary', 'sidebar-primary-foreground', 'sidebar-ring', 'chart-1'];
 }
 
 /* ------------------------------------------------------------------ */

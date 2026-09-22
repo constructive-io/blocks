@@ -27,11 +27,11 @@ export function showInfoToast(props: ToastInfoProps) {
 				<div className='flex grow gap-3'>
 					<InfoIcon className='text-primary mt-0.5 shrink-0' size={16} aria-hidden='true' />
 					<div className='flex grow flex-col gap-1'>
-						<p className='text-primary text-sm font-medium'>{message}</p>
+						<p className='text-link text-sm font-medium'>{message}</p>
 						{description && <p className='text-muted-foreground text-sm'>{description}</p>}
 						{action && (
 							<div className='mt-2'>
-								<button className='text-primary text-sm font-medium hover:underline' onClick={action.onClick}>
+								<button className='text-link text-sm font-medium hover:underline' onClick={action.onClick}>
 									{action.label}
 								</button>
 							</div>

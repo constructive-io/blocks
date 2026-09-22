@@ -43,7 +43,7 @@ function FormControl({ children, label, id, layout = 'stacked', error, className
             // Float label when focused
             'has-[input:focus-visible]:[&_[data-slot=form-control-label]]:translate-y-0',
             'has-[input:focus-visible]:[&_[data-slot=form-control-label]]:scale-[0.7]',
-            'has-[input:focus-visible]:[&_[data-slot=form-control-label]]:text-primary/80',
+            'has-[input:focus-visible]:[&_[data-slot=form-control-label]]:text-link',
             // Float label when there's a value
             'has-[input:not(:placeholder-shown)]:[&_[data-slot=form-control-label]]:translate-y-0',
             'has-[input:not(:placeholder-shown)]:[&_[data-slot=form-control-label]]:scale-[0.7]',

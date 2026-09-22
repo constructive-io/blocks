@@ -43,7 +43,7 @@ function OrgChartNodeComponent({ id, data, positionAbsoluteX }: NodeProps<OrgCha
 					{data.avatarUrl && (
 						<AvatarImage src={data.avatarUrl} alt={data.displayName ?? ''} />
 					)}
-					<AvatarFallback className='bg-primary/10 text-primary text-xs font-medium'>
+					<AvatarFallback className='bg-primary/10 text-link text-xs font-medium'>
 						{getInitials(data.displayName)}
 					</AvatarFallback>
 				</Avatar>

@@ -272,13 +272,18 @@ function AccentContrastBadge({ draft }: { draft: ThemeDraft }) {
     });
   });
   const worst = Math.min(...ratios);
+  // WCAG tiers for text on the accent fill: 4.5:1 for body text, 3:1 for
+  // large or bold text (the tier the brand-action blue is specified against).
+  const tier = worst >= 4.5 ? 'AA' : worst >= 3 ? 'AA large' : 'Below AA';
   return (
     <Badge
-      variant={worst >= 4.5 ? 'success' : 'warning'}
-      title={`Light ${ratios[0].toFixed(2)}:1 · Dark ${ratios[1].toFixed(2)}:1`}
+      variant={worst >= 3 ? 'success' : 'warning'}
+      title={`Light ${ratios[0].toFixed(2)}:1 · Dark ${ratios[1].toFixed(2)}:1 — ${
+        worst >= 4.5 ? 'passes AA for body text' : worst >= 3 ? 'passes AA for large or bold text' : 'below AA'
+      }`}
       className="tabular-nums"
     >
-      {worst >= 4.5 ? 'AA' : 'Below AA'} {worst.toFixed(1)}:1
+      {tier} {worst.toFixed(1)}:1
     </Badge>
   );
 }

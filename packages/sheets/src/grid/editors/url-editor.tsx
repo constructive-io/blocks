@@ -134,12 +134,12 @@ export const UrlEditor: React.FC<UrlEditorProps> = ({ value, onFinishedEditing }
 						<Link className='text-muted-foreground h-3 w-3 flex-shrink-0' />
 						{isValid ? (
 							<div className='flex min-w-0 flex-1 items-center gap-2'>
-								<span className='text-primary truncate'>{displayText}</span>
+								<span className='text-link truncate'>{displayText}</span>
 								<Button
 									variant='ghost'
 									size='sm'
 									onClick={handleTestUrl}
-									className='text-muted-foreground hover:text-primary h-6 w-6 p-0'
+									className='text-muted-foreground hover:text-link h-6 w-6 p-0'
 									title='Test URL'
 								>
 									<ExternalLink className='h-3 w-3' />

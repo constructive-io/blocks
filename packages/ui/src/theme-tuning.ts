@@ -121,6 +121,22 @@ export function contrastRatio(a: OklchParts, b: OklchParts): number {
 	return (lighter + 0.05) / (darker + 0.05);
 }
 
+/**
+ * The accent as *text* on a surface: the accent itself when it already clears
+ * 4.5:1 against `background`, otherwise its lightness stepped (darker on light
+ * surfaces, lighter on dark ones) until the emitted 3-dp value does. Solid
+ * fills keep the vivid accent; links and labels use this.
+ */
+export function linkColorFor(accent: OklchParts, background: OklchParts): OklchParts {
+	const emitted = (c: OklchParts) => parseColor(formatOklch(c.l, c.c, c.h));
+	const step = background.l > 0.5 ? -0.01 : 0.01;
+	let current = accent;
+	for (let i = 0; i < 60 && contrastRatio(emitted(current), emitted(background)) < 4.5; i++) {
+		current = { l: Math.min(1, Math.max(0, current.l + step)), c: current.c, h: current.h };
+	}
+	return current;
+}
+
 /** Format with 3-decimal rounding: `oklch(0.565 0.215 259)`. */
 export function formatOklch(l: number, c: number, h: number) {
 	return `oklch(${round3(l)} ${round3(c)} ${round3(h)})`;
@@ -230,13 +246,19 @@ export function deriveModeTokens(tuning: ModeTuning, base: ThemeTokenMap): Recor
 	};
 	const primary = formatOklch(tuning.accentL, tuning.accentC, tuning.accentH);
 	const ring = formatOklch(tuning.ringL, tuning.accentC, tuning.accentH);
+	const background = n('background', 'background', tuning.backgroundL);
+	const linkParts = linkColorFor(
+		{ l: tuning.accentL, c: tuning.accentC, h: tuning.accentH },
+		parseColor(background),
+	);
+	const link = formatOklch(linkParts.l, linkParts.c, linkParts.h);
 	const accentForeground = formatOklch(
 		tuning.accentForegroundL,
 		parseColor(base['primary-foreground']).c,
 		parseColor(base['primary-foreground']).h,
 	);
 	return {
-		background: n('background', 'background', tuning.backgroundL),
+		background,
 		foreground: n('foreground', 'foreground', tuning.foregroundL),
 		card: n('card', 'card', tuning.cardL),
 		'card-foreground': n('card-foreground', 'foreground', tuning.foregroundL),
@@ -254,6 +276,7 @@ export function deriveModeTokens(tuning: ModeTuning, base: ThemeTokenMap): Recor
 		border: n('border', 'border', tuning.borderL),
 		input: n('input', 'input', tuning.inputL),
 		ring,
+		link,
 		sidebar: n('sidebar', 'sidebar', tuning.sidebarL),
 		'sidebar-foreground': n('sidebar-foreground', 'foreground', tuning.foregroundL),
 		'sidebar-primary': primary,

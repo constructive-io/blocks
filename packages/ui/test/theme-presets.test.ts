@@ -31,6 +31,7 @@ const COLOR_TOKEN_KEYS = [
 	'border',
 	'input',
 	'ring',
+	'link',
 	'chart-1',
 	'chart-2',
 	'chart-3',

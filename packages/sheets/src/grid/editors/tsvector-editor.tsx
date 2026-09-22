@@ -74,7 +74,7 @@ export const TsvectorEditor: React.FC<TsvectorEditorProps> = ({ value, onFinishe
 											? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/40 dark:text-yellow-200'
 											: weight === 'D'
 												? 'bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-200'
-												: 'bg-primary/10 text-primary';
+												: 'bg-primary/10 text-link';
 							return (
 								<span key={index} className={cn('inline-flex items-center rounded px-2 py-1 text-xs', color)}>
 									{t.lexeme}

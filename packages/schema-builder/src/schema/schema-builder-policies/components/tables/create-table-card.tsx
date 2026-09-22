@@ -103,13 +103,13 @@ function PolicyTypeCard({ policyType, tableName, isSelected, onSelect, onKnowMor
 				<Icon className={cn('h-5 w-5 shrink-0', isSelected ? 'text-primary' : 'text-muted-foreground')} />
 
 				<div className='min-w-0 flex-1'>
-					<p className={cn('text-sm font-semibold', isSelected && 'text-primary')}>{policyType.title}</p>
+					<p className={cn('text-sm font-semibold', isSelected && 'text-link')}>{policyType.title}</p>
 					<p className='text-muted-foreground mt-0.5 line-clamp-2 text-pretty text-xs leading-relaxed'>{policyType.description}</p>
 					<button
 						type='button'
 						data-testid={`policy-know-more-${policyType.name}`}
 						onClick={handleKnowMoreClick}
-						className='text-primary hover:text-primary/80 pointer-events-auto relative z-20 mt-1 inline-flex min-h-10 cursor-pointer
+						className='text-link hover:text-link/80 pointer-events-auto relative z-20 mt-1 inline-flex min-h-10 cursor-pointer
 							items-center gap-1 rounded-lg pr-2 text-xs font-medium transition-[color,scale] duration-(--duration-moderate) ease-out
 							motion-safe:active:scale-[0.96]'
 					>
@@ -167,7 +167,7 @@ function BlankTableCard({ isSelected, onSelect }: { isSelected: boolean; onSelec
 				<Grid3X3 className={cn('h-5 w-5 shrink-0', isSelected ? 'text-primary' : 'text-muted-foreground')} />
 
 				<div className='min-w-0 flex-1'>
-					<p className={cn('text-sm font-semibold', isSelected && 'text-primary')}>Custom Table (Blank)</p>
+					<p className={cn('text-sm font-semibold', isSelected && 'text-link')}>Custom Table (Blank)</p>
 					<p className='text-muted-foreground mt-0.5 text-pretty text-xs leading-relaxed'>
 						No fields or RLS policies will be pre-created.
 					</p>

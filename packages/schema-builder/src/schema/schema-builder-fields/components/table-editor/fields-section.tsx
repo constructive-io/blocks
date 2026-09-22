@@ -261,7 +261,7 @@ export function FieldsSection({ onAddFieldRef }: FieldsSectionProps = {}) {
 						size='sm'
 						className={cn(
 							'gap-1.5 px-3 text-xs font-medium',
-							'hover:bg-primary/10 hover:text-primary hover:border-primary/30',
+							'hover:bg-primary/10 hover:text-link hover:border-primary/30',
 							'transition-[background-color,border-color,color,scale] duration-(--duration-moderate) ease-out motion-safe:active:scale-[0.96]',
 						)}
 						onClick={handleAddField}
