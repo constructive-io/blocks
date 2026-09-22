@@ -205,8 +205,8 @@ function PulseDot({ size, className }: { size: 'sm' | 'md' | 'lg'; className?: s
 }
 
 /**
- * Agent loading indicator. Pixel variants (drive / dots / orbit) match the
- * Beautiful UI craft; simple variants cover common chat spinners.
+ * Agent loading indicator. Pixel variants (drive / dots / orbit) give the
+ * agent a distinct presence; simple variants cover common chat spinners.
  */
 function AgentLoader({
 	variant = 'drive',

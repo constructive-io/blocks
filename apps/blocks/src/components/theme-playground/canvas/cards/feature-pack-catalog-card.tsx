@@ -30,7 +30,7 @@ function PackTile({ pack }: { pack: (typeof PACKS)[number] }) {
     <div className="flex min-w-0 flex-col gap-1.5">
       <div
         aria-hidden
-        className="flex aspect-[4/3] items-center justify-center rounded-md outline outline-1 -outline-offset-1 outline-black/10 dark:outline-white/10"
+        className="grain relative isolate flex aspect-[4/3] items-center justify-center overflow-hidden rounded-md outline outline-1 -outline-offset-1 outline-black/10 dark:outline-white/10"
         style={{ background: `color-mix(in oklch, ${pack.tone} 14%, var(--card))` }}
       >
         <pack.icon className="size-7" style={{ color: pack.tone }} />

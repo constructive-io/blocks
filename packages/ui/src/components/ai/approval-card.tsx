@@ -227,7 +227,7 @@ function ApprovalCard({
 								className={cn(
 									// card rounded-lg + p-3 → option rows use rounded-md (concentric)
 									'-mx-1.5 flex min-h-10 items-start gap-2 rounded-md px-1.5 py-1.5 text-left text-[13px]',
-									'transition-[color,background-color,border-color,text-decoration-color,fill,stroke,box-shadow] duration-(--duration-moderate) hover:bg-accent',
+									'transition-[box-shadow] duration-(--duration-moderate) hover:bg-accent',
 									'focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50',
 									on && 'bg-accent',
 								)}

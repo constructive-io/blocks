@@ -97,7 +97,7 @@ export function IconGridCard() {
             key={name}
             type="button"
             aria-label={name}
-            className="flex size-9 items-center justify-center rounded-sm transition-colors hover:bg-accent focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:outline-none"
+            className="flex size-9 items-center justify-center rounded-sm hover:bg-accent focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:outline-none"
           >
             <Icon className="size-4 text-muted-foreground" aria-hidden />
           </button>

@@ -11,7 +11,11 @@ export function ActiveConnectionsCard() {
     <SinkCard
       title="Active connections"
       description="Last 6 months"
-      action={<Badge variant="success">+12%</Badge>}
+      action={
+        <Badge variant="success" className="tabular-nums">
+          +12%
+        </Badge>
+      }
       contentClassName="flex flex-col gap-4"
     >
       <div className="relative h-24">

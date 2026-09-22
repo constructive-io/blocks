@@ -12,7 +12,7 @@ export function ProjectIconCard() {
       <div className="flex items-center gap-4">
         <div
           aria-hidden
-          className="flex size-24 shrink-0 items-center justify-center rounded-md text-xl font-semibold tracking-tight outline outline-1 -outline-offset-1 outline-black/10 dark:outline-white/10"
+          className="grain relative isolate flex size-24 shrink-0 items-center justify-center overflow-hidden rounded-md text-xl font-semibold tracking-tight outline outline-1 -outline-offset-1 outline-black/10 dark:outline-white/10"
           style={{
             background: 'color-mix(in oklch, var(--chart-1) 14%, var(--card))',
             color: 'var(--chart-1)',

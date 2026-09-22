@@ -8,7 +8,7 @@ import {
   ComboboxList,
   ComboboxPopup,
 } from '@constructive-io/ui/combobox';
-import { Tooltip, TooltipContent, TooltipTrigger } from '@constructive-io/ui/tooltip';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@constructive-io/ui/tooltip';
 
 import { SinkCard } from './sink-card';
 
@@ -57,14 +57,16 @@ export function AssignIssueCard() {
       <div className="flex items-center justify-between">
         <span className="text-[12px] text-muted-foreground">Watchers</span>
         <div className="flex -space-x-2">
-          {WATCHERS.map((watcher) => (
-            <Tooltip key={watcher.value}>
-              <TooltipTrigger render={<Avatar className="size-7 ring-2 ring-card" />}>
-                <AvatarFallback className="text-[10px]">{watcher.initials}</AvatarFallback>
-              </TooltipTrigger>
-              <TooltipContent>{watcher.label}</TooltipContent>
-            </Tooltip>
-          ))}
+          <TooltipProvider>
+            {WATCHERS.map((watcher) => (
+              <Tooltip key={watcher.value}>
+                <TooltipTrigger render={<Avatar className="size-7 ring-2 ring-card" />}>
+                  <AvatarFallback className="text-[10px]">{watcher.initials}</AvatarFallback>
+                </TooltipTrigger>
+                <TooltipContent>{watcher.label}</TooltipContent>
+              </Tooltip>
+            ))}
+          </TooltipProvider>
         </div>
       </div>
     </SinkCard>

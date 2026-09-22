@@ -261,7 +261,7 @@ function Tool({
 				<CollapsibleTrigger
 					className={cn(
 						'group/row -mx-1 flex min-h-8 w-[calc(100%+0.5rem)] min-w-0 items-center gap-2 rounded-md px-1 py-1 text-left',
-						'transition-colors duration-(--duration-moderate) hover:bg-accent',
+						'hover:bg-accent',
 						'pointer-coarse:min-h-11',
 					)}
 				>
@@ -290,7 +290,7 @@ function ToolGroup({ label, children, defaultOpen = true, className }: ToolGroup
 				<CollapsibleTrigger
 					className={cn(
 						'-mx-1.5 flex w-fit items-center gap-1.5 rounded-md px-1.5 py-1.5 text-[12.5px]',
-						'text-muted-foreground transition-colors duration-(--duration-moderate) hover:bg-accent hover:text-foreground',
+						'text-muted-foreground hover:bg-accent hover:text-foreground',
 					)}
 				>
 					<ChevronDown data-slot="collapsible-icon" className="size-3" />

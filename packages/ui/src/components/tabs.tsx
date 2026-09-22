@@ -53,7 +53,7 @@ function TabsTrigger({ className, ...props }: React.ComponentProps<typeof TabsPr
 			className={cn(
 				`hover:text-muted-foreground data-[active]:text-foreground
 					focus-visible:ring-ring/50 relative inline-flex min-h-10 min-w-10 items-center justify-center rounded-[calc(var(--radius-md)-2px)] px-3
-					text-sm font-medium whitespace-nowrap transition-[color] duration-(--duration-moderate) outline-none pointer-coarse:min-h-11 focus-visible:ring-[3px]
+					text-sm font-medium whitespace-nowrap outline-none pointer-coarse:min-h-11 focus-visible:ring-[3px]
 				data-[disabled]:pointer-events-none data-[disabled]:opacity-64 [&_svg]:shrink-0`,
 				className,
 			)}

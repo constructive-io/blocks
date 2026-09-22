@@ -185,7 +185,9 @@ function ContextRing({ usage, size = 24, stroke = 2, className }: ContextRingPro
 					</svg>
 				</span>
 			</TooltipTrigger>
-			<TooltipContent side="top">{tooltip}</TooltipContent>
+			<TooltipContent side="top" className="tabular-nums">
+				{tooltip}
+			</TooltipContent>
 		</Tooltip>
 	);
 }

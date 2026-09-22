@@ -77,7 +77,9 @@ export function ImageCellView(props: CellProps) {
 						decoding="async"
 						alt=""
 						onLoad={() => warmImage(url)}
-						className={cn('absolute inset-0 h-full w-full rounded-sm object-cover')}
+						className={cn(
+							'absolute inset-0 h-full w-full rounded-sm object-cover outline-1 -outline-offset-1 outline-black/10 dark:outline-white/10',
+						)}
 					/>
 				) : null}
 			</div>

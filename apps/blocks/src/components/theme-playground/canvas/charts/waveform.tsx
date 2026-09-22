@@ -133,7 +133,7 @@ export function Waveform({
         fadeRef.current = 0;
         blendRef.current = Math.min(1, blendRef.current + 0.02);
         time += 0.03;
-        // Gentle centred sine pulse (shadcn live-waveform processing mode).
+        // Gentle centred sine pulse for the processing state.
         const bars: number[] = [];
         const half = count / 2;
         for (let i = 0; i < count; i++) {

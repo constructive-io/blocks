@@ -32,7 +32,7 @@ const sharedTokens = {
 } as const;
 
 /**
- * Elevation shadows — Fluid's additive stacked-drop recipe on a pure-neutral
+ * Elevation shadows — an additive stacked-drop recipe on a pure-neutral
  * umbra. Each rung is the previous plus one layer whose offsets halve; every
  * layer shares one alpha so the ladder reads as a single light source.
  */
@@ -95,7 +95,7 @@ export const constructiveTheme = {
 		border: 'hsl(0 0% 95%)',
 		input: 'hsl(0 0% 89%)',
 		ring: 'oklch(0.565 0.215 259)',
-		// Surface-relative overlays — legible on any elevation (Fluid's --overlay ramp).
+		// Surface-relative overlays — legible on any elevation.
 		'overlay-hover': 'rgb(0 0 0 / 0.04)',
 		'overlay-active': 'rgb(0 0 0 / 0.07)',
 		'chart-1': 'oklch(0.565 0.215 259)',
@@ -173,7 +173,7 @@ export const constructiveTheme = {
 		warning: 'var(--color-amber-500)',
 		'warning-foreground': 'var(--color-amber-400)',
 		...sharedTokens,
-		// Dark cards get Fluid's lit top edge + an inset ring (inset so the
+		// Dark cards get a lit top edge + an inset ring (inset so the
 		// highlight and the ring don't draw two lines on the same edge).
 		'shadow-border':
 			'inset 0 1px 0 0 rgb(255 255 255 / 0.04), inset 0 0 0 1px oklch(1 0 0 / 0.1), 0 1px 1px -0.5px rgb(0 0 0 / 0.22), 0 3px 3px -1.5px rgb(0 0 0 / 0.22), 0 6px 6px -3px rgb(0 0 0 / 0.22)',
@@ -223,7 +223,7 @@ export const constructiveTheme = {
 		'--color-popover': 'var(--popover)',
 		'--color-card-foreground': 'var(--card-foreground)',
 		'--color-card': 'var(--card)',
-		// Beautiful UI's ladder on our 10px base: chips 6, controls 8,
+		// Radius ladder on the 10px base: chips 6, controls 8,
 		// cards/popovers 10, windows 14.
 		'--radius-xs': 'calc(var(--radius) - 6px)',
 		'--radius-sm': 'calc(var(--radius) - 4px)',
@@ -257,6 +257,7 @@ export const constructiveTheme = {
 			'color-scheme': 'dark',
 		},
 		html: {
+			'background-color': 'var(--background)',
 			'scrollbar-gutter': 'stable',
 		},
 		'*': {
@@ -394,7 +395,7 @@ export const constructiveTheme = {
 		'shimmer-slide': {
 			to: { transform: 'translateX(100%)' },
 		},
-		// AI / agentic surfaces (Beautiful UI motion craft, Constructive tokens)
+		// AI / agentic surfaces
 		'ai-shimmer-text': {
 			'0%': { 'background-position': '100% 0' },
 			'100%': { 'background-position': '-100% 0' },

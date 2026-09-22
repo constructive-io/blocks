@@ -26,7 +26,7 @@ export function ApiKeysCard() {
         <TableHeader>
           <TableRow>
             <TableHead className="pl-4">Name</TableHead>
-            <TableHead>Last used</TableHead>
+            <TableHead className="text-right">Last used</TableHead>
             <TableHead>Status</TableHead>
             <TableHead className="w-10 pr-2">
               <span className="sr-only">Actions</span>
@@ -37,7 +37,7 @@ export function ApiKeysCard() {
           {KEYS.map((key) => (
             <TableRow key={key.name}>
               <TableCell className="max-w-[8rem] truncate pl-4 font-mono text-[12px]">{key.name}</TableCell>
-              <TableCell className="text-muted-foreground">{key.lastUsed}</TableCell>
+              <TableCell className="text-right text-muted-foreground tabular-nums">{key.lastUsed}</TableCell>
               <TableCell>
                 <Badge variant={key.active ? 'success' : 'secondary'}>{key.active ? 'Active' : 'Revoked'}</Badge>
               </TableCell>

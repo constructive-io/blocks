@@ -44,7 +44,7 @@ function BreadcrumbLink({
 		defaultTagName: 'a',
 		props: mergeProps<'a'>(
 			{
-				className: cn('text-muted-foreground/60 transition-colors hover:text-foreground', className),
+				className: cn('text-muted-foreground/60 hover:text-foreground', className),
 				children: childRender ? undefined : children,
 			},
 			props,

@@ -33,7 +33,7 @@ function ItemSeparator({ className, ...props }: ItemSeparatorProps) {
 
 const itemVariants = cva(
 	`group/item flex w-full flex-wrap items-center gap-3 rounded-md outline-none
-		transition-[color,background-color,border-color,box-shadow] duration-(--duration-moderate) ease-out
+		transition-[box-shadow] duration-(--duration-moderate) ease-out
 		focus-visible:ring-[3px] focus-visible:ring-ring/50`,
 	{
 		variants: {

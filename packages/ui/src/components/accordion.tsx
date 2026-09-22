@@ -39,7 +39,7 @@ function AccordionTrigger({ className, children, ...props }: AccordionTriggerPro
 				data-slot="accordion-trigger"
 				className={cn(
 					'group/accordion-trigger flex w-full flex-1 cursor-pointer items-center justify-between gap-4 py-3 text-left text-sm font-medium outline-none',
-					'transition-[color] duration-(--duration-moderate) ease-out hover:text-foreground',
+					'hover:text-foreground',
 					'focus-visible:ring-[3px] focus-visible:ring-ring/50',
 					'disabled:pointer-events-none disabled:opacity-64',
 					className,

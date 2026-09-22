@@ -1,23 +1,11 @@
 import Link from 'next/link';
 
-import {
-  Table,
-  TableBody,
-  TableCaption,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@constructive-io/ui/table';
+import { Table, TableBody, TableCaption, TableCell, TableHead, TableHeader, TableRow } from '@constructive-io/ui/table';
 
 import { AiComponentPreview } from '@/components/ai-showcase/ai-component-preview';
 import { CodeBlock } from '@/components/docs/code-block';
 import { DocSection } from '@/components/docs/doc-section';
-import {
-  type AiComponentDoc,
-  type AiComponentName,
-  getAiComponentNeighbors,
-} from '@/lib/ai-components';
+import { type AiComponentDoc, type AiComponentName, getAiComponentNeighbors } from '@/lib/ai-components';
 import { REGISTRY_COMPONENTS_JSON, registryAdd } from '@/lib/install-mode';
 
 function GuidanceList({ items }: { items: readonly string[] }) {
@@ -101,9 +89,7 @@ export function AiComponentDocsPage({ component }: { component: AiComponentDoc }
             {component.api.map((row) => (
               <TableRow key={row.name}>
                 <TableCell className="font-mono text-xs font-medium">{row.name}</TableCell>
-                <TableCell className="whitespace-normal font-mono text-xs text-muted-foreground">
-                  {row.type}
-                </TableCell>
+                <TableCell className="whitespace-normal font-mono text-xs text-muted-foreground">{row.type}</TableCell>
                 <TableCell className="min-w-64 whitespace-normal text-pretty text-muted-foreground">
                   {row.behavior}
                 </TableCell>
@@ -113,13 +99,10 @@ export function AiComponentDocsPage({ component }: { component: AiComponentDoc }
         </Table>
       </DocSection>
 
-      <nav
-        aria-label="AI component pagination"
-        className="mt-12 grid grid-cols-2 gap-6 border-t border-border pt-6"
-      >
+      <nav aria-label="AI component pagination" className="mt-12 grid grid-cols-2 gap-6 border-t border-border pt-6">
         {previous ? (
           <Link
-            className="inline-flex min-h-10 flex-col justify-center rounded-md text-sm text-muted-foreground outline-none transition-[color,background-color,border-color,text-decoration-color,fill,stroke,box-shadow] duration-(--duration-moderate) ease-out hover:text-foreground focus-visible:ring-[3px] focus-visible:ring-ring/50"
+            className="inline-flex min-h-10 flex-col justify-center rounded-md text-sm text-muted-foreground outline-none transition-[box-shadow] duration-(--duration-moderate) ease-out hover:text-foreground focus-visible:ring-[3px] focus-visible:ring-ring/50"
             href={`/blocks/ai/${previous.name}`}
           >
             <span className="block text-xs">Previous</span>
@@ -130,7 +113,7 @@ export function AiComponentDocsPage({ component }: { component: AiComponentDoc }
         )}
         {next ? (
           <Link
-            className="inline-flex min-h-10 flex-col items-end justify-center rounded-md text-sm text-muted-foreground outline-none transition-[color,background-color,border-color,text-decoration-color,fill,stroke,box-shadow] duration-(--duration-moderate) ease-out hover:text-foreground focus-visible:ring-[3px] focus-visible:ring-ring/50"
+            className="inline-flex min-h-10 flex-col items-end justify-center rounded-md text-sm text-muted-foreground outline-none transition-[box-shadow] duration-(--duration-moderate) ease-out hover:text-foreground focus-visible:ring-[3px] focus-visible:ring-ring/50"
             href={`/blocks/ai/${next.name}`}
           >
             <span className="block text-xs">Next</span>

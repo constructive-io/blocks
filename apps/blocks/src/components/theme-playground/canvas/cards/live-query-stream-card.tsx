@@ -42,7 +42,7 @@ export function LiveQueryStreamCard() {
                 transition={{ type: 'spring', duration: 0.3, bounce: 0 }}
                 className="flex"
               >
-                {active ? <Pause aria-hidden /> : <Play aria-hidden />}
+                {active ? <Pause aria-hidden /> : <Play aria-hidden className="translate-x-px" />}
               </motion.span>
             </AnimatePresence>
             {active ? 'Stop' : 'Start'}

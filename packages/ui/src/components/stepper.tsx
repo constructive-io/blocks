@@ -214,7 +214,9 @@ function StepperIndicator({ asChild = false, className, children, ...props }: St
 				children
 			) : (
 				<>
-					<span className={cn('absolute', iconSwapClass, showNumber ? iconSwapVisible : iconSwapHidden)}>
+					<span
+						className={cn('absolute tabular-nums', iconSwapClass, showNumber ? iconSwapVisible : iconSwapHidden)}
+					>
 						{step}
 					</span>
 					<CheckIcon

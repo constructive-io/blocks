@@ -40,7 +40,7 @@ export function InvoiceCard() {
         <TableHeader>
           <TableRow className="hover:bg-transparent">
             <TableHead className="h-9 pl-4">Item</TableHead>
-            <TableHead className="h-9">Qty</TableHead>
+            <TableHead className="h-9 text-right">Qty</TableHead>
             <TableHead className="h-9 pr-4 text-right">Amount</TableHead>
           </TableRow>
         </TableHeader>
@@ -48,7 +48,7 @@ export function InvoiceCard() {
           {LINES.map((line) => (
             <TableRow key={line.item} className="border-border/60">
               <TableCell className="pl-4">{line.item}</TableCell>
-              <TableCell className="text-muted-foreground tabular-nums">{line.qty}</TableCell>
+              <TableCell className="text-right text-muted-foreground tabular-nums">{line.qty}</TableCell>
               <TableCell className="pr-4 text-right tabular-nums">{line.amount}</TableCell>
             </TableRow>
           ))}

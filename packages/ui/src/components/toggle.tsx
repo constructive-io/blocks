@@ -9,7 +9,7 @@ import { cn } from '../lib/utils';
 const toggleVariants = cva(
 	`group/toggle inline-flex shrink-0 cursor-pointer items-center justify-center gap-1.5 whitespace-nowrap
 		rounded-md text-sm font-medium outline-none
-		transition-[color,background-color,border-color,box-shadow,scale] duration-(--duration-moderate) ease-out
+		transition-[box-shadow,scale] duration-(--duration-moderate) ease-out
 		hover:bg-muted hover:text-foreground
 		focus-visible:ring-[3px] focus-visible:ring-ring/50
 		disabled:pointer-events-none disabled:opacity-64

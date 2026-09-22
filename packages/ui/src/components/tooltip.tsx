@@ -11,7 +11,7 @@ type TooltipProviderProps = React.ComponentProps<typeof TooltipPrimitive.Provide
 	delayDuration?: number;
 };
 
-function TooltipProvider({ delay = 0, delayDuration, ...props }: TooltipProviderProps) {
+function TooltipProvider({ delay = 600, delayDuration, ...props }: TooltipProviderProps) {
 	return <TooltipPrimitive.Provider data-slot="tooltip-provider" delay={delayDuration ?? delay} {...props} />;
 }
 
@@ -30,7 +30,7 @@ type TooltipTriggerProps = React.ComponentProps<typeof TooltipPrimitive.Trigger>
 	asChild?: boolean;
 };
 
-function TooltipTrigger({ delay = 0, asChild, children, render, ...props }: TooltipTriggerProps) {
+function TooltipTrigger({ delay = 600, asChild, children, render, ...props }: TooltipTriggerProps) {
 	const childRender = render === undefined && asChild && React.isValidElement(children) ? children : undefined;
 
 	return (

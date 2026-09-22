@@ -18,6 +18,22 @@ export function ThemeToggle() {
     setMounted(true);
   }, []);
 
+  // The media-queried theme-color metas only track the OS preference; sync the
+  // one that currently applies to the app's resolved background.
+  useEffect(() => {
+    const frame = requestAnimationFrame(() => {
+      const background = getComputedStyle(document.documentElement).getPropertyValue('--background').trim();
+      if (!background) return;
+      document.querySelectorAll('meta[name="theme-color"]').forEach((meta) => {
+        const media = meta.getAttribute('media');
+        if (!media || window.matchMedia(media).matches) {
+          meta.setAttribute('content', background);
+        }
+      });
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [resolvedTheme]);
+
   if (!mounted) {
     return (
       <Button

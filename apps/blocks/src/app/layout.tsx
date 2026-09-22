@@ -1,4 +1,4 @@
-import type { Metadata } from 'next';
+import type { Metadata, Viewport } from 'next';
 import { Inter } from 'next/font/google';
 import type { ReactNode } from 'react';
 
@@ -36,6 +36,13 @@ export const metadata: Metadata = {
     images: [OG_IMAGE],
   },
   twitter: { card: 'summary_large_image', images: [OG_IMAGE] },
+};
+
+export const viewport: Viewport = {
+  themeColor: [
+    { media: '(prefers-color-scheme: light)', color: 'hsl(0 0% 98%)' },
+    { media: '(prefers-color-scheme: dark)', color: 'hsl(0 0% 9%)' },
+  ],
 };
 
 export default function RootLayout({ children }: Readonly<{ children: ReactNode }>) {

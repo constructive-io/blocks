@@ -22,7 +22,7 @@ import {
 import { Separator } from '@constructive-io/ui/separator';
 import { Spinner } from '@constructive-io/ui/spinner';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@constructive-io/ui/tabs';
-import { Tooltip, TooltipContent, TooltipTrigger } from '@constructive-io/ui/tooltip';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@constructive-io/ui/tooltip';
 
 import { SinkCard } from './sink-card';
 
@@ -54,46 +54,48 @@ export function EnvironmentsCard() {
         <Separator className="my-3" />
         <TabsContent value="active" className="mt-0">
           <ItemGroup>
-            {ENVIRONMENTS.map((env) => (
-              <Item key={env.name} variant="muted" size="sm">
-                <ItemMedia variant="icon">
-                  <Container aria-hidden />
-                </ItemMedia>
-                <ItemContent>
-                  <ItemTitle className="truncate">{env.name}</ItemTitle>
-                  <ItemDescription className="truncate">{env.meta}</ItemDescription>
-                </ItemContent>
-                <ItemActions className="gap-1">
-                  {env.status === 'provisioning' ? (
-                    <span className="flex items-center gap-1.5 text-[12px] text-muted-foreground">
-                      <Spinner className="size-3.5" aria-label="Provisioning" />
-                      Provisioning
-                    </span>
-                  ) : (
-                    <Badge variant="success">Running</Badge>
-                  )}
-                  <DropdownMenu>
-                    <Tooltip>
-                      <TooltipTrigger
-                        render={
-                          <DropdownMenuTrigger
-                            render={<Button variant="ghost" size="icon-sm" aria-label={`Actions for ${env.name}`} />}
-                          />
-                        }
-                      >
-                        <MoreHorizontal aria-hidden />
-                      </TooltipTrigger>
-                      <TooltipContent>Environment actions</TooltipContent>
-                    </Tooltip>
-                    <DropdownMenuContent align="end">
-                      <DropdownMenuItem>View logs</DropdownMenuItem>
-                      <DropdownMenuItem>Restart</DropdownMenuItem>
-                      <DropdownMenuItem className="text-destructive">Archive</DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                </ItemActions>
-              </Item>
-            ))}
+            <TooltipProvider>
+              {ENVIRONMENTS.map((env) => (
+                <Item key={env.name} variant="muted" size="sm">
+                  <ItemMedia variant="icon">
+                    <Container aria-hidden />
+                  </ItemMedia>
+                  <ItemContent>
+                    <ItemTitle className="truncate">{env.name}</ItemTitle>
+                    <ItemDescription className="truncate">{env.meta}</ItemDescription>
+                  </ItemContent>
+                  <ItemActions className="gap-1">
+                    {env.status === 'provisioning' ? (
+                      <span className="flex items-center gap-1.5 text-[12px] text-muted-foreground">
+                        <Spinner className="size-3.5" aria-label="Provisioning" />
+                        Provisioning
+                      </span>
+                    ) : (
+                      <Badge variant="success">Running</Badge>
+                    )}
+                    <DropdownMenu>
+                      <Tooltip>
+                        <TooltipTrigger
+                          render={
+                            <DropdownMenuTrigger
+                              render={<Button variant="ghost" size="icon-sm" aria-label={`Actions for ${env.name}`} />}
+                            />
+                          }
+                        >
+                          <MoreHorizontal aria-hidden />
+                        </TooltipTrigger>
+                        <TooltipContent>Environment actions</TooltipContent>
+                      </Tooltip>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem>View logs</DropdownMenuItem>
+                        <DropdownMenuItem>Restart</DropdownMenuItem>
+                        <DropdownMenuItem className="text-destructive">Archive</DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </ItemActions>
+                </Item>
+              ))}
+            </TooltipProvider>
           </ItemGroup>
         </TabsContent>
         <TabsContent value="archived" className="mt-0">

@@ -88,7 +88,7 @@ function RecommendationCard({
 							className={cn(
 								// outer card is rounded-lg + p-3 → inner uses rounded-md for concentric radii
 								'flex w-full items-center justify-between rounded-md border border-border/80 px-2.5 py-1.5 text-[12.5px]',
-								'text-muted-foreground transition-colors duration-(--duration-moderate) hover:bg-accent hover:text-foreground',
+								'text-muted-foreground hover:bg-accent hover:text-foreground',
 							)}
 						>
 							<span>Other options</span>
@@ -108,7 +108,7 @@ function RecommendationCard({
 												}}
 												className={cn(
 													'flex w-full items-start gap-2 rounded-md px-2 py-1.5 text-left text-[13px]',
-													'transition-colors duration-(--duration-moderate) hover:bg-accent',
+													'hover:bg-accent',
 													on && 'bg-accent',
 												)}
 											>

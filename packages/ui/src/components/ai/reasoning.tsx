@@ -95,15 +95,15 @@ function Reasoning({
 			<CollapsibleTrigger
 				className={cn(
 					'group flex w-fit max-w-full items-center gap-1.5 rounded-md px-1.5 py-1.5 text-left text-[13px]',
-					'text-muted-foreground transition-[color,background-color,border-color,text-decoration-color,fill,stroke,box-shadow] duration-(--duration-moderate) hover:bg-accent hover:text-foreground',
+					'text-muted-foreground transition-[box-shadow] duration-(--duration-moderate) hover:bg-accent hover:text-foreground',
 					'focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50',
 				)}
 			>
 				<Brain className="size-3.5 shrink-0 opacity-80" />
 				{isStreaming ? (
-					<TextShimmer className="text-[13px] font-medium">{label}</TextShimmer>
+					<TextShimmer className="text-[13px] font-medium tabular-nums">{label}</TextShimmer>
 				) : (
-					<span className="font-medium">{label}</span>
+					<span className="font-medium tabular-nums">{label}</span>
 				)}
 				<ChevronDown
 					data-slot="collapsible-icon"

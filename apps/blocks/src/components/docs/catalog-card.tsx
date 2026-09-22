@@ -21,7 +21,7 @@ export function CatalogCard({ primitive, className, showPreview = true }: Catalo
     <div
       className={cn(
         'group/card relative flex h-full flex-col overflow-hidden rounded-xl bg-card shadow-card',
-        'transition-shadow duration-(--duration-moderate) ease-out',
+        'transition-shadow duration-(--duration-fast) ease-out',
         'hover:shadow-card-lg',
         className,
       )}
@@ -35,7 +35,9 @@ export function CatalogCard({ primitive, className, showPreview = true }: Catalo
             {primitive.title}
           </Link>
         </h3>
-        <p className="line-clamp-2 text-pretty text-[12.5px] leading-5 text-muted-foreground">{primitive.description}</p>
+        <p className="line-clamp-2 text-pretty text-[12.5px] leading-5 text-muted-foreground">
+          {primitive.description}
+        </p>
       </div>
 
       {showPreview ? (

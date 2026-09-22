@@ -39,7 +39,7 @@ export function SinkCard({
     <Card
       size="sm"
       className={cn(
-        'animate-fade-up gap-0 py-0 transition-shadow duration-(--duration-slow) hover:shadow-card-lg',
+        'animate-fade-up gap-0 py-0 transition-shadow duration-(--duration-fast) hover:shadow-card-lg',
         className,
       )}
     >

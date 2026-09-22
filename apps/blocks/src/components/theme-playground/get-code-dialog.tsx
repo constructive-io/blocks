@@ -107,13 +107,13 @@ ${JSON.stringify(item, null, 2)}`
             </TabsList>
 
             <TabsContent value="css" className="pt-2">
-              {css ? <CodeBlock>{css}</CodeBlock> : <EmptyNote />}
+              {css ? <CodeBlock className="rounded-md">{css}</CodeBlock> : <EmptyNote />}
             </TabsContent>
 
             <TabsContent value="install" className="flex flex-col gap-3 pt-2">
               {installCode ? (
                 <>
-                  <CodeBlock>{installCode}</CodeBlock>
+                  <CodeBlock className="rounded-md">{installCode}</CodeBlock>
                   <p className="text-pretty text-[13px] leading-5 text-muted-foreground">
                     shadcn merges the theme&rsquo;s variables into your globals.css (
                     <code className="rounded bg-muted px-1 font-mono text-[12px]">:root</code> and{' '}
@@ -136,6 +136,7 @@ ${JSON.stringify(item, null, 2)}`
                   Don&rsquo;t have the base theme yet?
                 </p>
                 <InstallToggle
+                  className="[&>div]:rounded-md"
                   npm={packageCommands({ globals: true })}
                   registry={registryCommands({ item: 'constructive-theme', includeConfig: true })}
                   descriptions={{

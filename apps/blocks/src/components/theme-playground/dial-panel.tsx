@@ -4,7 +4,7 @@ import dynamic from 'next/dynamic';
 import { memo, useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
 import { Radio } from '@base-ui/react/radio';
 import { RadioGroup } from '@base-ui/react/radio-group';
-import { Code, Monitor, Moon, Sun } from 'lucide-react';
+import { Code, Monitor, Moon, RotateCcw, Sun } from 'lucide-react';
 import { useTheme } from 'next-themes';
 import { useDialKitController, DialRoot, type DialKitValueUpdates } from 'dialkit';
 
@@ -19,6 +19,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { contrastRatio } from '@/lib/theme-playground/color';
 import {
   ACCENT_PRESETS,
+  DEFAULT_DRAFT,
   applyAccentPreset,
   applyElevationPreset,
   applyMotionPreset,
@@ -53,6 +54,8 @@ import { cn } from '@/lib/utils';
 
 import { useThemeDraft } from './use-theme-draft';
 
+const DEFAULT_ENCODED = encodeDraft(DEFAULT_DRAFT);
+
 // CodeBlock + sugar-high + InstallToggle only load after the first
 // "Get code" click; once mounted the dialog stays mounted so later closes
 // keep their exit animation.
@@ -84,7 +87,7 @@ const DIAL_CONFIG = {
 /* ------------------------------------------------------------------ */
 
 const SEGMENT_ITEM =
-  'inline-flex flex-1 items-center justify-center gap-1.5 rounded-md px-2 py-1.5 text-[12px] font-medium text-muted-foreground outline-none transition-[background-color,color,box-shadow] duration-(--duration-moderate) ease-out hover:text-foreground focus-visible:ring-[3px] focus-visible:ring-ring/50 data-checked:bg-background data-checked:text-foreground data-checked:shadow-sm motion-reduce:transition-none';
+  'inline-flex flex-1 items-center justify-center gap-1.5 rounded-md px-2 py-1.5 text-[12px] font-medium text-muted-foreground outline-none transition-[box-shadow] duration-(--duration-moderate) ease-out hover:text-foreground focus-visible:ring-[3px] focus-visible:ring-ring/50 data-checked:bg-background data-checked:text-foreground data-checked:shadow-sm motion-reduce:transition-none';
 
 const MODE_OPTIONS: { value: ColorMode; label: string; icon: ReactNode }[] = [
   { value: 'light', label: 'Light', icon: <Sun className="size-3.5" aria-hidden /> },
@@ -135,7 +138,7 @@ function ThemeTile({
       aria-pressed={selected}
       onClick={onSelect}
       className={cn(
-        'rounded-md bg-muted/50 p-2.5 text-left transition-[background-color,box-shadow] duration-(--duration-moderate) ease-out hover:bg-muted',
+        'rounded-md bg-muted/50 p-2.5 text-left transition-[box-shadow] duration-(--duration-moderate) ease-out hover:bg-muted',
         selected && 'bg-accent shadow-[inset_0_0_0_1px_var(--ring)]',
       )}
     >
@@ -273,6 +276,7 @@ function AccentContrastBadge({ draft }: { draft: ThemeDraft }) {
     <Badge
       variant={worst >= 4.5 ? 'success' : 'warning'}
       title={`Light ${ratios[0].toFixed(2)}:1 · Dark ${ratios[1].toFixed(2)}:1`}
+      className="tabular-nums"
     >
       {worst >= 4.5 ? 'AA' : 'Below AA'} {worst.toFixed(1)}:1
     </Badge>
@@ -307,6 +311,7 @@ export function DialPanel() {
   const [codeMounted, setCodeMounted] = useState(false);
   const previewMode: 'light' | 'dark' =
     draft.mode === 'system' ? (resolvedTheme === 'dark' ? 'dark' : 'light') : draft.mode;
+  const isDefault = encodeDraft(draft) === DEFAULT_ENCODED;
   const draftRef = useRef(draft);
   draftRef.current = draft;
   const syncedEncodedRef = useRef<string | null>(null);
@@ -452,10 +457,21 @@ export function DialPanel() {
         />
       </div>
 
-      <footer className="border-t border-border p-4">
+      <footer className="flex items-center gap-2 border-t border-border p-4">
         <Button
           type="button"
-          className="w-full"
+          variant="outline"
+          onClick={reset}
+          disabled={isDefault}
+          aria-label="Reset to the Constructive theme"
+          title="Reset to the Constructive theme"
+        >
+          <RotateCcw data-icon="inline-start" aria-hidden />
+          Reset
+        </Button>
+        <Button
+          type="button"
+          className="min-w-0 flex-1"
           onClick={() => {
             setCodeMounted(true);
             setCodeOpen(true);

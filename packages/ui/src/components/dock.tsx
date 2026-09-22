@@ -128,7 +128,7 @@ const DockIcon = ({
 			className={cn(
 				// Solid hover target with theme-aware colors
 				'flex aspect-square cursor-pointer items-center justify-center rounded-full bg-transparent',
-				`hover:bg-muted focus-visible:bg-muted/80 focus-visible:outline-ring transition-colors duration-(--duration-slow)
+				`hover:bg-muted focus-visible:bg-muted/80 focus-visible:outline-ring
 				focus-visible:outline`,
 				className,
 			)}

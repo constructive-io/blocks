@@ -200,6 +200,7 @@
     color-scheme: dark;
   }
   html {
+    background-color: var(--background);
     scrollbar-gutter: stable;
   }
   * {

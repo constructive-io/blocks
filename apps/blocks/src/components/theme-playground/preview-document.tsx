@@ -112,8 +112,8 @@ function useThemeOverrideSheet(draft: ThemeDraft | null) {
  * Widgets like cmdk call `scrollIntoView`/focus-driven scrolling on mount,
  * which scrolls the preview document to the selected item in a narrow iframe.
  * Inner scroll containers keep scrolling; the document's scroll position is
- * pinned by restoring it after every call (same approach as shadcn's
- * PreventScrollOnFocusScript for focus).
+ * pinned by restoring it after every call, and focus is forced to
+ * `preventScroll` for the same reason.
  */
 function usePreviewScrollGuard() {
   useEffect(() => {

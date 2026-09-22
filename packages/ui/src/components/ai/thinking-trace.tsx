@@ -38,7 +38,7 @@ type ThinkingTraceProps = {
 };
 
 /**
- * Beautiful UI–style expandable agent trace with mode variants.
+ * Expandable agent trace with mode variants.
  * Production hosts pass rows + streaming; demos can drive visibleCount.
  */
 function ThinkingTrace({
@@ -92,7 +92,7 @@ function ThinkingTrace({
 				<CollapsibleTrigger
 					className={cn(
 						'group -mx-1.5 flex w-fit items-center gap-2 rounded-md px-1.5 py-1.5 text-left',
-						'transition-colors duration-(--duration-moderate) hover:bg-accent',
+						'hover:bg-accent',
 					)}
 				>
 					<Sparkles

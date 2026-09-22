@@ -56,12 +56,12 @@ function PlanTracker({
 					<CollapsibleTrigger
 						className={cn(
 							'group flex w-full items-center gap-1.5 px-3 py-2 text-left text-[13px]',
-							'text-muted-foreground transition-colors duration-(--duration-moderate) hover:text-foreground',
+							'text-muted-foreground hover:text-foreground',
 						)}
 					>
 						<ListChecks className="size-3.5 shrink-0" />
 						{complete ? (
-							<span className="min-w-0 flex-1 truncate font-medium">{`${total}/${total} done`}</span>
+							<span className="min-w-0 flex-1 truncate font-medium tabular-nums">{`${total}/${total} done`}</span>
 						) : focusStep ? (
 							<span className="min-w-0 flex-1 truncate font-medium">
 								<span className="mr-1.5 font-mono text-[12px] font-normal tabular-nums text-muted-foreground/60">
