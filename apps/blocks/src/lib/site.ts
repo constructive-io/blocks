@@ -1,4 +1,8 @@
-const isPages = process.env.BLOCKS_PAGES === '1';
+// Server code sees BLOCKS_PAGES from the build environment; client bundles only
+// receive the NEXT_PUBLIC_ mirror that next.config.ts inlines, so check both —
+// otherwise the browser computes basePath-less URLs (a `/blocks/create/preview/`
+// iframe that 404s on GitHub Pages).
+const isPages = process.env.BLOCKS_PAGES === '1' || process.env.NEXT_PUBLIC_BLOCKS_PAGES === '1';
 
 export const SITE_NAME = 'Constructive Blocks';
 export const SITE_ORIGIN = isPages ? 'https://constructive-io.github.io' : 'http://localhost:3005';

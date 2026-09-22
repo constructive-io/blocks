@@ -16,6 +16,11 @@ const nextConfig: NextConfig = {
         images: { unoptimized: true }
       }
     : {}),
+  // BLOCKS_PAGES is only visible to server code; client components that build
+  // site URLs (the Create preview iframe) read this inlined public mirror.
+  env: {
+    NEXT_PUBLIC_BLOCKS_PAGES: isPagesBuild ? '1' : '0'
+  },
   transpilePackages: ['@constructive-io/ui'],
   experimental: {
     // Do not include @constructive-io/ui: subpath exports like /ai, /tabs, /button
