@@ -100,7 +100,7 @@ export function RelationshipTypeSelector({ value, onChange, disabled }: Relation
 							disabled={disabled}
 							className={cn(
 								`border-border relative flex min-h-10 items-center gap-2 rounded-lg border px-3 py-2.5 text-left
-								transition-[background-color,border-color,box-shadow,scale] duration-150 ease-out motion-safe:active:scale-[0.96]`,
+								transition-[background-color,border-color,box-shadow,scale] duration-(--duration-moderate) ease-out motion-safe:active:scale-[0.96]`,
 								!isSelected && 'disabled:pointer-events-none disabled:opacity-70',
 							isSelected && 'disabled:pointer-events-none',
 								isSelected

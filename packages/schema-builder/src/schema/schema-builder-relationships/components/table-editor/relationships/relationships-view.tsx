@@ -264,7 +264,7 @@ export function RelationshipsView() {
 				}}
 				className={cn(
 					`group relative cursor-pointer rounded-xl border p-4 transition-[background-color,border-color,box-shadow,scale]
-					duration-150 ease-out motion-safe:active:scale-[0.96]`,
+					duration-(--duration-moderate) ease-out motion-safe:active:scale-[0.96]`,
 					'border-border/60 hover:border-border/80 hover:bg-muted/30',
 				)}
 			>

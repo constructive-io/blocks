@@ -597,7 +597,7 @@ export const RelationEditor: React.FC<RelationEditorProps> = ({
 										className={cn(
 										'w-full rounded-md px-2 py-1.5 text-left',
 										!disabled && 'hover:bg-accent/50 cursor-pointer',
-										disabled && 'cursor-not-allowed opacity-50',
+										disabled && 'cursor-not-allowed opacity-64',
 											active && 'bg-accent/60',
 										)}
 									>

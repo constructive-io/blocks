@@ -16,7 +16,7 @@ export function AuthErrorAlert({ error, className }: AuthErrorAlertProps) {
 			aria-live='polite'
 			aria-hidden={!hasError}
 			className={cn(
-				'overflow-hidden transition-all duration-300 ease-out',
+				'overflow-hidden transition-[max-height,opacity] duration-(--duration-slow) ease-out',
 				hasError ? 'max-h-32' : 'max-h-0',
 				className,
 			)}
@@ -26,7 +26,7 @@ export function AuthErrorAlert({ error, className }: AuthErrorAlertProps) {
 					'flex items-start gap-2.5 rounded-md px-3 py-2.5',
 					'bg-destructive/8 border border-destructive/20',
 					'text-destructive text-sm text-left',
-					'transition-opacity duration-200',
+					'transition-opacity duration-(--duration-slow)',
 					hasError ? 'opacity-100' : 'opacity-0',
 				)}
 			>

@@ -252,7 +252,7 @@ export function FieldsSection({ onAddFieldRef }: FieldsSectionProps = {}) {
 					className={cn(
 						'flex items-center justify-center gap-3 border-t border-dashed p-4',
 						'border-border/40 bg-muted/20',
-						'transition-[background-color,border-color] duration-150 ease-out',
+						'transition-[background-color,border-color] duration-(--duration-moderate) ease-out',
 						isOverDropZone && 'border-primary/50 bg-primary/5',
 					)}
 				>
@@ -262,7 +262,7 @@ export function FieldsSection({ onAddFieldRef }: FieldsSectionProps = {}) {
 						className={cn(
 							'gap-1.5 px-3 text-xs font-medium',
 							'hover:bg-primary/10 hover:text-primary hover:border-primary/30',
-							'transition-[background-color,border-color,color,scale] duration-150 ease-out motion-safe:active:scale-[0.96]',
+							'transition-[background-color,border-color,color,scale] duration-(--duration-moderate) ease-out motion-safe:active:scale-[0.96]',
 						)}
 						onClick={handleAddField}
 					>

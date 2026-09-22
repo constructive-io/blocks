@@ -57,7 +57,7 @@ function RemoveButton({ onClick, label }: { onClick: () => void; label: string }
         type='button'
         className='flex size-7 cursor-pointer items-center justify-center rounded-full
           border border-black/10 bg-white/70 text-black/50 shadow-xs backdrop-blur-sm
-          transition-all outline-hidden hover:bg-white/90 hover:text-black/70
+          transition-[color,background-color,border-color,box-shadow] outline-hidden hover:bg-white/90 hover:text-black/70
           dark:border-white/10 dark:bg-black/50 dark:text-white/70
           dark:hover:bg-black/70 dark:hover:text-white/90
           focus-visible:ring-ring/50 focus-visible:ring-[3px]'
@@ -433,7 +433,7 @@ export const ImageEditor: React.FC<ImageEditorProps> = ({
             <div className='mt-3 w-full max-w-xs'>
               <div className='bg-muted h-1.5 overflow-hidden rounded-full'>
                 <div
-                  className='bg-primary h-1.5 rounded-full transition-all duration-300'
+                  className='bg-primary h-1.5 rounded-full transition-[width] duration-(--duration-slow)'
                   style={{ width: `${uploadProgress.percentage}%` }}
                 />
               </div>

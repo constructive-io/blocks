@@ -532,7 +532,7 @@ function TableListByCategory({
 		<Collapsible open={isExpanded} onOpenChange={onToggleExpand} className='flex min-h-0 shrink-0 flex-col'>
 			<CollapsibleTrigger
 				className={cn(
-					'group flex w-full items-center gap-2 rounded-lg py-1.5 pr-2 pl-1 transition-colors duration-150',
+					'group flex w-full items-center gap-2 rounded-lg py-1.5 pr-2 pl-1 transition-colors duration-(--duration-moderate)',
 					'bg-card hover:bg-muted/50',
 					isExpanded && 'bg-muted/50',
 				)}
@@ -625,7 +625,7 @@ function TableItem({ table, isSelected, onSelect, onDelete }: TableItemProps) {
 			tabIndex={0}
 			className={cn(
 				`group relative my-1 flex min-h-10 cursor-pointer items-center justify-between rounded-lg px-2
-				transition-[background-color,color,box-shadow,scale] duration-150 ease-out motion-safe:active:scale-[0.96]`,
+				transition-[background-color,color,box-shadow,scale] duration-(--duration-moderate) ease-out motion-safe:active:scale-[0.96]`,
 				isSelected
 					? 'bg-primary/10 text-foreground ring-primary/30 dark:bg-primary/15 dark:ring-primary/40 ring-1'
 					: 'text-muted-foreground hover:text-foreground',
@@ -645,7 +645,7 @@ function TableItem({ table, isSelected, onSelect, onDelete }: TableItemProps) {
 						size='sm'
 						aria-label={`Actions for ${table.name}`}
 						className={cn(
-							`size-8 rounded-md p-0 transition-[background-color,opacity,scale] duration-150 ease-out
+							`size-8 rounded-md p-0 transition-[background-color,opacity,scale] duration-(--duration-moderate) ease-out
 							motion-safe:active:scale-[0.96]`,
 							'opacity-0 group-hover:opacity-100',
 							'hover:bg-muted-foreground/10',

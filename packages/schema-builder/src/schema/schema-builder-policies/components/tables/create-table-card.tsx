@@ -76,7 +76,7 @@ function PolicyTypeCard({ policyType, tableName, isSelected, onSelect, onKnowMor
 			data-chat-selected={String(isSelected)}
 			className={cn(
 				`relative flex w-full min-w-0 flex-col gap-3 rounded-lg border p-4 text-left
-				transition-[background-color,border-color,box-shadow,scale] duration-150 ease-out
+				transition-[background-color,border-color,box-shadow,scale] duration-(--duration-moderate) ease-out
 				motion-safe:has-[:active]:scale-[0.96]`,
 				isSelected
 					? 'border-primary bg-primary/5 ring-primary/20 ring-2'
@@ -88,7 +88,7 @@ function PolicyTypeCard({ policyType, tableName, isSelected, onSelect, onKnowMor
 				onClick={onSelect}
 				aria-label={`Select ${policyType.title}`}
 				aria-pressed={isSelected}
-				className='absolute inset-0 z-0 rounded-[inherit] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring'
+				className='absolute inset-0 z-0 rounded-[inherit] focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50'
 			/>
 			<div className='pointer-events-none relative z-10 contents'>
 			{/* Diagram on top - fixed height for consistency */}
@@ -110,7 +110,7 @@ function PolicyTypeCard({ policyType, tableName, isSelected, onSelect, onKnowMor
 						data-testid={`policy-know-more-${policyType.name}`}
 						onClick={handleKnowMoreClick}
 						className='text-primary hover:text-primary/80 pointer-events-auto relative z-20 mt-1 inline-flex min-h-10 cursor-pointer
-							items-center gap-1 rounded-lg pr-2 text-xs font-medium transition-[color,scale] duration-150 ease-out
+							items-center gap-1 rounded-lg pr-2 text-xs font-medium transition-[color,scale] duration-(--duration-moderate) ease-out
 							motion-safe:active:scale-[0.96]'
 					>
 						Know More →
@@ -139,7 +139,7 @@ function BlankTableCard({ isSelected, onSelect }: { isSelected: boolean; onSelec
 			onClick={onSelect}
 			className={cn(
 				`relative flex w-full min-w-0 flex-col gap-3 rounded-lg border p-4 text-left
-				transition-[background-color,border-color,box-shadow,scale] duration-150 ease-out motion-safe:active:scale-[0.96]`,
+				transition-[background-color,border-color,box-shadow,scale] duration-(--duration-moderate) ease-out motion-safe:active:scale-[0.96]`,
 				isSelected
 					? 'border-primary bg-primary/5 ring-primary/20 ring-2'
 					: 'border-border/60 hover:border-border hover:bg-muted/30 border-dashed',

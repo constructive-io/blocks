@@ -410,7 +410,7 @@ export const DateEditor: React.FC<DateEditorProps> = ({ value, onFinishedEditing
 							step='1'
 							value={formatForInput(dateValue, 'time')}
 							onChange={(e) => handleTimeChange(e.target.value)}
-							className='bg-muted/40 border-border/40 text-foreground w-full rounded-md border px-3 py-2 text-sm outline-none focus:border-primary/60 focus:ring-2 focus:ring-primary/20'
+							className='bg-muted/40 border-border/40 text-foreground w-full rounded-md border px-3 py-2 text-sm outline-none focus-visible:border-ring/60 focus-visible:ring-[3px] focus-visible:ring-ring/35'
 							autoFocus
 						/>
 					</div>
@@ -437,7 +437,7 @@ export const DateEditor: React.FC<DateEditorProps> = ({ value, onFinishedEditing
 									step='1'
 									value={dateValue ? new Date(dateValue).toTimeString().split(' ')[0].slice(0, 8) : ''}
 									onChange={(e) => handleTimeChange(e.target.value)}
-									className='bg-muted/40 border-border/40 text-foreground w-full rounded-md border px-2.5 py-1.5 text-sm outline-none focus:border-primary/60 focus:ring-2 focus:ring-primary/20'
+									className='bg-muted/40 border-border/40 text-foreground w-full rounded-md border px-2.5 py-1.5 text-sm outline-none focus-visible:border-ring/60 focus-visible:ring-[3px] focus-visible:ring-ring/35'
 								/>
 							</div>
 						)}

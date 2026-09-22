@@ -42,11 +42,11 @@ export function PolicyPill({ policy, onClick }: PolicyPillProps) {
 			className={cn(
 				'group inline-flex min-h-10 items-center gap-1 rounded-full px-3 py-1',
 				'border text-xs font-semibold',
-				`cursor-pointer transition-[scale,box-shadow] duration-150 ease-out
+				`cursor-pointer transition-[scale,box-shadow] duration-(--duration-moderate) ease-out
 				motion-safe:active:scale-[0.96]`,
 				'hover:scale-[1.02] hover:shadow-sm',
-				'focus-visible:ring-ring focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none',
-				isDisabled && 'opacity-60',
+				'focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:outline-none',
+				isDisabled && 'opacity-64',
 			)}
 			style={{
 				backgroundColor: lighterBg,

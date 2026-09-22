@@ -41,7 +41,7 @@ const TableItem = memo(function TableItem({ table, activeTable, onTableSelect, i
 			type='button'
 			variant='ghost'
 			className={cn(
-				'group relative my-1 flex h-8 w-full shrink items-center justify-between rounded-lg px-2 text-left text-xs font-normal transition-colors duration-150',
+				'group relative my-1 flex h-8 w-full shrink items-center justify-between rounded-lg px-2 text-left text-xs font-normal transition-colors duration-(--duration-moderate)',
 				isActive
 					? 'bg-primary/10 text-foreground ring-primary/30 dark:bg-primary/15 dark:ring-primary/40 ring-1'
 					: 'text-muted-foreground hover:text-foreground',
@@ -323,7 +323,7 @@ function SheetsTableListByCategory({
 		<Collapsible open={isExpanded} onOpenChange={onToggleExpand} className='flex min-h-0 shrink-0 flex-col'>
 			<CollapsibleTrigger
 				className={cn(
-					'group flex w-full items-center gap-2 rounded-lg py-1.5 pr-2 pl-1 transition-colors duration-150',
+					'group flex w-full items-center gap-2 rounded-lg py-1.5 pr-2 pl-1 transition-colors duration-(--duration-moderate)',
 					'bg-muted hover:bg-muted/50',
 					isExpanded && 'bg-muted/50',
 				)}

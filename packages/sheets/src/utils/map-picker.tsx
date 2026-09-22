@@ -167,7 +167,7 @@ const LeafletMapInner = lazy(() =>
 						center={position || defaultCenter}
 						zoom={position ? 15 : 10}
 						style={{ height: '100%', width: '100%' }}
-						className={cn('z-0', disabled && 'pointer-events-none opacity-50')}
+						className={cn('z-0', disabled && 'pointer-events-none opacity-64')}
 					>
 						<TileLayer
 							attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
@@ -337,7 +337,7 @@ export function MapPicker({
 										onClick={() => handleResultSelect(result)}
 										disabled={disabled}
 										className='hover:bg-accent hover:text-accent-foreground w-full px-3 py-2 text-left text-sm
-											disabled:cursor-not-allowed disabled:opacity-50'
+											disabled:cursor-not-allowed disabled:opacity-64'
 									>
 										{result.display_name}
 									</button>
