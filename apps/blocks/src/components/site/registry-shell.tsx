@@ -5,6 +5,7 @@ import { usePathname } from 'next/navigation';
 
 import { SiteSidebar } from '@/components/site/site-sidebar';
 import { SiteTopbar } from '@/components/site/site-topbar';
+import { cn } from '@/lib/utils';
 
 const MOBILE_NAV_QUERY = '(max-width: 860px)';
 
@@ -32,11 +33,15 @@ function isMobileNavViewport() {
 
 export function RegistryShell({ children }: { children: ReactNode }) {
   const [mobileOpen, setMobileOpen] = useState(false);
-  const pathname = usePathname();
+  const rawPathname = usePathname();
+  const pathname =
+    rawPathname && rawPathname.length > 1 && rawPathname.endsWith('/')
+      ? rawPathname.slice(0, -1)
+      : rawPathname;
   const isConsoleKitProof = pathname === '/__integration/console-kit';
   const isStandalonePreview =
     isConsoleKitProof ||
-    /^\/blocks\/(?:billing\/[^/]+|features\/[^/]+|org-chart|storage-browser|sheets|schema-builder)\/preview\/?$/.test(pathname);
+    /^\/blocks\/(?:billing\/[^/]+|features\/[^/]+|org-chart|storage-browser|sheets|schema-builder|create)\/preview\/?$/.test(pathname);
   const menuButtonRef = useRef<HTMLButtonElement | null>(null);
   const sidebarRef = useRef<HTMLElement | null>(null);
   const previouslyFocusedRef = useRef<HTMLElement | null>(null);
@@ -154,7 +159,14 @@ export function RegistryShell({ children }: { children: ReactNode }) {
           menuButtonRef={menuButtonRef}
           menuExpanded={mobileOpen}
         />
-        <main className="registry-content flex-1" id="main-content" tabIndex={-1}>
+        <main
+          className={cn(
+            'registry-content flex-1',
+            pathname === '/blocks/create' && 'registry-content-fluid',
+          )}
+          id="main-content"
+          tabIndex={-1}
+        >
           {children}
         </main>
       </div>
