@@ -10,11 +10,19 @@ const buttonGroupVariants = cva(
 		[&>[data-slot=select-trigger]:not([class*='w-'])]:w-fit [&>input]:flex-1`,
 	{
 		variants: {
+			// Only the shared edges square off: the first child keeps its leading
+			// corners, the last keeps its trailing ones, and each Button's `before:`
+			// overlay follows so its highlight never shows a rounded corner inside a
+			// squared one. Works for any child count, separators included.
 			orientation: {
-				horizontal:
-					'*:data-[slot]:rounded-r-none [&>[data-slot]~[data-slot]]:rounded-l-none [&>[data-slot]~[data-slot]]:border-l-0',
-				vertical:
-					'flex-col *:data-[slot]:rounded-b-none [&>[data-slot]~[data-slot]]:rounded-t-none [&>[data-slot]~[data-slot]]:border-t-0',
+				horizontal: `flex-row
+					[&>[data-slot]:not(:last-child)]:rounded-r-none [&>[data-slot]:not(:last-child)]:before:rounded-r-none
+					[&>[data-slot]:not(:first-child)]:rounded-l-none [&>[data-slot]:not(:first-child)]:before:rounded-l-none
+					[&>[data-slot]:not(:first-child)]:border-l-0`,
+				vertical: `flex-col
+					[&>[data-slot]:not(:last-child)]:rounded-b-none [&>[data-slot]:not(:last-child)]:before:rounded-b-none
+					[&>[data-slot]:not(:first-child)]:rounded-t-none [&>[data-slot]:not(:first-child)]:before:rounded-t-none
+					[&>[data-slot]:not(:first-child)]:border-t-0`,
 			},
 		},
 		defaultVariants: {
@@ -66,7 +74,11 @@ function ButtonGroupSeparator({
 			data-slot="button-group-separator"
 			orientation={orientation}
 			className={cn(
-				'relative self-stretch bg-input data-[orientation=horizontal]:mx-px data-[orientation=horizontal]:h-auto data-[orientation=vertical]:my-px data-[orientation=vertical]:w-auto',
+				// A translucent ink line drawn *over* the preceding button's edge (pulled
+				// back by 1px, above it) so it tints the fill it divides — darker blue in a
+				// primary group, a hairline between outline buttons — instead of opening a
+				// slot that shows the page behind the group.
+				'relative z-10 self-stretch bg-black/16 dark:bg-white/16 data-[orientation=vertical]:-ml-px data-[orientation=vertical]:h-auto data-[orientation=horizontal]:-mt-px data-[orientation=horizontal]:w-auto',
 				className,
 			)}
 			{...props}
