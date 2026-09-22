@@ -50,13 +50,13 @@ function PlanTracker({
 				<div
 					className={cn(
 						'border border-input bg-muted/40',
-						flushBottom ? 'rounded-t-xl border-b-0' : 'rounded-xl',
+						flushBottom ? 'rounded-t-lg border-b-0' : 'rounded-lg',
 					)}
 				>
 					<CollapsibleTrigger
 						className={cn(
 							'group flex w-full items-center gap-1.5 px-3 py-2 text-left text-[13px]',
-							'text-muted-foreground transition-colors duration-150 hover:text-foreground',
+							'text-muted-foreground transition-colors duration-(--duration-moderate) hover:text-foreground',
 						)}
 					>
 						<ListChecks className="size-3.5 shrink-0" />

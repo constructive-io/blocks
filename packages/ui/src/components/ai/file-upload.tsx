@@ -13,8 +13,8 @@ type FileUploadProps = {
 	accept?: string;
 	disabled?: boolean;
 	className?: string;
-	/** Compact trigger only (no dropzone chrome). */
-	variant?: 'dropzone' | 'button';
+	/** `compact` renders a single-row dropzone; `button` renders a trigger only. */
+	variant?: 'dropzone' | 'compact' | 'button';
 	children?: React.ReactNode;
 };
 
@@ -120,17 +120,20 @@ function FileUpload({
 				onDragLeave={() => setDragging(false)}
 				onDrop={onDrop}
 				className={cn(
-					'flex cursor-pointer flex-col items-center justify-center gap-2 rounded-xl border border-dashed px-4 py-6 text-center',
-					'transition-colors duration-150',
+					'flex cursor-pointer items-center justify-center gap-2 rounded-lg border border-dashed px-4 text-center',
+					'transition-colors duration-(--duration-moderate)',
+					variant === 'compact' ? 'flex-row rounded-md py-3' : 'flex-col py-6',
 					dragging ? 'border-primary bg-primary/5' : 'border-border bg-muted/30 hover:bg-muted/50',
 					disabled && 'pointer-events-none opacity-60',
 				)}
 			>
-				<Upload className="size-5 text-muted-foreground" />
+				<Upload className={cn('text-muted-foreground', variant === 'compact' ? 'size-4' : 'size-5')} />
 				<div className="text-[13px] font-medium text-foreground">Drop files or click to upload</div>
-				<div className="text-xs text-muted-foreground">
-					{multiple ? 'Multiple files supported' : 'Single file'}
-				</div>
+				{variant === 'compact' ? null : (
+					<div className="text-xs text-muted-foreground">
+						{multiple ? 'Multiple files supported' : 'Single file'}
+					</div>
+				)}
 			</div>
 			{files.length > 0 ? (
 				<ul className="flex flex-col gap-1">

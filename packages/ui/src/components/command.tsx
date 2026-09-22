@@ -4,6 +4,7 @@ import { Command as CommandPrimitive } from "cmdk";
 import { SearchIcon } from "lucide-react";
 import * as React from "react";
 import { ModalPortalScope, useRootPortalContainer } from "@constructive-io/ui/portal";
+import { FluidHighlight } from "../lib/motion/fluid-highlight";
 import { cn } from "../lib/utils";
 
 function CommandDialog({
@@ -20,7 +21,7 @@ function CommandDialog({
 		"fixed inset-0 z-[var(--z-layer-toast)] bg-black/32 backdrop-blur-sm data-[state=open]:animate-[fade-in_200ms_ease-out] data-[state=closed]:animate-[fade-out_150ms_ease-in] motion-reduce:animate-none",
       )}
       contentClassName={cn(
-        "fixed left-1/2 top-[max(--spacing(4),4vh)] sm:top-[10vh] z-[var(--z-layer-toast)] -translate-x-1/2 flex max-h-100 min-h-0 w-full min-w-0 max-w-xl flex-col rounded-2xl border bg-popover bg-clip-padding text-popover-foreground shadow-lg max-sm:right-3 max-sm:left-3 max-sm:w-auto max-sm:translate-x-0 data-[state=open]:animate-[command-in_200ms_ease-out] data-[state=closed]:animate-[command-out_150ms_ease-in] motion-reduce:animate-none before:pointer-events-none before:absolute before:inset-0 before:rounded-[calc(var(--radius-2xl)-1px)] before:bg-muted/50 before:shadow-[0_1px_--theme(--color-black/4%)] **:data-[slot=scroll-area-viewport]:data-has-overflow-y:pe-1 dark:bg-clip-border dark:before:shadow-[0_-1px_--theme(--color-white/8%)]",
+        "fixed left-1/2 top-[max(--spacing(4),4vh)] sm:top-[10vh] z-[var(--z-layer-toast)] -translate-x-1/2 flex max-h-100 min-h-0 w-full min-w-0 max-w-xl flex-col rounded-lg border bg-popover bg-clip-padding text-popover-foreground shadow-lg max-sm:right-3 max-sm:left-3 max-sm:w-auto max-sm:translate-x-0 data-[state=open]:animate-[command-in_200ms_ease-out] data-[state=closed]:animate-[command-out_150ms_ease-in] motion-reduce:animate-none before:pointer-events-none before:absolute before:inset-0 before:rounded-[calc(var(--radius-2xl)-1px)] before:bg-muted/50 before:shadow-[0_1px_--theme(--color-black/4%)] **:data-[slot=scroll-area-viewport]:data-has-overflow-y:pe-1 dark:bg-clip-border dark:before:shadow-[0_-1px_--theme(--color-white/8%)]",
         className,
       )}
       loop
@@ -50,7 +51,7 @@ function Command({
   return (
     <CommandPrimitive
       className={cn(
-        "flex h-full w-full flex-col overflow-hidden rounded-2xl",
+        "flex h-full w-full flex-col overflow-hidden rounded-lg",
         className,
       )}
       data-slot="command"
@@ -74,7 +75,7 @@ function CommandInput({
       >
         <SearchIcon className="size-4 shrink-0 text-muted-foreground" />
         <CommandPrimitive.Input
-          className="flex h-10 w-full bg-transparent text-sm outline-none placeholder:text-muted-foreground disabled:cursor-not-allowed disabled:opacity-50"
+          className="flex h-10 w-full bg-transparent text-sm outline-none placeholder:text-subtle-foreground disabled:cursor-not-allowed disabled:opacity-64"
           placeholder={placeholder}
           data-slot="command-input"
           {...props}
@@ -86,14 +87,18 @@ function CommandInput({
 
 function CommandList({
   className,
+  children,
   ...props
 }: React.ComponentProps<typeof CommandPrimitive.List>) {
   return (
     <CommandPrimitive.List
-      className={cn("not-empty:scroll-py-2 not-empty:p-2 max-h-[300px] overflow-y-auto overflow-x-hidden", className)}
+      className={cn("relative not-empty:scroll-py-2 not-empty:p-2 max-h-[300px] overflow-y-auto overflow-x-hidden", className)}
       data-slot="command-list"
       {...props}
-    />
+    >
+      <FluidHighlight />
+      {children}
+    </CommandPrimitive.List>
   );
 }
 
@@ -114,7 +119,7 @@ function CommandPanel({ className, ...props }: React.ComponentProps<"div">) {
   return (
     <div
       className={cn(
-        "-mx-px relative min-h-0 rounded-t-xl border bg-popover bg-clip-padding shadow-xs [clip-path:inset(0_1px)] before:pointer-events-none before:absolute before:inset-0 before:rounded-t-[calc(var(--radius-xl)-1px)] **:data-[slot=scroll-area-scrollbar]:mt-2 dark:bg-clip-border dark:before:shadow-[0_-1px_--theme(--color-white/8%)]",
+        "-mx-px relative min-h-0 rounded-t-lg border bg-popover bg-clip-padding shadow-xs [clip-path:inset(0_1px)] before:pointer-events-none before:absolute before:inset-0 before:rounded-t-[calc(var(--radius-xl)-1px)] **:data-[slot=scroll-area-scrollbar]:mt-2 dark:bg-clip-border dark:before:shadow-[0_-1px_--theme(--color-white/8%)]",
         className,
       )}
       data-slot="command-panel"
@@ -173,7 +178,7 @@ function CommandItem({
   return (
     <CommandPrimitive.Item
       className={cn(
-        "relative flex cursor-default items-center gap-2 rounded-sm px-2 py-1.5 text-sm outline-none select-none pointer-coarse:min-h-11 data-[disabled=true]:pointer-events-none data-[selected=true]:bg-accent data-[selected=true]:text-accent-foreground data-[disabled=true]:opacity-50",
+        "relative flex cursor-default items-center gap-2 rounded-sm px-2 py-1.5 text-sm outline-none select-none pointer-coarse:min-h-11 data-[disabled=true]:pointer-events-none data-[selected=true]:text-accent-foreground data-[disabled=true]:opacity-64",
         className,
       )}
       data-slot="command-item"
@@ -199,7 +204,7 @@ function CommandShortcut({ className, ...props }: React.ComponentProps<"kbd">) {
   return (
     <span
       className={cn(
-        "ms-auto font-medium text-muted-foreground/72 text-xs tracking-widest",
+        "ms-auto font-medium text-subtle-foreground text-xs tracking-widest",
         className,
       )}
       data-slot="command-shortcut"
@@ -212,7 +217,7 @@ function CommandFooter({ className, ...props }: React.ComponentProps<"div">) {
   return (
     <div
       className={cn(
-        "flex items-center justify-between gap-2 rounded-b-[calc(var(--radius-2xl)-1px)] px-5 py-3 text-muted-foreground text-xs",
+        "flex items-center justify-between gap-2 rounded-b-[calc(var(--radius-lg)-1px)] px-5 py-3 text-subtle-foreground text-xs",
         className,
       )}
       data-slot="command-footer"

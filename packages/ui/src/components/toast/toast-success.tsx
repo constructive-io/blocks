@@ -20,7 +20,7 @@ export function showSuccessToast(props: ToastSuccessProps) {
 
 	return toast.custom((t) => (
 		<div
-			className='bg-background text-foreground w-full rounded-md border border-green-200/60 px-4 py-3 shadow-lg
+			className='bg-background text-foreground w-full rounded-lg border border-green-200/60 px-4 py-3 shadow-lg
 				sm:w-[var(--width)] dark:border-green-800/50'
 		>
 			<div className='flex gap-2'>

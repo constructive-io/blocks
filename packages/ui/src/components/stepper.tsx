@@ -28,7 +28,7 @@ const StepperContext = createContext<StepperContextValue | undefined>(undefined)
 const StepItemContext = createContext<StepItemContextValue | undefined>(undefined);
 
 const iconSwapClass =
-	'transition-[opacity,scale,filter] duration-300 ease-[cubic-bezier(0.2,0,0,1)] motion-reduce:transition-none';
+	'transition-[opacity,scale,filter] duration-(--duration-slow) ease-out motion-reduce:transition-none';
 const iconSwapVisible = 'scale-100 opacity-100 blur-0';
 const iconSwapHidden = 'scale-[0.25] opacity-0 blur-[4px]';
 
@@ -154,9 +154,9 @@ function StepperTrigger({ asChild = false, static: isStatic, className, children
 	const { step, isDisabled } = useStepItem();
 
 	const triggerClassName = cn(
-		`focus-visible:border-ring focus-visible:ring-ring/50 inline-flex items-center gap-3 rounded-full transition-transform
-		duration-150 ease-out outline-none focus-visible:z-10 focus-visible:ring-[3px]
-		disabled:pointer-events-none disabled:opacity-50`,
+		`focus-visible:ring-ring/50 -my-1 inline-flex items-center gap-3 rounded-full py-1 transition-transform
+		duration-(--duration-moderate) ease-out outline-none focus-visible:z-10 focus-visible:ring-[3px]
+		disabled:pointer-events-none disabled:opacity-64`,
 		!isStatic && 'motion-safe:hover:scale-105 motion-safe:active:not-disabled:scale-[0.96]',
 		className,
 	);
@@ -204,7 +204,7 @@ function StepperIndicator({ asChild = false, className, children, ...props }: St
 			className={cn(
 				`bg-muted text-muted-foreground data-[state=active]:bg-primary data-[state=completed]:bg-primary
 					data-[state=active]:text-primary-foreground data-[state=completed]:text-primary-foreground relative flex size-6
-					shrink-0 items-center justify-center rounded-full text-xs font-medium transition-[color,background-color] duration-200 ease-out`,
+					shrink-0 items-center justify-center rounded-full text-xs font-medium transition-[color,background-color] duration-(--duration-slow) ease-out`,
 				className,
 			)}
 			data-state={state}
@@ -240,7 +240,7 @@ function StepperTitle({ className, ...props }: React.HTMLAttributes<HTMLHeadingE
 	return (
 		<h3
 			data-slot="stepper-title"
-			className={cn('text-sm font-medium transition-colors duration-200 ease-out', className)}
+			className={cn('text-sm font-medium transition-[color,background-color,border-color,text-decoration-color,fill,stroke,box-shadow] duration-(--duration-slow) ease-out', className)}
 			{...props}
 		/>
 	);
@@ -251,7 +251,7 @@ function StepperDescription({ className, ...props }: React.HTMLAttributes<HTMLPa
 	return (
 		<p
 			data-slot="stepper-description"
-			className={cn('text-muted-foreground text-sm transition-colors duration-200 ease-out', className)}
+			className={cn('text-muted-foreground text-sm transition-[color,background-color,border-color,text-decoration-color,fill,stroke,box-shadow] duration-(--duration-slow) ease-out', className)}
 			{...props}
 		/>
 	);
@@ -263,7 +263,7 @@ function StepperSeparator({ className, ...props }: React.HTMLAttributes<HTMLDivE
 		<div
 			data-slot="stepper-separator"
 			className={cn(
-				`bg-muted group-data-[state=completed]/step:bg-primary m-0.5 transition-colors duration-200 ease-out
+				`bg-muted group-data-[state=completed]/step:bg-primary m-0.5 transition-[color,background-color,border-color,text-decoration-color,fill,stroke,box-shadow] duration-(--duration-slow) ease-out
 				group-data-[orientation=horizontal]/stepper:h-0.5 group-data-[orientation=horizontal]/stepper:w-full
 				group-data-[orientation=horizontal]/stepper:flex-1 group-data-[orientation=vertical]/stepper:h-12
 				group-data-[orientation=vertical]/stepper:w-0.5`,

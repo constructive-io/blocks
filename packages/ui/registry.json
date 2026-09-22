@@ -10,10 +10,11 @@
       "description": "Constructive design system theme — OKLCH colors, z-index layers, shadow utilities, and animations.",
       "cssVars": {
         "theme": {
+          "--font-sans": "\"Inter\", ui-sans-serif, system-ui, sans-serif",
+          "--font-serif": "Georgia, ui-serif, serif",
+          "--font-mono": "Menlo, Monaco, Consolas, \"Liberation Mono\", monospace",
           "--color-background": "var(--background)",
           "--color-foreground": "var(--foreground)",
-          "--font-sans": "var(--font-geist-sans, \"Open Sans\", ui-sans-serif, system-ui, sans-serif)",
-          "--font-mono": "var(--font-geist-mono, Menlo, Monaco, Consolas, \"Liberation Mono\", monospace)",
           "--color-sidebar-ring": "var(--sidebar-ring)",
           "--color-sidebar-border": "var(--sidebar-border)",
           "--color-sidebar-accent-foreground": "var(--sidebar-accent-foreground)",
@@ -34,6 +35,7 @@
           "--color-accent-foreground": "var(--accent-foreground)",
           "--color-accent": "var(--accent)",
           "--color-muted-foreground": "var(--muted-foreground)",
+          "--color-subtle-foreground": "var(--subtle-foreground)",
           "--color-muted": "var(--muted)",
           "--color-secondary-foreground": "var(--secondary-foreground)",
           "--color-secondary": "var(--secondary)",
@@ -45,10 +47,12 @@
           "--color-card": "var(--card)",
           "--radius-xs": "calc(var(--radius) - 6px)",
           "--radius-sm": "calc(var(--radius) - 4px)",
-          "--radius-md": "var(--radius)",
-          "--radius-lg": "calc(var(--radius) + 2px)",
-          "--radius-xl": "calc(var(--radius) + 6px)",
+          "--radius-md": "calc(var(--radius) - 2px)",
+          "--radius-lg": "var(--radius)",
+          "--radius-xl": "calc(var(--radius) + 4px)",
           "--radius-2xl": "calc(var(--radius) + 10px)",
+          "--color-overlay-hover": "var(--overlay-hover)",
+          "--color-overlay-active": "var(--overlay-active)",
           "--color-warning-foreground": "var(--warning-foreground)",
           "--color-warning": "var(--warning)",
           "--color-success-foreground": "var(--success-foreground)",
@@ -58,58 +62,65 @@
           "--color-destructive-foreground": "var(--destructive-foreground)"
         },
         "light": {
-          "background": "oklch(1 0 0)",
-          "foreground": "oklch(0.3211 0 0)",
-          "card": "oklch(1 0 0)",
-          "card-foreground": "oklch(0.3211 0 0)",
-          "popover": "oklch(1 0 0)",
-          "popover-foreground": "oklch(0.3211 0 0)",
-          "primary": "oklch(0.688 0.1754 245.6151)",
-          "primary-foreground": "oklch(0.979 0.021 166.113)",
-          "secondary": "oklch(0.967 0.001 286.375)",
-          "secondary-foreground": "oklch(0.21 0.006 285.885)",
-          "muted": "oklch(0.967 0.001 286.375)",
-          "muted-foreground": "oklch(0.552 0.016 285.938)",
-          "accent": "oklch(0.967 0.001 286.375)",
-          "accent-foreground": "oklch(0.21 0.006 285.885)",
-          "destructive": "oklch(0.55 0.2 25)",
-          "destructive-foreground": "oklch(0.985 0 0)",
-          "border": "oklch(0.92 0.004 286.32)",
-          "input": "oklch(0.93 0.004 286.32)",
-          "ring": "oklch(0.871 0.006 286.286)",
-          "chart-1": "oklch(0.646 0.222 41.116)",
-          "chart-2": "oklch(0.6 0.118 184.704)",
-          "chart-3": "oklch(0.398 0.07 227.392)",
-          "chart-4": "oklch(0.828 0.189 84.429)",
-          "chart-5": "oklch(0.769 0.188 70.08)",
-          "sidebar": "oklch(0.985 0 0)",
-          "sidebar-foreground": "oklch(0.37 0.013 285.805)",
-          "sidebar-primary": "oklch(0.985 0 0)",
-          "sidebar-primary-foreground": "oklch(0.21 0.006 285.885)",
-          "sidebar-accent": "oklch(0.967 0.001 286.375)",
-          "sidebar-accent-foreground": "oklch(0.21 0.006 285.885)",
-          "sidebar-border": "oklch(0.92 0.004 286.32)",
-          "sidebar-ring": "oklch(0.871 0.006 286.286)",
+          "background": "hsl(0 0% 98%)",
+          "foreground": "hsl(0 0% 16%)",
+          "card": "hsl(0 0% 100%)",
+          "card-foreground": "hsl(0 0% 16%)",
+          "popover": "hsl(0 0% 100%)",
+          "popover-foreground": "hsl(0 0% 16%)",
+          "primary": "oklch(0.565 0.215 259)",
+          "primary-foreground": "oklch(0.985 0.005 250)",
+          "secondary": "hsl(0 0% 96%)",
+          "secondary-foreground": "hsl(0 0% 16%)",
+          "muted": "hsl(0 0% 96%)",
+          "muted-foreground": "hsl(0 0% 36%)",
+          "subtle-foreground": "hsl(0 0% 50%)",
+          "accent": "hsl(0 0% 96%)",
+          "accent-foreground": "hsl(0 0% 16%)",
+          "destructive": "oklch(0.56 0.21 27)",
+          "destructive-foreground": "oklch(0.985 0.005 250)",
+          "border": "hsl(0 0% 95%)",
+          "input": "hsl(0 0% 89%)",
+          "ring": "oklch(0.565 0.215 259)",
+          "overlay-hover": "rgb(0 0 0 / 0.04)",
+          "overlay-active": "rgb(0 0 0 / 0.07)",
+          "chart-1": "oklch(0.565 0.215 259)",
+          "chart-2": "oklch(0.68 0.13 195)",
+          "chart-3": "oklch(0.60 0.17 292)",
+          "chart-4": "oklch(0.78 0.16 75)",
+          "chart-5": "oklch(0.66 0.15 155)",
+          "sidebar": "hsl(0 0% 97%)",
+          "sidebar-foreground": "hsl(0 0% 24%)",
+          "sidebar-primary": "oklch(0.565 0.215 259)",
+          "sidebar-primary-foreground": "oklch(0.985 0.005 250)",
+          "sidebar-accent": "hsl(0 0% 93%)",
+          "sidebar-accent-foreground": "hsl(0 0% 16%)",
+          "sidebar-border": "hsl(0 0% 92%)",
+          "sidebar-ring": "oklch(0.565 0.215 259)",
           "info": "var(--color-blue-500)",
           "info-foreground": "var(--color-blue-700)",
           "success": "var(--color-emerald-500)",
           "success-foreground": "var(--color-emerald-700)",
           "warning": "var(--color-amber-500)",
           "warning-foreground": "var(--color-amber-700)",
-          "font-sans": "Open Sans, sans-serif",
-          "font-serif": "Georgia, serif",
-          "font-mono": "Menlo, monospace",
-          "radius": "0.5rem",
-          "shadow-border": "0 0 0 1px oklch(0 0 0 / 0.06), 0 1px 1px -0.5px rgb(35 35 35 / 0.08), 0 1px 2px -1px rgb(35 35 35 / 0.04), 0 2px 4px -1px rgb(35 35 35 / 0.03)",
-          "shadow-border-hover": "0 0 0 1px oklch(0 0 0 / 0.08), 0 1px 2px -1px rgb(35 35 35 / 0.08), 0 2px 4px -2px rgb(35 35 35 / 0.06), 0 4px 8px -2px rgb(35 35 35 / 0.04), 0 8px 16px -4px rgb(35 35 35 / 0.03)",
+          "radius": "0.625rem",
+          "duration-fast": "80ms",
+          "duration-moderate": "160ms",
+          "duration-slow": "240ms",
+          "duration-fast-exit": "60ms",
+          "duration-moderate-exit": "120ms",
+          "duration-slow-exit": "160ms",
+          "ease-out": "cubic-bezier(0.16, 1, 0.3, 1)",
+          "shadow-border": "0 0 0 1px oklch(0 0 0 / 0.055), 0 1px 1px -0.5px rgb(0 0 0 / 0.06), 0 3px 3px -1.5px rgb(0 0 0 / 0.06), 0 6px 6px -3px rgb(0 0 0 / 0.06)",
+          "shadow-border-hover": "0 0 0 1px oklch(0 0 0 / 0.075), 0 1px 1px -0.5px rgb(0 0 0 / 0.06), 0 3px 3px -1.5px rgb(0 0 0 / 0.06), 0 6px 6px -3px rgb(0 0 0 / 0.06), 0 12px 12px -6px rgb(0 0 0 / 0.06), 0 24px 24px -12px rgb(0 0 0 / 0.06)",
           "shadow-2xs": "0 1px rgb(0 0 0 / 0.05)",
-          "shadow-xs": "0 1px 2px 0 rgb(0 0 0 / 0.05)",
-          "shadow-sm": "0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1)",
-          "shadow": "0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1)",
-          "shadow-md": "0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1)",
-          "shadow-lg": "0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1)",
-          "shadow-xl": "0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1)",
-          "shadow-2xl": "0 25px 50px -12px rgb(0 0 0 / 0.25)",
+          "shadow-xs": "0 1px 1px -0.5px rgb(0 0 0 / 0.06)",
+          "shadow-sm": "0 1px 1px -0.5px rgb(0 0 0 / 0.06), 0 3px 3px -1.5px rgb(0 0 0 / 0.06)",
+          "shadow": "0 1px 1px -0.5px rgb(0 0 0 / 0.06), 0 3px 3px -1.5px rgb(0 0 0 / 0.06)",
+          "shadow-md": "0 1px 1px -0.5px rgb(0 0 0 / 0.06), 0 3px 3px -1.5px rgb(0 0 0 / 0.06), 0 6px 6px -3px rgb(0 0 0 / 0.06)",
+          "shadow-lg": "0 1px 1px -0.5px rgb(0 0 0 / 0.06), 0 3px 3px -1.5px rgb(0 0 0 / 0.06), 0 6px 6px -3px rgb(0 0 0 / 0.06), 0 12px 12px -6px rgb(0 0 0 / 0.06)",
+          "shadow-xl": "0 1px 1px -0.5px rgb(0 0 0 / 0.06), 0 3px 3px -1.5px rgb(0 0 0 / 0.06), 0 6px 6px -3px rgb(0 0 0 / 0.06), 0 12px 12px -6px rgb(0 0 0 / 0.06), 0 24px 24px -12px rgb(0 0 0 / 0.06)",
+          "shadow-2xl": "0 1px 1px -0.5px rgb(0 0 0 / 0.06), 0 3px 3px -1.5px rgb(0 0 0 / 0.06), 0 6px 6px -3px rgb(0 0 0 / 0.06), 0 12px 12px -6px rgb(0 0 0 / 0.06), 0 24px 24px -12px rgb(0 0 0 / 0.06), 0 48px 48px -24px rgb(0 0 0 / 0.06)",
           "z-layer-portal-root": "9999",
           "z-layer-floating": "1000",
           "z-layer-modal-backdrop": "2000",
@@ -118,58 +129,65 @@
           "z-layer-toast": "4000"
         },
         "dark": {
-          "background": "oklch(0.21 0.006 285.885)",
-          "foreground": "oklch(0.985 0 0)",
-          "card": "oklch(0.21 0.006 285.885)",
-          "card-foreground": "oklch(0.985 0 0)",
-          "popover": "oklch(0.21 0.006 285.885)",
-          "popover-foreground": "oklch(0.985 0 0)",
-          "primary": "oklch(0.688 0.1754 245.6151)",
-          "primary-foreground": "oklch(0.979 0.021 166.113)",
-          "secondary": "oklch(0.274 0.006 286.033)",
-          "secondary-foreground": "oklch(0.985 0 0)",
-          "muted": "oklch(0.244 0.006 285.97)",
-          "muted-foreground": "oklch(0.705 0.015 286.067)",
-          "accent": "oklch(0.244 0.006 285.97)",
-          "accent-foreground": "oklch(0.985 0 0)",
-          "destructive": "oklch(0.55 0.2 25)",
-          "destructive-foreground": "oklch(0.985 0 0)",
-          "border": "oklch(0.29 0.009 285.83)",
-          "input": "oklch(0.29 0.009 285.83)",
-          "ring": "oklch(0.442 0.017 285.786)",
-          "chart-1": "oklch(0.488 0.243 264.376)",
-          "chart-2": "oklch(0.696 0.17 162.48)",
-          "chart-3": "oklch(0.769 0.188 70.08)",
-          "chart-4": "oklch(0.627 0.265 303.9)",
-          "chart-5": "oklch(0.645 0.246 16.439)",
-          "sidebar": "oklch(0.244 0.006 285.97)",
-          "sidebar-foreground": "oklch(0.967 0.001 286.375)",
-          "sidebar-primary": "oklch(0.596 0.145 163.225)",
-          "sidebar-primary-foreground": "oklch(1 0 0)",
-          "sidebar-accent": "oklch(0.274 0.006 286.033)",
-          "sidebar-accent-foreground": "oklch(0.967 0.001 286.375)",
-          "sidebar-border": "oklch(0.274 0.006 286.033)",
-          "sidebar-ring": "oklch(0.442 0.017 285.786)",
+          "background": "hsl(0 0% 9%)",
+          "foreground": "hsl(0 0% 93%)",
+          "card": "hsl(0 0% 13%)",
+          "card-foreground": "hsl(0 0% 93%)",
+          "popover": "hsl(0 0% 14%)",
+          "popover-foreground": "hsl(0 0% 93%)",
+          "primary": "oklch(0.56 0.19 256)",
+          "primary-foreground": "oklch(0.985 0.005 250)",
+          "secondary": "hsl(0 0% 17%)",
+          "secondary-foreground": "hsl(0 0% 93%)",
+          "muted": "hsl(0 0% 17%)",
+          "muted-foreground": "hsl(0 0% 68%)",
+          "subtle-foreground": "hsl(0 0% 52%)",
+          "accent": "hsl(0 0% 17%)",
+          "accent-foreground": "hsl(0 0% 93%)",
+          "destructive": "oklch(0.62 0.19 22)",
+          "destructive-foreground": "oklch(0.985 0.005 250)",
+          "border": "hsl(0 0% 19%)",
+          "input": "hsl(0 0% 24%)",
+          "ring": "oklch(0.62 0.19 256)",
+          "overlay-hover": "rgb(255 255 255 / 0.06)",
+          "overlay-active": "rgb(255 255 255 / 0.10)",
+          "chart-1": "oklch(0.66 0.18 256)",
+          "chart-2": "oklch(0.74 0.12 195)",
+          "chart-3": "oklch(0.68 0.15 292)",
+          "chart-4": "oklch(0.80 0.15 75)",
+          "chart-5": "oklch(0.72 0.14 155)",
+          "sidebar": "hsl(0 0% 11%)",
+          "sidebar-foreground": "hsl(0 0% 93%)",
+          "sidebar-primary": "oklch(0.56 0.19 256)",
+          "sidebar-primary-foreground": "oklch(0.985 0.005 250)",
+          "sidebar-accent": "hsl(0 0% 17%)",
+          "sidebar-accent-foreground": "hsl(0 0% 93%)",
+          "sidebar-border": "hsl(0 0% 19%)",
+          "sidebar-ring": "oklch(0.62 0.19 256)",
           "info": "var(--color-blue-500)",
           "info-foreground": "var(--color-blue-400)",
           "success": "var(--color-emerald-500)",
           "success-foreground": "var(--color-emerald-400)",
           "warning": "var(--color-amber-500)",
           "warning-foreground": "var(--color-amber-400)",
-          "font-sans": "Open Sans, sans-serif",
-          "font-serif": "Georgia, serif",
-          "font-mono": "Menlo, monospace",
-          "radius": "0.5rem",
-          "shadow-border": "0 0 0 1px oklch(1 0 0 / 0.08), 0 1px 1px -0.5px rgb(0 0 0 / 0.25), 0 1px 2px -1px rgb(0 0 0 / 0.15), 0 2px 4px -1px rgb(0 0 0 / 0.10)",
-          "shadow-border-hover": "0 0 0 1px oklch(1 0 0 / 0.13), 0 1px 2px -1px rgb(0 0 0 / 0.30), 0 2px 4px -2px rgb(0 0 0 / 0.20), 0 4px 8px -2px rgb(0 0 0 / 0.15), 0 8px 16px -4px rgb(0 0 0 / 0.10)",
-          "shadow-2xs": "0 1px rgb(0 0 0 / 0.2)",
-          "shadow-xs": "0 1px 2px 0 rgb(0 0 0 / 0.25)",
-          "shadow-sm": "0 1px 3px 0 rgb(0 0 0 / 0.3), 0 1px 2px -1px rgb(0 0 0 / 0.25)",
-          "shadow": "0 1px 3px 0 rgb(0 0 0 / 0.3), 0 1px 2px -1px rgb(0 0 0 / 0.25)",
-          "shadow-md": "0 4px 6px -1px rgb(0 0 0 / 0.35), 0 2px 4px -2px rgb(0 0 0 / 0.3)",
-          "shadow-lg": "0 10px 15px -3px rgb(0 0 0 / 0.4), 0 4px 6px -4px rgb(0 0 0 / 0.3)",
-          "shadow-xl": "0 20px 25px -5px rgb(0 0 0 / 0.45), 0 8px 10px -6px rgb(0 0 0 / 0.35)",
-          "shadow-2xl": "0 25px 50px -12px rgb(0 0 0 / 0.55)",
+          "radius": "0.625rem",
+          "duration-fast": "80ms",
+          "duration-moderate": "160ms",
+          "duration-slow": "240ms",
+          "duration-fast-exit": "60ms",
+          "duration-moderate-exit": "120ms",
+          "duration-slow-exit": "160ms",
+          "ease-out": "cubic-bezier(0.16, 1, 0.3, 1)",
+          "shadow-border": "inset 0 1px 0 0 rgb(255 255 255 / 0.04), inset 0 0 0 1px oklch(1 0 0 / 0.1), 0 1px 1px -0.5px rgb(0 0 0 / 0.22), 0 3px 3px -1.5px rgb(0 0 0 / 0.22), 0 6px 6px -3px rgb(0 0 0 / 0.22)",
+          "shadow-border-hover": "inset 0 1px 0 0 rgb(255 255 255 / 0.06), inset 0 0 0 1px oklch(1 0 0 / 0.14), 0 1px 1px -0.5px rgb(0 0 0 / 0.22), 0 3px 3px -1.5px rgb(0 0 0 / 0.22), 0 6px 6px -3px rgb(0 0 0 / 0.22), 0 12px 12px -6px rgb(0 0 0 / 0.22), 0 24px 24px -12px rgb(0 0 0 / 0.22)",
+          "shadow-2xs": "0 1px rgb(0 0 0 / 0.18)",
+          "shadow-xs": "0 1px 1px -0.5px rgb(0 0 0 / 0.22)",
+          "shadow-sm": "0 1px 1px -0.5px rgb(0 0 0 / 0.22), 0 3px 3px -1.5px rgb(0 0 0 / 0.22)",
+          "shadow": "0 1px 1px -0.5px rgb(0 0 0 / 0.22), 0 3px 3px -1.5px rgb(0 0 0 / 0.22)",
+          "shadow-md": "0 1px 1px -0.5px rgb(0 0 0 / 0.22), 0 3px 3px -1.5px rgb(0 0 0 / 0.22), 0 6px 6px -3px rgb(0 0 0 / 0.22)",
+          "shadow-lg": "0 1px 1px -0.5px rgb(0 0 0 / 0.22), 0 3px 3px -1.5px rgb(0 0 0 / 0.22), 0 6px 6px -3px rgb(0 0 0 / 0.22), 0 12px 12px -6px rgb(0 0 0 / 0.22)",
+          "shadow-xl": "0 1px 1px -0.5px rgb(0 0 0 / 0.22), 0 3px 3px -1.5px rgb(0 0 0 / 0.22), 0 6px 6px -3px rgb(0 0 0 / 0.22), 0 12px 12px -6px rgb(0 0 0 / 0.22), 0 24px 24px -12px rgb(0 0 0 / 0.22)",
+          "shadow-2xl": "0 1px 1px -0.5px rgb(0 0 0 / 0.22), 0 3px 3px -1.5px rgb(0 0 0 / 0.22), 0 6px 6px -3px rgb(0 0 0 / 0.22), 0 12px 12px -6px rgb(0 0 0 / 0.22), 0 24px 24px -12px rgb(0 0 0 / 0.22), 0 48px 48px -24px rgb(0 0 0 / 0.22)",
           "z-layer-portal-root": "9999",
           "z-layer-floating": "1000",
           "z-layer-modal-backdrop": "2000",
@@ -186,13 +204,27 @@
           ".dark": {
             "color-scheme": "dark"
           },
+          "html": {
+            "scrollbar-gutter": "stable"
+          },
           "*": {
             "@apply border-border/60 outline-ring/50": {}
           },
           "body": {
             "@apply bg-background font-sans text-foreground antialiased": {},
             "font-synthesis": "none",
+            "font-feature-settings": "\"cv11\", \"ss01\"",
+            "letter-spacing": "-0.01em",
             "position": "relative"
+          },
+          "h1, h2, h3, h4": {
+            "text-wrap": "balance"
+          },
+          "p": {
+            "text-wrap": "pretty"
+          },
+          "::selection": {
+            "background": "color-mix(in oklch, var(--primary) 18%, transparent)"
           },
           "#__next, [data-nextjs-root-layout]": {
             "isolation": "isolate"
@@ -249,6 +281,10 @@
           },
           ".animate-ai-fade-up": {
             "animation": "ai-fade-up 300ms cubic-bezier(0.23, 1, 0.32, 1) both"
+          },
+          ".animate-fade-up": {
+            "animation": "fade-up 0.6s var(--ease-out) both",
+            "animation-delay": "calc(var(--stagger, 0) * 60ms)"
           }
         },
         "@keyframes pulse-glow": {
@@ -305,6 +341,16 @@
           },
           "to": {
             "opacity": "1"
+          }
+        },
+        "@keyframes fade-up": {
+          "from": {
+            "opacity": "0",
+            "transform": "translateY(8px)"
+          },
+          "to": {
+            "opacity": "1",
+            "transform": "translateY(0)"
           }
         },
         "@keyframes fade-out": {
@@ -425,9 +471,974 @@
         },
         "[data-slot=\"portal-root\"] > *": {
           "pointer-events": "auto"
+        },
+        "@media (pointer: fine)": {
+          "*": {
+            "scrollbar-width": "thin",
+            "scrollbar-color": "color-mix(in oklch, var(--foreground) 14%, transparent) transparent"
+          },
+          "::-webkit-scrollbar": {
+            "width": "10px",
+            "height": "10px"
+          },
+          "::-webkit-scrollbar-track, ::-webkit-scrollbar-corner": {
+            "background": "transparent"
+          },
+          "::-webkit-scrollbar-thumb": {
+            "background-color": "color-mix(in oklch, var(--foreground) 14%, transparent)",
+            "border": "3px solid transparent",
+            "background-clip": "content-box",
+            "border-radius": "9999px"
+          },
+          "::-webkit-scrollbar-thumb:hover": {
+            "background-color": "color-mix(in oklch, var(--foreground) 20%, transparent)"
+          },
+          "::-webkit-scrollbar-thumb:active": {
+            "background-color": "color-mix(in oklch, var(--foreground) 26%, transparent)"
+          }
         }
       },
       "files": []
+    },
+    {
+      "name": "theme-catppuccin",
+      "type": "registry:theme",
+      "title": "Catppuccin theme",
+      "description": "Catppuccin Mocha mapped onto the Constructive token set, with Catppuccin Latte for light mode. Ported from the Ghostty built-in color schemes.",
+      "categories": [
+        "theme"
+      ],
+      "docs": "Install with `pnpm dlx shadcn@latest add @constructive/theme-catppuccin`. Requires the Constructive base theme (`@constructive/constructive-theme`).",
+      "cssVars": {
+        "light": {
+          "background": "oklch(0.958 0.006 264.532)",
+          "foreground": "oklch(0.435 0.043 279.325)",
+          "card": "oklch(0.978 0.006 264.532)",
+          "card-foreground": "oklch(0.435 0.043 279.325)",
+          "popover": "oklch(0.978 0.006 264.532)",
+          "popover-foreground": "oklch(0.435 0.043 279.325)",
+          "primary": "oklch(0.555 0.25 297.016)",
+          "primary-foreground": "oklch(0.985 0 0)",
+          "secondary": "oklch(0.913 0.006 264.532)",
+          "secondary-foreground": "oklch(0.435 0.043 279.325)",
+          "muted": "oklch(0.913 0.006 264.532)",
+          "muted-foreground": "oklch(0.547 0.034 279.084)",
+          "subtle-foreground": "oklch(0.637 0.034 279.084)",
+          "accent": "oklch(0.913 0.006 264.532)",
+          "accent-foreground": "oklch(0.435 0.043 279.325)",
+          "destructive": "oklch(0.55 0.216 19.809)",
+          "destructive-foreground": "oklch(0.985 0 0)",
+          "border": "oklch(0.883 0.006 264.532)",
+          "input": "oklch(0.853 0.006 264.532)",
+          "ring": "oklch(0.555 0.25 297.016)",
+          "chart-1": "oklch(0.555 0.25 297.016)",
+          "chart-2": "oklch(0.602 0.098 201.105)",
+          "chart-3": "oklch(0.68 0.174 338.433)",
+          "chart-4": "oklch(0.68 0.149 67.777)",
+          "chart-5": "oklch(0.625 0.177 140.445)",
+          "sidebar": "oklch(0.946 0.006 264.532)",
+          "sidebar-foreground": "oklch(0.435 0.043 279.325)",
+          "sidebar-primary": "oklch(0.555 0.25 297.016)",
+          "sidebar-primary-foreground": "oklch(0.985 0 0)",
+          "sidebar-accent": "oklch(0.913 0.006 264.532)",
+          "sidebar-accent-foreground": "oklch(0.435 0.043 279.325)",
+          "sidebar-border": "oklch(0.883 0.006 264.532)",
+          "sidebar-ring": "oklch(0.555 0.25 297.016)",
+          "info": "oklch(0.559 0.226 262.087)",
+          "info-foreground": "oklch(0.42 0.226 262.087)",
+          "success": "oklch(0.625 0.177 140.445)",
+          "success-foreground": "oklch(0.42 0.177 140.445)",
+          "warning": "oklch(0.66 0.149 67.777)",
+          "warning-foreground": "oklch(0.42 0.149 67.777)"
+        },
+        "dark": {
+          "background": "oklch(0.243 0.03 283.911)",
+          "foreground": "oklch(0.879 0.043 272.277)",
+          "card": "oklch(0.278 0.03 283.911)",
+          "card-foreground": "oklch(0.879 0.043 272.277)",
+          "popover": "oklch(0.293 0.03 283.911)",
+          "popover-foreground": "oklch(0.879 0.043 272.277)",
+          "primary": "oklch(0.787 0.119 304.769)",
+          "primary-foreground": "oklch(0.243 0.03 283.911)",
+          "secondary": "oklch(0.323 0.03 283.911)",
+          "secondary-foreground": "oklch(0.879 0.043 272.277)",
+          "muted": "oklch(0.323 0.03 283.911)",
+          "muted-foreground": "oklch(0.657 0.034 278.643)",
+          "subtle-foreground": "oklch(0.567 0.034 278.643)",
+          "accent": "oklch(0.323 0.03 283.911)",
+          "accent-foreground": "oklch(0.879 0.043 272.277)",
+          "destructive": "oklch(0.596 0.13 2.764)",
+          "destructive-foreground": "oklch(0.985 0 0)",
+          "border": "oklch(0.343 0.03 283.911)",
+          "input": "oklch(0.373 0.03 283.911)",
+          "ring": "oklch(0.787 0.119 304.769)",
+          "chart-1": "oklch(0.787 0.119 304.769)",
+          "chart-2": "oklch(0.85 0.079 182.749)",
+          "chart-3": "oklch(0.85 0.075 336.304)",
+          "chart-4": "oklch(0.85 0.07 86.528)",
+          "chart-5": "oklch(0.85 0.109 142.715)",
+          "sidebar": "oklch(0.228 0.03 283.911)",
+          "sidebar-foreground": "oklch(0.879 0.043 272.277)",
+          "sidebar-primary": "oklch(0.787 0.119 304.769)",
+          "sidebar-primary-foreground": "oklch(0.243 0.03 283.911)",
+          "sidebar-accent": "oklch(0.323 0.03 283.911)",
+          "sidebar-accent-foreground": "oklch(0.879 0.043 272.277)",
+          "sidebar-border": "oklch(0.343 0.03 283.911)",
+          "sidebar-ring": "oklch(0.787 0.119 304.769)",
+          "info": "oklch(0.766 0.111 259.885)",
+          "info-foreground": "oklch(0.8 0.111 259.885)",
+          "success": "oklch(0.858 0.109 142.715)",
+          "success-foreground": "oklch(0.8 0.109 142.715)",
+          "warning": "oklch(0.919 0.07 86.528)",
+          "warning-foreground": "oklch(0.8 0.07 86.528)"
+        }
+      }
+    },
+    {
+      "name": "theme-dracula",
+      "type": "registry:theme",
+      "title": "Dracula theme",
+      "description": "Dracula mapped onto the Constructive token set, with a derived light mode. Ported from the Ghostty built-in color schemes.",
+      "categories": [
+        "theme"
+      ],
+      "docs": "Install with `pnpm dlx shadcn@latest add @constructive/theme-dracula`. Requires the Constructive base theme (`@constructive/constructive-theme`).",
+      "cssVars": {
+        "light": {
+          "background": "oklch(0.977 0.008 106.545)",
+          "foreground": "oklch(0.288 0.022 277.509)",
+          "card": "oklch(0.995 0.008 106.545)",
+          "card-foreground": "oklch(0.288 0.022 277.509)",
+          "popover": "oklch(0.995 0.008 106.545)",
+          "popover-foreground": "oklch(0.288 0.022 277.509)",
+          "primary": "oklch(0.539 0.188 296.609)",
+          "primary-foreground": "oklch(0.985 0 0)",
+          "secondary": "oklch(0.932 0.008 106.545)",
+          "secondary-foreground": "oklch(0.288 0.022 277.509)",
+          "muted": "oklch(0.932 0.008 106.545)",
+          "muted-foreground": "oklch(0.558 0.016 277.509)",
+          "subtle-foreground": "oklch(0.648 0.016 277.509)",
+          "accent": "oklch(0.932 0.008 106.545)",
+          "accent-foreground": "oklch(0.288 0.022 277.509)",
+          "destructive": "oklch(0.58 0.206 24.431)",
+          "destructive-foreground": "oklch(0.985 0 0)",
+          "border": "oklch(0.902 0.008 106.545)",
+          "input": "oklch(0.872 0.008 106.545)",
+          "ring": "oklch(0.539 0.188 296.609)",
+          "chart-1": "oklch(0.539 0.188 296.609)",
+          "chart-2": "oklch(0.58 0.093 212.846)",
+          "chart-3": "oklch(0.58 0.183 346.812)",
+          "chart-4": "oklch(0.58 0.134 112.757)",
+          "chart-5": "oklch(0.58 0.22 148.025)",
+          "sidebar": "oklch(0.965 0.008 106.545)",
+          "sidebar-foreground": "oklch(0.288 0.022 277.509)",
+          "sidebar-primary": "oklch(0.539 0.188 296.609)",
+          "sidebar-primary-foreground": "oklch(0.985 0 0)",
+          "sidebar-accent": "oklch(0.932 0.008 106.545)",
+          "sidebar-accent-foreground": "oklch(0.288 0.022 277.509)",
+          "sidebar-border": "oklch(0.902 0.008 106.545)",
+          "sidebar-ring": "oklch(0.539 0.188 296.609)",
+          "info": "oklch(0.58 0.149 301.883)",
+          "info-foreground": "oklch(0.42 0.149 301.883)",
+          "success": "oklch(0.58 0.22 148.025)",
+          "success-foreground": "oklch(0.42 0.22 148.025)",
+          "warning": "oklch(0.58 0.134 112.757)",
+          "warning-foreground": "oklch(0.42 0.134 112.757)"
+        },
+        "dark": {
+          "background": "oklch(0.288 0.022 277.509)",
+          "foreground": "oklch(0.977 0.008 106.545)",
+          "card": "oklch(0.323 0.022 277.509)",
+          "card-foreground": "oklch(0.977 0.008 106.545)",
+          "popover": "oklch(0.338 0.022 277.509)",
+          "popover-foreground": "oklch(0.977 0.008 106.545)",
+          "primary": "oklch(0.742 0.149 301.883)",
+          "primary-foreground": "oklch(0.288 0.022 277.509)",
+          "secondary": "oklch(0.403 0.032 277.832)",
+          "secondary-foreground": "oklch(0.977 0.008 106.545)",
+          "muted": "oklch(0.403 0.032 277.832)",
+          "muted-foreground": "oklch(0.7 0.08 270.086)",
+          "subtle-foreground": "oklch(0.61 0.08 270.086)",
+          "accent": "oklch(0.403 0.032 277.832)",
+          "accent-foreground": "oklch(0.977 0.008 106.545)",
+          "destructive": "oklch(0.602 0.206 24.431)",
+          "destructive-foreground": "oklch(0.985 0 0)",
+          "border": "oklch(0.388 0.022 277.509)",
+          "input": "oklch(0.418 0.022 277.509)",
+          "ring": "oklch(0.742 0.149 301.883)",
+          "chart-1": "oklch(0.742 0.149 301.883)",
+          "chart-2": "oklch(0.85 0.093 212.846)",
+          "chart-3": "oklch(0.755 0.183 346.812)",
+          "chart-4": "oklch(0.85 0.134 112.757)",
+          "chart-5": "oklch(0.85 0.22 148.025)",
+          "sidebar": "oklch(0.273 0.022 277.509)",
+          "sidebar-foreground": "oklch(0.977 0.008 106.545)",
+          "sidebar-primary": "oklch(0.742 0.149 301.883)",
+          "sidebar-primary-foreground": "oklch(0.288 0.022 277.509)",
+          "sidebar-accent": "oklch(0.403 0.032 277.832)",
+          "sidebar-accent-foreground": "oklch(0.977 0.008 106.545)",
+          "sidebar-border": "oklch(0.388 0.022 277.509)",
+          "sidebar-ring": "oklch(0.742 0.149 301.883)",
+          "info": "oklch(0.742 0.149 301.883)",
+          "info-foreground": "oklch(0.8 0.149 301.883)",
+          "success": "oklch(0.871 0.22 148.025)",
+          "success-foreground": "oklch(0.8 0.22 148.025)",
+          "warning": "oklch(0.955 0.134 112.757)",
+          "warning-foreground": "oklch(0.8 0.134 112.757)"
+        }
+      }
+    },
+    {
+      "name": "theme-nord",
+      "type": "registry:theme",
+      "title": "Nord theme",
+      "description": "Nord mapped onto the Constructive token set, with Nord Light for light mode. Ported from the Ghostty built-in color schemes.",
+      "categories": [
+        "theme"
+      ],
+      "docs": "Install with `pnpm dlx shadcn@latest add @constructive/theme-nord`. Requires the Constructive base theme (`@constructive/constructive-theme`).",
+      "cssVars": {
+        "light": {
+          "background": "oklch(0.933 0.01 261.788)",
+          "foreground": "oklch(0.402 0.029 266.521)",
+          "card": "oklch(0.953 0.01 261.788)",
+          "card-foreground": "oklch(0.402 0.029 266.521)",
+          "popover": "oklch(0.953 0.01 261.788)",
+          "popover-foreground": "oklch(0.402 0.029 266.521)",
+          "primary": "oklch(0.554 0.077 254.028)",
+          "primary-foreground": "oklch(0.985 0 0)",
+          "secondary": "oklch(0.888 0.01 261.788)",
+          "secondary-foreground": "oklch(0.402 0.029 266.521)",
+          "muted": "oklch(0.888 0.01 261.788)",
+          "muted-foreground": "oklch(0.452 0.035 264.131)",
+          "subtle-foreground": "oklch(0.542 0.035 264.131)",
+          "accent": "oklch(0.888 0.01 261.788)",
+          "accent-foreground": "oklch(0.402 0.029 266.521)",
+          "destructive": "oklch(0.566 0.121 15.342)",
+          "destructive-foreground": "oklch(0.985 0 0)",
+          "border": "oklch(0.858 0.01 261.788)",
+          "input": "oklch(0.828 0.01 261.788)",
+          "ring": "oklch(0.554 0.077 254.028)",
+          "chart-1": "oklch(0.554 0.077 254.028)",
+          "chart-2": "oklch(0.68 0.063 217.577)",
+          "chart-3": "oklch(0.68 0.062 332.665)",
+          "chart-4": "oklch(0.68 0.091 83.72)",
+          "chart-5": "oklch(0.68 0.076 131.142)",
+          "sidebar": "oklch(0.921 0.01 261.788)",
+          "sidebar-foreground": "oklch(0.402 0.029 266.521)",
+          "sidebar-primary": "oklch(0.554 0.077 254.028)",
+          "sidebar-primary-foreground": "oklch(0.985 0 0)",
+          "sidebar-accent": "oklch(0.888 0.01 261.788)",
+          "sidebar-accent-foreground": "oklch(0.402 0.029 266.521)",
+          "sidebar-border": "oklch(0.858 0.01 261.788)",
+          "sidebar-ring": "oklch(0.554 0.077 254.028)",
+          "info": "oklch(0.66 0.059 248.687)",
+          "info-foreground": "oklch(0.42 0.059 248.687)",
+          "success": "oklch(0.66 0.076 131.142)",
+          "success-foreground": "oklch(0.42 0.076 131.142)",
+          "warning": "oklch(0.66 0.091 83.72)",
+          "warning-foreground": "oklch(0.42 0.091 83.72)"
+        },
+        "dark": {
+          "background": "oklch(0.324 0.023 264.182)",
+          "foreground": "oklch(0.899 0.016 262.749)",
+          "card": "oklch(0.359 0.023 264.182)",
+          "card-foreground": "oklch(0.899 0.016 262.749)",
+          "popover": "oklch(0.374 0.023 264.182)",
+          "popover-foreground": "oklch(0.899 0.016 262.749)",
+          "primary": "oklch(0.775 0.062 217.469)",
+          "primary-foreground": "oklch(0.324 0.023 264.182)",
+          "secondary": "oklch(0.404 0.023 264.182)",
+          "secondary-foreground": "oklch(0.899 0.016 262.749)",
+          "muted": "oklch(0.404 0.023 264.182)",
+          "muted-foreground": "oklch(0.736 0.021 262.749)",
+          "subtle-foreground": "oklch(0.646 0.021 262.749)",
+          "accent": "oklch(0.404 0.023 264.182)",
+          "accent-foreground": "oklch(0.899 0.016 262.749)",
+          "destructive": "oklch(0.596 0.121 15.342)",
+          "destructive-foreground": "oklch(0.985 0 0)",
+          "border": "oklch(0.424 0.023 264.182)",
+          "input": "oklch(0.454 0.023 264.182)",
+          "ring": "oklch(0.775 0.062 217.469)",
+          "chart-1": "oklch(0.775 0.062 217.469)",
+          "chart-2": "oklch(0.692 0.062 332.665)",
+          "chart-3": "oklch(0.85 0.089 84.093)",
+          "chart-4": "oklch(0.768 0.075 131.063)",
+          "chart-5": "oklch(0.697 0.059 248.687)",
+          "sidebar": "oklch(0.309 0.023 264.182)",
+          "sidebar-foreground": "oklch(0.899 0.016 262.749)",
+          "sidebar-primary": "oklch(0.775 0.062 217.469)",
+          "sidebar-primary-foreground": "oklch(0.324 0.023 264.182)",
+          "sidebar-accent": "oklch(0.404 0.023 264.182)",
+          "sidebar-accent-foreground": "oklch(0.899 0.016 262.749)",
+          "sidebar-border": "oklch(0.424 0.023 264.182)",
+          "sidebar-ring": "oklch(0.775 0.062 217.469)",
+          "info": "oklch(0.697 0.059 248.687)",
+          "info-foreground": "oklch(0.8 0.059 248.687)",
+          "success": "oklch(0.768 0.075 131.063)",
+          "success-foreground": "oklch(0.8 0.075 131.063)",
+          "warning": "oklch(0.855 0.089 84.093)",
+          "warning-foreground": "oklch(0.8 0.089 84.093)"
+        }
+      }
+    },
+    {
+      "name": "theme-gruvbox",
+      "type": "registry:theme",
+      "title": "Gruvbox theme",
+      "description": "Gruvbox Dark mapped onto the Constructive token set, with Gruvbox Light for light mode. Ported from the Ghostty built-in color schemes.",
+      "categories": [
+        "theme"
+      ],
+      "docs": "Install with `pnpm dlx shadcn@latest add @constructive/theme-gruvbox`. Requires the Constructive base theme (`@constructive/constructive-theme`).",
+      "cssVars": {
+        "light": {
+          "background": "oklch(0.956 0.055 96.155)",
+          "foreground": "oklch(0.344 0.007 48.523)",
+          "card": "oklch(0.976 0.055 96.155)",
+          "card-foreground": "oklch(0.344 0.007 48.523)",
+          "popover": "oklch(0.976 0.055 96.155)",
+          "popover-foreground": "oklch(0.344 0.007 48.523)",
+          "primary": "oklch(0.513 0.162 39.297)",
+          "primary-foreground": "oklch(0.985 0 0)",
+          "secondary": "oklch(0.911 0.055 96.155)",
+          "secondary-foreground": "oklch(0.344 0.007 48.523)",
+          "muted": "oklch(0.911 0.055 96.155)",
+          "muted-foreground": "oklch(0.549 0.029 67.258)",
+          "subtle-foreground": "oklch(0.639 0.029 67.258)",
+          "accent": "oklch(0.911 0.055 96.155)",
+          "accent-foreground": "oklch(0.344 0.007 48.523)",
+          "destructive": "oklch(0.546 0.203 28.662)",
+          "destructive-foreground": "oklch(0.985 0 0)",
+          "border": "oklch(0.881 0.055 96.155)",
+          "input": "oklch(0.851 0.055 96.155)",
+          "ring": "oklch(0.513 0.162 39.297)",
+          "chart-1": "oklch(0.513 0.162 39.297)",
+          "chart-2": "oklch(0.645 0.094 145.266)",
+          "chart-3": "oklch(0.597 0.111 352.218)",
+          "chart-4": "oklch(0.68 0.143 77.708)",
+          "chart-5": "oklch(0.656 0.135 109.119)",
+          "sidebar": "oklch(0.944 0.055 96.155)",
+          "sidebar-foreground": "oklch(0.344 0.007 48.523)",
+          "sidebar-primary": "oklch(0.513 0.162 39.297)",
+          "sidebar-primary-foreground": "oklch(0.985 0 0)",
+          "sidebar-accent": "oklch(0.911 0.055 96.155)",
+          "sidebar-accent-foreground": "oklch(0.344 0.007 48.523)",
+          "sidebar-border": "oklch(0.881 0.055 96.155)",
+          "sidebar-ring": "oklch(0.513 0.162 39.297)",
+          "info": "oklch(0.576 0.066 199.487)",
+          "info-foreground": "oklch(0.42 0.066 199.487)",
+          "success": "oklch(0.656 0.135 109.119)",
+          "success-foreground": "oklch(0.42 0.135 109.119)",
+          "warning": "oklch(0.66 0.143 77.708)",
+          "warning-foreground": "oklch(0.42 0.143 77.708)"
+        },
+        "dark": {
+          "background": "oklch(0.277 0 0)",
+          "foreground": "oklch(0.894 0.057 89.24)",
+          "card": "oklch(0.312 0 0)",
+          "card-foreground": "oklch(0.894 0.057 89.24)",
+          "popover": "oklch(0.327 0 0)",
+          "popover-foreground": "oklch(0.894 0.057 89.24)",
+          "primary": "oklch(0.731 0.182 51.693)",
+          "primary-foreground": "oklch(0.277 0 0)",
+          "secondary": "oklch(0.357 0 0)",
+          "secondary-foreground": "oklch(0.894 0.057 89.24)",
+          "muted": "oklch(0.357 0 0)",
+          "muted-foreground": "oklch(0.689 0.029 67.258)",
+          "subtle-foreground": "oklch(0.599 0.029 67.258)",
+          "accent": "oklch(0.357 0 0)",
+          "accent-foreground": "oklch(0.894 0.057 89.24)",
+          "destructive": "oklch(0.546 0.203 28.662)",
+          "destructive-foreground": "oklch(0.985 0 0)",
+          "border": "oklch(0.377 0 0)",
+          "input": "oklch(0.407 0 0)",
+          "ring": "oklch(0.731 0.182 51.693)",
+          "chart-1": "oklch(0.731 0.182 51.693)",
+          "chart-2": "oklch(0.645 0.094 145.266)",
+          "chart-3": "oklch(0.62 0.111 352.218)",
+          "chart-4": "oklch(0.656 0.135 109.119)",
+          "chart-5": "oklch(0.62 0.066 199.487)",
+          "sidebar": "oklch(0.262 0 0)",
+          "sidebar-foreground": "oklch(0.894 0.057 89.24)",
+          "sidebar-primary": "oklch(0.731 0.182 51.693)",
+          "sidebar-primary-foreground": "oklch(0.277 0 0)",
+          "sidebar-accent": "oklch(0.357 0 0)",
+          "sidebar-accent-foreground": "oklch(0.894 0.057 89.24)",
+          "sidebar-border": "oklch(0.377 0 0)",
+          "sidebar-ring": "oklch(0.731 0.182 51.693)",
+          "info": "oklch(0.62 0.066 199.487)",
+          "info-foreground": "oklch(0.8 0.066 199.487)",
+          "success": "oklch(0.656 0.135 109.119)",
+          "success-foreground": "oklch(0.8 0.135 109.119)",
+          "warning": "oklch(0.725 0.143 77.708)",
+          "warning-foreground": "oklch(0.8 0.143 77.708)"
+        }
+      }
+    },
+    {
+      "name": "theme-tokyo-night",
+      "type": "registry:theme",
+      "title": "Tokyo Night theme",
+      "description": "TokyoNight mapped onto the Constructive token set, with TokyoNight Day for light mode. Ported from the Ghostty built-in color schemes.",
+      "categories": [
+        "theme"
+      ],
+      "docs": "Install with `pnpm dlx shadcn@latest add @constructive/theme-tokyo-night`. Requires the Constructive base theme (`@constructive/constructive-theme`).",
+      "cssVars": {
+        "light": {
+          "background": "oklch(0.913 0.007 277.156)",
+          "foreground": "oklch(0.422 0.156 264.096)",
+          "card": "oklch(0.933 0.007 277.156)",
+          "card-foreground": "oklch(0.422 0.156 264.096)",
+          "popover": "oklch(0.933 0.007 277.156)",
+          "popover-foreground": "oklch(0.422 0.156 264.096)",
+          "primary": "oklch(0.56 0.18 257.527)",
+          "primary-foreground": "oklch(0.985 0 0)",
+          "secondary": "oklch(0.738 0.083 273.373)",
+          "secondary-foreground": "oklch(0.422 0.156 264.096)",
+          "muted": "oklch(0.738 0.083 273.373)",
+          "muted-foreground": "oklch(0.513 0.059 264.096)",
+          "subtle-foreground": "oklch(0.603 0.059 264.096)",
+          "accent": "oklch(0.738 0.083 273.373)",
+          "accent-foreground": "oklch(0.422 0.156 264.096)",
+          "destructive": "oklch(0.584 0.233 11.566)",
+          "destructive-foreground": "oklch(0.985 0 0)",
+          "border": "oklch(0.838 0.007 277.156)",
+          "input": "oklch(0.808 0.007 277.156)",
+          "ring": "oklch(0.56 0.18 257.527)",
+          "chart-1": "oklch(0.56 0.18 257.527)",
+          "chart-2": "oklch(0.604 0.225 299.483)",
+          "chart-3": "oklch(0.553 0.075 75.193)",
+          "chart-4": "oklch(0.525 0.093 130.279)",
+          "chart-5": "oklch(0.634 0.233 11.566)",
+          "sidebar": "oklch(0.901 0.007 277.156)",
+          "sidebar-foreground": "oklch(0.422 0.156 264.096)",
+          "sidebar-primary": "oklch(0.56 0.18 257.527)",
+          "sidebar-primary-foreground": "oklch(0.985 0 0)",
+          "sidebar-accent": "oklch(0.738 0.083 273.373)",
+          "sidebar-accent-foreground": "oklch(0.422 0.156 264.096)",
+          "sidebar-border": "oklch(0.838 0.007 277.156)",
+          "sidebar-ring": "oklch(0.56 0.18 257.527)",
+          "info": "oklch(0.6 0.18 257.527)",
+          "info-foreground": "oklch(0.42 0.18 257.527)",
+          "success": "oklch(0.525 0.093 130.279)",
+          "success-foreground": "oklch(0.42 0.093 130.279)",
+          "warning": "oklch(0.553 0.075 75.193)",
+          "warning-foreground": "oklch(0.42 0.075 75.193)"
+        },
+        "dark": {
+          "background": "oklch(0.226 0.021 280.487)",
+          "foreground": "oklch(0.846 0.061 274.763)",
+          "card": "oklch(0.261 0.021 280.487)",
+          "card-foreground": "oklch(0.846 0.061 274.763)",
+          "popover": "oklch(0.276 0.021 280.487)",
+          "popover-foreground": "oklch(0.846 0.061 274.763)",
+          "primary": "oklch(0.719 0.132 264.202)",
+          "primary-foreground": "oklch(0.226 0.021 280.487)",
+          "secondary": "oklch(0.306 0.021 280.487)",
+          "secondary-foreground": "oklch(0.846 0.061 274.763)",
+          "muted": "oklch(0.306 0.021 280.487)",
+          "muted-foreground": "oklch(0.643 0.035 274.763)",
+          "subtle-foreground": "oklch(0.553 0.035 274.763)",
+          "accent": "oklch(0.306 0.021 280.487)",
+          "accent-foreground": "oklch(0.846 0.061 274.763)",
+          "destructive": "oklch(0.603 0.159 10.276)",
+          "destructive-foreground": "oklch(0.985 0 0)",
+          "border": "oklch(0.326 0.021 280.487)",
+          "input": "oklch(0.356 0.021 280.487)",
+          "ring": "oklch(0.719 0.132 264.202)",
+          "chart-1": "oklch(0.719 0.132 264.202)",
+          "chart-2": "oklch(0.751 0.134 299.499)",
+          "chart-3": "oklch(0.784 0.106 75.428)",
+          "chart-4": "oklch(0.795 0.139 130.136)",
+          "chart-5": "oklch(0.723 0.159 10.276)",
+          "sidebar": "oklch(0.211 0.021 280.487)",
+          "sidebar-foreground": "oklch(0.846 0.061 274.763)",
+          "sidebar-primary": "oklch(0.719 0.132 264.202)",
+          "sidebar-primary-foreground": "oklch(0.226 0.021 280.487)",
+          "sidebar-accent": "oklch(0.306 0.021 280.487)",
+          "sidebar-accent-foreground": "oklch(0.846 0.061 274.763)",
+          "sidebar-border": "oklch(0.326 0.021 280.487)",
+          "sidebar-ring": "oklch(0.719 0.132 264.202)",
+          "info": "oklch(0.719 0.132 264.202)",
+          "info-foreground": "oklch(0.8 0.132 264.202)",
+          "success": "oklch(0.795 0.139 130.136)",
+          "success-foreground": "oklch(0.8 0.139 130.136)",
+          "warning": "oklch(0.784 0.106 75.428)",
+          "warning-foreground": "oklch(0.8 0.106 75.428)"
+        }
+      }
+    },
+    {
+      "name": "theme-one-dark",
+      "type": "registry:theme",
+      "title": "One Dark theme",
+      "description": "Atom One Dark mapped onto the Constructive token set, with Atom One Light for light mode. Ported from the Ghostty built-in color schemes.",
+      "categories": [
+        "theme"
+      ],
+      "docs": "Install with `pnpm dlx shadcn@latest add @constructive/theme-one-dark`. Requires the Constructive base theme (`@constructive/constructive-theme`).",
+      "cssVars": {
+        "light": {
+          "background": "oklch(0.982 0 0)",
+          "foreground": "oklch(0.294 0.013 272.931)",
+          "card": "oklch(0.995 0 0)",
+          "card-foreground": "oklch(0.294 0.013 272.931)",
+          "popover": "oklch(0.995 0 0)",
+          "popover-foreground": "oklch(0.294 0.013 272.931)",
+          "primary": "oklch(0.562 0.193 263.246)",
+          "primary-foreground": "oklch(0.985 0 0)",
+          "secondary": "oklch(0.937 0 0)",
+          "secondary-foreground": "oklch(0.294 0.013 272.931)",
+          "muted": "oklch(0.937 0 0)",
+          "muted-foreground": "oklch(0.561 0.005 272.931)",
+          "subtle-foreground": "oklch(0.651 0.005 272.931)",
+          "accent": "oklch(0.937 0 0)",
+          "accent-foreground": "oklch(0.294 0.013 272.931)",
+          "destructive": "oklch(0.581 0.198 27.978)",
+          "destructive-foreground": "oklch(0.985 0 0)",
+          "border": "oklch(0.907 0 0)",
+          "input": "oklch(0.877 0 0)",
+          "ring": "oklch(0.562 0.193 263.246)",
+          "chart-1": "oklch(0.562 0.193 263.246)",
+          "chart-2": "oklch(0.597 0.153 142.469)",
+          "chart-3": "oklch(0.47 0.216 328.363)",
+          "chart-4": "oklch(0.68 0.082 84.853)",
+          "chart-5": "oklch(0.601 0.198 27.978)",
+          "sidebar": "oklch(0.97 0 0)",
+          "sidebar-foreground": "oklch(0.294 0.013 272.931)",
+          "sidebar-primary": "oklch(0.562 0.193 263.246)",
+          "sidebar-primary-foreground": "oklch(0.985 0 0)",
+          "sidebar-accent": "oklch(0.937 0 0)",
+          "sidebar-accent-foreground": "oklch(0.294 0.013 272.931)",
+          "sidebar-border": "oklch(0.907 0 0)",
+          "sidebar-ring": "oklch(0.562 0.193 263.246)",
+          "info": "oklch(0.539 0.233 266.124)",
+          "info-foreground": "oklch(0.42 0.233 266.124)",
+          "success": "oklch(0.597 0.153 142.469)",
+          "success-foreground": "oklch(0.42 0.153 142.469)",
+          "warning": "oklch(0.66 0.082 84.853)",
+          "warning-foreground": "oklch(0.42 0.082 84.853)"
+        },
+        "dark": {
+          "background": "oklch(0.263 0.013 258.372)",
+          "foreground": "oklch(0.792 0.02 262.987)",
+          "card": "oklch(0.298 0.013 258.372)",
+          "card-foreground": "oklch(0.792 0.02 262.987)",
+          "popover": "oklch(0.313 0.013 258.372)",
+          "popover-foreground": "oklch(0.792 0.02 262.987)",
+          "primary": "oklch(0.73 0.121 245.297)",
+          "primary-foreground": "oklch(0.263 0.013 258.372)",
+          "secondary": "oklch(0.34 0.023 264.21)",
+          "secondary-foreground": "oklch(0.792 0.02 262.987)",
+          "muted": "oklch(0.34 0.023 264.21)",
+          "muted-foreground": "oklch(0.666 0 0)",
+          "subtle-foreground": "oklch(0.576 0 0)",
+          "accent": "oklch(0.34 0.023 264.21)",
+          "accent-foreground": "oklch(0.792 0.02 262.987)",
+          "destructive": "oklch(0.601 0.145 16.999)",
+          "destructive-foreground": "oklch(0.985 0 0)",
+          "border": "oklch(0.363 0.013 258.372)",
+          "input": "oklch(0.393 0.013 258.372)",
+          "ring": "oklch(0.73 0.121 245.297)",
+          "chart-1": "oklch(0.73 0.121 245.297)",
+          "chart-2": "oklch(0.723 0.092 206.315)",
+          "chart-3": "oklch(0.694 0.164 318.207)",
+          "chart-4": "oklch(0.727 0.095 63.822)",
+          "chart-5": "oklch(0.768 0.11 133)",
+          "sidebar": "oklch(0.248 0.013 258.372)",
+          "sidebar-foreground": "oklch(0.792 0.02 262.987)",
+          "sidebar-primary": "oklch(0.73 0.121 245.297)",
+          "sidebar-primary-foreground": "oklch(0.263 0.013 258.372)",
+          "sidebar-accent": "oklch(0.34 0.023 264.21)",
+          "sidebar-accent-foreground": "oklch(0.792 0.02 262.987)",
+          "sidebar-border": "oklch(0.363 0.013 258.372)",
+          "sidebar-ring": "oklch(0.73 0.121 245.297)",
+          "info": "oklch(0.73 0.121 245.297)",
+          "info-foreground": "oklch(0.8 0.121 245.297)",
+          "success": "oklch(0.768 0.11 133)",
+          "success-foreground": "oklch(0.8 0.11 133)",
+          "warning": "oklch(0.727 0.095 63.822)",
+          "warning-foreground": "oklch(0.8 0.095 63.822)"
+        }
+      }
+    },
+    {
+      "name": "theme-solarized",
+      "type": "registry:theme",
+      "title": "Solarized theme",
+      "description": "iTerm2 Solarized Dark mapped onto the Constructive token set, with iTerm2 Solarized Light for light mode. Ported from the Ghostty built-in color schemes.",
+      "categories": [
+        "theme"
+      ],
+      "docs": "Install with `pnpm dlx shadcn@latest add @constructive/theme-solarized`. Requires the Constructive base theme (`@constructive/constructive-theme`).",
+      "cssVars": {
+        "light": {
+          "background": "oklch(0.974 0.026 90.095)",
+          "foreground": "oklch(0.448 0.029 221.899)",
+          "card": "oklch(0.994 0.026 90.095)",
+          "card-foreground": "oklch(0.448 0.029 221.899)",
+          "popover": "oklch(0.994 0.026 90.095)",
+          "popover-foreground": "oklch(0.448 0.029 221.899)",
+          "primary": "oklch(0.555 0.139 244.927)",
+          "primary-foreground": "oklch(0.985 0 0)",
+          "secondary": "oklch(0.931 0.026 92.402)",
+          "secondary-foreground": "oklch(0.448 0.029 221.899)",
+          "muted": "oklch(0.931 0.026 92.402)",
+          "muted-foreground": "oklch(0.552 0.027 221.899)",
+          "subtle-foreground": "oklch(0.642 0.027 221.899)",
+          "accent": "oklch(0.931 0.026 92.402)",
+          "accent-foreground": "oklch(0.448 0.029 221.899)",
+          "destructive": "oklch(0.576 0.206 27.117)",
+          "destructive-foreground": "oklch(0.985 0 0)",
+          "border": "oklch(0.899 0.026 90.095)",
+          "input": "oklch(0.869 0.026 90.095)",
+          "ring": "oklch(0.555 0.139 244.927)",
+          "chart-1": "oklch(0.555 0.139 244.927)",
+          "chart-2": "oklch(0.644 0.102 187.384)",
+          "chart-3": "oklch(0.592 0.202 355.894)",
+          "chart-4": "oklch(0.654 0.134 85.719)",
+          "chart-5": "oklch(0.644 0.151 118.597)",
+          "sidebar": "oklch(0.962 0.026 90.095)",
+          "sidebar-foreground": "oklch(0.448 0.029 221.899)",
+          "sidebar-primary": "oklch(0.555 0.139 244.927)",
+          "sidebar-primary-foreground": "oklch(0.985 0 0)",
+          "sidebar-accent": "oklch(0.931 0.026 92.402)",
+          "sidebar-accent-foreground": "oklch(0.448 0.029 221.899)",
+          "sidebar-border": "oklch(0.899 0.026 90.095)",
+          "sidebar-ring": "oklch(0.555 0.139 244.927)",
+          "info": "oklch(0.615 0.139 244.927)",
+          "info-foreground": "oklch(0.42 0.139 244.927)",
+          "success": "oklch(0.644 0.151 118.597)",
+          "success-foreground": "oklch(0.42 0.151 118.597)",
+          "warning": "oklch(0.654 0.134 85.719)",
+          "warning-foreground": "oklch(0.42 0.134 85.719)"
+        },
+        "dark": {
+          "background": "oklch(0.267 0.049 219.817)",
+          "foreground": "oklch(0.794 0.02 205.262)",
+          "card": "oklch(0.302 0.049 219.817)",
+          "card-foreground": "oklch(0.794 0.02 205.262)",
+          "popover": "oklch(0.317 0.049 219.817)",
+          "popover-foreground": "oklch(0.794 0.02 205.262)",
+          "primary": "oklch(0.555 0.139 244.927)",
+          "primary-foreground": "oklch(0.985 0 0)",
+          "secondary": "oklch(0.309 0.052 219.652)",
+          "secondary-foreground": "oklch(0.794 0.02 205.262)",
+          "muted": "oklch(0.309 0.052 219.652)",
+          "muted-foreground": "oklch(0.673 0.039 205.262)",
+          "subtle-foreground": "oklch(0.583 0.039 205.262)",
+          "accent": "oklch(0.309 0.052 219.652)",
+          "accent-foreground": "oklch(0.794 0.02 205.262)",
+          "destructive": "oklch(0.586 0.206 27.117)",
+          "destructive-foreground": "oklch(0.985 0 0)",
+          "border": "oklch(0.367 0.049 219.817)",
+          "input": "oklch(0.397 0.049 219.817)",
+          "ring": "oklch(0.555 0.139 244.927)",
+          "chart-1": "oklch(0.555 0.139 244.927)",
+          "chart-2": "oklch(0.644 0.102 187.384)",
+          "chart-3": "oklch(0.62 0.202 355.894)",
+          "chart-4": "oklch(0.654 0.134 85.719)",
+          "chart-5": "oklch(0.644 0.151 118.597)",
+          "sidebar": "oklch(0.252 0.049 219.817)",
+          "sidebar-foreground": "oklch(0.794 0.02 205.262)",
+          "sidebar-primary": "oklch(0.555 0.139 244.927)",
+          "sidebar-primary-foreground": "oklch(0.985 0 0)",
+          "sidebar-accent": "oklch(0.309 0.052 219.652)",
+          "sidebar-accent-foreground": "oklch(0.794 0.02 205.262)",
+          "sidebar-border": "oklch(0.367 0.049 219.817)",
+          "sidebar-ring": "oklch(0.555 0.139 244.927)",
+          "info": "oklch(0.62 0.139 244.927)",
+          "info-foreground": "oklch(0.8 0.139 244.927)",
+          "success": "oklch(0.644 0.151 118.597)",
+          "success-foreground": "oklch(0.8 0.151 118.597)",
+          "warning": "oklch(0.654 0.134 85.719)",
+          "warning-foreground": "oklch(0.8 0.134 85.719)"
+        }
+      }
+    },
+    {
+      "name": "theme-rose-pine",
+      "type": "registry:theme",
+      "title": "Rosé Pine theme",
+      "description": "Rose Pine mapped onto the Constructive token set, with Rose Pine Dawn for light mode. Ported from the Ghostty built-in color schemes.",
+      "categories": [
+        "theme"
+      ],
+      "docs": "Install with `pnpm dlx shadcn@latest add @constructive/theme-rose-pine`. Requires the Constructive base theme (`@constructive/constructive-theme`).",
+      "cssVars": {
+        "light": {
+          "background": "oklch(0.97 0.011 71.9)",
+          "foreground": "oklch(0.46 0.063 289.556)",
+          "card": "oklch(0.99 0.011 71.9)",
+          "card-foreground": "oklch(0.46 0.063 289.556)",
+          "popover": "oklch(0.99 0.011 71.9)",
+          "popover-foreground": "oklch(0.46 0.063 289.556)",
+          "primary": "oklch(0.566 0.106 23.033)",
+          "primary-foreground": "oklch(0.985 0 0)",
+          "secondary": "oklch(0.892 0.006 31.055)",
+          "secondary-foreground": "oklch(0.46 0.063 289.556)",
+          "muted": "oklch(0.892 0.006 31.055)",
+          "muted-foreground": "oklch(0.553 0.027 298.37)",
+          "subtle-foreground": "oklch(0.643 0.027 298.37)",
+          "accent": "oklch(0.892 0.006 31.055)",
+          "accent-foreground": "oklch(0.46 0.063 289.556)",
+          "destructive": "oklch(0.569 0.107 2.655)",
+          "destructive-foreground": "oklch(0.985 0 0)",
+          "border": "oklch(0.895 0.011 71.9)",
+          "input": "oklch(0.865 0.011 71.9)",
+          "ring": "oklch(0.566 0.106 23.033)",
+          "chart-1": "oklch(0.566 0.106 23.033)",
+          "chart-2": "oklch(0.617 0.074 305.698)",
+          "chart-3": "oklch(0.68 0.146 69.743)",
+          "chart-4": "oklch(0.491 0.077 227.998)",
+          "chart-5": "oklch(0.599 0.107 2.655)",
+          "sidebar": "oklch(0.958 0.011 71.9)",
+          "sidebar-foreground": "oklch(0.46 0.063 289.556)",
+          "sidebar-primary": "oklch(0.566 0.106 23.033)",
+          "sidebar-primary-foreground": "oklch(0.985 0 0)",
+          "sidebar-accent": "oklch(0.892 0.006 31.055)",
+          "sidebar-accent-foreground": "oklch(0.46 0.063 289.556)",
+          "sidebar-border": "oklch(0.895 0.011 71.9)",
+          "sidebar-ring": "oklch(0.566 0.106 23.033)",
+          "info": "oklch(0.629 0.066 210.123)",
+          "info-foreground": "oklch(0.42 0.066 210.123)",
+          "success": "oklch(0.491 0.077 227.998)",
+          "success-foreground": "oklch(0.42 0.077 227.998)",
+          "warning": "oklch(0.66 0.146 69.743)",
+          "warning-foreground": "oklch(0.42 0.146 69.743)"
+        },
+        "dark": {
+          "background": "oklch(0.213 0.025 291.131)",
+          "foreground": "oklch(0.909 0.03 289.969)",
+          "card": "oklch(0.248 0.025 291.131)",
+          "card-foreground": "oklch(0.909 0.03 289.969)",
+          "popover": "oklch(0.263 0.025 291.131)",
+          "popover-foreground": "oklch(0.909 0.03 289.969)",
+          "primary": "oklch(0.836 0.054 21.141)",
+          "primary-foreground": "oklch(0.213 0.025 291.131)",
+          "secondary": "oklch(0.372 0.036 291.097)",
+          "secondary-foreground": "oklch(0.909 0.03 289.969)",
+          "muted": "oklch(0.372 0.036 291.097)",
+          "muted-foreground": "oklch(0.628 0.044 291.412)",
+          "subtle-foreground": "oklch(0.538 0.044 291.412)",
+          "accent": "oklch(0.372 0.036 291.097)",
+          "accent-foreground": "oklch(0.909 0.03 289.969)",
+          "destructive": "oklch(0.598 0.156 4.224)",
+          "destructive-foreground": "oklch(0.985 0 0)",
+          "border": "oklch(0.313 0.025 291.131)",
+          "input": "oklch(0.343 0.025 291.131)",
+          "ring": "oklch(0.836 0.054 21.141)",
+          "chart-1": "oklch(0.836 0.054 21.141)",
+          "chart-2": "oklch(0.776 0.095 304.994)",
+          "chart-3": "oklch(0.843 0.11 74.602)",
+          "chart-4": "oklch(0.62 0.079 227.716)",
+          "chart-5": "oklch(0.822 0.054 209.559)",
+          "sidebar": "oklch(0.198 0.025 291.131)",
+          "sidebar-foreground": "oklch(0.909 0.03 289.969)",
+          "sidebar-primary": "oklch(0.836 0.054 21.141)",
+          "sidebar-primary-foreground": "oklch(0.213 0.025 291.131)",
+          "sidebar-accent": "oklch(0.372 0.036 291.097)",
+          "sidebar-accent-foreground": "oklch(0.909 0.03 289.969)",
+          "sidebar-border": "oklch(0.313 0.025 291.131)",
+          "sidebar-ring": "oklch(0.836 0.054 21.141)",
+          "info": "oklch(0.822 0.054 209.559)",
+          "info-foreground": "oklch(0.8 0.054 209.559)",
+          "success": "oklch(0.62 0.079 227.716)",
+          "success-foreground": "oklch(0.8 0.079 227.716)",
+          "warning": "oklch(0.843 0.11 74.602)",
+          "warning-foreground": "oklch(0.8 0.11 74.602)"
+        }
+      }
+    },
+    {
+      "name": "theme-everforest",
+      "type": "registry:theme",
+      "title": "Everforest theme",
+      "description": "Everforest Dark Med mapped onto the Constructive token set, with Everforest Light Med for light mode. Ported from the Ghostty built-in color schemes.",
+      "categories": [
+        "theme"
+      ],
+      "docs": "Install with `pnpm dlx shadcn@latest add @constructive/theme-everforest`. Requires the Constructive base theme (`@constructive/constructive-theme`).",
+      "cssVars": {
+        "light": {
+          "background": "oklch(0.937 0.031 98.872)",
+          "foreground": "oklch(0.425 0.021 232.866)",
+          "card": "oklch(0.957 0.031 98.872)",
+          "card-foreground": "oklch(0.425 0.021 232.866)",
+          "popover": "oklch(0.957 0.031 98.872)",
+          "popover-foreground": "oklch(0.425 0.021 232.866)",
+          "primary": "oklch(0.54 0.156 118.23)",
+          "primary-foreground": "oklch(0.985 0 0)",
+          "secondary": "oklch(0.892 0.031 98.872)",
+          "secondary-foreground": "oklch(0.425 0.021 232.866)",
+          "muted": "oklch(0.892 0.031 98.872)",
+          "muted-foreground": "oklch(0.529 0.027 232.866)",
+          "subtle-foreground": "oklch(0.619 0.027 232.866)",
+          "accent": "oklch(0.892 0.031 98.872)",
+          "accent-foreground": "oklch(0.425 0.021 232.866)",
+          "destructive": "oklch(0.581 0.2 25.205)",
+          "destructive-foreground": "oklch(0.985 0 0)",
+          "border": "oklch(0.862 0.031 98.872)",
+          "input": "oklch(0.832 0.031 98.872)",
+          "ring": "oklch(0.54 0.156 118.23)",
+          "chart-1": "oklch(0.54 0.156 118.23)",
+          "chart-2": "oklch(0.653 0.121 163.884)",
+          "chart-3": "oklch(0.68 0.174 340.993)",
+          "chart-4": "oklch(0.68 0.155 80.267)",
+          "chart-5": "oklch(0.634 0.112 236.347)",
+          "sidebar": "oklch(0.925 0.031 98.872)",
+          "sidebar-foreground": "oklch(0.425 0.021 232.866)",
+          "sidebar-primary": "oklch(0.54 0.156 118.23)",
+          "sidebar-primary-foreground": "oklch(0.985 0 0)",
+          "sidebar-accent": "oklch(0.892 0.031 98.872)",
+          "sidebar-accent-foreground": "oklch(0.425 0.021 232.866)",
+          "sidebar-border": "oklch(0.862 0.031 98.872)",
+          "sidebar-ring": "oklch(0.54 0.156 118.23)",
+          "info": "oklch(0.634 0.112 236.347)",
+          "info-foreground": "oklch(0.42 0.112 236.347)",
+          "success": "oklch(0.66 0.156 118.23)",
+          "success-foreground": "oklch(0.42 0.156 118.23)",
+          "warning": "oklch(0.66 0.155 80.267)",
+          "warning-foreground": "oklch(0.42 0.155 80.267)"
+        },
+        "dark": {
+          "background": "oklch(0.28 0.012 232.918)",
+          "foreground": "oklch(0.83 0.041 86.053)",
+          "card": "oklch(0.315 0.012 232.918)",
+          "card-foreground": "oklch(0.83 0.041 86.053)",
+          "popover": "oklch(0.33 0.012 232.918)",
+          "popover-foreground": "oklch(0.83 0.041 86.053)",
+          "primary": "oklch(0.773 0.091 125.783)",
+          "primary-foreground": "oklch(0.28 0.012 232.918)",
+          "secondary": "oklch(0.383 0.042 345.777)",
+          "secondary-foreground": "oklch(0.83 0.041 86.053)",
+          "muted": "oklch(0.383 0.042 345.777)",
+          "muted-foreground": "oklch(0.745 0.025 133.522)",
+          "subtle-foreground": "oklch(0.655 0.025 133.522)",
+          "accent": "oklch(0.383 0.042 345.777)",
+          "accent-foreground": "oklch(0.83 0.041 86.053)",
+          "destructive": "oklch(0.599 0.128 19.624)",
+          "destructive-foreground": "oklch(0.985 0 0)",
+          "border": "oklch(0.38 0.012 232.918)",
+          "input": "oklch(0.41 0.012 232.918)",
+          "ring": "oklch(0.773 0.091 125.783)",
+          "chart-1": "oklch(0.773 0.091 125.783)",
+          "chart-2": "oklch(0.75 0.082 349.176)",
+          "chart-3": "oklch(0.808 0.086 83.696)",
+          "chart-4": "oklch(0.749 0.063 185.495)",
+          "chart-5": "oklch(0.709 0.128 19.624)",
+          "sidebar": "oklch(0.265 0.012 232.918)",
+          "sidebar-foreground": "oklch(0.83 0.041 86.053)",
+          "sidebar-primary": "oklch(0.773 0.091 125.783)",
+          "sidebar-primary-foreground": "oklch(0.28 0.012 232.918)",
+          "sidebar-accent": "oklch(0.383 0.042 345.777)",
+          "sidebar-accent-foreground": "oklch(0.83 0.041 86.053)",
+          "sidebar-border": "oklch(0.38 0.012 232.918)",
+          "sidebar-ring": "oklch(0.773 0.091 125.783)",
+          "info": "oklch(0.749 0.063 185.495)",
+          "info-foreground": "oklch(0.8 0.063 185.495)",
+          "success": "oklch(0.773 0.091 125.783)",
+          "success-foreground": "oklch(0.8 0.091 125.783)",
+          "warning": "oklch(0.808 0.086 83.696)",
+          "warning-foreground": "oklch(0.8 0.086 83.696)"
+        }
+      }
+    },
+    {
+      "name": "theme-kanagawa",
+      "type": "registry:theme",
+      "title": "Kanagawa theme",
+      "description": "Kanagawa Wave mapped onto the Constructive token set, with Kanagawa Lotus for light mode. Ported from the Ghostty built-in color schemes.",
+      "categories": [
+        "theme"
+      ],
+      "docs": "Install with `pnpm dlx shadcn@latest add @constructive/theme-kanagawa`. Requires the Constructive base theme (`@constructive/constructive-theme`).",
+      "cssVars": {
+        "light": {
+          "background": "oklch(0.936 0.063 101.586)",
+          "foreground": "oklch(0.432 0.026 285.316)",
+          "card": "oklch(0.956 0.063 101.586)",
+          "card-foreground": "oklch(0.432 0.026 285.316)",
+          "popover": "oklch(0.956 0.063 101.586)",
+          "popover-foreground": "oklch(0.432 0.026 285.316)",
+          "primary": "oklch(0.521 0.086 261.487)",
+          "primary-foreground": "oklch(0.985 0 0)",
+          "secondary": "oklch(0.891 0.063 101.586)",
+          "secondary-foreground": "oklch(0.432 0.026 285.316)",
+          "muted": "oklch(0.891 0.063 101.586)",
+          "muted-foreground": "oklch(0.538 0.013 101.615)",
+          "subtle-foreground": "oklch(0.628 0.013 101.615)",
+          "accent": "oklch(0.891 0.063 101.586)",
+          "accent-foreground": "oklch(0.432 0.026 285.316)",
+          "destructive": "oklch(0.571 0.171 16.478)",
+          "destructive-foreground": "oklch(0.985 0 0)",
+          "border": "oklch(0.861 0.063 101.586)",
+          "input": "oklch(0.831 0.063 101.586)",
+          "ring": "oklch(0.521 0.086 261.487)",
+          "chart-1": "oklch(0.521 0.086 261.487)",
+          "chart-2": "oklch(0.555 0.04 182.728)",
+          "chart-3": "oklch(0.585 0.118 359.767)",
+          "chart-4": "oklch(0.542 0.07 102.422)",
+          "chart-5": "oklch(0.463 0.09 301.411)",
+          "sidebar": "oklch(0.924 0.063 101.586)",
+          "sidebar-foreground": "oklch(0.432 0.026 285.316)",
+          "sidebar-primary": "oklch(0.521 0.086 261.487)",
+          "sidebar-primary-foreground": "oklch(0.985 0 0)",
+          "sidebar-accent": "oklch(0.891 0.063 101.586)",
+          "sidebar-accent-foreground": "oklch(0.432 0.026 285.316)",
+          "sidebar-border": "oklch(0.861 0.063 101.586)",
+          "sidebar-ring": "oklch(0.521 0.086 261.487)",
+          "info": "oklch(0.521 0.086 261.487)",
+          "info-foreground": "oklch(0.42 0.086 261.487)",
+          "success": "oklch(0.595 0.089 128.258)",
+          "success-foreground": "oklch(0.42 0.089 128.258)",
+          "warning": "oklch(0.542 0.07 102.422)",
+          "warning-foreground": "oklch(0.42 0.07 102.422)"
+        },
+        "dark": {
+          "background": "oklch(0.243 0.017 285.064)",
+          "foreground": "oklch(0.876 0.039 99.086)",
+          "card": "oklch(0.278 0.017 285.064)",
+          "card-foreground": "oklch(0.876 0.039 99.086)",
+          "popover": "oklch(0.293 0.017 285.064)",
+          "popover-foreground": "oklch(0.876 0.039 99.086)",
+          "primary": "oklch(0.694 0.095 263.657)",
+          "primary-foreground": "oklch(0.243 0.017 285.064)",
+          "secondary": "oklch(0.323 0.017 285.064)",
+          "secondary-foreground": "oklch(0.876 0.039 99.086)",
+          "muted": "oklch(0.323 0.017 285.064)",
+          "muted-foreground": "oklch(0.647 0.012 100.991)",
+          "subtle-foreground": "oklch(0.557 0.012 100.991)",
+          "accent": "oklch(0.323 0.017 285.064)",
+          "accent-foreground": "oklch(0.876 0.039 99.086)",
+          "destructive": "oklch(0.559 0.167 23.087)",
+          "destructive-foreground": "oklch(0.985 0 0)",
+          "border": "oklch(0.343 0.017 285.064)",
+          "input": "oklch(0.373 0.017 285.064)",
+          "ring": "oklch(0.694 0.095 263.657)",
+          "chart-1": "oklch(0.694 0.095 263.657)",
+          "chart-2": "oklch(0.635 0.05 175.424)",
+          "chart-3": "oklch(0.638 0.087 301.697)",
+          "chart-4": "oklch(0.729 0.078 82.015)",
+          "chart-5": "oklch(0.632 0.07 136.918)",
+          "sidebar": "oklch(0.228 0.017 285.064)",
+          "sidebar-foreground": "oklch(0.876 0.039 99.086)",
+          "sidebar-primary": "oklch(0.694 0.095 263.657)",
+          "sidebar-primary-foreground": "oklch(0.243 0.017 285.064)",
+          "sidebar-accent": "oklch(0.323 0.017 285.064)",
+          "sidebar-accent-foreground": "oklch(0.876 0.039 99.086)",
+          "sidebar-border": "oklch(0.343 0.017 285.064)",
+          "sidebar-ring": "oklch(0.694 0.095 263.657)",
+          "info": "oklch(0.694 0.095 263.657)",
+          "info-foreground": "oklch(0.8 0.095 263.657)",
+          "success": "oklch(0.632 0.07 136.918)",
+          "success-foreground": "oklch(0.8 0.07 136.918)",
+          "warning": "oklch(0.729 0.078 82.015)",
+          "warning-foreground": "oklch(0.8 0.078 82.015)"
+        }
+      }
     },
     {
       "name": "cn",
@@ -525,9 +1536,55 @@
       "dependencies": [
         "motion"
       ],
+      "registryDependencies": [
+        "motion-tuning"
+      ],
       "files": [
         {
           "path": "registry/constructive/lib/motion/motion-config.ts",
+          "type": "registry:lib"
+        }
+      ]
+    },
+    {
+      "name": "motion-tuning",
+      "type": "registry:lib",
+      "title": "Motion Tuning",
+      "description": "Shared live-tunable spring tier store for the motion system.",
+      "categories": [
+        "animation"
+      ],
+      "docs": "Import: `import { getSpringTiers, useSpringTiers } from '@/lib/motion/tuning'`",
+      "dependencies": [
+        "react"
+      ],
+      "files": [
+        {
+          "path": "registry/constructive/lib/motion/tuning.ts",
+          "type": "registry:lib"
+        }
+      ]
+    },
+    {
+      "name": "fluid-highlight",
+      "type": "registry:lib",
+      "title": "Fluid Highlight",
+      "description": "Traveling highlight pill that slides under the highlighted item in menu and list popups.",
+      "categories": [
+        "animation"
+      ],
+      "docs": "Import: `import { FluidHighlight } from '@/lib/motion/fluid-highlight'`",
+      "dependencies": [
+        "motion",
+        "react"
+      ],
+      "registryDependencies": [
+        "cn",
+        "motion-tuning"
+      ],
+      "files": [
+        {
+          "path": "registry/constructive/lib/motion/fluid-highlight.tsx",
           "type": "registry:lib"
         }
       ]
@@ -551,6 +1608,29 @@
       "files": [
         {
           "path": "registry/constructive/ui/button.tsx",
+          "type": "registry:ui"
+        }
+      ]
+    },
+    {
+      "name": "button-group",
+      "type": "registry:ui",
+      "title": "Button Group",
+      "description": "A group of attached buttons sharing borders and radii.",
+      "categories": [
+        "primitive"
+      ],
+      "docs": "Import: `import { ... } from '@/components/ui/button-group'`",
+      "dependencies": [
+        "class-variance-authority"
+      ],
+      "registryDependencies": [
+        "cn",
+        "separator"
+      ],
+      "files": [
+        {
+          "path": "registry/constructive/ui/button-group.tsx",
           "type": "registry:ui"
         }
       ]
@@ -597,6 +1677,25 @@
       ]
     },
     {
+      "name": "kbd",
+      "type": "registry:ui",
+      "title": "Kbd",
+      "description": "Keyboard key hint chip for shortcuts.",
+      "categories": [
+        "data-display"
+      ],
+      "docs": "Import: `import { ... } from '@/components/ui/kbd'`",
+      "registryDependencies": [
+        "cn"
+      ],
+      "files": [
+        {
+          "path": "registry/constructive/ui/kbd.tsx",
+          "type": "registry:ui"
+        }
+      ]
+    },
+    {
       "name": "skeleton",
       "type": "registry:ui",
       "title": "Skeleton",
@@ -611,6 +1710,28 @@
       "files": [
         {
           "path": "registry/constructive/ui/skeleton.tsx",
+          "type": "registry:ui"
+        }
+      ]
+    },
+    {
+      "name": "spinner",
+      "type": "registry:ui",
+      "title": "Spinner",
+      "description": "Inline loading spinner.",
+      "categories": [
+        "primitive"
+      ],
+      "docs": "Import: `import { ... } from '@/components/ui/spinner'`",
+      "dependencies": [
+        "lucide-react"
+      ],
+      "registryDependencies": [
+        "cn"
+      ],
+      "files": [
+        {
+          "path": "registry/constructive/ui/spinner.tsx",
           "type": "registry:ui"
         }
       ]
@@ -811,6 +1932,76 @@
       ]
     },
     {
+      "name": "slider",
+      "type": "registry:ui",
+      "title": "Slider",
+      "description": "A slider control built on Base UI.",
+      "categories": [
+        "form"
+      ],
+      "docs": "Import: `import { ... } from '@/components/ui/slider'`",
+      "dependencies": [
+        "@base-ui/react"
+      ],
+      "registryDependencies": [
+        "cn"
+      ],
+      "files": [
+        {
+          "path": "registry/constructive/ui/slider.tsx",
+          "type": "registry:ui"
+        }
+      ]
+    },
+    {
+      "name": "toggle",
+      "type": "registry:ui",
+      "title": "Toggle",
+      "description": "A pressable toggle button built on Base UI.",
+      "categories": [
+        "form"
+      ],
+      "docs": "Import: `import { ... } from '@/components/ui/toggle'`",
+      "dependencies": [
+        "@base-ui/react",
+        "class-variance-authority"
+      ],
+      "registryDependencies": [
+        "cn"
+      ],
+      "files": [
+        {
+          "path": "registry/constructive/ui/toggle.tsx",
+          "type": "registry:ui"
+        }
+      ]
+    },
+    {
+      "name": "toggle-group",
+      "type": "registry:ui",
+      "title": "Toggle Group",
+      "description": "A group of toggle buttons with a traveling selection pill.",
+      "categories": [
+        "form"
+      ],
+      "docs": "Import: `import { ... } from '@/components/ui/toggle-group'`",
+      "dependencies": [
+        "@base-ui/react",
+        "class-variance-authority"
+      ],
+      "registryDependencies": [
+        "cn",
+        "toggle",
+        "fluid-highlight"
+      ],
+      "files": [
+        {
+          "path": "registry/constructive/ui/toggle-group.tsx",
+          "type": "registry:ui"
+        }
+      ]
+    },
+    {
       "name": "progress",
       "type": "registry:ui",
       "title": "Progress",
@@ -850,6 +2041,30 @@
       "files": [
         {
           "path": "registry/constructive/ui/avatar.tsx",
+          "type": "registry:ui"
+        }
+      ]
+    },
+    {
+      "name": "item",
+      "type": "registry:ui",
+      "title": "Item",
+      "description": "A flexible list row primitive for media, content, and actions.",
+      "categories": [
+        "data-display"
+      ],
+      "docs": "Import: `import { ... } from '@/components/ui/item'`",
+      "dependencies": [
+        "class-variance-authority"
+      ],
+      "registryDependencies": [
+        "cn",
+        "separator",
+        "slot"
+      ],
+      "files": [
+        {
+          "path": "registry/constructive/ui/item.tsx",
           "type": "registry:ui"
         }
       ]
@@ -908,7 +2123,8 @@
       ],
       "registryDependencies": [
         "cn",
-        "portal"
+        "portal",
+        "fluid-highlight"
       ],
       "files": [
         {
@@ -1028,7 +2244,8 @@
       ],
       "registryDependencies": [
         "cn",
-        "portal"
+        "portal",
+        "fluid-highlight"
       ],
       "files": [
         {
@@ -1055,7 +2272,8 @@
       "registryDependencies": [
         "cn",
         "portal",
-        "motion-config"
+        "motion-config",
+        "motion-tuning"
       ],
       "files": [
         {
@@ -1127,6 +2345,29 @@
       "files": [
         {
           "path": "registry/constructive/ui/collapsible.tsx",
+          "type": "registry:ui"
+        }
+      ]
+    },
+    {
+      "name": "accordion",
+      "type": "registry:ui",
+      "title": "Accordion",
+      "description": "Vertically stacked collapsible sections built on Base UI.",
+      "categories": [
+        "data-display"
+      ],
+      "docs": "Import: `import { ... } from '@/components/ui/accordion'`",
+      "dependencies": [
+        "@base-ui/react",
+        "lucide-react"
+      ],
+      "registryDependencies": [
+        "cn"
+      ],
+      "files": [
+        {
+          "path": "registry/constructive/ui/accordion.tsx",
           "type": "registry:ui"
         }
       ]
@@ -1301,7 +2542,8 @@
         "cn",
         "portal",
         "input",
-        "scroll-area"
+        "scroll-area",
+        "fluid-highlight"
       ],
       "files": [
         {
@@ -1325,7 +2567,8 @@
       ],
       "registryDependencies": [
         "cn",
-        "portal"
+        "portal",
+        "fluid-highlight"
       ],
       "files": [
         {
@@ -1351,7 +2594,8 @@
         "cn",
         "portal",
         "input",
-        "scroll-area"
+        "scroll-area",
+        "fluid-highlight"
       ],
       "files": [
         {
@@ -1377,7 +2621,9 @@
         "cn",
         "badge",
         "popover",
-        "separator"
+        "separator",
+        "input",
+        "fluid-highlight"
       ],
       "files": [
         {
@@ -1574,7 +2820,8 @@
         "motion"
       ],
       "registryDependencies": [
-        "cn"
+        "cn",
+        "motion-config"
       ],
       "files": [
         {
@@ -1656,7 +2903,8 @@
         "motion"
       ],
       "registryDependencies": [
-        "cn"
+        "cn",
+        "motion-config"
       ],
       "files": [
         {

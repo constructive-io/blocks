@@ -271,7 +271,7 @@ function CodeBlock({
 						'overflow-x-auto p-3 font-mono text-xs leading-relaxed text-foreground',
 						'[&_.sh__line]:block',
 						// Soft height transition when toggling expand
-						'transition-[max-height] duration-300 ease-[cubic-bezier(0.2,0,0,1)] motion-reduce:transition-none',
+						'transition-[max-height] duration-(--duration-slow) ease-out motion-reduce:transition-none',
 						isCollapsed && 'overflow-y-hidden',
 						!isCollapsed && maxExpandedHeight !== false && collapsible && 'overflow-y-auto',
 					)}
@@ -321,9 +321,9 @@ function CodeBlock({
 						className={cn(
 							'flex w-full items-center justify-center gap-1.5 px-3 py-2',
 							'text-[12px] font-medium text-muted-foreground',
-							'outline-none transition-colors duration-150',
+							'outline-none transition-[color,background-color,border-color,text-decoration-color,fill,stroke,box-shadow] duration-(--duration-moderate)',
 							'hover:bg-muted/70 hover:text-foreground',
-							'focus-visible:bg-muted/70 focus-visible:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset',
+							'focus-visible:bg-muted/70 focus-visible:text-foreground focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:ring-inset',
 						)}
 					>
 						<span>
@@ -335,7 +335,7 @@ function CodeBlock({
 						</span>
 						<ChevronDown
 							className={cn(
-								'size-3.5 opacity-70 transition-transform duration-200 ease-[cubic-bezier(0.2,0,0,1)] motion-reduce:transition-none',
+								'size-3.5 opacity-70 transition-transform duration-(--duration-slow) ease-out motion-reduce:transition-none',
 								expanded && 'rotate-180',
 							)}
 							aria-hidden

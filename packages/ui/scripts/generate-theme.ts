@@ -3,6 +3,7 @@ import path from 'node:path';
 import process from 'node:process';
 import { fileURLToPath } from 'node:url';
 
+import { THEME_PRESETS, type ThemePreset } from '../src/theme-presets.ts';
 import { constructiveTheme, type ThemeCssObject, type ThemeTokenMap } from '../src/theme.ts';
 
 interface RegistryItem {
@@ -73,6 +74,10 @@ ${renderVariables(constructiveTheme.zIndex)}
 ${renderVariables(constructiveTheme.dark)}
 }
 
+@theme static {
+${renderTailwindVariables(constructiveTheme.fonts)}
+}
+
 @theme inline {
 ${renderTailwindVariables(constructiveTheme.tailwind)}
 }
@@ -97,7 +102,9 @@ export const constructiveThemeRegistryItem: RegistryItem = {
 	title: 'Constructive Theme',
 	description: 'Constructive design system theme — OKLCH colors, z-index layers, shadow utilities, and animations.',
 	cssVars: {
-		theme: constructiveTheme.tailwind,
+		// shadcn writes cssVars.theme as `@theme inline` — the standard flow for
+		// font tokens installed through the registry.
+		theme: { ...constructiveTheme.fonts, ...constructiveTheme.tailwind },
 		light: { ...constructiveTheme.light, ...constructiveTheme.zIndex },
 		dark: { ...constructiveTheme.dark, ...constructiveTheme.zIndex },
 	},
@@ -111,6 +118,67 @@ export const constructiveThemeRegistryItem: RegistryItem = {
 	},
 	files: [],
 };
+
+/** One `registry:theme` item per preset, installed via `shadcn add @constructive/theme-<id>`. */
+function themePresetRegistryItem(preset: ThemePreset): RegistryItem {
+	return {
+		name: `theme-${preset.id}`,
+		type: 'registry:theme',
+		title: `${preset.label} theme`,
+		description: preset.description,
+		categories: ['theme'],
+		docs: `Install with \`pnpm dlx shadcn@latest add @constructive/theme-${preset.id}\`. Requires the Constructive base theme (\`@constructive/constructive-theme\`).`,
+		cssVars: { light: preset.tokens.light, dark: preset.tokens.dark },
+	};
+}
+
+const THEME_REGISTRY_ITEMS: RegistryItem[] = [
+	constructiveThemeRegistryItem,
+	...THEME_PRESETS.map(themePresetRegistryItem),
+];
+
+/** Remove one named item (object + its separating comma + trailing newline). */
+function removeRegistryItem(source: string, name: string): string {
+	const marker = `"name": "${name}"`;
+	const markerIndex = source.indexOf(marker);
+	if (markerIndex === -1) return source;
+
+	const start = source.lastIndexOf('{', markerIndex);
+	let depth = 0;
+	let inString = false;
+	let escaped = false;
+	let end = -1;
+	for (let index = start; index < source.length; index += 1) {
+		const character = source[index];
+		if (inString) {
+			if (escaped) escaped = false;
+			else if (character === '\\') escaped = true;
+			else if (character === '"') inString = false;
+			continue;
+		}
+		if (character === '"') inString = true;
+		else if (character === '{') depth += 1;
+		else if (character === '}') {
+			depth -= 1;
+			if (depth === 0) {
+				end = index + 1;
+				break;
+			}
+		}
+	}
+	if (end === -1) throw new Error(`Could not locate the ${name} object end`);
+
+	// Items are separated as `{item},\n    {next}` — consume the trailing
+	// separator comma and the rest of the item's line.
+	let removeStart = start;
+	while (removeStart > 0 && (source[removeStart - 1] === ' ' || source[removeStart - 1] === '\t')) {
+		removeStart -= 1;
+	}
+	while (removeStart > 0 && source[removeStart - 1] !== '\n') removeStart -= 1;
+	if (source[end] === ',') end += 1;
+	if (source[end] === '\n') end += 1;
+	return source.slice(0, removeStart) + source.slice(end);
+}
 
 function findThemeItemRange(source: string): { start: number; end: number } {
 	const marker = '"name": "constructive-theme"';
@@ -143,14 +211,22 @@ function findThemeItemRange(source: string): { start: number; end: number } {
 }
 
 function replaceThemeItemSource(source: string): string {
-	const { start, end } = findThemeItemRange(source);
-	const lineStart = source.lastIndexOf('\n', start) + 1;
-	if (source.slice(lineStart, start).trim() !== '') throw new Error('constructive-theme must start on its own line');
-	const itemSource = JSON.stringify(constructiveThemeRegistryItem, null, 2)
-		.split('\n')
-		.map((line) => `    ${line}`)
-		.join('\n');
-	return `${source.slice(0, lineStart)}${itemSource}${source.slice(end)}`;
+	// Drop previously generated preset items, then splice the full theme block
+	// (constructive-theme + one item per preset) back in place.
+	let next = source;
+	for (const preset of THEME_PRESETS) {
+		next = removeRegistryItem(next, `theme-${preset.id}`);
+	}
+	const { start, end } = findThemeItemRange(next);
+	const lineStart = next.lastIndexOf('\n', start) + 1;
+	if (next.slice(lineStart, start).trim() !== '') throw new Error('constructive-theme must start on its own line');
+	const itemsSource = THEME_REGISTRY_ITEMS.map((item) =>
+		JSON.stringify(item, null, 2)
+			.split('\n')
+			.map((line) => `    ${line}`)
+			.join('\n'),
+	).join(',\n');
+	return `${next.slice(0, lineStart)}${itemsSource}${next.slice(end)}`;
 }
 
 async function main(): Promise<void> {
@@ -163,10 +239,18 @@ async function main(): Promise<void> {
 	const currentThemeItem = currentRegistry.items.find((item) => item.name === 'constructive-theme');
 	if (!currentThemeItem) throw new Error('packages/ui/registry.json is missing constructive-theme');
 	const expectedRegistry = replaceThemeItemSource(registrySource);
+	JSON.parse(expectedRegistry); // generated output must stay valid JSON
 	const failures: string[] = [];
 
 	if (currentGlobals !== expectedGlobals) failures.push(path.relative(packageRoot, globalsPath));
-	if (JSON.stringify(currentThemeItem) !== JSON.stringify(constructiveThemeRegistryItem)) {
+	const expectedNames = new Set(THEME_REGISTRY_ITEMS.map((item) => item.name));
+	const currentThemeItems = currentRegistry.items.filter((item) => expectedNames.has(item.name));
+	const themesCurrent =
+		currentThemeItems.length === THEME_REGISTRY_ITEMS.length &&
+		THEME_REGISTRY_ITEMS.every((expected) =>
+			currentThemeItems.some((item) => JSON.stringify(item) === JSON.stringify(expected)),
+		);
+	if (!themesCurrent) {
 		failures.push(path.relative(packageRoot, registryPath));
 	}
 

@@ -296,7 +296,7 @@ function OrgChartInner({
 			<div
 				role='status'
 				aria-live='polite'
-				className='bg-card border-border/60 flex items-center justify-center rounded-xl border p-16'
+				className='bg-card border-border/60 flex items-center justify-center rounded-lg border p-16'
 			>
 				<Loader2 aria-hidden className='text-muted-foreground size-6 motion-safe:animate-spin' />
 				<span className='sr-only'>Loading organization chart</span>
@@ -310,7 +310,7 @@ function OrgChartInner({
 
 	return (
 		<NodeActionsProvider onEditNode={handleEditNode} onRemoveNode={handleRemoveNode}>
-			<div ref={chartRef} className={cn('border-border/60 h-[600px] overflow-hidden rounded-xl border', className)}>
+			<div ref={chartRef} className={cn('border-border/60 h-[600px] overflow-hidden rounded-lg border', className)}>
 				<ReactFlow
 					nodes={nodes}
 					edges={rfEdges}

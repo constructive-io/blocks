@@ -31,7 +31,7 @@ function ContextCard({
 		<article
 			data-slot="context-card"
 			className={cn(
-				'rounded-xl border border-border bg-card p-3 shadow-xs',
+				'rounded-lg bg-card p-3 shadow-card',
 				'animate-[ai-fade-up_300ms_cubic-bezier(0.23,1,0.32,1)_both] motion-reduce:animate-none',
 				className,
 			)}

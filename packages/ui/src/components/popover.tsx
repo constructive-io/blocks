@@ -91,8 +91,8 @@ function PopoverContent({
 				<PopoverPrimitive.Popup
 					data-slot="popover-content"
 					className={cn(
-						`bg-popover text-popover-foreground origin-(--transform-origin) w-72 rounded-md border p-4 shadow-md outline-hidden
-						transition-[scale,opacity,translate] duration-150 ease-out data-starting-style:scale-95
+						`bg-popover text-popover-foreground origin-(--transform-origin) w-72 rounded-lg border p-4 shadow-lg outline-hidden
+						transition-[scale,opacity,translate] duration-(--duration-moderate) ease-out data-starting-style:scale-95
 						data-ending-style:scale-95 data-starting-style:opacity-0 data-ending-style:opacity-0
 						data-[side=bottom]:data-starting-style:-translate-y-2
 						data-[side=left]:data-starting-style:translate-x-2

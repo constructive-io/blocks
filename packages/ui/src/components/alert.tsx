@@ -11,7 +11,7 @@ import { cn } from '../lib/utils';
  */
 const alertVariants = cva(
 	[
-		'group/alert relative w-full rounded-xl border px-4 py-3.5 text-sm',
+		'group/alert relative w-full rounded-md border px-4 py-3.5 text-sm',
 		'grid grid-cols-[0_minmax(0,1fr)] items-start gap-y-1',
 		'has-[>svg]:grid-cols-[1rem_minmax(0,1fr)] has-[>svg]:gap-x-3',
 		"[&>svg]:col-start-1 [&>svg]:row-span-full [&>svg]:mt-0.5 [&>svg]:size-4 [&>svg]:shrink-0 [&>svg]:text-current",

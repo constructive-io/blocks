@@ -67,7 +67,7 @@ function FormControl({ children, label, id, layout = 'stacked', error, className
               // Small, subtle typography
               'origin-left text-[13px] leading-none font-normal text-muted-foreground/60 select-none',
               // Snappy transition
-              'transition-[transform,color] duration-200 ease-out motion-reduce:transition-none',
+              'transition-[transform,color] duration-(--duration-slow) ease-out motion-reduce:transition-none',
               // Error state
               error && 'text-destructive',
             )}

@@ -328,7 +328,7 @@ function ChipsInput({ value, onChange, placeholder, ariaLabel }: ChipsInputProps
 		<div
 			className={cn(
 				`flex min-h-9 flex-wrap items-center gap-1.5 rounded-lg border border-input bg-background px-2 py-1.5
-				focus-within:border-primary/60 focus-within:ring-[3px] focus-within:ring-primary/35`,
+				focus-within:border-ring/60 focus-within:ring-[3px] focus-within:ring-ring/35`,
 			)}
 		>
 			{value.map((chip, index) => (
@@ -358,7 +358,7 @@ function ChipsInput({ value, onChange, placeholder, ariaLabel }: ChipsInputProps
 				onBlur={commit}
 				placeholder={value.length === 0 ? placeholder : undefined}
 				aria-label={ariaLabel}
-				className='min-w-24 flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground/72'
+				className='min-w-24 flex-1 bg-transparent text-sm outline-none placeholder:text-subtle-foreground'
 			/>
 		</div>
 	);

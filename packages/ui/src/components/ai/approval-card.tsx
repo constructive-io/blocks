@@ -109,7 +109,7 @@ function ApprovalCard({
 			<div
 				data-slot="approval-card"
 				className={cn(
-					'flex min-h-28 w-full max-w-sm flex-col items-center justify-center gap-2 rounded-xl border border-border bg-card p-4 shadow-xs',
+					'flex min-h-28 w-full max-w-sm flex-col items-center justify-center gap-2 rounded-lg bg-card p-4 shadow-card',
 					className,
 				)}
 			>
@@ -128,7 +128,7 @@ function ApprovalCard({
 				data-slot="approval-card"
 				data-destructive={destructive ? 'true' : 'false'}
 				className={cn(
-					'w-full max-w-md overflow-hidden rounded-xl border bg-card shadow-xs',
+					'w-full max-w-md overflow-hidden rounded-lg bg-card shadow-card',
 					destructive ? 'border-destructive/35' : 'border-border',
 					className,
 				)}
@@ -185,7 +185,7 @@ function ApprovalCard({
 		<div
 			data-slot="approval-card"
 			className={cn(
-				'w-full max-w-sm overflow-hidden rounded-xl border border-border bg-card shadow-xs',
+				'w-full max-w-sm overflow-hidden rounded-lg shadow-card',
 				className,
 			)}
 		>
@@ -202,7 +202,7 @@ function ApprovalCard({
 								<span
 									key={i}
 									className={cn(
-										'h-1 rounded-full transition-[width,background-color] duration-200',
+										'h-1 rounded-full transition-[width,background-color] duration-(--duration-slow)',
 										on ? 'w-3 bg-primary' : 'w-1.5 bg-border',
 									)}
 								/>
@@ -225,10 +225,10 @@ function ApprovalCard({
 								aria-pressed={on}
 								onClick={() => toggleOption(option.id)}
 								className={cn(
-									// card rounded-xl + p-3 → option rows use rounded-md (concentric)
+									// card rounded-lg + p-3 → option rows use rounded-md (concentric)
 									'-mx-1.5 flex min-h-10 items-start gap-2 rounded-md px-1.5 py-1.5 text-left text-[13px]',
-									'transition-colors duration-150 hover:bg-accent',
-									'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+									'transition-[color,background-color,border-color,text-decoration-color,fill,stroke,box-shadow] duration-(--duration-moderate) hover:bg-accent',
+									'focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50',
 									on && 'bg-accent',
 								)}
 							>

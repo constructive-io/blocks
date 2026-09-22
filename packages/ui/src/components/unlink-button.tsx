@@ -30,7 +30,7 @@ export function UnlinkButton({
 			disabled={disabled || isUnlinking}
 			className={cn(
 				'hover:bg-destructive/10 hover:text-destructive h-5 w-5 p-0',
-				'focus:ring-destructive/20 focus:ring-2 focus:ring-offset-1',
+				'focus-visible:ring-[3px] focus-visible:ring-destructive/30',
 				isUnlinking && 'cursor-not-allowed opacity-50',
 				className,
 			)}

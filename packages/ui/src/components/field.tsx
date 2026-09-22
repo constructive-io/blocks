@@ -147,8 +147,8 @@ function FieldLabel({ className, ...props }: React.ComponentProps<typeof Label>)
 			data-slot='field-label'
 			className={cn(
 				`group/field-label peer/field-label flex w-fit gap-2 leading-snug
-				group-data-[disabled=true]/field:opacity-50 has-data-checked:border-primary/30 has-data-checked:bg-primary/5
-				has-[>[data-slot=field]]:rounded-lg has-[>[data-slot=field]]:border
+				group-data-[disabled=true]/field:opacity-64 has-data-checked:border-primary/30 has-data-checked:bg-primary/5
+				has-[>[data-slot=field]]:rounded-md has-[>[data-slot=field]]:border
 				*:data-[slot=field]:p-2.5 has-[>[data-slot=field]]:w-full has-[>[data-slot=field]]:flex-col`,
 				className,
 			)}
@@ -162,7 +162,7 @@ function FieldTitle({ className, ...props }: React.ComponentProps<'div'>) {
 		<div
 			data-slot='field-label'
 			className={cn(
-				'flex w-fit items-center gap-2 text-sm font-medium group-data-[disabled=true]/field:opacity-50',
+				'flex w-fit items-center gap-2 text-sm font-medium group-data-[disabled=true]/field:opacity-64',
 				className,
 			)}
 			{...props}

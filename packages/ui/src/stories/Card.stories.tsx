@@ -92,6 +92,31 @@ export const Variants: Story = {
 	),
 };
 
+export const Sizes: Story = {
+	render: () => (
+		<div className='grid max-w-3xl grid-cols-2 gap-6'>
+			<Card className='w-full'>
+				<CardHeader>
+					<CardTitle>Default</CardTitle>
+					<CardDescription>size=&quot;default&quot; — 1.5rem padding</CardDescription>
+				</CardHeader>
+				<CardContent>
+					<p className='text-muted-foreground text-sm'>Standard card rhythm.</p>
+				</CardContent>
+			</Card>
+			<Card size='sm' className='w-full'>
+				<CardHeader>
+					<CardTitle>Small</CardTitle>
+					<CardDescription>size=&quot;sm&quot; — 1rem padding</CardDescription>
+				</CardHeader>
+				<CardContent>
+					<p className='text-muted-foreground text-sm'>Compact density for dashboards and walls.</p>
+				</CardContent>
+			</Card>
+		</div>
+	),
+};
+
 export const Interactive: Story = {
 	render: () => (
 		<Card variant='interactive' className='w-[350px]'>

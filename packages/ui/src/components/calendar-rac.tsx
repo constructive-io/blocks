@@ -67,7 +67,7 @@ function CalendarGridComponent({ isRange = false }: { isRange?: boolean }) {
 							`text-foreground data-hovered:bg-accent data-selected:bg-primary data-hovered:text-foreground
 							data-selected:text-primary-foreground data-focus-visible:ring-ring/50 relative flex size-9 items-center
 							justify-center rounded-md p-0 text-sm font-normal whitespace-nowrap
-							[transition-property:color,background-color,border-radius,box-shadow] duration-150 outline-none
+							[transition-property:color,background-color,border-radius,box-shadow] duration-(--duration-moderate) outline-none
 							data-disabled:pointer-events-none data-disabled:opacity-30 data-focus-visible:z-10
 							data-focus-visible:ring-[3px] data-unavailable:pointer-events-none data-unavailable:line-through
 							data-unavailable:opacity-30`,

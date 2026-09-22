@@ -91,8 +91,8 @@ function ThinkingTrace({
 			<Collapsible open={open} onOpenChange={setOpen}>
 				<CollapsibleTrigger
 					className={cn(
-						'group -mx-1.5 flex w-fit items-center gap-2 rounded-md px-1.5 py-1 text-left',
-						'transition-colors duration-150 hover:bg-accent',
+						'group -mx-1.5 flex w-fit items-center gap-2 rounded-md px-1.5 py-1.5 text-left',
+						'transition-colors duration-(--duration-moderate) hover:bg-accent',
 					)}
 				>
 					<Sparkles

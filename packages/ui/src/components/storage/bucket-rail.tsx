@@ -30,8 +30,8 @@ function BucketRailItem({ bucket, selected, onSelect }: BucketRailItemProps) {
 			aria-current={selected ? 'true' : undefined}
 			onClick={() => onSelect(bucket.id)}
 			className={cn(
-				`flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm outline-none transition-colors
-				focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 focus-visible:ring-offset-background`,
+				`flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm outline-none transition-[color,background-color,border-color,text-decoration-color,fill,stroke,box-shadow]
+				focus-visible:ring-[3px] focus-visible:ring-ring/50`,
 				selected ? 'bg-accent text-accent-foreground' : 'text-foreground hover:bg-muted/50',
 			)}
 		>

@@ -8,8 +8,8 @@ interface OrgChartEmptyProps {
 
 export function OrgChartEmpty({ editable, onAddRoot }: OrgChartEmptyProps) {
 	return (
-		<div className='bg-card border-border/60 flex flex-col items-center justify-center rounded-xl border py-16'>
-			<div className='bg-muted mb-4 flex size-14 items-center justify-center rounded-2xl'>
+		<div className='bg-card border-border/60 flex flex-col items-center justify-center rounded-lg border py-16'>
+			<div className='bg-muted mb-4 flex size-14 items-center justify-center rounded-xl'>
 				<Network className='text-muted-foreground size-7' />
 			</div>
 			<h3 className='text-foreground text-base font-semibold'>No Org Chart Yet</h3>

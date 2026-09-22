@@ -30,7 +30,7 @@ const DEFAULT_DISTANCE = 140;
 
 const dockVariants = cva(
 	// Solid themed surface (no glass/blur)
-	'mx-auto mt-8 flex h-[58px] w-max items-center justify-center gap-2 rounded-2xl bg-card p-2 shadow-card',
+	'mx-auto mt-8 flex h-[58px] w-max items-center justify-center gap-2 rounded-xl bg-card p-2 shadow-card',
 );
 
 const Dock = React.forwardRef<HTMLDivElement, DockProps>(
@@ -128,7 +128,7 @@ const DockIcon = ({
 			className={cn(
 				// Solid hover target with theme-aware colors
 				'flex aspect-square cursor-pointer items-center justify-center rounded-full bg-transparent',
-				`hover:bg-muted focus-visible:bg-muted/80 focus-visible:outline-ring transition-colors duration-200
+				`hover:bg-muted focus-visible:bg-muted/80 focus-visible:outline-ring transition-colors duration-(--duration-slow)
 				focus-visible:outline`,
 				className,
 			)}

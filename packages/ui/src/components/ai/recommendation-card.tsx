@@ -59,7 +59,7 @@ function RecommendationCard({
 		<div
 			data-slot="recommendation-card"
 			className={cn(
-				'w-full max-w-md overflow-hidden rounded-xl border border-border bg-card shadow-xs',
+				'w-full max-w-md overflow-hidden rounded-lg bg-card shadow-card',
 				className,
 			)}
 		>
@@ -75,7 +75,7 @@ function RecommendationCard({
 						</div>
 						<div className="h-1.5 overflow-hidden rounded-full bg-muted">
 							<div
-								className="h-full origin-left rounded-full bg-primary transition-transform duration-200 ease-out motion-reduce:transition-none"
+								className="h-full origin-left rounded-full bg-primary transition-transform duration-(--duration-slow) ease-out motion-reduce:transition-none"
 								style={{ transform: `scaleX(${pct / 100})` }}
 							/>
 						</div>
@@ -86,9 +86,9 @@ function RecommendationCard({
 					<Collapsible className="group/collapsible">
 						<CollapsibleTrigger
 							className={cn(
-								// outer card is rounded-xl + p-3 → inner uses rounded-md for concentric radii
+								// outer card is rounded-lg + p-3 → inner uses rounded-md for concentric radii
 								'flex w-full items-center justify-between rounded-md border border-border/80 px-2.5 py-1.5 text-[12.5px]',
-								'text-muted-foreground transition-colors duration-150 hover:bg-accent hover:text-foreground',
+								'text-muted-foreground transition-colors duration-(--duration-moderate) hover:bg-accent hover:text-foreground',
 							)}
 						>
 							<span>Other options</span>
@@ -108,7 +108,7 @@ function RecommendationCard({
 												}}
 												className={cn(
 													'flex w-full items-start gap-2 rounded-md px-2 py-1.5 text-left text-[13px]',
-													'transition-colors duration-150 hover:bg-accent',
+													'transition-colors duration-(--duration-moderate) hover:bg-accent',
 													on && 'bg-accent',
 												)}
 											>

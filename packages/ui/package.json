@@ -50,6 +50,16 @@
         "default": "./dist/components/button.cjs"
       }
     },
+    "./button-group": {
+      "import": {
+        "types": "./dist/components/button-group.d.ts",
+        "default": "./dist/components/button-group.js"
+      },
+      "require": {
+        "types": "./dist/components/button-group.d.cts",
+        "default": "./dist/components/button-group.cjs"
+      }
+    },
     "./badge": {
       "import": {
         "types": "./dist/components/badge.d.ts",
@@ -70,6 +80,16 @@
         "default": "./dist/components/label.cjs"
       }
     },
+    "./kbd": {
+      "import": {
+        "types": "./dist/components/kbd.d.ts",
+        "default": "./dist/components/kbd.js"
+      },
+      "require": {
+        "types": "./dist/components/kbd.d.cts",
+        "default": "./dist/components/kbd.cjs"
+      }
+    },
     "./skeleton": {
       "import": {
         "types": "./dist/components/skeleton.d.ts",
@@ -78,6 +98,16 @@
       "require": {
         "types": "./dist/components/skeleton.d.cts",
         "default": "./dist/components/skeleton.cjs"
+      }
+    },
+    "./spinner": {
+      "import": {
+        "types": "./dist/components/spinner.d.ts",
+        "default": "./dist/components/spinner.js"
+      },
+      "require": {
+        "types": "./dist/components/spinner.d.cts",
+        "default": "./dist/components/spinner.cjs"
       }
     },
     "./card": {
@@ -168,6 +198,36 @@
       "require": {
         "types": "./dist/components/switch.d.cts",
         "default": "./dist/components/switch.cjs"
+      }
+    },
+    "./slider": {
+      "import": {
+        "types": "./dist/components/slider.d.ts",
+        "default": "./dist/components/slider.js"
+      },
+      "require": {
+        "types": "./dist/components/slider.d.cts",
+        "default": "./dist/components/slider.cjs"
+      }
+    },
+    "./toggle": {
+      "import": {
+        "types": "./dist/components/toggle.d.ts",
+        "default": "./dist/components/toggle.js"
+      },
+      "require": {
+        "types": "./dist/components/toggle.d.cts",
+        "default": "./dist/components/toggle.cjs"
+      }
+    },
+    "./toggle-group": {
+      "import": {
+        "types": "./dist/components/toggle-group.d.ts",
+        "default": "./dist/components/toggle-group.js"
+      },
+      "require": {
+        "types": "./dist/components/toggle-group.d.cts",
+        "default": "./dist/components/toggle-group.cjs"
       }
     },
     "./select": {
@@ -330,6 +390,16 @@
         "default": "./dist/components/collapsible.cjs"
       }
     },
+    "./accordion": {
+      "import": {
+        "types": "./dist/components/accordion.d.ts",
+        "default": "./dist/components/accordion.js"
+      },
+      "require": {
+        "types": "./dist/components/accordion.d.cts",
+        "default": "./dist/components/accordion.cjs"
+      }
+    },
     "./scroll-area": {
       "import": {
         "types": "./dist/components/scroll-area.d.ts",
@@ -388,6 +458,16 @@
       "require": {
         "types": "./dist/components/avatar.d.cts",
         "default": "./dist/components/avatar.cjs"
+      }
+    },
+    "./item": {
+      "import": {
+        "types": "./dist/components/item.d.ts",
+        "default": "./dist/components/item.js"
+      },
+      "require": {
+        "types": "./dist/components/item.d.cts",
+        "default": "./dist/components/item.cjs"
       }
     },
     "./autocomplete": {
@@ -649,6 +729,46 @@
         "types": "./dist/components/ai/index.d.cts",
         "default": "./dist/components/ai/index.cjs"
       }
+    },
+    "./theme": {
+      "import": {
+        "types": "./dist/theme.d.ts",
+        "default": "./dist/theme.js"
+      },
+      "require": {
+        "types": "./dist/theme.d.cts",
+        "default": "./dist/theme.cjs"
+      }
+    },
+    "./theme-tuning": {
+      "import": {
+        "types": "./dist/theme-tuning.d.ts",
+        "default": "./dist/theme-tuning.js"
+      },
+      "require": {
+        "types": "./dist/theme-tuning.d.cts",
+        "default": "./dist/theme-tuning.cjs"
+      }
+    },
+    "./theme-presets": {
+      "import": {
+        "types": "./dist/theme-presets.d.ts",
+        "default": "./dist/theme-presets.js"
+      },
+      "require": {
+        "types": "./dist/theme-presets.d.cts",
+        "default": "./dist/theme-presets.cjs"
+      }
+    },
+    "./theme-dials-config": {
+      "import": {
+        "types": "./dist/theme-dials-config.d.ts",
+        "default": "./dist/theme-dials-config.js"
+      },
+      "require": {
+        "types": "./dist/theme-dials-config.d.cts",
+        "default": "./dist/theme-dials-config.cjs"
+      }
     }
   },
   "main": "./dist/index.cjs",
@@ -723,6 +843,7 @@
     "@xyflow/react": "^12.10.0",
     "ace-builds": "^1.43.5",
     "cmdk": "^1.1.1",
+    "dialkit": "2.0.2",
     "jsdom": "^26.1.0",
     "lucide-react": "^0.525.0",
     "match-sorter": "^8.2.0",

@@ -94,9 +94,9 @@ function Reasoning({
 		>
 			<CollapsibleTrigger
 				className={cn(
-					'group flex w-fit max-w-full items-center gap-1.5 rounded-md px-1.5 py-1 text-left text-[13px]',
-					'text-muted-foreground transition-colors duration-150 hover:bg-accent hover:text-foreground',
-					'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+					'group flex w-fit max-w-full items-center gap-1.5 rounded-md px-1.5 py-1.5 text-left text-[13px]',
+					'text-muted-foreground transition-[color,background-color,border-color,text-decoration-color,fill,stroke,box-shadow] duration-(--duration-moderate) hover:bg-accent hover:text-foreground',
+					'focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50',
 				)}
 			>
 				<Brain className="size-3.5 shrink-0 opacity-80" />
@@ -107,7 +107,7 @@ function Reasoning({
 				)}
 				<ChevronDown
 					data-slot="collapsible-icon"
-					className="size-3.5 shrink-0 opacity-60 transition-transform duration-200"
+					className="size-3.5 shrink-0 opacity-60 transition-transform duration-(--duration-slow)"
 				/>
 			</CollapsibleTrigger>
 			<CollapsiblePanel innerClassName="py-0">
@@ -155,7 +155,7 @@ function ThinkingBar({
 				<button
 					type="button"
 					onClick={onClick}
-					className="flex items-center gap-1 text-sm transition-opacity duration-150 hover:opacity-80"
+					className="flex items-center gap-1 text-sm transition-opacity duration-(--duration-moderate) hover:opacity-80"
 				>
 					<TextShimmer className="font-medium">{text}</TextShimmer>
 					<ChevronDown className="size-4 -rotate-90 text-muted-foreground" />
@@ -167,7 +167,7 @@ function ThinkingBar({
 				<button
 					type="button"
 					onClick={onStop}
-					className="border-b border-dotted border-muted-foreground/50 text-sm text-muted-foreground transition-colors duration-150 hover:border-foreground hover:text-foreground"
+					className="border-b border-dotted border-muted-foreground/50 text-sm text-muted-foreground transition-[color,background-color,border-color,text-decoration-color,fill,stroke,box-shadow] duration-(--duration-moderate) hover:border-foreground hover:text-foreground"
 				>
 					{stopLabel}
 				</button>

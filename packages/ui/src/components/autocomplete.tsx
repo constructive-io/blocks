@@ -4,6 +4,7 @@ import { Autocomplete as AutocompletePrimitive } from "@base-ui/react/autocomple
 import { ChevronsUpDownIcon, XIcon } from "lucide-react";
 
 import { useFloatingOverlayPortalProps } from "@constructive-io/ui/portal";
+import { FluidHighlight } from "../lib/motion/fluid-highlight";
 import { cn } from "../lib/utils";
 import { Input } from "./input";
 import { ScrollArea } from "./scroll-area";
@@ -118,7 +119,7 @@ function AutocompleteItem({
   return (
     <AutocompletePrimitive.Item
       className={cn(
-        "flex min-h-8 cursor-default select-none items-center rounded-sm px-2 py-1 text-base outline-none pointer-coarse:min-h-11 sm:pointer-coarse:min-h-11 data-disabled:pointer-events-none data-highlighted:bg-accent data-highlighted:text-accent-foreground data-disabled:opacity-64 sm:min-h-7 sm:text-sm",
+        "relative flex min-h-8 cursor-default select-none items-center rounded-sm px-2 py-1 text-base outline-none pointer-coarse:min-h-11 sm:pointer-coarse:min-h-11 data-disabled:pointer-events-none data-highlighted:text-accent-foreground data-disabled:opacity-64 sm:min-h-7 sm:text-sm",
         className,
       )}
       data-slot="autocomplete-item"
@@ -217,14 +218,17 @@ function AutocompleteList({
 }: AutocompletePrimitive.List.Props) {
   return (
     <ScrollArea scrollbarGutter scrollFade>
-      <AutocompletePrimitive.List
-        className={cn(
-          "not-empty:scroll-py-1 not-empty:p-1 in-data-has-overflow-y:pe-3",
-          className,
-        )}
-        data-slot="autocomplete-list"
-        {...props}
-      />
+      <div className="relative">
+        <FluidHighlight />
+        <AutocompletePrimitive.List
+          className={cn(
+            "not-empty:scroll-py-1 not-empty:p-1 in-data-has-overflow-y:pe-3",
+            className,
+          )}
+          data-slot="autocomplete-list"
+          {...props}
+        />
+      </div>
     </ScrollArea>
   );
 }

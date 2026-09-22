@@ -74,7 +74,7 @@ function TableRow({ className, ...props }: React.ComponentProps<'tr'>) {
 			className={cn(
 				'border-b border-border/60',
 				// Specific properties only — interruptible hover/selection
-				'transition-colors duration-150 ease-out',
+				'transition-colors duration-(--duration-moderate) ease-out',
 				'hover:bg-muted/40 data-[state=selected]:bg-muted',
 				className,
 			)}
@@ -116,7 +116,7 @@ function TableCaption({ className, ...props }: React.ComponentProps<'caption'>) 
 	return (
 		<caption
 			data-slot="table-caption"
-			className={cn('mt-3 text-pretty text-sm text-muted-foreground', className)}
+			className={cn('mt-3 text-pretty text-sm text-subtle-foreground', className)}
 			{...props}
 		/>
 	);

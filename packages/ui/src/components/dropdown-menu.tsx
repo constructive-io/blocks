@@ -5,6 +5,7 @@ import { Menu as MenuPrimitive } from '@base-ui/react/menu';
 import { CheckIcon, ChevronRightIcon, CircleIcon } from 'lucide-react';
 
 import { useFloatingOverlayPortalProps } from '@constructive-io/ui/portal';
+import { FluidHighlight } from '../lib/motion/fluid-highlight';
 import { cn } from '../lib/utils';
 
 const DropdownMenuGroupContext = React.createContext(false);
@@ -61,6 +62,7 @@ function DropdownMenuContent({
 	onPointerDownOutside: _onPointerDownOutside,
 	onCloseAutoFocus: _onCloseAutoFocus,
 	forceMount: _forceMount,
+	children,
 	...props
 }: DropdownMenuContentProps) {
 	const { zIndexClass } = useFloatingOverlayPortalProps();
@@ -71,8 +73,8 @@ function DropdownMenuContent({
 				<MenuPrimitive.Popup
 					data-slot="dropdown-menu-content"
 					className={cn(
-						`bg-popover text-popover-foreground origin-(--transform-origin) min-w-40 overflow-hidden rounded-md border p-1
-						shadow-lg transition-[scale,opacity,translate] duration-150 ease-out data-starting-style:scale-95
+						`bg-popover text-popover-foreground relative origin-(--transform-origin) min-w-40 overflow-hidden rounded-lg border p-1
+						shadow-lg transition-[scale,opacity,translate] duration-(--duration-moderate) ease-out data-starting-style:scale-95
 						data-ending-style:scale-95 data-starting-style:opacity-0 data-ending-style:opacity-0
 						data-[side=bottom]:data-starting-style:-translate-y-2
 						data-[side=left]:data-starting-style:translate-x-2
@@ -81,7 +83,10 @@ function DropdownMenuContent({
 						className,
 					)}
 					{...props}
-				/>
+				>
+					<FluidHighlight />
+					{children}
+				</MenuPrimitive.Popup>
 			</MenuPrimitive.Positioner>
 		</DropdownMenuPortal>
 	);
@@ -113,12 +118,12 @@ function DropdownMenuItem({
 }: DropdownMenuItemProps) {
 	const childRender = render === undefined && asChild && React.isValidElement(children) ? children : undefined;
 	const itemClassName = cn(
-		`data-[highlighted]:bg-accent data-[highlighted]:text-accent-foreground data-[variant=destructive]:text-destructive
+		`data-[highlighted]:text-accent-foreground data-[variant=destructive]:text-destructive
 		data-[variant=destructive]:data-[highlighted]:bg-destructive/10 dark:data-[variant=destructive]:data-[highlighted]:bg-destructive/40
 		data-[variant=destructive]:data-[highlighted]:text-destructive
 		data-[variant=destructive]:*:[svg]:!text-destructive relative flex cursor-default items-center gap-2 pointer-coarse:min-h-11
 		rounded-sm px-2 py-1.5 text-sm outline-hidden select-none data-[disabled]:pointer-events-none
-		data-[disabled]:opacity-50 data-[inset]:pl-8 [&_svg]:pointer-events-none [&_svg]:shrink-0`,
+		data-[disabled]:opacity-64 data-[inset]:pl-8 [&_svg]:pointer-events-none [&_svg]:shrink-0`,
 		className,
 	);
 
@@ -146,8 +151,8 @@ function DropdownMenuCheckboxItem({
 		<MenuPrimitive.CheckboxItem
 			data-slot="dropdown-menu-checkbox-item"
 			className={cn(
-				`data-[highlighted]:bg-accent data-[highlighted]:text-accent-foreground relative flex cursor-default items-center gap-2 rounded-sm py-1.5
-				pr-2 pl-8 text-sm outline-hidden select-none pointer-coarse:min-h-11 data-[disabled]:pointer-events-none data-[disabled]:opacity-50
+				`data-[highlighted]:text-accent-foreground relative flex cursor-default items-center gap-2 rounded-sm py-1.5
+				pr-2 pl-8 text-sm outline-hidden select-none pointer-coarse:min-h-11 data-[disabled]:pointer-events-none data-[disabled]:opacity-64
 				[&_svg]:pointer-events-none [&_svg]:shrink-0`,
 				className,
 			)}
@@ -157,7 +162,7 @@ function DropdownMenuCheckboxItem({
 			<span className='pointer-events-none absolute left-2 flex size-3.5 items-center justify-center'>
 					<MenuPrimitive.CheckboxItemIndicator
 						keepMounted
-						className='transition-[opacity,scale,filter] duration-300 ease-[cubic-bezier(0.2,0,0,1)] data-unchecked:scale-[0.25] data-unchecked:opacity-0 data-unchecked:blur-[4px] motion-reduce:transition-none'
+						className='transition-[opacity,scale,filter] duration-(--duration-slow) ease-out data-unchecked:scale-[0.25] data-unchecked:opacity-0 data-unchecked:blur-[4px] motion-reduce:transition-none'
 					>
 					<CheckIcon size={16} />
 				</MenuPrimitive.CheckboxItemIndicator>
@@ -180,8 +185,8 @@ function DropdownMenuRadioItem({
 		<MenuPrimitive.RadioItem
 			data-slot="dropdown-menu-radio-item"
 			className={cn(
-				`data-[highlighted]:bg-accent data-[highlighted]:text-accent-foreground relative flex cursor-default items-center gap-2 rounded-sm py-1.5
-				pr-2 pl-8 text-sm outline-hidden select-none pointer-coarse:min-h-11 data-[disabled]:pointer-events-none data-[disabled]:opacity-50
+				`data-[highlighted]:text-accent-foreground relative flex cursor-default items-center gap-2 rounded-sm py-1.5
+				pr-2 pl-8 text-sm outline-hidden select-none pointer-coarse:min-h-11 data-[disabled]:pointer-events-none data-[disabled]:opacity-64
 				[&_svg]:pointer-events-none [&_svg]:shrink-0`,
 				className,
 			)}
@@ -190,7 +195,7 @@ function DropdownMenuRadioItem({
 			<span className='pointer-events-none absolute left-2 flex size-3.5 items-center justify-center'>
 					<MenuPrimitive.RadioItemIndicator
 						keepMounted
-						className='transition-[opacity,scale,filter] duration-300 ease-[cubic-bezier(0.2,0,0,1)] data-unchecked:scale-[0.25] data-unchecked:opacity-0 data-unchecked:blur-[4px] motion-reduce:transition-none'
+						className='transition-[opacity,scale,filter] duration-(--duration-slow) ease-out data-unchecked:scale-[0.25] data-unchecked:opacity-0 data-unchecked:blur-[4px] motion-reduce:transition-none'
 					>
 					<CircleIcon className='size-2 fill-current' />
 				</MenuPrimitive.RadioItemIndicator>
@@ -244,7 +249,7 @@ function DropdownMenuShortcut({ className, ...props }: React.ComponentProps<'spa
 		<kbd
 			data-slot="dropdown-menu-shortcut"
 			className={cn(
-				`bg-background text-muted-foreground/70 ms-auto -me-1 inline-flex h-5 max-h-full items-center rounded border
+				`bg-background text-subtle-foreground ms-auto -me-1 inline-flex h-5 max-h-full items-center rounded border
 				px-1 font-[inherit] text-[0.625rem] font-medium`,
 				className,
 			)}
@@ -270,8 +275,8 @@ function DropdownMenuSubTrigger({
 			data-slot="dropdown-menu-sub-trigger"
 			data-inset={inset}
 			className={cn(
-				`data-[highlighted]:bg-accent data-[highlighted]:text-accent-foreground data-[popup-open]:bg-accent
-				data-[popup-open]:text-accent-foreground flex cursor-default items-center rounded-sm px-2 py-1.5 text-sm pointer-coarse:min-h-11
+				`data-[highlighted]:text-accent-foreground data-[popup-open]:bg-accent
+				data-[popup-open]:text-accent-foreground relative flex cursor-default items-center rounded-sm px-2 py-1.5 text-sm pointer-coarse:min-h-11
 				outline-hidden select-none data-[inset]:pl-8`,
 				className,
 			)}
@@ -283,7 +288,7 @@ function DropdownMenuSubTrigger({
 	);
 }
 
-function DropdownMenuSubContent({ className, ...props }: React.ComponentProps<typeof MenuPrimitive.Popup>) {
+function DropdownMenuSubContent({ className, children, ...props }: React.ComponentProps<typeof MenuPrimitive.Popup>) {
 	const { container, zIndexClass } = useFloatingOverlayPortalProps();
 
 	return (
@@ -292,8 +297,8 @@ function DropdownMenuSubContent({ className, ...props }: React.ComponentProps<ty
 				<MenuPrimitive.Popup
 					data-slot="dropdown-menu-sub-content"
 					className={cn(
-						`bg-popover text-popover-foreground origin-(--transform-origin) min-w-40 overflow-hidden rounded-md border p-1
-						shadow-lg transition-[scale,opacity,translate] duration-150 ease-out data-starting-style:scale-95
+						`bg-popover text-popover-foreground relative origin-(--transform-origin) min-w-40 overflow-hidden rounded-lg border p-1
+						shadow-lg transition-[scale,opacity,translate] duration-(--duration-moderate) ease-out data-starting-style:scale-95
 						data-ending-style:scale-95 data-starting-style:opacity-0 data-ending-style:opacity-0
 						data-[side=bottom]:data-starting-style:-translate-y-2
 						data-[side=left]:data-starting-style:translate-x-2
@@ -302,7 +307,10 @@ function DropdownMenuSubContent({ className, ...props }: React.ComponentProps<ty
 						className,
 					)}
 					{...props}
-				/>
+				>
+					<FluidHighlight />
+					{children}
+				</MenuPrimitive.Popup>
 			</MenuPrimitive.Positioner>
 		</MenuPrimitive.Portal>
 	);

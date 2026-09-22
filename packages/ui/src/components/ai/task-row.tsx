@@ -117,7 +117,7 @@ function TaskRow({
 			data-slot="task-row"
 			data-status={status}
 			className={cn(
-				'rounded-lg border border-border/80 bg-card px-2.5 py-2 shadow-xs',
+				'rounded-lg bg-card px-2.5 py-2 shadow-card',
 				'animate-[ai-fade-up_300ms_cubic-bezier(0.23,1,0.32,1)_both] motion-reduce:animate-none',
 				className,
 			)}

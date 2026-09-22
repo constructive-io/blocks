@@ -106,7 +106,7 @@ export const JsonInput = ({ value = '', setValue, minLines = 16, className, them
 					<Tooltip>
 						<TooltipTrigger asChild>
 							<Button
-								className="absolute top-2 right-2 size-8 rounded-xl"
+								className="absolute top-2 right-2 size-8 rounded-md"
 								size="icon"
 								variant="outline"
 								type="button"

@@ -84,8 +84,8 @@ export function StackHeader({ card, onClose, className, renderTitle }: StackHead
             'rounded-md',
             'text-muted-foreground hover:text-foreground',
             'hover:bg-muted/50',
-            'transition-colors',
-            'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring'
+            'transition-[color,background-color,border-color,text-decoration-color,fill,stroke,box-shadow]',
+            'focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50'
           )}
           aria-label="Close"
         >

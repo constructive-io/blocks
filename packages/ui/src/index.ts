@@ -2,13 +2,65 @@
 export { cn } from './lib/utils';
 export { Slot, Slottable, composeRefs, mergeProps } from './lib/slot';
 export { useControllableState } from './lib/use-controllable-state';
-export { easings, durations, springs, transitions, variants } from './lib/motion/motion-config';
+export { easings, durations, springs, transitions, variants, tierSpring, tierExit } from './lib/motion/motion-config';
+export { DEFAULT_SPRING_TIERS, getSpringTiers, setSpringTiers, useSpringTiers, type SpringTier, type SpringTiers } from './lib/motion/tuning';
+
+// Theme definition + live-tuning math (shared with the docs theme playground)
+export { constructiveTheme, type ConstructiveTheme, type ThemeTokenMap } from './theme';
+export {
+	parseColor,
+	parseOklch,
+	formatOklch,
+	oklchToLinearSrgb,
+	relativeLuminance,
+	contrastRatio,
+	NEUTRAL_CHROMA_WEIGHTS,
+	NEUTRAL_REFERENCE_HUE,
+	modeTuningDefaults,
+	deriveModeTokens,
+	shadowBorderRecipe,
+	toCssDeclarations,
+	themeOverrideStyleSheet,
+	defaultThemeTuning,
+	resolveThemeTuning,
+	type OklchParts,
+	type ModeTuning,
+	type ThemeTuning,
+} from './theme-tuning';
+export {
+	THEME_PRESETS,
+	THEME_PRESET_IDS,
+	getThemePreset,
+	isThemePresetId,
+	fitModeTuning,
+	PIN_FAMILIES,
+	themePresetRegistryName,
+	type GhosttyScheme,
+	type PresetMode,
+	type ThemePreset,
+	type ThemePresetId,
+	type ThemePresetSource,
+} from './theme-presets';
+export {
+	buildThemeDialConfig,
+	dialValuesToTuning,
+	tuningToDialValues,
+} from './theme-dials-config';
 
 // Core primitives
 export { Button, buttonVariants, type ButtonProps } from './components/button';
+export {
+	ButtonGroup,
+	ButtonGroupSeparator,
+	ButtonGroupText,
+	buttonGroupVariants,
+	type ButtonGroupProps,
+} from './components/button-group';
 export { Badge, badgeVariants, type BadgeProps } from './components/badge';
 export { Label, type LabelProps } from './components/label';
+export { Kbd, KbdGroup, type KbdProps, type KbdGroupProps } from './components/kbd';
 export { Skeleton, type SkeletonProps } from './components/skeleton';
+export { Spinner, type SpinnerProps } from './components/spinner';
 export {
 	Card,
 	CardHeader,
@@ -30,6 +82,14 @@ export { Checkbox, type CheckboxProps } from './components/checkbox';
 export { CheckboxGroup, type CheckboxGroupProps } from './components/checkbox-group';
 export { RadioGroup, Radio, RadioGroupItem, type RadioGroupProps, type RadioProps } from './components/radio-group';
 export { Switch, type SwitchProps } from './components/switch';
+export { Slider, type SliderProps } from './components/slider';
+export { Toggle, toggleVariants, type ToggleProps } from './components/toggle';
+export {
+	ToggleGroup,
+	ToggleGroupItem,
+	type ToggleGroupProps,
+	type ToggleGroupItemProps,
+} from './components/toggle-group';
 export {
 	Select,
 	SelectTrigger,
@@ -159,6 +219,16 @@ export {
 
 // Layout & navigation
 export { Tabs, TabsList, TabsTrigger, TabsContent } from './components/tabs';
+export {
+	Accordion,
+	AccordionItem,
+	AccordionTrigger,
+	AccordionContent,
+	type AccordionProps,
+	type AccordionItemProps,
+	type AccordionTriggerProps,
+	type AccordionContentProps,
+} from './components/accordion';
 export { Collapsible, CollapsibleTrigger, CollapsibleContent } from './components/collapsible';
 export { ScrollArea, ScrollBar } from './components/scroll-area';
 export { ResizablePanelGroup, ResizablePanel, ResizableHandle } from './components/resizable';
@@ -191,6 +261,21 @@ export {
 	BreadcrumbEllipsis,
 } from './components/breadcrumb';
 export { Avatar, AvatarImage, AvatarFallback } from './components/avatar';
+export {
+	Item,
+	ItemMedia,
+	ItemContent,
+	ItemActions,
+	ItemGroup,
+	ItemSeparator,
+	ItemTitle,
+	ItemDescription,
+	ItemHeader,
+	ItemFooter,
+	itemVariants,
+	itemMediaVariants,
+	type ItemProps,
+} from './components/item';
 export {
 	Autocomplete,
 	AutocompleteInput,
