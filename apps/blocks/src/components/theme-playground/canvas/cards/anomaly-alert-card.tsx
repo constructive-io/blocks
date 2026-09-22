@@ -18,7 +18,7 @@ export function AnomalyAlertCard() {
             Write latency on <code className="font-mono text-[12px]">orders</code> is 3.2× the 7-day baseline.
           </EmptyDescription>
         </EmptyHeader>
-        <EmptyContent className="flex justify-center gap-2">
+        <EmptyContent className="flex-row justify-center gap-2">
           <Button size="sm">Investigate</Button>
           <Button variant="ghost" size="sm">
             Dismiss

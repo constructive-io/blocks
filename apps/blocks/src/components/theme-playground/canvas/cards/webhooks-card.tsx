@@ -7,8 +7,8 @@ import { SinkCard } from './sink-card';
 
 const ENDPOINTS = [
   { icon: Globe, value: 'https://api.acme.dev/hooks/deploys', label: 'Deploys webhook' },
-  { icon: MessageSquare, value: 'https://hooks.slack.com/services/T0123/B0456/xyz', label: 'Slack webhook' },
-  { icon: Siren, value: 'https://acme.pagerduty.com/integration/alerts', label: 'PagerDuty webhook' },
+  { icon: MessageSquare, value: 'https://hooks.slack.com/T0123/B04', label: 'Slack webhook' },
+  { icon: Siren, value: 'https://acme.pagerduty.com/alerts', label: 'PagerDuty webhook' },
 ];
 
 export function WebhooksCard() {
@@ -33,7 +33,7 @@ export function WebhooksCard() {
           <InputGroupAddon>
             <endpoint.icon aria-hidden />
           </InputGroupAddon>
-          <InputGroupInput defaultValue={endpoint.value} aria-label={endpoint.label} />
+          <InputGroupInput defaultValue={endpoint.value} aria-label={endpoint.label} className="truncate" />
           <InputGroupAddon align="inline-end">
             <Button variant="ghost" size="icon-sm" aria-label={`Delete ${endpoint.label}`}>
               <Trash2 aria-hidden />

@@ -8,7 +8,13 @@ import { SinkCard } from './sink-card';
 const DIGESTS = [
   { id: 'deploy-summaries', title: 'Deploy summaries', description: 'A digest after each deploy.', on: true },
   { id: 'weekly-usage', title: 'Weekly usage report', description: 'Credits and compute, Mondays.', on: true },
-  { id: 'security-advisories', title: 'Security advisories', description: 'Required', on: true, disabled: true },
+  {
+    id: 'security-advisories',
+    title: 'Security advisories',
+    description: 'Cannot be disabled.',
+    on: true,
+    disabled: true,
+  },
   { id: 'product-updates', title: 'Product updates', description: 'New blocks and features.', on: false },
 ];
 
@@ -25,13 +31,7 @@ export function DigestSettingsCard() {
     >
       {DIGESTS.map((digest) => (
         <Field key={digest.id} orientation="horizontal" className="items-start">
-          <Checkbox
-            id={digest.id}
-            defaultChecked={digest.on}
-            disabled={digest.disabled}
-            aria-label={digest.title}
-            className="size-8"
-          />
+          <Checkbox id={digest.id} defaultChecked={digest.on} disabled={digest.disabled} aria-label={digest.title} />
           <FieldContent>
             <FieldLabel htmlFor={digest.id} className="flex items-center gap-2 text-[13px]">
               {digest.title}

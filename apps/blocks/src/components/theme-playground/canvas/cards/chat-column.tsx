@@ -41,7 +41,10 @@ export function ChatColumn({
       footer={prompt ?? <ChatPrompt placeholder="Ask about your schema…" />}
     >
       <ChatContainer className="min-h-0 flex-1">
-        <ChatContainerContent className="px-4 py-4">{children}</ChatContainerContent>
+        <ChatContainerContent className="min-h-full px-4 py-4">
+          <div className="flex-1" aria-hidden />
+          {children}
+        </ChatContainerContent>
         <ScrollButton />
       </ChatContainer>
     </SinkCard>

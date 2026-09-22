@@ -15,7 +15,9 @@ export function YourThemeCard() {
 
   return (
     <SinkCard title="Your theme" contentClassName="px-0 py-0">
-      <CodeBlock className="max-h-64 overflow-y-auto rounded-none border-0 text-[11px]">{css}</CodeBlock>
+      <CodeBlock label="globals.css" className="max-h-64 overflow-y-auto rounded-none border-0 text-[11px]">
+        {css}
+      </CodeBlock>
     </SinkCard>
   );
 }

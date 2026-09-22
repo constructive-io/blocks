@@ -58,7 +58,7 @@ const GROUPS = [
 export function SidebarNavCard() {
   return (
     <SinkCard contentClassName="px-0 pt-0 pb-0">
-      <SidebarProvider className="min-h-0" style={{ '--sidebar-width': '11.5rem', height: 420 } as CSSProperties}>
+      <SidebarProvider className="min-h-0" style={{ '--sidebar-width': '100%' } as CSSProperties}>
         <Sidebar collapsible="none" className="bg-transparent">
           <SidebarContent className="p-2">
             {GROUPS.map((group) => (

@@ -44,10 +44,18 @@ export function SinkCard({
       )}
     >
       {title ? (
-        <CardHeader className="border-b border-border/60 px-4 pt-4 pb-3 [.border-b]:pb-3">
+        <CardHeader
+          className={cn(
+            'border-b border-border/60 px-4 pt-4 pb-3 [.border-b]:pb-3',
+            // Title-only headers collapse to one centred row so an action button sits on the title's axis.
+            !description && 'grid-rows-[auto] items-center',
+          )}
+        >
           <CardTitle className="text-[13px] font-medium tracking-tight">{title}</CardTitle>
           {description ? <CardDescription className="text-[12.5px]">{description}</CardDescription> : null}
-          {action ? <CardAction>{action}</CardAction> : null}
+          {action ? (
+            <CardAction className={description ? undefined : 'row-span-1 self-center'}>{action}</CardAction>
+          ) : null}
         </CardHeader>
       ) : null}
       <CardContent className={cn('px-4 pt-4 pb-4', contentClassName)}>{children}</CardContent>

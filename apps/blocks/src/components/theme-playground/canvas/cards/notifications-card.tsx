@@ -12,7 +12,7 @@ const ROWS = [
 
 export function NotificationsCard() {
   return (
-    <SinkCard title="Notifications" contentClassName="flex flex-col divide-y divide-border/60">
+    <SinkCard title="Notifications" contentClassName="flex flex-col divide-y divide-border/60 py-1">
       {ROWS.map((row) => (
         <div key={row.id} className="flex items-center justify-between gap-3 py-3">
           <div>

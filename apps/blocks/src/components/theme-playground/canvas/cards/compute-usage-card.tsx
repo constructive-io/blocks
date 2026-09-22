@@ -1,3 +1,4 @@
+import type { CSSProperties } from 'react';
 import { Progress } from '@constructive-io/ui/progress';
 import { Separator } from '@constructive-io/ui/separator';
 
@@ -26,7 +27,12 @@ export function ComputeUsageCard() {
                 <span className="text-muted-foreground">{u.name}</span>
                 <span className="font-medium tabular-nums">{u.pct}%</span>
               </div>
-              <Progress value={u.pct} aria-label={`${u.name} usage`} className="h-1.5" />
+              <Progress
+                value={u.pct}
+                aria-label={`${u.name} usage`}
+                className="h-1.5 bg-(--bar)/20 [&_[data-slot=progress-indicator]]:bg-(--bar)"
+                style={{ '--bar': u.color } as CSSProperties}
+              />
             </div>
           ))}
         </div>

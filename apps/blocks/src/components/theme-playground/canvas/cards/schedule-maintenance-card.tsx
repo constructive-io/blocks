@@ -5,18 +5,11 @@ import { Button } from '@constructive-io/ui/button';
 import { Calendar } from '@constructive-io/ui/calendar-rac';
 import { Field } from '@constructive-io/ui/field';
 import { Popover, PopoverContent, PopoverTrigger } from '@constructive-io/ui/popover';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@constructive-io/ui/select';
 import { ToggleGroup, ToggleGroupItem } from '@constructive-io/ui/toggle-group';
 
 import { SinkCard } from './sink-card';
 
 const SLOTS = ['02:00', '03:00', '04:00', '05:00'];
-
-const WINDOWS = {
-  '00:00': '00:00 – 01:00 UTC',
-  '02:00': '02:00 – 03:00 UTC',
-  '04:00': '04:00 – 05:00 UTC',
-};
 
 export function ScheduleMaintenanceCard() {
   return (
@@ -41,20 +34,6 @@ export function ScheduleMaintenanceCard() {
             <Calendar aria-label="Maintenance date" />
           </PopoverContent>
         </Popover>
-      </Field>
-      <Field label="Window">
-        <Select defaultValue="02:00" items={WINDOWS}>
-          <SelectTrigger aria-label="Maintenance window">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            {Object.keys(WINDOWS).map((id) => (
-              <SelectItem key={id} value={id}>
-                {id}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
       </Field>
       <Field label="Start time (UTC)">
         <ToggleGroup defaultValue={['02:00']} variant="outline" aria-label="Start time" className="w-full">

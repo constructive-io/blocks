@@ -56,7 +56,7 @@ export function AssignIssueCard() {
       </Combobox>
       <div className="flex items-center justify-between">
         <span className="text-[12px] text-muted-foreground">Watchers</span>
-        <div className="flex -space-x-2">
+        <div className="flex gap-1">
           <TooltipProvider>
             {WATCHERS.map((watcher) => (
               <Tooltip key={watcher.value}>

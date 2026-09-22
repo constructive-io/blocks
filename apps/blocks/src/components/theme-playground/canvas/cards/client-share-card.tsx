@@ -1,3 +1,4 @@
+import type { CSSProperties } from 'react';
 import { Badge } from '@constructive-io/ui/badge';
 import { Progress } from '@constructive-io/ui/progress';
 
@@ -38,7 +39,12 @@ export function ClientShareCard() {
                 <span className="text-muted-foreground">{channel.name}</span>
                 <span className="font-medium tabular-nums">{channel.pct}%</span>
               </div>
-              <Progress value={channel.pct} aria-label={`${channel.name} share`} className="h-1.5" />
+              <Progress
+                value={channel.pct}
+                aria-label={`${channel.name} share`}
+                className="h-1.5 bg-(--bar)/20 [&_[data-slot=progress-indicator]]:bg-(--bar)"
+                style={{ '--bar': channel.color } as CSSProperties}
+              />
             </div>
           ))}
         </div>

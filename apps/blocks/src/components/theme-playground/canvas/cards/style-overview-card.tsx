@@ -35,7 +35,7 @@ export function StyleOverviewCard() {
         </p>
         <p className="mt-1 text-[13px] text-muted-foreground">A preview of the current type and color tokens.</p>
       </div>
-      <div className="grid grid-cols-6 gap-2">
+      <div className="grid grid-cols-4 gap-3">
         {SWATCH_TOKENS.map((token) => (
           <div key={token} className="flex min-w-0 flex-col gap-1">
             <div

@@ -22,7 +22,7 @@ const KEYS = [
 export function ApiKeysCard() {
   return (
     <SinkCard title="API keys" contentClassName="px-0 py-0">
-      <Table className="text-[13px] [&_td]:px-2 [&_td]:py-3 [&_th]:px-2 [&_th]:py-3">
+      <Table className="text-[13px] [&_td]:py-3 [&_th]:py-3 [&_td:not(:first-child):not(:last-child)]:px-2 [&_th:not(:first-child):not(:last-child)]:px-2">
         <TableHeader>
           <TableRow>
             <TableHead className="pl-4">Name</TableHead>

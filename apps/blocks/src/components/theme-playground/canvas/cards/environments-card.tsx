@@ -27,9 +27,9 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@const
 import { SinkCard } from './sink-card';
 
 const ENVIRONMENTS = [
-  { name: 'acme-prod · main', meta: 'eu-central-1 · Postgres 17 · 2 vCPU', status: 'running' },
-  { name: 'acme-staging · feat/billing', meta: 'us-east-1 · Postgres 17 · 1 vCPU', status: 'running' },
-  { name: 'acme-preview · pr-412', meta: 'eu-central-1 · Postgres 17 · shared', status: 'provisioning' },
+  { name: 'acme-prod', meta: 'main · eu-central-1', status: 'running' },
+  { name: 'acme-staging', meta: 'feat/billing · us-east-1', status: 'running' },
+  { name: 'acme-preview', meta: 'pr-412 · eu-central-1', status: 'provisioning' },
 ];
 
 export function EnvironmentsCard() {
@@ -61,8 +61,10 @@ export function EnvironmentsCard() {
                     <Container aria-hidden />
                   </ItemMedia>
                   <ItemContent>
-                    <ItemTitle className="truncate">{env.name}</ItemTitle>
-                    <ItemDescription className="truncate">{env.meta}</ItemDescription>
+                    <ItemTitle className="min-w-0 max-w-full">
+                      <span className="truncate">{env.name}</span>
+                    </ItemTitle>
+                    <ItemDescription className="line-clamp-1">{env.meta}</ItemDescription>
                   </ItemContent>
                   <ItemActions className="gap-1">
                     {env.status === 'provisioning' ? (

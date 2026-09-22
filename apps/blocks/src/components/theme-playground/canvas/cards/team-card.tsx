@@ -19,11 +19,11 @@ export function TeamCard() {
     <SinkCard
       title="Team"
       action={
-        <Button variant="ghost" size="icon" aria-label="Invite member">
+        <Button variant="ghost" size="icon-sm" aria-label="Invite member">
           <Plus aria-hidden />
         </Button>
       }
-      contentClassName="flex flex-col divide-y divide-border/60"
+      contentClassName="flex flex-col divide-y divide-border/60 py-1"
     >
       <TooltipProvider>
         {MEMBERS.map((member) => (

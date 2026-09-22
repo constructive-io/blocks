@@ -16,7 +16,7 @@ export function ShortcutsCard() {
     <SinkCard title="Keyboard shortcuts" contentClassName="pt-3">
       <ItemGroup className="gap-1">
         {SHORTCUTS.map((shortcut) => (
-          <Item key={shortcut.action} size="sm">
+          <Item key={shortcut.action} size="sm" className="px-0">
             <ItemContent>
               <ItemTitle className="font-normal">{shortcut.action}</ItemTitle>
             </ItemContent>

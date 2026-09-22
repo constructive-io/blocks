@@ -11,12 +11,7 @@ export function ToolChatCard() {
       <Message from="assistant">
         <div className="flex w-full flex-col gap-3">
           <ToolGroup label="3 tool calls">
-            <Tool
-              name="list_tables"
-              status="success"
-              summary="public.orders, public.customers, +11 more"
-              variant="row"
-            />
+            <Tool name="list_tables" status="success" summary="orders, customers, +11 more" variant="row" />
             <Tool
               name="explain_query"
               status="success"
@@ -38,6 +33,7 @@ export function ToolChatCard() {
             destructive
             confirmLabel="Approve"
             skipLabel="Reject"
+            onSkip={() => undefined}
           />
         </div>
       </Message>

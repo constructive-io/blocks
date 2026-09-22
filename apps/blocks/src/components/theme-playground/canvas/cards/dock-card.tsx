@@ -15,7 +15,7 @@ export function DockCard() {
   return (
     <SinkCard title="Dock">
       <div className="flex justify-center py-2">
-        <Dock>
+        <Dock className="mt-0">
           {ITEMS.map((item) => (
             <DockIcon key={item.label} aria-label={item.label} title={item.label}>
               <item.icon className="size-5 text-muted-foreground" aria-hidden />

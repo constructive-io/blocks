@@ -4,7 +4,6 @@ import { useEffect, useState } from 'react';
 import { Check, Copy } from 'lucide-react';
 
 import { Button } from '@constructive-io/ui/button';
-import { Kbd } from '@constructive-io/ui/kbd';
 
 import { SinkCard } from './sink-card';
 
@@ -36,7 +35,7 @@ function finderFill(row: number, col: number): boolean | null {
 function QrTile() {
   return (
     <div
-      className="grid size-[152px] shrink-0 grid-cols-[repeat(21,minmax(0,1fr))] rounded-md bg-muted/50 p-3"
+      className="grid size-[136px] shrink-0 grid-cols-[repeat(21,minmax(0,1fr))] rounded-md bg-muted/50 p-3"
       aria-hidden
     >
       {Array.from({ length: GRID * GRID }, (_, index) => {
@@ -76,7 +75,9 @@ export function ConnectCliCard() {
         <div className="min-w-0">
           <p className="font-mono text-lg tracking-[0.18em]">QK7-3M9P</p>
           <p className="mt-1 text-[12px] text-muted-foreground tabular-nums">Expires in 09:41</p>
-          <Kbd className="mt-3 max-w-full truncate">npx constructive login --device</Kbd>
+          <code className="mt-3 block w-fit max-w-full rounded-sm bg-muted px-2 py-1 font-mono text-[11px] leading-4 text-muted-foreground break-words">
+            npx constructive login --device
+          </code>
         </div>
       </div>
     </SinkCard>
