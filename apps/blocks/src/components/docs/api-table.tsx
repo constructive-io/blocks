@@ -1,11 +1,4 @@
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@constructive-io/ui/table';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@constructive-io/ui/table';
 
 import type { PrimitiveApiPart } from '@/lib/primitive-docs';
 
@@ -16,9 +9,7 @@ function ApiPart({ part }: { part: PrimitiveApiPart }) {
         <code className="inline-flex rounded-md bg-muted px-2 py-1 text-xs font-medium text-foreground">
           {part.name}
         </code>
-        <p className="mt-3 max-w-3xl text-pretty text-sm leading-6 text-muted-foreground">
-          {part.description}
-        </p>
+        <p className="mt-3 max-w-3xl text-pretty text-sm leading-6 text-muted-foreground">{part.description}</p>
       </div>
       {part.props?.length ? (
         <Table containerClassName="mt-4 border-y border-border/60">
@@ -40,9 +31,7 @@ function ApiPart({ part }: { part: PrimitiveApiPart }) {
                     <span className="ml-2 font-sans text-[11px] text-destructive">deprecated</span>
                   ) : null}
                 </TableCell>
-                <TableCell className="align-top font-mono text-xs text-muted-foreground">
-                  {prop.type}
-                </TableCell>
+                <TableCell className="align-top font-mono text-xs text-muted-foreground">{prop.type}</TableCell>
                 <TableCell className="align-top font-mono text-xs text-muted-foreground">
                   {prop.default ?? '—'}
                 </TableCell>
@@ -74,7 +63,7 @@ function ApiPart({ part }: { part: PrimitiveApiPart }) {
 
 export function ApiTable({ parts }: { parts: readonly PrimitiveApiPart[] }) {
   return (
-    <div className="divide-y divide-border/70 overflow-hidden rounded-xl border border-border bg-card shadow-sm">
+    <div className="divide-y divide-border overflow-hidden rounded-xl border border-border bg-card">
       {parts.map((part) => (
         <ApiPart key={part.name} part={part} />
       ))}

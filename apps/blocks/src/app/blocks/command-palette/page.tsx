@@ -1,14 +1,6 @@
 import type { Metadata } from 'next';
 
-import {
-  Table,
-  TableBody,
-  TableCaption,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow
-} from '@constructive-io/ui/table';
+import { Table, TableBody, TableCaption, TableCell, TableHead, TableHeader, TableRow } from '@constructive-io/ui/table';
 
 import { CommandPaletteDemo } from '@/components/command-palette-showcase/command-palette-demo';
 import { ComponentDocPagination } from '@/components/docs/component-doc-pagination';
@@ -49,12 +41,8 @@ function PublicContract() {
       <TableBody>
         {COMMAND_PALETTE_DOC.api.map((row) => (
           <TableRow key={row.name}>
-            <TableCell className="font-mono text-xs font-medium">
-              {row.name}
-            </TableCell>
-            <TableCell className="whitespace-normal font-mono text-xs text-muted-foreground">
-              {row.type}
-            </TableCell>
+            <TableCell className="font-mono text-xs font-medium">{row.name}</TableCell>
+            <TableCell className="whitespace-normal font-mono text-xs text-muted-foreground">{row.type}</TableCell>
             <TableCell className="min-w-64 whitespace-normal text-pretty text-muted-foreground">
               {row.behavior}
             </TableCell>
@@ -70,11 +58,7 @@ export default function CommandPalettePage() {
 
   return (
     <article aria-labelledby="command-palette-title" className="registry-page">
-      <section
-        aria-labelledby="command-palette-title"
-        className="scroll-mt-20"
-        id="overview"
-      >
+      <section aria-labelledby="command-palette-title" className="scroll-mt-20" id="overview">
         <header className="mb-6 max-w-2xl">
           <p className="registry-eyebrow">Components</p>
           <h1
@@ -83,9 +67,7 @@ export default function CommandPalettePage() {
           >
             {doc.title}
           </h1>
-          <p className="mt-2 text-pretty text-sm leading-7 text-muted-foreground sm:text-[15px]">
-            {doc.description}
-          </p>
+          <p className="mt-2 text-pretty text-sm leading-7 text-muted-foreground sm:text-[15px]">{doc.description}</p>
         </header>
 
         <CommandPaletteDemo />
@@ -96,70 +78,45 @@ export default function CommandPalettePage() {
         id="installation"
         title="Installation"
       >
-        <CodeBlock label="Registry install">
-          {registryAdd(doc.name)}
-        </CodeBlock>
+        <CodeBlock label="Registry install">{registryAdd(doc.name)}</CodeBlock>
       </DocSection>
 
       <DocSection id="when-to-use" title="When to use">
         <GuidanceList items={doc.whenToUse} />
       </DocSection>
 
-      <DocSection
-        description={doc.usage.description}
-        id="usage"
-        title="Basic usage"
-      >
+      <DocSection description={doc.usage.description} id="usage" title="Basic usage">
         <CodeBlock label="application-command-palette.tsx" language="tsx">
           {doc.usage.example}
         </CodeBlock>
       </DocSection>
 
-      <DocSection
-        description={doc.state.description}
-        id="state"
-        title={doc.state.title}
-      >
+      <DocSection description={doc.state.description} id="state" title={doc.state.title}>
         <GuidanceList items={doc.state.guidance} />
       </DocSection>
 
-      <DocSection
-        description={doc.composition.description}
-        id="composition"
-        title="Composition"
-      >
+      <DocSection description={doc.composition.description} id="composition" title="Composition">
         <div className="flex flex-col gap-6">
           <CodeBlock label="records-page-commands.tsx" language="tsx">
             {doc.composition.pageCommandsExample}
           </CodeBlock>
           <div className="grid gap-3 md:grid-cols-3">
             {doc.composition.boundaries.map((item) => (
-              <article
-                className="rounded-xl bg-card p-4 shadow-card"
-                key={item.title}
-              >
-                <h3 className="text-balance text-sm font-semibold">
-                  {item.title}
-                </h3>
-                <p className="mt-1 text-pretty text-sm leading-6 text-muted-foreground">
-                  {item.body}
-                </p>
+              <article className="rounded-xl border border-border bg-card p-4" key={item.title}>
+                <h3 className="text-balance text-sm font-semibold">{item.title}</h3>
+                <p className="mt-1 text-pretty text-sm leading-6 text-muted-foreground">{item.body}</p>
               </article>
             ))}
           </div>
         </div>
       </DocSection>
 
-      <DocSection
-        description={doc.previewDescription}
-        id="examples"
-        title="Examples"
-      >
+      <DocSection description={doc.previewDescription} id="examples" title="Examples">
         <GuidanceList
           items={[
             'Press Command K or Control K anywhere on this page, or use the Open command palette button in the preview.',
             'Run Create database to inspect the host-supplied multi-step confirmation flow and layered Escape behavior.',
-            'Run Export application data to inspect task progress, cooperative cancellation, and completion feedback.'
+            'Run Export application data to inspect task progress, cooperative cancellation, and completion feedback.',
           ]}
         />
       </DocSection>
@@ -189,6 +146,6 @@ export const metadata: Metadata = {
     title: COMMAND_PALETTE_DOC.title,
     description: COMMAND_PALETTE_DOC.description,
     url: withBase('/blocks/command-palette'),
-    images: [OG_IMAGE]
-  }
+    images: [OG_IMAGE],
+  },
 };

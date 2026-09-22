@@ -20,9 +20,8 @@ export function CatalogCard({ primitive, className, showPreview = true }: Catalo
   return (
     <div
       className={cn(
-        'group/card relative flex h-full flex-col overflow-hidden rounded-xl bg-card shadow-card',
-        'transition-shadow duration-(--duration-fast) ease-out',
-        'hover:shadow-card-lg',
+        'group/card relative flex h-full flex-col overflow-hidden rounded-xl border border-border bg-card',
+        'hover:bg-accent/30',
         className,
       )}
     >

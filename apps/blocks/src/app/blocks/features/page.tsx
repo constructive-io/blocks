@@ -86,9 +86,9 @@ export default function FeaturePacksPage() {
                 <Link
                   href={`/blocks/features/${pack.id}`}
                   className={cn(
-                    'group block h-full rounded-xl bg-card p-4 shadow-card outline-none',
-                    'transition-[background-color,box-shadow] duration-(--duration-moderate) ease-out',
-                    'hover:bg-accent/40 hover:shadow-card-lg',
+                    'group block h-full rounded-xl border border-border bg-card p-4 outline-none',
+                    'transition-[box-shadow] duration-(--duration-moderate) ease-out',
+                    'hover:bg-accent/40',
                     'focus-visible:ring-[3px] focus-visible:ring-ring/50',
                   )}
                 >

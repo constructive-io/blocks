@@ -35,6 +35,8 @@ export function PreviewTopBar() {
 export const COLUMN_CLASS = 'flex flex-col gap-6 [content-visibility:auto] [contain-intrinsic-size:352px_1400px]';
 export const WIDE_COLUMN_CLASS =
   'col-span-2 flex flex-col gap-6 [content-visibility:auto] [contain-intrinsic-size:728px_1400px]';
+/** A stack inside the wide column — cards flow independently of the neighbouring stack. */
+export const SUBCOLUMN_CLASS = 'flex min-w-0 flex-col gap-6';
 
 /** Per-column entrance delay — cards read it through `animate-fade-up`. */
 export const stagger = (index: number) => ({ '--stagger': index }) as CSSProperties;

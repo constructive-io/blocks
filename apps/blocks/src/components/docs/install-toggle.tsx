@@ -86,13 +86,9 @@ export function InstallToggle({ npm, registry, descriptions, className }: Instal
 
   return (
     <div className={cn('min-w-0', className)}>
-      <div className="overflow-hidden rounded-xl border border-border bg-card shadow-sm">
+      <div className="overflow-hidden rounded-xl border border-border bg-card">
         <div className="flex flex-wrap items-center gap-2 border-b border-border px-2 py-2 sm:px-2.5">
-          <div
-            role="tablist"
-            aria-label="Install method"
-            className="inline-flex rounded-lg bg-muted/70 p-0.5"
-          >
+          <div role="tablist" aria-label="Install method" className="inline-flex rounded-lg bg-muted/70 p-0.5">
             {MODES.map((item) => {
               const active = mode === item.id;
               const index = MODES.indexOf(item);
@@ -125,9 +121,7 @@ export function InstallToggle({ npm, registry, descriptions, className }: Instal
                   className={cn(
                     'rounded-md px-2.5 py-1.5 text-[12.5px] font-medium outline-none transition-[background-color,color,box-shadow] duration-(--duration-moderate) ease-out',
                     'focus-visible:ring-[3px] focus-visible:ring-ring/50',
-                    active
-                      ? 'bg-background text-foreground shadow-sm'
-                      : 'text-muted-foreground hover:text-foreground',
+                    active ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground',
                   )}
                 >
                   {item.label}
@@ -157,11 +151,7 @@ export function InstallToggle({ npm, registry, descriptions, className }: Instal
                   transition={iconTransition}
                   className="absolute inset-0 flex items-center justify-center"
                 >
-                  {copied ? (
-                    <Check className="size-3.5 text-emerald-500" />
-                  ) : (
-                    <Copy className="size-3.5" />
-                  )}
+                  {copied ? <Check className="size-3.5 text-emerald-500" /> : <Copy className="size-3.5" />}
                 </motion.span>
               </AnimatePresence>
             </span>
