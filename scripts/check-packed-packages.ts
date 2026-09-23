@@ -127,7 +127,9 @@ await writeFile(
         '@constructive-io/sheets': `file:${sheetsTarball}`,
         '@constructive-io/ui': `file:${uiTarball}`,
         react: '^19.0.0',
-        'react-dom': '^19.0.0'
+        'react-dom': '^19.0.0',
+        // Optional peer of the subpath-only @constructive-io/ui/phone-input; auto-install-peers skips optional peers.
+        'react-phone-number-input': '^3.4.18'
       },
       devDependencies: {
         '@tailwindcss/postcss': '^4.1.0',
