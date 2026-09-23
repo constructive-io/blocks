@@ -106,6 +106,7 @@ to endpoints, sessions, adapters, or tenant data.
 | Reporting hierarchy | `org-chart` |
 | Object storage workspace | `storage-browser` or a focused storage leaf |
 | Customer billing | `billing-settings-page` or a focused billing block |
+| Account phone numbers and SMS verification | `account-phone-numbers` |
 | Provider-neutral domain screen | `feature-pack-<id>` |
 | Selected Console Kit integration | `console-kit-core` plus `console-module-<id>` |
 | Backend-aligned Console composition | Search `preset` and inspect the current preset roots |

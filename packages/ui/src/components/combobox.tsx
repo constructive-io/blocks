@@ -138,9 +138,11 @@ function ComboboxPopup({
   className,
   children,
   sideOffset = 4,
+  align,
   ...props
 }: ComboboxPrimitive.Popup.Props & {
     sideOffset?: number;
+    align?: ComboboxPrimitive.Positioner.Props["align"];
   }) {
   const { chipsRef, multiple } = React.useContext(ComboboxContext);
   const { container, zIndexClass } = useFloatingOverlayPortalProps();
@@ -152,6 +154,7 @@ function ComboboxPopup({
         className={cn("select-none", zIndexClass)}
         data-slot="combobox-positioner"
         sideOffset={sideOffset}
+        align={align}
       >
         <span
           className={cn(

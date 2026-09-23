@@ -308,6 +308,8 @@ export {
 	type ComboboxItemProps,
 	type ComboboxSeparatorProps,
 } from './components/combobox';
+export { InputOtp, type InputOtpProps } from './components/input-otp';
+// PhoneInput is subpath-only (`@constructive-io/ui/phone-input`) so the root never needs its optional peer.
 export {
 	MultiSelect,
 	type MultiSelectRef,

@@ -93,6 +93,15 @@
       "purpose": "Router-neutral composition of the customer billing blocks."
     },
     {
+      "name": "account-phone-numbers",
+      "slug": "account-phone-numbers",
+      "title": "Account Phone Numbers",
+      "category": "account",
+      "type": "block",
+      "status": "ready",
+      "purpose": "Add, verify by text-message code, and remove account phone numbers."
+    },
+    {
       "name": "feature-pack-data",
       "slug": "feature-pack-data",
       "title": "Data Feature Pack",

@@ -149,7 +149,7 @@ function App() {
 - Card, Separator, Tabs, Collapsible, ScrollArea, Resizable
 
 ### Forms
-- Button, Input, Textarea, Checkbox, Switch, Select, RadioGroup, Label, Progress
+- Button, Input, Textarea, Checkbox, Switch, Select, RadioGroup, Label, Progress, PhoneInput, InputOtp
 
 ### Feedback
 - Alert, Badge, Skeleton, Toast

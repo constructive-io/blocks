@@ -5,6 +5,7 @@ import { Table, TableBody, TableCaption, TableCell, TableHead, TableHeader, Tabl
 import { CodeBlock } from '@/components/docs/code-block';
 import { DocSection } from '@/components/docs/doc-section';
 import { FEATURE_PACK_CATALOG, getFeaturePackManifest, type FeaturePackManifestV1 } from '@/feature-packs';
+import { ACCOUNT_BLOCKS } from '@/lib/account-blocks';
 import { BILLING_BLOCKS } from '@/lib/billing-blocks';
 import { type FeaturePackApiRow, type FeaturePackDoc } from '@/lib/feature-packs';
 import { registryAdd } from '@/lib/install-mode';
@@ -117,10 +118,16 @@ function FeaturePackContract({ manifest }: { manifest: FeaturePackManifestV1 }) 
   );
 }
 
-function BillingBlockLinks() {
+function BlockLinks({
+  blocks,
+  basePath
+}: {
+  blocks: readonly { name: string; title: string; description: string }[];
+  basePath: string;
+}) {
   return (
     <ul className="grid gap-2 sm:grid-cols-2">
-      {BILLING_BLOCKS.map((block) => (
+      {blocks.map((block) => (
         <li key={block.name}>
           <Link
             className={cn(
@@ -129,7 +136,7 @@ function BillingBlockLinks() {
               'hover:bg-accent/40 hover:shadow-card-lg',
               'focus-visible:ring-[3px] focus-visible:ring-ring/50',
             )}
-            href={`/blocks/billing/${block.name}`}
+            href={`${basePath}/${block.name}`}
           >
             <span className="text-sm font-medium text-foreground">{block.title}</span>
             <span className="mt-0.5 line-clamp-1 text-xs text-muted-foreground">{block.description}</span>
@@ -232,7 +239,17 @@ export function FeaturePackDocsPage({
           id="billing-blocks"
           title="Billing blocks"
         >
-          <BillingBlockLinks />
+          <BlockLinks basePath="/blocks/billing" blocks={BILLING_BLOCKS} />
+        </DocSection>
+      ) : null}
+
+      {block.id === 'auth' ? (
+        <DocSection
+          description="Standalone account settings blocks for flows this pack does not render itself. Each installs on its own and binds to your backend through an adapter."
+          id="account-blocks"
+          title="Account blocks"
+        >
+          <BlockLinks basePath="/blocks/account" blocks={ACCOUNT_BLOCKS} />
         </DocSection>
       ) : null}
 

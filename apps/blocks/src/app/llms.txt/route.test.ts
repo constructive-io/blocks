@@ -27,6 +27,7 @@ describe('llms.txt', () => {
       '/blocks/org-chart/',
       '/blocks/storage-browser/',
       '/blocks/billing/',
+      '/blocks/account/',
       '/blocks/features/',
       '/blocks/console-kit/',
       '/blocks/documents/',

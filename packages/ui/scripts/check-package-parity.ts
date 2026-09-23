@@ -115,6 +115,9 @@ const nonComponentSubpaths = new Set([
 	'./theme-presets',
 	'./theme-dials-config',
 ]);
+// Subpaths whose runtime statically imports an optional peer stay out of the root barrel, so importing
+// `@constructive-io/ui` never requires that peer. They still ship a subpath, built outputs, and a registry item.
+const subpathOnlyModules = new Set(['phone-input']);
 const packageModules = sorted(
 	Object.keys(manifest.exports)
 		.filter((subpath) => subpath.startsWith('./') && !nonComponentSubpaths.has(subpath))
@@ -128,8 +131,18 @@ const registryModules = sorted(
 
 const failures = [
 	formatDifference('Root exports missing package subpaths', difference(rootModules, packageModules)),
-	formatDifference('Package subpaths missing root exports', difference(packageModules, rootModules)),
-	formatDifference('Root exports missing registry items', difference(rootModules, registryModules)),
+	formatDifference(
+		'Package subpaths missing root exports',
+		difference(packageModules, rootModules).filter((moduleName) => !subpathOnlyModules.has(moduleName)),
+	),
+	formatDifference(
+		'Subpath-only modules exported from the root',
+		rootModules.filter((moduleName) => subpathOnlyModules.has(moduleName)),
+	),
+	formatDifference(
+		'Root exports missing registry items',
+		difference([...rootModules, ...subpathOnlyModules], registryModules),
+	),
 ].filter((failure): failure is string => Boolean(failure));
 
 if (manifest.dependencies?.['tw-animate-css']) failures.push('tw-animate-css must not be a UI runtime dependency');

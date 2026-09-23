@@ -2629,6 +2629,50 @@
       ]
     },
     {
+      "name": "input-otp",
+      "type": "registry:ui",
+      "title": "Input OTP",
+      "description": "A one-time-code input with one box per digit that handles typing, Backspace, arrows, paste, and OS autofill as one value.",
+      "categories": [
+        "input"
+      ],
+      "docs": "Import: `import { InputOtp } from '@/components/ui/input-otp'`",
+      "registryDependencies": [
+        "cn"
+      ],
+      "files": [
+        {
+          "path": "registry/constructive/ui/input-otp.tsx",
+          "type": "registry:ui"
+        }
+      ]
+    },
+    {
+      "name": "phone-input",
+      "type": "registry:ui",
+      "title": "Phone Input",
+      "description": "A phone number field with a searchable country picker and flags that formats as you type and emits E.164, defaulting to the browser's region.",
+      "categories": [
+        "input"
+      ],
+      "docs": "Import: `import { PhoneInput } from '@/components/ui/phone-input'`. The value is E.164 (`+12025550143`) or an empty string; `normalizePhoneNumber`, `formatPhoneNumber`, and `CountryFlag` share the same metadata.",
+      "dependencies": [
+        "react-phone-number-input@^3.4.18",
+        "lucide-react"
+      ],
+      "registryDependencies": [
+        "cn",
+        "combobox",
+        "input-group"
+      ],
+      "files": [
+        {
+          "path": "registry/constructive/ui/phone-input.tsx",
+          "type": "registry:ui"
+        }
+      ]
+    },
+    {
       "name": "multi-select",
       "type": "registry:ui",
       "title": "Multi Select",
