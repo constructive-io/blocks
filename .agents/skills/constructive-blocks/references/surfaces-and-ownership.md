@@ -16,6 +16,7 @@ live `shadcn@latest search` and `view`.
 | Reporting relationships | `org-chart` | The controlled block owns hierarchy presentation; the host loads and persists reporting lines. |
 | Object storage management | `storage-browser` or a storage leaf | Blocks are controlled and transport-neutral; the host filters, authorizes, fetches, uploads, and mutates objects. |
 | Customer billing | `billing-settings-page` or a billing leaf | Blocks render provider-neutral resources and callbacks; the host owns billing providers, mutations, routing, and account policy. |
+| Account phone numbers | `account-phone-numbers` | The block owns the add, text-a-code, and verify flow; a host adapter performs every request and binds it to the signed-in identity. |
 | One provider-neutral domain screen | `feature-pack-<id>` | The host supplies resources, policy, callbacks, and navigation. No Console Kit is required. |
 | One domain inside Console Kit | `console-module-<id>` with `console-kit-core` | The module adds Console discovery and Constructive integration for its feature pack. |
 | A reviewed multi-module Console | Search `preset` | Inspect the current preset before installing; do not infer its module set from memory. |

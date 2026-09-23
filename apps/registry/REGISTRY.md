@@ -38,6 +38,7 @@ pnpm dlx shadcn@latest add @constructive/sheets
 pnpm dlx shadcn@latest add @constructive/schema-builder
 pnpm dlx shadcn@latest add @constructive/app-shell
 pnpm dlx shadcn@latest add @constructive/billing-settings-page
+pnpm dlx shadcn@latest add @constructive/account-phone-numbers
 ```
 
 `feature-pack-*` installs are standalone views and write their machine-readable

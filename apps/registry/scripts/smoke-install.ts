@@ -507,6 +507,23 @@ export function AiRegistrySmokeConsumer() {
 		],
 	},
 	{
+		name: 'account-phone-numbers',
+		expectedPackages: ['react-phone-number-input'],
+		expected: [
+			'src/blocks/account/account-phone-numbers/account-phone-numbers.tsx',
+			'src/blocks/account/account-phone-numbers/account-phone-numbers-view.tsx',
+			'src/blocks/account/account-phone-numbers/use-account-phone-numbers.ts',
+			'src/blocks/account/account-phone-numbers/account-phone-numbers-contracts.ts',
+			'src/blocks/account/account-phone-numbers/messages.ts',
+			'src/components/ui/phone-input.tsx',
+			'src/components/ui/input-otp.tsx',
+			'src/components/ui/combobox.tsx',
+			'src/components/ui/input-group.tsx',
+			'src/components/ui/card.tsx',
+			'src/lib/utils.ts',
+		],
+	},
+	{
 		name: 'billing-settings-page',
 		customAliases: true,
 		expected: [

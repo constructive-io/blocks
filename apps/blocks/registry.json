@@ -259,6 +259,48 @@
       ]
     },
     {
+      "name": "account-phone-numbers",
+      "type": "registry:block",
+      "title": "Account Phone Numbers",
+      "description": "A settings card to add phone numbers, verify them with a texted code, and remove them, with country flags, a country-aware phone field, and a six-digit code input.",
+      "categories": [
+        "blocks",
+        "account"
+      ],
+      "docs": "## Usage\n\nPass an adapter that binds each call to the signed-in account. The block owns the add, text-a-code, verify, and remove flow; the host owns requests, credentials, and error codes.\n\n```tsx\nimport {\n  AccountPhoneNumbers,\n  type AccountPhoneNumbersAdapter\n} from '@/blocks/account/account-phone-numbers/account-phone-numbers';\n\nconst adapter: AccountPhoneNumbersAdapter = {\n  list: () => api.listPhoneNumbers(),\n  add: ({ number }) => api.addPhoneNumber(number),\n  sendCode: ({ number }) => api.sendPhoneVerificationCode(number),\n  verify: ({ number, code }) => api.verifyPhone(number, code),\n  remove: ({ id }) => api.removePhoneNumber(id)\n};\n\n<AccountPhoneNumbers adapter={adapter} identityKey={session.userId} />\n```\n\nNumbers are E.164. Throw `AccountPhoneNumbersUnavailableError` when the backend has no phone support, and an error with a `code` (or GraphQL `extensions.code`) to show the matching entry from `messages.errors`. Compose `useAccountPhoneNumbers` with `AccountPhoneNumbersView` when you need to own the layout or state.",
+      "dependencies": [
+        "lucide-react"
+      ],
+      "registryDependencies": [],
+      "files": [
+        {
+          "path": "registry/constructive/blocks/account/account-phone-numbers/account-phone-numbers.tsx",
+          "target": "src/blocks/account/account-phone-numbers/account-phone-numbers.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/account/account-phone-numbers/account-phone-numbers-view.tsx",
+          "target": "src/blocks/account/account-phone-numbers/account-phone-numbers-view.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/account/account-phone-numbers/use-account-phone-numbers.ts",
+          "target": "src/blocks/account/account-phone-numbers/use-account-phone-numbers.ts",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/account/account-phone-numbers/account-phone-numbers-contracts.ts",
+          "target": "src/blocks/account/account-phone-numbers/account-phone-numbers-contracts.ts",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/account/account-phone-numbers/messages.ts",
+          "target": "src/blocks/account/account-phone-numbers/messages.ts",
+          "type": "registry:component"
+        }
+      ]
+    },
+    {
       "name": "command-palette",
       "type": "registry:block",
       "title": "Command Palette",
