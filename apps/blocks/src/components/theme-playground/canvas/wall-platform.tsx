@@ -17,6 +17,7 @@ import { FeaturePackCatalogCard } from './cards/feature-pack-catalog-card';
 import { LatencyHistoryCard } from './cards/latency-history-card';
 import { MigrationMilestonesCard } from './cards/migration-milestones-card';
 import { PaymentMethodsCard } from './cards/payment-methods-card';
+import { PhoneNumbersCard } from './cards/phone-numbers-card';
 import { PrimaryDatabaseCard } from './cards/primary-database-card';
 import { ProjectIconCard } from './cards/project-icon-card';
 import { ProjectPreferencesCard } from './cards/project-preferences-card';
@@ -72,10 +73,10 @@ export function WallPlatform() {
       </div>
       <div className={COLUMN_CLASS} style={stagger(3)}>
         <RecoveryAccessCard />
+        <PhoneNumbersCard />
         <SidebarNavCard />
         <ComputeBalanceCard />
         <TransferCreditsCard />
-        <ProjectIconCard />
       </div>
       <div className={COLUMN_CLASS} style={stagger(4)}>
         <BackupDestinationCard />
@@ -83,6 +84,7 @@ export function WallPlatform() {
         <ConnectPaymentEmptyCard />
         <UpcomingMaintenanceCard />
         <ReadReplicasCard />
+        <ProjectIconCard />
       </div>
       <div className={COLUMN_CLASS} style={stagger(5)}>
         <LatencyHistoryCard />
