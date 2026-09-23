@@ -8,6 +8,7 @@ import { Check, Menu, Terminal } from 'lucide-react';
 import { Button } from '@constructive-io/ui/button';
 
 import { ThemeToggle } from '@/components/site/theme-toggle';
+import { getAccountBlock } from '@/lib/account-blocks';
 import { getAiComponent } from '@/lib/ai-components';
 import { getApplicationBlock } from '@/lib/application-blocks';
 import { getBasePrimitive, registryInstall } from '@/lib/base-primitives';
@@ -49,6 +50,10 @@ function crumbFor(path: string): string {
     const block = getApplicationBlock(p.slice('/blocks/'.length));
     if (block) return block.title;
   }
+  if (p === '/blocks/account') return 'Account';
+  if (p.startsWith('/blocks/account/')) {
+    return getAccountBlock(p.slice('/blocks/account/'.length))?.title ?? 'Account';
+  }
   if (p === '/blocks/billing') return 'Billing';
   if (p.startsWith('/blocks/billing/')) {
     const name = p.slice('/blocks/billing/'.length);
@@ -77,6 +82,16 @@ function installActionFor(path: string) {
   if (normalizedPath.startsWith('/blocks/billing/')) {
     const name = normalizedPath.slice('/blocks/billing/'.length);
     const block = getBillingBlock(name);
+    if (!block) return null;
+    return {
+      command: registryAdd(block.name),
+      label: registryAdd(block.name),
+      title: block.title,
+    };
+  }
+
+  if (normalizedPath.startsWith('/blocks/account/')) {
+    const block = getAccountBlock(normalizedPath.slice('/blocks/account/'.length));
     if (!block) return null;
     return {
       command: registryAdd(block.name),

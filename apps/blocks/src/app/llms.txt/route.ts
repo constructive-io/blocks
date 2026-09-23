@@ -41,6 +41,12 @@ const surfaceLinks: readonly SurfaceLink[] = [
       'Provider-neutral customer billing blocks for plans, subscriptions, usage, credits, entitlements, history, and activity.',
   },
   {
+    title: 'Account',
+    path: '/blocks/account/',
+    description:
+      'Account settings blocks with host-owned adapters, starting with phone numbers verified by a texted code.',
+  },
+  {
     title: 'Feature packs',
     path: '/blocks/features/',
     description:

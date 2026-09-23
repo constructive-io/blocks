@@ -140,6 +140,7 @@ export const SiteSidebar = forwardRef<HTMLElement, SiteSidebarProps>(function Si
   const onComponents = pathname.startsWith('/blocks/ui/') || pathname === '/blocks/command-palette';
   const onAi = pathname === '/blocks/ai' || pathname.startsWith('/blocks/ai/');
   const onBillingDocs = pathname === '/blocks/billing' || pathname.startsWith('/blocks/billing/');
+  const onAccountDocs = pathname === '/blocks/account' || pathname.startsWith('/blocks/account/');
   const onFoundations =
     pathname === '/' || pathname === '/blocks' || pathname === '/blocks/styling' || pathname === '/blocks/create';
 
@@ -240,7 +241,7 @@ export const SiteSidebar = forwardRef<HTMLElement, SiteSidebarProps>(function Si
         <div className="mt-3">
           <NavGroupLabel
             title="Application"
-            count={featurePackLinks.length + applicationBlockLinks.length + sourceBlockLinks.length + 3}
+            count={featurePackLinks.length + applicationBlockLinks.length + sourceBlockLinks.length + 4}
           />
           <ul className="flex flex-col gap-0.5 pb-0.5 pt-0.5">
             <li>
@@ -258,6 +259,11 @@ export const SiteSidebar = forwardRef<HTMLElement, SiteSidebarProps>(function Si
                 </li>
               );
             })}
+            <li>
+              <NavLink href="/blocks/account" active={onAccountDocs} onNavigate={onNavigate}>
+                Account
+              </NavLink>
+            </li>
             {applicationBlockLinks.map(({ href, label }) => (
               <li key={href}>
                 <NavLink active={pathname === href} href={href} onNavigate={onNavigate}>

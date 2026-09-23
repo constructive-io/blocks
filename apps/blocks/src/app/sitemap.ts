@@ -1,5 +1,6 @@
 import type { MetadataRoute } from 'next';
 
+import { ACCOUNT_BLOCKS } from '@/lib/account-blocks';
 import { AI_COMPONENTS } from '@/lib/ai-components';
 import { APPLICATION_BLOCKS } from '@/lib/application-blocks';
 import { BASE_PRIMITIVES } from '@/lib/base-primitives';
@@ -28,6 +29,8 @@ export default function sitemap(): MetadataRoute.Sitemap {
     ...BASE_PRIMITIVES.map(({ name }) => `/blocks/ui/${name}`),
     '/blocks/billing',
     ...BILLING_BLOCKS.map(({ name }) => `/blocks/billing/${name}`),
+    '/blocks/account',
+    ...ACCOUNT_BLOCKS.map(({ name }) => `/blocks/account/${name}`),
   ];
   const trailingSlash = BASE_PATH ? '/' : '';
 
@@ -46,7 +49,8 @@ export default function sitemap(): MetadataRoute.Sitemap {
             SOURCE_BLOCKS.some(({ name }) => path === `/blocks/${name}`) ||
             path === '/blocks/console-kit' ||
             path === '/blocks/documents' ||
-            path === '/blocks/billing'
+            path === '/blocks/billing' ||
+            path === '/blocks/account'
           ? 0.9
           : 0.7,
   }));
