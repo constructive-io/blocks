@@ -170,6 +170,7 @@ describe('constructive-blocks Agent Skill', () => {
       { root: 'schema-builder', marker: '`schema-builder`' },
       { root: 'org-chart', marker: '`org-chart`' },
       { root: 'storage-browser', marker: '`storage-browser`' },
+      { root: 'agents-builder', marker: '`agents-builder`' },
       { root: 'billing-settings-page', marker: '`billing-settings-page`' },
       { root: 'feature-pack-data', marker: '`feature-pack-<id>`' },
       { root: 'console-module-data', marker: '`console-module-<id>`' },
