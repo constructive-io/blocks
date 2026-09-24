@@ -170,7 +170,7 @@ function PromptInputTextarea({
 			disabled={disabled}
 			rows={1}
 			className={cn(
-				'min-h-11 w-full resize-none border-none bg-transparent px-2 py-1.5 text-sm outline-none',
+				'min-h-11 w-full resize-none border-none bg-transparent px-2 py-1.5 text-sm outline-none pointer-coarse:text-base',
 				'placeholder:text-subtle-foreground disabled:cursor-not-allowed',
 				className,
 			)}
