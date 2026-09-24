@@ -3374,6 +3374,180 @@
       ]
     },
     {
+      "name": "agents-builder",
+      "type": "registry:block",
+      "title": "Agents Builder",
+      "description": "A complete agent workspace template: chat with scripted agent replies, an integrations directory with a two-step connect flow, a skills library, and an agent detail view with a live run panel and pannable canvas.",
+      "categories": [
+        "block",
+        "application",
+        "ai"
+      ],
+      "docs": "Import: `import { AgentsBuilder, AGENTS_BUILDER_DEMO } from '@/components/ui/agents-builder'`. Pass your own `data` and handle side effects through `onAction`, `onConnectIntegration`, and `onAuthorizeIntegration`.",
+      "dependencies": [
+        "lucide-react",
+        "motion@^13.4.0"
+      ],
+      "registryDependencies": [
+        "cn",
+        "use-controllable-state",
+        "ai",
+        "button",
+        "dialog",
+        "dropdown-menu",
+        "popover",
+        "command",
+        "tooltip",
+        "kbd",
+        "switch",
+        "avatar",
+        "spinner",
+        "sheet"
+      ],
+      "files": [
+        {
+          "path": "registry/constructive/blocks/agents-builder/agent-canvas.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/agents-builder/agent-run-panel.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/agents-builder/agent-view.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/agents-builder/agents-builder-context.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/agents-builder/agents-builder.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/agents-builder/app-picker.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/agents-builder/canvas-nodes.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/agents-builder/canvas-wires.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/agents-builder/chat-thread.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/agents-builder/chat-view.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/agents-builder/composer.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/agents-builder/connect-integration-dialog.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/agents-builder/demo-conversations.ts",
+          "type": "registry:lib"
+        },
+        {
+          "path": "registry/constructive/blocks/agents-builder/demo-inbox.ts",
+          "type": "registry:lib"
+        },
+        {
+          "path": "registry/constructive/blocks/agents-builder/demo-integrations.ts",
+          "type": "registry:lib"
+        },
+        {
+          "path": "registry/constructive/blocks/agents-builder/demo-schedules.ts",
+          "type": "registry:lib"
+        },
+        {
+          "path": "registry/constructive/blocks/agents-builder/fixtures.ts",
+          "type": "registry:lib"
+        },
+        {
+          "path": "registry/constructive/blocks/agents-builder/inbox-view.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/agents-builder/index.ts",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/agents-builder/integration-mark.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/agents-builder/integration-sections.ts",
+          "type": "registry:lib"
+        },
+        {
+          "path": "registry/constructive/blocks/agents-builder/integrations-view.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/agents-builder/mascot.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/agents-builder/playback.ts",
+          "type": "registry:lib"
+        },
+        {
+          "path": "registry/constructive/blocks/agents-builder/primitives.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/agents-builder/reveal-text.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/agents-builder/schedules-view.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/agents-builder/sidebar.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/agents-builder/skills-view.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/agents-builder/types.ts",
+          "type": "registry:lib"
+        },
+        {
+          "path": "registry/constructive/blocks/agents-builder/use-agent-run.ts",
+          "type": "registry:lib"
+        },
+        {
+          "path": "registry/constructive/blocks/agents-builder/use-canvas-viewport.ts",
+          "type": "registry:lib"
+        },
+        {
+          "path": "registry/constructive/blocks/agents-builder/use-scripted-conversation.ts",
+          "type": "registry:lib"
+        },
+        {
+          "path": "registry/constructive/blocks/agents-builder/view-transition.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/agents-builder/workspace-menu.tsx",
+          "type": "registry:component"
+        }
+      ]
+    },
+    {
       "name": "stack",
       "type": "registry:block",
       "title": "Stack Navigation",
@@ -3600,9 +3774,17 @@
         "tooltip",
         "alert",
         "collapsible",
-        "badge"
+        "badge",
+        "spinner",
+        "command",
+        "popover",
+        "kbd"
       ],
       "files": [
+        {
+          "path": "registry/constructive/blocks/ai/agent-draft-card.tsx",
+          "type": "registry:component"
+        },
         {
           "path": "registry/constructive/blocks/ai/agent-loader.tsx",
           "type": "registry:component"
@@ -3612,11 +3794,19 @@
           "type": "registry:component"
         },
         {
+          "path": "registry/constructive/blocks/ai/ask-card.tsx",
+          "type": "registry:component"
+        },
+        {
           "path": "registry/constructive/blocks/ai/chat-container.tsx",
           "type": "registry:component"
         },
         {
           "path": "registry/constructive/blocks/ai/code-block.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/ai/connect-prompt.tsx",
           "type": "registry:component"
         },
         {
@@ -3656,6 +3846,10 @@
           "type": "registry:component"
         },
         {
+          "path": "registry/constructive/blocks/ai/mark-tile.tsx",
+          "type": "registry:component"
+        },
+        {
           "path": "registry/constructive/blocks/ai/markdown.tsx",
           "type": "registry:component"
         },
@@ -3664,7 +3858,19 @@
           "type": "registry:component"
         },
         {
+          "path": "registry/constructive/blocks/ai/model-selector.tsx",
+          "type": "registry:component"
+        },
+        {
           "path": "registry/constructive/blocks/ai/plan-tracker.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/ai/prompt-input-attachment.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/ai/prompt-input-tray.tsx",
           "type": "registry:component"
         },
         {
@@ -3716,7 +3922,15 @@
           "type": "registry:component"
         },
         {
+          "path": "registry/constructive/blocks/ai/thinking-status.tsx",
+          "type": "registry:component"
+        },
+        {
           "path": "registry/constructive/blocks/ai/thinking-trace.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/ai/tool-trace.tsx",
           "type": "registry:component"
         },
         {
@@ -3725,6 +3939,10 @@
         },
         {
           "path": "registry/constructive/blocks/ai/types.ts",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/ai/usage-notice.tsx",
           "type": "registry:component"
         },
         {
