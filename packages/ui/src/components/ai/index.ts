@@ -108,6 +108,56 @@ export {
 export { FileUpload, type FileUploadProps } from './file-upload';
 export { AiImage, type AiImageProps } from './image';
 
+// Phase 3 — agent workspace surfaces
+export { MarkTile, iconEnterClass, type MarkTileProps } from './mark-tile';
+export {
+	ToolTrace,
+	type ToolTraceProps,
+	type ToolTraceStep,
+	type ToolTraceStatus,
+} from './tool-trace';
+export { ThinkingStatus, formatElapsed, type ThinkingStatusProps } from './thinking-status';
+export { UsageNotice, usageTone, type UsageNoticeProps } from './usage-notice';
+export {
+	ModelSelector,
+	CostBlocks,
+	type AiModel,
+	type AiModelLevel,
+	type AiModelPricing,
+	type AiModelTag,
+	type ModelSelection,
+	type ModelSelectorProps,
+} from './model-selector';
+export {
+	PromptInputTray,
+	PromptInputTrayRow,
+	type PromptInputTrayProps,
+	type PromptInputTrayRowProps,
+	type PromptInputTrayTone,
+} from './prompt-input-tray';
+export {
+	PromptInputAttachment,
+	PromptInputAttachments,
+	type PromptInputAttachmentProps,
+	type PromptInputAttachmentsProps,
+	type PromptInputAttachmentStatus,
+} from './prompt-input-attachment';
+export {
+	AskCard,
+	type AskCardProps,
+	type AskQuestion,
+	type AskOption,
+	type AskChoice,
+	type AskAnswer,
+} from './ask-card';
+export { ConnectPrompt, type ConnectPromptProps, type ConnectPromptStatus } from './connect-prompt';
+export {
+	AgentDraftCard,
+	type AgentDraftCardProps,
+	type AgentDraftAction,
+	type AgentDraftTool,
+} from './agent-draft-card';
+
 // Shared types & helpers
 export {
 	normalizeToolStatus,

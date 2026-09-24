@@ -6,6 +6,7 @@
 @import '@constructive-io/schema-builder/styles.css';
 
 @source '../';
+@source '../../../../packages/ui/src/components/agents-builder';
 
 html {
   scroll-padding-top: 4.5rem;
@@ -245,12 +246,16 @@ pre {
   }
 }
 
-/* preview block frame — a flat 1px border like the rest of the docs chrome */
+/*
+  Preview block — the same surface language as the Agents Builder: a
+  shadow-edged card (no hard border), a 48px toolbar, and a dotted canvas
+  stage like the agent canvas, so every showcase reads as one system.
+*/
 .registry-block {
   min-width: 0;
-  border: 1px solid var(--border);
   border-radius: var(--radius-xl);
   background: var(--card);
+  box-shadow: var(--shadow-border);
   overflow: hidden;
 }
 
@@ -262,16 +267,13 @@ pre {
   display: flex;
   align-items: center;
   gap: 0.625rem;
-  padding: 0.75rem 1.25rem;
+  min-height: 3rem;
+  padding: 0.5rem 0.75rem 0.5rem 1rem;
   border-bottom: 1px solid var(--border);
   font-size: 13px;
   font-weight: 500;
 }
 
-/*
-  Preview / catalog canvas — flat, pattern-free.
-  Content is the focus; stage only separates chrome (bar) from body.
-*/
 .registry-block-stage {
   min-width: 0;
   min-height: 200px;
@@ -280,7 +282,13 @@ pre {
   flex-wrap: wrap;
   gap: 0.875rem;
   align-items: center;
-  background: color-mix(in oklch, var(--muted) 35%, var(--background));
+  background-color: color-mix(in oklch, var(--muted) 35%, var(--background));
+  background-image: radial-gradient(
+    circle,
+    color-mix(in oklab, var(--foreground) 7%, transparent) 1px,
+    transparent 1.2px
+  );
+  background-size: 16px 16px;
 }
 
 .registry-block-stage-col {

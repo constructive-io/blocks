@@ -1,6 +1,7 @@
 export type ApplicationDocId =
   | 'org-chart'
   | 'storage-browser'
+  | 'agents-builder'
   | 'sheets'
   | 'schema-builder'
   | 'console-kit';
@@ -13,6 +14,7 @@ export type ApplicationDocLink = Readonly<{
 export const APPLICATION_DOC_SEQUENCE: readonly ApplicationDocLink[] = [
   { id: 'org-chart', title: 'Org Chart' },
   { id: 'storage-browser', title: 'Storage Browser' },
+  { id: 'agents-builder', title: 'Agents Builder' },
   { id: 'sheets', title: 'Sheets' },
   { id: 'schema-builder', title: 'Schema Builder' },
   { id: 'console-kit', title: 'Console Kit' },

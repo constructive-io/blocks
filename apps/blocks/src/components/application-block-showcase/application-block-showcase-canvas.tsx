@@ -1,6 +1,7 @@
 'use client';
 
 import { useMemo, useState } from 'react';
+import dynamic from 'next/dynamic';
 
 import { Badge } from '@constructive-io/ui/badge';
 import {
@@ -27,6 +28,11 @@ import {
   type UploadItem,
 } from '@/components/ui/storage';
 import type { ApplicationBlockDoc } from '@/lib/application-blocks';
+
+// Only the Agents Builder preview route pays for the template's code.
+const AgentsBuilderPreview = dynamic(() =>
+  import('./agents-builder-preview').then((module) => module.AgentsBuilderPreview),
+);
 
 const ORG_CHART_EDGES: OrgChartEdge[] = [
   {
@@ -398,6 +404,7 @@ export function ApplicationBlockShowcaseCanvas({
 }: {
   name: ApplicationBlockDoc['name'];
 }) {
+  if (name === 'agents-builder') return <AgentsBuilderPreview />;
   return name === 'org-chart' ? (
     <OrgChartPreview />
   ) : (

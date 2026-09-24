@@ -278,6 +278,8 @@ describe('overlay editor integration (host -> OverlayManager -> commit)', () => 
 		await act(async () => {
 			root.unmount();
 		});
+		// TanStack Virtual's scroll-reset timeout (150ms) outlives unmount; let it fire while jsdom is still up.
+		await new Promise((resolve) => setTimeout(resolve, 200));
 		container.remove();
 		vi.clearAllMocks();
 		if (origW) Object.defineProperty(proto, 'offsetWidth', origW);

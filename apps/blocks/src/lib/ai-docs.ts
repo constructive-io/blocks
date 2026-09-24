@@ -178,5 +178,25 @@ export function AgentPane({
       type: 'component',
       behavior: 'Agent-proposed table row edits and file line diffs.',
     },
+    {
+      name: 'ToolTrace / ThinkingStatus',
+      type: 'component',
+      behavior: 'Tool-call trace with per-call status; live elapsed time and token spend.',
+    },
+    {
+      name: 'AskCard / ConnectPrompt / AgentDraftCard',
+      type: 'component',
+      behavior: 'Interactive agent beats: clarifying questions, missing-app connect requests, and agent drafts.',
+    },
+    {
+      name: 'PromptInputTray / UsageNotice',
+      type: 'component',
+      behavior: 'Tinted shell that docks status rows (usage, errors, reply targets) onto the composer as one surface.',
+    },
+    {
+      name: 'PromptInputAttachment(s)',
+      type: 'component',
+      behavior: 'Staged file chips with preview, upload, and error states above the textarea.',
+    },
   ],
 } as const;

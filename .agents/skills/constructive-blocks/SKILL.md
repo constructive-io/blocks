@@ -100,6 +100,7 @@ to endpoints, sessions, adapters, or tenant data.
 | General UI primitive or bundle | Search for the component, `form-kit`, `overlay-kit`, or `layout-kit` |
 | Application shell | `app-shell` |
 | AI or agent UI | `ai` |
+| Complete agent workspace (chat, integrations, skills, agent canvas) | `agents-builder` |
 | Global commands and workflows | `command-palette` |
 | Metadata-driven data grid | `sheets` |
 | PostgreSQL schema workspace | `schema-builder` |

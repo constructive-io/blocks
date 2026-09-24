@@ -1,0 +1,202 @@
+import type { InboxThread } from './types';
+
+// Agent-handled conversations for the demo Inbox: texts, email and alerts
+// that agents triage, draft replies for, or act on after approval.
+
+export const DEMO_INBOX: InboxThread[] = [
+	{
+		id: 'northwind-mrr',
+		contact: { name: 'Maya Chen', org: 'Northwind Health', handle: '+1 (415) 555-0142' },
+		channel: 'sms',
+		time: '9:41',
+		unread: true,
+		status: 'needs-you',
+		agentId: 'revenue-analyst',
+		messages: [
+			{
+				id: 'm1',
+				kind: 'message',
+				from: 'contact',
+				time: '9:38',
+				text: 'Hey! Our dashboard says MRR is down 12% this month but Stripe shows it flat. Which one do I trust for the board deck?',
+			},
+			{
+				id: 'a1',
+				kind: 'activity',
+				agentId: 'revenue-analyst',
+				text: 'Checked both numbers against the metric definition',
+				steps: [
+					{ id: 'stripe-invoices', label: 'Stripe Read invoices · Northwind', integrationId: 'stripe' },
+					{ id: 'snowflake-mrr', label: 'Snowflake Query mrr_movements', integrationId: 'snowflake' },
+				],
+			},
+			{ id: 'm2', kind: 'message', from: 'contact', time: '9:40', text: 'Need it by noon if possible.' },
+		],
+		draft: {
+			confidence: 0.92,
+			text: 'Both are right; they count different things. The dashboard spreads your two annual renewals across 12 months and nets the $4.2k refund from Sep 3, while Stripe counts invoices when they are paid. For the board, use $86.4k MRR, down 1.8%. The 12% view still includes a one-off setup invoice from August. Want a one-page reconciliation?',
+			sources: ['Stripe · 14 invoices', 'analytics.mrr_movements', 'metric-definitions'],
+		},
+		suggestions: ['Send the reconciliation', 'Book 15 min to walk through it', 'Loop in finance'],
+	},
+	{
+		id: 'orders-freshness',
+		contact: { name: 'dbt Cloud', org: '#data-alerts', handle: '#data-alerts' },
+		channel: 'slack',
+		subject: 'orders_daily failed freshness',
+		time: '8:55',
+		unread: true,
+		status: 'needs-you',
+		agentId: 'data-quality-monitor',
+		messages: [
+			{
+				id: 'm1',
+				kind: 'message',
+				from: 'contact',
+				time: '8:55',
+				text: 'orders_daily failed freshness: last loaded 06:02 UTC, 2h 53m ago (SLA 2h).',
+			},
+			{
+				id: 'a1',
+				kind: 'activity',
+				agentId: 'data-quality-monitor',
+				text: 'Traced the failure to a column rename upstream',
+				steps: [
+					{ id: 'dbt-runs', label: 'dbt Read model runs · orders_daily', integrationId: 'dbt' },
+					{ id: 'postgres-describe', label: 'Postgres Describe table orders', integrationId: 'postgres' },
+					{ id: 'github-pr', label: 'GitHub Read pull request #412', integrationId: 'github' },
+				],
+			},
+			{
+				id: 'm2',
+				kind: 'message',
+				from: 'agent',
+				time: '8:57',
+				text: 'PR #412 renamed orders.total_cents to amount_cents and the staging model still selects the old column. The fix is one line in stg_orders.sql; I can open it and rerun the job once it merges.',
+			},
+		],
+		approval: {
+			title: 'Merge the fix and rerun orders_daily?',
+			description: 'Opens PR #418 (1 line in stg_orders.sql), then triggers the dbt job. 6 dashboards refresh downstream.',
+			confirmLabel: 'Merge and rerun',
+			doneText: 'Merged #418 and reran orders_daily. Fresh as of 09:06 UTC; all 6 dashboards refreshed.',
+		},
+	},
+	{
+		id: 'acme-board-pack',
+		contact: { name: 'Priya Raman', org: 'Acme Corp', handle: 'priya@acme.co' },
+		channel: 'email',
+		subject: 'Q3 board metrics pack',
+		time: '9:12',
+		status: 'working',
+		agentId: 'board-report-writer',
+		activity: 'Pulling Q3 numbers from Snowflake',
+		messages: [
+			{
+				id: 'm1',
+				kind: 'message',
+				from: 'contact',
+				time: '9:12',
+				text: 'Hi team, could we get the Q3 metrics pack by Thursday? Same format as Q2, plus net revenue retention by segment this time.',
+			},
+			{
+				id: 'a1',
+				kind: 'activity',
+				agentId: 'board-report-writer',
+				text: 'Started the Q3 pack from the Q2 template',
+				steps: [
+					{ id: 'notion-q2', label: 'Notion Read Board / Q2 pack', integrationId: 'notion' },
+					{ id: 'snowflake-nrr', label: 'Snowflake Query nrr_by_segment', integrationId: 'snowflake' },
+				],
+			},
+		],
+	},
+	{
+		id: 'halcyon-invoicing',
+		contact: { name: 'Dana Wright', org: 'Halcyon Logistics', handle: 'dana@halcyon.io' },
+		channel: 'email',
+		subject: 'Moving to annual invoicing',
+		time: '8:20',
+		status: 'working',
+		agentId: 'churn-radar',
+		activity: 'Matching the renewal in HubSpot',
+		messages: [
+			{
+				id: 'm1',
+				kind: 'message',
+				from: 'contact',
+				time: '8:20',
+				text: 'Procurement is moving us to annual invoicing from October, so the monthly subscription will be cancelled in Stripe. Nothing changes on our side otherwise.',
+			},
+			{
+				id: 'a1',
+				kind: 'activity',
+				agentId: 'churn-radar',
+				text: 'Flagged the cancellation as a billing change, not churn',
+				steps: [{ id: 'stripe-customer', label: 'Stripe Read customer · Halcyon', integrationId: 'stripe' }],
+			},
+		],
+	},
+	{
+		id: 'lumen-churn-csv',
+		contact: { name: 'Jordan Lee', org: 'Lumen', handle: '+1 (646) 555-0199' },
+		channel: 'sms',
+		time: 'Tue',
+		status: 'done',
+		agentId: 'churn-radar',
+		messages: [
+			{ id: 'm1', kind: 'message', from: 'contact', time: 'Tue 16:02', text: 'Can you send me the accounts that churned in August? CSV is fine.' },
+			{
+				id: 'a1',
+				kind: 'activity',
+				agentId: 'churn-radar',
+				text: 'Exported August churn',
+				steps: [{ id: 'snowflake-churn', label: 'Snowflake Query churned_accounts', integrationId: 'snowflake' }],
+			},
+			{
+				id: 'm2',
+				kind: 'message',
+				from: 'agent',
+				time: 'Tue 16:03',
+				text: 'Here you go: 23 accounts, $61.8k MRR. Reasons come from the cancellation survey where there is one.',
+				attachment: { name: 'churned-accounts-aug.csv', meta: '23 rows · 4 KB' },
+			},
+			{ id: 'm3', kind: 'message', from: 'contact', time: 'Tue 16:05', text: 'Perfect, thanks!' },
+		],
+	},
+	{
+		id: 'growth-trial-spike',
+		contact: { name: 'Sam Ortiz', org: 'Growth', handle: 'sam@constructive.io' },
+		channel: 'email',
+		subject: 'Trial conversion jump on the 14th?',
+		time: 'Mon',
+		status: 'done',
+		agentId: 'anomaly-watch',
+		messages: [
+			{
+				id: 'm1',
+				kind: 'message',
+				from: 'contact',
+				time: 'Mon 10:14',
+				text: 'Trial-to-paid conversion jumped from 11% to 19% on Sep 14. Real, or tracking?',
+			},
+			{
+				id: 'a1',
+				kind: 'activity',
+				agentId: 'anomaly-watch',
+				text: 'Checked the event pipeline and the pricing log',
+				steps: [
+					{ id: 'amplitude-funnel', label: 'Amplitude Read funnels · trial', integrationId: 'amplitude' },
+					{ id: 'notion-pricing', label: 'Notion Read Pricing log', integrationId: 'notion' },
+				],
+			},
+			{
+				id: 'm2',
+				kind: 'message',
+				from: 'agent',
+				time: 'Mon 10:16',
+				text: 'Real, but not organic: the annual-plan discount went live on the 14th and 71% of the extra conversions chose annual. Tracking is clean; checkout events match Stripe one to one.',
+			},
+		],
+	},
+];
