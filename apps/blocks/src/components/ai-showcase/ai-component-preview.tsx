@@ -1,12 +1,16 @@
 'use client';
 
-import { ArrowUp, Paperclip } from 'lucide-react';
 import { useState } from 'react';
 
 import {
+  AgentDraftCard,
   AgentLoader,
   AiImage,
   ApprovalCard,
+  type AskAnswer,
+  AskCard,
+  ConnectPrompt,
+  type ConnectPromptStatus,
   ChatContainer,
   ChatContainerContent,
   CodeBlock,
@@ -21,11 +25,6 @@ import {
   Message,
   MessageContent,
   PlanTracker,
-  PromptInput,
-  PromptInputAction,
-  PromptInputActions,
-  PromptInputBody,
-  PromptInputTextarea,
   PromptSuggestion,
   PromptSuggestions,
   Reasoning,
@@ -41,13 +40,21 @@ import {
   TaskList,
   TaskRow,
   TextShimmer,
+  ThinkingStatus,
   ThinkingTrace,
   Tool,
   ToolGroup,
+  ToolTrace,
+  UsageNotice,
+  PromptInputTray,
+  usageTone,
 } from '@constructive-io/ui/ai';
 import { Button } from '@constructive-io/ui/button';
 
 import type { AiComponentName } from '@/lib/ai-components';
+
+import { ModelSelectorCompositions } from './model-selector-demo';
+import { PromptInputCompositions } from './prompt-input-compositions';
 
 function Frame({
   children,
@@ -149,8 +156,8 @@ export function AiComponentPreview({ name }: { name: AiComponentName }) {
       );
     case 'prompt-input':
       return (
-        <Frame>
-          <PromptInputDemo />
+        <Frame className="registry-block flex w-full items-start justify-center overflow-auto p-6">
+          <PromptInputCompositions />
         </Frame>
       );
     case 'message':
@@ -619,28 +626,196 @@ GROUP BY 1, 2`}</pre>
           />
         </Frame>
       );
+    case 'tool-trace':
+      return (
+        <Frame>
+          <ToolTraceDemo />
+        </Frame>
+      );
+    case 'thinking-status':
+      return (
+        <Frame>
+          <div className="flex flex-col gap-2">
+            <ThinkingStatus elapsedSeconds={60} tokens={2500} tokensPerTick={40} />
+            <ThinkingStatus label="Searching" live={false} elapsedSeconds={7} />
+          </div>
+        </Frame>
+      );
+    case 'ask-card':
+      return (
+        <Frame>
+          <AskCardDemo />
+        </Frame>
+      );
+    case 'connect-prompt':
+      return (
+        <Frame>
+          <ConnectPromptDemo />
+        </Frame>
+      );
+    case 'agent-draft-card':
+      return (
+        <Frame>
+          <AgentDraftDemo />
+        </Frame>
+      );
+    case 'model-selector':
+      return (
+        <Frame className="registry-block flex w-full items-start justify-center overflow-auto p-6">
+          <ModelSelectorCompositions />
+        </Frame>
+      );
+    case 'usage-notice':
+      return (
+        <Frame>
+          <UsageNoticeDemo />
+        </Frame>
+      );
     default:
       return null;
   }
 }
 
-function PromptInputDemo() {
-  const [value, setValue] = useState('');
+function Monogram({ letter, color }: { letter: string; color: string }) {
   return (
-    <PromptInput value={value} onValueChange={setValue} onSubmit={() => setValue('')}>
-      <PromptInputBody>
-        <PromptInputTextarea placeholder="Ask the agent…" />
-        <PromptInputActions className="justify-between">
-          <PromptInputAction tooltip="Attach">
-            <Button type="button" size="icon-sm" variant="ghost" aria-label="Attach">
-              <Paperclip className="size-4" />
-            </Button>
-          </PromptInputAction>
-          <Button type="button" size="icon-sm" aria-label="Send" disabled={!value.trim()}>
-            <ArrowUp className="size-4" />
-          </Button>
-        </PromptInputActions>
-      </PromptInputBody>
-    </PromptInput>
+    <span className="font-semibold leading-none" style={{ color }}>
+      {letter}
+    </span>
+  );
+}
+
+const TRACE_STEPS = [
+  { id: 'zendesk', label: 'Zendesk Search', icon: <Monogram letter="Z" color="#2F8F83" /> },
+  { id: 'slack', label: 'Slack History #support', icon: <Monogram letter="S" color="#B0489E" /> },
+  { id: 'notion', label: 'Notion Create Support / Weekly', icon: <Monogram letter="N" color="currentColor" /> },
+];
+
+function ToolTraceDemo() {
+  const [done, setDone] = useState(1);
+  return (
+    <div className="flex flex-col gap-4">
+      <ToolTrace
+        steps={TRACE_STEPS.map((step, index) => ({
+          ...step,
+          status: index < done ? 'done' : index === done ? 'running' : 'pending',
+        }))}
+      />
+      <Button
+        className="self-start"
+        onClick={() => setDone((value) => (value > TRACE_STEPS.length ? 0 : value + 1))}
+        size="xs"
+        type="button"
+        variant="outline"
+      >
+        {done > TRACE_STEPS.length ? 'Restart' : 'Advance'}
+      </Button>
+    </div>
+  );
+}
+
+function AskCardDemo() {
+  const [answer, setAnswer] = useState<AskAnswer | undefined>();
+  return (
+    <div className="flex flex-col gap-3">
+      <AskCard
+        answer={answer}
+        onSkip={() => setAnswer({ skipped: true })}
+        onSubmit={(choices) => setAnswer({ choices })}
+        questions={[
+          {
+            id: 'destination',
+            question: 'Where should the digest go?',
+            options: [
+              { id: 'slack', label: 'Post it to #support-leads' },
+              { id: 'here', label: 'Keep it here' },
+              { id: 'notion', label: 'File it under Support / Weekly' },
+            ],
+          },
+        ]}
+      />
+      {answer ? (
+        <Button className="self-start" onClick={() => setAnswer(undefined)} size="xs" type="button" variant="outline">
+          Reset
+        </Button>
+      ) : null}
+    </div>
+  );
+}
+
+function ConnectPromptDemo() {
+  const [status, setStatus] = useState<ConnectPromptStatus>('idle');
+  return (
+    <div className="flex flex-col gap-3">
+      <ConnectPrompt
+        description="Read conversations and reply"
+        icon={<Monogram letter="I" color="#286EFA" />}
+        name="Intercom"
+        onConnect={() => {
+          setStatus('connecting');
+          window.setTimeout(() => setStatus('connected'), 700);
+        }}
+        onSkip={() => setStatus('skipped')}
+        skipLabel="Zendesk only for now"
+        status={status}
+      />
+      {status === 'connected' || status === 'skipped' ? (
+        <Button className="self-start" onClick={() => setStatus('idle')} size="xs" type="button" variant="outline">
+          Reset
+        </Button>
+      ) : null}
+    </div>
+  );
+}
+
+function AgentDraftDemo() {
+  const [chosen, setChosen] = useState<string | undefined>();
+  return (
+    <AgentDraftCard
+      actions={[
+        { id: 'create', label: 'Create agent', chosenLabel: 'Agent created' },
+        { id: 'later', label: 'Not now', chosenLabel: 'Kept as a draft' },
+      ]}
+      chosenActionId={chosen}
+      name="monday_numbers"
+      onAction={setChosen}
+      schedule="Mondays at 9:00"
+      steps={[
+        'Run the weekly-metrics question in Metabase',
+        'Post the deltas to #metrics',
+        'File the post under Reports / Weekly in Notion',
+      ]}
+      tools={[
+        { id: 'metabase', label: 'Metabase', icon: <Monogram letter="M" color="#509EE3" /> },
+        { id: 'slack', label: 'Slack', icon: <Monogram letter="S" color="#B0489E" /> },
+        { id: 'notion', label: 'Notion', icon: <Monogram letter="N" color="currentColor" /> },
+      ]}
+    />
+  );
+}
+
+function UsageNoticeDemo() {
+  const [open, setOpen] = useState(true);
+  return (
+    <div className="flex flex-col gap-4">
+      {[62, 80, 96].map((percent) => (
+        <PromptInputTray
+          header={open ? <UsageNotice onAction={() => {}} onDismiss={() => setOpen(false)} percent={percent} /> : null}
+          key={percent}
+          tone={usageTone(percent)}
+        >
+          <div
+            className="rounded-xl border border-border bg-card p-3 text-sm text-subtle-foreground shadow-sm"
+            data-slot="prompt-input"
+          >
+            Add a follow-up
+          </div>
+        </PromptInputTray>
+      ))}
+      {open ? null : (
+        <Button className="self-start" onClick={() => setOpen(true)} size="xs" type="button" variant="outline">
+          Show notices
+        </Button>
+      )}
+    </div>
   );
 }

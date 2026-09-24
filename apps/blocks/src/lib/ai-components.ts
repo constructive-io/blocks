@@ -60,10 +60,12 @@ export const AI_COMPONENTS: readonly AiComponentDoc[] = [
     name: 'prompt-input',
     title: 'Prompt Input',
     exportName: 'PromptInput',
-    description: 'Compound chat composer with autosize textarea, action slots, and submit/stop patterns.',
+    description:
+      'Compound chat composer with autosize textarea, action slots, staged attachments, and a tray for docking status rows such as usage, errors, and reply targets.',
     whenToUse: [
-      'Use PromptInput as the shell for send, stop, attachments, and model chrome.',
-      'Keep streaming and network in the host; this surface only owns layout and controlled value.',
+      'Use PromptInput as the shell for send, stop, attachments, model pickers, and tool toggles.',
+      'Wrap it in PromptInputTray to dock a UsageNotice or any PromptInputTrayRow above or below; the tray tints by tone and rounds the composer concentrically.',
+      'Keep streaming, uploads, and network in the host; these surfaces only own layout and controlled value.',
     ],
     importExample: `import {
   PromptInput,
@@ -78,7 +80,22 @@ export const AI_COMPONENTS: readonly AiComponentDoc[] = [
     api: [
       { name: 'value / onValueChange', type: 'string / callback', behavior: 'Controlled text.' },
       { name: 'onSubmit / isLoading', type: 'callback / boolean', behavior: 'Submit and loading shell state.' },
-      { name: 'shape', type: "'default' | 'pill'", behavior: 'rounded-xl vs rounder shell.' },
+      { name: 'shape / disabled', type: "'default' | 'pill' / boolean", behavior: 'Shell shape; disabled locks the whole composer.' },
+      {
+        name: 'PromptInputTray tone / header / footer',
+        type: "'neutral' | 'info' | 'warning' | 'danger' / ReactNode",
+        behavior: 'Tinted shell that docks rows onto the composer. Renders the composer alone when both rows are empty.',
+      },
+      {
+        name: 'PromptInputTrayRow icon / actions',
+        type: 'ReactNode',
+        behavior: 'One tray line with a tone-colored icon and trailing controls.',
+      },
+      {
+        name: 'PromptInputAttachment status / previewUrl / onRemove',
+        type: "'uploading' | 'ready' | 'error' / string / callback",
+        behavior: 'Staged file chip; place several in PromptInputAttachments above the textarea.',
+      },
     ],
   },
   {
@@ -628,6 +645,175 @@ export const AI_COMPONENTS: readonly AiComponentDoc[] = [
     api: [
       { name: 'data / bytes / src', type: 'string / Uint8Array / string', behavior: 'Image payload.' },
       { name: 'mimeType / alt', type: 'string', behavior: 'Type and accessibility.' },
+    ],
+  },
+  {
+    name: 'tool-trace',
+    title: 'Tool Trace',
+    exportName: 'ToolTrace',
+    description: 'Quiet trace of tool calls under a heading, each row morphing from spinner to check as the call settles.',
+    whenToUse: [
+      'Use ToolTrace for the reads an agent makes before it answers, where each call needs a mark and a status but no payload.',
+      'Prefer Tool when people need to expand a call and inspect its input and output.',
+    ],
+    importExample: `import { ToolTrace } from '@/components/ui/ai';
+
+<ToolTrace
+  steps={[
+    { id: 'search', label: 'Zendesk Search', icon: <ZendeskMark />, status: 'done' },
+    { id: 'history', label: 'Slack History #support', icon: <SlackMark />, status: 'running' },
+  ]}
+/>`,
+    api: [
+      { name: 'steps', type: '{ id, label, icon?, status? }[]', behavior: "Rows in call order. status is 'pending' | 'running' | 'done'." },
+      { name: 'title / icon', type: 'ReactNode', behavior: 'Heading row, "Read tools" with a book glyph by default.' },
+    ],
+  },
+  {
+    name: 'thinking-status',
+    title: 'Thinking Status',
+    exportName: 'ThinkingStatus',
+    description: 'One-line in-flight status with a pulsing glyph, elapsed time, and token spend in tabular digits.',
+    whenToUse: [
+      'Use ThinkingStatus at the end of a transcript or run log while the agent is working.',
+      'Pass live={false} and drive elapsedSeconds and tokens from the host when you stream real counts.',
+    ],
+    importExample: `import { ThinkingStatus } from '@/components/ui/ai';
+
+<ThinkingStatus elapsedSeconds={60} tokens={2500} />`,
+    api: [
+      { name: 'label', type: 'ReactNode', behavior: 'Status verb, "Thinking" by default.' },
+      { name: 'elapsedSeconds / tokens', type: 'number', behavior: 'Starting values; the timer ticks each second while live.' },
+      { name: 'live / tokensPerTick', type: 'boolean / number', behavior: 'Stops the timer, or simulates token growth for demos.' },
+    ],
+  },
+  {
+    name: 'ask-card',
+    title: 'Ask Card',
+    exportName: 'AskCard',
+    description: 'Inline clarifying questions with lettered options and a free-text row, settling into a one-line answer summary.',
+    whenToUse: [
+      'Use AskCard when an agent must pause for a choice before it continues, including several questions at once.',
+      'Prefer ApprovalCard for a single confirm or skip decision on a pending action.',
+    ],
+    importExample: `import { AskCard } from '@/components/ui/ai';
+
+<AskCard
+  questions={[{ id: 'where', question: 'Where should the digest go?', options }]}
+  answer={answer}
+  onSubmit={(choices) => resume({ choices })}
+  onSkip={() => resume({ skipped: true })}
+/>`,
+    api: [
+      { name: 'questions', type: '{ id, question, options, allowOther? }[]', behavior: 'Stacked questions; Continue enables once each has an answer.' },
+      { name: 'answer', type: '{ choices } | { skipped: true }', behavior: 'Settled answer. Renders the read-only summary.' },
+      { name: 'onSubmit / onSkip', type: 'callbacks', behavior: 'Receive the chosen option ids or free text per question.' },
+    ],
+  },
+  {
+    name: 'connect-prompt',
+    title: 'Connect Prompt',
+    exportName: 'ConnectPrompt',
+    description: 'Inline request to connect a missing app, with an optional continue-without action and a settled state.',
+    whenToUse: [
+      'Use ConnectPrompt when an agent hits a source it cannot read and can either wait for a connection or carry on without it.',
+      'Keep the OAuth flow in the host; the prompt only reports intent.',
+    ],
+    importExample: `import { ConnectPrompt } from '@/components/ui/ai';
+
+<ConnectPrompt
+  icon={<IntercomMark />}
+  name="Intercom"
+  description="Read conversations and reply"
+  status={status}
+  skipLabel="Zendesk only for now"
+  onConnect={openConnectDialog}
+  onSkip={continueWithout}
+/>`,
+    api: [
+      { name: 'status', type: "'idle' | 'connecting' | 'connected' | 'skipped'", behavior: 'Settled states replace the actions with a chip.' },
+      { name: 'skipLabel / onSkip', type: 'ReactNode / callback', behavior: 'Continue-without action; hidden when omitted.' },
+      { name: 'onConnect / connectLabel', type: 'callback / ReactNode', behavior: 'Primary action.' },
+    ],
+  },
+  {
+    name: 'agent-draft-card',
+    title: 'Agent Draft Card',
+    exportName: 'AgentDraftCard',
+    description: 'Proposed agent spec drafted in chat: schedule, tools, and ordered steps, with actions that settle into a chip.',
+    whenToUse: [
+      'Use AgentDraftCard when an assistant turns a described chore into an agent the person must approve before anything runs.',
+      'Handle creation in the host and pass chosenActionId once it succeeds.',
+    ],
+    importExample: `import { AgentDraftCard } from '@/components/ui/ai';
+
+<AgentDraftCard
+  name="monday_numbers"
+  schedule="Mondays at 9:00"
+  tools={tools}
+  steps={['Run the weekly-metrics question', 'Post the deltas to #metrics']}
+  actions={[{ id: 'create', label: 'Create agent', chosenLabel: 'Agent created' }, { id: 'later', label: 'Not now' }]}
+  chosenActionId={chosen}
+  onAction={setChosen}
+/>`,
+    api: [
+      { name: 'name / badge / schedule', type: 'ReactNode', behavior: 'Header and the Runs row.' },
+      { name: 'tools / steps', type: '{ id, label, icon? }[] / ReactNode[]', behavior: 'Tool marks and the numbered plan.' },
+      { name: 'actions / chosenActionId / onAction', type: 'action[] / string / callback', behavior: 'First action is primary; a chosen action becomes a chip.' },
+    ],
+  },
+  {
+    name: 'usage-notice',
+    title: 'Usage Notice',
+    exportName: 'UsageNotice',
+    description: 'Plan-budget line that docks onto a composer through PromptInputTray, with a usage link and dismiss.',
+    whenToUse: [
+      'Use UsageNotice when a workspace is close to its token budget and people should see it before they send.',
+      'Pass it as the header of a PromptInputTray and let usageTone(percent) pick info, warning (75%+), or danger (90%+).',
+    ],
+    importExample: `import { PromptInput, PromptInputTray, UsageNotice, usageTone } from '@/components/ui/ai';
+
+<PromptInputTray
+  tone={usageTone(80)}
+  header={<UsageNotice percent={80} actionHref="/usage" onDismiss={dismiss} />}
+>
+  <PromptInput …>…</PromptInput>
+</PromptInputTray>`,
+    api: [
+      { name: 'percent / message', type: 'number / ReactNode', behavior: 'Budget share, or a custom sentence.' },
+      { name: 'actionLabel / actionHref / onAction', type: 'ReactNode / string / callback', behavior: 'Usage link or button.' },
+      { name: 'onDismiss', type: 'callback', behavior: 'Shows the close button when set.' },
+    ],
+  },
+  {
+    name: 'model-selector',
+    title: 'Model Selector',
+    exportName: 'ModelSelector',
+    description:
+      'Composer model picker with search, pinned routers, recent and recommended sections, reasoning levels, relative cost or per-million pricing, and a detail strip for the highlighted model.',
+    whenToUse: [
+      'Use ModelSelector in a composer action row when people choose a model and how hard it should think.',
+      'Pass pricing to show cost; omit it (or set priceDisplay="none") for workspaces that bill flat.',
+      'Keep recents, plan gating, and persistence in the host; mark unavailable models disabled with a reason.',
+    ],
+    importExample: `import { ModelSelector, type AiModel, type ModelSelection } from '@/components/ui/ai';
+
+const [model, setModel] = useState<ModelSelection>({ modelId: 'claude-5', levelId: 'medium' });
+
+<ModelSelector
+  models={models}
+  value={model}
+  onValueChange={setModel}
+  pinnedIds={['auto']}
+  recentIds={recent}
+  recommendedIds={['sonnet-5', 'gpt-5-mini']}
+/>`,
+    api: [
+      { name: 'models', type: 'AiModel[]', behavior: 'id, name, provider, icon, levels, defaultLevel, pricing (per 1M), contextWindow, tags, disabled / disabledReason.' },
+      { name: 'value / onValueChange', type: '{ modelId, levelId? }', behavior: 'Controlled selection of a model and its reasoning level.' },
+      { name: 'pinnedIds / recentIds / recommendedIds', type: 'string[]', behavior: 'Sections shown before the provider groups while not searching.' },
+      { name: 'priceDisplay / allowPriceToggle', type: "'meter' | 'price' | 'none' / boolean", behavior: 'Relative cost bar or input / output prices, with an optional toggle in the search row.' },
+      { name: 'side / align / triggerClassName', type: 'placement / string', behavior: 'Popover placement and trigger styling.' },
     ],
   },
 ] as const;

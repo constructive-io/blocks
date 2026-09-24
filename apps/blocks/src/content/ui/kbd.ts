@@ -17,6 +17,12 @@ export const kbdDocs = definePrimitiveDocs({
       description: 'Right-align KbdGroup chords next to their action names for a readable shortcut reference.',
       demo: 'KbdShortcutsDemo',
     },
+    {
+      title: 'On any surface',
+      description:
+        'The keycap mixes its fill, edge, and bottom lip from the inherited text color, so it stays distinct on cards, tinted rows, primary buttons, and inverted tooltips. Change its tone by setting the text color.',
+      demo: 'KbdSurfacesDemo',
+    },
   ],
   accessibility: [
     'Kbd renders the semantic kbd element, so assistive technology announces the text as keyboard input.',
@@ -26,8 +32,11 @@ export const kbdDocs = definePrimitiveDocs({
   api: [
     {
       name: 'Kbd',
-      description: 'Styled kbd element for a single key.',
-      props: [{ name: 'children', type: 'ReactNode', description: 'The key name or symbol.' }],
+      description: 'Keycap for a single key, tinted from the inherited text color.',
+      props: [
+        { name: 'children', type: 'ReactNode', description: 'The key name or symbol.' },
+        { name: 'className', type: 'string', description: 'Set a text color here or on the parent to retint the key.' },
+      ],
     },
     {
       name: 'KbdGroup',
