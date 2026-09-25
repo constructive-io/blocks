@@ -1,6 +1,6 @@
 'use client';
 
-import { type LucideIcon, PanelLeft, X } from 'lucide-react';
+import { Loader2, type LucideIcon, PanelLeft, X } from 'lucide-react';
 import * as React from 'react';
 
 import { cn } from '../../lib/utils';
@@ -35,6 +35,10 @@ type NavRowProps = {
 	trailing?: React.ReactNode;
 	/** Row tone when not active. */
 	muted?: boolean;
+	/** Not choosable right now, e.g. while another row loads or policy forbids it. */
+	disabled?: boolean;
+	/** Loading this row's destination; announced and shown in place of the trailing value. */
+	busy?: boolean;
 	onClick: () => void;
 };
 
@@ -42,7 +46,7 @@ type NavRowProps = {
  * One sidebar row. Focus reads through weight and a tinted fill, never a
  * coloured dot; hover is instant because rows are clicked constantly.
  */
-function NavRow({ label, collapsed, active, leading, labelNode, trailing, muted, onClick }: NavRowProps) {
+function NavRow({ label, collapsed, active, leading, labelNode, trailing, muted, disabled, busy, onClick }: NavRowProps) {
 	return (
 		<li>
 			<RailTip label={label} collapsed={collapsed}>
@@ -50,19 +54,22 @@ function NavRow({ label, collapsed, active, leading, labelNode, trailing, muted,
 					type="button"
 					aria-label={collapsed ? label : undefined}
 					aria-current={active ? 'page' : undefined}
+					aria-busy={busy || undefined}
+					disabled={disabled}
 					onClick={onClick}
 					className={cn(
 						ROW,
+						'disabled:cursor-not-allowed disabled:opacity-50',
 						active
 							? 'bg-sidebar-accent font-medium text-foreground'
-							: cn('hover:bg-overlay-hover', muted ? 'text-muted-foreground hover:text-foreground' : 'text-sidebar-foreground'),
+							: cn('enabled:hover:bg-overlay-hover', muted ? 'text-muted-foreground enabled:hover:text-foreground' : 'text-sidebar-foreground'),
 					)}
 				>
 					{leading}
 					{collapsed ? null : (
 						<>
 							<span className="min-w-0 flex-1 truncate">{labelNode ?? label}</span>
-							{trailing}
+							{busy ? <Loader2 aria-hidden="true" className="size-3.5 shrink-0 text-muted-foreground motion-safe:animate-spin" /> : trailing}
 						</>
 					)}
 				</button>

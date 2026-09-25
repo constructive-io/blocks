@@ -22,14 +22,18 @@ export {
 	shortMimeLabel,
 	objectDisplayName,
 	bucketDisplayName,
+	formatCount,
+	fileCategory,
+	keyFolder,
+	type FileCategory,
 } from './utils';
 
 // Components
-export { FileTypeIcon } from './file-type-icon';
+export { FileTypeIcon, FileGlyph } from './file-type-icon';
 export { VisibilityBadge, ObjectStatusBadge } from './visibility-badge';
 export { BucketRail } from './bucket-rail';
 export { StorageBreadcrumb, type StorageBreadcrumbSegment } from './storage-breadcrumb';
-export { ObjectToolbar } from './object-toolbar';
+export { ObjectToolbar, ObjectSelectionBar, ObjectSortMenu } from './object-toolbar';
 export { ObjectTable, ObjectTableSkeleton, OBJECT_TABLE_COLUMN_COUNT } from './object-table';
 export { ObjectDetailSheet } from './object-detail-sheet';
 export { UploadDropzone, UploadProgressList } from './upload-dropzone';

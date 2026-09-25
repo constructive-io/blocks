@@ -3140,10 +3140,9 @@
       "registryDependencies": [
         "cn",
         "badge",
-        "breadcrumb",
         "button",
         "dropdown-menu",
-        "input-group"
+        "workspace-kit"
       ],
       "files": [
         {
@@ -3188,10 +3187,7 @@
       "registryDependencies": [
         "storage",
         "cn",
-        "badge",
-        "button",
-        "scroll-area",
-        "separator"
+        "workspace-kit"
       ],
       "files": [
         {
@@ -3215,11 +3211,10 @@
       ],
       "registryDependencies": [
         "storage",
-        "button",
+        "cn",
         "checkbox",
         "dropdown-menu",
-        "skeleton",
-        "table"
+        "workspace-kit"
       ],
       "files": [
         {
@@ -3245,7 +3240,7 @@
         "storage",
         "cn",
         "button",
-        "progress"
+        "workspace-kit"
       ],
       "files": [
         {
@@ -3273,9 +3268,8 @@
         "alert-dialog",
         "button",
         "input",
-        "separator",
-        "skeleton",
-        "sheet"
+        "sheet",
+        "workspace-kit"
       ],
       "files": [
         {
@@ -3300,14 +3294,14 @@
       "registryDependencies": [
         "storage",
         "cn",
-        "badge",
         "button",
         "input",
         "label",
         "radio-group",
         "switch",
         "textarea",
-        "sheet"
+        "sheet",
+        "workspace-kit"
       ],
       "files": [
         {
@@ -3331,7 +3325,8 @@
       ],
       "registryDependencies": [
         "cn",
-        "button"
+        "button",
+        "workspace-kit"
       ],
       "files": [
         {
@@ -3344,7 +3339,7 @@
       "name": "storage-browser",
       "type": "registry:block",
       "title": "Storage Browser",
-      "description": "A complete controlled storage workspace with bucket navigation, object discovery, upload, configuration, detail, and empty states.",
+      "description": "A storage workspace on the shared workspace shell: buckets in the sidebar, a file list with type-tinted glyphs, search, sort, drag-and-drop upload, a floating selection bar, detail and bucket sheets, and distinct empty states.",
       "categories": [
         "block",
         "application"
@@ -3359,7 +3354,8 @@
         "storage-bucket-config-sheet",
         "storage-empty-state",
         "cn",
-        "separator"
+        "button",
+        "workspace-kit"
       ],
       "files": [
         {

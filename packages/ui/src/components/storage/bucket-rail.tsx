@@ -2,90 +2,96 @@
 
 import { PlusIcon } from 'lucide-react';
 
-import { Badge } from '../badge';
-import { Button } from '../button';
-import { ScrollArea } from '../scroll-area';
-import { Separator } from '../separator';
 import { cn } from '../../lib/utils';
+import { NavCount, NavRow, NavSection } from '../workspace-kit/nav';
+import { TooltipIconButton } from '../workspace-kit/primitives';
 import type { BucketVisibility, StorageBucket } from './types';
-import { bucketDisplayName } from './utils';
-import { VisibilityBadge } from './visibility-badge';
-
-interface BucketRailItemProps {
-	bucket: StorageBucket;
-	selected: boolean;
-	onSelect: (bucketId: string) => void;
-}
-
-/**
- * A single row in the bucket rail. Highlights when selected, shows a visibility
- * badge, an optional object count, and a subtle "unprovisioned" hint.
- */
-function BucketRailItem({ bucket, selected, onSelect }: BucketRailItemProps) {
-	const unprovisioned = bucket.provisioned === false;
-
-	return (
-		<button
-			type='button'
-			aria-current={selected ? 'true' : undefined}
-			onClick={() => onSelect(bucket.id)}
-			className={cn(
-				`flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm outline-none transition-[color,background-color,border-color,text-decoration-color,fill,stroke,box-shadow]
-				focus-visible:ring-[3px] focus-visible:ring-ring/50`,
-				selected ? 'bg-accent text-accent-foreground' : 'text-foreground hover:bg-muted/50',
-			)}
-		>
-			<div className='flex min-w-0 flex-1 flex-col gap-0.5'>
-				<span className='truncate font-medium'>{bucketDisplayName(bucket)}</span>
-				<span className='flex items-center gap-1.5'>
-					<VisibilityBadge visibility={bucket.visibility} size='sm' />
-					{unprovisioned && (
-						<span className='truncate text-[0.625rem] text-muted-foreground'>Not provisioned</span>
-					)}
-				</span>
-			</div>
-			{bucket.objectCount != null && (
-				<span className='shrink-0 text-xs tabular-nums text-muted-foreground'>{bucket.objectCount}</span>
-			)}
-		</button>
-	);
-}
+import { bucketDisplayName, formatCount } from './utils';
+import { VISIBILITY } from './visibility-badge';
 
 interface BucketRailProps {
 	buckets: StorageBucket[];
 	selectedBucketId?: string | null;
 	onSelectBucket: (bucketId: string) => void;
 	onNewBucket?: () => void;
+	/** Icon-only rail, as in a collapsed workspace sidebar. */
+	collapsed?: boolean;
+	/** Heading above the list. */
+	title?: string;
+	/** Bucket whose contents are loading; its row shows a spinner. */
+	busyBucketId?: string | null;
+	/** When false, only the selected bucket is enabled, e.g. while policy forbids switching. */
+	selectable?: boolean;
 	className?: string;
 }
 
 /**
- * `BucketRail` — a vertical, scrollable list of buckets with a pinned
- * "New bucket" action at the bottom. Stateless: selection is controlled via
- * `selectedBucketId` + `onSelectBucket`.
+ * `BucketRail` — buckets as workspace nav rows: a visibility glyph, the name,
+ * and a quiet object count, with "New bucket" beside the heading. Buckets
+ * that are not provisioned yet read muted. Selection is controlled.
  */
-export function BucketRail({ buckets, selectedBucketId, onSelectBucket, onNewBucket, className }: BucketRailProps) {
+export function BucketRail({
+	buckets,
+	selectedBucketId,
+	onSelectBucket,
+	onNewBucket,
+	collapsed = false,
+	title = 'Buckets',
+	busyBucketId,
+	selectable = true,
+	className,
+}: BucketRailProps) {
 	return (
-		<div className={cn('flex h-full min-h-0 flex-col', className)}>
-			<ScrollArea className='min-h-0 flex-1'>
-				<div className='flex flex-col gap-0.5 p-2'>
-					{buckets.map((bucket) => (
-						<BucketRailItem
+		<div className={cn('flex min-h-0 flex-col', className)}>
+			<NavSection
+				title={title}
+				collapsed={collapsed}
+				action={
+					onNewBucket ? (
+						<TooltipIconButton label="New bucket" size="sm" side={collapsed ? 'right' : 'top'} onClick={onNewBucket}>
+							<PlusIcon aria-hidden="true" className="size-3.5" />
+						</TooltipIconButton>
+					) : null
+				}
+			>
+				{buckets.map((bucket) => {
+					const active = bucket.id === selectedBucketId;
+					const { icon: Icon, label: visibility } = VISIBILITY[bucket.visibility] ?? VISIBILITY.private;
+					const unprovisioned = bucket.provisioned === false;
+					const name = bucketDisplayName(bucket);
+					const details = [visibility, unprovisioned ? 'not provisioned' : null, bucket.objectCount != null ? `${bucket.objectCount} files` : null]
+						.filter(Boolean)
+						.join(', ');
+					return (
+						<NavRow
 							key={bucket.id}
-							bucket={bucket}
-							selected={bucket.id === selectedBucketId}
-							onSelect={onSelectBucket}
+							label={`${name}, ${details}`}
+							labelNode={
+								<>
+									{name}
+									<span className="sr-only">, {details}</span>
+								</>
+							}
+							collapsed={collapsed}
+							active={active}
+							muted={unprovisioned}
+							busy={busyBucketId === bucket.id}
+							disabled={!selectable && !active}
+							leading={<Icon aria-hidden="true" className={cn('size-3.5 shrink-0', active ? 'text-foreground' : 'text-muted-foreground')} />}
+							trailing={
+								unprovisioned ? (
+									<span aria-hidden="true" className="text-[11px] text-subtle-foreground">
+										Off
+									</span>
+								) : bucket.objectCount != null ? (
+									<NavCount value={formatCount(bucket.objectCount)} />
+								) : null
+							}
+							onClick={() => onSelectBucket(bucket.id)}
 						/>
-					))}
-				</div>
-			</ScrollArea>
-			<Separator />
-			<div className='p-2'>
-				<Button variant='ghost' size='sm' className='w-full justify-start' onClick={onNewBucket}>
-					<PlusIcon aria-hidden />
-					New bucket
-				</Button>
-			</div>
+					);
+				})}
+			</NavSection>
 		</div>
 	);
 }
