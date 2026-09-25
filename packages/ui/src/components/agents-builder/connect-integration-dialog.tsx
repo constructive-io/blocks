@@ -9,9 +9,9 @@ import { Dialog, DialogDescription, DialogPopup, DialogTitle } from '../dialog';
 import { Spinner } from '../spinner';
 import { Switch } from '../switch';
 import { IntegrationMark } from './integration-mark';
-import { focusRingClass } from './primitives';
+import { focusRingClass } from '../workspace-kit/primitives';
 import type { Integration } from './types';
-import { startViewTransition, ViewAnimation } from './view-transition';
+import { startViewTransition, ViewAnimation } from '../workspace-kit/view-transition';
 
 type Phase = 'sign-in' | 'authorizing' | 'tools' | 'connecting';
 

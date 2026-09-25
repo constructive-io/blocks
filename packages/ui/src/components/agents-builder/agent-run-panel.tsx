@@ -18,7 +18,7 @@ import { Spinner } from '../spinner';
 import { useAgentsBuilder } from './agents-builder-context';
 import { Composer } from './composer';
 import { IntegrationMark } from './integration-mark';
-import { enterClass, focusRingClass, SurfaceBody, surfaceInsetClass, ToneBadge, TooltipIconButton, useInert } from './primitives';
+import { enterClass, focusRingClass, SurfaceBody, surfaceInsetClass, ToneBadge, TooltipIconButton, useInert } from '../workspace-kit/primitives';
 import { RevealText } from './reveal-text';
 import { usePlaybackClock } from './playback';
 import type { AgentRunScript, RunApproval, RunQuery, ToolStep } from './types';

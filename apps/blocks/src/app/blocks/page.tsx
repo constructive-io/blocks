@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 
 import { InstallToggle } from '@/components/docs/install-toggle';
-import { APPLICATION_BLOCKS } from '@/lib/application-blocks';
+import { APPLICATION_BLOCKS, applicationBlockHref } from '@/lib/application-blocks';
 import { COMPONENT_DOC_SEQUENCE } from '@/lib/component-doc-navigation';
 import { packageCommands, registryCommands } from '@/lib/install-mode';
 import { OG_IMAGE, withBase } from '@/lib/site';
@@ -18,11 +18,16 @@ const APPLICATION_CATALOG = [
     description:
       'Data, authentication, users, organizations, storage, billing, and notifications.',
   },
-  ...APPLICATION_BLOCKS.map((block) => ({
-    href: `/blocks/${block.name}`,
+  ...APPLICATION_BLOCKS.filter((block) => !block.section).map((block) => ({
+    href: applicationBlockHref(block),
     title: block.title,
     description: block.description,
   })),
+  {
+    href: '/blocks/billing',
+    title: 'Billing',
+    description: 'Customer and operator billing workspaces, gift codes, and the billing feature pack, for platform and tenant billing.',
+  },
   ...SOURCE_BLOCKS.map((block) => ({
     href: `/blocks/${block.name}`,
     title: block.title,

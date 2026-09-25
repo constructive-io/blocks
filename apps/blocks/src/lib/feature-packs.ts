@@ -537,97 +537,106 @@ export const FEATURE_PACK_DOCS = [
     title: 'Billing',
     exportName: 'BillingFeaturePack',
     description:
-      'A complete customer billing destination for subscriptions, entitlements, usage, credits, plans, and account activity.',
+      'A customer billing workspace for one personal or organization account: current plan, plan changes, usage by pool, credits, invoices, and ledger activity.',
     endpoints: 'optional billing, optional admin, optional data',
     dependencies: [],
-    resource: 'BillingSettingsResources',
-    actions: ['BillingSettingsActions', 'onSectionChange(section)'],
+    resource: 'BillingAccountData',
+    actions: ['onChangePlan(request)', 'onBuyCredits(pack)', 'onRedeemCode(code)', 'onAction(action)'],
     whenToUse: [
-      'Use the Billing feature pack when an application needs one complete destination for personal or organization billing management.',
-      'Use the individual billing blocks when subscription, usage, credits, plans, or activity belong inside an existing account page or dashboard.',
+      'Use the Billing feature pack when an application needs one complete destination for personal or organization billing, backed by the Constructive billing modules.',
+      'Install billing-account directly for the same workspace outside Console Kit, or billing-kit when a single plan card, usage tree, or invoice table belongs inside an existing page.',
     ],
     usage: {
       description:
-        'Pass one billing account and the independent resources for every section. Supply only the provider actions available in the current account context.',
+        'Pass the account data and the host callbacks that reach your payment provider. Limit views to the ones your data can back.',
       example: `import { BillingFeaturePack } from '@/blocks/feature-packs/billing/billing-feature-pack';
 
 <BillingFeaturePack
-  account={account}
-  resources={billingResources}
-  actions={billingActions}
-  formatOptions={{ locale: 'en-US', timeZone: 'UTC' }}
-  section={section}
-  onSectionChange={setSection}
+  data={billingAccount}
+  views={['overview', 'plans', 'usage', 'credits', 'invoices', 'activity']}
+  onChangePlan={(request) => changePlan(request)}
+  onBuyCredits={(pack) => openCheckout(pack.slug)}
+  onRedeemCode={(code) => redeemGiftCode(accountId, code)}
+  initialRedeemCode={searchParams.get('code') ?? undefined}
+  onAction={(action) => handleBillingAction(action)}
+  onError={reportError}
 />`,
     },
     state: {
-      title: 'Section and resource state',
+      title: 'Views and local state',
       description:
-        'Use defaultSection when the page can remember its own section. Pass section and onSectionChange when routing or application state owns the selection. Each billing resource keeps an independent loading, empty, error, ready, and quality state.',
+        'The view is uncontrolled by default; pass view and onViewChange to sync it with a router. Plan changes, scheduled changes, and alert edits show optimistically once the host callback resolves, and reset whenever the host passes new data.',
       actionGuidance:
-        'Optional callbacks determine which provider-backed billing controls are available. Each composed block owns pending and local error feedback for the action it starts, while onError reports failures to the host.',
+        'Plan changes, credit purchases, and codes are promises: reject with an Error to keep the preview open with its message. Checkout and the customer portal stay with the provider; the pack never collects card details.',
     },
     surfaces: [
-      'Overview composition for subscription, credits, current usage, and entitlements.',
-      'Usage composition for period history and account ledger activity.',
-      'Plans composition for pricing comparison and provider-backed plan actions.',
+      'Overview with the current notice, plan card, credit wallet, busiest pools, limits, and recent ledger entries.',
+      'Usage with a projection to period end, the credit waterfall by pool, limits, features, and alerts.',
+      'Plans with a monthly/yearly comparison and a change preview that explains what goes up, what goes down, and when.',
+      'Gift codes: a redeem dialog (from the overview, credits view, account menu, or a ?code= link) that shows exactly what a code added, typed refusals, and a history of redeemed codes.',
+      'Credits, invoices, and activity views for packs, provider-hosted invoices, and the ledger.',
     ],
     accessibility: [
-      'Overview, usage, and plans use a keyboard-navigable tablist with one labelled panel for each section.',
-      'Every composed billing block keeps text labels for status and quality, so meaning does not depend on color or layout position.',
-      'Set showHeader to false only when the surrounding document already provides the page heading, which preserves one clear heading hierarchy.',
+      'Every status keeps a text label, so meaning never depends on colour; meters expose their value through the meter role.',
+      'The plan-change preview is a labelled dialog with radio choices for timing and inline error text on refusal.',
+      'The sidebar keeps labels in the collapsed rail through tooltips and aria-label, and below the sidebar width it becomes a drawer.',
     ],
     apiProps: featurePackApiProps<BillingFeaturePackProps>()([
-      'account',
-      'resources',
-      'formatOptions',
-      'actions',
-      'controls',
-      'onSectionChange',
-      'showHeader',
-      'messages',
+      'data',
+      'view',
+      'defaultView',
+      'onViewChange',
+      'views',
+      'onChangePlan',
+      'onBuyCredits',
+      'onRedeemCode',
+      'initialRedeemCode',
+      'onAlertsChange',
+      'onAction',
       'onError',
-      'onMessage',
+      'theme',
+      'onThemeChange',
+      'locale',
+      'timeZone',
+      'now',
+      'defaultSidebarCollapsed',
       'className',
-      'section',
-      'defaultSection',
     ]),
     api: [
       {
-        name: 'account',
-        type: 'BillingAccountRef',
-        behavior: 'Identifies a personal or organization billing context.',
+        name: 'data',
+        type: 'BillingAccountData',
+        behavior: 'Plans and prices, meters and balances, the subscription, credits, ledger, invoices, limits, and caps for one account.',
       },
       {
-        name: 'resources',
-        type: 'BillingSettingsResources',
-        behavior:
-          'Supplies every composed billing block independently so one unavailable section does not replace the page.',
+        name: 'view / defaultView / onViewChange / views',
+        type: 'BillingAccountView',
+        behavior: 'Controls or seeds the active view, and limits navigation to the views the host can back.',
       },
       {
-        name: 'actions / controls',
-        type: 'BillingSettingsActions / BillingSettingsControls',
-        behavior: 'Supplies optional provider operations and controlled pricing, history, and activity values.',
+        name: 'onChangePlan / onBuyCredits',
+        type: 'Promise callbacks',
+        behavior: 'Hand plan changes and purchases to the host; rejecting shows the error in place.',
       },
       {
-        name: 'section / defaultSection / onSectionChange',
-        type: 'BillingSettingsSection / callback',
-        behavior: 'Uses either a controlled section or an initial selection and reports section changes.',
+        name: 'onRedeemCode / initialRedeemCode',
+        type: '(code) => Promise<RedeemResult> / string',
+        behavior: 'Redeems a gift code for the account and shows what it granted, or a typed refusal; a prefilled code (e.g. from ?code=) opens the redeem dialog.',
       },
       {
-        name: 'formatOptions / messages',
-        type: 'BillingFormatOptions / message overrides',
-        behavior: 'Controls locale, time zone, date formatting, and user-facing copy.',
+        name: 'onAction / onAlertsChange',
+        type: 'callbacks',
+        behavior: 'Report portal, invoice, account-switch, and support requests, and alert edits.',
       },
       {
-        name: 'showHeader / className',
-        type: 'boolean / string',
-        behavior: 'Controls the internal page heading and adds layout classes to the outer surface.',
+        name: 'locale / timeZone / now',
+        type: 'string',
+        behavior: 'Format money and dates; pass now from the server so relative dates hydrate identically.',
       },
       {
-        name: 'onError / onMessage',
-        type: 'Observer callbacks',
-        behavior: 'Reports local failures and billing message events.',
+        name: 'onError',
+        type: '(error: unknown) => void',
+        behavior: 'Reports failed host callbacks after the view has shown them.',
       },
     ] satisfies readonly FeaturePackApiRow[],
   },

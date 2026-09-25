@@ -221,6 +221,8 @@ for (const requiredEntry of [
   `${pagesOrigin}${pagesBasePath}/blocks/schema-builder/`,
   `${pagesOrigin}${pagesBasePath}/blocks/storage-browser/`,
   `${pagesOrigin}${pagesBasePath}/blocks/billing/`,
+  `${pagesOrigin}${pagesBasePath}/blocks/billing/account/`,
+  `${pagesOrigin}${pagesBasePath}/blocks/billing/console/`,
   `${pagesOrigin}${pagesBasePath}/blocks/console-kit/`,
 ]) {
   if (!llms.includes(requiredEntry)) {

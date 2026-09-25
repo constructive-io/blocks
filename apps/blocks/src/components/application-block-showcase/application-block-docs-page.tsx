@@ -11,7 +11,8 @@ import {
 import { CodeBlock } from '@/components/docs/code-block';
 import { DocSection } from '@/components/docs/doc-section';
 import { ApplicationDocPagination } from '@/components/docs/application-doc-pagination';
-import type { ApplicationBlockDoc } from '@/lib/application-blocks';
+import { BillingDocsNav, type BillingDocsHref } from '@/components/billing-docs/billing-docs-nav';
+import { applicationBlockHref, type ApplicationBlockDoc } from '@/lib/application-blocks';
 import { registryAdd } from '@/lib/install-mode';
 import { withBase } from '@/lib/site';
 
@@ -32,21 +33,29 @@ function GuidanceList({ items }: { items: readonly string[] }) {
   );
 }
 
-function PublicContract({ block }: { block: ApplicationBlockDoc }) {
-  const caption = `Public properties for ${block.title}.`;
-
+function PublicContract({
+  block,
+  rows = block.api,
+  caption = `Public properties for ${block.title}.`,
+  columns = ['Prop', 'Type', 'Behavior'],
+}: {
+  block: ApplicationBlockDoc;
+  rows?: ApplicationBlockDoc['api'];
+  caption?: string;
+  columns?: readonly [string, string, string];
+}) {
   return (
     <Table containerProps={{ tabIndex: 0, 'aria-label': caption }}>
       <TableCaption className="sr-only">{caption}</TableCaption>
       <TableHeader>
         <TableRow>
-          <TableHead scope="col">Prop</TableHead>
-          <TableHead scope="col">Type</TableHead>
-          <TableHead scope="col">Behavior</TableHead>
+          <TableHead scope="col">{columns[0]}</TableHead>
+          <TableHead scope="col">{columns[1]}</TableHead>
+          <TableHead scope="col">{columns[2]}</TableHead>
         </TableRow>
       </TableHeader>
       <TableBody>
-        {block.api.map((row) => (
+        {rows.map((row) => (
           <TableRow key={row.name}>
             <TableCell className="font-mono text-xs font-medium">
               {row.name}
@@ -77,7 +86,7 @@ export function ApplicationBlockDocsPage({
         id="overview"
       >
         <header className="mb-6 max-w-2xl">
-          <p className="registry-eyebrow">Application blocks</p>
+          <p className="registry-eyebrow">{block.section === 'billing' ? 'Billing' : 'Application blocks'}</p>
           <h1
             className="mt-2 text-balance text-[22px] font-semibold tracking-tight sm:text-[1.75rem]"
             id="application-block-title"
@@ -89,9 +98,11 @@ export function ApplicationBlockDocsPage({
           </p>
         </header>
 
+        {block.section === 'billing' ? <BillingDocsNav current={applicationBlockHref(block) as BillingDocsHref} /> : null}
+
         <ApplicationBlockShowcasePreview
           block={block}
-          previewPath={withBase(`/blocks/${block.name}/preview/`)}
+          previewPath={withBase(`${applicationBlockHref(block)}/preview/`)}
         />
       </section>
 
@@ -135,6 +146,21 @@ export function ApplicationBlockDocsPage({
       >
         <GuidanceList items={block.composition} />
       </DocSection>
+
+      {block.buildingBlocks?.length ? (
+        <DocSection
+          description="Each of these installs with billing-kit and works outside the template: pass data and callbacks, and wrap them in BillingFormatProvider for locale, time zone, and clock."
+          id="building-blocks"
+          title="Building blocks"
+        >
+          <PublicContract
+            block={block}
+            rows={block.buildingBlocks}
+            caption={`Components ${block.title} is built from.`}
+            columns={['Component', 'Group', 'What it shows']}
+          />
+        </DocSection>
+      ) : null}
 
       <DocSection
         description={block.previewDescription}

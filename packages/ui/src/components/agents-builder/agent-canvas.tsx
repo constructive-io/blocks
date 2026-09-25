@@ -9,7 +9,7 @@ import { CanvasNode, Dot, Instructions, NODE_WIDTH, NodeCard, NodeRow, RowIcon }
 import { CanvasWires } from './canvas-wires';
 import { IntegrationMark } from './integration-mark';
 import { useReducedMotion } from './playback';
-import { focusRingClass, pressClass, SurfaceBody, surfaceInsetClass, ToneBadge, TooltipIconButton } from './primitives';
+import { focusRingClass, pressClass, SurfaceBody, surfaceInsetClass, ToneBadge, TooltipIconButton } from '../workspace-kit/primitives';
 import type { AgentRunState, NodeStage } from './use-agent-run';
 import { useCanvasViewport } from './use-canvas-viewport';
 

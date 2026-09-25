@@ -6,19 +6,11 @@ import { Alert, AlertDescription } from '@constructive-io/ui/alert';
 import type { SheetsConfig, SheetsExecuteFn } from '@constructive-io/sheets';
 import { createMockExecute, type MockTable } from '@constructive-io/sheets/testing';
 
-import type {
-  BillingSettingsActions,
-  BillingSettingsSection,
-} from '@/blocks/billing/billing-settings-page/billing-settings-page';
-import { billingShowcaseFormatOptions } from '@/lib/billing-showcase-fixtures';
+import { billingAccountScenario, DEMO_NOW, demoRedeemCode } from '@/components/ui/billing-account/fixtures';
+import type { BillingAccountView } from '@/components/ui/billing-account/types';
 import type { FeaturePackDocId } from '@/lib/feature-packs';
 import { cn } from '@/lib/utils';
 
-import {
-  getBillingShowcaseAccount,
-  getBillingShowcaseSettingsResources,
-  type BillingShowcaseAccountKind,
-} from '../billing-showcase/billing-showcase-resources';
 import {
   FEATURE_PACK_SHOWCASE_AUTH_ACCOUNT,
   FEATURE_PACK_SHOWCASE_NOTIFICATIONS,
@@ -216,7 +208,10 @@ export function FeaturePackShowcaseCanvas({
   variant: string;
 }) {
   const [delegatedAction, setDelegatedAction] = React.useState<string | null>(null);
-  const [billingSection, setBillingSection] = React.useState<BillingSettingsSection>('overview');
+  const [billingView, setBillingView] = React.useState<BillingAccountView>('overview');
+  const billingData = billingAccountScenario(variant === 'personal' || state === 'empty' ? 'free' : 'active');
+  // One redeemer per account, so a code redeemed here reads as already redeemed next time.
+  const billingRedeemer = React.useMemo(() => demoRedeemCode(billingData), [billingData]);
 
   const recordAction = React.useCallback((message: string) => {
     setDelegatedAction(message);
@@ -416,33 +411,31 @@ export function FeaturePackShowcaseCanvas({
 
     if (pack === 'billing') {
       const FeatureRoot = FEATURE_PACK_SHOWCASE_ROOTS.billing;
-      const accountKind: BillingShowcaseAccountKind = variant === 'personal' ? 'personal' : 'organization';
-      const billingActions: BillingSettingsActions = {
-        onSelectPlan: ({ planId, priceId }) => recordAction(`onSelectPlan('${planId}', '${priceId}')`),
-        onContactSales: ({ planId }) => recordAction(`onContactSales('${planId}')`),
-        onManageSubscription: ({ subscriptionId }) => recordAction(`onManageSubscription('${subscriptionId}')`),
-        onChangePlan: ({ subscriptionId }) => {
-          setBillingSection('plans');
-          recordAction(`onChangePlan('${subscriptionId}')`);
-        },
-        onResolvePayment: ({ subscriptionId }) => recordAction(`onResolvePayment('${subscriptionId}')`),
-        onViewHistory: (meterSlug) => {
-          setBillingSection('usage');
-          recordAction(`onViewHistory('${meterSlug}')`);
-        },
-        onBuyCredits: (meterSlug) => recordAction(`onBuyCredits('${meterSlug}')`),
-      };
-
+      if (state === 'loading') return <FeaturePackPreviewLoading />;
+      if (state === 'error') {
+        return (
+          <Alert variant="destructive">
+            <AlertDescription>The billing endpoint did not answer. Billing stays unavailable until it does.</AlertDescription>
+          </Alert>
+        );
+      }
       return (
-        <FeatureRoot
-          account={getBillingShowcaseAccount(accountKind)}
-          actions={billingActions}
-          formatOptions={billingShowcaseFormatOptions}
-          onError={(error) => recordAction(`onError('${error.message}')`)}
-          onSectionChange={setBillingSection}
-          resources={getBillingShowcaseSettingsResources(state, accountKind)}
-          section={billingSection}
-        />
+        <div className="h-[760px] overflow-hidden rounded-xl border border-border shadow-sm">
+          <FeatureRoot
+            data={billingData}
+            now={DEMO_NOW}
+            view={billingView}
+            onViewChange={setBillingView}
+            onChangePlan={(request) => recordAction(`onChangePlan('${request.plan.name}', '${request.timing}')`)}
+            onBuyCredits={(creditPack) => recordAction(`onBuyCredits('${creditPack.slug}')`)}
+            onRedeemCode={async (code) => {
+              recordAction(`onRedeemCode('${code}')`);
+              return billingRedeemer(code);
+            }}
+            onAction={(action) => recordAction(`onAction('${action.type}')`)}
+            onError={(error) => recordAction(`onError('${error instanceof Error ? error.message : String(error)}')`)}
+          />
+        </div>
       );
     }
 

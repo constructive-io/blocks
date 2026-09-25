@@ -2,6 +2,8 @@ export type ApplicationDocId =
   | 'org-chart'
   | 'storage-browser'
   | 'agents-builder'
+  | 'billing-account'
+  | 'billing-console'
   | 'sheets'
   | 'schema-builder'
   | 'console-kit';
@@ -9,12 +11,16 @@ export type ApplicationDocId =
 export type ApplicationDocLink = Readonly<{
   id: ApplicationDocId;
   title: string;
+  /** Defaults to `/blocks/<id>`. */
+  href?: string;
 }>;
 
 export const APPLICATION_DOC_SEQUENCE: readonly ApplicationDocLink[] = [
   { id: 'org-chart', title: 'Org Chart' },
   { id: 'storage-browser', title: 'Storage Browser' },
   { id: 'agents-builder', title: 'Agents Builder' },
+  { id: 'billing-account', title: 'Billing Account', href: '/blocks/billing/account' },
+  { id: 'billing-console', title: 'Billing Console', href: '/blocks/billing/console' },
   { id: 'sheets', title: 'Sheets' },
   { id: 'schema-builder', title: 'Schema Builder' },
   { id: 'console-kit', title: 'Console Kit' },

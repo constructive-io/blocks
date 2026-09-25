@@ -6,7 +6,7 @@ import * as React from 'react';
 import { cn } from '../../lib/utils';
 import { TextShimmer } from '../ai/text-shimmer';
 import { useAgentsBuilder } from './agents-builder-context';
-import { enterClass, focusRingClass, SurfaceBody, surfaceInsetClass, useInert } from './primitives';
+import { enterClass, focusRingClass, SurfaceBody, surfaceInsetClass, useInert } from '../workspace-kit/primitives';
 import type { NodeStage } from './use-agent-run';
 import { NO_PAN_ATTRIBUTE } from './use-canvas-viewport';
 

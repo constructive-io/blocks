@@ -16,7 +16,8 @@ live `shadcn@latest search` and `view`.
 | Database schema editing | `schema-builder` | Installed source owns the workspace; a host adapter performs control-plane operations and confirmation workflows. |
 | Reporting relationships | `org-chart` | The controlled block owns hierarchy presentation; the host loads and persists reporting lines. |
 | Object storage management | `storage-browser` or a storage leaf | Blocks are controlled and transport-neutral; the host filters, authorizes, fetches, uploads, and mutates objects. |
-| Customer billing | `billing-settings-page` or a billing leaf | Blocks render provider-neutral resources and callbacks; the host owns billing providers, mutations, routing, and account policy. |
+| Customer billing | `billing-account`, or a `billing-kit` leaf | Installed source owns navigation, the plan-change preview, and optimistic local state; the host owns the payment provider (checkout, portal), mutations, routing, and account policy. |
+| Billing operations | `billing-console` | Installed source owns the catalog draft, readiness display, and the billing-switch gate check; the host owns every write, provider credentials (write-only), and database standing calls. |
 | Account phone numbers | `account-phone-numbers` | The block owns the add, text-a-code, and verify flow; a host adapter performs every request and binds it to the signed-in identity. |
 | One provider-neutral domain screen | `feature-pack-<id>` | The host supplies resources, policy, callbacks, and navigation. No Console Kit is required. |
 | One domain inside Console Kit | `console-module-<id>` with `console-kit-core` | The module adds Console discovery and Constructive integration for its feature pack. |
@@ -70,7 +71,7 @@ and dependency closure. The public documentation provides richer examples:
 - Org Chart: `https://constructive-io.github.io/blocks/blocks/org-chart/`
 - Storage Browser: `https://constructive-io.github.io/blocks/blocks/storage-browser/`
 - Agents Builder: `https://constructive-io.github.io/blocks/blocks/agents-builder/`
-- Billing: `https://constructive-io.github.io/blocks/blocks/billing/`
+- Billing: `https://constructive-io.github.io/blocks/blocks/billing/` (Billing Account at `/blocks/billing/account/`, Billing Console at `/blocks/billing/console/`)
 - Feature packs: `https://constructive-io.github.io/blocks/blocks/features/`
 - Console Kit: `https://constructive-io.github.io/blocks/blocks/console-kit/`
 

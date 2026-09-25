@@ -8,9 +8,9 @@ import { Button } from '../button';
 import { useAgentsBuilder } from './agents-builder-context';
 import { buildIntegrationSections, type IntegrationScope } from './integration-sections';
 import { IntegrationMark } from './integration-mark';
-import { focusRingClass, pressClass, scrollRowClass, SearchField, ViewHeader } from './primitives';
+import { focusRingClass, pressClass, scrollRowClass, SearchField, ViewHeader } from '../workspace-kit/primitives';
 import type { Integration } from './types';
-import { startViewTransition, ViewAnimation } from './view-transition';
+import { startViewTransition, ViewAnimation } from '../workspace-kit/view-transition';
 
 /** A 200px fractal-noise tile, rasterized once and repeated, to break up gradient banding. */
 const NOISE_TILE =

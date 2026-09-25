@@ -1,10 +1,15 @@
 import type {
-  BillingAllowance,
-  BillingEntitlement,
-  BillingPlan,
-  BillingPrice,
-  BillingSubscription
-} from '../../billing/billing-contracts/billing-contracts';
+  BillingAccountData,
+  BillingAccountView
+} from '@/components/ui/billing-account/index';
+import type {
+  EntitlementRow,
+  FeatureCap,
+  Meter,
+  Plan,
+  PlanPrice
+} from '@/components/ui/billing-kit/index';
+
 import type { AtomicCapabilityId } from '../../../feature-packs';
 import type { BillingFeaturePackProps } from '../../feature-packs/billing/billing-feature-pack';
 import type {
@@ -51,28 +56,19 @@ const BILLING_COLLECTIONS = [
   },
   {
     root: 'planSubscriptions',
-    desired: [
-      'id',
-      'entityId',
-      'entityType',
-      'organizationId',
-      'planId',
-      'isActive',
-      'startsAt',
-      'endsAt'
-    ],
+    desired: ['id', 'entityId', 'entityType', 'organizationId', 'planId', 'isActive', 'startsAt', 'endsAt'],
     required: ['id', 'entityId', 'planId'],
     requiredRoot: true
   },
   {
     root: 'meters',
-    desired: ['id', 'slug', 'displayName', 'unit', 'meterType', 'isActive'],
+    desired: ['id', 'slug', 'displayName', 'unit', 'meterType', 'aggregation', 'creditCost', 'categoryMeter', 'periodInterval', 'isActive'],
     required: ['id', 'slug'],
     requiredRoot: false
   },
   {
     root: 'planPricings',
-    desired: ['id', 'planId', 'billingInterval', 'price', 'currency', 'isActive'],
+    desired: ['id', 'planId', 'billingInterval', 'usageType', 'price', 'currency', 'discountPercent', 'isActive'],
     required: ['id', 'planId', 'billingInterval', 'price', 'currency'],
     requiredRoot: false
   },
@@ -95,6 +91,9 @@ const BILLING_COLLECTIONS = [
     requiredRoot: false
   }
 ] as const;
+
+/** The public usage schema carries the catalog and subscriptions, not balances, credits, or a ledger. */
+const AVAILABLE_VIEWS: BillingAccountView[] = ['overview', 'plans'];
 
 function connectionContract(
   schema: ConstructiveSchemaSnapshot,
@@ -123,16 +122,9 @@ function connectionContract(
 function billingDocument(schema: ConstructiveSchemaSnapshot): BillingDocument {
   const contracts = new Map<string, ConnectionContract>();
   for (const collection of BILLING_COLLECTIONS) {
-    const contract = connectionContract(
-      schema,
-      collection.root,
-      collection.desired,
-      collection.required
-    );
+    const contract = connectionContract(schema, collection.root, collection.desired, collection.required);
     if (!contract && collection.requiredRoot) {
-      throw new Error(
-        `Query.${collection.root} does not expose the required billing read contract.`
-      );
+      throw new Error(`Query.${collection.root} does not expose the required billing read contract.`);
     }
     if (contract) contracts.set(collection.root, contract);
   }
@@ -148,119 +140,128 @@ function billingDocument(schema: ConstructiveSchemaSnapshot): BillingDocument {
   };
 }
 
-function scalarString(value: unknown): string | null {
-  if (typeof value === 'string' && value.length > 0) return value;
-  if (typeof value === 'number' && Number.isFinite(value)) return String(value);
+function numberOf(value: unknown): number | null {
+  if (typeof value === 'number' && Number.isFinite(value)) return value;
+  if (typeof value === 'string' && value.trim() !== '' && Number.isFinite(Number(value))) return Number(value);
   return null;
 }
 
-function optionalBoolean(value: unknown): boolean | undefined {
+function booleanOf(value: unknown): boolean | undefined {
   return typeof value === 'boolean' ? value : undefined;
 }
 
 function titleize(value: string): string {
-  return value
-    .replace(/[_-]+/gu, ' ')
-    .replace(/\b\w/gu, (character) => character.toUpperCase());
+  return value.replace(/[_-]+/gu, ' ').replace(/\b\w/gu, (character) => character.toUpperCase());
 }
 
-function allowance(value: string): BillingAllowance {
-  return value.startsWith('-')
-    ? { kind: 'unlimited' }
-    : { kind: 'limited', limit: value };
+function intervalOf(value: string): PlanPrice['interval'] | null {
+  const normalized = value.toLowerCase();
+  if (normalized.startsWith('month')) return 'month';
+  if (normalized.startsWith('year') || normalized === 'annual') return 'year';
+  if (normalized === 'one_time' || normalized === 'once') return 'one_time';
+  return null;
 }
 
-function pricesByPlan(result: Record<string, unknown>): ReadonlyMap<string, BillingPrice[]> {
-  const prices = new Map<string, BillingPrice[]>();
-  for (const row of connectionNodes(result.planPricings)) {
-    if (optionalBoolean(row.isActive) === false) continue;
-    const id = asString(row.id);
-    const planId = asString(row.planId);
-    const interval = asString(row.billingInterval);
-    const amountMinor = scalarString(row.price);
-    const currency = asString(row.currency);
-    if (!id || !planId || !interval || !amountMinor || !currency) continue;
-    const price: BillingPrice = amountMinor.startsWith('-')
-      ? { kind: 'contact_sales', id, interval }
-      : {
-          kind: 'fixed',
-          id,
-          interval,
-          money: { amountMinor, currency: currency.toUpperCase() }
-        };
-    prices.set(planId, [...(prices.get(planId) ?? []), price]);
-  }
-  return prices;
-}
-
-function entitlementsByPlan(
-  result: Record<string, unknown>
-): ReadonlyMap<string, BillingEntitlement[]> {
-  const entitlements = new Map<string, BillingEntitlement[]>();
-  const meters = new Map(connectionNodes(result.meters).flatMap((row) => {
+function metersOf(result: Record<string, unknown>): Meter[] {
+  return connectionNodes(result.meters).flatMap((row) => {
     const slug = asString(row.slug);
-    return slug
-      ? [[slug, {
-          label: asString(row.displayName) ?? titleize(slug),
-          unit: asString(row.unit) ?? undefined
-        }] as const]
-      : [];
-  }));
-  const add = (planId: string, entitlement: BillingEntitlement) => {
-    entitlements.set(planId, [...(entitlements.get(planId) ?? []), entitlement]);
+    if (!slug) return [];
+    const meterType = asString(row.meterType);
+    const period = asString(row.periodInterval);
+    return [{
+      slug,
+      displayName: asString(row.displayName) ?? titleize(slug),
+      unit: asString(row.unit) ?? 'units',
+      meterType: meterType === 'usage_pool' || meterType === 'boolean' ? meterType : 'quota',
+      aggregation: asString(row.aggregation) === 'peak' ? 'peak' : 'cumulative',
+      creditCost: numberOf(row.creditCost),
+      categoryMeter: asString(row.categoryMeter),
+      periodInterval: period?.includes('year') ? 'year' : period ? 'month' : null,
+      active: booleanOf(row.isActive) ?? true
+    } satisfies Meter];
+  });
+}
+
+function plansOf(result: Record<string, unknown>, subscribedPlanId: string | null): Plan[] {
+  const byPlan = <T,>(rows: Record<string, unknown>[], read: (row: Record<string, unknown>) => [string, T] | null) => {
+    const map = new Map<string, T[]>();
+    for (const row of rows) {
+      const entry = read(row);
+      if (entry) map.set(entry[0], [...(map.get(entry[0]) ?? []), entry[1]]);
+    }
+    return map;
   };
+  const prices = byPlan<PlanPrice>(connectionNodes(result.planPricings), (row) => {
+    const id = asString(row.id);
+    const planId = asString(row.planId);
+    const interval = intervalOf(asString(row.billingInterval) ?? '');
+    const amount = numberOf(row.price);
+    const currency = asString(row.currency);
+    if (!id || !planId || !interval || amount === null || !currency) return null;
+    return [planId, {
+      id,
+      interval,
+      usageType: asString(row.usageType) === 'metered' ? 'metered' : 'licensed',
+      amount: { amountMinor: amount, currency },
+      discountPercent: numberOf(row.discountPercent) ?? undefined,
+      active: booleanOf(row.isActive) ?? true
+    }];
+  });
+  const values = (root: unknown, key: string, value: string) =>
+    byPlan<[string, number]>(connectionNodes(root), (row) => {
+      const planId = asString(row.planId);
+      const name = asString(row[key]);
+      const amount = numberOf(row[value]);
+      return planId && name && amount !== null ? [planId, [name, amount]] : null;
+    });
+  const limits = values(result.planLimits, 'limitName', 'maxValue');
+  const meterLimits = values(result.planMeterLimits, 'meterSlug', 'planLimit');
+  const caps = values(result.planCaps, 'capName', 'capValue');
 
-  for (const row of connectionNodes(result.planMeterLimits)) {
+  return connectionNodes(result.plans).flatMap((row) => {
     const id = asString(row.id);
-    const planId = asString(row.planId);
-    const meterSlug = asString(row.meterSlug);
-    const planLimit = scalarString(row.planLimit);
-    if (!id || !planId || !meterSlug || !planLimit) continue;
-    const meter = meters.get(meterSlug);
-    add(planId, {
+    const name = asString(row.name);
+    if (!id || !name) return [];
+    const active = booleanOf(row.isActive) ?? true;
+    if (!active && id !== subscribedPlanId) return [];
+    const planPrices = prices.get(id) ?? [];
+    return [{
       id,
-      kind: 'meter',
-      meterSlug,
-      label: meter?.label ?? titleize(meterSlug),
-      unit: meter?.unit,
-      allowance: allowance(planLimit)
-    });
-  }
-  for (const row of connectionNodes(result.planLimits)) {
-    const id = asString(row.id);
-    const planId = asString(row.planId);
-    const limitName = asString(row.limitName);
-    const maxValue = scalarString(row.maxValue);
-    if (!id || !planId || !limitName || !maxValue) continue;
-    add(planId, {
-      id,
-      kind: 'quota',
-      label: titleize(limitName),
-      allowance: allowance(maxValue)
-    });
-  }
-  for (const row of connectionNodes(result.planCaps)) {
-    const id = asString(row.id);
-    const planId = asString(row.planId);
-    const capName = asString(row.capName);
-    const capValue = scalarString(row.capValue);
-    if (!id || !planId || !capName || !capValue) continue;
-    add(planId, {
-      id,
-      kind: 'cap',
-      label: titleize(capName),
-      value: capValue
-    });
-  }
-  return entitlements;
+      name,
+      displayName: titleize(name),
+      description: asString(row.description) ?? undefined,
+      prices: planPrices,
+      limits: Object.fromEntries(limits.get(id) ?? []),
+      meterLimits: Object.fromEntries(meterLimits.get(id) ?? []),
+      caps: Object.fromEntries(caps.get(id) ?? []),
+      active,
+      fallback: planPrices.length > 0 && planPrices.every((price) => price.amount.amountMinor === 0)
+    } satisfies Plan];
+  });
 }
 
-function subscriptionStatus(row: Record<string, unknown>): string {
-  if (optionalBoolean(row.isActive) === true) return 'active';
-  return asString(row.endsAt) ? 'canceled' : 'inactive';
+/** Comparison rows: every limit, then meter allowances, then caps, as the catalog defines them. */
+function comparisonRows(plans: Plan[], meters: Meter[]): EntitlementRow[] {
+  const keys = (pick: (plan: Plan) => Record<string, number>) => [...new Set(plans.flatMap((plan) => Object.keys(pick(plan))))];
+  const meterName = new Map(meters.map((meter) => [meter.slug, meter.displayName]));
+  return [
+    ...keys((plan) => plan.limits).map((key) => ({ kind: 'limit' as const, key, label: titleize(key) })),
+    ...keys((plan) => plan.meterLimits).map((key) => ({ kind: 'meter' as const, key, label: meterName.get(key) ?? titleize(key) })),
+    ...keys((plan) => plan.caps).map((key) => ({ kind: 'cap' as const, key, label: titleize(key) }))
+  ].slice(0, 12);
 }
 
-/** Maps the public Constructive usage schema to the provider-neutral billing UI. */
+function accountName(runtime: ConsoleKitAdapterContext, organization: boolean) {
+  if (organization) return 'Organization';
+  return runtime.session.status === 'authenticated' ? 'Personal account' : 'Account';
+}
+
+/**
+ * Maps the public Constructive usage schema into the Billing Account
+ * template: the plan catalog, its prices and entitlements, and the account's
+ * subscription. Balances, credits, invoices, and the ledger have no public
+ * read contract yet, so only the overview and plans views are offered.
+ */
 export function createConstructiveBillingAdapter(
   options: ConstructiveBillingAdapterOptions
 ): ConsoleKitFeatureAdapter<BillingFeaturePackProps> {
@@ -281,15 +282,7 @@ export function createConstructiveBillingAdapter(
       const schema = options.discovery.getSchemas().billing;
       if (!schema) throw new Error('The billing endpoint schema is unavailable.');
       const query = billingDocument(schema);
-      const result = await executeConstructiveGraphQL<Record<string, unknown>>(
-        runtime,
-        'billing',
-        query.document,
-        undefined,
-        signal
-      );
-      const prices = pricesByPlan(result);
-      const entitlements = entitlementsByPlan(result);
+      const result = await executeConstructiveGraphQL<Record<string, unknown>>(runtime, 'billing', query.document, undefined, signal);
       const subscriptionRows = connectionNodes(result.planSubscriptions);
       const selectedOrganizationId = options.store.getState().context?.organizationId;
       const subscriptionRow = selectedOrganizationId
@@ -297,84 +290,51 @@ export function createConstructiveBillingAdapter(
             asString(row.entityId) === selectedOrganizationId ||
             asString(row.organizationId) === selectedOrganizationId
           )
-        : subscriptionRows.find((row) => optionalBoolean(row.isActive) === true) ?? subscriptionRows[0];
+        : subscriptionRows.find((row) => booleanOf(row.isActive) === true) ?? subscriptionRows[0];
       const subscribedPlanId = asString(subscriptionRow?.planId);
-
-      const plans: BillingPlan[] = connectionNodes(result.plans).flatMap((row) => {
-        const id = asString(row.id);
-        const name = asString(row.name);
-        if (!id || !name) return [];
-        if (optionalBoolean(row.isActive) === false && id !== subscribedPlanId) return [];
-        const planEntitlements = entitlements.get(id);
-        return [{
-          id,
-          name: titleize(name),
-          description: asString(row.description) ?? undefined,
-          prices: prices.get(id) ?? [],
-          entitlements: planEntitlements?.length ? planEntitlements : undefined,
-          current: id === subscribedPlanId
-        }];
-      });
-      const plansById = new Map(plans.map((plan) => [plan.id, plan]));
-      let subscription: BillingSubscription | null = null;
-      if (subscriptionRow) {
-        const id = asString(subscriptionRow.id);
-        const planId = asString(subscriptionRow.planId);
-        if (id && planId) {
-          const plan = plansById.get(planId);
-          subscription = {
-            id,
-            planId,
-            planName: plan?.name ?? planId,
-            status: subscriptionStatus(subscriptionRow),
-            price: plan?.prices[0],
-            startedAt: asString(subscriptionRow.startsAt) ?? undefined,
-            endsAt: asString(subscriptionRow.endsAt) ?? undefined
-          };
-        }
-      }
-
-      const entityId = asString(subscriptionRow?.entityId) ?? (
-        selectedOrganizationId ?? (runtime.session.status === 'authenticated'
-          ? runtime.session.identity.subjectId
-          : runtime.databaseId)
+      const meters = metersOf(result);
+      const plans = plansOf(result, subscribedPlanId);
+      const current = plans.find((plan) => plan.id === subscribedPlanId);
+      const entityId = asString(subscriptionRow?.entityId) ?? selectedOrganizationId ?? (
+        runtime.session.status === 'authenticated' ? runtime.session.identity.subjectId : runtime.databaseId
       );
-      const entityType = asString(subscriptionRow?.entityType)?.toLowerCase();
-      const currentEntitlements = subscribedPlanId
-        ? entitlements.get(subscribedPlanId) ?? []
-        : [];
-      return {
-        account: {
-          entityId,
-          kind: selectedOrganizationId || entityType?.startsWith('org')
-            ? 'organization'
-            : 'personal'
-        },
-        resources: {
-          plans: plans.length > 0
-            ? { status: 'ready', quality: 'authoritative', data: plans }
-            : { status: 'empty' },
-          subscription: subscription
-            ? { status: 'ready', quality: 'authoritative', data: subscription }
-            : { status: 'empty' },
-          entitlements: currentEntitlements.length > 0
-            ? { status: 'ready', quality: 'authoritative', data: currentEntitlements }
-            : { status: 'empty' },
-          // Public meter definitions do not establish authoritative balances,
-          // credits, or usage totals. Those surfaces remain empty until their
-          // dedicated contracts can be mapped without approximation.
-          usage: { status: 'empty' },
-          credits: { status: 'empty' },
-          usageHistory: { status: 'empty' },
-          activity: { status: 'empty' }
-        },
-        formatOptions: {
-          locale: 'en-US',
-          timeZone: 'UTC'
-        },
-        defaultSection: 'overview',
-        showHeader: true
+      const organization = Boolean(selectedOrganizationId) || Boolean(asString(subscriptionRow?.entityType)?.toLowerCase().startsWith('org'));
+      const caps: FeatureCap[] = Object.entries(current?.caps ?? {}).map(([name, value]) => ({
+        name,
+        label: titleize(name),
+        value,
+        kind: value > 1 ? 'number' : 'switch'
+      }));
+
+      const data: BillingAccountData = {
+        scope: 'tenant',
+        workspace: { name: 'Billing' },
+        accounts: [{
+          id: entityId,
+          name: accountName(runtime, organization),
+          kind: organization ? 'organization' : 'personal',
+          planName: current?.displayName
+        }],
+        accountId: entityId,
+        currency: plans.flatMap((plan) => plan.prices)[0]?.amount.currency ?? 'usd',
+        creditsPerCent: 1,
+        plans,
+        comparisonRows: comparisonRows(plans, meters),
+        meters,
+        balances: [],
+        planId: subscribedPlanId ?? undefined,
+        lifecycle: subscriptionRow
+          ? booleanOf(subscriptionRow.isActive) === false ? 'ended' : 'active'
+          : 'unsubscribed',
+        grants: [],
+        packs: [],
+        ledger: [],
+        invoices: [],
+        limits: [],
+        caps,
+        alerts: []
       };
+      return { data, views: AVAILABLE_VIEWS };
     }
   };
 }

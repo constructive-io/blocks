@@ -12,10 +12,10 @@ import { Switch } from '../switch';
 import { useAgentsBuilder } from './agents-builder-context';
 import { IntegrationMark } from './integration-mark';
 import { usePlaybackClock } from './playback';
-import { enterClass, FilterGroup, focusRingClass, SurfaceBody, surfaceInsetClass, useInert, ViewHeader } from './primitives';
+import { enterClass, FilterGroup, focusRingClass, SurfaceBody, surfaceInsetClass, useInert, ViewHeader } from '../workspace-kit/primitives';
 import type { AgentSchedule, ScheduleRunStatus } from './types';
 import { RUN_TIMING } from './use-agent-run';
-import { startViewTransition, ViewAnimation } from './view-transition';
+import { startViewTransition, ViewAnimation } from '../workspace-kit/view-transition';
 
 type Filter = 'all' | 'active' | 'paused';
 type Layout = 'cards' | 'table';

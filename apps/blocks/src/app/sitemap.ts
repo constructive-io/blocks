@@ -2,9 +2,8 @@ import type { MetadataRoute } from 'next';
 
 import { ACCOUNT_BLOCKS } from '@/lib/account-blocks';
 import { AI_COMPONENTS } from '@/lib/ai-components';
-import { APPLICATION_BLOCKS } from '@/lib/application-blocks';
+import { APPLICATION_BLOCKS, applicationBlockHref } from '@/lib/application-blocks';
 import { BASE_PRIMITIVES } from '@/lib/base-primitives';
-import { BILLING_BLOCKS } from '@/lib/billing-blocks';
 import { FEATURE_PACK_DOCS } from '@/lib/feature-packs';
 import { BASE_PATH, SITE_ORIGIN, withBase } from '@/lib/site';
 import { SOURCE_BLOCKS } from '@/lib/source-blocks';
@@ -23,12 +22,11 @@ export default function sitemap(): MetadataRoute.Sitemap {
     '/blocks/ai',
     ...AI_COMPONENTS.map(({ name }) => `/blocks/ai/${name}`),
     ...SOURCE_BLOCKS.map(({ name }) => `/blocks/${name}`),
-    ...APPLICATION_BLOCKS.map(({ name }) => `/blocks/${name}`),
+    ...APPLICATION_BLOCKS.map(applicationBlockHref),
+    '/blocks/billing',
     '/blocks/console-kit',
     '/blocks/documents',
     ...BASE_PRIMITIVES.map(({ name }) => `/blocks/ui/${name}`),
-    '/blocks/billing',
-    ...BILLING_BLOCKS.map(({ name }) => `/blocks/billing/${name}`),
     '/blocks/account',
     ...ACCOUNT_BLOCKS.map(({ name }) => `/blocks/account/${name}`),
   ];
@@ -49,8 +47,8 @@ export default function sitemap(): MetadataRoute.Sitemap {
             SOURCE_BLOCKS.some(({ name }) => path === `/blocks/${name}`) ||
             path === '/blocks/console-kit' ||
             path === '/blocks/documents' ||
-            path === '/blocks/billing' ||
-            path === '/blocks/account'
+            path === '/blocks/account' ||
+            path === '/blocks/billing'
           ? 0.9
           : 0.7,
   }));

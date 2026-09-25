@@ -19,80 +19,16 @@ import * as React from 'react';
 import { cn } from '../../lib/utils';
 import { TextShimmer } from '../ai/text-shimmer';
 import { Kbd, KbdGroup } from '../kbd';
-import { Tooltip, TooltipContent, TooltipTrigger } from '../tooltip';
+import { NavIcon, NavRow } from '../workspace-kit/nav';
+import { SearchField, TooltipIconButton } from '../workspace-kit/primitives';
 import { AppPicker } from './app-picker';
 import { useAgentsBuilder } from './agents-builder-context';
 import { IntegrationMark } from './integration-mark';
-import { focusRingClass, SearchField, TooltipIconButton } from './primitives';
 import type { AgentSummary } from './types';
 import { WorkspaceMenu } from './workspace-menu';
 
 /** Agents listed before "More agents". */
 const SIDEBAR_AGENT_LIMIT = 6;
-
-const ROW = cn(
-	'relative flex h-8 w-full cursor-pointer items-center gap-2 rounded-md px-2 text-left text-sm pointer-coarse:h-10',
-	focusRingClass,
-);
-
-/** Labels a rail control with a tooltip only while the sidebar is collapsed. */
-function RailTip({ label, collapsed, children }: { label: string; collapsed: boolean; children: React.ReactElement }) {
-	if (!collapsed) return children;
-	return (
-		<Tooltip>
-			<TooltipTrigger render={children} />
-			<TooltipContent side="right">{label}</TooltipContent>
-		</Tooltip>
-	);
-}
-
-type NavRowProps = {
-	label: string;
-	collapsed: boolean;
-	active?: boolean;
-	/** Leading glyph: an icon, or any node such as an agent monogram. */
-	leading: React.ReactNode;
-	/** Replaces the plain label, e.g. with shimmering text. */
-	labelNode?: React.ReactNode;
-	/** Quiet trailing value such as a count. */
-	trailing?: React.ReactNode;
-	/** Row tone when not active. */
-	muted?: boolean;
-	onClick: () => void;
-};
-
-function NavRow({ label, collapsed, active, leading, labelNode, trailing, muted, onClick }: NavRowProps) {
-	return (
-		<li>
-			<RailTip label={label} collapsed={collapsed}>
-				<button
-					type="button"
-					aria-label={collapsed ? label : undefined}
-					aria-current={active ? 'page' : undefined}
-					onClick={onClick}
-					className={cn(
-						ROW,
-						active
-							? 'bg-sidebar-accent font-medium text-foreground'
-							: cn('hover:bg-overlay-hover', muted ? 'text-muted-foreground hover:text-foreground' : 'text-sidebar-foreground'),
-					)}
-				>
-					{leading}
-					{collapsed ? null : (
-						<>
-							<span className="min-w-0 flex-1 truncate">{labelNode ?? label}</span>
-							{trailing}
-						</>
-					)}
-				</button>
-			</RailTip>
-		</li>
-	);
-}
-
-function NavIcon({ icon: Icon, active }: { icon: LucideIcon; active?: boolean }) {
-	return <Icon aria-hidden="true" className={cn('size-3.5 shrink-0', active ? 'text-foreground' : 'text-muted-foreground')} />;
-}
 
 function monogram(name: string) {
 	return name

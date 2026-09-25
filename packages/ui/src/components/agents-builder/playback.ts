@@ -2,25 +2,12 @@
 
 import * as React from 'react';
 
+import { prefersReducedMotion } from '../workspace-kit/reduced-motion';
+
+export { prefersReducedMotion, useReducedMotion } from '../workspace-kit/reduced-motion';
+
 /** Longest wait, in milliseconds, between scripted steps when reduced motion is requested. */
 const REDUCED_MOTION_DELAY = 40;
-
-const REDUCED_MOTION_QUERY = '(prefers-reduced-motion: reduce)';
-
-export function prefersReducedMotion() {
-	return typeof window !== 'undefined' && Boolean(window.matchMedia?.(REDUCED_MOTION_QUERY).matches);
-}
-
-function subscribeReducedMotion(onChange: () => void) {
-	const query = typeof window === 'undefined' ? undefined : window.matchMedia?.(REDUCED_MOTION_QUERY);
-	query?.addEventListener('change', onChange);
-	return () => query?.removeEventListener('change', onChange);
-}
-
-/** Reduced-motion preference that renders `false` on the server and hydrates without a mismatch. */
-export function useReducedMotion() {
-	return React.useSyncExternalStore(subscribeReducedMotion, prefersReducedMotion, () => false);
-}
 
 /**
  * Drives a queue of timed steps: waits `head.delay` and then calls `onDue`,

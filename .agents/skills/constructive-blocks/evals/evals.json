@@ -63,8 +63,8 @@
       "expected_output": "A live installation of appropriate billing roots and command-palette presentation with correct headless-package and installed-source import ownership.",
       "files": [],
       "expectations": [
-        "Inspects billing-settings-page and command-palette through live search and view",
-        "Chooses a billing composition or focused leaves based on the requested workflow",
+        "Inspects billing-account and command-palette through live search and view",
+        "Chooses the billing-account template or focused billing-kit leaves based on the requested workflow",
         "Imports command registry hooks from @constructive-io/command-palette",
         "Imports CommandPalette and task presentation from installed source rather than the npm package",
         "Keeps routing, billing mutations, provider errors, and authorization in the host",

@@ -10,9 +10,8 @@ import { Button } from '@constructive-io/ui/button';
 import { ThemeToggle } from '@/components/site/theme-toggle';
 import { getAccountBlock } from '@/lib/account-blocks';
 import { getAiComponent } from '@/lib/ai-components';
-import { getApplicationBlock } from '@/lib/application-blocks';
+import { getApplicationBlockByPath } from '@/lib/application-blocks';
 import { getBasePrimitive, registryInstall } from '@/lib/base-primitives';
-import { getBillingBlock } from '@/lib/billing-blocks';
 import { getFeaturePackDoc } from '@/lib/feature-packs';
 import { registryAdd } from '@/lib/install-mode';
 import { getSourceBlock } from '@/lib/source-blocks';
@@ -46,18 +45,14 @@ function crumbFor(path: string): string {
     const sourceBlock = getSourceBlock(p.slice('/blocks/'.length));
     if (sourceBlock) return sourceBlock.title;
   }
-  if (p.startsWith('/blocks/')) {
-    const block = getApplicationBlock(p.slice('/blocks/'.length));
+  if (p === '/blocks/billing') return 'Billing';
+  {
+    const block = getApplicationBlockByPath(p);
     if (block) return block.title;
   }
   if (p === '/blocks/account') return 'Account';
   if (p.startsWith('/blocks/account/')) {
     return getAccountBlock(p.slice('/blocks/account/'.length))?.title ?? 'Account';
-  }
-  if (p === '/blocks/billing') return 'Billing';
-  if (p.startsWith('/blocks/billing/')) {
-    const name = p.slice('/blocks/billing/'.length);
-    return getBillingBlock(name)?.title ?? 'Billing';
   }
   if (p.startsWith('/blocks/ui/')) {
     const name = p.slice('/blocks/ui/'.length);
@@ -76,17 +71,6 @@ function installActionFor(path: string) {
       command: registryAdd(pack.registryName),
       label: registryAdd(pack.registryName),
       title: `${pack.title} feature pack`,
-    };
-  }
-
-  if (normalizedPath.startsWith('/blocks/billing/')) {
-    const name = normalizedPath.slice('/blocks/billing/'.length);
-    const block = getBillingBlock(name);
-    if (!block) return null;
-    return {
-      command: registryAdd(block.name),
-      label: registryAdd(block.name),
-      title: block.title,
     };
   }
 
@@ -137,10 +121,8 @@ function installActionFor(path: string) {
     }
   }
 
-  if (normalizedPath.startsWith('/blocks/')) {
-    const block = getApplicationBlock(
-      normalizedPath.slice('/blocks/'.length),
-    );
+  {
+    const block = getApplicationBlockByPath(normalizedPath);
     if (block) {
       return {
         command: registryAdd(block.name),

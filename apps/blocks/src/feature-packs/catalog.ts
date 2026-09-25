@@ -165,7 +165,7 @@ export const BILLING_FEATURE_PACK = {
   id: 'billing',
   title: 'Billing',
   description:
-    'Plans, subscriptions, entitlement meters, usage, credits, and account activity.',
+    'A customer billing workspace: current plan, plan comparison and changes, usage by pool, credits, invoices, and ledger activity.',
   dependencies: [] as FeaturePackManifestV1['dependencies'],
   endpoints: {
     required: [] as FeaturePackManifestV1['endpoints']['required'],

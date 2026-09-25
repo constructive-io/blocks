@@ -28,7 +28,7 @@ import { ToolTrace } from '../ai/tool-trace';
 import { Button } from '../button';
 import { useAgentsBuilder } from './agents-builder-context';
 import { IntegrationMark } from './integration-mark';
-import { enterClass, FilterGroup, focusRingClass, SurfaceBody, surfaceInsetClass, TooltipIconButton, ViewHeader } from './primitives';
+import { enterClass, FilterGroup, focusRingClass, SurfaceBody, surfaceInsetClass, TooltipIconButton, ViewHeader } from '../workspace-kit/primitives';
 import type { InboxChannel, InboxMessage, InboxStatus, InboxThread } from './types';
 
 type Filter = InboxStatus | 'all';

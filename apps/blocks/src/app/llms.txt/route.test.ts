@@ -28,6 +28,8 @@ describe('llms.txt', () => {
       '/blocks/storage-browser/',
       '/blocks/agents-builder/',
       '/blocks/billing/',
+      '/blocks/billing/account/',
+      '/blocks/billing/console/',
       '/blocks/account/',
       '/blocks/features/',
       '/blocks/console-kit/',
