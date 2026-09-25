@@ -1,3 +1,5 @@
+import type { DocSectionId } from './doc-sections';
+
 export type ApplicationBlockApiRow = Readonly<{
   name: string;
   type: string;
@@ -9,7 +11,7 @@ export type ApplicationBlockDoc = Readonly<{
   /** Docs route when it is not `/blocks/<name>`, e.g. inside a section such as Billing. */
   href?: string;
   /** Section hub the block is listed under instead of its own nav item. */
-  section?: 'billing';
+  section?: DocSectionId;
   title: string;
   description: string;
   previewDescription: string;
@@ -180,11 +182,13 @@ export function CompanyOrgChart({
   },
   {
     name: 'storage-browser',
+    href: '/blocks/storage/browser',
+    section: 'storage',
     title: 'Storage Browser',
     description:
-      'A complete controlled storage workspace with bucket navigation, object discovery, upload, configuration, detail, and empty states.',
+      'A controlled storage workspace: buckets in the workspace sidebar, a file list with type-tinted glyphs, search, sort, drag-and-drop upload, a floating selection bar, detail and bucket sheets, and distinct empty states.',
     previewDescription:
-      'Switch buckets, search and sort objects, select rows, and open object details in the composed storage workspace.',
+      'Switch buckets, search and sort files, select a few to see the selection bar, drop files onto the list, or open one for its preview and details.',
     previewHeight: 720,
     whenToUse: [
       'Use Storage Browser when people need to inspect and manage objects across several application buckets.',
@@ -322,7 +326,7 @@ export function AssetBrowser({
     },
     composition: [
       'The storage-browser registry item installs the shared storage barrel and every leaf: bucket rail, object table, upload dropzone, detail sheet, bucket configuration sheet, and empty states.',
-      'StorageBrowser composes the bucket rail, toolbar, breadcrumb, object table, and empty states; render the installed sheets and upload surface beside it when those workflows are available.',
+      'StorageBrowser sits on the shared workspace shell (the same sidebar rail, drawer, and view header as Agents Builder and Billing) and composes the bucket rail, folder path, search, sort menu, object table, selection bar, and empty states; render the installed sheets and upload surface beside it.',
       'The types mirror Constructive storage records, but the UI remains transport-neutral and does not bypass PostgreSQL privileges or RLS.',
     ],
     accessibility: [
@@ -366,6 +370,18 @@ export function AssetBrowser({
         type: 'Callbacks',
         behavior:
           'Delegates upload, delete, open, download, copy-link, rename, and row-delete workflows.',
+      },
+      {
+        name: 'onDropFiles',
+        type: '(files: FileList) => void',
+        behavior:
+          'Turns the file list into a drop target: dragging files over it shows where they will land, and dropping hands the files to the host.',
+      },
+      {
+        name: 'title / defaultSidebarCollapsed',
+        type: 'string / boolean',
+        behavior:
+          'Names the workspace in the sidebar header (default "Storage") and starts the sidebar as an icon rail.',
       },
       {
         name: 'isLoading / emptyState / emptyLabel',

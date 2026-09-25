@@ -66,6 +66,10 @@ Use Node 24 LTS and pnpm 10.28.0, then run `pnpm check`, `pnpm build:pages`, and
   `index.ts`: the UI registry build cannot resolve directory imports.
 - Registry `registryDependencies` must match imports exactly; the registry
   build names any missing or stale edge.
+- Docs sections that group a feature pack with its application blocks under
+  one sidebar entry and a tab row (Billing, Storage) are declared in
+  `apps/blocks/src/lib/doc-sections.ts`; give each block `section` and `href`
+  in `application-blocks.ts`, and add the hub page under `app/blocks/<section>`.
 
 ## Testing
 

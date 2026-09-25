@@ -13,6 +13,6 @@ export default function StorageBrowserPreviewPage() {
 }
 
 export const metadata: Metadata = {
-  alternates: { canonical: withBase('/blocks/storage-browser') },
+  alternates: { canonical: withBase('/blocks/storage/browser') },
   robots: { follow: false, index: false },
 };

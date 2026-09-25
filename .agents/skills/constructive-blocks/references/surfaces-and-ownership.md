@@ -69,7 +69,7 @@ and dependency closure. The public documentation provides richer examples:
 - Sheets: `https://constructive-io.github.io/blocks/blocks/sheets/`
 - Schema Builder: `https://constructive-io.github.io/blocks/blocks/schema-builder/`
 - Org Chart: `https://constructive-io.github.io/blocks/blocks/org-chart/`
-- Storage Browser: `https://constructive-io.github.io/blocks/blocks/storage-browser/`
+- Storage: `https://constructive-io.github.io/blocks/blocks/storage/` (Storage Browser at `/blocks/storage/browser/`, the feature pack at `/blocks/features/storage/`)
 - Agents Builder: `https://constructive-io.github.io/blocks/blocks/agents-builder/`
 - Billing: `https://constructive-io.github.io/blocks/blocks/billing/` (Billing Account at `/blocks/billing/account/`, Billing Console at `/blocks/billing/console/`)
 - Feature packs: `https://constructive-io.github.io/blocks/blocks/features/`

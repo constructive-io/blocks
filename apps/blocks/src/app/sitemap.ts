@@ -1,3 +1,4 @@
+import { DOC_SECTION_LIST } from '@/lib/doc-sections';
 import type { MetadataRoute } from 'next';
 
 import { ACCOUNT_BLOCKS } from '@/lib/account-blocks';
@@ -23,7 +24,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
     ...AI_COMPONENTS.map(({ name }) => `/blocks/ai/${name}`),
     ...SOURCE_BLOCKS.map(({ name }) => `/blocks/${name}`),
     ...APPLICATION_BLOCKS.map(applicationBlockHref),
-    '/blocks/billing',
+    ...DOC_SECTION_LIST.map(({ hub }) => hub),
     '/blocks/console-kit',
     '/blocks/documents',
     ...BASE_PRIMITIVES.map(({ name }) => `/blocks/ui/${name}`),
@@ -48,7 +49,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
             path === '/blocks/console-kit' ||
             path === '/blocks/documents' ||
             path === '/blocks/account' ||
-            path === '/blocks/billing'
+            DOC_SECTION_LIST.some(({ hub }) => path === hub)
           ? 0.9
           : 0.7,
   }));

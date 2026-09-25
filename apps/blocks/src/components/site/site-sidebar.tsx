@@ -9,7 +9,7 @@ import { Button } from '@constructive-io/ui/button';
 
 import { ConstructiveMark } from '@/components/brand/constructive-mark';
 import { AI_COMPONENTS } from '@/lib/ai-components';
-import { isBillingDocsPath } from '@/components/billing-docs/billing-docs-nav';
+import { docSectionForPack, isDocSectionPath } from '@/lib/doc-sections';
 import { APPLICATION_BLOCKS, applicationBlockHref } from '@/lib/application-blocks';
 import { COMPONENT_DOC_SEQUENCE } from '@/lib/component-doc-navigation';
 import { FEATURE_PACK_DOCS } from '@/lib/feature-packs';
@@ -170,12 +170,13 @@ export const SiteSidebar = forwardRef<HTMLElement, SiteSidebarProps>(function Si
       label: component.title,
     })),
   ];
-  // Billing is one section (templates plus its feature pack), so it gets a single entry pointing at its hub.
-  const featurePackLinks = FEATURE_PACK_DOCS.map((pack) =>
-    pack.id === 'billing'
-      ? { href: '/blocks/billing', label: pack.title, active: isBillingDocsPath(pathname) }
-      : { href: `/blocks/features/${pack.id}`, label: pack.title, active: pathname === `/blocks/features/${pack.id}` },
-  );
+  // Billing and Storage are sections (application blocks plus their feature pack), so each gets one entry pointing at its hub.
+  const featurePackLinks = FEATURE_PACK_DOCS.map((pack) => {
+    const section = docSectionForPack(pack.id);
+    return section
+      ? { href: section.hub, label: section.title, active: isDocSectionPath(section, pathname) }
+      : { href: `/blocks/features/${pack.id}`, label: pack.title, active: pathname === `/blocks/features/${pack.id}` };
+  });
   const applicationBlockLinks = APPLICATION_BLOCKS.filter((block) => !block.section).map((block) => ({
     href: applicationBlockHref(block),
     label: block.title,

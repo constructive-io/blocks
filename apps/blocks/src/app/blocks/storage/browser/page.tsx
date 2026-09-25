@@ -13,11 +13,11 @@ export default function StorageBrowserPage() {
 export const metadata: Metadata = {
   title: block.title,
   description: block.description,
-  alternates: { canonical: withBase('/blocks/storage-browser') },
+  alternates: { canonical: withBase('/blocks/storage/browser') },
   openGraph: {
     title: block.title,
     description: block.description,
-    url: withBase('/blocks/storage-browser'),
+    url: withBase('/blocks/storage/browser'),
     images: [OG_IMAGE],
   },
 };
