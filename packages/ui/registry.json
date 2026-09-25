@@ -3374,6 +3374,61 @@
       ]
     },
     {
+      "name": "workspace-kit",
+      "type": "registry:block",
+      "title": "Workspace Kit",
+      "description": "The shared workspace shell behind the application templates: a collapsible sidebar rail with a mobile drawer, nav rows and sections, 48px view headers and scrolling view frames, filter pills, segmented controls, surfaces that keep their edge in dark mode, and a React ViewTransition wrapper with a reduced-motion fallback.",
+      "categories": [
+        "block",
+        "application"
+      ],
+      "docs": "Import: `import { WorkspaceShell, SidebarFrame, NavSection, NavRow, ViewFrame } from '@/components/ui/workspace-kit'`. Render your sidebar through the `sidebar` render prop (it is called once for the rail and once for the drawer) and your views as children; `ViewFrame` and `NavMenuButton` open the drawer below the `3xl` container width.",
+      "dependencies": [
+        "lucide-react",
+        "motion@^13.4.0"
+      ],
+      "registryDependencies": [
+        "cn",
+        "tooltip",
+        "sheet",
+        "dropdown-menu"
+      ],
+      "files": [
+        {
+          "path": "registry/constructive/blocks/workspace-kit/index.ts",
+          "type": "registry:lib"
+        },
+        {
+          "path": "registry/constructive/blocks/workspace-kit/menu.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/workspace-kit/nav.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/workspace-kit/primitives.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/workspace-kit/reduced-motion.ts",
+          "type": "registry:lib"
+        },
+        {
+          "path": "registry/constructive/blocks/workspace-kit/shell.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/workspace-kit/use-latest.ts",
+          "type": "registry:lib"
+        },
+        {
+          "path": "registry/constructive/blocks/workspace-kit/view-transition.tsx",
+          "type": "registry:component"
+        }
+      ]
+    },
+    {
       "name": "agents-builder",
       "type": "registry:block",
       "title": "Agents Builder",
@@ -3402,7 +3457,7 @@
         "switch",
         "avatar",
         "spinner",
-        "sheet"
+        "workspace-kit"
       ],
       "files": [
         {
@@ -3502,10 +3557,6 @@
           "type": "registry:lib"
         },
         {
-          "path": "registry/constructive/blocks/agents-builder/primitives.tsx",
-          "type": "registry:component"
-        },
-        {
           "path": "registry/constructive/blocks/agents-builder/reveal-text.tsx",
           "type": "registry:component"
         },
@@ -3538,12 +3589,284 @@
           "type": "registry:lib"
         },
         {
-          "path": "registry/constructive/blocks/agents-builder/view-transition.tsx",
+          "path": "registry/constructive/blocks/agents-builder/workspace-menu.tsx",
+          "type": "registry:component"
+        }
+      ]
+    },
+    {
+      "name": "billing-kit",
+      "type": "registry:block",
+      "title": "Billing Kit",
+      "description": "Contracts, formatters, provider descriptors (Stripe built in), and components for Constructive billing: plans and prices, meters in the credit waterfall, balances, credit grants and packs, gift codes (redeem, create, bulk batches, redemptions), limits and feature caps, the ledger, invoices, provider readiness, customers, and database standing.",
+      "categories": [
+        "block",
+        "billing"
+      ],
+      "docs": "Import: `import { BillingFormatProvider, CurrentPlanCard, UsageTree, PlanChangeDialog, STRIPE_PROVIDER } from '@/components/ui/billing-kit'`. Wrap components in `BillingFormatProvider` with a locale, time zone, and a fixed `now` from the server. Money is integer minor units and `-1` means unlimited, as in the database. Register more payment providers by passing your own `BillingProviderDescriptor` objects.",
+      "dependencies": [
+        "lucide-react"
+      ],
+      "registryDependencies": [
+        "cn",
+        "button",
+        "dialog",
+        "sheet",
+        "input",
+        "switch",
+        "tooltip",
+        "ai",
+        "workspace-kit"
+      ],
+      "files": [
+        {
+          "path": "registry/constructive/blocks/billing-kit/allowance.tsx",
           "type": "registry:component"
         },
         {
-          "path": "registry/constructive/blocks/agents-builder/workspace-menu.tsx",
+          "path": "registry/constructive/blocks/billing-kit/catalog.tsx",
           "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/billing-kit/code-admin.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/billing-kit/codes.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/billing-kit/context.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/billing-kit/credits.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/billing-kit/customers.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/billing-kit/demo.ts",
+          "type": "registry:lib"
+        },
+        {
+          "path": "registry/constructive/blocks/billing-kit/entitlements.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/billing-kit/format.ts",
+          "type": "registry:lib"
+        },
+        {
+          "path": "registry/constructive/blocks/billing-kit/index.ts",
+          "type": "registry:lib"
+        },
+        {
+          "path": "registry/constructive/blocks/billing-kit/invoices.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/billing-kit/ledger.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/billing-kit/plan-change-dialog.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/billing-kit/plan.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/billing-kit/provider.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/billing-kit/providers.ts",
+          "type": "registry:lib"
+        },
+        {
+          "path": "registry/constructive/blocks/billing-kit/standing.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/billing-kit/status.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/billing-kit/surface.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/billing-kit/types.ts",
+          "type": "registry:lib"
+        },
+        {
+          "path": "registry/constructive/blocks/billing-kit/usage.tsx",
+          "type": "registry:component"
+        }
+      ]
+    },
+    {
+      "name": "billing-account",
+      "type": "registry:block",
+      "title": "Billing Account",
+      "description": "The customer billing workspace: an account switcher and six views (overview, usage, plans, credits, invoices, activity) over one account’s plan, credit waterfall, credits, invoices, and ledger, with a plan-change preview and provider-neutral actions.",
+      "categories": [
+        "block",
+        "application",
+        "billing"
+      ],
+      "docs": "Import: `import { BillingAccount, BILLING_ACCOUNT_DEMO } from '@/components/ui/billing-account'`. Pass `data` mapped from your billing tables and hand purchases to your payment provider through `onChangePlan`, `onBuyCredits`, `onRedeemCode`, and `onAction`; limit `views` to what your data can back.",
+      "dependencies": [
+        "lucide-react"
+      ],
+      "registryDependencies": [
+        "cn",
+        "use-controllable-state",
+        "dropdown-menu",
+        "button",
+        "billing-kit",
+        "workspace-kit"
+      ],
+      "files": [
+        {
+          "path": "registry/constructive/blocks/billing-account/account-banner.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/billing-account/account-menu.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/billing-account/activity-view.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/billing-account/billing-account-context.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/billing-account/billing-account.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/billing-account/credits-view.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/billing-account/fixtures.ts",
+          "type": "registry:lib"
+        },
+        {
+          "path": "registry/constructive/blocks/billing-account/index.ts",
+          "type": "registry:lib"
+        },
+        {
+          "path": "registry/constructive/blocks/billing-account/invoices-view.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/billing-account/overview-view.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/billing-account/plans-view.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/billing-account/redemption.ts",
+          "type": "registry:lib"
+        },
+        {
+          "path": "registry/constructive/blocks/billing-account/sidebar.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/billing-account/types.ts",
+          "type": "registry:lib"
+        },
+        {
+          "path": "registry/constructive/blocks/billing-account/usage-view.tsx",
+          "type": "registry:component"
+        }
+      ]
+    },
+    {
+      "name": "billing-console",
+      "type": "registry:block",
+      "title": "Billing Console",
+      "description": "The operator billing workspace for the platform or a tenant database: overview, catalog (plans and prices, entitlement matrix, meters, packs and codes), customers with credit grants, the payment provider with readiness and the gated billing switch, and platform database standing.",
+      "categories": [
+        "block",
+        "application",
+        "billing"
+      ],
+      "docs": "Import: `import { BillingConsole, BILLING_CONSOLE_DEMO } from '@/components/ui/billing-console'`. Pass `data` for one billing module and route every write through the callbacks (`onSaveEntitlements`, `onConnectProvider`, `onRunReadinessCheck`, `onToggleBilling`, `onGrantCredits`, `onHoldDatabase`, and more). Credentials are write-only.",
+      "dependencies": [
+        "lucide-react"
+      ],
+      "registryDependencies": [
+        "cn",
+        "use-controllable-state",
+        "dropdown-menu",
+        "button",
+        "dialog",
+        "input",
+        "switch",
+        "billing-kit",
+        "workspace-kit"
+      ],
+      "files": [
+        {
+          "path": "registry/constructive/blocks/billing-console/billing-console-context.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/billing-console/billing-console.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/billing-console/catalog-view.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/billing-console/codes-tab.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/billing-console/customers-view.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/billing-console/fixtures.ts",
+          "type": "registry:lib"
+        },
+        {
+          "path": "registry/constructive/blocks/billing-console/index.ts",
+          "type": "registry:lib"
+        },
+        {
+          "path": "registry/constructive/blocks/billing-console/overview-view.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/billing-console/provider-view.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/billing-console/sidebar.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/billing-console/standing-view.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/billing-console/types.ts",
+          "type": "registry:lib"
         }
       ]
     },

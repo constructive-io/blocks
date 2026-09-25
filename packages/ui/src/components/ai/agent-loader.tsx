@@ -9,7 +9,7 @@ const REDUCED_MOTION_QUERY = '(prefers-reduced-motion: reduce)';
 
 function subscribeToReducedMotion(onStoreChange: () => void) {
 	if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') {
-		return () => undefined;
+		return () => {};
 	}
 	const mediaQuery = window.matchMedia(REDUCED_MOTION_QUERY);
 	mediaQuery.addEventListener('change', onStoreChange);
