@@ -196,6 +196,45 @@ describe('feature-pack interaction policy', () => {
     await waitFor(() => expect(openNotification).toHaveBeenCalledWith({ notification }));
   });
 
+  it('groups notifications by day, filters by read state and category, and marks one read', async () => {
+    const user = userEvent.setup();
+    const markRead = vi.fn();
+    const hoursAgo = (hours: number) => new Date(Date.now() - hours * 3_600_000).toISOString();
+    const startOfToday = new Date();
+    startOfToday.setHours(0, 0, 0, 0);
+    const yesterdayNoon = new Date(startOfToday.getTime() - 12 * 3_600_000).toISOString();
+    render(
+      <NotificationsFeaturePack
+        actions={{ markRead }}
+        policy={{ markRead: true }}
+        resource={{
+          status: 'ready',
+          data: {
+            unreadCount: 2,
+            notifications: [
+              { id: 'n-1', title: 'Grace joined', category: 'Membership', createdAt: new Date().toISOString() },
+              { id: 'n-2', title: 'Storage at 80%', category: 'Usage', createdAt: yesterdayNoon },
+              { id: 'n-3', title: 'Export ready', category: 'Usage', createdAt: hoursAgo(24 * 9), readAt: hoursAgo(24 * 8) }
+            ]
+          }
+        }}
+      />
+    );
+
+    expect(screen.getByRole('region', { name: /Today/ })).toHaveTextContent('Grace joined');
+    expect(screen.getByRole('region', { name: /Yesterday/ })).toHaveTextContent('Storage at 80%');
+
+    await user.click(screen.getByRole('radio', { name: /Unread/ }));
+    expect(screen.queryByText('Export ready')).toBeNull();
+
+    await user.click(screen.getByRole('radio', { name: /Usage/ }));
+    expect(screen.queryByText('Grace joined')).toBeNull();
+    expect(screen.getByText('Storage at 80%')).toBeVisible();
+
+    await user.click(screen.getByRole('button', { name: 'Mark Storage at 80% as read' }));
+    await waitFor(() => expect(markRead).toHaveBeenCalledWith({ notificationId: 'n-2' }));
+  });
+
   it('confirms notification deletion and keeps a failed action open', async () => {
     const user = userEvent.setup();
     const deleteNotification = vi.fn().mockRejectedValue(new Error('Delete rejected'));

@@ -2,10 +2,11 @@
 
 import * as React from 'react';
 import {
+  ArrowRightIcon,
   BellIcon,
   CheckCheckIcon,
+  CheckIcon,
   CircleAlertIcon,
-  ExternalLinkIcon,
   LoaderCircleIcon,
   MailOpenIcon,
   Trash2Icon
@@ -21,10 +22,10 @@ import {
   AlertDialogHeader,
   AlertDialogTitle
 } from '@constructive-io/ui/alert-dialog';
-import { Badge } from '@constructive-io/ui/badge';
 import { Button } from '@constructive-io/ui/button';
-import { Card, CardContent } from '@constructive-io/ui/card';
-import { Separator } from '@constructive-io/ui/separator';
+import { FilterGroup, focusRingClass, ToneBadge, TooltipIconButton } from '@/components/ui/workspace-kit/primitives';
+import { IconTile } from '@/components/ui/workspace-kit/surface';
+import { cn } from '@/lib/utils';
 
 import {
   canPerform,
@@ -38,8 +39,7 @@ import {
   FeaturePackBoundary,
   FeaturePackFilteredEmpty,
   FeaturePackLimitations,
-  FeaturePackPageHeader,
-  FeaturePackTimestamp
+  FeaturePackPageHeader
 } from '../shared/feature-pack-ui';
 
 export type AppNotification = Readonly<{
@@ -78,6 +78,67 @@ export type NotificationsFeaturePackProps = Readonly<{
   onError?: (error: FeaturePackError) => void;
 }>;
 
+const DAY_MS = 24 * 60 * 60 * 1000;
+const TIME_FORMAT = new Intl.DateTimeFormat(undefined, { hour: 'numeric', minute: '2-digit' });
+const WEEKDAY_FORMAT = new Intl.DateTimeFormat(undefined, { weekday: 'long' });
+const DATE_FORMAT = new Intl.DateTimeFormat(undefined, { weekday: 'short', month: 'short', day: 'numeric' });
+const DATE_YEAR_FORMAT = new Intl.DateTimeFormat(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
+
+type NotificationGroup = Readonly<{ key: string; label: string; items: AppNotification[] }>;
+
+function startOfDay(time: number) {
+  const date = new Date(time);
+  date.setHours(0, 0, 0, 0);
+  return date.getTime();
+}
+
+/**
+ * Groups notifications by the day they arrived, in the host's order. A
+ * timestamp that doesn't parse (e.g. "Just now") stays in a "Recent" group.
+ */
+function groupByDay(notifications: readonly AppNotification[], now: number): NotificationGroup[] {
+  const today = startOfDay(now);
+  const groups = new Map<string, NotificationGroup>();
+  for (const notification of notifications) {
+    const time = Date.parse(notification.createdAt);
+    let key = 'recent';
+    let label = 'Recent';
+    if (!Number.isNaN(time)) {
+      const day = startOfDay(time);
+      const daysAgo = Math.round((today - day) / DAY_MS);
+      key = String(day);
+      label = daysAgo <= 0
+        ? 'Today'
+        : daysAgo === 1
+          ? 'Yesterday'
+          : daysAgo < 7
+            ? WEEKDAY_FORMAT.format(day)
+            : new Date(day).getFullYear() === new Date(today).getFullYear()
+              ? DATE_FORMAT.format(day)
+              : DATE_YEAR_FORMAT.format(day);
+    }
+    const group = groups.get(key) ?? { key, label, items: [] };
+    group.items.push(notification);
+    groups.set(key, group);
+  }
+  return [...groups.values()];
+}
+
+/** Time of day for a parseable timestamp (the group names the day); anything else is shown as the host wrote it. */
+function NotificationTime({ value, unread }: Readonly<{ value: string; unread: boolean }>) {
+  const time = Date.parse(value);
+  return (
+    <time
+      className={cn('shrink-0 text-xs tabular-nums', unread ? 'text-foreground/80 font-medium' : 'text-muted-foreground/75')}
+      dateTime={Number.isNaN(time) ? undefined : value}
+      suppressHydrationWarning
+      title={Number.isNaN(time) ? undefined : new Date(time).toLocaleString()}
+    >
+      {Number.isNaN(time) ? value : TIME_FORMAT.format(time)}
+    </time>
+  );
+}
+
 function DeleteNotificationAction({
   disabled,
   notification,
@@ -93,15 +154,14 @@ function DeleteNotificationAction({
 
   return (
     <>
-      <Button
-        aria-label={`Delete ${notification.title}`}
+      <TooltipIconButton
         disabled={disabled}
+        extendHitArea={false}
+        label={`Delete ${notification.title}`}
         onClick={() => setOpen(true)}
-        size='icon-sm'
-        variant='ghost'
       >
-        <Trash2Icon />
-      </Button>
+        <Trash2Icon aria-hidden='true' className='size-3.5' />
+      </TooltipIconButton>
       <AlertDialog
         onOpenChange={(nextOpen) => {
           if (pending) return;
@@ -143,6 +203,103 @@ function DeleteNotificationAction({
   );
 }
 
+type RowProps = Readonly<{
+  notification: AppNotification;
+  pendingAction?: string;
+  policy?: NotificationsFeaturePackProps['policy'];
+  actions?: NotificationsFeatureActions;
+  run: (key: string, action: () => FeatureActionResult, fallback: string, showInlineError?: boolean) => Promise<boolean>;
+}>;
+
+function NotificationRow({ notification, pendingAction, policy, actions, run }: RowProps) {
+  const unread = !notification.readAt;
+  const canOpen = Boolean(notification.actionLabel) && canPerform(policy, 'openNotification') && Boolean(actions?.openNotification);
+  const canMarkRead = unread && canPerform(policy, 'markRead') && Boolean(actions?.markRead);
+  const canDelete = canPerform(policy, 'deleteNotification') && Boolean(actions?.deleteNotification);
+  const opening = pendingAction === `open-${notification.id}`;
+  const marking = pendingAction === `read-${notification.id}`;
+
+  return (
+    <li className='group/row hover:bg-overlay-hover focus-within:bg-overlay-hover relative flex gap-3 px-4 py-3 transition-colors duration-(--duration-fast)'>
+      <IconTile
+        className={cn('mt-0.5', unread ? 'ring-1 ring-primary/20 ring-inset' : 'bg-transparent text-muted-foreground/70 ring-1 ring-foreground/[0.07] ring-inset')}
+        icon={unread ? BellIcon : MailOpenIcon}
+        tone={unread ? 'primary' : 'neutral'}
+      />
+      <article className='min-w-0 flex-1'>
+        <div className='flex items-baseline gap-2'>
+          <h3 className={cn('min-w-0 flex-1 text-pretty text-[13px] break-words', unread ? 'text-foreground font-medium' : 'text-muted-foreground')}>
+            {notification.title}
+            {unread ? <span className='sr-only'> (unread)</span> : null}
+          </h3>
+          <NotificationTime unread={unread} value={notification.createdAt} />
+        </div>
+        {notification.body ? (
+          <p className={cn('mt-0.5 line-clamp-2 max-w-3xl text-pretty text-[13px] break-words', unread ? 'text-muted-foreground' : 'text-muted-foreground/75')}>{notification.body}</p>
+        ) : null}
+        <div className='mt-1.5 flex min-h-7 flex-wrap items-center gap-x-3 gap-y-1'>
+          {notification.category ? <ToneBadge tone='neutral'>{notification.category}</ToneBadge> : null}
+          {canOpen ? (
+            <button
+              aria-busy={opening}
+              className={cn('text-primary inline-flex cursor-pointer items-center gap-1 rounded text-[13px] font-medium hover:underline disabled:cursor-not-allowed disabled:opacity-60', focusRingClass)}
+              disabled={Boolean(pendingAction)}
+              onClick={() => void run(
+                `open-${notification.id}`,
+                () => actions!.openNotification!({ notification }),
+                'The notification could not be opened.'
+              )}
+              type='button'
+            >
+              {opening ? 'Opening…' : notification.actionLabel}
+              {opening
+                ? <LoaderCircleIcon aria-hidden='true' className='size-3.5 animate-spin motion-reduce:animate-none' />
+                : <ArrowRightIcon aria-hidden='true' className='size-3.5' />}
+            </button>
+          ) : null}
+          {canMarkRead || canDelete ? (
+            <span className='ml-auto flex items-center gap-0.5 transition-opacity duration-(--duration-fast) group-hover/row:opacity-100 group-focus-within/row:opacity-100 pointer-coarse:opacity-100 sm:opacity-0 data-[busy=true]:opacity-100' data-busy={marking || undefined}>
+              {canMarkRead ? (
+                <TooltipIconButton
+                  disabled={Boolean(pendingAction)}
+                  extendHitArea={false}
+                  label={`Mark ${notification.title} as read`}
+                  onClick={() => void run(
+                    `read-${notification.id}`,
+                    () => actions!.markRead!({ notificationId: notification.id }),
+                    'The notification could not be marked as read.'
+                  )}
+                >
+                  {marking
+                    ? <LoaderCircleIcon aria-hidden='true' className='size-3.5 animate-spin motion-reduce:animate-none' />
+                    : <CheckIcon aria-hidden='true' className='size-3.5' />}
+                </TooltipIconButton>
+              ) : null}
+              {canDelete ? (
+                <DeleteNotificationAction
+                  disabled={Boolean(pendingAction)}
+                  notification={notification}
+                  onDelete={() => run(
+                    `delete-${notification.id}`,
+                    () => actions!.deleteNotification!({ notificationId: notification.id }),
+                    'The notification could not be deleted.',
+                    false
+                  )}
+                />
+              ) : null}
+            </span>
+          ) : null}
+        </div>
+      </article>
+    </li>
+  );
+}
+
+/**
+ * The notification inbox: grouped by day, unread first in weight and colour,
+ * filterable by read state and category, with read, open, and delete actions
+ * that appear on hover or focus. Every action goes through the host.
+ */
 export function NotificationsFeaturePack({
   resource,
   policy,
@@ -150,9 +307,13 @@ export function NotificationsFeaturePack({
   onError
 }: NotificationsFeaturePackProps) {
   const [filter, setFilter] = React.useState<'all' | 'unread'>('all');
+  const [category, setCategory] = React.useState('all');
   const [pendingAction, setPendingAction] = React.useState<string>();
   const [actionError, setActionError] = React.useState<string>();
   const pendingActionRef = React.useRef<string | undefined>(undefined);
+  // Day labels ("Today", "Yesterday") are relative to when the list first rendered.
+  const [now] = React.useState(() => Date.now());
+  const headingId = React.useId();
 
   const run = async (
     key: string,
@@ -178,11 +339,13 @@ export function NotificationsFeaturePack({
     }
   };
 
+  const unreadCount = resource.status === 'ready' ? resource.data.unreadCount : 0;
+
   return (
-    <div className='flex flex-col gap-6'>
+    <div className='flex flex-col gap-5'>
       <FeaturePackPageHeader
         actions={
-          canPerform(policy, 'markAllRead') && actions?.markAllRead && resource.status === 'ready' && resource.data.unreadCount > 0 ? (
+          canPerform(policy, 'markAllRead') && actions?.markAllRead && unreadCount > 0 ? (
             <Button
               aria-busy={pendingAction === 'mark-all'}
               disabled={Boolean(pendingAction)}
@@ -191,6 +354,7 @@ export function NotificationsFeaturePack({
                 actions.markAllRead!,
                 'Notifications could not be marked as read.'
               )}
+              size='sm'
               variant='outline'
             >
               <CheckCheckIcon data-icon='inline-start' />
@@ -198,6 +362,9 @@ export function NotificationsFeaturePack({
             </Button>
           ) : null
         }
+        description={resource.status === 'ready'
+          ? unreadCount > 0 ? `${unreadCount} unread` : 'You are all caught up'
+          : undefined}
         title='Notifications'
       />
       <FeaturePackLimitations
@@ -215,131 +382,93 @@ export function NotificationsFeaturePack({
         resource={resource}
       >
         {(data) => {
-          const visible = filter === 'unread'
+          const categories = [...new Set(data.notifications.flatMap((notification) => notification.category ? [notification.category] : []))];
+          const activeCategory = categories.includes(category) ? category : 'all';
+          const byState = filter === 'unread'
             ? data.notifications.filter((notification) => !notification.readAt)
             : data.notifications;
+          const visible = activeCategory === 'all'
+            ? byState
+            : byState.filter((notification) => notification.category === activeCategory);
+          const groups = groupByDay(visible, now);
 
           return (
             <div className='flex flex-col gap-4'>
-              <div
-                aria-label='Notification filter'
-                className='bg-muted inline-flex w-fit items-center gap-1 rounded-lg p-1'
-                role='group'
-              >
-                <Button
-                  aria-pressed={filter === 'all'}
-                  onClick={() => setFilter('all')}
-                  size='sm'
-                  variant={filter === 'all' ? 'secondary' : 'ghost'}
-                >
-                  All <span className='tabular-nums'>({data.notifications.length})</span>
-                </Button>
-                <Button
-                  aria-pressed={filter === 'unread'}
-                  onClick={() => setFilter('unread')}
-                  size='sm'
-                  variant={filter === 'unread' ? 'secondary' : 'ghost'}
-                >
-                  Unread <span className='tabular-nums'>({data.unreadCount})</span>
-                </Button>
+              <div className='flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between'>
+                <div className='bg-muted/70 w-fit rounded-lg p-0.5'>
+                  <FilterGroup
+                    label='Notification filter'
+                    onChange={setFilter}
+                    options={[
+                      { value: 'all', label: 'All', count: data.notifications.length },
+                      { value: 'unread', label: 'Unread', count: data.unreadCount }
+                    ]}
+                    rootClassName='m-0 p-0'
+                    value={filter}
+                  />
+                </div>
+                {categories.length > 1 ? (
+                  <div className='bg-muted/70 w-fit max-w-full rounded-lg p-0.5'>
+                  <FilterGroup
+                    label='Category'
+                    onChange={setCategory}
+                    options={[
+                      { value: 'all', label: 'Every category' },
+                      ...categories.map((name) => ({
+                        value: name,
+                        label: name,
+                        count: byState.filter((notification) => notification.category === name).length
+                      }))
+                    ]}
+                    rootClassName='m-0 p-0'
+                    value={activeCategory}
+                  />
+                  </div>
+                ) : null}
               </div>
-              <Card variant='flat'>
-                <CardContent className='flex flex-col px-0'>
-                  {visible.length === 0 ? (
-                    <div className='p-4'>
-                      <FeaturePackFilteredEmpty
-                        clearLabel='Show all'
-                        description={
-                          filter === 'unread'
-                            ? 'You have no unread notifications right now.'
-                            : 'Nothing matches this filter.'
-                        }
-                        onClear={filter === 'unread' ? () => setFilter('all') : undefined}
-                        title={filter === 'unread' ? 'No unread notifications' : 'No notifications'}
-                      />
-                    </div>
-                  ) : null}
-                  {visible.map((notification, index) => (
-                    <React.Fragment key={notification.id}>
-                      {index > 0 ? <Separator /> : null}
-                      <article className='group grid grid-cols-[auto_minmax(0,1fr)] gap-x-3 gap-y-2 px-4 py-4 sm:grid-cols-[auto_minmax(0,1fr)_auto] sm:gap-x-4 sm:px-6'>
-                        <div className={notification.readAt
-                          ? 'bg-muted text-muted-foreground flex size-10 shrink-0 items-center justify-center rounded-lg'
-                          : 'bg-primary/10 text-primary flex size-10 shrink-0 items-center justify-center rounded-lg'}
-                        >
-                          {notification.readAt ? <MailOpenIcon aria-hidden='true' /> : <BellIcon aria-hidden='true' />}
-                        </div>
-                        <div className='min-w-0 flex-1'>
-                          <div className='flex flex-wrap items-center gap-2'>
-                            <h2 className='break-words text-pretty font-medium'>{notification.title}</h2>
-                            {!notification.readAt ? <span className='bg-primary size-2 rounded-full'><span className='sr-only'>Unread</span></span> : null}
-                            {notification.category ? (
-                              <Badge className='max-w-full' title={notification.category} variant='outline'>
-                                <span className='truncate'>{notification.category}</span>
-                              </Badge>
-                            ) : null}
-                          </div>
-                          {notification.body ? <p className='text-muted-foreground mt-1 max-w-3xl break-words text-pretty text-sm'>{notification.body}</p> : null}
-                          <p className='text-muted-foreground mt-2 text-xs'>
-                            <FeaturePackTimestamp value={notification.createdAt} />
-                          </p>
-                          {notification.actionLabel && canPerform(policy, 'openNotification') && actions?.openNotification ? (
-                            <Button
-                              aria-busy={pendingAction === `open-${notification.id}`}
-                              className='mt-2 px-0'
-                              disabled={Boolean(pendingAction)}
-                              onClick={() => void run(
-                                `open-${notification.id}`,
-                                () => actions.openNotification!({ notification }),
-                                'The notification could not be opened.'
-                              )}
-                              size='sm'
-                              variant='link'
-                            >
-                              {pendingAction === `open-${notification.id}`
-                                ? 'Opening…'
-                                : notification.actionLabel}
-                              <ExternalLinkIcon data-icon='inline-end' />
-                            </Button>
-                          ) : null}
-                        </div>
-                        <div className='col-start-2 flex shrink-0 items-start justify-end gap-1 sm:col-start-3 sm:row-start-1'>
-                          {!notification.readAt && canPerform(policy, 'markRead') && actions?.markRead ? (
-                            <Button
-                              aria-label={`Mark ${notification.title} as read`}
-                              aria-busy={pendingAction === `read-${notification.id}`}
-                              disabled={Boolean(pendingAction)}
-                              onClick={() => void run(
-                                `read-${notification.id}`,
-                                () => actions.markRead!({ notificationId: notification.id }),
-                                'The notification could not be marked as read.'
-                              )}
-                              size='icon-sm'
-                              variant='ghost'
-                            >
-                              {pendingAction === `read-${notification.id}`
-                                ? <LoaderCircleIcon className='animate-spin motion-reduce:animate-none' />
-                                : <CheckCheckIcon />}
-                            </Button>
-                          ) : null}
-                          {canPerform(policy, 'deleteNotification') && actions?.deleteNotification ? (
-                            <DeleteNotificationAction
-                              disabled={Boolean(pendingAction)}
-                              notification={notification}
-                              onDelete={() => run(
-                                `delete-${notification.id}`,
-                                () => actions.deleteNotification!({ notificationId: notification.id }),
-                                'The notification could not be deleted.',
-                                false
-                              )}
-                            />
-                          ) : null}
-                        </div>
-                      </article>
-                    </React.Fragment>
+
+              {visible.length === 0 ? (
+                <FeaturePackFilteredEmpty
+                  clearLabel='Show all'
+                  description={filter === 'unread'
+                    ? 'You have no unread notifications right now.'
+                    : 'Nothing matches this filter.'}
+                  onClear={filter !== 'all' || activeCategory !== 'all'
+                    ? () => {
+                      setFilter('all');
+                      setCategory('all');
+                    }
+                    : undefined}
+                  title={filter === 'unread' ? 'No unread notifications' : 'No notifications'}
+                />
+              ) : (
+                <div className='flex flex-col gap-5'>
+                  {groups.map((group) => (
+                    <section aria-labelledby={`${headingId}-${group.key}`} className='flex flex-col gap-2' key={group.key}>
+                      <h2
+                        className='text-muted-foreground flex items-center gap-2 px-1 text-xs font-medium'
+                        id={`${headingId}-${group.key}`}
+                        suppressHydrationWarning
+                      >
+                        {group.label}
+                        <span className='text-subtle-foreground font-normal tabular-nums'>{group.items.length}</span>
+                      </h2>
+                      <ul className='bg-card divide-y divide-dashed divide-foreground/10 overflow-hidden rounded-xl shadow-card'>
+                        {group.items.map((notification) => (
+                          <NotificationRow
+                            actions={actions}
+                            key={notification.id}
+                            notification={notification}
+                            pendingAction={pendingAction}
+                            policy={policy}
+                            run={run}
+                          />
+                        ))}
+                      </ul>
+                    </section>
                   ))}
-                </CardContent>
-              </Card>
+                </div>
+              )}
             </div>
           );
         }}
