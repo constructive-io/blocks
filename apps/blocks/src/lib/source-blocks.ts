@@ -19,6 +19,14 @@ export type SourceBlockDoc = Readonly<{
     actionGuidance: string;
   }>;
   composition: readonly string[];
+  /** A tour of the block's capabilities, one card each, with where to find it in the preview. */
+  features?: readonly Readonly<{
+    id: string;
+    title: string;
+    summary: string;
+    details: readonly string[];
+    tryIt: string;
+  }>[];
   accessibility: readonly string[];
   api: readonly Readonly<{ name: string; type: string; behavior: string }>[];
 }>;
@@ -175,7 +183,7 @@ export default function RootLayout({
     description:
       'A source-installable PostgreSQL schema workspace for tables, fields, relationships, indexes, and RLS policy configuration.',
     previewDescription:
-      'The live preview mounts the published SchemaBuilder root with host-owned query, scope, selection, preferences, and a deterministic adapter.',
+      'The live preview mounts the published SchemaBuilder root over a project-tracker schema: six application tables and two system tables, with relationships of every kind, several index methods, and row-level security on every table. A deterministic adapter answers every read; writes resolve without changing anything.',
     previewHeight: 760,
     whenToUse: [
       'Use Schema Builder in a control plane where operators need one workspace for application tables, fields, relationships, indexes, and security policies.',
@@ -255,6 +263,74 @@ export function DatabaseSchema({
       actionGuidance:
         'The adapter receives explicit control-plane scope and operation context. Keep endpoints, generated SDKs, credentials, capability evidence, destructive confirmations, and business workflows in the host; PostgreSQL capabilities remain authoritative.',
     },
+    features: [
+      {
+        id: 'tables',
+        title: 'Tables',
+        summary: 'The sidebar lists your tables and, on request, the system tables that modules own.',
+        details: [
+          'Your tables and system tables are separate, collapsible sections with counts; system tables stay hidden until someone asks for them.',
+          'Create table opens a guided card that starts from an access model (owned by a user, by an organization, public, and more), so a new table ships with row-level security.',
+          'Each table has a delete action behind a confirmation, and long names shorten in the middle so both ends stay readable.',
+        ],
+        tryIt: 'Press + beside "Your tables" to open the create-table card, or turn on System tables to reveal users and memberships.',
+      },
+      {
+        id: 'structure',
+        title: 'Structure',
+        summary: 'Fields, types, constraints, defaults, and validation for the selected table.',
+        details: [
+          'The fields table shows each column’s type, its constraints (primary key, unique, required, nullable), and its default.',
+          'The Types library offers 31 types in groups: text and case-insensitive text, numbers and decimals, dates, times, and intervals, booleans, JSON, arrays, UUIDs, email, URL, color, media uploads, geometry, and more.',
+          'Add a field by dragging a type onto the table, from the keyboard, or with Add field; each field opens for its name, type, required and unique flags, default, and validation (length, range, pattern, precision, and scale).',
+        ],
+        tryIt: 'Select projects to see a unique case-insensitive slug, a status with a default, a decimal budget, a text array, and JSONB metadata; open a field to see its validation.',
+      },
+      {
+        id: 'relationships',
+        title: 'Relationships',
+        summary: 'Every foreign key into or out of the table, drawn as a connector with its type and delete rule.',
+        details: [
+          'Belongs-to, one-to-many, one-to-one, and many-to-many relationships, with many-to-many detected through its junction table.',
+          'Each card names the constraint, the fields it joins, and what happens on delete (cascade, restrict, set null, set default, no action).',
+          'Add relationship walks through the type, target table, fields, and the policy the new junction or column should carry.',
+        ],
+        tryIt: 'Open projects → Relationships: owner (belongs-to users), releases and tasks (one-to-many), settings (one-to-one), and labels (many-to-many through project_labels).',
+      },
+      {
+        id: 'indexes',
+        title: 'Indexes',
+        summary: 'The table’s indexes, with their access method, columns, and uniqueness.',
+        details: [
+          'B-tree, Hash, GIN, GiST, SP-GiST, and BRIN indexes, labelled by method.',
+          'Multi-column indexes list their columns in order, and unique indexes are marked.',
+          'Add index picks the method and columns; editing and deleting go through the adapter.',
+        ],
+        tryIt: 'Compare projects (B-tree, a GIN index on tags, a unique slug) with releases (a BRIN index on created_at) and tasks (a Hash index).',
+      },
+      {
+        id: 'policies',
+        title: 'Policies',
+        summary: 'Row-level security for the table, grouped by create, read, update, and delete.',
+        details: [
+          'Each operation lists its policies as pills by type: direct ownership, app and entity membership, published content, public access or deny-all, member lists, temporal windows, organization hierarchy, and composite rules.',
+          'Opening a policy shows its settings next to a diagram of what it checks; composite policies combine conditions with and/or groups.',
+          'Grantees (for example authenticated or anonymous), permissive rules, and disabled policies are all shown; backend-managed policies stay out of the list.',
+        ],
+        tryIt: 'Open releases → Policies for anonymous published-content reads, or tasks → Policies for an owner-only update beside a disabled temporal rule.',
+      },
+      {
+        id: 'host-tabs',
+        title: 'Host tabs and data',
+        summary: 'The host can add its own tabs and share its data boundary with the block.',
+        details: [
+          'The tabs prop adds host-owned workspace tabs after the built-in four; each receives the scope, color mode, and selected table.',
+          'dataState reuses a host-owned schema query instead of letting the block start its own, which is how this preview runs without a live database.',
+          'Every write goes through the adapter, and onInvalidate tells the host which cache to refresh afterwards.',
+        ],
+        tryIt: 'Make a change in the preview: the status line under it reports the operation the adapter received.',
+      },
+    ],
     composition: [
       'The installed source owns schema navigation, editors, diagrams, validation, mutation intent, loading states, and accessible interaction.',
       'The typed adapter translates capability operations into the host’s generated GraphQL clients without importing those clients into the block.',
