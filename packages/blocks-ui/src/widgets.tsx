@@ -148,6 +148,8 @@ export function SelectBlock({ props }: BlockProps) {
 	return (
 		<FieldShell props={props} id={field.id} error={field.error}>
 			<Select
+				// `items` lets the trigger show the option's label, not its stored value.
+				items={options}
 				value={textValue(field.value)}
 				onValueChange={(value) => field.setValue(value)}
 				disabled={field.disabled}
