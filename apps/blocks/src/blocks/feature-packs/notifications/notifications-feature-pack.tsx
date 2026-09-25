@@ -395,7 +395,7 @@ export function NotificationsFeaturePack({
           return (
             <div className='flex flex-col gap-4'>
               <div className='flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between'>
-                <div className='bg-muted/70 w-fit rounded-lg p-0.5'>
+                <div className='bg-muted/70 dark:[&_[role=radio][aria-checked=true]]:bg-foreground/10 w-fit rounded-lg p-0.5'>
                   <FilterGroup
                     label='Notification filter'
                     onChange={setFilter}
@@ -408,7 +408,7 @@ export function NotificationsFeaturePack({
                   />
                 </div>
                 {categories.length > 1 ? (
-                  <div className='bg-muted/70 w-fit max-w-full rounded-lg p-0.5'>
+                  <div className='bg-muted/70 dark:[&_[role=radio][aria-checked=true]]:bg-foreground/10 w-fit max-w-full rounded-lg p-0.5'>
                   <FilterGroup
                     label='Category'
                     onChange={setCategory}

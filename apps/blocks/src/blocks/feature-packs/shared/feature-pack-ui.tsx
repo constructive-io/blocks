@@ -398,7 +398,7 @@ export function FeaturePackTabList({
       aria-label={label}
       className={cn(
         'h-auto max-w-full justify-start overflow-x-auto rounded-lg bg-muted/70 p-0.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden',
-        '[&>[data-slot=tabs-indicator]]:rounded-[6px] [&>[data-slot=tabs-indicator]]:bg-card [&>[data-slot=tabs-indicator]]:shadow-card',
+        '[&>[data-slot=tabs-indicator]]:rounded-[6px] [&>[data-slot=tabs-indicator]]:bg-card [&>[data-slot=tabs-indicator]]:shadow-card dark:[&>[data-slot=tabs-indicator]]:bg-foreground/10',
         className
       )}
     >
