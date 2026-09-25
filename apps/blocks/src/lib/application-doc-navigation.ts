@@ -6,7 +6,8 @@ export type ApplicationDocId =
   | 'billing-console'
   | 'sheets'
   | 'schema-builder'
-  | 'console-kit';
+  | 'console-kit'
+  | 'documents';
 
 export type ApplicationDocLink = Readonly<{
   id: ApplicationDocId;
@@ -24,6 +25,7 @@ export const APPLICATION_DOC_SEQUENCE: readonly ApplicationDocLink[] = [
   { id: 'sheets', title: 'Sheets' },
   { id: 'schema-builder', title: 'Schema Builder' },
   { id: 'console-kit', title: 'Console Kit' },
+  { id: 'documents', title: 'JSON documents' },
 ];
 
 export function getApplicationDocNeighbors(currentId: ApplicationDocId) {

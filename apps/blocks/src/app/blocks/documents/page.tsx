@@ -2,7 +2,8 @@ import type { Metadata } from 'next';
 
 import { CodeBlock } from '@/components/docs/code-block';
 import { DocSection } from '@/components/docs/doc-section';
-import { DocumentFormDemo } from '@/components/documents-showcase/document-form-demo';
+import { ApplicationBlockShowcasePreview } from '@/components/application-block-showcase/application-block-showcase-preview';
+import { ApplicationDocPagination } from '@/components/docs/application-doc-pagination';
 import { OG_IMAGE, withBase } from '@/lib/site';
 
 const TITLE = 'JSON documents';
@@ -58,27 +59,75 @@ export const metadata: Metadata = {
   },
 };
 
+const WHEN_TO_USE = [
+  'Use JSON documents when the form comes from data rather than code: a JSON Schema, database metadata, or an agent tool call.',
+  'Use them where the same form must render in more than one place, such as an admin screen, a human-in-the-loop task, and an agent-generated page.',
+  'Hand-write the form instead when it is one-off, heavily custom, or needs interactions the widget registry does not cover.',
+];
+
+const COMPOSITION = [
+  '`blocks-schema` defines the document: an envelope and a tree of typed nodes with props, constraints, and actions.',
+  '`json-schema-to-blocks` lowers a JSON Schema to that tree; `x-ui` annotations pick widgets, labels, and options without leaving the schema.',
+  '`blocks-renderer` walks the tree, owns form state and validation, and asks a registry which component renders each node type.',
+  '`@constructive-io/blocks-ui` is the default registry, built on `@constructive-io/ui`. Your application owns submission, persistence, and data-bound nodes.',
+];
+
+function GuidanceList({ items }: { items: readonly string[] }) {
+  return (
+    <ul className="flex max-w-3xl flex-col gap-2 text-pretty text-sm leading-7 text-muted-foreground sm:text-[15px]">
+      {items.map((item) => (
+        <li className="relative pl-5 before:absolute before:left-0 before:text-foreground before:content-['•']" key={item}>
+          {item.split(/(`[^`]+`)/).map((part, index) =>
+            part.startsWith('`') ? (
+              <code className="rounded bg-muted px-1 py-0.5 font-mono text-[12px] text-foreground" key={index}>
+                {part.slice(1, -1)}
+              </code>
+            ) : (
+              part
+            ),
+          )}
+        </li>
+      ))}
+    </ul>
+  );
+}
+
 export default function DocumentsPage() {
   return (
-    <div className="registry-page">
-      <header className="mb-8 max-w-2xl">
-        <p className="registry-eyebrow">Documents</p>
-        <h1 className="mt-2 text-[22px] font-semibold tracking-tight sm:text-[1.75rem]">
-          {TITLE}
-        </h1>
-        <p className="mt-2 text-pretty text-sm leading-7 text-muted-foreground sm:text-[15px]">
-          {DESCRIPTION}
-        </p>
-      </header>
+    <article aria-labelledby="documents-title" className="registry-page">
+      <section aria-labelledby="documents-title" className="scroll-mt-20" id="overview">
+        <header className="mb-6 max-w-2xl">
+          <p className="registry-eyebrow">Application blocks</p>
+          <h1 className="mt-2 text-balance text-[22px] font-semibold tracking-tight sm:text-[1.75rem]" id="documents-title">
+            {TITLE}
+          </h1>
+          <p className="mt-2 text-pretty text-sm leading-7 text-muted-foreground sm:text-[15px]">{DESCRIPTION}</p>
+        </header>
 
-      <DocSection id="installation" title="Installation">
-        <CodeBlock label="terminal">
-          {INSTALL}
-        </CodeBlock>
+        <ApplicationBlockShowcasePreview
+          block={{
+            title: TITLE,
+            previewHeight: 820,
+            previewDescription: '',
+          }}
+          previewPath={withBase('/blocks/documents/preview/')}
+        />
+      </section>
+
+      <DocSection
+        description="Four packages, each replaceable: the document format, a JSON Schema converter, the renderer, and the default widget registry."
+        id="installation"
+        title="Installation"
+      >
+        <CodeBlock label="terminal">{INSTALL}</CodeBlock>
+      </DocSection>
+
+      <DocSection id="when-to-use" title="When to use">
+        <GuidanceList items={WHEN_TO_USE} />
       </DocSection>
 
       <DocSection
-        description="A document is data: an envelope plus a node tree. The renderer walks the tree and asks a registry which component renders each node type, so the same document works in an admin screen, a human-in-the-loop task, or an agent-generated page."
+        description="A document is data: an envelope plus a node tree. Convert a schema once, then render it with the default registry and handle submission in the host."
         id="usage"
         title="Basic usage"
       >
@@ -88,22 +137,24 @@ export default function DocumentsPage() {
       </DocSection>
 
       <DocSection
-        description="The form below is generated from the JSON Schema on the left of the source: labels, widget selection, constraints, and validation all come from the document."
-        id="examples"
-        title="Live example"
+        description="Each layer is a separate package with one job, so any of them can be swapped without touching the others."
+        id="composition"
+        title="Composition and ownership"
       >
-        <DocumentFormDemo />
+        <GuidanceList items={COMPOSITION} />
       </DocSection>
 
       <DocSection
-        description="The registry is a plain node type to component map, so replace any subset without forking it. Data-bound nodes such as DataTable and AgentChat are deliberately unregistered: they need a query runtime, so the host supplies them."
-        id="composition"
+        description="The registry is a plain map from node type to component, so replace any subset without forking it. Data-bound nodes such as DataTable and AgentChat are deliberately unregistered: they need a query runtime, so the host supplies them."
+        id="replacing-components"
         title="Replacing components"
       >
         <CodeBlock label="registry.ts" language="tsx">
           {OVERRIDE}
         </CodeBlock>
       </DocSection>
-    </div>
+
+      <ApplicationDocPagination current="documents" />
+    </article>
   );
 }
