@@ -78,7 +78,7 @@ describe('ModelSelector', () => {
 		expect(document.querySelector('[cmdk-item]')).toBeNull();
 	});
 
-	it('picks a level from the detail strip for the highlighted model', async () => {
+	it('picks a level from the side card for the highlighted model', async () => {
 		await render();
 		await click(trigger());
 		const high = [...document.querySelectorAll<HTMLButtonElement>('[role="radio"]')].find((radio) => radio.textContent === 'High');
