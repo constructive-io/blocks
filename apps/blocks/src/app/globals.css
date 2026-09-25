@@ -9,6 +9,7 @@
 @source '../../../../packages/ui/src/components/agents-builder';
 @source '../../../../packages/ui/src/components/workspace-kit';
 @source '../../../../packages/ui/src/components/org-chart';
+@source '../../../../packages/ui/src/components/storage';
 @source '../../../../packages/ui/src/components/billing-kit';
 @source '../../../../packages/ui/src/components/billing-account';
 @source '../../../../packages/ui/src/components/billing-console';

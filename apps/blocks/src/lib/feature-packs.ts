@@ -467,7 +467,7 @@ export const FEATURE_PACK_DOCS = [
     title: 'Storage',
     exportName: 'StorageFeaturePack',
     description:
-      'A policy-aware bucket and object browser with folder navigation, upload, download, creation, and deletion actions.',
+      'The Storage Browser workspace behind a policy-aware contract: buckets in the sidebar, folders, search and sort, uploads by button or drop, downloads, bucket creation, and confirmed deletes.',
     endpoints: 'optional storage, optional admin, optional data',
     dependencies: [],
     resource: 'FeaturePackResource<StorageFeatureData>',
@@ -503,16 +503,16 @@ export const FEATURE_PACK_DOCS = [
         'A policy grant and matching callback enable each bucket or object action. Async failures remain beside the initiating transfer or confirmation surface and are normalized through onError.',
     },
     surfaces: [
-      'Bucket navigation and public or private bucket creation.',
-      'Folder breadcrumbs and object listing for the active policy-visible path.',
-      'Multi-file upload, download, and confirmed object deletion.',
+      'The Storage Browser: buckets in the workspace sidebar, with public or private bucket creation.',
+      'Folder crumbs, folders-first listing with local search and sort, and loading rows while a bucket or folder opens.',
+      'Multi-file upload from the header or by dropping files on the list, download, and confirmed object deletion.',
     ],
     accessibility: [
       'Bucket controls and folder breadcrumbs expose their names and current location in the reading order.',
       'Object rows identify files and folders with text in addition to icons, while every action trigger includes the object name.',
       'Destructive object actions require a titled confirmation dialog that states the affected file and restores focus after closing.',
     ],
-    apiProps: featurePackApiProps<StorageFeaturePackProps>()(['resource', 'policy', 'actions', 'onError']),
+    apiProps: featurePackApiProps<StorageFeaturePackProps>()(['resource', 'policy', 'actions', 'onError', 'className']),
     api: [
       {
         name: 'resource',
@@ -528,6 +528,11 @@ export const FEATURE_PACK_DOCS = [
         name: 'onError',
         type: '(error: FeaturePackError) => void',
         behavior: 'Reports normalized navigation, transfer, and mutation failures.',
+      },
+      {
+        name: 'className',
+        type: 'string',
+        behavior: 'Classes for the storage workspace. It fills its box, so give it a height; the default is 40rem.',
       },
     ] satisfies readonly FeaturePackApiRow[],
   },

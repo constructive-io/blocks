@@ -879,8 +879,48 @@ describe('feature-pack interaction policy', () => {
       />
     );
 
-    expect(screen.queryByRole('button', { name: 'Reports' })).toBeNull();
+    expect(screen.queryByRole('button', { name: /Reports/ })).toBeNull();
     expect(screen.getByRole('button', { name: /Images/ })).toBeDisabled();
+  });
+
+  it('opens folders, walks back through the path, switches buckets, and uploads into the open folder', async () => {
+    const navigate = vi.fn();
+    const selectBucket = vi.fn();
+    const upload = vi.fn();
+    render(
+      <StorageFeaturePack
+        actions={{ navigate, selectBucket, upload }}
+        policy={{ navigate: true, selectBucket: true, upload: true }}
+        resource={{
+          status: 'ready',
+          data: {
+            activeBucketKey: 'assets',
+            path: 'launches/summer',
+            buckets: [
+              { id: 'bucket-1', key: 'assets', name: 'Product assets', access: 'public', objectCount: 3 },
+              { id: 'bucket-2', key: 'exports', name: 'Customer exports', access: 'private' }
+            ],
+            objects: [
+              { id: 'folder-1', key: 'launches/summer/brand', name: 'brand', kind: 'folder' },
+              { id: 'file-1', key: 'launches/summer/hero.webp', name: 'hero.webp', kind: 'file', contentType: 'image/webp', sizeLabel: '2.4 MB' }
+            ]
+          }
+        }}
+      />
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'Open folder brand' }));
+    await waitFor(() => expect(navigate).toHaveBeenCalledWith({ bucketKey: 'assets', path: 'launches/summer/brand' }));
+    fireEvent.click(screen.getByRole('button', { name: 'launches' }));
+    await waitFor(() => expect(navigate).toHaveBeenLastCalledWith({ bucketKey: 'assets', path: 'launches' }));
+    expect(screen.getByText('summer').closest('[aria-current]')).toHaveAttribute('aria-current', 'location');
+
+    fireEvent.click(screen.getByRole('button', { name: /Customer exports/ }));
+    await waitFor(() => expect(selectBucket).toHaveBeenCalledWith({ bucketKey: 'exports' }));
+
+    const file = new File(['hello'], 'notes.txt', { type: 'text/plain' });
+    fireEvent.change(screen.getByLabelText('Upload files'), { target: { files: [file] } });
+    await waitFor(() => expect(upload).toHaveBeenCalledWith({ bucketKey: 'assets', path: 'launches/summer', files: [file] }));
   });
 
   it('explains filtered-empty member searches without treating the resource as empty', async () => {

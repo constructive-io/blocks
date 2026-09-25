@@ -34,6 +34,7 @@ import {
   EmptyTitle
 } from '@constructive-io/ui/empty';
 import { Skeleton } from '@constructive-io/ui/skeleton';
+import { EmptyState } from '@/components/ui/workspace-kit/surface';
 import { cn } from '@/lib/utils';
 
 import type {
@@ -103,17 +104,20 @@ export function FeaturePackBoundary<T>({
 }: FeaturePackBoundaryProps<T>) {
   if (resource.status === 'loading') {
     return (
-      <Card aria-busy='true' aria-label='Loading content' variant='flat'>
-        <CardHeader>
-          <Skeleton className='h-5 w-40' />
-          <Skeleton className='h-4 w-64 max-w-full' />
-        </CardHeader>
-        <CardContent className='flex flex-col gap-3'>
+      <div aria-busy='true' aria-label='Loading content' className='bg-card overflow-hidden rounded-xl shadow-card' role='status'>
+        <div className='flex flex-col gap-2 px-4 pt-4 pb-3'>
+          <Skeleton className='h-3.5 w-40 rounded-full' />
+          <Skeleton className='h-3 w-64 max-w-full rounded-full' />
+        </div>
+        <div className='flex flex-col'>
           {Array.from({ length: loadingRows }, (_, index) => (
-            <Skeleton className='h-11 w-full' key={index} />
+            <div className='border-border flex items-center gap-3 border-t px-4 py-3' key={index}>
+              <Skeleton className='size-7 shrink-0 rounded-lg' />
+              <Skeleton className='h-3 rounded-full' style={{ width: `${40 + ((index * 17) % 35)}%` }} />
+            </div>
           ))}
-        </CardContent>
-      </Card>
+        </div>
+      </div>
     );
   }
 
@@ -134,18 +138,9 @@ export function FeaturePackBoundary<T>({
 
   if (resource.status === 'empty') {
     return (
-      <Card variant='flat'>
-        <CardHeader className='items-start'>
-          <div className='bg-muted text-muted-foreground flex size-10 items-center justify-center rounded-lg'>
-            <InboxIcon aria-hidden='true' />
-          </div>
-          <CardTitle className='text-balance'>{emptyTitle}</CardTitle>
-          <CardDescription className='max-w-xl text-pretty'>
-            {emptyDescription}
-          </CardDescription>
-        </CardHeader>
-        {emptyAction ? <CardContent>{emptyAction}</CardContent> : null}
-      </Card>
+      <div className='bg-card rounded-xl shadow-card'>
+        <EmptyState action={emptyAction} description={emptyDescription} icon={InboxIcon} title={emptyTitle} />
+      </div>
     );
   }
 
@@ -388,6 +383,9 @@ export function FeatureStatusBadge({
   );
 }
 
+const DATE_FORMAT = new Intl.DateTimeFormat(undefined, { dateStyle: 'medium' });
+const DATE_TIME_FORMAT = new Intl.DateTimeFormat(undefined, { dateStyle: 'medium', timeStyle: 'short' });
+
 export function FeaturePackTimestamp({
   value,
   fallback = '—'
@@ -398,17 +396,18 @@ export function FeaturePackTimestamp({
     return <span className='break-words' title={value}>{value}</span>;
   }
 
+  const date = new Date(timestamp);
+  // A date with no time of day (e.g. "2026-07-22" or "Jul 22, 2026") shows as a date only, not "12:00 AM".
+  const dateOnly = date.getHours() === 0 && date.getMinutes() === 0 && date.getSeconds() === 0;
+
   return (
     <time
-      className='tabular-nums'
+      className='whitespace-nowrap tabular-nums'
       dateTime={value}
       suppressHydrationWarning
-      title={new Date(timestamp).toISOString()}
+      title={date.toISOString()}
     >
-      {new Intl.DateTimeFormat(undefined, {
-        dateStyle: 'medium',
-        timeStyle: 'short'
-      }).format(timestamp)}
+      {(dateOnly ? DATE_FORMAT : DATE_TIME_FORMAT).format(timestamp)}
     </time>
   );
 }

@@ -1,20 +1,7 @@
 'use client';
 
 import * as React from 'react';
-import {
-  BoxIcon,
-  ChevronRightIcon,
-  CircleAlertIcon,
-  DownloadIcon,
-  FileIcon,
-  FolderIcon,
-  FolderOpenIcon,
-  LoaderCircleIcon,
-  MoreHorizontalIcon,
-  PlusIcon,
-  Trash2Icon,
-  UploadIcon
-} from 'lucide-react';
+import { CircleAlertIcon } from 'lucide-react';
 
 import { Alert, AlertDescription } from '@constructive-io/ui/alert';
 import {
@@ -26,15 +13,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle
 } from '@constructive-io/ui/alert-dialog';
-import { Badge } from '@constructive-io/ui/badge';
-import { Button, buttonVariants } from '@constructive-io/ui/button';
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle
-} from '@constructive-io/ui/card';
+import { Button } from '@constructive-io/ui/button';
 import {
   Dialog,
   DialogContent,
@@ -42,26 +21,18 @@ import {
   DialogFooter,
   DialogHeader,
   DialogPanel,
-  DialogTitle,
-  DialogTrigger
+  DialogTitle
 } from '@constructive-io/ui/dialog';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger
-} from '@constructive-io/ui/dropdown-menu';
-import { Field, FieldLabel, FieldLegend, FieldSet } from '@constructive-io/ui/field';
+import { Field, FieldLegend, FieldSet } from '@constructive-io/ui/field';
 import { Input } from '@constructive-io/ui/input';
 import { RadioGroup, RadioGroupItem } from '@constructive-io/ui/radio-group';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow
-} from '@constructive-io/ui/table';
+import { StorageBrowser } from '@/components/ui/storage/storage-browser';
+import type {
+  ObjectSort,
+  StorageBucket as StorageBrowserBucket,
+  StorageObject as StorageBrowserObject
+} from '@/components/ui/storage/types';
+import { VISIBILITY } from '@/components/ui/storage/visibility-badge';
 import { cn } from '@/lib/utils';
 
 import {
@@ -72,12 +43,7 @@ import {
   type FeaturePackError,
   type FeaturePackResource
 } from '../shared/feature-pack-contracts';
-import {
-  FeaturePackBoundary,
-  FeaturePackLimitations,
-  FeaturePackPageHeader,
-  FeaturePackTimestamp
-} from '../shared/feature-pack-ui';
+import { FeaturePackBoundary, FeaturePackLimitations } from '../shared/feature-pack-ui';
 
 export type StorageBucket = Readonly<{
   id: string;
@@ -127,14 +93,72 @@ export type StorageFeaturePackProps = Readonly<{
   policy?: FeatureActionPolicy<StorageFeatureAction>;
   actions?: StorageFeatureActions;
   onError?: (error: FeaturePackError) => void;
+  /** Classes for the storage workspace; give it a height. Default: 40rem tall. */
+  className?: string;
 }>;
 
+/** The pack's buckets in the Storage Browser's shape. */
+function toBrowserBucket(bucket: StorageBucket): StorageBrowserBucket {
+  const visibility = bucket.access === 'public' ? 'public' : bucket.access === 'temp' ? 'temp' : 'private';
+  return {
+    id: bucket.id,
+    key: bucket.key,
+    name: bucket.name,
+    visibility,
+    isPublic: visibility === 'public',
+    allowCustomKeys: false,
+    objectCount: bucket.objectCount ?? null
+  };
+}
+
+/**
+ * The pack's objects in the Storage Browser's shape. Keys are relative to the
+ * open folder (the crumbs already show where you are) and sizes stay the
+ * host's labels; actions map back to the pack object by id.
+ */
+function toBrowserObject(object: StorageObject, bucket: StorageBucket): StorageBrowserObject {
+  return {
+    id: object.id,
+    bucketId: bucket.id,
+    key: object.name,
+    filename: object.name,
+    mimeType: object.contentType ?? '',
+    size: 0,
+    sizeLabel: object.sizeLabel ?? (object.kind === 'folder' ? undefined : '—'),
+    isPublic: bucket.access === 'public',
+    createdAt: object.updatedAt ?? '',
+    kind: object.kind
+  };
+}
+
+const SIZE_UNITS: Record<string, number> = { B: 1, KB: 1024, MB: 1024 ** 2, GB: 1024 ** 3, TB: 1024 ** 4 };
+
+/** Bytes behind a label such as "2.4 MB", for sorting; unknown labels sort first. */
+function labelBytes(label: string | undefined) {
+  const match = label?.trim().match(/^([\d.,]+)\s*([KMGT]?B)$/i);
+  return match ? Number(match[1]!.replace(/,/g, '')) * (SIZE_UNITS[match[2]!.toUpperCase()] ?? 1) : -1;
+}
+
+/** Folders first, then by the chosen column. */
+function compareObjects(left: StorageObject, right: StorageObject, sort: ObjectSort) {
+  if (left.kind !== right.kind) return left.kind === 'folder' ? -1 : 1;
+  let comparison = 0;
+  if (sort.column === 'filename') comparison = left.name.localeCompare(right.name, undefined, { sensitivity: 'base' });
+  else if (sort.column === 'mimeType') comparison = (left.contentType ?? '').localeCompare(right.contentType ?? '');
+  else if (sort.column === 'size') comparison = labelBytes(left.sizeLabel) - labelBytes(right.sizeLabel);
+  else comparison = (Date.parse(left.updatedAt ?? '') || 0) - (Date.parse(right.updatedAt ?? '') || 0);
+  return sort.direction === 'asc' ? comparison : -comparison;
+}
+
 function CreateBucketDialog({
+  open,
+  onOpenChange,
   onCreate
 }: Readonly<{
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
   onCreate: (input: { name: string; access: 'public' | 'private' }) => Promise<boolean>;
 }>) {
-  const [open, setOpen] = React.useState(false);
   const [name, setName] = React.useState('');
   const [access, setAccess] = React.useState<'public' | 'private'>('private');
   const [pending, setPending] = React.useState(false);
@@ -150,7 +174,7 @@ function CreateBucketDialog({
       const succeeded = await onCreate({ name: name.trim(), access });
       if (succeeded) {
         setName('');
-        setOpen(false);
+        onOpenChange(false);
       } else {
         setError('The bucket could not be created.');
       }
@@ -164,19 +188,17 @@ function CreateBucketDialog({
       open={open}
       onOpenChange={(nextOpen) => {
         if (pending) return;
-        setOpen(nextOpen);
+        onOpenChange(nextOpen);
         if (!nextOpen) setError(undefined);
       }}
     >
-      <DialogTrigger render={<Button variant='outline' />}>
-        <PlusIcon data-icon='inline-start' />
-        New bucket
-      </DialogTrigger>
-      <DialogContent>
+      <DialogContent className='max-w-md'>
         <form onSubmit={(event) => void submit(event)}>
-          <DialogHeader>
-            <DialogTitle>Create a storage bucket</DialogTitle>
-            <DialogDescription>Bucket access sets the default delivery boundary; database policy remains authoritative.</DialogDescription>
+          <DialogHeader className='gap-1.5 pb-3'>
+            <DialogTitle className='text-base font-medium'>Create a storage bucket</DialogTitle>
+            <DialogDescription className='text-[13px]'>
+              Bucket access sets the default delivery boundary; database policy remains authoritative.
+            </DialogDescription>
           </DialogHeader>
           <DialogPanel className='flex flex-col gap-4'>
             <Field error={error} htmlFor={`${fieldId}-name`} label='Bucket name' required>
@@ -194,22 +216,35 @@ function CreateBucketDialog({
               <FieldLegend id={`${fieldId}-access-label`} variant='label'>Access</FieldLegend>
               <RadioGroup
                 aria-labelledby={`${fieldId}-access-label`}
-                className='grid grid-cols-2 gap-2'
+                className='grid gap-1.5'
                 name='bucket-access'
                 onValueChange={(value) => setAccess(value as 'public' | 'private')}
                 value={access}
               >
-                {(['private', 'public'] as const).map((candidate) => (
-                  <FieldLabel className='rounded-lg border px-3 py-2' htmlFor={`${fieldId}-access-${candidate}`} key={candidate}>
-                    <RadioGroupItem id={`${fieldId}-access-${candidate}`} value={candidate} />
-                    {candidate === 'private' ? 'Private' : 'Public'}
-                  </FieldLabel>
-                ))}
+                {(['private', 'public'] as const).map((candidate) => {
+                  const { icon: Icon, label, hint } = VISIBILITY[candidate];
+                  return (
+                    <label
+                      className='bg-card flex cursor-pointer items-center gap-3 rounded-lg px-3 py-2.5 shadow-card has-[:checked]:ring-2 has-[:checked]:ring-primary/40'
+                      htmlFor={`${fieldId}-access-${candidate}`}
+                      key={candidate}
+                    >
+                      <Icon aria-hidden='true' className='text-muted-foreground size-4 shrink-0' />
+                      <span className='flex min-w-0 flex-1 flex-col gap-0.5'>
+                        <span className='text-[13px] font-medium'>{label}</span>
+                        <span className='text-muted-foreground text-xs'>{hint}</span>
+                      </span>
+                      <RadioGroupItem id={`${fieldId}-access-${candidate}`} value={candidate} />
+                    </label>
+                  );
+                })}
               </RadioGroup>
             </FieldSet>
           </DialogPanel>
           <DialogFooter>
-            <Button disabled={pending || !name.trim()} type='submit'>{pending ? 'Creating…' : 'Create bucket'}</Button>
+            <Button disabled={pending || !name.trim()} size='sm' type='submit'>
+              {pending ? 'Creating…' : 'Create bucket'}
+            </Button>
           </DialogFooter>
         </form>
       </DialogContent>
@@ -217,118 +252,90 @@ function CreateBucketDialog({
   );
 }
 
-function StorageObjectActions({
-  busy,
-  disabled,
+function DeleteObjectDialog({
   object,
-  onDelete,
-  onDownload
+  onClose,
+  onDelete
 }: Readonly<{
-  busy?: 'delete' | 'download';
-  disabled?: boolean;
-  object: StorageObject;
-  onDelete?: () => Promise<boolean>;
-  onDownload?: () => Promise<boolean>;
+  object: StorageObject | null;
+  onClose: () => void;
+  onDelete: (object: StorageObject) => Promise<boolean>;
 }>) {
-  const [deleteOpen, setDeleteOpen] = React.useState(false);
-  const [deletePending, setDeletePending] = React.useState(false);
-  const [deleteError, setDeleteError] = React.useState<string>();
-
-  if (!onDelete && !onDownload) return null;
+  const [pending, setPending] = React.useState(false);
+  const [error, setError] = React.useState<string>();
+  // Keep the name on screen while the dialog animates closed.
+  const [shown, setShown] = React.useState(object);
+  if (object && object !== shown) setShown(object);
+  const target = object ?? shown;
 
   return (
-    <>
-      <DropdownMenu>
-        <DropdownMenuTrigger
-          aria-busy={Boolean(busy)}
-          aria-label={busy === 'download'
-            ? `Downloading ${object.name}`
-            : busy === 'delete'
-              ? `Deleting ${object.name}`
-              : `Actions for ${object.name}`}
-          disabled={disabled}
-          render={<Button disabled={disabled} size='icon' variant='ghost' />}
-        >
-          {busy
-            ? <LoaderCircleIcon className='animate-spin motion-reduce:animate-none' />
-            : <MoreHorizontalIcon />}
-        </DropdownMenuTrigger>
-        <DropdownMenuContent align='end'>
-          {onDownload ? (
-            <DropdownMenuItem onClick={() => void onDownload()}>
-              <DownloadIcon />
-              Download
-            </DropdownMenuItem>
-          ) : null}
-          {onDelete ? (
-            <DropdownMenuItem onClick={() => setDeleteOpen(true)} variant='destructive'>
-              <Trash2Icon />
-              Delete
-            </DropdownMenuItem>
-          ) : null}
-        </DropdownMenuContent>
-      </DropdownMenu>
-      {onDelete ? (
-        <AlertDialog
-          onOpenChange={(nextOpen) => {
-            if (!deletePending) {
-              setDeleteOpen(nextOpen);
-              if (!nextOpen) setDeleteError(undefined);
-            }
-          }}
-          open={deleteOpen}
-        >
-          <AlertDialogContent>
-            <AlertDialogHeader>
-              <AlertDialogTitle>Delete {object.name}?</AlertDialogTitle>
-              <AlertDialogDescription>
-                This removes the object from this bucket. This action cannot be undone from the console.
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            {deleteError ? (
-              <Alert role='alert' variant='destructive'>
-                <AlertDescription>{deleteError}</AlertDescription>
-              </Alert>
-            ) : null}
-            <AlertDialogFooter>
-              <AlertDialogCancel disabled={deletePending}>Cancel</AlertDialogCancel>
-              <Button
-                disabled={deletePending}
-                onClick={() => {
-                  setDeletePending(true);
-                  setDeleteError(undefined);
-                  void onDelete()
-                    .then((succeeded) => {
-                      if (succeeded) setDeleteOpen(false);
-                      else setDeleteError('The object could not be deleted. Check your access and try again.');
-                    })
-                    .finally(() => setDeletePending(false));
-                }}
-                variant='destructive'
-              >
-                {deletePending ? 'Deleting…' : 'Delete object'}
-              </Button>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
-      ) : null}
-    </>
+    <AlertDialog
+      onOpenChange={(nextOpen) => {
+        if (pending || nextOpen) return;
+        setError(undefined);
+        onClose();
+      }}
+      open={Boolean(object)}
+    >
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>Delete {target?.name}?</AlertDialogTitle>
+          <AlertDialogDescription>
+            This removes the {target?.kind === 'folder' ? 'folder' : 'object'} from this bucket. This action cannot be undone from the console.
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        {error ? (
+          <Alert role='alert' variant='destructive'>
+            <AlertDescription>{error}</AlertDescription>
+          </Alert>
+        ) : null}
+        <AlertDialogFooter>
+          <AlertDialogCancel disabled={pending}>Cancel</AlertDialogCancel>
+          <Button
+            disabled={pending || !object}
+            onClick={() => {
+              if (!object) return;
+              setPending(true);
+              setError(undefined);
+              void onDelete(object)
+                .then((succeeded) => {
+                  if (succeeded) onClose();
+                  else setError('The object could not be deleted. Check your access and try again.');
+                })
+                .finally(() => setPending(false));
+            }}
+            variant='destructive'
+          >
+            {pending ? 'Deleting…' : 'Delete object'}
+          </Button>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
   );
 }
 
+/**
+ * The storage feature pack: the Storage Browser workspace behind the pack
+ * contract. Buckets, folders, uploads (button or drop), downloads, and
+ * deletes run through the host's actions and only appear when the policy
+ * allows them. Search and sort are local to the open folder.
+ */
 export function StorageFeaturePack({
   resource,
   policy,
   actions,
-  onError
+  onError,
+  className
 }: StorageFeaturePackProps) {
-  const createBucket = actions?.createBucket;
-  const upload = actions?.upload;
   const [pendingAction, setPendingAction] = React.useState<string>();
   const [actionError, setActionError] = React.useState<string>();
+  const [createOpen, setCreateOpen] = React.useState(false);
+  const [deleteTarget, setDeleteTarget] = React.useState<StorageObject | null>(null);
+  const [query, setQuery] = React.useState('');
+  const [sort, setSort] = React.useState<ObjectSort>({ column: 'filename', direction: 'asc' });
   const pendingActionRef = React.useRef<string | undefined>(undefined);
-  const canCreateBucket = canPerform(policy, 'createBucket') && Boolean(createBucket);
-  const canUpload = canPerform(policy, 'upload') && Boolean(upload);
+  const fileInputRef = React.useRef<HTMLInputElement>(null);
+
   const run = async (
     key: string,
     action: () => FeatureActionResult,
@@ -353,303 +360,154 @@ export function StorageFeaturePack({
     }
   };
 
-  return (
-    <div className='flex flex-col gap-6'>
-      <FeaturePackPageHeader
-        actions={
-          resource.status === 'ready' && canCreateBucket && createBucket ? (
-            <CreateBucketDialog onCreate={(input) => run(
-              'create-bucket',
-              () => createBucket(input),
-              'The bucket could not be created.',
-              false
-            )} />
-          ) : null
-        }
-        title='Storage'
-      />
-      <FeaturePackLimitations
-        limitations={resource.status === 'ready' ? resource.limitations : undefined}
-      />
+  const createBucket = canPerform(policy, 'createBucket') ? actions?.createBucket : undefined;
+  const data = resource.status === 'ready' ? resource.data : undefined;
+  const activeBucket = data ? data.buckets.find((bucket) => bucket.key === data.activeBucketKey) ?? data.buckets[0] : undefined;
+  const path = data?.path ?? '';
+  const pathSegments = path.split('/').filter(Boolean);
+  const selectBucket = canPerform(policy, 'selectBucket') ? actions?.selectBucket : undefined;
+  const navigate = canPerform(policy, 'navigate') && activeBucket ? actions?.navigate : undefined;
+  const upload = canPerform(policy, 'upload') && activeBucket ? actions?.upload : undefined;
+  const download = canPerform(policy, 'download') && activeBucket ? actions?.download : undefined;
+  const deleteObject = canPerform(policy, 'deleteObject') && activeBucket ? actions?.deleteObject : undefined;
+
+  const objects = React.useMemo(() => {
+    if (!data || !activeBucket) return [];
+    const needle = query.trim().toLowerCase();
+    return data.objects
+      .filter((object) => !needle || `${object.name} ${object.contentType ?? ''}`.toLowerCase().includes(needle))
+      .sort((left, right) => compareObjects(left, right, sort))
+      .map((object) => toBrowserObject(object, activeBucket));
+  }, [activeBucket, data, query, sort]);
+  const objectById = React.useMemo(() => new Map(data?.objects.map((object) => [object.id, object])), [data]);
+
+  const openPath = (target: string, key: string) => {
+    if (!navigate || !activeBucket) return;
+    setQuery('');
+    void run(key, () => navigate({ bucketKey: activeBucket.key, path: target }), 'The folder could not be opened.');
+  };
+  const uploadFiles = upload && activeBucket
+    ? (files: readonly File[]): void => {
+      void run('upload', () => upload({ bucketKey: activeBucket.key, path, files }), 'The files could not be uploaded.');
+    }
+    : undefined;
+  const loadingContents = Boolean(pendingAction?.startsWith('bucket-') || pendingAction?.startsWith('navigate-'));
+
+  const notices = (
+    <>
+      <FeaturePackLimitations limitations={resource.status === 'ready' ? resource.limitations : undefined} />
       {actionError ? (
         <Alert role='alert' variant='destructive'>
           <CircleAlertIcon aria-hidden='true' />
           <AlertDescription>{actionError}</AlertDescription>
         </Alert>
       ) : null}
-      <FeaturePackBoundary
-        emptyAction={
-          canCreateBucket && createBucket ? (
-            <CreateBucketDialog onCreate={(input) => run(
-              'create-bucket',
-              () => createBucket(input),
-              'The bucket could not be created.',
-              false
-            )} />
-          ) : null
-        }
-        emptyDescription={canCreateBucket
-          ? 'Create a bucket to add the first storage boundary.'
-          : 'No storage buckets are visible to this session, and the connected endpoint does not expose bucket creation.'}
-        emptyTitle='No storage buckets'
-        resource={resource}
-      >
-        {(data) => {
-          const activeBucket = data.buckets.find((bucket) => bucket.key === data.activeBucketKey) ?? data.buckets[0];
-          const path = data.path ?? '';
-          const pathSegments = path.split('/').filter(Boolean);
-          const canNavigate = canPerform(policy, 'navigate') && Boolean(actions?.navigate) && Boolean(activeBucket);
-          const canSelectBucket = canPerform(policy, 'selectBucket') && Boolean(actions?.selectBucket);
+    </>
+  );
 
-          return (
-            <div className='grid min-h-[32rem] gap-6 lg:grid-cols-[17rem_minmax(0,1fr)]'>
-              <Card className='h-fit' variant='flat'>
-                <CardHeader>
-                  <CardTitle className='text-sm'>Buckets</CardTitle>
-                  <CardDescription>Each bucket keeps its own delivery and policy boundary.</CardDescription>
-                </CardHeader>
-                <CardContent className='flex flex-col gap-1'>
-                  {data.buckets.map((bucket) => (
-                    <Button
-                      aria-busy={pendingAction === `bucket-${bucket.key}`}
-                      aria-pressed={bucket.key === activeBucket?.key}
-                      className='h-auto justify-start px-2 py-2 text-left'
-                      disabled={Boolean(pendingAction) || (bucket.key !== activeBucket?.key && !canSelectBucket)}
-                      key={bucket.id}
-                      onClick={() => {
-                        if (bucket.key !== activeBucket?.key && canPerform(policy, 'selectBucket') && actions?.selectBucket) {
-                          void run(
-                            `bucket-${bucket.key}`,
-                            () => actions.selectBucket!({ bucketKey: bucket.key }),
-                            'The bucket could not be opened.'
-                          );
-                        }
-                      }}
-                      variant={bucket.key === activeBucket?.key ? 'secondary' : 'ghost'}
-                    >
-                      {pendingAction === `bucket-${bucket.key}`
-                        ? <LoaderCircleIcon aria-hidden='true' className='animate-spin motion-reduce:animate-none' />
-                        : <BoxIcon />}
-                      <span className='min-w-0 flex-1'>
-                        <span className='block truncate' title={bucket.name}>{bucket.name}</span>
-                        <span className='text-muted-foreground block text-xs tabular-nums'>{bucket.objectCount ?? '—'} objects</span>
-                      </span>
-                      <Badge className='max-w-24' title={bucket.access} variant='outline'>
-                        <span className='truncate'>{bucket.access}</span>
-                      </Badge>
-                    </Button>
-                  ))}
-                </CardContent>
-              </Card>
+  if (resource.status === 'loading' || resource.status === 'error') {
+    return (
+      <div className='flex flex-col gap-3'>
+        {notices}
+        <FeaturePackBoundary emptyDescription='' emptyTitle='' resource={resource}>
+          {() => null}
+        </FeaturePackBoundary>
+      </div>
+    );
+  }
 
-              <div className='min-w-0'>
-                <div className='mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between'>
-                  <nav aria-label='Storage path' className='flex min-w-0 items-center gap-1 overflow-x-auto pb-1 text-sm'>
-                    {canNavigate && path ? (
-                      <Button
-                        className='px-2'
-                        disabled={Boolean(pendingAction)}
-                        onClick={() => activeBucket && void run(
-                          'navigate-root',
-                          () => actions?.navigate?.({ bucketKey: activeBucket.key, path: '' }),
-                          'The folder could not be opened.'
-                        )}
-                        size='sm'
-                        variant='ghost'
-                      >
-                        <FolderOpenIcon data-icon='inline-start' />
-                        <span className='max-w-48 truncate' title={activeBucket?.name ?? 'Bucket'}>
-                          {activeBucket?.name ?? 'Bucket'}
-                        </span>
-                      </Button>
-                    ) : (
-                      <span className='flex items-center gap-2 px-2 py-1.5 font-medium'>
-                        <FolderOpenIcon aria-hidden='true' className='size-4' />
-                        <span className='max-w-48 truncate' title={activeBucket?.name ?? 'Bucket'}>
-                          {activeBucket?.name ?? 'Bucket'}
-                        </span>
-                      </span>
-                    )}
-                    {pathSegments.map((segment, index) => {
-                      const segmentPath = pathSegments.slice(0, index + 1).join('/');
-                      return (
-                        <React.Fragment key={segmentPath}>
-                          <ChevronRightIcon aria-hidden='true' className='text-muted-foreground size-4' />
-                          {canNavigate && segmentPath !== path ? (
-                            <Button
-                              className='max-w-36 truncate px-2'
-                              disabled={Boolean(pendingAction)}
-                              onClick={() => activeBucket && void run(
-                                `navigate-${segmentPath}`,
-                                () => actions?.navigate?.({ bucketKey: activeBucket.key, path: segmentPath }),
-                                'The folder could not be opened.'
-                              )}
-                              size='sm'
-                              variant='ghost'
-                            >
-                              <span className='truncate' title={segment}>{segment}</span>
-                            </Button>
-                          ) : (
-                            <span className='max-w-36 truncate px-2 py-1.5' title={segment}>{segment}</span>
-                          )}
-                        </React.Fragment>
-                      );
-                    })}
-                  </nav>
-                  {activeBucket && canUpload && upload ? (
-                    <label
-                      aria-busy={pendingAction === 'upload'}
-                      aria-disabled={Boolean(pendingAction)}
-                      className={buttonVariants({
-                        className: cn(
-                          'focus-within:border-ring focus-within:ring-ring/50 focus-within:ring-[3px]',
-                          pendingAction ? 'pointer-events-none opacity-64' : undefined
-                        )
-                      })}
-                    >
-                      {pendingAction === 'upload'
-                        ? <LoaderCircleIcon className='animate-spin motion-reduce:animate-none' data-icon='inline-start' />
-                        : <UploadIcon data-icon='inline-start' />}
-                      {pendingAction === 'upload' ? 'Uploading…' : 'Upload files'}
-                      <Input
-                        aria-label='Upload files'
-                        className='sr-only'
-                        disabled={Boolean(pendingAction)}
-                        multiple
-                        name='files'
-                        onChange={(event) => {
-                          const files = Array.from(event.currentTarget.files ?? []);
-                          if (files.length > 0) {
-                            void run(
-                              'upload',
-                              () => upload({ bucketKey: activeBucket.key, path, files }),
-                              'The files could not be uploaded.'
-                            );
-                          }
-                          event.currentTarget.value = '';
-                        }}
-                        type='file'
-                        unstyled
-                      />
-                    </label>
-                  ) : null}
-                </div>
-
-                <Card variant='flat'>
-                  <Table
-                    aria-label='Storage objects'
-                    className='block lg:table'
-                    containerClassName='overflow-visible lg:overflow-x-auto'
-                  >
-                    <TableHeader className='sr-only lg:not-sr-only lg:table-header-group'>
-                      <TableRow>
-                        <TableHead>Name</TableHead>
-                        <TableHead>Type</TableHead>
-                        <TableHead>Size</TableHead>
-                        <TableHead>Updated</TableHead>
-                        <TableHead className='w-12'><span className='sr-only'>Actions</span></TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody className='block lg:table-row-group'>
-                      {data.objects.map((object) => (
-                        <TableRow
-                          className='grid grid-cols-[minmax(0,1fr)_minmax(0,.6fr)_minmax(0,1fr)_auto] gap-x-3 gap-y-2 px-3 py-3 lg:table-row lg:px-0 lg:py-0'
-                          key={object.id}
-                        >
-                          <TableCell className='col-span-3 min-w-0 p-0 whitespace-normal lg:table-cell lg:px-4 lg:py-3 lg:whitespace-nowrap'>
-                            {object.kind === 'folder' && canNavigate ? (
-                              <Button
-                                aria-busy={pendingAction === `navigate-${object.key}`}
-                                className='max-w-full justify-start px-1 lg:max-w-72'
-                                disabled={Boolean(pendingAction)}
-                                onClick={() => activeBucket && void run(
-                                  `navigate-${object.key}`,
-                                  () => actions?.navigate?.({ bucketKey: activeBucket.key, path: object.key }),
-                                  'The folder could not be opened.'
-                                )}
-                                size='sm'
-                                variant='ghost'
-                              >
-                                {pendingAction === `navigate-${object.key}`
-                                  ? <LoaderCircleIcon aria-hidden='true' className='animate-spin motion-reduce:animate-none' />
-                                  : <FolderIcon aria-hidden='true' />}
-                                <span className='truncate' title={object.name}>{object.name}</span>
-                              </Button>
-                            ) : (
-                              <span className='flex min-w-0 items-center gap-2 px-1 py-1.5 text-sm lg:max-w-72'>
-                                {object.kind === 'folder'
-                                  ? <FolderIcon aria-hidden='true' className='shrink-0' />
-                                  : <FileIcon aria-hidden='true' className='shrink-0' />}
-                                <span className='truncate' title={object.name}>{object.name}</span>
-                              </span>
-                            )}
-                          </TableCell>
-                          <TableCell className='min-w-0 p-0 align-top whitespace-normal lg:table-cell lg:max-w-48 lg:px-4 lg:py-3 lg:align-middle lg:whitespace-nowrap'>
-                            <span className='text-muted-foreground block text-xs lg:hidden'>Type</span>
-                            <span className='mt-0.5 block truncate lg:mt-0' title={object.contentType ?? object.kind}>
-                              {object.contentType ?? object.kind}
-                            </span>
-                          </TableCell>
-                          <TableCell className='min-w-0 p-0 align-top whitespace-normal lg:table-cell lg:px-4 lg:py-3 lg:align-middle lg:whitespace-nowrap'>
-                            <span className='text-muted-foreground block text-xs lg:hidden'>Size</span>
-                            <span className='mt-0.5 block whitespace-nowrap tabular-nums lg:mt-0'>{object.sizeLabel ?? '—'}</span>
-                          </TableCell>
-                          <TableCell className='min-w-0 p-0 align-top whitespace-normal lg:table-cell lg:px-4 lg:py-3 lg:align-middle lg:whitespace-nowrap'>
-                            <span className='text-muted-foreground block text-xs lg:hidden'>Updated</span>
-                            <span className='mt-0.5 block break-words lg:mt-0 lg:break-normal'>
-                              <FeaturePackTimestamp value={object.updatedAt} />
-                            </span>
-                          </TableCell>
-                          <TableCell className='col-start-4 row-start-1 p-0 text-right align-top lg:table-cell lg:px-4 lg:py-3 lg:text-left lg:align-middle'>
-                            {activeBucket ? (
-                              <StorageObjectActions
-                                busy={pendingAction === `download-${object.id}`
-                                  ? 'download'
-                                  : pendingAction === `delete-${object.id}`
-                                    ? 'delete'
-                                    : undefined}
-                                disabled={Boolean(pendingAction)}
-                                object={object}
-                                onDelete={canPerform(policy, 'deleteObject') && actions?.deleteObject
-                                  ? () => run(
-                                    `delete-${object.id}`,
-                                    () => actions.deleteObject!({ bucketKey: activeBucket.key, objectKey: object.key }),
-                                    'The object could not be deleted.',
-                                    false
-                                  )
-                                  : undefined}
-                                onDownload={object.kind === 'file' && canPerform(policy, 'download') && actions?.download
-                                  ? () => run(
-                                    `download-${object.id}`,
-                                    () => actions.download!({ bucketKey: activeBucket.key, objectKey: object.key }),
-                                    'The file could not be downloaded.'
-                                  )
-                                  : undefined}
-                              />
-                            ) : null}
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                      {data.objects.length === 0 ? (
-                        <TableRow className='grid lg:table-row'>
-                          <TableCell className='col-span-4 h-32 text-center whitespace-normal lg:table-cell' colSpan={5}>
-                            <p className='font-medium'>This folder is empty</p>
-                            <p className='text-muted-foreground text-pretty text-sm'>
-                              {canUpload
-                                ? 'Upload a file to add the first object.'
-                                : 'No objects are visible, and uploads are unavailable on the connected endpoint.'}
-                            </p>
-                          </TableCell>
-                        </TableRow>
-                      ) : null}
-                    </TableBody>
-                  </Table>
-                </Card>
-              </div>
-            </div>
+  return (
+    <div className='flex flex-col gap-3'>
+      {notices}
+      <StorageBrowser
+        buckets={data ? data.buckets.map(toBrowserBucket) : []}
+        bucketsSelectable={Boolean(selectBucket) && !pendingAction}
+        busyBucketId={pendingAction?.startsWith('bucket-')
+          ? data?.buckets.find((bucket) => `bucket-${bucket.key}` === pendingAction)?.id
+          : undefined}
+        className={cn('h-[40rem]', className)}
+        emptyLabel={query ? `Nothing in this folder matches “${query.trim()}”` : 'This folder is empty'}
+        emptyState={!activeBucket
+          ? 'no-buckets'
+          : data?.objects.length === 0 && !path && !loadingContents
+            ? 'empty-bucket'
+            : null}
+        isLoading={loadingContents}
+        isUploading={pendingAction === 'upload'}
+        objects={objects}
+        onDelete={deleteObject ? (object) => setDeleteTarget(objectById.get(object.id) ?? null) : undefined}
+        onDownload={download && activeBucket ? (object) => {
+          const target = objectById.get(object.id);
+          if (!target) return;
+          void run(
+            `download-${target.id}`,
+            () => download({ bucketKey: activeBucket.key, objectKey: target.key }),
+            'The file could not be downloaded.'
           );
+        } : undefined}
+        onDropFiles={uploadFiles ? (files) => uploadFiles(Array.from(files)) : undefined}
+        onEmptyStateAction={!activeBucket
+          ? createBucket ? () => setCreateOpen(true) : undefined
+          : uploadFiles ? () => fileInputRef.current?.click() : undefined}
+        onNavigate={navigate ? (target) => openPath(target ?? '', `navigate-${target ?? 'root'}`) : undefined}
+        onNewBucket={createBucket ? () => setCreateOpen(true) : undefined}
+        onOpenFolder={navigate ? (object) => {
+          const target = objectById.get(object.id);
+          if (target) openPath(target.key, `navigate-${target.key}`);
+        } : undefined}
+        onQueryChange={setQuery}
+        onSelectBucket={(bucketId) => {
+          const bucket = data?.buckets.find((candidate) => candidate.id === bucketId);
+          if (!bucket || bucket.key === activeBucket?.key || !selectBucket) return;
+          setQuery('');
+          void run(`bucket-${bucket.key}`, () => selectBucket({ bucketKey: bucket.key }), 'The bucket could not be opened.');
         }}
-      </FeaturePackBoundary>
+        onSelectionChange={() => {}}
+        onSortChange={setSort}
+        onUpload={uploadFiles ? () => fileInputRef.current?.click() : undefined}
+        query={query}
+        segments={pathSegments.map((segment, index) => ({ label: segment, path: pathSegments.slice(0, index + 1).join('/') }))}
+        selectable={false}
+        selectedBucketId={activeBucket?.id ?? null}
+        selectedIds={[]}
+        sort={sort}
+      />
+      {uploadFiles ? (
+        <input
+          aria-label='Upload files'
+          className='sr-only'
+          disabled={Boolean(pendingAction)}
+          multiple
+          name='files'
+          onChange={(event) => {
+            const files = Array.from(event.currentTarget.files ?? []);
+            if (files.length > 0) uploadFiles(files);
+            event.currentTarget.value = '';
+          }}
+          ref={fileInputRef}
+          tabIndex={-1}
+          type='file'
+        />
+      ) : null}
+      {createBucket ? (
+        <CreateBucketDialog
+          onCreate={(input) => run('create-bucket', () => createBucket(input), 'The bucket could not be created.', false)}
+          onOpenChange={setCreateOpen}
+          open={createOpen}
+        />
+      ) : null}
+      {deleteObject && activeBucket ? (
+        <DeleteObjectDialog
+          object={deleteTarget}
+          onClose={() => setDeleteTarget(null)}
+          onDelete={(object) => run(
+            `delete-${object.id}`,
+            () => deleteObject({ bucketKey: activeBucket.key, objectKey: object.key }),
+            'The object could not be deleted.',
+            false
+          )}
+        />
+      ) : null}
     </div>
   );
 }
