@@ -197,6 +197,11 @@
           "type": "registry:component"
         },
         {
+          "path": "registry/constructive/blocks/schema-builder/schema/schema-builder-core/components/table-editor/editor-view.tsx",
+          "target": "@components/schema-builder/schema/schema-builder-core/components/table-editor/editor-view.tsx",
+          "type": "registry:component"
+        },
+        {
           "path": "registry/constructive/blocks/schema-builder/schema/schema-builder-core/context/block-config.tsx",
           "target": "@components/schema-builder/schema/schema-builder-core/context/block-config.tsx",
           "type": "registry:component"
@@ -429,6 +434,11 @@
         {
           "path": "registry/constructive/blocks/schema-builder/schema/schema-builder-fields/components/table-editor/fields-section.tsx",
           "target": "@components/schema-builder/schema/schema-builder-fields/components/table-editor/fields-section.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/schema-builder/schema/schema-builder-fields/components/table-editor/form-field.tsx",
+          "target": "@components/schema-builder/schema/schema-builder-fields/components/table-editor/form-field.tsx",
           "type": "registry:component"
         },
         {
@@ -760,6 +770,11 @@
           "path": "registry/constructive/blocks/schema-builder/schema/schema-builder-policies/components/table-editor/policies/policy-pill.tsx",
           "target": "@components/schema-builder/schema/schema-builder-policies/components/table-editor/policies/policy-pill.tsx",
           "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/schema-builder/schema/schema-builder-policies/components/table-editor/policies/policy-presentation.ts",
+          "target": "@components/schema-builder/schema/schema-builder-policies/components/table-editor/policies/policy-presentation.ts",
+          "type": "registry:lib"
         },
         {
           "path": "registry/constructive/blocks/schema-builder/schema/schema-builder-policies/components/table-editor/policies/use-policy-edit-state.ts",

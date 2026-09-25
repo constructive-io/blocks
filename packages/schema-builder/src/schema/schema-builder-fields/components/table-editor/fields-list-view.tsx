@@ -1,8 +1,8 @@
 'use client';
 
-import { useCallback, useMemo, type ComponentType } from 'react';
+import { memo, useCallback, useMemo } from 'react';
 import { Checkbox } from '@constructive-io/ui/checkbox';
-import { RiFingerprintLine, RiKey2Line, RiShieldCheckLine, RiSparklingLine } from '@remixicon/react';
+import { RiFingerprintLine, RiKey2Line, RiSparklingLine } from '@remixicon/react';
 
 import type { FieldDefinition, TableConstraint } from '@/blocks/schema/schema-builder-core/lib/schema';
 import { getFieldTypeInfo } from '@/blocks/schema/schema-builder-core/lib/schema';
@@ -19,41 +19,23 @@ interface FieldsListViewProps {
 	disabled?: boolean;
 }
 
-// Constraint indicator component for clean visual hierarchy
-function ConstraintIndicator({ type, label }: { type: 'pk' | 'unique' | 'nullable' | 'required'; label: string }) {
-	const styles = {
-		pk: 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20',
-		unique: 'bg-violet-500/10 text-violet-600 dark:text-violet-400 border-violet-500/20',
-		nullable: 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20',
-		required: 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/20',
-	};
+const CONSTRAINT_STYLE = {
+	pk: { className: 'bg-amber-500/10 text-amber-700 dark:text-amber-300', icon: RiKey2Line, label: 'Primary key' },
+	unique: { className: 'bg-violet-500/10 text-violet-700 dark:text-violet-300', icon: RiFingerprintLine, label: 'Unique' },
+} as const;
 
-	const icons: Record<
-		'pk' | 'unique' | 'nullable' | 'required',
-		ComponentType<{ className?: string }> | null
-	> = {
-		pk: RiKey2Line,
-		unique: RiFingerprintLine,
-		nullable: null,
-		required: RiShieldCheckLine,
-	};
-
-	const Icon = icons[type];
-
+/** Keys stand out as tinted labels; required and nullable read as plain words, since every column is one or the other. */
+function ConstraintIndicator({ type }: { type: keyof typeof CONSTRAINT_STYLE }) {
+	const { className, icon: Icon, label } = CONSTRAINT_STYLE[type];
 	return (
-		<span
-			className={cn(
-				`inline-flex items-center gap-1 rounded-md border px-1.5 py-0.5 text-[10px] font-semibold tracking-wide
-				uppercase`,
-				'transition-[background-color,border-color,color] duration-(--duration-moderate) ease-out',
-				styles[type],
-			)}
-		>
-			{Icon && <Icon className='size-2.5' />}
+		<span className={cn('inline-flex h-5 items-center gap-1 rounded-md px-1.5 text-[11px] font-medium whitespace-nowrap', className)}>
+			<Icon aria-hidden='true' className='size-3' />
 			{label}
 		</span>
 	);
 }
+
+const GRID = 'grid grid-cols-[36px_minmax(0,1.3fr)_minmax(0,1fr)_minmax(0,1.1fr)_minmax(0,1fr)] items-center gap-3';
 
 export function FieldsListView({
 	fields,
@@ -63,31 +45,26 @@ export function FieldsListView({
 	onFieldClick,
 	disabled,
 }: FieldsListViewProps) {
-	// Find primary key constraint
-	const pkConstraint = useMemo(() => constraints.find((c) => c.type === 'primary_key'), [constraints]);
+	// Key membership, looked up once per table rather than per row.
+	const { primaryKeyIds, uniqueIds } = useMemo(() => {
+		const primaryKey = constraints.find((c) => c.type === 'primary_key');
+		return {
+			primaryKeyIds: new Set(primaryKey?.fields ?? []),
+			uniqueIds: new Set(constraints.flatMap((c) => (c.type === 'unique' && c.fields.length === 1 ? c.fields : []))),
+		};
+	}, [constraints]);
 
-	// Select all handler
 	const handleSelectAll = useCallback(
-		(checked: boolean) => {
-			if (checked) {
-				onSelectionChange(new Set(fields.map((f) => f.id)));
-			} else {
-				onSelectionChange(new Set());
-			}
-		},
+		(checked: boolean) => onSelectionChange(checked ? new Set(fields.map((f) => f.id)) : new Set()),
 		[fields, onSelectionChange],
 	);
 
-	// Individual row selection
 	const handleSelectRow = useCallback(
 		(fieldId: string, checked: boolean) => {
-			const newSelected = new Set(selectedFieldIds);
-			if (checked) {
-				newSelected.add(fieldId);
-			} else {
-				newSelected.delete(fieldId);
-			}
-			onSelectionChange(newSelected);
+			const next = new Set(selectedFieldIds);
+			if (checked) next.add(fieldId);
+			else next.delete(fieldId);
+			onSelectionChange(next);
 		},
 		[selectedFieldIds, onSelectionChange],
 	);
@@ -96,20 +73,15 @@ export function FieldsListView({
 	const someSelected = selectedFieldIds.size > 0 && selectedFieldIds.size < fields.length;
 
 	return (
-		<div className='min-w-[720px]'>
+		<div className='min-w-[640px]'>
 			{/* Header Row */}
-			<div
-				className={cn(
-					`bg-muted/30 border-border/50 grid
-					grid-cols-[40px_minmax(0,1.2fr)_minmax(0,1fr)_minmax(0,1fr)_minmax(0,1.2fr)] gap-3 border-b px-3 py-2`,
-					'text-muted-foreground/70 text-[10px] font-semibold tracking-widest uppercase',
-				)}
-			>
+			<div className={cn(GRID, 'bg-muted/60 text-muted-foreground px-3 py-2 text-xs')}>
 				<div className='flex items-center justify-center'>
 					<Checkbox
 						checked={allSelected}
 						indeterminate={someSelected}
-						onCheckedChange={(checked) => handleSelectAll(checked as boolean)}
+						aria-label='Select all fields'
+						onCheckedChange={(checked) => handleSelectAll(checked === true)}
 						disabled={disabled || fields.length === 0}
 					/>
 				</div>
@@ -120,143 +92,128 @@ export function FieldsListView({
 			</div>
 
 			{/* Field Rows */}
-			<div className='divide-border/30 divide-y'>
-				{fields.map((field, index) => {
-					const isSelected = selectedFieldIds.has(field.id);
-					const fieldTypeInfo = getFieldTypeInfo(field.type as CellType);
-
-					// Check constraints for this field
-					const isPartOfPrimaryKey = pkConstraint?.fields.includes(field.id) || false;
-					const uniqueConstraint = constraints.find(
-						(c) => c.type === 'unique' && c.fields.length === 1 && c.fields[0] === field.id,
-					);
-					const isUnique = (uniqueConstraint !== undefined || isPartOfPrimaryKey) && !isPartOfPrimaryKey;
-					const isNullable = field.constraints.nullable && !isPartOfPrimaryKey;
-					const isRequired = !field.constraints.nullable && !isPartOfPrimaryKey;
-
-					return (
-						<div
-							key={field.id}
-							role='button'
-							tabIndex={disabled ? -1 : 0}
-							aria-disabled={disabled || undefined}
-							data-chat-component='field-row'
-							data-chat-field-name={field.name}
-							data-chat-field-type={field.type}
-							data-chat-nullable={String(field.constraints.nullable)}
-							className={cn(
-								`group grid grid-cols-[40px_minmax(0,1.2fr)_minmax(0,1fr)_minmax(0,1fr)_minmax(0,1.2fr)] gap-3 px-3
-								py-2.5`,
-								'cursor-pointer transition-colors duration-(--duration-moderate) ease-out',
-								'hover:bg-muted/40',
-								isSelected && 'bg-primary/5',
-							)}
-							style={{
-								animationDelay: `${index * 30}ms`,
-							}}
-							onClick={() => {
-								if (!disabled) {
-									onFieldClick(field);
-								}
-							}}
-							onKeyDown={(event) => {
-								handleActivationKeyDown(event, () => onFieldClick(field), disabled);
-							}}
-						>
-							{/* Checkbox */}
-							<div className='flex items-center justify-center' onClick={(e) => e.stopPropagation()}>
-								<Checkbox
-									checked={isSelected}
-									onCheckedChange={(checked) => handleSelectRow(field.id, checked as boolean)}
-									disabled={disabled}
-								/>
-							</div>
-
-							{/* Field Name */}
-							<div className='flex items-center gap-2'>
-								<span
-									className={cn(
-										'truncate font-mono text-[13px] font-medium tracking-tight',
-										'text-foreground/90 group-hover:text-foreground',
-										'transition-colors duration-(--duration-slow)',
-									)}
-								>
-									{field.name}
-								</span>
-							</div>
-
-							{/* Data Type */}
-							<div className='flex items-center'>
-								<div
-									className={cn(
-										'inline-flex items-center gap-1.5 rounded-md px-2 py-1',
-										'bg-muted/60 group-hover:bg-muted/80',
-										'border-border/40 border',
-										'transition-[background-color,border-color] duration-(--duration-moderate) ease-out',
-									)}
-								>
-									{fieldTypeInfo?.icon && (
-										<span className='text-muted-foreground/70 flex items-center'>
-											{typeof fieldTypeInfo.icon === 'string' ? (
-												<span className='text-xs'>{fieldTypeInfo.icon}</span>
-											) : (
-												<fieldTypeInfo.icon className='size-3.5' />
-											)}
-										</span>
-									)}
-									<span className='text-foreground/70 font-mono text-[11px] font-medium'>
-										{fieldTypeInfo?.label || field.type}
-									</span>
-								</div>
-							</div>
-
-							{/* Constraints */}
-							<div className='flex flex-wrap items-center gap-1'>
-								{isPartOfPrimaryKey && <ConstraintIndicator type='pk' label='PK' />}
-								{isUnique && <ConstraintIndicator type='unique' label='Unique' />}
-								{isNullable && <ConstraintIndicator type='nullable' label='Null' />}
-								{isRequired && <ConstraintIndicator type='required' label='Req' />}
-								{!isPartOfPrimaryKey && !isNullable && !isUnique && !isRequired && (
-									<span className='text-muted-foreground/30 text-xs'>—</span>
-								)}
-							</div>
-
-							{/* Default Value */}
-							<div className='flex items-center'>
-								{field.constraints.defaultValue ? (
-									<code
-										className={cn(
-											'text-muted-foreground truncate rounded px-1.5 py-0.5 font-mono text-[11px]',
-											'bg-muted/40 group-hover:bg-muted/60',
-											'transition-colors duration-(--duration-slow)',
-										)}
-									>
-										{field.constraints.defaultValue.toString()}
-									</code>
-								) : (
-									<span className='text-muted-foreground/30 text-[11px] italic'>null</span>
-								)}
-							</div>
-						</div>
-					);
-				})}
+			<div className='divide-border divide-y'>
+				{fields.map((field) => (
+					<FieldRow
+						disabled={disabled}
+						field={field}
+						isPrimaryKey={primaryKeyIds.has(field.id)}
+						isSelected={selectedFieldIds.has(field.id)}
+						isUnique={uniqueIds.has(field.id)}
+						key={field.id}
+						onOpen={onFieldClick}
+						onSelect={handleSelectRow}
+					/>
+				))}
 			</div>
 
 			{/* Empty state */}
 			{fields.length === 0 && (
-				<div className='flex flex-col items-center justify-center py-12'>
-					<div
-						className={cn(
-							'bg-muted/30 mb-3 flex size-12 items-center justify-center rounded-xl',
-							'border-border/50 border border-dashed',
-						)}
-					>
-						<RiSparklingLine className='text-muted-foreground/40 size-5' />
+				<div className='flex flex-col items-center justify-center gap-2 py-10'>
+					<span className='bg-muted text-muted-foreground grid size-9 place-items-center rounded-xl'>
+						<RiSparklingLine aria-hidden='true' className='size-4' />
+					</span>
+					<div className='text-center'>
+						<p className='text-foreground text-[13px] font-medium'>No fields yet</p>
+						<p className='text-muted-foreground mt-0.5 text-xs'>Add a field, or drop a type from the library.</p>
 					</div>
-					<p className='text-muted-foreground/60 text-sm font-medium'>No fields defined</p>
-					<p className='text-muted-foreground/40 mt-1 text-xs'>Add your first field to start building the schema</p>
 				</div>
 			)}
 		</div>
 	);
 }
+
+type FieldRowProps = {
+	field: FieldDefinition;
+	isSelected: boolean;
+	isPrimaryKey: boolean;
+	isUnique: boolean;
+	disabled?: boolean;
+	onSelect: (fieldId: string, checked: boolean) => void;
+	onOpen: (field: FieldDefinition) => void;
+};
+
+/** One field. Memoized so a selection change re-renders only the rows it touches. */
+const FieldRow = memo(function FieldRow({
+	field,
+	isSelected,
+	isPrimaryKey,
+	isUnique,
+	disabled,
+	onSelect,
+	onOpen,
+}: FieldRowProps) {
+	const typeInfo = getFieldTypeInfo(field.type as CellType);
+	const TypeIcon = typeInfo?.icon;
+	const isRequired = !field.constraints.nullable;
+	const defaultValue = field.constraints.defaultValue;
+	const hasDefault = defaultValue !== undefined && defaultValue !== null && defaultValue !== '';
+
+	return (
+		<div
+			role='button'
+			tabIndex={disabled ? -1 : 0}
+			aria-disabled={disabled || undefined}
+			data-chat-component='field-row'
+			data-chat-field-name={field.name}
+			data-chat-field-type={field.type}
+			data-chat-nullable={String(field.constraints.nullable)}
+			className={cn(
+				GRID,
+				'group hover:bg-overlay-hover cursor-pointer px-3 py-2 outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:ring-inset',
+				isSelected && 'bg-primary/[0.05]',
+			)}
+			onClick={() => {
+				if (!disabled) onOpen(field);
+			}}
+			onKeyDown={(event) => handleActivationKeyDown(event, () => onOpen(field), disabled)}
+		>
+			<div className='flex items-center justify-center' onClick={(e) => e.stopPropagation()}>
+				<Checkbox
+					aria-label={`Select ${field.name}`}
+					checked={isSelected}
+					disabled={disabled}
+					onCheckedChange={(checked) => onSelect(field.id, checked === true)}
+				/>
+			</div>
+
+			<span className='text-foreground min-w-0 truncate font-mono text-[13px]' title={field.name}>
+				{field.name}
+			</span>
+
+			<div className='flex min-w-0 items-center'>
+				<span className='bg-muted/50 inline-flex h-6 min-w-0 items-center gap-1.5 rounded-md px-2 text-xs ring-1 ring-foreground/[0.07] ring-inset'>
+					{TypeIcon ? (
+						<span className='text-muted-foreground flex items-center'>
+							{typeof TypeIcon === 'string' ? <span className='text-xs'>{TypeIcon}</span> : <TypeIcon className='size-3.5' />}
+						</span>
+					) : null}
+					<span className='text-foreground/80 truncate'>{typeInfo?.label || field.type}</span>
+				</span>
+			</div>
+
+			<div className='flex min-w-0 flex-wrap items-center gap-1.5'>
+				{isPrimaryKey ? (
+					<ConstraintIndicator type='pk' />
+				) : (
+					<>
+						{isUnique ? <ConstraintIndicator type='unique' /> : null}
+						<span className={cn('text-xs', isRequired ? 'text-foreground/75' : 'text-muted-foreground')}>
+							{isRequired ? 'Required' : 'Nullable'}
+						</span>
+					</>
+				)}
+			</div>
+
+			<div className='flex min-w-0 items-center'>
+				{hasDefault ? (
+					<code className='bg-muted/60 text-foreground/75 truncate rounded px-1.5 py-0.5 font-mono text-xs'>{String(defaultValue)}</code>
+				) : (
+					<span aria-label='No default' className='text-subtle-foreground text-xs'>
+						—
+					</span>
+				)}
+			</div>
+		</div>
+	);
+});

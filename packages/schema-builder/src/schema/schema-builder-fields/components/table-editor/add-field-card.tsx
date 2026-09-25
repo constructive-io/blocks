@@ -20,13 +20,13 @@ import {
 	ComboboxTrigger,
 } from '@constructive-io/ui/combobox';
 import { Input } from '@constructive-io/ui/input';
-import { Label } from '@constructive-io/ui/label';
 import { ScrollArea } from '@constructive-io/ui/scroll-area';
 import { toast } from '@constructive-io/ui/toast';
 
 import type { FieldConstraints, FieldDefinition } from '@/blocks/schema/schema-builder-core/lib/schema';
 import { getAllFieldTypes, getFieldTypeInfo, updateCommonConstraint } from '@/blocks/schema/schema-builder-core/lib/schema';
 import { ConstraintCard } from './constraint-card';
+import { FormField, FormSection } from './form-field';
 import { ValidationRulesSection, type ValidationRulesValues } from './validation-rules-section';
 
 const fieldTypes = getAllFieldTypes();
@@ -273,8 +273,7 @@ export const AddFieldCard: CardComponent<AddFieldCardProps> = ({
 			<ScrollArea className='min-h-0 flex-1'>
 				<div className='space-y-6 p-6'>
 					{/* Field Name */}
-					<div className='space-y-2'>
-						<Label htmlFor='columnName'>Field Name</Label>
+					<FormField htmlFor='columnName' label='Field name'>
 						<Input
 							id='columnName'
 							ref={fieldNameInputRef}
@@ -284,11 +283,10 @@ export const AddFieldCard: CardComponent<AddFieldCardProps> = ({
 							disabled={isPending}
 							autoComplete='off'
 						/>
-					</div>
+					</FormField>
 
 					{/* Data Type */}
-					<div className='space-y-2'>
-						<Label>Data Type</Label>
+					<FormField label='Data type'>
 						<Combobox
 							items={fieldTypeOptions}
 							value={selectedFieldTypeOption}
@@ -366,12 +364,11 @@ export const AddFieldCard: CardComponent<AddFieldCardProps> = ({
 								</ComboboxList>
 							</ComboboxPopup>
 						</Combobox>
-					</div>
+					</FormField>
 
 					{/* Constraints Section */}
-					<div className='space-y-3'>
-						<Label>Constraints</Label>
-						<div className='space-y-3'>
+					<FormSection title='Constraints'>
+						<div className='flex flex-col gap-2'>
 							<ConstraintCard
 								type='primaryKey'
 								selected={constraints.primaryKey ?? false}
@@ -380,7 +377,8 @@ export const AddFieldCard: CardComponent<AddFieldCardProps> = ({
 							/>
 							<ConstraintCard
 								type='unique'
-								selected={constraints.unique ?? false}
+								// A primary key is unique by definition, so show it ticked while PK is on.
+								selected={Boolean(constraints.unique || constraints.primaryKey)}
 								onToggle={() => handleConstraintToggle('unique')}
 								disabled={isPending || constraints.primaryKey}
 								disabledReason={constraints.primaryKey ? 'set by PK' : undefined}
@@ -393,24 +391,26 @@ export const AddFieldCard: CardComponent<AddFieldCardProps> = ({
 								disabledReason={constraints.primaryKey ? 'disabled by PK' : undefined}
 							/>
 						</div>
-					</div>
+					</FormSection>
 
 					{/* Default Value */}
-					<div className='space-y-2'>
-						<Label htmlFor='defaultValue'>
-							Default Value <span className='text-muted-foreground'>(optional)</span>
-						</Label>
+					<FormField
+						hint='SQL functions or static values'
+						htmlFor='defaultValue'
+						label={
+							<>
+								Default value <span className='text-muted-foreground'>(optional)</span>
+							</>
+						}
+					>
 						<Input
 							id='defaultValue'
-							placeholder="e.g., 0, true, now()"
+							placeholder='e.g., 0, true, now()'
 							value={defaultValue}
 							onChange={(e) => setDefaultValue(e.target.value)}
 							disabled={isPending}
 						/>
-						<p className='text-muted-foreground text-xs'>
-							SQL functions or static values
-						</p>
-					</div>
+					</FormField>
 
 					{/* Validation Rules Section - Type-specific */}
 					<ValidationRulesSection

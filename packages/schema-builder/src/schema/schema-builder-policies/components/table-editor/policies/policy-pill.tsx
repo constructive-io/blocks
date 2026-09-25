@@ -1,62 +1,43 @@
 'use client';
 
-import { Pencil, Shield } from 'lucide-react';
+import { Pencil } from 'lucide-react';
 import { useSchemaBuilderRuntime } from '@/blocks/schema/schema-builder-core/context/block-config';
 
 import type { DatabasePolicy } from '@/blocks/schema/schema-builder-core/lib/gql/hooks/schema-builder/policies/use-database-policies';
+import { focusRingClass } from '@constructive-io/ui/workspace-kit';
 import { cn } from '@/lib/utils';
-import { POLICY_TYPE_UI_CONFIG } from '@/blocks/schema/schema-builder-core/components/policies/policy-config';
-import { getDiagramTheme } from '@/blocks/schema/schema-builder-core/components/policies/policy-diagram/diagram-themes';
+import { policyPresentation } from './policy-presentation';
 
 interface PolicyPillProps {
 	policy: DatabasePolicy;
 	onClick: () => void;
 }
 
-function getPolicyThemeKey(policyType: string | null): string {
-	if (!policyType) return 'AuthzAllowAll';
-	return policyType in POLICY_TYPE_UI_CONFIG ? policyType : 'AuthzAllowAll';
-}
-
+/** One policy as a compact chip in its type's colours; hovering swaps the icon for the edit action. */
 export function PolicyPill({ policy, onClick }: PolicyPillProps) {
-	const config = policy.policyType ? POLICY_TYPE_UI_CONFIG[policy.policyType] : null;
-	const title = config?.fallbackTitle ?? policy.policyType ?? policy.name ?? 'Policy';
-	const isDisabled = policy.disabled === true;
-
-	// Get the policy type's icon, fallback to Shield
-	const Icon = config?.icon ?? Shield;
-
-	// Get the diagram theme colors for this policy type
-	const { colorMode: resolvedTheme } = useSchemaBuilderRuntime();
-	const mode = resolvedTheme === 'dark' ? 'dark' : 'light';
-	const themeKey = getPolicyThemeKey(policy.policyType);
-	const theme = getDiagramTheme(themeKey, mode);
-
-	// Make the background lighter by adding transparency
-	const lighterBg = theme.fill + '80'; // 50% opacity
+	const { colorMode } = useSchemaBuilderRuntime();
+	const { title, Icon, theme, disabled: isDisabled } = policyPresentation(policy, colorMode === 'dark' ? 'dark' : 'light');
 
 	return (
 		<button
 			type='button'
-			onClick={onClick}
-			className={cn(
-				'group inline-flex min-h-10 items-center gap-1 rounded-full px-3 py-1',
-				'border text-xs font-semibold',
-				`cursor-pointer transition-[scale,box-shadow] duration-(--duration-moderate) ease-out
-				motion-safe:active:scale-[0.96]`,
-				'hover:scale-[1.02] hover:shadow-sm',
-				'focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:outline-none',
-				isDisabled && 'opacity-64',
-			)}
-			style={{
-				backgroundColor: lighterBg,
-				borderColor: theme.border,
-				color: theme.primary,
+			aria-label={`Edit ${title}${isDisabled ? ' (disabled)' : ''}`}
+			onClick={(event) => {
+				event.stopPropagation();
+				onClick();
 			}}
+			className={cn(
+				'group/pill inline-flex h-7 cursor-pointer items-center gap-1.5 rounded-md border px-2 text-xs font-medium pointer-coarse:h-9',
+				'motion-safe:active:scale-[0.97] transition-transform duration-(--duration-fast)',
+				focusRingClass,
+				isDisabled && 'opacity-60',
+			)}
+			style={{ backgroundColor: theme.fill + '4d', borderColor: theme.border, color: theme.primary }}
 		>
-			<Icon className='size-3 group-hover:hidden' style={{ color: theme.primary }} />
-			<Pencil className='hidden size-3 group-hover:block' style={{ color: theme.primary }} />
+			<Icon aria-hidden='true' className='size-3 group-hover/pill:hidden' />
+			<Pencil aria-hidden='true' className='hidden size-3 group-hover/pill:block' />
 			<span>{title}</span>
+			{isDisabled ? <span className='text-[10px] font-normal uppercase opacity-80'>Off</span> : null}
 		</button>
 	);
 }

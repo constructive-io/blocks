@@ -18,18 +18,14 @@ export interface TableMetadataSectionProps {
 	isEditable?: boolean;
 }
 
-function TableMetadataReadOnly({ tableName }: { tableName: string }) {
+function TableMetadataReadOnly({ tableName, description }: { tableName: string; description?: string }) {
 	return (
-		<div className='flex min-w-0 flex-wrap items-center justify-between gap-3'>
-			<h2 className='min-w-0'>
-				<span className='sr-only'>Table</span>
-				<span
-					className='border-border/60 bg-muted/40 text-foreground inline-flex max-w-full items-center rounded-md border
-						px-2 py-1 font-mono text-base font-semibold tracking-tight'
-				>
-					<span className='truncate'>{tableName}</span>
-				</span>
+		<div className='min-w-0'>
+			<h2 className='text-foreground truncate text-base font-medium tracking-tight'>
+				<span className='sr-only'>Table </span>
+				{tableName}
 			</h2>
+			{description ? <p className='text-muted-foreground mt-0.5 text-pretty text-[13px]'>{description}</p> : null}
 		</div>
 	);
 }
@@ -90,7 +86,7 @@ function TableMetadataEditable({ currentTable }: { currentTable: { id: string; n
 
 	return (
 		<div className='flex flex-wrap items-center justify-between gap-3'>
-			<h2 className='text-foreground text-balance text-lg font-semibold tracking-tight'>Edit Table</h2>
+			<h2 className='text-foreground text-balance text-base font-medium tracking-tight'>Edit table</h2>
 			<form onSubmit={handleFormSubmit} className='flex min-w-0 items-center gap-2'>
 				<label className='sr-only' htmlFor='table-name'>
 					Table name
@@ -156,7 +152,7 @@ export function TableMetadataSection({ isEditable = false }: TableMetadataSectio
 	if (!currentTable?.name || !currentTable?.id) return null;
 
 	if (!isEditable) {
-		return <TableMetadataReadOnly tableName={currentTable.name} />;
+		return <TableMetadataReadOnly description={currentTable.description} tableName={currentTable.name} />;
 	}
 
 	return <TableMetadataEditable currentTable={{ id: currentTable.id, name: currentTable.name }} />;

@@ -23,7 +23,7 @@ import { TypesLibraryRail } from './types-library-rail';
 import { DEFAULT_DROP_ANIMATION, useFieldDnD } from './use-field-dnd';
 
 // Constants for panel widths
-const PANEL_WIDTH_EXPANDED = 380;
+const PANEL_WIDTH_EXPANDED = 320;
 const PANEL_WIDTH_COLLAPSED = 56;
 
 // Shared tween config for synchronized content crossfades
@@ -42,13 +42,11 @@ interface TypesLibraryHeaderProps {
 
 function TypesLibraryHeader({ isExpanded, onToggle }: TypesLibraryHeaderProps) {
 	return (
-		<div className='flex items-center justify-between border-b px-3 py-2'>
-			<div className='flex items-center gap-2'>
-				<h3 className='text-balance text-sm font-medium'>Types Library</h3>
-				<span className='text-muted-foreground bg-muted rounded-md px-1.5 py-0.5 text-xs tabular-nums'>
-					{totalTypesCount}
-				</span>
-			</div>
+		<div className='flex h-12 shrink-0 items-center justify-between px-3'>
+			<h3 className='text-foreground text-[13px] font-medium'>
+				Types library
+				<span className='text-subtle-foreground ml-1.5 font-normal tabular-nums'>{totalTypesCount}</span>
+			</h3>
 			<Button
 				variant='ghost'
 				size='sm'
@@ -68,7 +66,7 @@ interface CollapsedHeaderProps {
 
 function CollapsedHeader({ onToggle }: CollapsedHeaderProps) {
 	return (
-		<div className='flex items-center justify-center border-b py-2'>
+		<div className='flex h-12 shrink-0 items-center justify-center'>
 			<Button variant='ghost' size='sm' onClick={onToggle} className='h-7 w-7 p-0' aria-label='Expand panel'>
 				<ChevronLeft className='h-4 w-4' />
 			</Button>
@@ -115,14 +113,14 @@ export function TableEditor() {
 					<div
 						className={cn(
 							'scrollbar-neutral-thin relative min-h-0 w-full min-w-0 flex-1 overflow-auto !pr-0',
-							currentTable && (panelExpanded ? 'sm:!pr-[380px]' : 'sm:!pr-14'),
+							currentTable && (panelExpanded ? 'sm:!pr-[320px]' : 'sm:!pr-14'),
 						)}
 						style={{
 							paddingRight: currentTable ? (panelExpanded ? PANEL_WIDTH_EXPANDED : PANEL_WIDTH_COLLAPSED) : 0,
 						}}
 					>
 						{currentTable ? (
-							<div className='min-h-full min-w-full space-y-8 p-3 pb-8 sm:p-6 sm:pb-12'>
+							<div className='mx-auto flex min-h-full w-full max-w-4xl min-w-0 flex-col gap-5 px-3 py-5 pb-10 sm:px-6'>
 								<TableMetadataSection />
 								<FieldsSection onAddFieldRef={handleAddFieldRef} />
 							</div>
@@ -137,7 +135,7 @@ export function TableEditor() {
 					{currentTable && (
 						<div
 							data-state={panelExpanded ? 'expanded' : 'collapsed'}
-							className='bg-background border-border/60 absolute top-0 right-0 z-10 hidden h-full flex-col border-l sm:flex'
+							className='bg-sidebar border-sidebar-border absolute top-0 right-0 z-10 hidden h-full flex-col border-l sm:flex'
 							style={{
 								width: panelExpanded ? PANEL_WIDTH_EXPANDED : PANEL_WIDTH_COLLAPSED,
 							}}

@@ -1,6 +1,6 @@
 'use client';
 
-import { memo, startTransition, useMemo, useState } from 'react';
+import { startTransition, useMemo, useState } from 'react';
 import { RiDragDropLine, RiSearchLine } from '@remixicon/react';
 import { ChevronRight } from 'lucide-react';
 import { AnimatePresence, motion } from 'motion/react';
@@ -69,7 +69,7 @@ export function TypesLibrary() {
 			</div>
 
 			{/* Types sections */}
-			<div className='scrollbar-neutral-thin min-h-0 flex-1 space-y-2 overflow-auto px-2 pb-2'>
+			<div className='scrollbar-neutral-thin min-h-0 flex-1 space-y-3 overflow-auto px-2 pb-2'>
 				{totalFilteredCount === 0 ? (
 					<div className='text-muted-foreground p-4 text-center text-sm'>
 						<p>No types found for &ldquo;{searchQuery}&rdquo;</p>
@@ -100,7 +100,7 @@ export function TypesLibrary() {
 			</div>
 
 			{/* Footer hint */}
-			<div className='text-muted-foreground/70 flex items-center gap-1.5 border-t px-3 py-2 text-xs'>
+			<div className='text-muted-foreground flex items-center gap-1.5 border-t border-dashed border-foreground/10 px-3 py-2 text-xs'>
 				<RiDragDropLine className='h-3 w-3' />
 				<span>Drag or use the keyboard to add fields.</span>
 			</div>
@@ -119,18 +119,17 @@ function TypesSection({ title, types, isExpanded, onToggleExpand }: TypesSection
 	return (
 		<Collapsible open={isExpanded} onOpenChange={onToggleExpand} className='flex min-h-0 shrink-0 flex-col'>
 			<CollapsibleTrigger
-				className='group flex w-full cursor-pointer items-center gap-2 rounded-lg py-1.5 pr-2 pl-1 transition-colors
-					duration-(--duration-moderate) bg-card hover:bg-muted/50 data-[state=open]:bg-muted/50'
+				className='group text-muted-foreground hover:text-foreground flex h-7 w-full cursor-pointer items-center gap-1.5 rounded-md px-1.5 text-xs outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50'
 			>
 				<motion.div
 					animate={{ rotate: isExpanded ? 90 : 0 }}
 					transition={{ type: 'spring', stiffness: 400, damping: 25 }}
 					className='flex shrink-0 items-center justify-center'
 				>
-					<ChevronRight className='text-muted-foreground/60 h-3.5 w-3.5' />
+					<ChevronRight className='size-3 opacity-70' />
 				</motion.div>
-				<span className='text-muted-foreground text-xs font-medium'>{title}</span>
-				<span className='text-muted-foreground/70 ml-auto text-[10px] tabular-nums'>{types.length}</span>
+				<span>{title}</span>
+				<span className='text-subtle-foreground ml-auto tabular-nums'>{types.length}</span>
 			</CollapsibleTrigger>
 
 			<AnimatePresence initial={false}>
@@ -145,7 +144,7 @@ function TypesSection({ title, types, isExpanded, onToggleExpand }: TypesSection
 						}}
 						className='min-h-0 overflow-hidden'
 					>
-						<div className='mt-1.5 space-y-1'>
+						<div className='mt-0.5 flex flex-col gap-px'>
 							{types.map((typeInfo) => (
 								<DraggableFieldType key={typeInfo.type} typeInfo={typeInfo} className='w-full' />
 							))}

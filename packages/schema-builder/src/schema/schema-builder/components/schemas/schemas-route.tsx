@@ -99,7 +99,9 @@ export function SchemasRoute({ emptyState }: { emptyState?: ReactNode } = {}) {
 
 					{!remoteSchemasError && !showSkeleton && hasDatabases && (
 						<ContentFadeIn className='flex min-h-0 min-w-0 flex-1'>
-							{leftPanelVisible && <SchemaBuilderSidebar showSystemTables={showSystemTablesInSidebar} />}
+							{leftPanelVisible && (
+								<SchemaBuilderSidebar onHide={() => setLeftPanelVisible(false)} showSystemTables={showSystemTablesInSidebar} />
+							)}
 
 							<div className='flex min-h-0 min-w-0 flex-1 flex-col'>
 								<SchemaBuilderMobileNavigation
