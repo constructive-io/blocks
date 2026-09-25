@@ -31,8 +31,6 @@ type AgentsBuilderContextValue = {
 	setTheme: (theme: AgentsBuilderTheme) => void;
 	usageDismissed: boolean;
 	dismissUsage: () => void;
-	/** Opens the navigation drawer used below the sidebar breakpoint. */
-	openNav: () => void;
 };
 
 const AgentsBuilderContext = React.createContext<AgentsBuilderContextValue | null>(null);

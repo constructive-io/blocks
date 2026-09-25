@@ -10,7 +10,7 @@ import { ConnectPrompt } from '../ai/connect-prompt';
 import { ToolTrace } from '../ai/tool-trace';
 import { useAgentsBuilder } from './agents-builder-context';
 import { IntegrationMark } from './integration-mark';
-import { enterClass, TooltipIconButton } from './primitives';
+import { enterClass, TooltipIconButton } from '../workspace-kit/primitives';
 import { RevealText } from './reveal-text';
 import type { ToolStep } from './types';
 import { sayDuration, type ScriptedConversation, type ThreadItem } from './use-scripted-conversation';

@@ -3,9 +3,7 @@
 import * as React from 'react';
 
 import { useControllableState } from '../../lib/use-controllable-state';
-import { cn } from '../../lib/utils';
-import { Sheet, SheetContent, SheetTitle } from '../sheet';
-import { TooltipProvider } from '../tooltip';
+import { WorkspaceShell } from '../workspace-kit/shell';
 import { AgentView } from './agent-view';
 import { AgentsBuilderContext, type AgentsBuilderContextValue, type ConnectRequest } from './agents-builder-context';
 import { ChatView } from './chat-view';
@@ -83,15 +81,12 @@ function AgentsBuilder({
 		defaultProp: 'system',
 		onChange: onThemeChange,
 	});
-	const [collapsed, setCollapsed] = React.useState(defaultSidebarCollapsed);
 	const [connected, setConnected] = React.useState<ReadonlySet<string>>(
 		() => new Set(data.integrations.filter((integration) => integration.connected).map((integration) => integration.id)),
 	);
 	const [request, setRequest] = React.useState<ConnectRequest | null>(null);
 	const [dialogOpen, setDialogOpen] = React.useState(false);
 	const [usageDismissed, setUsageDismissed] = React.useState(false);
-	const [navOpen, setNavOpen] = React.useState(false);
-	const mainId = React.useId();
 	const onActionRef = useLatest(onAction);
 
 	const integrations = React.useMemo(
@@ -119,7 +114,6 @@ function AgentsBuilder({
 			setTheme,
 			usageDismissed,
 			dismissUsage: () => setUsageDismissed(true),
-			openNav: () => setNavOpen(true),
 		};
 	}, [agentNames, connected, data, integrations, onActionRef, setTheme, setView, theme, usageDismissed, view]);
 
@@ -131,44 +125,29 @@ function AgentsBuilder({
 
 	return (
 		<AgentsBuilderContext.Provider value={context}>
-			<TooltipProvider>
-				<div
-					data-slot="agents-builder"
-					className={cn(
-						'@container/ab relative flex h-full min-h-0 w-full overflow-hidden bg-background text-foreground',
-						className,
-					)}
-				>
-					<a
-						href={`#${mainId}`}
-						className="sr-only z-50 rounded-md bg-card px-3 py-2 text-sm shadow-card focus:not-sr-only focus:absolute focus:top-2 focus:left-2"
-					>
-						Skip to main content
-					</a>
+			<WorkspaceShell
+				slot="agents-builder"
+				className={className}
+				defaultSidebarCollapsed={defaultSidebarCollapsed}
+				sidebar={({ mode, collapsed, onCollapsedChange, onNavigate }) => (
 					<AgentsBuilderSidebar
-						className="hidden @3xl/ab:flex"
+						drawer={mode === 'drawer'}
 						collapsed={collapsed}
-						onCollapsedChange={setCollapsed}
+						onCollapsedChange={onCollapsedChange}
+						onNavigate={mode === 'drawer' ? onNavigate : undefined}
 					/>
-					<main id={mainId} tabIndex={-1} className="@container/view flex min-w-0 flex-1 outline-none">
-						{/* Chat stays mounted so a conversation survives a trip to another view. */}
-						<div className={view === 'chat' ? 'flex min-w-0 flex-1' : 'hidden'}>
-							<ChatView />
-						</div>
-						{view === 'inbox' ? <InboxView /> : null}
-						{view === 'schedules' ? <SchedulesView /> : null}
-						{view === 'integrations' ? <IntegrationsView /> : null}
-						{view === 'skills' ? <SkillsView /> : null}
-						{view === 'agent' ? <AgentView autoplay={autoplayRun} /> : null}
-					</main>
+				)}
+			>
+				{/* Chat stays mounted so a conversation survives a trip to another view. */}
+				<div className={view === 'chat' ? 'flex min-w-0 flex-1' : 'hidden'}>
+					<ChatView />
 				</div>
-				<Sheet open={navOpen} onOpenChange={setNavOpen}>
-					<SheetContent side="left" showClose={false} className="w-72 max-w-[85vw] gap-0 p-0 sm:max-w-72">
-						<SheetTitle className="sr-only">Navigation</SheetTitle>
-						<AgentsBuilderSidebar drawer onNavigate={() => setNavOpen(false)} />
-					</SheetContent>
-				</Sheet>
-			</TooltipProvider>
+				{view === 'inbox' ? <InboxView /> : null}
+				{view === 'schedules' ? <SchedulesView /> : null}
+				{view === 'integrations' ? <IntegrationsView /> : null}
+				{view === 'skills' ? <SkillsView /> : null}
+				{view === 'agent' ? <AgentView autoplay={autoplayRun} /> : null}
+			</WorkspaceShell>
 			<ConnectIntegrationDialog
 				integration={request ? integrations.get(request.integrationId) : undefined}
 				appName={data.workspace.appName}

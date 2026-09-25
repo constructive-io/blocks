@@ -9,10 +9,6 @@ import {
 	LogOut,
 	type LucideIcon,
 	Megaphone,
-	Monitor,
-	Moon,
-	Sun,
-	SunMoon,
 	User,
 } from 'lucide-react';
 import * as React from 'react';
@@ -25,65 +21,16 @@ import {
 	DropdownMenuSeparator,
 	DropdownMenuTrigger,
 } from '../dropdown-menu';
+import { AppearanceRow } from '../workspace-kit/menu';
+import { focusRingClass, Segmented } from '../workspace-kit/primitives';
 import { useAgentsBuilder } from './agents-builder-context';
-import { focusRingClass, pressClass } from './primitives';
-import type { AgentsBuilderAction, AgentsBuilderTheme } from './types';
+import type { AgentsBuilderAction } from './types';
 
 type Choice<T extends string> = { value: T; label: string; icon?: LucideIcon };
-
-/**
- * Two-to-three option segmented control. The menu popup has a 10px radius and
- * 4px padding, so the track is 6px and each segment 4px (concentric).
- */
-function Segmented<T extends string>({
-	label,
-	value,
-	options,
-	onChange,
-	className,
-}: {
-	label: string;
-	value: T;
-	options: Choice<T>[];
-	onChange: (value: T) => void;
-	className?: string;
-}) {
-	return (
-		<div role="radiogroup" aria-label={label} className={cn('flex gap-0.5 rounded-sm bg-muted p-0.5', className)}>
-			{options.map((option) => {
-				const Icon = option.icon;
-				return (
-					<button
-						key={option.value}
-						type="button"
-						role="radio"
-						aria-checked={value === option.value}
-						aria-label={Icon ? option.label : undefined}
-						onClick={() => onChange(option.value)}
-						className={cn(
-							'grid h-7 flex-1 cursor-pointer place-items-center rounded-[4px] px-1.5 text-[13px]',
-							pressClass,
-							focusRingClass,
-							value === option.value ? 'bg-card text-foreground shadow-card' : 'text-muted-foreground hover:text-foreground',
-						)}
-					>
-						{Icon ? <Icon aria-hidden="true" className="size-3.5" /> : option.label}
-					</button>
-				);
-			})}
-		</div>
-	);
-}
 
 const MODES: Choice<'agents' | 'workbench'>[] = [
 	{ value: 'agents', label: 'Agents' },
 	{ value: 'workbench', label: 'Workbench' },
-];
-
-const THEMES: Choice<AgentsBuilderTheme>[] = [
-	{ value: 'light', label: 'Light', icon: Sun },
-	{ value: 'dark', label: 'Dark', icon: Moon },
-	{ value: 'system', label: 'System', icon: Monitor },
 ];
 
 type MenuEntry = { item: Extract<AgentsBuilderAction, { type: 'workspace-menu' }>['item']; label: string; icon: LucideIcon; submenu?: boolean };
@@ -146,11 +93,7 @@ function WorkspaceMenu({ collapsed }: { collapsed: boolean }) {
 					}}
 				/>
 				{SETTINGS.map(entry)}
-				<div className="flex items-center gap-2 px-2 py-1 text-sm">
-					<SunMoon aria-hidden="true" className="size-3.5 text-muted-foreground" />
-					<span className="flex-1">Appearance</span>
-					<Segmented label="Appearance" value={theme} options={THEMES} onChange={setTheme} />
-				</div>
+				<AppearanceRow value={theme} onChange={setTheme} />
 				<DropdownMenuSeparator />
 				{HELP.map(entry)}
 				<DropdownMenuSeparator />

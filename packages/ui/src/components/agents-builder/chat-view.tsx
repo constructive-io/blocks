@@ -14,7 +14,7 @@ import { ThreadEntry } from './chat-thread';
 import { Composer } from './composer';
 import { IntegrationMark } from './integration-mark';
 import { Mascot } from './mascot';
-import { enterClass, focusRingClass, staggerStyle, TooltipIconButton, ViewHeader } from './primitives';
+import { enterClass, focusRingClass, staggerStyle, TooltipIconButton, ViewHeader } from '../workspace-kit/primitives';
 import type { ChatRecommendation } from './types';
 import { useScriptedConversation } from './use-scripted-conversation';
 

@@ -9,7 +9,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '../popover';
 import { Tooltip, TooltipContent, TooltipTrigger } from '../tooltip';
 import { useAgentsBuilder } from './agents-builder-context';
 import { IntegrationMark } from './integration-mark';
-import { focusRingClass, hitAreaClass, pressClass } from './primitives';
+import { focusRingClass, hitAreaClass, pressClass } from '../workspace-kit/primitives';
 import type { Integration } from './types';
 
 /** Unconnected apps grouped as the directory groups them: models first, then categories. */

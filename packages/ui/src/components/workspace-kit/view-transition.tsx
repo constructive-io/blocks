@@ -3,7 +3,7 @@
 import { AnimateView, type AnimateViewProps } from 'motion/react-animate-view';
 import * as React from 'react';
 
-import { useReducedMotion } from './playback';
+import { useReducedMotion } from './reduced-motion';
 
 /**
  * React 19.3 ships `ViewTransition` and `addTransitionType`; older React keeps

@@ -19,9 +19,9 @@ import { Avatar, AvatarFallback, AvatarImage } from '../avatar';
 import { Button } from '../button';
 import { Popover, PopoverContent, PopoverTrigger } from '../popover';
 import { useAgentsBuilder } from './agents-builder-context';
-import { focusRingClass, pressClass, SearchField, SurfaceBody, surfaceInsetClass, type Tone, ToneBadge, ViewHeader } from './primitives';
+import { focusRingClass, pressClass, SearchField, SurfaceBody, surfaceInsetClass, type Tone, ToneBadge, ViewHeader } from '../workspace-kit/primitives';
 import type { Skill, SkillType, StarterPack } from './types';
-import { startViewTransition, ViewAnimation } from './view-transition';
+import { startViewTransition, ViewAnimation } from '../workspace-kit/view-transition';
 
 type SortColumn = 'name' | 'type' | 'author' | 'updated';
 type SortState = { column: SortColumn; direction: 'ascending' | 'descending' };

@@ -5,7 +5,7 @@ import * as React from 'react';
 
 import { cn } from '../../lib/utils';
 import { Tooltip, TooltipContent, TooltipTrigger } from '../tooltip';
-import { useAgentsBuilder } from './agents-builder-context';
+import { useWorkspaceShell } from './shell';
 
 /** Tactile press for custom controls: 0.96, never lower. */
 export const pressClass = 'transition-transform duration-(--duration-fast) ease-out motion-safe:active:scale-[0.96]';
@@ -81,6 +81,9 @@ const TONE_COLOR = {
 	warning: 'var(--warning)',
 	violet: 'var(--chart-3)',
 	amber: 'var(--chart-4)',
+	success: 'var(--success)',
+	danger: 'var(--destructive)',
+	info: 'var(--info)',
 } as const;
 
 export type Tone = keyof typeof TONE_COLOR | 'neutral';
@@ -156,9 +159,9 @@ type ViewHeaderProps = {
 
 /** Opens the navigation drawer; only rendered below the sidebar breakpoint. */
 export function NavMenuButton() {
-	const { openNav } = useAgentsBuilder();
+	const { openNav } = useWorkspaceShell();
 	return (
-		<TooltipIconButton label="Open navigation" side="bottom" className="-ml-1 text-foreground @3xl/ab:hidden" onClick={openNav}>
+		<TooltipIconButton label="Open navigation" side="bottom" className="-ml-1 text-foreground @3xl/ws:hidden" onClick={openNav}>
 			<Menu aria-hidden="true" className="size-4" />
 		</TooltipIconButton>
 	);
@@ -170,11 +173,42 @@ export function ViewHeader({ icon: Icon, title, children, divider = true }: View
 		<header className={cn('flex h-12 shrink-0 items-center gap-2 px-3', divider && 'border-b border-border')}>
 			<NavMenuButton />
 			<div className="flex min-w-0 flex-1 items-center gap-1.5">
-				<Icon aria-hidden="true" className="hidden size-3.5 shrink-0 text-muted-foreground @3xl/ab:block" />
+				<Icon aria-hidden="true" className="hidden size-3.5 shrink-0 text-muted-foreground @3xl/ws:block" />
 				<h1 className="truncate text-sm font-medium text-foreground">{title}</h1>
 			</div>
 			{children ? <div className="flex shrink-0 items-center gap-2">{children}</div> : null}
 		</header>
+	);
+}
+
+type ViewFrameProps = {
+	icon: LucideIcon;
+	title: React.ReactNode;
+	/** Header controls on the right. */
+	actions?: React.ReactNode;
+	/** Accessible name for the view region; defaults to the title when it is a string. */
+	label?: string;
+	/** Widest the content column grows. */
+	maxWidth?: string;
+	className?: string;
+	children: React.ReactNode;
+};
+
+/**
+ * A full view: the 48px header over a scrolling, centred content column with
+ * container-relative padding. Views keep their own scroll so the sidebar
+ * never moves.
+ */
+export function ViewFrame({ icon, title, actions, label, maxWidth = 'max-w-6xl', className, children }: ViewFrameProps) {
+	return (
+		<section aria-label={label ?? (typeof title === 'string' ? title : undefined)} className="flex min-w-0 flex-1 flex-col">
+			<ViewHeader icon={icon} title={title}>
+				{actions}
+			</ViewHeader>
+			<div className="min-h-0 flex-1 overflow-y-auto">
+				<div className={cn('mx-auto flex w-full flex-col gap-6 px-4 py-5 @3xl/view:px-6 @3xl/view:py-6', maxWidth, className)}>{children}</div>
+			</div>
+		</section>
 	);
 }
 
@@ -229,6 +263,49 @@ export function FilterGroup<T extends string>({ label, value, options, onChange,
 					);
 				})}
 			</div>
+		</div>
+	);
+}
+
+type SegmentedChoice<T extends string> = { value: T; label: string; icon?: LucideIcon };
+
+type SegmentedProps<T extends string> = {
+	label: string;
+	value: T;
+	options: SegmentedChoice<T>[];
+	onChange: (value: T) => void;
+	className?: string;
+};
+
+/**
+ * Two-to-four option segmented control. The track has a 6px radius and 2px
+ * padding, so each segment is 4px (concentric with the track).
+ */
+export function Segmented<T extends string>({ label, value, options, onChange, className }: SegmentedProps<T>) {
+	return (
+		<div role="radiogroup" aria-label={label} className={cn('flex gap-0.5 rounded-sm bg-muted p-0.5', className)}>
+			{options.map((option) => {
+				const Icon = option.icon;
+				const active = value === option.value;
+				return (
+					<button
+						key={option.value}
+						type="button"
+						role="radio"
+						aria-checked={active}
+						aria-label={Icon ? option.label : undefined}
+						onClick={() => onChange(option.value)}
+						className={cn(
+							'grid h-7 flex-1 cursor-pointer place-items-center whitespace-nowrap rounded-[4px] px-2 text-[13px]',
+							pressClass,
+							focusRingClass,
+							active ? 'bg-card font-medium text-foreground shadow-card' : 'text-muted-foreground hover:text-foreground',
+						)}
+					>
+						{Icon ? <Icon aria-hidden="true" className="size-3.5" /> : option.label}
+					</button>
+				);
+			})}
 		</div>
 	);
 }

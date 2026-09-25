@@ -8,9 +8,9 @@ import { Button } from '../button';
 import { AgentCanvas } from './agent-canvas';
 import { AgentRunPanel } from './agent-run-panel';
 import { useAgentsBuilder } from './agents-builder-context';
-import { focusRingClass, NavMenuButton, pressClass, TooltipIconButton, useInert } from './primitives';
+import { focusRingClass, NavMenuButton, pressClass, TooltipIconButton, useInert } from '../workspace-kit/primitives';
 import { useAgentRun } from './use-agent-run';
-import { startViewTransition, ViewAnimation } from './view-transition';
+import { startViewTransition, ViewAnimation } from '../workspace-kit/view-transition';
 
 /**
  * Agent detail: breadcrumb header, the live run panel, and the agent canvas.
