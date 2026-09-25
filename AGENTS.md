@@ -39,7 +39,7 @@ Use Node 24 LTS and pnpm 10.28.0, then run `pnpm check`, `pnpm build:pages`, and
   (`http://localhost:6007`; the Kitchen Sink story carries the DialKit tuning panel).
 - The docs app's Tailwind only scans `packages/ui/dist` plus `apps/blocks/src`.
   Registry-only `packages/ui/src/components/*` trees rendered through the
-  `@/components/ui/*` alias (e.g. `agents-builder`) need an `@source` line in
+  `@/components/ui/*` alias (e.g. `agents-builder`, `billing-kit`) need an `@source` line in
   `apps/blocks/src/app/globals.css`, or their unique classes are missing.
 - Smoke-install one registry root: `SMOKE_CASE=<name> pnpm --filter
   @constructive-io/registry smoke:install` (add `SMOKE_REUSE_PACKED_ARTIFACTS=1`
@@ -49,10 +49,17 @@ Use Node 24 LTS and pnpm 10.28.0, then run `pnpm check`, `pnpm build:pages`, and
   an element already shows/hides or crossfades (list swaps, step swaps, tab
   panels, reorders, shared elements), through a
   wrapper that falls back when `React.ViewTransition` is missing (see
-  `agents-builder/view-transition.tsx`). Keep interruptible micro-interactions
+  `workspace-kit/view-transition.tsx`). Keep interruptible micro-interactions
   on `motion/react` or CSS, and keep npm package peers usable on React 18.
   jsdom lacks `CSS.escape`, which React's ViewTransition calls; polyfill it in
   tests that render these boundaries.
+- Workspace templates (`agents-builder`, `billing-account`, `billing-console`)
+  share `packages/ui/src/components/workspace-kit` (shell, sidebar rail and
+  drawer, view frames, filter pills). Billing leaves live in `billing-kit`.
+  Import sibling registry trees by file (`../billing-kit/plan`), not by their
+  `index.ts`: the UI registry build cannot resolve directory imports.
+- Registry `registryDependencies` must match imports exactly; the registry
+  build names any missing or stale edge.
 
 ## Testing
 

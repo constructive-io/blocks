@@ -106,7 +106,10 @@ to endpoints, sessions, adapters, or tenant data.
 | PostgreSQL schema workspace | `schema-builder` |
 | Reporting hierarchy | `org-chart` |
 | Object storage workspace | `storage-browser` or a focused storage leaf |
-| Customer billing | `billing-settings-page` or a focused billing block |
+| Customer billing workspace (plan, usage, credits, invoices, ledger) | `billing-account` |
+| Billing operator console (catalog, customers, payment provider, standing) | `billing-console` |
+| Gift or promo codes that grant credits (redeem, create, bulk batches) | `billing-account` to redeem, `billing-console` to manage, `billing-kit` leaves |
+| A single billing card, table, or dialog | `billing-kit` |
 | Account phone numbers and SMS verification | `account-phone-numbers` |
 | Provider-neutral domain screen | `feature-pack-<id>` |
 | Selected Console Kit integration | `console-kit-core` plus `console-module-<id>` |
