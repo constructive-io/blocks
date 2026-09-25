@@ -3066,25 +3066,24 @@
       "name": "org-chart",
       "type": "registry:block",
       "title": "Org Chart",
-      "description": "An interactive organizational chart with automatic hierarchy layout, zoom controls, node actions, and drag-to-reparent behavior.",
+      "description": "An interactive organization chart on the workspace canvas: automatic top-down layout, pan and zoom, folding teams, a details panel, drag-to-reassign with a live preview wire, and a searchable change-manager dialog for keyboard users.",
       "categories": [
         "block",
         "application"
       ],
-      "docs": "Import: `import { OrgChart } from '@/components/ui/org-chart'`",
+      "docs": "Import: `import { OrgChart } from '@/components/ui/org-chart'`. Pass controlled `edges` or `defaultEdges` (flat `{ id, parentId }` reporting lines) and persist moves in `onReparent`. Tab into the chart and use the arrow keys to move between people; Enter opens their details.",
       "dependencies": [
-        "@xyflow/react",
-        "@remixicon/react",
         "lucide-react"
       ],
       "registryDependencies": [
         "cn",
-        "button",
-        "tooltip",
         "avatar",
-        "badge",
+        "button",
+        "command",
+        "dialog",
         "dropdown-menu",
-        "flow-zoom-panel"
+        "tooltip",
+        "workspace-kit"
       ],
       "files": [
         {
@@ -3096,19 +3095,19 @@
           "type": "registry:component"
         },
         {
-          "path": "registry/constructive/blocks/org-chart/org-chart-context.tsx",
-          "type": "registry:component"
-        },
-        {
           "path": "registry/constructive/blocks/org-chart/org-chart-node.tsx",
           "type": "registry:component"
         },
         {
-          "path": "registry/constructive/blocks/org-chart/org-chart-edge.tsx",
+          "path": "registry/constructive/blocks/org-chart/org-chart-details.tsx",
           "type": "registry:component"
         },
         {
-          "path": "registry/constructive/blocks/org-chart/org-chart-empty.tsx",
+          "path": "registry/constructive/blocks/org-chart/org-chart-move-dialog.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/org-chart/org-chart-states.tsx",
           "type": "registry:component"
         },
         {

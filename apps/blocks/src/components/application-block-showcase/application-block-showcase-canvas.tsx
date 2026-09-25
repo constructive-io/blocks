@@ -3,7 +3,6 @@
 import { useMemo, useState } from 'react';
 import dynamic from 'next/dynamic';
 
-import { Badge } from '@constructive-io/ui/badge';
 import {
   Sheet,
   SheetContent,
@@ -40,42 +39,28 @@ const BillingConsolePreview = dynamic(() =>
   import('./billing-console-preview').then((module) => module.BillingConsolePreview),
 );
 
+const orgPerson = (
+  id: string,
+  parentId: string | null,
+  displayName: string,
+  positionTitle: string,
+): OrgChartEdge => ({ id, parentId, displayName, positionTitle, avatarUrl: null });
+
 const ORG_CHART_EDGES: OrgChartEdge[] = [
-  {
-    id: 'alex',
-    parentId: null,
-    displayName: 'Alex Morgan',
-    positionTitle: 'Chief Executive Officer',
-    avatarUrl: null,
-  },
-  {
-    id: 'maya',
-    parentId: 'alex',
-    displayName: 'Maya Chen',
-    positionTitle: 'VP of Product',
-    avatarUrl: null,
-  },
-  {
-    id: 'theo',
-    parentId: 'alex',
-    displayName: 'Theo Brooks',
-    positionTitle: 'VP of Engineering',
-    avatarUrl: null,
-  },
-  {
-    id: 'jordan',
-    parentId: 'maya',
-    displayName: 'Jordan Lee',
-    positionTitle: 'Design Lead',
-    avatarUrl: null,
-  },
-  {
-    id: 'cass',
-    parentId: 'theo',
-    displayName: 'Cass Taylor',
-    positionTitle: 'Platform Lead',
-    avatarUrl: null,
-  },
+  orgPerson('alex', null, 'Alex Morgan', 'Chief Executive Officer'),
+  orgPerson('maya', 'alex', 'Maya Chen', 'VP of Product'),
+  orgPerson('theo', 'alex', 'Theo Brooks', 'VP of Engineering'),
+  orgPerson('rosa', 'alex', 'Rosa Alvarez', 'Head of Operations'),
+  orgPerson('jordan', 'maya', 'Jordan Lee', 'Design Lead'),
+  orgPerson('priya', 'maya', 'Priya Natarajan', 'Product Manager'),
+  orgPerson('cass', 'theo', 'Cass Taylor', 'Platform Lead'),
+  orgPerson('devon', 'theo', 'Devon Park', 'Applications Lead'),
+  orgPerson('ines', 'cass', 'Inès Moreau', 'Site Reliability Engineer'),
+  orgPerson('kofi', 'cass', 'Kofi Mensah', 'Database Engineer'),
+  orgPerson('lena', 'devon', 'Lena Fischer', 'Frontend Engineer'),
+  orgPerson('omar', 'devon', 'Omar Haddad', 'Mobile Engineer'),
+  orgPerson('sam', 'rosa', 'Sam Rivera', 'People Partner'),
+  orgPerson('noa', 'rosa', 'Noa Levi', 'Finance Manager'),
 ];
 
 const STORAGE_BUCKETS: StorageBucket[] = [
@@ -197,7 +182,7 @@ const UPLOADS: UploadItem[] = [
 
 function OrgChartPreview() {
   const [message, setMessage] = useState(
-    'Select a person or drag a non-root card onto a new manager.',
+    'Select a person, fold a team, or drag a card onto a new manager.',
   );
 
   function personName(person: OrgChartNodeData) {
@@ -206,24 +191,20 @@ function OrgChartPreview() {
 
   return (
     <div
-      className="flex min-h-full w-full flex-col gap-3 p-3 sm:p-5"
+      className="flex h-full min-h-[640px] w-full flex-col gap-3 p-3 sm:p-4"
       data-slot="application-block-showcase-canvas"
     >
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <div>
-          <h1 className="text-base font-semibold tracking-tight">
-            Product organization
-          </h1>
-          <p className="text-sm text-muted-foreground">
-            Five people · two reporting groups
-          </p>
-        </div>
-        <Badge variant="secondary">Editable</Badge>
+      <div className="flex items-baseline justify-between gap-3 px-1">
+        <h1 className="text-sm font-medium tracking-tight">Northstar Labs</h1>
+        <p className="text-xs text-muted-foreground tabular-nums">
+          {ORG_CHART_EDGES.length} people
+        </p>
       </div>
 
       <OrgChart
-        className="h-[590px] min-h-[590px]"
+        className="min-h-0 flex-1"
         defaultEdges={ORG_CHART_EDGES}
+        defaultCollapsedIds={['rosa']}
         onAddToChart={() => setMessage('Add-person workflow requested.')}
         onEditNode={(person) =>
           setMessage(`Edit requested for ${personName(person)}.`)
@@ -231,18 +212,14 @@ function OrgChartPreview() {
         onRemoveNode={(person) =>
           setMessage(`Removal confirmation requested for ${personName(person)}.`)
         }
-        onReparent={(_, __, preserve) =>
-          setMessage(
-            preserve.positionTitle
-              ? `Reporting line updated for ${preserve.positionTitle}.`
-              : 'Reporting line updated.',
-          )
+        onReparentSuccess={(child, parent) =>
+          setMessage(`${child} now reports to ${parent}.`)
         }
         onReparentError={setMessage}
       />
 
       <p
-        className="min-h-6 text-pretty text-xs leading-5 text-muted-foreground"
+        className="min-h-5 px-1 text-pretty text-xs text-muted-foreground"
         role="status"
       >
         {message}

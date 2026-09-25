@@ -1,22 +1,19 @@
-import type { Node } from '@xyflow/react';
-
-/** A single edge in the org chart — represents a person and their reporting relationship */
+/** A single edge in the org chart: one person and who they report to. */
 export interface OrgChartEdge {
-	/** Person ID (used as the React Flow node id) */
+	/** Person ID. */
 	id: string;
-	/** ID of the person this edge reports to (null = root) */
+	/** ID of the person this edge reports to (null = root). */
 	parentId: string | null;
 	displayName: string | null;
 	avatarUrl: string | null;
 	positionTitle: string | null;
 }
 
-/** Data carried by each React Flow node */
+/** A person as the chart shows them, passed to node callbacks. */
 export interface OrgChartNodeData extends OrgChartEdge {
+	/** Direct reports, including any hidden while the node is collapsed. */
 	childCount: number;
 	isRoot: boolean;
+	/** True while the chart is narrow enough to use compact cards. */
 	isCompact: boolean;
-	[key: string]: unknown;
 }
-
-export type OrgChartNode = Node<OrgChartNodeData, 'orgChartNode'>;
