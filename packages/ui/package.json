@@ -650,6 +650,16 @@
         "default": "./dist/components/flickering-grid.cjs"
       }
     },
+    "./workspace-kit": {
+      "import": {
+        "types": "./dist/components/workspace-kit/index.d.ts",
+        "default": "./dist/components/workspace-kit/index.js"
+      },
+      "require": {
+        "types": "./dist/components/workspace-kit/index.d.cts",
+        "default": "./dist/components/workspace-kit/index.cjs"
+      }
+    },
     "./flow-zoom-panel": {
       "import": {
         "types": "./dist/components/flow-zoom-panel.d.ts",

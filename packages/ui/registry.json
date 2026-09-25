@@ -3377,12 +3377,12 @@
       "name": "workspace-kit",
       "type": "registry:block",
       "title": "Workspace Kit",
-      "description": "The shared workspace shell behind the application templates: a collapsible sidebar rail with a mobile drawer, nav rows and sections, 48px view headers and scrolling view frames, filter pills, segmented controls, surfaces that keep their edge in dark mode, and a React ViewTransition wrapper with a reduced-motion fallback.",
+      "description": "The shared workspace shell behind the application templates: a collapsible sidebar rail with a mobile drawer, nav rows and sections, 48px view headers and scrolling view frames, filter pills, segmented controls, surfaces that keep their edge in dark mode (panels, table surfaces, stat tiles, key-value lists, empty states), a pan-and-zoom canvas with double-framed nodes and bezier wires, and a React ViewTransition wrapper with a reduced-motion fallback.",
       "categories": [
         "block",
         "application"
       ],
-      "docs": "Import: `import { WorkspaceShell, SidebarFrame, NavSection, NavRow, ViewFrame } from '@/components/ui/workspace-kit'`. Render your sidebar through the `sidebar` render prop (it is called once for the rail and once for the drawer) and your views as children; `ViewFrame` and `NavMenuButton` open the drawer below the `3xl` container width.",
+      "docs": "Import: `import { WorkspaceShell, SidebarFrame, NavSection, NavRow, ViewFrame, Panel, CanvasSurface, useCanvasViewport } from '@/components/ui/workspace-kit'`. Render your sidebar through the `sidebar` render prop (it is called once for the rail and once for the drawer) and your views as children; `ViewFrame` and `NavMenuButton` open the drawer below the `3xl` container width.",
       "dependencies": [
         "lucide-react",
         "motion@^13.4.0"
@@ -3394,6 +3394,10 @@
         "dropdown-menu"
       ],
       "files": [
+        {
+          "path": "registry/constructive/blocks/workspace-kit/canvas.tsx",
+          "type": "registry:component"
+        },
         {
           "path": "registry/constructive/blocks/workspace-kit/index.ts",
           "type": "registry:lib"
@@ -3416,6 +3420,10 @@
         },
         {
           "path": "registry/constructive/blocks/workspace-kit/shell.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/workspace-kit/surface.tsx",
           "type": "registry:component"
         },
         {
@@ -3578,10 +3586,6 @@
         },
         {
           "path": "registry/constructive/blocks/agents-builder/use-agent-run.ts",
-          "type": "registry:lib"
-        },
-        {
-          "path": "registry/constructive/blocks/agents-builder/use-canvas-viewport.ts",
           "type": "registry:lib"
         },
         {

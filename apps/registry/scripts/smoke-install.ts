@@ -463,7 +463,7 @@ export function AiRegistrySmokeConsumer() {
 			'src/components/ui/agents-builder/skills-view.tsx',
 			'src/components/ui/agents-builder/types.ts',
 			'src/components/ui/agents-builder/use-agent-run.ts',
-			'src/components/ui/agents-builder/use-canvas-viewport.ts',
+			'src/components/ui/workspace-kit/canvas.tsx',
 			'src/components/ui/agents-builder/use-scripted-conversation.ts',
 			'src/components/ui/agents-builder/workspace-menu.tsx',
 			'src/components/ui/workspace-kit/primitives.tsx',

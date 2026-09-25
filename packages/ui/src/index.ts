@@ -310,6 +310,7 @@ export {
 } from './components/combobox';
 export { InputOtp, type InputOtpProps } from './components/input-otp';
 // PhoneInput is subpath-only (`@constructive-io/ui/phone-input`) so the root never needs its optional peer.
+// The workspace kit is subpath-only (`@constructive-io/ui/workspace-kit`) because it needs motion >= 13.4.
 export {
 	MultiSelect,
 	type MultiSelectRef,

@@ -41,6 +41,8 @@ Use Node 24 LTS and pnpm 10.28.0, then run `pnpm check`, `pnpm build:pages`, and
   Registry-only `packages/ui/src/components/*` trees rendered through the
   `@/components/ui/*` alias (e.g. `agents-builder`, `billing-kit`) need an `@source` line in
   `apps/blocks/src/app/globals.css`, or their unique classes are missing.
+  After adding an `@source` line, stop the dev server and delete
+  `apps/blocks/.next/dev`: Turbopack's persistent cache keeps the old source list.
 - Smoke-install one registry root: `SMOKE_CASE=<name> pnpm --filter
   @constructive-io/registry smoke:install` (add `SMOKE_REUSE_PACKED_ARTIFACTS=1`
   after the first run to skip repacking).
@@ -55,7 +57,11 @@ Use Node 24 LTS and pnpm 10.28.0, then run `pnpm check`, `pnpm build:pages`, and
   tests that render these boundaries.
 - Workspace templates (`agents-builder`, `billing-account`, `billing-console`)
   share `packages/ui/src/components/workspace-kit` (shell, sidebar rail and
-  drawer, view frames, filter pills). Billing leaves live in `billing-kit`.
+  drawer, view frames, filter pills, surfaces such as `Panel` and
+  `TableSurface`, and the pan-and-zoom canvas used by Agents Builder and
+  Org Chart). Billing leaves live in `billing-kit`. The kit is also the
+  subpath-only npm export `@constructive-io/ui/workspace-kit` (it needs
+  motion >= 13.4), so npm-built packages such as Schema Builder can import it.
   Import sibling registry trees by file (`../billing-kit/plan`), not by their
   `index.ts`: the UI registry build cannot resolve directory imports.
 - Registry `registryDependencies` must match imports exactly; the registry
