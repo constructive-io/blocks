@@ -9,7 +9,8 @@ import { Button } from '@constructive-io/ui/button';
 
 import { ConstructiveMark } from '@/components/brand/constructive-mark';
 import { AI_COMPONENTS } from '@/lib/ai-components';
-import { APPLICATION_BLOCKS } from '@/lib/application-blocks';
+import { isBillingDocsPath } from '@/components/billing-docs/billing-docs-nav';
+import { APPLICATION_BLOCKS, applicationBlockHref } from '@/lib/application-blocks';
 import { COMPONENT_DOC_SEQUENCE } from '@/lib/component-doc-navigation';
 import { FEATURE_PACK_DOCS } from '@/lib/feature-packs';
 import { SOURCE_BLOCKS } from '@/lib/source-blocks';
@@ -139,7 +140,6 @@ export const SiteSidebar = forwardRef<HTMLElement, SiteSidebarProps>(function Si
   const pathname = normalizePath(usePathname() ?? '');
   const onComponents = pathname.startsWith('/blocks/ui/') || pathname === '/blocks/command-palette';
   const onAi = pathname === '/blocks/ai' || pathname.startsWith('/blocks/ai/');
-  const onBillingDocs = pathname === '/blocks/billing' || pathname.startsWith('/blocks/billing/');
   const onAccountDocs = pathname === '/blocks/account' || pathname.startsWith('/blocks/account/');
   const onFoundations =
     pathname === '/' || pathname === '/blocks' || pathname === '/blocks/styling' || pathname === '/blocks/create';
@@ -170,12 +170,14 @@ export const SiteSidebar = forwardRef<HTMLElement, SiteSidebarProps>(function Si
       label: component.title,
     })),
   ];
-  const featurePackLinks = FEATURE_PACK_DOCS.map((pack) => ({
-    href: `/blocks/features/${pack.id}`,
-    label: pack.title,
-  }));
-  const applicationBlockLinks = APPLICATION_BLOCKS.map((block) => ({
-    href: `/blocks/${block.name}`,
+  // Billing is one section (templates plus its feature pack), so it gets a single entry pointing at its hub.
+  const featurePackLinks = FEATURE_PACK_DOCS.map((pack) =>
+    pack.id === 'billing'
+      ? { href: '/blocks/billing', label: pack.title, active: isBillingDocsPath(pathname) }
+      : { href: `/blocks/features/${pack.id}`, label: pack.title, active: pathname === `/blocks/features/${pack.id}` },
+  );
+  const applicationBlockLinks = APPLICATION_BLOCKS.filter((block) => !block.section).map((block) => ({
+    href: applicationBlockHref(block),
     label: block.title,
   }));
   const sourceBlockLinks = SOURCE_BLOCKS.map((block) => ({
@@ -249,16 +251,13 @@ export const SiteSidebar = forwardRef<HTMLElement, SiteSidebarProps>(function Si
                 Feature packs
               </NavLink>
             </li>
-            {featurePackLinks.map(({ href, label }) => {
-              const active = pathname === href || (href === '/blocks/features/billing' && onBillingDocs);
-              return (
-                <li key={href}>
-                  <NavLink active={active} href={href} onNavigate={onNavigate}>
-                    {label}
-                  </NavLink>
-                </li>
-              );
-            })}
+            {featurePackLinks.map(({ href, label, active }) => (
+              <li key={href}>
+                <NavLink active={active} href={href} onNavigate={onNavigate}>
+                  {label}
+                </NavLink>
+              </li>
+            ))}
             <li>
               <NavLink href="/blocks/account" active={onAccountDocs} onNavigate={onNavigate}>
                 Account

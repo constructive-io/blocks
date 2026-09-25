@@ -3,96 +3,6 @@
   "source": "apps/blocks/registry.json",
   "blocks": [
     {
-      "name": "billing-contracts",
-      "slug": "billing-contracts",
-      "title": "Billing Contracts",
-      "category": "billing",
-      "type": "library",
-      "status": "ready",
-      "purpose": "Provider-neutral billing DTOs, resource states, and precision-safe formatters."
-    },
-    {
-      "name": "billing-ui",
-      "slug": "billing-ui",
-      "title": "Billing UI Helpers",
-      "category": "billing",
-      "type": "library",
-      "status": "ready",
-      "purpose": "Shared billing formatting and presentation helpers."
-    },
-    {
-      "name": "billing-pricing-table",
-      "slug": "billing-pricing-table",
-      "title": "Billing Pricing Table",
-      "category": "billing",
-      "type": "block",
-      "status": "ready",
-      "purpose": "Responsive plan comparison and interval selection."
-    },
-    {
-      "name": "billing-subscription-card",
-      "slug": "billing-subscription-card",
-      "title": "Billing Subscription Card",
-      "category": "billing",
-      "type": "block",
-      "status": "ready",
-      "purpose": "Current-plan, subscription, provider, and payment summary."
-    },
-    {
-      "name": "billing-entitlements-list",
-      "slug": "billing-entitlements-list",
-      "title": "Billing Entitlements List",
-      "category": "billing",
-      "type": "block",
-      "status": "ready",
-      "purpose": "Plan features, caps, quotas, and metered allowances."
-    },
-    {
-      "name": "billing-usage-overview",
-      "slug": "billing-usage-overview",
-      "title": "Billing Usage Overview",
-      "category": "billing",
-      "type": "block",
-      "status": "ready",
-      "purpose": "Current-period usage, allowance, credit pool, and overage states."
-    },
-    {
-      "name": "billing-credits-card",
-      "slug": "billing-credits-card",
-      "title": "Billing Credits Card",
-      "category": "billing",
-      "type": "block",
-      "status": "ready",
-      "purpose": "Available credits grouped by compatible meter and unit."
-    },
-    {
-      "name": "billing-usage-history",
-      "slug": "billing-usage-history",
-      "title": "Billing Usage History",
-      "category": "billing",
-      "type": "block",
-      "status": "ready",
-      "purpose": "Accessible, filterable, and paginated usage history."
-    },
-    {
-      "name": "billing-activity-table",
-      "slug": "billing-activity-table",
-      "title": "Billing Activity Table",
-      "category": "billing",
-      "type": "block",
-      "status": "ready",
-      "purpose": "Filterable billing ledger activity with metadata details."
-    },
-    {
-      "name": "billing-settings-page",
-      "slug": "billing-settings-page",
-      "title": "Billing Settings Page",
-      "category": "billing",
-      "type": "page",
-      "status": "ready",
-      "purpose": "Router-neutral composition of the customer billing blocks."
-    },
-    {
       "name": "account-phone-numbers",
       "slug": "account-phone-numbers",
       "title": "Account Phone Numbers",
@@ -153,7 +63,7 @@
       "category": "feature-pack",
       "type": "feature-pack",
       "status": "ready",
-      "purpose": "Feature-pack root for plans, subscriptions, usage, credits, and activity."
+      "purpose": "Feature-pack root for customer billing: the Billing Account workspace."
     },
     {
       "name": "feature-pack-notifications",

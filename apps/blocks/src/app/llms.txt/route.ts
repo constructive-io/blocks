@@ -1,5 +1,5 @@
 import { AI_DOC } from '@/lib/ai-docs';
-import { APPLICATION_BLOCKS } from '@/lib/application-blocks';
+import { APPLICATION_BLOCKS, applicationBlockHref } from '@/lib/application-blocks';
 import { COMMAND_PALETTE_DOC } from '@/lib/command-palette-docs';
 import { SOURCE_BLOCKS } from '@/lib/source-blocks';
 
@@ -29,17 +29,17 @@ const surfaceLinks: readonly SurfaceLink[] = [
     path: `/blocks/${name}/`,
     description,
   })),
-  ...APPLICATION_BLOCKS.map(({ description, name, title }) => ({
-    title,
-    path: `/blocks/${name}/`,
-    description,
-  })),
   {
     title: 'Billing',
     path: '/blocks/billing/',
     description:
-      'Provider-neutral customer billing blocks for plans, subscriptions, usage, credits, entitlements, history, and activity.',
+      'Billing workspaces for platform and tenant billing: the Billing Account and Billing Console templates, gift codes, and the billing feature pack.',
   },
+  ...APPLICATION_BLOCKS.map((block) => ({
+    title: block.title,
+    path: `${applicationBlockHref(block)}/`,
+    description: block.description,
+  })),
   {
     title: 'Account',
     path: '/blocks/account/',

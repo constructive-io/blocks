@@ -33,6 +33,12 @@ import type { ApplicationBlockDoc } from '@/lib/application-blocks';
 const AgentsBuilderPreview = dynamic(() =>
   import('./agents-builder-preview').then((module) => module.AgentsBuilderPreview),
 );
+const BillingAccountPreview = dynamic(() =>
+  import('./billing-account-preview').then((module) => module.BillingAccountPreview),
+);
+const BillingConsolePreview = dynamic(() =>
+  import('./billing-console-preview').then((module) => module.BillingConsolePreview),
+);
 
 const ORG_CHART_EDGES: OrgChartEdge[] = [
   {
@@ -405,6 +411,8 @@ export function ApplicationBlockShowcaseCanvas({
   name: ApplicationBlockDoc['name'];
 }) {
   if (name === 'agents-builder') return <AgentsBuilderPreview />;
+  if (name === 'billing-account') return <BillingAccountPreview />;
+  if (name === 'billing-console') return <BillingConsolePreview />;
   return name === 'org-chart' ? (
     <OrgChartPreview />
   ) : (

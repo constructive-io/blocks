@@ -695,8 +695,7 @@ test('source manifests define one collision-free public registry contract', () =
 	assertFeaturePackRegistryContract(items);
 
 	const itemByName = new Map(items.map((item) => [item.name, item]));
-	assert.deepEqual(itemByName.get('billing-usage-overview')?.dependencies, ['lucide-react', 'motion']);
-	assert.deepEqual(itemByName.get('billing-credits-card')?.dependencies, ['lucide-react', 'motion']);
-	assert.deepEqual(itemByName.get('billing-settings-page')?.dependencies, ['lucide-react']);
-	assert.deepEqual(itemByName.get('billing-activity-table')?.dependencies, []);
+	assert.deepEqual(itemByName.get('billing-account')?.dependencies, ['lucide-react']);
+	assert.deepEqual(itemByName.get('billing-console')?.dependencies, ['lucide-react']);
+	assert.deepEqual(itemByName.get('feature-pack-billing')?.registryDependencies, ['billing-account']);
 });

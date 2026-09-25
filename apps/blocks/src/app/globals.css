@@ -7,6 +7,10 @@
 
 @source '../';
 @source '../../../../packages/ui/src/components/agents-builder';
+@source '../../../../packages/ui/src/components/workspace-kit';
+@source '../../../../packages/ui/src/components/billing-kit';
+@source '../../../../packages/ui/src/components/billing-account';
+@source '../../../../packages/ui/src/components/billing-console';
 
 html {
   scroll-padding-top: 4.5rem;

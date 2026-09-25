@@ -1,17 +1,17 @@
-import { BillingUsageOverview } from '@/blocks/billing/billing-usage-overview/billing-usage-overview';
-import {
-  billingShowcaseFormatOptions,
-  billingShowcaseOrganizationAccount,
-  billingShowcaseUsageResources,
-} from '@/lib/billing-showcase-fixtures';
+import { BILLING_ACCOUNT_DEMO, DEMO_NOW } from '@/components/ui/billing-account/fixtures';
+import { BillingFormatProvider } from '@/components/ui/billing-kit/context';
+import { Panel } from '@/components/ui/billing-kit/surface';
+import { PoolGrid } from '@/components/ui/billing-kit/usage';
 
-/** Real billing block — the org usage snapshot from the showcase fixtures. */
+/** Real billing block — the category pools from the Billing Account demo. */
 export function UsageCard() {
   return (
-    <BillingUsageOverview
-      account={billingShowcaseOrganizationAccount}
-      formatOptions={billingShowcaseFormatOptions}
-      resource={billingShowcaseUsageResources.ready}
-    />
+    <BillingFormatProvider now={DEMO_NOW}>
+      <div className="@container/view">
+        <Panel title="Usage this period" description="6 days until the period resets.">
+          <PoolGrid meters={BILLING_ACCOUNT_DEMO.meters} balances={BILLING_ACCOUNT_DEMO.balances} limit={4} />
+        </Panel>
+      </div>
+    </BillingFormatProvider>
   );
 }

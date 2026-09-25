@@ -5,7 +5,11 @@ export type ApplicationBlockApiRow = Readonly<{
 }>;
 
 export type ApplicationBlockDoc = Readonly<{
-  name: 'org-chart' | 'storage-browser' | 'agents-builder';
+  name: 'org-chart' | 'storage-browser' | 'agents-builder' | 'billing-account' | 'billing-console';
+  /** Docs route when it is not `/blocks/<name>`, e.g. inside a section such as Billing. */
+  href?: string;
+  /** Section hub the block is listed under instead of its own nav item. */
+  section?: 'billing';
   title: string;
   description: string;
   previewDescription: string;
@@ -22,6 +26,8 @@ export type ApplicationBlockDoc = Readonly<{
   composition: readonly string[];
   accessibility: readonly string[];
   api: readonly ApplicationBlockApiRow[];
+  /** Leaf components the template is built from, each usable on its own. */
+  buildingBlocks?: readonly ApplicationBlockApiRow[];
 }>;
 
 export const APPLICATION_BLOCKS: readonly ApplicationBlockDoc[] = [
@@ -488,6 +494,211 @@ export function AgentWorkspace({
       },
     ],
   },
+  {
+    name: 'billing-account',
+    href: '/blocks/billing/account',
+    section: 'billing',
+    title: 'Billing Account',
+    description:
+      'The customer side of Constructive billing: an account switcher and six views over one account’s plan, usage by credit pool, credits, invoices, and ledger. Works for Constructive’s own platform billing and for any tenant app billing its customers.',
+    previewDescription:
+      'Switch scenarios (overdue, suspended, checkout pending, scheduled downgrade, free, read-only member, tenant app), open a meter to see its daily usage and waterfall, preview a downgrade with its conflicts, buy a pack, redeem a gift code (try HACKWEEK-2026 or TEAM-SEATS), and filter the ledger.',
+    previewHeight: 820,
+    whenToUse: [
+      'Use Billing Account as the billing destination for a signed-in person or organization: what plan they are on, what they have used, what is left, and what they paid.',
+      'Use the Billing Console template for the operator side (catalog, customers, provider, standing), and billing-kit leaves when one card or table belongs inside an existing page.',
+    ],
+    usage: {
+      description:
+        'Map the account’s billing rows into BillingAccountData and hand purchases to your provider through callbacks. The template owns navigation, previews, and optimistic local state; the host owns checkout, the customer portal, and persistence.',
+      example: `'use client';
+
+import { useRouter } from 'next/navigation';
+
+import {
+  BillingAccount,
+  type BillingAccountAction,
+  type BillingAccountData,
+  type PlanChangeRequest,
+  type RedeemResult
+} from '@/components/ui/billing-account';
+
+type AccountBillingProps = Readonly<{
+  data: BillingAccountData;
+  now: string;
+  changePlan: (request: PlanChangeRequest) => Promise<{ checkoutUrl?: string }>;
+  checkoutPack: (slug: string) => Promise<string>;
+  redeem: (code: string) => Promise<RedeemResult>;
+  openPortal: () => Promise<string>;
+  /** From the \`?code=\` of a promo link, if any. */
+  promoCode?: string;
+}>;
+
+export function AccountBilling({ data, now, changePlan, checkoutPack, redeem, openPortal, promoCode }: AccountBillingProps) {
+  const router = useRouter();
+
+  const handleAction = async (action: BillingAccountAction) => {
+    if (action.type === 'open-portal') window.location.assign(await openPortal());
+    if (action.type === 'switch-account') router.push(\`/billing/\${action.accountId}\`);
+  };
+
+  return (
+    <div className="h-dvh">
+      <BillingAccount
+        data={data}
+        now={now}
+        onChangePlan={async (request) => {
+          const { checkoutUrl } = await changePlan(request);
+          if (checkoutUrl) window.location.assign(checkoutUrl);
+        }}
+        onBuyCredits={async (pack) => window.location.assign(await checkoutPack(pack.slug))}
+        onRedeemCode={redeem}
+        initialRedeemCode={promoCode}
+        onAction={handleAction}
+      />
+    </div>
+  );
+}`,
+    },
+    state: {
+      title: 'Views, previews, and optimistic state',
+      description:
+        'The view is uncontrolled by default; pass view and onViewChange to sync it with a router, and views to hide the ones your data cannot back. After a callback resolves the template shows the result locally (a scheduled change, a pending checkout, a new plan); passing new data resets it to the host’s truth.',
+    },
+    composition: [
+      'Built on workspace-kit (the same shell as Agents Builder: sidebar rail, drawer, view frames, filter pills) and billing-kit, so every card, table, and dialog is reusable on its own.',
+      'Overview: BillingStatusBanner (admin hold → suspension → grace → checkout pending → review → scheduled change), CurrentPlanCard, CreditWallet, PoolGrid, LimitList, LedgerTimeline, and FeatureCapList.',
+      'Usage: headline StatTiles with a projection to period end, UsageTree (universal → category pools → meters, each with plan marker and credit cost), MeterDetailSheet with daily Sparkline and request windows, LimitList, UsageAlertList, and FeatureCapList.',
+      'Plans: IntervalSwitch and PlanComparison; choosing a plan opens PlanChangeDialog, which diffs entitlements, flags limits already exceeded, and offers “now” or “at period end” when the provider can schedule changes.',
+      'Gift codes: RedeemCodeDialog opens from the overview, the credits view, the account menu, or a ?code= link (initialRedeemCode). The host answers with the redemption or a typed refusal (not found, paused, expired, used up, already redeemed, not eligible); the dialog lists every grant, and the credits, balances, limits, and ledger update right away.',
+      'Credits: CreditWallet, RedeemCodeField, CreditPackGrid, CreditGrantList in draw-down order, and RedemptionList of codes this account redeemed. Invoices: provider-portal panel, InvoiceTable with expandable lines, AdjustmentList. Activity: LedgerTimeline filtered by class.',
+      'Provider-neutral: the active BillingProviderDescriptor decides which actions appear (hosted checkout, customer portal, scheduled changes). Stripe ships as STRIPE_PROVIDER; hosts register others the same way.',
+    ],
+    accessibility: [
+      'Status never relies on colour: every badge carries a label, meters expose values through the meter role, and warnings in the sidebar have screen-reader text.',
+      'The plan-change preview is a labelled dialog with radio choices for timing and inline error text when the host refuses the change.',
+      'The collapsed sidebar keeps labels through tooltips and aria-label; below the sidebar width navigation moves into a drawer.',
+      'Entrance motion and bar fills turn off under reduced motion; view swaps never animate the whole page.',
+    ],
+    api: [
+      { name: 'data', type: 'BillingAccountData', behavior: 'Accounts, plans and prices, comparison rows, meters and balances, the subscription, credit grants and packs, ledger, invoices, limits, caps, alerts, and (platform) database standing. BILLING_ACCOUNT_DEMO and billingAccountScenario() are complete examples.' },
+      { name: 'view / defaultView / onViewChange', type: "'overview' | 'usage' | 'plans' | 'credits' | 'invoices' | 'activity'", behavior: 'Controls or seeds the active view.' },
+      { name: 'views', type: 'BillingAccountView[]', behavior: 'Limits navigation to the views the host can back; defaults to all six.' },
+      { name: 'onChangePlan', type: '(request: PlanChangeRequest) => Promise<void>', behavior: 'Receives the plan, price, timing, and whether a hosted checkout is needed. Reject to keep the preview open with the message.' },
+      { name: 'onBuyCredits', type: '(pack) => Promise<void>', behavior: 'Starts a pack checkout.' },
+      { name: 'onRedeemCode', type: '(code: string) => Promise<RedeemResult>', behavior: 'Redeems a normalised gift code for this account. Resolve with { status: \'redeemed\', redemption } (what it granted, each grant\'s expiry resolved) or { status: \'refused\', reason, message? }. Without it, redeeming is hidden.' },
+      { name: 'initialRedeemCode', type: 'string', behavior: 'Opens the redeem dialog prefilled, e.g. from a promo link; a new value reopens it.' },
+      { name: 'onAlertsChange', type: '(alerts: UsageAlert[]) => void', behavior: 'Persists usage alert edits.' },
+      { name: 'onAction', type: '(action: BillingAccountAction) => void', behavior: 'Portal, invoice, pay, cancel scheduled change, contact sales or support, account switch, and account-menu items.' },
+      { name: 'locale / timeZone / now', type: 'string', behavior: 'Formatting; pass now from the server so relative dates render identically on both sides.' },
+      { name: 'theme / onThemeChange / defaultSidebarCollapsed', type: "'light' | 'dark' | 'system' / boolean", behavior: 'Drives the appearance switch in the account menu and the initial rail state.' },
+    ],
+    buildingBlocks: [
+      { name: 'BillingStatusBanner / Notice / LifecycleBadge', type: 'status', behavior: 'The one notice an account needs now, and lifecycle labels for active, grace, suspended, checkout pending, ended, and review required.' },
+      { name: 'CurrentPlanCard / PriceTag / IntervalSwitch', type: 'plan', behavior: 'Plan, price, period progress, next invoice, and scheduled change.' },
+      { name: 'PlanComparison / PlanChangeDialog', type: 'plan', behavior: 'Side-by-side plans and the preview that diffs entitlements and picks timing.' },
+      { name: 'UsageTree / PoolGrid / MeterDetailSheet', type: 'usage', behavior: 'The credit waterfall, busiest pools, and one meter in depth.' },
+      { name: 'AllowanceBar / UsageFigure / Sparkline / PeriodTrack', type: 'primitives', behavior: 'Bars with soft thresholds and plan markers, figures, daily bars, and the billing period as a thin segmented bar, one segment per day.' },
+      { name: 'CreditWallet / CreditGrantList / CreditPackGrid', type: 'credits', behavior: 'Balance composition, grants in spend order, and packs.' },
+      { name: 'RedeemCodeDialog / RedeemCodeField / RedemptionList / CodeGrantList', type: 'gift codes', behavior: 'Redeem a code, see exactly what it added (e.g. +25,000 compute credits for 30 days), typed refusals, and redeemed-code history.' },
+      { name: 'LimitList / FeatureCapList / UsageAlertList', type: 'entitlements', behavior: 'Counted limits, plan features, and usage alerts.' },
+      { name: 'InvoiceTable / AdjustmentList / LedgerTimeline', type: 'history', behavior: 'Invoices with lines, refunds and disputes, and the ledger by day.' },
+    ],
+  },
+  {
+    name: 'billing-console',
+    href: '/blocks/billing/console',
+    section: 'billing',
+    title: 'Billing Console',
+    description:
+      'The operator side of Constructive billing, for the platform or a tenant database: revenue and attention, the catalog (plans and prices, entitlements, meters, packs and codes), customers, the payment provider with readiness and the billing switch, and platform database standing.',
+    previewDescription:
+      'Switch between the platform console and a tenant setting up billing. Edit the entitlement matrix and save, open a customer and grant credits, run the readiness check, try the locked billing switch, change the credit rate, switch providers, create or bulk-create gift codes and see who redeemed them, and place or lift an admin hold.',
+    previewHeight: 820,
+    whenToUse: [
+      'Use Billing Console where operators manage what a billing module sells and to whom: Constructive’s platform team, or a developer running billing for their own app.',
+      'Use Billing Account for the customer side of the same module.',
+    ],
+    usage: {
+      description:
+        'Map the billing module’s catalog, customers, provider connection, readiness verdict, and settings into BillingConsoleData, and route every write to your API. Provider credentials are write-only: the console only learns whether each one is set.',
+      example: `'use client';
+
+import {
+  BillingConsole,
+  type BillingConsoleData
+} from '@/components/ui/billing-console';
+
+type OperatorBillingProps = Readonly<{
+  data: BillingConsoleData;
+  api: {
+    saveEntitlements: (changes: { planId: string; kind: string; key: string; value: number }[]) => Promise<void>;
+    storeProviderSecrets: (providerId: string, values: Record<string, string>) => Promise<void>;
+    enqueueReadinessCheck: () => Promise<void>;
+    setBillingEnabled: (enabled: boolean) => Promise<void>;
+    grantCredits: (customerId: string, meter: string, amount: number, reason: string) => Promise<void>;
+  };
+}>;
+
+export function OperatorBilling({ data, api }: OperatorBillingProps) {
+  return (
+    <div className="h-dvh">
+      <BillingConsole
+        data={data}
+        onSaveEntitlements={api.saveEntitlements}
+        onConnectProvider={api.storeProviderSecrets}
+        onRunReadinessCheck={api.enqueueReadinessCheck}
+        onToggleBilling={api.setBillingEnabled}
+        onGrantCredits={(request) =>
+          api.grantCredits(request.customerId, request.meterSlug, request.amount, request.reason)
+        }
+      />
+    </div>
+  );
+}`,
+    },
+    state: {
+      title: 'Drafts, gates, and optimistic state',
+      description:
+        'Entitlement edits stay a local draft with a save bar until onSaveEntitlements resolves. The billing switch refuses to turn on without a passing readiness verdict under 24 hours old, mirroring the database gate; turning it off is always allowed. Toggles, grants, holds, and provider connections show locally after the host resolves and reset with new data.',
+    },
+    composition: [
+      'Same shell as Billing Account and Agents Builder (workspace-kit), with a workspace menu that marks the scope as Platform or Tenant and a footer showing whether billing is live.',
+      'Overview: StatTiles for recurring revenue, customers, and revenue at risk; a “Needs attention” list (readiness, overdue customers, reviews, catalog sync, usage-sync failures, suspended databases); revenue bars; customers by plan.',
+      'Catalog: PlanPriceTable (immutable prices, sync state, provider ids), EntitlementMatrix (plans × limits, meter allowances, caps, editable with ∞), MeterCatalogTable grouped by pool, and CreditPackTable (flags packs priced below the credit rate).',
+      'Gift codes: CreditCodeTable with live, paused, expired, and used-up codes; CreditCodeDialog to create or edit one (generated or typed code, grants on meters such as the compute pool or on limits such as seats, redemption cap, expiry, pause); BulkCodeDialog for single-use batches with copy and CSV download; CreditCodeSheet with every redemption.',
+      'Customers: filters and search over CustomerTable; CustomerDetailSheet with balances, credits and GrantCreditsForm, overrides, request windows, the provider operations log, and invoices.',
+      'Provider: the active provider card with write-only credential state, ReadinessChecklist with “Check now”, the gated billing switch, the credit rate, usage sync, and ProviderConnectDialog for connecting or switching (one active provider at a time).',
+      'Standing (platform only): StandingTable with billing suspensions and admin holds, a reasoned hold dialog, and release.',
+    ],
+    accessibility: [
+      'Tables use real table semantics with scoped headers; switches have descriptive labels such as “Retire the monthly Pro price”.',
+      'Matrix cells are labelled inputs (“Databases for Team”) that commit on blur or Enter and cancel on Escape; the unlimited toggle is a pressed-state button.',
+      'The readiness checklist announces its running state, and every check keeps its text status.',
+      'Credential inputs never echo stored values; errors are tied to fields with aria-describedby.',
+    ],
+    api: [
+      { name: 'data', type: 'BillingConsoleData', behavior: 'Scope, workspace, providers and the active connection, readiness verdict, settings, usage sync, plans, entitlement groups, meters, packs, codes, customers, standing, and a revenue trend. BILLING_CONSOLE_DEMO and BILLING_CONSOLE_TENANT_DEMO are complete examples.' },
+      { name: 'view / defaultView / onViewChange / views', type: "'overview' | 'catalog' | 'customers' | 'provider' | 'standing'", behavior: 'Controls or seeds the active view and limits navigation; standing only appears at platform scope.' },
+      { name: 'onSaveEntitlements', type: '(changes: EntitlementChange[]) => Promise<void>', behavior: 'Persists the matrix draft; reject to keep it unsaved with the message.' },
+      { name: 'onConnectProvider', type: '(providerId, values) => Promise<void>', behavior: 'Stores credentials and makes the provider active.' },
+      { name: 'onRunReadinessCheck', type: '() => Promise<BillingHealth | void>', behavior: 'Enqueues the readiness job; resolve with the new verdict to show it.' },
+      { name: 'onToggleBilling / onCreditRateChange', type: '(enabled) / (creditsPerCent) => Promise<void>', behavior: 'Flip enable_billing and set credits_per_cent; reject with the gate’s error to show it.' },
+      { name: 'onGrantCredits', type: '(request: GrantCreditsRequest) => Promise<void>', behavior: 'Grants credits to one customer with a type, optional expiry, and a ledger reason.' },
+      { name: 'onSaveCode / onCreateCodes', type: '(draft, existing?) => Promise<CreditCode | void> / (drafts) => Promise<void>', behavior: 'Create or edit one gift code, or a bulk batch of single-use codes. Without them the code actions are hidden.' },
+      { name: 'onHoldDatabase / onReleaseDatabase', type: '(database, note?) => Promise<void>', behavior: 'Platform scope: place an admin hold or lift a suspension.' },
+      { name: 'onAction', type: '(action: BillingConsoleAction) => void', behavior: 'Plan, price, meter, pack, and code toggles; new plan, price, and pack; override removal; scheduled-change cancellation; workspace menu.' },
+    ],
+    buildingBlocks: [
+      { name: 'EntitlementMatrix / PlanPriceTable', type: 'catalog', behavior: 'Plans × entitlements with in-place editing, and plans with their immutable prices and provider mirror.' },
+      { name: 'MeterCatalogTable / CreditPackTable', type: 'catalog', behavior: 'Meters grouped by pool, and packs checked against the credit rate.' },
+      { name: 'CreditCodeTable / CreditCodeDialog / BulkCodeDialog / CreditCodeSheet / CodeItemsEditor', type: 'gift codes', behavior: 'List, create, bulk-create, pause, and inspect gift codes and their redemptions.' },
+      { name: 'CustomerTable / CustomerDetailSheet / GrantCreditsForm', type: 'customers', behavior: 'Subscribers, one customer in depth, and credit grants.' },
+      { name: 'ProviderConnectDialog / ProviderCredentialForm / ProviderCard / ProviderMark', type: 'provider', behavior: 'Pick or switch providers and store write-only credentials, driven by BillingProviderDescriptor.' },
+      { name: 'ReadinessChecklist / SyncBadge / ExternalRef', type: 'provider', behavior: 'Doctor checks with provider copy, catalog sync state, and provider ids with copy and deep links.' },
+      { name: 'StandingTable', type: 'platform', behavior: 'Billing suspensions and admin holds with hold and release.' },
+    ],
+  },
 ];
 
 const APPLICATION_BLOCK_BY_NAME = new Map(
@@ -496,4 +707,18 @@ const APPLICATION_BLOCK_BY_NAME = new Map(
 
 export function getApplicationBlock(name: string): ApplicationBlockDoc | undefined {
   return APPLICATION_BLOCK_BY_NAME.get(name as ApplicationBlockDoc['name']);
+}
+
+/** The docs route for an application block. */
+export function applicationBlockHref(block: Pick<ApplicationBlockDoc, 'name' | 'href'>) {
+  return block.href ?? `/blocks/${block.name}`;
+}
+
+const APPLICATION_BLOCK_BY_HREF = new Map(
+  APPLICATION_BLOCKS.map((block) => [applicationBlockHref(block), block] as const),
+);
+
+/** The application block documented at a (normalised) path, if any. */
+export function getApplicationBlockByPath(path: string): ApplicationBlockDoc | undefined {
+  return APPLICATION_BLOCK_BY_HREF.get(path);
 }

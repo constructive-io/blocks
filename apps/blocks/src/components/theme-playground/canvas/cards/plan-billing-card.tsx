@@ -1,17 +1,19 @@
-import { BillingSubscriptionCard } from '@/blocks/billing/billing-subscription-card/billing-subscription-card';
-import {
-  billingShowcaseFormatOptions,
-  billingShowcaseOrganizationAccount,
-  billingShowcaseOrganizationSubscriptionResources,
-} from '@/lib/billing-showcase-fixtures';
+import { BILLING_ACCOUNT_DEMO, DEMO_NOW } from '@/components/ui/billing-account/fixtures';
+import { BillingFormatProvider } from '@/components/ui/billing-kit/context';
+import { CurrentPlanCard } from '@/components/ui/billing-kit/plan';
 
-/** Real billing block — same fixture the billing showcase uses. */
+const PLAN = BILLING_ACCOUNT_DEMO.plans.find((plan) => plan.id === BILLING_ACCOUNT_DEMO.subscription?.planId)!;
+
+/** Real billing block — the same plan card the Billing Account overview shows. */
 export function PlanBillingCard() {
   return (
-    <BillingSubscriptionCard
-      account={billingShowcaseOrganizationAccount}
-      formatOptions={billingShowcaseFormatOptions}
-      resource={billingShowcaseOrganizationSubscriptionResources.ready}
-    />
+    <BillingFormatProvider now={DEMO_NOW}>
+      <CurrentPlanCard
+        plan={PLAN}
+        subscription={BILLING_ACCOUNT_DEMO.subscription}
+        lifecycle="active"
+        nextInvoice={BILLING_ACCOUNT_DEMO.nextInvoice}
+      />
+    </BillingFormatProvider>
   );
 }

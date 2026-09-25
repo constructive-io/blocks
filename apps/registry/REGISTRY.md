@@ -2,10 +2,11 @@
 
 The public `@constructive` registry is built from four canonical sources:
 
-- `packages/ui` provides the Constructive primitives, app bar, and app shell.
+- `packages/ui` provides the Constructive primitives, app bar, app shell, and
+  the application templates (Agents Builder, Billing Account, Billing Console).
 - `packages/sheets` provides the source-owned data grid and its adapter contracts.
 - `packages/schema-builder` provides the source-owned control-plane schema editor.
-- `apps/blocks` provides billing blocks, the Command Palette presentation,
+- `apps/blocks` provides the Command Palette presentation,
   provider-neutral feature packs, optional Console Kit modules, preset roots,
   and `console-kit-nextjs`.
 
@@ -37,7 +38,7 @@ pnpm dlx shadcn@latest add @constructive/command-palette
 pnpm dlx shadcn@latest add @constructive/sheets
 pnpm dlx shadcn@latest add @constructive/schema-builder
 pnpm dlx shadcn@latest add @constructive/app-shell
-pnpm dlx shadcn@latest add @constructive/billing-settings-page
+pnpm dlx shadcn@latest add @constructive/billing-account
 pnpm dlx shadcn@latest add @constructive/account-phone-numbers
 pnpm dlx shadcn@latest add @constructive/agents-builder
 ```

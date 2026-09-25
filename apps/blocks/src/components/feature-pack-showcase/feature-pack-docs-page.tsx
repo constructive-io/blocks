@@ -2,11 +2,11 @@ import Link from 'next/link';
 
 import { Table, TableBody, TableCaption, TableCell, TableHead, TableHeader, TableRow } from '@constructive-io/ui/table';
 
+import { BillingDocsNav } from '@/components/billing-docs/billing-docs-nav';
 import { CodeBlock } from '@/components/docs/code-block';
 import { DocSection } from '@/components/docs/doc-section';
 import { FEATURE_PACK_CATALOG, getFeaturePackManifest, type FeaturePackManifestV1 } from '@/feature-packs';
 import { ACCOUNT_BLOCKS } from '@/lib/account-blocks';
-import { BILLING_BLOCKS } from '@/lib/billing-blocks';
 import { type FeaturePackApiRow, type FeaturePackDoc } from '@/lib/feature-packs';
 import { registryAdd } from '@/lib/install-mode';
 import { withBase } from '@/lib/site';
@@ -186,6 +186,8 @@ export function FeaturePackDocsPage({
           <p className="mt-2 text-pretty text-sm leading-7 text-muted-foreground sm:text-[15px]">{block.description}</p>
         </header>
 
+        {block.id === 'billing' ? <BillingDocsNav current="/blocks/features/billing" /> : null}
+
         <FeaturePackShowcasePreview pack={block.id} previewPath={withBase(`/blocks/features/${block.id}/preview/`)} />
       </section>
 
@@ -235,11 +237,17 @@ export function FeaturePackDocsPage({
 
       {block.id === 'billing' ? (
         <DocSection
-          description="The Billing feature pack composes the mature customer billing blocks. Each leaf block remains independently installable and has its own state, accessibility, and API documentation."
-          id="billing-blocks"
-          title="Billing blocks"
+          description="The Billing feature pack mounts the Billing Account template. The operator side ships as the Billing Console template, and every card, table, and dialog they share installs on its own from billing-kit."
+          id="billing-templates"
+          title="Billing templates"
         >
-          <BlockLinks basePath="/blocks/billing" blocks={BILLING_BLOCKS} />
+          <GuidanceList
+            items={[
+              'Billing Account: the customer workspace this pack renders.',
+              'Billing Console: catalog, gift codes, customers, provider setup, and database standing for operators.',
+              'billing-kit: the shared contracts, provider descriptors, and components both templates are built from.',
+            ]}
+          />
         </DocSection>
       ) : null}
 
