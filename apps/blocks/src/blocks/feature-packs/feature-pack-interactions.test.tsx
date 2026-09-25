@@ -1023,7 +1023,7 @@ describe('feature-pack interaction policy', () => {
       />
     );
 
-    const target = screen.getByText('Grace Hopper').closest('li');
+    const target = screen.getByText('Grace Hopper').closest('tr');
     expect(target).toHaveAttribute('aria-current', 'true');
     await waitFor(() => expect(target).toHaveFocus());
   });
@@ -1086,6 +1086,72 @@ describe('feature-pack interaction policy', () => {
     const row = target.closest('tr');
     expect(row).toHaveAttribute('aria-current', 'true');
     await waitFor(() => expect(row).toHaveFocus());
+  });
+
+  it('draws the organization chart from reporting lines and adds a line through the host action', async () => {
+    vi.stubGlobal('ResizeObserver', class { observe() {} unobserve() {} disconnect() {} });
+    // jsdom lacks the Web Animations API that Base UI's scroll areas query.
+    if (!Element.prototype.getAnimations) Element.prototype.getAnimations = () => [];
+    const user = userEvent.setup();
+    const setHierarchyEdge = vi.fn().mockResolvedValue(undefined);
+    const member = (id: string, name: string) => ({
+      id: `membership-${id}`,
+      userId: id,
+      name,
+      email: `${id}@example.com`,
+      governance: 'member' as const,
+      status: 'active' as const,
+      isApproved: true,
+      isBanned: false,
+      isDisabled: false,
+      isActive: true,
+      isExternal: false,
+      isReadOnly: false
+    });
+    render(
+      <OrganizationsFeaturePack
+        actions={{ setHierarchyEdge }}
+        policy={{ setHierarchyEdge: true }}
+        resource={{
+          status: 'ready',
+          data: {
+            activeOrganizationId: 'organization-1',
+            organizations: [{ id: 'organization-1', name: 'Acme' }],
+            members: [member('ada', 'Ada Lovelace'), member('grace', 'Grace Hopper'), member('linus', 'Linus Torvalds')],
+            hierarchy: [{ id: 'edge-1', childId: 'grace', parentId: 'ada', positionTitle: 'Engineering lead' }]
+          }
+        }}
+        section='hierarchy'
+      />
+    );
+
+    const chart = screen.getByRole('tree');
+    expect(within(chart).getByText('Ada Lovelace')).toBeInTheDocument();
+    expect(within(chart).getByText('Engineering lead')).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'Add reporting line' }));
+    const dialog = screen.getByRole('dialog');
+    fireEvent.click(within(dialog).getByRole('combobox', { name: 'Member' }));
+    const linus = screen.getByRole('option', { name: 'Linus Torvalds' });
+    fireEvent.pointerDown(linus, { pointerType: 'mouse' });
+    fireEvent.click(linus);
+    fireEvent.click(within(dialog).getByRole('combobox', { name: 'Reports to' }));
+    // The member list may still be closing, so take the manager list that just opened.
+    const grace = screen.getAllByRole('option', { name: 'Grace Hopper' }).at(-1)!;
+    fireEvent.pointerDown(grace, { pointerType: 'mouse' });
+    fireEvent.click(grace);
+    await user.type(within(dialog).getByRole('textbox', { name: 'Position title' }), 'Kernel engineer');
+    await user.click(within(dialog).getByRole('button', { name: 'Save reporting line' }));
+
+    await waitFor(() => expect(setHierarchyEdge).toHaveBeenCalledWith({
+      organizationId: 'organization-1',
+      childId: 'linus',
+      parentId: 'grace',
+      positionTitle: 'Kernel engineer',
+      positionLevel: undefined
+    }));
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
+    vi.unstubAllGlobals();
   });
 
   it('clears an organization invite profile when delivery is not a single-use email', async () => {
@@ -1259,7 +1325,7 @@ describe('feature-pack interaction policy', () => {
       />
     );
 
-    const target = screen.getByText('Ada Lovelace').closest('li');
+    const target = screen.getByText('Ada Lovelace').closest('tr');
     expect(target).toHaveAttribute('aria-current', 'true');
     await waitFor(() => expect(target).toHaveFocus());
   });

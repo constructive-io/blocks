@@ -449,9 +449,46 @@ export const FEATURE_PACK_SHOWCASE_ORGANIZATIONS: OrganizationsFeatureData = {
     populateMemberEmail: true,
     limitAllocationMode: 'pooled',
   },
-  hierarchy: [],
-  principals: [],
-  apiKeys: [],
+  hierarchy: [
+    {
+      id: 'org_edge_grace',
+      childId: 'user_grace',
+      parentId: 'user_ada',
+      positionTitle: 'Head of Engineering',
+      positionLevel: 1,
+      actionPolicy: { removeHierarchyEdge: true },
+    },
+    {
+      id: 'org_edge_alan',
+      childId: 'user_alan',
+      parentId: 'user_grace',
+      positionTitle: 'Research Engineer',
+      positionLevel: 2,
+      actionPolicy: { removeHierarchyEdge: true },
+    },
+  ],
+  principals: [
+    {
+      id: 'org_principal_ci',
+      name: 'Deploy pipeline',
+      type: 'Service',
+      useAdminOwner: false,
+      isReadOnly: true,
+      bypassStepUp: false,
+      actionPolicy: { revokeOrganizationPrincipal: true },
+    },
+  ],
+  apiKeys: [
+    {
+      id: 'org_key_ci',
+      principalId: 'org_principal_ci',
+      name: 'Reporting export',
+      createdAt: '2026-06-02T10:00:00.000Z',
+      lastUsedAt: '2026-07-21T08:12:00.000Z',
+      expiresAt: '2026-09-01T00:00:00.000Z',
+      actionPolicy: { revokeOrganizationApiKey: true },
+    },
+  ],
 };
 
 export const FEATURE_PACK_SHOWCASE_STORAGE: StorageFeatureData = {

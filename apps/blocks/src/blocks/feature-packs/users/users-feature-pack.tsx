@@ -4,7 +4,6 @@ import * as React from 'react';
 import {
   BadgeCheckIcon,
   BanIcon,
-  CheckIcon,
   HistoryIcon,
   KeyRoundIcon,
   MailPlusIcon,
@@ -12,19 +11,14 @@ import {
   PencilIcon,
   PlusIcon,
   RefreshCwIcon,
-  SearchIcon,
   ShieldCheckIcon,
   ShieldIcon,
   Trash2Icon,
   UserRoundCheckIcon,
-  UserRoundXIcon
+  UserRoundXIcon,
+  UsersRoundIcon
 } from 'lucide-react';
 
-import {
-  Alert,
-  AlertDescription,
-  AlertTitle
-} from '@constructive-io/ui/alert';
 import {
   AlertDialog,
   AlertDialogCancel,
@@ -35,8 +29,6 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger
 } from '@constructive-io/ui/alert-dialog';
-import { Avatar, AvatarFallback, AvatarImage } from '@constructive-io/ui/avatar';
-import { Badge } from '@constructive-io/ui/badge';
 import { Button } from '@constructive-io/ui/button';
 import { Checkbox } from '@constructive-io/ui/checkbox';
 import {
@@ -58,25 +50,12 @@ import {
   DropdownMenuTrigger
 } from '@constructive-io/ui/dropdown-menu';
 import {
-  Empty,
-  EmptyContent,
-  EmptyDescription,
-  EmptyHeader,
-  EmptyMedia,
-  EmptyTitle
-} from '@constructive-io/ui/empty';
-import {
   Field,
   FieldDescription,
   FieldGroup,
   FieldLabel
 } from '@constructive-io/ui/field';
 import { Input } from '@constructive-io/ui/input';
-import {
-  InputGroup,
-  InputGroupAddon,
-  InputGroupInput
-} from '@constructive-io/ui/input-group';
 import {
   Select,
   SelectContent,
@@ -85,16 +64,11 @@ import {
   SelectTrigger,
   SelectValue
 } from '@constructive-io/ui/select';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow
-} from '@constructive-io/ui/table';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@constructive-io/ui/tabs';
+import { Sheet, SheetContent, SheetDescription, SheetTitle } from '@constructive-io/ui/sheet';
+import { Tabs, TabsContent } from '@constructive-io/ui/tabs';
 import { Textarea } from '@constructive-io/ui/textarea';
+import { focusRingClass, pressClass, SearchField, ToneBadge, TooltipIconButton } from '@/components/ui/workspace-kit/primitives';
+import { SectionHeading, TableSurface, tableHeadClass, tableRowClass } from '@/components/ui/workspace-kit/surface';
 import { cn } from '@/lib/utils';
 
 import {
@@ -107,10 +81,16 @@ import {
 } from '../shared/feature-pack-contracts';
 import {
   FeaturePackBoundary,
+  FeaturePackEmpty,
   FeaturePackFilteredEmpty,
   FeaturePackLimitations,
+  FeaturePackOptionList,
+  FeaturePackPageHeader,
+  FeaturePackPerson,
+  FeaturePackTabList,
   FeaturePackTimestamp,
-  FeatureStatusBadge
+  FeatureStatusBadge,
+  focusedRecordClass
 } from '../shared/feature-pack-ui';
 
 export type UsersSection =
@@ -120,17 +100,6 @@ export type UsersSection =
   | 'profiles'
   | 'capabilities'
   | 'defaults';
-
-const sectionTriggerClass = cn(
-  'relative h-10 shrink-0 rounded-none border-0 border-b-2 border-transparent bg-transparent px-3',
-  'text-muted-foreground',
-  'hover:text-foreground data-[active]:text-foreground',
-  'data-[active]:border-foreground data-[active]:bg-transparent',
-  'focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-ring'
-);
-
-const focusedRecordClass =
-  'bg-muted/60 outline outline-2 outline-offset-[-2px] outline-ring';
 
 const NO_PROFILE_VALUE = '__no_profile__';
 
@@ -302,15 +271,6 @@ export type UsersFeaturePackProps = Readonly<{
   onError?: (error: FeaturePackError) => void;
 }>;
 
-function initials(name: string): string {
-  return name
-    .split(/\s+/u)
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((part) => part[0]?.toUpperCase())
-    .join('');
-}
-
 function memberStatus(member: AppMember): string {
   if (member.lifecycle.banned) return 'banned';
   if (member.lifecycle.disabled) return 'disabled';
@@ -385,7 +345,7 @@ function InviteMemberDialog({
 
   return (
     <Dialog onOpenChange={changeOpen} open={open}>
-      <DialogTrigger render={<Button />}>
+      <DialogTrigger render={<Button size='sm' />}>
         <MailPlusIcon data-icon='inline-start' />
         Invite member
       </DialogTrigger>
@@ -527,11 +487,15 @@ function MemberActions({
       <DropdownMenu>
         <DropdownMenuTrigger
           aria-label={`Actions for ${member.name}`}
-          render={<Button size='icon' variant='ghost' />}
+          className={cn(
+            'text-muted-foreground hover:bg-overlay-hover hover:text-foreground data-[popup-open]:bg-overlay-hover grid size-7 cursor-pointer place-items-center rounded-md',
+            pressClass,
+            focusRingClass
+          )}
         >
-          <MoreHorizontalIcon />
+          <MoreHorizontalIcon aria-hidden='true' className='size-3.5' />
         </DropdownMenuTrigger>
-        <DropdownMenuContent align='end'>
+        <DropdownMenuContent align='end' className='w-56 [&_[role=menuitem]]:gap-2 [&_[role=menuitem]_svg]:size-3.5'>
           {hasLifecycle ? (
             <DropdownMenuGroup>
               {available('setApproved') && actions?.setApproved ? (
@@ -697,7 +661,7 @@ function MemberActions({
   );
 }
 
-function MemberAccessDialog({
+function MemberAccessSheet({
   member,
   profiles,
   capabilities,
@@ -737,128 +701,145 @@ function MemberAccessDialog({
   };
 
   return (
-    <Dialog onOpenChange={setOpen} open={open}>
-      <DialogTrigger render={<Button size='sm' variant='outline' />}>
-        <ShieldIcon data-icon='inline-start' />
-        Manage access
-      </DialogTrigger>
-      <DialogContent className='sm:max-w-2xl'>
-        <DialogHeader>
-          <DialogTitle>Access for {member.name}</DialogTitle>
-          <DialogDescription>
-            Profiles and direct grants are separate inputs. Effective capabilities show the result enforced by the backend.
-          </DialogDescription>
-        </DialogHeader>
-        <DialogPanel className='flex max-h-[70dvh] flex-col gap-6 overflow-y-auto'>
-          {profiles.length > 0 ? (
-            <Field htmlFor={`${fieldId}-profile`} label='Access profile'>
-              <Select
-                disabled={!canSetProfile || Boolean(pendingKey)}
-                onValueChange={(value) => {
-                  const profileId = value === NO_PROFILE_VALUE ? undefined : value;
-                  if (profileId === member.profile?.id || (!profileId && !member.profile)) return;
-                  void run(
-                    'profile',
-                    () => actions!.setProfile!({ membershipId: member.id, profileId }),
-                    'The access profile could not be changed.'
-                  );
-                }}
-                value={member.profile?.id ?? NO_PROFILE_VALUE}
-              >
-                <SelectTrigger id={`${fieldId}-profile`}>
-                  <SelectValue>
-                    {(value: string | null) => value === NO_PROFILE_VALUE
-                      ? 'No profile'
-                      : profiles.find((profile) => profile.id === value)?.name ?? value}
-                  </SelectValue>
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectGroup>
-                    <SelectItem value={NO_PROFILE_VALUE}>No profile</SelectItem>
-                    {profiles.map((profile) => (
-                      <SelectItem key={profile.id} value={profile.id}>{profile.name}</SelectItem>
-                    ))}
-                  </SelectGroup>
-                </SelectContent>
-              </Select>
-            </Field>
-          ) : null}
-
-          <section className='flex flex-col gap-3'>
-            <div>
-              <h3 className='text-balance text-sm font-medium'>Direct capability overrides</h3>
-              <p className='text-muted-foreground text-pretty text-xs'>
-                These grants are independent from the selected profile.
-              </p>
+    <>
+      <TooltipIconButton extendHitArea={false} label='Manage access' onClick={() => setOpen(true)}>
+        <ShieldIcon aria-hidden='true' className='size-3.5' />
+      </TooltipIconButton>
+      <Sheet onOpenChange={setOpen} open={open}>
+        <SheetContent className='w-full gap-0 p-0 sm:max-w-md' side='right'>
+          <header className='flex flex-col gap-3 p-4 pr-12'>
+            <SheetTitle className='text-sm font-medium'>Access for {member.name}</SheetTitle>
+            <SheetDescription className='text-[13px]'>
+              Profiles and direct grants are separate inputs. Effective capabilities show the result enforced by the backend.
+            </SheetDescription>
+            <div className='flex flex-wrap items-center gap-1.5'>
+              <MemberRole member={member} />
+              <FeatureStatusBadge status={memberStatus(member)} />
             </div>
-            {capabilities.length > 0 ? (
-              <FieldGroup>
-                {capabilities.map((capability) => {
-                  const checked = directCapabilityIds.has(capability.id);
-                  return (
-                    <Field
-                      data-disabled={!canSetDirectCapability || Boolean(pendingKey)}
-                      key={capability.id}
-                      orientation='horizontal'
-                    >
-                      <Checkbox
-                        aria-label={`${checked ? 'Revoke' : 'Grant'} ${capability.name} directly`}
-                        checked={checked}
-                        disabled={!canSetDirectCapability || Boolean(pendingKey)}
-                        id={`${fieldId}-direct-${capability.id}`}
-                        onCheckedChange={(nextChecked) => void run(
-                          `direct-${capability.id}`,
-                          () => actions!.setDirectCapability!({
-                            userId: member.userId,
-                            capabilityId: capability.id,
-                            granted: nextChecked === true
-                          }),
-                          'The direct capability could not be changed.'
-                        )}
-                      />
-                      <div className='min-w-0 flex-1'>
-                        <FieldLabel htmlFor={`${fieldId}-direct-${capability.id}`}>
-                          {capability.name}
-                        </FieldLabel>
-                        {capability.description ? (
-                          <FieldDescription className='text-pretty'>{capability.description}</FieldDescription>
-                        ) : null}
-                      </div>
-                    </Field>
-                  );
-                })}
-              </FieldGroup>
-            ) : (
-              <p className='text-muted-foreground text-pretty text-sm'>
-                The capability catalog is unavailable for this tenant.
-              </p>
-            )}
-          </section>
+          </header>
+          <div className='flex min-h-0 flex-1 flex-col gap-5 overflow-y-auto border-t border-dashed border-foreground/10 p-4'>
+            {profiles.length > 0 ? (
+              <Field htmlFor={`${fieldId}-profile`} label='Access profile'>
+                <Select
+                  disabled={!canSetProfile || Boolean(pendingKey)}
+                  onValueChange={(value) => {
+                    const profileId = value === NO_PROFILE_VALUE ? undefined : value;
+                    if (profileId === member.profile?.id || (!profileId && !member.profile)) return;
+                    void run(
+                      'profile',
+                      () => actions!.setProfile!({ membershipId: member.id, profileId }),
+                      'The access profile could not be changed.'
+                    );
+                  }}
+                  value={member.profile?.id ?? NO_PROFILE_VALUE}
+                >
+                  <SelectTrigger id={`${fieldId}-profile`}>
+                    <SelectValue>
+                      {(value: string | null) => value === NO_PROFILE_VALUE
+                        ? 'No profile'
+                        : profiles.find((profile) => profile.id === value)?.name ?? value}
+                    </SelectValue>
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectGroup>
+                      <SelectItem value={NO_PROFILE_VALUE}>No profile</SelectItem>
+                      {profiles.map((profile) => (
+                        <SelectItem key={profile.id} value={profile.id}>{profile.name}</SelectItem>
+                      ))}
+                    </SelectGroup>
+                  </SelectContent>
+                </Select>
+              </Field>
+            ) : null}
 
-          <section className='flex flex-col gap-3'>
-            <div>
-              <h3 className='text-balance text-sm font-medium'>Effective capabilities</h3>
-              <p className='text-muted-foreground text-pretty text-xs'>
-                This read-only result includes profile, direct, admin, and owner access.
-              </p>
-            </div>
-            <div className='flex flex-wrap gap-2'>
-              {capabilities.filter((capability) => effectiveCapabilityIds.has(capability.id)).map(
-                (capability) => <Badge key={capability.id} variant='outline'>{capability.name}</Badge>
+            <section className='flex flex-col gap-2'>
+              <SectionHeading
+                description='These grants are independent from the selected profile.'
+                title='Direct capability overrides'
+              />
+              {capabilities.length > 0 ? (
+                <FeaturePackOptionList>
+                  {capabilities.map((capability) => {
+                    const checked = directCapabilityIds.has(capability.id);
+                    return (
+                      <Field
+                        data-disabled={!canSetDirectCapability || Boolean(pendingKey)}
+                        key={capability.id}
+                        orientation='horizontal'
+                      >
+                        <Checkbox
+                          aria-label={`${checked ? 'Revoke' : 'Grant'} ${capability.name} directly`}
+                          checked={checked}
+                          disabled={!canSetDirectCapability || Boolean(pendingKey)}
+                          id={`${fieldId}-direct-${capability.id}`}
+                          onCheckedChange={(nextChecked) => void run(
+                            `direct-${capability.id}`,
+                            () => actions!.setDirectCapability!({
+                              userId: member.userId,
+                              capabilityId: capability.id,
+                              granted: nextChecked === true
+                            }),
+                            'The direct capability could not be changed.'
+                          )}
+                        />
+                        <div className='min-w-0 flex-1'>
+                          <FieldLabel htmlFor={`${fieldId}-direct-${capability.id}`}>{capability.name}</FieldLabel>
+                          {capability.description ? (
+                            <FieldDescription className='text-pretty'>{capability.description}</FieldDescription>
+                          ) : null}
+                        </div>
+                      </Field>
+                    );
+                  })}
+                </FeaturePackOptionList>
+              ) : (
+                <p className='text-muted-foreground text-pretty text-[13px]'>
+                  The capability catalog is unavailable for this tenant.
+                </p>
               )}
-              {effectiveCapabilityIds.size === 0 ? (
-                <span className='text-muted-foreground text-sm'>No effective capabilities</span>
-              ) : null}
-            </div>
-          </section>
-          {error ? <p className='text-destructive text-pretty text-sm' role='alert'>{error}</p> : null}
-        </DialogPanel>
-        <DialogFooter>
-          <Button onClick={() => setOpen(false)} type='button' variant='outline'>Done</Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+            </section>
+
+            <section className='flex flex-col gap-2'>
+              <SectionHeading
+                description='Read-only result of profile, direct, admin, and owner access.'
+                title='Effective capabilities'
+              />
+              <div className='flex flex-wrap gap-1.5'>
+                {capabilities.filter((capability) => effectiveCapabilityIds.has(capability.id)).map(
+                  (capability) => <ToneBadge key={capability.id} tone='neutral'>{capability.name}</ToneBadge>
+                )}
+                {effectiveCapabilityIds.size === 0 ? (
+                  <span className='text-muted-foreground text-[13px]'>No effective capabilities</span>
+                ) : null}
+              </div>
+            </section>
+            {error ? <p className='text-destructive text-pretty text-sm' role='alert'>{error}</p> : null}
+          </div>
+          <footer className='flex justify-end border-t border-dashed border-foreground/10 bg-muted/40 p-3'>
+            <Button onClick={() => setOpen(false)} size='sm' type='button' variant='outline'>Done</Button>
+          </footer>
+        </SheetContent>
+      </Sheet>
+    </>
   );
+}
+
+function MemberRole({ member }: Readonly<{ member: AppMember }>) {
+  if (member.governance.owner) return <ToneBadge tone='primary'>Owner</ToneBadge>;
+  if (member.governance.admin) return <ToneBadge tone='info'>Admin</ToneBadge>;
+  return <span className='text-muted-foreground text-[13px]'>Member</span>;
+}
+
+/** Moves focus to a record a route points at, once it is on screen. */
+function useFocusedRecord<T extends HTMLElement>(present: boolean, key: string | undefined) {
+  const ref = React.useRef<T>(null);
+  React.useEffect(() => {
+    if (!present) return;
+    const element = ref.current;
+    element?.focus({ preventScroll: true });
+    element?.scrollIntoView?.({ block: 'nearest' });
+  }, [key, present]);
+  return ref;
 }
 
 function MembersDirectory({
@@ -882,17 +863,10 @@ function MembersDirectory({
   actions?: UsersFeatureActions;
   onError?: UsersFeaturePackProps['onError'];
 }>) {
-  const focusedMemberRef = React.useRef<HTMLLIElement>(null);
-  const focusedMemberPresent = Boolean(
-    focusedMemberId && members.some((member) => member.id === focusedMemberId)
+  const focusedMemberRef = useFocusedRecord<HTMLTableRowElement>(
+    Boolean(focusedMemberId && members.some((member) => member.id === focusedMemberId)),
+    focusedMemberId
   );
-
-  React.useEffect(() => {
-    if (!focusedMemberPresent) return;
-    const element = focusedMemberRef.current;
-    element?.focus({ preventScroll: true });
-    element?.scrollIntoView?.({ block: 'nearest' });
-  }, [focusedMemberId, focusedMemberPresent]);
 
   if (members.length === 0 && query.trim()) {
     return (
@@ -908,68 +882,75 @@ function MembersDirectory({
 
   if (members.length === 0) {
     return (
-      <Empty className='min-h-40 border border-dashed'>
-        <EmptyHeader>
-          <EmptyMedia variant='icon'><SearchIcon aria-hidden='true' /></EmptyMedia>
-          <EmptyTitle>No application members to show</EmptyTitle>
-          <EmptyDescription>People with access to this application will appear here.</EmptyDescription>
-        </EmptyHeader>
-      </Empty>
+      <FeaturePackEmpty
+        description='People with access to this application will appear here.'
+        icon={UsersRoundIcon}
+        title='No application members to show'
+      />
     );
   }
 
+  const canManageAccess = profiles.length > 0 || capabilities.length > 0;
+
   return (
-    <ul
-      aria-label='Application members'
-      className='border-border/70 divide-border/60 divide-y overflow-hidden rounded-xl border'
-    >
-      {members.map((member) => {
-        const focused = member.id === focusedMemberId;
-        return (
-        <li
-          aria-current={focused ? 'true' : undefined}
-          className={cn(
-            'flex flex-col gap-3 px-3 py-3 sm:flex-row sm:items-center sm:gap-4 sm:px-4',
-            focused && focusedRecordClass
-          )}
-          key={member.id}
-          ref={focused ? focusedMemberRef : undefined}
-          tabIndex={focused ? -1 : undefined}
-        >
-          <div className='flex min-w-0 flex-1 items-center gap-3'>
-            <Avatar className='ring-border/50 size-10 shrink-0 ring-1 ring-inset'>
-              {member.avatarUrl ? <AvatarImage alt='' src={member.avatarUrl} /> : null}
-              <AvatarFallback>{initials(member.name)}</AvatarFallback>
-            </Avatar>
-            <div className='min-w-0'>
-              <p className='truncate text-sm font-medium' title={member.name}>{member.name}</p>
-              <p className='text-muted-foreground truncate text-xs sm:text-sm' title={member.email}>{member.email}</p>
-              <p className='text-muted-foreground mt-0.5 line-clamp-2 text-pretty text-xs'>
-                {member.profile?.name ?? 'No access profile'}
-                {member.joinedAt ? <>{' · Joined '}<FeaturePackTimestamp value={member.joinedAt} /></> : null}
-              </p>
-            </div>
-          </div>
-          <div className='flex flex-wrap items-center justify-end gap-2'>
-            {member.governance.owner ? <Badge>Owner</Badge> : null}
-            {!member.governance.owner && member.governance.admin ? <Badge variant='secondary'>Admin</Badge> : null}
-            <FeatureStatusBadge status={memberStatus(member)} />
-            {(profiles.length > 0 || capabilities.length > 0) ? (
-              <MemberAccessDialog
-                actions={actions}
-                member={member}
-                onError={onError}
-                capabilities={capabilities}
-                policy={policy}
-                profiles={profiles}
-              />
-            ) : null}
-            <MemberActions actions={actions} member={member} onError={onError} policy={policy} />
-          </div>
-        </li>
-        );
-      })}
-    </ul>
+    <TableSurface className='@container/table' minWidth='0'>
+      <caption className='sr-only'>Application members</caption>
+      <thead className={tableHeadClass}>
+        <tr>
+          <th scope='col'>Member</th>
+          <th className='hidden @xl/table:table-cell' scope='col'>Profile</th>
+          <th className='hidden w-24 @lg/table:table-cell' scope='col'>Role</th>
+          <th className='w-32' scope='col'>Status</th>
+          <th className='hidden w-36 @3xl/table:table-cell' scope='col'>Joined</th>
+          <th className='w-20' scope='col'><span className='sr-only'>Actions</span></th>
+        </tr>
+      </thead>
+      <tbody>
+        {members.map((member) => {
+          const focused = member.id === focusedMemberId;
+          return (
+            <tr
+              aria-current={focused ? 'true' : undefined}
+              className={cn(tableRowClass, 'hover:bg-overlay-hover transition-colors', focused && focusedRecordClass)}
+              key={member.id}
+              ref={focused ? focusedMemberRef : undefined}
+              tabIndex={focused ? -1 : undefined}
+            >
+              <td className='max-w-0'>
+                <FeaturePackPerson
+                  avatarUrl={member.avatarUrl}
+                  detail={member.email}
+                  name={member.name}
+                />
+              </td>
+              <td className='text-muted-foreground hidden truncate @xl/table:table-cell'>
+                {member.profile?.name ?? 'No profile'}
+              </td>
+              <td className='hidden @lg/table:table-cell'><MemberRole member={member} /></td>
+              <td><FeatureStatusBadge status={memberStatus(member)} /></td>
+              <td className='text-muted-foreground hidden tabular-nums @3xl/table:table-cell'>
+                <FeaturePackTimestamp value={member.joinedAt} />
+              </td>
+              <td>
+                <div className='flex items-center justify-end gap-0.5'>
+                  {canManageAccess ? (
+                    <MemberAccessSheet
+                      actions={actions}
+                      capabilities={capabilities}
+                      member={member}
+                      onError={onError}
+                      policy={policy}
+                      profiles={profiles}
+                    />
+                  ) : null}
+                  <MemberActions actions={actions} member={member} onError={onError} policy={policy} />
+                </div>
+              </td>
+            </tr>
+          );
+        })}
+      </tbody>
+    </TableSurface>
   );
 }
 
@@ -1001,7 +982,7 @@ function CancelInviteAction({
 
   return (
     <AlertDialog onOpenChange={(nextOpen) => !pending && setOpen(nextOpen)} open={open}>
-      <AlertDialogTrigger render={<Button size='sm' variant='outline' />}>Cancel</AlertDialogTrigger>
+      <AlertDialogTrigger render={<Button className='h-7' size='sm' variant='outline' />}>Cancel</AlertDialogTrigger>
       <AlertDialogContent>
         <AlertDialogHeader>
           <AlertDialogTitle>Cancel invitation for {invite.recipient}?</AlertDialogTitle>
@@ -1036,96 +1017,95 @@ function InvitationsDirectory({
 }>) {
   const [error, setError] = React.useState<string>();
   const [pendingInviteId, setPendingInviteId] = React.useState<string>();
-  const focusedInvitationRef = React.useRef<HTMLLIElement>(null);
-  const focusedInvitationPresent = Boolean(
-    focusedInvitationId && invitations.some((invite) => invite.id === focusedInvitationId)
+  const focusedInvitationRef = useFocusedRecord<HTMLTableRowElement>(
+    Boolean(focusedInvitationId && invitations.some((invite) => invite.id === focusedInvitationId)),
+    focusedInvitationId
   );
-
-  React.useEffect(() => {
-    if (!focusedInvitationPresent) return;
-    const element = focusedInvitationRef.current;
-    element?.focus({ preventScroll: true });
-    element?.scrollIntoView?.({ block: 'nearest' });
-  }, [focusedInvitationId, focusedInvitationPresent]);
 
   if (invitations.length === 0) {
     return (
-      <Empty className='min-h-48 border border-dashed'>
-        <EmptyHeader>
-          <EmptyMedia variant='icon'><MailPlusIcon aria-hidden='true' /></EmptyMedia>
-          <EmptyTitle>No pending invitations</EmptyTitle>
-          <EmptyDescription>Invite a collaborator when they are ready to join this application.</EmptyDescription>
-        </EmptyHeader>
-      </Empty>
+      <FeaturePackEmpty
+        description='Invite a collaborator when they are ready to join this application.'
+        icon={MailPlusIcon}
+        title='No pending invitations'
+      />
     );
   }
 
   return (
     <div className='flex flex-col gap-3'>
       {error ? <p className='text-destructive text-pretty text-sm' role='alert'>{error}</p> : null}
-      <ul
-        aria-label='Application invitations'
-        className='border-border/70 divide-border/60 divide-y overflow-hidden rounded-xl border'
-      >
-        {invitations.map((invite) => {
-          const focused = invite.id === focusedInvitationId;
-          return (
-          <li
-            aria-current={focused ? 'true' : undefined}
-            className={cn(
-              'flex flex-col gap-3 px-3 py-3 sm:flex-row sm:items-center sm:gap-4 sm:px-4',
-              focused && focusedRecordClass
-            )}
-            key={invite.id}
-            ref={focused ? focusedInvitationRef : undefined}
-            tabIndex={focused ? -1 : undefined}
-          >
-            <div className='min-w-0 flex-1'>
-              <p className='truncate text-sm font-medium' title={invite.recipient}>{invite.recipient}</p>
-              <p className='text-muted-foreground mt-0.5 text-pretty text-xs'>
-                {invite.profile?.name ?? 'No access profile'}
-                {invite.expiresAt ? <>{' · Expires '}<FeaturePackTimestamp value={invite.expiresAt} /></> : null}
-                {invite.useLimit !== undefined ? <>{' · '}<span className='tabular-nums'>{invite.useCount ?? 0}/{invite.useLimit}</span>{' uses'}</> : null}
-              </p>
-            </div>
-            <div className='flex flex-wrap items-center gap-2 sm:justify-end'>
-              {invite.channel ? <Badge title={invite.channel} variant='outline'>{invite.channel}</Badge> : null}
-              <FeatureStatusBadge status={invite.status} />
-              {canPerform(policy, 'extendInvite') &&
-              canPerform(invite.actionPolicy, 'extendInvite') && actions?.extendInvite ? (
-                <Button
-                  aria-label={`Extend invitation for ${invite.recipient}`}
-                  disabled={pendingInviteId === invite.id}
-                  onClick={() => void (async () => {
-                    setPendingInviteId(invite.id);
-                    try {
-                      await actions.extendInvite!({ inviteId: invite.id });
-                    } catch (cause) {
-                      reportActionError(
-                        cause,
-                        'The invitation could not be extended.',
-                        setError,
-                        onError
-                      );
-                    } finally {
-                      setPendingInviteId(undefined);
-                    }
-                  })()}
-                  size='icon-sm'
-                  variant='ghost'
-                >
-                  <RefreshCwIcon />
-                </Button>
-              ) : null}
-              {canPerform(policy, 'cancelInvite') &&
-              canPerform(invite.actionPolicy, 'cancelInvite') && actions?.cancelInvite ? (
-                <CancelInviteAction cancelInvite={actions.cancelInvite} invite={invite} onError={onError} />
-              ) : null}
-            </div>
-          </li>
-          );
-        })}
-      </ul>
+      <TableSurface className='@container/table' minWidth='0'>
+        <caption className='sr-only'>Application invitations</caption>
+        <thead className={tableHeadClass}>
+          <tr>
+            <th scope='col'>Recipient</th>
+            <th className='hidden @xl/table:table-cell' scope='col'>Profile</th>
+            <th className='w-28' scope='col'>Status</th>
+            <th className='hidden w-40 @2xl/table:table-cell' scope='col'>Expires</th>
+            <th className='hidden w-20 text-right @lg/table:table-cell' scope='col'>Uses</th>
+            <th className='w-32' scope='col'><span className='sr-only'>Actions</span></th>
+          </tr>
+        </thead>
+        <tbody>
+          {invitations.map((invite) => {
+            const focused = invite.id === focusedInvitationId;
+            return (
+              <tr
+                aria-current={focused ? 'true' : undefined}
+                className={cn(tableRowClass, focused && focusedRecordClass)}
+                key={invite.id}
+                ref={focused ? focusedInvitationRef : undefined}
+                tabIndex={focused ? -1 : undefined}
+              >
+                <td className='max-w-0'>
+                  <span className='flex min-w-0 items-center gap-2'>
+                    <span className='truncate font-medium' title={invite.recipient}>{invite.recipient}</span>
+                    {invite.channel ? <ToneBadge className='capitalize' tone='neutral'>{invite.channel}</ToneBadge> : null}
+                  </span>
+                  <span className='text-muted-foreground block truncate text-xs @xl/table:hidden'>
+                    {invite.profile?.name ?? 'No access profile'}
+                  </span>
+                </td>
+                <td className='text-muted-foreground hidden truncate @xl/table:table-cell'>{invite.profile?.name ?? 'No profile'}</td>
+                <td><FeatureStatusBadge status={invite.status} /></td>
+                <td className='text-muted-foreground hidden @2xl/table:table-cell'><FeaturePackTimestamp value={invite.expiresAt} /></td>
+                <td className='hidden text-right tabular-nums @lg/table:table-cell'>
+                  {invite.useLimit !== undefined ? `${invite.useCount ?? 0}/${invite.useLimit}` : '—'}
+                </td>
+                <td>
+                  <div className='flex items-center justify-end gap-1'>
+                    {canPerform(policy, 'extendInvite') &&
+                    canPerform(invite.actionPolicy, 'extendInvite') && actions?.extendInvite ? (
+                      <TooltipIconButton
+                        disabled={pendingInviteId === invite.id}
+                        extendHitArea={false}
+                        label={`Extend invitation for ${invite.recipient}`}
+                        onClick={() => void (async () => {
+                          setPendingInviteId(invite.id);
+                          try {
+                            await actions.extendInvite!({ inviteId: invite.id });
+                          } catch (cause) {
+                            reportActionError(cause, 'The invitation could not be extended.', setError, onError);
+                          } finally {
+                            setPendingInviteId(undefined);
+                          }
+                        })()}
+                      >
+                        <RefreshCwIcon aria-hidden='true' className='size-3.5' />
+                      </TooltipIconButton>
+                    ) : null}
+                    {canPerform(policy, 'cancelInvite') &&
+                    canPerform(invite.actionPolicy, 'cancelInvite') && actions?.cancelInvite ? (
+                      <CancelInviteAction cancelInvite={actions.cancelInvite} invite={invite} onError={onError} />
+                    ) : null}
+                  </div>
+                </td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </TableSurface>
     </div>
   );
 }
@@ -1135,62 +1115,47 @@ function AcceptedInvitesDirectory({
 }: Readonly<{ invitations: readonly AppClaimedInvite[] }>) {
   if (invitations.length === 0) {
     return (
-      <Empty className='min-h-48 border border-dashed'>
-        <EmptyHeader>
-          <EmptyMedia variant='icon'><HistoryIcon aria-hidden='true' /></EmptyMedia>
-          <EmptyTitle>No accepted invitations</EmptyTitle>
-          <EmptyDescription>Accepted application invitations will appear here as an audit history.</EmptyDescription>
-        </EmptyHeader>
-      </Empty>
+      <FeaturePackEmpty
+        description='Accepted application invitations will appear here as an audit history.'
+        icon={HistoryIcon}
+        title='No accepted invitations'
+      />
     );
   }
 
   return (
-    <Table
-      className='block sm:table'
-      containerClassName='border-border/70 overflow-hidden rounded-xl border sm:overflow-x-auto sm:rounded-none sm:border-0'
-    >
-      <TableHeader className='sr-only sm:not-sr-only sm:table-header-group'>
-        <TableRow>
-          <TableHead>Recipient</TableHead>
-          <TableHead>Invited by</TableHead>
-          <TableHead>Accepted</TableHead>
-        </TableRow>
-      </TableHeader>
-      <TableBody className='block sm:table-row-group'>
+    <TableSurface className='@container/table' minWidth='0'>
+      <caption className='sr-only'>Accepted invitations</caption>
+      <thead className={tableHeadClass}>
+        <tr>
+          <th scope='col'>Recipient</th>
+          <th className='hidden @lg/table:table-cell' scope='col'>Invited by</th>
+          <th className='w-44' scope='col'>Accepted</th>
+        </tr>
+      </thead>
+      <tbody>
         {invitations.map((invite) => {
           const receiver = invite.receiverName ?? invite.receiverId ?? 'Unknown member';
           const sender = invite.senderName ?? invite.senderId ?? 'Unknown sender';
           const receiverIsId = !invite.receiverName && Boolean(invite.receiverId);
           const senderIsId = !invite.senderName && Boolean(invite.senderId);
-
           return (
-            <TableRow className='grid grid-cols-2 gap-3 px-3 py-3 sm:table-row sm:px-0 sm:py-0' key={invite.id}>
-              <TableCell className='col-span-2 block min-w-0 whitespace-normal p-0 sm:table-cell sm:px-4 sm:py-3'>
-                <span className='text-muted-foreground block text-xs sm:hidden'>Recipient</span>
-                <span
-                  className='mt-0.5 block max-w-64 break-words font-medium sm:mt-0'
-                  translate={receiverIsId ? 'no' : undefined}
-                >
+            <tr className={tableRowClass} key={invite.id}>
+              <td className='max-w-0'>
+                <span className={cn('block truncate font-medium', receiverIsId && 'font-mono text-xs')} translate={receiverIsId ? 'no' : undefined}>
                   {receiver}
                 </span>
-              </TableCell>
-              <TableCell
-                className='block min-w-0 whitespace-normal p-0 sm:table-cell sm:max-w-64 sm:px-4 sm:py-3'
-                translate={senderIsId ? 'no' : undefined}
-              >
-                <span className='text-muted-foreground block text-xs sm:hidden'>Invited by</span>
-                <span className='mt-0.5 block break-words sm:mt-0'>{sender}</span>
-              </TableCell>
-              <TableCell className='block min-w-0 whitespace-normal p-0 sm:table-cell sm:px-4 sm:py-3'>
-                <span className='text-muted-foreground block text-xs sm:hidden'>Accepted</span>
-                <span className='mt-0.5 block break-words sm:mt-0'><FeaturePackTimestamp value={invite.acceptedAt} /></span>
-              </TableCell>
-            </TableRow>
+                <span className='text-muted-foreground block truncate text-xs @lg/table:hidden'>Invited by {sender}</span>
+              </td>
+              <td className={cn('text-muted-foreground hidden truncate @lg/table:table-cell', senderIsId && 'font-mono text-xs')} translate={senderIsId ? 'no' : undefined}>
+                {sender}
+              </td>
+              <td className='text-muted-foreground'><FeaturePackTimestamp value={invite.acceptedAt} /></td>
+            </tr>
           );
         })}
-      </TableBody>
-    </Table>
+      </tbody>
+    </TableSurface>
   );
 }
 
@@ -1255,10 +1220,16 @@ function ProfileFormDialog({
 
   return (
     <Dialog onOpenChange={changeOpen} open={open}>
-      <DialogTrigger render={<Button size={profile ? 'icon-sm' : 'default'} variant={profile ? 'ghost' : 'default'} />}>
-        {profile ? <PencilIcon /> : <PlusIcon data-icon='inline-start' />}
-        {profile ? <span className='sr-only'>Edit {profile.name}</span> : 'New profile'}
-      </DialogTrigger>
+      {profile ? (
+        <TooltipIconButton extendHitArea={false} label={`Edit ${profile.name}`} onClick={() => changeOpen(true)}>
+          <PencilIcon aria-hidden='true' className='size-3.5' />
+        </TooltipIconButton>
+      ) : (
+        <DialogTrigger render={<Button size='sm' />}>
+          <PlusIcon data-icon='inline-start' />
+          New profile
+        </DialogTrigger>
+      )}
       <DialogContent>
         <form onSubmit={(event) => void submit(event)}>
           <DialogHeader>
@@ -1285,6 +1256,7 @@ function ProfileFormDialog({
                 <Input
                   autoCapitalize='none'
                   autoComplete='off'
+                  className='font-mono'
                   id={`${fieldId}-slug`}
                   name='profile-slug'
                   onChange={(event) => setSlug(event.currentTarget.value)}
@@ -1317,7 +1289,7 @@ function ProfileFormDialog({
   );
 }
 
-function ProfileRow({
+function ProfileCard({
   profile,
   capabilities,
   policy,
@@ -1345,14 +1317,7 @@ function ProfileRow({
     canPerform(profilePolicy, 'setProfileCapability') && Boolean(actions?.setProfileCapability);
   const profileCapabilityIds = new Set(profile.capabilityIds);
   const fieldId = React.useId();
-  const focusedProfileRef = React.useRef<HTMLLIElement>(null);
-
-  React.useEffect(() => {
-    if (!focused) return;
-    const element = focusedProfileRef.current;
-    element?.focus({ preventScroll: true });
-    element?.scrollIntoView?.({ block: 'nearest' });
-  }, [focused]);
+  const focusedProfileRef = useFocusedRecord<HTMLLIElement>(Boolean(focused), profile.id);
 
   const run = async (key: string, action: () => FeatureActionResult, fallback: string) => {
     setPendingKey(key);
@@ -1369,28 +1334,29 @@ function ProfileRow({
   return (
     <li
       aria-current={focused ? 'true' : undefined}
-      className={cn('flex flex-col gap-4 px-4 py-4', focused && focusedRecordClass)}
+      className={cn('flex flex-col overflow-hidden rounded-xl bg-card shadow-card', focused && focusedRecordClass)}
       ref={focused ? focusedProfileRef : undefined}
       tabIndex={focused ? -1 : undefined}
     >
-      <div className='flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between'>
-        <div className='min-w-0'>
-          <div className='flex flex-wrap items-center gap-2'>
+      <div className='flex items-start gap-3 px-4 pt-3.5 pb-3'>
+        <div className='min-w-0 flex-1'>
+          <div className='flex flex-wrap items-center gap-1.5'>
             <h3 className='text-balance text-sm font-medium'>{profile.name}</h3>
-            {profile.default ? <Badge>Default</Badge> : null}
-            {profile.system ? <Badge variant='secondary'>System</Badge> : null}
+            {profile.default ? <ToneBadge tone='primary'>Default</ToneBadge> : null}
+            {profile.system ? <ToneBadge tone='neutral'>System</ToneBadge> : null}
           </div>
-          <p className='text-muted-foreground mt-1 text-pretty text-xs'>
+          <p className='text-muted-foreground mt-0.5 text-pretty text-[13px]'>
             {profile.description ?? profile.slug ?? 'No description'}
           </p>
           <p className='text-muted-foreground mt-1 text-xs tabular-nums'>
             {profile.capabilityIds.length} {profile.capabilityIds.length === 1 ? 'capability' : 'capabilities'}
-            {profile.memberCount !== undefined ? ` · ${profile.memberCount} members` : ''}
+            {profile.memberCount !== undefined ? ` · ${profile.memberCount} ${profile.memberCount === 1 ? 'member' : 'members'}` : ''}
           </p>
         </div>
-        <div className='flex shrink-0 items-center gap-1'>
+        <div className='flex shrink-0 items-center gap-0.5'>
           {!profile.default && canSetDefault && actions?.setDefaultProfile ? (
             <Button
+              className='h-7'
               disabled={Boolean(pendingKey)}
               onClick={() => void run(
                 'default',
@@ -1398,7 +1364,7 @@ function ProfileRow({
                 'The default profile could not be changed.'
               )}
               size='sm'
-              variant='outline'
+              variant='ghost'
             >
               Make default
             </Button>
@@ -1410,9 +1376,9 @@ function ProfileRow({
             <AlertDialog>
               <AlertDialogTrigger
                 aria-label={`Delete ${profile.name}`}
-                render={<Button size='icon-sm' variant='ghost' />}
+                className='text-muted-foreground hover:bg-destructive/10 hover:text-destructive grid size-7 cursor-pointer place-items-center rounded-md outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50'
               >
-                <Trash2Icon />
+                <Trash2Icon aria-hidden='true' className='size-3.5' />
               </AlertDialogTrigger>
               <AlertDialogContent>
                 <AlertDialogHeader>
@@ -1442,7 +1408,7 @@ function ProfileRow({
         </div>
       </div>
       {capabilities.length > 0 ? (
-        <FieldGroup className='grid sm:grid-cols-2'>
+        <div className='grid gap-x-4 gap-y-2.5 border-t border-dashed border-foreground/10 px-4 py-3 @lg/profiles:grid-cols-2'>
           {capabilities.map((capability) => {
             const checked = profileCapabilityIds.has(capability.id);
             return (
@@ -1473,9 +1439,9 @@ function ProfileRow({
               </Field>
             );
           })}
-        </FieldGroup>
+        </div>
       ) : null}
-      {error ? <p className='text-destructive text-pretty text-sm' role='alert'>{error}</p> : null}
+      {error ? <p className='text-destructive text-pretty px-4 pb-3 text-sm' role='alert'>{error}</p> : null}
     </li>
   );
 }
@@ -1496,45 +1462,38 @@ function ProfilesDirectory({
   onError?: UsersFeaturePackProps['onError'];
 }>) {
   const canCreate = canPerform(policy, 'createProfile') && Boolean(actions?.createProfile);
+  const create = canCreate && actions?.createProfile
+    ? <ProfileFormDialog action={actions.createProfile} onError={onError} />
+    : null;
 
   return (
-    <div className='flex flex-col gap-4'>
-      <div className='flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between'>
-        <div>
-          <h2 className='text-balance text-sm font-medium'>Access profiles</h2>
-          <p className='text-muted-foreground text-pretty text-xs'>
-            Named capability bundles for application members. Owner and admin grants remain separate.
-          </p>
-        </div>
-        {canCreate && actions?.createProfile ? (
-          <ProfileFormDialog action={actions.createProfile} onError={onError} />
-        ) : null}
-      </div>
+    <div className='@container/profiles flex flex-col gap-3'>
+      <SectionHeading
+        actions={profiles.length > 0 ? create : null}
+        description='Named capability bundles for application members. Owner and admin grants remain separate.'
+        title='Access profiles'
+      />
       {profiles.length > 0 ? (
-        <ul className='border-border/70 divide-border/60 divide-y overflow-hidden rounded-xl border'>
+        <ul className='grid gap-3 @4xl/profiles:grid-cols-2'>
           {profiles.map((profile) => (
-            <ProfileRow
+            <ProfileCard
               actions={actions}
+              capabilities={capabilities}
               focused={profile.id === focusedProfileId}
               key={profile.id}
               onError={onError}
-              capabilities={capabilities}
               policy={policy}
               profile={profile}
             />
           ))}
         </ul>
       ) : (
-        <Empty className='min-h-48 border border-dashed'>
-          <EmptyHeader>
-            <EmptyMedia variant='icon'><ShieldIcon aria-hidden='true' /></EmptyMedia>
-            <EmptyTitle>No access profiles</EmptyTitle>
-            <EmptyDescription>Create a reusable capability bundle for application members.</EmptyDescription>
-          </EmptyHeader>
-          {canCreate && actions?.createProfile ? (
-            <EmptyContent><ProfileFormDialog action={actions.createProfile} onError={onError} /></EmptyContent>
-          ) : null}
-        </Empty>
+        <FeaturePackEmpty
+          action={create}
+          description='Create a reusable capability bundle for application members.'
+          icon={ShieldIcon}
+          title='No access profiles'
+        />
       )}
     </div>
   );
@@ -1543,53 +1502,42 @@ function ProfilesDirectory({
 function CapabilitiesCatalog({ capabilities }: Readonly<{ capabilities: readonly AppCapability[] }>) {
   if (capabilities.length === 0) {
     return (
-      <Empty className='min-h-48 border border-dashed'>
-        <EmptyHeader>
-          <EmptyMedia variant='icon'><KeyRoundIcon aria-hidden='true' /></EmptyMedia>
-          <EmptyTitle>No application capabilities</EmptyTitle>
-          <EmptyDescription>This tenant does not expose a capability catalog.</EmptyDescription>
-        </EmptyHeader>
-      </Empty>
+      <FeaturePackEmpty
+        description='This tenant does not expose a capability catalog.'
+        icon={KeyRoundIcon}
+        title='No application capabilities'
+      />
     );
   }
 
   return (
     <div className='flex flex-col gap-3'>
-      <Alert>
-        <ShieldCheckIcon aria-hidden='true' />
-        <AlertTitle>Capability definitions are read-only</AlertTitle>
-        <AlertDescription>
-          Console Kit assigns existing capabilities through profiles, defaults, and direct grants. It never rewrites the backend catalog.
-        </AlertDescription>
-      </Alert>
-      <Table
-        className='block sm:table'
-        containerClassName='border-border/70 overflow-hidden rounded-xl border sm:overflow-x-auto sm:rounded-none sm:border-0'
-      >
-        <TableHeader className='sr-only sm:not-sr-only sm:table-header-group'>
-          <TableRow>
-            <TableHead>Capability</TableHead>
-            <TableHead>Description</TableHead>
-            <TableHead>Bit</TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody className='block sm:table-row-group'>
+      <SectionHeading
+        description='Console Kit assigns existing capabilities through profiles, defaults, and direct grants. It never rewrites the backend catalog.'
+        title='Capability definitions are read-only'
+      />
+      <TableSurface className='@container/table' minWidth='0'>
+        <caption className='sr-only'>Application capabilities</caption>
+        <thead className={tableHeadClass}>
+          <tr>
+            <th scope='col'>Capability</th>
+            <th className='hidden @lg/table:table-cell' scope='col'>Description</th>
+            <th className='w-16 text-right' scope='col'>Bit</th>
+          </tr>
+        </thead>
+        <tbody>
           {capabilities.map((capability) => (
-            <TableRow className='grid grid-cols-[minmax(0,1fr)_auto] gap-2 px-3 py-3 sm:table-row sm:px-0 sm:py-0' key={capability.id}>
-              <TableCell className='block min-w-0 whitespace-normal p-0 font-medium sm:table-cell sm:px-4 sm:py-3'>
-                <span className='break-words'>{capability.name}</span>
-              </TableCell>
-              <TableCell className='col-span-2 row-start-2 block max-w-xl whitespace-normal p-0 text-pretty text-muted-foreground sm:table-cell sm:px-4 sm:py-3'>
-                {capability.description ?? 'No description'}
-              </TableCell>
-              <TableCell className='col-start-2 row-start-1 block whitespace-normal p-0 tabular-nums sm:table-cell sm:px-4 sm:py-3'>
-                <Badge className='sm:hidden' variant='outline'>Bit {capability.bit ?? '—'}</Badge>
-                <span className='hidden sm:inline'>{capability.bit ?? '—'}</span>
-              </TableCell>
-            </TableRow>
+            <tr className={tableRowClass} key={capability.id}>
+              <td className='max-w-0'>
+                <span className='block truncate font-medium'>{capability.name}</span>
+                <span className='text-muted-foreground block text-pretty text-xs @lg/table:hidden'>{capability.description ?? 'No description'}</span>
+              </td>
+              <td className='text-muted-foreground hidden text-pretty @lg/table:table-cell'>{capability.description ?? 'No description'}</td>
+              <td className='text-muted-foreground text-right font-mono text-xs tabular-nums'>{capability.bit ?? '—'}</td>
+            </tr>
           ))}
-        </TableBody>
-      </Table>
+        </tbody>
+      </TableSurface>
     </div>
   );
 }
@@ -1628,15 +1576,13 @@ function CapabilityDefaults({
   };
 
   return (
-    <div className='flex flex-col gap-4'>
-      <div>
-        <h2 className='text-balance text-sm font-medium'>New-member capability defaults</h2>
-        <p className='text-muted-foreground text-pretty text-xs'>
-          These capabilities apply to new application memberships. Existing members keep their current grants.
-        </p>
-      </div>
+    <div className='flex max-w-3xl flex-col gap-3'>
+      <SectionHeading
+        description='These capabilities apply to new application memberships. Existing members keep their current grants.'
+        title='New-member capability defaults'
+      />
       {capabilities.length > 0 ? (
-        <FieldGroup className='border-border/70 rounded-xl border p-4'>
+        <FeaturePackOptionList>
           {capabilities.map((capability) => {
             const checked = defaults.has(capability.id);
             return (
@@ -1650,10 +1596,7 @@ function CapabilityDefaults({
                   checked={checked}
                   disabled={!canUpdate || Boolean(pendingId)}
                   id={`${fieldId}-${capability.id}`}
-                  onCheckedChange={(nextChecked) => void update(
-                    capability.id,
-                    nextChecked === true
-                  )}
+                  onCheckedChange={(nextChecked) => void update(capability.id, nextChecked === true)}
                 />
                 <div className='min-w-0 flex-1'>
                   <FieldLabel htmlFor={`${fieldId}-${capability.id}`}>{capability.name}</FieldLabel>
@@ -1662,9 +1605,9 @@ function CapabilityDefaults({
               </Field>
             );
           })}
-        </FieldGroup>
+        </FeaturePackOptionList>
       ) : (
-        <p className='text-muted-foreground text-pretty text-sm'>
+        <p className='text-muted-foreground text-pretty text-[13px]'>
           Capability defaults require the application capability catalog.
         </p>
       )}
@@ -1697,10 +1640,12 @@ export function UsersFeaturePack({
   const normalizedQuery = query.trim().toLowerCase();
   const canInvite = canPerform(policy, 'invite') && Boolean(actions?.invite);
   const limitations = resource.status === 'ready' ? resource.limitations : undefined;
-
-  React.useEffect(() => {
+  // A route-selected member must be visible, so a hiding search clears (adjusted during render, not in an effect).
+  const [clearedFor, setClearedFor] = React.useState(focusedMemberId);
+  if (focusedMemberId !== clearedFor) {
+    setClearedFor(focusedMemberId);
     if (focusedMemberId) setQuery('');
-  }, [focusedMemberId]);
+  }
 
   return (
     <FeaturePackBoundary
@@ -1762,7 +1707,7 @@ export function UsersFeaturePack({
           />
         ) : null;
 
-        const changeSection = (value: string) => {
+        const changeSection = (value: unknown) => {
           const nextSection = value as UsersSection;
           if (!sections.some((candidate) => candidate.id === nextSection)) return;
           if (controlledSection === undefined) setInternalSection(nextSection);
@@ -1770,100 +1715,49 @@ export function UsersFeaturePack({
         };
 
         return (
-          <div className='flex flex-col gap-6'>
-            <header className='flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between'>
-              <div className='min-w-0'>
-                <h1 className='break-words text-balance text-lg font-semibold lg:text-xl'>{title}</h1>
-                <p className='text-muted-foreground mt-1 break-words text-pretty text-sm'>
-                  {description ?? (
-                    <>
-                      <span className='tabular-nums'>{data.members.length}</span>{' '}
-                      {data.members.length === 1 ? 'application member' : 'application members'}
-                      {activeCount !== data.members.length ? (
-                        <>{' · '}<span className='tabular-nums'>{activeCount}</span>{' active'}</>
-                      ) : null}
-                    </>
-                  )}
-                </p>
-              </div>
-              {inviteAction}
-            </header>
+          <div className='flex flex-col gap-5'>
+            <FeaturePackPageHeader
+              actions={inviteAction}
+              description={description ?? (
+                `${data.members.length} ${data.members.length === 1 ? 'application member' : 'application members'}` +
+                (activeCount !== data.members.length ? ` · ${activeCount} active` : '')
+              )}
+              title={title}
+            />
 
             <FeaturePackLimitations limitations={limitations} />
 
-            <Tabs onValueChange={changeSection} value={activeSection}>
-              <div className='flex flex-col gap-4'>
-                <Select onValueChange={changeSection} value={activeSection}>
-                  <SelectTrigger aria-label='App access section' className='md:hidden'>
-                    <SelectValue>
-                      {(value: string | null) => {
-                        const selected = sections.find((candidate) => candidate.id === value);
-                        if (!selected) return 'Choose a section';
-                        return selected.count === undefined
-                          ? selected.label
-                          : `${selected.label} (${selected.count})`;
-                      }}
-                    </SelectValue>
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectGroup>
-                      {sections.map((candidate) => (
-                        <SelectItem key={candidate.id} value={candidate.id}>
-                          {candidate.label}
-                          {candidate.count === undefined ? null : ` (${candidate.count})`}
-                        </SelectItem>
-                      ))}
-                    </SelectGroup>
-                  </SelectContent>
-                </Select>
-                <TabsList
-                  aria-label='App access sections'
-                  className='hidden h-auto w-full justify-start gap-1 overflow-x-auto rounded-none border-b border-border/60 bg-transparent p-0 md:flex'
-                >
-                  {sections.map((candidate) => (
-                    <TabsTrigger className={sectionTriggerClass} key={candidate.id} value={candidate.id}>
-                      {candidate.label}
-                      {candidate.count !== undefined ? (
-                        <span className='text-muted-foreground ml-1.5 tabular-nums text-xs'>
-                          {candidate.count}
-                        </span>
-                      ) : null}
-                    </TabsTrigger>
-                  ))}
-                </TabsList>
+            <Tabs className='gap-4' onValueChange={changeSection} value={activeSection}>
+              <div className='flex flex-col gap-3 md:flex-row md:items-center md:justify-between'>
+                <FeaturePackTabList label='App access sections' sections={sections} />
                 {activeSection === 'members' ? (
-                  <label className='block w-full self-end sm:max-w-xs'>
-                    <span className='sr-only'>Search application members</span>
-                    <InputGroup>
-                      <InputGroupAddon><SearchIcon aria-hidden='true' /></InputGroupAddon>
-                      <InputGroupInput
-                        autoComplete='off'
-                        name='member-search'
-                        onChange={(event) => setQuery(event.currentTarget.value)}
-                        placeholder='Search application members…'
-                        type='search'
-                        value={query}
-                      />
-                    </InputGroup>
-                  </label>
+                  <SearchField
+                    autoComplete='off'
+                    className='w-full md:w-64'
+                    label='Search application members'
+                    name='member-search'
+                    onChange={(event) => setQuery(event.currentTarget.value)}
+                    placeholder='Search members'
+                    value={query}
+                  />
                 ) : null}
               </div>
 
-              <TabsContent className='mt-5' value='members'>
+              <TabsContent value='members'>
                 <MembersDirectory
                   actions={actions}
+                  capabilities={capabilities}
                   focusedMemberId={focusedMemberId}
                   members={members}
                   onClearSearch={() => setQuery('')}
                   onError={onError}
-                  capabilities={capabilities}
                   policy={policy}
                   profiles={profiles}
                   query={query}
                 />
               </TabsContent>
               {data.invitations !== undefined ? (
-                <TabsContent className='mt-5' value='invitations'>
+                <TabsContent value='invitations'>
                   <InvitationsDirectory
                     actions={actions}
                     focusedInvitationId={focusedInvitationId}
@@ -1874,34 +1768,34 @@ export function UsersFeaturePack({
                 </TabsContent>
               ) : null}
               {data.acceptedInvites !== undefined ? (
-                <TabsContent className='mt-5' value='accepted-invites'>
+                <TabsContent value='accepted-invites'>
                   <AcceptedInvitesDirectory invitations={acceptedInvites} />
                 </TabsContent>
               ) : null}
               {data.profiles !== undefined ? (
-                <TabsContent className='mt-5' value='profiles'>
+                <TabsContent value='profiles'>
                   <ProfilesDirectory
                     actions={actions}
-                    onError={onError}
                     capabilities={capabilities}
+                    focusedProfileId={focusedProfileId}
+                    onError={onError}
                     policy={policy}
                     profiles={profiles}
-                    focusedProfileId={focusedProfileId}
                   />
                 </TabsContent>
               ) : null}
               {data.capabilities !== undefined ? (
-                <TabsContent className='mt-5' value='capabilities'>
+                <TabsContent value='capabilities'>
                   <CapabilitiesCatalog capabilities={capabilities} />
                 </TabsContent>
               ) : null}
               {data.defaultCapabilityIds !== undefined ? (
-                <TabsContent className='mt-5' value='defaults'>
+                <TabsContent value='defaults'>
                   <CapabilityDefaults
                     actions={actions}
+                    capabilities={capabilities}
                     defaultCapabilityIds={data.defaultCapabilityIds}
                     onError={onError}
-                    capabilities={capabilities}
                     policy={policy}
                   />
                 </TabsContent>

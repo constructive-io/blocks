@@ -13,7 +13,6 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger
 } from '@constructive-io/ui/alert-dialog';
-import { Badge } from '@constructive-io/ui/badge';
 import { Button } from '@constructive-io/ui/button';
 import { Checkbox } from '@constructive-io/ui/checkbox';
 import {
@@ -26,13 +25,6 @@ import {
   DialogTitle,
   DialogTrigger
 } from '@constructive-io/ui/dialog';
-import {
-  Empty,
-  EmptyDescription,
-  EmptyHeader,
-  EmptyMedia,
-  EmptyTitle
-} from '@constructive-io/ui/empty';
 import {
   Field,
   FieldDescription,
@@ -48,14 +40,18 @@ import {
   SelectTrigger,
   SelectValue
 } from '@constructive-io/ui/select';
+import { Sheet, SheetContent, SheetDescription, SheetTitle } from '@constructive-io/ui/sheet';
 import { Switch } from '@constructive-io/ui/switch';
 import { Textarea } from '@constructive-io/ui/textarea';
+import { ToneBadge, TooltipIconButton } from '@/components/ui/workspace-kit/primitives';
+import { SectionHeading } from '@/components/ui/workspace-kit/surface';
 import { cn } from '@/lib/utils';
 
 import {
   canPerform,
   normalizeFeaturePackError
 } from '../shared/feature-pack-contracts';
+import { FeaturePackEmpty, FeaturePackOptionList, focusedRecordClass } from '../shared/feature-pack-ui';
 import type {
   OrganizationAccessProfile,
   OrganizationMember,
@@ -143,10 +139,16 @@ function AccessProfileDialog({
       }}
       open={open}
     >
-      <DialogTrigger render={<Button size={profile ? 'icon-sm' : 'sm'} variant='outline' />}>
-        {profile ? <PencilIcon aria-hidden='true' /> : <PlusIcon data-icon='inline-start' />}
-        {profile ? <span className='sr-only'>Edit {profile.name}</span> : 'New profile'}
-      </DialogTrigger>
+      {profile ? (
+        <TooltipIconButton extendHitArea={false} label={`Edit ${profile.name}`} onClick={() => setOpen(true)}>
+          <PencilIcon aria-hidden='true' className='size-3.5' />
+        </TooltipIconButton>
+      ) : (
+        <DialogTrigger render={<Button size='sm' />}>
+          <PlusIcon data-icon='inline-start' />
+          New profile
+        </DialogTrigger>
+      )}
       <DialogContent>
         <form onSubmit={(event) => void submit(event)}>
           <DialogHeader>
@@ -205,9 +207,11 @@ function DeleteAccessProfileAction({
   const [error, setError] = React.useState<string>();
   return (
     <AlertDialog>
-      <AlertDialogTrigger render={<Button size='icon-sm' variant='ghost' />}>
-        <Trash2Icon aria-hidden='true' />
-        <span className='sr-only'>Delete {profile.name}</span>
+      <AlertDialogTrigger
+        aria-label={`Delete ${profile.name}`}
+        className='text-muted-foreground hover:bg-destructive/10 hover:text-destructive grid size-7 cursor-pointer place-items-center rounded-md outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50'
+      >
+        <Trash2Icon aria-hidden='true' className='size-3.5' />
       </AlertDialogTrigger>
       <AlertDialogContent>
         <AlertDialogHeader>
@@ -288,36 +292,28 @@ export function OrganizationProfilesPanel({
   };
 
   return (
-    <div className='flex flex-col gap-4'>
-      <div className='flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between'>
-        <div>
-          <h3 className='text-sm font-medium'>Access profiles</h3>
-          <p className='text-muted-foreground text-pretty text-sm'>
-            Assign profiles for routine access, then reserve direct grants for exceptions.
-          </p>
-        </div>
-        {canCreateProfile && actions?.createAccessProfile ? (
+    <div className='@container/profiles flex flex-col gap-3'>
+      <SectionHeading
+        actions={canCreateProfile && actions?.createAccessProfile ? (
           <AccessProfileDialog
             action={actions.createAccessProfile}
             onError={onError}
             organizationId={organizationId}
           />
         ) : null}
-      </div>
+        description='Assign profiles for routine access, then reserve direct grants for exceptions.'
+        title='Access profiles'
+      />
       {profiles.length === 0 ? (
-        <Empty className='min-h-52 border' role='status'>
-          <EmptyHeader>
-            <EmptyMedia variant='icon'><ShieldIcon aria-hidden='true' /></EmptyMedia>
-            <EmptyTitle>No access profiles</EmptyTitle>
-            <EmptyDescription>
-              {canCreateProfile
-                ? 'Create a profile to bundle organization capabilities.'
-                : 'No access profiles are visible, and this session cannot create one.'}
-            </EmptyDescription>
-          </EmptyHeader>
-        </Empty>
+        <FeaturePackEmpty
+          description={canCreateProfile
+            ? 'Create a profile to bundle organization capabilities.'
+            : 'No access profiles are visible, and this session cannot create one.'}
+          icon={ShieldIcon}
+          title='No access profiles'
+        />
       ) : (
-        <div className='grid gap-4 xl:grid-cols-2'>
+        <div className='grid gap-3 @4xl/profiles:grid-cols-2'>
           {profiles.map((profile) => {
             const assigned = new Set(profile.capabilityIds);
             const canSet = canPerform(policy, 'setProfileCapability') &&
@@ -327,26 +323,28 @@ export function OrganizationProfilesPanel({
               <section
                 aria-current={profile.id === focusedProfileId ? 'true' : undefined}
                 className={cn(
-                  'border-border/70 rounded-xl border p-4',
-                  profile.id === focusedProfileId &&
-                    'bg-muted/60 outline outline-2 outline-offset-[-2px] outline-ring'
+                  'flex flex-col overflow-hidden rounded-xl bg-card shadow-card',
+                  profile.id === focusedProfileId && focusedRecordClass
                 )}
                 key={profile.id}
                 ref={profile.id === focusedProfileId ? focusedProfileRef : undefined}
                 tabIndex={profile.id === focusedProfileId ? -1 : undefined}
               >
-                <div className='flex items-start justify-between gap-3'>
+                <div className='flex items-start justify-between gap-3 px-4 pt-3.5 pb-3'>
                   <div className='min-w-0'>
-                    <div className='flex flex-wrap items-center gap-2'>
-                      <h4 className='truncate font-medium'>{profile.name}</h4>
-                      {profile.isSystem ? <Badge variant='secondary'>System</Badge> : null}
-                      {profile.isDefault ? <Badge>Default</Badge> : null}
+                    <div className='flex flex-wrap items-center gap-1.5'>
+                      <h4 className='truncate text-sm font-medium'>{profile.name}</h4>
+                      {profile.isSystem ? <ToneBadge tone='neutral'>System</ToneBadge> : null}
+                      {profile.isDefault ? <ToneBadge tone='primary'>Default</ToneBadge> : null}
                     </div>
-                    <p className='text-muted-foreground mt-1 text-pretty text-sm'>
+                    <p className='text-muted-foreground mt-0.5 text-pretty text-[13px]'>
                       {profile.description ?? 'No description provided.'}
                     </p>
+                    <p className='text-muted-foreground mt-1 text-xs tabular-nums'>
+                      {profile.capabilityIds.length} {profile.capabilityIds.length === 1 ? 'capability' : 'capabilities'}
+                    </p>
                   </div>
-                  <div className='flex shrink-0 items-center gap-1'>
+                  <div className='flex shrink-0 items-center gap-0.5'>
                     {canPerform(policy, 'updateAccessProfile') &&
                     profile.actionPolicy?.updateAccessProfile &&
                     actions?.updateAccessProfile ? (
@@ -370,7 +368,7 @@ export function OrganizationProfilesPanel({
                   </div>
                 </div>
                 {capabilities.length > 0 ? (
-                  <FieldGroup className='mt-4'>
+                  <div className='grid gap-x-4 gap-y-2.5 border-t border-dashed border-foreground/10 px-4 py-3 @lg/profiles:grid-cols-2'>
                     {capabilities.map((capability) => {
                       const key = `${profile.id}:${capability.id}`;
                       return (
@@ -399,9 +397,9 @@ export function OrganizationProfilesPanel({
                         </Field>
                       );
                     })}
-                  </FieldGroup>
+                  </div>
                 ) : (
-                  <p className='text-muted-foreground mt-4 text-sm'>
+                  <p className='text-muted-foreground border-t border-dashed border-foreground/10 px-4 py-3 text-[13px]'>
                     The organization capability catalog is unavailable.
                   </p>
                 )}
@@ -515,21 +513,23 @@ export function OrganizationMemberAccessDialog({
   const emailRef = React.useRef<HTMLInputElement>(null);
   const fieldId = React.useId();
 
-  React.useEffect(() => {
+  // Reload the form when the member's saved profile changes (adjusted during render, not in an effect).
+  const savedProfile = [
+    member.id,
+    member.memberProfile?.displayName ?? member.name,
+    member.memberProfile?.email ?? member.email,
+    member.memberProfile?.title ?? '',
+    member.memberProfile?.bio ?? ''
+  ].join('\u0000');
+  const [loadedProfile, setLoadedProfile] = React.useState(savedProfile);
+  if (savedProfile !== loadedProfile) {
+    setLoadedProfile(savedProfile);
     setDisplayName(member.memberProfile?.displayName ?? member.name);
     setEmail(member.memberProfile?.email ?? member.email);
     setTitle(member.memberProfile?.title ?? '');
     setBio(member.memberProfile?.bio ?? '');
     setEmailError(undefined);
-  }, [
-    member.id,
-    member.email,
-    member.name,
-    member.memberProfile?.bio,
-    member.memberProfile?.displayName,
-    member.memberProfile?.email,
-    member.memberProfile?.title
-  ]);
+  }
 
   const run = async (key: string, action: () => void | Promise<void>, fallback: string) => {
     setPending(key);
@@ -552,23 +552,23 @@ export function OrganizationMemberAccessDialog({
   ] as const;
 
   return (
-    <Dialog onOpenChange={(nextOpen) => !pending && setOpen(nextOpen)} open={open}>
-      <DialogTrigger render={<Button size='icon-sm' variant='ghost' />}>
-        <Settings2Icon aria-hidden='true' />
-        <span className='sr-only'>Manage access for {member.name}</span>
-      </DialogTrigger>
-      <DialogContent className='sm:max-w-2xl'>
-        <DialogHeader>
-          <DialogTitle>Manage {member.name}</DialogTitle>
-          <DialogDescription>
+    <>
+    <TooltipIconButton extendHitArea={false} label={`Manage access for ${member.name}`} onClick={() => setOpen(true)}>
+      <Settings2Icon aria-hidden='true' className='size-3.5' />
+    </TooltipIconButton>
+    <Sheet onOpenChange={(nextOpen) => !pending && setOpen(nextOpen)} open={open}>
+      <SheetContent className='w-full gap-0 p-0 sm:max-w-lg' side='right'>
+        <header className='flex flex-col gap-1 p-4 pr-12'>
+          <SheetTitle className='text-sm font-medium'>Manage {member.name}</SheetTitle>
+          <SheetDescription className='text-[13px]'>
             Governance, lifecycle, profile access, and direct exceptions remain separate so effective access is auditable.
-          </DialogDescription>
-        </DialogHeader>
-        <DialogPanel className='max-h-[65dvh] overflow-y-auto'>
-          <div className='flex flex-col gap-6'>
-            <section className='flex flex-col gap-3'>
-              <div><h4 className='text-sm font-medium'>Governance</h4><p className='text-muted-foreground text-xs'>Owner and administrator changes use Constructive&apos;s append-only semantic grants.</p></div>
-              <FieldGroup>
+          </SheetDescription>
+        </header>
+        <div className='min-h-0 flex-1 overflow-y-auto border-t border-dashed border-foreground/10 p-4'>
+          <div className='flex flex-col gap-5'>
+            <section className='flex flex-col gap-2'>
+              <SectionHeading description='Owner and administrator changes use Constructive’s append-only semantic grants.' title='Governance' />
+              <FeaturePackOptionList>
                 {[
                   ['grantAdmin', 'Administrator', member.governance === 'admin' || member.governance === 'owner', actions?.setMemberAdmin],
                   ['grantOwner', 'Owner', member.governance === 'owner', actions?.setMemberOwner]
@@ -603,12 +603,12 @@ export function OrganizationMemberAccessDialog({
                     />
                   );
                 })}
-              </FieldGroup>
+              </FeaturePackOptionList>
             </section>
 
-            <section className='flex flex-col gap-3'>
-              <div><h4 className='text-sm font-medium'>Lifecycle</h4><p className='text-muted-foreground text-xs'>Approval, bans, disabled access, and membership scope are independent backend flags.</p></div>
-              <FieldGroup>
+            <section className='flex flex-col gap-2'>
+              <SectionHeading description='Approval, bans, disabled access, and membership scope are independent backend flags.' title='Lifecycle' />
+              <FeaturePackOptionList>
                 {lifecycle.map(([field, actionName, label, checked]) => {
                   const enabled = canPerform(policy, actionName) &&
                     member.actionPolicy?.[actionName] === true &&
@@ -634,12 +634,12 @@ export function OrganizationMemberAccessDialog({
                     </Field>
                   );
                 })}
-              </FieldGroup>
+              </FeaturePackOptionList>
             </section>
 
             {profiles.length > 0 ? (
-              <section className='flex flex-col gap-3'>
-                <div><h4 className='text-sm font-medium'>Access profile</h4><p className='text-muted-foreground text-xs'>Profiles are the primary way to assign organization capabilities.</p></div>
+              <section className='flex flex-col gap-2'>
+                <SectionHeading description='Profiles are the primary way to assign organization capabilities.' title='Access profile' />
                 <Field label='Profile'>
                   <Select
                     disabled={!canPerform(policy, 'assignProfile') ||
@@ -666,7 +666,13 @@ export function OrganizationMemberAccessDialog({
                     )}
                     value={member.profileId ?? '__none__'}
                   >
-                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectTrigger>
+                      <SelectValue>
+                        {(value: string | null) => value === '__none__'
+                          ? 'No profile'
+                          : profiles.find((profile) => profile.id === value)?.name ?? value}
+                      </SelectValue>
+                    </SelectTrigger>
                     <SelectContent><SelectGroup>
                       <SelectItem value='__none__'>No profile</SelectItem>
                       {profiles.map((profile) => <SelectItem key={profile.id} value={profile.id}>{profile.name}</SelectItem>)}
@@ -677,9 +683,9 @@ export function OrganizationMemberAccessDialog({
             ) : null}
 
             {capabilities.length > 0 ? (
-              <section className='flex flex-col gap-3'>
-                <div><h4 className='text-sm font-medium'>Direct capability exceptions</h4><p className='text-muted-foreground text-xs'>Use direct grants only when a shared access profile would be too broad.</p></div>
-                <FieldGroup>
+              <section className='flex flex-col gap-2'>
+                <SectionHeading description='Use direct grants only when a shared access profile would be too broad.' title='Direct capability exceptions' />
+                <FeaturePackOptionList>
                   {capabilities.map((capability) => {
                     const checked = maskIncludes(member.directCapabilities, capability.bitstr);
                     const enabled = canPerform(policy, 'grantCapability') &&
@@ -710,12 +716,12 @@ export function OrganizationMemberAccessDialog({
                       </Field>
                     );
                   })}
-                </FieldGroup>
+                </FeaturePackOptionList>
               </section>
             ) : null}
 
             <section className='flex flex-col gap-3'>
-              <div><h4 className='text-sm font-medium'>Organization profile</h4><p className='text-muted-foreground text-xs'>This tenant-specific profile is separate from the member&apos;s global account.</p></div>
+              <SectionHeading description='This tenant-specific profile is separate from the member’s global account.' title='Organization profile' />
               <FieldGroup>
                 <Field htmlFor={`${fieldId}-display-name`} label='Display name'>
                   <Input autoComplete='name' id={`${fieldId}-display-name`} name='member-display-name' onChange={(event) => setDisplayName(event.currentTarget.value)} value={displayName} />
@@ -749,6 +755,7 @@ export function OrganizationMemberAccessDialog({
               actions?.upsertMemberProfile ? (
                 <Button
                   className='self-start'
+                  size='sm'
                   disabled={Boolean(pending)}
                   onClick={() => {
                     const emailInput = emailRef.current;
@@ -781,9 +788,10 @@ export function OrganizationMemberAccessDialog({
             </section>
             {error ? <p className='text-destructive text-sm' role='alert'>{error}</p> : null}
           </div>
-        </DialogPanel>
-      </DialogContent>
-    </Dialog>
+        </div>
+      </SheetContent>
+    </Sheet>
+    </>
   );
 }
 
@@ -797,14 +805,12 @@ export function OrganizationCapabilitiesPanel({
   capabilities: readonly OrganizationCapability[];
 }>) {
   return (
-    <div className='flex flex-col gap-4'>
-      <div>
-        <h3 className='text-sm font-medium'>Capability catalog</h3>
-        <p className='text-muted-foreground text-pretty text-sm'>
-          Effective access combines profile capabilities with the direct grants shown here as exceptions.
-        </p>
-      </div>
-      <div className='grid gap-3 xl:grid-cols-2'>
+    <div className='@container/capabilities flex flex-col gap-3'>
+      <SectionHeading
+        description='Effective access combines profile capabilities with the direct grants shown here as exceptions.'
+        title='Capability catalog'
+      />
+      <div className='grid gap-3 @3xl/capabilities:grid-cols-2'>
         {capabilities.map((capability) => {
           const profileCount = profiles.filter((profile) =>
             profile.capabilityIds.includes(capability.id)
@@ -813,19 +819,19 @@ export function OrganizationCapabilitiesPanel({
             maskIncludes(member.directCapabilities, capability.bitstr)
           ).length;
           return (
-            <section className='border-border/70 rounded-xl border p-4' key={capability.id}>
+            <section className='rounded-xl bg-card px-4 py-3.5 shadow-card' key={capability.id}>
               <div className='flex items-start justify-between gap-3'>
-                <div>
-                  <h4 className='font-medium'>{capability.name}</h4>
+                <div className='min-w-0'>
+                  <h4 className='text-sm font-medium'>{capability.name}</h4>
                   {capability.description ? (
-                    <p className='text-muted-foreground mt-1 text-pretty text-sm'>
+                    <p className='text-muted-foreground mt-0.5 text-pretty text-[13px]'>
                       {capability.description}
                     </p>
                   ) : null}
                 </div>
-                <Badge variant='outline'>Tenant</Badge>
+                <ToneBadge tone='neutral'>Tenant</ToneBadge>
               </div>
-              <p className='text-muted-foreground mt-3 text-xs tabular-nums'>
+              <p className='text-muted-foreground mt-2.5 text-xs tabular-nums'>
                 {profileCount} {profileCount === 1 ? 'profile' : 'profiles'} · {directCount}{' '}
                 {directCount === 1 ? 'direct grant' : 'direct grants'}
               </p>
@@ -834,7 +840,7 @@ export function OrganizationCapabilitiesPanel({
         })}
       </div>
       {capabilities.length === 0 ? (
-        <p className='text-muted-foreground text-sm'>No organization capabilities are visible.</p>
+        <FeaturePackEmpty icon={ShieldIcon} title='No organization capabilities are visible.' />
       ) : null}
     </div>
   );
@@ -855,7 +861,7 @@ export function OrganizationDefaultsPanel({
     Boolean(actions?.updateMembershipDefault);
 
   return (
-    <div className='max-w-2xl'>
+    <FeaturePackOptionList className='max-w-2xl'>
       <Field data-disabled={!canUpdate || pending} orientation='horizontal'>
         <div className='min-w-0 flex-1'>
           <FieldLabel htmlFor={fieldId}>Approve new memberships automatically</FieldLabel>
@@ -880,6 +886,6 @@ export function OrganizationDefaultsPanel({
           }}
         />
       </Field>
-    </div>
+    </FeaturePackOptionList>
   );
 }

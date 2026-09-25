@@ -397,12 +397,12 @@ export const FEATURE_PACK_DOCS = [
       'Invitations by email, SMS, or reusable link with profile assignment, expiry, reusable claim limits and counts, token copying, cancellation, and accepted-invite history.',
       'Access-profile creation, editing, deletion, and capability grants alongside a readable capability catalog.',
       'Membership defaults and tenant-wide membership settings for approval, inheritance, external access, invitation assignment, and limit allocation.',
-      'Organization hierarchy edges with position metadata and cycle-safe creation and removal controls.',
+      'The organization chart on the Org Chart canvas: drag a card onto a new manager or use Change manager, edit positions, add or remove reporting lines, all through the host actions.',
       'Developer credentials with service-principal creation and revocation, one-time API-key issuance, and key revocation.',
     ],
     accessibility: [
       'The selected organization and active management section use readable labels and selection indicators, while unavailable tenant actions remain disabled or absent according to policy.',
-      'Member, invitation, hierarchy, principal, and API-key tables use scoped headers, named row actions, and text status labels whose meaning does not depend on color.',
+      'Member, invitation, principal, and API-key tables use scoped headers, named row actions, and text status labels whose meaning does not depend on color; the chart is a keyboard-navigable tree with a Change manager dialog as the alternative to dragging.',
       'Destructive, hierarchy, invitation, principal, and credential dialogs identify their tenant scope and consequences before submission; a newly issued key is labelled as a one-time secret.',
     ],
     apiProps: featurePackApiProps<OrganizationsFeaturePackProps>()([

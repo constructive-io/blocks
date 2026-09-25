@@ -20,7 +20,6 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger
 } from '@constructive-io/ui/alert-dialog';
-import { Badge } from '@constructive-io/ui/badge';
 import { Button } from '@constructive-io/ui/button';
 import { Checkbox } from '@constructive-io/ui/checkbox';
 import {
@@ -33,13 +32,6 @@ import {
   DialogTitle,
   DialogTrigger
 } from '@constructive-io/ui/dialog';
-import {
-  Empty,
-  EmptyDescription,
-  EmptyHeader,
-  EmptyMedia,
-  EmptyTitle
-} from '@constructive-io/ui/empty';
 import {
   Field,
   FieldDescription,
@@ -56,20 +48,16 @@ import {
   SelectValue
 } from '@constructive-io/ui/select';
 import { Switch } from '@constructive-io/ui/switch';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow
-} from '@constructive-io/ui/table';
+import { OrgChart } from '@/components/ui/org-chart/org-chart';
+import type { OrgChartEdge } from '@/components/ui/org-chart/org-chart.types';
+import { ToneBadge } from '@/components/ui/workspace-kit/primitives';
+import { SectionHeading, TableSurface, tableHeadClass, tableRowClass } from '@/components/ui/workspace-kit/surface';
 
 import {
   canPerform,
   normalizeFeaturePackError
 } from '../shared/feature-pack-contracts';
-import { FeaturePackTimestamp } from '../shared/feature-pack-ui';
+import { FeaturePackEmpty, FeaturePackOptionList, FeaturePackTimestamp } from '../shared/feature-pack-ui';
 import type {
   OrganizationApiKey,
   OrganizationChartEdge,
@@ -87,6 +75,19 @@ type OperationPanelProps = Readonly<{
   policy?: OrganizationsFeaturePackProps['policy'];
   onError?: OrganizationsFeaturePackProps['onError'];
 }>;
+
+const PROFILE_MODE_LABELS: Readonly<Record<string, string>> = {
+  strict: 'Capability and subset',
+  capability_only: 'Capability only',
+  subset_only: 'Subset only'
+};
+
+const ALLOCATION_MODE_LABELS: Readonly<Record<string, string>> = {
+  pooled: 'Pooled',
+  budgeted: 'Budgeted'
+};
+
+const REVOKE_BUTTON = 'text-muted-foreground hover:bg-destructive/10 hover:text-destructive grid size-7 cursor-pointer place-items-center rounded-md outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50';
 
 function report(
   cause: unknown,
@@ -106,19 +107,29 @@ function ConfirmAction({
   confirmLabel,
   onConfirm,
   onError,
-  fallback
+  fallback,
+  open: controlledOpen,
+  onOpenChange
 }: Readonly<{
   title: string;
   description: string;
-  trigger: React.ReactElement;
+  /** Opens the confirmation; omit it and pass `open` to open it from elsewhere. */
+  trigger?: React.ReactElement;
   confirmLabel: string;
   onConfirm: () => void | Promise<void>;
   onError?: OrganizationsFeaturePackProps['onError'];
   fallback: string;
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
 }>) {
-  const [open, setOpen] = React.useState(false);
+  const [internalOpen, setInternalOpen] = React.useState(false);
   const [pending, setPending] = React.useState(false);
   const [error, setError] = React.useState<string>();
+  const open = controlledOpen ?? internalOpen;
+  const setOpen = (nextOpen: boolean) => {
+    if (controlledOpen === undefined) setInternalOpen(nextOpen);
+    onOpenChange?.(nextOpen);
+  };
   return (
     <AlertDialog
       onOpenChange={(nextOpen) => {
@@ -128,7 +139,7 @@ function ConfirmAction({
       }}
       open={open}
     >
-      <AlertDialogTrigger render={trigger} />
+      {trigger ? <AlertDialogTrigger render={trigger} /> : null}
       <AlertDialogContent>
         <AlertDialogHeader>
           <AlertDialogTitle>{title}</AlertDialogTitle>
@@ -195,10 +206,14 @@ export function OrganizationSettingsPanel({
   const canUpdateSettings = canPerform(policy, 'updateMembershipSettings') &&
     Boolean(actions?.updateMembershipSettings) && Boolean(settings);
 
-  React.useEffect(() => {
+  // Reload the identity fields when the saved organization changes (adjusted during render, not in an effect).
+  const savedIdentity = `${organization.id}\u0000${organization.name}\u0000${organization.slug ?? ''}`;
+  const [loadedIdentity, setLoadedIdentity] = React.useState(savedIdentity);
+  if (savedIdentity !== loadedIdentity) {
+    setLoadedIdentity(savedIdentity);
     setName(organization.name);
     setSlug(organization.slug ?? '');
-  }, [organization.id, organization.name, organization.slug]);
+  }
 
   const updateSetting = async (
     field: keyof Omit<OrganizationMembershipSettings, 'id'>,
@@ -265,16 +280,14 @@ export function OrganizationSettingsPanel({
   ] : [];
 
   return (
-    <div className='flex max-w-3xl flex-col gap-8'>
-      <section className='flex flex-col gap-4'>
-        <div>
-          <h3 className='text-sm font-medium'>General</h3>
-          <p className='text-muted-foreground text-pretty text-sm'>
-            The organization identity is the tenant boundary used by Constructive memberships.
-          </p>
-        </div>
+    <div className='flex max-w-3xl flex-col gap-6'>
+      <section className='flex flex-col gap-3'>
+        <SectionHeading
+          description='The organization identity is the tenant boundary used by Constructive memberships.'
+          title='General'
+        />
         <form
-          className='flex flex-col gap-4'
+          className='flex flex-col gap-4 rounded-xl bg-card p-4 shadow-card'
           onSubmit={(event) => {
             event.preventDefault();
             if (!canUpdateOrganization || !actions?.updateOrganization) return;
@@ -315,7 +328,7 @@ export function OrganizationSettingsPanel({
             </Field>
           </FieldGroup>
           {canUpdateOrganization ? (
-            <Button className='self-start' disabled={pendingGeneral || !name.trim()} type='submit'>
+            <Button className='self-start' disabled={pendingGeneral || !name.trim()} size='sm' type='submit'>
               {pendingGeneral ? 'Saving…' : 'Save organization'}
             </Button>
           ) : null}
@@ -323,14 +336,12 @@ export function OrganizationSettingsPanel({
       </section>
 
       {settings ? (
-        <section className='flex flex-col gap-4'>
-          <div>
-            <h3 className='text-sm font-medium'>Membership policy</h3>
-            <p className='text-muted-foreground text-pretty text-sm'>
-              These controls govern invitations, child organizations, and membership lifecycle defaults.
-            </p>
-          </div>
-          <FieldGroup>
+        <section className='flex flex-col gap-3'>
+          <SectionHeading
+            description='These controls govern invitations, child organizations, and membership lifecycle defaults.'
+            title='Membership policy'
+          />
+          <FeaturePackOptionList className='@container/field-group'>
             {toggles.map((setting) => {
               const id = `${fieldId}-${setting.field}`;
               return (
@@ -367,7 +378,9 @@ export function OrganizationSettingsPanel({
                 )}
                 value={settings.inviteProfileAssignmentMode}
               >
-                <SelectTrigger id={`${fieldId}-profile-mode`}><SelectValue /></SelectTrigger>
+                <SelectTrigger className='sm:w-52' id={`${fieldId}-profile-mode`}>
+                  <SelectValue>{(value: string | null) => PROFILE_MODE_LABELS[value ?? ''] ?? value}</SelectValue>
+                </SelectTrigger>
                 <SelectContent>
                   <SelectGroup>
                     <SelectItem value='strict'>Capability and subset</SelectItem>
@@ -389,7 +402,9 @@ export function OrganizationSettingsPanel({
                 onValueChange={(value) => void updateSetting('limitAllocationMode', value)}
                 value={settings.limitAllocationMode}
               >
-                <SelectTrigger id={`${fieldId}-allocation-mode`}><SelectValue /></SelectTrigger>
+                <SelectTrigger className='sm:w-52' id={`${fieldId}-allocation-mode`}>
+                  <SelectValue>{(value: string | null) => ALLOCATION_MODE_LABELS[value ?? ''] ?? value}</SelectValue>
+                </SelectTrigger>
                 <SelectContent>
                   <SelectGroup>
                     <SelectItem value='pooled'>Pooled</SelectItem>
@@ -398,17 +413,17 @@ export function OrganizationSettingsPanel({
                 </SelectContent>
               </Select>
             </Field>
-          </FieldGroup>
+          </FeaturePackOptionList>
           {settingError ? (
             <p className='text-destructive text-pretty text-sm' role='alert'>{settingError}</p>
           ) : null}
         </section>
       ) : null}
 
-      <section className='border-destructive/30 flex flex-col gap-4 rounded-xl border p-4'>
+      <section className='border-destructive/25 bg-destructive/[0.03] flex flex-col gap-3 rounded-xl border p-4'>
         <div>
           <h3 className='text-destructive text-sm font-medium'>Danger zone</h3>
-          <p className='text-muted-foreground text-pretty text-sm'>
+          <p className='text-muted-foreground mt-0.5 text-pretty text-[13px]'>
             Leaving removes only your membership. Deleting removes the organization identity and may cascade tenant data.
           </p>
         </div>
@@ -424,7 +439,7 @@ export function OrganizationSettingsPanel({
               })}
               onError={onError}
               title={`Leave ${organization.name}?`}
-              trigger={<Button variant='outline'>Leave organization</Button>}
+              trigger={<Button size='sm' variant='outline'>Leave organization</Button>}
             />
           ) : null}
           {canDeleteOrganization && actions?.deleteOrganization ? (
@@ -435,7 +450,7 @@ export function OrganizationSettingsPanel({
               onConfirm={() => actions.deleteOrganization!({ organizationId })}
               onError={onError}
               title={`Delete ${organization.name}?`}
-              trigger={<Button variant='destructive'>Delete organization</Button>}
+              trigger={<Button size='sm' variant='destructive'>Delete organization</Button>}
             />
           ) : null}
         </div>
@@ -444,6 +459,120 @@ export function OrganizationSettingsPanel({
   );
 }
 
+type ReportingLineDraft = Readonly<{
+  mode: 'add' | 'edit';
+  childId: string;
+  parentId: string;
+  title: string;
+  level: string;
+}>;
+
+function ReportingLineDialog({
+  draft,
+  members,
+  onClose,
+  onSubmit
+}: Readonly<{
+  draft: ReportingLineDraft | null;
+  members: readonly OrganizationMember[];
+  onClose: () => void;
+  onSubmit: (input: { childId: string; parentId: string; title: string; level: string }) => Promise<string | undefined>;
+}>) {
+  const [childId, setChildId] = React.useState('');
+  const [parentId, setParentId] = React.useState('');
+  const [title, setTitle] = React.useState('');
+  const [level, setLevel] = React.useState('');
+  const [pending, setPending] = React.useState(false);
+  const [error, setError] = React.useState<string>();
+  const fieldId = React.useId();
+  // Load the draft each time the dialog opens (adjusted during render, not in an effect).
+  const [loaded, setLoaded] = React.useState<ReportingLineDraft | null>(null);
+  if (draft && draft !== loaded) {
+    setLoaded(draft);
+    setChildId(draft.childId);
+    setParentId(draft.parentId);
+    setTitle(draft.title);
+    setLevel(draft.level);
+    setError(undefined);
+  }
+  const editing = draft?.mode === 'edit';
+  const nameOf = (userId: string) => members.find((member) => member.userId === userId)?.name ?? userId;
+
+  return (
+    <Dialog
+      onOpenChange={(nextOpen) => {
+        if (!nextOpen && !pending) onClose();
+      }}
+      open={Boolean(draft)}
+    >
+      <DialogContent>
+        <form
+          onSubmit={(event) => {
+            event.preventDefault();
+            setPending(true);
+            setError(undefined);
+            void onSubmit({ childId, parentId, title, level })
+              .then((message) => {
+                if (message) setError(message);
+                else onClose();
+              })
+              .finally(() => setPending(false));
+          }}
+        >
+          <DialogHeader>
+            <DialogTitle>{editing ? `Edit ${nameOf(childId)}’s position` : 'Add a reporting line'}</DialogTitle>
+            <DialogDescription>
+              Reporting edges are append-only grants; Console Kit rejects self-links and cycles before submission.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogPanel>
+            <FieldGroup>
+              {editing ? null : (
+                <Field htmlFor={`${fieldId}-member`} label='Member'>
+                  <Select name='hierarchy-member' onValueChange={(value) => setChildId(value ?? '')} value={childId}>
+                    <SelectTrigger id={`${fieldId}-member`}><SelectValue placeholder='Select member' /></SelectTrigger>
+                    <SelectContent><SelectGroup>{members.map((member) => (
+                      <SelectItem key={member.userId} value={member.userId}>{member.name}</SelectItem>
+                    ))}</SelectGroup></SelectContent>
+                  </Select>
+                </Field>
+              )}
+              <Field htmlFor={`${fieldId}-manager`} label='Reports to'>
+                <Select name='hierarchy-manager' onValueChange={(value) => setParentId(value ?? '')} value={parentId}>
+                  <SelectTrigger id={`${fieldId}-manager`}><SelectValue placeholder='Select manager' /></SelectTrigger>
+                  <SelectContent><SelectGroup>{members.filter((member) => member.userId !== childId).map((member) => (
+                    <SelectItem key={member.userId} value={member.userId}>{member.name}</SelectItem>
+                  ))}</SelectGroup></SelectContent>
+                </Select>
+              </Field>
+              <div className='grid gap-4 sm:grid-cols-[minmax(0,1fr)_7rem]'>
+                <Field htmlFor={`${fieldId}-title`} label='Position title'>
+                  <Input autoComplete='organization-title' id={`${fieldId}-title`} name='position-title' onChange={(event) => setTitle(event.currentTarget.value)} value={title} />
+                </Field>
+                <Field htmlFor={`${fieldId}-level`} label='Level'>
+                  <Input id={`${fieldId}-level`} inputMode='numeric' min={0} name='position-level' onChange={(event) => setLevel(event.currentTarget.value)} type='number' value={level} />
+                </Field>
+              </div>
+              {error ? <p className='text-destructive text-pretty text-sm' role='alert'>{error}</p> : null}
+            </FieldGroup>
+          </DialogPanel>
+          <DialogFooter>
+            <Button disabled={pending || !childId || !parentId || childId === parentId} type='submit'>
+              {pending ? 'Saving…' : 'Save reporting line'}
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+/**
+ * The organization's reporting lines on the Org Chart canvas: drag a card onto
+ * a new manager (or use "Change manager…") to move someone, edit a position,
+ * or remove a reporting line. Every change goes through the host actions, and
+ * the chart redraws from the next resource.
+ */
 export function OrganizationHierarchyPanel({
   organizationId,
   members,
@@ -455,119 +584,137 @@ export function OrganizationHierarchyPanel({
   members: readonly OrganizationMember[];
   edges: readonly OrganizationChartEdge[];
 }>) {
-  const [childId, setChildId] = React.useState('');
-  const [parentId, setParentId] = React.useState('');
-  const [title, setTitle] = React.useState('');
-  const [level, setLevel] = React.useState('');
-  const [pending, setPending] = React.useState(false);
+  const [draft, setDraft] = React.useState<ReportingLineDraft | null>(null);
+  const [removeTarget, setRemoveTarget] = React.useState<OrganizationChartEdge | null>(null);
   const [error, setError] = React.useState<string>();
-  const fieldId = React.useId();
-  const memberByActor = new Map(members.map((member) => [member.userId, member]));
-  const canSet = canPerform(policy, 'setHierarchyEdge') && Boolean(actions?.setHierarchyEdge);
+  const setHierarchyEdge = canPerform(policy, 'setHierarchyEdge') ? actions?.setHierarchyEdge : undefined;
+  const removeHierarchyEdge = canPerform(policy, 'removeHierarchyEdge') ? actions?.removeHierarchyEdge : undefined;
+
+  // One reporting line per person; a later edge for the same person wins.
+  const edgeByChild = React.useMemo(() => new Map(edges.map((edge) => [edge.childId, edge])), [edges]);
+  const chartEdges = React.useMemo<OrgChartEdge[]>(() => {
+    const memberByActor = new Map(members.map((member) => [member.userId, member]));
+    const people = new Set<string>();
+    for (const edge of edgeByChild.values()) {
+      people.add(edge.childId);
+      people.add(edge.parentId);
+    }
+    return [...people].map((id) => {
+      const edge = edgeByChild.get(id);
+      const member = memberByActor.get(id);
+      return {
+        id,
+        parentId: edge?.parentId ?? null,
+        displayName: member?.name ?? id,
+        avatarUrl: member?.avatarUrl ?? null,
+        positionTitle: edge?.positionTitle ?? member?.memberProfile?.title ?? null
+      };
+    });
+  }, [edgeByChild, members]);
+
+  const save = async (input: { childId: string; parentId: string; positionTitle?: string; positionLevel?: number }) => {
+    if (!setHierarchyEdge) return 'This session cannot change reporting lines.';
+    try {
+      await setHierarchyEdge({ organizationId, ...input });
+      return undefined;
+    } catch (cause) {
+      const normalized = normalizeFeaturePackError(cause, 'The reporting edge could not be saved.');
+      onError?.(normalized);
+      return normalized.message;
+    }
+  };
 
   return (
-    <div className='flex flex-col gap-5'>
-      <div>
-        <h3 className='text-sm font-medium'>Organization chart</h3>
-        <p className='text-muted-foreground text-pretty text-sm'>
-          Reporting edges are append-only grants; Console Kit rejects self-links and cycles before submission.
-        </p>
-      </div>
-      {canSet && actions?.setHierarchyEdge ? (
-        <form
-          className='border-border/70 grid gap-3 rounded-xl border p-4 md:grid-cols-2 xl:grid-cols-5'
-          onSubmit={(event) => {
-            event.preventDefault();
-            setPending(true);
+    <div className='flex flex-col gap-3'>
+      <SectionHeading
+        actions={setHierarchyEdge ? (
+          <Button onClick={() => setDraft({ mode: 'add', childId: '', parentId: '', title: '', level: '' })} size='sm' variant='outline'>
+            <PlusIcon data-icon='inline-start' />
+            Add reporting line
+          </Button>
+        ) : null}
+        description={setHierarchyEdge
+          ? 'Drag a card onto someone to change who they report to, or open a person for their details.'
+          : 'Who reports to whom in this organization.'}
+        title='Organization chart'
+      />
+      {error ? <p className='text-destructive text-pretty text-sm' role='alert'>{error}</p> : null}
+      {edges.length === 0 ? (
+        <FeaturePackEmpty
+          action={setHierarchyEdge ? (
+            <Button onClick={() => setDraft({ mode: 'add', childId: '', parentId: '', title: '', level: '' })} size='sm'>
+              Add reporting line
+            </Button>
+          ) : undefined}
+          description={setHierarchyEdge
+            ? 'Add a manager relationship to begin the organization chart.'
+            : 'No reporting lines are visible, and this session cannot add one.'}
+          icon={NetworkIcon}
+          title='No reporting lines'
+        />
+      ) : (
+        <OrgChart
+          className='h-[34rem]'
+          editable={Boolean(setHierarchyEdge)}
+          edges={chartEdges}
+          onEditNode={setHierarchyEdge ? (node) => {
+            const edge = edgeByChild.get(node.id);
+            setDraft({
+              mode: 'edit',
+              childId: node.id,
+              parentId: edge?.parentId ?? '',
+              title: edge?.positionTitle ?? '',
+              level: edge?.positionLevel === undefined ? '' : String(edge.positionLevel)
+            });
+          } : undefined}
+          onRemoveNode={removeHierarchyEdge ? (node) => {
+            const edge = edgeByChild.get(node.id);
+            if (edge?.actionPolicy?.removeHierarchyEdge) {
+              setError(undefined);
+              setRemoveTarget(edge);
+            } else {
+              setError(edge
+                ? `You cannot remove ${node.displayName ?? 'this person'}’s reporting line.`
+                : `${node.displayName ?? 'This person'} is at the top of the chart and has no reporting line to remove.`);
+            }
+          } : undefined}
+          onReparent={async (childId, parentId, preserve) => {
             setError(undefined);
-            void Promise.resolve(actions.setHierarchyEdge!({
-              organizationId,
+            const message = await save({
               childId,
               parentId,
-              positionTitle: title.trim() || undefined,
-              positionLevel: level ? Number(level) : undefined
-            })).then(() => {
-              setChildId('');
-              setParentId('');
-              setTitle('');
-              setLevel('');
-            }).catch((cause) => {
-              report(cause, 'The reporting edge could not be saved.', onError, setError);
-            }).finally(() => setPending(false));
+              positionTitle: preserve.positionTitle ?? undefined,
+              positionLevel: edgeByChild.get(childId)?.positionLevel
+            });
+            if (message) setError(message);
           }}
-        >
-          <Field htmlFor={`${fieldId}-member`} label='Member'>
-            <Select name='hierarchy-member' onValueChange={setChildId} value={childId}>
-              <SelectTrigger id={`${fieldId}-member`}><SelectValue placeholder='Select member' /></SelectTrigger>
-              <SelectContent><SelectGroup>{members.map((member) => (
-                <SelectItem key={member.userId} value={member.userId}>{member.name}</SelectItem>
-              ))}</SelectGroup></SelectContent>
-            </Select>
-          </Field>
-          <Field htmlFor={`${fieldId}-manager`} label='Reports to'>
-            <Select name='hierarchy-manager' onValueChange={setParentId} value={parentId}>
-              <SelectTrigger id={`${fieldId}-manager`}><SelectValue placeholder='Select manager' /></SelectTrigger>
-              <SelectContent><SelectGroup>{members.filter((member) => member.userId !== childId).map((member) => (
-                <SelectItem key={member.userId} value={member.userId}>{member.name}</SelectItem>
-              ))}</SelectGroup></SelectContent>
-            </Select>
-          </Field>
-          <Field htmlFor={`${fieldId}-title`} label='Position title'>
-            <Input autoComplete='organization-title' id={`${fieldId}-title`} name='position-title' onChange={(event) => setTitle(event.currentTarget.value)} value={title} />
-          </Field>
-          <Field htmlFor={`${fieldId}-level`} label='Level'>
-            <Input id={`${fieldId}-level`} inputMode='numeric' min={0} name='position-level' onChange={(event) => setLevel(event.currentTarget.value)} type='number' value={level} />
-          </Field>
-          <div className='flex items-end'>
-            <Button className='w-full' disabled={pending || !childId || !parentId} type='submit'>
-              {pending ? 'Saving…' : 'Save reporting line'}
-            </Button>
-          </div>
-          {error ? <p className='text-destructive md:col-span-2 xl:col-span-5' role='alert'>{error}</p> : null}
-        </form>
-      ) : null}
-      {edges.length === 0 ? (
-        <Empty className='min-h-52 border' role='status'>
-          <EmptyHeader>
-            <EmptyMedia variant='icon'><NetworkIcon aria-hidden='true' /></EmptyMedia>
-            <EmptyTitle>No reporting lines</EmptyTitle>
-            <EmptyDescription>
-              {canSet
-                ? 'Add a manager relationship to begin the organization chart.'
-                : 'No reporting lines are visible, and this session cannot add one.'}
-            </EmptyDescription>
-          </EmptyHeader>
-        </Empty>
-      ) : (
-        <Table>
-          <TableHeader><TableRow>
-            <TableHead>Member</TableHead><TableHead>Manager</TableHead>
-            <TableHead>Position</TableHead><TableHead className='w-12'><span className='sr-only'>Actions</span></TableHead>
-          </TableRow></TableHeader>
-          <TableBody>{edges.map((edge) => (
-            <TableRow key={edge.id}>
-              <TableCell className='font-medium'>{memberByActor.get(edge.childId)?.name ?? edge.childId}</TableCell>
-              <TableCell>{memberByActor.get(edge.parentId)?.name ?? edge.parentId}</TableCell>
-              <TableCell>{edge.positionTitle ?? (edge.positionLevel === undefined ? '—' : `Level ${edge.positionLevel}`)}</TableCell>
-              <TableCell>
-                {canPerform(policy, 'removeHierarchyEdge') &&
-                edge.actionPolicy?.removeHierarchyEdge &&
-                actions?.removeHierarchyEdge ? (
-                  <ConfirmAction
-                    confirmLabel='Remove reporting line'
-                    description='The member remains in the organization; only this reporting relationship is revoked.'
-                    fallback='The reporting edge could not be removed.'
-                    onConfirm={() => actions.removeHierarchyEdge!({ organizationId, edge })}
-                    onError={onError}
-                    title='Remove reporting line?'
-                    trigger={<Button size='icon-sm' variant='ghost'><Trash2Icon aria-hidden='true' /><span className='sr-only'>Remove reporting line</span></Button>}
-                  />
-                ) : null}
-              </TableCell>
-            </TableRow>
-          ))}</TableBody>
-        </Table>
+        />
       )}
+      <ReportingLineDialog
+        draft={draft}
+        members={members}
+        onClose={() => setDraft(null)}
+        onSubmit={({ childId, parentId, title, level }) => save({
+          childId,
+          parentId,
+          positionTitle: title.trim() || undefined,
+          positionLevel: level ? Number(level) : undefined
+        })}
+      />
+      {removeHierarchyEdge ? (
+        <ConfirmAction
+          confirmLabel='Remove reporting line'
+          description='The member remains in the organization; only this reporting relationship is revoked.'
+          fallback='The reporting edge could not be removed.'
+          onConfirm={() => removeTarget ? removeHierarchyEdge({ organizationId, edge: removeTarget }) : undefined}
+          onError={onError}
+          onOpenChange={(open) => {
+            if (!open) setRemoveTarget(null);
+          }}
+          open={Boolean(removeTarget)}
+          title='Remove reporting line?'
+        />
+      ) : null}
     </div>
   );
 }
@@ -682,11 +829,10 @@ function CreateApiKeyDialog({
   const [error, setError] = React.useState<string>();
   const fieldId = React.useId();
 
-  React.useEffect(() => {
-    if (!principals.some((principal) => principal.id === principalId)) {
-      setPrincipalId(principals[0]?.id ?? '');
-    }
-  }, [principalId, principals]);
+  // A principal that disappears falls back to the first one still listed.
+  const selectedPrincipalId = principals.some((principal) => principal.id === principalId)
+    ? principalId
+    : principals[0]?.id ?? '';
 
   return (
     <Dialog
@@ -784,7 +930,7 @@ function CreateApiKeyDialog({
             setError(undefined);
             void action({
               organizationId,
-              principalId,
+              principalId: selectedPrincipalId,
               name: name.trim(),
               accessLevel,
               mfaLevel,
@@ -809,7 +955,7 @@ function CreateApiKeyDialog({
                   <Input autoComplete='off' id={`${fieldId}-key-name`} name='api-key-name' onChange={(event) => setName(event.currentTarget.value)} required value={name} />
                 </Field>
                 <Field htmlFor={`${fieldId}-principal`} label='Principal'>
-                  <Select name='api-key-principal' onValueChange={setPrincipalId} value={principalId}>
+                  <Select name='api-key-principal' onValueChange={(value) => setPrincipalId(value ?? '')} value={selectedPrincipalId}>
                     <SelectTrigger id={`${fieldId}-principal`}><SelectValue placeholder='Select principal' /></SelectTrigger>
                     <SelectContent><SelectGroup>{principals.map((principal) => (
                       <SelectItem key={principal.id} value={principal.id}>{principal.name}</SelectItem>
@@ -847,7 +993,7 @@ function CreateApiKeyDialog({
                 </Field>
               </FieldGroup>
             </DialogPanel>
-            <DialogFooter><Button disabled={pending || !name.trim() || !principalId} type='submit'>{pending ? 'Creating…' : 'Create API key'}</Button></DialogFooter>
+            <DialogFooter><Button disabled={pending || !name.trim() || !selectedPrincipalId} type='submit'>{pending ? 'Creating…' : 'Create API key'}</Button></DialogFooter>
           </form>
         )}
       </DialogContent>
@@ -866,29 +1012,42 @@ export function OrganizationPrincipalsPanel({
     Boolean(actions?.createOrganizationPrincipal);
 
   return (
-    <div className='flex flex-col gap-4'>
-      <div className='flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between'>
-        <div>
-          <h3 className='text-sm font-medium'>Machine principals</h3>
-          <p className='text-muted-foreground text-pretty text-sm'>Create one principal per integration so access and keys can be revoked independently.</p>
-        </div>
-        {canCreatePrincipal && actions?.createOrganizationPrincipal ? (
+    <div className='flex flex-col gap-3'>
+      <SectionHeading
+        actions={canCreatePrincipal && actions?.createOrganizationPrincipal ? (
           <CreatePrincipalDialog action={actions.createOrganizationPrincipal} onError={onError} organizationId={organizationId} />
         ) : null}
-      </div>
+        description='Create one principal per integration so access and keys can be revoked independently.'
+        title='Machine principals'
+      />
       {principals.length === 0 ? (
-        <Empty className='min-h-52 border' role='status'>
-          <EmptyHeader><EmptyMedia variant='icon'><UserCogIcon aria-hidden='true' /></EmptyMedia><EmptyTitle>No machine principals</EmptyTitle><EmptyDescription>{canCreatePrincipal ? 'Create a principal before issuing an organization API key.' : 'No machine principals are visible, and this session cannot create one.'}</EmptyDescription></EmptyHeader>
-        </Empty>
+        <FeaturePackEmpty
+          description={canCreatePrincipal ? 'Create a principal before issuing an organization API key.' : 'No machine principals are visible, and this session cannot create one.'}
+          icon={UserCogIcon}
+          title='No machine principals'
+        />
       ) : (
-        <Table>
-          <TableHeader><TableRow><TableHead>Name</TableHead><TableHead>Access</TableHead><TableHead>Step-up</TableHead><TableHead className='w-12'><span className='sr-only'>Actions</span></TableHead></TableRow></TableHeader>
-          <TableBody>{principals.map((principal) => (
-            <TableRow key={principal.id}>
-              <TableCell className='max-w-64 truncate font-medium' title={principal.name}>{principal.name}</TableCell>
-              <TableCell><Badge className='max-w-40' title={principal.type ?? 'Custom'} variant='secondary'><span className='truncate'>{principal.type ?? 'Custom'}</span></Badge></TableCell>
-              <TableCell>{principal.bypassStepUp ? 'Bypassed' : 'Required'}</TableCell>
-              <TableCell>{canPerform(policy, 'revokeOrganizationPrincipal') && principal.actionPolicy?.revokeOrganizationPrincipal && actions?.revokeOrganizationPrincipal ? (
+        <TableSurface className='@container/table' minWidth='0'>
+          <caption className='sr-only'>Machine principals</caption>
+          <thead className={tableHeadClass}>
+            <tr>
+              <th scope='col'>Name</th>
+              <th className='w-32' scope='col'>Access</th>
+              <th className='hidden w-28 @md/table:table-cell' scope='col'>Step-up</th>
+              <th className='w-12' scope='col'><span className='sr-only'>Actions</span></th>
+            </tr>
+          </thead>
+          <tbody>{principals.map((principal) => (
+            <tr className={tableRowClass} key={principal.id}>
+              <td className='max-w-0'>
+                <span className='flex min-w-0 items-center gap-2'>
+                  <span className='truncate font-medium' title={principal.name}>{principal.name}</span>
+                  {principal.isReadOnly ? <ToneBadge tone='neutral'>Read only</ToneBadge> : null}
+                </span>
+              </td>
+              <td><ToneBadge className='max-w-full' tone={principal.useAdminOwner ? 'warning' : 'neutral'}><span className='truncate'>{principal.type ?? 'Custom'}</span></ToneBadge></td>
+              <td className='text-muted-foreground hidden @md/table:table-cell'>{principal.bypassStepUp ? 'Bypassed' : 'Required'}</td>
+              <td className='text-right'>{canPerform(policy, 'revokeOrganizationPrincipal') && principal.actionPolicy?.revokeOrganizationPrincipal && actions?.revokeOrganizationPrincipal ? (
                 <ConfirmAction
                   confirmLabel='Revoke principal'
                   description='The principal and every key attached to it will stop authenticating.'
@@ -896,12 +1055,12 @@ export function OrganizationPrincipalsPanel({
                   onConfirm={() => actions.revokeOrganizationPrincipal!({ organizationId, principalId: principal.id })}
                   onError={onError}
                   title={`Revoke ${principal.name}?`}
-                  trigger={<Button size='icon-sm' variant='ghost'><Trash2Icon aria-hidden='true' /><span className='sr-only'>Revoke {principal.name}</span></Button>}
+                  trigger={<button aria-label={`Revoke ${principal.name}`} className={REVOKE_BUTTON} type='button'><Trash2Icon aria-hidden='true' className='size-3.5' /></button>}
                 />
-              ) : null}</TableCell>
-            </TableRow>
-          ))}</TableBody>
-        </Table>
+              ) : null}</td>
+            </tr>
+          ))}</tbody>
+        </TableSurface>
       )}
     </div>
   );
@@ -923,31 +1082,48 @@ export function OrganizationApiKeysPanel({
     Boolean(actions?.createOrganizationApiKey) &&
     principals.length > 0;
   return (
-    <div className='flex flex-col gap-4'>
-      <div className='flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between'>
-        <div><h3 className='text-sm font-medium'>Organization API keys</h3><p className='text-muted-foreground text-pretty text-sm'>Keys are shown once at creation and remain independently revocable.</p></div>
-        {canCreateKey && actions?.createOrganizationApiKey ? (
+    <div className='flex flex-col gap-3'>
+      <SectionHeading
+        actions={canCreateKey && actions?.createOrganizationApiKey ? (
           <CreateApiKeyDialog action={actions.createOrganizationApiKey} onError={onError} organizationId={organizationId} principals={principals} />
         ) : null}
-      </div>
+        description='Keys are shown once at creation and remain independently revocable.'
+        title='Organization API keys'
+      />
       {apiKeys.length === 0 ? (
-        <Empty className='min-h-52 border' role='status'>
-          <EmptyHeader><EmptyMedia variant='icon'><KeyRoundIcon aria-hidden='true' /></EmptyMedia><EmptyTitle>No active API keys</EmptyTitle><EmptyDescription>{canCreateKey ? 'Create a key for one of this organization’s principals.' : principals.length === 0 ? 'Create a machine principal before issuing a key.' : 'No API keys are visible, and this session cannot create one.'}</EmptyDescription></EmptyHeader>
-        </Empty>
+        <FeaturePackEmpty
+          description={canCreateKey ? 'Create a key for one of this organization’s principals.' : principals.length === 0 ? 'Create a machine principal before issuing a key.' : 'No API keys are visible, and this session cannot create one.'}
+          icon={KeyRoundIcon}
+          title='No active API keys'
+        />
       ) : (
-        <Table>
-          <TableHeader><TableRow><TableHead>Name</TableHead><TableHead>Principal</TableHead><TableHead>Last used</TableHead><TableHead>Expires</TableHead><TableHead className='w-12'><span className='sr-only'>Actions</span></TableHead></TableRow></TableHeader>
-          <TableBody>{apiKeys.map((apiKey) => (
-            <TableRow key={apiKey.id}>
-              <TableCell className='max-w-64 truncate font-medium' title={apiKey.name ?? 'Unnamed key'}>{apiKey.name ?? 'Unnamed key'}</TableCell>
-              <TableCell className='max-w-64 break-all'>
+        <TableSurface className='@container/table' minWidth='0'>
+          <caption className='sr-only'>Organization API keys</caption>
+          <thead className={tableHeadClass}>
+            <tr>
+              <th scope='col'>Name</th>
+              <th className='hidden @lg/table:table-cell' scope='col'>Principal</th>
+              <th className='hidden w-40 @2xl/table:table-cell' scope='col'>Last used</th>
+              <th className='w-40' scope='col'>Expires</th>
+              <th className='w-12' scope='col'><span className='sr-only'>Actions</span></th>
+            </tr>
+          </thead>
+          <tbody>{apiKeys.map((apiKey) => (
+            <tr className={tableRowClass} key={apiKey.id}>
+              <td className='max-w-0'>
+                <span className='flex min-w-0 items-center gap-2'>
+                  <KeyRoundIcon aria-hidden='true' className='text-muted-foreground size-3.5 shrink-0' />
+                  <span className='truncate font-medium' title={apiKey.name ?? 'Unnamed key'}>{apiKey.name ?? 'Unnamed key'}</span>
+                </span>
+              </td>
+              <td className='text-muted-foreground hidden truncate @lg/table:table-cell'>
                 {principalNames.get(apiKey.principalId) ?? (
-                  <span translate='no'>{apiKey.principalId}</span>
+                  <span className='font-mono text-xs' translate='no'>{apiKey.principalId}</span>
                 )}
-              </TableCell>
-              <TableCell><FeaturePackTimestamp value={apiKey.lastUsedAt} /></TableCell>
-              <TableCell><FeaturePackTimestamp value={apiKey.expiresAt} /></TableCell>
-              <TableCell>{canPerform(policy, 'revokeOrganizationApiKey') && apiKey.actionPolicy?.revokeOrganizationApiKey && actions?.revokeOrganizationApiKey ? (
+              </td>
+              <td className='text-muted-foreground hidden @2xl/table:table-cell'><FeaturePackTimestamp value={apiKey.lastUsedAt} /></td>
+              <td className='text-muted-foreground'><FeaturePackTimestamp value={apiKey.expiresAt} /></td>
+              <td className='text-right'>{canPerform(policy, 'revokeOrganizationApiKey') && apiKey.actionPolicy?.revokeOrganizationApiKey && actions?.revokeOrganizationApiKey ? (
                 <ConfirmAction
                   confirmLabel='Revoke API key'
                   description='Requests using this key will stop authenticating immediately.'
@@ -955,12 +1131,12 @@ export function OrganizationApiKeysPanel({
                   onConfirm={() => actions.revokeOrganizationApiKey!({ organizationId, apiKeyId: apiKey.id })}
                   onError={onError}
                   title={`Revoke ${apiKey.name ?? 'this API key'}?`}
-                  trigger={<Button size='icon-sm' variant='ghost'><Trash2Icon aria-hidden='true' /><span className='sr-only'>Revoke {apiKey.name ?? 'API key'}</span></Button>}
+                  trigger={<button aria-label={`Revoke ${apiKey.name ?? 'API key'}`} className={REVOKE_BUTTON} type='button'><Trash2Icon aria-hidden='true' className='size-3.5' /></button>}
                 />
-              ) : null}</TableCell>
-            </TableRow>
-          ))}</TableBody>
-        </Table>
+              ) : null}</td>
+            </tr>
+          ))}</tbody>
+        </TableSurface>
       )}
     </div>
   );
