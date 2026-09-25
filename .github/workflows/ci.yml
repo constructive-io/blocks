@@ -83,7 +83,7 @@ jobs:
 
       - name: Verify representative registry installs
         env:
-          SMOKE_CASE: ai,command-palette,sheets,schema-builder,storage-browser,billing-settings-page,feature-pack-data,preset-full
+          SMOKE_CASE: ai,command-palette,sheets,schema-builder,storage-browser,billing-account,feature-pack-data,preset-full
           SMOKE_DISCOVERY: '1'
           SMOKE_REUSE_PACKED_ARTIFACTS: '1'
           SMOKE_SHADCN_LATEST: '1'
