@@ -95,7 +95,8 @@ pre {
   display: flex;
   align-items: center;
   flex-shrink: 0;
-  padding: 0 1.125rem;
+  /* Lines the mark up with the section chevrons below it. */
+  padding: 0 1.25rem;
   border-bottom: 1px solid var(--sidebar-border);
 }
 

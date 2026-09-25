@@ -16,8 +16,15 @@ import { FEATURE_PACK_DOCS } from '@/lib/feature-packs';
 import { SOURCE_BLOCKS } from '@/lib/source-blocks';
 import { cn } from '@/lib/utils';
 
-const NAV_LINK =
-  'flex min-h-10 items-center rounded-[var(--radius)] px-2.5 py-1.5 text-[13px] text-sidebar-foreground outline-none transition-[box-shadow] duration-(--duration-moderate) ease-out pointer-coarse:min-h-11 hover:bg-overlay-hover hover:text-foreground focus-visible:ring-[3px] focus-visible:ring-ring/50';
+/*
+ * The same scale as the workspace sidebars: 32px rows, 13px type, instant
+ * hover. Each section hangs off one guide line under its chevron, and the
+ * current page is a blue segment on that line, as in the Schema Builder.
+ */
+const NAV_LINK = cn(
+  'relative flex h-8 items-center rounded-md px-2 text-[13px] text-sidebar-foreground outline-none pointer-coarse:h-10',
+  'hover:bg-overlay-hover hover:text-foreground focus-visible:ring-[3px] focus-visible:ring-ring/50',
+);
 
 function normalizePath(path: string) {
   if (path.length > 1 && path.endsWith('/')) return path.slice(0, -1);
@@ -36,26 +43,26 @@ function NavLink({
   children: ReactNode;
 }) {
   return (
-    <Link
-      href={href}
-      onClick={onNavigate}
-      className={cn(NAV_LINK, active && 'bg-overlay-active font-medium text-foreground')}
-      aria-current={active ? 'page' : undefined}
-    >
-      {children}
-    </Link>
+    <li>
+      <Link
+        href={href}
+        onClick={onNavigate}
+        className={cn(NAV_LINK, active && 'bg-sidebar-accent font-medium text-foreground')}
+        aria-current={active ? 'page' : undefined}
+      >
+        <span
+          aria-hidden
+          className={cn('absolute inset-y-1.5 -left-[7.5px] w-0.5 rounded-full', active ? 'bg-primary' : 'bg-transparent')}
+        />
+        <span className="min-w-0 truncate">{children}</span>
+      </Link>
+    </li>
   );
 }
 
-function NavGroupLabel({ title, count }: { title: string; count: number }) {
-  return (
-    <h2 className="flex min-h-10 items-center gap-1.5 px-2.5 py-1.5 text-[10.5px] font-medium uppercase tracking-[0.12em] text-muted-foreground">
-      <span className="min-w-0 flex-1 truncate">{title}</span>
-      <span className="font-mono text-[10px] font-normal normal-case tracking-normal tabular-nums opacity-70">
-        {count}
-      </span>
-    </h2>
-  );
+/** The rows of one section, hung off a guide line that starts under the section's chevron. */
+function NavList({ children }: { children: ReactNode }) {
+  return <ul className="ml-[13px] flex flex-col gap-px border-l border-sidebar-border py-0.5 pl-1.5">{children}</ul>;
 }
 
 function NavSection({
@@ -75,7 +82,7 @@ function NavSection({
   const labelId = useId();
 
   return (
-    <div className="mt-1">
+    <div>
       <button
         type="button"
         id={labelId}
@@ -83,27 +90,19 @@ function NavSection({
         aria-controls={panelId}
         onClick={onToggle}
         className={cn(
-          'group flex min-h-10 w-full items-center gap-1.5 rounded-[var(--radius)] px-2.5 py-1.5 pointer-coarse:min-h-11',
-          'text-left text-[10.5px] font-medium uppercase tracking-[0.12em] text-muted-foreground',
-          'outline-none transition-[box-shadow] duration-(--duration-moderate) ease-out',
-          'hover:bg-overlay-hover hover:text-foreground',
-          'focus-visible:ring-[3px] focus-visible:ring-ring/50',
+          'group flex h-7 w-full cursor-pointer items-center gap-1.5 rounded-md px-2 text-left text-xs text-muted-foreground outline-none pointer-coarse:h-9',
+          'hover:text-foreground focus-visible:ring-[3px] focus-visible:ring-ring/50',
         )}
       >
         <ChevronRight
           className={cn(
-            'size-3 shrink-0 opacity-70 transition-transform duration-(--duration-slow) ease-out',
-            'motion-reduce:transition-none',
+            'size-3 shrink-0 opacity-70 transition-transform duration-(--duration-moderate) ease-out motion-reduce:transition-none',
             open && 'rotate-90',
           )}
           aria-hidden
         />
         <span className="min-w-0 flex-1 truncate">{title}</span>
-        {typeof count === 'number' ? (
-          <span className="font-mono text-[10px] font-normal normal-case tracking-normal tabular-nums opacity-70">
-            {count}
-          </span>
-        ) : null}
+        {typeof count === 'number' ? <span className="text-subtle-foreground tabular-nums">{count}</span> : null}
       </button>
 
       <div
@@ -116,7 +115,7 @@ function NavSection({
         inert={!open ? true : undefined}
       >
         <div className="registry-nav-panel-inner">
-          <div className="pb-0.5 pt-0.5">{children}</div>
+          <div className="pt-0.5 pb-1">{children}</div>
         </div>
       </div>
     </div>
@@ -145,6 +144,7 @@ export const SiteSidebar = forwardRef<HTMLElement, SiteSidebarProps>(function Si
     pathname === '/' || pathname === '/blocks' || pathname === '/blocks/styling' || pathname === '/blocks/create';
 
   const [foundationsOpen, setFoundationsOpen] = useState(true);
+  const [applicationOpen, setApplicationOpen] = useState(true);
   // Collapse Components while browsing AI so the AI group is not buried under 30 primitives.
   const [componentsOpen, setComponentsOpen] = useState(() => !onAi);
   const [aiOpen, setAiOpen] = useState(true);
@@ -223,9 +223,9 @@ export const SiteSidebar = forwardRef<HTMLElement, SiteSidebarProps>(function Si
         ) : null}
       </div>
 
-      <nav className="flex-1 overflow-y-auto px-3 py-3" aria-label="Registry">
+      <nav className="flex flex-1 flex-col gap-3 overflow-y-auto px-3 py-3" aria-label="Registry">
         <NavSection title="Foundations" open={foundationsOpen} onToggle={() => setFoundationsOpen((v) => !v)}>
-          <div className="flex flex-col gap-0.5">
+          <NavList>
             <NavLink href="/" active={pathname === '/'} onNavigate={onNavigate}>
               Overview
             </NavLink>
@@ -238,100 +238,68 @@ export const SiteSidebar = forwardRef<HTMLElement, SiteSidebarProps>(function Si
             <NavLink href="/blocks/create" active={pathname === '/blocks/create'} onNavigate={onNavigate}>
               Create
             </NavLink>
-          </div>
+          </NavList>
         </NavSection>
 
-        <div className="mt-3">
-          <NavGroupLabel
-            title="Application"
-            count={featurePackLinks.length + applicationBlockLinks.length + sourceBlockLinks.length + 4}
-          />
-          <ul className="flex flex-col gap-0.5 pb-0.5 pt-0.5">
-            <li>
-              <NavLink href="/blocks/features" active={pathname === '/blocks/features'} onNavigate={onNavigate}>
-                Feature packs
-              </NavLink>
-            </li>
+        <NavSection
+          title="Application"
+          open={applicationOpen}
+          onToggle={() => setApplicationOpen((v) => !v)}
+          count={featurePackLinks.length + applicationBlockLinks.length + sourceBlockLinks.length + 4}
+        >
+          <NavList>
+            <NavLink href="/blocks/features" active={pathname === '/blocks/features'} onNavigate={onNavigate}>
+              Feature packs
+            </NavLink>
             {featurePackLinks.map(({ href, label, active }) => (
-              <li key={href}>
-                <NavLink active={active} href={href} onNavigate={onNavigate}>
-                  {label}
-                </NavLink>
-              </li>
-            ))}
-            <li>
-              <NavLink href="/blocks/account" active={onAccountDocs} onNavigate={onNavigate}>
-                Account
+              <NavLink active={active} href={href} key={href} onNavigate={onNavigate}>
+                {label}
               </NavLink>
-            </li>
-            {applicationBlockLinks.map(({ href, label }) => (
-              <li key={href}>
-                <NavLink active={pathname === href} href={href} onNavigate={onNavigate}>
-                  {label}
-                </NavLink>
-              </li>
             ))}
-            {sourceBlockLinks.map(({ href, label }) => (
-              <li key={href}>
-                <NavLink active={pathname === href} href={href} onNavigate={onNavigate}>
-                  {label}
-                </NavLink>
-              </li>
+            <NavLink href="/blocks/account" active={onAccountDocs} onNavigate={onNavigate}>
+              Account
+            </NavLink>
+            {[...applicationBlockLinks, ...sourceBlockLinks].map(({ href, label }) => (
+              <NavLink active={pathname === href} href={href} key={href} onNavigate={onNavigate}>
+                {label}
+              </NavLink>
             ))}
-            <li>
-              <NavLink href="/blocks/console-kit" active={pathname === '/blocks/console-kit'} onNavigate={onNavigate}>
-                Console Kit
-              </NavLink>
-            </li>
-            <li>
-              <NavLink href="/blocks/documents" active={pathname === '/blocks/documents'} onNavigate={onNavigate}>
-                JSON documents
-              </NavLink>
-            </li>
-          </ul>
-        </div>
+            <NavLink href="/blocks/console-kit" active={pathname === '/blocks/console-kit'} onNavigate={onNavigate}>
+              Console Kit
+            </NavLink>
+            <NavLink href="/blocks/documents" active={pathname === '/blocks/documents'} onNavigate={onNavigate}>
+              JSON documents
+            </NavLink>
+          </NavList>
+        </NavSection>
 
-        <div className="mt-3">
-          <NavSection
-            title="Components"
-            open={componentsOpen}
-            onToggle={() => setComponentsOpen((v) => !v)}
-            count={componentLinks.length}
-          >
-            <ul className="flex flex-col gap-0.5">
-              {componentLinks.map(({ href, label }) => {
-                const active = pathname === href;
-                return (
-                  <li key={href}>
-                    <NavLink href={href} active={active} onNavigate={onNavigate}>
-                      {label}
-                    </NavLink>
-                  </li>
-                );
-              })}
-            </ul>
-          </NavSection>
-        </div>
+        <NavSection
+          title="Components"
+          open={componentsOpen}
+          onToggle={() => setComponentsOpen((v) => !v)}
+          count={componentLinks.length}
+        >
+          <NavList>
+            {componentLinks.map(({ href, label }) => (
+              <NavLink active={pathname === href} href={href} key={href} onNavigate={onNavigate}>
+                {label}
+              </NavLink>
+            ))}
+          </NavList>
+        </NavSection>
 
-        <div className="mt-3">
-          <NavSection title="AI" open={aiOpen} onToggle={() => setAiOpen((v) => !v)} count={aiLinks.length}>
-            <ul className="flex flex-col gap-0.5">
-              {aiLinks.map(({ href, label }) => {
-                const active = pathname === href;
-                return (
-                  <li key={href}>
-                    <NavLink href={href} active={active} onNavigate={onNavigate}>
-                      {label}
-                    </NavLink>
-                  </li>
-                );
-              })}
-            </ul>
-          </NavSection>
-        </div>
+        <NavSection title="AI" open={aiOpen} onToggle={() => setAiOpen((v) => !v)} count={aiLinks.length}>
+          <NavList>
+            {aiLinks.map(({ href, label }) => (
+              <NavLink active={pathname === href} href={href} key={href} onNavigate={onNavigate}>
+                {label}
+              </NavLink>
+            ))}
+          </NavList>
+        </NavSection>
       </nav>
 
-      <footer className="px-4 pb-4 pt-2 text-[11.5px] text-muted-foreground">
+      <footer className="border-t border-sidebar-border px-5 py-3 text-xs text-muted-foreground">
         Built by <span className="font-medium text-sidebar-foreground">Constructive</span>
       </footer>
     </aside>
