@@ -20,8 +20,8 @@ import {
 } from '@constructive-io/ui/select';
 import { useCardStack } from '@constructive-io/ui/stack';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@constructive-io/ui/tooltip';
-import { RiDatabaseLine } from '@remixicon/react';
-import { ChevronRight, Eye, EyeOff, MoreVertical, Plus, Trash2 } from 'lucide-react';
+import { focusRingClass, TooltipIconButton } from '@constructive-io/ui/workspace-kit';
+import { ChevronRight, Database, Eye, EyeOff, MoreHorizontal, PanelLeft, Plus, Trash2 } from 'lucide-react';
 import { AnimatePresence, motion } from 'motion/react';
 
 import { useSchemaBuilderSelectors } from '@/blocks/schema/schema-builder-core/lib/gql/hooks/schema-builder';
@@ -33,14 +33,14 @@ import { cn } from '@/lib/utils';
 import { useSidebarSectionActions, useSidebarSections } from '@/blocks/schema/schema-builder-core/store/app-store';
 import { CreateTableCard, DeleteTableDialog } from '../tables';
 
-// Height of each table item in pixels (for height calculations)
-const TABLE_ITEM_HEIGHT = 32;
+// Height of each table row plus its gap, in pixels (for height calculations)
+const TABLE_ITEM_HEIGHT = 34;
 // Height of section header (collapsible trigger)
-const SECTION_HEADER_HEIGHT = 32;
+const SECTION_HEADER_HEIGHT = 28;
 // Gap between sections
-const SECTION_GAP = 8;
+const SECTION_GAP = 12;
 // Empty state height
-const EMPTY_STATE_HEIGHT = 100;
+const EMPTY_STATE_HEIGHT = 72;
 
 const TABLE_NAME_ELLIPSIS = '...';
 const SCROLL_AFFORDANCE_THRESHOLD_PX = 8;
@@ -120,6 +120,8 @@ export function getScrollAffordanceState({
 interface SchemaBuilderSidebarProps {
 	onTableSelect?: (tableId: string) => void;
 	showSystemTables?: boolean;
+	/** Hides the sidebar; shown as a control in the sidebar header when set. */
+	onHide?: () => void;
 }
 
 type CreatedTable = { id: string; name: string };
@@ -171,7 +173,7 @@ export function SchemaBuilderMobileNavigation({
 
 	return (
 		<div
-			className='bg-card flex items-center gap-2 border-b p-2 sm:hidden'
+			className='flex items-center gap-1.5 border-b border-dashed border-foreground/10 px-3 py-2 sm:hidden'
 			data-chat-component='schema-builder-mobile-navigation'
 		>
 			<Select items={tableOptions} onValueChange={handleTableSelect} value={selectedTableId ?? ''}>
@@ -208,7 +210,7 @@ export function SchemaBuilderMobileNavigation({
 	);
 }
 
-export function SchemaBuilderSidebar({ onTableSelect, showSystemTables = false }: SchemaBuilderSidebarProps) {
+export function SchemaBuilderSidebar({ onTableSelect, showSystemTables = false, onHide }: SchemaBuilderSidebarProps) {
 	const containerRef = useRef<HTMLDivElement>(null);
 	const [containerHeight, setContainerHeight] = useState(0);
 
@@ -384,23 +386,25 @@ export function SchemaBuilderSidebar({ onTableSelect, showSystemTables = false }
 			<div
 				data-chat-component='schema-builder-sidebar'
 				data-chat-table-count={String(tables.length)}
-				className={cn(
-					'border-sidebar-border hidden h-full w-64 flex-col overflow-hidden border-r bg-transparent sm:flex',
-					'px-2 pt-2 2xl:w-72',
-				)}
+				className='border-sidebar-border bg-sidebar hidden h-full w-60 shrink-0 flex-col overflow-hidden border-r sm:flex 2xl:w-64'
 			>
 				<h1 className='sr-only'>Schema Builder</h1>
 
-				{/* Fixed header section - create button only */}
-				<div className='shrink-0 p-1'>
-					<Button variant='outline' size='sm' className='w-full' onClick={handleCreateTable}>
-						<Plus className='h-4 w-4' />
-						<span className='text-xs font-medium'>Create Table</span>
-					</Button>
+				{/* Schema name, with the hide control */}
+				<div className='flex h-12 shrink-0 items-center gap-2 px-2.5'>
+					<span aria-hidden='true' className='bg-foreground text-background grid size-5 shrink-0 place-items-center rounded-md'>
+						<Database className='size-3' strokeWidth={2.25} />
+					</span>
+					<span className='text-foreground min-w-0 flex-1 truncate text-sm font-medium'>{currentSchema?.name ?? 'Schema'}</span>
+					{onHide ? (
+						<TooltipIconButton label='Hide table sidebar' onClick={onHide}>
+							<PanelLeft aria-hidden='true' className='size-3.5' />
+						</TooltipIconButton>
+					) : null}
 				</div>
 
 				{/* Scrollable sections container - takes remaining space */}
-				<div ref={containerRef} className='mt-4 flex min-h-0 flex-1 flex-col gap-2 overflow-hidden'>
+				<div ref={containerRef} className='flex min-h-0 flex-1 flex-col gap-3 overflow-hidden px-2.5 pb-3'>
 					{/* Your Tables Section - APP tables, expanded by default */}
 					<TableListByCategory
 						title='Your Tables'
@@ -412,6 +416,7 @@ export function SchemaBuilderSidebar({ onTableSelect, showSystemTables = false }
 						onTableDelete={handleDeleteTable}
 						emptyMessage='No tables yet'
 						maxContentHeight={topMaxHeight}
+						onCreate={handleCreateTable}
 					/>
 
 					{/* System Tables Section - CORE + MODULE tables, collapsed by default */}
@@ -452,6 +457,8 @@ interface TableListByCategoryProps {
 	onTableDelete: (tableId: string, tableName: string) => void;
 	emptyMessage?: string;
 	maxContentHeight?: number;
+	/** Adds a create control beside the section heading. */
+	onCreate?: () => void;
 }
 
 function TableListByCategory({
@@ -464,6 +471,7 @@ function TableListByCategory({
 	onTableDelete,
 	emptyMessage = 'No tables',
 	maxContentHeight,
+	onCreate,
 }: TableListByCategoryProps) {
 	// Check if this section contains the selected item
 	const hasSelectedItem = selectedTableId ? tables.some((t) => t.id === selectedTableId) : false;
@@ -530,29 +538,33 @@ function TableListByCategory({
 
 	return (
 		<Collapsible open={isExpanded} onOpenChange={onToggleExpand} className='flex min-h-0 shrink-0 flex-col'>
-			<CollapsibleTrigger
-				className={cn(
-					'group flex w-full items-center gap-2 rounded-lg py-1.5 pr-2 pl-1 transition-colors duration-(--duration-moderate)',
-					'bg-card hover:bg-muted/50',
-					isExpanded && 'bg-muted/50',
-				)}
-			>
-				<motion.div
-					animate={{ rotate: isExpanded ? 90 : 0 }}
-					transition={{ type: 'spring', stiffness: 400, damping: 25 }}
-					className='flex shrink-0 items-center justify-center'
-				>
-					<ChevronRight className='text-muted-foreground/60 h-3.5 w-3.5' />
-				</motion.div>
-				<span className='text-muted-foreground text-xs font-medium'>{title}</span>
-				<span className='ml-auto flex items-center gap-1.5'>
-					{/* Subtle indicator when collapsed and contains selected item */}
-					{!isExpanded && hasSelectedItem && (
-						<span className='bg-primary/50 h-1.5 w-1.5 rounded-full' aria-label='Contains selected item' />
+			<div className='flex h-7 items-center gap-1'>
+				<CollapsibleTrigger
+					className={cn(
+						'group text-muted-foreground hover:text-foreground flex h-7 min-w-0 flex-1 cursor-pointer items-center gap-1.5 rounded-md px-1.5 text-xs transition-colors duration-(--duration-fast)',
+						focusRingClass,
 					)}
-					<span className='text-muted-foreground/70 text-[10px] tabular-nums'>{tables.length}</span>
-				</span>
-			</CollapsibleTrigger>
+				>
+					<motion.div
+						animate={{ rotate: isExpanded ? 90 : 0 }}
+						transition={{ type: 'spring', stiffness: 400, damping: 25 }}
+						className='flex shrink-0 items-center justify-center'
+					>
+						<ChevronRight className='size-3 opacity-70' />
+					</motion.div>
+					<span className='truncate'>{title}</span>
+					<span className='text-subtle-foreground ml-auto flex items-center gap-1.5 tabular-nums'>
+						{/* When collapsed over the selected table, the heading carries the selection. */}
+						{!isExpanded && hasSelectedItem ? <span className='sr-only'>Contains the selected table</span> : null}
+						<span className={cn(!isExpanded && hasSelectedItem && 'text-foreground font-medium')}>{tables.length}</span>
+					</span>
+				</CollapsibleTrigger>
+				{onCreate ? (
+					<TooltipIconButton extendHitArea={false} label='Create table' onClick={onCreate} size='sm'>
+						<Plus aria-hidden='true' className='size-3.5' />
+					</TooltipIconButton>
+				) : null}
+			</div>
 
 			<AnimatePresence initial={false}>
 				{isExpanded && (
@@ -568,13 +580,14 @@ function TableListByCategory({
 						className='min-h-0 overflow-hidden'
 					>
 						{tables.length > 0 ? (
-							<div className='relative mt-2 min-h-0'>
+							<div className='relative mt-0.5 min-h-0'>
 								<div
 									ref={scrollViewportRef}
 									style={scrollViewportStyle}
 									className='scrollbar-neutral-thin min-h-0 overflow-x-hidden overflow-y-auto'
 								>
-									<div className='space-y-0.5 px-1 py-2'>
+									{/* One guide line down the list; the current table is a blue segment on it. */}
+									<div className='border-sidebar-border ml-[11px] flex flex-col gap-0.5 border-l py-0.5 pl-1.5'>
 										{tables.map((table) => (
 											<TableItem
 												key={table.id}
@@ -587,18 +600,24 @@ function TableListByCategory({
 									</div>
 								</div>
 								{affordanceState.showTopBlur && (
-									<ProgressiveBlur position='top' height='14%' blurPx={4} surface='background' intensity={0.1} />
+									<ProgressiveBlur position='top' height='14%' blurPx={4} surface='sidebar' intensity={0.1} />
 								)}
 								{affordanceState.showBottomBlur && (
-									<ProgressiveBlur position='bottom' height='16%' blurPx={4} surface='background' intensity={0.12} />
+									<ProgressiveBlur position='bottom' height='16%' blurPx={4} surface='sidebar' intensity={0.12} />
 								)}
 							</div>
 						) : (
-							<div className='flex flex-col items-center justify-center py-6 text-center'>
-								<div className='bg-muted mb-2 flex h-10 w-10 items-center justify-center rounded-full'>
-									<RiDatabaseLine className='text-muted-foreground h-5 w-5' />
-								</div>
+							<div className='flex flex-col items-start gap-1.5 px-2 py-3'>
 								<p className='text-muted-foreground text-xs'>{emptyMessage}</p>
+								{onCreate ? (
+									<button
+										className={cn('text-primary cursor-pointer rounded text-xs font-medium hover:underline', focusRingClass)}
+										onClick={onCreate}
+										type='button'
+									>
+										Create a table
+									</button>
+								) : null}
 							</div>
 						)}
 					</motion.div>
@@ -617,27 +636,46 @@ interface TableItemProps {
 
 function TableItem({ table, isSelected, onSelect, onDelete }: TableItemProps) {
 	const [isMenuOpen, setIsMenuOpen] = useState(false);
+	const fieldCount = table.fields.length;
 
 	return (
 		<div
 			data-testid='table-item'
 			role='button'
 			tabIndex={0}
+			aria-current={isSelected ? 'page' : undefined}
+			aria-label={table.name}
 			className={cn(
-				`group relative my-1 flex min-h-10 cursor-pointer items-center justify-between rounded-lg px-2
-				transition-[background-color,color,box-shadow,scale] duration-(--duration-moderate) ease-out motion-safe:active:scale-[0.96]`,
+				'group relative flex h-8 shrink-0 cursor-pointer items-center gap-2 rounded-md pr-1 pl-2 text-[13px] pointer-coarse:h-10',
+				'transition-[background-color,color] duration-(--duration-fast)',
+				focusRingClass,
 				isSelected
-					? 'bg-primary/10 text-foreground ring-primary/30 dark:bg-primary/15 dark:ring-primary/40 ring-1'
-					: 'text-muted-foreground hover:text-foreground',
+					? 'bg-sidebar-accent text-foreground font-medium'
+					: 'text-sidebar-foreground hover:bg-overlay-hover',
 			)}
 			onClick={() => onSelect(table.id)}
 			onKeyDown={(event) => {
 				handleActivationKeyDown(event, () => onSelect(table.id));
 			}}
 		>
+			<span
+				aria-hidden='true'
+				className={cn('absolute inset-y-1.5 -left-[7.5px] w-0.5 rounded-full', isSelected ? 'bg-primary' : 'bg-transparent')}
+			/>
 			<div className='flex min-w-0 flex-1 items-center'>
 				<OverflowAwareTableName name={table.name} />
 			</div>
+			{/* Field count at rest; the actions menu takes its place on hover or focus. */}
+			<span
+				aria-hidden='true'
+				className={cn(
+					'text-subtle-foreground shrink-0 pr-1.5 text-xs tabular-nums',
+					'group-hover:hidden group-focus-within:hidden pointer-coarse:hidden',
+					isMenuOpen && 'hidden',
+				)}
+			>
+				{fieldCount}
+			</span>
 			<DropdownMenu open={isMenuOpen} onOpenChange={setIsMenuOpen}>
 				<DropdownMenuTrigger asChild>
 					<Button
@@ -645,28 +683,26 @@ function TableItem({ table, isSelected, onSelect, onDelete }: TableItemProps) {
 						size='sm'
 						aria-label={`Actions for ${table.name}`}
 						className={cn(
-							`size-8 rounded-md p-0 transition-[background-color,opacity,scale] duration-(--duration-moderate) ease-out
-							motion-safe:active:scale-[0.96]`,
-							'opacity-0 group-hover:opacity-100',
-							'hover:bg-muted-foreground/10',
-							isMenuOpen && 'bg-muted-foreground/10 opacity-100',
+							'text-muted-foreground hover:text-foreground hover:bg-overlay-hover size-6 shrink-0 rounded-md p-0',
+							'hidden group-hover:inline-flex group-focus-within:inline-flex pointer-coarse:inline-flex',
+							isMenuOpen && 'bg-overlay-hover inline-flex',
 						)}
 						onClick={(e) => e.stopPropagation()}
 					>
-						<MoreVertical className='h-3 w-3' />
+						<MoreHorizontal className='size-3.5' />
 					</Button>
 				</DropdownMenuTrigger>
-				<DropdownMenuContent align='end'>
+				<DropdownMenuContent align='start' className='w-40'>
 					<DropdownMenuItem
 						className='text-destructive hover:bg-destructive/10 focus:bg-destructive/10 hover:text-destructive
-							focus:text-destructive data-[disabled=true]:text-muted-foreground'
+							focus:text-destructive data-[disabled=true]:text-muted-foreground gap-2 [&_svg]:size-3.5'
 						onClick={(e) => {
 							e.stopPropagation();
 							onDelete(table.id, table.name);
 						}}
 					>
-						<Trash2 className='mr-2 h-4 w-4' />
-						Delete
+						<Trash2 />
+						Delete table
 					</DropdownMenuItem>
 				</DropdownMenuContent>
 			</DropdownMenu>
@@ -725,14 +761,14 @@ function OverflowAwareTableName({ name }: OverflowAwareTableNameProps) {
 	const triggerLabel = (
 		<span
 			ref={containerRef}
-			className='relative block max-w-full min-w-0 text-xs'
+			className='relative block max-w-full min-w-0'
 			aria-label={isOverflowing ? name : undefined}
 		>
 			<span className='block max-w-full min-w-0 truncate'>{displayName}</span>
 			<span
 				ref={measureRef}
 				aria-hidden='true'
-				className='pointer-events-none invisible absolute top-0 left-0 text-xs whitespace-nowrap'
+				className='pointer-events-none invisible absolute top-0 left-0 whitespace-nowrap'
 			/>
 		</span>
 	);

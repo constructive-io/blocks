@@ -25,8 +25,8 @@ export function PageBlock({ props, children }: BlockProps) {
 		<div className={props.className ? String(props.className) : 'flex flex-col gap-6'}>
 			{(title || description) && (
 				<header className="flex flex-col gap-1">
-					{title && <h1 className="text-2xl font-semibold tracking-tight">{title}</h1>}
-					{description && <p className="text-muted-foreground">{description}</p>}
+					{title && <h1 className="text-lg font-semibold tracking-tight">{title}</h1>}
+					{description && <p className="text-sm text-muted-foreground">{description}</p>}
 				</header>
 			)}
 			{children}

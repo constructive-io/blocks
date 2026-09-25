@@ -1,176 +1,218 @@
 'use client';
 
-import { ArrowDownIcon, ArrowUpIcon, ArrowUpDownIcon, SearchIcon, Trash2Icon, UploadIcon, XIcon } from 'lucide-react';
+import { ArrowDownWideNarrowIcon, ArrowUpNarrowWideIcon, Loader2Icon, Trash2Icon, UploadIcon, XIcon } from 'lucide-react';
+import * as React from 'react';
 
+import { cn } from '../../lib/utils';
 import { Button } from '../button';
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuLabel,
-  DropdownMenuRadioGroup,
-  DropdownMenuRadioItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
+	DropdownMenu,
+	DropdownMenuContent,
+	DropdownMenuLabel,
+	DropdownMenuRadioGroup,
+	DropdownMenuRadioItem,
+	DropdownMenuSeparator,
+	DropdownMenuTrigger,
 } from '../dropdown-menu';
-import { InputGroup, InputGroupAddon, InputGroupInput } from '../input-group';
-import { cn } from '../../lib/utils';
+import { enterClass, focusRingClass, pressClass, SearchField } from '../workspace-kit/primitives';
 import type { ObjectSort, ObjectSortColumn } from './types';
 
 const SORT_COLUMNS: { value: ObjectSortColumn; label: string }[] = [
-  { value: 'filename', label: 'Name' },
-  { value: 'size', label: 'Size' },
-  { value: 'createdAt', label: 'Modified' },
-  { value: 'mimeType', label: 'Type' },
+	{ value: 'filename', label: 'Name' },
+	{ value: 'size', label: 'Size' },
+	{ value: 'createdAt', label: 'Modified' },
+	{ value: 'mimeType', label: 'Type' },
 ];
 
-interface ObjectToolbarProps {
-  query: string;
-  onQueryChange: (query: string) => void;
-  sort: ObjectSort;
-  onSortChange: (sort: ObjectSort) => void;
-  onUpload?: () => void;
-  /** Number of currently selected objects. >0 swaps to the selection bar. */
-  selectedCount?: number;
-  /** Signals intent to delete the selection; the parent binds the ids + confirms. */
-  onBulkDelete?: () => void;
-  /**
-   * Progress for an in-flight bulk delete: while set, the Delete button shows a
-   * "Deleting N/M" count and is disabled; any failed ids surface as a note.
-   */
-  bulkDeleteProgress?: { done: number; total: number; failed: string[] };
-  onClearSelection?: () => void;
-  className?: string;
+type BulkDeleteProgress = { done: number; total: number; failed: string[] };
+
+interface ObjectSelectionBarProps {
+	selectedCount: number;
+	/** Signals intent to delete the selection; the parent binds the ids and confirms. */
+	onBulkDelete?: () => void;
+	/** In-flight bulk delete: shows "Deleting N/M" and disables the actions; failed ids surface as a note. */
+	bulkDeleteProgress?: BulkDeleteProgress;
+	onClearSelection?: () => void;
+	/** Float over the bottom of the list instead of sitting inline. */
+	floating?: boolean;
+	className?: string;
 }
 
 /**
- * `ObjectToolbar` — search + sort + upload. When `selectedCount > 0` it swaps to
- * a selection action bar (count, destructive Delete, Clear). Fully controlled.
- *
- * The destructive Delete here only signals intent via `onBulkDelete`; the parent
- * is expected to route it through an AlertDialog confirmation.
+ * `ObjectSelectionBar` — what to do with the selected files: a count, a
+ * destructive Delete, and Clear. Announces the selection and bulk-delete
+ * progress to screen readers; renders only the announcer when nothing is
+ * selected.
+ */
+export function ObjectSelectionBar({ selectedCount, onBulkDelete, bulkDeleteProgress, onClearSelection, floating = false, className }: ObjectSelectionBarProps) {
+	const deleting = bulkDeleteProgress != null && bulkDeleteProgress.done < bulkDeleteProgress.total;
+	const failed = bulkDeleteProgress?.failed.length ?? 0;
+	const noun = selectedCount === 1 ? 'file' : 'files';
+	const progress = bulkDeleteProgress
+		? deleting
+			? ` Deleting ${bulkDeleteProgress.done} of ${bulkDeleteProgress.total}.`
+			: ` Deletion finished: ${bulkDeleteProgress.done} of ${bulkDeleteProgress.total} processed.`
+		: '';
+	const status = selectedCount > 0 ? `${selectedCount} ${noun} selected.${progress}${failed > 0 ? ` ${failed} failed.` : ''}` : 'No files selected.';
+
+	return (
+		<>
+			<span className="sr-only" role="status" aria-live="polite" aria-atomic="true">
+				{status}
+			</span>
+			{selectedCount > 0 ? (
+				<div
+					className={cn(
+						'flex h-9 items-center gap-1 rounded-lg pr-1 pl-3 text-[13px]',
+						floating ? cn('bg-card shadow-card-lg', enterClass) : 'bg-muted/60',
+						className,
+					)}
+				>
+					<span className="font-medium text-foreground tabular-nums">{selectedCount} selected</span>
+					{failed > 0 ? <span className="text-xs text-destructive tabular-nums">· {failed} failed</span> : null}
+					<span aria-hidden="true" className="mx-1.5 h-4 w-px bg-border" />
+					{onBulkDelete ? (
+						<button
+							type="button"
+							onClick={onBulkDelete}
+							disabled={deleting}
+							className={cn(
+								'inline-flex h-7 cursor-pointer items-center gap-1.5 rounded-md px-2 text-destructive hover:bg-destructive/10 disabled:cursor-not-allowed disabled:opacity-60',
+								pressClass,
+								focusRingClass,
+							)}
+						>
+							{deleting ? <Loader2Icon aria-hidden="true" className="size-3.5 motion-safe:animate-spin" /> : <Trash2Icon aria-hidden="true" className="size-3.5" />}
+							<span className="tabular-nums">{deleting ? `Deleting ${bulkDeleteProgress.done}/${bulkDeleteProgress.total}` : 'Delete'}</span>
+						</button>
+					) : null}
+					{onClearSelection ? (
+						<button
+							type="button"
+							onClick={onClearSelection}
+							disabled={deleting}
+							aria-label="Clear selection"
+							className={cn(
+								'grid size-7 cursor-pointer place-items-center rounded-md text-muted-foreground hover:bg-overlay-hover hover:text-foreground disabled:cursor-not-allowed disabled:opacity-60',
+								pressClass,
+								focusRingClass,
+							)}
+						>
+							<XIcon aria-hidden="true" className="size-3.5" />
+						</button>
+					) : null}
+				</div>
+			) : null}
+		</>
+	);
+}
+
+interface ObjectToolbarProps {
+	query: string;
+	onQueryChange: (query: string) => void;
+	sort: ObjectSort;
+	onSortChange: (sort: ObjectSort) => void;
+	onUpload?: () => void;
+	/** Number of currently selected objects. >0 swaps to the selection bar. */
+	selectedCount?: number;
+	/** Signals intent to delete the selection; the parent binds the ids + confirms. */
+	onBulkDelete?: () => void;
+	/**
+	 * Progress for an in-flight bulk delete: while set, the Delete button shows a
+	 * "Deleting N/M" count and is disabled; any failed ids surface as a note.
+	 */
+	bulkDeleteProgress?: BulkDeleteProgress;
+	onClearSelection?: () => void;
+	className?: string;
+}
+
+/** Compact sort menu: the column and direction, as one control. */
+export function ObjectSortMenu({ sort, onSortChange }: Pick<ObjectToolbarProps, 'sort' | 'onSortChange'>) {
+	const active = SORT_COLUMNS.find((column) => column.value === sort.column);
+	const DirectionIcon = sort.direction === 'asc' ? ArrowUpNarrowWideIcon : ArrowDownWideNarrowIcon;
+	return (
+		<DropdownMenu>
+			<DropdownMenuTrigger
+				aria-label={`Sort by ${active?.label ?? 'column'}, ${sort.direction === 'asc' ? 'ascending' : 'descending'}`}
+				className={cn(
+					'inline-flex h-7 shrink-0 cursor-pointer items-center gap-1.5 rounded-md border border-border bg-card px-2 text-[13px] text-foreground shadow-2xs hover:bg-muted data-[popup-open]:bg-muted',
+					pressClass,
+					focusRingClass,
+				)}
+			>
+				<DirectionIcon aria-hidden="true" className="size-3.5 text-muted-foreground" />
+				<span aria-hidden="true" className="hidden @md/view:inline">
+					{active?.label ?? 'Sort'}
+				</span>
+			</DropdownMenuTrigger>
+			<DropdownMenuContent align="end" className="min-w-44">
+				<DropdownMenuLabel>Sort by</DropdownMenuLabel>
+				<DropdownMenuRadioGroup value={sort.column} onValueChange={(value) => onSortChange({ ...sort, column: value as ObjectSortColumn })}>
+					{SORT_COLUMNS.map((column) => (
+						<DropdownMenuRadioItem key={column.value} value={column.value}>
+							{column.label}
+						</DropdownMenuRadioItem>
+					))}
+				</DropdownMenuRadioGroup>
+				<DropdownMenuSeparator />
+				<DropdownMenuLabel>Direction</DropdownMenuLabel>
+				<DropdownMenuRadioGroup value={sort.direction} onValueChange={(value) => onSortChange({ ...sort, direction: value as ObjectSort['direction'] })}>
+					<DropdownMenuRadioItem value="asc">Ascending</DropdownMenuRadioItem>
+					<DropdownMenuRadioItem value="desc">Descending</DropdownMenuRadioItem>
+				</DropdownMenuRadioGroup>
+			</DropdownMenuContent>
+		</DropdownMenu>
+	);
+}
+
+/**
+ * `ObjectToolbar` — search, sort, and upload. When `selectedCount > 0` it
+ * swaps to the selection bar (count, destructive Delete, Clear). Fully
+ * controlled; Delete only signals intent, so route it through a confirmation.
  */
 export function ObjectToolbar({
-  query,
-  onQueryChange,
-  sort,
-  onSortChange,
-  onUpload,
-  selectedCount = 0,
-  onBulkDelete,
-  bulkDeleteProgress,
-  onClearSelection,
-  className,
+	query,
+	onQueryChange,
+	sort,
+	onSortChange,
+	onUpload,
+	selectedCount = 0,
+	onBulkDelete,
+	bulkDeleteProgress,
+	onClearSelection,
+	className,
 }: ObjectToolbarProps) {
-  const isDeleting = bulkDeleteProgress != null && bulkDeleteProgress.done < bulkDeleteProgress.total;
-  const failedCount = bulkDeleteProgress?.failed.length ?? 0;
-  const itemLabel = selectedCount === 1 ? 'file' : 'files';
-  const deleteProgressStatus = bulkDeleteProgress
-    ? isDeleting
-      ? ` Deleting ${bulkDeleteProgress.done} of ${bulkDeleteProgress.total}.`
-      : ` Deletion finished: ${bulkDeleteProgress.done} of ${bulkDeleteProgress.total} processed.`
-    : '';
-  const failureStatus = failedCount > 0 ? ` ${failedCount} failed.` : '';
-  const statusMessage =
-    selectedCount > 0
-      ? `${selectedCount} ${itemLabel} selected.${deleteProgressStatus}${failureStatus}`
-      : 'No files selected.';
-  const selectionStatus = (
-    <span className="sr-only" role="status" aria-live="polite" aria-atomic="true">
-      {statusMessage}
-    </span>
-  );
+	if (selectedCount > 0) {
+		return (
+			<ObjectSelectionBar
+				selectedCount={selectedCount}
+				onBulkDelete={onBulkDelete}
+				bulkDeleteProgress={bulkDeleteProgress}
+				onClearSelection={onClearSelection}
+				className={className}
+			/>
+		);
+	}
 
-  if (selectedCount > 0) {
-    return (
-      <>
-        {selectionStatus}
-        <div className={cn('flex h-9 items-center justify-between gap-2 rounded-lg border bg-muted/40 px-2', className)}>
-          <span className="flex items-center gap-2 text-sm font-medium tabular-nums">
-            {selectedCount} selected
-            {failedCount > 0 && <span className="text-xs font-normal text-destructive">{failedCount} failed</span>}
-          </span>
-          <div className="flex items-center gap-1.5">
-            {onBulkDelete ? (
-              <Button variant="destructive-outline" size="sm" onClick={onBulkDelete} disabled={isDeleting}>
-                <Trash2Icon aria-hidden />
-                {isDeleting ? `Deleting ${bulkDeleteProgress.done}/${bulkDeleteProgress.total}` : 'Delete'}
-              </Button>
-            ) : null}
-            {onClearSelection ? (
-              <Button variant="ghost" size="sm" onClick={onClearSelection} disabled={isDeleting}>
-                <XIcon aria-hidden />
-                Clear
-              </Button>
-            ) : null}
-          </div>
-        </div>
-      </>
-    );
-  }
-
-  const activeColumn = SORT_COLUMNS.find((column) => column.value === sort.column);
-  const DirectionIcon = sort.direction === 'asc' ? ArrowUpIcon : ArrowDownIcon;
-
-  return (
-    <>
-      {selectionStatus}
-      <div className={cn('flex items-center gap-2', className)}>
-        <InputGroup className="max-w-xs flex-1">
-          <InputGroupAddon>
-            <SearchIcon aria-hidden />
-          </InputGroupAddon>
-          <InputGroupInput
-            aria-label="Search files"
-            type="search"
-            placeholder="Search files"
-            value={query}
-            onChange={(event) => onQueryChange(event.target.value)}
-          />
-        </InputGroup>
-
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button
-              aria-label={`Sort by ${activeColumn?.label ?? 'column'}, ${sort.direction === 'asc' ? 'ascending' : 'descending'}`}
-              variant="outline"
-              size="sm"
-            >
-              <ArrowUpDownIcon aria-hidden data-icon="inline-start" />
-              <span aria-hidden className="hidden sm:inline">{activeColumn?.label ?? 'Sort'}</span>
-              <DirectionIcon aria-hidden className="opacity-70" data-icon="inline-end" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="min-w-44">
-            <DropdownMenuLabel>Sort by</DropdownMenuLabel>
-            <DropdownMenuRadioGroup
-              value={sort.column}
-              onValueChange={(value) => onSortChange({ ...sort, column: value as ObjectSortColumn })}
-            >
-              {SORT_COLUMNS.map((column) => (
-                <DropdownMenuRadioItem key={column.value} value={column.value}>
-                  {column.label}
-                </DropdownMenuRadioItem>
-              ))}
-            </DropdownMenuRadioGroup>
-            <DropdownMenuSeparator />
-            <DropdownMenuLabel>Direction</DropdownMenuLabel>
-            <DropdownMenuRadioGroup
-              value={sort.direction}
-              onValueChange={(value) => onSortChange({ ...sort, direction: value as ObjectSort['direction'] })}
-            >
-              <DropdownMenuRadioItem value="asc">Ascending</DropdownMenuRadioItem>
-              <DropdownMenuRadioItem value="desc">Descending</DropdownMenuRadioItem>
-            </DropdownMenuRadioGroup>
-          </DropdownMenuContent>
-        </DropdownMenu>
-
-        {onUpload ? (
-          <Button aria-label="Upload files" size="sm" onClick={onUpload}>
-            <UploadIcon aria-hidden data-icon="inline-start" />
-            <span className="hidden sm:inline">Upload</span>
-          </Button>
-        ) : null}
-      </div>
-    </>
-  );
+	return (
+		<>
+			<ObjectSelectionBar selectedCount={0} />
+			<div className={cn('flex items-center gap-2', className)}>
+				<SearchField
+					label="Search files"
+					placeholder="Search files"
+					value={query}
+					onChange={(event) => onQueryChange(event.target.value)}
+					className="w-full min-w-0 @md/view:w-56"
+				/>
+				<ObjectSortMenu sort={sort} onSortChange={onSortChange} />
+				{onUpload ? (
+					<Button aria-label="Upload files" size="sm" className="h-7 shrink-0" onClick={onUpload}>
+						<UploadIcon aria-hidden="true" data-icon="inline-start" />
+						<span className="hidden @md/view:inline">Upload</span>
+					</Button>
+				) : null}
+			</div>
+		</>
+	);
 }

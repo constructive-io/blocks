@@ -397,12 +397,12 @@ export const FEATURE_PACK_DOCS = [
       'Invitations by email, SMS, or reusable link with profile assignment, expiry, reusable claim limits and counts, token copying, cancellation, and accepted-invite history.',
       'Access-profile creation, editing, deletion, and capability grants alongside a readable capability catalog.',
       'Membership defaults and tenant-wide membership settings for approval, inheritance, external access, invitation assignment, and limit allocation.',
-      'Organization hierarchy edges with position metadata and cycle-safe creation and removal controls.',
+      'The organization chart on the Org Chart canvas: drag a card onto a new manager or use Change manager, edit positions, add or remove reporting lines, all through the host actions.',
       'Developer credentials with service-principal creation and revocation, one-time API-key issuance, and key revocation.',
     ],
     accessibility: [
       'The selected organization and active management section use readable labels and selection indicators, while unavailable tenant actions remain disabled or absent according to policy.',
-      'Member, invitation, hierarchy, principal, and API-key tables use scoped headers, named row actions, and text status labels whose meaning does not depend on color.',
+      'Member, invitation, principal, and API-key tables use scoped headers, named row actions, and text status labels whose meaning does not depend on color; the chart is a keyboard-navigable tree with a Change manager dialog as the alternative to dragging.',
       'Destructive, hierarchy, invitation, principal, and credential dialogs identify their tenant scope and consequences before submission; a newly issued key is labelled as a one-time secret.',
     ],
     apiProps: featurePackApiProps<OrganizationsFeaturePackProps>()([
@@ -467,7 +467,7 @@ export const FEATURE_PACK_DOCS = [
     title: 'Storage',
     exportName: 'StorageFeaturePack',
     description:
-      'A policy-aware bucket and object browser with folder navigation, upload, download, creation, and deletion actions.',
+      'The Storage Browser workspace behind a policy-aware contract: buckets in the sidebar, folders, search and sort, uploads by button or drop, downloads, bucket creation, and confirmed deletes.',
     endpoints: 'optional storage, optional admin, optional data',
     dependencies: [],
     resource: 'FeaturePackResource<StorageFeatureData>',
@@ -503,16 +503,16 @@ export const FEATURE_PACK_DOCS = [
         'A policy grant and matching callback enable each bucket or object action. Async failures remain beside the initiating transfer or confirmation surface and are normalized through onError.',
     },
     surfaces: [
-      'Bucket navigation and public or private bucket creation.',
-      'Folder breadcrumbs and object listing for the active policy-visible path.',
-      'Multi-file upload, download, and confirmed object deletion.',
+      'The Storage Browser: buckets in the workspace sidebar, with public or private bucket creation.',
+      'Folder crumbs, folders-first listing with local search and sort, and loading rows while a bucket or folder opens.',
+      'Multi-file upload from the header or by dropping files on the list, download, and confirmed object deletion.',
     ],
     accessibility: [
       'Bucket controls and folder breadcrumbs expose their names and current location in the reading order.',
       'Object rows identify files and folders with text in addition to icons, while every action trigger includes the object name.',
       'Destructive object actions require a titled confirmation dialog that states the affected file and restores focus after closing.',
     ],
-    apiProps: featurePackApiProps<StorageFeaturePackProps>()(['resource', 'policy', 'actions', 'onError']),
+    apiProps: featurePackApiProps<StorageFeaturePackProps>()(['resource', 'policy', 'actions', 'onError', 'className']),
     api: [
       {
         name: 'resource',
@@ -528,6 +528,11 @@ export const FEATURE_PACK_DOCS = [
         name: 'onError',
         type: '(error: FeaturePackError) => void',
         behavior: 'Reports normalized navigation, transfer, and mutation failures.',
+      },
+      {
+        name: 'className',
+        type: 'string',
+        behavior: 'Classes for the storage workspace. It fills its box, so give it a height; the default is 40rem.',
       },
     ] satisfies readonly FeaturePackApiRow[],
   },

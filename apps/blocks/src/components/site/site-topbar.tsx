@@ -1,5 +1,6 @@
 'use client';
 
+import { DOC_SECTION_LIST } from '@/lib/doc-sections';
 import { useState, type Ref } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
@@ -45,7 +46,10 @@ function crumbFor(path: string): string {
     const sourceBlock = getSourceBlock(p.slice('/blocks/'.length));
     if (sourceBlock) return sourceBlock.title;
   }
-  if (p === '/blocks/billing') return 'Billing';
+  {
+    const section = DOC_SECTION_LIST.find((candidate) => candidate.hub === p);
+    if (section) return section.title;
+  }
   {
     const block = getApplicationBlockByPath(p);
     if (block) return block.title;

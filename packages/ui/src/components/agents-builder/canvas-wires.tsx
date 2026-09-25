@@ -2,10 +2,9 @@
 
 import * as React from 'react';
 
+import { CanvasWire, type WirePoint, type WireTone } from '../workspace-kit/canvas';
 import { NODE_ANCHOR_Y as ANCHOR_Y } from './canvas-nodes';
 import type { AgentRunState } from './use-agent-run';
-
-type WireTone = 'rest' | 'live' | 'warn';
 
 /** Inputs wire from their right edge into the agent. */
 const INPUTS: { id: string; tone: WireTone }[] = [
@@ -17,14 +16,7 @@ const INPUTS: { id: string; tone: WireTone }[] = [
 /** Outputs wire from the agent into their left edge; they glow while their stage loads. */
 const OUTPUTS = ['tools', 'subagents', 'skills'] as const;
 
-const STROKE: Record<WireTone, string> = {
-	rest: 'color-mix(in oklab, var(--foreground) 20%, transparent)',
-	live: 'color-mix(in oklab, var(--primary) 55%, transparent)',
-	warn: 'color-mix(in oklab, var(--warning) 70%, transparent)',
-};
-
-type Point = [number, number];
-type Wire = { id: string; tone: WireTone; animated: boolean; start: Point; end: Point };
+type Wire = { id: string; tone: WireTone; animated: boolean; start: WirePoint; end: WirePoint };
 
 /** Offset of `node` within `layer`, ignoring transforms (so pan and zoom never skew it). */
 function layerBox(layer: HTMLElement, node: HTMLElement) {
@@ -35,11 +27,6 @@ function layerBox(layer: HTMLElement, node: HTMLElement) {
 		top += element.offsetTop;
 	}
 	return { left, right: left + node.offsetWidth, top };
-}
-
-function curve([x1, y1]: Point, [x2, y2]: Point) {
-	const dx = Math.max(40, (x2 - x1) / 2);
-	return `M ${x1} ${y1} C ${x1 + dx} ${y1}, ${x2 - dx} ${y2}, ${x2} ${y2}`;
 }
 
 type CanvasWiresProps = {
@@ -90,13 +77,7 @@ function CanvasWires({ stages, layoutKey, animate }: CanvasWiresProps) {
 	return (
 		<svg ref={svgRef} aria-hidden="true" className="pointer-events-none absolute top-0 left-0 overflow-visible" width="1" height="1">
 			{wires.map((wire) => (
-				<g key={wire.id} stroke={STROKE[wire.tone]} strokeWidth={1}>
-					<path d={curve(wire.start, wire.end)} fill="none" strokeDasharray={wire.tone === 'rest' ? undefined : '4 4'} strokeLinecap="round">
-						{wire.animated && animate ? <animate attributeName="stroke-dashoffset" from="8" to="0" dur="0.5s" repeatCount="indefinite" /> : null}
-					</path>
-					<circle cx={wire.start[0]} cy={wire.start[1]} r={3} fill="var(--card)" />
-					<circle cx={wire.end[0]} cy={wire.end[1]} r={3} fill="var(--card)" />
-				</g>
+				<CanvasWire key={wire.id} start={wire.start} end={wire.end} tone={wire.tone} animated={wire.animated && animate} />
 			))}
 		</svg>
 	);

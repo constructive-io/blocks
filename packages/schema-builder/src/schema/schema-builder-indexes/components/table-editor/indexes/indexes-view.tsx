@@ -5,7 +5,7 @@ import { Button } from '@constructive-io/ui/button';
 import { useCardStack } from '@constructive-io/ui/stack';
 import { toast } from '@constructive-io/ui/toast';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@constructive-io/ui/tooltip';
-import { ListChecks, Plus, Table2, Trash2 } from 'lucide-react';
+import { ListTree, Plus } from 'lucide-react';
 
 import { useSchemaBuilderSelectors } from '@/blocks/schema/schema-builder-core/lib/gql/hooks/schema-builder';
 import { useDeleteIndex } from '../../../lib/gql/hooks/schema-builder/use-index-mutations';
@@ -16,45 +16,23 @@ import { handleActivationKeyDown } from '@/blocks/schema/schema-builder-core/lib
 import { cn } from '@/lib/utils';
 
 import { DeleteConfirmDialog } from '@/blocks/schema/schema-builder-core/components/table-editor/delete-confirm-dialog';
+import {
+	CardDeleteButton,
+	EditorView,
+	editorCardClass,
+	InlineCode,
+	KindBadge,
+	linkedChipClass,
+	NoTableSelectedState,
+} from '@/blocks/schema/schema-builder-core/components/table-editor/editor-view';
 import { IndexCard } from '../index-card';
 import { IndexEmptyState } from './index-empty-state';
 
 const FIELD_SUMMARY_LIMIT = 4;
 
-function buildFieldSummary(
-	fieldIds: string[],
-	tableFields: { id: string; name: string }[],
-	limit = FIELD_SUMMARY_LIMIT,
-) {
-	const fieldNameList = fieldIds
-		.map((fieldId) => tableFields.find((field) => field.id === fieldId)?.name || fieldId)
-		.filter(Boolean);
-	const visibleFields = fieldNameList.slice(0, limit);
-	const remainingCount = Math.max(fieldNameList.length - visibleFields.length, 0);
-	const hasFields = fieldNameList.length > 0;
-	const fieldSummary = hasFields
-		? `${visibleFields.join(', ')}${remainingCount > 0 ? `, +${remainingCount} more` : ''}`
-		: 'None';
-
-	return {
-		fieldSummary,
-		fieldNameList,
-		hasFields,
-	};
-}
-
-function NoTableSelectedState() {
-	return (
-		<div className='flex min-h-0 flex-1 flex-col items-center justify-center p-6'>
-			<div className='bg-muted/50 mb-4 flex h-16 w-16 items-center justify-center rounded-full'>
-				<Table2 className='text-muted-foreground h-8 w-8' />
-			</div>
-			<h3 className='mb-1 text-balance text-lg font-semibold'>No table selected</h3>
-			<p className='text-muted-foreground max-w-sm text-center text-sm'>
-				Select a table from the sidebar to view and manage its indexes.
-			</p>
-		</div>
-	);
+/** Index columns by name, in index order; ids no longer on the table stay visible as-is. */
+function indexColumnNames(fieldIds: string[], tableFields: { id: string; name: string }[]) {
+	return fieldIds.map((fieldId) => tableFields.find((field) => field.id === fieldId)?.name || fieldId);
 }
 
 export function IndexesView() {
@@ -67,7 +45,7 @@ export function IndexesView() {
 
 	// No table selected state
 	if (!currentTable) {
-		return <NoTableSelectedState />;
+		return <NoTableSelectedState icon={ListTree} subject='indexes' />;
 	}
 
 	const indexes = currentTable.indexes || [];
@@ -116,118 +94,86 @@ export function IndexesView() {
 
 	return (
 		<>
-			<div className='flex min-h-0 flex-1 flex-col overflow-auto p-6'>
-				{!hasIndexes ? (
+			{!hasIndexes ? (
+				<div className='flex min-h-0 flex-1 flex-col overflow-auto p-6'>
 					<IndexEmptyState onCreateClick={handleOpenCreate} tableName={currentTable.name} />
-				) : (
-					<div className='mx-auto w-full max-w-4xl space-y-6'>
-						{/* Header */}
-						<div className='flex items-center justify-between'>
-							<div>
-								<h2 className='text-balance text-xl font-semibold tracking-tight'>Indexes</h2>
-								<p className='text-muted-foreground mt-1 text-sm'>
-									{indexes.length} index{indexes.length !== 1 ? 'es' : ''} on{' '}
-									<code className='bg-muted rounded px-1.5 py-0.5 font-mono text-xs'>{currentTable.name}</code>
-								</p>
-							</div>
-							<Button onClick={handleOpenCreate}>
-								<Plus className='mr-2 h-4 w-4' />
-								Add Index
-							</Button>
-						</div>
-
-					{/* Index Cards */}
-					<div className='space-y-3'>
+				</div>
+			) : (
+				<EditorView
+					actions={
+						<Button onClick={handleOpenCreate} size='sm'>
+							<Plus aria-hidden='true' data-icon='inline-start' />
+							Add index
+						</Button>
+					}
+					description={
+						<>
+							{indexes.length} index{indexes.length !== 1 ? 'es' : ''} on <InlineCode>{currentTable.name}</InlineCode>
+						</>
+					}
+					title='Indexes'
+				>
+					<ul className='flex flex-col gap-2'>
 						{indexes.map((index) => {
-							const { fieldNameList, hasFields } = buildFieldSummary(index.fields, currentTable.fields);
-
+							const fieldNameList = indexColumnNames(index.fields, currentTable.fields);
+							const ordered = fieldNameList.length > 1;
 							return (
-								<div
-									key={index.id}
-									role='button'
-									tabIndex={0}
-									onClick={() => handleOpenEdit(index)}
-									onKeyDown={(event) => {
-										handleActivationKeyDown(event, () => handleOpenEdit(index));
-									}}
-									className={cn(
-										`group relative cursor-pointer rounded-xl border p-4 transition-[background-color,border-color,box-shadow,scale]
-										duration-(--duration-moderate) ease-out motion-safe:active:scale-[0.96]`,
-										'border-border/60 hover:border-border/80 hover:bg-muted/30',
-									)}
-								>
-									{/* Header: Name + Type Pill + Delete */}
-									<div className='flex items-center justify-between'>
+								<li key={index.id}>
+									<div
+										className={editorCardClass}
+										onClick={() => handleOpenEdit(index)}
+										onKeyDown={(event) => handleActivationKeyDown(event, () => handleOpenEdit(index))}
+										role='button'
+										tabIndex={0}
+									>
 										<div className='flex items-center gap-2'>
-											<ListChecks className='text-muted-foreground h-4 w-4' />
-											<p className='truncate text-sm font-semibold'>{index.name || 'Unnamed index'}</p>
-											<span
-												className={cn(
-													'rounded-full px-2 py-0.5 text-[10px] font-semibold tracking-wide uppercase',
-													'border border-blue-500/30 bg-blue-500/10 text-blue-600 dark:text-blue-400',
-												)}
-											>
+											<ListTree aria-hidden='true' className='text-muted-foreground size-3.5 shrink-0' />
+											<p className='text-foreground min-w-0 truncate text-[13px] font-medium'>{index.name || 'Unnamed index'}</p>
+											<KindBadge className='bg-blue-500/10 text-blue-700 dark:text-blue-300'>
 												{INDEX_TYPE_LABELS[index.type ?? 'btree'] ?? index.type ?? 'B-tree'}
-											</span>
-											{index.unique && (
-												<span
-													className={cn(
-														'rounded-full px-2 py-0.5 text-[10px] font-semibold tracking-wide uppercase',
-														'border border-emerald-500/30 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400',
+											</KindBadge>
+											{index.unique ? (
+												<KindBadge className='bg-emerald-500/10 text-emerald-700 dark:text-emerald-300'>Unique</KindBadge>
+											) : null}
+											<span className='ml-auto' />
+											<CardDeleteButton label='Delete index' onDelete={() => handleDeleteRequest(index.id, index.name || 'this index')} />
+										</div>
+
+										<div className='mt-2.5 flex flex-wrap items-center gap-1.5'>
+											{fieldNameList.length > 0 ? (
+												<>
+													{fieldNameList.slice(0, FIELD_SUMMARY_LIMIT).map((name, position) => (
+														<span className={cn(linkedChipClass('idle'), 'gap-1.5')} key={name}>
+															{ordered ? (
+																<span aria-hidden='true' className='text-subtle-foreground tabular-nums'>
+																	{position + 1}
+																</span>
+															) : null}
+															<span className='text-foreground/85'>{name}</span>
+														</span>
+													))}
+													{fieldNameList.length > FIELD_SUMMARY_LIMIT && (
+														<Tooltip>
+															<TooltipTrigger asChild>
+																<span className='text-muted-foreground px-1 text-xs'>
+																	+{fieldNameList.length - FIELD_SUMMARY_LIMIT} more
+																</span>
+															</TooltipTrigger>
+															<TooltipContent className='max-w-xs'>{fieldNameList.join(', ')}</TooltipContent>
+														</Tooltip>
 													)}
-												>
-													Unique
-												</span>
+												</>
+											) : (
+												<span className='text-muted-foreground text-xs'>No fields</span>
 											)}
 										</div>
-										<Button
-											variant='ghost'
-											size='sm'
-											aria-label='Delete index'
-											className='text-muted-foreground hover:text-destructive hover:bg-destructive/10 h-8 w-8 shrink-0 p-0'
-											onClick={(e) => {
-												e.stopPropagation();
-												handleDeleteRequest(index.id, index.name || 'this index');
-											}}
-										>
-											<Trash2 className='h-4 w-4' />
-										</Button>
 									</div>
-
-									{/* Fields */}
-									<div className='mt-2.5 flex flex-wrap items-center gap-1.5'>
-										{hasFields ? (
-											<>
-												{fieldNameList.slice(0, FIELD_SUMMARY_LIMIT).map((name) => (
-													<span
-														key={name}
-														className='bg-muted/60 text-foreground/80 rounded-md px-2 py-0.5 font-mono text-xs'
-													>
-														{name}
-													</span>
-												))}
-												{fieldNameList.length > FIELD_SUMMARY_LIMIT && (
-													<Tooltip>
-														<TooltipTrigger asChild>
-															<span className='text-muted-foreground rounded-md px-1.5 py-0.5 text-xs'>
-																+{fieldNameList.length - FIELD_SUMMARY_LIMIT} more
-															</span>
-														</TooltipTrigger>
-														<TooltipContent className='max-w-xs'>{fieldNameList.join(', ')}</TooltipContent>
-													</Tooltip>
-												)}
-											</>
-										) : (
-											<span className='text-muted-foreground text-xs'>No fields</span>
-										)}
-									</div>
-								</div>
+								</li>
 							);
 						})}
-					</div>
-				</div>
-				)}
-			</div>
+					</ul>
+				</EditorView>
+			)}
 
 			<DeleteConfirmDialog
 				entityType='Index'

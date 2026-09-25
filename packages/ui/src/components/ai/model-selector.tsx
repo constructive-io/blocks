@@ -172,8 +172,8 @@ function ModelGlyph({ model }: { model: AiModel }) {
 	);
 }
 
-/** Segmented control for a model's reasoning levels. 8px track, 2px inset, 6px segments (concentric). */
-function LevelPicker({
+/** A model's reasoning levels as a stacked menu: one row each, with its description and a check on the current one. */
+function LevelMenu({
 	model,
 	levelId,
 	onPick,
@@ -183,36 +183,42 @@ function LevelPicker({
 	onPick: (levelId: string) => void;
 }) {
 	if (!model.levels?.length) {
-		return <p className="flex h-8 items-center text-xs text-muted-foreground">One mode, no reasoning levels</p>;
+		return <p className="px-2 py-1.5 text-xs text-muted-foreground">One mode, no reasoning levels</p>;
 	}
 	return (
-		<div role="radiogroup" aria-label={`${model.name} reasoning level`} className="flex h-8 gap-0.5 rounded-md bg-muted p-0.5">
-			{model.levels.map((level) => (
-				<button
-					key={level.id}
-					type="button"
-					role="radio"
-					aria-checked={level.id === levelId}
-					title={level.description}
-					onMouseDown={(event) => event.preventDefault()}
-					onClick={() => onPick(level.id)}
-					className={cn(
-						'min-w-0 flex-1 cursor-pointer truncate rounded-[6px] px-2 text-xs outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50',
-						'transition-transform duration-(--duration-fast) motion-safe:active:scale-[0.96]',
-						level.id === levelId ? 'bg-card text-foreground shadow-card' : 'text-muted-foreground hover:text-foreground',
-					)}
-				>
-					{level.label}
-				</button>
-			))}
+		<div role="radiogroup" aria-label={`${model.name} reasoning level`} className="flex flex-col gap-px">
+			{model.levels.map((level) => {
+				const checked = level.id === levelId;
+				return (
+					<button
+						key={level.id}
+						type="button"
+						role="radio"
+						aria-checked={checked}
+						onMouseDown={(event) => event.preventDefault()}
+						onClick={() => onPick(level.id)}
+						className={cn(
+							'flex min-h-8 w-full cursor-pointer items-center gap-2 rounded-sm px-2 py-1.5 text-left outline-none pointer-coarse:min-h-11',
+							'hover:bg-overlay-hover focus-visible:ring-[3px] focus-visible:ring-ring/50',
+							checked && 'bg-overlay-hover',
+						)}
+					>
+						<span className="flex min-w-0 flex-1 flex-col">
+							<span className={cn('text-[13px]', checked ? 'font-medium text-foreground' : 'text-foreground/85')}>{level.label}</span>
+							{level.description ? <span className="text-xs text-muted-foreground">{level.description}</span> : null}
+						</span>
+						<Check aria-hidden="true" className={cn('size-3.5 shrink-0 text-foreground', checked ? 'opacity-100' : 'opacity-0')} />
+					</button>
+				);
+			})}
 		</div>
 	);
 }
 
 /**
- * Detail strip for the highlighted model. Every row has a fixed height and
- * every slot always renders (a dash when unknown), so moving the highlight
- * never changes the popover's size or makes it reposition.
+ * The side card for the active model: what it is, its reasoning levels as a
+ * menu, and its prices. It opens beside the list like a submenu, so the list
+ * never changes size while moving through it.
  */
 function ModelDetails({
 	model,
@@ -234,16 +240,20 @@ function ModelDetails({
 		{ label: 'Cached /1M', value: free ? 'Free' : price(pricing?.cachedInput) },
 		{ label: 'Context', value: model.contextWindow ? formatTokens(model.contextWindow) : '—' },
 	];
-	const summary = level?.description ?? model.description;
 
 	return (
-		<div data-slot="model-selector-details" className="flex flex-col gap-2 border-t border-border p-2.5">
-			<div className="flex h-5 min-w-0 items-baseline gap-2">
-				<p className="shrink-0 text-[13px] font-medium text-foreground">{model.name}</p>
-				<p className="min-w-0 truncate text-xs text-muted-foreground">{summary ?? model.provider}</p>
+		<>
+			<div className="flex items-center gap-2 px-3 pt-3 pb-2">
+				<ModelGlyph model={model} />
+				<div className="min-w-0">
+					<p className="truncate text-[13px] font-medium text-foreground">{model.name}</p>
+					<p className="truncate text-xs text-muted-foreground">{model.description ?? model.provider}</p>
+				</div>
 			</div>
-			<LevelPicker model={model} levelId={level?.id} onPick={onPickLevel} />
-			<dl className="grid h-8 grid-cols-4 gap-x-3">
+			<div className="px-1 pb-1">
+				<LevelMenu model={model} levelId={level?.id} onPick={onPickLevel} />
+			</div>
+			<dl className="grid grid-cols-2 gap-x-3 gap-y-2 border-t border-border px-3 py-2.5">
 				{facts.map((fact) => (
 					<div key={fact.label} className="min-w-0">
 						<dt className="truncate text-[11px] leading-4 text-muted-foreground">{fact.label}</dt>
@@ -251,7 +261,7 @@ function ModelDetails({
 					</div>
 				))}
 			</dl>
-			<p className="hidden h-5 items-center gap-1 text-[11px] text-muted-foreground pointer-fine:flex">
+			<p className="hidden h-8 items-center gap-1 border-t border-border px-3 text-[11px] text-muted-foreground pointer-fine:flex">
 				{model.levels && model.levels.length > 1 ? (
 					<>
 						<Kbd>←</Kbd>
@@ -262,14 +272,29 @@ function ModelDetails({
 				<Kbd>↵</Kbd>
 				<span>choose</span>
 			</p>
-		</div>
+		</>
 	);
 }
+
+type Point = { x: number; y: number };
+
+/** Whether `point` lies inside the triangle `a b c` (sign test). */
+function inTriangle(point: Point, a: Point, b: Point, c: Point) {
+	const side = (p: Point, q: Point, r: Point) => (p.x - r.x) * (q.y - r.y) - (q.x - r.x) * (p.y - r.y);
+	const d1 = side(point, a, b);
+	const d2 = side(point, b, c);
+	const d3 = side(point, c, a);
+	return !((d1 < 0 || d2 < 0 || d3 < 0) && (d1 > 0 || d2 > 0 || d3 > 0));
+}
+
+/** How long a row crossed on the way to the side card waits before taking it over. */
+const PANEL_INTENT_MS = 240;
 
 /**
  * Model picker for composers: searchable list with pinned routers, recent and
  * recommended sections, per-provider groups, reasoning levels, relative cost
- * or per-million pricing, tags, and a detail strip for the highlighted model.
+ * or per-million pricing, tags, and a side card for the highlighted model
+ * with its reasoning levels.
  * Controlled: the host owns the selection and persists recents.
  */
 function ModelSelector({
@@ -293,6 +318,13 @@ function ModelSelector({
 	const [highlighted, setHighlighted] = React.useState('');
 	const [pendingLevels, setPendingLevels] = React.useState<Record<string, string>>({});
 	const [priceDisplay, setPriceDisplay] = React.useState(priceDisplayProp);
+	/** The row the side card shows. Follows the highlight, except while the pointer heads for the card. */
+	const [active, setActive] = React.useState('');
+	const [panel, setPanel] = React.useState<{ top: number; side: 'left' | 'right' | 'below' }>({ top: 0, side: 'right' });
+	const contentRef = React.useRef<HTMLDivElement>(null);
+	const panelRef = React.useRef<HTMLDivElement>(null);
+	const trail = React.useRef<Point[]>([]);
+	const intentTimer = React.useRef<number | undefined>(undefined);
 
 	const byId = React.useMemo(() => new Map(models.map((model) => [model.id, model])), [models]);
 	const selected = byId.get(value.modelId);
@@ -333,10 +365,64 @@ function ModelSelector({
 	};
 
 	const highlightedModel = byId.get(highlighted.split('::')[1] ?? '');
-	/** Falls back to the selection so the strip is present from the first frame. */
-	const detailModel = highlightedModel ?? selected;
+	/** Falls back to the selection so the card is present from the first frame. */
+	const detailModel = byId.get(active.split('::')[1] ?? '') ?? selected;
+
+	/** The pointer is moving toward the side card through the rows between (the submenu "safe triangle"). */
+	const headingToPanel = () => {
+		const card = panelRef.current?.getBoundingClientRect();
+		const from = trail.current[0];
+		const to = trail.current[trail.current.length - 1];
+		if (!card || !from || !to || panel.side === 'below') return false;
+		const edge = panel.side === 'right' ? card.left : card.right;
+		const towards = panel.side === 'right' ? to.x > from.x : to.x < from.x;
+		return towards && inTriangle(to, from, { x: edge, y: card.top - 8 }, { x: edge, y: card.bottom + 8 });
+	};
+
+	React.useEffect(() => {
+		if (!open) return;
+		if (headingToPanel()) intentTimer.current = window.setTimeout(() => setActive(highlighted), PANEL_INTENT_MS);
+		else setActive(highlighted);
+		return () => window.clearTimeout(intentTimer.current);
+		// headingToPanel only reads refs and the card's side.
+		// eslint-disable-next-line react-hooks/exhaustive-deps
+	}, [highlighted, open]);
+
+	/** Lines the card up with its row, clamped to the list, on whichever side has room. */
+	const placePanel = React.useCallback(() => {
+		const content = contentRef.current;
+		const card = panelRef.current;
+		if (!content || !card) return;
+		if (window.innerWidth < 640) {
+			setPanel((current) => (current.side === 'below' ? current : { top: 0, side: 'below' }));
+			return;
+		}
+		const box = content.getBoundingClientRect();
+		const rows = Array.from(content.querySelectorAll<HTMLElement>('[data-model-value]'));
+		const row =
+			rows.find((element) => element.dataset.modelValue === active) ??
+			rows.find((element) => element.dataset.modelValue?.endsWith(`::${value.modelId}`));
+		const rowTop = row ? row.getBoundingClientRect().top - box.top - 4 : 0;
+		// Aligned with its row; only the viewport edges push it, not the list's own height.
+		const top = Math.round(Math.min(Math.max(8 - box.top, rowTop), window.innerHeight - box.top - card.offsetHeight - 8));
+		const side = box.right + card.offsetWidth + 8 > window.innerWidth ? 'left' : 'right';
+		setPanel((current) => (current.top === top && current.side === side ? current : { top, side }));
+	}, [active, value.modelId]);
+
+	React.useLayoutEffect(() => {
+		if (!open) return;
+		placePanel();
+		// The popover positions itself after mounting, so measure again once it has settled.
+		let frame = requestAnimationFrame(() => {
+			frame = requestAnimationFrame(placePanel);
+		});
+		return () => cancelAnimationFrame(frame);
+	}, [open, placePanel, detailModel]);
 
 	const onKeyDown = (event: React.KeyboardEvent) => {
+		// Keys move the highlight directly, so the card follows at once.
+		window.clearTimeout(intentTimer.current);
+		trail.current = [];
 		if (query || !highlightedModel?.levels?.length || (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight')) return;
 		event.preventDefault();
 		const levels = highlightedModel.levels;
@@ -363,6 +449,7 @@ function ModelSelector({
 			<CommandItem
 				key={`${section}::${model.id}`}
 				value={`${section}::${model.id}`}
+				data-model-value={`${section}::${model.id}`}
 				keywords={[model.name, model.provider, ...(model.levels?.map((entry) => entry.label) ?? []), ...(model.tags ?? [])]}
 				disabled={model.disabled}
 				onSelect={() => choose(model)}
@@ -393,6 +480,11 @@ function ModelSelector({
 				if (next) {
 					setQuery('');
 					setPendingLevels({});
+					// Open on the current model, so its card is the first one shown.
+					const home = [...sections.browsing, ...sections.all].find((section) =>
+						section.items.some((model) => model.id === value.modelId),
+					);
+					if (home) setHighlighted(`${home.id}::${value.modelId}`);
 				}
 			}}
 		>
@@ -415,48 +507,74 @@ function ModelSelector({
 			<PopoverContent
 				side={side}
 				align={align}
-				className={cn('w-[min(22rem,calc(100vw-1.5rem))] overflow-hidden p-0', contentClassName)}
+				className={cn('relative w-[min(22rem,calc(100vw-1.5rem))] p-0', contentClassName)}
 			>
-				<Command
-					value={highlighted}
-					onValueChange={setHighlighted}
-					onKeyDown={onKeyDown}
-					loop
-					className="rounded-none"
+				<div
+					ref={contentRef}
+					onPointerMove={(event) => {
+						trail.current = [...trail.current.slice(-3), { x: event.clientX, y: event.clientY }];
+					}}
 				>
-					<div className="relative border-b border-border">
-						<CommandInput value={query} onValueChange={setQuery} placeholder="Search models" className="pr-9" />
-						{canTogglePrice ? (
-							<Tooltip>
-								<TooltipTrigger
-									render={
-										<button
-											type="button"
-											aria-label="Show prices per million tokens"
-											aria-pressed={priceDisplay === 'price'}
-											onClick={() => setPriceDisplay((current) => (current === 'price' ? 'meter' : 'price'))}
-											className={cn(
-												'absolute top-1/2 right-2.5 grid size-7 -translate-y-1/2 cursor-pointer place-items-center rounded-md outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50',
-												priceDisplay === 'price' ? 'bg-muted text-foreground' : 'text-muted-foreground hover:bg-overlay-hover hover:text-foreground',
-											)}
-										>
-											<CircleDollarSign aria-hidden="true" className="size-4" />
-										</button>
-									}
-								/>
-								<TooltipContent>{priceDisplay === 'price' ? 'Show relative cost' : 'Show prices per 1M tokens'}</TooltipContent>
-							</Tooltip>
-						) : null}
-					</div>
-					<CommandList className="h-[min(18rem,45vh)] max-h-none p-1 not-empty:p-1">
-						<CommandEmpty className="py-6 text-center text-sm text-muted-foreground">No models matched</CommandEmpty>
-						{visible.map((section) => (
-							<CommandGroup key={section.id} heading={section.label}>
-								{section.items.map((model) => renderItem(model, section.id))}
-							</CommandGroup>
-						))}
-					</CommandList>
-					{detailModel ? (
+					<Command
+						value={highlighted}
+						onValueChange={setHighlighted}
+						onKeyDown={onKeyDown}
+						loop
+						className="rounded-[inherit]"
+					>
+						<div className="relative border-b border-border">
+							<CommandInput value={query} onValueChange={setQuery} placeholder="Search models" className="pr-9" />
+							{canTogglePrice ? (
+								<Tooltip>
+									<TooltipTrigger
+										render={
+											<button
+												type="button"
+												aria-label="Show prices per million tokens"
+												aria-pressed={priceDisplay === 'price'}
+												onClick={() => setPriceDisplay((current) => (current === 'price' ? 'meter' : 'price'))}
+												className={cn(
+													'absolute top-1/2 right-2.5 grid size-7 -translate-y-1/2 cursor-pointer place-items-center rounded-md outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50',
+													priceDisplay === 'price' ? 'bg-muted text-foreground' : 'text-muted-foreground hover:bg-overlay-hover hover:text-foreground',
+												)}
+											>
+												<CircleDollarSign aria-hidden="true" className="size-4" />
+											</button>
+										}
+									/>
+									<TooltipContent>{priceDisplay === 'price' ? 'Show relative cost' : 'Show prices per 1M tokens'}</TooltipContent>
+								</Tooltip>
+							) : null}
+						</div>
+						<CommandList className="h-[min(20rem,50vh)] max-h-none p-1 not-empty:p-1" onScroll={placePanel}>
+							<CommandEmpty className="py-6 text-center text-sm text-muted-foreground">No models matched</CommandEmpty>
+							{visible.map((section) => (
+								<CommandGroup key={section.id} heading={section.label}>
+									{section.items.map((model) => renderItem(model, section.id))}
+								</CommandGroup>
+							))}
+						</CommandList>
+					</Command>
+				</div>
+				{detailModel ? (
+					<div
+						ref={panelRef}
+						data-slot="model-selector-details"
+						onPointerEnter={() => {
+							// Arriving at the card keeps its model and moves the row highlight back to it.
+							window.clearTimeout(intentTimer.current);
+							if (active && active !== highlighted) setHighlighted(active);
+						}}
+						style={panel.side === 'below' ? undefined : { top: panel.top }}
+						className={cn(
+							panel.side === 'below'
+								? 'border-t border-border'
+								: cn(
+										'absolute w-64 rounded-lg border bg-popover text-popover-foreground shadow-lg',
+										panel.side === 'right' ? 'left-full ml-1.5' : 'right-full mr-1.5',
+									),
+						)}
+					>
 						<ModelDetails
 							model={detailModel}
 							levelId={levelFor(detailModel)}
@@ -465,8 +583,8 @@ function ModelSelector({
 								choose(detailModel, levelId);
 							}}
 						/>
-					) : null}
-				</Command>
+					</div>
+				) : null}
 			</PopoverContent>
 		</Popover>
 	);

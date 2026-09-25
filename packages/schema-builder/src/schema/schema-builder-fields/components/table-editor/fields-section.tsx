@@ -54,21 +54,18 @@ export function FieldsSection({ onAddFieldRef }: FieldsSectionProps = {}) {
 		setSelectedFieldIds(new Set());
 	}, [currentTable?.id]);
 
-	// Get constraint info for a field
-	const getFieldConstraintInfo = useCallback(
-		(field: FieldDefinition | null) => {
-			if (!field) return {};
-
+	// The key constraints a field edit or delete must carry along.
+	const constraintInfoFor = useCallback(
+		(field: FieldDefinition) => {
 			const pkConstraint = constraints.find((c) => c.type === 'primary_key');
 			const uniqueConstraint = constraints.find(
 				(c) => c.type === 'unique' && c.fields.length === 1 && c.fields[0] === field.id,
 			);
-
 			return {
 				primaryKeyConstraintId: pkConstraint?.id,
 				uniqueConstraintId: uniqueConstraint?.id,
-				allPrimaryKeyFieldIds: pkConstraint?.fields || [],
-				isPartOfPrimaryKey: pkConstraint?.fields.includes(field.id) || false,
+				allPrimaryKeyFieldIds: pkConstraint?.fields ?? [],
+				isPartOfPrimaryKey: pkConstraint?.fields.includes(field.id) ?? false,
 			};
 		},
 		[constraints],
@@ -92,7 +89,7 @@ export function FieldsSection({ onAddFieldRef }: FieldsSectionProps = {}) {
 	// Handle field row click - push card in edit mode
 	const handleFieldClick = useCallback(
 		(field: FieldDefinition) => {
-			const constraintInfo = getFieldConstraintInfo(field);
+			const constraintInfo = constraintInfoFor(field);
 			stack.push({
 				id: `edit-field-${field.id}`,
 				title: 'Edit Field',
@@ -109,7 +106,7 @@ export function FieldsSection({ onAddFieldRef }: FieldsSectionProps = {}) {
 				width: CARD_WIDTHS.wide,
 			});
 		},
-		[stack, getFieldConstraintInfo, remoteFields],
+		[stack, constraintInfoFor, remoteFields],
 	);
 
 	// Handle drag-drop from types library - push card with pre-selected type
@@ -143,24 +140,12 @@ export function FieldsSection({ onAddFieldRef }: FieldsSectionProps = {}) {
 		const fieldsToDelete = sortedFields.filter((f) => selectedFieldIds.has(f.id));
 		if (fieldsToDelete.length === 0) return;
 
-		const pkConstraint = constraints.find((c) => c.type === 'primary_key');
-
 		setIsDeleting(true);
 
 		const results = await Promise.allSettled(
 			fieldsToDelete.map((field) => {
-				const isPartOfPrimaryKey = pkConstraint?.fields.includes(field.id) || false;
-				const uniqueConstraint = constraints.find(
-					(c) => c.type === 'unique' && c.fields.length === 1 && c.fields[0] === field.id,
-				);
-
-				return deleteFieldMutation.mutateAsync({
-					id: field.id,
-					primaryKeyConstraintId: pkConstraint?.id,
-					uniqueConstraintId: uniqueConstraint?.id,
-					allPrimaryKeyFieldIds: pkConstraint?.fields || [],
-					wasPartOfPrimaryKey: isPartOfPrimaryKey,
-				});
+				const { isPartOfPrimaryKey, ...keys } = constraintInfoFor(field);
+				return deleteFieldMutation.mutateAsync({ id: field.id, ...keys, wasPartOfPrimaryKey: isPartOfPrimaryKey });
 			}),
 		);
 
@@ -201,28 +186,36 @@ export function FieldsSection({ onAddFieldRef }: FieldsSectionProps = {}) {
 				description: `Failed to delete: ${failed.map((f) => f.name).join(', ')}`,
 			});
 		}
-	}, [selectedFieldIds, sortedFields, constraints, deleteFieldMutation]);
+	}, [selectedFieldIds, sortedFields, constraintInfoFor, deleteFieldMutation]);
 
 	return (
 		<div
 			data-chat-component='fields-section'
 			data-chat-table-name={currentTable?.name ?? ''}
 			data-chat-field-count={String(remoteFields.length)}
-			className='space-y-3'
+			className='flex flex-col gap-2.5'
 		>
 			{/* Section Header */}
-			<div className='flex items-center justify-between'>
-				<h3 className='text-balance text-sm font-medium'>Fields</h3>
-				{selectedFieldIds.size > 0 && (
+			<div className='flex h-7 items-center justify-between gap-2'>
+				<h3 className='text-foreground text-[13px] font-medium'>
+					Fields
+					<span className='text-subtle-foreground ml-1.5 font-normal tabular-nums'>{remoteFields.length}</span>
+				</h3>
+				{selectedFieldIds.size > 0 ? (
 					<Button
-						variant='outline'
+						variant='ghost'
 						size='sm'
-						className='text-destructive hover:bg-destructive/10 hover:text-destructive border-destructive/30 gap-1.5'
+						className='text-destructive hover:bg-destructive/10 hover:text-destructive h-7 gap-1.5 px-2 text-xs'
 						onClick={handleBulkDelete}
 						disabled={isDeleting}
 					>
 						{isDeleting ? <Loader2 className='size-3.5 animate-spin' /> : <Trash2 className='size-3.5' />}
-						{isDeleting ? 'Deleting...' : `Delete (${selectedFieldIds.size})`}
+						{isDeleting ? 'Deleting…' : `Delete ${selectedFieldIds.size}`}
+					</Button>
+				) : (
+					<Button className='h-7 gap-1.5 px-2 text-xs' onClick={handleAddField} size='sm' variant='ghost'>
+						<Plus aria-hidden='true' className='size-3.5' />
+						Add field
 					</Button>
 				)}
 			</div>
@@ -231,8 +224,8 @@ export function FieldsSection({ onAddFieldRef }: FieldsSectionProps = {}) {
 			<div
 				ref={setDropZoneRef}
 				className={cn(
-					'bg-card/50 border-border/50 overflow-hidden rounded-lg border transition-colors',
-					isOverDropZone ? 'border-primary bg-primary/5' : null,
+					'bg-card overflow-hidden rounded-xl shadow-card ring-inset',
+					isOverDropZone ? 'ring-primary/50 ring-2' : null,
 				)}
 			>
 				{/* Fields List */}
@@ -250,26 +243,18 @@ export function FieldsSection({ onAddFieldRef }: FieldsSectionProps = {}) {
 				{/* Drop zone footer */}
 				<div
 					className={cn(
-						'flex items-center justify-center gap-3 border-t border-dashed p-4',
-						'border-border/40 bg-muted/20',
-						'transition-[background-color,border-color] duration-(--duration-moderate) ease-out',
-						isOverDropZone && 'border-primary/50 bg-primary/5',
+						'text-muted-foreground flex items-center justify-center gap-1.5 border-t border-dashed border-foreground/10 px-4 py-2.5 text-xs',
+						isOverDropZone && 'bg-primary/[0.06] text-primary',
 					)}
 				>
-					<Button
-						variant='outline'
-						size='sm'
-						className={cn(
-							'gap-1.5 px-3 text-xs font-medium',
-							'hover:bg-primary/10 hover:text-link hover:border-primary/30',
-							'transition-[background-color,border-color,color,scale] duration-(--duration-moderate) ease-out motion-safe:active:scale-[0.96]',
-						)}
+					<button
+						className='text-foreground/80 hover:text-foreground cursor-pointer rounded font-medium outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50'
 						onClick={handleAddField}
+						type='button'
 					>
-						<Plus className='size-3.5' />
-						Add Field
-					</Button>
-					<span className='text-muted-foreground/80 text-xs'>or drag field types here</span>
+						Add a field
+					</button>
+					<span>or drop a type from the library here</span>
 				</div>
 			</div>
 		</div>

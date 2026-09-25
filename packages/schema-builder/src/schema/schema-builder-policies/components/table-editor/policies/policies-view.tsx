@@ -3,7 +3,7 @@
 import { useMemo } from 'react';
 import { useCardStack } from '@constructive-io/ui/stack';
 import { useQueryClient } from '@tanstack/react-query';
-import { Table2 } from 'lucide-react';
+import { ShieldCheck } from 'lucide-react';
 
 import { useSchemaBuilderSelectors } from '@/blocks/schema/schema-builder-core/lib/gql/hooks/schema-builder';
 import type { DatabasePolicy } from '@/blocks/schema/schema-builder-core/lib/gql/hooks/schema-builder/policies/use-database-policies';
@@ -12,26 +12,13 @@ import {
 	useDatabasePolicies,
 } from '@/blocks/schema/schema-builder-core/lib/gql/hooks/schema-builder/policies/use-database-policies';
 import { CARD_WIDTHS } from '@/blocks/schema/schema-builder-core/lib/stack/card-widths';
+import { EditorView, InlineCode, NoTableSelectedState } from '@/blocks/schema/schema-builder-core/components/table-editor/editor-view';
 
 import { CreateTableCard } from '../../tables/create-table-card';
 import { CRUD_OPERATIONS, PRIVILEGE_TO_OPERATION, type CrudOperation } from '@/blocks/schema/schema-builder-core/components/policies/policy-types';
 import { PolicyEditCard } from './policy-edit-card';
 import { PolicyOperationGroup } from './policy-operation-group';
 import { PoliciesEmptyState } from './policies-empty-state';
-
-function NoTableSelectedState() {
-	return (
-		<div className='flex min-h-0 flex-1 flex-col items-center justify-center p-6'>
-			<div className='bg-muted/50 mb-4 flex h-16 w-16 items-center justify-center rounded-full'>
-				<Table2 className='text-muted-foreground h-8 w-8' />
-			</div>
-			<h3 className='mb-1 text-balance text-lg font-semibold'>No table selected</h3>
-			<p className='text-muted-foreground max-w-sm text-center text-sm'>
-				Select a table from the sidebar to view and manage its security policies.
-			</p>
-		</div>
-	);
-}
 
 export function PoliciesView() {
 	const stack = useCardStack();
@@ -73,7 +60,7 @@ export function PoliciesView() {
 
 	// No table selected state
 	if (!currentTable) {
-		return <NoTableSelectedState />;
+		return <NoTableSelectedState icon={ShieldCheck} subject='policies' />;
 	}
 
 	const hasPolicies = currentTablePolicies.length > 0;
@@ -118,45 +105,50 @@ export function PoliciesView() {
 		});
 	};
 
-	return (
-		<div
-			data-chat-component='policies-view'
-			data-chat-table-name={currentTable.name}
-			data-chat-policy-count={String(currentTablePolicies.length)}
-			className='flex min-h-0 flex-1 flex-col overflow-auto p-6'
-		>
-			{isLoading ? (
-				<div className='flex items-center justify-center py-16'>
-					<p className='text-muted-foreground text-sm'>Loading policies...</p>
-				</div>
-			) : !hasPolicies ? (
-				<PoliciesEmptyState onCreateClick={() => handleOpenCreate()} tableName={currentTable.name} />
-			) : (
-				<div className='mx-auto w-full max-w-4xl space-y-6'>
-					{/* Header */}
-					<div>
-						<h2 className='text-balance text-xl font-semibold tracking-tight'>Policies</h2>
-						<p className='text-muted-foreground mt-1 text-sm'>
-							{currentTablePolicies.length} polic{currentTablePolicies.length !== 1 ? 'ies' : 'y'} protecting{' '}
-							<code className='bg-muted rounded px-1.5 py-0.5 font-mono text-xs'>{currentTable.name}</code>
-						</p>
-					</div>
+	if (isLoading || !hasPolicies) {
+		return (
+			<div
+				className='flex min-h-0 flex-1 flex-col overflow-auto p-6'
+				data-chat-component='policies-view'
+				data-chat-policy-count={String(currentTablePolicies.length)}
+				data-chat-table-name={currentTable.name}
+			>
+				{isLoading ? (
+					<p className='text-muted-foreground py-16 text-center text-[13px]' role='status'>
+						Loading policies…
+					</p>
+				) : (
+					<PoliciesEmptyState onCreateClick={() => handleOpenCreate()} tableName={currentTable.name} />
+				)}
+			</div>
+		);
+	}
 
-					{/* Operation Groups */}
-					<div className='space-y-3'>
-						{CRUD_OPERATIONS.map((op) => (
-							<PolicyOperationGroup
-								key={op}
-								operation={op}
-								policies={groupedPolicies[op]}
-								tableName={currentTable.name}
-								onPolicyClick={handleOpenEdit}
-								onAddClick={() => handleOpenCreate(op)}
-							/>
-						))}
-					</div>
-				</div>
-			)}
-		</div>
+	return (
+		<EditorView
+			data-chat-component='policies-view'
+			data-chat-policy-count={String(currentTablePolicies.length)}
+			data-chat-table-name={currentTable.name}
+			description={
+				<>
+					{currentTablePolicies.length} polic{currentTablePolicies.length !== 1 ? 'ies' : 'y'} protecting{' '}
+					<InlineCode>{currentTable.name}</InlineCode>
+				</>
+			}
+			title='Policies'
+		>
+			<div className='flex flex-col gap-2'>
+				{CRUD_OPERATIONS.map((op) => (
+					<PolicyOperationGroup
+						key={op}
+						onAddClick={() => handleOpenCreate(op)}
+						onPolicyClick={handleOpenEdit}
+						operation={op}
+						policies={groupedPolicies[op]}
+						tableName={currentTable.name}
+					/>
+				))}
+			</div>
+		</EditorView>
 	);
 }

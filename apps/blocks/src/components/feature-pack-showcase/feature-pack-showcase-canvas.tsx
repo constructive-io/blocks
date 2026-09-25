@@ -358,6 +358,36 @@ export function FeaturePackShowcaseCanvas({
               recordAction(`removeMember('${organizationId}', '${membershipId}')`),
             cancelInvite: ({ organizationId, inviteId }) =>
               recordAction(`cancelInvite('${organizationId}', '${inviteId}')`),
+            updateOrganization: ({ organizationId, name }) =>
+              recordAction(`updateOrganization('${organizationId}', '${name}')`),
+            updateMembershipSettings: ({ organizationId, patch }) =>
+              recordAction(`updateMembershipSettings('${organizationId}', '${JSON.stringify(patch)}')`),
+            updateMembershipDefault: ({ organizationId, isApproved }) =>
+              recordAction(`updateMembershipDefault('${organizationId}', ${isApproved})`),
+            createAccessProfile: ({ organizationId, name }) =>
+              recordAction(`createAccessProfile('${organizationId}', '${name}')`),
+            updateAccessProfile: ({ organizationId, profileId, name }) =>
+              recordAction(`updateAccessProfile('${organizationId}', '${profileId}', '${name}')`),
+            deleteAccessProfile: ({ organizationId, profileId }) =>
+              recordAction(`deleteAccessProfile('${organizationId}', '${profileId}')`),
+            setProfileCapability: ({ organizationId, profileId, capabilityId, isGrant }) =>
+              recordAction(`setProfileCapability('${organizationId}', '${profileId}', '${capabilityId}', ${isGrant})`),
+            setHierarchyEdge: ({ organizationId, childId, parentId }) =>
+              recordAction(`setHierarchyEdge('${organizationId}', '${childId}', '${parentId}')`),
+            removeHierarchyEdge: ({ organizationId, edge }) =>
+              recordAction(`removeHierarchyEdge('${organizationId}', '${edge.id}')`),
+            createOrganizationPrincipal: async ({ organizationId, name }) => {
+              recordAction(`createOrganizationPrincipal('${organizationId}', '${name}')`);
+              return { id: 'org_principal_demo' };
+            },
+            createOrganizationApiKey: async ({ organizationId, name }) => {
+              recordAction(`createOrganizationApiKey('${organizationId}', '${name}')`);
+              return { token: 'ck_demo_4f1c9a2e7b8d', expiresAt: '2026-09-01T00:00:00.000Z' };
+            },
+            revokeOrganizationApiKey: ({ organizationId, apiKeyId }) =>
+              recordAction(`revokeOrganizationApiKey('${organizationId}', '${apiKeyId}')`),
+            revokeOrganizationPrincipal: ({ organizationId, principalId }) =>
+              recordAction(`revokeOrganizationPrincipal('${organizationId}', '${principalId}')`),
           }}
           onError={(error) => recordAction(`onError('${error.message}')`)}
           policy={{
@@ -376,6 +406,19 @@ export function FeaturePackShowcaseCanvas({
             grantCapability: true,
             removeMember: true,
             cancelInvite: true,
+            updateOrganization: true,
+            updateMembershipSettings: true,
+            updateMembershipDefault: true,
+            createAccessProfile: true,
+            updateAccessProfile: true,
+            deleteAccessProfile: true,
+            setProfileCapability: true,
+            setHierarchyEdge: true,
+            removeHierarchyEdge: true,
+            createOrganizationPrincipal: true,
+            createOrganizationApiKey: true,
+            revokeOrganizationApiKey: true,
+            revokeOrganizationPrincipal: true,
           }}
           resource={getFeaturePackShowcaseResource(state, FEATURE_PACK_SHOWCASE_ORGANIZATIONS)}
         />

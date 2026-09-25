@@ -76,7 +76,8 @@ export function TooltipIconButton({
 	);
 }
 
-const TONE_COLOR = {
+/** CSS colour for each non-neutral tone, for tints mixed at runtime. */
+export const TONE_COLOR = {
 	primary: 'var(--primary)',
 	warning: 'var(--warning)',
 	violet: 'var(--chart-3)',

@@ -2,23 +2,22 @@
 
 import * as React from 'react';
 import {
+  BellIcon,
+  Building2Icon,
   CircleAlertIcon,
+  CreditCardIcon,
   DatabaseIcon,
+  HardDriveIcon,
   KeyRoundIcon,
   LoaderCircleIcon,
   LockKeyholeIcon,
-  ShieldAlertIcon
+  ShieldAlertIcon,
+  ShieldCheckIcon,
+  UsersIcon,
+  type LucideIcon
 } from 'lucide-react';
 
-import { Badge } from '@constructive-io/ui/badge';
-import { Button } from '@constructive-io/ui/button';
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle
-} from '@constructive-io/ui/card';
+import type { AppLinkRenderProps } from '@constructive-io/ui/app-bar';
 import {
   Select,
   SelectContent,
@@ -29,7 +28,9 @@ import {
 } from '@constructive-io/ui/select';
 import { Skeleton } from '@constructive-io/ui/skeleton';
 
+import { ConsoleShell, type ConsoleNavigationItem } from '@/blocks/console-kit/console-shell';
 import { AuthEntryPanel } from '@/blocks/feature-packs/auth/auth-entry-panel';
+import { ToneBadge, type Tone } from '@/components/ui/workspace-kit/primitives';
 import { UsersFeaturePack } from '@/blocks/feature-packs/users/users-feature-pack';
 import { FeaturePackDiagnosticPanel } from '@/blocks/feature-packs/shared/feature-pack-ui';
 import { cn } from '@/lib/utils';
@@ -119,6 +120,38 @@ function showcaseNavigationState(
   };
 }
 
+const NAV_ICONS: Record<string, LucideIcon> = {
+  Data: DatabaseIcon,
+  Auth: ShieldCheckIcon,
+  'App access': UsersIcon,
+  Organizations: Building2Icon,
+  Storage: HardDriveIcon,
+  Billing: CreditCardIcon,
+  Notifications: BellIcon
+};
+
+const STATE_TONE: Record<ConsoleKitShowcaseState, Tone> = {
+  'signed-out': 'neutral',
+  discovering: 'info',
+  ready: 'success',
+  partial: 'warning',
+  incompatible: 'danger',
+  unavailable: 'warning'
+};
+
+/** Keeps preview links on the page while still running the row's own click handling. */
+function previewLink(props: AppLinkRenderProps) {
+  return (
+    <a
+      {...props}
+      onClick={(event) => {
+        event.preventDefault();
+        props.onClick?.(event);
+      }}
+    />
+  );
+}
+
 function ShowcaseShell({
   preset,
   state,
@@ -130,190 +163,79 @@ function ShowcaseShell({
   children: React.ReactNode;
   activeNav?: string;
 }>) {
-  const nav = NAV_BY_PRESET[preset];
-  const badge = stateBadge(state);
-  const mobileNavRef = React.useRef<HTMLElement | null>(null);
-  const activeMobileItemRef = React.useRef<HTMLLIElement | null>(null);
-  const [mobileOverflow, setMobileOverflow] = React.useState({
-    start: false,
-    end: false
+  const items = NAV_BY_PRESET[preset].map((item): ConsoleNavigationItem => {
+    const view = showcaseNavigationState(item, activeNav, state);
+    const status = state === 'discovering' && !view.active
+      ? 'checking'
+      : view.signedOutLocked
+        ? 'locked'
+        : view.setupTarget
+          ? 'setup'
+          : view.partialTarget
+            ? 'partial'
+            : undefined;
+    return {
+      id: item,
+      label: item,
+      href: `#console-${item}`,
+      icon: NAV_ICONS[item],
+      isActive: view.active,
+      disabled: view.signedOutLocked,
+      status,
+      badge: status === 'checking'
+        ? 'Checking'
+        : status === 'locked'
+          ? 'Sign in'
+          : status === 'setup'
+            ? 'Needs setup'
+            : status === 'partial'
+              ? 'Partial'
+              : undefined
+    };
   });
 
-  const measureMobileOverflow = React.useCallback(() => {
-    const scroller = mobileNavRef.current;
-    if (!scroller) return;
-    const maxScrollLeft = scroller.scrollWidth - scroller.clientWidth;
-    const start = scroller.scrollLeft > 2;
-    const end = scroller.scrollLeft < maxScrollLeft - 2;
-    setMobileOverflow((previous) => {
-      if (previous.start === start && previous.end === end) return previous;
-      return { start, end };
-    });
-  }, []);
-
-  React.useEffect(() => {
-    const scroller = mobileNavRef.current;
-    if (!scroller) return;
-    measureMobileOverflow();
-    if (typeof ResizeObserver === 'undefined') return;
-    const observer = new ResizeObserver(measureMobileOverflow);
-    observer.observe(scroller);
-    return () => observer.disconnect();
-  }, [measureMobileOverflow, nav]);
-
-  React.useEffect(() => {
-    activeMobileItemRef.current?.scrollIntoView?.({
-      block: 'nearest',
-      inline: 'center'
-    });
-    measureMobileOverflow();
-  }, [activeNav, measureMobileOverflow, nav]);
-
   return (
-    <div className="shadow-card bg-background grid min-h-[32rem] overflow-hidden rounded-xl sm:min-h-[34rem] sm:grid-cols-[15rem_minmax(0,1fr)]">
-      {/* Platform Kit-style left rail: quiet label + full-width manager links */}
-      <aside className="bg-sidebar text-sidebar-foreground hidden flex-col border-r border-border/60 px-3 py-6 pb-3 sm:flex">
-        <div className="mb-4 px-3">
-          <div className="mb-3 flex items-center gap-2">
-            <div className="bg-primary text-primary-foreground flex size-7 items-center justify-center rounded-md">
-              <DatabaseIcon aria-hidden="true" className="size-3.5" />
-            </div>
-            <p className="truncate text-sm font-semibold">Application</p>
-          </div>
-          <h2 className="text-muted-foreground text-sm font-semibold">
-            Manage application
-          </h2>
-        </div>
-        <nav aria-label="Showcase features" className="flex grow flex-col gap-0.5">
-          {nav.map((item) => {
-            const itemState = showcaseNavigationState(item, activeNav, state);
-            return (
-              <div
-                className={cn(
-                  'flex w-full items-center justify-between rounded-md px-3 py-2 text-sm',
-                  itemState.active && 'bg-secondary font-medium text-secondary-foreground',
-                  !itemState.active && 'text-foreground',
-                  itemState.muted && !itemState.active && 'text-muted-foreground'
-                )}
-                key={item}
-              >
-                <span className="truncate">{item}</span>
-                {itemState.signedOutLocked ? (
-                  <Badge className="text-[10px]" size="sm" variant="outline">
-                    Sign in
-                  </Badge>
-                ) : null}
-                {itemState.setupTarget ? (
-                  <Badge className="text-[10px]" size="sm" variant="outline">
-                    Setup
-                  </Badge>
-                ) : null}
-                {itemState.partialTarget && item === activeNav ? (
-                  <Badge className="text-[10px]" size="sm" variant="secondary">
-                    Partial
-                  </Badge>
-                ) : null}
-              </div>
-            );
-          })}
-        </nav>
-      </aside>
-      <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
-        {/* Quiet content chrome — no endpoint/connection dump; state badge is docs-only. */}
-        <div className="relative flex h-12 shrink-0 items-center gap-2 border-b px-3 sm:px-4">
-          <p className="text-muted-foreground min-w-0 truncate text-sm">
-            Documentation preview
-          </p>
-          <div className="ml-auto flex shrink-0 items-center gap-2">
-            <Badge size="sm" variant={badge.variant}>{badge.label}</Badge>
-          </div>
-        </div>
-        <div className="relative border-b sm:hidden">
-          <nav
-            aria-label="Showcase features"
-            className="scrollbar-hide snap-x snap-mandatory overflow-x-auto overscroll-x-contain scroll-smooth scroll-px-3 px-2 py-1.5 motion-reduce:scroll-auto"
-            onScroll={measureMobileOverflow}
-            ref={mobileNavRef}
-          >
-            <ul className="flex min-w-max gap-1">
-              {nav.map((item) => {
-                const itemState = showcaseNavigationState(item, activeNav, state);
-                const status = itemState.signedOutLocked
-                  ? 'Sign in'
-                  : itemState.setupTarget
-                    ? 'Setup'
-                    : itemState.partialTarget
-                      ? 'Partial'
-                      : undefined;
-                return (
-                  <li
-                    className="snap-center"
-                    key={item}
-                    ref={itemState.active ? activeMobileItemRef : undefined}
-                  >
-                    <span
-                      aria-current={itemState.active ? 'page' : undefined}
-                      aria-label={status ? `${item} (${status})` : item}
-                      className={cn(
-                        'relative flex min-h-9 items-center rounded-md px-3 text-xs font-medium',
-                        itemState.active
-                          ? 'bg-secondary text-secondary-foreground'
-                          : 'text-muted-foreground'
-                      )}
-                    >
-                      {item}
-                      {status ? (
-                        <span
-                          aria-hidden="true"
-                          className="bg-primary ms-2 size-1.5 rounded-full"
-                        />
-                      ) : null}
-                    </span>
-                  </li>
-                );
-              })}
-            </ul>
-          </nav>
-          <div
-            aria-hidden="true"
-            className={cn(
-              'from-background pointer-events-none absolute inset-y-0 left-0 w-6 bg-linear-to-r to-transparent transition-opacity motion-reduce:transition-none',
-              mobileOverflow.start ? 'opacity-100' : 'opacity-0'
-            )}
-          />
-          <div
-            aria-hidden="true"
-            className={cn(
-              'from-background pointer-events-none absolute inset-y-0 right-0 w-8 bg-linear-to-l to-transparent transition-opacity motion-reduce:transition-none',
-              mobileOverflow.end ? 'opacity-100' : 'opacity-0'
-            )}
-          />
-        </div>
-        <div className="bg-background min-h-0 flex-1 overflow-auto p-4 sm:p-6 lg:p-8">
-          {children}
-        </div>
-      </div>
+    <div className="h-[44rem] overflow-hidden rounded-xl border border-border">
+      <ConsoleShell
+        account={state === 'signed-out' ? undefined : {
+          name: 'Ada Lovelace',
+          secondaryLabel: 'ada@northstar.example',
+          actionGroups: [{ id: 'session', actions: [{ id: 'sign-out', label: 'Sign out', onSelect: () => undefined }] }]
+        }}
+        barActions={<ToneBadge tone={STATE_TONE[state]}>{stateBadge(state).label}</ToneBadge>}
+        brand={{ name: 'Northstar Labs', logo: <DatabaseIcon aria-hidden="true" /> }}
+        breadcrumbs={[{ id: 'feature', label: activeNav, current: true }]}
+        className="h-full"
+        navigation={[{ id: 'features', label: 'Manage application', items }]}
+        renderLink={previewLink}
+      >
+        {children}
+      </ConsoleShell>
     </div>
   );
 }
 
 function DiscoveringState() {
   return (
-    <Card aria-busy="true" aria-label="Discovering features" variant="flat">
-      <CardHeader>
-        <div className="text-muted-foreground mb-2 flex items-center gap-2 text-sm">
-          <LoaderCircleIcon aria-hidden="true" className="size-4 animate-spin" />
-          Checking tenant contracts…
-        </div>
-        <Skeleton className="h-6 w-40" />
-        <Skeleton className="h-4 w-72 max-w-full" />
-      </CardHeader>
-      <CardContent className="flex flex-col gap-3">
+    <div aria-busy="true" aria-label="Discovering features" className="flex flex-col gap-5" role="status">
+      <div className="text-muted-foreground flex items-center gap-2 text-[13px]">
+        <LoaderCircleIcon aria-hidden="true" className="size-3.5 animate-spin motion-reduce:animate-none" />
+        Checking tenant contracts…
+      </div>
+      <div className="flex flex-col gap-2">
+        <Skeleton className="h-4 w-36 rounded-full" />
+        <Skeleton className="h-3 w-64 max-w-full rounded-full" />
+      </div>
+      <div className="bg-card overflow-hidden rounded-xl shadow-card">
+        <div className="bg-muted/60 h-8" />
         {Array.from({ length: 4 }, (_, index) => (
-          <Skeleton className="h-11 w-full" key={index} />
+          <div className="flex items-center gap-3 border-t border-border px-4 py-3" key={index}>
+            <Skeleton className="size-7 shrink-0 rounded-full" />
+            <Skeleton className="h-3 rounded-full" style={{ width: `${36 + ((index * 13) % 30)}%` }} />
+          </div>
         ))}
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   );
 }
 
@@ -378,37 +300,18 @@ function ShowcaseBody({
   if (state === 'partial') {
     const hasOrganizations = NAV_BY_PRESET[preset].includes('Organizations');
     return (
-      <div className="flex flex-col gap-4">
-        {hasOrganizations ? (
-          <Card variant="flat">
-            <CardHeader>
-              <CardTitle className="text-base">Organizations (partial)</CardTitle>
-              <CardDescription>
-                Membership reads work. Invite writes stay hidden until the public
-                contract exposes them.
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="bg-muted/50 flex items-center gap-3 rounded-lg p-3 text-sm">
-                <ShieldAlertIcon aria-hidden="true" className="text-warning-foreground" />
-                <span className="text-pretty">
-                  Capability discovery returned partial evidence for{' '}
-                  <code className="rounded bg-muted px-1 font-mono text-xs">{preset}</code>.
-                </span>
-              </div>
-            </CardContent>
-          </Card>
-        ) : (
-          <Card variant="flat">
-            <CardHeader>
-              <CardTitle className="text-base">App access (partial)</CardTitle>
-              <CardDescription>
-                Member reads work. Invite writes stay hidden until the public
-                contract exposes them.
-              </CardDescription>
-            </CardHeader>
-          </Card>
-        )}
+      <div className="flex flex-col gap-5">
+        <div className="bg-warning/[0.06] ring-warning/20 flex items-start gap-3 rounded-xl px-4 py-3 ring-1 ring-inset">
+          <ShieldAlertIcon aria-hidden="true" className="text-warning mt-0.5 size-4 shrink-0" />
+          <div className="min-w-0 text-[13px]">
+            <p className="text-foreground font-medium">{hasOrganizations ? 'Organizations' : 'App access'} is partly available</p>
+            <p className="text-muted-foreground mt-0.5 text-pretty">
+              Member reads work. Invite writes stay hidden until the public contract exposes them.
+              Capability discovery returned partial evidence for{' '}
+              <code className="bg-muted rounded px-1 font-mono text-xs">{preset}</code>.
+            </p>
+          </div>
+        </div>
         <UsersFeaturePack
           resource={{ status: 'ready', data: FEATURE_PACK_SHOWCASE_USERS }}
         />
@@ -475,7 +378,7 @@ export function ConsoleKitShowcasePreview({ className }: Readonly<{ className?: 
               value={preset}
             >
               <SelectTrigger aria-label="Showcase preset" className="w-full sm:w-44">
-                <SelectValue />
+                <SelectValue>{(value: string | null) => PRESET_OPTIONS.find((option) => option.value === value)?.label ?? value}</SelectValue>
               </SelectTrigger>
               <SelectContent>
                 <SelectGroup>
@@ -495,7 +398,7 @@ export function ConsoleKitShowcasePreview({ className }: Readonly<{ className?: 
               value={state}
             >
               <SelectTrigger aria-label="Showcase state" className="w-full sm:w-40">
-                <SelectValue />
+                <SelectValue>{(value: string | null) => STATE_OPTIONS.find((option) => option.value === value)?.label ?? value}</SelectValue>
               </SelectTrigger>
               <SelectContent>
                 <SelectGroup>

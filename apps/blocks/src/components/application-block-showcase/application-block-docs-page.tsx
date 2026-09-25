@@ -11,7 +11,8 @@ import {
 import { CodeBlock } from '@/components/docs/code-block';
 import { DocSection } from '@/components/docs/doc-section';
 import { ApplicationDocPagination } from '@/components/docs/application-doc-pagination';
-import { BillingDocsNav, type BillingDocsHref } from '@/components/billing-docs/billing-docs-nav';
+import { DocSectionNav } from '@/components/docs/doc-section-nav';
+import { DOC_SECTIONS } from '@/lib/doc-sections';
 import { applicationBlockHref, type ApplicationBlockDoc } from '@/lib/application-blocks';
 import { registryAdd } from '@/lib/install-mode';
 import { withBase } from '@/lib/site';
@@ -86,7 +87,7 @@ export function ApplicationBlockDocsPage({
         id="overview"
       >
         <header className="mb-6 max-w-2xl">
-          <p className="registry-eyebrow">{block.section === 'billing' ? 'Billing' : 'Application blocks'}</p>
+          <p className="registry-eyebrow">{block.section ? DOC_SECTIONS[block.section].title : 'Application blocks'}</p>
           <h1
             className="mt-2 text-balance text-[22px] font-semibold tracking-tight sm:text-[1.75rem]"
             id="application-block-title"
@@ -98,7 +99,7 @@ export function ApplicationBlockDocsPage({
           </p>
         </header>
 
-        {block.section === 'billing' ? <BillingDocsNav current={applicationBlockHref(block) as BillingDocsHref} /> : null}
+        {block.section ? <DocSectionNav section={block.section} current={applicationBlockHref(block)} /> : null}
 
         <ApplicationBlockShowcasePreview
           block={block}

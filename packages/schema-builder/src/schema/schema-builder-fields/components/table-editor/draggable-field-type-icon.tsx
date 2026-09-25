@@ -46,15 +46,12 @@ export function DraggableFieldTypeIcon({ typeInfo, isDragging = false, className
 					{...attributes}
 					aria-label={`Drag ${typeInfo.label} field type`}
 					className={cn(
-						// Uniform square buttons - fixed aspect ratio for clean grid
-						`group bg-background hover:bg-accent relative aspect-square w-10 cursor-grab rounded-lg border
-						transition-[background-color,border-color,box-shadow,opacity] duration-(--duration-moderate) ease-out active:cursor-grabbing`,
-            'flex items-center justify-center',
-						'touch-none select-none',
+						// Raised square tiles, the same surface as the Agents Builder app picker, so they read on the rail in both themes.
+						'group bg-card shadow-card hover:bg-muted relative flex aspect-square w-10 cursor-grab items-center justify-center rounded-lg active:cursor-grabbing',
+						'touch-none select-none outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50',
 						{
 							'opacity-50': isBeingDragged && !isDragging,
-							'border-primary/30 bg-primary/5 shadow-lg': isDragging,
-							'hover:border-primary/40 hover:shadow-sm': !isBeingDragged,
+							'shadow-card-lg': isDragging,
 						},
 						className,
 					)}
@@ -64,12 +61,12 @@ export function DraggableFieldTypeIcon({ typeInfo, isDragging = false, className
 					{IconComponent ? (
 						<IconComponent
 							className={cn(
-								'text-muted-foreground h-4 w-4 transition-colors',
+								'text-foreground/70 size-4',
 								'group-hover:text-foreground',
 							)}
 						/>
 					) : (
-						<span className='text-muted-foreground group-hover:text-foreground font-mono text-xs font-medium'>
+						<span className='text-foreground/70 group-hover:text-foreground font-mono text-xs font-medium'>
 							{typeInfo.type.charAt(0).toUpperCase()}
 						</span>
 					)}
@@ -80,9 +77,8 @@ export function DraggableFieldTypeIcon({ typeInfo, isDragging = false, className
 							className={cn(
 								'absolute inset-x-0 bottom-0.5',
 								'flex items-center justify-center',
-								'text-muted-foreground/60 group-hover:text-muted-foreground',
+								'text-muted-foreground group-hover:text-foreground/70',
 								'font-mono text-[7px] font-medium uppercase leading-none tracking-wide',
-								'transition-colors',
 							)}
 						>
 							{badge}

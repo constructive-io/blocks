@@ -1,3 +1,4 @@
+import { DOC_SECTION_LIST } from '@/lib/doc-sections';
 import { AI_DOC } from '@/lib/ai-docs';
 import { APPLICATION_BLOCKS, applicationBlockHref } from '@/lib/application-blocks';
 import { COMMAND_PALETTE_DOC } from '@/lib/command-palette-docs';
@@ -29,12 +30,11 @@ const surfaceLinks: readonly SurfaceLink[] = [
     path: `/blocks/${name}/`,
     description,
   })),
-  {
-    title: 'Billing',
-    path: '/blocks/billing/',
-    description:
-      'Billing workspaces for platform and tenant billing: the Billing Account and Billing Console templates, gift codes, and the billing feature pack.',
-  },
+  ...DOC_SECTION_LIST.map(({ title, hub, summary }) => ({
+    title,
+    path: `${hub}/`,
+    description: summary,
+  })),
   ...APPLICATION_BLOCKS.map((block) => ({
     title: block.title,
     path: `${applicationBlockHref(block)}/`,

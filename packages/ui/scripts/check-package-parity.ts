@@ -115,9 +115,10 @@ const nonComponentSubpaths = new Set([
 	'./theme-presets',
 	'./theme-dials-config',
 ]);
-// Subpaths whose runtime statically imports an optional peer stay out of the root barrel, so importing
-// `@constructive-io/ui` never requires that peer. They still ship a subpath, built outputs, and a registry item.
-const subpathOnlyModules = new Set(['phone-input']);
+// Subpaths whose runtime statically imports an optional peer (or a peer subpath newer than the declared range)
+// stay out of the root barrel, so importing `@constructive-io/ui` never requires it. They still ship a subpath,
+// built outputs, and a registry item. workspace-kit imports `motion/react-animate-view` (motion >= 13.4).
+const subpathOnlyModules = new Set(['phone-input', 'workspace-kit']);
 const packageModules = sorted(
 	Object.keys(manifest.exports)
 		.filter((subpath) => subpath.startsWith('./') && !nonComponentSubpaths.has(subpath))

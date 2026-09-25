@@ -3066,25 +3066,24 @@
       "name": "org-chart",
       "type": "registry:block",
       "title": "Org Chart",
-      "description": "An interactive organizational chart with automatic hierarchy layout, zoom controls, node actions, and drag-to-reparent behavior.",
+      "description": "An interactive organization chart on the workspace canvas: automatic top-down layout, pan and zoom, folding teams, a details panel, drag-to-reassign with a live preview wire, and a searchable change-manager dialog for keyboard users.",
       "categories": [
         "block",
         "application"
       ],
-      "docs": "Import: `import { OrgChart } from '@/components/ui/org-chart'`",
+      "docs": "Import: `import { OrgChart } from '@/components/ui/org-chart'`. Pass controlled `edges` or `defaultEdges` (flat `{ id, parentId }` reporting lines) and persist moves in `onReparent`. Tab into the chart and use the arrow keys to move between people; Enter opens their details.",
       "dependencies": [
-        "@xyflow/react",
-        "@remixicon/react",
         "lucide-react"
       ],
       "registryDependencies": [
         "cn",
-        "button",
-        "tooltip",
         "avatar",
-        "badge",
+        "button",
+        "command",
+        "dialog",
         "dropdown-menu",
-        "flow-zoom-panel"
+        "tooltip",
+        "workspace-kit"
       ],
       "files": [
         {
@@ -3096,19 +3095,19 @@
           "type": "registry:component"
         },
         {
-          "path": "registry/constructive/blocks/org-chart/org-chart-context.tsx",
-          "type": "registry:component"
-        },
-        {
           "path": "registry/constructive/blocks/org-chart/org-chart-node.tsx",
           "type": "registry:component"
         },
         {
-          "path": "registry/constructive/blocks/org-chart/org-chart-edge.tsx",
+          "path": "registry/constructive/blocks/org-chart/org-chart-details.tsx",
           "type": "registry:component"
         },
         {
-          "path": "registry/constructive/blocks/org-chart/org-chart-empty.tsx",
+          "path": "registry/constructive/blocks/org-chart/org-chart-move-dialog.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/org-chart/org-chart-states.tsx",
           "type": "registry:component"
         },
         {
@@ -3141,10 +3140,9 @@
       "registryDependencies": [
         "cn",
         "badge",
-        "breadcrumb",
         "button",
         "dropdown-menu",
-        "input-group"
+        "workspace-kit"
       ],
       "files": [
         {
@@ -3189,10 +3187,7 @@
       "registryDependencies": [
         "storage",
         "cn",
-        "badge",
-        "button",
-        "scroll-area",
-        "separator"
+        "workspace-kit"
       ],
       "files": [
         {
@@ -3216,11 +3211,10 @@
       ],
       "registryDependencies": [
         "storage",
-        "button",
+        "cn",
         "checkbox",
         "dropdown-menu",
-        "skeleton",
-        "table"
+        "workspace-kit"
       ],
       "files": [
         {
@@ -3246,7 +3240,7 @@
         "storage",
         "cn",
         "button",
-        "progress"
+        "workspace-kit"
       ],
       "files": [
         {
@@ -3274,9 +3268,8 @@
         "alert-dialog",
         "button",
         "input",
-        "separator",
-        "skeleton",
-        "sheet"
+        "sheet",
+        "workspace-kit"
       ],
       "files": [
         {
@@ -3301,14 +3294,14 @@
       "registryDependencies": [
         "storage",
         "cn",
-        "badge",
         "button",
         "input",
         "label",
         "radio-group",
         "switch",
         "textarea",
-        "sheet"
+        "sheet",
+        "workspace-kit"
       ],
       "files": [
         {
@@ -3332,7 +3325,8 @@
       ],
       "registryDependencies": [
         "cn",
-        "button"
+        "button",
+        "workspace-kit"
       ],
       "files": [
         {
@@ -3345,7 +3339,7 @@
       "name": "storage-browser",
       "type": "registry:block",
       "title": "Storage Browser",
-      "description": "A complete controlled storage workspace with bucket navigation, object discovery, upload, configuration, detail, and empty states.",
+      "description": "A storage workspace on the shared workspace shell: buckets in the sidebar, a file list with type-tinted glyphs, search, sort, drag-and-drop upload, a floating selection bar, detail and bucket sheets, and distinct empty states.",
       "categories": [
         "block",
         "application"
@@ -3360,7 +3354,8 @@
         "storage-bucket-config-sheet",
         "storage-empty-state",
         "cn",
-        "separator"
+        "button",
+        "workspace-kit"
       ],
       "files": [
         {
@@ -3377,12 +3372,12 @@
       "name": "workspace-kit",
       "type": "registry:block",
       "title": "Workspace Kit",
-      "description": "The shared workspace shell behind the application templates: a collapsible sidebar rail with a mobile drawer, nav rows and sections, 48px view headers and scrolling view frames, filter pills, segmented controls, surfaces that keep their edge in dark mode, and a React ViewTransition wrapper with a reduced-motion fallback.",
+      "description": "The shared workspace shell behind the application templates: a collapsible sidebar rail with a mobile drawer, nav rows and sections, 48px view headers and scrolling view frames, filter pills, segmented controls, surfaces that keep their edge in dark mode (panels, table surfaces, stat tiles, key-value lists, empty states), a pan-and-zoom canvas with double-framed nodes and bezier wires, and a React ViewTransition wrapper with a reduced-motion fallback.",
       "categories": [
         "block",
         "application"
       ],
-      "docs": "Import: `import { WorkspaceShell, SidebarFrame, NavSection, NavRow, ViewFrame } from '@/components/ui/workspace-kit'`. Render your sidebar through the `sidebar` render prop (it is called once for the rail and once for the drawer) and your views as children; `ViewFrame` and `NavMenuButton` open the drawer below the `3xl` container width.",
+      "docs": "Import: `import { WorkspaceShell, SidebarFrame, NavSection, NavRow, ViewFrame, Panel, CanvasSurface, useCanvasViewport } from '@/components/ui/workspace-kit'`. Render your sidebar through the `sidebar` render prop (it is called once for the rail and once for the drawer) and your views as children; `ViewFrame` and `NavMenuButton` open the drawer below the `3xl` container width.",
       "dependencies": [
         "lucide-react",
         "motion@^13.4.0"
@@ -3394,6 +3389,10 @@
         "dropdown-menu"
       ],
       "files": [
+        {
+          "path": "registry/constructive/blocks/workspace-kit/canvas.tsx",
+          "type": "registry:component"
+        },
         {
           "path": "registry/constructive/blocks/workspace-kit/index.ts",
           "type": "registry:lib"
@@ -3416,6 +3415,10 @@
         },
         {
           "path": "registry/constructive/blocks/workspace-kit/shell.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/workspace-kit/surface.tsx",
           "type": "registry:component"
         },
         {
@@ -3578,10 +3581,6 @@
         },
         {
           "path": "registry/constructive/blocks/agents-builder/use-agent-run.ts",
-          "type": "registry:lib"
-        },
-        {
-          "path": "registry/constructive/blocks/agents-builder/use-canvas-viewport.ts",
           "type": "registry:lib"
         },
         {

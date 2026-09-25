@@ -11,6 +11,8 @@ export type BucketVisibility = 'public' | 'private' | 'temp';
 export interface StorageBucket {
 	id: string;
 	key: string;
+	/** Friendly label; the key shows when omitted. */
+	name?: string | null;
 	visibility: BucketVisibility;
 	isPublic: boolean;
 	allowCustomKeys: boolean;
@@ -37,6 +39,10 @@ export interface StorageObject {
 	createdAt: string;
 	updatedAt?: string;
 	downloadUrl?: string | null;
+	/** Folders list alongside files in a prefix view and open with `onOpenFolder`. Default: `file`. */
+	kind?: 'file' | 'folder';
+	/** Preformatted size, shown instead of `size` when the host only has a label. */
+	sizeLabel?: string;
 }
 
 export type UploadStatus = 'queued' | 'uploading' | 'done' | 'error';

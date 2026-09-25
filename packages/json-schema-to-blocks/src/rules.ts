@@ -41,7 +41,10 @@ const inputTypes: Record<string, string> = {
 	password: 'password',
 };
 
-/** Long free text is a Textarea; the cutoff is a heuristic, overridable by `x-ui`. */
+/**
+ * Long free text is a Textarea; the cutoff is a heuristic, overridable by `x-ui`.
+ * A `pattern` marks a single token (a slug, a code), so it stays one line.
+ */
 const TEXTAREA_MIN_LENGTH = 256;
 
 export const defaultWidgetRules: WidgetRule[] = [
@@ -92,7 +95,9 @@ export const defaultWidgetRules: WidgetRule[] = [
 		name: 'string-long',
 		match: (ctx) => {
 			const maxLength = ctx.constraints?.maxLength;
-			return ctx.dataType === 'string' && (maxLength == null || maxLength >= TEXTAREA_MIN_LENGTH);
+			if (ctx.dataType !== 'string') return false;
+			if (maxLength != null) return maxLength >= TEXTAREA_MIN_LENGTH;
+			return ctx.constraints?.pattern == null;
 		},
 		node: 'Textarea',
 	},

@@ -2,7 +2,8 @@ import Link from 'next/link';
 
 import { Table, TableBody, TableCaption, TableCell, TableHead, TableHeader, TableRow } from '@constructive-io/ui/table';
 
-import { BillingDocsNav } from '@/components/billing-docs/billing-docs-nav';
+import { DocSectionNav } from '@/components/docs/doc-section-nav';
+import { docSectionForPack } from '@/lib/doc-sections';
 import { CodeBlock } from '@/components/docs/code-block';
 import { DocSection } from '@/components/docs/doc-section';
 import { FEATURE_PACK_CATALOG, getFeaturePackManifest, type FeaturePackManifestV1 } from '@/feature-packs';
@@ -186,7 +187,7 @@ export function FeaturePackDocsPage({
           <p className="mt-2 text-pretty text-sm leading-7 text-muted-foreground sm:text-[15px]">{block.description}</p>
         </header>
 
-        {block.id === 'billing' ? <BillingDocsNav current="/blocks/features/billing" /> : null}
+        {docSectionForPack(block.id) ? <DocSectionNav section={docSectionForPack(block.id)!.id} current={`/blocks/features/${block.id}`} /> : null}
 
         <FeaturePackShowcasePreview pack={block.id} previewPath={withBase(`/blocks/features/${block.id}/preview/`)} />
       </section>

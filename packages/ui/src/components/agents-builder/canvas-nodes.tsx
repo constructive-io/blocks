@@ -6,18 +6,15 @@ import * as React from 'react';
 import { cn } from '../../lib/utils';
 import { TextShimmer } from '../ai/text-shimmer';
 import { useAgentsBuilder } from './agents-builder-context';
-import { enterClass, focusRingClass, SurfaceBody, surfaceInsetClass, useInert } from '../workspace-kit/primitives';
+import { NO_PAN_ATTRIBUTE, NodeIconTile, NodeShell } from '../workspace-kit/canvas';
+import { enterClass, focusRingClass, useInert } from '../workspace-kit/primitives';
 import type { NodeStage } from './use-agent-run';
-import { NO_PAN_ATTRIBUTE } from './use-canvas-viewport';
 
 export const NODE_WIDTH = 230;
 
 /** Shell border (1) + inset (3) + half the 40px header: where wires attach. */
 export const NODE_ANCHOR_Y = 24;
 
-/** Shell radius; its 1px border and 3px inset make the inner card 10px (concentric). */
-const NODE_RADIUS = 'rounded-[14px]';
-const INNER_RADIUS = 'rounded-[10px]';
 const DIVIDER = 'border-t border-dashed border-foreground/10';
 
 export function NodeRow({ children, className }: { children: React.ReactNode; className?: string }) {
@@ -50,18 +47,6 @@ function Chevron({ open, className }: { open: boolean; className?: string }) {
 				className,
 			)}
 		/>
-	);
-}
-
-/** Small framed tile holding a node's tinted icon. */
-function IconTile({ icon: Icon }: { icon: LucideIcon }) {
-	return (
-		<span
-			aria-hidden="true"
-			className="grid size-[22px] shrink-0 place-items-center rounded-[6px] bg-card text-primary shadow-card"
-		>
-			<Icon className="size-3" strokeWidth={2} />
-		</span>
 	);
 }
 
@@ -106,64 +91,53 @@ export function CanvasNode({ id, title, icon, tone = 'plain', meta, badge, stage
 	const expanded = open && !loading;
 
 	return (
-		<section
+		<NodeShell
+			as="section"
 			aria-label={title}
 			aria-busy={loading || undefined}
 			data-node-id={id}
-			style={{
-				width: NODE_WIDTH,
-				...(tone === 'new' && {
-					borderColor: 'color-mix(in oklab, var(--primary) 40%, transparent)',
-					backgroundColor: 'color-mix(in oklab, var(--primary) 7%, var(--muted))',
-				}),
-			}}
-			className={cn(
-				'relative isolate flex flex-col overflow-hidden border p-[3px]',
-				NODE_RADIUS,
-				stage && enterClass,
-				tone === 'new' ? 'border-dashed' : 'border-foreground/[0.07] bg-muted/80',
-			)}
+			tone={tone}
+			style={{ width: NODE_WIDTH }}
+			className={cn('overflow-hidden', stage && enterClass)}
+			underlay={
+				loading ? (
+					<span
+						aria-hidden="true"
+						className="absolute inset-0 -z-10 animate-pulse bg-[radial-gradient(80%_120%_at_20%_0%,color-mix(in_oklab,var(--primary)_18%,transparent),transparent_70%)] motion-reduce:animate-none"
+					/>
+				) : null
+			}
 		>
-			{loading ? (
-				<span
-					aria-hidden="true"
-					className="absolute inset-0 -z-10 animate-pulse bg-[radial-gradient(80%_120%_at_20%_0%,color-mix(in_oklab,var(--primary)_18%,transparent),transparent_70%)] motion-reduce:animate-none"
-				/>
-			) : null}
-			<div className={cn(surfaceInsetClass, 'bg-card shadow-card', INNER_RADIUS)}>
-				<SurfaceBody>
-					<div className="flex h-10 items-center gap-2 pr-2 pl-2">
-						<IconTile icon={icon} />
-						{loading ? (
-							<TextShimmer className="flex-1 text-[13px]">{title}</TextShimmer>
-						) : (
-							<button
-								type="button"
-								aria-expanded={expanded}
-								onClick={onToggle}
-								className={cn(
-									'-ml-0.5 mr-auto flex h-7 shrink-0 cursor-pointer items-center gap-1 rounded-md px-0.5 text-left text-[13px] font-medium whitespace-nowrap text-foreground',
-									focusRingClass,
-								)}
-							>
-								<span>{title}</span>
-								<Chevron open={expanded} />
-							</button>
+			<div className="flex h-10 items-center gap-2 pr-2 pl-2">
+				<NodeIconTile icon={icon} />
+				{loading ? (
+					<TextShimmer className="flex-1 text-[13px]">{title}</TextShimmer>
+				) : (
+					<button
+						type="button"
+						aria-expanded={expanded}
+						onClick={onToggle}
+						className={cn(
+							'-ml-0.5 mr-auto flex h-7 shrink-0 cursor-pointer items-center gap-1 rounded-md px-0.5 text-left text-[13px] font-medium whitespace-nowrap text-foreground',
+							focusRingClass,
 						)}
-						{loading ? null : (
-							<>
-								{meta != null ? <span className="text-xs text-muted-foreground tabular-nums">{meta}</span> : null}
-								{badge}
-							</>
-						)}
-					</div>
-					<Collapse open={expanded}>
-						<div className={DIVIDER}>{children}</div>
-						{footer ? <div className={cn(DIVIDER, 'bg-muted/60')}>{footer}</div> : null}
-					</Collapse>
-				</SurfaceBody>
+					>
+						<span>{title}</span>
+						<Chevron open={expanded} />
+					</button>
+				)}
+				{loading ? null : (
+					<>
+						{meta != null ? <span className="text-xs text-muted-foreground tabular-nums">{meta}</span> : null}
+						{badge}
+					</>
+				)}
 			</div>
-		</section>
+			<Collapse open={expanded}>
+				<div className={DIVIDER}>{children}</div>
+				{footer ? <div className={cn(DIVIDER, 'bg-muted/60')}>{footer}</div> : null}
+			</Collapse>
+		</NodeShell>
 	);
 }
 

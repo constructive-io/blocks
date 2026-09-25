@@ -3,7 +3,6 @@
 import * as React from 'react';
 import { XIcon } from 'lucide-react';
 
-import { Badge } from '../badge';
 import { Button } from '../button';
 import { Input } from '../input';
 import { Label } from '../label';
@@ -19,7 +18,11 @@ import {
 	SheetTitle,
 } from '../sheet';
 import { cn } from '../../lib/utils';
+import { ToneBadge } from '../workspace-kit/primitives';
+import { dashedRule } from '../workspace-kit/surface';
 import type { BucketVisibility, StorageBucket } from './types';
+import { humanizeBytes } from './utils';
+import { VISIBILITY } from './visibility-badge';
 
 export type BucketConfigMode = 'create' | 'edit';
 
@@ -63,11 +66,10 @@ interface BucketConfigSheetProps {
 	supportedFields?: BucketConfigSupportedFields;
 }
 
-const VISIBILITY_OPTIONS: { value: BucketVisibility; label: string; hint: string }[] = [
-	{ value: 'public', label: 'Public', hint: 'Anyone with the link can read objects.' },
-	{ value: 'private', label: 'Private', hint: 'Only authorized requests can read objects.' },
-	{ value: 'temp', label: 'Temp', hint: 'Short-lived objects, cleaned up automatically.' },
-];
+const VISIBILITY_OPTIONS: BucketVisibility[] = ['private', 'public', 'temp'];
+
+const FIELD_LABEL = 'text-[13px] font-medium text-foreground';
+const FIELD_HINT = 'text-xs text-muted-foreground';
 
 function toFormValue(initial?: Partial<StorageBucket>): BucketConfigValue {
 	return {
@@ -112,53 +114,60 @@ function BucketConfigForm({
 
 	return (
 		<form onSubmit={handleSubmit} className='flex min-h-0 flex-1 flex-col'>
-			<SheetHeader className='text-left'>
-				<SheetTitle>{mode === 'create' ? 'New bucket' : 'Edit bucket'}</SheetTitle>
-				<SheetDescription>
+			<SheetHeader className='space-y-1 p-4 pr-12 pb-3 text-left'>
+				<SheetTitle className='text-sm font-medium'>{mode === 'create' ? 'New bucket' : 'Edit bucket'}</SheetTitle>
+				<SheetDescription className='text-[13px]'>
 					{mode === 'create'
 						? 'Configure a new storage bucket.'
 						: 'Update this bucket’s configuration.'}
 				</SheetDescription>
 			</SheetHeader>
 
-			<div className='-mx-4 flex min-h-0 flex-1 flex-col gap-5 overflow-y-auto px-4 py-2'>
+			<div className={cn('flex min-h-0 flex-1 flex-col gap-5 overflow-y-auto border-t px-4 py-4', dashedRule)}>
 				{/* Key */}
 				<div className='flex flex-col gap-1.5'>
-					<Label htmlFor='bucket-key'>Key</Label>
+					<Label htmlFor='bucket-key' className={FIELD_LABEL}>Key</Label>
 					<Input
 						id='bucket-key'
 						value={value.key}
 						disabled={mode === 'edit'}
 						placeholder='my-bucket'
+						className='font-mono'
+						autoComplete='off'
 						aria-invalid={keyMissing || undefined}
 						onChange={(event) => set('key', event.target.value)}
 					/>
 					{mode === 'edit' && (
-						<p className='text-xs text-muted-foreground'>The key cannot be changed after creation.</p>
+						<p className={FIELD_HINT}>The key cannot be changed after creation.</p>
 					)}
 				</div>
 
 				{/* Visibility */}
 				<div className='flex flex-col gap-2'>
-					<Label>Visibility</Label>
+					<Label id='bucket-visibility-label' className={FIELD_LABEL}>Visibility</Label>
 					<RadioGroup
+						aria-labelledby='bucket-visibility-label'
 						value={value.visibility}
 						onValueChange={(next) => set('visibility', next as BucketVisibility)}
-						className='gap-2'
+						className='gap-1.5'
 					>
-						{VISIBILITY_OPTIONS.map((option) => (
-							<Label
-								key={option.value}
-								htmlFor={`visibility-${option.value}`}
-								className='flex cursor-pointer items-start gap-2.5 rounded-lg border p-3 font-normal has-[:checked]:border-primary/50 has-[:checked]:bg-primary/5'
-							>
-								<RadioGroupItem id={`visibility-${option.value}`} value={option.value} className='mt-0.5' />
-								<span className='flex flex-col gap-0.5'>
-									<span className='text-sm font-medium'>{option.label}</span>
-									<span className='text-xs text-muted-foreground'>{option.hint}</span>
-								</span>
-							</Label>
-						))}
+						{VISIBILITY_OPTIONS.map((option) => {
+							const { icon: Icon, label, hint } = VISIBILITY[option];
+							return (
+								<Label
+									key={option}
+									htmlFor={`visibility-${option}`}
+									className='flex cursor-pointer items-center gap-3 rounded-lg bg-card px-3 py-2.5 font-normal shadow-card transition-shadow duration-(--duration-fast) has-[:checked]:ring-2 has-[:checked]:ring-primary/40'
+								>
+									<Icon aria-hidden='true' className='size-4 shrink-0 text-muted-foreground' />
+									<span className='flex min-w-0 flex-1 flex-col gap-0.5'>
+										<span className='text-[13px] font-medium text-foreground'>{label}</span>
+										<span className={FIELD_HINT}>{hint}</span>
+									</span>
+									<RadioGroupItem id={`visibility-${option}`} value={option} />
+								</Label>
+							);
+						})}
 					</RadioGroup>
 				</div>
 
@@ -169,8 +178,8 @@ function BucketConfigForm({
 						className='flex cursor-pointer items-center justify-between gap-3 font-normal'
 					>
 						<span className='flex flex-col gap-0.5'>
-							<span className='text-sm font-medium'>Allow custom keys</span>
-							<span className='text-pretty text-xs text-muted-foreground'>
+							<span className={FIELD_LABEL}>Allow custom keys</span>
+							<span className={cn('text-pretty', FIELD_HINT)}>
 								Let clients choose object keys instead of generated ones.
 							</span>
 						</span>
@@ -185,21 +194,21 @@ function BucketConfigForm({
 				{/* Allowed MIME types */}
 				{supports('allowedMimeTypes') && (
 					<div className='flex flex-col gap-1.5'>
-						<Label>Allowed MIME types</Label>
+						<Label className={FIELD_LABEL}>Allowed MIME types</Label>
 						<ChipsInput
 							value={value.allowedMimeTypes}
 							onChange={(next) => set('allowedMimeTypes', next)}
 							placeholder='image/png, application/pdf…'
 							ariaLabel='Allowed MIME types'
 						/>
-						<p className='text-xs text-muted-foreground'>Leave empty to allow any type.</p>
+						<p className={FIELD_HINT}>Leave empty to allow any type.</p>
 					</div>
 				)}
 
 				{/* Max file size */}
 				{supports('maxFileSize') && (
 					<div className='flex flex-col gap-1.5'>
-						<Label htmlFor='max-file-size'>Max file size</Label>
+						<Label htmlFor='max-file-size' className={FIELD_LABEL}>Max file size</Label>
 						<div className='flex items-center gap-2'>
 							<Input
 								id='max-file-size'
@@ -213,7 +222,10 @@ function BucketConfigForm({
 									set('maxFileSize', event.target.value === '' ? null : Number(event.target.value))
 								}
 							/>
-							<span className='text-sm text-muted-foreground'>bytes</span>
+							<span className='text-[13px] text-muted-foreground'>bytes</span>
+							{value.maxFileSize ? (
+								<span className='ml-auto text-xs text-muted-foreground tabular-nums'>≈ {humanizeBytes(value.maxFileSize)}</span>
+							) : null}
 						</div>
 					</div>
 				)}
@@ -221,7 +233,7 @@ function BucketConfigForm({
 				{/* Allowed origins (CORS) */}
 				{supports('allowedOrigins') && (
 					<div className='flex flex-col gap-1.5'>
-						<Label>Allowed origins (CORS)</Label>
+						<Label className={FIELD_LABEL}>Allowed origins (CORS)</Label>
 						<ChipsInput
 							value={value.allowedOrigins}
 							onChange={(next) => set('allowedOrigins', next)}
@@ -234,7 +246,7 @@ function BucketConfigForm({
 				{/* Description */}
 				{supports('description') && (
 					<div className='flex flex-col gap-1.5'>
-						<Label htmlFor='bucket-description'>Description</Label>
+						<Label htmlFor='bucket-description' className={FIELD_LABEL}>Description</Label>
 						<Textarea
 							id='bucket-description'
 							value={value.description}
@@ -245,9 +257,10 @@ function BucketConfigForm({
 				)}
 			</div>
 
-			<SheetFooter className='pt-3'>
+			<SheetFooter className={cn('gap-2 border-t bg-muted/40 p-3 sm:space-x-0', dashedRule)}>
 				<Button
 					type='button'
+					size='sm'
 					variant='outline'
 					onClick={() => {
 						onCancel?.();
@@ -256,7 +269,7 @@ function BucketConfigForm({
 				>
 					Cancel
 				</Button>
-				<Button type='submit' disabled={keyMissing}>
+				<Button type='submit' size='sm' disabled={keyMissing}>
 					{mode === 'create' ? 'Create bucket' : 'Save changes'}
 				</Button>
 			</SheetFooter>
@@ -282,7 +295,7 @@ export function BucketConfigSheet({
 	const formKey = `${mode}:${initial?.id ?? 'new'}:${open}`;
 	return (
 		<Sheet open={open} onOpenChange={onOpenChange}>
-			<SheetContent side='right' className='w-full sm:max-w-md'>
+			<SheetContent side='right' className='w-full gap-0 p-0 sm:max-w-md'>
 				<BucketConfigForm
 					key={formKey}
 					mode={mode}
@@ -327,22 +340,22 @@ function ChipsInput({ value, onChange, placeholder, ariaLabel }: ChipsInputProps
 	return (
 		<div
 			className={cn(
-				`flex min-h-9 flex-wrap items-center gap-1.5 rounded-lg border border-input bg-background px-2 py-1.5
+				`flex min-h-9 flex-wrap items-center gap-1.5 rounded-lg border border-input bg-card px-2 py-1.5 shadow-2xs
 				focus-within:border-ring/60 focus-within:ring-[3px] focus-within:ring-ring/35`,
 			)}
 		>
 			{value.map((chip, index) => (
-				<Badge key={chip} variant='secondary' className='gap-1 pr-1'>
+				<ToneBadge key={chip} tone='neutral' className='max-w-full pr-0.5 font-mono'>
 					<span className='truncate'>{chip}</span>
 					<button
 						type='button'
 						aria-label={`Remove ${chip}`}
 						onClick={() => removeAt(index)}
-						className='inline-flex size-3.5 items-center justify-center rounded-xs hover:bg-foreground/10'
+						className='inline-flex size-4 cursor-pointer items-center justify-center rounded-[4px] hover:bg-foreground/10'
 					>
 						<XIcon className='size-3' aria-hidden />
 					</button>
-				</Badge>
+				</ToneBadge>
 			))}
 			<input
 				value={draft}
@@ -358,7 +371,7 @@ function ChipsInput({ value, onChange, placeholder, ariaLabel }: ChipsInputProps
 				onBlur={commit}
 				placeholder={value.length === 0 ? placeholder : undefined}
 				aria-label={ariaLabel}
-				className='min-w-24 flex-1 bg-transparent text-sm outline-none placeholder:text-subtle-foreground'
+				className='min-w-24 flex-1 bg-transparent text-[13px] outline-none placeholder:text-subtle-foreground'
 			/>
 		</div>
 	);

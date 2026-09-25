@@ -14,7 +14,12 @@ import {
   type SchemaBuilderDataState,
   type SchemaBuilderPreferences,
 } from '@constructive-io/schema-builder';
-import { createNoopSchemaBuilderAdapter } from '@constructive-io/schema-builder/testing';
+
+import {
+  createShowcaseSchemaBuilderAdapter,
+  SHOWCASE_SCHEMA,
+  SHOWCASE_SCHEMA_INFO,
+} from './schema-builder-showcase-fixture';
 import {
   Sheets,
   SheetsProvider,
@@ -128,139 +133,6 @@ function SheetsShowcase() {
   );
 }
 
-const SCHEMA_TABLES: NonNullable<
-  SchemaBuilderDataState['currentSchema']
->['tables'] = [
-  {
-    id: 'table-projects',
-    name: 'projects',
-    label: 'Projects',
-    description: 'Customer projects visible to organization members.',
-    category: 'APP',
-    fields: [
-      {
-        id: 'field-project-id',
-        name: 'id',
-        type: 'uuid',
-        fieldOrder: 0,
-        constraints: { nullable: false, primaryKey: true },
-      },
-      {
-        id: 'field-project-name',
-        name: 'name',
-        type: 'text',
-        fieldOrder: 1,
-        constraints: { nullable: false },
-      },
-      {
-        id: 'field-project-status',
-        name: 'status',
-        type: 'text',
-        fieldOrder: 2,
-        constraints: { nullable: false, defaultValue: 'planned' },
-      },
-      {
-        id: 'field-project-owner',
-        name: 'owner_id',
-        type: 'uuid',
-        fieldOrder: 3,
-        constraints: { nullable: false },
-      },
-    ],
-    constraints: [
-      {
-        id: 'projects-pkey',
-        type: 'primary_key',
-        name: 'projects_pkey',
-        fields: ['field-project-id'],
-      },
-    ],
-    indexes: [],
-  },
-  {
-    id: 'table-releases',
-    name: 'releases',
-    label: 'Releases',
-    description: 'Project release history.',
-    category: 'APP',
-    fields: [
-      {
-        id: 'field-release-id',
-        name: 'id',
-        type: 'uuid',
-        fieldOrder: 0,
-        constraints: { nullable: false, primaryKey: true },
-      },
-      {
-        id: 'field-release-version',
-        name: 'version',
-        type: 'text',
-        fieldOrder: 1,
-        constraints: { nullable: false },
-      },
-    ],
-    constraints: [
-      {
-        id: 'releases-pkey',
-        type: 'primary_key',
-        name: 'releases_pkey',
-        fields: ['field-release-id'],
-      },
-    ],
-    indexes: [],
-  },
-  {
-    id: 'table-memberships',
-    name: 'memberships',
-    label: 'Memberships',
-    description: 'Organization membership records.',
-    category: 'MODULE',
-    fields: [],
-    constraints: [],
-    indexes: [],
-  },
-];
-
-const SCHEMA_DATABASE: NonNullable<SchemaBuilderDataState['currentSchema']> = {
-  id: 'schema-public',
-  name: 'public',
-  description: 'Application schema for the docs tenant.',
-  version: '1',
-  tables: SCHEMA_TABLES,
-  relationships: [],
-};
-
-const SCHEMA_INFO: SchemaBuilderDataState['availableSchemas'][number] = {
-  key: 'database-docs-tenant',
-  name: 'public',
-  description: 'Application schema for the docs tenant.',
-  category: 'Database',
-  nodeCount: SCHEMA_TABLES.length,
-  edgeCount: 0,
-  source: 'database',
-  schema: {
-    name: 'public',
-    description: 'Application schema for the docs tenant.',
-    category: 'Database',
-    nodes: [],
-    edges: [],
-  },
-  dbSchema: SCHEMA_DATABASE,
-  databaseInfo: {
-    id: 'docs-tenant',
-    name: 'docs_tenant',
-    label: 'Docs tenant',
-    schemaId: 'schema-public',
-    ownerName: 'Constructive',
-    ownerId: 'org-constructive',
-    tableCount: SCHEMA_TABLES.length,
-    fieldCount: SCHEMA_TABLES.reduce(
-      (count, table) => count + table.fields.length,
-      0,
-    ),
-  },
-};
-
 function SchemaBuilderShowcase() {
   const { resolvedTheme } = useTheme();
   const [queryClient] = useState(() => new QueryClient());
@@ -274,9 +146,9 @@ function SchemaBuilderShowcase() {
   const [lastAction, setLastAction] = useState(
     'Host scope and adapter are connected.',
   );
-  const adapter = useMemo(() => createNoopSchemaBuilderAdapter(), []);
+  const adapter = useMemo(() => createShowcaseSchemaBuilderAdapter(), []);
   const currentTable =
-    SCHEMA_TABLES.find((table) => table.id === selectedTableId) ?? null;
+    SHOWCASE_SCHEMA.tables.find((table) => table.id === selectedTableId) ?? null;
 
   const selectTable = useCallback(
     (tableId: string | null, tableName?: string | null) => {
@@ -294,12 +166,12 @@ function SchemaBuilderShowcase() {
 
   const dataState = useMemo<SchemaBuilderDataState>(
     () => ({
-      availableSchemas: [SCHEMA_INFO],
+      availableSchemas: [SHOWCASE_SCHEMA_INFO],
       routeOrgId: 'org-constructive',
       routeDatabaseId: 'docs-tenant',
-      selectedSchemaKey: SCHEMA_INFO.key,
-      currentSchemaInfo: SCHEMA_INFO,
-      currentSchema: SCHEMA_DATABASE,
+      selectedSchemaKey: SHOWCASE_SCHEMA_INFO.key,
+      currentSchemaInfo: SHOWCASE_SCHEMA_INFO,
+      currentSchema: SHOWCASE_SCHEMA,
       currentTable,
       selectedTableId,
       hasResolvedDatabaseLookup: true,

@@ -1,27 +1,15 @@
 import Link from 'next/link';
 
+import { DOC_SECTIONS, type DocSectionId } from '@/lib/doc-sections';
 import { cn } from '@/lib/utils';
 
-export const BILLING_DOCS_LINKS = [
-  { href: '/blocks/billing', label: 'Overview' },
-  { href: '/blocks/billing/account', label: 'Billing Account' },
-  { href: '/blocks/billing/console', label: 'Billing Console' },
-  { href: '/blocks/features/billing', label: 'Feature pack' },
-] as const;
-
-export type BillingDocsHref = (typeof BILLING_DOCS_LINKS)[number]['href'];
-
-/** Paths that belong to the Billing docs section, for the sidebar's active state. */
-export function isBillingDocsPath(path: string) {
-  return path === '/blocks/billing' || path.startsWith('/blocks/billing/') || path === '/blocks/features/billing';
-}
-
-/** Moves between the pages of the Billing docs section. */
-export function BillingDocsNav({ current }: { current: BillingDocsHref }) {
+/** Moves between the pages of one docs section, such as Billing or Storage. */
+export function DocSectionNav({ section, current }: { section: DocSectionId; current: string }) {
+  const { title, links } = DOC_SECTIONS[section];
   return (
-    <nav aria-label="Billing docs" className="mb-6 overflow-x-auto border-b border-border [scrollbar-width:none]">
+    <nav aria-label={`${title} docs`} className="mb-6 overflow-x-auto border-b border-border [scrollbar-width:none]">
       <ul className="flex min-w-max gap-1">
-        {BILLING_DOCS_LINKS.map((link) => {
+        {links.map((link) => {
           const active = link.href === current;
           return (
             <li key={link.href}>

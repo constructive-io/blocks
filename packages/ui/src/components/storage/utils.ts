@@ -20,30 +20,29 @@ export function humanizeBytes(bytes: number | null | undefined): string {
 	return `${formatted} ${units[exponent]}`;
 }
 
+const COUNT = new Intl.NumberFormat('en-US');
+
+/** Thousands-separated count that renders the same on the server and in the browser. */
+export function formatCount(value: number): string {
+	return COUNT.format(value);
+}
+
+// Built once: `toLocaleDateString` creates a formatter on every call, which adds up across table rows.
+const DATE = new Intl.DateTimeFormat(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
+const DATE_TIME = new Intl.DateTimeFormat(undefined, { year: 'numeric', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
+
 /** Format an ISO timestamp as a compact, locale date — e.g. "Jun 24, 2026". */
 export function formatDate(iso: string | null | undefined): string {
 	if (!iso) return '—';
-	const date = new Date(iso);
-	if (Number.isNaN(date.getTime())) return '—';
-	return date.toLocaleDateString(undefined, {
-		year: 'numeric',
-		month: 'short',
-		day: 'numeric',
-	});
+	const time = Date.parse(iso);
+	return Number.isNaN(time) ? '—' : DATE.format(time);
 }
 
 /** Format an ISO timestamp with date + time — used in the detail sheet. */
 export function formatDateTime(iso: string | null | undefined): string {
 	if (!iso) return '—';
-	const date = new Date(iso);
-	if (Number.isNaN(date.getTime())) return '—';
-	return date.toLocaleString(undefined, {
-		year: 'numeric',
-		month: 'short',
-		day: 'numeric',
-		hour: 'numeric',
-		minute: '2-digit',
-	});
+	const time = Date.parse(iso);
+	return Number.isNaN(time) ? '—' : DATE_TIME.format(time);
 }
 
 /**
@@ -85,7 +84,50 @@ export function objectDisplayName(object: Pick<StorageObject, 'filename' | 'key'
 	return object.filename?.trim() || object.key;
 }
 
-/** Best display name for a bucket: its key (buckets have no separate label). */
-export function bucketDisplayName(bucket: Pick<StorageBucket, 'key'>): string {
-	return bucket.key;
+/** Best display name for a bucket: its friendly name, falling back to its key. */
+export function bucketDisplayName(bucket: Pick<StorageBucket, 'key'> & { name?: string | null }): string {
+	return bucket.name?.trim() || bucket.key;
+}
+
+export type FileCategory = 'image' | 'video' | 'audio' | 'document' | 'spreadsheet' | 'archive' | 'text' | 'folder' | 'other';
+
+const DOCUMENT_TYPES = new Set([
+	'application/pdf',
+	'application/msword',
+	'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+	'application/vnd.ms-powerpoint',
+	'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+]);
+const SPREADSHEET_TYPES = new Set([
+	'text/csv',
+	'application/vnd.ms-excel',
+	'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+]);
+const ARCHIVE_TYPES = new Set([
+	'application/zip',
+	'application/x-zip-compressed',
+	'application/gzip',
+	'application/x-tar',
+	'application/x-7z-compressed',
+	'application/x-rar-compressed',
+]);
+
+/** Broad family of a MIME type, for choosing an icon and its tint. */
+export function fileCategory(mimeType: string | null | undefined): FileCategory {
+	if (!mimeType) return 'other';
+	const lower = mimeType.toLowerCase();
+	if (lower.startsWith('image/')) return 'image';
+	if (lower.startsWith('video/')) return 'video';
+	if (lower.startsWith('audio/')) return 'audio';
+	if (DOCUMENT_TYPES.has(lower)) return 'document';
+	if (SPREADSHEET_TYPES.has(lower)) return 'spreadsheet';
+	if (ARCHIVE_TYPES.has(lower)) return 'archive';
+	if (lower.startsWith('text/') || lower === 'application/json') return 'text';
+	return 'other';
+}
+
+/** The folder part of an object key, e.g. "launch/cover.png" → "launch/". */
+export function keyFolder(key: string): string {
+	const slash = key.lastIndexOf('/');
+	return slash > 0 ? key.slice(0, slash + 1) : '';
 }

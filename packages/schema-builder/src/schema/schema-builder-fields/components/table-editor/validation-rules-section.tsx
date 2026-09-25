@@ -1,10 +1,11 @@
 'use client';
 
 import { Input } from '@constructive-io/ui/input';
-import { Label } from '@constructive-io/ui/label';
 
 import { getFieldTypeInfo } from '@/blocks/schema/schema-builder-core/lib/schema';
 import type { CellType } from '@/blocks/schema/schema-builder-core/lib/types/cell-types';
+
+import { FormField, FormSection } from './form-field';
 
 export interface ValidationRulesValues {
 	minLength?: number;
@@ -23,140 +24,71 @@ interface ValidationRulesSectionProps {
 	disabled?: boolean;
 }
 
-export function ValidationRulesSection({ dataType, values, onChange, disabled }: ValidationRulesSectionProps) {
-	const typeInfo = getFieldTypeInfo(dataType);
-	const configurable = typeInfo?.configurable;
-	const hasValidationRules =
-		configurable &&
-		(configurable.length || configurable.pattern || configurable.range || configurable.precision || configurable.scale);
+type NumberRule = { key: keyof ValidationRulesValues; label: string; placeholder: string; hint?: string; decimal?: boolean };
 
-	if (!hasValidationRules) return null;
+const LENGTH_RULES: NumberRule[] = [
+	{ key: 'minLength', label: 'Min length', placeholder: 'e.g., 3' },
+	{ key: 'maxLength', label: 'Max length', placeholder: 'e.g., 255' },
+];
+const RANGE_RULES: NumberRule[] = [
+	{ key: 'minValue', label: 'Min value', placeholder: 'e.g., 0', decimal: true },
+	{ key: 'maxValue', label: 'Max value', placeholder: 'e.g., 100', decimal: true },
+];
+const PRECISION_RULE: NumberRule = { key: 'precision', label: 'Precision', placeholder: 'e.g., 10', hint: 'Total digits' };
+const SCALE_RULE: NumberRule = { key: 'scale', label: 'Scale', placeholder: 'e.g., 2', hint: 'Decimal places' };
+
+export function ValidationRulesSection({ dataType, values, onChange, disabled }: ValidationRulesSectionProps) {
+	const configurable = getFieldTypeInfo(dataType)?.configurable;
+	if (!configurable) return null;
+
+	// Rows in display order; the regex pattern sits after the length row.
+	const numericRows = [
+		[...(configurable.precision ? [PRECISION_RULE] : []), ...(configurable.scale ? [SCALE_RULE] : [])],
+		configurable.range ? RANGE_RULES : [],
+	].filter((row) => row.length > 0);
+	if (!configurable.length && !configurable.pattern && numericRows.length === 0) return null;
+
+	const numberField = ({ key, label, placeholder, hint, decimal }: NumberRule) => (
+		<FormField hint={hint} htmlFor={key} key={key} label={label} subtle>
+			<Input
+				disabled={disabled}
+				id={key}
+				onChange={(e) => onChange(key, e.target.value ? (decimal ? parseFloat : parseInt)(e.target.value) : undefined)}
+				placeholder={placeholder}
+				type='number'
+				value={values[key] ?? ''}
+			/>
+		</FormField>
+	);
 
 	return (
-		<div className='space-y-4'>
-			<Label>
-				Validation Rules <span className='text-muted-foreground'>(optional)</span>
-			</Label>
-
-			{/* Length constraints (text types) */}
-			{configurable.length && (
-				<div className='grid grid-cols-2 gap-4'>
-					<div className='space-y-2'>
-						<Label htmlFor='minLength' className='text-muted-foreground text-xs'>
-							Min Length
-						</Label>
+		<FormSection
+			title={
+				<>
+					Validation rules <span className='text-muted-foreground'>(optional)</span>
+				</>
+			}
+		>
+			<div className='flex flex-col gap-4'>
+				{configurable.length ? <div className='grid grid-cols-2 gap-4'>{LENGTH_RULES.map(numberField)}</div> : null}
+				{configurable.pattern ? (
+					<FormField hint='Validate values with a regular expression' htmlFor='pattern' label='Regex pattern' subtle>
 						<Input
-							id='minLength'
-							type='number'
-							placeholder='e.g., 3'
-							value={values.minLength ?? ''}
-							onChange={(e) => onChange('minLength', e.target.value ? parseInt(e.target.value) : undefined)}
+							className='font-mono text-sm'
 							disabled={disabled}
+							id='pattern'
+							onChange={(e) => onChange('pattern', e.target.value || undefined)}
+							placeholder='e.g., ^[a-z]+$'
+							value={values.pattern ?? ''}
 						/>
+					</FormField>
+				) : null}
+				{numericRows.map((row) => (
+					<div className='grid grid-cols-2 gap-4' key={row[0]!.key}>
+						{row.map(numberField)}
 					</div>
-					<div className='space-y-2'>
-						<Label htmlFor='maxLength' className='text-muted-foreground text-xs'>
-							Max Length
-						</Label>
-						<Input
-							id='maxLength'
-							type='number'
-							placeholder='e.g., 255'
-							value={values.maxLength ?? ''}
-							onChange={(e) => onChange('maxLength', e.target.value ? parseInt(e.target.value) : undefined)}
-							disabled={disabled}
-						/>
-					</div>
-				</div>
-			)}
-
-			{/* Regex Pattern (text types) */}
-			{configurable.pattern && (
-				<div className='space-y-2'>
-					<Label htmlFor='pattern' className='text-muted-foreground text-xs'>
-						Regex Pattern
-					</Label>
-					<Input
-						id='pattern'
-						placeholder='e.g., ^[a-z]+$'
-						value={values.pattern ?? ''}
-						onChange={(e) => onChange('pattern', e.target.value || undefined)}
-						disabled={disabled}
-						className='font-mono text-sm'
-					/>
-					<p className='text-muted-foreground text-xs'>Validate values with a regular expression</p>
-				</div>
-			)}
-
-			{/* Precision & Scale (decimal/numeric types) */}
-			{(configurable.precision || configurable.scale) && (
-				<div className='grid grid-cols-2 gap-4'>
-					{configurable.precision && (
-						<div className='space-y-2'>
-							<Label htmlFor='precision' className='text-muted-foreground text-xs'>
-								Precision
-							</Label>
-							<Input
-								id='precision'
-								type='number'
-								placeholder='e.g., 10'
-								value={values.precision ?? ''}
-								onChange={(e) => onChange('precision', e.target.value ? parseInt(e.target.value) : undefined)}
-								disabled={disabled}
-							/>
-							<p className='text-muted-foreground text-xs'>Total digits</p>
-						</div>
-					)}
-					{configurable.scale && (
-						<div className='space-y-2'>
-							<Label htmlFor='scale' className='text-muted-foreground text-xs'>
-								Scale
-							</Label>
-							<Input
-								id='scale'
-								type='number'
-								placeholder='e.g., 2'
-								value={values.scale ?? ''}
-								onChange={(e) => onChange('scale', e.target.value ? parseInt(e.target.value) : undefined)}
-								disabled={disabled}
-							/>
-							<p className='text-muted-foreground text-xs'>Decimal places</p>
-						</div>
-					)}
-				</div>
-			)}
-
-			{/* Range constraints (numeric types) */}
-			{configurable.range && (
-				<div className='grid grid-cols-2 gap-4'>
-					<div className='space-y-2'>
-						<Label htmlFor='minValue' className='text-muted-foreground text-xs'>
-							Min Value
-						</Label>
-						<Input
-							id='minValue'
-							type='number'
-							placeholder='e.g., 0'
-							value={values.minValue ?? ''}
-							onChange={(e) => onChange('minValue', e.target.value ? parseFloat(e.target.value) : undefined)}
-							disabled={disabled}
-						/>
-					</div>
-					<div className='space-y-2'>
-						<Label htmlFor='maxValue' className='text-muted-foreground text-xs'>
-							Max Value
-						</Label>
-						<Input
-							id='maxValue'
-							type='number'
-							placeholder='e.g., 100'
-							value={values.maxValue ?? ''}
-							onChange={(e) => onChange('maxValue', e.target.value ? parseFloat(e.target.value) : undefined)}
-							disabled={disabled}
-						/>
-					</div>
-				</div>
-			)}
-		</div>
+				))}
+			</div>
+		</FormSection>
 	);
 }

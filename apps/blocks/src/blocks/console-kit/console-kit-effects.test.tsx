@@ -21,8 +21,8 @@ vi.mock('./console-kit-runtime', async (importOriginal) => ({
   useConsoleKitRuntime: runtimeMocks.useConsoleKitRuntime
 }));
 
-vi.mock('@constructive-io/ui/app-shell', () => ({
-  AppShell: ({ account, breadcrumbs, children, navigation, renderLink }: Readonly<{
+vi.mock('./console-shell', () => ({
+  ConsoleShell: ({ account, breadcrumbs, children, navigation, renderLink }: Readonly<{
     account?: Readonly<{
       name: string;
       secondaryLabel?: string;
@@ -1328,7 +1328,7 @@ describe('Console Kit observational callbacks', () => {
       failedRefresh.reject(new Error('Refresh failed'));
       await failedRefresh.promise.catch(() => undefined);
     });
-    expect(await screen.findByText('The auth feature could not be loaded')).toBeVisible();
+    expect(await screen.findByText('Authentication could not be loaded')).toBeVisible();
 
     fireEvent.click(screen.getByRole('button', { name: 'Try again' }));
     await waitFor(() => expect(adapterLoad).toHaveBeenCalledTimes(3));

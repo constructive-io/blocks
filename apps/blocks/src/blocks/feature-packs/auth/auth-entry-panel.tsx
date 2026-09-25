@@ -216,20 +216,20 @@ export function AuthEntryPanel({
 
   return (
     <div className='flex min-h-[min(36rem,calc(100dvh-8rem))] items-center justify-center py-2 sm:py-6'>
-      <Card className='w-full max-w-md border-border/70 shadow-sm' variant='flat'>
-        <CardHeader className='pb-2'>
-          <div className='bg-primary text-primary-foreground mb-3 flex size-10 items-center justify-center rounded-lg'>
-            <KeyRoundIcon aria-hidden='true' />
+      <Card className='w-full max-w-sm gap-0 border-0 py-0 shadow-card' variant='flat'>
+        <CardHeader className='gap-1 px-6 pt-6 pb-4'>
+          <div className='bg-primary/10 text-primary ring-primary/20 mb-3 grid size-9 place-items-center rounded-[10px] ring-1 ring-inset'>
+            <KeyRoundIcon aria-hidden='true' className='size-4' />
           </div>
           <CardTitle>
-            <h1 className='text-balance text-base font-semibold tracking-tight lg:text-xl'>
+            <h1 className='text-balance text-lg font-medium tracking-tight'>
               {copy.title}
             </h1>
           </CardTitle>
-          <CardDescription className='text-pretty'>{copy.description}</CardDescription>
+          <CardDescription className='text-pretty text-[13px]'>{copy.description}</CardDescription>
         </CardHeader>
         <form noValidate onSubmit={(event) => void submit(event)}>
-          <CardContent className='flex flex-col gap-4'>
+          <CardContent className='flex flex-col gap-4 px-6 pb-6'>
             {activeNotice ? (
               <Alert
                 role={activeNotice.status === 'error' ? 'alert' : 'status'}
@@ -367,20 +367,23 @@ export function AuthEntryPanel({
           />
         ) : null}
         {mode === 'sign-in' && (canRecoverPassword || canSignUp) ? (
-          <CardFooter className='mt-6 flex flex-wrap justify-between gap-2 border-t'>
+          <CardFooter className='flex flex-wrap items-center justify-between gap-2 border-t border-dashed border-foreground/10 bg-muted/30 px-6 py-3 text-[13px]'>
             {canRecoverPassword ? (
-              <Button onClick={() => onModeChange?.('recover-password')} size='sm' variant='link'>
+              <button className='text-muted-foreground hover:text-foreground cursor-pointer rounded outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50' onClick={() => onModeChange?.('recover-password')} type='button'>
                 Forgot password?
-              </Button>
-            ) : null}
+              </button>
+            ) : <span />}
             {canSignUp ? (
-              <Button onClick={() => onModeChange?.('sign-up')} size='sm' variant='ghost'>
-                Create account
-              </Button>
+              <span className='text-muted-foreground'>
+                New here?{' '}
+                <button className='text-primary cursor-pointer rounded font-medium outline-none hover:underline focus-visible:ring-[3px] focus-visible:ring-ring/50' onClick={() => onModeChange?.('sign-up')} type='button'>
+                  Create account
+                </button>
+              </span>
             ) : null}
           </CardFooter>
         ) : mode !== 'sign-in' && canSignIn ? (
-          <CardFooter className='mt-6 flex flex-wrap justify-between gap-2 border-t'>
+          <CardFooter className='flex flex-wrap justify-between gap-2 border-t border-dashed border-foreground/10 bg-muted/30 px-6 py-2'>
             <Button onClick={() => onModeChange?.('sign-in')} size='sm' variant='ghost'>
               <ArrowLeftIcon data-icon='inline-start' />
               Back to sign in

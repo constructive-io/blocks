@@ -42,40 +42,31 @@ export const DraggableFieldType = memo(function DraggableFieldType({ typeInfo, i
 			style={style}
 			{...listeners}
 			{...attributes}
+			title={typeInfo.description}
 			className={cn(
-				`group hover:bg-accent flex cursor-grab items-center gap-3 rounded-lg border border-transparent px-2.5 py-2
-				transition-[background-color,border-color,box-shadow,opacity] duration-(--duration-moderate) ease-out active:cursor-grabbing`,
-				'touch-none select-none',
-				'hover:border-border/60 hover:shadow-sm',
+				'group flex h-9 cursor-grab items-center gap-2.5 rounded-lg px-2 active:cursor-grabbing',
+				'touch-none select-none hover:bg-overlay-hover outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50',
 				{
 					'opacity-50': isBeingDragged && !isDragging,
-					'border-primary/30 bg-primary/5 shadow-md': isDragging,
+					'bg-card shadow-card-lg': isDragging,
 				},
 				className,
 			)}
 		>
-			{/* Type Icon */}
-			<div
-				className='bg-muted/60 text-muted-foreground flex h-8 w-8 flex-shrink-0 items-center justify-center
-					rounded-md'
-			>
+			<span className='bg-muted text-muted-foreground group-hover:text-foreground grid size-6 shrink-0 place-items-center rounded-md'>
 				{IconComponent ? (
-					<IconComponent className='h-4 w-4' />
+					<IconComponent className='size-3.5' />
 				) : (
-					<span className='font-mono text-xs font-medium'>{typeInfo.type.charAt(0).toUpperCase()}</span>
+					<span className='font-mono text-[11px] font-medium'>{typeInfo.type.charAt(0).toUpperCase()}</span>
 				)}
-			</div>
+			</span>
 
-			{/* Type Info */}
-			<div className='min-w-0 flex-1'>
-				<span className='text-foreground block truncate text-sm font-medium'>{typeInfo.label}</span>
-				<p className='text-muted-foreground truncate text-xs'>{typeInfo.description}</p>
-			</div>
+			<span className='flex min-w-0 flex-1 items-baseline gap-2'>
+				<span className='text-foreground shrink-0 text-[13px]'>{typeInfo.label}</span>
+				<span className='text-muted-foreground min-w-0 truncate text-xs'>{typeInfo.description}</span>
+			</span>
 
-			{/* Drag Handle */}
-			<div className='flex-shrink-0 opacity-0 transition-opacity group-hover:opacity-100'>
-				<RiDragDropLine className='text-muted-foreground h-4 w-4' />
-			</div>
+			<RiDragDropLine aria-hidden='true' className='text-muted-foreground size-3.5 shrink-0 opacity-0 group-hover:opacity-100' />
 		</div>
 	);
 });

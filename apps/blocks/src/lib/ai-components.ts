@@ -790,7 +790,7 @@ export const AI_COMPONENTS: readonly AiComponentDoc[] = [
     title: 'Model Selector',
     exportName: 'ModelSelector',
     description:
-      'Composer model picker with search, pinned routers, recent and recommended sections, reasoning levels, relative cost or per-million pricing, and a detail strip for the highlighted model.',
+      'Composer model picker with search, pinned routers, recent and recommended sections, relative cost or per-million pricing, and a side card for the highlighted model with its reasoning levels and prices.',
     whenToUse: [
       'Use ModelSelector in a composer action row when people choose a model and how hard it should think.',
       'Pass pricing to show cost; omit it (or set priceDisplay="none") for workspaces that bill flat.',

@@ -1,126 +1,204 @@
-import type { Edge } from '@xyflow/react';
-import type { OrgChartEdge, OrgChartNode } from './org-chart.types';
+import type { OrgChartEdge, OrgChartNodeData } from './org-chart.types';
 
-export const NODE_WIDTH = 260;
-export const NODE_HEIGHT = 100;
-export const COMPACT_NODE_WIDTH = 184;
-const COMPACT_NODE_HEIGHT = 76;
-const RANK_SEP = 80;
-const NODE_SEP = 40;
-const COMPACT_RANK_SEP = 60;
-const COMPACT_NODE_SEP = 12;
-const ROOT_KEY = '__root__';
+type Metrics = { width: number; header: number; footer: number; nodeGap: number; rankGap: number; treeGap: number };
 
-export interface LayoutResult {
-	nodes: OrgChartNode[];
-	edges: Edge[];
+const REGULAR: Metrics = { width: 232, header: 52, footer: 28, nodeGap: 24, rankGap: 72, treeGap: 56 };
+const COMPACT: Metrics = { width: 184, header: 44, footer: 26, nodeGap: 12, rankGap: 56, treeGap: 32 };
+
+/** Shell border (1) and bezel (3) on each side. */
+const CHROME = 8;
+
+export function metricsFor(compact: boolean) {
+	return compact ? COMPACT : REGULAR;
 }
 
-export function computeLayout(edges: OrgChartEdge[], isCompact = false): LayoutResult {
-	const nodeWidth = isCompact ? COMPACT_NODE_WIDTH : NODE_WIDTH;
-	const nodeHeight = isCompact ? COMPACT_NODE_HEIGHT : NODE_HEIGHT;
-	const rankSeparation = isCompact ? COMPACT_RANK_SEP : RANK_SEP;
-	const nodeSeparation = isCompact ? COMPACT_NODE_SEP : NODE_SEP;
+/** Everyone indexed once: children sorted by name, roots in input order. */
+export type OrgIndex = {
+	edges: ReadonlyMap<string, OrgChartEdge>;
+	children: ReadonlyMap<string, readonly string[]>;
+	roots: readonly string[];
+};
 
-	// Single pass builds edgeById, childCountMap, and childrenMap.
-	const edgeById = new Map<string, OrgChartEdge>();
-	const childCountMap = new Map<string, number>();
-	const childrenMap = new Map<string, string[]>();
-	for (const e of edges) {
-		edgeById.set(e.id, e);
-		if (e.parentId) {
-			childCountMap.set(e.parentId, (childCountMap.get(e.parentId) ?? 0) + 1);
-		}
-		const parent = e.parentId ?? ROOT_KEY;
-		const bucket = childrenMap.get(parent);
-		if (bucket) bucket.push(e.id);
-		else childrenMap.set(parent, [e.id]);
-	}
-	for (const children of childrenMap.values()) {
-		children.sort((a, b) => {
-			const nameA = edgeById.get(a)?.displayName?.toLowerCase() ?? '';
-			const nameB = edgeById.get(b)?.displayName?.toLowerCase() ?? '';
-			return nameA.localeCompare(nameB);
-		});
-	}
+function byName(edges: ReadonlyMap<string, OrgChartEdge>) {
+	return (a: string, b: string) => (edges.get(a)?.displayName ?? '').localeCompare(edges.get(b)?.displayName ?? '', undefined, { sensitivity: 'base' });
+}
 
-	const widthCache = new Map<string, number>();
-	const subtreeWidth = (nodeId: string): number => {
-		if (widthCache.has(nodeId)) return widthCache.get(nodeId)!;
-		const children = childrenMap.get(nodeId);
-		if (!children || children.length === 0) {
-			widthCache.set(nodeId, nodeWidth);
-			return nodeWidth;
+/**
+ * Indexes flat edges into a forest. Anyone whose manager is missing (or is
+ * themselves) becomes a root, and a cycle is broken at its first member, so
+ * bad data still renders every person exactly once.
+ */
+export function indexEdges(list: readonly OrgChartEdge[]): OrgIndex {
+	const edges = new Map(list.map((edge) => [edge.id, edge]));
+	const children = new Map<string, string[]>();
+	const roots: string[] = [];
+	for (const edge of edges.values()) {
+		const parent = edge.parentId && edge.parentId !== edge.id && edges.has(edge.parentId) ? edge.parentId : null;
+		if (!parent) {
+			roots.push(edge.id);
+			continue;
 		}
-		const totalChildWidth = children.reduce((sum, c) => sum + subtreeWidth(c), 0);
-		const gaps = (children.length - 1) * nodeSeparation;
-		const w = Math.max(nodeWidth, totalChildWidth + gaps);
-		widthCache.set(nodeId, w);
-		return w;
+		const siblings = children.get(parent);
+		if (siblings) siblings.push(edge.id);
+		else children.set(parent, [edge.id]);
+	}
+	const compare = byName(edges);
+	for (const siblings of children.values()) siblings.sort(compare);
+
+	const reached = new Set<string>();
+	const walk = (id: string) => {
+		if (reached.has(id)) return;
+		reached.add(id);
+		for (const child of children.get(id) ?? []) walk(child);
+	};
+	roots.forEach(walk);
+	for (const id of edges.keys()) {
+		if (reached.has(id)) continue;
+		roots.push(id);
+		walk(id);
+	}
+	return { edges, children, roots };
+}
+
+/** Everyone below `id`, however deep. */
+export function descendantsOf(index: OrgIndex, id: string): Set<string> {
+	const found = new Set<string>();
+	const stack = [...(index.children.get(id) ?? [])];
+	while (stack.length > 0) {
+		const next = stack.pop()!;
+		if (found.has(next) || next === id) continue;
+		found.add(next);
+		stack.push(...(index.children.get(next) ?? []));
+	}
+	return found;
+}
+
+/** The chain of managers above `id`, nearest first. */
+export function managersOf(index: OrgIndex, id: string): string[] {
+	const chain: string[] = [];
+	const seen = new Set([id]);
+	let parent = effectiveParent(index, id);
+	while (parent && !seen.has(parent)) {
+		chain.push(parent);
+		seen.add(parent);
+		parent = effectiveParent(index, parent);
+	}
+	return chain;
+}
+
+export function effectiveParent(index: OrgIndex, id: string): string | null {
+	const parentId = index.edges.get(id)?.parentId;
+	return parentId && index.children.get(parentId)?.includes(id) ? parentId : null;
+}
+
+/** A person's node data straight from the index, whether or not they are on screen. */
+export function nodeDataFor(index: OrgIndex, id: string, compact: boolean): OrgChartNodeData | undefined {
+	const edge = index.edges.get(id);
+	if (!edge) return undefined;
+	return { ...edge, childCount: index.children.get(id)?.length ?? 0, isRoot: effectiveParent(index, id) === null, isCompact: compact };
+}
+
+export type PlacedPerson = {
+	data: OrgChartNodeData;
+	x: number;
+	y: number;
+	width: number;
+	height: number;
+	/** 0 for roots. */
+	depth: number;
+	/** Visible parent; null for roots. */
+	parentId: string | null;
+	/** Visible direct reports, left to right. */
+	childIds: readonly string[];
+	collapsed: boolean;
+	/** Everyone hidden under a collapsed node. */
+	hiddenCount: number;
+	/** 1-based position among siblings, and the sibling count, for the tree's ARIA attributes. */
+	position: number;
+	siblings: number;
+};
+
+export type OrgLayout = {
+	people: readonly PlacedPerson[];
+	byId: ReadonlyMap<string, PlacedPerson>;
+	width: number;
+	height: number;
+	nodeWidth: number;
+};
+
+/**
+ * Tidy top-down tree: each subtree is as wide as its children (or one card),
+ * parents centre over their children, and each rank sits one step lower.
+ * Collapsed nodes keep their card but hide everyone below. Coordinates start
+ * at 0, so the content box is `width` by `height`.
+ */
+export function computeLayout(index: OrgIndex, compact: boolean, collapsed: ReadonlySet<string>): OrgLayout {
+	const metrics = metricsFor(compact);
+	const step = CHROME + metrics.header + metrics.footer + metrics.rankGap;
+	const visibleChildren = (id: string) => (collapsed.has(id) ? [] : (index.children.get(id) ?? []));
+
+	const widths = new Map<string, number>();
+	const subtreeWidth = (id: string, trail: Set<string>): number => {
+		const cached = widths.get(id);
+		if (cached !== undefined) return cached;
+		trail.add(id);
+		const kids = visibleChildren(id).filter((child) => !trail.has(child));
+		const span = kids.reduce((sum, child) => sum + subtreeWidth(child, trail), 0) + Math.max(0, kids.length - 1) * metrics.nodeGap;
+		trail.delete(id);
+		const width = Math.max(metrics.width, span);
+		widths.set(id, width);
+		return width;
 	};
 
-	const positions = new Map<string, { x: number; y: number }>();
+	const people: PlacedPerson[] = [];
+	const byId = new Map<string, PlacedPerson>();
+	let height = 0;
 
-	const positionSubtree = (nodeId: string, centerX: number, y: number) => {
-		positions.set(nodeId, { x: centerX, y });
-		const children = childrenMap.get(nodeId);
-		if (!children || children.length === 0) return;
-
-		const totalWidth = children.reduce((sum, c) => sum + subtreeWidth(c), 0) + (children.length - 1) * nodeSeparation;
-		let currentX = centerX - totalWidth / 2;
-
-		for (const childId of children) {
-			const childW = subtreeWidth(childId);
-			positionSubtree(childId, currentX + childW / 2, y + nodeHeight + rankSeparation);
-			currentX += childW + nodeSeparation;
-		}
-	};
-
-	const roots = childrenMap.get(ROOT_KEY) ?? [];
-	if (roots.length === 1) {
-		positionSubtree(roots[0], 0, 0);
-	} else {
-		const totalWidth = roots.reduce((sum, r) => sum + subtreeWidth(r), 0) + (roots.length - 1) * nodeSeparation;
-		let currentX = -totalWidth / 2;
-		for (const rootId of roots) {
-			const w = subtreeWidth(rootId);
-			positionSubtree(rootId, currentX + w / 2, 0);
-			currentX += w + nodeSeparation;
-		}
-	}
-
-	const nodes: OrgChartNode[] = edges.map((e) => {
-		const pos = positions.get(e.id)!;
-		return {
-			id: e.id,
-			type: 'orgChartNode' as const,
-			width: nodeWidth,
-			height: nodeHeight,
-			position: {
-				x: pos.x - nodeWidth / 2,
-				y: pos.y,
-			},
+	const place = (id: string, left: number, depth: number, parentId: string | null, position: number, siblings: number) => {
+		const edge = index.edges.get(id);
+		if (!edge || byId.has(id)) return;
+		const allChildren = index.children.get(id) ?? [];
+		const isCollapsed = collapsed.has(id) && allChildren.length > 0;
+		const kids = isCollapsed ? [] : allChildren.filter((child) => !byId.has(child) && child !== id);
+		const width = subtreeWidth(id, new Set());
+		const nodeHeight = CHROME + metrics.header + (allChildren.length > 0 ? metrics.footer : 0);
+		const person: PlacedPerson = {
 			data: {
-				id: e.id,
-				displayName: e.displayName,
-				avatarUrl: e.avatarUrl,
-				positionTitle: e.positionTitle,
-				parentId: e.parentId,
-				childCount: childCountMap.get(e.id) ?? 0,
-				isRoot: !e.parentId,
-				isCompact,
+				...edge,
+				childCount: allChildren.length,
+				isRoot: parentId === null,
+				isCompact: compact,
 			},
+			x: left + (width - metrics.width) / 2,
+			y: depth * step,
+			width: metrics.width,
+			height: nodeHeight,
+			depth,
+			parentId,
+			childIds: kids,
+			collapsed: isCollapsed,
+			hiddenCount: isCollapsed ? descendantsOf(index, id).size : 0,
+			position,
+			siblings,
 		};
+		people.push(person);
+		byId.set(id, person);
+		height = Math.max(height, person.y + nodeHeight);
+
+		const span = kids.reduce((sum, child) => sum + (widths.get(child) ?? metrics.width), 0) + Math.max(0, kids.length - 1) * metrics.nodeGap;
+		let cursor = left + (width - span) / 2;
+		kids.forEach((child, childIndex) => {
+			place(child, cursor, depth + 1, id, childIndex + 1, kids.length);
+			cursor += (widths.get(child) ?? metrics.width) + metrics.nodeGap;
+		});
+	};
+
+	let cursor = 0;
+	index.roots.forEach((root, rootIndex) => {
+		if (byId.has(root)) return;
+		place(root, cursor, 0, null, rootIndex + 1, index.roots.length);
+		cursor += subtreeWidth(root, new Set()) + metrics.treeGap;
 	});
 
-	const flowEdges: Edge[] = edges
-		.filter((e) => e.parentId)
-		.map((e) => ({
-			id: `edge-${e.parentId}-${e.id}`,
-			source: e.parentId!,
-			target: e.id,
-			type: 'orgChartEdge',
-		}));
-
-	return { nodes, edges: flowEdges };
+	return { people, byId, width: Math.max(0, cursor - metrics.treeGap), height, nodeWidth: metrics.width };
 }

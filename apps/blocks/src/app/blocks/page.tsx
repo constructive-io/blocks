@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { InstallToggle } from '@/components/docs/install-toggle';
 import { APPLICATION_BLOCKS, applicationBlockHref } from '@/lib/application-blocks';
 import { COMPONENT_DOC_SEQUENCE } from '@/lib/component-doc-navigation';
+import { DOC_SECTION_LIST } from '@/lib/doc-sections';
 import { packageCommands, registryCommands } from '@/lib/install-mode';
 import { OG_IMAGE, withBase } from '@/lib/site';
 import { SOURCE_BLOCKS } from '@/lib/source-blocks';
@@ -23,11 +24,11 @@ const APPLICATION_CATALOG = [
     title: block.title,
     description: block.description,
   })),
-  {
-    href: '/blocks/billing',
-    title: 'Billing',
-    description: 'Customer and operator billing workspaces, gift codes, and the billing feature pack, for platform and tenant billing.',
-  },
+  ...DOC_SECTION_LIST.map((section) => ({
+    href: section.hub,
+    title: section.title,
+    description: section.summary,
+  })),
   ...SOURCE_BLOCKS.map((block) => ({
     href: `/blocks/${block.name}`,
     title: block.title,

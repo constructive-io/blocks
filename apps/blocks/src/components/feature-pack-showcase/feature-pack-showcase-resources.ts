@@ -449,9 +449,46 @@ export const FEATURE_PACK_SHOWCASE_ORGANIZATIONS: OrganizationsFeatureData = {
     populateMemberEmail: true,
     limitAllocationMode: 'pooled',
   },
-  hierarchy: [],
-  principals: [],
-  apiKeys: [],
+  hierarchy: [
+    {
+      id: 'org_edge_grace',
+      childId: 'user_grace',
+      parentId: 'user_ada',
+      positionTitle: 'Head of Engineering',
+      positionLevel: 1,
+      actionPolicy: { removeHierarchyEdge: true },
+    },
+    {
+      id: 'org_edge_alan',
+      childId: 'user_alan',
+      parentId: 'user_grace',
+      positionTitle: 'Research Engineer',
+      positionLevel: 2,
+      actionPolicy: { removeHierarchyEdge: true },
+    },
+  ],
+  principals: [
+    {
+      id: 'org_principal_ci',
+      name: 'Deploy pipeline',
+      type: 'Service',
+      useAdminOwner: false,
+      isReadOnly: true,
+      bypassStepUp: false,
+      actionPolicy: { revokeOrganizationPrincipal: true },
+    },
+  ],
+  apiKeys: [
+    {
+      id: 'org_key_ci',
+      principalId: 'org_principal_ci',
+      name: 'Reporting export',
+      createdAt: '2026-06-02T10:00:00.000Z',
+      lastUsedAt: '2026-07-21T08:12:00.000Z',
+      expiresAt: '2026-09-01T00:00:00.000Z',
+      actionPolicy: { revokeOrganizationApiKey: true },
+    },
+  ],
 };
 
 export const FEATURE_PACK_SHOWCASE_STORAGE: StorageFeatureData = {
@@ -504,15 +541,19 @@ export const FEATURE_PACK_SHOWCASE_STORAGE: StorageFeatureData = {
   ],
 };
 
+// Notification times are relative to page load so the inbox groups read as Today, Yesterday, and earlier.
+const SHOWCASE_NOW = Math.floor(Date.now() / 60_000) * 60_000;
+const minutesAgo = (minutes: number) => new Date(SHOWCASE_NOW - minutes * 60_000).toISOString();
+
 export const FEATURE_PACK_SHOWCASE_NOTIFICATIONS: NotificationsFeatureData = {
-  unreadCount: 2,
+  unreadCount: 3,
   notifications: [
     {
       id: 'notification_invite',
       title: 'Grace accepted your invitation',
       body: 'Grace Hopper joined Northstar Labs as an administrator.',
       category: 'Membership',
-      createdAt: '12 minutes ago',
+      createdAt: minutesAgo(12),
       actionLabel: 'Open members',
       actionHref: '/members',
     },
@@ -521,19 +562,44 @@ export const FEATURE_PACK_SHOWCASE_NOTIFICATIONS: NotificationsFeatureData = {
       title: 'Storage usage reached 80%',
       body: 'Product assets is approaching its current storage allowance.',
       category: 'Usage',
-      createdAt: '2 hours ago',
+      createdAt: minutesAgo(135),
       actionLabel: 'Review usage',
       actionHref: '/billing/usage',
+    },
+    {
+      id: 'notification_key',
+      title: 'New API key created',
+      body: 'Reporting export was issued for the Deploy pipeline principal.',
+      category: 'Security',
+      createdAt: minutesAgo(190),
+      readAt: minutesAgo(180),
     },
     {
       id: 'notification_export',
       title: 'Customer export is ready',
       body: 'The requested CSV export finished successfully.',
       category: 'Data',
-      createdAt: 'Yesterday',
-      readAt: '2026-07-21T11:30:00.000Z',
+      createdAt: minutesAgo(26 * 60),
+      readAt: minutesAgo(25 * 60),
       actionLabel: 'Download export',
       actionHref: '/exports/customer.csv',
+    },
+    {
+      id: 'notification_signin',
+      title: 'New sign-in from Firefox on Linux',
+      body: 'If this was not you, revoke the session from your account settings.',
+      category: 'Security',
+      createdAt: minutesAgo(30 * 60),
+      actionLabel: 'Review sessions',
+      actionHref: '/account/sessions',
+    },
+    {
+      id: 'notification_policy',
+      title: 'Membership approval turned on',
+      body: 'New organization members now wait for an administrator to approve them.',
+      category: 'Membership',
+      createdAt: minutesAgo(4 * 24 * 60),
+      readAt: minutesAgo(4 * 24 * 60 - 30),
     },
   ],
 };

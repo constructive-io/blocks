@@ -34,6 +34,7 @@ describe('schemaToDocument', () => {
 			properties: {
 				name: { type: 'string', maxLength: 80 },
 				bio: { type: 'string' },
+				slug: { type: 'string', pattern: '^[a-z0-9-]+$' },
 				age: { type: 'integer' },
 				score: { type: 'number', multipleOf: 0.5 },
 				active: { type: 'boolean' },
@@ -47,6 +48,7 @@ describe('schemaToDocument', () => {
 		const byName = new Map(fieldsOf(document).map((node) => [node.props.name, node]));
 		expect(byName.get('name')?.type).toBe('Input');
 		expect(byName.get('bio')?.type).toBe('Textarea');
+		expect(byName.get('slug')?.type).toBe('Input');
 		expect(byName.get('age')?.type).toBe('NumberInput');
 		expect(byName.get('age')?.props.step).toBe(1);
 		expect(byName.get('score')?.props.step).toBe(0.5);

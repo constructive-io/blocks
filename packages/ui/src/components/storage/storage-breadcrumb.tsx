@@ -1,14 +1,10 @@
-import { HardDriveIcon } from 'lucide-react';
+'use client';
 
-import {
-	Breadcrumb,
-	BreadcrumbItem,
-	BreadcrumbLink,
-	BreadcrumbList,
-	BreadcrumbPage,
-	BreadcrumbSeparator,
-} from '../breadcrumb';
+import { ChevronRightIcon, HardDriveIcon } from 'lucide-react';
+import * as React from 'react';
+
 import { cn } from '../../lib/utils';
+import { focusRingClass, scrollRowClass } from '../workspace-kit/primitives';
 
 /** A single path segment inside a bucket (folder-style). */
 export interface StorageBreadcrumbSegment {
@@ -25,58 +21,57 @@ interface StorageBreadcrumbProps {
 	segments?: StorageBreadcrumbSegment[];
 	/**
 	 * Navigate callback. `path` is the segment's prefix, or `null` for the
-	 * bucket root crumb.
+	 * bucket root crumb. Without it every crumb is plain text.
 	 */
 	onNavigate?: (path: string | null) => void;
+	/** Disable navigation, e.g. while a folder is loading. */
+	disabled?: boolean;
 	className?: string;
 }
 
+const CRUMB = 'inline-flex h-6 min-w-0 max-w-48 items-center gap-1.5 rounded-md px-1.5';
+
 /**
- * `StorageBreadcrumb` — bucket root plus optional folder segments. Pure render;
- * the final crumb is the current location and is not a link.
+ * `StorageBreadcrumb` — the bucket root and folder segments as quiet, compact
+ * crumbs. The last crumb is the current location; earlier ones navigate
+ * when `onNavigate` is set. Scrolls sideways instead of wrapping.
  */
-export function StorageBreadcrumb({ bucketKey, segments = [], onNavigate, className }: StorageBreadcrumbProps) {
-	const hasSegments = segments.length > 0;
+export function StorageBreadcrumb({ bucketKey, segments = [], onNavigate, disabled = false, className }: StorageBreadcrumbProps) {
+	const crumbs = [{ label: bucketKey, path: null as string | null }, ...segments.map((segment) => ({ label: segment.label, path: segment.path as string | null }))];
 
 	return (
-		<Breadcrumb className={cn('min-w-0', className)}>
-			<BreadcrumbList className='flex-nowrap'>
-				<BreadcrumbItem className='min-w-0'>
-					{hasSegments ? (
-						<BreadcrumbLink
-							className='inline-flex min-w-0 cursor-pointer items-center gap-1.5'
-							onClick={() => onNavigate?.(null)}
-						>
-							<HardDriveIcon className='size-3.5 shrink-0' aria-hidden />
-							<span className='truncate'>{bucketKey}</span>
-						</BreadcrumbLink>
-					) : (
-						<BreadcrumbPage className='inline-flex min-w-0 items-center gap-1.5'>
-							<HardDriveIcon className='size-3.5 shrink-0' aria-hidden />
-							<span className='truncate'>{bucketKey}</span>
-						</BreadcrumbPage>
-					)}
-				</BreadcrumbItem>
-
-				{segments.map((segment, index) => {
-					const isLast = index === segments.length - 1;
+		<nav aria-label="Folder path" className={cn(scrollRowClass, 'min-w-0', className)}>
+			<ol className="flex w-max items-center gap-0.5 text-[13px]">
+				{crumbs.map((crumb, index) => {
+					const last = index === crumbs.length - 1;
+					const content = (
+						<>
+							{index === 0 ? <HardDriveIcon aria-hidden="true" className="size-3.5 shrink-0" /> : null}
+							<span className="truncate">{crumb.label}</span>
+						</>
+					);
 					return (
-						<BreadcrumbItem key={segment.path} className='min-w-0'>
-							<BreadcrumbSeparator />
-							{isLast ? (
-								<BreadcrumbPage className='truncate'>{segment.label}</BreadcrumbPage>
+						<li key={crumb.path ?? '__root__'} className="flex min-w-0 items-center gap-0.5">
+							{index > 0 ? <ChevronRightIcon aria-hidden="true" className="size-3.5 shrink-0 text-subtle-foreground" /> : null}
+							{last || !onNavigate ? (
+								<span aria-current={last ? 'location' : undefined} className={cn(CRUMB, last ? 'font-medium text-foreground' : 'text-muted-foreground')} title={crumb.label}>
+									{content}
+								</span>
 							) : (
-								<BreadcrumbLink
-									className='cursor-pointer truncate'
-									onClick={() => onNavigate?.(segment.path)}
+								<button
+									type="button"
+									disabled={disabled}
+									onClick={() => onNavigate(crumb.path)}
+									title={crumb.label}
+									className={cn(CRUMB, 'cursor-pointer text-muted-foreground hover:bg-overlay-hover hover:text-foreground disabled:cursor-not-allowed disabled:opacity-60', focusRingClass)}
 								>
-									{segment.label}
-								</BreadcrumbLink>
+									{content}
+								</button>
 							)}
-						</BreadcrumbItem>
+						</li>
 					);
 				})}
-			</BreadcrumbList>
-		</Breadcrumb>
+			</ol>
+		</nav>
 	);
 }

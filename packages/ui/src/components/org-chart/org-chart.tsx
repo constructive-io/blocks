@@ -1,67 +1,26 @@
 'use client';
 
-import '@xyflow/react/dist/style.css';
-
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import {
-	Background,
-	BackgroundVariant,
-	ReactFlow,
-	ReactFlowProvider,
-	useEdgesState,
-	useNodesState,
-	useReactFlow,
-	type Edge,
-	type EdgeTypes,
-	type Node,
-	type NodeTypes,
-	type OnNodeDrag,
-} from '@xyflow/react';
-
-import { Loader2 } from 'lucide-react';
+import * as React from 'react';
 
 import { cn } from '../../lib/utils';
 import { TooltipProvider } from '../tooltip';
-import { FlowZoomPanel } from '../flow-zoom-panel';
+import { CanvasSurface, CanvasWire, CanvasZoomControls, useCanvasViewport, WIRE_STROKE, WireDot, type WirePoint, type WireTone } from '../workspace-kit/canvas';
+import { useReducedMotion } from '../workspace-kit/reduced-motion';
+import { useLatest } from '../workspace-kit/use-latest';
+import { computeLayout, descendantsOf, effectiveParent, indexEdges, managersOf, nodeDataFor, type OrgLayout, type PlacedPerson } from './layout';
+import { OrgChartDetails } from './org-chart-details';
+import { OrgChartMoveDialog } from './org-chart-move-dialog';
+import { OrgChartNode, type NodeHandlers } from './org-chart-node';
+import { OrgChartEmpty, OrgChartLoading } from './org-chart-states';
+import type { OrgChartEdge, OrgChartNodeData } from './org-chart.types';
+import { personName } from './org-chart-utils';
 
-import { computeLayout } from './layout';
-import { NodeActionsProvider, OrgChartProvider, useOrgChartContext } from './org-chart-context';
-import { OrgChartEdge as OrgChartEdgeComponent } from './org-chart-edge';
-import { OrgChartEmpty } from './org-chart-empty';
-import { OrgChartNodeMemo } from './org-chart-node';
-import type { OrgChartEdge, OrgChartNodeData, OrgChartNode as OrgChartNodeType } from './org-chart.types';
-
-const FIT_VIEW_OPTIONS = { padding: 0.12 } as const;
-const COMPACT_FIT_VIEW_OPTIONS = { padding: 0.02 } as const;
-const COMPACT_LAYOUT_MAX_WIDTH = 639;
-
-/** Walk parent→child graph to collect all descendant IDs (cycle-check on drag drop). */
-function getDescendantIds(nodeId: string, nodes: { id: string; data: { parentId: string | null } }[]): Set<string> {
-	const descendants = new Set<string>();
-	const queue = [nodeId];
-	while (queue.length > 0) {
-		const current = queue.pop()!;
-		for (const n of nodes) {
-			if (n.data.parentId === current && !descendants.has(n.id)) {
-				descendants.add(n.id);
-				queue.push(n.id);
-			}
-		}
-	}
-	return descendants;
-}
-
-/** Merge layout nodes into RF state, preserving measured dimensions from previous nodes. */
-function mergeWithMeasured(prev: OrgChartNodeType[], layoutNodes: OrgChartNodeType[]): OrgChartNodeType[] {
-	const prevMap = new Map(prev.map((n) => [n.id, n]));
-	return layoutNodes.map((n) => {
-		const existing = prevMap.get(n.id);
-		if (!existing) return n;
-		return existing.data.isRoot !== n.data.isRoot || existing.data.isCompact !== n.data.isCompact
-			? n
-			: { ...n, measured: existing.measured };
-	});
-}
+/** Container width at or below which cards switch to their compact size. */
+const COMPACT_MAX_WIDTH = 639;
+/** Pointer travel, in screen pixels, before a press on a card becomes a drag. */
+const DRAG_THRESHOLD = 4;
+const CANVAS_INSET = { side: 24, top: 24, bottom: 64 };
+const EMPTY_SET: ReadonlySet<string> = new Set();
 
 interface OrgChartPropsBase {
 	/** Additional classes for the chart container (e.g. `"h-full"` to fill parent). Default height: 600px. */
@@ -72,15 +31,21 @@ interface OrgChartPropsBase {
 	editable?: boolean;
 	/** Called when a node is dragged onto a new parent. In uncontrolled mode, the component updates visually first — if this throws, it reverts. */
 	onReparent?: (childId: string, newParentId: string, preserve: { positionTitle?: string | null }) => void | Promise<void>;
-	/** Called when the "Add to Chart" button is clicked (empty state) */
+	/** Called when the "Add first person" button is clicked (empty state) */
 	onAddToChart?: () => void;
-	/** Called when "Edit Position" is selected from the node menu */
+	/** Called when "Edit position" is selected from the node menu or details panel */
 	onEditNode?: (nodeData: OrgChartNodeData) => void;
-	/** Called when "Remove from Chart" is selected from the node menu */
+	/** Called when "Remove from chart" is selected from the node menu or details panel */
 	onRemoveNode?: (nodeData: OrgChartNodeData) => void;
 	/** Toast handler for reparent success/error messages. If not provided, no toasts are shown. */
 	onReparentSuccess?: (childName: string, parentName: string) => void;
 	onReparentError?: (message: string) => void;
+	/** Show a panel for the selected person with their manager, reports, and actions. Default: true. */
+	showDetails?: boolean;
+	/** Called when the selected person changes; `null` when the selection clears. */
+	onSelectNode?: (nodeData: OrgChartNodeData | null) => void;
+	/** People whose reports start folded away, e.g. every manager below the second level in a large org. */
+	defaultCollapsedIds?: readonly string[];
 }
 
 /** Controlled mode — consumer owns edge state */
@@ -97,272 +62,431 @@ interface OrgChartUncontrolledProps extends OrgChartPropsBase {
 
 export type OrgChartProps = OrgChartControlledProps | OrgChartUncontrolledProps;
 
-function OrgChartInner({
-	className,
-	edges: controlledEdges,
-	defaultEdges,
-	isLoading = false,
-	editable = true,
-	onReparent,
-	onAddToChart,
-	onEditNode,
-	onRemoveNode,
-	onReparentSuccess,
-	onReparentError,
-}: OrgChartProps) {
-	const isControlled = controlledEdges !== undefined;
-	const {
-		selectNode,
-		clearSelection,
-		setDraggedNodeId,
-		setDropTargetNodeId,
-	} = useOrgChartContext();
+type DragState = { id: string; dx: number; dy: number; targetId: string | null; blocked: ReadonlySet<string> };
+type Press = { id: string; pointerId: number; x: number; y: number; moved: boolean; blocked: ReadonlySet<string> };
 
-	const [internalEdges, setInternalEdges] = useState<OrgChartEdge[]>(defaultEdges ?? []);
-	const [isCompactLayout, setIsCompactLayout] = useState(false);
-	const chartRef = useRef<HTMLDivElement>(null);
+function edgesKey(edges: readonly OrgChartEdge[] | undefined) {
+	return edges?.map((edge) => `${edge.id}:${edge.parentId}:${edge.positionTitle ?? ''}:${edge.displayName ?? ''}:${edge.avatarUrl ?? ''}`).join('|') ?? '';
+}
 
-	const defaultEdgesHash = useMemo(
-		() => defaultEdges?.map((e) => `${e.id}:${e.parentId}:${e.positionTitle ?? ''}:${e.displayName ?? ''}`).join(',') ?? '',
-		[defaultEdges],
-	);
-	useEffect(() => {
-		if (!isControlled && defaultEdges) {
-			setInternalEdges(defaultEdges);
-		}
-		// eslint-disable-next-line react-hooks/exhaustive-deps
-	}, [defaultEdgesHash]);
+function findNode(layer: HTMLElement | null, id: string) {
+	if (!layer) return null;
+	for (const node of layer.querySelectorAll<HTMLElement>('[data-node-id]')) if (node.dataset.nodeId === id) return node;
+	return null;
+}
 
-	const apiEdges = controlledEdges ?? internalEdges;
+/** The neighbour at the same depth, left (-1) or right (+1), across subtrees. */
+function sideNeighbour(layout: OrgLayout, person: PlacedPerson, direction: -1 | 1) {
+	const row = layout.people.filter((candidate) => candidate.depth === person.depth).sort((a, b) => a.x - b.x);
+	return row[row.indexOf(person) + direction];
+}
 
-	const layout = useMemo(
-		() => (apiEdges.length > 0 ? computeLayout(apiEdges, isCompactLayout) : null),
-		[apiEdges, isCompactLayout],
-	);
-	const layoutNodes = layout?.nodes ?? [];
-	const layoutEdges = layout?.edges ?? [];
-	const isEmpty = apiEdges.length === 0 && !isLoading;
-	const fitViewOptions = isCompactLayout ? COMPACT_FIT_VIEW_OPTIONS : FIT_VIEW_OPTIONS;
+type Wire = { id: string; start: WirePoint; end: WirePoint; tone: WireTone; animated: boolean };
 
-	useEffect(() => {
-		const chart = chartRef.current;
-		if (!chart || typeof ResizeObserver === 'undefined') return;
-
-		const updateLayoutDensity = () => {
-			setIsCompactLayout(chart.clientWidth <= COMPACT_LAYOUT_MAX_WIDTH);
+function useWires(layout: OrgLayout, highlighted: ReadonlySet<string>, drag: DragState | null, animate: boolean) {
+	return React.useMemo(() => {
+		const offset = (id: string) => (drag?.id === id ? drag : { dx: 0, dy: 0 });
+		const top = (person: PlacedPerson): WirePoint => {
+			const { dx, dy } = offset(person.data.id);
+			return [person.x + person.width / 2 + dx, person.y + dy];
 		};
-		updateLayoutDensity();
+		const bottom = (person: PlacedPerson): WirePoint => {
+			const { dx, dy } = offset(person.data.id);
+			return [person.x + person.width / 2 + dx, person.y + person.height + dy];
+		};
+		const wires: Wire[] = [];
+		const anchors = new Map<string, { point: WirePoint; live: boolean }>();
+		for (const person of layout.people) {
+			if (!person.parentId) continue;
+			const parent = layout.byId.get(person.parentId);
+			if (!parent) continue;
+			const id = person.data.id;
+			if (drag?.id === id && drag.targetId) continue;
+			const live = highlighted.has(id);
+			wires.push({ id, start: bottom(parent), end: top(person), tone: live ? 'live' : 'rest', animated: false });
+			const anchor = anchors.get(parent.data.id);
+			anchors.set(parent.data.id, { point: bottom(parent), live: live || Boolean(anchor?.live) });
+		}
+		const target = drag?.targetId ? layout.byId.get(drag.targetId) : undefined;
+		const dragged = drag ? layout.byId.get(drag.id) : undefined;
+		if (target && dragged) {
+			wires.push({ id: `preview-${dragged.data.id}`, start: bottom(target), end: top(dragged), tone: 'live', animated: animate });
+			anchors.set(target.data.id, { point: bottom(target), live: true });
+		}
+		// Live wires paint last so they sit above the rest.
+		wires.sort((a, b) => Number(a.tone === 'live') - Number(b.tone === 'live'));
+		return { wires, anchors: [...anchors.entries()] };
+	}, [animate, drag, highlighted, layout]);
+}
 
-		const observer = new ResizeObserver(updateLayoutDensity);
-		observer.observe(chart);
+function OrgChartInner(props: OrgChartProps) {
+	const {
+		className,
+		edges: controlledEdges,
+		defaultEdges,
+		isLoading = false,
+		editable = true,
+		showDetails = true,
+		onAddToChart,
+		onEditNode,
+		onRemoveNode,
+	} = props;
+	const isControlled = controlledEdges !== undefined;
+	const [internalEdges, setInternalEdges] = React.useState<readonly OrgChartEdge[]>(defaultEdges ?? []);
+	// New defaultEdges content (not just a new array) resets the uncontrolled chart.
+	const defaultKey = React.useMemo(() => edgesKey(defaultEdges), [defaultEdges]);
+	const [syncedKey, setSyncedKey] = React.useState(defaultKey);
+	if (!isControlled && defaultKey !== syncedKey) {
+		setSyncedKey(defaultKey);
+		setInternalEdges(defaultEdges ?? []);
+	}
+	const edges = controlledEdges ?? internalEdges;
+
+	const containerRef = React.useRef<HTMLDivElement>(null);
+	const layerRef = React.useRef<HTMLDivElement>(null);
+	const [compact, setCompact] = React.useState(false);
+	const [collapsed, setCollapsed] = React.useState<ReadonlySet<string>>(() => new Set(props.defaultCollapsedIds));
+	const [selectedId, setSelectedId] = React.useState<string | null>(null);
+	const [activeId, setActiveId] = React.useState<string | null>(null);
+	const [moveId, setMoveId] = React.useState<string | null>(null);
+	const [drag, setDrag] = React.useState<DragState | null>(null);
+	const [revealRequest, setRevealRequest] = React.useState<{ id: string } | null>(null);
+	const [announcement, setAnnouncement] = React.useState('');
+	const press = React.useRef<Press | null>(null);
+	const animate = !useReducedMotion();
+
+	const index = React.useMemo(() => indexEdges(edges), [edges]);
+	const layout = React.useMemo(() => computeLayout(index, compact, collapsed), [index, compact, collapsed]);
+	const selected = selectedId ? layout.byId.get(selectedId) : undefined;
+	const tabStopId = activeId && layout.byId.has(activeId) ? activeId : (layout.people[0]?.data.id ?? null);
+
+	const viewport = useCanvasViewport(layout.width, {
+		fit: 'contain',
+		contentHeight: layout.height,
+		minZoom: 0.3,
+		maxZoom: 1.5,
+		// Past this the names are unreadable; frame the top of the tree instead of all of it.
+		minFitZoom: compact ? 0.7 : 0.5,
+		inset: CANVAS_INSET,
+	});
+
+	const highlighted = React.useMemo<ReadonlySet<string>>(() => {
+		if (!selected) return EMPTY_SET;
+		const id = selected.data.id;
+		return new Set([id, ...managersOf(index, id).slice(0, -1), ...selected.childIds]);
+	}, [index, selected]);
+	const { wires, anchors } = useWires(layout, highlighted, drag, animate);
+
+	React.useEffect(() => {
+		const container = containerRef.current;
+		if (!container || typeof ResizeObserver === 'undefined') return;
+		const measure = () => setCompact(container.clientWidth <= COMPACT_MAX_WIDTH);
+		measure();
+		const observer = new ResizeObserver(measure);
+		observer.observe(container);
 		return () => observer.disconnect();
-	}, [isEmpty, isLoading]);
-
-	const { fitView, getIntersectingNodes } = useReactFlow();
-
-	const [nodes, setNodes, onNodesChange] = useNodesState<OrgChartNodeType>([]);
-	const [rfEdges, setRfEdges, onEdgesChange] = useEdgesState<Edge>([]);
-
-	const nodesHash = useMemo(
-		() => layoutNodes.map((n) => `${n.id}:${n.data.parentId ?? ''}:${n.data.positionTitle ?? ''}:${n.data.displayName ?? ''}:${n.data.isCompact}`).join(','),
-		[layoutNodes],
-	);
-	const edgesHash = useMemo(() => layoutEdges.map((e) => `${e.id}:${e.source}:${e.target}`).join(','), [layoutEdges]);
-	const fitViewRef = useRef(fitView);
-
-	useEffect(() => {
-		fitViewRef.current = fitView;
-	}, [fitView]);
-
-	useEffect(() => {
-		setNodes((prev) => mergeWithMeasured(prev, layoutNodes));
-		setRfEdges(layoutEdges);
-		const raf = requestAnimationFrame(() => fitViewRef.current(fitViewOptions));
-		return () => cancelAnimationFrame(raf);
-		// eslint-disable-next-line react-hooks/exhaustive-deps
-	}, [nodesHash, edgesHash, fitViewOptions]);
-
-	const draggedNodeRef = useRef<string | null>(null);
-	const dropTargetIdRef = useRef<string | null>(null);
-
-	const nodeTypes: NodeTypes = useMemo(() => ({ orgChartNode: OrgChartNodeMemo }), []);
-	const edgeTypes: EdgeTypes = useMemo(() => ({ orgChartEdge: OrgChartEdgeComponent }), []);
-
-	const onNodeDragStart = useCallback<OnNodeDrag<OrgChartNodeType>>(
-		(_, node) => {
-			if (!editable) return;
-			draggedNodeRef.current = node.id;
-			setDraggedNodeId(node.id);
-		},
-		[editable, setDraggedNodeId],
-	);
-
-	const onNodeDrag = useCallback<OnNodeDrag<OrgChartNodeType>>(
-		(_, node) => {
-			if (!editable || !draggedNodeRef.current) return;
-			const intersecting = getIntersectingNodes(node);
-			const target = intersecting.find((n) => n.id !== node.id);
-			const targetId = target?.id ?? null;
-			if (targetId === dropTargetIdRef.current) return; // avoid no-op re-render cascade
-			dropTargetIdRef.current = targetId;
-			setDropTargetNodeId(targetId);
-		},
-		[editable, getIntersectingNodes, setDropTargetNodeId],
-	);
-
-	const applyOptimisticReparent = useCallback((childId: string, newParentId: string) => {
-		setInternalEdges((prev) =>
-			prev.map((e) => (e.id === childId ? { ...e, parentId: newParentId } : e)),
-		);
 	}, []);
 
-	const snapBack = useCallback(() => {
-		setNodes((prev) => mergeWithMeasured(prev, layoutNodes));
-	}, [layoutNodes, setNodes]);
+	// Ease a person into view once they are laid out (after unfolding their managers).
+	const { reveal, viewportRef } = viewport;
+	React.useEffect(() => {
+		if (!revealRequest) return;
+		const node = findNode(layerRef.current, revealRequest.id);
+		if (node) reveal(node);
+	}, [layout, reveal, revealRequest]);
 
-	const onNodeDragStop = useCallback<OnNodeDrag<OrgChartNodeType>>(
-		async () => {
-			if (!editable || !draggedNodeRef.current) return;
-			const childId = draggedNodeRef.current;
-			const newParentId = dropTargetIdRef.current;
+	const latest = useLatest({ props, index, layout, compact, view: viewport.view, drag, isControlled });
 
-			draggedNodeRef.current = null;
-			dropTargetIdRef.current = null;
-			setDraggedNodeId(null);
-			setDropTargetNodeId(null);
+	const select = React.useCallback(
+		(id: string | null, andReveal = false) => {
+			const { index, props, compact } = latest.current;
+			setSelectedId(id);
+			props.onSelectNode?.(id ? (nodeDataFor(index, id, compact) ?? null) : null);
+			if (!id) return;
+			// Unfold anyone above the person so they are on the chart.
+			const above = new Set(managersOf(index, id));
+			setCollapsed((current) => ([...above].some((manager) => current.has(manager)) ? new Set([...current].filter((manager) => !above.has(manager))) : current));
+			setActiveId(id);
+			if (andReveal) setRevealRequest({ id });
+		},
+		[latest],
+	);
 
-			if (!newParentId || newParentId === childId) {
-				snapBack();
+	const toggle = React.useCallback((id: string) => {
+		setCollapsed((current) => {
+			const next = new Set(current);
+			if (next.has(id)) next.delete(id);
+			else next.add(id);
+			return next;
+		});
+	}, []);
+
+	const reparent = React.useCallback(
+		async (childId: string, parentId: string) => {
+			const { index, props, isControlled } = latest.current;
+			const child = index.edges.get(childId);
+			const parent = index.edges.get(parentId);
+			if (!child || !parent || childId === parentId || effectiveParent(index, childId) === parentId) return;
+			if (descendantsOf(index, childId).has(parentId)) {
+				props.onReparentError?.('Cannot create circular reporting chain');
+				setAnnouncement(`${personName(parent)} reports to ${personName(child)}, so they can't be their manager.`);
 				return;
 			}
-
-			// Derive descendants at drop time instead of carrying a ref through the drag
-			if (getDescendantIds(childId, layoutNodes).has(newParentId)) {
-				onReparentError?.('Cannot create circular reporting chain');
-				snapBack();
-				return;
-			}
-
-			const draggedData = layoutNodes.find((n) => n.id === childId)?.data;
-			if (!draggedData || newParentId === draggedData.parentId) {
-				snapBack();
-				return;
-			}
-
-			const targetName = layoutNodes.find((n) => n.id === newParentId)?.data.displayName;
-			const preserve = { positionTitle: draggedData.positionTitle };
-
-			if (!isControlled) {
-				// Uncontrolled: optimistic update, then notify consumer
-				const snapshotEdges = internalEdges;
-				applyOptimisticReparent(childId, newParentId);
-				try {
-					await onReparent?.(childId, newParentId, preserve);
-					onReparentSuccess?.(draggedData.displayName ?? 'Member', targetName ?? 'new manager');
-				} catch (err) {
-					console.error('[OrgChart] reparent failed', err);
-					setInternalEdges(snapshotEdges);
-					onReparentError?.('Failed to update reporting line');
+			const preserve = { positionTitle: child.positionTitle };
+			const previousParentId = child.parentId;
+			setCollapsed((current) => (current.has(parentId) ? new Set([...current].filter((id) => id !== parentId)) : current));
+			if (!isControlled) setInternalEdges((current) => current.map((edge) => (edge.id === childId ? { ...edge, parentId } : edge)));
+			try {
+				await props.onReparent?.(childId, parentId, preserve);
+				props.onReparentSuccess?.(child.displayName ?? 'Member', parent.displayName ?? 'new manager');
+				setAnnouncement(`${personName(child)} now reports to ${personName(parent)}.`);
+			} catch (error) {
+				console.error('[OrgChart] reparent failed', error);
+				if (!isControlled) {
+					setInternalEdges((current) => current.map((edge) => (edge.id === childId && edge.parentId === parentId ? { ...edge, parentId: previousParentId } : edge)));
 				}
-			} else {
-				// Controlled: snap back, let consumer update edges
-				snapBack();
-				try {
-					await onReparent?.(childId, newParentId, preserve);
-					onReparentSuccess?.(draggedData.displayName ?? 'Member', targetName ?? 'new manager');
-				} catch (err) {
-					console.error('[OrgChart] reparent failed', err);
-					onReparentError?.('Failed to update reporting line');
-				}
+				props.onReparentError?.('Failed to update reporting line');
+				setAnnouncement(`${personName(child)}'s reporting line could not be changed.`);
 			}
 		},
-		[editable, isControlled, internalEdges, layoutNodes, onReparent, onReparentSuccess, onReparentError, applyOptimisticReparent, snapBack, setDraggedNodeId, setDropTargetNodeId],
+		[latest],
 	);
 
-	const onNodeClick = useCallback((_: React.MouseEvent, node: Node) => selectNode(node.id), [selectNode]);
-	const onPaneClick = useCallback(() => clearSelection(), [clearSelection]);
-
-	const handleEditNode = useCallback(
-		(nodeData: OrgChartNodeData) => onEditNode?.(nodeData),
-		[onEditNode],
+	const focusPerson = React.useCallback(
+		(id: string | undefined) => {
+			if (!id) return;
+			const node = findNode(layerRef.current, id);
+			if (!node) return;
+			node.focus({ preventScroll: true });
+			reveal(node);
+		},
+		[reveal],
 	);
-	const handleRemoveNode = useCallback(
-		(nodeData: OrgChartNodeData) => onRemoveNode?.(nodeData),
-		[onRemoveNode],
-	);
 
-	if (isLoading) {
-		return (
-			<div
-				role='status'
-				aria-live='polite'
-				className='bg-card border-border/60 flex items-center justify-center rounded-lg border p-16'
-			>
-				<Loader2 aria-hidden className='text-muted-foreground size-6 motion-safe:animate-spin' />
-				<span className='sr-only'>Loading organization chart</span>
-			</div>
-		);
-	}
-
-	if (isEmpty) {
-		return <OrgChartEmpty editable={editable} onAddRoot={onAddToChart ?? (() => {})} />;
-	}
-
-	return (
-		<NodeActionsProvider onEditNode={handleEditNode} onRemoveNode={handleRemoveNode}>
-			<div ref={chartRef} className={cn('border-border/60 h-[600px] overflow-hidden rounded-lg border', className)}>
-				<ReactFlow
-					nodes={nodes}
-					edges={rfEdges}
-					onNodesChange={onNodesChange}
-					onEdgesChange={onEdgesChange}
-					onNodeClick={onNodeClick}
-					proOptions={{ hideAttribution: true }}
-					onPaneClick={onPaneClick}
-					onNodeDragStart={onNodeDragStart}
-					onNodeDrag={onNodeDrag}
-					onNodeDragStop={onNodeDragStop}
-					nodeTypes={nodeTypes}
-					edgeTypes={edgeTypes}
-					fitView
-					fitViewOptions={fitViewOptions}
-					minZoom={0.3}
-					maxZoom={1.5}
-					nodesDraggable={editable}
-					nodesConnectable={false}
-					elementsSelectable
-					selectNodesOnDrag={false}
-					panOnDrag
-					zoomOnScroll
-					preventScrolling
-					style={
-						{
-							'--xy-background-pattern-dots-color-default': 'var(--color-border)',
-							'--xy-edge-stroke-width-default': 2,
-							'--xy-edge-stroke-default': 'var(--color-border)',
-							'--xy-edge-stroke-selected-default': 'var(--color-foreground)',
-							'--xy-attribution-background-color-default': 'transparent',
-						} as React.CSSProperties
+	const canEdit = Boolean(onEditNode);
+	const canRemove = Boolean(onRemoveNode);
+	const edit = React.useMemo(
+		() =>
+			canEdit
+				? (id: string) => {
+						const data = latest.current.layout.byId.get(id)?.data;
+						if (data) latest.current.props.onEditNode?.(data);
 					}
-					attributionPosition='bottom-left'
-				>
-					<Background variant={BackgroundVariant.Dots} gap={20} size={2} />
+				: undefined,
+		[canEdit, latest],
+	);
+	const remove = React.useMemo(
+		() =>
+			canRemove
+				? (id: string) => {
+						const data = latest.current.layout.byId.get(id)?.data;
+						if (data) latest.current.props.onRemoveNode?.(data);
+					}
+				: undefined,
+		[canRemove, latest],
+	);
 
-					<FlowZoomPanel fitViewOptions={fitViewOptions} />
-				</ReactFlow>
-			</div>
-		</NodeActionsProvider>
+	const handlers = React.useMemo<NodeHandlers>(
+		() => ({
+			pointerDown(id, event) {
+				if (event.button !== 0 || (event.target as Element).closest('button, a, [role="menuitem"], [role="menu"]')) return;
+				event.currentTarget.setPointerCapture(event.pointerId);
+				press.current = { id, pointerId: event.pointerId, x: event.clientX, y: event.clientY, moved: false, blocked: EMPTY_SET };
+			},
+			pointerMove(id, event) {
+				const current = press.current;
+				if (!current || current.pointerId !== event.pointerId) return;
+				const { props, layout, view, index } = latest.current;
+				if (props.editable === false) return;
+				const dx = event.clientX - current.x;
+				const dy = event.clientY - current.y;
+				if (!current.moved) {
+					if (Math.hypot(dx, dy) < DRAG_THRESHOLD) return;
+					current.moved = true;
+					current.blocked = new Set([id, ...descendantsOf(index, id)]);
+				}
+				const frame = viewportRef.current?.getBoundingClientRect();
+				if (!frame) return;
+				const x = (event.clientX - frame.left - view.x) / view.zoom;
+				const y = (event.clientY - frame.top - view.y) / view.zoom;
+				const hit = layout.people.find(
+					(person) => !current.blocked.has(person.data.id) && x >= person.x && x <= person.x + person.width && y >= person.y && y <= person.y + person.height,
+				);
+				const targetId = hit && hit.data.id !== layout.byId.get(id)?.parentId ? hit.data.id : null;
+				setDrag({ id, dx: dx / view.zoom, dy: dy / view.zoom, targetId, blocked: current.blocked });
+			},
+			pointerUp(id, event) {
+				const current = press.current;
+				if (!current || current.pointerId !== event.pointerId) return;
+				press.current = null;
+				const targetId = latest.current.drag?.targetId;
+				setDrag(null);
+				if (!current.moved) select(id);
+				else if (targetId) void reparent(id, targetId);
+			},
+			pointerCancel() {
+				press.current = null;
+				setDrag(null);
+			},
+			keyDown(id, event) {
+				if (event.target !== event.currentTarget) return;
+				const { layout } = latest.current;
+				const person = layout.byId.get(id);
+				if (!person) return;
+				const go = (next: string | undefined) => {
+					event.preventDefault();
+					focusPerson(next);
+				};
+				switch (event.key) {
+					case 'ArrowUp':
+						return go(person.parentId ?? undefined);
+					case 'ArrowDown':
+						if (person.collapsed) {
+							event.preventDefault();
+							return toggle(id);
+						}
+						return go(person.childIds[0]);
+					case 'ArrowLeft':
+						return go(sideNeighbour(layout, person, -1)?.data.id);
+					case 'ArrowRight':
+						return go(sideNeighbour(layout, person, 1)?.data.id);
+					case 'Home':
+						return go(layout.people[0]?.data.id);
+					case 'Enter':
+					case ' ':
+						event.preventDefault();
+						return select(id);
+					case 'Escape':
+						if (latest.current.drag) {
+							press.current = null;
+							setDrag(null);
+						} else select(null);
+						return;
+				}
+			},
+			focus(id, event) {
+				if (event.target !== event.currentTarget) return;
+				setActiveId(id);
+				// Keyboard focus (Tab into the tree) brings the card into view; a press on it does not.
+				if (!press.current) reveal(event.currentTarget);
+			},
+			toggle,
+			openMove: setMoveId,
+			edit,
+			remove,
+		}),
+		[edit, focusPerson, latest, remove, reparent, reveal, select, toggle, viewportRef],
+	);
+
+	const manager = selected?.parentId ? index.edges.get(selected.parentId) : undefined;
+	const reports = selected
+		? (index.children.get(selected.data.id) ?? []).flatMap((id): OrgChartEdge[] => {
+				const report = index.edges.get(id);
+				return report ? [report] : [];
+			})
+		: [];
+
+	// One container for every state, so the width observer keeps watching it when data arrives.
+	return (
+		<div ref={containerRef} className={cn('@container/chart relative h-[600px]', className)}>
+			{isLoading ? (
+				<OrgChartLoading />
+			) : edges.length === 0 ? (
+				<OrgChartEmpty editable={editable} onAddRoot={onAddToChart} />
+			) : (
+				<>
+					<CanvasSurface
+						viewport={viewport}
+						layerRef={layerRef}
+						className="absolute inset-0 h-auto"
+						label="Organization chart. Drag or use arrow keys to pan, plus and minus to zoom. Tab into the chart to move between people with the arrow keys."
+						onPaneClick={() => select(null)}
+						overlay={
+							<>
+								{showDetails && selected ? (
+									<OrgChartDetails
+										key={selected.data.id}
+										person={selected}
+										manager={manager}
+										reports={reports}
+										editable={editable}
+										onSelect={(id) => select(id, true)}
+										onClose={() => {
+											select(null);
+											focusPerson(selected.data.id);
+										}}
+										onToggle={toggle}
+										onMove={setMoveId}
+										onEdit={handlers.edit}
+										onRemove={handlers.remove}
+									/>
+								) : null}
+								<CanvasZoomControls viewport={viewport} fit />
+							</>
+						}
+					>
+						<svg aria-hidden="true" className="pointer-events-none absolute top-0 left-0 overflow-visible" width={Math.max(1, layout.width)} height={Math.max(1, layout.height)}>
+							{wires.map((wire) => (
+								<CanvasWire
+									key={wire.id}
+									start={wire.start}
+									end={wire.end}
+									tone={wire.tone}
+									axis="vertical"
+									animated={wire.animated}
+									startDot={false}
+									glide={animate && !drag}
+								/>
+							))}
+							{anchors.map(([id, anchor]) => (
+								<WireDot key={id} at={anchor.point} glide={animate && !drag} stroke={WIRE_STROKE[anchor.live ? 'live' : 'rest']} />
+							))}
+						</svg>
+						<div role="tree" aria-label="Reporting lines">
+							{layout.people.map((person) => {
+								const id = person.data.id;
+								const target = drag?.id === id && drag.targetId ? layout.byId.get(drag.targetId) : undefined;
+								return (
+									<OrgChartNode
+										key={id}
+										person={person}
+										selected={id === selectedId}
+										tabStop={id === tabStopId}
+										editable={editable}
+										dragOffset={drag?.id === id ? drag : null}
+										dropTarget={drag?.targetId === id}
+										blocked={Boolean(drag?.blocked.has(id))}
+										dropHint={target ? `Reports to ${personName(target.data)}` : undefined}
+										handlers={handlers}
+									/>
+								);
+							})}
+						</div>
+					</CanvasSurface>
+					<p role="status" aria-live="polite" className="sr-only">
+						{announcement}
+					</p>
+					<OrgChartMoveDialog
+						index={index}
+						personId={moveId}
+						onOpenChange={(open) => {
+							if (!open) setMoveId(null);
+						}}
+						onMove={(personId, managerId) => {
+							setMoveId(null);
+							void reparent(personId, managerId);
+						}}
+					/>
+				</>
+			)}
+		</div>
 	);
 }
 
 export function OrgChart(props: OrgChartProps) {
 	return (
-		<ReactFlowProvider>
-			<OrgChartProvider editable={props.editable ?? true}>
-				<TooltipProvider>
-					<OrgChartInner {...props} />
-				</TooltipProvider>
-			</OrgChartProvider>
-		</ReactFlowProvider>
+		<TooltipProvider>
+			<OrgChartInner {...props} />
+		</TooltipProvider>
 	);
 }

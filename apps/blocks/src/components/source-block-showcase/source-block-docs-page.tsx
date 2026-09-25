@@ -90,6 +90,45 @@ export function SourceBlockDocsPage({ block }: { block: SourceBlockDoc }) {
         />
       </section>
 
+      {block.features?.length ? (
+        <DocSection
+          description={`What ${block.title} can do, one area at a time. Each card says where to find it in the preview above.`}
+          id="features"
+          title="Feature tour"
+        >
+          <ol className="grid gap-3 md:grid-cols-2">
+            {block.features.map((feature, index) => (
+              <li
+                className="flex flex-col gap-3 rounded-xl border border-border bg-card px-4 py-4"
+                id={`feature-${feature.id}`}
+                key={feature.id}
+              >
+                <div className="flex items-baseline gap-2.5">
+                  <span className="font-mono text-xs text-muted-foreground tabular-nums">
+                    {String(index + 1).padStart(2, '0')}
+                  </span>
+                  <div className="min-w-0">
+                    <h3 className="text-sm font-medium text-foreground">{feature.title}</h3>
+                    <p className="mt-0.5 text-pretty text-[13px] leading-5 text-muted-foreground">{feature.summary}</p>
+                  </div>
+                </div>
+                <ul className="flex flex-col gap-1.5 text-pretty text-[13px] leading-5 text-muted-foreground">
+                  {feature.details.map((detail) => (
+                    <li className="relative pl-4 before:absolute before:left-0 before:text-foreground/40 before:content-['–']" key={detail}>
+                      {detail}
+                    </li>
+                  ))}
+                </ul>
+                <p className="mt-auto rounded-lg bg-muted/60 px-3 py-2 text-pretty text-xs leading-5 text-muted-foreground">
+                  <span className="font-medium text-foreground">In the preview: </span>
+                  {feature.tryIt}
+                </p>
+              </li>
+            ))}
+          </ol>
+        </DocSection>
+      ) : null}
+
       <DocSection
         description="The registry copies the complete editable, source-owned visual graph and the Constructive theme. It also installs declared headless runtime dependencies such as @constructive-io/data; your application owns their endpoint and session configuration."
         id="installation"

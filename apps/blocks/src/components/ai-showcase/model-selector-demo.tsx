@@ -162,7 +162,7 @@ export function ModelSelectorCompositions() {
           priceDisplay="none"
         />
       </Case>
-      <Case description="Levels can bill differently: Opus 5 Max overrides pricing, shown in the detail strip." label="Level pricing">
+      <Case description="Levels can bill differently: Opus 5 Max overrides pricing, shown in the side card." label="Level pricing">
         <Selector initial={{ modelId: 'opus-5', levelId: 'max' }} priceDisplay="price" recommendedIds={['opus-5', 'claude-5']} />
       </Case>
     </div>

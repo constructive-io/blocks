@@ -1,16 +1,16 @@
 'use client';
 
-import { type LucideIcon, PanelLeft, X } from 'lucide-react';
+import { Loader2, type LucideIcon, PanelLeft, X } from 'lucide-react';
 import * as React from 'react';
 
 import { cn } from '../../lib/utils';
 import { Tooltip, TooltipContent, TooltipTrigger } from '../tooltip';
 import { focusRingClass, TooltipIconButton } from './primitives';
 
-const ROW = cn(
-	'relative flex h-8 w-full cursor-pointer items-center gap-2 rounded-md px-2 text-left text-sm pointer-coarse:h-10',
-	focusRingClass,
-);
+const ROW = cn('relative flex h-8 cursor-pointer items-center rounded-md text-left text-sm pointer-coarse:h-10', focusRingClass);
+
+/** Full-width row with a label, or a centred square matching the rail's icon buttons. */
+const rowShape = (collapsed: boolean) => (collapsed ? 'size-8 shrink-0 justify-center pointer-coarse:size-10' : 'w-full gap-2 px-2');
 
 /** Labels a rail control with a tooltip only while the sidebar is collapsed. */
 function RailTip({ label, collapsed, children }: { label: string; collapsed: boolean; children: React.ReactElement }) {
@@ -35,37 +35,89 @@ type NavRowProps = {
 	trailing?: React.ReactNode;
 	/** Row tone when not active. */
 	muted?: boolean;
-	onClick: () => void;
+	/** Not choosable right now, e.g. while another row loads or policy forbids it. */
+	disabled?: boolean;
+	/** Loading this row's destination; announced and shown in place of the trailing value. */
+	busy?: boolean;
+	onClick?: () => void;
+	/** Renders the row as a link to this address instead of a button. */
+	href?: string;
+	/** Renders the link through the host's router component. Default: a plain anchor. */
+	renderLink?: (props: NavRowLinkProps) => React.ReactElement;
 };
+
+/** Props a link-mode row hands to `renderLink`. */
+type NavRowLinkProps = Omit<React.ComponentProps<'a'>, 'href'> & { href: string };
 
 /**
  * One sidebar row. Focus reads through weight and a tinted fill, never a
  * coloured dot; hover is instant because rows are clicked constantly.
  */
-function NavRow({ label, collapsed, active, leading, labelNode, trailing, muted, onClick }: NavRowProps) {
+function NavRow({ label, collapsed, active, leading, labelNode, trailing, muted, disabled, busy, onClick, href, renderLink }: NavRowProps) {
+	const content = (
+		<>
+			{leading}
+			{collapsed ? null : (
+				<>
+					<span className="min-w-0 flex-1 truncate">{labelNode ?? label}</span>
+					{busy ? <Loader2 aria-hidden="true" className="size-3.5 shrink-0 text-muted-foreground motion-safe:animate-spin" /> : trailing}
+				</>
+			)}
+		</>
+	);
+	const tone = active
+		? 'bg-sidebar-accent font-medium text-foreground'
+		: muted
+			? 'text-muted-foreground'
+			: 'text-sidebar-foreground';
+	const shared = {
+		'aria-label': collapsed ? label : undefined,
+		'aria-current': active ? ('page' as const) : undefined,
+		'aria-busy': busy || undefined,
+	};
+	let row: React.ReactElement;
+	if (href !== undefined) {
+		// A disabled link stays focusable and announced, but does nothing.
+		const props: NavRowLinkProps = {
+			...shared,
+			href,
+			'aria-disabled': disabled || undefined,
+			onClick: (event) => {
+				if (disabled) event.preventDefault();
+				else onClick?.();
+			},
+			className: cn(
+				ROW,
+				rowShape(collapsed),
+				'no-underline',
+				disabled ? 'cursor-not-allowed opacity-50' : cn('hover:bg-overlay-hover', muted && !active && 'hover:text-foreground'),
+				tone,
+			),
+			children: content,
+		};
+		row = renderLink ? renderLink(props) : <a {...props} />;
+	} else {
+		row = (
+			<button
+				type="button"
+				{...shared}
+				disabled={disabled}
+				onClick={onClick}
+				className={cn(
+					ROW,
+					rowShape(collapsed),
+					'disabled:cursor-not-allowed disabled:opacity-50',
+					active ? tone : cn('enabled:hover:bg-overlay-hover', tone, muted && 'enabled:hover:text-foreground'),
+				)}
+			>
+				{content}
+			</button>
+		);
+	}
 	return (
-		<li>
+		<li className={collapsed ? 'flex justify-center' : undefined}>
 			<RailTip label={label} collapsed={collapsed}>
-				<button
-					type="button"
-					aria-label={collapsed ? label : undefined}
-					aria-current={active ? 'page' : undefined}
-					onClick={onClick}
-					className={cn(
-						ROW,
-						active
-							? 'bg-sidebar-accent font-medium text-foreground'
-							: cn('hover:bg-overlay-hover', muted ? 'text-muted-foreground hover:text-foreground' : 'text-sidebar-foreground'),
-					)}
-				>
-					{leading}
-					{collapsed ? null : (
-						<>
-							<span className="min-w-0 flex-1 truncate">{labelNode ?? label}</span>
-							{trailing}
-						</>
-					)}
-				</button>
+				{row}
 			</RailTip>
 		</li>
 	);
@@ -106,7 +158,8 @@ function NavSection({ title, collapsed, action, children }: NavSectionProps) {
 	const headingId = React.useId();
 	return (
 		<div className="flex w-full flex-col gap-1">
-			{title || action ? (
+			{/* In the icon rail a heading has nothing to show, so only an action keeps the row. */}
+			{(title && !collapsed) || action ? (
 				<div className={cn('flex h-7 items-center gap-2 pl-2', collapsed && 'justify-center pl-0')}>
 					{collapsed || !title ? null : (
 						<h2 id={headingId} className="flex-1 truncate text-xs text-muted-foreground">
@@ -186,4 +239,4 @@ function SidebarFrame({ label, menu, collapsed: collapsedProp, onCollapsedChange
 }
 
 export { NavCount, NavIcon, NavRow, NavSection, RailTip, SidebarFrame };
-export type { NavRowProps, NavSectionProps, SidebarFrameProps };
+export type { NavRowLinkProps, NavRowProps, NavSectionProps, SidebarFrameProps };
