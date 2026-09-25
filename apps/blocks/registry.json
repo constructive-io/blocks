@@ -255,6 +255,11 @@
           "type": "registry:component"
         },
         {
+          "path": "registry/constructive/blocks/console-kit/console-shell.tsx",
+          "target": "src/blocks/console-kit/console-shell.tsx",
+          "type": "registry:component"
+        },
+        {
           "path": "registry/constructive/blocks/console-kit/console-kit-runtime.tsx",
           "target": "src/blocks/console-kit/console-kit-runtime.tsx",
           "type": "registry:component"

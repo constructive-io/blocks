@@ -4,22 +4,13 @@ import * as React from 'react';
 import {
   CircleAlertIcon,
   DatabaseIcon,
-  LockKeyholeIcon,
-  RefreshCwIcon
+  LockKeyholeIcon
 } from 'lucide-react';
 
 import { Alert, AlertDescription, AlertTitle } from '@constructive-io/ui/alert';
-import {
-  AppShell,
-  type AppAccount,
-  type AppNavigationGroup,
-  type AppNavigationItem,
-  type AppShellBrand
-} from '@constructive-io/ui/app-shell';
+import type { AppAccount, AppShellBrand } from '@constructive-io/ui/app-shell';
 import type { AppLinkRenderProps } from '@constructive-io/ui/app-bar';
-import { Button, buttonVariants } from '@constructive-io/ui/button';
 import { Skeleton } from '@constructive-io/ui/skeleton';
-import { cn } from '@/lib/utils';
 
 import type { FeaturePackId } from '../../feature-packs';
 import type { ConsoleRuntimeError } from '../console-runtime';
@@ -42,6 +33,7 @@ import type {
   ConsoleKitProps
 } from './console-kit-contracts';
 import { ConsoleConnectionMenu } from './console-connection-menu';
+import { ConsoleShell, type ConsoleNavigationGroup, type ConsoleNavigationItem } from './console-shell';
 import type { ConsoleKitFeatureModule } from './feature-module';
 import {
   consoleKitRouteKey,
@@ -231,34 +223,30 @@ function FeatureLoadingState() {
     <div
       aria-busy='true'
       aria-live='polite'
-      className='flex w-full max-w-5xl flex-col gap-5'
+      className='flex w-full flex-col gap-5'
       role='status'
     >
       <span className='sr-only'>Loading feature…</span>
-      <div className='flex items-start justify-between gap-4'>
+      <div className='flex items-center justify-between gap-4'>
         <div className='flex min-w-0 flex-1 flex-col gap-2'>
-          <Skeleton className='h-7 w-40 max-w-2/3' />
-          <Skeleton className='h-4 w-80 max-w-full' />
+          <Skeleton className='h-4 w-36 max-w-2/3 rounded-full' />
+          <Skeleton className='h-3 w-64 max-w-full rounded-full' />
         </div>
-        <Skeleton className='hidden h-9 w-24 shrink-0 sm:block' />
+        <Skeleton className='hidden h-8 w-28 shrink-0 rounded-lg sm:block' />
       </div>
-      <div className='overflow-hidden rounded-xl border bg-card'>
-        <div className='flex items-center justify-between gap-4 border-b px-4 py-3'>
-          <Skeleton className='h-9 w-64 max-w-2/3' />
-          <Skeleton className='size-9 shrink-0' />
-        </div>
-        <div className='divide-y'>
-          {Array.from({ length: 5 }, (_, index) => (
-            <div className='flex items-center gap-3 px-4 py-3' key={index}>
-              <Skeleton className='size-9 shrink-0 rounded-full' />
-              <div className='flex min-w-0 flex-1 flex-col gap-1.5'>
-                <Skeleton className='h-4 w-40 max-w-2/3' />
-                <Skeleton className='h-3 w-56 max-w-4/5' />
-              </div>
-              <Skeleton className='hidden h-6 w-16 shrink-0 sm:block' />
+      <Skeleton className='h-8 w-72 max-w-full rounded-lg' />
+      <div className='overflow-hidden rounded-xl bg-card shadow-card'>
+        <div className='bg-muted/60 h-8' />
+        {Array.from({ length: 5 }, (_, index) => (
+          <div className='flex items-center gap-3 border-t border-border px-4 py-3' key={index}>
+            <Skeleton className='size-7 shrink-0 rounded-full' />
+            <div className='flex min-w-0 flex-1 flex-col gap-1.5'>
+              <Skeleton className='h-3 rounded-full' style={{ width: `${34 + ((index * 13) % 30)}%` }} />
+              <Skeleton className='h-2.5 w-40 max-w-3/5 rounded-full' />
             </div>
-          ))}
-        </div>
+            <Skeleton className='hidden h-5 w-14 shrink-0 rounded-md sm:block' />
+          </div>
+        ))}
       </div>
     </div>
   );
@@ -373,17 +361,16 @@ function AdapterFeature({
   }
   if (state?.status === 'error') {
     return (
-      <Alert variant='destructive'>
-        <CircleAlertIcon aria-hidden='true' />
-        <AlertTitle>The {feature} feature could not be loaded</AlertTitle>
-        <AlertDescription className='flex flex-col items-start gap-3'>
-          <span>{state.error.message}</span>
-          <Button onClick={() => retryAdapter(feature)} size='sm' variant='outline'>
-            <RefreshCwIcon data-icon='inline-start' />
-            Try again
-          </Button>
-        </AlertDescription>
-      </Alert>
+      <div role='alert'>
+        <FeaturePackDiagnosticPanel
+          description={state.error.message}
+          guidance='The adapter reached the endpoint but could not read this feature. Check the connection and your access, then try again.'
+          icon={<CircleAlertIcon aria-hidden='true' />}
+          onRetry={() => retryAdapter(feature)}
+          title={`${module.manifest.title ?? feature} could not be loaded`}
+          tone='destructive'
+        />
+      </div>
     );
   }
 
@@ -594,137 +581,6 @@ function useAdapterSubscriptions(
   return revision;
 }
 
-function MobileFeatureNavigation({
-  items,
-  renderLink
-}: Readonly<{
-  items: readonly AppNavigationItem[];
-  renderLink: (props: AppLinkRenderProps) => React.ReactElement;
-}>) {
-  const scrollerRef = React.useRef<HTMLDivElement | null>(null);
-  const activeItemRef = React.useRef<HTMLDivElement | null>(null);
-  const [overflow, setOverflow] = React.useState({ start: false, end: false });
-  const activeItemId = items.find((item) => item.isActive)?.id;
-
-  const measureOverflow = React.useCallback(() => {
-    const scroller = scrollerRef.current;
-    if (!scroller) return;
-    const maxScrollLeft = scroller.scrollWidth - scroller.clientWidth;
-    const start = scroller.scrollLeft > 2;
-    const end = scroller.scrollLeft < maxScrollLeft - 2;
-    setOverflow((previous) => {
-      if (previous.start === start && previous.end === end) return previous;
-      return { start, end };
-    });
-  }, []);
-
-  React.useEffect(() => {
-    const scroller = scrollerRef.current;
-    if (!scroller) return;
-    measureOverflow();
-    if (typeof ResizeObserver === 'undefined') return;
-    const observer = new ResizeObserver(measureOverflow);
-    observer.observe(scroller);
-    return () => observer.disconnect();
-  }, [items, measureOverflow]);
-
-  React.useEffect(() => {
-    activeItemRef.current?.scrollIntoView?.({
-      block: 'nearest',
-      inline: 'center'
-    });
-    measureOverflow();
-  }, [activeItemId, measureOverflow]);
-
-  return (
-    <nav
-      aria-label='Application features'
-      className='bg-background/95 fixed inset-x-0 bottom-0 z-40 border-t pb-[env(safe-area-inset-bottom)] md:hidden'
-    >
-      <div
-        className='scrollbar-hide mx-auto flex max-w-2xl snap-x snap-mandatory gap-1 overflow-x-auto overscroll-x-contain scroll-smooth scroll-px-4 px-4 py-1.5 motion-reduce:scroll-auto'
-        onScroll={measureOverflow}
-        ref={scrollerRef}
-      >
-        {items.map((item) => {
-          const Icon = item.icon;
-          const label = typeof item.label === 'string' ? item.label : item.id;
-          const shortLabel =
-            label === 'Organizations'
-              ? 'Orgs'
-              : label === 'Notifications'
-                ? 'Alerts'
-                : label === 'Authentication'
-                  ? 'Auth'
-                  : label;
-          const itemContent = (
-            <>
-              {Icon ? <Icon aria-hidden='true' /> : null}
-              <span className='max-w-16 truncate'>{shortLabel}</span>
-              {item.badge ? (
-                <span
-                  aria-hidden='true'
-                  className='bg-primary absolute top-1.5 right-1.5 size-1.5 rounded-full'
-                />
-              ) : null}
-              {item.isActive ? (
-                <span
-                  aria-hidden='true'
-                  className='bg-primary absolute inset-x-5 bottom-0 h-0.5 rounded-full'
-                />
-              ) : null}
-            </>
-          );
-          const className = cn(
-            buttonVariants({
-              size: 'sm',
-              variant: item.isActive ? 'secondary' : 'ghost'
-            }),
-            'relative h-14 min-w-18 flex-1 flex-col gap-1 px-2 text-xs leading-tight'
-          );
-          return (
-            <div
-              className='snap-center'
-              key={item.id}
-              ref={item.isActive ? activeItemRef : undefined}
-            >
-              {item.disabled || !item.href ? (
-                <span
-                  aria-disabled='true'
-                  aria-label={item.badge ? `${label} (${String(item.badge)})` : label}
-                  className={cn(className, 'cursor-not-allowed opacity-60')}
-                >
-                  {itemContent}
-                </span>
-              ) : renderLink({
-                  'aria-current': item.isActive ? 'page' : undefined,
-                  'aria-label': item.badge ? `${label} (${String(item.badge)})` : label,
-                  children: itemContent,
-                  className,
-                  href: item.href
-                })}
-            </div>
-          );
-        })}
-      </div>
-      <div
-        aria-hidden='true'
-        className={cn(
-          'from-background pointer-events-none absolute inset-y-0 left-0 w-6 bg-linear-to-r to-transparent transition-opacity motion-reduce:transition-none',
-          overflow.start ? 'opacity-100' : 'opacity-0'
-        )}
-      />
-      <div
-        aria-hidden='true'
-        className={cn(
-          'from-background pointer-events-none absolute inset-y-0 right-0 w-8 bg-linear-to-l to-transparent transition-opacity motion-reduce:transition-none',
-          overflow.end ? 'opacity-100' : 'opacity-0'
-        )}
-      />
-    </nav>
-  );
-}
-
 function ConsoleKitContent({ config, featureModules, className }: ConsoleKitProps) {
   const runtime = useConsoleKitRuntime({
     databaseId: config.databaseId,
@@ -930,10 +786,20 @@ function ConsoleKitContent({ config, featureModules, className }: ConsoleKitProp
     const status = availability[module.id]?.status;
     return config.showUnavailable || status === 'available' || status === 'checking';
   }), [availability, config.showUnavailable, ordered]);
-  const navigationItems = React.useMemo(() => visibleModules.map((module) => {
+  const navigationItems = React.useMemo(() => visibleModules.map((module): ConsoleNavigationItem => {
     const feature = module.id;
     const state = availability[module.id];
     const route = featureRoutes.get(feature) ?? defaultConsoleKitRoute(feature);
+    // The badge text names the state for assistive tech; the shell shows it as a quiet glyph.
+    const status = state?.status === 'checking'
+      ? 'checking'
+      : state?.status === 'unauthorized'
+        ? 'locked'
+        : discoveredCapabilities[feature]?.status === 'partial'
+          ? 'partial'
+          : state?.status !== 'available'
+            ? 'setup'
+            : undefined;
     return {
       id: feature,
       label: config.labels?.[feature] ?? module.manifest.title,
@@ -941,31 +807,24 @@ function ConsoleKitContent({ config, featureModules, className }: ConsoleKitProp
       icon: module.icon,
       isActive: feature === activeFeature,
       disabled: state?.status === 'unauthorized',
-      badge: state?.status === 'checking'
-        ? '…'
-        : state?.status === 'unauthorized'
+      status,
+      badge: status === 'checking'
+        ? 'Checking'
+        : status === 'locked'
           ? 'Sign in'
-        : discoveredCapabilities[feature]?.status === 'partial'
-          ? 'Partial'
-          : state?.status !== 'available'
-            ? 'Setup'
-            : undefined
+          : status === 'partial'
+            ? 'Partial'
+            : status === 'setup'
+              ? 'Needs setup'
+              : undefined
     };
   }), [activeFeature, availability, config.labels, discoveredCapabilities, featureRoutes, routeHref, visibleModules]);
 
-  // Platform Kit uses a quiet section label above icon+text manager links.
-  const navigation = React.useMemo<AppNavigationGroup[]>(() => [{
+  const navigation = React.useMemo<ConsoleNavigationGroup[]>(() => [{
     id: 'features',
     label: 'Manage application',
     items: navigationItems
   }], [navigationItems]);
-
-  const mobileFeatureNav = navigationItems.length > 1 ? (
-    <MobileFeatureNavigation
-      items={navigationItems}
-      renderLink={renderLink}
-    />
-  ) : null;
 
   const identity = runtime.session.status === 'authenticated' ? runtime.session.identity : undefined;
   const [signOutPending, setSignOutPending] = React.useState(false);
@@ -1133,10 +992,9 @@ function ConsoleKitContent({ config, featureModules, className }: ConsoleKitProp
   };
 
   return (
-    <AppShell
+    <ConsoleShell
       account={account}
       barActions={barActions}
-      barPlacement='content'
       brand={shellBrand}
       breadcrumbs={[{
         id: `feature-${activeFeature}`,
@@ -1144,29 +1002,18 @@ function ConsoleKitContent({ config, featureModules, className }: ConsoleKitProp
         current: true
       }]}
       className={className}
-      contentClassName='bg-background'
-      contentFooter={mobileFeatureNav}
-      contentProps={{ id: 'main-content', tabIndex: -1 }}
-      headerHeight='3rem'
       navigation={navigation}
       renderLink={renderLink}
-      sidebarProps={{
-        collapsible: 'offcanvas',
-        className: 'border-r'
-      }}
-      sidebarWidth='15rem'
     >
-      <div className='flex min-h-full min-w-0 flex-col gap-4 p-4 pt-4 sm:p-6 lg:p-8 lg:pt-8'>
-        {sessionActionError ? (
-          <Alert className='w-full max-w-5xl' role='alert' variant='destructive'>
-            <CircleAlertIcon aria-hidden='true' />
-            <AlertTitle>Session action failed</AlertTitle>
-            <AlertDescription>{sessionActionError.message}</AlertDescription>
-          </Alert>
-        ) : null}
-        {content}
-      </div>
-    </AppShell>
+      {sessionActionError ? (
+        <Alert role='alert' variant='destructive'>
+          <CircleAlertIcon aria-hidden='true' />
+          <AlertTitle>Session action failed</AlertTitle>
+          <AlertDescription>{sessionActionError.message}</AlertDescription>
+        </Alert>
+      ) : null}
+      {content}
+    </ConsoleShell>
   );
 }
 

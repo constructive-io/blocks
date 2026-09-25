@@ -16,14 +16,6 @@ import {
   AlertTitle
 } from '@constructive-io/ui/alert';
 import { Button } from '@constructive-io/ui/button';
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle
-} from '@constructive-io/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@constructive-io/ui/avatar';
 import { Skeleton } from '@constructive-io/ui/skeleton';
 import { TabsList, TabsTrigger } from '@constructive-io/ui/tabs';
@@ -222,64 +214,57 @@ export function FeaturePackDiagnosticPanel({
 
   const iconTone =
     tone === 'destructive'
-      ? 'bg-destructive/10 text-destructive'
+      ? 'bg-destructive/10 text-destructive ring-destructive/20'
       : tone === 'warning'
-        ? 'bg-amber-500/10 text-amber-700 dark:text-amber-400'
-        : 'bg-muted text-muted-foreground';
+        ? 'bg-warning/10 text-warning ring-warning/20'
+        : 'bg-muted text-muted-foreground ring-foreground/[0.06]';
 
   return (
-    <Card className='w-full max-w-2xl border-border/70 shadow-sm' variant='flat'>
-      <CardHeader className='pb-3'>
-        <div className={cn('mb-3 flex size-10 items-center justify-center rounded-lg', iconTone)}>
+    <section className='w-full max-w-2xl overflow-hidden rounded-xl bg-card shadow-card'>
+      <div className='flex flex-col gap-3 px-5 pt-5 pb-4'>
+        <div className={cn('grid size-9 place-items-center rounded-[10px] ring-1 ring-inset [&_svg]:size-4', iconTone)}>
           {icon ?? <CircleAlertIcon aria-hidden='true' />}
         </div>
-        <CardTitle className='text-balance'>
-          <h1 className='text-base font-semibold tracking-tight lg:text-xl'>{title}</h1>
-        </CardTitle>
-        <CardDescription className='text-pretty text-sm lg:text-base'>{description}</CardDescription>
-      </CardHeader>
-      {(guidance || diagnostics?.length) ? (
-        <CardContent className='flex flex-col gap-4'>
-          {guidance ? (
-            <p className='text-muted-foreground text-pretty text-sm'>{guidance}</p>
-          ) : null}
-          {diagnostics?.length ? (
-            <div className='grid gap-2'>
-              <p className='text-muted-foreground text-xs font-medium'>Diagnostic evidence</p>
-              <dl className='bg-muted/60 grid gap-2 rounded-lg p-3'>
-                {diagnostics.map((item) => (
-                  <div className='grid min-w-0 gap-0.5 sm:grid-cols-[8rem_minmax(0,1fr)] sm:gap-3' key={item.label}>
-                    <dt className='text-muted-foreground text-xs font-medium'>{item.label}</dt>
-                    <dd className='min-w-0 break-words font-mono text-xs'>{item.value}</dd>
-                  </div>
-                ))}
-              </dl>
-              <div className='flex flex-wrap items-center gap-2'>
-                <Button
-                  onClick={() => void copyDiagnostics()}
-                  size='sm'
-                  type='button'
-                  variant='outline'
-                >
-                  {copyState === 'copied'
-                    ? <CheckIcon data-icon='inline-start' />
-                    : <CopyIcon data-icon='inline-start' />}
-                  {copyState === 'copied' ? 'Copied' : 'Copy diagnostics'}
-                </Button>
-                <span
-                  aria-live='polite'
-                  className='text-muted-foreground text-xs'
-                  role={copyState === 'error' ? 'alert' : 'status'}
-                >
-                  {copyState === 'error' ? 'Could not copy diagnostics.' : null}
-                </span>
-              </div>
+        <div className='flex flex-col gap-1'>
+          <h1 className='text-balance text-base font-medium tracking-tight text-foreground'>{title}</h1>
+          <p className='text-pretty text-[13px] leading-5 text-muted-foreground'>{description}</p>
+        </div>
+        {guidance ? (
+          <p className='text-pretty text-[13px] leading-5 text-muted-foreground/85'>{guidance}</p>
+        ) : null}
+      </div>
+      {diagnostics?.length ? (
+        <div className='flex flex-col gap-2 border-t border-dashed border-foreground/10 px-5 py-4'>
+          <div className='flex items-center justify-between gap-3'>
+            <p className='text-xs text-muted-foreground'>Diagnostic evidence</p>
+            <div className='flex items-center gap-2'>
+              <span
+                aria-live='polite'
+                className='text-xs text-muted-foreground'
+                role={copyState === 'error' ? 'alert' : 'status'}
+              >
+                {copyState === 'error' ? 'Could not copy diagnostics.' : null}
+              </span>
+              <Button className='h-7' onClick={() => void copyDiagnostics()} size='sm' type='button' variant='ghost'>
+                {copyState === 'copied'
+                  ? <CheckIcon data-icon='inline-start' />
+                  : <CopyIcon data-icon='inline-start' />}
+                {copyState === 'copied' ? 'Copied' : 'Copy diagnostics'}
+              </Button>
             </div>
-          ) : null}
-        </CardContent>
+          </div>
+          <dl className='grid gap-1.5 rounded-lg bg-muted/50 p-3'>
+            {diagnostics.map((item) => (
+              <div className='grid min-w-0 gap-0.5 sm:grid-cols-[8.5rem_minmax(0,1fr)] sm:gap-3' key={item.label}>
+                <dt className='text-xs text-muted-foreground'>{item.label}</dt>
+                <dd className='min-w-0 break-words font-mono text-xs text-foreground'>{item.value}</dd>
+              </div>
+            ))}
+          </dl>
+        </div>
       ) : null}
       {(onRetry || actions) ? (
-        <CardFooter className='flex flex-wrap gap-2 border-t pt-4'>
+        <div className='flex flex-wrap items-center gap-2 border-t border-dashed border-foreground/10 bg-muted/30 px-5 py-3'>
           {onRetry ? (
             <Button onClick={onRetry} size='sm' type='button' variant='outline'>
               <RefreshCwIcon data-icon='inline-start' />
@@ -287,9 +272,9 @@ export function FeaturePackDiagnosticPanel({
             </Button>
           ) : null}
           {actions}
-        </CardFooter>
+        </div>
       ) : null}
-    </Card>
+    </section>
   );
 }
 

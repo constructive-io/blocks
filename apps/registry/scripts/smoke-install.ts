@@ -121,6 +121,7 @@ const consoleCoreFiles = [
 	'src/blocks/console-kit/feature-module.ts',
 	'src/blocks/console-kit/console-kit-contracts.ts',
 	'src/blocks/console-kit/console-connection-menu.tsx',
+	'src/blocks/console-kit/console-shell.tsx',
 	'src/blocks/console-kit/console-kit-runtime.tsx',
 	'src/blocks/console-kit/use-latest-callback.ts',
 	'src/blocks/console-kit/console-kit-core.tsx',

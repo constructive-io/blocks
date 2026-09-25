@@ -603,9 +603,11 @@ export default function ConsoleKitPage() {
               Route-neutral app shell
             </h2>
             <p className="mt-1.5 text-pretty text-sm leading-7 text-muted-foreground">
-              Console Kit composes the Constructive App Shell, App Bar, and the shadcn Base UI Sidebar. The shell
-              renders typed navigation, breadcrumbs, brand, account actions, search, and action slots, but links remain
-              plain anchors until your host supplies a Next.js or other framework renderer.
+              Console Kit sits on the same workspace shell as Agents Builder, Billing, and the Storage Browser: a
+              collapsible sidebar rail (a drawer on phones) with the application&apos;s features, the signed-in account at
+              its foot, and a slim bar with the current location. It takes the same typed navigation, brand, account,
+              and breadcrumb data as the App Shell, and its links stay plain anchors until your host supplies a Next.js
+              or other framework renderer.
             </p>
             <p className="mt-2 text-pretty text-sm leading-7 text-muted-foreground">
               Omit a controlled route to let Console Kit own navigation, optionally starting from{' '}
@@ -620,7 +622,7 @@ export default function ConsoleKitPage() {
           </CodeBlock>
 
           <div className="grid gap-3 md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
-            <CodeBlock label="Install the shell without Console Kit">{registryAdd('app-shell')}</CodeBlock>
+            <CodeBlock label="Install the workspace shell without Console Kit">{registryAdd('workspace-kit')}</CodeBlock>
             <div className="rounded-xl border border-border/60 bg-card p-4">
               <h3 className="text-sm font-medium text-foreground">Compose only what you need</h3>
               <p className="mt-1 text-pretty text-xs leading-5 text-muted-foreground">
