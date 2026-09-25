@@ -16,7 +16,7 @@ export type { CanvasViewport, CanvasViewportOptions, NodeShellTone, Viewport, Wi
 export { AppearanceRow, monogram, SwitcherTrigger } from './menu';
 export type { WorkspaceTheme } from './menu';
 export { NavCount, NavIcon, NavRow, NavSection, RailTip, SidebarFrame } from './nav';
-export type { NavRowProps, NavSectionProps, SidebarFrameProps } from './nav';
+export type { NavRowLinkProps, NavRowProps, NavSectionProps, SidebarFrameProps } from './nav';
 export {
 	enterClass,
 	FilterGroup,
