@@ -67,6 +67,29 @@ function largeOrg(): OrgChartEdge[] {
 const LARGE = largeOrg();
 const LARGE_FOLDED = LARGE.filter((edge) => edge.id.split('-').length === 3).map((edge) => edge.id);
 
+/** 391 people with uneven team sizes, all unfolded: the worst case for folding, unfolding, and dragging. */
+function stressOrg(): OrgChartEdge[] {
+	const edges = [person('s', null, 'Rowan Ellis', 'Chief Executive Officer')];
+	const levels = [
+		{ count: 6, title: 'Vice President' },
+		{ count: 4, title: 'Director' },
+		{ count: 3, title: 'Manager' },
+		{ count: 4, title: 'Engineer' },
+	];
+	const grow = (parentId: string, depth: number) => {
+		const level = levels[depth];
+		if (!level) return;
+		for (let index = 0; index < level.count; index += 1) {
+			const id = `${parentId}.${index + 1}`;
+			edges.push(person(id, parentId, `Person ${id.slice(2)}`, level.title));
+			grow(id, depth + 1);
+		}
+	};
+	grow('s', 0);
+	return edges;
+}
+const STRESS = stressOrg();
+
 function Frame({ children, width = 960, height = 620 }: { children: React.ReactNode; width?: number; height?: number }) {
 	return <div style={{ width, height, maxWidth: '100%' }}>{children}</div>;
 }
@@ -185,6 +208,31 @@ export const LargeOrganization: Story = {
 			<OrgChart className="h-full" defaultEdges={LARGE} defaultCollapsedIds={LARGE_FOLDED} />
 		</Frame>
 	),
+};
+
+/**
+ * 391 people, all unfolded, with a host that saves each move after 300ms.
+ * Fold and unfold whole divisions, and drag again while a save is in flight.
+ */
+export const StressTest: Story = {
+	render: () => {
+		const [edges, setEdges] = React.useState(STRESS);
+		const { entries, log } = useHostLog();
+		return (
+			<Frame width={1180} height={720}>
+				<OrgChart
+					className="h-full"
+					edges={edges}
+					onReparent={async (child, parent) => {
+						await new Promise((resolve) => setTimeout(resolve, 300));
+						setEdges((current) => current.map((edge) => (edge.id === child ? { ...edge, parentId: parent } : edge)));
+						log(`onReparent(${child} → ${parent})`);
+					}}
+				/>
+				<HostLog entries={entries} />
+			</Frame>
+		);
+	},
 };
 
 /** Below 640px the cards switch to their compact size and the details panel docks to the bottom. */

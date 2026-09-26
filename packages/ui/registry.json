@@ -3111,7 +3111,19 @@
           "type": "registry:component"
         },
         {
+          "path": "registry/constructive/blocks/org-chart/org-chart-wires.tsx",
+          "type": "registry:component"
+        },
+        {
           "path": "registry/constructive/blocks/org-chart/layout.ts",
+          "type": "registry:lib"
+        },
+        {
+          "path": "registry/constructive/blocks/org-chart/org-chart-scene.ts",
+          "type": "registry:lib"
+        },
+        {
+          "path": "registry/constructive/blocks/org-chart/org-chart-spring.ts",
           "type": "registry:lib"
         },
         {
