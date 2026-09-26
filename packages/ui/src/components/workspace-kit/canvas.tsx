@@ -8,6 +8,8 @@ import { focusRingClass, pressClass, SurfaceBody, surfaceInsetClass, TooltipIcon
 import { prefersReducedMotion } from './reduced-motion';
 
 export type Viewport = { x: number; y: number; zoom: number };
+/** A rectangle in canvas units, e.g. where a node will settle. */
+export type CanvasBox = { x: number; y: number; width: number; height: number };
 
 type CanvasInset = { side: number; top: number; bottom: number };
 
@@ -19,6 +21,8 @@ export type CanvasViewportOptions = {
 	fit?: 'width' | 'contain';
 	/** Content height in canvas units; `contain` needs it. */
 	contentHeight?: number;
+	/** Top-left corner of the content in canvas units, when it doesn't start at the origin. */
+	contentOrigin?: { x: number; y: number };
 	minZoom?: number;
 	maxZoom?: number;
 	/**
@@ -59,6 +63,8 @@ function zoomAround(view: Viewport, zoom: number, cx: number, cy: number): Viewp
 export function useCanvasViewport(contentWidth: number, options: CanvasViewportOptions = {}) {
 	const { fit: fitMode = 'width', contentHeight = 0, minZoom = 0.5, maxZoom = 2 } = options;
 	const minFitZoom = options.minFitZoom ?? minZoom;
+	const originX = options.contentOrigin?.x ?? 0;
+	const originY = options.contentOrigin?.y ?? 0;
 	const inset = options.inset ?? DEFAULT_INSET;
 	const { side, top, bottom } = inset;
 	const viewportRef = React.useRef<HTMLDivElement | null>(null);
@@ -106,32 +112,53 @@ export function useCanvasViewport(contentWidth: number, options: CanvasViewportO
 		const availableWidth = width - side * 2;
 		if (fitMode === 'width') {
 			const zoom = Math.max(minZoom, Math.min(1, Math.floor((availableWidth / contentWidth) * 20) / 20));
-			return { x: Math.max(side, Math.round((width - contentWidth * zoom) / 2)), y: top, zoom };
+			return { x: Math.max(side, Math.round((width - contentWidth * zoom) / 2)) - originX * zoom, y: top - originY * zoom, zoom };
 		}
 		const availableHeight = viewport.clientHeight - top - bottom;
 		const fitZoom = Math.min(1, availableWidth / contentWidth, contentHeight ? availableHeight / contentHeight : 1);
 		const zoom = Math.max(minFitZoom, Math.floor(fitZoom * 20) / 20);
 		return {
-			x: Math.round((width - contentWidth * zoom) / 2),
-			y: Math.round(top + Math.max(0, (availableHeight - contentHeight * zoom) / 2)),
+			x: Math.round((width - contentWidth * zoom) / 2 - originX * zoom),
+			y: Math.round(top + Math.max(0, (availableHeight - contentHeight * zoom) / 2) - originY * zoom),
 			zoom,
 		};
-	}, [bottom, contentHeight, contentWidth, fitMode, minFitZoom, minZoom, side, top]);
+	}, [bottom, contentHeight, contentWidth, fitMode, minFitZoom, minZoom, originX, originY, side, top]);
 
-	// Keep fitting as the canvas resizes (a panel opening, a mobile tab
-	// revealing it) until the person takes over.
-	React.useLayoutEffect(() => {
-		if (!element) return;
-		const refit = () => {
+	// Keep fitting until the person takes over: at once as the canvas resizes (a panel opening, a
+	// mobile tab revealing it), and eased when the content changes (data arriving, say).
+	const refit = React.useCallback(
+		(ease: keyof typeof EASE | null) => {
 			if (touched.current) return;
 			const next = fitted();
-			if (next) place(() => next, null);
-		};
-		refit();
-		const observer = new ResizeObserver(refit);
+			if (next) place(() => next, ease);
+		},
+		[fitted, place],
+	);
+	const latestRefit = React.useRef(refit);
+	const fittedElement = React.useRef<HTMLDivElement | null>(null);
+	React.useLayoutEffect(() => {
+		latestRefit.current = refit;
+		// A new canvas fits at once; new content eases into its new frame.
+		if (element) refit(fittedElement.current === element ? 'reveal' : null);
+		fittedElement.current = element;
+	}, [element, refit]);
+	React.useLayoutEffect(() => {
+		if (!element) return;
+		let size = [element.clientWidth, element.clientHeight];
+		const observer = new ResizeObserver(() => {
+			// The first callback reports the size we already have; skipping it keeps an eased refit running.
+			if (size[0] === element.clientWidth && size[1] === element.clientHeight) return;
+			size = [element.clientWidth, element.clientHeight];
+			latestRefit.current(null);
+		});
 		observer.observe(element);
 		return () => observer.disconnect();
-	}, [element, fitted, place]);
+	}, [element]);
+
+	/** Keeps the current view and stops fitting, as a pan would; for edits the person makes to the content. */
+	const hold = React.useCallback(() => {
+		touched.current = true;
+	}, []);
 
 	/** Frames the content again and resumes fitting on resize. */
 	const fit = React.useCallback(() => {
@@ -150,13 +177,25 @@ export function useCanvasViewport(contentWidth: number, options: CanvasViewportO
 		[clampZoom, move],
 	);
 
-	/** Eases the view just enough to bring `node` inside the canvas margins. */
+	/**
+	 * Eases the view just enough to bring a node inside the canvas margins.
+	 * Pass a `CanvasBox` for a node that is still moving to where it will settle.
+	 */
 	const reveal = React.useCallback(
-		(node: Element) => {
+		(target: Element | CanvasBox) => {
 			const viewport = viewportRef.current;
 			if (!viewport) return;
 			const frame = viewport.getBoundingClientRect();
-			const rect = node.getBoundingClientRect();
+			const { x, y, zoom } = viewRef.current;
+			const rect =
+				target instanceof Element
+					? target.getBoundingClientRect()
+					: {
+							left: frame.left + x + target.x * zoom,
+							top: frame.top + y + target.y * zoom,
+							right: frame.left + x + (target.x + target.width) * zoom,
+							bottom: frame.top + y + (target.y + target.height) * zoom,
+						};
 			let dx = 0;
 			let dy = 0;
 			if (rect.right > frame.right - side) dx = frame.right - side - rect.right;
@@ -209,6 +248,11 @@ export function useCanvasViewport(contentWidth: number, options: CanvasViewportO
 		onPointerMove(event: React.PointerEvent<HTMLDivElement>) {
 			const start = gesture.current;
 			if (!start || !pointers.current.has(event.pointerId)) return;
+			// No button held: the release happened somewhere we never heard about (a context menu, another window).
+			if ((event.buttons & 1) === 0) {
+				handlers.onPointerUp(event);
+				return;
+			}
 			pointers.current.set(event.pointerId, { x: event.clientX, y: event.clientY });
 			const points = [...pointers.current.values()];
 			const x = points.reduce((sum, point) => sum + point.x, 0) / points.length;
@@ -260,7 +304,7 @@ export function useCanvasViewport(contentWidth: number, options: CanvasViewportO
 		view,
 		transition,
 		dragging,
-		handlers: { ...handlers, onPointerCancel: handlers.onPointerUp },
+		handlers: { ...handlers, onPointerCancel: handlers.onPointerUp, onLostPointerCapture: handlers.onPointerUp },
 		zoomTo,
 		zoomIn: () => zoomTo(view.zoom + ZOOM_STEP),
 		zoomOut: () => zoomTo(view.zoom - ZOOM_STEP),
@@ -268,6 +312,7 @@ export function useCanvasViewport(contentWidth: number, options: CanvasViewportO
 		canZoomOut: view.zoom > minZoom,
 		fit,
 		reveal,
+		hold,
 		/** True when the last press panned; use it to ignore the click that ends a drag. */
 		wasPanned: () => panned.current,
 	};
