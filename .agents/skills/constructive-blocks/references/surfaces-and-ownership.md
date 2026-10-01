@@ -11,6 +11,7 @@ live `shadcn@latest search` and `view`.
 | Button, form, overlay, navigation, or layout | A primitive name, `form-kit`, `overlay-kit`, `layout-kit`, `app-shell` | Installed source owns presentation; the host owns application behavior. |
 | AI chat or agent traces | `ai` | Presentational only. The host owns the model runtime, streaming reducer, tools, IPC, and persistence. |
 | Agent workspace template | `agents-builder` | Installed source owns the chat, integrations, skills, and agent-canvas views plus scripted playback; the host supplies workspace data and owns OAuth, persistence, routing, and model runs. |
+| Secure document rooms | `data-rooms` | Installed source owns the rooms, documents, people, Q&A, insights, settings, and access-map views, the access explanations and previews, optimistic local updates, and scripted assistant answers; the host supplies workspace data and owns storage, delivery, authorization, the activity log, and assistant runs. |
 | Searchable application commands | `command-palette` | The npm package owns the headless engine; installed source owns the dialog and task presentation; the host owns routing and actions. |
 | Arbitrary application-table CRUD | `sheets` | Installed source owns the grid; the data runtime interprets current `_meta`; the host owns endpoint and session discovery. |
 | Database schema editing | `schema-builder` | Installed source owns the workspace; a host adapter performs control-plane operations and confirmation workflows. |
@@ -71,6 +72,7 @@ and dependency closure. The public documentation provides richer examples:
 - Org Chart: `https://constructive-io.github.io/blocks/blocks/org-chart/`
 - Storage: `https://constructive-io.github.io/blocks/blocks/storage/` (Storage Browser at `/blocks/storage/browser/`, the feature pack at `/blocks/features/storage/`)
 - Agents Builder: `https://constructive-io.github.io/blocks/blocks/agents-builder/`
+- Data Rooms: `https://constructive-io.github.io/blocks/blocks/data-rooms/`
 - Billing: `https://constructive-io.github.io/blocks/blocks/billing/` (Billing Account at `/blocks/billing/account/`, Billing Console at `/blocks/billing/console/`)
 - Feature packs: `https://constructive-io.github.io/blocks/blocks/features/`
 - Console Kit: `https://constructive-io.github.io/blocks/blocks/console-kit/`

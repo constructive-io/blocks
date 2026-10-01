@@ -2,6 +2,7 @@ export type ApplicationDocId =
   | 'org-chart'
   | 'storage-browser'
   | 'agents-builder'
+  | 'data-rooms'
   | 'billing-account'
   | 'billing-console'
   | 'sheets'
@@ -20,6 +21,7 @@ export const APPLICATION_DOC_SEQUENCE: readonly ApplicationDocLink[] = [
   { id: 'org-chart', title: 'Org Chart' },
   { id: 'storage-browser', title: 'Storage Browser', href: '/blocks/storage/browser' },
   { id: 'agents-builder', title: 'Agents Builder' },
+  { id: 'data-rooms', title: 'Data Rooms' },
   { id: 'billing-account', title: 'Billing Account', href: '/blocks/billing/account' },
   { id: 'billing-console', title: 'Billing Console', href: '/blocks/billing/console' },
   { id: 'sheets', title: 'Sheets' },

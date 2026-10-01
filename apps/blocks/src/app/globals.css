@@ -7,6 +7,7 @@
 
 @source '../';
 @source '../../../../packages/ui/src/components/agents-builder';
+@source '../../../../packages/ui/src/components/data-rooms';
 @source '../../../../packages/ui/src/components/workspace-kit';
 @source '../../../../packages/ui/src/components/org-chart';
 @source '../../../../packages/ui/src/components/storage';

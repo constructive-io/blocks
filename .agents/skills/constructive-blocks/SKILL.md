@@ -101,6 +101,7 @@ to endpoints, sessions, adapters, or tenant data.
 | Application shell | `app-shell` |
 | AI or agent UI | `ai` |
 | Complete agent workspace (chat, integrations, skills, agent canvas) | `agents-builder` |
+| Secure document rooms shared inside and outside an organization (roles, folder shares, agreements, Q&A, insights) | `data-rooms` |
 | Global commands and workflows | `command-palette` |
 | Metadata-driven data grid | `sheets` |
 | PostgreSQL schema workspace | `schema-builder` |
