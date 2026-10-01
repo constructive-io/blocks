@@ -8,7 +8,8 @@ import { Button } from '../button';
 import { Switch } from '../switch';
 import { useBillingFormat } from '../billing-kit/context';
 import { isHealthFresh } from '../billing-kit/format';
-import { ExternalRef, FEATURE_LABEL, ProviderCard, ProviderMark, ReadinessChecklist } from '../billing-kit/provider';
+import { ExternalRef, featureLabel, ProviderCard, ProviderMark, ReadinessChecklist } from '../billing-kit/provider';
+import { modeLabel } from '../billing-kit/providers';
 import { Bezel, dashedRule, KeyValueList, Panel, SectionHeading } from '../billing-kit/surface';
 import { ToneBadge, ViewFrame } from '../workspace-kit/primitives';
 import { useBillingConsole } from './billing-console-context';
@@ -170,7 +171,7 @@ export function ConsoleProviderView() {
 							<p className="flex flex-wrap items-center gap-2 text-base font-semibold tracking-tight text-foreground">
 								{provider.name}
 								<ToneBadge tone="success">Active</ToneBadge>
-								<ToneBadge tone={connection.mode === 'live' ? 'primary' : 'amber'}>{connection.mode === 'live' ? 'Live mode' : 'Test mode'}</ToneBadge>
+								<ToneBadge tone={connection.mode === 'live' ? 'primary' : 'amber'}>{`${modeLabel(provider, connection.mode)} mode`}</ToneBadge>
 							</p>
 							<p className="mt-0.5 text-[13px] text-muted-foreground">
 								{connection.accountLabel ?? 'Connected account'}
@@ -179,7 +180,7 @@ export function ConsoleProviderView() {
 							<div className="mt-3 flex flex-wrap gap-1">
 								{provider.features.map((feature) => (
 									<span key={feature} className="rounded-[4px] bg-muted px-1.5 py-0.5 text-[11px] text-muted-foreground">
-										{FEATURE_LABEL[feature]}
+										{featureLabel(provider, feature)}
 									</span>
 								))}
 							</div>

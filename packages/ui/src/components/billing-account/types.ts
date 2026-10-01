@@ -16,6 +16,7 @@ import type {
 	LimitCounter,
 	Meter,
 	Money,
+	PaymentMethodSummary,
 	Plan,
 	ProviderMode,
 	RateWindow,
@@ -46,6 +47,8 @@ export type BillingAccountData = {
 	/** The active payment provider. Actions it cannot perform are hidden or explained. */
 	provider?: BillingProviderDescriptor;
 	providerMode?: ProviderMode;
+	/** The payment method on file, read from the provider. Omit it to show only the portal link. */
+	paymentMethod?: PaymentMethodSummary;
 	currency: string;
 	/** Universal credits one cent buys (`database_settings.credits_per_cent`). */
 	creditsPerCent: number;

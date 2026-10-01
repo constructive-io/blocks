@@ -13,6 +13,7 @@ import {
 	DEMO_NOW,
 	demoRedeemCode,
 } from '../../components/billing-account';
+import { DEMO_PROVIDERS } from '../../components/billing-kit';
 
 const wait = (ms: number) => new Promise((resolve) => window.setTimeout(resolve, ms));
 
@@ -100,6 +101,26 @@ export const NeedsReview: Story = scenario('review-required');
 export const FreeNoSubscription: Story = scenario('free', 'plans');
 export const MemberReadOnly: Story = scenario('member');
 export const TenantApp: Story = scenario('tenant');
+
+export const MerchantOfRecord: Story = {
+	name: 'Merchant of record provider',
+	args: {
+		data: {
+			...billingAccountScenario('tenant'),
+			provider: DEMO_PROVIDERS.find((provider) => provider.id === 'paddle'),
+			paymentMethod: { kind: 'wallet', label: 'PayPal', detail: 'billing@harbor.coach' },
+		},
+		defaultView: 'invoices',
+	},
+	parameters: {
+		docs: {
+			description: {
+				story: 'The same tenant on an example Paddle descriptor. A merchant-of-record provider charges the customer and issues invoices in its own name, so the payment panel says so; nothing else in the template changes.',
+			},
+		},
+	},
+	render: (args) => <Frame {...args} />,
+};
 
 export const ScenarioSwitcher: Story = {
 	name: 'All scenarios (switcher)',

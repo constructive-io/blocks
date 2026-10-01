@@ -1,14 +1,14 @@
 'use client';
 
-import { ChevronRight, FileText, Receipt, Scale, Undo2 } from 'lucide-react';
+import { ChevronRight, CircleDollarSign, CreditCard, FileText, Landmark, type LucideIcon, Receipt, Scale, Undo2, Wallet } from 'lucide-react';
 import * as React from 'react';
 
 import { cn } from '../../lib/utils';
-import { focusRingClass } from '../workspace-kit/primitives';
+import { focusRingClass, ToneBadge } from '../workspace-kit/primitives';
 import { useBillingFormat } from './context';
 import { dayKey, INVOICE_STATUS } from './format';
 import { dashedRule, EmptyState, IconTile, StatusBadge, TableSurface, tableHeadClass, tableRowClass } from './surface';
-import type { Invoice, RefundOrDispute } from './types';
+import type { Invoice, PaymentMethodSummary, RefundOrDispute } from './types';
 
 const REASON: Record<Invoice['billingReason'], string> = {
 	subscription_cycle: 'Renewal',
@@ -174,5 +174,48 @@ export function AdjustmentList({ items, className }: { items: RefundOrDispute[];
 				</li>
 			))}
 		</ul>
+	);
+}
+
+const METHOD_ICON: Record<PaymentMethodSummary['kind'], LucideIcon> = {
+	card: CreditCard,
+	bank_account: Landmark,
+	wallet: Wallet,
+	invoice: FileText,
+	other: CircleDollarSign,
+};
+
+/** Whole months from `now` to a card's expiry month: negative once it has expired, 0 in its last month. */
+function monthsToExpiry(method: PaymentMethodSummary, now: string) {
+	if (!method.expMonth || !method.expYear) return null;
+	const today = new Date(now);
+	return (method.expYear - today.getUTCFullYear()) * 12 + (method.expMonth - (today.getUTCMonth() + 1));
+}
+
+/**
+ * The payment method on file, whichever provider holds it: brand or scheme,
+ * the last four digits, and a card's expiry, flagged when it has run out or
+ * runs out next month.
+ */
+export function PaymentMethodRow({ method, className }: { method: PaymentMethodSummary; className?: string }) {
+	const f = useBillingFormat();
+	const months = monthsToExpiry(method, f.now);
+	const expiry = months === null ? null : `${months < 0 ? 'Expired' : 'Expires'} ${String(method.expMonth).padStart(2, '0')}/${String(method.expYear).slice(-2)}`;
+	return (
+		<div className={cn('flex min-w-0 items-center gap-3', className)}>
+			<IconTile icon={METHOD_ICON[method.kind]} tone={months !== null && months < 0 ? 'danger' : 'neutral'} />
+			<span className="min-w-0 flex-1">
+				<span className="block truncate text-[13px] text-foreground">
+					{method.label}
+					{method.last4 ? <span className="text-muted-foreground tabular-nums"> •••• {method.last4}</span> : null}
+				</span>
+				{method.detail || expiry ? (
+					<span className={cn('block truncate text-xs tabular-nums', months !== null && months < 0 ? 'text-destructive' : 'text-muted-foreground')}>
+						{[method.detail, expiry].filter(Boolean).join(' · ')}
+					</span>
+				) : null}
+			</span>
+			{months !== null && months >= 0 && months <= 1 ? <ToneBadge tone="warning">Expires soon</ToneBadge> : null}
+		</div>
 	);
 }

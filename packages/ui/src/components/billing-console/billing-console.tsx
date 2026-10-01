@@ -7,7 +7,6 @@ import { BillingFormatProvider } from '../billing-kit/context';
 import { CustomerDetailSheet, type GrantCreditsRequest } from '../billing-kit/customers';
 import { DAY, humanize, isHealthFresh } from '../billing-kit/format';
 import { ProviderConnectDialog } from '../billing-kit/provider';
-import { modeFromCredential } from '../billing-kit/providers';
 import type { BillingHealth, CreditCode, CreditCodeDraft, CreditPack, CustomerSummary, DatabaseStanding, Meter, Plan, ProviderConnection } from '../billing-kit/types';
 import { WorkspaceShell } from '../workspace-kit/shell';
 import { useLatest } from '../workspace-kit/use-latest';
@@ -282,8 +281,7 @@ function BillingConsole({
 					onOpenChange={(open) => setConnect((current) => ({ ...current, open }))}
 					onConnect={async (providerId, values) => {
 						await onConnectProvider?.(providerId, values);
-						const descriptor = data.providers.find((candidate) => candidate.id === providerId);
-						const firstSecret = descriptor?.credentials.find((field) => field.kind === 'secret')?.name;
+						const detected = data.providers.find((candidate) => candidate.id === providerId)?.detectMode?.(values) ?? null;
 						setLocal((current) => {
 							const same = current.connection?.providerId === providerId;
 							const credentials = { ...(same ? current.connection?.credentials : {}) };
@@ -292,7 +290,7 @@ function BillingConsole({
 								...current,
 								connection: {
 									providerId,
-									mode: (firstSecret && values[firstSecret] ? modeFromCredential(values[firstSecret]!) : null) ?? (same ? current.connection!.mode : 'test'),
+									mode: detected ?? (same ? current.connection!.mode : 'test'),
 									accountLabel: same ? current.connection?.accountLabel : undefined,
 									accountId: same ? current.connection?.accountId : undefined,
 									connectedAt: same ? current.connection?.connectedAt : clock(),

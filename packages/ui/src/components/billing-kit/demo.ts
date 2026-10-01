@@ -39,6 +39,8 @@ export const DEMO_PROVIDERS: BillingProviderDescriptor[] = [
 		monogram: 'P',
 		availability: 'coming_soon',
 		features: ['hostedCheckout', 'customerPortal', 'invoices', 'refunds', 'testMode'],
+		merchantOfRecord: true,
+		modeLabels: { test: 'Sandbox', live: 'Live' },
 		credentials: [{ name: 'PADDLE_API_KEY', label: 'API key', kind: 'secret', placeholder: 'pdl_…' }],
 	},
 	{
@@ -49,6 +51,7 @@ export const DEMO_PROVIDERS: BillingProviderDescriptor[] = [
 		monogram: 'L',
 		availability: 'coming_soon',
 		features: ['hostedCheckout', 'customerPortal', 'invoices', 'testMode'],
+		merchantOfRecord: true,
 		credentials: [{ name: 'LEMON_SQUEEZY_API_KEY', label: 'API key', kind: 'secret' }],
 	},
 ];
