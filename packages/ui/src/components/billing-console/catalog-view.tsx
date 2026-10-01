@@ -164,7 +164,11 @@ export function ConsoleCatalogView() {
 						<div className="flex flex-col gap-3">
 							<SectionHeading
 								title="Plans and prices"
-								description={`Prices are immutable once ${provider?.name ?? 'the provider'} has them: add a new price and retire the old one instead of editing it.`}
+								description={
+									provider?.immutablePrices
+										? `Prices are immutable once ${provider.name} has them: add a new price and retire the old one instead of editing it.`
+										: `Each plan's prices and how they mirror to ${provider?.name ?? 'the provider'}. Retire a price rather than removing it so current subscribers keep theirs.`
+								}
 							/>
 							<PlanPriceTable
 								plans={plans}

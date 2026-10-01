@@ -5,6 +5,7 @@ import * as React from 'react';
 
 import { cn } from '../../lib/utils';
 import { ProviderMark } from '../billing-kit/provider';
+import { modeLabel } from '../billing-kit/providers';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator } from '../dropdown-menu';
 import { AppearanceRow, monogram, SwitcherTrigger } from '../workspace-kit/menu';
 import { NavCount, NavIcon, NavRow, NavSection, SidebarFrame } from '../workspace-kit/nav';
@@ -121,7 +122,7 @@ export function BillingConsoleSidebar({ collapsed = false, onCollapsedChange, dr
 						<div className="flex items-center gap-2">
 							{provider ? <ProviderMark provider={provider} size="sm" /> : null}
 							<p className="min-w-0 flex-1 truncate text-sm font-medium text-foreground">{settings.enableBilling ? 'Billing is live' : 'Billing is off'}</p>
-							{connection ? <span className="text-xs text-muted-foreground">{connection.mode === 'live' ? 'Live' : 'Test'}</span> : null}
+							{connection ? <span className="text-xs text-muted-foreground">{modeLabel(provider, connection.mode)}</span> : null}
 						</div>
 						<div aria-hidden="true" className="mt-3 flex h-1 gap-px overflow-hidden rounded-full bg-foreground/[0.07]">
 							{health.checks.map((check) => (

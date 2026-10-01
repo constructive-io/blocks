@@ -3614,7 +3614,7 @@
         "block",
         "billing"
       ],
-      "docs": "Import: `import { BillingFormatProvider, CurrentPlanCard, UsageTree, PlanChangeDialog, STRIPE_PROVIDER } from '@/components/ui/billing-kit'`. Wrap components in `BillingFormatProvider` with a locale, time zone, and a fixed `now` from the server. Money is integer minor units and `-1` means unlimited, as in the database. Register more payment providers by passing your own `BillingProviderDescriptor` objects.",
+      "docs": "Import: `import { BillingFormatProvider, CurrentPlanCard, UsageTree, PlanChangeDialog, STRIPE_PROVIDER } from '@/components/ui/billing-kit'`. Wrap components in `BillingFormatProvider` with a locale, time zone, and a fixed `now` from the server. Money is integer minor units and `-1` means unlimited, as in the database. Register more payment providers by passing your own `BillingProviderDescriptor` objects; `logo`, `modeLabels`, `detectMode`, `merchantOfRecord`, and `immutablePrices` cover what differs between providers.",
       "dependencies": [
         "lucide-react"
       ],
@@ -3730,7 +3730,7 @@
         "application",
         "billing"
       ],
-      "docs": "Import: `import { BillingAccount, BILLING_ACCOUNT_DEMO } from '@/components/ui/billing-account'`. Pass `data` mapped from your billing tables and hand purchases to your payment provider through `onChangePlan`, `onBuyCredits`, `onRedeemCode`, and `onAction`; limit `views` to what your data can back.",
+      "docs": "Import: `import { BillingAccount, BILLING_ACCOUNT_DEMO } from '@/components/ui/billing-account'`. Pass `data` mapped from your billing tables and hand purchases to your payment provider through `onChangePlan`, `onBuyCredits`, `onRedeemCode`, and `onAction`; limit `views` to what your data can back. Fill `paymentMethod` from your provider to show the method on file.",
       "dependencies": [
         "lucide-react"
       ],

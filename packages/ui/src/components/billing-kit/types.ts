@@ -331,6 +331,22 @@ export type Invoice = {
 	externalId?: string;
 };
 
+/**
+ * The payment method on file, as the host reads it from whichever provider
+ * holds it. Only display details: never a full number or a token.
+ */
+export type PaymentMethodSummary = {
+	kind: 'card' | 'bank_account' | 'wallet' | 'invoice' | 'other';
+	/** Brand, network, or scheme, e.g. "Visa", "PayPal", "SEPA Direct Debit". */
+	label: string;
+	last4?: string;
+	/** Card expiry, 1–12. */
+	expMonth?: number;
+	expYear?: number;
+	/** A secondary line, e.g. the PayPal email or "Net 30 terms". */
+	detail?: string;
+};
+
 export type RefundOrDispute = {
 	id: string;
 	kind: 'refund' | 'dispute';

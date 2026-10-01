@@ -1,7 +1,7 @@
 import type { Meta, StoryObj } from '@storybook/react-vite';
 
 import { BILLING_ACCOUNT_DEMO, billingAccountScenario } from '../../components/billing-account';
-import { AdjustmentList, InvoiceTable, LedgerTimeline, Panel } from '../../components/billing-kit';
+import { AdjustmentList, InvoiceTable, LedgerTimeline, Panel, PaymentMethodRow } from '../../components/billing-kit';
 import { billingFrame, Stack, Variant } from './story-frame';
 
 const meta: Meta = {
@@ -31,6 +31,22 @@ export const Invoices: Story = {
 				<InvoiceTable invoices={[]} />
 			</Variant>
 		</Stack>
+	),
+};
+
+export const PaymentMethods: Story = {
+	name: 'PaymentMethodRow: card, expiring, expired, wallet, bank, invoice',
+	render: () => (
+		<Panel title="Payment methods" description="Whatever the provider holds, mapped to brand, last four, and expiry.">
+			<div className="flex flex-col gap-3">
+				<PaymentMethodRow method={{ kind: 'card', label: 'Visa', last4: '4242', expMonth: 3, expYear: 2028 }} />
+				<PaymentMethodRow method={{ kind: 'card', label: 'Mastercard', last4: '4444', expMonth: 10, expYear: 2026 }} />
+				<PaymentMethodRow method={{ kind: 'card', label: 'Amex', last4: '0005', expMonth: 8, expYear: 2026 }} />
+				<PaymentMethodRow method={{ kind: 'wallet', label: 'PayPal', detail: 'billing@harbor.coach' }} />
+				<PaymentMethodRow method={{ kind: 'bank_account', label: 'SEPA Direct Debit', last4: '3000' }} />
+				<PaymentMethodRow method={{ kind: 'invoice', label: 'Bank transfer', detail: 'Net 30 terms' }} />
+			</div>
+		</Panel>
 	),
 };
 

@@ -59,7 +59,7 @@ export default function BillingDocsPage() {
           items={[
             'Platform: Constructive bills its customers for databases, seats, and usage through the standard meter pools (compute, inference, storage, database, transfer, messaging).',
             'Tenant: a database provisioned with the b2b:saas preset bills its own customers with its own catalog and its own provider account.',
-            'Payment providers are descriptors the host passes in. Stripe ships built in; one provider is active at a time and can be switched.',
+            'Payment providers are descriptors the host passes in: name and logo, what the provider can do, what it calls test mode, and whether it is the merchant of record. Stripe ships built in; one provider is active at a time and can be switched.',
           ]}
         />
       </DocSection>

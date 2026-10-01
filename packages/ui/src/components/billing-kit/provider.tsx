@@ -16,7 +16,7 @@ import {
 	type BillingProviderDescriptor,
 	checkCopy,
 	credentialError,
-	modeFromCredential,
+	modeLabel,
 	PLATFORM_CHECKS,
 	type ProviderFeature,
 	type ProviderObjectKind,
@@ -30,15 +30,15 @@ const SIZE = {
 	lg: 'size-9 rounded-[9px] text-sm',
 } as const;
 
-/** Monogram tile in the provider's colour, with a faint inner outline so it holds its shape on any surface. */
+/** The provider's logo, or its monogram, on a tile in its colour, with a faint inner outline so it holds its shape on any surface. */
 export function ProviderMark({ provider, size = 'md', className }: { provider: BillingProviderDescriptor; size?: keyof typeof SIZE; className?: string }) {
 	return (
 		<span
 			aria-hidden="true"
-			className={cn('grid shrink-0 place-items-center font-semibold text-white outline-1 -outline-offset-1 outline-black/10 dark:outline-white/10', SIZE[size], className)}
+			className={cn('grid shrink-0 place-items-center overflow-hidden font-semibold text-white outline-1 -outline-offset-1 outline-black/10 dark:outline-white/10', SIZE[size], className)}
 			style={{ backgroundColor: provider.brandColor }}
 		>
-			{provider.monogram}
+			{provider.logo ? <img src={provider.logo} alt="" className="size-3/5 object-contain" /> : provider.monogram}
 		</span>
 	);
 }
@@ -53,6 +53,11 @@ export const FEATURE_LABEL: Record<ProviderFeature, string> = {
 	disputes: 'Disputes',
 	testMode: 'Test mode',
 };
+
+/** A feature's label in the provider's own words, e.g. "Sandbox mode" rather than "Test mode". */
+export function featureLabel(provider: BillingProviderDescriptor | undefined, feature: ProviderFeature) {
+	return feature === 'testMode' ? `${modeLabel(provider, 'test')} mode` : FEATURE_LABEL[feature];
+}
 
 type ExternalRefProps = {
 	provider?: BillingProviderDescriptor;
@@ -245,8 +250,7 @@ export function ProviderCredentialForm({ provider, connection, onSave, submitLab
 		}
 	};
 
-	const secret = values[provider.credentials[0]?.name ?? ''] ?? '';
-	const detected = secret ? modeFromCredential(secret) : null;
+	const detected = provider.detectMode?.(values) ?? null;
 
 	return (
 		<form onSubmit={submit} noValidate className={cn('flex flex-col gap-4', className)}>
@@ -291,7 +295,7 @@ export function ProviderCredentialForm({ provider, connection, onSave, submitLab
 			})}
 			{detected ? (
 				<p className="text-xs text-muted-foreground">
-					Detected <span className="font-medium text-foreground">{detected}</span> mode from the key.
+					Detected <span className="font-medium text-foreground">{modeLabel(provider, detected).toLowerCase()}</span> mode from the key.
 				</p>
 			) : null}
 			{failure ? (
@@ -331,13 +335,13 @@ export function ProviderCard({ provider, connection, active, onSelect, className
 				<span className="flex flex-wrap items-center gap-2">
 					<span className="text-sm font-medium text-foreground">{provider.name}</span>
 					{active ? <ToneBadge tone="success">Active</ToneBadge> : soon ? <ToneBadge tone="neutral">Coming soon</ToneBadge> : null}
-					{active && connection ? <ToneBadge tone={connection.mode === 'live' ? 'primary' : 'amber'}>{connection.mode === 'live' ? 'Live' : 'Test mode'}</ToneBadge> : null}
+					{active && connection ? <ToneBadge tone={connection.mode === 'live' ? 'primary' : 'amber'}>{connection.mode === 'live' ? modeLabel(provider, 'live') : `${modeLabel(provider, 'test')} mode`}</ToneBadge> : null}
 				</span>
 				<span className="mt-0.5 block text-pretty text-xs text-muted-foreground">{provider.description}</span>
 				<span className="mt-2 flex flex-wrap gap-1">
 					{provider.features.slice(0, 5).map((feature) => (
 						<span key={feature} className="rounded-[4px] bg-muted px-1.5 py-0.5 text-[11px] text-muted-foreground">
-							{FEATURE_LABEL[feature]}
+							{featureLabel(provider, feature)}
 						</span>
 					))}
 				</span>

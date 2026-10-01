@@ -181,6 +181,7 @@ export const BILLING_ACCOUNT_DEMO: BillingAccountData = {
 	accountId: 'acct-northwind',
 	provider: STRIPE_PROVIDER,
 	providerMode: 'live',
+	paymentMethod: { kind: 'card', label: 'Visa', last4: '4242', expMonth: 3, expYear: 2028 },
 	currency: 'usd',
 	creditsPerCent: 1,
 	plans: PLATFORM_PLANS,
@@ -253,6 +254,7 @@ function buildScenario(id: BillingAccountScenario): BillingAccountData {
 			return {
 				...base,
 				subscription: { ...subscription, status: 'past_due', lifecycle: 'grace', pastDueSince: '2026-09-23T00:00:00.000Z', graceDeadlineAt: '2026-09-30T00:00:00.000Z' },
+				paymentMethod: { kind: 'card', label: 'Visa', last4: '4242', expMonth: 8, expYear: 2026 },
 				invoices: [
 					{
 						id: 'inv-open',
@@ -331,6 +333,7 @@ export const BILLING_ACCOUNT_TENANT_DEMO: BillingAccountData = {
 	accountId: 'lumen-harbor',
 	provider: STRIPE_PROVIDER,
 	providerMode: 'test',
+	paymentMethod: { kind: 'card', label: 'Mastercard', last4: '4444', expMonth: 10, expYear: 2026 },
 	currency: 'usd',
 	creditsPerCent: 1,
 	plans: TENANT_PLANS,

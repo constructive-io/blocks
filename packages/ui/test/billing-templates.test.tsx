@@ -3,9 +3,9 @@ import { act } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { BILLING_ACCOUNT_DEMO, BillingAccount, type BillingAccountAction, demoRedeemCode, type PlanChangeRequest } from '../src/components/billing-account';
+import { BILLING_ACCOUNT_DEMO, BILLING_ACCOUNT_TENANT_DEMO, BillingAccount, type BillingAccountAction, demoRedeemCode, type PlanChangeRequest } from '../src/components/billing-account';
 import { BILLING_CONSOLE_DEMO, BILLING_CONSOLE_TENANT_DEMO, BillingConsole, type CreditCodeDraft, type EntitlementChange } from '../src/components/billing-console';
-import { DEMO_NOW } from '../src/components/billing-kit';
+import { type BillingProviderDescriptor, DEMO_NOW, DEMO_PROVIDERS, STRIPE_PROVIDER } from '../src/components/billing-kit';
 
 globalThis.IS_REACT_ACT_ENVIRONMENT = true;
 
@@ -114,6 +114,30 @@ describe('BillingAccount', () => {
 		expect(document.body.querySelector('[role="dialog"] [role="alert"]')?.textContent).toBe('The card on file expired.');
 	});
 
+	it('shows customers the method on file and the provider by name, never its object ids', async () => {
+		await render(<BillingAccount data={BILLING_ACCOUNT_TENANT_DEMO} now={DEMO_NOW} defaultView="invoices" />);
+		expect(text()).toContain('Billing details are kept by Stripe.');
+		expect(text()).toContain('Mastercard •••• 4444');
+		expect(text()).toContain('Expires 10/26');
+		expect(text()).toContain('Expires soon');
+		expect(text()).not.toContain(BILLING_ACCOUNT_TENANT_DEMO.subscription!.externalId!);
+		expect(document.body.querySelector('a[href*="dashboard.stripe.com"]')).toBeNull();
+	});
+
+	it('says who issues the invoices when the provider is the merchant of record', async () => {
+		const paddle = DEMO_PROVIDERS.find((provider) => provider.id === 'paddle');
+		await render(
+			<BillingAccount
+				data={{ ...BILLING_ACCOUNT_TENANT_DEMO, provider: paddle, paymentMethod: { kind: 'wallet', label: 'PayPal', detail: 'billing@harbor.coach' } }}
+				now={DEMO_NOW}
+				defaultView="invoices"
+			/>,
+		);
+		expect(text()).toContain('Paddle is the merchant of record');
+		expect(text()).toContain('PayPal');
+		expect(buttonNamed(/Manage in Paddle/)).toBeDefined();
+	});
+
 	it('only offers the views the host can back', async () => {
 		await render(<BillingAccount data={BILLING_ACCOUNT_DEMO} now={DEMO_NOW} views={['overview', 'plans']} />);
 		expect(buttonNamed('Plans')).toBeDefined();
@@ -182,6 +206,38 @@ describe('BillingConsole', () => {
 		await click(toggle());
 		expect(onToggleBilling).toHaveBeenCalledWith(true);
 		expect(text()).toContain('Billing is on');
+	});
+
+	it('reads the mode off new keys with the provider’s own rule and names it the provider’s way', async () => {
+		const acme: BillingProviderDescriptor = {
+			id: 'acme',
+			name: 'Acme Pay',
+			description: 'A host-registered provider.',
+			brandColor: '#0f766e',
+			monogram: 'A',
+			availability: 'available',
+			features: ['hostedCheckout'],
+			credentials: [{ name: 'ACME_KEY', label: 'API key', kind: 'secret' }],
+			modeLabels: { test: 'Sandbox', live: 'Production' },
+			detectMode: (values) => (values.ACME_KEY?.startsWith('acme_sbx_') ? 'test' : values.ACME_KEY ? 'live' : null),
+		};
+		const onConnectProvider = vi.fn().mockResolvedValue(undefined);
+		await render(
+			<BillingConsole
+				data={{ ...BILLING_CONSOLE_TENANT_DEMO, providers: [STRIPE_PROVIDER, acme] }}
+				now={DEMO_NOW}
+				defaultView="provider"
+				onConnectProvider={onConnectProvider}
+			/>,
+		);
+
+		await click(buttonNamed(/Acme Pay/));
+		await type(document.body.querySelector<HTMLInputElement>('input[id$="-ACME_KEY"]'), 'acme_sbx_123');
+		expect(text()).toContain('Detected sandbox mode from the key.');
+
+		await click(buttonNamed('Switch to Acme Pay'));
+		expect(onConnectProvider).toHaveBeenCalledWith('acme', { ACME_KEY: 'acme_sbx_123' });
+		expect(text()).toContain('Sandbox mode');
 	});
 
 	it('keeps catalog toggles and unsaved entitlement edits when the operator moves around', async () => {

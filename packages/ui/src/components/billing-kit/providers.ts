@@ -36,12 +36,25 @@ export type BillingProviderDescriptor = {
 	id: string;
 	name: string;
 	description: string;
-	/** Tile colour for the monogram mark. */
+	/** Tile colour for the mark. */
 	brandColor: string;
-	/** One or two letters for the mark; hosts may pass a real logo through `mark`. */
+	/** One or two letters drawn on the tile when there is no `logo`. */
 	monogram: string;
+	/** Image URL or data URI drawn on the tile instead of the monogram; a white glyph reads best. */
+	logo?: string;
 	availability: 'available' | 'coming_soon';
 	features: readonly ProviderFeature[];
+	/**
+	 * The provider sells to your customers in its own name (Paddle, Lemon
+	 * Squeezy): it charges them, handles sales tax, and issues the invoices.
+	 */
+	merchantOfRecord?: boolean;
+	/** Prices cannot be edited once the provider has them; the catalog says to add a new one instead. */
+	immutablePrices?: boolean;
+	/** What the provider calls its two modes, e.g. `{ test: 'Sandbox', live: 'Live' }`. Defaults to Test and Live. */
+	modeLabels?: Readonly<Record<ProviderMode, string>>;
+	/** Reads test or live off the credentials being saved, when the provider encodes it there. */
+	detectMode?: (values: Readonly<Record<string, string>>) => ProviderMode | null;
 	credentials: readonly ProviderCredentialField[];
 	/** Copy for provider-specific readiness checks, keyed by check id. */
 	checks?: Readonly<Record<string, ProviderCheckCopy>>;
@@ -80,6 +93,8 @@ export const STRIPE_PROVIDER: BillingProviderDescriptor = {
 	monogram: 'S',
 	availability: 'available',
 	features: ['hostedCheckout', 'customerPortal', 'scheduledChanges', 'meteredUsage', 'invoices', 'refunds', 'disputes', 'testMode'],
+	immutablePrices: true,
+	detectMode: (values) => (values.STRIPE_SECRET_KEY ? modeFromCredential(values.STRIPE_SECRET_KEY) : null),
 	credentials: [
 		{
 			name: 'STRIPE_SECRET_KEY',
@@ -134,7 +149,12 @@ export function credentialError(field: ProviderCredentialField, value: string): 
 	return null;
 }
 
-/** Test or live, read off a credential prefix when the provider encodes it there. */
+/** What the provider calls a mode: "Sandbox" for some, "Test" or "Live" by default. */
+export function modeLabel(provider: BillingProviderDescriptor | undefined, mode: ProviderMode) {
+	return provider?.modeLabels?.[mode] ?? (mode === 'live' ? 'Live' : 'Test');
+}
+
+/** Test or live, read off a Stripe-style key prefix (`sk_test_…`, `rk_live_…`). */
 export function modeFromCredential(value: string): ProviderMode | null {
 	if (/_test_/.test(value)) return 'test';
 	if (/_live_/.test(value)) return 'live';
