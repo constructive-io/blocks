@@ -3606,6 +3606,178 @@
       ]
     },
     {
+      "name": "data-rooms",
+      "type": "registry:block",
+      "title": "Data Rooms",
+      "description": "Secure document rooms for an organization and its sub-organizations: access that carries down the hierarchy, expiring folder shares, agreements before entry, view-only and watermarked documents, Q&A, reading insights, an access map, and a room assistant that only cites what the reader can open.",
+      "categories": [
+        "block",
+        "application"
+      ],
+      "docs": "Import: `import { DataRooms, DATA_ROOMS_DEMO } from '@/components/ui/data-rooms'`. Pass your workspace as `data`, apply every change through `onCommand` (reject to keep a dialog open), and handle downloads and view logging through `onAction`. `effectiveAccess` explains who can do what; your server still decides every request.",
+      "dependencies": [
+        "lucide-react"
+      ],
+      "registryDependencies": [
+        "cn",
+        "use-controllable-state",
+        "ai",
+        "button",
+        "checkbox",
+        "dialog",
+        "dropdown-menu",
+        "input",
+        "select",
+        "sheet",
+        "switch",
+        "textarea",
+        "tooltip",
+        "workspace-kit"
+      ],
+      "files": [
+        {
+          "path": "registry/constructive/blocks/data-rooms/access-end.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/data-rooms/access-map-view.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/data-rooms/access-trace-sheet.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/data-rooms/access.ts",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/data-rooms/activity-view.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/data-rooms/agreement-gate.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/data-rooms/assistant.ts",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/data-rooms/commands.ts",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/data-rooms/data-rooms-context.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/data-rooms/data-rooms.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/data-rooms/demo-documents.ts",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/data-rooms/demo-org.ts",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/data-rooms/demo-questions.ts",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/data-rooms/document-sheet.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/data-rooms/documents-tab.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/data-rooms/fixtures.ts",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/data-rooms/folder-tree.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/data-rooms/format.ts",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/data-rooms/home-view.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/data-rooms/index.ts",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/data-rooms/insights-tab.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/data-rooms/invite-dialog.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/data-rooms/new-room-dialog.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/data-rooms/org-menu.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/data-rooms/parts.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/data-rooms/people-tab.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/data-rooms/preview-as-menu.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/data-rooms/questions-tab.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/data-rooms/room-assistant.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/data-rooms/room-view.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/data-rooms/settings-tab.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/data-rooms/share-dialog.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/data-rooms/sidebar.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/data-rooms/types.ts",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/data-rooms/use-command.ts",
+          "type": "registry:component"
+        }
+      ]
+    },
+    {
       "name": "billing-kit",
       "type": "registry:block",
       "title": "Billing Kit",

@@ -65,6 +65,10 @@ backend evidence; they never grant authority.
   states.
 - **Billing:** Verify independent resource failures, exact quantities and dates,
   pending actions, provider errors, and host authorization.
+- **Data Rooms:** Verify that each person sees only the rooms, folders, and
+  documents your server grants, that refused commands keep their dialog open,
+  that expired shares and memberships stop working, and that previews and
+  assistant citations never show what the reader cannot open.
 - **Console Kit:** Verify explicit endpoint selection, session/database identity,
   capability discovery, installed-module navigation, isolation across mounts,
   and authenticated reads and writes.

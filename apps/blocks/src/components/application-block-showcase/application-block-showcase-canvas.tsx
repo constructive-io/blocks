@@ -8,6 +8,9 @@ import type { ApplicationBlockDoc } from '@/lib/application-blocks';
 const AgentsBuilderPreview = dynamic(() =>
   import('./agents-builder-preview').then((module) => module.AgentsBuilderPreview),
 );
+const DataRoomsPreview = dynamic(() =>
+  import('./data-rooms-preview').then((module) => module.DataRoomsPreview),
+);
 const BillingAccountPreview = dynamic(() =>
   import('./billing-account-preview').then((module) => module.BillingAccountPreview),
 );
@@ -27,6 +30,7 @@ export function ApplicationBlockShowcaseCanvas({
   name: ApplicationBlockDoc['name'];
 }) {
   if (name === 'agents-builder') return <AgentsBuilderPreview />;
+  if (name === 'data-rooms') return <DataRoomsPreview />;
   if (name === 'billing-account') return <BillingAccountPreview />;
   if (name === 'billing-console') return <BillingConsolePreview />;
   return name === 'org-chart' ? (
