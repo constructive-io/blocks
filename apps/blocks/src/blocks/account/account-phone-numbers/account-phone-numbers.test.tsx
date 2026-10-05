@@ -40,7 +40,7 @@ async function renderBlock(adapter: AccountPhoneNumbersAdapter, props: Partial<P
 }
 
 const rowFor = (display: string) => screen.getByText(display).closest('li') as HTMLElement;
-const codeBox = (index: number) => screen.getByLabelText(`Digit ${index} of 6`);
+const codeField = () => screen.getByLabelText('Verification code');
 
 describe('AccountPhoneNumbers', () => {
   it('lists numbers with their status on one line', async () => {
@@ -79,13 +79,13 @@ describe('AccountPhoneNumbers', () => {
     expect(adapter.sendCode).toHaveBeenCalledWith({ id: 'new-0', number: '+12025550143' });
     expect(await screen.findByText('Enter the 6-digit code sent to +1 202 555 0143.')).toBeInTheDocument();
 
-    await user.click(codeBox(1));
+    await user.click(codeField());
     await user.paste('000000');
     await user.click(screen.getByRole('button', { name: 'Verify' }));
     expect(await screen.findByRole('alert')).toHaveTextContent('That code didn’t work.');
-    expect(codeBox(1)).toHaveAttribute('aria-invalid', 'true');
+    expect(codeField()).toHaveAttribute('aria-invalid', 'true');
 
-    await user.click(codeBox(1));
+    await user.click(codeField());
     await user.paste('123456');
     await user.click(screen.getByRole('button', { name: 'Verify' }));
     await waitFor(() => expect(within(rowFor('+1 202 555 0143')).getByText('Verified')).toBeInTheDocument());
