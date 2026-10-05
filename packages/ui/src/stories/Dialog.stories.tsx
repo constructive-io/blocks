@@ -9,6 +9,7 @@ import {
 	DialogDescription,
 	DialogFooter,
 	DialogHeader,
+	DialogPanel,
 	DialogTitle,
 	DialogTrigger,
 } from '../components/dialog';
@@ -204,6 +205,37 @@ export const LargeContentDialog: Story = {
 				<DialogFooter>
 					<Button variant='outline'>Decline</Button>
 					<Button>Accept</Button>
+				</DialogFooter>
+			</DialogContent>
+		</Dialog>
+	),
+};
+
+/** Tinted header band closed by a hairline, mirroring the default footer: the shape of a structured settings dialog. */
+export const BandedHeader: Story = {
+	render: () => (
+		<Dialog>
+			<DialogTrigger asChild>
+				<Button variant='outline'>Share dashboard</Button>
+			</DialogTrigger>
+			<DialogContent className='max-w-lg'>
+				<DialogHeader variant='band' className='gap-1.5'>
+					<DialogTitle className='text-base font-medium'>Share dashboard</DialogTitle>
+					<DialogDescription className='text-[13px]'>People you add can open it with their own access.</DialogDescription>
+				</DialogHeader>
+				<DialogPanel className='flex flex-col gap-4'>
+					<div className='grid gap-2'>
+						<Label htmlFor='share-people'>People</Label>
+						<Input id='share-people' placeholder='Search by people or department' />
+					</div>
+					<div className='grid gap-2'>
+						<Label htmlFor='share-note'>Note</Label>
+						<Textarea id='share-note' placeholder='Optional message' />
+					</div>
+				</DialogPanel>
+				<DialogFooter>
+					<Button variant='outline'>Embed</Button>
+					<Button>Done</Button>
 				</DialogFooter>
 			</DialogContent>
 		</Dialog>

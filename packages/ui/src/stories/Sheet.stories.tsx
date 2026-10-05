@@ -69,6 +69,41 @@ export const Default: Story = {
 	),
 };
 
+/** Header and footer bands bleed to the panel edges, so the form sits on white between two tinted rails. */
+export const Banded: Story = {
+	render: () => (
+		<Sheet>
+			<SheetTrigger asChild>
+				<Button variant='outline'>Open banded sheet</Button>
+			</SheetTrigger>
+			<SheetContent>
+				<SheetHeader variant='band'>
+					<SheetTitle>Edit profile</SheetTitle>
+					<SheetDescription>Changes apply when you save.</SheetDescription>
+				</SheetHeader>
+				<div className='grid gap-4 py-2'>
+					<div className='grid gap-2'>
+						<Label htmlFor='banded-name'>Name</Label>
+						<Input id='banded-name' defaultValue='Pedro Duarte' />
+					</div>
+					<div className='grid gap-2'>
+						<Label htmlFor='banded-username'>Username</Label>
+						<Input id='banded-username' defaultValue='@peduarte' />
+					</div>
+				</div>
+				<SheetFooter variant='band'>
+					<SheetClose asChild>
+						<Button variant='outline'>Cancel</Button>
+					</SheetClose>
+					<SheetClose asChild>
+						<Button type='submit'>Save changes</Button>
+					</SheetClose>
+				</SheetFooter>
+			</SheetContent>
+		</Sheet>
+	),
+};
+
 export const DifferentSides: Story = {
 	render: () => (
 		<div className='flex flex-wrap gap-4'>

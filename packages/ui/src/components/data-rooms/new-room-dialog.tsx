@@ -92,7 +92,7 @@ function NewRoomForm({ unitId: initialUnit, onDone }: { unitId?: string; onDone:
 
 	return (
 		<form onSubmit={submit} noValidate className="flex min-h-0 flex-col">
-			<DialogHeader className="gap-1">
+			<DialogHeader variant="band" className="gap-1">
 				<DialogTitle className="text-base font-medium">New room</DialogTitle>
 				<DialogDescription className="text-[13px]">A private space for documents, people, and questions.</DialogDescription>
 			</DialogHeader>

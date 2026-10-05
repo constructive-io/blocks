@@ -79,7 +79,7 @@ function ShareForm({ request, onDone }: { request: ShareRequest; onDone: () => v
 
 	return (
 		<form id={formId} onSubmit={submit} className="flex min-h-0 flex-col">
-			<DialogHeader className="gap-1.5 pb-3">
+			<DialogHeader variant="band" className="gap-1.5">
 				<DialogTitle className="text-base font-medium">Share a folder</DialogTitle>
 				<DialogDescription className="text-[13px]">People only see this folder and what’s inside it, not the rest of {room.name}.</DialogDescription>
 			</DialogHeader>
