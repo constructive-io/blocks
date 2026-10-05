@@ -590,25 +590,44 @@ function SheetContent({
 	);
 }
 
-type SheetHeaderProps = React.ComponentProps<'div'>;
+type SheetHeaderProps = React.ComponentProps<'div'> & {
+	/** `band` tints the header and closes it with a hairline, edge to edge. */
+	variant?: 'default' | 'band';
+};
 
-function SheetHeader({ className, ...props }: SheetHeaderProps) {
+function SheetHeader({ className, variant = 'default', ...props }: SheetHeaderProps) {
 	return (
 		<div
 			data-slot="sheet-header"
-			className={cn('flex flex-col space-y-2 pb-4 text-center sm:text-left', className)}
+			data-variant={variant}
+			className={cn(
+				'flex flex-col space-y-2',
+				variant === 'default' && 'pb-4 text-center sm:text-left',
+				// Bleeds through SheetContent's p-4 to the panel edges.
+				variant === 'band' && '-mx-4 -mt-4 border-b bg-muted/50 p-4 pr-12 text-left',
+				className,
+			)}
 			{...props}
 		/>
 	);
 }
 
-type SheetFooterProps = React.ComponentProps<'div'>;
+type SheetFooterProps = React.ComponentProps<'div'> & {
+	/** `band` pins a tinted footer to the bottom edge, closed off by a hairline. */
+	variant?: 'default' | 'band';
+};
 
-function SheetFooter({ className, ...props }: SheetFooterProps) {
+function SheetFooter({ className, variant = 'default', ...props }: SheetFooterProps) {
 	return (
 		<div
 			data-slot="sheet-footer"
-			className={cn('flex flex-col-reverse pt-4 sm:flex-row sm:justify-end sm:space-x-2', className)}
+			data-variant={variant}
+			className={cn(
+				'flex flex-col-reverse sm:flex-row sm:justify-end sm:space-x-2',
+				variant === 'default' && 'pt-4',
+				variant === 'band' && '-mx-4 mt-auto -mb-4 gap-2 border-t bg-muted/50 px-4 py-3 sm:space-x-0',
+				className,
+			)}
 			{...props}
 		/>
 	);

@@ -77,6 +77,8 @@ type DataRoomsProps = {
 	theme?: DataRoomsTheme;
 	onThemeChange?: (theme: DataRoomsTheme) => void;
 	defaultSidebarCollapsed?: boolean;
+	/** Shows the workspace as a rounded frame on a canvas instead of filling its container. */
+	framed?: boolean;
 	/** Formatting for dates and numbers. Defaults to `en-US` in UTC, so server and client agree. */
 	locale?: string;
 	timeZone?: string;
@@ -112,6 +114,7 @@ function DataRooms({
 	theme: themeProp,
 	onThemeChange,
 	defaultSidebarCollapsed = false,
+	framed,
 	locale = 'en-US',
 	timeZone = 'UTC',
 	className,
@@ -288,6 +291,7 @@ function DataRooms({
 				slot="data-rooms"
 				className={className}
 				defaultSidebarCollapsed={defaultSidebarCollapsed}
+				framed={framed}
 				sidebar={({ mode, collapsed, onCollapsedChange, onNavigate }) => (
 					<DataRoomsSidebar
 						drawer={mode === 'drawer'}

@@ -82,6 +82,8 @@ interface StorageBrowserProps {
 	/** Name in the sidebar header. Default: "Storage". */
 	title?: string;
 	defaultSidebarCollapsed?: boolean;
+	/** Shows the workspace as a rounded frame on a canvas instead of filling its container. */
+	framed?: boolean;
 	className?: string;
 }
 
@@ -166,6 +168,7 @@ export function StorageBrowser({
 	onEmptyStateSecondaryAction,
 	title = 'Storage',
 	defaultSidebarCollapsed,
+	framed,
 	className,
 }: StorageBrowserProps) {
 	const selectedBucket = buckets.find((bucket) => bucket.id === selectedBucketId) ?? null;
@@ -335,6 +338,7 @@ export function StorageBrowser({
 			slot="storage-browser"
 			sidebar={sidebar}
 			defaultSidebarCollapsed={defaultSidebarCollapsed}
+			framed={framed}
 			className={cn('rounded-xl border border-border', className)}
 		>
 			{view}

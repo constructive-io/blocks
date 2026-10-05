@@ -237,10 +237,12 @@ export {
 	TableHeader,
 	TableBody,
 	TableFooter,
+	TableGroupRow,
 	TableHead,
 	TableRow,
 	TableCell,
 	TableCaption,
+	type TableGroupRowProps,
 } from './components/table';
 export {
 	Pagination,
@@ -374,26 +376,6 @@ export {
 	SidebarTrigger,
 	useSidebar,
 } from './components/sidebar';
-export {
-	AppBar,
-	createAppLink,
-	type AppBarProps,
-	type AppBreadcrumbItem,
-	type AppLinkRenderer,
-	type AppLinkRenderProps,
-} from './components/app-bar';
-export {
-	AppShell,
-	type AppAccount,
-	type AppAccountAction,
-	type AppAccountActionGroup,
-	type AppIcon,
-	type AppNavigationChild,
-	type AppNavigationGroup,
-	type AppNavigationItem,
-	type AppShellBrand,
-	type AppShellProps,
-} from './components/app-shell';
 
 // Specialized components
 export { Calendar, RangeCalendar } from './components/calendar-rac';

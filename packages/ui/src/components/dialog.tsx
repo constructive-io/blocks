@@ -153,14 +153,27 @@ function DialogPopup({
   );
 }
 
-function DialogHeader({ className, ...props }: React.ComponentProps<"div">) {
+function DialogHeader({
+  className,
+  variant = "default",
+  ...props
+}: React.ComponentProps<"div"> & {
+  /** `band` tints the header and closes it with a hairline, mirroring the default footer. */
+  variant?: "default" | "band";
+}) {
   return (
     <div
       className={cn(
-        "flex flex-col gap-2 p-6 in-[[data-slot=dialog-popup]:has([data-slot=dialog-panel])]:pb-3 max-sm:pb-4",
+        "flex flex-col gap-2",
+        variant === "default" &&
+          "p-6 in-[[data-slot=dialog-popup]:has([data-slot=dialog-panel])]:pb-3 max-sm:pb-4",
+        // The band carries its own gap below, so a panel or plain body after it needs no top padding.
+        variant === "band" &&
+          "mb-5 border-b bg-muted/50 px-6 py-4 sm:rounded-t-[calc(var(--radius-xl)-1px)]",
         className,
       )}
       data-slot="dialog-header"
+      data-variant={variant}
       {...props}
     />
   );

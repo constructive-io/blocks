@@ -13,7 +13,7 @@ import { humanize, INTERVAL_LABEL, isUnlimited } from './format';
 import type { EntitlementRow } from './plan';
 import { type BillingProviderDescriptor } from './providers';
 import { ExternalRef, SyncBadge } from './provider';
-import { TableSurface, tableHeadClass, tableRowClass } from './surface';
+import { TableSurface, tableGroupRowClass, tableHeadClass, tableRowClass } from './surface';
 import type { CreditPack, Meter, Plan, PlanPrice, ProviderMode } from './types';
 
 /** Keeps the switch's 40px hit area without making dense rows taller. */
@@ -139,8 +139,8 @@ export function EntitlementMatrix({ plans, groups, onChange, dirty, className }:
 			</thead>
 			{groups.map((group) => (
 				<tbody key={group.title}>
-					<tr className="border-t border-border bg-muted/30">
-						<th scope="rowgroup" colSpan={plans.length + 1} className="px-4 py-1.5 text-left text-xs font-medium text-muted-foreground">
+					<tr className={tableGroupRowClass}>
+						<th scope="rowgroup" colSpan={plans.length + 1}>
 							{group.title}
 						</th>
 					</tr>
@@ -327,8 +327,8 @@ export function MeterCatalogTable({ meters, onToggle, className }: MeterCatalogT
 			</thead>
 			{groups.map(({ pool, rows }) => (
 				<tbody key={pool?.slug ?? 'loose'}>
-					<tr className="border-t border-border bg-muted/30">
-						<th scope="rowgroup" colSpan={6} className="px-4 py-1.5 text-left text-xs font-medium text-muted-foreground">
+					<tr className={tableGroupRowClass}>
+						<th scope="rowgroup" colSpan={6}>
 							{pool ? `${pool.displayName} pool` : 'Straight to universal'}
 						</th>
 					</tr>

@@ -98,7 +98,7 @@ to endpoints, sessions, adapters, or tenant data.
 | Intent | Start with |
 | --- | --- |
 | General UI primitive or bundle | Search for the component, `form-kit`, `overlay-kit`, or `layout-kit` |
-| Application shell | `app-shell` |
+| Application shell (sidebar rail, drawer, views) | `workspace-kit` |
 | AI or agent UI | `ai` |
 | Complete agent workspace (chat, integrations, skills, agent canvas) | `agents-builder` |
 | Secure document rooms shared inside and outside an organization (roles, folder shares, agreements, Q&A, insights) | `data-rooms` |

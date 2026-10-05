@@ -605,6 +605,7 @@ export const FEATURE_PACK_DOCS = [
       'timeZone',
       'now',
       'defaultSidebarCollapsed',
+      'framed',
       'className',
     ]),
     api: [

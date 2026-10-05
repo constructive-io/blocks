@@ -142,7 +142,7 @@ export function AccessTraceSheet({ request, onOpenChange }: AccessTraceSheetProp
 	return (
 		<Sheet open={Boolean(request)} onOpenChange={onOpenChange}>
 			<SheetContent side="right" className="w-[27rem] max-w-[92vw] gap-0 p-0 sm:max-w-[27rem]">
-				<div className="flex flex-col gap-3 border-b border-border px-5 pt-5 pb-4">
+				<div className="flex flex-col gap-3 border-b border-border bg-muted/50 px-5 pt-5 pb-4">
 					<div className="flex flex-col gap-1">
 						<SheetTitle className="text-base font-medium">Why can {first} open this?</SheetTitle>
 						<SheetDescription className="text-[13px]">Access to {room.name}, and where it comes from.</SheetDescription>

@@ -135,7 +135,7 @@ export function DocumentSheet() {
 			<SheetContent side="right" className="@container/sheet w-[44rem] max-w-[96vw] gap-0 p-0 sm:max-w-[44rem]">
 				{document && room ? (
 					<>
-						<div className="flex shrink-0 items-start gap-3 border-b border-border px-5 pt-5 pb-4 pr-12">
+						<div className="flex shrink-0 items-start gap-3 border-b border-border bg-muted/50 px-5 pt-5 pb-4 pr-12">
 							<DocumentGlyph kind={document.kind} size="lg" />
 							<div className="min-w-0 flex-1">
 								<SheetTitle className="text-base font-medium break-words">{document.name}</SheetTitle>

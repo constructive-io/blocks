@@ -570,26 +570,6 @@
         "default": "./dist/components/sidebar.cjs"
       }
     },
-    "./app-bar": {
-      "import": {
-        "types": "./dist/components/app-bar.d.ts",
-        "default": "./dist/components/app-bar.js"
-      },
-      "require": {
-        "types": "./dist/components/app-bar.d.cts",
-        "default": "./dist/components/app-bar.cjs"
-      }
-    },
-    "./app-shell": {
-      "import": {
-        "types": "./dist/components/app-shell.d.ts",
-        "default": "./dist/components/app-shell.js"
-      },
-      "require": {
-        "types": "./dist/components/app-shell.d.cts",
-        "default": "./dist/components/app-shell.cjs"
-      }
-    },
     "./calendar-rac": {
       "import": {
         "types": "./dist/components/calendar-rac.d.ts",

@@ -22,7 +22,11 @@ function TextShimmer({ className, active = true, children, ...props }: TextShimm
 				'inline-block font-medium',
 				active
 					? [
-							'bg-[linear-gradient(90deg,var(--muted-foreground)_35%,var(--foreground)_50%,var(--muted-foreground)_65%)]',
+							// The sweep runs toward the page colour: a light sheen over grey text in light mode, and a bright
+							// glint over dim text in dark. Sweeping toward `foreground` in light only darkened the text a step,
+							// which next to normal labels read as no motion at all.
+							'bg-[linear-gradient(90deg,var(--muted-foreground)_35%,color-mix(in_oklab,var(--muted-foreground),var(--background)_55%)_50%,var(--muted-foreground)_65%)]',
+							'dark:bg-[linear-gradient(90deg,var(--muted-foreground)_35%,var(--foreground)_50%,var(--muted-foreground)_65%)]',
 							'bg-size-[200%_100%] bg-clip-text text-transparent',
 							'animate-[ai-shimmer-text_1.4s_linear_infinite]',
 							'motion-reduce:animate-none motion-reduce:bg-none motion-reduce:text-muted-foreground',

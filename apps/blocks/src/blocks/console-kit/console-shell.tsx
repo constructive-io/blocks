@@ -10,13 +10,6 @@ import {
   TriangleAlertIcon
 } from 'lucide-react';
 
-import type { AppLinkRenderProps } from '@constructive-io/ui/app-bar';
-import type {
-  AppAccount,
-  AppNavigationGroup,
-  AppNavigationItem,
-  AppShellBrand
-} from '@constructive-io/ui/app-shell';
 import { Avatar, AvatarFallback, AvatarImage } from '@constructive-io/ui/avatar';
 import {
   DropdownMenu,
@@ -27,17 +20,24 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger
 } from '@constructive-io/ui/dropdown-menu';
-import { NavRow, NavSection, SidebarFrame } from '@/components/ui/workspace-kit/nav';
+import { NavRow, NavSection, SidebarFrame, type NavRowLinkProps } from '@/components/ui/workspace-kit/nav';
 import { focusRingClass, NavMenuButton } from '@/components/ui/workspace-kit/primitives';
-import { WorkspaceShell, type WorkspaceSidebarRenderProps } from '@/components/ui/workspace-kit/shell';
+import {
+  WorkspaceShell,
+  type WorkspaceAccount,
+  type WorkspaceBrand,
+  type WorkspaceNavigationGroup,
+  type WorkspaceNavigationItem,
+  type WorkspaceSidebarRenderProps
+} from '@/components/ui/workspace-kit/shell';
 import { cn } from '@/lib/utils';
 
 /** Why a feature row isn't simply open: shown as a quiet glyph, announced through the row's badge text. */
 export type ConsoleNavigationStatus = 'checking' | 'locked' | 'partial' | 'setup';
 
-export type ConsoleNavigationItem = AppNavigationItem & Readonly<{ status?: ConsoleNavigationStatus }>;
+export type ConsoleNavigationItem = WorkspaceNavigationItem & Readonly<{ status?: ConsoleNavigationStatus }>;
 
-export type ConsoleNavigationGroup = Omit<AppNavigationGroup, 'items'> & Readonly<{
+export type ConsoleNavigationGroup = Omit<WorkspaceNavigationGroup, 'items'> & Readonly<{
   items: readonly ConsoleNavigationItem[];
 }>;
 
@@ -45,10 +45,10 @@ export type ConsoleBreadcrumb = Readonly<{ id: string; label: React.ReactNode; c
 
 export type ConsoleShellProps = Readonly<{
   navigation: readonly ConsoleNavigationGroup[];
-  brand: AppShellBrand;
-  account?: AppAccount;
+  brand: WorkspaceBrand;
+  account?: WorkspaceAccount;
   breadcrumbs?: readonly ConsoleBreadcrumb[];
-  renderLink?: (props: AppLinkRenderProps) => React.ReactElement;
+  renderLink?: (props: NavRowLinkProps) => React.ReactElement;
   /** Right side of the top bar, e.g. the connection menu. */
   barActions?: React.ReactNode;
   className?: string;
@@ -65,7 +65,7 @@ function initials(name: string) {
   return name.split(/\s+/u).filter(Boolean).slice(0, 2).map((part) => part[0]?.toUpperCase()).join('');
 }
 
-function BrandMark({ brand, collapsed }: Readonly<{ brand: AppShellBrand; collapsed: boolean }>) {
+function BrandMark({ brand, collapsed }: Readonly<{ brand: WorkspaceBrand; collapsed: boolean }>) {
   const name = typeof brand.name === 'string' ? brand.name : 'Application';
   const content = (
     <>
@@ -90,7 +90,7 @@ function AccountMenu({
   account,
   collapsed,
   renderLink
-}: Readonly<{ account: AppAccount; collapsed: boolean; renderLink?: ConsoleShellProps['renderLink'] }>) {
+}: Readonly<{ account: WorkspaceAccount; collapsed: boolean; renderLink?: ConsoleShellProps['renderLink'] }>) {
   const avatar = (
     <Avatar className='size-6 shrink-0 ring-1 ring-foreground/[0.06]'>
       {account.avatarUrl ? <AvatarImage alt={account.avatarAlt ?? ''} src={account.avatarUrl} /> : null}
@@ -182,7 +182,7 @@ function AccountMenu({
   );
 }
 
-function ItemIcon({ icon: Icon, active }: Readonly<{ icon?: AppNavigationItem['icon']; active?: boolean }>) {
+function ItemIcon({ icon: Icon, active }: Readonly<{ icon?: WorkspaceNavigationItem['icon']; active?: boolean }>) {
   if (!Icon) return <span aria-hidden='true' className='size-3.5 shrink-0' />;
   return <Icon aria-hidden='true' className={cn('size-3.5 shrink-0', active ? 'text-foreground' : 'text-muted-foreground')} />;
 }

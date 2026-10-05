@@ -96,23 +96,27 @@ type ToneBadgeProps = {
 	className?: string;
 };
 
+/**
+ * Tone fills mixed from `--tone`. On a white page the fill carries the colour and the
+ * border only defines the edge; dark keeps a fainter fill under a stronger border.
+ */
+const toneBadgeClass = cn(
+	'border-[color-mix(in_oklab,var(--tone)_25%,transparent)] bg-[color-mix(in_oklab,var(--tone)_14%,transparent)]',
+	'text-[color-mix(in_oklab,var(--tone),var(--foreground)_32%)]',
+	'dark:border-[color-mix(in_oklab,var(--tone)_35%,transparent)] dark:bg-[color-mix(in_oklab,var(--tone)_9%,transparent)]',
+);
+
 /** Small tinted label. Clickable when `onClick` is set. */
 export function ToneBadge({ tone, children, onClick, className }: ToneBadgeProps) {
 	const color = tone === 'neutral' ? null : TONE_COLOR[tone];
 	const props = {
 		className: cn(
 			'inline-flex h-5 shrink-0 items-center gap-1 whitespace-nowrap rounded-[5px] border px-1.5 text-xs [&_svg]:size-3',
-			color ? null : 'border-border bg-muted/60 text-muted-foreground',
+			color ? toneBadgeClass : 'border-border bg-muted/60 text-muted-foreground',
 			onClick && cn('cursor-pointer', pressClass, focusRingClass),
 			className,
 		),
-		style: color
-			? {
-					borderColor: `color-mix(in oklab, ${color} 35%, transparent)`,
-					backgroundColor: `color-mix(in oklab, ${color} 9%, transparent)`,
-					color: `color-mix(in oklab, ${color}, var(--foreground) 32%)`,
-				}
-			: undefined,
+		style: color ? ({ '--tone': color } as React.CSSProperties) : undefined,
 	};
 	return onClick ? (
 		<button type="button" onClick={onClick} {...props}>
@@ -313,12 +317,12 @@ export function Segmented<T extends string>({ label, value, options, onChange, c
 
 /**
  * Card surfaces whose full-bleed children (tinted strips, sticky columns,
- * table heads, canvas grids) must not cover the edge. Dark mode draws the
- * `shadow-card` edge as an inset shadow, which paints beneath children, so the
- * surface gets a 1px dark-only inset and every child lives in `SurfaceBody`.
- * Light mode draws the edge outside the box and needs no inset.
+ * table heads, canvas grids) must not cover the edge. `shadow-card` draws its
+ * edge as an inset shadow in both modes, which keeps it safe from any clipping
+ * ancestor but paints it beneath children, so the surface gets a 1px inset and
+ * every child lives in `SurfaceBody`.
  */
-export const surfaceInsetClass = 'overflow-hidden dark:p-px';
+export const surfaceInsetClass = 'overflow-hidden p-px';
 
 export function SurfaceBody({ className, children, ...props }: React.ComponentProps<'div'>) {
 	return (

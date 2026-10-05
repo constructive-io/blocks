@@ -17,7 +17,7 @@ import {
   type LucideIcon
 } from 'lucide-react';
 
-import type { AppLinkRenderProps } from '@constructive-io/ui/app-bar';
+import type { NavRowLinkProps } from '@/components/ui/workspace-kit/nav';
 import {
   Select,
   SelectContent,
@@ -140,7 +140,7 @@ const STATE_TONE: Record<ConsoleKitShowcaseState, Tone> = {
 };
 
 /** Keeps preview links on the page while still running the row's own click handling. */
-function previewLink(props: AppLinkRenderProps) {
+function previewLink(props: NavRowLinkProps) {
   return (
     <a
       {...props}

@@ -71,11 +71,12 @@ export const constructiveTheme = {
 	npmSource: '../../dist',
 	darkVariant: '&:is(.dark *)',
 	light: {
-		// Pure-neutral hsl() ramp — five tip values: strong 16% text, default
-		// 36% secondary text, subtle 50% hints, selected 96% fills, 95% border
-		// on a 98% page under white cards. The cool tint survives only as a
-		// Create-page preset; brand/status tokens stay OKLCH.
-		background: 'hsl(0 0% 98%)',
+		// Pure-neutral hsl() ramp in three surface tiers: white content and
+		// cards, a 97% sidebar/chrome, and 92% hairlines that separate them
+		// while still reading as a thin line. Text runs strong 16%, secondary 36%, hints 44% (AA on
+		// white and the sidebar); fills sit at 95–96%. No warm or grain tint;
+		// those belong to the presets. Brand/status tokens stay OKLCH.
+		background: 'hsl(0 0% 100%)',
 		foreground: 'hsl(0 0% 16%)',
 		card: 'hsl(0 0% 100%)',
 		'card-foreground': 'hsl(0 0% 16%)',
@@ -91,15 +92,15 @@ export const constructiveTheme = {
 		'secondary-foreground': 'hsl(0 0% 16%)',
 		muted: 'hsl(0 0% 96%)',
 		'muted-foreground': 'hsl(0 0% 36%)',
-		'subtle-foreground': 'hsl(0 0% 50%)',
-		accent: 'hsl(0 0% 96%)',
+		'subtle-foreground': 'hsl(0 0% 44%)',
+		accent: 'hsl(0 0% 95%)',
 		'accent-foreground': 'hsl(0 0% 16%)',
 		destructive: 'oklch(0.56 0.21 27)',
 		'destructive-foreground': 'oklch(0.985 0.005 250)',
-		border: 'hsl(0 0% 95%)',
-		input: 'hsl(0 0% 89%)',
+		border: 'hsl(0 0% 92%)',
+		input: 'hsl(0 0% 87%)',
 		ring: 'oklch(0.689 0.175 245.4)',
-		link: 'oklch(0.549 0.175 245.4)',
+		link: 'oklch(0.559 0.175 245.4)',
 		// Surface-relative overlays — legible on any elevation.
 		'overlay-hover': 'rgb(0 0 0 / 0.04)',
 		'overlay-active': 'rgb(0 0 0 / 0.07)',
@@ -112,7 +113,7 @@ export const constructiveTheme = {
 		'sidebar-foreground': 'hsl(0 0% 24%)',
 		'sidebar-primary': 'oklch(0.689 0.175 245.4)',
 		'sidebar-primary-foreground': 'oklch(0.985 0.005 250)',
-		// Reads on the 97% sidebar without collapsing into the 95% border.
+		// Selected nav fill: a clear step below the 97% sidebar, still lighter than the 92% hairline.
 		'sidebar-accent': 'hsl(0 0% 93%)',
 		'sidebar-accent-foreground': 'hsl(0 0% 16%)',
 		// Follows `border` — sidebar hairlines match every other hairline.
@@ -125,11 +126,12 @@ export const constructiveTheme = {
 		warning: 'var(--color-amber-500)',
 		'warning-foreground': 'var(--color-amber-700)',
 		...sharedTokens,
-		// Cards: hairline + the first three drop layers of the elevation ladder.
+		// Cards: an inset hairline (as in dark, so an overflow edge can never clip it)
+		// + the first three drop layers of the elevation ladder.
 		'shadow-border':
-			'0 0 0 1px oklch(0 0 0 / 0.055), 0 1px 1px -0.5px rgb(0 0 0 / 0.06), 0 3px 3px -1.5px rgb(0 0 0 / 0.06), 0 6px 6px -3px rgb(0 0 0 / 0.06)',
+			'inset 0 0 0 1px oklch(0 0 0 / 0.08), 0 1px 1px -0.5px rgb(0 0 0 / 0.06), 0 3px 3px -1.5px rgb(0 0 0 / 0.06), 0 6px 6px -3px rgb(0 0 0 / 0.06)',
 		'shadow-border-hover':
-			'0 0 0 1px oklch(0 0 0 / 0.075), 0 1px 1px -0.5px rgb(0 0 0 / 0.06), 0 3px 3px -1.5px rgb(0 0 0 / 0.06), 0 6px 6px -3px rgb(0 0 0 / 0.06), 0 12px 12px -6px rgb(0 0 0 / 0.06), 0 24px 24px -12px rgb(0 0 0 / 0.06)',
+			'inset 0 0 0 1px oklch(0 0 0 / 0.11), 0 1px 1px -0.5px rgb(0 0 0 / 0.06), 0 3px 3px -1.5px rgb(0 0 0 / 0.06), 0 6px 6px -3px rgb(0 0 0 / 0.06), 0 12px 12px -6px rgb(0 0 0 / 0.06), 0 24px 24px -12px rgb(0 0 0 / 0.06)',
 		...lightElevationShadows,
 	},
 	dark: {
@@ -269,7 +271,8 @@ export const constructiveTheme = {
 			'scrollbar-gutter': 'stable',
 		},
 		'*': {
-			'@apply border-border/60 outline-ring/50': {},
+			// Full-strength hairlines in light; dark keeps its softer 60% wash until its own pass.
+			'@apply border-border dark:border-border/60 outline-ring/50': {},
 		},
 		body: {
 			'@apply bg-background font-sans text-foreground antialiased': {},

@@ -100,7 +100,7 @@ export const JsonInput = ({ value = '', setValue, minLines = 16, className, them
 
 	return (
 		<div>
-			<div className={cn('border-border/60 relative overflow-y-auto rounded-md border p-2.5', className)}>
+			<div className={cn('border-border relative overflow-y-auto rounded-md border p-2.5', className)}>
 				<JsonEditor value={value} setValue={handleChange} lines={lines} theme={theme} />
 				<TooltipProvider>
 					<Tooltip>

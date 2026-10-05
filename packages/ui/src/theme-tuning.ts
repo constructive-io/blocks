@@ -292,14 +292,15 @@ export function deriveModeTokens(tuning: ModeTuning, base: ThemeTokenMap): Recor
  * Hairline + stacked-drop recipe matching theme.ts so default tuning
  * reproduces shipped `--shadow-border` tokens exactly.
  *
- * Shipped hairline alphas differ per mode (light 0.055 / dark 0.10) — the
- * input tunes the light value and dark keeps the shipped 0.10/0.055 ratio.
+ * Shipped hairline alphas differ per mode (light 0.08 / dark 0.10) — the
+ * input tunes the light value and dark keeps the shipped 0.10/0.08 ratio.
  * Drops are the first three elevation-ladder layers scaled by `elevation`
  * on a neutral black umbra (light alpha 0.06, dark 0.22); dark prepends the
- * lit top edge.
+ * lit top edge. The hairline is inset in both modes, so an overflow boundary
+ * can clip the soft drops but never the edge.
  */
 export function shadowBorderRecipe(hairlineAlpha: number, elevation: number, dark: boolean): string {
-	const ringAlpha = dark ? Math.min(1, hairlineAlpha * (0.1 / 0.055)) : hairlineAlpha;
+	const ringAlpha = dark ? Math.min(1, hairlineAlpha * (0.1 / 0.08)) : hairlineAlpha;
 	const ringColor = dark ? `oklch(1 0 0 / ${round3(ringAlpha)})` : `oklch(0 0 0 / ${round3(ringAlpha)})`;
 	const shade = '0 0 0';
 	const alpha = round3((dark ? 0.22 : 0.06) * elevation);
@@ -311,7 +312,7 @@ export function shadowBorderRecipe(hairlineAlpha: number, elevation: number, dar
 	];
 	return [
 		...(dark ? [`inset 0 1px 0 0 rgb(255 255 255 / ${round3(0.04 * elevation)})`] : []),
-		`${dark ? 'inset ' : ''}0 0 0 1px ${ringColor}`,
+		`inset 0 0 0 1px ${ringColor}`,
 		...layers,
 	].join(', ');
 }
@@ -322,7 +323,7 @@ export interface ThemeTuning {
 	dark: ModeTuning;
 	/** --radius in rem. */
 	radius: number;
-	/** Light hairline alpha (dark keeps the shipped 0.10/0.055 ratio). */
+	/** Light hairline alpha (dark keeps the shipped 0.10/0.08 ratio). */
 	hairline: number;
 	/** Umbra multiplier on the card drop layers. */
 	elevation: number;
@@ -337,7 +338,7 @@ export function defaultThemeTuning(): ThemeTuning {
 		light: modeTuningDefaults(constructiveTheme.light),
 		dark: modeTuningDefaults(constructiveTheme.dark),
 		radius: parseFloat(constructiveTheme.light.radius) || 0.625,
-		hairline: 0.055,
+		hairline: 0.08,
 		elevation: 1,
 		fontSans: constructiveTheme.fonts['--font-sans'],
 		tiers: {

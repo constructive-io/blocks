@@ -13,18 +13,9 @@ const preview: Preview = {
         date: /Date$/i,
       },
     },
-    backgrounds: {
-      options: {
-        light: {
-          name: 'light',
-          value: '#ffffff',
-        },
-        dark: {
-          name: 'dark',
-          value: '#0a0a0a',
-        },
-      },
-    },
+    // The canvas is painted by the theme (`html`/`body` use --background), which follows the Theme toolbar.
+    // Storybook's own backgrounds forced `#fff !important` on the body regardless of that toggle.
+    backgrounds: { disable: true },
     viewport: {
       options: {
         mobile: {
@@ -71,6 +62,8 @@ const preview: Preview = {
   decorators: [
     (Story, context) => {
       const theme = context.globals.theme || 'light';
+      // `fullscreen` stories own the whole viewport (app shells, templates); everything else gets a 16px gutter.
+      const fullscreen = context.parameters.layout === 'fullscreen';
 
       // Apply dark class to document root so Base UI portals inherit dark mode
       useEffect(() => {
@@ -88,8 +81,10 @@ const preview: Preview = {
         React.createElement(
           'div',
           {
+            // No viewport sizing here: Storybook already pads non-fullscreen roots, so a 100vh/100vw box overflowed
+            // by that padding (and by the scrollbar width). The page background comes from `html`, which the
+            // theme paints with --background and which carries the dark class set above.
             className: theme,
-            style: { height: '100vh', width: '100vw', backgroundColor: 'var(--background)' },
           },
           // Portal root for all overlay components - matches PortalRoot component
           React.createElement(
@@ -107,7 +102,7 @@ const preview: Preview = {
           ),
           React.createElement(
             'div',
-            { className: 'bg-background text-foreground p-4' },
+            { className: fullscreen ? 'bg-background text-foreground' : 'bg-background text-foreground p-4' },
             React.createElement(Story)
           ),
           // Live theme/motion tuning panel (dev tooling; any story can register
@@ -121,12 +116,6 @@ const preview: Preview = {
       );
     },
   ],
-
-  initialGlobals: {
-    backgrounds: {
-      value: 'light',
-    },
-  },
 };
 
 export default preview;

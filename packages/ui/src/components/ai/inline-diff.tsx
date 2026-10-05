@@ -70,7 +70,7 @@ function InlineDiff({ source, className, maxLines = 40 }: InlineDiffProps) {
 			)}
 		>
 			{source.fileName ? (
-				<div className="border-b border-border/80 bg-muted/50 px-2.5 py-1 text-xs text-muted-foreground">
+				<div className="border-b border-border bg-muted/50 px-2.5 py-1 text-xs text-muted-foreground">
 					{source.fileName}
 				</div>
 			) : null}
@@ -93,7 +93,7 @@ function InlineDiff({ source, className, maxLines = 40 }: InlineDiffProps) {
 				))}
 			</pre>
 			{hidden > 0 ? (
-				<div className="border-t border-border/60 px-2.5 py-1 text-[11px] text-muted-foreground">
+				<div className="border-t border-border px-2.5 py-1 text-[11px] text-muted-foreground">
 					+{hidden} more lines
 				</div>
 			) : null}

@@ -205,7 +205,7 @@ function CodeBlock({
 			{hasHeader ? (
 				<div
 					data-slot="code-block-header"
-					className="flex items-center gap-2 border-b border-border/70 bg-muted/50 px-2.5 py-1.5"
+					className="flex items-center gap-2 border-b border-border bg-muted/50 px-2.5 py-1.5"
 				>
 					<div className="flex min-w-0 flex-1 items-center gap-2">
 						{filename ? (
@@ -230,7 +230,7 @@ function CodeBlock({
 								data-slot="code-block-language"
 								className={cn(
 									'inline-flex shrink-0 items-center rounded-md px-1.5 py-0.5',
-									'border border-border/60 bg-background/50',
+									'border border-border bg-background/50',
 									'font-sans text-[10px] font-medium tracking-wide text-muted-foreground uppercase',
 								)}
 							>
@@ -311,7 +311,7 @@ function CodeBlock({
 			{collapsible ? (
 				<div
 					data-slot="code-block-footer"
-					className="border-t border-border/70 bg-muted/40"
+					className="border-t border-border bg-muted/40"
 				>
 					<button
 						type="button"

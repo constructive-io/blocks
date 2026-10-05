@@ -6,7 +6,7 @@ import * as React from 'react';
 import { cn } from '../../lib/utils';
 import { Button } from '../button';
 import { Textarea } from '../textarea';
-import { Dialog, DialogDescription, DialogFooter, DialogPopup, DialogTitle } from '../dialog';
+import { Dialog, DialogDescription, DialogFooter, DialogHeader, DialogPopup, DialogTitle } from '../dialog';
 import { focusRingClass } from '../workspace-kit/primitives';
 import { type AccessEnd, AccessEndPicker, resolveAccessEnd } from './access-end';
 import { roomPeople } from './access';
@@ -134,10 +134,10 @@ function InviteForm({ room, onDone }: { room: Room; onDone: () => void }) {
 
 	return (
 		<form onSubmit={submit} noValidate className="flex min-h-0 flex-col">
-			<div className="flex flex-col gap-1.5 px-6 pt-6 pb-4">
+			<DialogHeader variant="band" className="gap-1.5">
 				<DialogTitle className="text-base font-medium">Invite to {room.name}</DialogTitle>
 				<DialogDescription className="text-[13px]">People from {data.org.name} join right away. Everyone else joins as a guest.</DialogDescription>
-			</div>
+			</DialogHeader>
 			<div className="flex min-h-0 flex-col gap-4 overflow-y-auto px-6 pb-5">
 				<div className="flex flex-col gap-1.5">
 					<label htmlFor={`${listId}-input`} className="text-[13px] font-medium text-foreground">

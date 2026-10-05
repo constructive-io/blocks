@@ -37,6 +37,8 @@ type AgentsBuilderProps = {
 	theme?: AgentsBuilderTheme;
 	onThemeChange?: (theme: AgentsBuilderTheme) => void;
 	defaultSidebarCollapsed?: boolean;
+	/** Shows the workspace as a rounded frame on a canvas instead of filling its container. */
+	framed?: boolean;
 	/** Replays the agent run when the agent view opens. Defaults to true. */
 	autoplayRun?: boolean;
 	className?: string;
@@ -68,6 +70,7 @@ function AgentsBuilder({
 	theme: themeProp,
 	onThemeChange,
 	defaultSidebarCollapsed = false,
+	framed,
 	autoplayRun = true,
 	className,
 }: AgentsBuilderProps) {
@@ -129,6 +132,7 @@ function AgentsBuilder({
 				slot="agents-builder"
 				className={className}
 				defaultSidebarCollapsed={defaultSidebarCollapsed}
+				framed={framed}
 				sidebar={({ mode, collapsed, onCollapsedChange, onNavigate }) => (
 					<AgentsBuilderSidebar
 						drawer={mode === 'drawer'}

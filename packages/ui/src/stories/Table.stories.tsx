@@ -9,6 +9,7 @@ import {
 	TableCaption,
 	TableCell,
 	TableFooter,
+	TableGroupRow,
 	TableHead,
 	TableHeader,
 	TableRow,
@@ -224,6 +225,38 @@ export const WithSelection: Story = {
 					</TableRow>
 				))}
 			</TableBody>
+		</Table>
+	),
+};
+
+/** Each group is its own body opened by a tinted heading row; row hairlines stay one weight throughout. */
+export const Grouped: Story = {
+	render: () => (
+		<Table>
+			<TableHeader>
+				<TableRow>
+					<TableHead className='w-[100px]'>Invoice</TableHead>
+					<TableHead>Method</TableHead>
+					<TableHead className='text-right'>Amount</TableHead>
+				</TableRow>
+			</TableHeader>
+			{(['Paid', 'Pending', 'Unpaid'] as const).map((status) => {
+				const rows = invoices.filter((invoice) => invoice.paymentStatus === status);
+				return (
+					<TableBody key={status}>
+						<TableGroupRow colSpan={3}>
+							{status} <span className='tabular-nums text-subtle-foreground'>{rows.length}</span>
+						</TableGroupRow>
+						{rows.map((invoice) => (
+							<TableRow key={invoice.invoice}>
+								<TableCell className='font-medium'>{invoice.invoice}</TableCell>
+								<TableCell>{invoice.paymentMethod}</TableCell>
+								<TableCell className='text-right tabular-nums'>{invoice.totalAmount}</TableCell>
+							</TableRow>
+						))}
+					</TableBody>
+				);
+			})}
 		</Table>
 	),
 };
