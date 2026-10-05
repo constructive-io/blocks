@@ -42,7 +42,7 @@ function Demo({ collapsed = false }: { collapsed?: boolean }) {
 	const title = { home: 'Home', inbox: 'Inbox', settings: 'Settings' }[view];
 	const icon = { home: LayoutDashboard, inbox: Inbox, settings: Settings2 }[view];
 	return (
-		<div className="h-[calc(100vh-2rem)] min-h-[560px] p-4">
+		<div className="h-dvh min-h-[560px] p-4">
 			<div className="h-full overflow-hidden rounded-xl border border-border shadow-sm">
 				<WorkspaceShell
 					defaultSidebarCollapsed={collapsed}

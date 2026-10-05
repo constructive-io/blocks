@@ -36,7 +36,7 @@ type Story = StoryObj<typeof AgentsBuilder>;
 function Frame(props: AgentsBuilderProps) {
 	const [log, setLog] = useState<AgentsBuilderAction[]>([]);
 	return (
-		<div className="flex h-[calc(100vh-2rem)] min-h-[640px] flex-col gap-2">
+		<div className="flex h-dvh min-h-[640px] flex-col gap-2 p-4">
 			<div className="min-h-0 flex-1 overflow-hidden rounded-xl border border-border shadow-sm">
 				<AgentsBuilder {...props} onAction={(action) => setLog((current) => [action, ...current].slice(0, 4))} />
 			</div>

@@ -45,7 +45,7 @@ function Frame({ failInvites = false, ...props }: DataRoomsProps & { failInvites
 	const [log, setLog] = useState<LogEntry[]>([]);
 	const record = (label: string, detail: unknown) => setLog((current) => [{ label, detail: JSON.stringify(detail) }, ...current].slice(0, 3));
 	return (
-		<div className="flex h-[calc(100vh-2rem)] min-h-[680px] flex-col gap-2">
+		<div className="flex h-dvh min-h-[680px] flex-col gap-2 p-4">
 			<div className="min-h-0 flex-1 overflow-hidden rounded-xl border border-border shadow-sm">
 				<DataRooms
 					{...props}

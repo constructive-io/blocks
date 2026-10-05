@@ -38,7 +38,7 @@ function Frame(props: BillingConsoleProps) {
 	const [log, setLog] = useState<string[]>([]);
 	const record = (entry: string) => setLog((current) => [entry, ...current].slice(0, 3));
 	return (
-		<div className="flex h-[calc(100vh-2rem)] min-h-[680px] flex-col gap-2 p-4">
+		<div className="flex h-dvh min-h-[680px] flex-col gap-2 p-4">
 			<div className="min-h-0 flex-1 overflow-hidden rounded-xl border border-border shadow-sm">
 				<BillingConsole
 					onSaveEntitlements={async (changes) => {
