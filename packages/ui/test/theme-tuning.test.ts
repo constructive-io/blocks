@@ -64,13 +64,13 @@ describe('shadowBorderRecipe', () => {
 	const normalize = (css: string) => css.replace(/\s+/g, ' ').trim();
 
 	it('reproduces the shipped light --shadow-border', () => {
-		expect(normalize(shadowBorderRecipe(0.055, 1, false))).toBe(
+		expect(normalize(shadowBorderRecipe(0.08, 1, false))).toBe(
 			normalize(constructiveTheme.light['shadow-border']),
 		);
 	});
 
 	it('reproduces the shipped dark --shadow-border', () => {
-		expect(normalize(shadowBorderRecipe(0.055, 1, true))).toBe(
+		expect(normalize(shadowBorderRecipe(0.08, 1, true))).toBe(
 			normalize(constructiveTheme.dark['shadow-border']),
 		);
 	});

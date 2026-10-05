@@ -69,7 +69,7 @@ describe('theme-dials-config', () => {
 				cardL: 0.3,
 			},
 			radius: 0.875,
-			hairline: 0.08,
+			hairline: 0.1,
 			elevation: 1.6,
 			fontSans: 'ui-sans-serif, system-ui, sans-serif',
 			tiers: {

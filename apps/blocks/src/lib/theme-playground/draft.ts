@@ -221,10 +221,11 @@ export interface ElevationPreset {
 }
 
 export const ELEVATION_PRESETS: readonly ElevationPreset[] = [
-  { id: 'flat', label: 'Flat', hairline: 0.08, elevation: 0 },
-  // Shipped recipe: 0.055 hairline + unit elevation.
-  { id: 'soft', label: 'Soft', hairline: 0.055, elevation: 1 },
-  { id: 'lifted', label: 'Lifted', hairline: 0.055, elevation: 1.6 },
+  // Without drops the hairline is the only edge, so it runs a step stronger.
+  { id: 'flat', label: 'Flat', hairline: 0.1, elevation: 0 },
+  // Shipped recipe: 0.08 hairline + unit elevation.
+  { id: 'soft', label: 'Soft', hairline: 0.08, elevation: 1 },
+  { id: 'lifted', label: 'Lifted', hairline: 0.08, elevation: 1.6 },
 ];
 
 export interface MotionPreset {
