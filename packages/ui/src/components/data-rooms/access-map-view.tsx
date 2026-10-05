@@ -309,30 +309,32 @@ export function AccessMapView() {
 
 	return (
 		<section aria-label="Access map" className="flex min-w-0 flex-1 flex-col">
-			<ViewHeader icon={Network} title="Access map">
-				<label htmlFor={selectId} className="sr-only">
-					Show access for
-				</label>
-				<ChoiceSelect
-					id={selectId}
-					value={selected}
-					onValueChange={setSelected}
-					className="w-auto max-w-[14rem] min-w-40"
-					options={[
-						{ value: '', label: 'Everyone' },
-						...members.map((entry) => ({ value: entry.id, label: entry.name, group: data.org.name })),
-						...guests.map((entry) => ({ value: entry.id, label: entry.company ? `${entry.name} · ${entry.company}` : entry.name, group: 'Guests' })),
-					]}
-				/>
-			</ViewHeader>
-			<div className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto p-3 @4xl/view:flex-row @4xl/view:overflow-hidden">
-				<div className="flex min-h-[26rem] min-w-0 flex-1 flex-col gap-2">
-					<p aria-live="polite" className="px-1 text-[13px] text-muted-foreground tabular-nums">
-						{chosen
-							? `${chosen.name} can enter ${reach} of ${layout.rooms.length} rooms.`
-							: 'Pick a person to see where their access reaches.'}
+			<ViewHeader icon={Network} title="Access map" />
+			<div className="flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto p-3 @4xl/view:overflow-hidden">
+				{/* The prompt and the picker it asks for read as one line, above both the map and the panel, so those two
+				    share a top edge. The prompt never changes, so the picker stays put; the result follows it. */}
+				<div className="flex flex-wrap items-center gap-x-2 gap-y-1.5 px-1">
+					<p className="text-[13px] text-muted-foreground">Pick a person to see where their access reaches.</p>
+					<label htmlFor={selectId} className="sr-only">
+						Show access for
+					</label>
+					<ChoiceSelect
+						id={selectId}
+						value={selected}
+						onValueChange={setSelected}
+						className="w-auto max-w-[14rem] min-w-40"
+						options={[
+							{ value: '', label: 'Everyone' },
+							...members.map((entry) => ({ value: entry.id, label: entry.name, group: data.org.name })),
+							...guests.map((entry) => ({ value: entry.id, label: entry.company ? `${entry.name} · ${entry.company}` : entry.name, group: 'Guests' })),
+						]}
+					/>
+					<p aria-live="polite" className="text-[13px] font-medium text-foreground tabular-nums">
+						{chosen ? `Can enter ${reach} of ${layout.rooms.length} rooms.` : null}
 					</p>
-					<div className="min-h-0 flex-1">
+				</div>
+				<div className="flex min-h-0 flex-1 flex-col gap-3 @4xl/view:flex-row">
+					<div className="min-h-[26rem] min-w-0 flex-1">
 						<CanvasSurface
 							viewport={viewport}
 							label="Access map. Drag or use arrow keys to pan; plus and minus to zoom."
@@ -355,9 +357,9 @@ export function AccessMapView() {
 							})}
 						</CanvasSurface>
 					</div>
-				</div>
-				<div className="shrink-0 @4xl/view:w-[300px] @4xl/view:overflow-y-auto">
-					<InheritancePanel />
+					<div className="shrink-0 @4xl/view:w-[300px] @4xl/view:overflow-y-auto">
+						<InheritancePanel />
+					</div>
 				</div>
 			</div>
 		</section>
