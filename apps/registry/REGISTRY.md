@@ -37,7 +37,7 @@ pnpm dlx shadcn@latest add @constructive/feature-pack-users
 pnpm dlx shadcn@latest add @constructive/command-palette
 pnpm dlx shadcn@latest add @constructive/sheets
 pnpm dlx shadcn@latest add @constructive/schema-builder
-pnpm dlx shadcn@latest add @constructive/app-shell
+pnpm dlx shadcn@latest add @constructive/workspace-kit
 pnpm dlx shadcn@latest add @constructive/billing-account
 pnpm dlx shadcn@latest add @constructive/account-phone-numbers
 pnpm dlx shadcn@latest add @constructive/agents-builder

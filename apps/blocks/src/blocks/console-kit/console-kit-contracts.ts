@@ -5,10 +5,10 @@ import type {
   MetaQuery
 } from '@constructive-io/data';
 import type {
-  AppAccount,
-  AppShellBrand
-} from '@constructive-io/ui/app-shell';
-import type { AppLinkRenderer } from '@constructive-io/ui/app-bar';
+  WorkspaceAccount,
+  WorkspaceBrand
+} from '@/components/ui/workspace-kit/shell';
+import type { NavRowLinkProps } from '@/components/ui/workspace-kit/nav';
 
 import type {
   ConsoleEndpoint,
@@ -118,7 +118,7 @@ export type ConsoleKitRouteConfig = Readonly<{
   defaultRoute?: ConsoleKitRoute;
   getHref?: (route: ConsoleKitRoute) => string;
   onRouteChange?: (route: ConsoleKitRoute) => void;
-  renderLink?: AppLinkRenderer;
+  renderLink?: (props: NavRowLinkProps) => React.ReactElement;
 }>;
 
 export type ConsoleKitConfig = Readonly<{
@@ -143,8 +143,8 @@ export type ConsoleKitConfig = Readonly<{
   routes?: ConsoleKitRouteConfig;
   /** Pack-owned configuration keyed by an installed feature module id. */
   featureOptions?: Readonly<Partial<Record<FeaturePackId, unknown>>>;
-  brand?: AppShellBrand;
-  account?: AppAccount;
+  brand?: WorkspaceBrand;
+  account?: WorkspaceAccount;
   onError?: (
     error: ConsoleRuntimeError,
     context: Readonly<{

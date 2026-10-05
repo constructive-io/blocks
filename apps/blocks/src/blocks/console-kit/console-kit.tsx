@@ -8,8 +8,8 @@ import {
 } from 'lucide-react';
 
 import { Alert, AlertDescription, AlertTitle } from '@constructive-io/ui/alert';
-import type { AppAccount, AppShellBrand } from '@constructive-io/ui/app-shell';
-import type { AppLinkRenderProps } from '@constructive-io/ui/app-bar';
+import type { NavRowLinkProps } from '@/components/ui/workspace-kit/nav';
+import type { WorkspaceAccount, WorkspaceBrand } from '@/components/ui/workspace-kit/shell';
 import { Skeleton } from '@constructive-io/ui/skeleton';
 
 import type { FeaturePackId } from '../../feature-packs';
@@ -728,7 +728,7 @@ function ConsoleKitContent({ config, featureModules, className }: ConsoleKitProp
     onRouteChange?.(route);
   }, [controlledRoute, onRouteChange, setInternalRoute]);
 
-  const renderLink = React.useCallback((props: AppLinkRenderProps) => {
+  const renderLink = React.useCallback((props: NavRowLinkProps) => {
     const route = hrefToRoute.get(props.href);
     if (!route) return renderHostLink ? renderHostLink(props) : <a {...props} />;
     const onClick: React.MouseEventHandler<HTMLAnchorElement> = (event) => {
@@ -863,7 +863,7 @@ function ConsoleKitContent({ config, featureModules, className }: ConsoleKitProp
       }
     }
   });
-  const account = React.useMemo<AppAccount | undefined>(() => {
+  const account = React.useMemo<WorkspaceAccount | undefined>(() => {
     if (config.account) return config.account;
     if (!identity) return undefined;
     const privateEmail = loadedAuthIdentity?.primaryEmail === 'Private email';
@@ -984,7 +984,7 @@ function ConsoleKitContent({ config, featureModules, className }: ConsoleKitProp
   const activeFeatureLabel = config.labels?.[activeFeature]
     ?? activeModule?.manifest.title
     ?? activeFeature;
-  const shellBrand: AppShellBrand = {
+  const shellBrand: WorkspaceBrand = {
     name: config.brand?.name ?? 'Application',
     description: config.brand?.description,
     href: config.brand?.href,

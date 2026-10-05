@@ -6,6 +6,65 @@ import { cn } from '../../lib/utils';
 import { Sheet, SheetContent, SheetTitle } from '../sheet';
 import { TooltipProvider } from '../tooltip';
 
+/** An icon for a navigation row or account action: any component that takes a class name. */
+type WorkspaceIcon = React.ComponentType<{ className?: string; 'aria-hidden'?: boolean | 'true' | 'false' }>;
+
+/** The product mark at the top of the sidebar. */
+type WorkspaceBrand = {
+	name: React.ReactNode;
+	description?: React.ReactNode;
+	href?: string;
+	logo?: React.ReactNode;
+};
+
+/** One sidebar destination. Rows are links, so hosts keep their own router. */
+type WorkspaceNavigationItem = {
+	id: string;
+	label: React.ReactNode;
+	href: string;
+	isActive?: boolean;
+	disabled?: boolean;
+	icon?: WorkspaceIcon;
+	/** Quiet trailing value, such as a count. */
+	badge?: React.ReactNode;
+};
+
+/** A titled run of sidebar rows. */
+type WorkspaceNavigationGroup = {
+	id: string;
+	label?: React.ReactNode;
+	items: readonly WorkspaceNavigationItem[];
+};
+
+type WorkspaceAccountActionBase = {
+	id: string;
+	label: React.ReactNode;
+	icon?: WorkspaceIcon;
+	disabled?: boolean;
+	variant?: 'default' | 'destructive';
+};
+
+/** A session action in the account menu: a link, or a callback. */
+type WorkspaceAccountAction = WorkspaceAccountActionBase &
+	({ href: string; onSelect?: never } | { href?: never; onSelect: () => void });
+
+type WorkspaceAccountActionGroup = {
+	id: string;
+	label?: React.ReactNode;
+	actions: readonly WorkspaceAccountAction[];
+};
+
+/** The signed-in person shown at the foot of the sidebar. */
+type WorkspaceAccount = {
+	name: string;
+	secondaryLabel?: string;
+	avatarUrl?: string;
+	avatarAlt?: string;
+	/** Initials when there is no avatar; derived from `name` by default. */
+	fallback?: string;
+	actionGroups?: readonly WorkspaceAccountActionGroup[];
+};
+
 type WorkspaceShellContextValue = {
 	/** Opens the navigation drawer shown below the sidebar breakpoint. */
 	openNav: () => void;
@@ -119,4 +178,15 @@ function WorkspaceShell({
 }
 
 export { useWorkspaceShell, WorkspaceShell, WorkspaceShellContext };
-export type { WorkspaceShellContextValue, WorkspaceShellProps, WorkspaceSidebarRenderProps };
+export type {
+	WorkspaceAccount,
+	WorkspaceAccountAction,
+	WorkspaceAccountActionGroup,
+	WorkspaceBrand,
+	WorkspaceIcon,
+	WorkspaceNavigationGroup,
+	WorkspaceNavigationItem,
+	WorkspaceShellContextValue,
+	WorkspaceShellProps,
+	WorkspaceSidebarRenderProps,
+};

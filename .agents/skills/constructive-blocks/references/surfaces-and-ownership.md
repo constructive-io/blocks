@@ -8,7 +8,7 @@ live `shadcn@latest search` and `view`.
 
 | Need | Search or inspect | Ownership boundary |
 | --- | --- | --- |
-| Button, form, overlay, navigation, or layout | A primitive name, `form-kit`, `overlay-kit`, `layout-kit`, `app-shell` | Installed source owns presentation; the host owns application behavior. |
+| Button, form, overlay, navigation, or layout | A primitive name, `form-kit`, `overlay-kit`, `layout-kit`, `workspace-kit` | Installed source owns presentation; the host owns application behavior. |
 | AI chat or agent traces | `ai` | Presentational only. The host owns the model runtime, streaming reducer, tools, IPC, and persistence. |
 | Agent workspace template | `agents-builder` | Installed source owns the chat, integrations, skills, and agent-canvas views plus scripted playback; the host supplies workspace data and owns OAuth, persistence, routing, and model runs. |
 | Secure document rooms | `data-rooms` | Installed source owns the rooms, documents, people, Q&A, insights, settings, and access-map views, the access explanations and previews, optimistic local updates, and scripted assistant answers; the host supplies workspace data and owns storage, delivery, authorization, the activity log, and assistant runs. |

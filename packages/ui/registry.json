@@ -4169,61 +4169,6 @@
       ]
     },
     {
-      "name": "app-bar",
-      "type": "registry:block",
-      "title": "App Bar",
-      "description": "A sticky application header with a sidebar trigger, responsive breadcrumbs, and framework-neutral search and action slots.",
-      "categories": [
-        "block",
-        "navigation"
-      ],
-      "docs": "Import: `import { AppBar } from '@/components/ui/app-bar'`",
-      "dependencies": [
-        "@base-ui/react"
-      ],
-      "registryDependencies": [
-        "cn",
-        "breadcrumb",
-        "separator",
-        "sidebar"
-      ],
-      "files": [
-        {
-          "path": "registry/constructive/blocks/app-bar.tsx",
-          "type": "registry:component"
-        }
-      ]
-    },
-    {
-      "name": "app-shell",
-      "type": "registry:block",
-      "title": "App Shell",
-      "description": "A provider-neutral application shell with typed navigation, brand, account, breadcrumb, and link-render contracts.",
-      "categories": [
-        "block",
-        "navigation"
-      ],
-      "docs": "Import: `import { AppShell } from '@/components/ui/app-shell'`",
-      "dependencies": [
-        "@base-ui/react",
-        "lucide-react"
-      ],
-      "registryDependencies": [
-        "cn",
-        "app-bar",
-        "avatar",
-        "collapsible",
-        "dropdown-menu",
-        "sidebar"
-      ],
-      "files": [
-        {
-          "path": "registry/constructive/blocks/app-shell.tsx",
-          "type": "registry:component"
-        }
-      ]
-    },
-    {
       "name": "field",
       "type": "registry:ui",
       "title": "Field",

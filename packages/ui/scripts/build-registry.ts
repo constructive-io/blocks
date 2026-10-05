@@ -23,8 +23,6 @@ const sourceFilePattern = /\.[cm]?[jt]sx?$/;
 const clientFiles = new Set([
 	'alert-dialog.tsx',
 	'alert.tsx',
-	'app-bar.tsx',
-	'app-shell.tsx',
 	'autocomplete.tsx',
 	'avatar.tsx',
 	'breadcrumb.tsx',

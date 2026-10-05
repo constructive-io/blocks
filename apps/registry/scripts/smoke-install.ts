@@ -395,8 +395,8 @@ export function AiRegistrySmokeConsumer() {
 		],
 	},
 	{
-		name: 'app-shell',
-		expected: ['src/components/ui/app-shell.tsx', 'src/components/ui/app-bar.tsx'],
+		name: 'workspace-kit',
+		expected: ['src/components/ui/workspace-kit/shell.tsx', 'src/components/ui/workspace-kit/nav.tsx'],
 	},
 	{
 		name: 'org-chart',

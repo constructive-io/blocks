@@ -57,5 +57,16 @@ export {
 	tableRowClass,
 } from './surface';
 export type { Presentation } from './surface';
-export type { WorkspaceShellContextValue, WorkspaceShellProps, WorkspaceSidebarRenderProps } from './shell';
+export type {
+	WorkspaceAccount,
+	WorkspaceAccountAction,
+	WorkspaceAccountActionGroup,
+	WorkspaceBrand,
+	WorkspaceIcon,
+	WorkspaceNavigationGroup,
+	WorkspaceNavigationItem,
+	WorkspaceShellContextValue,
+	WorkspaceShellProps,
+	WorkspaceSidebarRenderProps,
+} from './shell';
 export { startViewTransition, ViewAnimation } from './view-transition';

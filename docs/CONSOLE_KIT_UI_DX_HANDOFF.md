@@ -184,9 +184,9 @@ user explicitly asks for versioned screenshots.
 
 The app chrome is canonical in `packages/ui`, not in generated registry output:
 
-- `packages/ui/src/components/app-shell.tsx`
-- `packages/ui/src/components/app-bar.tsx`
-- `packages/ui/src/components/sidebar.tsx`
+- `packages/ui/src/components/workspace-kit/shell.tsx` (shell, plus the brand, account, and navigation types)
+- `packages/ui/src/components/workspace-kit/nav.tsx`
+- `apps/blocks/src/blocks/console-kit/console-shell.tsx` (Console Kit's frame on that shell)
 - `packages/ui/src/styles/globals.css`
 - `packages/ui/src/theme.ts`
 
@@ -310,8 +310,8 @@ The next visual/DX pass should concentrate on the remaining product work:
 1. Improve filtered-empty states anywhere a populated resource can still render
    an empty local search or tab, and keep the explanation beside the filter that
    caused it.
-2. Add command navigation across installed features and discovered tables using
-   the existing `AppShell` search slot.
+2. Add command navigation across installed features and discovered tables,
+   with a search slot in the Console Kit bar.
 3. Add controlled/default/callback forms for useful Users, Organizations, and
    Notifications filters so hosts can synchronize them with URLs.
 4. Add dialog or drawer Console Kit compositions for embedded management flows,
