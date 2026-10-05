@@ -2632,13 +2632,17 @@
       "name": "input-otp",
       "type": "registry:ui",
       "title": "Input OTP",
-      "description": "A one-time-code input with one box per digit that handles typing, Backspace, arrows, paste, and OS autofill as one value.",
+      "description": "A one-time-code input that draws one slot per digit over a single field, so typing, selection, paste, and OS autofill behave like text, with a gliding focus ring and digit motion.",
       "categories": [
         "input"
       ],
       "docs": "Import: `import { InputOtp } from '@/components/ui/input-otp'`",
+      "dependencies": [
+        "motion"
+      ],
       "registryDependencies": [
-        "cn"
+        "cn",
+        "fluid-highlight"
       ],
       "files": [
         {
