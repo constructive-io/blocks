@@ -11,6 +11,7 @@ export {
 	StatTile,
 	StatusBadge,
 	TableSurface,
+	tableGroupRowClass,
 	tableHeadClass,
 	tableRowClass,
 } from '../workspace-kit/surface';

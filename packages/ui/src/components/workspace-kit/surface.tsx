@@ -15,6 +15,12 @@ export const dashedRule = 'border-dashed border-foreground/10';
 /** Header row and body row classes shared by every workspace table. */
 export const tableHeadClass = 'bg-muted/60 text-left text-xs font-normal text-muted-foreground [&_th]:px-4 [&_th]:py-2 [&_th]:font-normal';
 export const tableRowClass = 'border-t border-border align-middle [&_td]:px-4 [&_td]:py-2.5';
+/**
+ * Heading row that opens a group of body rows, tinted like the header so the
+ * break reads without a heavier line. Pair it with `<th scope="rowgroup" colSpan>`.
+ */
+export const tableGroupRowClass =
+	'border-t border-border bg-muted/60 [&_th]:px-4 [&_th]:py-1.5 [&_th]:text-left [&_th]:text-xs [&_th]:font-medium [&_th]:text-muted-foreground';
 
 /** A native select styled like the kit's inputs. */
 export const nativeSelectClass = cn('h-8 rounded-md border border-border bg-card px-2 text-[13px] text-foreground shadow-2xs', focusRingClass);

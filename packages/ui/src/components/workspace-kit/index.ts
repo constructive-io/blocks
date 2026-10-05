@@ -52,6 +52,7 @@ export {
 	StatTile,
 	StatusBadge,
 	TableSurface,
+	tableGroupRowClass,
 	tableHeadClass,
 	tableRowClass,
 } from './surface';

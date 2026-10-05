@@ -2427,7 +2427,7 @@
       "categories": [
         "data-display"
       ],
-      "docs": "Import: `import { Table, TableHeader, TableBody, TableRow, TableCell } from '@/components/ui/table'`",
+      "docs": "Import: `import { Table, TableHeader, TableBody, TableRow, TableCell } from '@/components/ui/table'`. Group rows: give each group its own `TableBody` and start it with `<TableGroupRow colSpan={n}>`.",
       "registryDependencies": [
         "cn"
       ],

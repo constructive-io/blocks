@@ -237,10 +237,12 @@ export {
 	TableHeader,
 	TableBody,
 	TableFooter,
+	TableGroupRow,
 	TableHead,
 	TableRow,
 	TableCell,
 	TableCaption,
+	type TableGroupRowProps,
 } from './components/table';
 export {
 	Pagination,
