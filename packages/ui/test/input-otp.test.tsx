@@ -33,7 +33,8 @@ function Harness({ onComplete }: { onComplete?: (value: string) => void }) {
 	);
 }
 
-const box = (index: number) => container!.querySelector<HTMLInputElement>(`[aria-label="Digit ${index} of 6"]`)!;
+const field = () => container!.querySelector<HTMLInputElement>('input')!;
+const slots = () => Array.from(container!.querySelectorAll('[data-slot="input-otp-slot"]'));
 const value = () => container!.querySelector('[data-testid="value"]')!.textContent;
 
 async function type(input: HTMLInputElement, text: string) {
@@ -50,47 +51,61 @@ async function paste(input: HTMLInputElement, text: string) {
 	await act(async () => input.dispatchEvent(event));
 }
 
-async function press(input: HTMLInputElement, key: string) {
-	await act(async () => input.dispatchEvent(new KeyboardEvent('keydown', { key, bubbles: true, cancelable: true })));
-}
-
 describe('InputOtp', () => {
-	it('fills a box and advances focus as digits are typed', async () => {
+	it('mirrors the single field into one slot per digit', async () => {
 		await render(<Harness />);
-		await type(box(1), '4');
+		await type(field(), '42');
+		expect(value()).toBe('42');
+		expect(slots().map((slot) => slot.textContent)).toEqual(['4', '2', '', '', '', '']);
+	});
+
+	it('drops non-digits', async () => {
+		await render(<Harness />);
+		await type(field(), '4a');
 		expect(value()).toBe('4');
-		expect(document.activeElement).toBe(box(2));
 	});
 
-	it('ignores non-digits', async () => {
-		await render(<Harness />);
-		await type(box(1), 'a');
-		expect(value()).toBe('');
-	});
-
-	it('distributes a pasted or autofilled code and reports completion', async () => {
+	it('strips separators from a pasted code and reports completion', async () => {
 		const onComplete = vi.fn();
 		await render(<Harness onComplete={onComplete} />);
-		await paste(box(3), '123 456');
+		await act(async () => field().setSelectionRange(0, 0));
+		await paste(field(), '123 456');
 		expect(value()).toBe('123456');
 		expect(onComplete).toHaveBeenCalledWith('123456');
 	});
 
-	it('clears in place, then steps back on an empty box', async () => {
+	it('lets a complete code replace the value wherever the caret is', async () => {
 		await render(<Harness />);
-		await paste(box(1), '12');
-		await press(box(2), 'Backspace');
-		expect(value()).toBe('1');
-		await press(box(2), 'Backspace');
-		expect(value()).toBe('');
-		expect(document.activeElement).toBe(box(1));
+		await type(field(), '99');
+		await act(async () => field().setSelectionRange(1, 1));
+		await paste(field(), '123456');
+		expect(value()).toBe('123456');
 	});
 
-	it('marks every box invalid without putting aria-invalid on the group', async () => {
+	it('completes again only when a full code changes', async () => {
+		const onComplete = vi.fn();
+		await render(<Harness onComplete={onComplete} />);
+		await type(field(), '123456');
+		await paste(field(), '123456');
+		expect(onComplete).toHaveBeenCalledTimes(1);
+		await type(field(), '123457');
+		expect(onComplete).toHaveBeenLastCalledWith('123457');
+		expect(onComplete).toHaveBeenCalledTimes(2);
+	});
+
+	it('highlights the slot the caret lands on when focused', async () => {
+		await render(<Harness />);
+		await type(field(), '12');
+		await act(async () => field().focus());
+		expect(slots()[2].hasAttribute('data-highlighted')).toBe(true);
+		expect(slots().filter((slot) => slot.hasAttribute('data-highlighted'))).toHaveLength(1);
+	});
+
+	it('exposes one labelled field and marks it invalid', async () => {
 		await render(<InputOtp isInvalid aria-label="Verification code" />);
-		const group = container!.querySelector('[role="group"]')!;
-		expect(group.getAttribute('aria-label')).toBe('Verification code');
-		expect(group.hasAttribute('aria-invalid')).toBe(false);
-		expect(box(1).getAttribute('aria-invalid')).toBe('true');
+		expect(container!.querySelectorAll('input')).toHaveLength(1);
+		expect(field().getAttribute('aria-label')).toBe('Verification code');
+		expect(field().getAttribute('aria-invalid')).toBe('true');
+		expect(slots().every((slot) => slot.getAttribute('aria-hidden') === 'true')).toBe(true);
 	});
 });
