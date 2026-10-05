@@ -274,7 +274,7 @@ function StackCardInner({
 				'flex flex-col',
 				'bg-background',
 				'shadow-lg',
-				'border-l border-border/50',
+				'border-l border-border',
 				className,
 			)}
 			// Gesture binding for swipe-to-dismiss (from @use-gesture/react)

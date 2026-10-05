@@ -22,7 +22,7 @@ const alertVariants = cva(
 		variants: {
 			variant: {
 				default:
-					'border-border/80 bg-card text-card-foreground [&>svg]:text-foreground',
+					'border-border bg-card text-card-foreground [&>svg]:text-foreground',
 				destructive:
 					'border-[color-mix(in_oklab,var(--destructive)_30%,var(--card))] bg-[color-mix(in_oklab,var(--destructive)_8%,var(--card))] text-destructive dark:border-[color-mix(in_oklab,var(--destructive)_35%,var(--card))] dark:bg-[color-mix(in_oklab,var(--destructive)_12%,var(--card))] [&>svg]:text-destructive',
 				info: 'border-[color-mix(in_oklab,var(--info)_30%,var(--card))] bg-[color-mix(in_oklab,var(--info)_8%,var(--card))] text-info-foreground dark:border-[color-mix(in_oklab,var(--info)_35%,var(--card))] dark:bg-[color-mix(in_oklab,var(--info)_12%,var(--card))] [&>svg]:text-info',

@@ -60,7 +60,7 @@ export function StackHeader({ card, onClose, className, renderTitle }: StackHead
       data-slot="stack-header"
       className={cn(
         'flex shrink-0 items-center justify-between',
-        'border-b border-border/50',
+        'border-b border-border',
         'px-4',
         hasDescription ? styles.heightWithDesc : styles.height,
         className
@@ -107,7 +107,7 @@ export function StackHeaderSlot({ className, children }: StackHeaderSlotProps) {
   return (
     <div
       data-slot="stack-header-slot"
-      className={cn('flex h-12 shrink-0 items-center', 'border-b border-border/50', 'px-4', className)}
+      className={cn('flex h-12 shrink-0 items-center', 'border-b border-border', 'px-4', className)}
     >
       {children}
     </div>

@@ -112,7 +112,7 @@ function Tool({
 				data-variant="chip"
 				data-status={status}
 				className={cn(
-					'inline-flex max-w-full items-center gap-1.5 rounded-md border border-border/80 bg-muted/40 px-2 py-1 text-[12px]',
+					'inline-flex max-w-full items-center gap-1.5 rounded-md border border-border bg-muted/40 px-2 py-1 text-[12px]',
 					className,
 				)}
 			>

@@ -41,7 +41,7 @@ function ScrollButton({
 			className={cn(
 				'absolute bottom-4 left-1/2 z-10 flex size-9 -translate-x-1/2 items-center justify-center',
 				// Single ring — no pseudo inset, no outline Button double-edge
-				'rounded-full border border-border/80 bg-background/95 text-muted-foreground',
+				'rounded-full border border-border bg-background/95 text-muted-foreground',
 				'shadow-lg backdrop-blur-md',
 				'dark:border-border dark:bg-card/90 dark:shadow-black/40',
 				// Interaction

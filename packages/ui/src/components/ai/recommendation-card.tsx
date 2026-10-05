@@ -87,7 +87,7 @@ function RecommendationCard({
 						<CollapsibleTrigger
 							className={cn(
 								// outer card is rounded-lg + p-3 → inner uses rounded-md for concentric radii
-								'flex w-full items-center justify-between rounded-md border border-border/80 px-2.5 py-1.5 text-[12.5px]',
+								'flex w-full items-center justify-between rounded-md border border-border px-2.5 py-1.5 text-[12.5px]',
 								'text-muted-foreground hover:bg-accent hover:text-foreground',
 							)}
 						>

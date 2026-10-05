@@ -22,7 +22,7 @@ const badgeVariants = cva(
 				error: 'bg-destructive/8 text-destructive dark:bg-destructive/16',
 				info: 'bg-info/8 text-info-foreground dark:bg-info/16',
 				outline:
-					'border-border/60 bg-transparent dark:bg-input/32 [button,a&]:hover:bg-accent/50 dark:[button,a&]:hover:bg-input/48',
+					'border-border bg-transparent dark:bg-input/32 [button,a&]:hover:bg-accent/50 dark:[button,a&]:hover:bg-input/48',
 				secondary: 'bg-secondary text-secondary-foreground [button,a&]:hover:bg-secondary/90',
 				success: 'bg-success/8 text-success-foreground dark:bg-success/16',
 				warning: 'bg-warning/8 text-warning-foreground dark:bg-warning/16',
