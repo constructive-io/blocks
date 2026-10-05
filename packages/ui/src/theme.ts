@@ -72,8 +72,8 @@ export const constructiveTheme = {
 	darkVariant: '&:is(.dark *)',
 	light: {
 		// Pure-neutral hsl() ramp in three surface tiers: white content and
-		// cards, a 97% sidebar/chrome, and 90% hairlines that stay visible
-		// between them. Text runs strong 16%, secondary 36%, hints 44% (AA on
+		// cards, a 97% sidebar/chrome, and 92% hairlines that separate them
+		// while still reading as a thin line. Text runs strong 16%, secondary 36%, hints 44% (AA on
 		// white and the sidebar); fills sit at 95–96%. No warm or grain tint;
 		// those belong to the presets. Brand/status tokens stay OKLCH.
 		background: 'hsl(0 0% 100%)',
@@ -97,7 +97,7 @@ export const constructiveTheme = {
 		'accent-foreground': 'hsl(0 0% 16%)',
 		destructive: 'oklch(0.56 0.21 27)',
 		'destructive-foreground': 'oklch(0.985 0.005 250)',
-		border: 'hsl(0 0% 90%)',
+		border: 'hsl(0 0% 92%)',
 		input: 'hsl(0 0% 87%)',
 		ring: 'oklch(0.689 0.175 245.4)',
 		link: 'oklch(0.559 0.175 245.4)',
@@ -113,11 +113,11 @@ export const constructiveTheme = {
 		'sidebar-foreground': 'hsl(0 0% 24%)',
 		'sidebar-primary': 'oklch(0.689 0.175 245.4)',
 		'sidebar-primary-foreground': 'oklch(0.985 0.005 250)',
-		// Selected nav fill: a clear step below the 97% sidebar, still lighter than the 90% hairline.
+		// Selected nav fill: a clear step below the 97% sidebar, still lighter than the 92% hairline.
 		'sidebar-accent': 'hsl(0 0% 93%)',
 		'sidebar-accent-foreground': 'hsl(0 0% 16%)',
 		// Follows `border` — sidebar hairlines match every other hairline.
-		'sidebar-border': 'hsl(0 0% 90%)',
+		'sidebar-border': 'hsl(0 0% 92%)',
 		'sidebar-ring': 'oklch(0.689 0.175 245.4)',
 		info: 'var(--color-blue-500)',
 		'info-foreground': 'var(--color-blue-700)',
