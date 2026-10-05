@@ -313,12 +313,12 @@ export function Segmented<T extends string>({ label, value, options, onChange, c
 
 /**
  * Card surfaces whose full-bleed children (tinted strips, sticky columns,
- * table heads, canvas grids) must not cover the edge. Dark mode draws the
- * `shadow-card` edge as an inset shadow, which paints beneath children, so the
- * surface gets a 1px dark-only inset and every child lives in `SurfaceBody`.
- * Light mode draws the edge outside the box and needs no inset.
+ * table heads, canvas grids) must not cover the edge. `shadow-card` draws its
+ * edge as an inset shadow in both modes, which keeps it safe from any clipping
+ * ancestor but paints it beneath children, so the surface gets a 1px inset and
+ * every child lives in `SurfaceBody`.
  */
-export const surfaceInsetClass = 'overflow-hidden dark:p-px';
+export const surfaceInsetClass = 'overflow-hidden p-px';
 
 export function SurfaceBody({ className, children, ...props }: React.ComponentProps<'div'>) {
 	return (

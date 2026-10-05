@@ -296,7 +296,8 @@ export function deriveModeTokens(tuning: ModeTuning, base: ThemeTokenMap): Recor
  * input tunes the light value and dark keeps the shipped 0.10/0.08 ratio.
  * Drops are the first three elevation-ladder layers scaled by `elevation`
  * on a neutral black umbra (light alpha 0.06, dark 0.22); dark prepends the
- * lit top edge.
+ * lit top edge. The hairline is inset in both modes, so an overflow boundary
+ * can clip the soft drops but never the edge.
  */
 export function shadowBorderRecipe(hairlineAlpha: number, elevation: number, dark: boolean): string {
 	const ringAlpha = dark ? Math.min(1, hairlineAlpha * (0.1 / 0.08)) : hairlineAlpha;
@@ -311,7 +312,7 @@ export function shadowBorderRecipe(hairlineAlpha: number, elevation: number, dar
 	];
 	return [
 		...(dark ? [`inset 0 1px 0 0 rgb(255 255 255 / ${round3(0.04 * elevation)})`] : []),
-		`${dark ? 'inset ' : ''}0 0 0 1px ${ringColor}`,
+		`inset 0 0 0 1px ${ringColor}`,
 		...layers,
 	].join(', ');
 }

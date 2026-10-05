@@ -126,11 +126,12 @@ export const constructiveTheme = {
 		warning: 'var(--color-amber-500)',
 		'warning-foreground': 'var(--color-amber-700)',
 		...sharedTokens,
-		// Cards: hairline + the first three drop layers of the elevation ladder.
+		// Cards: an inset hairline (as in dark, so an overflow edge can never clip it)
+		// + the first three drop layers of the elevation ladder.
 		'shadow-border':
-			'0 0 0 1px oklch(0 0 0 / 0.08), 0 1px 1px -0.5px rgb(0 0 0 / 0.06), 0 3px 3px -1.5px rgb(0 0 0 / 0.06), 0 6px 6px -3px rgb(0 0 0 / 0.06)',
+			'inset 0 0 0 1px oklch(0 0 0 / 0.08), 0 1px 1px -0.5px rgb(0 0 0 / 0.06), 0 3px 3px -1.5px rgb(0 0 0 / 0.06), 0 6px 6px -3px rgb(0 0 0 / 0.06)',
 		'shadow-border-hover':
-			'0 0 0 1px oklch(0 0 0 / 0.11), 0 1px 1px -0.5px rgb(0 0 0 / 0.06), 0 3px 3px -1.5px rgb(0 0 0 / 0.06), 0 6px 6px -3px rgb(0 0 0 / 0.06), 0 12px 12px -6px rgb(0 0 0 / 0.06), 0 24px 24px -12px rgb(0 0 0 / 0.06)',
+			'inset 0 0 0 1px oklch(0 0 0 / 0.11), 0 1px 1px -0.5px rgb(0 0 0 / 0.06), 0 3px 3px -1.5px rgb(0 0 0 / 0.06), 0 6px 6px -3px rgb(0 0 0 / 0.06), 0 12px 12px -6px rgb(0 0 0 / 0.06), 0 24px 24px -12px rgb(0 0 0 / 0.06)',
 		...lightElevationShadows,
 	},
 	dark: {

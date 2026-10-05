@@ -146,7 +146,8 @@ function AgentsBuilderSidebar({ collapsed: collapsedProp = false, onCollapsedCha
 				)}
 			</div>
 
-			<div className={cn('flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto px-2.5 pb-3', collapsed && 'items-center px-2')}>
+			{/* -mt-1 pt-1 gives the first control's 3px focus ring room inside the scroll clip without moving anything. */}
+			<div className={cn('-mt-1 flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto px-2.5 pt-1 pb-3', collapsed && 'items-center px-2')}>
 				{collapsed ? (
 					<div className="flex flex-col items-center gap-1">
 						<TooltipIconButton label="Expand sidebar" side="right" size="lg" aria-expanded={false} onClick={() => onCollapsedChange?.(false)}>

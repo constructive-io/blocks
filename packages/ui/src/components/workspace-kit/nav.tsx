@@ -225,7 +225,8 @@ function SidebarFrame({ label, menu, collapsed: collapsedProp, onCollapsedChange
 					</TooltipIconButton>
 				)}
 			</div>
-			<div className={cn('flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto px-2.5 pb-3', collapsed && 'items-center px-2')}>
+			{/* -mt-1 pt-1 gives the first control's 3px focus ring room inside the scroll clip without moving anything. */}
+			<div className={cn('-mt-1 flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto px-2.5 pt-1 pb-3', collapsed && 'items-center px-2')}>
 				{collapsed ? (
 					<TooltipIconButton label="Expand sidebar" side="right" size="lg" aria-expanded={false} onClick={() => onCollapsedChange?.(false)}>
 						<PanelLeft aria-hidden="true" className="size-3.5 -scale-x-100" />
