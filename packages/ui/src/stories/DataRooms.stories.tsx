@@ -46,7 +46,8 @@ function Frame({ failInvites = false, ...props }: DataRoomsProps & { failInvites
 	const record = (label: string, detail: unknown) => setLog((current) => [{ label, detail: JSON.stringify(detail) }, ...current].slice(0, 3));
 	return (
 		<div className="flex h-dvh min-h-[680px] flex-col gap-2 p-4">
-			<div className="min-h-0 flex-1 overflow-hidden rounded-xl border border-border shadow-sm">
+			{/* A framed shell draws its own edge, so the story drops its frame around it. */}
+			<div className={props.framed ? 'min-h-0 flex-1 overflow-hidden' : 'min-h-0 flex-1 overflow-hidden rounded-xl border border-border shadow-sm'}>
 				<DataRooms
 					{...props}
 					onAction={(action: DataRoomsAction) => record('onAction', action)}
@@ -67,6 +68,13 @@ function Frame({ failInvites = false, ...props }: DataRoomsProps & { failInvites
 const room = (tab: RoomTab, roomId = 'room-atlas'): Partial<DataRoomsProps> => ({ defaultView: 'room', defaultRoomId: roomId, defaultTab: tab });
 
 export const Home: Story = { args: { defaultView: 'home' }, render: (args) => <Frame {...args} /> };
+
+export const Framed: Story = {
+	name: 'Framed shell',
+	args: { ...room('questions'), framed: true },
+	parameters: { docs: { description: { story: 'The workspace as an app window: a rounded, hairline-edged frame on a canvas one tier darker than the content.' } } },
+	render: (args) => <Frame {...args} />,
+};
 
 export const Documents: Story = { name: 'Room: documents', args: room('documents'), render: (args) => <Frame {...args} /> };
 

@@ -55,6 +55,8 @@ type BillingConsoleProps = {
 	timeZone?: string;
 	now?: string;
 	defaultSidebarCollapsed?: boolean;
+	/** Shows the workspace as a rounded frame on a canvas instead of filling its container. */
+	framed?: boolean;
 	className?: string;
 };
 
@@ -116,6 +118,7 @@ function BillingConsole({
 	timeZone,
 	now,
 	defaultSidebarCollapsed,
+	framed,
 	className,
 }: BillingConsoleProps) {
 	const viewsKey = (viewsProp ?? ALL_VIEWS).filter((candidate) => candidate !== 'standing' || data.scope === 'platform').join('|');
@@ -262,6 +265,7 @@ function BillingConsole({
 					slot="billing-console"
 					className={className}
 					defaultSidebarCollapsed={defaultSidebarCollapsed}
+					framed={framed}
 					sidebar={({ mode, collapsed, onCollapsedChange, onNavigate }) => (
 						<BillingConsoleSidebar drawer={mode === 'drawer'} collapsed={collapsed} onCollapsedChange={onCollapsedChange} onNavigate={mode === 'drawer' ? onNavigate : undefined} />
 					)}

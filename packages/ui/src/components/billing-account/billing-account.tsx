@@ -56,6 +56,8 @@ type BillingAccountProps = {
 	timeZone?: string;
 	now?: string;
 	defaultSidebarCollapsed?: boolean;
+	/** Shows the workspace as a rounded frame on a canvas instead of filling its container. */
+	framed?: boolean;
 	className?: string;
 };
 
@@ -105,6 +107,7 @@ function BillingAccount({
 	timeZone,
 	now,
 	defaultSidebarCollapsed,
+	framed,
 	className,
 }: BillingAccountProps) {
 	const viewsKey = views.join('|');
@@ -239,6 +242,7 @@ function BillingAccount({
 					slot="billing-account"
 					className={className}
 					defaultSidebarCollapsed={defaultSidebarCollapsed}
+					framed={framed}
 					sidebar={({ mode, collapsed, onCollapsedChange, onNavigate }) => (
 						<BillingAccountSidebar drawer={mode === 'drawer'} collapsed={collapsed} onCollapsedChange={onCollapsedChange} onNavigate={mode === 'drawer' ? onNavigate : undefined} />
 					)}
