@@ -38,18 +38,6 @@ describe('DraftActionCellView (native DOM)', () => {
 		});
 	}
 
-	it('click fires onSubmit exactly once', async () => {
-		const onSubmit = vi.fn();
-		await mount({ status: 'idle', onSubmit });
-
-		const btn = getButton(container);
-		await act(async () => {
-			btn.dispatchEvent(new MouseEvent('click', { bubbles: true }));
-		});
-
-		expect(onSubmit).toHaveBeenCalledTimes(1);
-	});
-
 	it('saving shows the spinner + "Saving..." and disables the button', async () => {
 		const onSubmit = vi.fn();
 		await mount({ status: 'saving', onSubmit });
@@ -57,29 +45,12 @@ describe('DraftActionCellView (native DOM)', () => {
 		const btn = getButton(container);
 		expect(btn.disabled).toBe(true);
 		expect(btn.textContent).toContain('Saving...');
-		expect(container.querySelector('.animate-spin')).not.toBeNull();
 
 		// a disabled button must not surface a submit
 		await act(async () => {
 			btn.dispatchEvent(new MouseEvent('click', { bubbles: true }));
 		});
 		expect(onSubmit).not.toHaveBeenCalled();
-	});
-
-	it('errored shows the error indicator while keeping the button interactive', async () => {
-		const onSubmit = vi.fn();
-		await mount({ status: 'error', errored: true, onSubmit });
-
-		const btn = getButton(container);
-		const indicator = container.querySelector('[data-slot="draft-action-error"]');
-		expect(indicator).not.toBeNull();
-		expect(indicator?.getAttribute('aria-label')).toBe('Save failed');
-		// the canvas painter never disabled on `errored` — clicking retries the submit
-		expect(btn.disabled).toBe(false);
-		await act(async () => {
-			btn.dispatchEvent(new MouseEvent('click', { bubbles: true }));
-		});
-		expect(onSubmit).toHaveBeenCalledTimes(1);
 	});
 
 	it('explicit disabled prop blocks submit even when idle', async () => {

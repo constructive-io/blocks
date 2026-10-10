@@ -5,7 +5,7 @@
 // and key enumeration. NOTE: exactly like the previous non-enumerable string
 // markers (`__isDraft` etc.), this metadata does NOT survive an object spread
 // (`{ ...row }`) — callers must thread the row reference through rather than a
-// shallow copy. Use `copyDraftMeta()` when a copy is unavoidable.
+// shallow copy.
 import type { DraftRow } from '../store/draft-rows-slice';
 
 /** A grid row: arbitrary column values keyed by field name, plus an optional id. */
@@ -38,10 +38,4 @@ export function getDraftMeta(row: SheetsRow | null | undefined): DraftMeta | und
 /** True when the row is a client-side draft. */
 export function isDraftRow(row: SheetsRow | null | undefined): boolean {
 	return getDraftMeta(row)?.isDraft === true;
-}
-
-/** Re-attach draft metadata after an unavoidable shallow copy. */
-export function copyDraftMeta<TRow extends SheetsRow>(from: SheetsRow | null | undefined, to: TRow): TRow {
-	const meta = getDraftMeta(from);
-	return meta ? (attachDraftMeta(to, meta) as TRow) : to;
 }

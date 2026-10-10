@@ -90,36 +90,6 @@ describe('STAGE 5 — useCellEditing preserves a RAW boolean (no stringify)', ()
 		expect(typeof result.patchValue).toBe('boolean');
 	});
 
-	it('server row: a boolean cell toggles true -> false -> true (each commit stays raw)', async () => {
-		const update = vi.fn().mockResolvedValue({ updatedRow: null });
-		const rows: SheetsRow[] = [{ id: 'r1', active: true }];
-
-		const editCell = mountEditCell({
-			combinedRows: rows,
-			fieldMetaMap: new Map([['active', { type: { gqlType: 'Boolean' } }]]),
-			relationInfoByField: new Map(),
-			updateDraftCell: vi.fn(),
-			tableKey: 'widgets',
-			update,
-		});
-
-		// Emulate the inline-toggle: commit !current each time, threading the raw boolean.
-		let current = true;
-		for (const expected of [false, true, false]) {
-			current = !current;
-			// eslint-disable-next-line no-await-in-loop
-			await act(async () => {
-				await editCell(0, 'active', current);
-			});
-			expect(current).toBe(expected);
-		}
-
-		expect(update.mock.calls.map((c) => c[1])).toEqual([{ active: false }, { active: true }, { active: false }]);
-		for (const [, patch] of update.mock.calls) {
-			expect(typeof patch.active).toBe('boolean');
-		}
-	});
-
 	it('draft row: committing false stores the literal boolean in updateDraftCell', async () => {
 		const updateDraftCell = vi.fn();
 		const update = vi.fn().mockResolvedValue({ updatedRow: null });

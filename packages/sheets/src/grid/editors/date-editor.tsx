@@ -227,14 +227,6 @@ const dateValueToDate = (dateValue: DateValueType | null): Date | null => {
 	}
 };
 
-// Derive a date-only string from a calendar value (year/month/day) without any
-// UTC conversion. Pure and DOM-free so the write path is directly testable; it
-// mirrors handleSave's date-only serialization (local-midnight Date → local getters).
-export function dateOnlyStringFromCalendarValue(dateValue: DateValueType | null): string {
-	const date = dateValueToDate(dateValue);
-	return date ? toLocalDateString(date) : '';
-}
-
 interface DateEditorProps {
 	value: unknown;
 	onFinishedEditing: (next?: unknown) => void;

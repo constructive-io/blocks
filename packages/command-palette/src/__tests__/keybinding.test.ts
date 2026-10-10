@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it } from 'vitest';
 
-import { formatKeyBinding, isEditableTarget, isMac, kbd, matchKeyBinding } from '../keybinding';
+import { formatKeyBinding, isMac, kbd, matchKeyBinding } from '../keybinding';
 
 const originalNavigator = globalThis.navigator;
 
@@ -39,16 +39,6 @@ describe('keybinding', () => {
     expect(isMac()).toBe(false);
   });
 
-  it('recognizes editable targets that must retain keyboard input', () => {
-    for (const tag of ['input', 'textarea', 'select'] as const) {
-      expect(isEditableTarget(document.createElement(tag)), tag).toBe(true);
-    }
-    const editable = document.createElement('div');
-    editable.contentEditable = 'true';
-    expect(isEditableTarget(editable)).toBe(true);
-    expect(isEditableTarget(document.createElement('div'))).toBe(false);
-    expect(isEditableTarget(null)).toBe(false);
-  });
 
   it('matches keys case-insensitively and rejects missing or extra modifiers', () => {
     setPlatform('Win32');

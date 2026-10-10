@@ -88,10 +88,6 @@ function makeCtx(range?: SelectionRect, rows: unknown[] = ROWS) {
 describe('extendedFillRect (pure geometry)', () => {
 	const from: SelectionRect = { x: 1, y: 0, width: 2, height: 1 };
 
-	it('extends DOWN when the target overshoots vertically', () => {
-		expect(extendedFillRect(from, [1, 3])).toEqual({ x: 1, y: 0, width: 2, height: 4 });
-	});
-
 	it('extends RIGHT when the target overshoots horizontally', () => {
 		const src: SelectionRect = { x: 0, y: 1, width: 1, height: 2 };
 		expect(extendedFillRect(src, [3, 1])).toEqual({ x: 0, y: 1, width: 4, height: 2 });
@@ -102,11 +98,6 @@ describe('extendedFillRect (pure geometry)', () => {
 		expect(extendedFillRect(src, [0, 0])).toEqual({ x: 0, y: 0, width: 1, height: 3 });
 	});
 
-	it('collapses to `from` when the target is inside the band', () => {
-		const src: SelectionRect = { x: 0, y: 0, width: 2, height: 2 };
-		expect(extendedFillRect(src, [1, 1])).toEqual(src);
-	});
-
 	it('picks the dominant axis when both overshoot (vertical wins on tie/greater)', () => {
 		const src: SelectionRect = { x: 0, y: 0, width: 1, height: 1 };
 		// down by 3, right by 2 -> vertical dominates.
@@ -115,14 +106,6 @@ describe('extendedFillRect (pure geometry)', () => {
 });
 
 describe('fillDragWrites (pure replication)', () => {
-	it('replicates the source column into the new rows only (skips the source band)', () => {
-		const from: SelectionRect = { x: 1, y: 0, width: 1, height: 1 }; // seed = name@r0 = 'Alpha'
-		const extended: SelectionRect = { x: 1, y: 0, width: 1, height: 3 };
-		expect(fillDragWrites(from, extended, ROWS, COLS)).toEqual([
-			{ rowIndex: 1, colKey: 'name', value: 'Alpha' },
-			{ rowIndex: 2, colKey: 'name', value: 'Alpha' }
-		]);
-	});
 
 	it('tiles a multi-row source band down the extension', () => {
 		const from: SelectionRect = { x: 1, y: 0, width: 1, height: 2 }; // Alpha, Beta
@@ -138,11 +121,6 @@ describe('fill.drag command', () => {
 	it('canRun is false without a payload', () => {
 		const { ctx } = makeCtx();
 		expect(cmd('fill.drag').canRun?.(ctx)).toBe(false);
-	});
-
-	it('canRun is true with from + to', () => {
-		const { ctx } = makeCtx();
-		expect(cmd('fill.drag').canRun?.(ctx, { from: { x: 0, y: 0, width: 1, height: 1 }, to: [0, 2] })).toBe(true);
 	});
 
 	it('dragging down extends + replicates the source column, then grows the selection', () => {

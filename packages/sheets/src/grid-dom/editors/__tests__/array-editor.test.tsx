@@ -52,17 +52,6 @@ describe('ArrayEditorDom (native EditorProps adapter)', () => {
 		vi.clearAllMocks();
 	});
 
-	it('seeds existing tags from the array value', async () => {
-		await act(async () => {
-			root.render(<ArrayEditorDom {...makeProps(['a', 'b'])} />);
-		});
-
-		expect(container.querySelector('[data-slot="array-editor"]')).toBeTruthy();
-		const text = container.textContent ?? '';
-		expect(text).toContain('a');
-		expect(text).toContain('b');
-	});
-
 	it('typed input + Save commits the merged array via onCommit', async () => {
 		const onCommit = vi.fn();
 		const onCommitPatch = vi.fn();

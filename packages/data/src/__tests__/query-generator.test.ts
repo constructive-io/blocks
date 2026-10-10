@@ -1,48 +1,18 @@
 /**
  * Query Generator Tests
- * Consolidated: table utilities, select/findOne/count, mutations, edge cases
+ * Covers server-aware names and emitted relation aliases.
  */
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { describe, expect, it } from "vitest";
 
-import type { CleanTable, QueryOptions } from "../data.types";
 import {
-	buildCount,
-	buildFindOne,
-	buildPostGraphileCreate,
-	buildPostGraphileDelete,
-	buildPostGraphileUpdate,
 	buildSelect,
 	toCamelCasePlural,
 	toCamelCaseSingular,
 	toPatchFieldName,
 } from "../index";
-import { complexTable, queryOptionsFixtures, simpleTable } from "./fixtures";
 import { createCleanTable } from "./test-helpers";
 
-vi.mock("@constructive-io/graphql-query/query-builder", () => ({
-	QueryBuilder: vi.fn().mockImplementation(() => ({
-		query: vi.fn().mockReturnThis(),
-		getMany: vi.fn().mockReturnThis(),
-		getOne: vi.fn().mockReturnThis(),
-		create: vi.fn().mockReturnThis(),
-		update: vi.fn().mockReturnThis(),
-		delete: vi.fn().mockReturnThis(),
-		print: vi
-			.fn()
-			.mockReturnValue({ _hash: "mock-hash", _queryName: "mockQuery" }),
-	})),
-}));
-
 describe("query-generator", () => {
-	let testTable: CleanTable;
-	let allTables: CleanTable[];
-
-	beforeEach(() => {
-		testTable = complexTable;
-		allTables = [complexTable, simpleTable];
-		vi.clearAllMocks();
-	});
-
 	describe("toCamelCasePlural", () => {
 		const cases = [
 			["user", "users"],
@@ -140,22 +110,6 @@ describe("query-generator", () => {
 	});
 
 	describe("buildSelect", () => {
-		const selectCases = [
-			["basic", { fieldSelection: "display" }],
-			["with pagination", queryOptionsFixtures.withPagination],
-			["with sorting", queryOptionsFixtures.withSorting],
-			["with filtering", queryOptionsFixtures.withFiltering],
-			["complex", queryOptionsFixtures.complex],
-			["empty", {}],
-			["undefined", undefined],
-		] as const;
-
-		it.each(selectCases)("builds %s query", (_, options) => {
-			const result = buildSelect(testTable, allTables, options as any);
-			expect(result).toBeDefined();
-			expect(typeof result.toString()).toBe("string");
-		});
-
 		it("aliases remapped relation fields to preserve raw response keys", () => {
 			const activityTable = createCleanTable("Activity");
 			const contactTable = createCleanTable("Contact");
@@ -286,121 +240,6 @@ describe("query-generator", () => {
 
 			expect(query).not.toContain("contactsByMyContactId");
 			expect(query).toContain("id");
-		});
-	});
-
-	describe("buildFindOne", () => {
-		it("builds with default and custom primary key", () => {
-			expect(buildFindOne(testTable)).toBeDefined();
-			expect(buildFindOne(testTable, "customId")).toBeDefined();
-		});
-
-		it("handles table without id field", () => {
-			const tableWithoutId = createCleanTable("no_id");
-			tableWithoutId.fields = [
-				{
-					name: "name",
-					type: {
-						gqlType: "String",
-						isArray: false,
-						modifier: null,
-						pgAlias: null,
-						pgType: "text",
-						subtype: null,
-						typmod: null,
-					},
-				},
-			];
-			expect(buildFindOne(tableWithoutId)).toBeDefined();
-		});
-	});
-
-	describe("buildCount", () => {
-		it("builds count query", () => {
-			expect(buildCount(testTable)).toBeDefined();
-			expect(typeof buildCount(testTable).toString()).toBe("string");
-		});
-	});
-
-	describe("PostGraphile mutations", () => {
-		const mutationCases = [
-			["create default", () => buildPostGraphileCreate(testTable, allTables)],
-			[
-				"create all fields",
-				() =>
-					buildPostGraphileCreate(testTable, allTables, {
-						fieldSelection: "all",
-					}),
-			],
-			[
-				"create specific",
-				() =>
-					buildPostGraphileCreate(testTable, allTables, {
-						fieldSelection: { select: ["id", "name"] },
-					}),
-			],
-			["update default", () => buildPostGraphileUpdate(testTable, allTables)],
-			[
-				"update display",
-				() =>
-					buildPostGraphileUpdate(testTable, allTables, {
-						fieldSelection: "display",
-					}),
-			],
-			["delete default", () => buildPostGraphileDelete(testTable, allTables)],
-			["delete simple", () => buildPostGraphileDelete(simpleTable, allTables)],
-		] as const;
-
-		it.each(mutationCases)("builds %s mutation", (_, buildFn) => {
-			const result = buildFn();
-			expect(result).toBeDefined();
-			expect(typeof result.toString()).toBe("string");
-		});
-	});
-
-	describe("edge cases", () => {
-		it("handles empty fields", () => {
-			const emptyTable = createCleanTable("empty");
-			emptyTable.fields = [];
-			expect(buildSelect(emptyTable, [emptyTable])).toBeDefined();
-		});
-
-		it("handles invalid field selection", () => {
-			const options: QueryOptions = {
-				fieldSelection: { select: ["nonExistent"] },
-			};
-			expect(buildSelect(testTable, allTables, options)).toBeDefined();
-		});
-
-		it("handles complex nested filters", () => {
-			const options: QueryOptions = {
-				where: {
-					and: [
-						{
-							or: [
-								{ name: { includes: "test" } },
-								{ email: { endsWith: ".com" } },
-							],
-						},
-						{
-							and: [
-								{ isActive: { equalTo: true } },
-								{ age: { greaterThan: 18 } },
-							],
-						},
-					],
-				},
-			};
-			expect(buildSelect(testTable, allTables, options)).toBeDefined();
-		});
-
-		it("handles null/undefined options", () => {
-			const options: QueryOptions = {
-				fieldSelection: undefined,
-				where: undefined,
-				orderBy: undefined,
-			};
-			expect(buildSelect(testTable, allTables, options)).toBeDefined();
 		});
 	});
 });

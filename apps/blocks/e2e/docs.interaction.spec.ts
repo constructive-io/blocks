@@ -1,3 +1,7 @@
+import { mkdir } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+
 import {
   expect,
   test,
@@ -7,11 +11,11 @@ import {
 } from '@playwright/test';
 
 const primitiveRoute = (name: string) => `/blocks/blocks/ui/${name}/`;
-const billingRoute = (name: string) => `/blocks/blocks/billing/${name}/`;
+const billingRoute = (name: 'account' | 'console') => `/blocks/blocks/billing/${name}/`;
 
 function billingPreviewFrame(page: Page): FrameLocator {
   return page.frameLocator(
-    '[data-slot="billing-showcase-preview"] iframe[title$="live preview"]',
+    '[data-slot="application-block-showcase-preview"] iframe[title$="inline live preview"]',
   );
 }
 
@@ -22,27 +26,75 @@ async function visitPrimitive(page: Page, name: string) {
   await expect(page.getByRole('button', { name: /Switch to (light|dark) theme/ })).toBeEnabled();
 }
 
-async function visitBilling(page: Page, name: string) {
-  const response = await page.goto(billingRoute(name), {
-    waitUntil: 'networkidle',
-  });
+async function visitBilling(page: Page, name: 'account' | 'console') {
+  const response = await page.goto(billingRoute(name), { waitUntil: 'networkidle' });
   expect(response?.status()).toBe(200);
   await expect(page.locator('main')).toBeVisible();
-  await expect(
-    page.locator('[data-slot="billing-showcase-preview"]'),
-  ).toBeVisible();
+  await expect(page.locator('[data-slot="application-block-showcase-preview"]')).toBeVisible();
+  await expect(billingPreviewFrame(page).getByRole('radiogroup', {
+    name: name === 'account' ? 'Scenario' : 'Scope',
+  })).toBeVisible();
 }
 
-async function chooseShowcaseOption(
-  page: Page,
-  label: 'Account' | 'Resource state',
-  option: string,
-) {
-  const preview = page.locator('[data-slot="billing-showcase-preview"]');
-  const trigger = preview.getByRole('combobox', { name: label });
-  await trigger.click();
-  await page.getByRole('option', { name: option, exact: true }).click();
-  await expect(trigger).toContainText(option);
+function captureBillingErrors(page: Page) {
+  const errors: string[] = [];
+  page.on('pageerror', (error) => errors.push(error.message));
+  return errors;
+}
+
+async function recordBillingJourney(page: Page, errors: string[]) {
+  const artifactDirectory = process.env.BLOCKS_E2E_ARTIFACT_DIR
+    ?? join(tmpdir(), 'constructive-blocks-billing-e2e');
+  await mkdir(artifactDirectory, { recursive: true });
+  const screenshot = join(artifactDirectory, `${test.info().title.replace(/[^a-z0-9]+/gi, '-')}.png`);
+  await page.screenshot({ path: screenshot, fullPage: true });
+  test.info().annotations.push({ type: 'artifact', description: screenshot });
+  await test.info().attach('billing-journey', { path: screenshot, contentType: 'image/png' });
+  expect(errors).toEqual([]);
+}
+
+async function setBillingViewport(page: Page, name: 'Mobile' | 'Tablet' | 'Desktop') {
+  const width = { Mobile: 390, Tablet: 768, Desktop: 1280 }[name];
+  const preview = page.locator('[data-slot="application-block-showcase-preview"]');
+  await preview.getByRole('button', { name: `${name} preview, ${width} pixels` }).click();
+  await expect.poll(() => preview.locator('iframe').evaluate(
+    (frame) => (frame as HTMLIFrameElement).contentWindow?.innerWidth,
+  )).toBe(width);
+  // Pointer actionability also waits for the resized frame's visible bounds to settle.
+  await preview.locator('iframe').hover();
+}
+
+async function chooseBillingScenario(frame: FrameLocator, name: string) {
+  const choice = frame.getByRole('radiogroup', { name: 'Scenario' })
+    .getByRole('radio', { name, exact: true });
+  await choice.click();
+  await expect(choice).toHaveAttribute('aria-checked', 'true');
+}
+
+async function navigateBilling(frame: FrameLocator, name: string, consoleView = false) {
+  let navigation = frame.getByRole('navigation', {
+    name: consoleView ? 'Console views' : 'Billing views',
+  });
+  if (!await navigation.isVisible()) {
+    await frame.getByRole('button', { name: 'Open navigation', exact: true }).click();
+    const drawer = frame.getByRole('dialog', { name: 'Navigation', exact: true });
+    await expect(drawer).toBeVisible();
+    navigation = drawer.getByRole('navigation', {
+      name: consoleView ? 'Console views' : 'Billing views',
+    });
+  }
+  await navigation.getByRole('button', { name: new RegExp(`^${name}\\b`) }).click();
+  await expect(frame.getByRole('region', { name, exact: true }).first()).toBeVisible();
+  await expect(frame.getByRole('dialog', { name: 'Navigation', exact: true })).toBeHidden();
+}
+
+async function planHeadingBounds(frame: FrameLocator) {
+  const plans = frame.getByRole('region', { name: 'Plans', exact: true });
+  const free = plans.getByRole('heading', { name: 'Free', exact: true });
+  const pro = plans.getByRole('heading', { name: 'Pro', exact: true });
+  await expect(free).toHaveCount(1);
+  await expect(pro).toHaveCount(1);
+  return { free: (await free.boundingBox())!, pro: (await pro.boundingBox())! };
 }
 
 async function openFromKeyboard(trigger: Locator) {
@@ -278,346 +330,292 @@ test('documentation order, anchors, and shared install/source mode remain synchr
   expect(pageErrors).toEqual([]);
 });
 
-test('billing preview controls expose both account kinds and every resource state with visible semantics', async ({
-  page,
-}) => {
-  await visitBilling(page, 'billing-activity-table');
+test('billing preview scenarios expose account kinds, lifecycle failures, and host actions', async ({ page }) => {
+  test.setTimeout(60_000);
+  const errors = captureBillingErrors(page);
+  await visitBilling(page, 'account');
+  await setBillingViewport(page, 'Desktop');
   const frame = billingPreviewFrame(page);
-  const activity = frame.locator('[data-slot="billing-activity-table"]');
+  const scenarios = frame.getByRole('radiogroup', { name: 'Scenario' });
+  await expect(scenarios.getByRole('radio')).toHaveCount(9);
+  await expect(frame.getByRole('button', { name: 'Billing account: Northwind Labs' })).toBeVisible();
+  await expect(frame.getByRole('region', { name: 'Northwind Labs billing overview', exact: true })).toContainText('For teams running several apps with shared seats.');
 
-  await expect(activity.getByText('Northstar Field Operations')).toBeVisible();
-  await expect(activity.getByText('Organization', { exact: true })).toBeVisible();
+  await chooseBillingScenario(frame, 'Free, no subscription');
+  await expect(frame.getByRole('button', { name: 'Billing account: Mira Sato' })).toBeVisible();
+  await expect(frame.getByRole('status').filter({ hasText: 'No plan yet' })).toContainText('Pick a plan');
+  await navigateBilling(frame, 'Invoices');
+  await expect(frame.getByRole('heading', { name: 'Invoices', exact: true, level: 2 })).toBeVisible();
+  await expect(frame.getByText('No invoices yet', { exact: true })).toBeVisible();
+  await expect(frame.getByText('Invoices appear after the first renewal or purchase.', { exact: true })).toBeVisible();
+  await expect(frame.getByRole('table')).toHaveCount(0);
 
-  await chooseShowcaseOption(page, 'Account', 'Personal account');
-  await expect(activity.getByText('Avery Chen')).toBeVisible();
-  await expect(activity.getByText('Personal account', { exact: true })).toBeVisible();
+  await chooseBillingScenario(frame, 'Payment overdue');
+  const overdue = frame.getByRole('status').filter({ hasText: 'Payment failed' });
+  await expect(overdue).toContainText('Service continues until');
+  await overdue.getByRole('button', { name: 'Update payment method' }).click();
+  await expect(frame.getByRole('status').filter({ hasText: 'The host would open' })).toContainText('customer portal');
 
-  await chooseShowcaseOption(page, 'Resource state', 'Loading');
-  await expect(activity).toHaveAttribute('aria-busy', 'true');
-  await expect(activity.getByRole('status')).toContainText(
-    'Loading billing activity',
-  );
+  await chooseBillingScenario(frame, 'Suspended');
+  const suspended = frame.getByRole('alert').filter({ hasText: 'Billing suspended' });
+  await expect(suspended).toContainText('Billing suspended');
+  await expect(suspended).toContainText('storefront-prod, auth-prod stopped serving requests');
+  await suspended.getByRole('button', { name: 'Pay open invoice' }).click();
+  await expect(frame.getByRole('status').filter({ hasText: 'The host would open invoice' })).toContainText('inv-open');
 
-  await chooseShowcaseOption(page, 'Resource state', 'Empty');
-  await expect(
-    activity.getByRole('heading', { name: 'No billing activity' }),
-  ).toBeVisible();
+  await chooseBillingScenario(frame, 'Checkout pending');
+  await expect(frame.getByRole('status').filter({ hasText: 'Confirming your payment' })).toContainText('as soon as it confirms');
+  await chooseBillingScenario(frame, 'Scheduled downgrade');
+  await expect(frame.getByRole('region', { name: 'Northwind Labs billing overview', exact: true })
+    .getByRole('status').filter({ hasText: 'Moving to Pro' })).toContainText('Oct 1, 2026');
+  await chooseBillingScenario(frame, 'Needs review');
+  const review = frame.getByRole('status').filter({ hasText: 'A billing change needs review' });
+  await expect(review).toContainText('Nothing was charged twice');
+  await review.getByRole('button', { name: 'Contact support' }).click();
+  await expect(frame.getByRole('status').filter({ hasText: 'The host received' })).toContainText('contact-support');
 
-  await chooseShowcaseOption(page, 'Resource state', 'Error');
-  await expect(
-    activity.getByRole('heading', {
-      name: 'Billing activity could not be loaded',
-    }),
-  ).toBeVisible();
-  await expect(activity).toContainText('Billing activity is temporarily unavailable.');
-  await expect(activity.getByRole('button', { name: 'Try again' })).toBeEnabled();
+  await chooseBillingScenario(frame, 'Member view');
+  await expect(frame.getByRole('button', { name: 'Billing account: Acme Research' })).toBeVisible();
+  await expect(frame.getByRole('button', { name: 'Redeem code', exact: true })).toHaveCount(0);
+  await expect(frame.getByRole('button', { name: 'Change plan', exact: true })).toHaveCount(0);
+  await navigateBilling(frame, 'Plans');
+  await expect(frame.getByRole('region', { name: 'Plans', exact: true }).getByRole('button', { name: /Switch to/ })).toHaveCount(0);
 
-  await chooseShowcaseOption(page, 'Resource state', 'Stale');
-  await expect(activity.getByText('Stale', { exact: true })).toBeVisible();
-  await expect(activity.getByLabel('Data quality: Stale')).toBeVisible();
+  await chooseBillingScenario(frame, 'Tenant app');
+  await expect(frame.getByRole('button', { name: 'Billing account: Harbor Coaching' })).toBeVisible();
+  await expect(frame.getByRole('region', { name: 'Harbor Coaching billing overview', exact: true })).toContainText('Coaching sessions');
+  await expect(frame.getByRole('region', { name: 'Harbor Coaching billing overview', exact: true })).not.toContainText('storefront-prod');
 
-  await chooseShowcaseOption(page, 'Resource state', 'Estimated');
-  await expect(activity.getByText('Estimated', { exact: true })).toBeVisible();
-  await expect(activity.getByLabel('Data quality: Estimated')).toBeVisible();
+  await chooseBillingScenario(frame, 'Active');
+  await frame.getByRole('button', { name: 'Billing account: Northwind Labs' }).click();
+  await frame.getByRole('menuitem', { name: /Mira Sato/ }).click();
+  await expect(frame.getByRole('status').filter({ hasText: 'The host would load billing' })).toContainText('acct-personal');
+  // Account data is controlled by the host: a request cannot invent new account rows.
+  await expect(frame.getByRole('button', { name: 'Billing account: Northwind Labs' })).toBeVisible();
 
-  await chooseShowcaseOption(page, 'Resource state', 'Ready');
-  for (const semanticLabel of [
-    'Usage recorded',
-    'Credits granted',
-    'Credits rolled over',
-    'Credits expired',
-    'Provider pending review',
-  ]) {
-    await expect(activity.getByText(semanticLabel, { exact: true })).toBeVisible();
-  }
-
-  await activity.getByRole('button', { name: 'Next' }).click();
-  const callbackStatus = frame.getByRole('status');
-  await expect(callbackStatus).toContainText('Action received.');
-  await expect(callbackStatus).toContainText('onPageChange(2)');
-  await expect(callbackStatus).toContainText(
-    'Its example data remains unchanged.',
-  );
-  await expect(activity).toContainText('Page 1');
+  await visitBilling(page, 'console');
+  const consoleFrame = billingPreviewFrame(page);
+  await setBillingViewport(page, 'Desktop');
+  await consoleFrame.getByRole('radiogroup', { name: 'Scope' }).getByRole('radio', { name: 'Tenant app', exact: true }).click();
+  await navigateBilling(consoleFrame, 'Provider', true);
+  const provider = consoleFrame.getByRole('region', { name: 'Provider', exact: true });
+  await expect(provider).toContainText('Not ready yet');
+  const billingSwitch = provider.getByRole('switch', { name: 'Billing is off' });
+  await expect(billingSwitch).toBeDisabled();
+  await expect(billingSwitch).toHaveAccessibleDescription('Locked until readiness passes.');
+  const readiness = provider.getByRole('list').filter({ hasText: 'Webhook signing secret' });
+  await expect(readiness.getByRole('listitem').filter({ hasText: 'Webhook signing secret' })).toContainText('fail');
+  await provider.getByRole('button', { name: 'Check now' }).click();
+  await expect(readiness).toHaveAttribute('aria-busy', 'true');
+  await expect(provider).toContainText('Checking readiness');
+  await expect(billingSwitch).toBeDisabled();
+  await expect(provider).toContainText('Ready to bill');
+  await expect(readiness).not.toHaveAttribute('aria-busy', 'true');
+  await expect(billingSwitch).toBeEnabled();
+  await billingSwitch.click();
+  await expect(provider.getByRole('switch', { name: 'Billing is on' })).toBeChecked();
+  await expect(consoleFrame.getByRole('status').filter({ hasText: 'The host would set' })).toContainText('enable_billing to true');
+  await recordBillingJourney(page, errors);
 });
 
-test('billing breakpoint shortcuts use a real iframe viewport and full screen restores focus', async ({
-  page,
-}) => {
-  await visitBilling(page, 'billing-pricing-table');
-  const preview = page.locator('[data-slot="billing-showcase-preview"]');
-  const inlineFrame = preview.locator(
-    'iframe[title="Pricing table inline live preview"]',
-  );
+test('billing breakpoint shortcuts resize the real iframe and full screen restores focus', async ({ page }) => {
+  const errors = captureBillingErrors(page);
+  await visitBilling(page, 'account');
+  const preview = page.locator('[data-slot="application-block-showcase-preview"]');
+  const inlineFrame = preview.locator('iframe[title="Billing Account inline live preview"]');
+  await expect(inlineFrame).toHaveAttribute('src', /\/blocks\/blocks\/billing\/account\/preview\/$/);
+  await expect.poll(() => inlineFrame.evaluate((frame) => (frame as HTMLIFrameElement).contentWindow?.innerWidth)).toBe(1280);
+  await setBillingViewport(page, 'Mobile');
+  expect(await inlineFrame.evaluate((frame) => frame.getBoundingClientRect().height)).toBeLessThanOrEqual(960);
+  await navigateBilling(billingPreviewFrame(page), 'Plans');
+  await expect.poll(async () => {
+    const { free, pro } = await planHeadingBounds(billingPreviewFrame(page));
+    return pro.y >= free.y + free.height - 1;
+  }).toBe(true);
+  await setBillingViewport(page, 'Desktop');
+  await expect.poll(async () => {
+    const { free, pro } = await planHeadingBounds(billingPreviewFrame(page));
+    return pro.x >= free.x + free.width - 1;
+  }).toBe(true);
+  await setBillingViewport(page, 'Mobile');
 
-  await expect(inlineFrame).toHaveAttribute(
-    'src',
-    /\/blocks\/blocks\/billing\/billing-pricing-table\/preview\/\?account=organization&state=ready$/,
-  );
-  await expect
-    .poll(() =>
-      inlineFrame.evaluate(
-        (frame) => (frame as HTMLIFrameElement).contentWindow?.innerWidth,
-      ),
-    )
-    .toBe(1280);
-  expect(
-    await inlineFrame.evaluate((frame) => frame.getBoundingClientRect().height),
-  ).toBeLessThanOrEqual(960);
-
-  await preview
-    .getByRole('button', { name: 'Mobile preview, 390 pixels' })
-    .click();
-  await expect
-    .poll(() =>
-      inlineFrame.evaluate(
-        (frame) => (frame as HTMLIFrameElement).contentWindow?.innerWidth,
-      ),
-    )
-    .toBe(390);
-  expect(
-    await billingPreviewFrame(page)
-      .locator('[data-slot="billing-pricing-table"] > .grid')
-      .evaluate(
-        (grid) => getComputedStyle(grid).gridTemplateColumns.split(' ').length,
-      ),
-  ).toBe(1);
-
-  const fullscreenTrigger = preview.getByRole('button', {
-    name: 'Open full-screen preview',
-  });
+  const fullscreenTrigger = preview.getByRole('button', { name: 'Open full-screen preview' });
   await fullscreenTrigger.click();
-  const dialog = page.getByRole('dialog', { name: 'Live source preview' });
+  const dialog = page.getByRole('dialog', { name: 'Billing Account preview' });
   await expect(dialog).toBeVisible();
-  await expect(
-    dialog.getByRole('button', { name: 'Mobile preview, 390 pixels' }),
-  ).toBeFocused();
-  await dialog
-    .getByRole('button', { name: 'Tablet preview, 768 pixels' })
-    .click();
-  const fullscreenFrame = dialog.locator('iframe');
-  await expect
-    .poll(() =>
-      fullscreenFrame.evaluate(
-        (frame) => (frame as HTMLIFrameElement).contentWindow?.innerWidth,
-      ),
-    )
-    .toBe(768);
-
+  await expect(dialog.getByRole('button', { name: 'Mobile preview, 390 pixels' })).toBeFocused();
+  await dialog.getByRole('button', { name: 'Tablet preview, 768 pixels' }).click();
+  await expect.poll(() => dialog.locator('iframe').evaluate((frame) => (frame as HTMLIFrameElement).contentWindow?.innerWidth)).toBe(768);
   await page.keyboard.press('Escape');
   await expect(dialog).toBeHidden();
   await expect(fullscreenTrigger).toBeFocused();
-  await expect
-    .poll(() =>
-      inlineFrame.evaluate(
-        (frame) => (frame as HTMLIFrameElement).contentWindow?.innerWidth,
-      ),
-    )
-    .toBe(768);
+  await expect.poll(() => inlineFrame.evaluate((frame) => (frame as HTMLIFrameElement).contentWindow?.innerWidth)).toBe(768);
+  await recordBillingJourney(page, errors);
 });
 
-test('billing settings keeps narrow leaf layout inside its desktop rail', async ({
-  page,
-}) => {
-  await visitBilling(page, 'billing-settings-page');
-  const inlineFrame = page.locator(
-    '[data-slot="billing-showcase-preview"] iframe',
-  );
-  await expect
-    .poll(() =>
-      inlineFrame.evaluate(
-        (frame) => (frame as HTMLIFrameElement).contentWindow?.innerWidth,
-      ),
-    )
-    .toBe(1280);
-  await expect
-    .poll(() =>
-      inlineFrame.evaluate(
-        (frame) => (frame as HTMLIFrameElement).contentWindow?.innerHeight,
-      ),
-    )
-    .toBe(960);
-
+test('billing narrow plan content reflows inside a desktop sidebar and survives rail collapse', async ({ page }) => {
+  const errors = captureBillingErrors(page);
+  await visitBilling(page, 'account');
+  await setBillingViewport(page, 'Tablet');
+  // At 784px the shell still has a desktop rail, leaving narrow space for the view.
+  await page.getByRole('separator', { name: 'Resize preview width' }).press('ArrowRight');
+  await expect.poll(() => page.locator('[data-slot="application-block-showcase-preview"] iframe').evaluate(
+    (element) => (element as HTMLIFrameElement).contentWindow?.innerWidth,
+  )).toBe(784);
   const frame = billingPreviewFrame(page);
-  const primary = frame.locator('[data-slot="billing-settings-usage-primary"]');
-  const overviewGrid = primary.locator('xpath=..');
-  expect(
-    await overviewGrid.evaluate(
-      (grid) => getComputedStyle(grid).gridTemplateColumns.split(' ').length,
-    ),
-  ).toBe(12);
-
-  const rail = frame.locator('[data-slot="billing-settings-overview-rail"]');
-  expect(
-    await rail.evaluate((element) => element.getBoundingClientRect().width),
-  ).toBeLessThan(640);
-  const subscriptionHeader = rail.locator(
-    '[data-slot="billing-subscription-card"] [data-slot="card-header"]',
-  );
-  expect(
-    await subscriptionHeader.evaluate(
-      (header) =>
-        getComputedStyle(header).gridTemplateColumns.split(' ').length,
-    ),
-  ).toBe(1);
+  const sidebar = frame.getByRole('complementary', { name: 'Billing', exact: true });
+  await expect(sidebar).toBeVisible();
+  await navigateBilling(frame, 'Plans');
+  const plans = frame.getByRole('region', { name: 'Plans', exact: true });
+  const narrowWidth = await plans.evaluate((element) => element.getBoundingClientRect().width);
+  expect(narrowWidth).toBeLessThan(640);
+  const { free, pro } = await planHeadingBounds(frame);
+  expect(pro.y).toBeGreaterThanOrEqual(free.y + free.height - 1);
+  expect(await frame.locator('html').evaluate((element) => element.scrollWidth <= element.clientWidth)).toBe(true);
+  await sidebar.getByRole('button', { name: 'Collapse sidebar' }).click();
+  await expect.poll(() => plans.evaluate((element) => element.getBoundingClientRect().width)).toBeGreaterThan(narrowWidth + 100);
+  await expect(plans.getByRole('button', { name: 'Switch to Pro' })).toBeEnabled();
+  await sidebar.getByRole('button', { name: 'Expand sidebar' }).click();
+  await expect.poll(() => plans.evaluate((element) => element.getBoundingClientRect().width)).toBe(narrowWidth);
+  await recordBillingJourney(page, errors);
 });
 
-test('billing settings tabs follow keyboard conventions and partial failures remain local', async ({
-  page,
-}) => {
-  await visitBilling(page, 'billing-settings-page');
-  const settings = billingPreviewFrame(page).locator(
-    '[data-slot="billing-settings-page"]',
-  );
-  const tabList = settings.getByRole('tablist', { name: 'Billing sections' });
-  const overview = tabList.getByRole('tab', { name: 'Overview' });
-  const usage = tabList.getByRole('tab', { name: 'Usage' });
-  const plans = tabList.getByRole('tab', { name: 'Plans' });
-
-  await expect(overview).toHaveAttribute('aria-selected', 'true');
-  await overview.focus();
-  await overview.press('ArrowRight');
-  await expect(usage).toBeFocused();
-  await expect(usage).toHaveAttribute('aria-selected', 'false');
-  await usage.press('Enter');
-  await expect(usage).toHaveAttribute('aria-selected', 'true');
-  await expect(
-    settings.locator('[data-slot="billing-usage-history"]'),
-  ).toBeVisible();
-  await expect(
-    settings.locator('[data-slot="billing-activity-table"]'),
-  ).toBeVisible();
-
-  await usage.press('End');
+test('billing catalog supports keyboard choices and a refused code leaves other credits usable', async ({ page }) => {
+  const errors = captureBillingErrors(page);
+  await visitBilling(page, 'console');
+  await setBillingViewport(page, 'Desktop');
+  const frame = billingPreviewFrame(page);
+  await navigateBilling(frame, 'Catalog', true);
+  const group = frame.getByRole('radiogroup', { name: 'Catalog section' });
+  const plans = group.getByRole('radio', { name: /Plans & prices/ });
+  const entitlements = group.getByRole('radio', { name: 'Entitlements', exact: true });
+  const codes = group.getByRole('radio', { name: /Gift codes/ });
+  await expect(plans).toHaveAttribute('aria-checked', 'true');
+  await plans.focus();
+  await plans.press('ArrowRight');
+  await expect(entitlements).toBeFocused();
+  await expect(entitlements).toHaveAttribute('aria-checked', 'true');
+  await expect(frame.getByRole('heading', { name: 'Entitlements', exact: true })).toBeVisible();
+  await entitlements.press('End');
+  await expect(codes).toBeFocused();
+  await expect(codes).toHaveAttribute('aria-checked', 'true');
+  await expect(frame.getByRole('button', { name: 'New code', exact: true })).toBeVisible();
+  await codes.press('Home');
   await expect(plans).toBeFocused();
-  await plans.press('Enter');
-  await expect(plans).toHaveAttribute('aria-selected', 'true');
-  await expect(
-    settings.locator('[data-slot="billing-pricing-table"]'),
-  ).toBeVisible();
+  await expect(plans).toHaveAttribute('aria-checked', 'true');
+  await plans.press('ArrowLeft');
+  await expect(codes).toBeFocused();
+  await codes.press('ArrowRight');
+  await expect(plans).toBeFocused();
 
-  await plans.press('Home');
-  await expect(overview).toBeFocused();
-  await overview.press('Enter');
-  await expect(overview).toHaveAttribute('aria-selected', 'true');
-
-  await chooseShowcaseOption(page, 'Resource state', 'Partial failure');
-  const usageOverview = settings.locator(
-    '[data-slot="billing-usage-overview"]',
-  );
-  await expect(
-    usageOverview.getByRole('heading', { name: 'Usage could not be loaded' }),
-  ).toBeVisible();
-  await expect(usageOverview.getByRole('button', { name: 'Try again' })).toBeEnabled();
-
-  const credits = settings.locator('[data-slot="billing-credits-card"]');
-  await expect(credits.getByText('Stale', { exact: true })).toBeVisible();
-  await expect(settings.getByText('Scale', { exact: true })).toBeVisible();
-
-  await usage.click();
-  const history = settings.locator('[data-slot="billing-usage-history"]');
-  await expect(history.getByLabel('Data quality: Estimated')).toBeVisible();
-  const loadingActivity = settings.locator(
-    '[data-slot="billing-activity-table"]',
-  );
-  await expect(loadingActivity).toHaveAttribute('aria-busy', 'true');
-  await expect(loadingActivity.getByRole('status')).toContainText(
-    'Loading billing activity',
-  );
+  await visitBilling(page, 'account');
+  await setBillingViewport(page, 'Desktop');
+  const account = billingPreviewFrame(page);
+  await navigateBilling(account, 'Credits');
+  const credits = account.getByRole('region', { name: 'Credits', exact: true });
+  const field = credits.getByRole('textbox', { name: 'Have a code?' });
+  await field.fill('UNKNOWN-CODE');
+  await credits.getByRole('button', { name: 'Redeem', exact: true }).click();
+  await expect(credits.getByRole('button', { name: 'Checking…' })).toBeDisabled();
+  await expect(credits.getByRole('button', { name: 'Checking…' })).toHaveAttribute('aria-busy', 'true');
+  await expect(credits.getByRole('alert')).toContainText('That code doesn’t exist.');
+  await expect(field).toHaveAttribute('aria-invalid', 'true');
+  await expect(field).toHaveAccessibleDescription(/That code doesn’t exist/);
+  await expect(field).toHaveValue('UNKNOWN-CODE');
+  await expect(credits).toContainText('57,350');
+  await expect(credits.getByRole('heading', { name: 'Credit packs', exact: true })).toBeVisible();
+  await expect(credits.getByRole('button', { name: /Buy/ }).first()).toBeEnabled();
+  await field.fill(' hackweek-2026 ');
+  await credits.getByRole('button', { name: 'Redeem', exact: true }).click();
+  await expect(credits.getByRole('status')).toContainText('HACKWEEK-2026 added 25,000 Compute, 2,000,000 Model input tokens.');
+  await expect(credits.getByRole('alert')).toHaveCount(0);
+  await expect(field).not.toHaveAttribute('aria-invalid', 'true');
+  await expect(account.getByRole('status').filter({ hasText: 'The host redeemed' })).toContainText('HACKWEEK-2026 for this account');
+  await expect(credits.getByText('HACKWEEK-2026', { exact: true }).last()).toBeVisible();
+  await recordBillingJourney(page, errors);
 });
 
-test('billing tables expose captions and scoped column headers', async ({ page }) => {
-  await visitBilling(page, 'billing-settings-page');
-  const settings = billingPreviewFrame(page).locator(
-    '[data-slot="billing-settings-page"]',
-  );
-  await settings.getByRole('tab', { name: 'Usage' }).click();
-
-  const historyTable = settings.getByRole('table', {
-    name: 'Billing usage summaries by period and meter.',
-  });
-  await expect(historyTable).toBeVisible();
-  for (const header of [
-    'Period',
-    'Meter',
-    'Used',
-    'Allowance',
-    'Credits',
-    'Overage',
-    'Quality',
-  ]) {
-    await expect(
-      historyTable.getByRole('columnheader', { name: header }),
-    ).toHaveAttribute('scope', 'col');
+test('billing tables have accessible captions, scoped headers, and actionable invoice details', async ({ page }) => {
+  const errors = captureBillingErrors(page);
+  await visitBilling(page, 'account');
+  await setBillingViewport(page, 'Desktop');
+  const account = billingPreviewFrame(page);
+  await navigateBilling(account, 'Invoices');
+  const invoices = account.getByRole('table', { name: 'Billing invoices for this account.' });
+  await expect(invoices).toBeVisible();
+  for (const name of ['Invoice', 'Period', 'Status', 'Amount', 'Links']) {
+    await expect(invoices.getByRole('columnheader', { name, exact: true })).toHaveAttribute('scope', 'col');
   }
+  const renewal = invoices.getByRole('button', { name: /NW-2026-0009/ });
+  await renewal.click();
+  await expect(renewal).toHaveAttribute('aria-expanded', 'true');
+  await expect(invoices).toContainText('Team plan');
+  await invoices.getByRole('link', { name: 'View invoice NW-2026-0009', exact: true }).click();
+  await expect(account.getByRole('status').filter({ hasText: 'The host would open invoice' })).toContainText('inv-0924');
 
-  const activityTable = settings.getByRole('table', {
-    name: 'Billing ledger activity for the selected account and filters.',
-  });
-  await expect(activityTable).toBeVisible();
-  for (const header of [
-    'Date',
-    'Activity',
-    'Meter',
-    'Change',
-    'Balance after',
-    'Details',
-  ]) {
-    await expect(
-      activityTable.getByRole('columnheader', { name: header }),
-    ).toHaveAttribute('scope', 'col');
+  await visitBilling(page, 'console');
+  await setBillingViewport(page, 'Desktop');
+  const consoleFrame = billingPreviewFrame(page);
+  await navigateBilling(consoleFrame, 'Catalog', true);
+  const prices = consoleFrame.getByRole('table', { name: 'Billing plans and provider prices.' });
+  await expect(prices).toBeVisible();
+  for (const name of ['Plan / price', 'Billing', 'Amount', 'Provider', 'Active']) {
+    await expect(prices.getByRole('columnheader', { name, exact: true })).toHaveAttribute('scope', 'col');
   }
+  await expect(prices).toContainText('$25.00');
+  await expect(prices).toContainText('Synced');
+  await recordBillingJourney(page, errors);
 });
 
-test('billing activity metadata sheet has a name and description, restores focus, and honors reduced motion', async ({
-  page,
-}) => {
+test('billing meter details have a name and description, restore focus, and propagate reduced-motion preference', async ({ page }) => {
+  const errors = captureBillingErrors(page);
   await page.emulateMedia({ reducedMotion: 'reduce' });
-  await visitBilling(page, 'billing-activity-table');
-  expect(
-    await page.evaluate(() =>
-      window.matchMedia('(prefers-reduced-motion: reduce)').matches,
-    ),
-  ).toBe(true);
-
+  await visitBilling(page, 'account');
+  await setBillingViewport(page, 'Desktop');
   const frame = billingPreviewFrame(page);
-  const trigger = frame.getByRole('button', {
-    name: 'View metadata: Provider pending review',
-  });
-  await trigger.click();
-
-  const sheet = frame.getByRole('dialog', { name: 'Activity details' });
-  await expect(sheet).toBeVisible();
-  await expect(sheet).toHaveAccessibleDescription(
-    'Review the ledger fields and metadata recorded with this activity.',
-  );
-  await expect(sheet.getByRole('heading', { name: 'Metadata' })).toBeVisible();
-  await expect(sheet).toContainText('"source": "showcase"');
-
-  await page.keyboard.press('Escape');
-  await expect(sheet).toHaveCount(0);
-  await expect(trigger).toBeFocused();
+  await navigateBilling(frame, 'Usage');
+  expect(await frame.locator('html').evaluate(() => window.matchMedia('(prefers-reduced-motion: reduce)').matches)).toBe(true);
+  const trigger = frame.getByRole('region', { name: 'Usage', exact: true }).getByRole('button', { name: /^SMS/ });
+  for (let cycle = 0; cycle < 2; cycle += 1) {
+    await trigger.click();
+    const sheet = frame.getByRole('dialog', { name: 'SMS', exact: true });
+    await expect(sheet).toBeVisible();
+    await expect(sheet).toHaveAccessibleDescription('Measured in messages, summed each month.');
+    await expect(sheet).toContainText('2,000 / 2,000 messages');
+    await expect(sheet).toContainText('Plan allowance');
+    await expect(sheet).toContainText('Credits applied');
+    await expect(sheet).toContainText('500 requests');
+    await expect(sheet).toContainText('100 requests');
+    await expect(sheet).toContainText('5 credits from Messaging, then from Universal credits');
+    await page.keyboard.press('Escape');
+    await expect(sheet).toHaveCount(0);
+    await expect(trigger).toBeFocused();
+  }
+  await recordBillingJourney(page, errors);
 });
 
-test('billing settings reflow at an equivalent 200 percent zoom viewport', async ({
-  page,
-}) => {
+test('billing account reflows and stays usable at an equivalent 200 percent zoom viewport', async ({ page }) => {
+  const errors = captureBillingErrors(page);
   // A 1440px desktop viewport exposes 720 CSS pixels at 200% browser zoom.
   await page.setViewportSize({ width: 720, height: 500 });
-  await visitBilling(page, 'billing-settings-page');
-  await page
-    .locator('[data-slot="billing-showcase-preview"]')
-    .getByRole('button', { name: 'Mobile preview, 390 pixels' })
-    .click();
-
-  await expect(
-    billingPreviewFrame(page).locator('[data-slot="billing-settings-page"]'),
-  ).toBeVisible();
-  expect(
-    await page.evaluate(
-      () =>
-        document.documentElement.scrollWidth <=
-        document.documentElement.clientWidth,
-    ),
-  ).toBe(true);
+  await visitBilling(page, 'account');
+  await setBillingViewport(page, 'Mobile');
+  await page.locator('[data-slot="application-block-showcase-preview"] iframe').scrollIntoViewIfNeeded();
+  const frame = billingPreviewFrame(page);
+  const openNavigation = frame.getByRole('button', { name: 'Open navigation', exact: true });
+  await openNavigation.click();
+  const drawer = frame.getByRole('dialog', { name: 'Navigation', exact: true });
+  await expect(drawer).toBeVisible();
+  await drawer.getByRole('button', { name: 'Plans', exact: true }).click();
+  await expect(drawer).toBeHidden();
+  await expect(frame.getByRole('region', { name: 'Plans', exact: true }).getByRole('button', { name: 'Switch to Pro' })).toBeEnabled();
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true);
+  expect(await frame.locator('html').evaluate((element) => element.scrollWidth <= element.clientWidth)).toBe(true);
+  await navigateBilling(frame, 'Credits');
+  const credits = frame.getByRole('region', { name: 'Credits', exact: true });
+  await credits.getByRole('textbox', { name: 'Have a code?' }).fill('HACKWEEK-2026');
+  await credits.getByRole('button', { name: 'Redeem', exact: true }).click();
+  await expect(credits.getByRole('status')).toContainText('HACKWEEK-2026 added');
+  expect(await frame.locator('html').evaluate((element) => element.scrollWidth <= element.clientWidth)).toBe(true);
+  await recordBillingJourney(page, errors);
 });

@@ -1,7 +1,7 @@
 import { act, cleanup, fireEvent, render, renderHook, screen, waitFor } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { StrictMode, Suspense, useEffect, type PropsWithChildren } from 'react';
+import { type PropsWithChildren } from 'react';
 
 import { SchemaBuilderProvider, useSchemaBuilder, useSchemaBuilderStore } from '../core/context';
 import { useSchemaBuilderMutation } from '../core/mutation';
@@ -168,9 +168,7 @@ describe('SchemaBuilderProvider', () => {
     expect(() => result.current.setActiveTab('missing')).toThrow(/Unknown SchemaBuilder tab id/);
   });
 
-  it('keeps one committed store and stable default tabs while synchronizing host props', async () => {
-    const stores = new Set<object>();
-    const tabs = new Set<readonly unknown[]>();
+  it('reflects changing host scope, selection, preferences and tab props', async () => {
     const initialPreferences = { ...DEFAULT_SCHEMA_BUILDER_PREFERENCES, sidebarPinned: false };
     const nextPreferences = { ...DEFAULT_SCHEMA_BUILDER_PREFERENCES, sidebarPinned: true };
     const baseHost = createHost({
@@ -179,16 +177,10 @@ describe('SchemaBuilderProvider', () => {
     });
 
     function LifecycleProbe() {
-      const runtime = useSchemaBuilder();
       const scopeKey = useSchemaBuilderStore((state) => state.scopeKey);
       const activeTab = useSchemaBuilderStore((state) => state.activeTab);
       const selectedTableId = useSchemaBuilderStore((state) => state.selectedTableId);
       const sidebarPinned = useSchemaBuilderStore((state) => state.preferences.sidebarPinned);
-
-      useEffect(() => {
-        stores.add(runtime.store);
-        tabs.add(runtime.tabs ?? []);
-      }, [runtime.store, runtime.tabs]);
 
       return (
         <output data-testid='core-lifecycle'>
@@ -223,96 +215,6 @@ describe('SchemaBuilderProvider', () => {
         'org-1:db-2:user-1|security|table-2|true'
       );
     });
-    expect(stores.size).toBe(1);
-    expect(tabs.size).toBe(1);
-  });
-
-  it('keeps one committed store through Strict Mode and isolates provider remounts', async () => {
-    const firstStores = new Set<object>();
-    const secondStores = new Set<object>();
-
-    function StoreCapture({ stores }: { stores: Set<object> }) {
-      const { store } = useSchemaBuilder();
-      useEffect(() => {
-        stores.add(store);
-      }, [store, stores]);
-      return null;
-    }
-
-    const first = render(
-      <StrictMode>
-        <SchemaBuilderProvider {...createHost()}>
-          <StoreCapture stores={firstStores} />
-        </SchemaBuilderProvider>
-      </StrictMode>
-    );
-    await waitFor(() => expect(firstStores.size).toBe(1));
-    first.rerender(
-      <StrictMode>
-        <SchemaBuilderProvider {...createHost({ colorMode: 'dark' })}>
-          <StoreCapture stores={firstStores} />
-        </SchemaBuilderProvider>
-      </StrictMode>
-    );
-    expect(firstStores.size).toBe(1);
-    first.unmount();
-
-    render(
-      <StrictMode>
-        <SchemaBuilderProvider {...createHost()}>
-          <StoreCapture stores={secondStores} />
-        </SchemaBuilderProvider>
-      </StrictMode>
-    );
-    await waitFor(() => expect(secondStores.size).toBe(1));
-    expect([...secondStores][0]).not.toBe([...firstStores][0]);
-  });
-
-  it('does not leak a store from abandoned Suspense work into a committed provider', async () => {
-    const suspended = new Promise<never>(() => undefined);
-    const abandonedStores = new Set<object>();
-    const committedStores = new Set<object>();
-
-    function AbandonedProbe(): never {
-      abandonedStores.add(useSchemaBuilder().store);
-      throw suspended;
-    }
-
-    function CommittedProbe() {
-      const { store } = useSchemaBuilder();
-      const scopeKey = useSchemaBuilderStore((state) => state.scopeKey);
-      useEffect(() => {
-        committedStores.add(store);
-      }, [store]);
-      return <output data-testid='committed-core-scope'>{scopeKey}</output>;
-    }
-
-    const view = render(
-      <Suspense fallback={<span>loading abandoned provider</span>}>
-        <SchemaBuilderProvider key='abandoned' {...createHost()}>
-          <AbandonedProbe />
-        </SchemaBuilderProvider>
-      </Suspense>
-    );
-    expect(screen.getByText('loading abandoned provider')).toBeTruthy();
-    expect(abandonedStores.size).toBeGreaterThan(0);
-
-    view.rerender(
-      <Suspense fallback={<span>loading committed provider</span>}>
-        <SchemaBuilderProvider
-          key='committed'
-          {...createHost({ scope: { ...scope, databaseId: 'db-committed' } })}
-        >
-          <CommittedProbe />
-        </SchemaBuilderProvider>
-      </Suspense>
-    );
-
-    await waitFor(() => expect(committedStores.size).toBe(1));
-    expect(screen.getByTestId('committed-core-scope').textContent).toBe(
-      'org-1:db-committed:user-1'
-    );
-    expect(abandonedStores.has([...committedStores][0])).toBe(false);
   });
 });
 

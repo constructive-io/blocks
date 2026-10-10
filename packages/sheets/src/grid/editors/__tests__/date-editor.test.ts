@@ -1,8 +1,6 @@
-import { parseDate as parseAriaDate } from '@internationalized/date';
 import { describe, expect, it } from 'vitest';
 
 import {
-	dateOnlyStringFromCalendarValue,
 	extractDateOnly,
 	formatDate,
 	formatForInput,
@@ -47,16 +45,6 @@ describe('date-editor date-only calendar handling', () => {
 		expect(extractDateOnly(null)).toBeNull();
 		expect(extractDateOnly(undefined)).toBeNull();
 		expect(extractDateOnly(12345)).toBeNull();
-	});
-
-	// Write path: a calendar pick (year=2026, month=6, day=18) must serialize to
-	// exactly that day. dateOnlyStringFromCalendarValue mirrors handleSave's
-	// date-only serialization without needing the DOM. Under the old code this
-	// produced '2026-06-17' in any UTC+ zone — the live-confirmed corruption.
-	it('dateOnlyStringFromCalendarValue preserves the clicked day (regression)', () => {
-		expect(dateOnlyStringFromCalendarValue(parseAriaDate('2026-06-18'))).toBe('2026-06-18');
-		expect(dateOnlyStringFromCalendarValue(parseAriaDate('2026-01-01'))).toBe('2026-01-01');
-		expect(dateOnlyStringFromCalendarValue(null)).toBe('');
 	});
 
 	it('formatDate renders date-only values without a timezone shift', () => {

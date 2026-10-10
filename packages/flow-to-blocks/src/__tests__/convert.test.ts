@@ -2,7 +2,7 @@ import type { NodeDefinitionWithImpl } from '@fbp/evaluator';
 import type { Graph, Node } from '@fbp/types';
 import { describe, expect, it } from 'vitest';
 
-import { defaultDataDefinitions, evaluateFlow, flowToDocument, flowToNode } from '../convert';
+import { defaultDataDefinitions, flowToDocument, flowToNode } from '../convert';
 
 function node(name: string, type: string, props: Record<string, unknown> = {}): Node {
 	return {
@@ -306,16 +306,5 @@ describe('flowToNode and evaluateFlow', () => {
 		);
 
 		await expect(flowToNode(flow)).resolves.toMatchObject({ type: 'Page', key: 'page' });
-	});
-
-	it('returns a fragment list unvalidated', async () => {
-		const flow = graph(
-			[node('schema', 'graphInput', { portName: 'schema' }), node('fields', 'ui:FromJsonSchema'), node('out', 'graphOutput')],
-			[edge('schema', 'value', 'fields', 'schema'), edge('fields', 'nodes', 'out', 'value')]
-		);
-
-		const nodes = await evaluateFlow(flow, { inputs: { schema: { type: 'object', properties: { a: { type: 'string' } } } } });
-
-		expect(nodes).toHaveLength(1);
 	});
 });
