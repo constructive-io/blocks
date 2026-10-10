@@ -49,6 +49,12 @@ export function useMachine<State, Event>(
   const send = useCallback(
     (event: Event) => {
       const result = transitionRef.current(stateRef.current, event);
+      // An ignored event must not replace effects: their cleanup would cancel
+      // an invocation that still belongs to the unchanged state.
+      if (result.state === stateRef.current && !result.effects?.length) {
+        optionsRef.current?.onTransition?.(result.state, event);
+        return;
+      }
       stateRef.current = result.state;
       setState(result.state);
       setEffects(result.effects ?? (EMPTY_EFFECTS as Effect<Event>[]));

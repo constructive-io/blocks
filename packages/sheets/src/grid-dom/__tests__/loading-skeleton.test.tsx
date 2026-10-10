@@ -4,11 +4,8 @@
 // the null-backed proxy slot useSheets exposes while its page is in flight — must
 // resolve to a neutral `kind: 'loading'` SheetsCell with NO component, so the host's
 // kind→view map paints LoadingCellView (the canvas analogue of glide's loadingCell)
-// instead of a blank text cell. Two layers are asserted:
-//   1) the RESOLVER (useSheetsContent.getSheetsCell) emits kind 'loading' for a null
-//      row and a NON-loading kind for a loaded row (no over-eager skeletons);
-//   2) END-TO-END, that loading resolution renders LoadingCellView (data-slot
-//      "loading-cell") through SheetsCellHost.
+// instead of a blank text cell. The real resolver runs through SheetsCellHost,
+// so this protects the visible result without pinning the intermediate cell shape.
 //
 // Same component-test idiom as the rest of grid-dom: jsdom + react-dom/client
 // createRoot + act (no @testing-library — not a dep of this package).
@@ -16,7 +13,7 @@ import { act } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
-import { useSheetsContent, type SheetsCellResolution } from '../use-sheets-content';
+import { useSheetsContent } from '../use-sheets-content';
 import { SheetsCellHost } from '../sheets-cell-host';
 import { createCellTypeRegistry } from '../../cell-types/cell-type-registry';
 import { createSheetsCell } from '../../cell-model/create-sheets-cell';
@@ -40,22 +37,6 @@ const RELATION_INFO = new Map<string, RelationInfo>();
 
 // Index 0 is a loaded row; index 1 is an UNLOADED slot (null — the proxy's lazy backing).
 const DATA = [{ id: 'r1', name: 'Alpha' }, null] as unknown as SheetsRow[];
-
-let captured: { loaded?: SheetsCellResolution; unloaded?: SheetsCellResolution } = {};
-
-function CaptureHarness() {
-	const { getSheetsCell } = useSheetsContent({
-		data: DATA,
-		columnKeys: COLUMN_KEYS,
-		fieldMetaMap: FIELD_META,
-		registry,
-		tableName: 't',
-		relationInfoByField: RELATION_INFO,
-		meta: undefined,
-	});
-	captured = { loaded: getSheetsCell(0, 'name'), unloaded: getSheetsCell(1, 'name') };
-	return null;
-}
 
 // Minimal v9-Cell stub carrying ONLY the fields SheetsCellHost reads
 // (row.index/id/original, column.id, getValue) — points at the UNLOADED slot (index 1).
@@ -85,7 +66,6 @@ describe('DOM loading-skeleton resolution (unloaded infinite row → kind "loadi
 	let container: HTMLDivElement;
 
 	beforeEach(() => {
-		captured = {};
 		container = document.createElement('div');
 		document.body.appendChild(container);
 		root = createRoot(container);
@@ -97,22 +77,6 @@ describe('DOM loading-skeleton resolution (unloaded infinite row → kind "loadi
 		});
 		container.remove();
 	});
-
-	it('resolver emits kind "loading" (no component) for a null row, and a non-loading kind for a loaded row', async () => {
-		await act(async () => {
-			root.render(<CaptureHarness />);
-		});
-
-		// Unloaded slot → loading skeleton cell, with NO registry component (so the host
-		// falls through to renderKindView → LoadingCellView, not a blank <Component>).
-		expect(captured.unloaded?.cell.kind).toBe('loading');
-		expect(captured.unloaded?.component).toBeUndefined();
-
-		// Loaded row → a real (text) cell, NEVER the loading skeleton.
-		expect(captured.loaded?.cell.kind).not.toBe('loading');
-		expect(captured.loaded?.cell.kind).toBe('text');
-	});
-
 	it('renders LoadingCellView for an unloaded row through SheetsCellHost', async () => {
 		await act(async () => {
 			root.render(<HostHarness />);

@@ -25,19 +25,6 @@ export interface GridCellRoute {
 	activationBehavior: 'single-click' | 'double-click';
 }
 
-export interface ResolveEditorLocationInput {
-	cellLocation?: readonly [number, number];
-	activeCell?: readonly [number, number] | null;
-	columnKeys: string[];
-	dataLength: number;
-}
-
-export interface ResolvedEditorLocation {
-	colIndex: number;
-	rowIndex: number;
-	colKey: string;
-}
-
 export function buildRelationFieldNameSet(meta: MetaQuery | undefined, tableName?: string): Set<string> {
 	if (!tableName) return new Set<string>();
 
@@ -92,29 +79,5 @@ export function resolveGridCellRoute({
 		canActivate,
 		isReadonly,
 		activationBehavior: base.activationBehavior,
-	};
-}
-
-export function resolveEditorLocation({
-	cellLocation,
-	activeCell,
-	columnKeys,
-	dataLength,
-}: ResolveEditorLocationInput): ResolvedEditorLocation | null {
-	const source = cellLocation ?? activeCell ?? null;
-	if (!source) return null;
-
-	const [colIndex, rowIndex] = source;
-	if (!Number.isInteger(colIndex) || !Number.isInteger(rowIndex)) return null;
-	if (colIndex < 0 || colIndex >= columnKeys.length) return null;
-	if (rowIndex < 0 || rowIndex >= dataLength) return null;
-
-	const colKey = columnKeys[colIndex];
-	if (!colKey) return null;
-
-	return {
-		colIndex,
-		rowIndex,
-		colKey,
 	};
 }

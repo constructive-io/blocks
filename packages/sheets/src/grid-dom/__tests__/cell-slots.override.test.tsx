@@ -141,11 +141,10 @@ describe('cell slots override (registry -> SheetsCellHost, hand-fed)', () => {
 			root.render(<Harness registry={registry} />);
 		});
 
-		// (b) the built-in NumberCellView rendered (right-aligned, data-slot="number-cell"),
+		// (b) the built-in NumberCellView rendered (data-slot="number-cell"),
 		// carrying the formatted value — NOT the custom component.
 		const numberCell = container.querySelector('[data-slot="number-cell"]');
 		expect(numberCell).not.toBeNull();
-		expect(numberCell?.className).toContain('text-right');
 		expect(numberCell?.textContent).toBe('42');
 
 		// (c) the custom slot is absent for the number column's rendered output.

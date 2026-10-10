@@ -243,7 +243,7 @@ export function FilterGroup<T extends string>({ label, value, options, onChange,
 	return (
 		<div className={cn(scrollRowClass, 'min-w-0', rootClassName)}>
 			<div role="radiogroup" aria-label={label} className={cn('flex w-max gap-1', className)}>
-				{options.map((option) => {
+				{options.map((option, index) => {
 					const active = value === option.value;
 					return (
 						<button
@@ -251,6 +251,18 @@ export function FilterGroup<T extends string>({ label, value, options, onChange,
 							type="button"
 							role="radio"
 							aria-checked={active}
+							tabIndex={active ? 0 : -1}
+							onKeyDown={(event) => {
+								const nextIndex = event.key === 'Home' ? 0
+									: event.key === 'End' ? options.length - 1
+									: event.key === 'ArrowRight' || event.key === 'ArrowDown' ? (index + 1) % options.length
+									: event.key === 'ArrowLeft' || event.key === 'ArrowUp' ? (index - 1 + options.length) % options.length
+									: undefined;
+								if (nextIndex === undefined) return;
+								event.preventDefault();
+								event.currentTarget.parentElement?.querySelectorAll<HTMLButtonElement>('[role="radio"]')[nextIndex]?.focus();
+								onChange(options[nextIndex]!.value);
+							}}
 							onClick={() => onChange(option.value)}
 							className={cn(
 								'inline-flex h-7 shrink-0 cursor-pointer items-center gap-1.5 rounded-md px-2 text-[13px] pointer-coarse:h-9',

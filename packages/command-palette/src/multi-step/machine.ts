@@ -143,6 +143,8 @@ export function createMultiStepMachine<TContext>(
 
         case 'COMPLETE_STEP': {
           if (!state.config) return { state };
+          const currentStep = state.view.steps[state.view.currentStepIndex];
+          if (currentStep?.status !== 'active' && currentStep?.status !== 'error') return { state };
 
           const stepDef = state.config.steps[state.view.currentStepIndex];
           if (stepDef?.validate) {
@@ -164,6 +166,7 @@ export function createMultiStepMachine<TContext>(
             type: 'COMPLETE_STEP',
             output: event.output,
           });
+          if (view === state.view) return { state };
 
           const next = { ...state, view };
           const withCompletion = withCompletionEffect(state, next, options);
@@ -173,16 +176,16 @@ export function createMultiStepMachine<TContext>(
 
         case 'GO_BACK': {
           const view = multiStepReducer(state.view, { type: 'GO_BACK' });
-          const effects: Effect<MultiStepMachineEvent<TContext>>[] = [];
-          if (state.view.steps[state.view.currentStepIndex]?.status === 'loading') {
-            effects.push({ type: 'cancel', id: `loader:${state.view.currentStepIndex}` });
-          }
-          const next = { state: { ...state, view }, effects: effects.length ? effects : undefined };
-          const withLoader = withLoaderEffect(next.state);
-          return mergeResults(next, withLoader);
+          if (view === state.view) return { state };
+          return withLoaderEffect({ ...state, view });
         }
 
         case 'SKIP_STEP': {
+          if (
+            !state.config ||
+            state.view.flowStatus !== 'active' ||
+            !state.config.steps[state.view.currentStepIndex]?.skippable
+          ) return { state };
           const view = multiStepReducer(state.view, { type: 'SKIP_STEP' });
           const next = { ...state, view };
           const withCompletion = withCompletionEffect(state, next, options);

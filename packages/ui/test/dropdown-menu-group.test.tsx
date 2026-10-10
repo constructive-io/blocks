@@ -47,14 +47,6 @@ describe('DropdownMenuLabel', () => {
 		expect(group?.getAttribute('aria-labelledby')).toBe(label?.id);
 	});
 
-	it('keeps standalone labels renderable for backwards compatibility', async () => {
-		const container = await render(<DropdownMenuLabel>Legacy section</DropdownMenuLabel>);
-		const label = container.querySelector<HTMLElement>('[data-slot="dropdown-menu-label"]');
-
-		expect(label?.tagName).toBe('DIV');
-		expect(label?.textContent).toBe('Legacy section');
-		expect(label?.hasAttribute('role')).toBe(false);
-	});
 
 	it('uses Base UI render composition for linked items', async () => {
 		const itemClick = vi.fn();

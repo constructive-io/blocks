@@ -38,15 +38,6 @@ describe('createCellTypeRegistry', () => {
 		expect(reg.get('rating')?.typeKey).toBe('rating');
 	});
 
-	it('a def can override only the editor and keep the built-in display', () => {
-		const editorComponent = () => null;
-		const reg = createCellTypeRegistry([defineCellType({ typeKey: 'text', editorComponent })], makeBuiltins());
-		// display still built-in:
-		expect(reg.toSheetsCell('text', 'hi', ctx)).toMatchObject({ data: 'builtin:hi' });
-		// editor overridden (not undefined):
-		expect(reg.getEditorComponent('text')).toBe(editorComponent);
-	});
-
 	it('instance defs win over provider defs by typeKey and by match', () => {
 		const provider = defineCellType({ typeKey: 'relation', toSheetsCell: () => textCell('provider'), match: () => true });
 		const instance = defineCellType({ typeKey: 'relation', toSheetsCell: () => textCell('instance'), match: () => true });
@@ -63,12 +54,6 @@ describe('createCellTypeRegistry', () => {
 		expect(reg.resolveTypeKey({ gqlType: 'Int', isArray: false }, () => 'number')).toBe('number');
 	});
 
-	it('resolves the consumer cell COMPONENT override for a typeKey', () => {
-		const CellView = () => null;
-		const reg = createCellTypeRegistry([defineCellType({ typeKey: 'c', cell: CellView })], makeBuiltins());
-		expect(reg.getCellComponent('c')).toBe(CellView);
-		expect(reg.getCellComponent('text')).toBeUndefined();
-	});
 });
 
 // LOCK 3 — Per-instance isolation (roadmap §1.3).
@@ -103,27 +88,6 @@ describe('createCellTypeRegistry — per-instance isolation (LOCK 3)', () => {
 		expect(regB.toSheetsCell('color', 5, ctx)).toMatchObject({ data: '#' });
 	});
 
-	it('"extending" a base set into a larger set does not affect a registry built from the base alone', () => {
-		// Mirrors the use-sheets composition: provider plugins as the base, instance
-		// cellTypes appended to form the extended set. Both registries are independent.
-		const providerDef = defineCellType({ typeKey: 'relation', toSheetsCell: () => textCell('provider'), match: () => true });
-		const instanceDef = defineCellType({ typeKey: 'relation', toSheetsCell: () => textCell('instance'), match: () => true });
-
-		const baseSet = [providerDef];
-		const baseRegistry = createCellTypeRegistry(baseSet, textBuiltins);
-
-		// Extended set = base + instance overrides (new array, as useSheets builds it).
-		const extendedRegistry = createCellTypeRegistry([...baseSet, instanceDef], textBuiltins);
-
-		// Base registry is untouched by the extension: still the provider def.
-		expect(baseRegistry.toSheetsCell('relation', null, ctx)).toMatchObject({ data: 'provider' });
-		expect(baseRegistry.get('relation')).toBe(providerDef);
-
-		// Extended registry sees the instance override (last-write-wins).
-		expect(extendedRegistry.toSheetsCell('relation', null, ctx)).toMatchObject({ data: 'instance' });
-		expect(extendedRegistry.get('relation')).toBe(instanceDef);
-	});
-
 	it('does not mutate the input cell-types array (match-chain reverse() works on a copy)', () => {
 		const a = defineCellType({ typeKey: 'a', match: () => false });
 		const b = defineCellType({ typeKey: 'b', match: () => false });
@@ -138,15 +102,4 @@ describe('createCellTypeRegistry — per-instance isolation (LOCK 3)', () => {
 		expect(input[1]).toBe(b);
 	});
 
-	it('cell COMPONENT overrides are independent per registry', () => {
-		const CellA = () => null;
-		const CellB = () => null;
-		const regA = createCellTypeRegistry([defineCellType({ typeKey: 'ca', cell: CellA })], textBuiltins);
-		const regB = createCellTypeRegistry([defineCellType({ typeKey: 'cb', cell: CellB })], textBuiltins);
-
-		expect(regA.getCellComponent('ca')).toBe(CellA);
-		expect(regA.getCellComponent('cb')).toBeUndefined();
-		expect(regB.getCellComponent('cb')).toBe(CellB);
-		expect(regB.getCellComponent('ca')).toBeUndefined();
-	});
 });

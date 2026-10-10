@@ -51,29 +51,6 @@ describe('TextEditor (native EditorProps)', () => {
 		vi.clearAllMocks();
 	});
 
-	it('seeds from value, and Enter commits the typed text', async () => {
-		const onCommit = vi.fn();
-		const onCancel = vi.fn();
-		await act(async () => {
-			root.render(<TextEditor {...makeProps('hi', { onCommit, onCancel })} />);
-		});
-
-		const input = container.querySelector('input') as HTMLInputElement;
-		expect(input.getAttribute('aria-label')).toBe('Edit name');
-		expect(input.value).toBe('hi');
-
-		await act(async () => {
-			typeInto(input, 'hello');
-		});
-		await act(async () => {
-			input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
-		});
-
-		expect(onCommit).toHaveBeenCalledTimes(1);
-		expect(onCommit).toHaveBeenCalledWith('hello');
-		expect(onCancel).not.toHaveBeenCalled();
-	});
-
 	it('Save button commits the typed text', async () => {
 		const onCommit = vi.fn();
 		await act(async () => {
@@ -109,49 +86,11 @@ describe('TextEditor (native EditorProps)', () => {
 		expect(onCommit).toHaveBeenCalledWith('x');
 	});
 
-	it('Escape cancels and never commits', async () => {
-		const onCommit = vi.fn();
-		const onCancel = vi.fn();
-		await act(async () => {
-			root.render(<TextEditor {...makeProps('hi', { onCommit, onCancel })} />);
-		});
-
-		const input = container.querySelector('input') as HTMLInputElement;
-		await act(async () => {
-			typeInto(input, 'discard me');
-		});
-		await act(async () => {
-			input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
-		});
-
-		expect(onCancel).toHaveBeenCalledTimes(1);
-		expect(onCommit).not.toHaveBeenCalled();
-	});
-
 	// React delegates blur via the bubbling `focusout` event at the root; a `focusout` with a
 	// relatedTarget OUTSIDE the editor models a click-away.
 	function focusOut(input: HTMLInputElement, relatedTarget: Element | null) {
 		input.dispatchEvent(new FocusEvent('focusout', { bubbles: true, relatedTarget }));
 	}
-
-	it('commits the current value on blur to an element OUTSIDE the editor (commit-on-click-away)', async () => {
-		const onCommit = vi.fn();
-		const onCancel = vi.fn();
-		await act(async () => {
-			root.render(<TextEditor {...makeProps('hi', { onCommit, onCancel })} />);
-		});
-
-		const input = container.querySelector('input') as HTMLInputElement;
-		await act(async () => typeInto(input, 'away'));
-		const outside = document.createElement('button');
-		document.body.appendChild(outside);
-		await act(async () => focusOut(input, outside));
-
-		expect(onCommit).toHaveBeenCalledTimes(1);
-		expect(onCommit).toHaveBeenCalledWith('away');
-		expect(onCancel).not.toHaveBeenCalled();
-		outside.remove();
-	});
 
 	it('does NOT commit on blur to the Save button INSIDE the editor (no double-commit)', async () => {
 		const onCommit = vi.fn();

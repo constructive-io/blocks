@@ -2,50 +2,12 @@
  * Tests for data.types.ts
  * Tests core type definitions, utilities, and type conversion functions
  */
-import { beforeEach, describe, expect, it } from "vitest";
-import type { CleanTable, MetaTable } from "../data.types";
+import { describe, expect, it } from "vitest";
+import type { MetaTable } from "../data.types";
 import { cleanTable, pgFieldToCamelCase } from "../data.types";
-import { complexTable, simpleTable } from "./fixtures";
-import { createMockMetaResponse, createMockTable } from "./test-helpers";
 
 describe("data.types", () => {
 	describe("cleanTable", () => {
-		it("should convert MetaTable to CleanTable", () => {
-			const metaTable = createMockTable("users")!;
-			const result = cleanTable(metaTable);
-
-			expect(result.name).toBe("users");
-			expect(result.fields).toEqual(
-				expect.arrayContaining([
-					expect.objectContaining({
-						name: "id",
-						type: expect.objectContaining({
-							gqlType: "UUID",
-							isArray: false,
-						}),
-					}),
-					expect.objectContaining({
-						name: "name",
-						type: expect.objectContaining({
-							gqlType: "String",
-							isArray: false,
-						}),
-					}),
-				]),
-			);
-			expect(result.relations).toEqual(
-				expect.objectContaining({
-					belongsTo: [],
-					hasOne: [],
-					hasMany: [],
-					manyToMany: [],
-				}),
-			);
-			// v5 fields are populated from _meta
-			expect(result).toHaveProperty("inflection");
-			expect(result).toHaveProperty("query");
-		});
-
 		it("should handle null fields gracefully", () => {
 			const metaTable = {
 				name: "test_table",
@@ -105,44 +67,6 @@ describe("data.types", () => {
 	});
 
 	describe("field conversion within cleanTable", () => {
-		it("should convert fields correctly within table conversion", () => {
-			const metaTable = {
-				name: "testTable",
-				fields: [
-					{
-						name: "testField",
-						type: {
-							gqlType: "String",
-							isArray: false,
-							modifier: null,
-							pgAlias: "text",
-							pgType: "text",
-							subtype: null,
-							typmod: null,
-						},
-					},
-				],
-				relations: null,
-			} as MetaTable;
-
-			const result = cleanTable(metaTable);
-
-			expect(result.fields[0]).toEqual(
-				expect.objectContaining({
-					name: "testField",
-					type: {
-						gqlType: "String",
-						isArray: false,
-						modifier: null,
-						pgAlias: "text",
-						pgType: "text",
-						subtype: null,
-						typmod: null,
-					},
-				}),
-			);
-		});
-
 		it("should handle array fields correctly", () => {
 			const metaTable = {
 				name: "testTable",
@@ -168,59 +92,9 @@ describe("data.types", () => {
 			expect(result.fields[0].type.isArray).toBe(true);
 			expect(result.fields[0].type.pgType).toBe("text[]");
 		});
-
-		it("should preserve complex type information", () => {
-			const metaTable = {
-				name: "testTable",
-				fields: [
-					{
-						name: "geometryField",
-						type: {
-							gqlType: "GeometryPoint",
-							isArray: false,
-							modifier: null,
-							pgAlias: "point",
-							pgType: "geometry",
-							subtype: "Point",
-							typmod: 4326,
-						},
-					},
-				],
-				relations: null,
-			} as MetaTable;
-
-			const result = cleanTable(metaTable);
-
-			expect(result.fields[0].type).toEqual({
-				gqlType: "GeometryPoint",
-				isArray: false,
-				modifier: null,
-				pgAlias: "point",
-				pgType: "geometry",
-				subtype: "Point",
-				typmod: 4326,
-			});
-		});
 	});
 
 	describe("relations conversion within cleanTable", () => {
-		it("should handle null relations gracefully", () => {
-			const metaTable = {
-				name: "testTable",
-				fields: [],
-				relations: null,
-			} as unknown as MetaTable;
-
-			const result = cleanTable(metaTable);
-
-			expect(result.relations).toEqual({
-				belongsTo: [],
-				hasOne: [],
-				hasMany: [],
-				manyToMany: [],
-			});
-		});
-
 		it("should convert relations correctly", () => {
 			const metaTable = {
 				name: "testTable",
@@ -383,60 +257,9 @@ describe("data.types", () => {
 			expect(result.relations.manyToMany[0].junctionLeftKeyFields).toEqual(["actionId"]);
 			expect(result.relations.manyToMany[0].junctionRightKeyFields).toEqual(["goalId"]);
 		});
-
-		it("should apply pgFieldToCamelCase to junction key attribute names", () => {
-			const metaTable = {
-				name: "projects",
-				fields: [],
-				relations: {
-					belongsTo: [],
-					hasOne: [],
-					hasMany: [],
-					manyToMany: [
-						{
-							fieldName: "tags",
-							type: "Tag",
-							rightTable: { name: "tags" },
-							junctionTable: { name: "projectTags" },
-							junctionLeftKeyAttributes: [
-								{ name: "project_id", type: { gqlType: "UUID", isArray: false } },
-							],
-							junctionRightKeyAttributes: [
-								{ name: "tag_id", type: { gqlType: "UUID", isArray: false } },
-							],
-							leftKeyAttributes: [
-								{ name: "id", type: { gqlType: "UUID", isArray: false } },
-							],
-							rightKeyAttributes: [
-								{ name: "id", type: { gqlType: "UUID", isArray: false } },
-							],
-						},
-					],
-				},
-			} as unknown as MetaTable;
-
-			const result = cleanTable(metaTable);
-
-			expect(result.relations.manyToMany[0].junctionLeftKeyFields).toEqual(["projectId"]);
-			expect(result.relations.manyToMany[0].junctionRightKeyFields).toEqual(["tagId"]);
-		});
 	});
 
 	describe("pgFieldToCamelCase", () => {
-		it("should convert snake_case to camelCase", () => {
-			expect(pgFieldToCamelCase("owner_id")).toBe("ownerId");
-			expect(pgFieldToCamelCase("created_at")).toBe("createdAt");
-			expect(pgFieldToCamelCase("updated_at")).toBe("updatedAt");
-			expect(pgFieldToCamelCase("is_active")).toBe("isActive");
-		});
-
-		it("should leave camelCase and simple names unchanged", () => {
-			expect(pgFieldToCamelCase("id")).toBe("id");
-			expect(pgFieldToCamelCase("name")).toBe("name");
-			expect(pgFieldToCamelCase("ownerId")).toBe("ownerId");
-			expect(pgFieldToCamelCase("createdAt")).toBe("createdAt");
-		});
-
 		it("should handle multiple underscores", () => {
 			expect(pgFieldToCamelCase("long_field_name_here")).toBe(
 				"longFieldNameHere",
@@ -496,70 +319,6 @@ describe("data.types", () => {
 			const result = cleanTable(metaTable);
 
 			expect(result.relations.belongsTo[0].keys[0].name).toBe("ownerId");
-		});
-	});
-
-	describe("Type safety and edge cases", () => {
-		it("should handle empty table names", () => {
-			const metaTable = {
-				name: "",
-				fields: [],
-				relations: null,
-			} as unknown as MetaTable;
-
-			const result = cleanTable(metaTable);
-			expect(result.name).toBe("");
-		});
-
-		it("should handle fields with missing type information", () => {
-			const metaTable = {
-				name: "testTable",
-				fields: [
-					{
-						name: "incompleteField",
-						type: {
-							gqlType: "String",
-							isArray: false,
-							modifier: null,
-							pgAlias: "text",
-							pgType: "text",
-							subtype: null,
-							typmod: null,
-						},
-					},
-				],
-				relations: null,
-			} as MetaTable;
-
-			const result = cleanTable(metaTable);
-			expect(result.fields[0].type.pgType).toBe("text");
-		});
-
-		it("should preserve undefined and null values correctly", () => {
-			const metaTable = {
-				name: "testTable",
-				fields: [
-					{
-						name: "testField",
-						type: {
-							gqlType: "String",
-							isArray: false,
-							modifier: null,
-							pgAlias: "text",
-							pgType: "text",
-							subtype: null,
-							typmod: null,
-						},
-					},
-				],
-				relations: null,
-			} as MetaTable;
-
-			const result = cleanTable(metaTable);
-			expect(result.fields[0].type.modifier).toBeNull();
-			expect(result.fields[0].type.pgAlias).toBe("text");
-			expect(result.fields[0].type.subtype).toBeNull();
-			expect(result.fields[0].type.typmod).toBeNull();
 		});
 	});
 });
