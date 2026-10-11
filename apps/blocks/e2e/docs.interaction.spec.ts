@@ -1,6 +1,6 @@
-import { mkdir } from 'node:fs/promises';
+import { mkdir, mkdtemp, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { basename, join } from 'node:path';
 
 import {
   expect,
@@ -8,6 +8,7 @@ import {
   type FrameLocator,
   type Locator,
   type Page,
+  type TestInfo,
 } from '@playwright/test';
 
 const primitiveRoute = (name: string) => `/blocks/blocks/ui/${name}/`;
@@ -36,22 +37,60 @@ async function visitBilling(page: Page, name: 'account' | 'console') {
   })).toBeVisible();
 }
 
-function captureBillingErrors(page: Page) {
-  const errors: string[] = [];
-  page.on('pageerror', (error) => errors.push(error.message));
-  return errors;
+async function recordBillingJourney(page: Page, errors: string[], testInfo: TestInfo) {
+  const artifactRoot = process.env.BLOCKS_E2E_ARTIFACT_DIR
+    ?? join(tmpdir(), 'constructive-blocks-billing-e2e');
+  const artifactErrors: string[] = [];
+  let artifactDirectory: string | undefined;
+  try {
+    await mkdir(artifactRoot, { recursive: true });
+    artifactDirectory = await mkdtemp(join(artifactRoot, `${basename(testInfo.outputDir)}-`));
+    const screenshot = join(artifactDirectory, 'journey.png');
+    await page.screenshot({ path: screenshot, fullPage: true, timeout: 5_000 });
+    testInfo.annotations.push({ type: 'artifact', description: screenshot });
+    await testInfo.attach('billing-journey', { path: screenshot, contentType: 'image/png' });
+  } catch (error) {
+    artifactErrors.push(String(error));
+  }
+
+  try {
+    if (artifactDirectory) {
+      const path = join(artifactDirectory, 'diagnostics.json');
+      await writeFile(path, JSON.stringify({ pageErrors: errors, artifactErrors }, null, 2));
+      testInfo.annotations.push({ type: 'artifact', description: path });
+    }
+  } catch (error) {
+    artifactErrors.push(String(error));
+  }
+  try {
+    await testInfo.attach('billing-diagnostics', {
+      body: JSON.stringify({ pageErrors: errors, artifactErrors }, null, 2),
+      contentType: 'application/json',
+    });
+  } catch (error) {
+    artifactErrors.push(String(error));
+  }
+  // Record both failures without replacing the journey's original assertion or timeout.
+  expect.soft(errors, 'Unhandled billing page errors').toEqual([]);
+  expect.soft(artifactErrors, 'Billing journey artifacts must be saved').toEqual([]);
 }
 
-async function recordBillingJourney(page: Page, errors: string[]) {
-  const artifactDirectory = process.env.BLOCKS_E2E_ARTIFACT_DIR
-    ?? join(tmpdir(), 'constructive-blocks-billing-e2e');
-  await mkdir(artifactDirectory, { recursive: true });
-  const screenshot = join(artifactDirectory, `${test.info().title.replace(/[^a-z0-9]+/gi, '-')}.png`);
-  await page.screenshot({ path: screenshot, fullPage: true });
-  test.info().annotations.push({ type: 'artifact', description: screenshot });
-  await test.info().attach('billing-journey', { path: screenshot, contentType: 'image/png' });
-  expect(errors).toEqual([]);
-}
+const billingTest = test.extend<{ billingArtifacts: void }>({
+  billingArtifacts: [async ({ page }, use, testInfo) => {
+    const errors: string[] = [];
+    const captureError = (error: Error) => errors.push(error.message);
+    page.on('pageerror', captureError);
+    try {
+      await use();
+    } finally {
+      try {
+        await recordBillingJourney(page, errors, testInfo);
+      } finally {
+        page.off('pageerror', captureError);
+      }
+    }
+  }, { auto: true, timeout: 10_000 }],
+});
 
 async function setBillingViewport(page: Page, name: 'Mobile' | 'Tablet' | 'Desktop') {
   const width = { Mobile: 390, Tablet: 768, Desktop: 1280 }[name];
@@ -330,9 +369,8 @@ test('documentation order, anchors, and shared install/source mode remain synchr
   expect(pageErrors).toEqual([]);
 });
 
-test('billing preview scenarios expose account kinds, lifecycle failures, and host actions', async ({ page }) => {
+billingTest('billing preview scenarios expose account kinds, lifecycle failures, and host actions', async ({ page }) => {
   test.setTimeout(60_000);
-  const errors = captureBillingErrors(page);
   await visitBilling(page, 'account');
   await setBillingViewport(page, 'Desktop');
   const frame = billingPreviewFrame(page);
@@ -415,11 +453,9 @@ test('billing preview scenarios expose account kinds, lifecycle failures, and ho
   await billingSwitch.click();
   await expect(provider.getByRole('switch', { name: 'Billing is on' })).toBeChecked();
   await expect(consoleFrame.getByRole('status').filter({ hasText: 'The host would set' })).toContainText('enable_billing to true');
-  await recordBillingJourney(page, errors);
 });
 
-test('billing breakpoint shortcuts resize the real iframe and full screen restores focus', async ({ page }) => {
-  const errors = captureBillingErrors(page);
+billingTest('billing breakpoint shortcuts resize the real iframe and full screen restores focus', async ({ page }) => {
   await visitBilling(page, 'account');
   const preview = page.locator('[data-slot="application-block-showcase-preview"]');
   const inlineFrame = preview.locator('iframe[title="Billing Account inline live preview"]');
@@ -450,11 +486,9 @@ test('billing breakpoint shortcuts resize the real iframe and full screen restor
   await expect(dialog).toBeHidden();
   await expect(fullscreenTrigger).toBeFocused();
   await expect.poll(() => inlineFrame.evaluate((frame) => (frame as HTMLIFrameElement).contentWindow?.innerWidth)).toBe(768);
-  await recordBillingJourney(page, errors);
 });
 
-test('billing narrow plan content reflows inside a desktop sidebar and survives rail collapse', async ({ page }) => {
-  const errors = captureBillingErrors(page);
+billingTest('billing narrow plan content reflows inside a desktop sidebar and survives rail collapse', async ({ page }) => {
   await visitBilling(page, 'account');
   await setBillingViewport(page, 'Tablet');
   // At 784px the shell still has a desktop rail, leaving narrow space for the view.
@@ -477,11 +511,9 @@ test('billing narrow plan content reflows inside a desktop sidebar and survives 
   await expect(plans.getByRole('button', { name: 'Switch to Pro' })).toBeEnabled();
   await sidebar.getByRole('button', { name: 'Expand sidebar' }).click();
   await expect.poll(() => plans.evaluate((element) => element.getBoundingClientRect().width)).toBe(narrowWidth);
-  await recordBillingJourney(page, errors);
 });
 
-test('billing catalog supports keyboard choices and a refused code leaves other credits usable', async ({ page }) => {
-  const errors = captureBillingErrors(page);
+billingTest('billing catalog supports keyboard choices and a refused code leaves other credits usable', async ({ page }) => {
   await visitBilling(page, 'console');
   await setBillingViewport(page, 'Desktop');
   const frame = billingPreviewFrame(page);
@@ -532,11 +564,9 @@ test('billing catalog supports keyboard choices and a refused code leaves other 
   await expect(field).not.toHaveAttribute('aria-invalid', 'true');
   await expect(account.getByRole('status').filter({ hasText: 'The host redeemed' })).toContainText('HACKWEEK-2026 for this account');
   await expect(credits.getByText('HACKWEEK-2026', { exact: true }).last()).toBeVisible();
-  await recordBillingJourney(page, errors);
 });
 
-test('billing tables have accessible captions, scoped headers, and actionable invoice details', async ({ page }) => {
-  const errors = captureBillingErrors(page);
+billingTest('billing tables have accessible captions, scoped headers, and actionable invoice details', async ({ page }) => {
   await visitBilling(page, 'account');
   await setBillingViewport(page, 'Desktop');
   const account = billingPreviewFrame(page);
@@ -564,11 +594,9 @@ test('billing tables have accessible captions, scoped headers, and actionable in
   }
   await expect(prices).toContainText('$25.00');
   await expect(prices).toContainText('Synced');
-  await recordBillingJourney(page, errors);
 });
 
-test('billing meter details have a name and description, restore focus, and propagate reduced-motion preference', async ({ page }) => {
-  const errors = captureBillingErrors(page);
+billingTest('billing meter details have a name and description, restore focus, and propagate reduced-motion preference', async ({ page }) => {
   await page.emulateMedia({ reducedMotion: 'reduce' });
   await visitBilling(page, 'account');
   await setBillingViewport(page, 'Desktop');
@@ -591,11 +619,9 @@ test('billing meter details have a name and description, restore focus, and prop
     await expect(sheet).toHaveCount(0);
     await expect(trigger).toBeFocused();
   }
-  await recordBillingJourney(page, errors);
 });
 
-test('billing account reflows and stays usable at an equivalent 200 percent zoom viewport', async ({ page }) => {
-  const errors = captureBillingErrors(page);
+billingTest('billing account reflows and stays usable at an equivalent 200 percent zoom viewport', async ({ page }) => {
   // A 1440px desktop viewport exposes 720 CSS pixels at 200% browser zoom.
   await page.setViewportSize({ width: 720, height: 500 });
   await visitBilling(page, 'account');
@@ -617,5 +643,4 @@ test('billing account reflows and stays usable at an equivalent 200 percent zoom
   await credits.getByRole('button', { name: 'Redeem', exact: true }).click();
   await expect(credits.getByRole('status')).toContainText('HACKWEEK-2026 added');
   expect(await frame.locator('html').evaluate((element) => element.scrollWidth <= element.clientWidth)).toBe(true);
-  await recordBillingJourney(page, errors);
 });
