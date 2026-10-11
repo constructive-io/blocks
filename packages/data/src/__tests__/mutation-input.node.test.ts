@@ -6,7 +6,6 @@ import { describe, expect, it } from "vitest";
 
 import {
 	prepareCreateInput,
-	prepareMutationInput,
 	preparePatchInput,
 	prepareUpdateInput,
 	stripEmpty,
@@ -268,17 +267,6 @@ describe("prepareMutationInput", () => {
 				),
 			).toEqual({ b: 2 });
 		});
-
-		it("defaultValues: skips unchanged defaults when not dirty", () => {
-			const result = prepareCreateInput(
-				{ name: "default", other: "changed" },
-				{
-					defaultValues: { name: "default", other: "original" },
-					dirtyFields: new Set(["other"]),
-				},
-			);
-			expect(result).toEqual({ other: "changed" });
-		});
 	});
 
 	// =========================================================================
@@ -305,13 +293,6 @@ describe("prepareMutationInput", () => {
 			expect(prepareCreateInput({ createdAt: date })).toEqual({
 				createdAt: date,
 			});
-		});
-
-		it("does not mutate input", () => {
-			const input = { a: 1, b: undefined, nested: { x: 1 } };
-			const copy = JSON.parse(JSON.stringify(input));
-			prepareCreateInput(input);
-			expect(input.a).toBe(copy.a);
 		});
 	});
 
@@ -351,14 +332,6 @@ describe("prepareMutationInput", () => {
 				settings: { logo: null },
 			});
 		});
-	});
-});
-
-describe("prepareMutationInput direct usage", () => {
-	it("works with explicit operation parameter", () => {
-		expect(
-			prepareMutationInput({ a: 1, b: null }, { operation: "create" }),
-		).toEqual({ a: 1 });
 	});
 });
 

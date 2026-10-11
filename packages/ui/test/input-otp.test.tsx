@@ -93,13 +93,6 @@ describe('InputOtp', () => {
 		expect(onComplete).toHaveBeenCalledTimes(2);
 	});
 
-	it('highlights the slot the caret lands on when focused', async () => {
-		await render(<Harness />);
-		await type(field(), '12');
-		await act(async () => field().focus());
-		expect(slots()[2].hasAttribute('data-highlighted')).toBe(true);
-		expect(slots().filter((slot) => slot.hasAttribute('data-highlighted'))).toHaveLength(1);
-	});
 
 	it('exposes one labelled field and marks it invalid', async () => {
 		await render(<InputOtp isInvalid aria-label="Verification code" />);

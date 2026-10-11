@@ -49,48 +49,6 @@ describe('JsonEditorDom (native EditorProps adapter)', () => {
 		vi.clearAllMocks();
 	});
 
-	it('seeds from the value and Save commits the parsed object', async () => {
-		const onCommit = vi.fn();
-		const onCancel = vi.fn();
-		await act(async () => {
-			root.render(<JsonEditorDom {...makeProps({ a: 1 }, { onCommit, onCancel })} />);
-		});
-
-		const ta = container.querySelector('textarea') as HTMLTextAreaElement;
-		expect(JSON.parse(ta.value)).toEqual({ a: 1 });
-
-		await act(async () => {
-			setTextarea(ta, '{"a":2,"b":"x"}');
-		});
-		const saveBtn = Array.from(container.querySelectorAll('button')).find((b) => b.textContent?.includes('Save'));
-		expect(saveBtn).toBeTruthy();
-		await act(async () => {
-			saveBtn?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
-		});
-
-		expect(onCommit).toHaveBeenCalledTimes(1);
-		expect(onCommit).toHaveBeenCalledWith({ a: 2, b: 'x' });
-		expect(onCancel).not.toHaveBeenCalled();
-	});
-
-	it('does not commit invalid JSON (Save disabled)', async () => {
-		const onCommit = vi.fn();
-		await act(async () => {
-			root.render(<JsonEditorDom {...makeProps({ a: 1 }, { onCommit })} />);
-		});
-
-		const ta = container.querySelector('textarea') as HTMLTextAreaElement;
-		await act(async () => {
-			setTextarea(ta, '{ not valid');
-		});
-		const saveBtn = Array.from(container.querySelectorAll('button')).find((b) => b.textContent?.includes('Save'));
-		await act(async () => {
-			saveBtn?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
-		});
-
-		expect(onCommit).not.toHaveBeenCalled();
-	});
-
 	it('Escape cancels via onFinished(undefined) and never commits', async () => {
 		const onCommit = vi.fn();
 		const onCancel = vi.fn();

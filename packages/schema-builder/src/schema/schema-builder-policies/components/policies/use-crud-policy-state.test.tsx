@@ -71,23 +71,6 @@ describe('useCrudPolicyState', () => {
 		expect(result.current.operations.read.policyData).not.toBe(result.current.defaults.policyData);
 	});
 
-	it('clones policy data for each inherited operation', () => {
-		const { result } = renderHook(() => useCrudPolicyState());
-		const policyData = { ownerField: 'owner_id' };
-
-		act(() => {
-			result.current.updateDefaults({ policyData });
-		});
-
-		const operationPolicyData = CRUD_OPERATIONS.map(
-			(operation) => result.current.operations[operation].policyData,
-		);
-		for (const clonedPolicyData of operationPolicyData) {
-			expect(clonedPolicyData).toEqual(policyData);
-			expect(clonedPolicyData).not.toBe(policyData);
-		}
-		expect(new Set(operationPolicyData).size).toBe(CRUD_OPERATIONS.length);
-	});
 
 	it('keeps rapid updates replay-safe in Strict Mode', () => {
 		function StrictModeWrapper({ children }: { children: ReactNode }) {

@@ -5,10 +5,10 @@ import { useCardStack } from '@constructive-io/ui/stack';
 import { useQueryClient } from '@tanstack/react-query';
 import { ShieldCheck } from 'lucide-react';
 
+import { schemaBuilderQueryKey, useSchemaBuilderRuntime } from '@/blocks/schema/schema-builder-core/context/block-config';
 import { useSchemaBuilderSelectors } from '@/blocks/schema/schema-builder-core/lib/gql/hooks/schema-builder';
 import type { DatabasePolicy } from '@/blocks/schema/schema-builder-core/lib/gql/hooks/schema-builder/policies/use-database-policies';
 import {
-	databasePoliciesQueryKeys,
 	useDatabasePolicies,
 } from '@/blocks/schema/schema-builder-core/lib/gql/hooks/schema-builder/policies/use-database-policies';
 import { CARD_WIDTHS } from '@/blocks/schema/schema-builder-core/lib/stack/card-widths';
@@ -23,6 +23,7 @@ import { PoliciesEmptyState } from './policies-empty-state';
 export function PoliciesView() {
 	const stack = useCardStack();
 	const queryClient = useQueryClient();
+	const { scope } = useSchemaBuilderRuntime();
 	const { currentTable, currentDatabase } = useSchemaBuilderSelectors();
 
 	const databaseId = currentDatabase?.databaseId ?? '';
@@ -78,7 +79,7 @@ export function PoliciesView() {
 				preSelectedOperation: operation,
 				onPoliciesCreated: () => {
 					if (databaseId) {
-						queryClient.invalidateQueries({ queryKey: databasePoliciesQueryKeys.byDatabase(databaseId) });
+						queryClient.invalidateQueries({ queryKey: schemaBuilderQueryKey(scope, 'core', 'databasePolicies', { databaseId }) });
 					}
 				},
 			},
@@ -97,7 +98,7 @@ export function PoliciesView() {
 				tableName: currentTable.name,
 				onSuccess: () => {
 					if (databaseId) {
-						queryClient.invalidateQueries({ queryKey: databasePoliciesQueryKeys.byDatabase(databaseId) });
+						queryClient.invalidateQueries({ queryKey: schemaBuilderQueryKey(scope, 'core', 'databasePolicies', { databaseId }) });
 					}
 				},
 			},

@@ -194,6 +194,7 @@ export function PlanPriceTable({ plans, provider, mode = 'live', subscribers, on
 	const f = useBillingFormat();
 	return (
 		<TableSurface className={className} minWidth="48rem">
+			<caption className="sr-only">Billing plans and provider prices.</caption>
 			<thead className={tableHeadClass}>
 				<tr>
 					<th scope="col">Plan / price</th>

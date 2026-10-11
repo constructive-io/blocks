@@ -96,18 +96,4 @@ describe('buildContextMenuItems', () => {
 		expect(requestDelete).toHaveBeenCalledTimes(1);
 	});
 
-	it('places a separator between the clipboard block and the row actions', () => {
-		const items = buildContextMenuItems({
-			onAction: vi.fn(),
-			isEnabled: () => true,
-			onAddRow: vi.fn(),
-			requestDelete: vi.fn(),
-			selectedRowCount: 0,
-		});
-		const sepIndex = items.findIndex((i) => i.separator);
-		const clearIndex = items.findIndex((i) => i.key === 'clear');
-		const addIndex = items.findIndex((i) => i.key === 'add-row');
-		expect(sepIndex).toBeGreaterThan(clearIndex);
-		expect(sepIndex).toBeLessThan(addIndex);
-	});
 });

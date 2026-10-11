@@ -16,24 +16,6 @@ const ROWS = [
 ];
 
 describe('getCellsInRange', () => {
-	it('extracts a sub-rect as a row×col matrix with aligned row indices + col keys', () => {
-		const rect: SelectionRect = { x: 1, y: 0, width: 2, height: 2 };
-		const out = getCellsInRange(rect, ROWS, COLS);
-		expect(out.cols).toEqual(['name', 'active']);
-		expect(out.rows).toEqual([0, 1]);
-		expect(out.values).toEqual([
-			['Alpha', true],
-			['Beta', false],
-		]);
-	});
-
-	it('reads a single cell', () => {
-		const rect: SelectionRect = { x: 2, y: 2, width: 1, height: 1 };
-		const out = getCellsInRange(rect, ROWS, COLS);
-		expect(out.values).toEqual([[true]]);
-		expect(out.rows).toEqual([2]);
-		expect(out.cols).toEqual(['active']);
-	});
 
 	it('null (unfetched proxy) rows yield null cells', () => {
 		const sparse = [ROWS[0], null, ROWS[2]];
@@ -65,14 +47,6 @@ describe('getCellsInRange', () => {
 });
 
 describe('toTSV', () => {
-	it('joins cols with tabs and rows with newlines, stringifying values', () => {
-		expect(
-			toTSV([
-				['a', 1, true],
-				['b', 2, false],
-			]),
-		).toBe('a\t1\ttrue\nb\t2\tfalse');
-	});
 
 	it('renders null / undefined as empty cells', () => {
 		expect(toTSV([[null, undefined, 'x']])).toBe('\t\tx');

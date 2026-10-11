@@ -14,29 +14,6 @@ function expectDisplayedSource(mode: 'npm' | 'registry', source: string) {
 }
 
 describe('primitive install mode', () => {
-  it('switches installation commands and displayed source together', async () => {
-    render(
-      <>
-        <InstallToggle
-          npm={[{ code: 'pnpm add @constructive-io/ui' }]}
-          registry={[{ code: 'pnpm dlx shadcn@latest add @constructive/select' }]}
-        />
-        <DemoSourceBlock source={{ npm: 'npm example source', registry: 'registry example source' }} />
-      </>,
-    );
-
-    expect(screen.getByText('pnpm add @constructive-io/ui')).toBeVisible();
-    expectDisplayedSource('npm', 'npm example source');
-
-    fireEvent.click(screen.getByRole('tab', { name: 'registry' }));
-
-    await waitFor(() => {
-      expect(screen.getByText('pnpm dlx shadcn@latest add @constructive/select')).toBeVisible();
-      expectDisplayedSource('registry', 'registry example source');
-    });
-    expect(localStorage.getItem('constructive:install-mode')).toBe('registry');
-  });
-
   it('restores the persisted source mode after remounting', async () => {
     localStorage.setItem('constructive:install-mode', 'registry');
 

@@ -37,6 +37,7 @@ export function InvoiceTable({ invoices, onOpen, className }: InvoiceTableProps)
 	}
 	return (
 		<TableSurface className={className}>
+			<caption className="sr-only">Billing invoices for this account.</caption>
 					<thead className={tableHeadClass}>
 						<tr>
 							<th scope="col">Invoice</th>

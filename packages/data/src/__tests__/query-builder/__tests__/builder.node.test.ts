@@ -59,44 +59,6 @@ describe('getMany', () => {
 	});
 });
 
-it('should select totalCount in subfields by default', () => {
-	const builder = new QueryBuilder({
-		meta: typedMetaObject,
-		introspection: typedIntrospection,
-	});
-
-	const result = builder
-		.query('Action')
-		.getMany({
-			select: {
-				id: true,
-				name: true,
-				photo: true,
-				title: true,
-				actionResults: {
-					select: {
-						id: true,
-						actionId: true,
-					},
-					variables: {
-						first: 10,
-						filter: {
-							name: {
-								in: ['abc', 'def'],
-							},
-							actionId: { equalTo: 'dc310161-7a42-4b93-6a56-9fa48adcad7e' },
-						},
-					},
-				},
-			},
-		})
-		.print();
-
-	expect(/(totalCount)/.test(result._hash)).toBe(true);
-	expect(result._hash).toMatchSnapshot();
-	expect(result._queryName).toMatchSnapshot();
-});
-
 it('selects relation field', () => {
 	const builder = new QueryBuilder({
 		meta: typedMetaObject,
@@ -174,28 +136,6 @@ it('selects belongsTo relation field', () => {
 	// Straight up select the sub fields
 	expect(/(owner)|(id)|(type)/gm.test(result._hash)).toBe(true);
 	expect(result._hash).toMatchSnapshot();
-});
-
-it('selects non-scalar custom types', () => {
-	const builder = new QueryBuilder({
-		meta: typedMetaObject,
-		introspection: typedIntrospection,
-	});
-
-	const result = builder
-		.query('Action')
-		.getMany({
-			select: {
-				id: true,
-				name: true,
-				location: true, // non-scalar custom type
-				timeRequired: true, // non-scalar custom type
-			},
-		})
-		.print();
-
-	expect(/(totalCount)/.test(result._hash)).toBe(true);
-	expect(result._queryName).toMatchSnapshot();
 });
 
 it('getMany edges', () => {

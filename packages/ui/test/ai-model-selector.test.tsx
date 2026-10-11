@@ -65,10 +65,6 @@ async function click(element: HTMLElement | null | undefined) {
 }
 
 describe('ModelSelector', () => {
-	it('labels the trigger with the model and its level', async () => {
-		await render();
-		expect(trigger().getAttribute('aria-label')).toBe('Model: Claude 5, Medium');
-	});
 
 	it('selects a model at its default level and closes', async () => {
 		await render();

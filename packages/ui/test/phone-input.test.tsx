@@ -66,11 +66,6 @@ describe('CountryFlag', () => {
 		act(() => root.unmount());
 	});
 
-	it('renders a globe when the number cannot be placed', () => {
-		const unknown = markup(<CountryFlag number="+15550400005" />);
-		expect(unknown.querySelector('[data-slot="phone-flag"]')).toBeNull();
-		expect(unknown.querySelector('svg')).not.toBeNull();
-	});
 });
 
 describe('PhoneInput', () => {

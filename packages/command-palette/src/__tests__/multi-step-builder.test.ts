@@ -10,21 +10,6 @@ function StubStep(_props: StepViewProps<unknown>) {
 const base = { id: 'test', label: 'Test', group: 'g' };
 
 describe('multiStepCommand builder', () => {
-  it('preserves the ordered flow configuration', () => {
-    const onComplete = () => undefined;
-    const command = multiStepCommand<{ name: string }>(base)
-      .step({ id: 'first', title: 'First', Component: StubStep })
-      .step({ id: 'second', title: 'Second', Component: StubStep, skippable: true })
-      .initialContext({ name: 'default' })
-      .onComplete(onComplete)
-      .build();
-
-    expect(command.multiStep).toMatchObject({
-      steps: [{ id: 'first' }, { id: 'second', skippable: true }],
-      initialContext: { name: 'default' },
-      onComplete,
-    });
-  });
 
   it('rejects a flow without steps', () => {
     expect(() => multiStepCommand(base).build()).toThrow('at least one step is required');

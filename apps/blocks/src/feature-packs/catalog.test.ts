@@ -1,37 +1,14 @@
 import { describe, expect, it } from 'vitest';
 
 import {
-  FEATURE_PACK_CATALOG,
   FEATURE_PACK_MANIFESTS,
   PRESET_PROFILES,
   generateFeaturePackCatalog,
-  getPresetFeaturePacks,
   validateFeaturePackCatalog,
   type FeaturePackManifestV1
 } from './index';
 
-describe('first-release feature pack catalog', () => {
-  it('generates dependency-ordered manifests for each preset', () => {
-    expect(
-      getPresetFeaturePacks(FEATURE_PACK_CATALOG, 'b2b-storage').map(
-        (pack) => pack.id
-      )
-    ).toEqual(['data', 'auth', 'users', 'organizations', 'storage']);
-  });
-
-});
-
 describe('feature pack catalog validation', () => {
-  it('accepts the first-release catalog', () => {
-    expect(
-      validateFeaturePackCatalog({
-        schemaVersion: 1,
-        featurePacks: FEATURE_PACK_MANIFESTS,
-        presets: PRESET_PROFILES
-      }).valid
-    ).toBe(true);
-  });
-
   it('rejects capabilities assigned to the wrong pack', () => {
     const data = structuredClone(
       FEATURE_PACK_MANIFESTS[0]

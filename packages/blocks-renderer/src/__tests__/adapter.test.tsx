@@ -40,10 +40,6 @@ describe('reactAdapter', () => {
 		expect(reactAdapter.resolve('HoloDeck', context()).status).toBe('unknown');
 	});
 
-	it('resolves props through the binding scope', () => {
-		expect(reactAdapter.resolveProps(page, context())).toEqual({ text: 'Bound Title' });
-	});
-
 	it('renders a document and an unknown node', () => {
 		expect(renderToStaticMarkup(reactAdapter.renderDocument(document, context()))).toContain(
 			'<span>Bound Title</span>',

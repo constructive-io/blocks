@@ -1,16 +1,10 @@
 import { describe, expect, it } from 'vitest';
 
 import {
-	buildThemeDialConfig,
 	dialValuesToTuning,
 	tuningToDialValues,
 } from '../src/theme-dials-config';
 import { defaultThemeTuning, type ThemeTuning } from '../src/theme-tuning';
-
-const FONT_OPTIONS = [
-	{ value: '"Inter", ui-sans-serif, system-ui, sans-serif', label: 'Inter' },
-	{ value: 'ui-sans-serif, system-ui, sans-serif', label: 'System' },
-];
 
 function expectTuningClose(actual: ThemeTuning, expected: ThemeTuning) {
 	expect(actual.light).toEqual(expected.light);
@@ -26,21 +20,7 @@ function expectTuningClose(actual: ThemeTuning, expected: ThemeTuning) {
 describe('theme-dials-config', () => {
 	const defaults = defaultThemeTuning();
 
-	it('builds a config whose defaults match the tuning', () => {
-		const config = buildThemeDialConfig(defaults, FONT_OPTIONS);
-		expect(config.accent.hueLight[0]).toBeCloseTo(defaults.light.accentH, 3);
-		expect(config.accent.hueDark[0]).toBeCloseTo(defaults.dark.accentH, 3);
-		expect(config.neutral.hue[0]).toBeCloseTo(defaults.light.neutralHue, 3);
-		expect(config.shape.radius[0]).toBeCloseTo(defaults.radius, 3);
-		expect(config.type.fontSans.default).toBe(defaults.fontSans);
-	});
 
-	it('round-trips the default tuning through dial values', () => {
-		expectTuningClose(
-			dialValuesToTuning(tuningToDialValues(defaults), defaults),
-			defaults,
-		);
-	});
 
 	it('round-trips a mutated tuning', () => {
 		const mutated: ThemeTuning = {

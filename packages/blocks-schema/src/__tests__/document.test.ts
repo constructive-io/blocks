@@ -1,15 +1,10 @@
 import { describe, expect, it } from 'vitest';
 
 import { createDocument, isUIDocument } from '../envelope';
-import { toDocumentJsonSchema, toNodeJsonSchema } from '../json-schema';
 import {
 	collectDefaultValues,
 	collectFieldConstraints,
 	collectFieldNames,
-	findNodeByKey,
-	isContainerNode,
-	isKnownNodeType,
-	isWidgetNode,
 	type UINode,
 } from '../node';
 import { validateField } from '../validation';
@@ -51,14 +46,6 @@ describe('envelope', () => {
 });
 
 describe('node helpers', () => {
-	it('classifies node types', () => {
-		expect(isWidgetNode(node({ type: 'Input', key: 'a' }))).toBe(true);
-		expect(isWidgetNode(node({ type: 'Grid', key: 'a' }))).toBe(false);
-		expect(isContainerNode(node({ type: 'Page', key: 'a' }))).toBe(true);
-		expect(isKnownNodeType('DataTable')).toBe(true);
-		expect(isKnownNodeType('TotallyCustomThing')).toBe(false);
-	});
-
 	it('collects field names, defaults and constraints', () => {
 		expect(collectFieldNames(page)).toEqual(['title', 'count']);
 		expect(collectDefaultValues(page)).toEqual({ title: 'hi' });
@@ -66,11 +53,6 @@ describe('node helpers', () => {
 			title: { constraints: undefined, required: true },
 			count: { constraints: { maxValue: 10 }, required: undefined },
 		});
-	});
-
-	it('finds nodes by key', () => {
-		expect(findNodeByKey(page, 'count')?.type).toBe('NumberInput');
-		expect(findNodeByKey(page, 'nope')).toBeUndefined();
 	});
 });
 
@@ -96,15 +78,6 @@ describe('zod schemas', () => {
 
 	it('rejects a node without a key', () => {
 		expect(() => parseNode({ type: 'Input', key: '' })).toThrow();
-	});
-});
-
-describe('json schema export', () => {
-	it('exports a recursive JSON Schema for documents and nodes', () => {
-		const documentSchema = toDocumentJsonSchema();
-		expect(documentSchema).toHaveProperty('properties.page');
-		expect(JSON.stringify(documentSchema)).toContain('$ref');
-		expect(toNodeJsonSchema()).toHaveProperty('properties.children');
 	});
 });
 

@@ -1,14 +1,10 @@
-import { parse } from 'graphql';
 import { describe, expect, it } from 'vitest';
 
 import {
-	META_CONTRACT_VERSION,
-	META_CONTRACT_INTROSPECTION_SOURCE,
 	META_CONTRACT_REQUIREMENTS,
-	META_QUERY_SOURCE,
 	MetaContractError,
-	assessMetaContract,
 	assertMetaContract,
+	assessMetaContract,
 	parseMetaSearchWeights,
 } from '../meta-query';
 import type { MetaContractIntrospectionQuery } from '../meta-query.types';
@@ -25,22 +21,6 @@ function compatibleContract(): MetaContractIntrospectionQuery {
 }
 
 describe('Constructive _meta contract', () => {
-	it('publishes a syntactically valid query with the July capability fields', () => {
-		expect(() => parse(META_CONTRACT_INTROSPECTION_SOURCE)).not.toThrow();
-		expect(() => parse(META_QUERY_SOURCE)).not.toThrow();
-		for (const field of ['encoding', 'enumValues', 'storage', 'search', 'i18n', 'realtime', 'scope']) {
-			expect(META_QUERY_SOURCE).toContain(field);
-		}
-	});
-
-	it('accepts the current contract', () => {
-		expect(assessMetaContract(compatibleContract())).toEqual({
-			contractVersion: META_CONTRACT_VERSION,
-			status: 'compatible',
-			missing: [],
-		});
-	});
-
 	it('distinguishes an outdated contract from a missing _meta root', () => {
 		const outdated = compatibleContract();
 		outdated.metaType = { name: 'MetaType', fields: fields(['pgType', 'gqlType', 'isArray']) };

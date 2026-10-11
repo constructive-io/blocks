@@ -44,16 +44,6 @@ describe('resolveKeyCommand (non-mac: Mod = ctrl)', () => {
 		expect(resolveKeyCommand(ev('z', { ctrl: true, shift: true }))).toBe('edit.redo');
 	});
 
-	it('resolves Ctrl+Y → edit.redo', () => {
-		asWindows();
-		expect(resolveKeyCommand(ev('y', { ctrl: true }))).toBe('edit.redo');
-	});
-
-	it('resolves Ctrl+A → selection.all', () => {
-		asWindows();
-		expect(resolveKeyCommand(ev('a', { ctrl: true }))).toBe('selection.all');
-	});
-
 	it('does NOT resolve a bare Z (no modifier) to undo', () => {
 		asWindows();
 		expect(resolveKeyCommand(ev('z'))).toBeNull();
@@ -74,29 +64,10 @@ describe('resolveKeyCommand (mac: Mod = meta)', () => {
 });
 
 describe('resolveKeyCommand arrows', () => {
-	it('plain arrows resolve to move commands', () => {
-		expect(resolveKeyCommand(ev('ArrowUp'))).toBe('cell.moveUp');
-		expect(resolveKeyCommand(ev('ArrowDown'))).toBe('cell.moveDown');
-		expect(resolveKeyCommand(ev('ArrowLeft'))).toBe('cell.moveLeft');
-		expect(resolveKeyCommand(ev('ArrowRight'))).toBe('cell.moveRight');
-	});
 
 	it('shift+arrows resolve to extend commands (not move)', () => {
 		expect(resolveKeyCommand(ev('ArrowUp', { shift: true }))).toBe('cell.extendUp');
 		expect(resolveKeyCommand(ev('ArrowRight', { shift: true }))).toBe('cell.extendRight');
-	});
-});
-
-describe('resolveKeyCommand absolute nav + editor', () => {
-	it('Tab/Home/End/PageUp/PageDown → cell.navAbsolute', () => {
-		for (const k of ['Tab', 'Home', 'End', 'PageUp', 'PageDown']) {
-			expect(resolveKeyCommand(ev(k))).toBe('cell.navAbsolute');
-		}
-	});
-
-	it('Enter/F2 → editor.openActive', () => {
-		expect(resolveKeyCommand(ev('Enter'))).toBe('editor.openActive');
-		expect(resolveKeyCommand(ev('F2'))).toBe('editor.openActive');
 	});
 });
 

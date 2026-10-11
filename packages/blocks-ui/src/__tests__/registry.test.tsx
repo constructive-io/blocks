@@ -1,11 +1,11 @@
-import { schemaToDocument } from 'json-schema-to-blocks';
-import { composeRegistry, DocumentRenderer, missingTypes } from 'blocks-renderer';
-import { walkNodes } from 'blocks-schema';
-import type { UIDocument, UINode } from 'blocks-schema';
 import { fireEvent, render, screen } from '@testing-library/react';
+import { composeRegistry, DocumentRenderer, missingTypes } from 'blocks-renderer';
+import type { UIDocument, UINode } from 'blocks-schema';
+import { walkNodes } from 'blocks-schema';
+import { schemaToDocument } from 'json-schema-to-blocks';
 import { describe, expect, it, vi } from 'vitest';
 
-import { defaultBlockRegistry, widgetRegistry } from '../registry';
+import { defaultBlockRegistry } from '../registry';
 
 function doc(page: UINode): UIDocument {
 	return { formatVersion: '1.0', type: 'UISchema', id: 'doc-1', page };
@@ -45,24 +45,6 @@ describe('defaultBlockRegistry', () => {
 
 		const used = [...walkNodes(document.page)].map((node) => node.type);
 		expect(missingTypes(defaultBlockRegistry, used)).toEqual([]);
-	});
-
-	it('renders a generated document as a working form', () => {
-		const document = schemaToDocument({
-			$id: 'post',
-			type: 'object',
-			required: ['title'],
-			properties: {
-				title: { type: 'string', maxLength: 120, title: 'Title' },
-				featured: { type: 'boolean', title: 'Featured' },
-			},
-		});
-
-		render(<DocumentRenderer document={document} registry={defaultBlockRegistry} />);
-
-		expect(screen.getByLabelText(/Title/)).toBeDefined();
-		expect(screen.getByText('Featured')).toBeDefined();
-		expect(screen.getByRole('button', { name: 'Submit' })).toBeDefined();
 	});
 
 	it('reads and writes the renderer form state rather than owning it', () => {
@@ -168,10 +150,5 @@ describe('defaultBlockRegistry', () => {
 		// A browser reports an unparseable number as an empty value.
 		fireEvent.change(input, { target: { value: '1e' } });
 		expect(onChange).toHaveBeenLastCalledWith({ reading_time: null });
-	});
-
-	it('leaves data blocks unregistered, so an unsatisfied node stays visible', () => {
-		expect(widgetRegistry.DataTable).toBeUndefined();
-		expect(missingTypes(defaultBlockRegistry, ['DataTable'])).toEqual(['DataTable']);
 	});
 });

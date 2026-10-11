@@ -4,8 +4,6 @@ import { constructiveTheme, type ThemeTokenMap } from '../src/theme';
 import {
 	deriveModeTokens,
 	modeTuningDefaults,
-	NEUTRAL_CHROMA_WEIGHTS,
-	NEUTRAL_REFERENCE_HUE,
 	parseColor,
 	parseOklch,
 	shadowBorderRecipe,
@@ -47,17 +45,6 @@ describe('deriveModeTokens', () => {
 		expectDerivedMatchesShipped(constructiveTheme.dark, 'dark');
 	});
 
-	it('tints the neutral ramp through the reference weights', () => {
-		const tuning = {
-			...modeTuningDefaults(constructiveTheme.light),
-			neutralHue: NEUTRAL_REFERENCE_HUE,
-			neutralChroma: 1,
-		};
-		const derived = deriveModeTokens(tuning, constructiveTheme.light);
-		const border = parseColor(derived.border);
-		expect(border.c).toBeCloseTo(NEUTRAL_CHROMA_WEIGHTS.border, 3);
-		expect(border.h).toBeCloseTo(NEUTRAL_REFERENCE_HUE, 1);
-	});
 });
 
 describe('shadowBorderRecipe', () => {

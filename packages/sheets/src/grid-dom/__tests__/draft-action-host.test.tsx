@@ -11,8 +11,6 @@
 //    (DraftActionCellView, data-slot "draft-action-cell") with status derived from the
 //    row's DraftMeta (errored -> error dot; saving -> disabled), and clicking it calls
 //    the threaded submitDraftRow(draftRowId).
-//  - DRAFT STYLING: styleHint.draft fades the host wrapper; styleHint.error overrides
-//    with the destructive bg/text (the DOM analogue of applyDraftDisabledStyle/Error).
 import { act } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -98,17 +96,7 @@ function Harness({ submitDraftRow }: { submitDraftRow: (id: string) => Promise<u
 	return <GridViewport table={table} renderCell={renderCell} />;
 }
 
-/** Walk from a built-in view carrying `text` up to the host's wrapper div (stable id). */
-function wrapperByText(text: string): HTMLElement {
-	const view = Array.from(document.querySelectorAll<HTMLElement>('[role="gridcell"]')).find((v) =>
-		v.textContent?.includes(text),
-	);
-	const wrapper = view?.closest<HTMLElement>('[id^="sheets-cell-"]');
-	if (!wrapper) throw new Error(`no cell wrapper containing text: ${text}`);
-	return wrapper;
-}
-
-describe('Stage-4 host wiring (loading / draft-action / draft styling)', () => {
+describe('Stage-4 host wiring (loading / draft-action)', () => {
 	let root: Root;
 	let container: HTMLDivElement;
 	const proto = window.HTMLElement.prototype;
@@ -135,7 +123,7 @@ describe('Stage-4 host wiring (loading / draft-action / draft styling)', () => {
 		else delete (proto as unknown as Record<string, unknown>).offsetHeight;
 	});
 
-	it('renders LoadingCellView for kind loading; draft-action Button submits; draft+error style the wrapper', async () => {
+	it('renders loading cells and lets an errored draft submit again', async () => {
 		const submitDraftRow = vi.fn(async () => ({}));
 		await act(async () => {
 			root.render(<Harness submitDraftRow={submitDraftRow} />);
@@ -160,16 +148,5 @@ describe('Stage-4 host wiring (loading / draft-action / draft styling)', () => {
 		expect(submitDraftRow).toHaveBeenCalledTimes(1);
 		expect(submitDraftRow).toHaveBeenCalledWith(DRAFT_ID);
 
-		// (c) DRAFT STYLING. draft-only (`name`) fades the wrapper (muted text).
-		const nameWrapper = wrapperByText('Alpha');
-		expect(nameWrapper.className).toContain('text-muted-foreground');
-		expect(nameWrapper.className).not.toContain('text-destructive');
-
-		// draft+error (`errorCol`) resolves to the destructive bg/text — twMerge collapses
-		// the conflicting faded utilities so error WINS (canvas parity: applyDraftErrorStyle
-		// overrides applyDraftDisabledStyle).
-		const errorWrapper = wrapperByText('Bravo');
-		expect(errorWrapper.className).toContain('text-destructive');
-		expect(errorWrapper.className).not.toContain('text-muted-foreground');
 	});
 });

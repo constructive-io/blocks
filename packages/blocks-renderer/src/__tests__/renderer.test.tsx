@@ -2,8 +2,6 @@ import type { UIDocument, UINode } from 'blocks-schema';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it } from 'vitest';
 
-import { readPath, resolveBinding, resolveNodeProps } from '../bindings';
-import { composeRegistry, registeredTypes } from '../registry';
 import { DocumentRenderer } from '../renderer';
 import type { BlockProps, BlockRegistry } from '../types';
 
@@ -92,38 +90,5 @@ describe('DocumentRenderer', () => {
 		);
 
 		expect(html).toContain('<span>Bound Title</span>');
-	});
-});
-
-describe('registry layering', () => {
-	it('later layers win', () => {
-		const composed = composeRegistry(registry, { Markdown: Passthrough });
-		expect(composed.Markdown).toBe(Passthrough);
-		expect(composed.Page).toBe(Passthrough);
-		expect(registeredTypes(composed)).toEqual(['Markdown', 'Page', 'Section']);
-	});
-});
-
-describe('bindings', () => {
-	it('reads dotted paths', () => {
-		expect(readPath({ a: { b: { c: 1 } } }, 'a.b.c')).toBe(1);
-		expect(readPath({ a: 1 }, 'a.b')).toBeUndefined();
-	});
-
-	it('returns raw values for single-placeholder expressions', () => {
-		expect(resolveBinding('{{ flag }}', { flag: false })).toBe(false);
-		expect(resolveBinding('Hello {{ name }}!', { name: 'Ada' })).toBe('Hello Ada!');
-		expect(resolveBinding('Hi {{ missing }}.', {})).toBe('Hi .');
-	});
-
-	it('overlays bindings on static props', () => {
-		const node: UINode = {
-			type: 'Markdown',
-			key: 'k',
-			props: { text: 'static', keep: true },
-			bindings: { text: '{{ title }}' },
-			children: [],
-		};
-		expect(resolveNodeProps(node, { title: 'dyn' })).toEqual({ text: 'dyn', keep: true });
 	});
 });

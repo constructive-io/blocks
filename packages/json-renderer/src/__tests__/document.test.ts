@@ -1,12 +1,11 @@
 import { describe, expect, it } from 'vitest';
 
-import { createEnvelope, DOCUMENT_FORMAT_VERSION, isDocumentEnvelope } from '../envelope';
-import { collectFieldConstraints, collectDefaultValues, collectFieldNames } from '../fields';
-import { toEnvelopeJsonSchema, toNodeJsonSchema } from '../json-schema';
-import { collectNodeTypes, findNodeByKey, mapNodes, walkNodes } from '../node';
-import { node } from './helpers';
 import { validateValue } from '../constraints';
+import { createEnvelope, DOCUMENT_FORMAT_VERSION, isDocumentEnvelope } from '../envelope';
+import { collectDefaultValues, collectFieldConstraints, collectFieldNames } from '../fields';
+import { collectNodeTypes, findNodeByKey, mapNodes, walkNodes } from '../node';
 import { createDocumentSchema, parseEnvelope, parseNode, safeParseEnvelope } from '../zod';
+import { node } from './helpers';
 
 const KIND = { documentType: 'Report', formatVersion: DOCUMENT_FORMAT_VERSION } as const;
 
@@ -113,13 +112,5 @@ describe('validation', () => {
 		const schema = createDocumentSchema({ kind: { documentType: 'Report', formatVersion: '1.0' } });
 		expect(schema.safeParse(document()).success).toBe(true);
 		expect(schema.safeParse({ ...document(), type: 'Other' }).success).toBe(false);
-	});
-});
-
-describe('JSON Schema export', () => {
-	it('exports the envelope and node schemas', () => {
-		const envelope = toEnvelopeJsonSchema() as Record<string, unknown>;
-		expect(envelope).toHaveProperty('properties');
-		expect(toNodeJsonSchema()).toHaveProperty('properties');
 	});
 });

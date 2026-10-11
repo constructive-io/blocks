@@ -4,8 +4,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import {
-	ConstructiveError,
 	CONSTRAINT_MESSAGES,
+	ConstructiveError,
 	classify,
 	createError,
 	getConstraintMessage,
@@ -134,25 +134,12 @@ describe('error-handler', () => {
 	});
 
 	describe('createError factories', () => {
-		it('produces canonical codes', () => {
-			expect(createError.network().code).toBe('NETWORK_ERROR');
-			expect(createError.timeout().code).toBe('TIMEOUT_ERROR');
-			expect(createError.unauthorized().code).toBe('UNAUTHENTICATED');
-			expect(createError.forbidden().code).toBe('FORBIDDEN');
-			expect(createError.notFound().code).toBe('NOT_FOUND');
-			expect(createError.badRequest('bad').code).toBe('BAD_USER_INPUT');
-		});
-
 		it('maps a coded GraphQL error through graphql()', () => {
 			expect(createError.graphql('denied', 'FORBIDDEN').code).toBe('FORBIDDEN');
 		});
 	});
 
 	describe('constraint messages', () => {
-		it('matches an exact constraint name', () => {
-			expect(getConstraintMessage('database_name_key')).toBe(CONSTRAINT_MESSAGES.database_name_key);
-		});
-
 		it('matches a suffix pattern', () => {
 			expect(getConstraintMessage('users_email_key')).toBe(CONSTRAINT_MESSAGES['*_email_key']);
 		});

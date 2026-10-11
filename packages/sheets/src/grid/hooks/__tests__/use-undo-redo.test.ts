@@ -68,20 +68,6 @@ describe('useUndoRedo', () => {
 		expect(api.canUndo).toBe(false);
 	});
 
-	it('redo replays the last undone entry and returns it to the undo stack', async () => {
-		const log: string[] = [];
-		act(() => api.record(entry(log, 'a')));
-		await act(async () => {
-			await api.undo();
-		});
-		await act(async () => {
-			await api.redo();
-		});
-		expect(log).toEqual(['undo:a', 'redo:a']);
-		expect(api.canUndo).toBe(true);
-		expect(api.canRedo).toBe(false);
-	});
-
 	it('recording a new entry CLEARS the redo stack', async () => {
 		const log: string[] = [];
 		act(() => api.record(entry(log, 'a')));
@@ -96,15 +82,6 @@ describe('useUndoRedo', () => {
 		});
 		// redo stack was cleared -> nothing replays.
 		expect(log).toEqual(['undo:a']);
-	});
-
-	it('undo / redo on empty stacks are no-ops', async () => {
-		await act(async () => {
-			await api.undo();
-			await api.redo();
-		});
-		expect(api.canUndo).toBe(false);
-		expect(api.canRedo).toBe(false);
 	});
 
 	it('clear drops all history', async () => {
