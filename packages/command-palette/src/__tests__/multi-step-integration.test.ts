@@ -95,6 +95,46 @@ describe('multi-step host integration', () => {
     const onCancel = vi.fn();
     const onCompleted = vi.fn();
     const { result } = renderHook(() => useMultiStepExecution({ onCompleted }));
+    const onSkipComplete = vi.fn();
+    for (const timing of ['after commit', 'same batch']) {
+      for (const outcome of ['reject', 'resolve']) {
+        const skipped = deferred<string[]>();
+        const next = deferred<string[]>();
+        act(() => result.current.start('skip', {
+          steps: [
+            { ...step('optional'), skippable: true, loader: () => skipped.promise },
+            { ...step('next'), loader: () => next.promise },
+          ],
+          onComplete: onSkipComplete,
+        }));
+        expect(result.current.state?.steps[0].status).toBe('loading');
+        const settleSkipped = () => outcome === 'resolve'
+          ? skipped.resolve(['stale'])
+          : skipped.reject(new Error('Stale load error'));
+        if (timing === 'after commit') {
+          act(() => result.current.skipStep());
+          await act(async () => settleSkipped());
+        } else {
+          await act(async () => {
+            result.current.skipStep();
+            settleSkipped();
+          });
+        }
+        const scenario = `${outcome} ${timing}`;
+        expect(result.current.state?.currentStepIndex, scenario).toBe(1);
+        expect(result.current.state?.steps[1].status, scenario).toBe('loading');
+        expect(result.current.state?.steps[1].data, scenario).toBeUndefined();
+        expect(result.current.state?.steps[1].error, scenario).toBeNull();
+        await act(async () => next.resolve(['current']));
+        expect(result.current.state?.steps[1].data, scenario).toEqual(['current']);
+        await act(async () => result.current.completeStep({ name: 'Kept' }));
+        expect(onSkipComplete).toHaveBeenLastCalledWith({ name: 'Kept' });
+        expect(result.current.state?.flowStatus, scenario).toBe('completed');
+      }
+    }
+    expect(onSkipComplete).toHaveBeenCalledTimes(4);
+    expect(onCompleted).toHaveBeenCalledTimes(4);
+    onCompleted.mockClear();
     act(() => result.current.start('load', { steps: [{ ...step('load'), loader: () => pendingLoad.promise }], onCancel }));
     act(() => result.current.cancel());
     await act(async () => pendingLoad.reject(new Error('Late load error')));
