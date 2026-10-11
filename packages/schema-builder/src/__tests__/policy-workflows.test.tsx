@@ -158,12 +158,18 @@ describe('policy adapter and UI integration', () => {
     expect(screen.queryByRole('option', { name: /verified_member/ })).toBeNull();
     expect(screen.queryByRole('option', { name: /administer_app/ })).toBeNull();
     fireEvent.click(readOption);
-    fireEvent.keyDown(screen.getByRole('listbox'), { key: 'Escape' });
+    const permissionSearch = screen.getByRole('textbox', { name: 'Search through available options' });
+    permissionSearch.focus();
+    fireEvent.keyDown(permissionSearch, { key: 'Escape' });
+    await waitFor(() => expect(screen.queryByRole('listbox')).toBeNull());
     fireEvent.click(screen.getByText('Select membership levels'));
     const levelOption = await screen.findByRole('option', { name: /verified_member/ });
     expect(screen.queryByRole('option', { name: /read_reports/ })).toBeNull();
     fireEvent.click(levelOption);
-    fireEvent.keyDown(screen.getByRole('listbox'), { key: 'Escape' });
+    const levelSearch = screen.getByRole('textbox', { name: 'Search through available options' });
+    levelSearch.focus();
+    fireEvent.keyDown(levelSearch, { key: 'Escape' });
+    await waitFor(() => expect(screen.queryByRole('listbox')).toBeNull());
     policies.mockResolvedValue({ policies: { nodes: [ownerPolicy, {
       ...ownerPolicy, id: 'policy-member', name: 'member_read', policyType: 'AuthzEntityMembership',
       data: { entity_field: 'organization_id', membership_type: 2, capabilities: ['read_reports'], levels: ['verified_member'] },
@@ -185,6 +191,14 @@ describe('policy adapter and UI integration', () => {
     expect(screen.getByRole('heading', { name: 'Create 0' })).toBeTruthy();
     expect(screen.getByRole('heading', { name: 'Update 0' })).toBeTruthy();
     expect(screen.getByRole('heading', { name: 'Delete 0' })).toBeTruthy();
+    await waitFor(() => expect(screen.queryByRole('button', { name: 'Create Policy' })).toBeNull());
+    fireEvent.click(screen.getByRole('button', { name: 'Edit Entity Membership' }));
+    const savedField = await screen.findByRole('textbox');
+    expect((savedField as HTMLInputElement).value).toBe('organization_id');
+    savedField.focus();
+    fireEvent.keyDown(savedField, { key: 'Escape' });
+    await waitFor(() => expect(screen.queryByRole('textbox')).toBeNull());
+    expect(screen.getByRole('button', { name: 'Edit Entity Membership' })).toBeTruthy();
     artifact('policy-membership-read', provision.mock.calls);
   });
 });

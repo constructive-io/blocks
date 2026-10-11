@@ -345,10 +345,10 @@ export function CardStackProvider({
     };
   }, [dispatch]);
 
-  // Global escape key handler - pop top card only
+  // Let nested controls and overlays handle Escape before dismissing the top card.
   useEffect(() => {
     const handleEscape = (event: KeyboardEvent) => {
-      if (event.key === 'Escape' && stateRef.current.cards.length > 0) {
+      if (event.key === 'Escape' && !event.defaultPrevented && stateRef.current.cards.length > 0) {
         event.preventDefault();
         event.stopPropagation();
         const topCard = stateRef.current.cards[stateRef.current.cards.length - 1];
@@ -358,8 +358,8 @@ export function CardStackProvider({
       }
     };
 
-    document.addEventListener('keydown', handleEscape, true);
-    return () => document.removeEventListener('keydown', handleEscape, true);
+    window.addEventListener('keydown', handleEscape);
+    return () => window.removeEventListener('keydown', handleEscape);
   }, [api]);
 
   const contextValue = useMemo<StackContextValue>(
