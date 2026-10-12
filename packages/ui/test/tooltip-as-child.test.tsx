@@ -3,6 +3,7 @@ import { act } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
+import { Button } from '../src/components/button';
 import { Tooltip, TooltipProvider, TooltipTrigger } from '../src/components/tooltip';
 
 globalThis.IS_REACT_ACT_ENVIRONMENT = true;
@@ -120,6 +121,46 @@ describe('TooltipTrigger asChild', () => {
 		await act(async () => link!.click());
 		expect(childClick).toHaveBeenCalledOnce();
 		expect(parentClick).toHaveBeenCalledOnce();
+	});
+
+	it('triggers from a focusable wrapper when the child button is disabled', async () => {
+		const view = createTestRoot();
+
+		await view.render(
+			<TooltipProvider>
+				<Tooltip>
+					<TooltipTrigger asChild>
+						<Button disabled>Delete workspace</Button>
+					</TooltipTrigger>
+				</Tooltip>
+			</TooltipProvider>,
+		);
+
+		// A disabled button never receives hover or focus, so the wrapper carries the tooltip.
+		const trigger = view.container.querySelector('[data-slot="tooltip-trigger"]');
+		expect(trigger?.tagName).toBe('SPAN');
+		expect(trigger?.getAttribute('tabindex')).toBe('0');
+		const button = trigger?.querySelector('button');
+		expect(button?.disabled).toBe(true);
+		expect(button?.textContent).toBe('Delete workspace');
+	});
+
+	it('puts the trigger on an enabled button directly, without a wrapper', async () => {
+		const view = createTestRoot();
+
+		await view.render(
+			<TooltipProvider>
+				<Tooltip>
+					<TooltipTrigger asChild>
+						<Button>Rename</Button>
+					</TooltipTrigger>
+				</Tooltip>
+			</TooltipProvider>,
+		);
+
+		const trigger = view.container.querySelector('[data-slot="tooltip-trigger"]');
+		expect(trigger?.tagName).toBe('BUTTON');
+		expect(view.container.querySelector('span')).toBeNull();
 	});
 
 	it('keeps the normal trigger as a native button', async () => {

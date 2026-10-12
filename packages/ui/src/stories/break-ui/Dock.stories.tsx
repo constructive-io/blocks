@@ -68,11 +68,18 @@ export const Stress: StoryObj = {
 					</div>
 				</Frame>
 
-				<Frame width={720} label={`${apps.length} icons, flat children, 720px`}>
-					<div style={{ paddingBottom: 40 }}>
+				<Frame width={720} label={`${apps.length} icons, flat children, 720px (icons have onClick: keyboard operable)`}>
+					<div data-case="clickable" style={{ paddingBottom: 40 }}>
 						<Dock iconSize={32} iconMagnification={56}>
 							{apps.map((app) => (
-								<DockIcon key={app.key}>
+								<DockIcon
+									key={app.key}
+									aria-label={app.label}
+									onClick={() => {
+										(window as unknown as { __dockClicks?: number }).__dockClicks =
+											((window as unknown as { __dockClicks?: number }).__dockClicks ?? 0) + 1;
+									}}
+								>
 									<Glyph app={app} />
 								</DockIcon>
 							))}
@@ -81,7 +88,7 @@ export const Stress: StoryObj = {
 				</Frame>
 
 				{mode === 'worst' || mode === 'demo' ? (
-					<Frame width={720} label="Same icons inside a fragment: iconSize / magnification props are not injected">
+					<Frame width={720} label="Same icons inside a fragment (iconSize / magnification reach them through context)">
 						<div data-case="fragment" style={{ paddingBottom: 40 }}>
 							<Dock iconSize={32} iconMagnification={56}>
 								<>

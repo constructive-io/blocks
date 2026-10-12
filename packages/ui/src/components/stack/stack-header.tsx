@@ -68,9 +68,15 @@ export function StackHeader({ card, onClose, className, renderTitle }: StackHead
     >
       {/* Title & Description */}
       <div className="flex-1 min-w-0">
-        {title && <h2 className={cn('text-foreground truncate', styles.title)}>{title}</h2>}
+        {title && (
+          <h2 className={cn('text-foreground truncate', styles.title)} title={typeof title === 'string' ? title : undefined}>
+            {title}
+          </h2>
+        )}
         {card.description && (
-          <p className={cn('text-muted-foreground truncate', styles.description)}>{card.description}</p>
+          <p className={cn('text-muted-foreground truncate', styles.description)} title={card.description}>
+            {card.description}
+          </p>
         )}
       </div>
 

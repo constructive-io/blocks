@@ -69,6 +69,13 @@ export const buttonDocs = definePrimitiveDocs({
           description: 'Disables the tactile press-scale animation when motion would distract from the interaction.',
         },
         {
+          name: 'wrap',
+          type: 'boolean',
+          default: 'false',
+          description:
+            'Lets a long or translated label wrap onto several lines instead of staying on one line. The height becomes a minimum and the button can shrink inside a flex row.',
+        },
+        {
           name: 'asChild',
           type: 'boolean',
           default: 'false',
@@ -86,7 +93,7 @@ export const buttonDocs = definePrimitiveDocs({
     {
       name: 'buttonVariants',
       description:
-        'Public CVA helper for producing Button classes without rendering Button; it accepts the same variant, size, and static options.',
+        'Public CVA helper for producing Button classes without rendering Button; it accepts the same variant, size, static, and wrap options.',
       upstream: cva,
     },
   ],

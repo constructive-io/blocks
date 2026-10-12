@@ -15,7 +15,7 @@ function Label({ className, ...props }: LabelProps) {
 		<label
 			data-slot="label"
 			className={cn(
-				`text-foreground text-sm leading-4 font-medium select-none group-data-[disabled=true]:pointer-events-none
+				`text-foreground text-sm leading-4 font-medium select-none [overflow-wrap:anywhere] group-data-[disabled=true]:pointer-events-none
 				group-data-[disabled=true]:opacity-64 peer-disabled:cursor-not-allowed peer-disabled:opacity-64
 				data-[disabled]:pointer-events-none data-[disabled]:opacity-64`,
 				className,

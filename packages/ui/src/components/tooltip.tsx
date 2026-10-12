@@ -33,6 +33,21 @@ type TooltipTriggerProps = React.ComponentProps<typeof TooltipPrimitive.Trigger>
 function TooltipTrigger({ delay = 600, asChild, children, render, ...props }: TooltipTriggerProps) {
 	const childRender = render === undefined && asChild && React.isValidElement(children) ? children : undefined;
 
+	// A disabled button ignores pointer and focus events, so a tooltip explaining *why* it is disabled
+	// would never open. Trigger from a focusable wrapper around it instead.
+	if (childRender && (childRender.props as { disabled?: boolean }).disabled) {
+		return (
+			<TooltipPrimitive.Trigger
+				data-slot="tooltip-trigger"
+				delay={delay}
+				render={<span tabIndex={0} className="inline-flex cursor-not-allowed rounded-md focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:outline-none" />}
+				{...props}
+			>
+				{childRender}
+			</TooltipPrimitive.Trigger>
+		);
+	}
+
 	return (
 		<TooltipPrimitive.Trigger
 			data-slot="tooltip-trigger"
@@ -63,6 +78,12 @@ function TooltipContent({
 }: TooltipContentProps) {
 	const { container, zIndexClass } = useFloatingOverlayPortalProps();
 
+	// Nothing to say: render no bubble rather than an empty 18x10 box.
+	const hasContent = React.Children.toArray(children).some((child) =>
+		typeof child === 'string' ? child.trim() !== '' : true,
+	);
+	if (!hasContent) return null;
+
 	return (
 		<TooltipPrimitive.Portal container={container}>
 			<TooltipPrimitive.Positioner side={side} align={align} sideOffset={sideOffset} className={zIndexClass}>
@@ -70,7 +91,7 @@ function TooltipContent({
 					data-slot="tooltip-content"
 					className={cn(
 						`bg-popover text-popover-foreground origin-(--transform-origin) relative max-w-70 rounded-md border px-2 py-1 shadow-lg
-						text-xs transition-[scale,opacity,translate] duration-(--duration-moderate) ease-out data-starting-style:scale-95
+						text-xs [overflow-wrap:anywhere] transition-[scale,opacity,translate] duration-(--duration-moderate) ease-out data-starting-style:scale-95
 						data-ending-style:scale-95 data-starting-style:opacity-0 data-ending-style:opacity-0
 						data-[side=bottom]:data-starting-style:-translate-y-2
 						data-[side=left]:data-starting-style:translate-x-2

@@ -90,7 +90,7 @@ export const Stress: StoryObj = {
 						<Frame width={420} label="Each value as a plain inline badge (wrapped row)">
 							<div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, padding: 8, alignItems: 'center' }}>
 								{worstStatuses.map((s) => (
-									<span key={s.note} title={s.note} style={{ display: 'inline-flex', flexDirection: 'column', alignItems: 'flex-start', gap: 2 }}>
+									<span key={s.note} title={s.note} style={{ display: 'inline-flex', flexDirection: 'column', alignItems: 'flex-start', gap: 2, maxWidth: '100%' }}>
 										<Badge variant={s.variant}>{s.text}</Badge>
 										<span style={{ font: '9px/1.2 system-ui, sans-serif', color: '#737373' }}>{s.note}</span>
 									</span>

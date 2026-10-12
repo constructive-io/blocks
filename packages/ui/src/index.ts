@@ -1,6 +1,7 @@
 // Utilities
 export { cn } from './lib/utils';
 export { Slot, Slottable, composeRefs, mergeProps } from './lib/slot';
+export { initials, type InitialsOptions } from './lib/initials';
 export { useControllableState } from './lib/use-controllable-state';
 export { easings, durations, springs, transitions, variants, tierSpring, tierExit } from './lib/motion/motion-config';
 export { DEFAULT_SPRING_TIERS, getSpringTiers, setSpringTiers, useSpringTiers, type SpringTier, type SpringTiers } from './lib/motion/tuning';
@@ -73,7 +74,7 @@ export {
 	type CardProps,
 } from './components/card';
 export { Separator, type SeparatorProps } from './components/separator';
-export { Alert, AlertTitle, AlertDescription, alertVariants } from './components/alert';
+export { Alert, AlertTitle, AlertDescription, AlertAction, alertVariants } from './components/alert';
 
 // Form primitives
 export { Input, type InputProps } from './components/input';

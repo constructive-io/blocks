@@ -15,7 +15,13 @@ function Separator({ className, orientation = 'horizontal', decorative: _decorat
 		<SeparatorPrimitive
 			data-slot="separator-root"
 			orientation={orientation}
-			className={cn('bg-border shrink-0', orientation === 'horizontal' ? 'h-px w-full' : 'h-full w-px', className)}
+			className={cn(
+				'bg-border shrink-0',
+				// A vertical rule fills its parent's height and stretches in a flex row; `min-h-4` keeps it
+				// visible when the parent has no height of its own (otherwise it is 0px tall).
+				orientation === 'horizontal' ? 'h-px w-full' : 'h-full min-h-4 w-px self-stretch',
+				className,
+			)}
 			{...props}
 		/>
 	);

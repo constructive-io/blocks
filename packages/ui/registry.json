@@ -1501,6 +1501,22 @@
       ]
     },
     {
+      "name": "initials",
+      "type": "registry:lib",
+      "title": "initials",
+      "description": "Avatar-fallback initials from a name or email: grapheme-safe, non-Latin safe, returns null when empty so callers can show an icon.",
+      "categories": [
+        "utility"
+      ],
+      "docs": "Import: `import { initials } from '@/lib/initials'`",
+      "files": [
+        {
+          "path": "registry/constructive/lib/initials.ts",
+          "type": "registry:lib"
+        }
+      ]
+    },
+    {
       "name": "use-controllable-state",
       "type": "registry:hook",
       "title": "useControllableState",
@@ -1812,7 +1828,7 @@
       "categories": [
         "primitive"
       ],
-      "docs": "Import: `import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert'`",
+      "docs": "Import: `import { Alert, AlertTitle, AlertDescription, AlertAction } from '@/components/ui/alert'`",
       "dependencies": [
         "class-variance-authority"
       ],
@@ -4164,6 +4180,10 @@
         },
         {
           "path": "registry/constructive/blocks/toast/toast-info.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/toast/toast-card.tsx",
           "type": "registry:component"
         }
       ]

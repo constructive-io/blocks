@@ -5,7 +5,7 @@ import { Separator } from './separator';
 import { cn } from '../lib/utils';
 
 const buttonGroupVariants = cva(
-	`flex w-fit items-stretch
+	`flex w-fit max-w-full items-stretch
 		[&>*]:focus-visible:relative [&>*]:focus-visible:z-10
 		[&>[data-slot=select-trigger]:not([class*='w-'])]:w-fit [&>input]:flex-1`,
 	{
@@ -13,12 +13,13 @@ const buttonGroupVariants = cva(
 			// Only the shared edges square off: the first child keeps its leading
 			// corners, the last keeps its trailing ones, and each Button's `before:`
 			// overlay follows so its highlight never shows a rounded corner inside a
-			// squared one. Works for any child count, separators included.
+			// squared one. Works for any child count, separators included. Logical
+			// (`s`/`e`) sides so the group mirrors in right-to-left layouts.
 			orientation: {
 				horizontal: `flex-row
-					[&>[data-slot]:not(:last-child)]:rounded-r-none [&>[data-slot]:not(:last-child)]:before:rounded-r-none
-					[&>[data-slot]:not(:first-child)]:rounded-l-none [&>[data-slot]:not(:first-child)]:before:rounded-l-none
-					[&>[data-slot]:not(:first-child)]:border-l-0`,
+					[&>[data-slot]:not(:last-child)]:rounded-e-none [&>[data-slot]:not(:last-child)]:before:rounded-e-none
+					[&>[data-slot]:not(:first-child)]:rounded-s-none [&>[data-slot]:not(:first-child)]:before:rounded-s-none
+					[&>[data-slot]:not(:first-child)]:border-s-0`,
 				vertical: `flex-col
 					[&>[data-slot]:not(:last-child)]:rounded-b-none [&>[data-slot]:not(:last-child)]:before:rounded-b-none
 					[&>[data-slot]:not(:first-child)]:rounded-t-none [&>[data-slot]:not(:first-child)]:before:rounded-t-none
@@ -54,7 +55,7 @@ function ButtonGroupText({ className, ...props }: ButtonGroupTextProps) {
 		<div
 			data-slot="button-group-text"
 			className={cn(
-				'flex items-center gap-2 rounded-md border border-border bg-muted/60 px-3 text-[13px] font-medium text-muted-foreground [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*="size-"])]:size-4',
+				'flex min-w-0 items-center gap-2 rounded-md border border-border bg-muted/60 px-3 text-[0.8125rem] font-medium text-muted-foreground [overflow-wrap:anywhere] [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*="size-"])]:size-4',
 				className,
 			)}
 			{...props}

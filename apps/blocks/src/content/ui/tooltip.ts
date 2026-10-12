@@ -37,7 +37,7 @@ export const tooltipDocs = definePrimitiveDocs({
   ],
   accessibility: [
     'Keep TooltipContent concise and non-interactive. A tooltip supplements the trigger name and cannot replace a persistent label for unfamiliar controls.',
-    'Make the trigger keyboard focusable. For disabled controls, attach TooltipTrigger to a wrapper that can receive pointer and focus events.',
+    'Make the trigger keyboard focusable. For disabled controls, attach TooltipTrigger to a wrapper that can receive pointer and focus events; TooltipTrigger with asChild does this for you when its child is disabled.',
     'Base UI opens tooltips from hover or focus, closes them on Escape, and preserves the relationship through the portal chain.',
   ],
   api: [

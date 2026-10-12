@@ -50,17 +50,38 @@ export const Stress: StoryObj = {
 
 		return (
 			<div style={{ display: 'flex', flexDirection: 'column' }}>
-				<Frame width={480} label="Dialog footer (480px dialog, 24px padding → 432px of room)">
+				<Frame width={480} label="Dialog footer, default nowrap (480px dialog, 24px padding → 432px of room)">
 					<div className="flex justify-end gap-2 p-6">
 						<Button variant="outline">{d.secondary}</Button>
 						<Button>{d.primary}</Button>
 					</div>
 				</Frame>
 
-				<Frame width={288} label="Full-width CTA in a 320px viewport (288px after gutters)">
+				<Frame width={288} label="Full-width CTA, default nowrap, in a 320px viewport (288px after gutters)">
 					<div className="flex flex-col gap-2">
 						<Button className="w-full">{d.primary}</Button>
 						<Button variant="outline" className="w-full">
+							<UserPlusIcon />
+							{d.assignee}
+						</Button>
+					</div>
+				</Frame>
+
+				<Frame width={480} label="Same footer with the opt-in `wrap` prop (labels wrap, buttons shrink)">
+					<div className="flex justify-end gap-2 p-6">
+						<Button variant="outline" wrap>
+							{d.secondary}
+						</Button>
+						<Button wrap>{d.primary}</Button>
+					</div>
+				</Frame>
+
+				<Frame width={288} label="Full-width CTA with `wrap`">
+					<div className="flex flex-col gap-2">
+						<Button className="w-full" wrap>
+							{d.primary}
+						</Button>
+						<Button variant="outline" className="w-full" wrap>
 							<UserPlusIcon />
 							{d.assignee}
 						</Button>
@@ -84,7 +105,7 @@ export const Stress: StoryObj = {
 					<div className="flex items-center gap-3 p-2">
 						<Button data-case="idle">Save</Button>
 						<Button data-case="loading" disabled>
-							<Spinner />
+							<Spinner decorative />
 							Saving…
 						</Button>
 					</div>

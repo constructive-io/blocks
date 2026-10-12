@@ -12,7 +12,8 @@ function FieldSet({ className, ...props }: React.ComponentProps<'fieldset'>) {
 		<fieldset
 			data-slot='field-set'
 			className={cn(
-				'flex flex-col gap-4 has-[>[data-slot=checkbox-group]]:gap-3 has-[>[data-slot=radio-group]]:gap-3',
+				// `min-w-0`: a fieldset is `min-width: min-content`, so one unbroken value would widen every input in it.
+				'flex min-w-0 flex-col gap-4 has-[>[data-slot=checkbox-group]]:gap-3 has-[>[data-slot=radio-group]]:gap-3',
 				className,
 			)}
 			{...props}
@@ -117,12 +118,15 @@ function Field(props: FieldProps) {
 	return (
 		<FieldContainer className={className} data-invalid={Boolean(error)}>
 			<FieldLabel htmlFor={htmlFor}>
-				{label}
-				{required && (
-					<span className='ml-1 text-destructive' aria-hidden='true'>
-						*
-					</span>
-				)}
+				{/* One inline run, so a wrapped label keeps the star after its last word. */}
+				<span>
+					{label}
+					{required && (
+						<span className='ms-1 text-destructive' aria-hidden='true'>
+							*
+						</span>
+					)}
+				</span>
 			</FieldLabel>
 			{children}
 			{description && <FieldDescription id={descriptionId}>{description}</FieldDescription>}
@@ -135,7 +139,7 @@ function FieldContent({ className, ...props }: React.ComponentProps<'div'>) {
 	return (
 		<div
 			data-slot='field-content'
-			className={cn('group/field-content flex flex-1 flex-col gap-0.5 leading-snug', className)}
+			className={cn('group/field-content flex min-w-0 flex-1 flex-col gap-0.5 leading-snug', className)}
 			{...props}
 		/>
 	);
@@ -146,7 +150,7 @@ function FieldLabel({ className, ...props }: React.ComponentProps<typeof Label>)
 		<Label
 			data-slot='field-label'
 			className={cn(
-				`group/field-label peer/field-label flex w-fit gap-2 leading-snug
+				`group/field-label peer/field-label flex w-fit min-w-0 gap-2 leading-snug [overflow-wrap:anywhere]
 				group-data-[disabled=true]/field:opacity-64 has-data-checked:border-primary/30 has-data-checked:bg-primary/5
 				has-[>[data-slot=field]]:rounded-md has-[>[data-slot=field]]:border
 				*:data-[slot=field]:p-2.5 has-[>[data-slot=field]]:w-full has-[>[data-slot=field]]:flex-col`,
@@ -162,7 +166,7 @@ function FieldTitle({ className, ...props }: React.ComponentProps<'div'>) {
 		<div
 			data-slot='field-label'
 			className={cn(
-				'flex w-fit items-center gap-2 text-sm font-medium group-data-[disabled=true]/field:opacity-64',
+				'flex w-fit min-w-0 items-center gap-2 text-sm font-medium [overflow-wrap:anywhere] group-data-[disabled=true]/field:opacity-64',
 				className,
 			)}
 			{...props}
@@ -175,7 +179,7 @@ function FieldDescription({ className, ...props }: React.ComponentProps<'p'>) {
 		<p
 			data-slot='field-description'
 			className={cn(
-				`text-left text-sm leading-normal font-normal text-muted-foreground
+				`text-start text-sm leading-normal font-normal text-muted-foreground [overflow-wrap:anywhere]
 				group-has-data-horizontal/field:text-balance [[data-variant=legend]+&]:-mt-1.5 last:mt-0 nth-last-2:-mt-1
 				[&>a]:underline [&>a]:underline-offset-4 [&>a:hover]:text-link`,
 				className,
@@ -196,14 +200,18 @@ function FieldSeparator({
 		<div
 			data-slot='field-separator'
 			data-content={Boolean(children)}
-			className={cn('relative -my-2 h-5 text-sm group-data-[variant=outline]/field-group:-mb-2', className)}
+			// A flex row (rule, text, rule) instead of a fixed-height box: wrapped copy grows the row.
+			className={cn('relative -my-2 flex min-h-5 items-center gap-3 text-sm group-data-[variant=outline]/field-group:-mb-2', className)}
 			{...props}
 		>
-			<Separator className='absolute inset-0 top-1/2' />
+			<Separator className='min-w-4 flex-1' />
 			{children && (
-				<span className='relative mx-auto block w-fit bg-background px-2 text-muted-foreground' data-slot='field-separator-content'>
-					{children}
-				</span>
+				<>
+					<span className='text-center text-muted-foreground [overflow-wrap:anywhere]' data-slot='field-separator-content'>
+						{children}
+					</span>
+					<Separator className='min-w-4 flex-1' />
+				</>
 			)}
 		</div>
 	);
@@ -239,7 +247,7 @@ function FieldError({
 		<div
 			role='alert'
 			data-slot='field-error'
-			className={cn('text-sm font-normal text-destructive', className)}
+			className={cn('text-sm font-normal text-destructive [overflow-wrap:anywhere]', className)}
 			{...props}
 		>
 			{content}

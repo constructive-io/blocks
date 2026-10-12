@@ -1,7 +1,7 @@
 import type { Meta, StoryObj } from '@storybook/react-vite';
 import { CircleAlertIcon, InfoIcon, TriangleAlertIcon } from 'lucide-react';
 
-import { Alert, AlertDescription, AlertTitle } from '../../components/alert';
+import { Alert, AlertAction, AlertDescription, AlertTitle } from '../../components/alert';
 import { Button } from '../../components/button';
 import { pickDataset } from './dataset';
 import { Frame } from './group-a-frame';
@@ -23,6 +23,7 @@ type AlertData = {
 	title?: React.ReactNode;
 	description?: React.ReactNode;
 	action?: string;
+	rawAction?: string;
 };
 
 const demo: AlertData[] = [
@@ -89,13 +90,22 @@ const worst: AlertData[] = [
 		description: 'Title came back empty from the API.',
 	},
 	{
-		note: 'Alert with a trailing action button (420px)',
+		note: 'AlertAction row under the text (420px)',
 		width: 420,
 		variant: 'destructive',
 		icon: true,
 		title: 'Payment failed',
 		description: 'The card ending in 4242 was declined.',
 		action: 'Update card',
+	},
+	{
+		note: 'A bare Button child, no AlertAction (420px)',
+		width: 420,
+		variant: 'warning',
+		icon: true,
+		title: 'Trial ending',
+		description: 'Your trial ends in 1 days.',
+		rawAction: 'Choose a plan',
 	},
 	{
 		note: 'Markup-like text (420px)',
@@ -129,8 +139,15 @@ export const Stress: StoryObj = {
 							{a.title !== undefined ? <AlertTitle>{a.title}</AlertTitle> : null}
 							{a.description ? <AlertDescription>{a.description}</AlertDescription> : null}
 							{a.action ? (
+								<AlertAction>
+									<Button size="sm" variant="outline">
+										{a.action}
+									</Button>
+								</AlertAction>
+							) : null}
+							{a.rawAction ? (
 								<Button size="sm" variant="outline">
-									{a.action}
+									{a.rawAction}
 								</Button>
 							) : null}
 						</Alert>

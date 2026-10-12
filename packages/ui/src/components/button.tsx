@@ -11,6 +11,7 @@ const buttonVariants = cva(
 			size: 'default',
 			static: false,
 			variant: 'default',
+			wrap: false,
 		},
 		variants: {
 			static: {
@@ -46,7 +47,21 @@ const buttonVariants = cva(
 				secondary:
 					'border-transparent bg-secondary text-secondary-foreground hover:bg-secondary/90 [:active,[data-pressed]]:bg-secondary/80',
 			},
+			// Opt-in: long or translated labels wrap onto more lines instead of
+			// overflowing. The height becomes a minimum and the button may shrink
+			// inside a flex row. Icon sizes ignore it (they have no label).
+			wrap: {
+				false: null,
+				true: 'max-w-full min-w-0 shrink whitespace-normal text-center [overflow-wrap:anywhere]',
+			},
 		},
+		compoundVariants: [
+			{ wrap: true, size: 'default', className: 'h-auto min-h-10 py-[calc(--spacing(2)-1px)]' },
+			{ wrap: true, size: 'sm', className: 'h-auto min-h-8 py-[calc(--spacing(1.5)-1px)]' },
+			{ wrap: true, size: 'xs', className: 'h-auto min-h-7 py-[calc(--spacing(1)-1px)]' },
+			{ wrap: true, size: 'lg', className: 'h-auto min-h-11 py-[calc(--spacing(2.5)-1px)]' },
+			{ wrap: true, size: 'xl', className: 'h-auto min-h-12 py-[calc(--spacing(3)-1px)]' },
+		],
 	},
 );
 
@@ -55,13 +70,19 @@ interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
 	size?: VariantProps<typeof buttonVariants>['size'];
 	/** Disables tactile press scaling when motion would distract from the interaction. */
 	static?: boolean;
+	/**
+	 * Lets the label wrap onto several lines (long or translated copy) instead of
+	 * staying on one line and overflowing. The height becomes a minimum and the
+	 * button can shrink inside a flex row. Off by default.
+	 */
+	wrap?: boolean;
 	/** When true, merges props onto the child element instead of rendering a button */
 	asChild?: boolean;
 }
 
 const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
-	({ className, variant, size, static: isStatic, asChild, children, type = 'button', ...props }, ref) => {
-		const buttonClasses = cn(buttonVariants({ className, size, static: isStatic, variant }));
+	({ className, variant, size, static: isStatic, wrap, asChild, children, type = 'button', ...props }, ref) => {
+		const buttonClasses = cn(buttonVariants({ className, size, static: isStatic, variant, wrap }));
 		const Comp = asChild ? Slot : 'button';
 
 		if (asChild) {

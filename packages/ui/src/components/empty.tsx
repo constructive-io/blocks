@@ -8,7 +8,9 @@ function Empty({ className, ...props }: React.ComponentProps<'div'>) {
 		<div
 			data-slot='empty'
 			className={cn(
-				'flex w-full min-w-0 flex-1 flex-col items-center justify-center gap-4 rounded-lg border-dashed p-6 text-center text-balance',
+				// `[overflow-wrap:anywhere]` (inherited): an echoed search term or identifier wraps
+				// instead of overflowing both sides of the centred column.
+				'flex w-full min-w-0 flex-1 flex-col items-center justify-center gap-4 rounded-lg border-dashed p-6 text-center text-balance [overflow-wrap:anywhere]',
 				className,
 			)}
 			{...props}
@@ -20,7 +22,7 @@ function EmptyHeader({ className, ...props }: React.ComponentProps<'div'>) {
 	return (
 		<div
 			data-slot='empty-header'
-			className={cn('flex max-w-sm flex-col items-center gap-2', className)}
+			className={cn('flex max-w-sm min-w-0 flex-col items-center gap-2', className)}
 			{...props}
 		/>
 	);

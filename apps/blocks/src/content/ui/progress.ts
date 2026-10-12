@@ -48,7 +48,8 @@ export const progressDocs = definePrimitiveDocs({
           name: 'value',
           type: 'number | null',
           required: true,
-          description: 'Required current value. Pass null explicitly for indeterminate progress.',
+          description:
+            'Required current value. Finite values clamp into the min to max range (a value above max also sets data-overflow). Pass null, or let a calculation produce NaN or Infinity, for indeterminate progress, which shows a sweeping band instead of a full bar.',
         },
         { name: 'min', type: 'number', default: '0', description: 'Lower bound of the progress range.' },
         { name: 'max', type: 'number', default: '100', description: 'Upper bound of the progress range.' },

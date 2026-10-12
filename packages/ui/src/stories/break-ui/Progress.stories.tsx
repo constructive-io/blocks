@@ -55,14 +55,18 @@ export const Stress: StoryObj = {
 				</Frame>
 
 				{rows === worst ? (
-					<Frame width={280} label="max = 0 and min > max (bad bounds)">
+					<Frame width={280} label="Bounds: max = 0, inverted range, value below min">
 						<div style={{ display: 'flex', flexDirection: 'column', gap: 10, padding: 8 }}>
 							<div data-progress-row="max0">
 								<div className="mb-1 text-xs text-muted-foreground">value 5, max 0</div>
 								<Progress value={5} max={0} />
 							</div>
+							<div data-progress-row="inverted">
+								<div className="mb-1 text-xs text-muted-foreground">value 5, min 20, max 10</div>
+								<Progress value={5} min={20} max={10} />
+							</div>
 							<div data-progress-row="range">
-								<div className="mb-1 text-xs text-muted-foreground">value 5, min 10, max 20</div>
+								<div className="mb-1 text-xs text-muted-foreground">value 5, min 10, max 20 (below min)</div>
 								<Progress value={5} min={10} max={20} />
 							</div>
 						</div>

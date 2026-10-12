@@ -523,6 +523,7 @@ export function rewriteConstructiveUiImports(
 const ALIAS_DEPENDENCIES = new Map<string, string>([
 	['@/lib/utils', 'cn'],
 	['@/lib/slot', 'slot'],
+	['@/lib/initials', 'initials'],
 	['@/lib/motion/motion-config', 'motion-config'],
 	['@/lib/motion/tuning', 'motion-tuning'],
 	['@/lib/motion/fluid-highlight', 'fluid-highlight'],

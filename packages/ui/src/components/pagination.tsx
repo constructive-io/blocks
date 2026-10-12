@@ -65,12 +65,13 @@ function PaginationLink({
 			className={cn(
 				buttonVariants({
 					variant: isActive ? 'outline' : 'ghost',
-					size,
+					size: size === 'icon' ? 'default' : size,
 				}),
 				'tabular-nums',
 				isDisabled && 'pointer-events-none opacity-64',
-				// Slightly denser on small screens; full hit target from button variants
-				size === 'icon' && 'size-8 sm:size-10',
+				// Page numbers: a square at one or two digits (denser on small screens), growing
+				// with the label so 1,284 or 64,200 never overflows into its neighbours.
+				size === 'icon' && 'h-8 min-w-8 px-1 sm:h-10 sm:min-w-10',
 				className,
 			)}
 			{...props}
@@ -91,7 +92,7 @@ function PaginationPrevious({ className, ...props }: React.ComponentProps<typeof
 			)}
 			{...props}
 		>
-			<ChevronLeftIcon size={16} />
+			<ChevronLeftIcon size={16} className="rtl:rotate-180" />
 			<span className="hidden sm:inline">Previous</span>
 		</PaginationLink>
 	);
@@ -106,7 +107,7 @@ function PaginationNext({ className, ...props }: React.ComponentProps<typeof Pag
 			{...props}
 		>
 			<span className="hidden sm:inline">Next</span>
-			<ChevronRightIcon size={16} />
+			<ChevronRightIcon size={16} className="rtl:rotate-180" />
 		</PaginationLink>
 	);
 }

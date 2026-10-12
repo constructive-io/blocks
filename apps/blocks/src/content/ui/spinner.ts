@@ -26,7 +26,7 @@ export const spinnerDocs = definePrimitiveDocs({
     },
   ],
   accessibility: [
-    'Spinner renders role="status" with a default “Loading” label — override aria-label with the specific task, such as “Deploying”, when context helps.',
+    'Spinner renders role="status" with a default “Loading” label — set label to the specific task, such as “Deploying”, when context helps. Set decorative when a visible label already describes the wait, so a page of spinners is not a page of identical announcements.',
     'Under prefers-reduced-motion the spinner falls back to a pulse, so meaning does not depend on rotation.',
     'Do not rely on the spinner alone for long operations — surface progress or a cancel affordance when a wait may exceed a few seconds.',
   ],
@@ -41,10 +41,17 @@ export const spinnerDocs = definePrimitiveDocs({
           description: 'Size and color utilities, for example size-5 text-muted-foreground.',
         },
         {
-          name: 'aria-label',
+          name: 'label',
           type: 'string',
           default: '"Loading"',
           description: 'Accessible name announced with the status role.',
+        },
+        {
+          name: 'decorative',
+          type: 'boolean',
+          default: 'false',
+          description:
+            'Hides the spinner from assistive technology. Use it when text next to it already says what is loading, such as a "Saving…" button.',
         },
       ],
     },

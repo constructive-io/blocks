@@ -3,6 +3,9 @@ import type { Meta, StoryObj } from '@storybook/react-vite';
 import { Avatar, AvatarFallback, AvatarImage } from '../../components/avatar';
 import { pickDataset } from './dataset';
 import { Caption, faceImage, Frame, transparentLogo } from './group-a-frame';
+import { UserIcon } from 'lucide-react';
+
+import { initials } from '../../lib/initials';
 import { emails, manyRows, names } from './worst-case';
 
 const meta: Meta = {
@@ -162,6 +165,21 @@ export const Stress: StoryObj = {
 						<MemberRow name="Jane Doe" email="jane@acme.com" fallback="JD" />
 					)}
 				</Frame>
+
+				{mode === 'worst' ? (
+					<Frame width={420} label="initials() fallback for every worst-case name (empty name shows an icon)">
+						<div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px 16px', padding: 8 }}>
+							{[...Object.values(names), emails.long, emails.short, '   ', ''].map((name, i) => (
+								<div key={i} style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
+									<Avatar>
+										<AvatarFallback>{initials(name) ?? <UserIcon className="size-4" />}</AvatarFallback>
+									</Avatar>
+									<Caption>{name.trim() === '' ? '(empty)' : name}</Caption>
+								</div>
+							))}
+						</div>
+					</Frame>
+				) : null}
 
 				<Frame width={280} label="Stacked group">
 					{mode === 'empty' ? null : mode === 'one' ? (
