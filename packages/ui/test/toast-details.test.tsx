@@ -6,6 +6,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { Toaster } from '../src/components/sonner';
 import { toast } from '../src/components/toast';
+import { openToastDetails } from '../src/components/toast/toast-details';
 
 globalThis.IS_REACT_ACT_ENVIRONMENT = true;
 
@@ -172,6 +173,160 @@ describe('toast details dialog', () => {
 
 		expect(document.querySelectorAll('[data-slot="dialog-popup"]')).toHaveLength(1);
 		expect(dialogPopup()?.textContent).toContain('First');
+	});
+});
+
+describe('toast details in the host tree', () => {
+	const ownRoot = () => document.querySelector('[data-slot="toast-details-root"]');
+	const region = () => container!.querySelector<HTMLElement>('section[aria-live]');
+	const closeDialog = async () => {
+		await act(async () => buttonNamed(dialogPopup()!, 'Close')!.click());
+		await until(() => dialogPopup() === null);
+	};
+
+	it('is rendered inside whatever the app wrapped its Toaster in, so it gets the app\u2019s providers', async () => {
+		const reachedApp = vi.fn();
+		await renderToaster(
+			// React carries a portal's events, like its context, up the tree of whoever rendered it: a provider around
+			// the Toaster (Base UI's DirectionProvider, motion settings, a theme) is above the dialog exactly when this fires.
+			// biome-ignore lint/a11y/useKeyWithClickEvents: a probe for the React tree, not a control
+			<div onClick={reachedApp}>
+				<Toaster duration={600_000} />
+			</div>,
+		);
+		await openDetails();
+
+		await act(async () => dialogPopup()!.querySelector<HTMLElement>('[data-slot="dialog-title"]')!.click());
+
+		expect(reachedApp).toHaveBeenCalled();
+		expect(ownRoot()).toBeNull();
+	});
+
+	it('is shown by the first of several toasters, once', async () => {
+		await renderToaster(
+			<>
+				<Toaster duration={600_000} />
+				<Toaster duration={600_000} />
+			</>,
+		);
+		await act(async () => {
+			toast.error({ message: 'Import failed', description: DESCRIPTION });
+			await sleep(30);
+		});
+		await act(async () => buttonNamed(toastElement()!, 'View details')!.click());
+
+		expect(document.querySelectorAll('[data-slot="dialog-popup"]')).toHaveLength(1);
+	});
+
+	it('gives focus back to the control that opened it, while that control is on the page', async () => {
+		await renderToaster(<Toaster duration={600_000} />);
+		await act(async () => {
+			toast.error({ message: 'Import failed', description: DESCRIPTION });
+			await sleep(30);
+		});
+		const viewDetails = buttonNamed(toastElement()!, 'View details')!;
+		await act(async () => viewDetails.focus());
+		await act(async () => viewDetails.click());
+		// Focus has moved into the dialog, so there is something to give back.
+		await until(() => dialogPopup()?.contains(document.activeElement) === true);
+		expect(dialogPopup()?.contains(document.activeElement)).toBe(true);
+
+		await closeDialog();
+
+		expect(viewDetails.isConnected).toBe(true);
+		expect(document.activeElement).toBe(viewDetails);
+	});
+
+	it('gives focus back to the toaster\u2019s region when the toast is gone, not to the page', async () => {
+		await renderToaster(<Toaster duration={400} />);
+		await act(async () => {
+			toast.info({ message: 'Import finished', description: DESCRIPTION });
+			await sleep(30);
+		});
+		const viewDetails = buttonNamed(toastElement()!, 'View details')!;
+		await act(async () => viewDetails.focus());
+		await act(async () => viewDetails.click());
+		await until(() => viewDetails.isConnected === false);
+		expect(viewDetails.isConnected).toBe(false);
+
+		await closeDialog();
+
+		expect(region()).not.toBeNull();
+		expect(document.activeElement).toBe(region());
+	});
+
+	it('returns focus to the control it was given even when the browser never focused it (a click on a button in Safari)', async () => {
+		await renderToaster(<Toaster duration={600_000} />);
+		await act(async () => {
+			toast.error({ message: 'Import failed', description: DESCRIPTION });
+			await sleep(30);
+		});
+		const viewDetails = buttonNamed(toastElement()!, 'View details')!;
+		expect(document.activeElement).not.toBe(viewDetails);
+
+		await act(async () => viewDetails.click());
+		await closeDialog();
+
+		expect(document.activeElement).toBe(viewDetails);
+	});
+
+	it('does not leave a request waiting when its toaster unmounts, so the next one still opens', async () => {
+		await renderToaster(<Toaster duration={600_000} />);
+		await openDetails();
+		expect(dialogPopup()).not.toBeNull();
+
+		await act(async () => root!.unmount());
+		root = undefined;
+		expect(dialogPopup()).toBeNull();
+
+		await act(async () => openToastDetails({ title: 'Later', description: 'After the toaster went away' }));
+
+		expect(dialogPopup()?.textContent).toContain('After the toaster went away');
+	});
+});
+
+describe('toast details without a Toaster of ours', () => {
+	const ownRoot = () => document.querySelector('[data-slot="toast-details-root"]');
+	let opener: HTMLButtonElement;
+
+	beforeEach(() => {
+		opener = document.createElement('button');
+		opener.textContent = 'Open';
+		document.body.appendChild(opener);
+	});
+
+	it('opens in a root of its own, and gives focus back to its trigger', async () => {
+		await act(async () => opener.focus());
+		await act(async () => openToastDetails({ title: 'Import failed', description: DESCRIPTION, trigger: opener }));
+
+		expect(ownRoot()).not.toBeNull();
+		expect(dialogPopup()?.textContent).toContain('2 rows skipped');
+		expect(dialogPopup()?.closest('[data-slot="toast-details-root"]')).toBeNull(); // portaled out, like any dialog
+
+		await act(async () => buttonNamed(dialogPopup()!, 'Close')!.click());
+		await until(() => ownRoot() === null);
+
+		expect(dialogPopup()).toBeNull();
+		expect(document.activeElement).toBe(opener);
+	});
+
+	it('takes the focused element as the trigger when none is given', async () => {
+		await act(async () => opener.focus());
+		await act(async () => openToastDetails({ title: 'Import failed', description: DESCRIPTION }));
+		await act(async () => buttonNamed(dialogPopup()!, 'Close')!.click());
+		await until(() => ownRoot() === null);
+
+		expect(document.activeElement).toBe(opener);
+	});
+
+	it('opens one dialog however often it is asked', async () => {
+		await act(async () => {
+			openToastDetails({ title: 'One', description: DESCRIPTION });
+			openToastDetails({ title: 'Two', description: DESCRIPTION });
+		});
+
+		expect(document.querySelectorAll('[data-slot="dialog-popup"]')).toHaveLength(1);
+		expect(dialogPopup()?.textContent).toContain('One');
 	});
 });
 

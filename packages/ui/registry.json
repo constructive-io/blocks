@@ -2922,13 +2922,21 @@
       ],
       "docs": "Import: `import { Toaster } from '@/components/ui/sonner'`",
       "dependencies": [
-        "sonner"
+        "sonner",
+        "lucide-react"
       ],
-      "registryDependencies": [],
+      "registryDependencies": [
+        "button",
+        "dialog"
+      ],
       "files": [
         {
           "path": "registry/constructive/ui/sonner.tsx",
           "type": "registry:ui"
+        },
+        {
+          "path": "registry/constructive/blocks/toast/toast-details.tsx",
+          "type": "registry:component"
         }
       ]
     },
@@ -4207,7 +4215,8 @@
         "lucide-react"
       ],
       "registryDependencies": [
-        "button"
+        "button",
+        "sonner"
       ],
       "files": [
         {
@@ -4232,10 +4241,6 @@
         },
         {
           "path": "registry/constructive/blocks/toast/toast-card.tsx",
-          "type": "registry:component"
-        },
-        {
-          "path": "registry/constructive/blocks/toast/toast-details.tsx",
           "type": "registry:component"
         }
       ]

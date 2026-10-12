@@ -68,7 +68,7 @@ export function ToastCard({ toastId, message, description, action, onDismiss, ic
 									<button
 										type='button'
 										className='text-muted-foreground hover:text-foreground text-xs font-medium underline underline-offset-2 decoration-dotted'
-										onClick={() => openToastDetails({ title: message, description })}
+										onClick={(event) => openToastDetails({ title: message, description, trigger: event.currentTarget })}
 									>
 										View details
 									</button>
