@@ -62,17 +62,19 @@ describe('MiddleTruncate', () => {
 	it('keeps the end of the text visible and the whole text as the tooltip', async () => {
 		const name = 'IMG_20250914_183022_HDR_portrait_edited_edited.HEIC';
 		await render(<MiddleTruncate text={name} tail={9} />);
-		const parts = container!.querySelectorAll('span > span');
+		const parts = container!.querySelectorAll('[aria-hidden="true"]');
 		expect(container!.querySelector('[title]')?.getAttribute('title')).toBe(name);
+		// Assistive tech gets the name in one piece, not split at the cut.
+		expect(container!.querySelector('.sr-only')?.textContent).toBe(name);
 		expect(parts[0].textContent).toBe(name.slice(0, -9));
 		expect(parts[1].textContent).toBe('ited.HEIC');
 	});
 
 	it('does not split an emoji and leaves short text whole', async () => {
 		await render(<MiddleTruncate text="holiday-photo-🦊" tail={1} />);
-		expect(container!.querySelectorAll('span > span')[1].textContent).toBe('🦊');
+		expect(container!.querySelectorAll('[aria-hidden="true"]')[1].textContent).toBe('🦊');
 		act(() => root!.render(<MiddleTruncate text="short.txt" />));
-		expect(container!.querySelectorAll('span > span')).toHaveLength(1);
+		expect(container!.querySelectorAll('[aria-hidden="true"]')).toHaveLength(1);
 	});
 });
 

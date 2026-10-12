@@ -26,7 +26,7 @@ const segmenter =
 // Approximation for runtimes without Intl.Segmenter: a flag, or one code point
 // plus its combining marks, variation selector, skin tone and ZWJ continuations.
 const GRAPHEME_FALLBACK =
-	/^(?:\p{Regional_Indicator}{2}|.[\p{M}️\u{1F3FB}-\u{1F3FF}]*(?:‍.[\p{M}️\u{1F3FB}-\u{1F3FF}]*)*)/su;
+	/^(?:\p{Regional_Indicator}{2}|.[\p{M}️\u{1F3FB}-\u{1F3FF}]*(?:‍.[\p{M}️\u{1F3FB}-\u{1F3FF}]*)*)/u;
 
 const LEADING_NOISE = /^[^\p{L}\p{N}\p{Extended_Pictographic}\p{Regional_Indicator}]+/u;
 const TRAILING_NOISE = /[^\p{L}\p{N}\p{Extended_Pictographic}\p{Regional_Indicator}]+$/u;

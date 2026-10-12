@@ -29,10 +29,12 @@ export function MiddleTruncate({ text, tail = 12, className }: MiddleTruncatePro
 	return (
 		// `dir="auto"` lays the two halves out in the text's own direction, so Arabic or Hebrew names stay in reading order.
 		// `whitespace-pre` keeps a space at the cut ("Đặng " + "Thị Ngọc Hân") from collapsing away.
+		// The halves are flex items, so assistive tech would read a break at the cut ("Pr oduct"); it reads the sr-only copy instead.
 		<span dir="auto" className={cn('flex min-w-0', className)} title={text}>
-			<span className="min-w-0 overflow-hidden text-ellipsis whitespace-pre">{head}</span>
+			<span className="sr-only">{text}</span>
+			<span aria-hidden="true" className="min-w-0 overflow-hidden text-ellipsis whitespace-pre">{head}</span>
 			{/* The tail never shrinks while the head can, but it never outgrows the line either: in a box narrower than the tail it clips instead of spilling over the neighbours. */}
-			{end ? <span className="max-w-full shrink-0 overflow-hidden text-ellipsis whitespace-pre">{end}</span> : null}
+			{end ? <span aria-hidden="true" className="max-w-full shrink-0 overflow-hidden text-ellipsis whitespace-pre">{end}</span> : null}
 		</span>
 	);
 }
