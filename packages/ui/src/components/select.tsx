@@ -159,6 +159,8 @@ const SelectLabelContext = React.createContext<{ declared: SelectLabels; registr
 
 const getServerVersion = () => 0;
 
+const useIsomorphicLayoutEffect = typeof window === "undefined" ? React.useEffect : React.useLayoutEffect;
+
 function useRegisterSelectLabel(value: unknown, label: string) {
   const context = React.useContext(SelectLabelContext);
   const registry = context?.registry;
@@ -193,7 +195,9 @@ function Select({ onValueChange, items, children, ...props }: SelectProps) {
   const labels = React.useMemo(() => mergeLabels(registered, declared), [registered, declared]);
   const context = React.useMemo(() => (hasItems ? null : { declared, registry }), [hasItems, declared, registry]);
 
-  React.useEffect(() => {
+  // A layout effect, because a commit runs every layout effect before any passive cleanup: the selection is current
+  // when items that unmount in this same commit unregister, whatever order the host changed the value and the items in.
+  useIsomorphicLayoutEffect(() => {
     if (hasItems) return;
     const selected = new Set<string>();
     addValues(selected, value);
@@ -206,7 +210,9 @@ function Select({ onValueChange, items, children, ...props }: SelectProps) {
       <SelectPrimitive.Root<string>
         items={items ?? (hasLabels(labels) ? labels : undefined)}
         onValueChange={(next, _eventDetails) => {
-          setPicked(next);
+          // Base UI also reports `null` when it resets the value because the selected item unmounted. A controlled host
+          // never sees that, and it must not erase the value that was just picked and is on its way back.
+          if (next != null || value === undefined) setPicked(next);
           // Only call callback when there's an actual value (not null/undefined)
           if (next != null) {
             onValueChange?.(next);

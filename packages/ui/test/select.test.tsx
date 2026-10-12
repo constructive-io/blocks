@@ -261,6 +261,54 @@ describe('Select label registry', () => {
 		expect(trigger(container).textContent).toBe('viewer');
 	});
 
+	it('labels the new value when the host changes it in the same render that removes the items', async () => {
+		const App = ({ value, shown }: { value: string; shown: boolean }) => (
+			<Select value={value} onValueChange={() => {}} defaultOpen>
+				<SelectTrigger>
+					<SelectValue />
+				</SelectTrigger>
+				<SelectContent>
+					<Roles shown={shown} />
+				</SelectContent>
+			</Select>
+		);
+		const { container, root } = await mount(<App value="editor" shown />);
+
+		// One commit both selects "viewer" and unmounts its item: the selection has to be known before the item unregisters.
+		await act(async () => root.render(<App value="viewer" shown={false} />));
+
+		expect(trigger(container).textContent).toBe('Viewer');
+	});
+
+	it('keeps a picked value when Base UI resets a controlled value that has no item', async () => {
+		function Items({ extra }: { extra: boolean }) {
+			return (
+				<>
+					<SelectItem value="viewer">Viewer</SelectItem>
+					{extra ? <SelectItem value="guest">Guest</SelectItem> : null}
+				</>
+			);
+		}
+		const App = ({ value, shown, extra }: { value: string; shown: boolean; extra: boolean }) => (
+			<Select value={value} onValueChange={() => {}} defaultOpen>
+				<SelectTrigger>
+					<SelectValue />
+				</SelectTrigger>
+				<SelectContent>{shown ? <Items extra={extra} /> : null}</SelectContent>
+			</Select>
+		);
+		const { container, root } = await mount(<App value="editor" shown extra={false} />);
+		await pick(document.body.querySelector<HTMLElement>('[data-slot="select-item"]')!);
+
+		// The item list changes size while the host's value ("editor") has no item, which makes Base UI report `null`.
+		// The host never hears about it, so the pick that is still on its way back must survive.
+		await act(async () => root.render(<App value="editor" shown extra />));
+		await act(async () => root.render(<App value="editor" shown={false} extra />));
+		await act(async () => root.render(<App value="viewer" shown={false} extra />));
+
+		expect(trigger(container).textContent).toBe('Viewer');
+	});
+
 	it('labels the value a controlled host passes back after the items are gone', async () => {
 		const App = ({ value, shown }: { value: string; shown: boolean }) => (
 			<Select value={value} onValueChange={() => {}} defaultOpen>
