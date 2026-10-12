@@ -598,22 +598,54 @@ function SidebarMenuAction({
 	});
 }
 
+const BADGE_WIDTH_VAR = '--sidebar-menu-badge-width';
+
+// Layout effects that only observe: on the server `useEffect` stands in, so React 18 does not warn while rendering.
+const useIsomorphicLayoutEffect = typeof window === 'undefined' ? React.useEffect : React.useLayoutEffect;
+
+let badgeObserver: ResizeObserver | undefined;
+let observedBadges = 0;
+
+/**
+ * One observer serves every badge. Its first notification arrives with all of them, so their widths are read
+ * together and only then written: a read after each write would make the browser lay the whole list out again
+ * for every badge.
+ */
+function publishBadgeWidths(entries: ResizeObserverEntry[]) {
+	const widths = entries.map((entry) => entry.borderBoxSize?.[0]?.inlineSize ?? (entry.target as HTMLElement).offsetWidth);
+	entries.forEach((entry, index) => {
+		(entry.target.parentElement as HTMLElement | null)?.style.setProperty(BADGE_WIDTH_VAR, `${widths[index]}px`);
+	});
+}
+
+function observeBadge(badge: HTMLElement) {
+	if (typeof ResizeObserver === 'undefined') return;
+	badgeObserver ??= new ResizeObserver(publishBadgeWidths);
+	badgeObserver.observe(badge);
+	observedBadges += 1;
+	return () => {
+		badgeObserver?.unobserve(badge);
+		observedBadges -= 1;
+		if (observedBadges === 0) {
+			badgeObserver?.disconnect();
+			badgeObserver = undefined;
+		}
+	};
+}
+
 function SidebarMenuBadge({ className, ...props }: React.ComponentProps<'div'>) {
 	const ref = React.useRef<HTMLDivElement>(null);
 
 	// The badge is absolutely positioned, so the label beside it cannot see how wide it is. Publish the width on the
 	// item and the button reserves exactly that much room (see `sidebarMenuButtonVariants`).
-	React.useLayoutEffect(() => {
+	useIsomorphicLayoutEffect(() => {
 		const badge = ref.current;
 		const item = badge?.parentElement;
 		if (!badge || !item) return;
-		const publish = () => item.style.setProperty('--sidebar-menu-badge-width', `${badge.offsetWidth}px`);
-		publish();
-		const observer = typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(publish);
-		observer?.observe(badge);
+		const stop = observeBadge(badge);
 		return () => {
-			observer?.disconnect();
-			item.style.removeProperty('--sidebar-menu-badge-width');
+			stop?.();
+			item.style.removeProperty(BADGE_WIDTH_VAR);
 		};
 	}, []);
 

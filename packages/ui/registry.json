@@ -1533,6 +1533,22 @@
       ]
     },
     {
+      "name": "compose-refs",
+      "type": "registry:lib",
+      "title": "compose-refs",
+      "description": "Merges refs into one stable callback ref that keeps React 19 ref cleanup functions working, plus a hook that memoizes it.",
+      "categories": [
+        "utility"
+      ],
+      "docs": "Import: `import { mergeRefs, useMergedRefs } from '@/lib/compose-refs'`",
+      "files": [
+        {
+          "path": "registry/constructive/lib/compose-refs.ts",
+          "type": "registry:lib"
+        }
+      ]
+    },
+    {
       "name": "use-controllable-state",
       "type": "registry:hook",
       "title": "useControllableState",
@@ -2250,9 +2266,9 @@
       ],
       "registryDependencies": [
         "cn",
+        "compose-refs",
         "initial-focus",
         "portal",
-        "slot",
         "button",
         "scroll-area"
       ],
@@ -2277,9 +2293,9 @@
       ],
       "registryDependencies": [
         "cn",
+        "compose-refs",
         "initial-focus",
         "portal",
-        "slot",
         "button"
       ],
       "files": [
@@ -2379,7 +2395,8 @@
         "@base-ui/react"
       ],
       "registryDependencies": [
-        "cn"
+        "cn",
+        "compose-refs"
       ],
       "files": [
         {

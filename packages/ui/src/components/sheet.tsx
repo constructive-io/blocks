@@ -459,6 +459,7 @@ function SheetContent({
 	onPointerDownOutside: _onPointerDownOutside,
 	onEscapeKeyDown: _onEscapeKeyDown,
 	onFocusOutside: _onFocusOutside,
+	initialFocus,
 	...props
 }: SheetContentProps) {
 	const { isOpen, depth, sheetId } = useSheet();
@@ -550,7 +551,8 @@ function SheetContent({
 						data-sheet-depth={depth}
 						data-sheet-id={sheetId}
 						// A sheet that scrolls opens at its top, not scrolled to a footer button that is first in tab order.
-						initialFocus={scrollSafeInitialFocus(() => contentRef.current)}
+						// Leaving `initialFocus` out and passing `undefined` are the same thing: both get this default.
+						initialFocus={initialFocus ?? scrollSafeInitialFocus(() => contentRef.current)}
 						{...props}
 						render={
 							<motion.div

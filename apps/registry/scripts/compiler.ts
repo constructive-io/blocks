@@ -525,6 +525,7 @@ const ALIAS_DEPENDENCIES = new Map<string, string>([
 	['@/lib/slot', 'slot'],
 	['@/lib/initials', 'initials'],
 	['@/lib/initial-focus', 'initial-focus'],
+	['@/lib/compose-refs', 'compose-refs'],
 	['@/lib/motion/motion-config', 'motion-config'],
 	['@/lib/motion/tuning', 'motion-tuning'],
 	['@/lib/motion/fluid-highlight', 'fluid-highlight'],

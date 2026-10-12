@@ -7,8 +7,12 @@
  * itself, which does not scroll: the overlay opens at the top, and the focus moves on with the first Tab. That is
  * the WAI-ARIA dialog pattern for content long enough to scroll.
  *
+ * Base UI's own default also focuses the popup, not the first control, when it is opened by touch, so the soft
+ * keyboard does not open over it (needed on Android). Replacing `initialFocus` replaces that rule too, so this
+ * function carries it.
+ *
  * ```tsx
- * <DialogPrimitive.Popup ref={popupRef} initialFocus={scrollSafeInitialFocus(() => popupRef.current)} />
+ * <DialogPrimitive.Popup ref={popupRef} initialFocus={initialFocus ?? scrollSafeInitialFocus(() => popupRef.current)} />
  * ```
  */
 const TABBABLE = [
@@ -49,8 +53,11 @@ function firstTabbableIsInView(overlay: HTMLElement) {
  * placed, so it can come from a ref.
  */
 export function scrollSafeInitialFocus(getOverlay: () => HTMLElement | null) {
-	return (): true | HTMLElement => {
+	// `interactionType` is Base UI's: 'mouse', 'touch', 'pen', 'keyboard' or ''.
+	return (interactionType?: string): true | HTMLElement => {
 		const overlay = getOverlay();
-		return overlay && !firstTabbableIsInView(overlay) ? overlay : true;
+		if (!overlay) return true;
+		if (interactionType === 'touch') return overlay;
+		return firstTabbableIsInView(overlay) ? true : overlay;
 	};
 }

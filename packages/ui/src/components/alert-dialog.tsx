@@ -4,8 +4,8 @@ import * as React from 'react';
 import { AlertDialog as AlertDialogPrimitive } from '@base-ui/react/alert-dialog';
 
 import { ModalPortalScope, useRootPortalContainer } from '@constructive-io/ui/portal';
+import { useMergedRefs } from '../lib/compose-refs';
 import { scrollSafeInitialFocus } from '../lib/initial-focus';
-import { composeRefs } from '../lib/slot';
 import { cn } from '../lib/utils';
 import { buttonVariants } from './button';
 
@@ -68,9 +68,9 @@ function AlertDialogOverlay({ className, ...props }: React.ComponentProps<typeof
 	);
 }
 
-function AlertDialogContent({ className, children, ...props }: React.ComponentProps<typeof AlertDialogPrimitive.Popup>) {
+function AlertDialogContent({ className, children, initialFocus, ...props }: React.ComponentProps<typeof AlertDialogPrimitive.Popup>) {
 	const popupRef = React.useRef<HTMLDivElement>(null);
-	const ref = React.useMemo(() => composeRefs(popupRef, props.ref), [props.ref]);
+	const ref = useMergedRefs(popupRef, props.ref);
 	return (
 		<AlertDialogPortal>
 			<AlertDialogOverlay />
@@ -84,7 +84,8 @@ function AlertDialogContent({ className, children, ...props }: React.ComponentPr
 					className,
 				)}
 				// A popup that scrolls opens at its top, not scrolled to the footer button that is first in tab order.
-				initialFocus={scrollSafeInitialFocus(() => popupRef.current)}
+				// Leaving `initialFocus` out and passing `undefined` are the same thing: both get this default.
+				initialFocus={initialFocus ?? scrollSafeInitialFocus(() => popupRef.current)}
 				{...props}
 				ref={ref}
 			>

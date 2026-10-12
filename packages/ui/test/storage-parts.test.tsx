@@ -3,7 +3,7 @@ import { act } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { MiddleTruncate, ObjectSelectionBar, UploadProgressList, type UploadItem } from '../src/components/storage';
+import { BucketRail, MiddleTruncate, ObjectSelectionBar, UploadProgressList, type StorageBucket, type UploadItem } from '../src/components/storage';
 
 globalThis.IS_REACT_ACT_ENVIRONMENT = true;
 
@@ -70,11 +70,67 @@ describe('MiddleTruncate', () => {
 		expect(parts[1].textContent).toBe('ited.HEIC');
 	});
 
-	it('does not split an emoji and leaves short text whole', async () => {
+	it('does not split an emoji', async () => {
 		await render(<MiddleTruncate text="holiday-photo-🦊" tail={1} />);
 		expect(container!.querySelectorAll('[aria-hidden="true"]')[1].textContent).toBe('🦊');
-		act(() => root!.render(<MiddleTruncate text="short.txt" />));
-		expect(container!.querySelectorAll('[aria-hidden="true"]')).toHaveLength(1);
+	});
+
+	it('leaves text that fits in its tail as one ordinary line, readable and selectable once', async () => {
+		await render(<MiddleTruncate text="short.txt" />);
+		// No hidden halves and no second copy for assistive tech: the text is in the document exactly once.
+		expect(container!.querySelectorAll('[aria-hidden="true"]')).toHaveLength(0);
+		expect(container!.textContent).toBe('short.txt');
+		expect(container!.querySelector('[title]')?.getAttribute('title')).toBe('short.txt');
+	});
+
+	it('takes its tooltip from the host: a string replaces it and false leaves it off', async () => {
+		await render(<MiddleTruncate text="IMG_20250914_183022_HDR_portrait_edited_edited.HEIC" title="The name, 1.0 MB" />);
+		expect(container!.querySelector('[title]')?.getAttribute('title')).toBe('The name, 1.0 MB');
+		act(() => root!.render(<MiddleTruncate text="IMG_20250914_183022_HDR_portrait_edited_edited.HEIC" title={false} />));
+		expect(container!.querySelector('[title]')).toBeNull();
+	});
+
+	it('builds one segmenter and segments each text once, however often it re-renders', async () => {
+		const Original = Intl.Segmenter;
+		let constructed = 0;
+		class Counting extends Original {
+			constructor(...args: ConstructorParameters<typeof Intl.Segmenter>) {
+				super(...args);
+				constructed += 1;
+			}
+		}
+		const segment = vi.spyOn(Original.prototype, 'segment');
+		Intl.Segmenter = Counting as typeof Intl.Segmenter;
+		try {
+			const names = Array.from({ length: 20 }, (_, index) => `customer-feedback-from-enterprise-onboarding-${index}.csv`);
+			const rows = () => names.map((name) => <MiddleTruncate key={name} text={name} />);
+			await render(<div>{rows()}</div>);
+			const afterFirstRender = segment.mock.calls.length;
+			act(() => root!.render(<div>{rows()}</div>));
+			act(() => root!.render(<div>{rows()}</div>));
+			expect(constructed).toBe(0);
+			expect(afterFirstRender).toBe(20);
+			expect(segment.mock.calls.length).toBe(20);
+		} finally {
+			Intl.Segmenter = Original;
+			segment.mockRestore();
+		}
+	});
+});
+
+describe('BucketRail', () => {
+	it('keeps the details in the row tooltip: the truncated name inside adds no tooltip of its own', async () => {
+		const bucket: StorageBucket = {
+			id: 'b1',
+			key: 'customer-feedback-from-enterprise-onboarding-uploads-eu-west-1',
+			visibility: 'public',
+			isPublic: true,
+			allowCustomKeys: false,
+			objectCount: 1_284_000,
+		};
+		await render(<BucketRail buckets={[bucket]} selectedBucketId="b1" onSelectBucket={() => {}} />);
+		const titles = [...container!.querySelectorAll('[title]')].map((element) => element.getAttribute('title'));
+		expect(titles).toEqual([`${bucket.key}, Public, 1,284,000 files`]);
 	});
 });
 

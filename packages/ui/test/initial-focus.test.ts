@@ -56,6 +56,18 @@ describe('scrollSafeInitialFocus', () => {
 		expect(scrollSafeInitialFocus(() => overlay)()).toBe(true);
 	});
 
+	it('focuses the overlay itself when opened by touch, whatever is on screen, so the soft keyboard stays closed', () => {
+		const overlay = scrollingOverlay(place(el('input'), 100, 140));
+		const focus = scrollSafeInitialFocus(() => overlay);
+		expect(focus('touch')).toBe(overlay);
+		// Every other way of opening keeps the default while the first tabbable element is visible.
+		for (const type of ['mouse', 'pen', 'keyboard', '']) expect(focus(type)).toBe(true);
+	});
+
+	it('before the overlay exists, touch falls back to the default too', () => {
+		expect(scrollSafeInitialFocus(() => null)('touch')).toBe(true);
+	});
+
 	it('leaves overlays with nothing to focus, and a missing overlay, to the default', () => {
 		const empty = scrollingOverlay(place(el('p'), 20, 60));
 		expect(scrollSafeInitialFocus(() => empty)()).toBe(true);

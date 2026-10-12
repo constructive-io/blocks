@@ -77,7 +77,8 @@ export function BucketRail({
 							label={`${name}, ${details}`}
 							labelNode={
 								<>
-									<MiddleTruncate text={name} />
+									{/* The row's own title carries the details; a title here would hide it. */}
+									<MiddleTruncate text={name} title={false} />
 									<span className="sr-only">, {details}</span>
 								</>
 							}

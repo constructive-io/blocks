@@ -3,6 +3,7 @@
 import * as React from 'react';
 import { Tabs as TabsPrimitive } from '@base-ui/react/tabs';
 
+import { useMergedRefs } from '../lib/compose-refs';
 import { cn } from '../lib/utils';
 
 function Tabs({ className, ...props }: React.ComponentProps<typeof TabsPrimitive.Root>) {
@@ -25,6 +26,8 @@ function revealInline(scroller: HTMLElement, target: HTMLElement) {
  */
 function TabsList({ className, children, style, ...props }: React.ComponentProps<typeof TabsPrimitive.List>) {
 	const listRef = React.useRef<HTMLDivElement | null>(null);
+	// The list's own ref and the one the consumer passes, merged once so React does not detach and attach them every render.
+	const ref = useMergedRefs(listRef, props.ref);
 	// Physical sides that have more tabs behind them, so the fade masks the right edge in both text directions.
 	const [hidden, setHidden] = React.useState({ left: false, right: false });
 
@@ -84,12 +87,7 @@ function TabsList({ className, children, style, ...props }: React.ComponentProps
 			)}
 			style={{ ...style, maskImage: mask, WebkitMaskImage: mask }}
 			{...props}
-			ref={(node: HTMLDivElement | null) => {
-				listRef.current = node;
-				const forwarded = props.ref;
-				if (typeof forwarded === 'function') forwarded(node);
-				else if (forwarded) (forwarded as React.MutableRefObject<HTMLDivElement | null>).current = node;
-			}}
+			ref={ref}
 		>
 			<TabsIndicator />
 			{children}
