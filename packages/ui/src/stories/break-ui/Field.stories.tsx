@@ -125,6 +125,12 @@ export const Stress: StoryObj = {
 					</FieldRow>
 				</Frame>
 
+				<Frame width={288} label="FieldRow with the switch at the end, long label and description (288px)">
+					<FieldRow labelPosition="start" label={d.checkLabel} description={d.horizontalDescription}>
+						<Switch />
+					</FieldRow>
+				</Frame>
+
 				<Frame width={320} label="FieldError with several, duplicate and empty errors (320px)">
 					<Field data-invalid>
 						<FieldLabel htmlFor="errs">Password</FieldLabel>

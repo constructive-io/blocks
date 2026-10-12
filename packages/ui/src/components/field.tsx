@@ -268,21 +268,30 @@ function FieldRow({
 	className,
 	children,
 }: FieldRowProps) {
-	const labelElement = <FieldLabel htmlFor={htmlFor}>{label}</FieldLabel>;
+	// Label, description and error share one column, so the description lines up with the label
+	// text rather than sitting under the control.
+	const content = (
+		<FieldContent>
+			<FieldLabel htmlFor={htmlFor}>{label}</FieldLabel>
+			{description && <FieldDescription>{description}</FieldDescription>}
+			{error && <FieldError>{error}</FieldError>}
+		</FieldContent>
+	);
 
 	return (
 		<div
 			data-slot='field-row'
 			data-invalid={Boolean(error)}
-			className={cn('group/field flex flex-col gap-2 data-[invalid=true]:text-destructive', className)}
+			// `items-start`: the control stays beside the label's first line however long the label
+			// wraps; the 1px nudge centres a 16px checkbox or radio on that line.
+			className={cn(
+				'group/field flex items-start gap-2 data-[invalid=true]:text-destructive [&>[role=checkbox]]:mt-px [&>[role=radio]]:mt-px',
+				className,
+			)}
 		>
-			<div className='flex items-center gap-2'>
-				{labelPosition === 'start' && labelElement}
-				{children}
-				{labelPosition === 'end' && labelElement}
-			</div>
-			{description && <FieldDescription>{description}</FieldDescription>}
-			{error && <FieldError>{error}</FieldError>}
+			{labelPosition === 'start' && content}
+			{children}
+			{labelPosition === 'end' && content}
 		</div>
 	);
 }
