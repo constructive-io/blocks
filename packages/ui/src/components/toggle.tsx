@@ -36,40 +36,37 @@ const toggleVariants = cva(
 	},
 );
 
+// A run of only whitespace never becomes a flex item in a browser, so it is dropped rather than wrapped (an empty span would add a gap).
+const BLANK = /^[ \t\n\f\r]*$/;
+
 /**
- * Wraps each run of adjacent text in one truncating element, so a label longer than the container ends in an ellipsis.
- * A run is wrapped once, not per child: `Likes {count}` is one flex item, where one item per child would open a gap
- * between them. Elements are left alone and whitespace between them stays whitespace.
+ * Wraps each contiguous run of text (strings and numbers) in ONE truncating element and leaves elements alone, so a
+ * label longer than the container ends in an ellipsis. A run is wrapped once, not per child: `Likes {count}` is a
+ * single flex item, where one item per child would open a gap between them. Same rule as Badge.
  */
-function truncateTextRuns(children: React.ReactNode) {
-	const parts: React.ReactNode[] = [];
+function truncatable(children: React.ReactNode) {
+	const out: React.ReactNode[] = [];
 	let run = '';
-	let inRun = false;
-	const endRun = () => {
-		if (!inRun) return;
-		parts.push(
-			run.trim() === '' ? (
-				run
-			) : (
-				<span key={`text-${parts.length}`} className='min-w-0 truncate' dir='auto'>
+	const flush = () => {
+		if (!BLANK.test(run)) {
+			out.push(
+				<span key={`text-${out.length}`} className='min-w-0 truncate' dir='auto'>
 					{run}
-				</span>
-			),
-		);
+				</span>,
+			);
+		}
 		run = '';
-		inRun = false;
 	};
 	for (const child of React.Children.toArray(children)) {
 		if (typeof child === 'string' || typeof child === 'number') {
 			run += child;
-			inRun = true;
 		} else {
-			endRun();
-			parts.push(child);
+			flush();
+			out.push(child);
 		}
 	}
-	endRun();
-	return parts;
+	flush();
+	return out;
 }
 
 type ToggleProps = React.ComponentProps<typeof TogglePrimitive> &
@@ -82,7 +79,7 @@ function Toggle({ className, variant, size, children, ...props }: ToggleProps) {
 			className={cn(toggleVariants({ variant, size }), 'data-[pressed]:bg-accent', className)}
 			{...props}
 		>
-			{truncateTextRuns(children)}
+			{truncatable(children)}
 		</TogglePrimitive>
 	);
 }

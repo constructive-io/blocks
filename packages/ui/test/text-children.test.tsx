@@ -76,10 +76,11 @@ describe.each(Object.entries(hosts))('%s text children', (_name, { slot, element
 		expect(items(host)).toEqual(['span:ab', 'svg:', 'span:cd']);
 	});
 
-	it('leaves whitespace between elements as whitespace instead of a flex item', async () => {
+	it('drops whitespace between elements instead of turning it into a flex item', async () => {
 		const host = (await render(element(<svg key="one" />, ' ', <svg key="two" />))).querySelector<HTMLElement>(slot)!;
 
 		expect(items(host)).toEqual(['svg:', 'svg:']);
+		expect(host.textContent).toBe('');
 	});
 
 	it('renders nothing extra for empty children', async () => {
