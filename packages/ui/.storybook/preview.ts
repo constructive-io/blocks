@@ -2,6 +2,9 @@ import type { Preview } from '@storybook/react-vite';
 import React, { useEffect } from 'react';
 import { DialRoot } from 'dialkit';
 import { MotionConfig } from 'motion/react';
+import { DirectionProvider } from '@base-ui/react/direction-provider';
+import { useGlobals } from 'storybook/preview-api';
+import { BreakUiToggle, datasetStates, type BreakUiParameter, type Dataset } from '../src/stories/break-ui/dataset';
 import 'dialkit/styles.css';
 import '../src/styles/globals.css';
 
@@ -57,6 +60,36 @@ const preview: Preview = {
         showName: true,
       },
     },
+    // Break-UI fixture switch; stories opt in with `parameters.breakUi` and read it via `pickDataset`.
+    dataset: {
+      name: 'Dataset',
+      description: 'Fixture dataset for break-ui stories',
+      defaultValue: 'demo',
+      toolbar: {
+        icon: 'database',
+        items: [
+          { value: 'demo', title: 'Demo data' },
+          { value: 'worst', title: 'Worst case' },
+          { value: 'empty', title: 'Empty' },
+          { value: 'one', title: 'One' },
+          { value: 'huge', title: '1,000 rows' },
+        ],
+        showName: true,
+      },
+    },
+    direction: {
+      name: 'Direction',
+      description: 'Text direction for the story canvas',
+      defaultValue: 'ltr',
+      toolbar: {
+        icon: 'transfer',
+        items: [
+          { value: 'ltr', title: 'LTR' },
+          { value: 'rtl', title: 'RTL' },
+        ],
+        showName: true,
+      },
+    },
   },
 
   decorators: [
@@ -64,6 +97,9 @@ const preview: Preview = {
       const theme = context.globals.theme || 'light';
       // `fullscreen` stories own the whole viewport (app shells, templates); everything else gets a 16px gutter.
       const fullscreen = context.parameters.layout === 'fullscreen';
+      const direction = context.globals.direction === 'rtl' ? 'rtl' : 'ltr';
+      const breakUiStates = datasetStates(context.parameters.breakUi as BreakUiParameter | undefined);
+      const [, updateGlobals] = useGlobals();
 
       // Apply dark class to document root so Base UI portals inherit dark mode
       useEffect(() => {
@@ -75,7 +111,15 @@ const preview: Preview = {
         }
       }, [theme]);
 
+      useEffect(() => {
+        document.documentElement.dir = direction;
+      }, [direction]);
+
+      // A correctly configured host tells Base UI its direction; without this, RTL stories test a misconfigured app.
       return React.createElement(
+        DirectionProvider,
+        { direction },
+        React.createElement(
         MotionConfig,
         { reducedMotion: 'user' },
         React.createElement(
@@ -105,6 +149,13 @@ const preview: Preview = {
             { className: fullscreen ? 'bg-background text-foreground' : 'bg-background text-foreground p-4' },
             React.createElement(Story)
           ),
+          breakUiStates.length > 0
+            ? React.createElement(BreakUiToggle, {
+                states: breakUiStates,
+                active: (context.globals.dataset as Dataset | undefined) ?? 'demo',
+                onSelect: (dataset: Dataset) => updateGlobals({ dataset }),
+              })
+            : null,
           // Live theme/motion tuning panel (dev tooling; any story can register
           // a folder via useDialKit — the Kitchen Sink registers "Constructive theme")
           React.createElement(DialRoot, {
@@ -113,7 +164,7 @@ const preview: Preview = {
             theme,
           })
         )
-      );
+      ));
     },
   ],
 };
