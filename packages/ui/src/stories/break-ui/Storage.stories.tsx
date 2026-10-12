@@ -258,14 +258,14 @@ export const UploadStress: StoryObj = {
 			one: [worstUploads[0]],
 			huge: manyRows(200, (index) => ({ ...worstUploads[index % worstUploads.length], id: `h${index}` })),
 		});
-		const dropzone = (maxSize: number | null) => <UploadDropzone onFiles={noop} onCancel={noop} uploads={uploads} maxSize={maxSize} />;
+		const dropzone = (maxSize: number | null) => <UploadDropzone onFiles={noop} onCancel={noop} onDismiss={noop} uploads={uploads} maxSize={maxSize} />;
 		return (
 			<div className="flex flex-wrap items-start gap-8">
 				<div style={{ width: 416, maxWidth: '100%' }} data-testid="upload-sheet">
 					{dropzone(5_497_558_138_880)}
 				</div>
 				<div style={{ width: 280, maxWidth: '100%' }} data-testid="upload-narrow">
-					<UploadProgressList uploads={uploads} onCancel={noop} />
+					<UploadProgressList uploads={uploads} onCancel={noop} onDismiss={noop} />
 				</div>
 			</div>
 		);

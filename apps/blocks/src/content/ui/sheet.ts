@@ -51,7 +51,7 @@ export const sheetDocs = definePrimitiveDocs({
   accessibility: [
     'Give every SheetContent an accessible name with SheetTitle. Add SheetDescription when supporting context is useful, and give each form control a visible Label or another accessible name.',
     'Keep a SheetClose inside the panel when showClose is false; the built-in icon close button already has an accessible name.',
-    'Base UI moves focus into the panel, traps focus for the top-level modal sheet, closes on Escape or outside press, and returns focus to the trigger.',
+    'Base UI moves focus into the panel, traps focus for the top-level modal sheet, closes on Escape or outside press, and returns focus to the trigger. When the panel scrolls and the first focusable element is below the fold, focus goes to the panel itself so it opens at the top.',
     'Nested sheets keep the parent visible but make the newest sheet the active layer. Keep essential parent actions available again after the nested sheet closes.',
   ],
   api: [

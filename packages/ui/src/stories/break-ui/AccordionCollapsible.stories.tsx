@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from '@storybook/react-vite';
-import { pickDataset } from './dataset';
+import { getDataset, pickDataset } from './dataset';
 import { emails, identifiers, labels, manyRows, names } from './worst-case';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '../../components/accordion';
 import {
@@ -45,8 +45,10 @@ export const Stress: StoryObj = {
 		const sections = pickDataset<Section[]>(context, { demo, worst, empty: [], one: [demo[0]], huge });
 		// The first section starts open so the panel's own overflow is visible without a click.
 		const open = sections.slice(0, 1).map((section) => section.value);
+		const dataset = getDataset(context);
+		// `defaultValue` is read once, so each dataset gets a fresh uncontrolled Accordion.
 		const accordion = (testId: string) => (
-			<Accordion defaultValue={open} data-testid={testId}>
+			<Accordion key={dataset} defaultValue={open} data-testid={testId}>
 				{sections.map((section) => (
 					<AccordionItem key={section.value} value={section.value}>
 						<AccordionTrigger>{section.trigger}</AccordionTrigger>

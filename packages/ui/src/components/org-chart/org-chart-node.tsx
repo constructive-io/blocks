@@ -1,6 +1,6 @@
 'use client';
 
-import { ChevronDown, Ellipsis, GitBranch, Pencil, Trash2, UsersRound } from 'lucide-react';
+import { ChevronDown, Ellipsis, GitBranch, Pencil, Trash2, UserRound, UsersRound } from 'lucide-react';
 import * as React from 'react';
 
 import { cn } from '../../lib/utils';
@@ -29,7 +29,9 @@ export function PersonAvatar({ person, className }: { person: { displayName: str
 	return (
 		<Avatar className={cn('size-8 shrink-0 ring-1 ring-foreground/[0.06]', className)}>
 			{person.avatarUrl ? <AvatarImage src={person.avatarUrl} alt="" /> : null}
-			<AvatarFallback className="bg-muted text-[11px] font-medium text-muted-foreground">{getInitials(person.displayName)}</AvatarFallback>
+			<AvatarFallback className="bg-muted text-[0.6875rem] font-medium text-muted-foreground">
+				{getInitials(person.displayName) ?? <UserRound aria-hidden="true" className="size-[55%]" />}
+			</AvatarFallback>
 		</Avatar>
 	);
 }
@@ -122,13 +124,13 @@ const OrgCard = React.memo(function OrgCard({ person, selected, editable, draggi
 				innerClassName="flex flex-col"
 			>
 				<div className={cn('flex min-h-0 flex-1 items-center', compact ? 'gap-2 pr-1.5 pl-2' : 'gap-2.5 pr-2 pl-2.5')}>
-					<PersonAvatar person={data} className={compact ? 'size-6 text-[10px]' : undefined} />
+					<PersonAvatar person={data} className={compact ? 'size-6 text-[0.625rem]' : undefined} />
 					<div className="min-w-0 flex-1">
-						<p className={cn('truncate font-medium text-foreground', compact ? 'text-xs' : 'text-[13px]')} title={name}>
+						<p className={cn('truncate font-medium text-foreground', compact ? 'text-xs' : 'text-[0.8125rem]')} title={name}>
 							{name}
 						</p>
 						{data.positionTitle ? (
-							<p className={cn('truncate text-muted-foreground', compact ? 'text-[11px]' : 'text-xs')} title={data.positionTitle}>
+							<p className={cn('truncate text-muted-foreground', compact ? 'text-[0.6875rem]' : 'text-xs')} title={data.positionTitle}>
 								{data.positionTitle}
 							</p>
 						) : null}
@@ -143,7 +145,7 @@ const OrgCard = React.memo(function OrgCard({ person, selected, editable, draggi
 						onClick={() => handlers.toggle(id)}
 						className={cn(
 							'flex shrink-0 cursor-pointer items-center gap-1.5 border-t border-dashed border-foreground/10 text-left text-muted-foreground hover:bg-overlay-hover hover:text-foreground',
-							compact ? 'h-[26px] px-2 text-[11px]' : 'h-7 px-2.5 text-xs',
+							compact ? 'h-[1.625rem] px-2 text-[0.6875rem]' : 'h-7 px-2.5 text-xs',
 							focusRingClass,
 						)}
 					>

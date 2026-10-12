@@ -90,10 +90,10 @@ export const Stress: StoryObj = {
 						<Rows rows={copy.rows} />
 						<SheetFooter>
 							<SheetClose asChild>
-								<Button variant="outline">{copy.cancel}</Button>
+								<Button wrap variant="outline">{copy.cancel}</Button>
 							</SheetClose>
 							<SheetClose asChild>
-								<Button>{copy.confirm}</Button>
+								<Button wrap>{copy.confirm}</Button>
 							</SheetClose>
 						</SheetFooter>
 					</SheetContent>
@@ -112,10 +112,10 @@ export const Stress: StoryObj = {
 						<Rows rows={copy.rows} />
 						<SheetFooter variant="band">
 							<SheetClose asChild>
-								<Button variant="outline">{copy.cancel}</Button>
+								<Button wrap variant="outline">{copy.cancel}</Button>
 							</SheetClose>
 							<SheetClose asChild>
-								<Button>{copy.confirm}</Button>
+								<Button wrap>{copy.confirm}</Button>
 							</SheetClose>
 						</SheetFooter>
 					</SheetContent>
@@ -148,7 +148,7 @@ export const Stress: StoryObj = {
 						<Rows rows={copy.rows} />
 						<SheetFooter>
 							<SheetClose asChild>
-								<Button>{copy.confirm}</Button>
+								<Button wrap>{copy.confirm}</Button>
 							</SheetClose>
 						</SheetFooter>
 					</SheetContent>

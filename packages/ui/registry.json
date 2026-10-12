@@ -1517,6 +1517,22 @@
       ]
     },
     {
+      "name": "initial-focus",
+      "type": "registry:lib",
+      "title": "initial-focus",
+      "description": "Initial focus for overlays that scroll: keeps the first tabbable element when it is on screen, otherwise focuses the overlay so it opens at its top.",
+      "categories": [
+        "utility"
+      ],
+      "docs": "Import: `import { scrollSafeInitialFocus } from '@/lib/initial-focus'`",
+      "files": [
+        {
+          "path": "registry/constructive/lib/initial-focus.ts",
+          "type": "registry:lib"
+        }
+      ]
+    },
+    {
       "name": "use-controllable-state",
       "type": "registry:hook",
       "title": "useControllableState",
@@ -2234,7 +2250,9 @@
       ],
       "registryDependencies": [
         "cn",
+        "initial-focus",
         "portal",
+        "slot",
         "button",
         "scroll-area"
       ],
@@ -2259,7 +2277,9 @@
       ],
       "registryDependencies": [
         "cn",
+        "initial-focus",
         "portal",
+        "slot",
         "button"
       ],
       "files": [
@@ -2311,6 +2331,7 @@
       ],
       "registryDependencies": [
         "cn",
+        "initial-focus",
         "portal",
         "motion-config",
         "motion-tuning"
@@ -3102,6 +3123,7 @@
         "command",
         "dialog",
         "dropdown-menu",
+        "initials",
         "tooltip",
         "workspace-kit"
       ],
@@ -3187,6 +3209,10 @@
         },
         {
           "path": "registry/constructive/blocks/storage/file-type-icon.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/storage/middle-truncate.tsx",
           "type": "registry:component"
         },
         {

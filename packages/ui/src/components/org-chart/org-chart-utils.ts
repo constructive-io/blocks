@@ -1,14 +1,13 @@
-/** Get up to 2-char uppercase initials from a display name */
-export function getInitials(name: string | null): string {
-	if (!name) return '--';
-	const parts = name.trim().split(/\s+/).filter(Boolean);
-	if (parts.length === 0) return '--';
-	if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
-	return (parts[0][0] + parts[1][0]).toUpperCase();
+import { initials } from '../../lib/initials';
+
+/** Up to 2 initials for a display name, or `null` when there are none so the avatar can show an icon instead. */
+export function getInitials(name: string | null): string | null {
+	return initials(name);
 }
 
 export function personName(person: { displayName: string | null }) {
-	return person.displayName ?? 'Unnamed person';
+	// A blank or whitespace-only name is as missing as a null one; an empty title would leave a card nobody can identify.
+	return person.displayName?.trim() || 'Unnamed person';
 }
 
 export function reportsLabel(count: number) {

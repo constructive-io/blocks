@@ -23,7 +23,8 @@ const ScrollArea = React.forwardRef<HTMLDivElement, ScrollAreaProps>(
       >
       <ScrollAreaPrimitive.Viewport
         className={cn(
-          "h-full overscroll-contain rounded-[inherit] outline-none transition-shadow focus-visible:ring-[3px] focus-visible:ring-ring/50",
+          // `max-h-[inherit]` hands a root `max-height` (class or style) to the viewport; `h-full` alone resolves to auto under an auto-height root, so the list grew instead of scrolling.
+          "h-full max-h-[inherit] overscroll-contain rounded-[inherit] outline-none transition-shadow focus-visible:ring-[3px] focus-visible:ring-ring/50",
           scrollFade &&
             "mask-t-from-[calc(100%-min(var(--fade-size),var(--scroll-area-overflow-y-start)))] mask-b-from-[calc(100%-min(var(--fade-size),var(--scroll-area-overflow-y-end)))] mask-l-from-[calc(100%-min(var(--fade-size),var(--scroll-area-overflow-x-start)))] mask-r-from-[calc(100%-min(var(--fade-size),var(--scroll-area-overflow-x-end)))] [--fade-size:1.5rem]",
           scrollbarGutter &&

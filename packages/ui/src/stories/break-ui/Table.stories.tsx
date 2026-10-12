@@ -55,7 +55,7 @@ const worst: Row[] = [
 
 const huge: Row[] = manyRows(1000, (index) => ({ ...worst[index % worst.length], id: `r${index}`, name: `${worst[index % worst.length].name} ${index + 1}` }));
 
-/** A people/billing table in a 480px card and at page width. Cells never wrap, so the wrapper scrolls. */
+/** A people/billing table in a 480px card and at page width, plus one that truncates a long column. Cells never wrap, so the wrapper scrolls. */
 export const Stress: StoryObj = {
 	render: (_args, context) => {
 		const rows = pickDataset<Row[]>(context, { demo, worst, empty: [], one: [worst[0]], huge });
@@ -114,8 +114,36 @@ export const Stress: StoryObj = {
 				</TableFooter>
 			</Table>
 		);
+		// The opt-in `truncate` cell: one long value gives up its tail instead of widening the whole table.
+		const truncating = (
+			<Table>
+				<TableHeader>
+					<TableRow>
+						<TableHead className="w-1/2">Name</TableHead>
+						<TableHead className="w-1/2">File</TableHead>
+						<TableHead className="text-right">Amount</TableHead>
+					</TableRow>
+				</TableHeader>
+				<TableBody>
+					{rows.slice(0, 8).map((row) => (
+						<TableRow key={row.id}>
+							<TableCell truncate title={row.name}>
+								{row.name}
+							</TableCell>
+							<TableCell truncate title={row.file} className="font-mono text-xs">
+								{row.file}
+							</TableCell>
+							<TableCell className="text-right tabular-nums">{money.format(row.amount)}</TableCell>
+						</TableRow>
+					))}
+				</TableBody>
+			</Table>
+		);
 		return (
 			<div className="flex w-full flex-col gap-8">
+				<div style={{ width: 480, maxWidth: '100%' }} className="rounded-lg border" data-testid="truncating">
+					{truncating}
+				</div>
 				<div style={{ width: 480, maxWidth: '100%' }} className="rounded-lg border" data-testid="narrow">
 					{table()}
 				</div>

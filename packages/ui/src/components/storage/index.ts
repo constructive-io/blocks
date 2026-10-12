@@ -30,6 +30,7 @@ export {
 
 // Components
 export { FileTypeIcon, FileGlyph } from './file-type-icon';
+export { MiddleTruncate } from './middle-truncate';
 export { VisibilityBadge, ObjectStatusBadge } from './visibility-badge';
 export { BucketRail } from './bucket-rail';
 export { StorageBreadcrumb, type StorageBreadcrumbSegment } from './storage-breadcrumb';

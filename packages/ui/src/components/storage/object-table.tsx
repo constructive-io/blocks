@@ -9,6 +9,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSepara
 import { focusRingClass, pressClass, TooltipIconButton } from '../workspace-kit/primitives';
 import { TableSurface, tableHeadClass, tableRowClass } from '../workspace-kit/surface';
 import { FileGlyph } from './file-type-icon';
+import { MiddleTruncate } from './middle-truncate';
 import type { ObjectSort, ObjectSortColumn, StorageObject } from './types';
 import { formatDate, humanizeBytes, keyFolder, objectDisplayName, shortMimeLabel } from './utils';
 
@@ -51,7 +52,7 @@ function SortableHeader({ column, label, className, align, sort, onSortChange }:
 	const active = sort.column === column;
 	const Caret = sort.direction === 'asc' ? ArrowUpIcon : ArrowDownIcon;
 	return (
-		<th scope="col" aria-sort={active ? (sort.direction === 'asc' ? 'ascending' : 'descending') : undefined} className={cn(align === 'end' && 'text-right', className)}>
+		<th scope="col" aria-sort={active ? (sort.direction === 'asc' ? 'ascending' : 'descending') : undefined} className={cn(align === 'end' && 'text-end', className)}>
 			<button
 				type="button"
 				onClick={() => onSortChange({ column, direction: active && sort.direction === 'asc' ? 'desc' : 'asc' })}
@@ -71,7 +72,8 @@ function SortableHeader({ column, label, className, align, sort, onSortChange }:
 
 function Frame({ className, children }: { className?: string; children: React.ReactNode }) {
 	return (
-		<TableSurface minWidth="0" className={cn('@container/table', className)}>
+		// Below this width the card scrolls sideways rather than squeezing the name column to a character or two.
+		<TableSurface minWidth="18rem" className={cn('@container/table', className)}>
 			{children}
 		</TableSurface>
 	);
@@ -119,7 +121,7 @@ export function ObjectTable({
 			<thead className={tableHeadClass}>
 				<tr>
 					{selectable ? (
-						<th scope="col" className="w-10 !pr-0">
+						<th scope="col" className="w-10 !pe-0">
 							<Checkbox
 								aria-label="Select all files"
 								checked={allSelected}
@@ -157,12 +159,10 @@ export function ObjectTable({
 							<>
 								<FileGlyph mimeType={object.mimeType} kind={object.kind} />
 								<span className="min-w-0 flex-1">
-									<span className="block truncate font-medium text-foreground" title={name}>
-										{name}
-									</span>
-									<span className="block truncate text-xs text-muted-foreground">
-										{folder ? <span className="font-mono">{folder}</span> : null}
-										<span className="@lg/table:hidden">
+									<MiddleTruncate text={name} className="font-medium text-foreground" />
+									<span className="flex min-w-0 text-xs text-muted-foreground">
+										{folder ? <MiddleTruncate text={folder} tail={16} className="shrink font-mono" /> : null}
+										<span className="@lg/table:hidden shrink-0 whitespace-nowrap">
 											{folder ? ' · ' : null}
 											{isFolder ? type : `${type} · ${size}`}
 										</span>
@@ -183,7 +183,7 @@ export function ObjectTable({
 								)}
 							>
 								{selectable ? (
-									<td className="!pr-0" onClick={(event) => event.stopPropagation()}>
+									<td className="!pe-0" onClick={(event) => event.stopPropagation()}>
 										<Checkbox aria-label={`Select ${name}`} checked={isSelected} onCheckedChange={(checked) => toggleOne(object.id, checked === true)} />
 									</td>
 								) : null}
@@ -204,9 +204,11 @@ export function ObjectTable({
 										<div className="flex min-w-0 items-center gap-2.5">{glyphAndName}</div>
 									)}
 								</td>
-								<td className="hidden text-muted-foreground @lg/table:table-cell">{type}</td>
-								<td className="hidden text-right text-foreground tabular-nums @lg/table:table-cell">{size}</td>
-								<td className="hidden text-right text-muted-foreground tabular-nums @2xl/table:table-cell" suppressHydrationWarning>
+								<td className="hidden max-w-32 truncate text-muted-foreground @lg/table:table-cell" title={type}>
+									{type}
+								</td>
+								<td className="hidden text-end whitespace-nowrap text-foreground tabular-nums @lg/table:table-cell">{size}</td>
+								<td className="hidden text-end whitespace-nowrap text-muted-foreground tabular-nums @2xl/table:table-cell" suppressHydrationWarning>
 									{modified}
 								</td>
 								<td onClick={(event) => event.stopPropagation()}>
@@ -278,11 +280,11 @@ export function ObjectTableSkeleton({ rows = 6, className, selectable = true }: 
 		<Frame className={className}>
 			<thead className={tableHeadClass}>
 				<tr>
-					{selectable ? <th className="w-10 !pr-0" /> : null}
+					{selectable ? <th className="w-10 !pe-0" /> : null}
 					<th>Name</th>
 					<th className="hidden w-24 @lg/table:table-cell">Type</th>
-					<th className="hidden w-24 text-right @lg/table:table-cell">Size</th>
-					<th className="hidden w-32 text-right @2xl/table:table-cell">Modified</th>
+					<th className="hidden w-24 text-end @lg/table:table-cell">Size</th>
+					<th className="hidden w-32 text-end @2xl/table:table-cell">Modified</th>
 					<th className="w-20" />
 				</tr>
 			</thead>
@@ -290,7 +292,7 @@ export function ObjectTableSkeleton({ rows = 6, className, selectable = true }: 
 				{Array.from({ length: rows }, (_, index) => (
 					<tr key={index} className={tableRowClass}>
 						{selectable ? (
-							<td className="!pr-0">
+							<td className="!pe-0">
 								<span className="block size-4 rounded-[4px] bg-muted" />
 							</td>
 						) : null}
@@ -307,10 +309,10 @@ export function ObjectTableSkeleton({ rows = 6, className, selectable = true }: 
 							<span className="block h-2.5 w-10 rounded-full bg-muted" />
 						</td>
 						<td className="hidden @lg/table:table-cell">
-							<span className="ml-auto block h-2.5 w-12 rounded-full bg-muted" />
+							<span className="ms-auto block h-2.5 w-12 rounded-full bg-muted" />
 						</td>
 						<td className="hidden @2xl/table:table-cell">
-							<span className="ml-auto block h-2.5 w-20 rounded-full bg-muted" />
+							<span className="ms-auto block h-2.5 w-20 rounded-full bg-muted" />
 						</td>
 						<td />
 					</tr>

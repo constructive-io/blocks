@@ -113,14 +113,14 @@ export function CompanyOrgChart({
         'Use edges when the host owns the current hierarchy. Use defaultEdges for optimistic local reparenting, and persist each accepted move through onReparent.',
     },
     composition: [
-      'The workspace canvas (shared with Agents Builder) owns pan, pinch, wheel, and keyboard zoom; the block lays flat reporting edges out as a tidy top-down tree and draws bezier wires between cards.',
+      'The workspace canvas (shared with Agents Builder) owns pan, pinch, wheel, and keyboard zoom; the block lays flat reporting edges out as a tidy top-down tree and draws bezier wires between cards. More than eight reports without a team of their own stack in columns of up to eight under their manager instead of running in one row.',
       'Selecting a person highlights their reporting chain and opens a details panel with their manager, direct reports, and actions; folded teams show a stacked card edge and the team size.',
       'Node menus delegate editing and removal to the host, so the chart never assumes a router, form system, or destructive-action policy.',
       'Loading and empty states are built in, while success and error messaging remain injectable through observer callbacks.',
     ],
     accessibility: [
       'Keep every displayName and positionTitle meaningful because the same labels identify node actions and reporting relationships.',
-      'The chart is an ARIA tree: Tab into it, move between people with the arrow keys, press Enter for details, and use Change manager to reassign without dragging.',
+      'The chart is an ARIA tree: Tab into it, move between people with the arrow keys (inside a stacked column, Up and Down move through the column and Left and Right move between columns), press Enter for details, and use Change manager to reassign without dragging.',
       'Confirm removal in the host workflow before changing data; the node menu reports intent and does not delete records itself.',
     ],
     api: [
@@ -376,6 +376,12 @@ export function AssetBrowser({
         type: '(files: FileList) => void',
         behavior:
           'Turns the file list into a drop target: dragging files over it shows where they will land, and dropping hands the files to the host.',
+      },
+      {
+        name: 'locale',
+        type: 'string',
+        behavior:
+          'Formats the counts in the rail, toolbar and selection bar with the reader\'s own separators (for example "de-DE"). Counts render with "en-US" separators by default so the server and browser agree.',
       },
       {
         name: 'title / defaultSidebarCollapsed',

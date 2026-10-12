@@ -78,10 +78,10 @@ export const Stress: StoryObj = {
 						</DialogHeader>
 						<DialogFooter>
 							<DialogClose asChild>
-								<Button variant="outline">{copy.cancel}</Button>
+								<Button wrap variant="outline">{copy.cancel}</Button>
 							</DialogClose>
 							<DialogClose asChild>
-								<Button>{copy.confirm}</Button>
+								<Button wrap>{copy.confirm}</Button>
 							</DialogClose>
 						</DialogFooter>
 					</DialogPopup>
@@ -99,10 +99,10 @@ export const Stress: StoryObj = {
 						</DialogHeader>
 						<DialogFooter>
 							<DialogClose asChild>
-								<Button variant="outline">{demo.cancel}</Button>
+								<Button wrap variant="outline">{demo.cancel}</Button>
 							</DialogClose>
 							<DialogClose asChild>
-								<Button>Delete</Button>
+								<Button wrap>Delete</Button>
 							</DialogClose>
 						</DialogFooter>
 					</DialogPopup>
@@ -127,10 +127,10 @@ export const Stress: StoryObj = {
 						</DialogPanel>
 						<DialogFooter>
 							<DialogClose asChild>
-								<Button variant="outline">{copy.cancel}</Button>
+								<Button wrap variant="outline">{copy.cancel}</Button>
 							</DialogClose>
 							<DialogClose asChild>
-								<Button>{copy.confirm}</Button>
+								<Button wrap>{copy.confirm}</Button>
 							</DialogClose>
 						</DialogFooter>
 					</DialogPopup>
@@ -148,13 +148,13 @@ export const Stress: StoryObj = {
 						</DialogHeader>
 						<DialogFooter>
 							<DialogClose asChild>
-								<Button variant="ghost">{labels.german}</Button>
+								<Button wrap variant="ghost">{labels.german}</Button>
 							</DialogClose>
 							<DialogClose asChild>
-								<Button variant="outline">{copy.cancel}</Button>
+								<Button wrap variant="outline">{copy.cancel}</Button>
 							</DialogClose>
 							<DialogClose asChild>
-								<Button>{copy.confirm}</Button>
+								<Button wrap>{copy.confirm}</Button>
 							</DialogClose>
 						</DialogFooter>
 					</DialogPopup>
@@ -175,10 +175,10 @@ export const Stress: StoryObj = {
 						</DialogPanel>
 						<DialogFooter variant="bare">
 							<DialogClose asChild>
-								<Button variant="outline">{copy.cancel}</Button>
+								<Button wrap variant="outline">{copy.cancel}</Button>
 							</DialogClose>
 							<DialogClose asChild>
-								<Button>{copy.confirm}</Button>
+								<Button wrap>{copy.confirm}</Button>
 							</DialogClose>
 						</DialogFooter>
 					</DialogPopup>
@@ -203,10 +203,10 @@ export const Stress: StoryObj = {
 						</DialogPanel>
 						<DialogFooter>
 							<DialogClose asChild>
-								<Button variant="outline">{copy.cancel}</Button>
+								<Button wrap variant="outline">{copy.cancel}</Button>
 							</DialogClose>
 							<DialogClose asChild>
-								<Button>{copy.confirm}</Button>
+								<Button wrap>{copy.confirm}</Button>
 							</DialogClose>
 						</DialogFooter>
 					</DialogPopup>

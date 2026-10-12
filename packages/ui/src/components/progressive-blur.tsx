@@ -28,6 +28,8 @@ export function ProgressiveBlur({
 	const isBottom = position === 'bottom';
 	const isTop = position === 'top';
 	const clampedIntensity = Math.max(0, Math.min(1, intensity));
+	// A negative radius is invalid CSS and would silently turn the blur off.
+	const radius = Math.max(0, blurPx);
 	const surfaceVar = surface === 'card' ? '--card' : surface === 'sidebar' ? '--sidebar' : '--background';
 
 	// Vertical-only blur layer with a smooth single gradient mask
@@ -60,8 +62,8 @@ export function ProgressiveBlur({
 			<div
 				className='absolute inset-0'
 				style={{
-					backdropFilter: `blur(${blurPx}px)`,
-					WebkitBackdropFilter: `blur(${blurPx}px)`,
+					backdropFilter: `blur(${radius}px)`,
+					WebkitBackdropFilter: `blur(${radius}px)`,
 					maskImage: mask,
 					WebkitMaskImage: mask,
 				}}

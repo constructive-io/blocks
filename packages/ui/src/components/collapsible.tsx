@@ -42,7 +42,7 @@ const CollapsibleTrigger = React.forwardRef<
   CollapsibleTriggerProps
 >(({ className, asChild, nativeButton, children, render, ...props }, ref) => {
   const triggerClassName = cn(
-    "group/trigger flex w-full cursor-pointer items-center justify-between text-sm font-medium outline-none transition-[color,background-color,border-color,text-decoration-color,fill,stroke,box-shadow]",
+    "group/trigger flex w-full cursor-pointer items-center justify-between text-start text-sm font-medium outline-none [overflow-wrap:anywhere] transition-[color,background-color,border-color,text-decoration-color,fill,stroke,box-shadow]",
     "focus-visible:ring-[3px] focus-visible:ring-ring/50",
     "disabled:pointer-events-none disabled:opacity-64",
     "[&_[data-slot=collapsible-icon]]:transition-transform [&_[data-slot=collapsible-icon]]:duration-(--duration-slow)",
@@ -96,7 +96,7 @@ const CollapsiblePanel = React.forwardRef<HTMLDivElement, CollapsiblePanelProps>
       >
         <div
           data-slot="collapsible-panel-content"
-          className={cn("py-4", innerClassName)}
+          className={cn("py-4 [overflow-wrap:anywhere]", innerClassName)}
         >
           {children}
         </div>

@@ -46,7 +46,7 @@ export const dialogDocs = definePrimitiveDocs({
   accessibility: [
     'Every modal DialogContent needs an accessible name; use DialogTitle even when the heading is visually hidden. Add DialogDescription when a short explanation helps someone decide how to proceed.',
     'Keep a DialogClose control inside modal content so touch screen reader users can leave the popup; the built-in icon close button already has an accessible name.',
-    'Base UI moves focus into the popup, traps focus for modal dialogs, closes on Escape, and returns focus to the trigger. Use initialFocus or finalFocus only when the default focus target is not appropriate.',
+    'Base UI moves focus into the popup, traps focus for modal dialogs, closes on Escape, and returns focus to the trigger. When the popup scrolls and the first focusable element is below the fold, focus goes to the popup itself so it opens at the top. Use initialFocus or finalFocus only when the default focus target is not appropriate.',
     'Set modal to false only when interaction with the surrounding page must remain available; use trap-focus when focus containment is required without scroll locking or pointer blocking.',
   ],
   api: [

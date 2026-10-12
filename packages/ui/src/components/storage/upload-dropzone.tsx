@@ -7,6 +7,7 @@ import { cn } from '../../lib/utils';
 import { Button } from '../button';
 import { TooltipIconButton } from '../workspace-kit/primitives';
 import { FileGlyph } from './file-type-icon';
+import { MiddleTruncate } from './middle-truncate';
 import type { UploadItem } from './types';
 import { humanizeBytes } from './utils';
 
@@ -17,6 +18,8 @@ interface UploadDropzoneProps {
 	uploads?: UploadItem[];
 	/** Cancel an in-flight or queued upload. */
 	onCancel?: (id: string) => void;
+	/** Remove a failed upload from the list. Without it failed rows stay until the host drops them. */
+	onDismiss?: (id: string) => void;
 	/** `accept` attribute forwarded to the file input. */
 	accept?: string;
 	/** Max file size in bytes — shown as a hint only (no enforcement here). */
@@ -30,7 +33,7 @@ interface UploadDropzoneProps {
  * state is that highlight. Upload behaviour belongs to the parent through
  * `onFiles`; `uploads` render below as a progress list.
  */
-export function UploadDropzone({ onFiles, uploads, onCancel, accept, maxSize, className }: UploadDropzoneProps) {
+export function UploadDropzone({ onFiles, uploads, onCancel, onDismiss, accept, maxSize, className }: UploadDropzoneProps) {
 	const inputRef = React.useRef<HTMLInputElement>(null);
 	const [isDragging, setIsDragging] = React.useState(false);
 
@@ -65,7 +68,7 @@ export function UploadDropzone({ onFiles, uploads, onCancel, accept, maxSize, cl
 				</span>
 				<div className="flex flex-col gap-0.5">
 					<p className="text-pretty text-sm font-medium text-foreground">{isDragging ? 'Drop to upload' : 'Drag files here'}</p>
-					<p className="text-[13px] text-muted-foreground">{maxSize ? `Up to ${humanizeBytes(maxSize)} each` : 'Any size the bucket allows'}</p>
+					<p className="text-[0.8125rem] text-muted-foreground">{maxSize ? `Up to ${humanizeBytes(maxSize)} each` : 'Any size the bucket allows'}</p>
 				</div>
 				<Button type="button" size="sm" variant="outline" onClick={() => inputRef.current?.click()}>
 					Browse files
@@ -85,7 +88,7 @@ export function UploadDropzone({ onFiles, uploads, onCancel, accept, maxSize, cl
 				/>
 			</div>
 
-			{uploads && uploads.length > 0 ? <UploadProgressList uploads={uploads} onCancel={onCancel} /> : null}
+			{uploads && uploads.length > 0 ? <UploadProgressList uploads={uploads} onCancel={onCancel} onDismiss={onDismiss} /> : null}
 		</div>
 	);
 }
@@ -93,6 +96,8 @@ export function UploadDropzone({ onFiles, uploads, onCancel, accept, maxSize, cl
 interface UploadProgressListProps {
 	uploads: UploadItem[];
 	onCancel?: (id: string) => void;
+	/** Remove a failed upload from the list. */
+	onDismiss?: (id: string) => void;
 	className?: string;
 }
 
@@ -101,29 +106,33 @@ interface UploadProgressListProps {
  * percentage, a hairline progress bar, and cancel while it is active.
  * Finished rows show a check; failed rows say why.
  */
-export function UploadProgressList({ uploads, onCancel, className }: UploadProgressListProps) {
+export function UploadProgressList({ uploads, onCancel, onDismiss, className }: UploadProgressListProps) {
 	return (
 		<ul className={cn('flex flex-col gap-1.5', className)}>
 			{uploads.map((item) => {
 				const active = item.status === 'queued' || item.status === 'uploading';
 				const failed = item.status === 'error';
 				const done = item.status === 'done';
-				const percent = done ? 100 : Math.round(item.progress);
+				// A progress that is missing, NaN or past its bounds must neither print "NaN%" nor draw a full bar.
+				const percent = done ? 100 : Math.min(100, Math.max(0, Math.round(Number.isFinite(item.progress) ? item.progress : 0)));
 				return (
 					<li key={item.id} className="flex items-center gap-2.5 rounded-lg bg-card px-2.5 py-2 shadow-card">
 						<FileGlyph mimeType={guessMimeFromName(item.filename)} />
 						<div className="flex min-w-0 flex-1 flex-col gap-1.5">
-							<div className="flex items-baseline justify-between gap-2 text-[13px]">
-								<span className="truncate font-medium text-foreground">{item.filename}</span>
+							<div className="flex items-baseline justify-between gap-2 text-[0.8125rem]">
+								<MiddleTruncate text={item.filename} className="font-medium text-foreground" />
 								<span className="shrink-0 text-xs text-muted-foreground tabular-nums">
 									{humanizeBytes(item.size)}
 									{active ? ` · ${item.status === 'queued' ? 'Queued' : `${percent}%`}` : null}
 								</span>
 							</div>
 							{failed ? (
-								<span className="flex items-center gap-1 text-xs text-destructive">
-									<AlertCircleIcon className="size-3.5 shrink-0" aria-hidden="true" />
-									<span className="truncate">{item.error ?? 'Upload failed'}</span>
+								<span className="flex items-start gap-1 text-xs text-destructive">
+									<AlertCircleIcon className="mt-0.5 size-3.5 shrink-0" aria-hidden="true" />
+									{/* The reason is the point of the row: keep two lines and the whole text on hover. */}
+									<span className="line-clamp-2 min-w-0" title={item.error ?? undefined}>
+										{item.error ?? 'Upload failed'}
+									</span>
 								</span>
 							) : (
 								<div
@@ -147,6 +156,10 @@ export function UploadProgressList({ uploads, onCancel, className }: UploadProgr
 							</span>
 						) : active && onCancel ? (
 							<TooltipIconButton label={`Cancel upload of ${item.filename}`} size="sm" onClick={() => onCancel(item.id)}>
+								<XIcon aria-hidden="true" className="size-3.5" />
+							</TooltipIconButton>
+						) : failed && onDismiss ? (
+							<TooltipIconButton label={`Dismiss failed upload of ${item.filename}`} size="sm" onClick={() => onDismiss(item.id)}>
 								<XIcon aria-hidden="true" className="size-3.5" />
 							</TooltipIconButton>
 						) : null}

@@ -9,6 +9,7 @@ import { SidebarFrame } from '../workspace-kit/nav';
 import { SearchField, ViewHeader } from '../workspace-kit/primitives';
 import { WorkspaceShell, type WorkspaceSidebarRenderProps } from '../workspace-kit/shell';
 import { BucketRail } from './bucket-rail';
+import { MiddleTruncate } from './middle-truncate';
 import { ObjectTable } from './object-table';
 import { ObjectSelectionBar, ObjectSortMenu } from './object-toolbar';
 import { StorageBreadcrumb, type StorageBreadcrumbSegment } from './storage-breadcrumb';
@@ -84,6 +85,8 @@ interface StorageBrowserProps {
 	defaultSidebarCollapsed?: boolean;
 	/** Shows the workspace as a rounded frame on a canvas instead of filling its container. */
 	framed?: boolean;
+	/** Locale for the counts (for example `de-DE`). Default: `en-US`, so the server and the browser agree. */
+	locale?: string;
 	className?: string;
 }
 
@@ -93,7 +96,7 @@ function StorageMark({ title, collapsed }: { title: string; collapsed: boolean }
 			<span aria-hidden="true" className="grid size-5 shrink-0 place-items-center rounded-md bg-foreground text-background">
 				<HardDriveIcon className="size-3" strokeWidth={2.25} />
 			</span>
-			{collapsed ? <span className="sr-only">{title}</span> : <span className="min-w-0 flex-1 truncate text-sm font-medium text-foreground">{title}</span>}
+			{collapsed ? <span className="sr-only">{title}</span> : <MiddleTruncate text={title} className="flex-1 text-sm font-medium text-foreground" />}
 		</div>
 	);
 }
@@ -169,6 +172,7 @@ export function StorageBrowser({
 	title = 'Storage',
 	defaultSidebarCollapsed,
 	framed,
+	locale,
 	className,
 }: StorageBrowserProps) {
 	const selectedBucket = buckets.find((bucket) => bucket.id === selectedBucketId) ?? null;
@@ -191,12 +195,13 @@ export function StorageBrowser({
 				footer={
 					railCollapsed || buckets.length === 0 ? null : (
 						<p className="border-t border-sidebar-border px-3.5 py-2.5 text-xs text-muted-foreground tabular-nums">
-							{formatCount(totalFiles)} {totalFiles === 1 ? 'file' : 'files'} in {buckets.length} {buckets.length === 1 ? 'bucket' : 'buckets'}
+							{formatCount(totalFiles, locale)} {totalFiles === 1 ? 'file' : 'files'} in {formatCount(buckets.length, locale)} {buckets.length === 1 ? 'bucket' : 'buckets'}
 						</p>
 					)
 				}
 			>
 				<BucketRail
+					locale={locale}
 					buckets={buckets}
 					selectedBucketId={selectedBucketId}
 					onSelectBucket={(bucketId) => {
@@ -220,7 +225,7 @@ export function StorageBrowser({
 				<ViewHeader icon={HardDriveIcon} title={title} />
 				<div className="grid min-h-0 flex-1 place-items-center p-6">
 					{prompt ? (
-						<p className="text-[13px] text-muted-foreground">Choose a bucket to see its files.</p>
+						<p className="text-[0.8125rem] text-muted-foreground">Choose a bucket to see its files.</p>
 					) : (
 						<StorageEmptyState
 							variant={emptyState ?? 'no-buckets'}
@@ -240,7 +245,7 @@ export function StorageBrowser({
 					icon={visibility.icon}
 					title={
 						<span className="flex min-w-0 items-center gap-2">
-							<span className="truncate">{name}</span>
+							<MiddleTruncate text={name} />
 							<VisibilityBadge visibility={selectedBucket.visibility} className="hidden @md/view:inline-flex" />
 						</span>
 					}
@@ -264,8 +269,8 @@ export function StorageBrowser({
 								{segments?.length ? (
 									<StorageBreadcrumb bucketKey={name} segments={segments} onNavigate={onNavigate} />
 								) : (
-									<p className="px-0.5 text-[13px] text-muted-foreground tabular-nums">
-										{isLoading ? 'Loading files…' : `${formatCount(objects.length)} ${noun(objects.length)}`}
+									<p className="px-0.5 text-[0.8125rem] text-muted-foreground tabular-nums">
+										{isLoading ? 'Loading files…' : `${formatCount(objects.length, locale)} ${noun(objects.length)}`}
 									</p>
 								)}
 							</div>
@@ -310,6 +315,7 @@ export function StorageBrowser({
 
 				<div className="pointer-events-none absolute inset-x-0 bottom-4 z-10 flex justify-center px-4 [&>*]:pointer-events-auto">
 					<ObjectSelectionBar
+						locale={locale}
 						floating
 						selectedCount={selectable ? selectedIds.length : 0}
 						onBulkDelete={onBulkDelete ? () => onBulkDelete(selectedIds) : undefined}
@@ -323,7 +329,7 @@ export function StorageBrowser({
 						aria-hidden="true"
 						className="pointer-events-none absolute inset-2 z-20 grid place-items-center rounded-xl border-2 border-dashed border-primary/50 bg-primary/[0.06] backdrop-blur-[1px] animate-[ai-fade-up_var(--duration-moderate)_var(--ease-out)_both] motion-reduce:animate-none"
 					>
-						<span className="flex items-center gap-2 rounded-lg bg-card px-3 py-2 text-[13px] font-medium text-foreground shadow-card-lg">
+						<span className="flex items-center gap-2 rounded-lg bg-card px-3 py-2 text-[0.8125rem] font-medium text-foreground shadow-card-lg">
 							<UploadCloudIcon className="size-4 text-primary" />
 							Drop to upload to {name}
 						</span>

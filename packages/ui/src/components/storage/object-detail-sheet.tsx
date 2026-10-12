@@ -21,6 +21,7 @@ import { cn } from '../../lib/utils';
 import { TooltipIconButton } from '../workspace-kit/primitives';
 import { Bezel, dashedRule, KeyValueList } from '../workspace-kit/surface';
 import { FileGlyph } from './file-type-icon';
+import { MiddleTruncate } from './middle-truncate';
 import type { StorageObject } from './types';
 import { formatDateTime, humanizeBytes, objectDisplayName } from './utils';
 import { ObjectStatusBadge, VisibilityBadge } from './visibility-badge';
@@ -56,8 +57,11 @@ function ObjectDetailBody({ object, onDownload, onCopyLink, onRename, onDelete, 
 	const [isRenaming, setIsRenaming] = React.useState(false);
 	const [draftName, setDraftName] = React.useState(displayName);
 
+	// A signed preview link expires; when the image fails to load, say so instead of showing a broken-image icon.
+	const [failedUrl, setFailedUrl] = React.useState<string | null>(null);
+	const previewFailed = Boolean(object.downloadUrl) && failedUrl === object.downloadUrl;
 	const isImageType = object.mimeType.startsWith('image/');
-	const showImage = isImageType && Boolean(object.downloadUrl) && !isPreviewLoading;
+	const showImage = isImageType && Boolean(object.downloadUrl) && !isPreviewLoading && !previewFailed;
 
 	const commitRename = () => {
 		const trimmed = draftName.trim();
@@ -67,11 +71,15 @@ function ObjectDetailBody({ object, onDownload, onCopyLink, onRename, onDelete, 
 
 	return (
 		<div className="flex min-h-0 flex-1 flex-col overflow-y-auto">
-			<header className="flex items-start gap-3 p-4 pr-12">
+			<header className="flex items-start gap-3 p-4 pe-12">
 				<FileGlyph mimeType={object.mimeType} className="mt-0.5" />
 				<div className="min-w-0 flex-1">
-					<SheetTitle className="truncate text-sm font-medium">{displayName}</SheetTitle>
-					<SheetDescription className="truncate font-mono text-xs">{object.key}</SheetDescription>
+					<SheetTitle className="text-sm font-medium">
+						<MiddleTruncate text={displayName} />
+					</SheetTitle>
+					<SheetDescription className="font-mono text-xs">
+						<MiddleTruncate text={object.key} tail={20} />
+					</SheetDescription>
 				</div>
 			</header>
 
@@ -80,11 +88,16 @@ function ObjectDetailBody({ object, onDownload, onCopyLink, onRename, onDelete, 
 					{isImageType && isPreviewLoading ? (
 						<span aria-label="Loading preview" role="status" className="size-full bg-muted motion-safe:animate-pulse" />
 					) : showImage ? (
-						<img src={object.downloadUrl ?? undefined} alt={displayName} className="size-full object-contain" />
+						<img
+							src={object.downloadUrl ?? undefined}
+							alt={displayName}
+							className="size-full object-contain"
+							onError={() => setFailedUrl(object.downloadUrl ?? null)}
+						/>
 					) : (
 						<span className="flex flex-col items-center gap-2 text-xs text-muted-foreground">
 							<FileGlyph mimeType={object.mimeType} className="size-12 rounded-[14px] [&_svg]:size-5" />
-							{isImageType ? 'No preview link yet' : 'No preview for this type'}
+							{isImageType ? (previewFailed ? 'Preview unavailable' : 'No preview link yet') : 'No preview for this type'}
 						</span>
 					)}
 				</Bezel>
@@ -170,6 +183,8 @@ function ObjectDetailBody({ object, onDownload, onCopyLink, onRename, onDelete, 
 							? [{ key: 'modified', label: 'Modified', value: <span suppressHydrationWarning>{formatDateTime(object.updatedAt)}</span> }]
 							: []),
 						{ key: 'filename', label: 'Filename', value: <span className="break-all">{object.filename ?? '—'}</span> },
+						// The header only has room for part of a long key; this is where it can be read and copied in full.
+						{ key: 'key', label: 'Key', value: <span className="font-mono text-xs break-all">{object.key}</span> },
 					]}
 				/>
 			</div>

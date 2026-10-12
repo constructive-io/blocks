@@ -7,42 +7,69 @@
 
 import type { StorageBucket, StorageObject } from './types';
 
-/** Humanize a byte count, e.g. 1536 -> "1.5 KB". */
+/** Humanize a byte count, e.g. 1536 -> "1.5 KB". Missing, negative and non-finite values read as an em dash. */
 export function humanizeBytes(bytes: number | null | undefined): string {
-	if (bytes == null || Number.isNaN(bytes) || bytes < 0) return '—';
+	if (bytes == null || !Number.isFinite(bytes) || bytes < 0) return '—';
 	if (bytes === 0) return '0 B';
 
 	const units = ['B', 'KB', 'MB', 'GB', 'TB', 'PB'];
-	const exponent = Math.min(Math.floor(Math.log(Math.abs(bytes)) / Math.log(1024)), units.length - 1);
-	const value = bytes / 1024 ** exponent;
+	let value = bytes;
+	let exponent = 0;
+	while (value >= 1024 && exponent < units.length - 1) {
+		value /= 1024;
+		exponent += 1;
+	}
+	// Rounding can land on the next unit's boundary ("1024.0 KB", "1024 B"): carry into that unit instead.
+	const rounded = exponent === 0 ? Math.round(value) : Number(value.toFixed(1));
+	if (rounded >= 1024 && exponent < units.length - 1) {
+		value /= 1024;
+		exponent += 1;
+	}
 	// Whole bytes show no decimals (round any fractional byte count); larger units show one.
 	const formatted = exponent === 0 ? String(Math.round(value)) : value.toFixed(1);
 	return `${formatted} ${units[exponent]}`;
 }
 
-const COUNT = new Intl.NumberFormat('en-US');
+const COUNT_FORMATS = new Map<string, Intl.NumberFormat>();
 
-/** Thousands-separated count that renders the same on the server and in the browser. */
-export function formatCount(value: number): string {
-	return COUNT.format(value);
+/**
+ * Thousands-separated count. The default locale is fixed (`en-US`) so it renders the same on the server and in
+ * the browser; pass the host's locale (for example `de-DE`) to show the reader's own separators.
+ */
+export function formatCount(value: number, locale = 'en-US'): string {
+	if (!Number.isFinite(value)) return '—';
+	let format = COUNT_FORMATS.get(locale);
+	if (!format) {
+		try {
+			format = new Intl.NumberFormat(locale);
+		} catch {
+			// An invalid locale tag must not break the list; fall back to the fixed default.
+			format = COUNT_FORMATS.get('en-US') ?? new Intl.NumberFormat('en-US');
+		}
+		COUNT_FORMATS.set(locale, format);
+	}
+	return format.format(value);
 }
 
 // Built once: `toLocaleDateString` creates a formatter on every call, which adds up across table rows.
 const DATE = new Intl.DateTimeFormat(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
 const DATE_TIME = new Intl.DateTimeFormat(undefined, { year: 'numeric', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
 
-/** Format an ISO timestamp as a compact, locale date — e.g. "Jun 24, 2026". */
+/**
+ * Format an ISO timestamp as a compact, locale date — e.g. "Jun 24, 2026". Unparseable values and the Unix
+ * epoch (`1970-01-01T00:00:00Z`, what a zeroed or defaulted timestamp becomes) read as an em dash.
+ */
 export function formatDate(iso: string | null | undefined): string {
 	if (!iso) return '—';
 	const time = Date.parse(iso);
-	return Number.isNaN(time) ? '—' : DATE.format(time);
+	return Number.isNaN(time) || time === 0 ? '—' : DATE.format(time);
 }
 
 /** Format an ISO timestamp with date + time — used in the detail sheet. */
 export function formatDateTime(iso: string | null | undefined): string {
 	if (!iso) return '—';
 	const time = Date.parse(iso);
-	return Number.isNaN(time) ? '—' : DATE_TIME.format(time);
+	return Number.isNaN(time) || time === 0 ? '—' : DATE_TIME.format(time);
 }
 
 /**
@@ -70,12 +97,20 @@ export function shortMimeLabel(mimeType: string | null | undefined): string {
 		'text/csv': 'CSV',
 		'text/plain': 'TXT',
 		'text/markdown': 'MD',
+		'application/vnd.oasis.opendocument.text': 'ODT',
+		'application/vnd.oasis.opendocument.spreadsheet': 'ODS',
+		'application/vnd.oasis.opendocument.presentation': 'ODP',
+		'application/vnd.android.package-archive': 'APK',
+		'application/x-7z-compressed': '7Z',
+		'application/x-rar-compressed': 'RAR',
 	};
 	if (known[lower]) return known[lower];
 
 	// Fall back to the subtype: "image/svg+xml" -> "SVG", "video/mp4" -> "MP4".
 	const subtype = lower.split('/')[1] ?? lower;
-	const base = subtype.split('+')[0].replace(/^x-/, '');
+	let base = subtype.split('+')[0].replace(/^x-/, '');
+	// Vendor trees ("vnd.google-apps.spreadsheet") are namespaces: the last segment is the format.
+	if (base.startsWith('vnd.')) base = base.split('.').pop() || base;
 	return base.toUpperCase();
 }
 

@@ -1,7 +1,7 @@
 'use client';
 
 import * as React from 'react';
-import { motion, type HTMLMotionProps, useReducedMotion } from 'motion/react';
+import { motion, type HTMLMotionProps, type Transition, useReducedMotion } from 'motion/react';
 
 import { easings } from '../lib/motion/motion-config';
 import { cn } from '../lib/utils';
@@ -20,6 +20,30 @@ type MotionGridProps = {
 	cellActiveClassName?: string;
 	cellInactiveClassName?: string;
 } & React.ComponentProps<'div'>;
+
+type MotionGridCellProps = {
+	active: boolean;
+	className?: string;
+	activeClassName?: string;
+	inactiveClassName?: string;
+	cellProps?: HTMLMotionProps<'div'>;
+	transition: Transition;
+};
+
+/** One dot. Memoised so a frame re-renders only the dots that switch, not every dot in the grid. */
+const MotionGridCell = React.memo(function MotionGridCell({ active, className, activeClassName, inactiveClassName, cellProps, transition }: MotionGridCellProps) {
+	return (
+		<motion.div
+			className={cn(
+				'aspect-square size-3 rounded-full',
+				active ? cn('bg-primary scale-110', activeClassName) : cn('bg-muted scale-100', inactiveClassName),
+				className,
+			)}
+			{...cellProps}
+			transition={transition}
+		/>
+	);
+});
 
 const MotionGrid = ({
 	gridSize,
@@ -50,6 +74,11 @@ const MotionGrid = ({
 	}, [frames.length, duration, shouldAnimate]);
 
 	const active = new Set<number>(frames[index]?.map(([x, y]) => y * cols + x) ?? []);
+	// Convert ms to seconds for motion library
+	const transition = React.useMemo<Transition>(
+		() => (prefersReducedMotion ? { duration: 0 } : { duration: duration / 1000, ease: easings.easeInOut }),
+		[prefersReducedMotion, duration],
+	);
 
 	return (
 		<div
@@ -62,18 +91,14 @@ const MotionGrid = ({
 			{...props}
 		>
 			{Array.from({ length: cols * rows }).map((_, i) => (
-				<motion.div
+				<MotionGridCell
 					key={i}
-					className={cn(
-						'aspect-square size-3 rounded-full',
-						active.has(i)
-							? cn('bg-primary scale-110', cellActiveClassName)
-							: cn('bg-muted scale-100', cellInactiveClassName),
-						cellClassName,
-					)}
-					{...cellProps}
-					// Convert ms to seconds for motion library
-					transition={prefersReducedMotion ? { duration: 0 } : { duration: duration / 1000, ease: easings.easeInOut }}
+					active={active.has(i)}
+					className={cellClassName}
+					activeClassName={cellActiveClassName}
+					inactiveClassName={cellInactiveClassName}
+					cellProps={cellProps}
+					transition={transition}
 				/>
 			))}
 		</div>

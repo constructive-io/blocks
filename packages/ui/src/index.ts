@@ -243,6 +243,7 @@ export {
 	TableRow,
 	TableCell,
 	TableCaption,
+	type TableCellProps,
 	type TableGroupRowProps,
 } from './components/table';
 export {

@@ -73,7 +73,8 @@ function DropdownMenuContent({
 				<MenuPrimitive.Popup
 					data-slot="dropdown-menu-content"
 					className={cn(
-						`bg-popover text-popover-foreground relative origin-(--transform-origin) min-w-40 overflow-hidden rounded-lg border p-1
+						`bg-popover text-popover-foreground relative origin-(--transform-origin) max-h-(--available-height) min-w-40
+						max-w-(--available-width) overflow-y-auto overscroll-contain rounded-lg border p-1 [overflow-wrap:anywhere]
 						shadow-lg transition-[scale,opacity,translate] duration-(--duration-moderate) ease-out data-starting-style:scale-95
 						data-ending-style:scale-95 data-starting-style:opacity-0 data-ending-style:opacity-0
 						data-[side=bottom]:data-starting-style:-translate-y-2
@@ -123,7 +124,7 @@ function DropdownMenuItem({
 		data-[variant=destructive]:data-[highlighted]:text-destructive
 		data-[variant=destructive]:*:[svg]:!text-destructive relative flex cursor-default items-center gap-2 pointer-coarse:min-h-11
 		rounded-sm px-2 py-1.5 text-sm outline-hidden select-none data-[disabled]:pointer-events-none
-		data-[disabled]:opacity-64 data-[inset]:pl-8 [&_svg]:pointer-events-none [&_svg]:shrink-0`,
+		data-[disabled]:opacity-64 data-[inset]:ps-8 [&_svg]:pointer-events-none [&_svg]:shrink-0`,
 		className,
 	);
 
@@ -152,14 +153,14 @@ function DropdownMenuCheckboxItem({
 			data-slot="dropdown-menu-checkbox-item"
 			className={cn(
 				`data-[highlighted]:text-accent-foreground relative flex cursor-default items-center gap-2 rounded-sm py-1.5
-				pr-2 pl-8 text-sm outline-hidden select-none pointer-coarse:min-h-11 data-[disabled]:pointer-events-none data-[disabled]:opacity-64
+				pe-2 ps-8 text-sm outline-hidden select-none pointer-coarse:min-h-11 data-[disabled]:pointer-events-none data-[disabled]:opacity-64
 				[&_svg]:pointer-events-none [&_svg]:shrink-0`,
 				className,
 			)}
 			checked={checked}
 			{...props}
 		>
-			<span className='pointer-events-none absolute left-2 flex size-3.5 items-center justify-center'>
+			<span className='pointer-events-none absolute start-2 flex size-3.5 items-center justify-center'>
 					<MenuPrimitive.CheckboxItemIndicator
 						keepMounted
 						className='transition-[opacity,scale,filter] duration-(--duration-slow) ease-out data-unchecked:scale-[0.25] data-unchecked:opacity-0 data-unchecked:blur-[4px] motion-reduce:transition-none'
@@ -186,13 +187,13 @@ function DropdownMenuRadioItem({
 			data-slot="dropdown-menu-radio-item"
 			className={cn(
 				`data-[highlighted]:text-accent-foreground relative flex cursor-default items-center gap-2 rounded-sm py-1.5
-				pr-2 pl-8 text-sm outline-hidden select-none pointer-coarse:min-h-11 data-[disabled]:pointer-events-none data-[disabled]:opacity-64
+				pe-2 ps-8 text-sm outline-hidden select-none pointer-coarse:min-h-11 data-[disabled]:pointer-events-none data-[disabled]:opacity-64
 				[&_svg]:pointer-events-none [&_svg]:shrink-0`,
 				className,
 			)}
 			{...props}
 		>
-			<span className='pointer-events-none absolute left-2 flex size-3.5 items-center justify-center'>
+			<span className='pointer-events-none absolute start-2 flex size-3.5 items-center justify-center'>
 					<MenuPrimitive.RadioItemIndicator
 						keepMounted
 						className='transition-[opacity,scale,filter] duration-(--duration-slow) ease-out data-unchecked:scale-[0.25] data-unchecked:opacity-0 data-unchecked:blur-[4px] motion-reduce:transition-none'
@@ -221,7 +222,7 @@ function DropdownMenuLabel({
 	const labelProps = {
 		'data-slot': 'dropdown-menu-label',
 		'data-inset': inset,
-		className: cn('text-muted-foreground px-2 py-1.5 text-xs font-medium data-[inset]:pl-8', className),
+		className: cn('text-muted-foreground px-2 py-1.5 text-xs font-medium data-[inset]:ps-8', className),
 		...props,
 	};
 
@@ -248,9 +249,11 @@ function DropdownMenuShortcut({ className, ...props }: React.ComponentProps<'spa
 	return (
 		<kbd
 			data-slot="dropdown-menu-shortcut"
+			// Key chords read left to right in every script ("⌘T", never "T⌘"), and a long chord must not shrink.
+			dir="ltr"
 			className={cn(
-				`bg-background text-subtle-foreground ms-auto -me-1 inline-flex h-5 max-h-full items-center rounded border
-				px-1 font-[inherit] text-[0.625rem] font-medium`,
+				`bg-background text-subtle-foreground ms-auto -me-1 inline-flex h-5 max-h-full shrink-0 items-center rounded border
+				px-1 font-[inherit] text-[0.625rem] font-medium whitespace-nowrap`,
 				className,
 			)}
 			{...props}
@@ -277,13 +280,13 @@ function DropdownMenuSubTrigger({
 			className={cn(
 				`data-[highlighted]:text-accent-foreground data-[popup-open]:bg-accent
 				data-[popup-open]:text-accent-foreground relative flex cursor-default items-center rounded-sm px-2 py-1.5 text-sm pointer-coarse:min-h-11
-				outline-hidden select-none data-[inset]:pl-8`,
+				outline-hidden select-none data-[inset]:ps-8`,
 				className,
 			)}
 			{...props}
 		>
 			{children}
-			<ChevronRightIcon size={16} className='text-muted-foreground/80 ml-auto' />
+			<ChevronRightIcon size={16} className='text-muted-foreground/80 ms-auto rtl:rotate-180' />
 		</MenuPrimitive.SubmenuTrigger>
 	);
 }
@@ -293,11 +296,12 @@ function DropdownMenuSubContent({ className, children, ...props }: React.Compone
 
 	return (
 		<MenuPrimitive.Portal container={container}>
-			<MenuPrimitive.Positioner side='right' sideOffset={-4} className={zIndexClass}>
+			<MenuPrimitive.Positioner side='inline-end' sideOffset={-4} className={zIndexClass}>
 				<MenuPrimitive.Popup
 					data-slot="dropdown-menu-sub-content"
 					className={cn(
-						`bg-popover text-popover-foreground relative origin-(--transform-origin) min-w-40 overflow-hidden rounded-lg border p-1
+						`bg-popover text-popover-foreground relative origin-(--transform-origin) max-h-(--available-height) min-w-40
+						max-w-(--available-width) overflow-y-auto overscroll-contain rounded-lg border p-1 [overflow-wrap:anywhere]
 						shadow-lg transition-[scale,opacity,translate] duration-(--duration-moderate) ease-out data-starting-style:scale-95
 						data-ending-style:scale-95 data-starting-style:opacity-0 data-ending-style:opacity-0
 						data-[side=bottom]:data-starting-style:-translate-y-2

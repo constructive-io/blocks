@@ -71,9 +71,9 @@ export const Stress: StoryObj = {
 		);
 		const footer = (
 			<DrawerFooter>
-				<Button>{copy.confirm}</Button>
+				<Button wrap>{copy.confirm}</Button>
 				<DrawerClose asChild>
-					<Button variant="outline">{copy.cancel}</Button>
+					<Button wrap variant="outline">{copy.cancel}</Button>
 				</DrawerClose>
 			</DrawerFooter>
 		);

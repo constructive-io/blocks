@@ -140,7 +140,21 @@ export function useScene(layout: OrgLayout, anchorId: string | null, drag: DragS
 			// A newly shown line grows from its manager's old spot, collapsed behind that card.
 			const from = beforeOf(parentId) ?? (enter && shown?.parentId ? enterSpot(layout.byId.get(parentId)!) : undefined);
 			const growFrom = from && bottom({ ...from, height: parent.height });
-			wires.push({ id, start: bottom(parent), end: top(spotOf(id)!), tone: live ? 'live' : 'rest', marching: false, instant, enter: enter && growFrom ? { start: growFrom, end: top(enter) } : undefined });
+			const start = bottom(parent);
+			const stack = person.stack;
+			let line: Pick<WireSpec, 'start' | 'end' | 'via' | 'enter'>;
+			if (stack && shown && !instant) {
+				// A stacked report's line bends through its column; the layout drew it, so it only needs the scene's shift.
+				const [first, ...bends] = stack.route.map(([x, y]): WirePoint => [x + shift.x, y + shift.y]);
+				const end = bends.pop()!;
+				line = { start: first, end, via: bends, enter: enter && growFrom ? { start: growFrom, end: growFrom, via: bends.map(() => growFrom) } : undefined };
+			} else if (stack && !shown && !instant) {
+				// Folding away: the same bends, all pulled into the manager's card, so the line retracts instead of jumping.
+				line = { start, end: top(spotOf(id)!), via: stack.route.slice(2).map(() => start) };
+			} else {
+				line = { start, end: top(spotOf(id)!), enter: enter && growFrom ? { start: growFrom, end: top(enter) } : undefined };
+			}
+			wires.push({ id, ...line, tone: live ? 'live' : 'rest', marching: false, instant });
 			addAnchor({ id: parentId, at: bottom(parent), live, instant, enter: growFrom });
 		}
 		const target = drag?.targetId ? spotOf(drag.targetId) : undefined;

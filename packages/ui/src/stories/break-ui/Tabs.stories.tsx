@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from '@storybook/react-vite';
-import { pickDataset } from './dataset';
+import { getDataset, pickDataset } from './dataset';
 import { emails, identifiers, labels, manyRows, names, numbers } from './worst-case';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../components/tabs';
 
@@ -37,8 +37,10 @@ const huge: Tab[] = manyRows(100, (index) => ({ value: `t${index}`, label: `Work
 export const Stress: StoryObj = {
 	render: (_args, context) => {
 		const tabs = pickDataset<Tab[]>(context, { demo, worst, empty: [], one: [demo[0]], huge });
+		const dataset = getDataset(context);
+		// `defaultValue` is read once, so each dataset gets a fresh uncontrolled Tabs.
 		const renderTabs = (testId: string) => (
-			<Tabs defaultValue={tabs[0]?.value} data-testid={testId}>
+			<Tabs key={dataset} defaultValue={tabs[0]?.value} data-testid={testId}>
 				<TabsList>
 					{tabs.map((tab) => (
 						<TabsTrigger key={tab.value} value={tab.value}>

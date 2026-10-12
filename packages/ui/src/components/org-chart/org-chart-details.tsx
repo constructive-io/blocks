@@ -14,7 +14,7 @@ import type { OrgChartEdge } from './org-chart.types';
 import { personName } from './org-chart-utils';
 
 const ROW = cn(
-	'flex h-8 w-full min-w-0 cursor-pointer items-center gap-2 rounded-md px-2 text-left text-[13px] text-foreground hover:bg-overlay-hover',
+	'flex h-8 w-full min-w-0 cursor-pointer items-center gap-2 rounded-md px-2 text-left text-[0.8125rem] text-foreground hover:bg-overlay-hover',
 	focusRingClass,
 );
 
@@ -22,9 +22,15 @@ function PersonRow({ person, onSelect }: { person: OrgChartEdge; onSelect: (id: 
 	return (
 		<li>
 			<button type="button" className={ROW} onClick={() => onSelect(person.id)}>
-				<PersonAvatar person={person} className="size-5 text-[9px]" />
-				<span className="min-w-0 flex-1 truncate">{personName(person)}</span>
-				{person.positionTitle ? <span className="hidden max-w-[45%] truncate text-xs text-muted-foreground @xs/details:block">{person.positionTitle}</span> : null}
+				<PersonAvatar person={person} className="size-5 text-[0.5625rem]" />
+				<span className="min-w-0 flex-1 truncate" title={personName(person)}>
+					{personName(person)}
+				</span>
+				{person.positionTitle ? (
+					<span className="hidden max-w-[45%] truncate text-xs text-muted-foreground @xs/details:block" title={person.positionTitle}>
+						{person.positionTitle}
+					</span>
+				) : null}
 				<ChevronRight aria-hidden="true" className="size-3.5 shrink-0 text-subtle-foreground" />
 			</button>
 		</li>
@@ -98,10 +104,14 @@ export function OrgChartDetails({ person, manager, reports, editable, onSelect, 
 			<header className="flex items-start gap-2.5 p-3">
 				<PersonAvatar person={data} className="size-9 text-xs" />
 				<div className="min-w-0 flex-1 pt-0.5">
-					<h2 id={headingId} className="truncate text-sm font-medium text-foreground">
+					<h2 id={headingId} className="truncate text-sm font-medium text-foreground" title={name}>
 						{name}
 					</h2>
-					{data.positionTitle ? <p className="truncate text-xs text-muted-foreground">{data.positionTitle}</p> : null}
+					{data.positionTitle ? (
+						<p className="truncate text-xs text-muted-foreground" title={data.positionTitle}>
+							{data.positionTitle}
+						</p>
+					) : null}
 				</div>
 				<TooltipIconButton label="Close details" size="sm" className="-mt-0.5 -mr-0.5" onClick={onClose}>
 					<X aria-hidden="true" className="size-3.5" />
@@ -114,7 +124,7 @@ export function OrgChartDetails({ person, manager, reports, editable, onSelect, 
 						<PersonRow person={manager} onSelect={onSelect} />
 					</ul>
 				) : (
-					<p className="px-2 py-1.5 text-[13px] text-muted-foreground">No one. {name} is at the top of the chart.</p>
+					<p className="px-2 py-1.5 text-[0.8125rem] text-muted-foreground">No one. {name} is at the top of the chart.</p>
 				)}
 			</Group>
 
@@ -126,7 +136,7 @@ export function OrgChartDetails({ person, manager, reports, editable, onSelect, 
 						))}
 					</ul>
 				) : (
-					<p className="px-2 py-1.5 text-[13px] text-muted-foreground">No direct reports.</p>
+					<p className="px-2 py-1.5 text-[0.8125rem] text-muted-foreground">No direct reports.</p>
 				)}
 				{reports.length > 0 ? (
 					<ActionRow
