@@ -101,6 +101,7 @@ const DockIcon = ({
 	mouseX: mouseXProp,
 	className,
 	children,
+	onKeyDown,
 	...props
 }: DockIconProps) => {
 	const ref = useRef<HTMLDivElement>(null);
@@ -114,6 +115,16 @@ const DockIcon = ({
 	const padding = Math.max(6, size * 0.2);
 	// An icon with a click handler is a button: reachable and operable from the keyboard.
 	const interactive = typeof props.onClick === 'function' && props.role === undefined;
+	// The consumer's handler runs first and can cancel the press. Enter and Space only press the icon itself:
+	// a key from a link or button inside it belongs to that element, and pressing the icon would cancel it.
+	const handleKeyDown = (event: React.KeyboardEvent<HTMLDivElement>) => {
+		onKeyDown?.(event);
+		if (!interactive || event.defaultPrevented || event.target !== event.currentTarget) return;
+		if (event.key === 'Enter' || event.key === ' ') {
+			event.preventDefault();
+			event.currentTarget.click();
+		}
+	};
 	const defaultMouseX = useMotionValue(Infinity);
 
 	const distanceCalc = useTransform(mouseX ?? defaultMouseX, (val: number) => {
@@ -133,18 +144,7 @@ const DockIcon = ({
 		<motion.div
 			ref={ref}
 			style={{ width: prefersReducedMotion ? size : scaleSize, height: prefersReducedMotion ? size : scaleSize, padding }}
-			{...(interactive
-				? {
-						role: 'button',
-						tabIndex: 0,
-						onKeyDown: (event: React.KeyboardEvent<HTMLDivElement>) => {
-							if (event.key === 'Enter' || event.key === ' ') {
-								event.preventDefault();
-								event.currentTarget.click();
-							}
-						},
-					}
-				: {})}
+			{...(interactive ? { role: 'button', tabIndex: 0 } : {})}
 			className={cn(
 				// Solid hover target with theme-aware colors
 				'flex aspect-square cursor-pointer items-center justify-center rounded-full bg-transparent',
@@ -153,6 +153,7 @@ const DockIcon = ({
 				className,
 			)}
 			{...props}
+			onKeyDown={handleKeyDown}
 		>
 			{children}
 		</motion.div>

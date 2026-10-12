@@ -30,29 +30,29 @@ type TooltipTriggerProps = React.ComponentProps<typeof TooltipPrimitive.Trigger>
 	asChild?: boolean;
 };
 
-function TooltipTrigger({ delay = 600, asChild, children, render, ...props }: TooltipTriggerProps) {
-	const childRender = render === undefined && asChild && React.isValidElement(children) ? children : undefined;
+/**
+ * Read by Button. A natively disabled button gets no pointer or focus events, so a tooltip explaining why it is
+ * disabled would never open. Marked, the button stays the same element in the same place, hoverable and focusable,
+ * and is disabled with `aria-disabled` instead. Keep the name in step with button.tsx.
+ */
+const FOCUSABLE_WHEN_DISABLED = 'data-focusable-when-disabled';
 
-	// A disabled button ignores pointer and focus events, so a tooltip explaining *why* it is disabled
-	// would never open. Trigger from a focusable wrapper around it instead.
-	if (childRender && (childRender.props as { disabled?: boolean }).disabled) {
-		return (
-			<TooltipPrimitive.Trigger
-				data-slot="tooltip-trigger"
-				delay={delay}
-				render={<span tabIndex={0} className="inline-flex cursor-not-allowed rounded-md focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:outline-none" />}
-				{...props}
-			>
-				{childRender}
-			</TooltipPrimitive.Trigger>
-		);
-	}
+function keepFocusableWhenDisabled(element: React.ReactElement) {
+	// A DOM element ignores the attribute and stays natively disabled; only components that read it change.
+	if (typeof element.type === 'string' || !(element.props as { disabled?: boolean }).disabled) return element;
+	return React.cloneElement(element, { [FOCUSABLE_WHEN_DISABLED]: '' } as Record<string, string>);
+}
+
+function TooltipTrigger({ delay = 600, asChild, children, render, ...props }: TooltipTriggerProps) {
+	// A trigger with its own `disabled` shows no tooltip, so there is nothing for a focusable button to open.
+	const focusable = (element: React.ReactElement) => (props.disabled ? element : keepFocusableWhenDisabled(element));
+	const childRender = render === undefined && asChild && React.isValidElement(children) ? focusable(children) : undefined;
 
 	return (
 		<TooltipPrimitive.Trigger
 			data-slot="tooltip-trigger"
 			delay={delay}
-			render={render ?? childRender}
+			render={React.isValidElement(render) ? focusable(render) : (render ?? childRender)}
 			{...props}
 		>
 			{childRender ? undefined : children}

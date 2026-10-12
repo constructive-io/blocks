@@ -31,13 +31,13 @@ export const tooltipDocs = definePrimitiveDocs({
     },
     {
       title: 'Disabled trigger',
-      description: 'Render the trigger on a focusable wrapper when the disabled control cannot emit pointer or focus events.',
+      description: 'Render the trigger on a focusable wrapper when a disabled control other than Button cannot emit pointer or focus events. A disabled Button needs no wrapper.',
       demo: 'DisabledTriggerTooltipDemo',
     },
   ],
   accessibility: [
     'Keep TooltipContent concise and non-interactive. A tooltip supplements the trigger name and cannot replace a persistent label for unfamiliar controls.',
-    'Make the trigger keyboard focusable. For disabled controls, attach TooltipTrigger to a wrapper that can receive pointer and focus events; TooltipTrigger with asChild does this for you when its child is disabled.',
+    'Make the trigger keyboard focusable. A disabled Button used as the trigger (asChild or render) stays hoverable and focusable: it is marked aria-disabled instead of disabled, in place and without a wrapper, so its layout and state do not change. A disabled control of another kind cannot emit pointer or focus events, so attach TooltipTrigger to a focusable wrapper you provide.',
     'Base UI opens tooltips from hover or focus, closes them on Escape, and preserves the relationship through the portal chain.',
   ],
   api: [

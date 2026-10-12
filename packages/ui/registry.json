@@ -4233,6 +4233,10 @@
         {
           "path": "registry/constructive/blocks/toast/toast-card.tsx",
           "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/toast/toast-details.tsx",
+          "type": "registry:component"
         }
       ]
     },

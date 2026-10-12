@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
 import { initials } from '../src/lib/initials';
 
@@ -72,5 +72,21 @@ describe('initials', () => {
 		expect(initials('María José de la Cruz', { max: 3 })).toBe('MJC');
 		expect(initials('Jane Doe', { max: 3 })).toBe('JD');
 		expect(initials('Jane Doe', { max: 0 })).toBe('J');
+	});
+
+	it('upper-cases without asking the runtime for its locale, so server and browser agree', () => {
+		// `toLocaleUpperCase()` turns `i` into `İ` under a Turkish default; a server in another locale would not hydrate.
+		const localeAware = vi.spyOn(String.prototype, 'toLocaleUpperCase');
+		try {
+			expect(initials('irem yilmaz')).toBe('IY');
+			expect(localeAware).not.toHaveBeenCalled();
+		} finally {
+			localeAware.mockRestore();
+		}
+	});
+
+	it('applies a language casing rule only when asked', () => {
+		expect(initials('irem yilmaz', { locale: 'tr' })).toBe('İY');
+		expect(initials('irem yilmaz', { locale: ['tr', 'en'] })).toBe('İY');
 	});
 });

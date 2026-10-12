@@ -123,28 +123,6 @@ describe('TooltipTrigger asChild', () => {
 		expect(parentClick).toHaveBeenCalledOnce();
 	});
 
-	it('triggers from a focusable wrapper when the child button is disabled', async () => {
-		const view = createTestRoot();
-
-		await view.render(
-			<TooltipProvider>
-				<Tooltip>
-					<TooltipTrigger asChild>
-						<Button disabled>Delete workspace</Button>
-					</TooltipTrigger>
-				</Tooltip>
-			</TooltipProvider>,
-		);
-
-		// A disabled button never receives hover or focus, so the wrapper carries the tooltip.
-		const trigger = view.container.querySelector('[data-slot="tooltip-trigger"]');
-		expect(trigger?.tagName).toBe('SPAN');
-		expect(trigger?.getAttribute('tabindex')).toBe('0');
-		const button = trigger?.querySelector('button');
-		expect(button?.disabled).toBe(true);
-		expect(button?.textContent).toBe('Delete workspace');
-	});
-
 	it('puts the trigger on an enabled button directly, without a wrapper', async () => {
 		const view = createTestRoot();
 

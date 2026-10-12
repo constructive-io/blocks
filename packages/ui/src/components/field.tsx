@@ -210,7 +210,8 @@ function FieldSeparator({
 					<span className='text-center text-muted-foreground [overflow-wrap:anywhere]' data-slot='field-separator-content'>
 						{children}
 					</span>
-					<Separator className='min-w-4 flex-1' />
+					{/* One divider with a label, not two: the rule after the text is only drawn. */}
+					<Separator className='min-w-4 flex-1' aria-hidden='true' />
 				</>
 			)}
 		</div>

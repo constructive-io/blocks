@@ -6,6 +6,11 @@
  * `word[0]` pattern turns `🦊 Fox` into a lone surrogate). A single word gives
  * one initial. Pass an email address and the local part is used.
  *
+ * Letters are upper-cased without consulting the runtime's locale, so the server
+ * and the browser always draw the same characters (`toLocaleUpperCase()` turns `i`
+ * into `İ` under a Turkish default, which would not hydrate). Pass `locale` to opt
+ * in to a language's casing rules.
+ *
  * Returns `null` when there is nothing to show, so callers can render an icon
  * instead of an empty circle:
  *
@@ -16,6 +21,11 @@
 export interface InitialsOptions {
 	/** Maximum number of initials. Defaults to 2 (first and last word). */
 	max?: number;
+	/**
+	 * BCP 47 language tag whose casing rules upper-case the initials, for example `'tr'`
+	 * so `irem` becomes `İ`. Without it casing is locale-independent.
+	 */
+	locale?: string | string[];
 }
 
 const segmenter =
@@ -41,8 +51,8 @@ function firstGrapheme(text: string): string {
 	return GRAPHEME_FALLBACK.exec(text)?.[0] ?? '';
 }
 
-function upperCase(grapheme: string): string {
-	const upper = grapheme.toLocaleUpperCase();
+function upperCase(grapheme: string, locale: InitialsOptions['locale']): string {
+	const upper = locale ? grapheme.toLocaleUpperCase(locale) : grapheme.toUpperCase();
 	// `ß` becomes `SS`: keep the original when uppercasing would add a character.
 	return firstGrapheme(upper) === upper ? upper : grapheme;
 }
@@ -56,7 +66,10 @@ function wordsOf(value: string): string[] {
 	return trimmed.split(/\s+/u);
 }
 
-export function initials(name: string | null | undefined, { max = 2 }: InitialsOptions = {}): string | null {
+export function initials(
+	name: string | null | undefined,
+	{ max = 2, locale }: InitialsOptions = {},
+): string | null {
 	if (!name) return null;
 	const limit = Math.max(1, Math.floor(max));
 
@@ -69,5 +82,5 @@ export function initials(name: string | null | undefined, { max = 2 }: InitialsO
 
 	let picked = words;
 	if (words.length > limit) picked = limit === 1 ? [words[0]] : [...words.slice(0, limit - 1), words[words.length - 1]];
-	return picked.map((word) => upperCase(firstGrapheme(word))).join('');
+	return picked.map((word) => upperCase(firstGrapheme(word), locale)).join('');
 }

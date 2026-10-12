@@ -29,6 +29,10 @@ const worstStatuses: Array<{ note: string; text: React.ReactNode; variant: Varia
 	{ note: 'capped count', text: '99+', variant: 'error' },
 	{ note: 'formatted count', text: '1,284', variant: 'success' },
 	{ note: 'unformatted count', text: 1000000, variant: 'success' },
+	// JSX such as `{used}/{limit}` hands Badge several text children; they must read as one run, with no gap between.
+	{ note: 'interpolated percent', text: [50, '%'], variant: 'info' },
+	{ note: 'interpolated plus', text: ['+', 12], variant: 'secondary' },
+	{ note: 'interpolated ratio', text: [3, '/', 10], variant: 'outline' },
 	{ note: 'undefined count', text: undefined, variant: 'info' },
 	{ note: 'blank string', text: labels.blank, variant: 'warning' },
 	{ note: 'markup as text', text: labels.markup, variant: 'outline' },

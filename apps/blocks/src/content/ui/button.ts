@@ -42,6 +42,7 @@ export const buttonDocs = definePrimitiveDocs({
     'Give every Button a concise accessible name. Add aria-label to icon-only buttons and keep decorative icons out of the accessibility tree.',
     'Button defaults type to "button" so it does not submit a form accidentally. Set type="submit" for the form’s submit action.',
     'Use disabled while an action cannot run. For pending work, pair disabled with aria-busy and visible status text rather than showing an unlabeled spinner alone.',
+    'Inside a TooltipTrigger a disabled Button is marked aria-disabled instead of disabled, so it stays focusable and hoverable and the tooltip can say why it is unavailable. It still ignores clicks, presses and submits.',
   ],
   api: [
     {

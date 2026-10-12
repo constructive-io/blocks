@@ -91,8 +91,13 @@ function Stepper({
 				className={cn(
 					// Never wider than the container. Labels truncate before connectors shrink, and
 					// horizontal scrolls only as a last resort instead of widening the page.
-					`group/stepper inline-flex max-w-full min-w-0 data-[orientation=horizontal]:w-full data-[orientation=horizontal]:flex-row
-					data-[orientation=horizontal]:overflow-x-auto data-[orientation=vertical]:flex-col`,
+					// A scroll container clips on both axes, and a trigger reaches 4px past the row (`-my-1 py-1`) with a 3px
+					// focus ring around that. The 0.5rem of vertical padding keeps both inside the clip and the negative
+					// margin takes it back, so the stepper covers the height it always did. It adds nothing sideways: a box
+					// wider than its container would widen the page when the stepper runs edge to edge.
+					`group/stepper inline-flex max-w-full min-w-0 data-[orientation=horizontal]:-my-2 data-[orientation=horizontal]:w-full
+					data-[orientation=horizontal]:flex-row data-[orientation=horizontal]:overflow-x-auto data-[orientation=horizontal]:py-2
+					data-[orientation=vertical]:flex-col`,
 					className,
 				)}
 				data-orientation={orientation}
