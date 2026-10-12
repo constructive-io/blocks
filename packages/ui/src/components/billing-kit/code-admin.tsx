@@ -594,7 +594,7 @@ export function CreditCodeTable({ codes, describe, onToggle, onOpen, className }
 							</td>
 							<td className="text-end">
 								<Switch
-									className="-my-3"
+									className="align-middle"
 									aria-label={`${code.active ? 'Pause' : 'Resume'} ${code.code}`}
 									checked={code.active}
 									disabled={!onToggle || status === 'expired' || status === 'used_up'}

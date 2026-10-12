@@ -16,8 +16,8 @@ import { ExternalRef, SyncBadge } from './provider';
 import { TableSurface, tableGroupRowClass, tableHeadClass, tableRowClass } from './surface';
 import type { CreditPack, Meter, Plan, PlanPrice, ProviderMode } from './types';
 
-/** Keeps the switch's 40px hit area without making dense rows taller. */
-const tableSwitchClass = '-my-3';
+/** The switch box is its own 18px track now (the touch target is a pseudo-element), so it only needs to centre on the row's text. */
+const tableSwitchClass = 'align-middle';
 
 /* ------------------------------------------------------------------ *
  * Entitlement matrix

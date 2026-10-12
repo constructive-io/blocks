@@ -93,10 +93,10 @@ function RoomView({ room }: { room: Room }) {
 
 	return (
 		<div className="flex min-w-0 flex-1 flex-col">
-			{/* Narrow: the sections wrap to their own full-width row under the name, so a long room name cannot squeeze them out. Wide: one row, the name capped at 40%. */}
+			{/* Narrow: the sections wrap to their own full-width row under the name, so a long room name cannot squeeze them out. From 52rem: one row, the name capped at 40% (the five sections need about 22rem). */}
 			<header className="flex min-h-12 shrink-0 flex-wrap items-center gap-x-3 gap-y-0.5 border-b border-border px-3 py-1.5">
 				<NavMenuButton />
-				<div className="flex min-w-0 flex-1 items-center gap-1.5 @4xl/view:max-w-[40%] @4xl/view:flex-none">
+				<div className="flex min-w-0 flex-1 items-center gap-1.5 @min-[52rem]/view:max-w-[40%] @min-[52rem]/view:flex-none">
 					<h1 title={room.name} className="truncate text-sm font-medium text-foreground">
 						<bdi>{room.name}</bdi>
 					</h1>
@@ -104,9 +104,9 @@ function RoomView({ room }: { room: Room }) {
 					{room.status === 'archived' ? <ToneBadge tone="neutral">Archived</ToneBadge> : null}
 				</div>
 				{gated ? (
-					<div className="hidden flex-1 @4xl/view:block" />
+					<div className="hidden flex-1 @min-[52rem]/view:block" />
 				) : (
-					<div ref={tabFade.ref} style={tabFade.style} className={cn(scrollRowClass, 'order-last w-full min-w-0 @4xl/view:order-none @4xl/view:w-auto @4xl/view:flex-1')}>
+					<div ref={tabFade.ref} style={tabFade.style} className={cn(scrollRowClass, 'order-last w-full min-w-0 @min-[52rem]/view:order-none @min-[52rem]/view:w-auto @min-[52rem]/view:flex-1')}>
 						<div role="tablist" aria-label={`${room.name} sections`} className="flex w-max gap-0.5">
 							{tabs.map((option) => {
 								const selected = option.value === active;
