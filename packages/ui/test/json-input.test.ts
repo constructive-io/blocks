@@ -56,6 +56,18 @@ describe('findJsonErrorOffset', () => {
 		expect(findJsonErrorOffset('[1, 2 3]')).toBe(6);
 		expect(findJsonErrorOffset('{"a": 1} x')).toBe(9);
 	});
+
+	it('reads a long number whole, so the error after it is not blamed on the number', () => {
+		const text = `{"a": ${'1'.repeat(70)}, "b": }`;
+
+		expect(findJsonErrorOffset(text)).toBe(text.indexOf('}'));
+		expect(findJsonErrorOffset(`{"a": ${'1'.repeat(70)}.${'5'.repeat(70)}e+${'9'.repeat(70)}}`)).toBeNull();
+	});
+
+	it('reads a \\u escape wherever it sits in a long string', () => {
+		expect(findJsonErrorOffset(`"${'x'.repeat(500)}\\u00e9${'y'.repeat(500)}"`)).toBeNull();
+		expect(findJsonErrorOffset('"\\u00e"')).toBe(1);
+	});
 });
 
 describe('describeJsonError', () => {

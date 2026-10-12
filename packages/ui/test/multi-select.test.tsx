@@ -38,6 +38,16 @@ async function open(container: HTMLElement) {
 	await act(async () => trigger(container).click());
 }
 
+// What a browser does with Enter on a focused button: it activates it unless the keydown was cancelled.
+async function pressEnter(element: HTMLElement) {
+	const keydown = new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true });
+	await act(async () => {
+		element.dispatchEvent(keydown);
+	});
+	if (!keydown.defaultPrevented) await act(async () => element.click());
+	return keydown;
+}
+
 describe('MultiSelect selection overflow', () => {
 	it('shows the overflow count as plain text, so it cannot clear anything', async () => {
 		const container = await render(
@@ -116,5 +126,82 @@ describe('MultiSelect keyboard navigation', () => {
 		} finally {
 			delete (Element.prototype as { scrollIntoView?: unknown }).scrollIntoView;
 		}
+	});
+});
+
+describe('MultiSelect footer keyboard handling', () => {
+	it('clears the selection when Enter is pressed on the clear button', async () => {
+		const onValueChange = vi.fn();
+		const container = await render(
+			<MultiSelect options={options} defaultValue={labels.slice(0, 3)} onValueChange={onValueChange} />,
+		);
+		await open(container);
+
+		await pressEnter(buttonNamed(/Clear selection \(3\)/)!);
+
+		expect(onValueChange).toHaveBeenCalledTimes(1);
+		expect(onValueChange).toHaveBeenLastCalledWith([]);
+	});
+
+	it('does not drop the last selected value when Backspace is pressed on a footer button', async () => {
+		const onValueChange = vi.fn();
+		const container = await render(
+			<MultiSelect options={options} defaultValue={labels.slice(0, 3)} onValueChange={onValueChange} />,
+		);
+		await open(container);
+
+		await act(async () => {
+			buttonNamed(/Clear selection \(3\)/)!.dispatchEvent(new KeyboardEvent('keydown', { key: 'Backspace', bubbles: true, cancelable: true }));
+		});
+
+		expect(onValueChange).not.toHaveBeenCalled();
+	});
+
+	it('leaves Enter to the buttons a host puts in the footer', async () => {
+		const onAdd = vi.fn();
+		const onValueChange = vi.fn();
+		const container = await render(
+			<MultiSelect
+				options={options}
+				onValueChange={onValueChange}
+				footerContent={
+					<button type="button" onClick={onAdd}>
+						Add new tag
+					</button>
+				}
+			/>,
+		);
+		await open(container);
+
+		await pressEnter(buttonNamed(/Add new tag/)!);
+
+		expect(onAdd).toHaveBeenCalledTimes(1);
+		expect(onValueChange).not.toHaveBeenCalled();
+	});
+
+	it('still closes the popover with Escape from a footer button', async () => {
+		const container = await render(
+			<MultiSelect options={options} defaultValue={labels.slice(0, 2)} onValueChange={() => {}} />,
+		);
+		await open(container);
+		const clear = buttonNamed(/Clear selection \(2\)/)!;
+		clear.focus();
+
+		await act(async () => {
+			clear.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }));
+		});
+
+		expect(trigger(container).getAttribute('aria-expanded')).toBe('false');
+	});
+
+	it('still toggles the highlighted option with Enter from the search field', async () => {
+		const onValueChange = vi.fn();
+		const container = await render(<MultiSelect options={options} onValueChange={onValueChange} />);
+		await open(container);
+		const search = document.body.querySelector<HTMLInputElement>('input[type="text"]')!;
+
+		await pressEnter(search);
+
+		expect(onValueChange).toHaveBeenLastCalledWith(['design']);
 	});
 });

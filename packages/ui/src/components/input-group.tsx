@@ -71,6 +71,42 @@ function InputGroupAddon({
   );
 }
 
+/**
+ * Wraps each run of adjacent text in one truncating element, so a long prefix ends in an ellipsis instead of wrapping or
+ * clipping. A run is wrapped once, not per child: `{used}/{max}` is one flex item, where one item per child would open
+ * a gap between them. Elements are left alone and whitespace between them stays whitespace.
+ */
+function truncateTextRuns(children: React.ReactNode) {
+  const parts: React.ReactNode[] = [];
+  let run = "";
+  let inRun = false;
+  const endRun = () => {
+    if (!inRun) return;
+    parts.push(
+      run.trim() === "" ? (
+        run
+      ) : (
+        <span key={`text-${parts.length}`} className="min-w-0 truncate" dir="auto">
+          {run}
+        </span>
+      ),
+    );
+    run = "";
+    inRun = false;
+  };
+  for (const child of React.Children.toArray(children)) {
+    if (typeof child === "string" || typeof child === "number") {
+      run += child;
+      inRun = true;
+    } else {
+      endRun();
+      parts.push(child);
+    }
+  }
+  endRun();
+  return parts;
+}
+
 function InputGroupText({ className, children, ...props }: React.ComponentProps<"span">) {
   return (
     <span
@@ -81,16 +117,7 @@ function InputGroupText({ className, children, ...props }: React.ComponentProps<
       )}
       {...props}
     >
-      {/* Text nodes become their own flex items so a long prefix ends in an ellipsis instead of wrapping or clipping. */}
-      {React.Children.map(children, (child) =>
-        typeof child === "string" || typeof child === "number" ? (
-          <span className="min-w-0 truncate" dir="auto">
-            {child}
-          </span>
-        ) : (
-          child
-        ),
-      )}
+      {truncateTextRuns(children)}
     </span>
   );
 }

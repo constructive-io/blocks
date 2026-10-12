@@ -3,7 +3,19 @@ import { act } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { matchSorter } from 'match-sorter';
+
 import { RecordPicker } from '../src/components/record-picker';
+
+// Pass-through spy: lets a test count how often the search actually runs.
+vi.mock('match-sorter', async (importOriginal) => {
+	const actual = await importOriginal<typeof import('match-sorter')>();
+	const spy = Object.assign(
+		vi.fn((...args: Parameters<typeof actual.matchSorter>) => actual.matchSorter(...args)),
+		{ rankings: actual.matchSorter.rankings },
+	);
+	return { ...actual, matchSorter: spy };
+});
 
 globalThis.IS_REACT_ACT_ENVIRONMENT = true;
 
@@ -86,5 +98,57 @@ describe('RecordPicker search', () => {
 
 		expect(rows()).toEqual([]);
 		expect(container!.textContent).toContain('No records match your search');
+	});
+});
+
+describe('RecordPicker re-renders', () => {
+	// Hosts pass the getters inline, so they are new functions on every parent render.
+	async function renderInline(tick: number, searchFields: string[], labelOf: (contact: Contact) => string = label) {
+		await act(async () =>
+			root!.render(
+				<RecordPicker
+					records={contacts}
+					linkedRecordIds={new Set()}
+					isLinking={false}
+					getRecordId={(contact: Contact) => contact.id}
+					getRecordLabel={(contact: Contact) => labelOf(contact)}
+					searchFields={searchFields}
+					onLink={() => {}}
+					placeholder={`tick ${tick}`}
+				/>,
+			),
+		);
+	}
+
+	it('does not run the search again when only the getter functions change', async () => {
+		container = document.createElement('div');
+		document.body.appendChild(container);
+		root = createRoot(container);
+		const fields = ['name', 'email'];
+		await renderInline(0, fields);
+		await search('hopper');
+		const runs = vi.mocked(matchSorter).mock.calls.length;
+		expect(runs).toBeGreaterThan(0);
+
+		await renderInline(1, fields);
+		await renderInline(2, fields);
+
+		expect(vi.mocked(matchSorter).mock.calls.length).toBe(runs);
+		expect(rows()).toEqual(['Grace Hopper']);
+	});
+
+	it('searches again when the labels themselves change', async () => {
+		container = document.createElement('div');
+		document.body.appendChild(container);
+		root = createRoot(container);
+		const fields = ['email'];
+		await renderInline(0, fields, (contact) => contact.id);
+		await search('hopper');
+		expect(rows()).toEqual([]);
+
+		// The same records, now labelled with their names: the text a row shows is what the search has to match.
+		await renderInline(1, fields, label);
+
+		expect(rows()).toEqual(['Grace Hopper']);
 	});
 });

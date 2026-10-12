@@ -76,37 +76,60 @@ type JsonInputProps = {
 // Ace draws a 14px line about 19px tall.
 const LINE_HEIGHT = 19;
 
-/** The number of editor lines that fit in 40% of the viewport (client-side; a fixed fallback during SSR). */
-function useViewportLines() {
-	const [lines, setLines] = useState(24);
+/**
+ * Connects to the page when the first listener arrives and lets go when the last one leaves, so any number of editors
+ * share one MutationObserver and one resize listener.
+ */
+function sharedSubscription(connect: (notify: () => void) => () => void) {
+	const listeners = new Set<() => void>();
+	let disconnect: (() => void) | undefined;
 
-	useEffect(() => {
-		const update = () => setLines(Math.max(1, Math.floor((window.innerHeight * 0.4) / LINE_HEIGHT)));
-		update();
-		window.addEventListener('resize', update);
-		return () => window.removeEventListener('resize', update);
-	}, []);
-
-	return lines;
+	return (listener: () => void) => {
+		listeners.add(listener);
+		if (listeners.size === 1) disconnect = connect(() => listeners.forEach((notify) => notify()));
+		return () => {
+			listeners.delete(listener);
+			if (listeners.size === 0) {
+				disconnect?.();
+				disconnect = undefined;
+			}
+		};
+	};
 }
 
-function subscribeToDocumentTheme(onChange: () => void) {
-	const observer = new MutationObserver(onChange);
+const subscribeToViewport = sharedSubscription((notify) => {
+	window.addEventListener('resize', notify);
+	return () => window.removeEventListener('resize', notify);
+});
+
+const subscribeToDocumentTheme = sharedSubscription((notify) => {
+	const observer = new MutationObserver(notify);
 	observer.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
 	return () => observer.disconnect();
+});
+
+const subscribeToNothing = () => () => {};
+
+/** The number of editor lines that fit in 40% of the viewport (client-side; a fixed fallback during SSR). */
+function useViewportLines() {
+	return useSyncExternalStore(
+		subscribeToViewport,
+		() => Math.max(1, Math.floor((window.innerHeight * 0.4) / LINE_HEIGHT)),
+		() => 24,
+	);
 }
 
 const documentTheme = (): 'light' | 'dark' => (document.documentElement.classList.contains('dark') ? 'dark' : 'light');
 
-/** The theme the page is in, following the `dark` class on `<html>`. */
-function useDocumentTheme() {
-	return useSyncExternalStore(subscribeToDocumentTheme, documentTheme, () => 'light' as const);
+/** The theme the page is in, following the `dark` class on `<html>`. Pass `false` when the host sets the theme itself. */
+function useDocumentTheme(follow = true) {
+	return useSyncExternalStore(follow ? subscribeToDocumentTheme : subscribeToNothing, documentTheme, () => 'light' as const);
 }
 
 export const JsonInput = ({ value = '', setValue, minLines = 16, maxLines, className, theme: themeProp }: JsonInputProps) => {
 	const [jsonState, setJsonState] = useState<JsonState>({ state: 'empty' });
 	const viewportLines = useViewportLines();
-	const pageTheme = useDocumentTheme();
+	const pageTheme = useDocumentTheme(themeProp === undefined);
 	const theme = themeProp ?? pageTheme;
 
 	const handleChange = (val: string) => {
@@ -187,7 +210,7 @@ export const JsonEditor = ({
 	enableFolding = false,
 	theme: themeProp,
 }: JsonEditorProps) => {
-	const pageTheme = useDocumentTheme();
+	const pageTheme = useDocumentTheme(themeProp === undefined);
 	const theme = themeProp ?? pageTheme;
 	const editorProps: IAceEditorProps = {
 		mode: 'json',
@@ -232,6 +255,10 @@ export const validateJson = (text: string) => {
 	}
 };
 
+// Sticky, so they match at `lastIndex` itself: a number of any length is read whole and nothing is sliced out of the text.
+const JSON_NUMBER = /-?(0|[1-9]\d*)(\.\d+)?([eE][+-]?\d+)?/y;
+const JSON_HEX_ESCAPE = /[0-9a-fA-F]{4}/y;
+
 /**
  * Where `text` first stops being valid JSON, as a 0-based character offset (null when it parses). Engines word
  * syntax errors differently and often leave out the position, which makes a mistake on line 4,500 hard to find.
@@ -255,7 +282,8 @@ export const findJsonErrorOffset = (text: string): number | null => {
 			if (char === '\\') {
 				const escape = text[i + 1];
 				if (escape === 'u') {
-					if (!/^[0-9a-fA-F]{4}$/.test(text.slice(i + 2, i + 6))) fail(i);
+					JSON_HEX_ESCAPE.lastIndex = i + 2;
+					if (!JSON_HEX_ESCAPE.test(text)) fail(i);
 					i += 6;
 				} else if (escape !== undefined && '"\\/bfnrt'.includes(escape)) i += 2;
 				else fail(i + 1);
@@ -315,7 +343,8 @@ export const findJsonErrorOffset = (text: string): number | null => {
 			}
 		} else if (char === '"') string();
 		else if (char === '-' || (char >= '0' && char <= '9')) {
-			const number = /^-?(0|[1-9]\d*)(\.\d+)?([eE][+-]?\d+)?/.exec(text.slice(i, i + 64));
+			JSON_NUMBER.lastIndex = i;
+			const number = JSON_NUMBER.exec(text);
 			if (!number) fail();
 			i += number![0].length;
 		} else if (text.startsWith('true', i)) i += 4;

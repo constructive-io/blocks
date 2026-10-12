@@ -569,6 +569,10 @@ export const MultiSelect = React.forwardRef<MultiSelectRef, MultiSelectProps>(
 		// Handle keyboard navigation in dropdown
 		const handleKeyDown = React.useCallback(
 			(event: React.KeyboardEvent) => {
+				// The footer holds real buttons (the clear button and whatever the host adds). Enter and Backspace there belong
+				// to them: cancelling the keydown would stop a browser from activating the button.
+				if (event.target instanceof Element && event.target.closest('[data-slot="multi-select-footer"]')) return;
+
 				const optionsCount = flatFilteredOptions.length;
 				if (optionsCount === 0) return;
 
@@ -961,7 +965,7 @@ export const MultiSelect = React.forwardRef<MultiSelectRef, MultiSelectProps>(
 
 							{/* Footer: clearing the selection lives here, not in the trigger, so a stray click cannot drop it. */}
 							{(selectedValues.length > 0 || footerContent) && (
-								<div className='border-t p-1'>
+								<div className='border-t p-1' data-slot='multi-select-footer'>
 									{selectedValues.length > 0 && !disabled && (
 										<button
 											type='button'
