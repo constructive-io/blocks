@@ -7,7 +7,7 @@ import { cva, type VariantProps } from 'class-variance-authority';
 import { cn } from '../lib/utils';
 
 const toggleVariants = cva(
-	`group/toggle inline-flex shrink-0 cursor-pointer items-center justify-center gap-1.5 whitespace-nowrap
+	`group/toggle inline-flex max-w-full shrink-0 cursor-pointer items-center justify-center gap-1.5 whitespace-nowrap
 		rounded-md text-sm font-medium outline-none
 		transition-[box-shadow,scale] duration-(--duration-moderate) ease-out
 		hover:bg-muted hover:text-foreground
@@ -39,13 +39,18 @@ const toggleVariants = cva(
 type ToggleProps = React.ComponentProps<typeof TogglePrimitive> &
 	VariantProps<typeof toggleVariants>;
 
-function Toggle({ className, variant, size, ...props }: ToggleProps) {
+function Toggle({ className, variant, size, children, ...props }: ToggleProps) {
 	return (
 		<TogglePrimitive
 			data-slot="toggle"
 			className={cn(toggleVariants({ variant, size }), 'data-[pressed]:bg-accent', className)}
 			{...props}
-		/>
+		>
+			{/* Text nodes become their own flex items, so a label longer than the container ends in an ellipsis. */}
+			{React.Children.map(children, (child) =>
+				typeof child === 'string' || typeof child === 'number' ? <span className='min-w-0 truncate' dir='auto'>{child}</span> : child,
+			)}
+		</TogglePrimitive>
 	);
 }
 

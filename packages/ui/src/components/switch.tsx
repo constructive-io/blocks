@@ -12,14 +12,16 @@ function Switch({ className, ...props }: SwitchProps) {
 		<SwitchPrimitive.Root
 			data-slot="switch"
 			className={cn(
-				`peer relative inline-flex h-10 w-11 shrink-0 items-center justify-center outline-none
-					before:pointer-events-none before:absolute before:left-1/2 before:top-1/2 before:h-[1.15rem]
-					before:w-8 before:-translate-x-1/2 before:-translate-y-1/2 before:rounded-full before:border
+				// The box is the track itself (so a top-aligned switch lines up with the first label line); the 44x40
+				// touch target is the `after` pseudo-element, the way Checkbox and Radio do it with `before`.
+				`peer relative inline-flex h-[1.15rem] w-8 shrink-0 items-center outline-none
+					after:absolute after:-inset-x-1.5 after:-inset-y-[0.675rem] after:content-[''] pointer-coarse:after:-inset-y-[0.8rem]
+					before:pointer-events-none before:absolute before:inset-0 before:rounded-full before:border
 					before:border-transparent before:bg-input before:shadow-xs before:transition-[background-color,box-shadow]
 					data-[checked]:before:bg-primary dark:data-[unchecked]:before:bg-input/80
 					focus-visible:before:border-ring focus-visible:before:ring-[3px] focus-visible:before:ring-ring/50
 					transition-transform duration-(--duration-moderate) ease-out motion-safe:active:not-data-disabled:scale-[0.96]
-					motion-reduce:transition-none pointer-coarse:h-11 data-[disabled]:cursor-not-allowed data-[disabled]:opacity-64`,
+					motion-reduce:transition-none data-[disabled]:cursor-not-allowed data-[disabled]:opacity-64`,
 				className,
 			)}
 			{...props}

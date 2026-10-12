@@ -79,13 +79,17 @@ export const Stress: StoryObj = {
 
 		return (
 			<div style={{ display: 'flex', flexDirection: 'column', gap: 20, paddingBottom: 56 }}>
-				<Cell title="Form field 320px, selected value, no items prop" width={320}>
+				<Cell title="Form field 320px, selected value, no items prop (labels read from the declared items)" width={320}>
 					<Select defaultValue={selected}>
 						<SelectTrigger data-testid="select-plain">
 							<SelectValue placeholder="Pick a role" />
 						</SelectTrigger>
 						<SelectContent>
-							<Items options={options} />
+							{options.map((option) => (
+								<SelectItem key={option.value} value={option.value}>
+									{option.label}
+								</SelectItem>
+							))}
 						</SelectContent>
 					</Select>
 				</Cell>

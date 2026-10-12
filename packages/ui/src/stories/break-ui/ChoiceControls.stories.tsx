@@ -1,6 +1,5 @@
 import type { ReactNode } from 'react';
 import type { Meta, StoryObj } from '@storybook/react-vite';
-import { DirectionProvider } from '@base-ui/react/direction-provider';
 import { BoldIcon } from 'lucide-react';
 
 import { Checkbox } from '../../components/checkbox';
@@ -66,7 +65,7 @@ function Row({ choice, control, align, id }: { choice: Choice; control: ReactNod
 	return (
 		<div className={`flex gap-2 ${align === 'start' ? 'items-start' : 'items-center'}`}>
 			{control}
-			<div className="grid gap-1 leading-none">
+			<div className="grid min-w-0 gap-1 leading-none [overflow-wrap:anywhere]">
 				<Label htmlFor={id}>{choice.label}</Label>
 				{choice.description && <p className="text-muted-foreground text-xs">{choice.description}</p>}
 			</div>
@@ -136,7 +135,7 @@ export const Stress: StoryObj = {
 					<div style={{ display: 'grid', gap: 12 }} data-testid="cc-switch-end">
 						{few.map((choice) => (
 							<div key={choice.value} className="flex items-center justify-between gap-3">
-								<div className="grid gap-1 leading-none">
+								<div className="grid min-w-0 gap-1 leading-none [overflow-wrap:anywhere]">
 									<Label htmlFor={`sw-${choice.value}`}>{choice.label}</Label>
 									{choice.description && <p className="text-muted-foreground text-xs">{choice.description}</p>}
 								</div>
@@ -206,15 +205,6 @@ export const Stress: StoryObj = {
 						<Slider defaultValue={[50, 50]} min={0} max={100} aria-label="Range" data-testid="cc-slider-pair" />
 						<Slider defaultValue={[100, 100]} min={0} max={100} aria-label="Range at max" data-testid="cc-slider-pair-max" />
 					</div>
-				</Cell>
-
-				<Cell title="Fix check: the same sliders inside Base UI DirectionProvider (matches the document direction)" width={280}>
-					<DirectionProvider direction={context.globals.direction === 'rtl' ? 'rtl' : 'ltr'}>
-						<div style={{ display: 'grid', gap: 24 }}>
-							<Slider defaultValue={100} min={0} max={100} aria-label="At the maximum" data-testid="cc-slider-dir-max" />
-							<Slider defaultValue={[50, 50]} min={0} max={100} aria-label="Range" data-testid="cc-slider-dir-pair" />
-						</div>
-					</DirectionProvider>
 				</Cell>
 			</div>
 		);

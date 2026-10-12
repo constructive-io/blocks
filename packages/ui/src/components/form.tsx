@@ -71,9 +71,10 @@ const FormItemContext = React.createContext<FormItemContextValue>({} as FormItem
 function FormItem({ className, ...props }: React.ComponentProps<'div'>) {
 	const id = React.useId();
 
+	// `grid-cols-1` is minmax(0, 1fr): an unbreakable message or label wraps instead of widening the whole field.
 	return (
 		<FormItemContext.Provider value={{ id }}>
-			<div data-slot="form-item" className={cn('grid gap-2', className)} {...props} />
+			<div data-slot="form-item" className={cn('grid min-w-0 grid-cols-1 gap-2', className)} {...props} />
 		</FormItemContext.Provider>
 	);
 }
@@ -85,7 +86,7 @@ function FormLabel({ className, ...props }: React.ComponentProps<typeof Label>) 
 		<Label
 			data-slot="form-label"
 			data-error={!!error}
-			className={cn('data-[error=true]:text-destructive', className)}
+			className={cn('[overflow-wrap:anywhere] data-[error=true]:text-destructive', className)}
 			htmlFor={formItemId}
 			{...props}
 		/>
@@ -113,7 +114,7 @@ function FormDescription({ className, ...props }: React.ComponentProps<'p'>) {
 		<p
 			data-slot="form-description"
 			id={formDescriptionId}
-			className={cn('text-muted-foreground text-sm', className)}
+			className={cn('text-muted-foreground text-sm [overflow-wrap:anywhere]', className)}
 			{...props}
 		/>
 	);
@@ -121,14 +122,21 @@ function FormDescription({ className, ...props }: React.ComponentProps<'p'>) {
 
 function FormMessage({ className, ...props }: React.ComponentProps<'p'>) {
 	const { error, formMessageId } = useFormField();
-	const body = error ? String(error?.message ?? '') : props.children;
+	// A field can be invalid without a message (for example `setError(name, { type })`); `children` then act as the
+	// fallback so the field never turns red without saying why.
+	const body = (error ? String(error?.message ?? '') : '') || props.children;
 
 	if (!body) {
 		return null;
 	}
 
 	return (
-		<p data-slot="form-message" id={formMessageId} className={cn('text-destructive text-sm', className)} {...props}>
+		<p
+			data-slot="form-message"
+			id={formMessageId}
+			className={cn('text-destructive text-sm [overflow-wrap:anywhere]', className)}
+			{...props}
+		>
 			{body}
 		</p>
 	);

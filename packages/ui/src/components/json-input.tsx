@@ -1,7 +1,7 @@
 'use client';
 
 import * as React from 'react';
-import { useEffect, useMemo, useState, Suspense } from 'react';
+import { useEffect, useMemo, useState, useSyncExternalStore, Suspense } from 'react';
 import { CheckCircle2, CircleAlert, Loader2, WandSparkles } from 'lucide-react';
 import type { IAceEditorProps } from 'react-ace';
 
@@ -66,13 +66,48 @@ type JsonInputProps = {
 	value: string;
 	setValue: (value: string) => void;
 	minLines?: number;
+	/** Tallest the editor grows, in lines; longer documents scroll inside it. Defaults to what fits in 40% of the viewport. */
+	maxLines?: number;
 	className?: string;
-	/** Theme for the editor: 'light' or 'dark'. Defaults to 'light'. */
+	/** Theme for the editor: 'light' or 'dark'. Defaults to the document's theme (the `dark` class on `<html>`). */
 	theme?: 'light' | 'dark';
 };
 
-export const JsonInput = ({ value = '', setValue, minLines = 16, className, theme = 'light' }: JsonInputProps) => {
+// Ace draws a 14px line about 19px tall.
+const LINE_HEIGHT = 19;
+
+/** The number of editor lines that fit in 40% of the viewport (client-side; a fixed fallback during SSR). */
+function useViewportLines() {
+	const [lines, setLines] = useState(24);
+
+	useEffect(() => {
+		const update = () => setLines(Math.max(1, Math.floor((window.innerHeight * 0.4) / LINE_HEIGHT)));
+		update();
+		window.addEventListener('resize', update);
+		return () => window.removeEventListener('resize', update);
+	}, []);
+
+	return lines;
+}
+
+function subscribeToDocumentTheme(onChange: () => void) {
+	const observer = new MutationObserver(onChange);
+	observer.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
+	return () => observer.disconnect();
+}
+
+const documentTheme = (): 'light' | 'dark' => (document.documentElement.classList.contains('dark') ? 'dark' : 'light');
+
+/** The theme the page is in, following the `dark` class on `<html>`. */
+function useDocumentTheme() {
+	return useSyncExternalStore(subscribeToDocumentTheme, documentTheme, () => 'light' as const);
+}
+
+export const JsonInput = ({ value = '', setValue, minLines = 16, maxLines, className, theme: themeProp }: JsonInputProps) => {
 	const [jsonState, setJsonState] = useState<JsonState>({ state: 'empty' });
+	const viewportLines = useViewportLines();
+	const pageTheme = useDocumentTheme();
+	const theme = themeProp ?? pageTheme;
 
 	const handleChange = (val: string) => {
 		setJsonState({ state: 'loading' });
@@ -84,7 +119,7 @@ export const JsonInput = ({ value = '', setValue, minLines = 16, className, them
 			const error = validateJson(value);
 
 			if (value.trim().length === 0) setJsonState({ state: 'empty' });
-			else if (error) setJsonState({ state: 'error', errMsg: error });
+			else if (error) setJsonState({ state: 'error', errMsg: describeJsonError(value, error) });
 			else setJsonState({ state: 'success' });
 		}, 400);
 
@@ -94,13 +129,15 @@ export const JsonInput = ({ value = '', setValue, minLines = 16, className, them
 	const { icon, text, className: textClassName } = displayJsonState(jsonState);
 	const isValidJson = validateJson(value) === null;
 
+	const cap = Math.max(minLines, maxLines ?? viewportLines);
 	const lines = useMemo(() => {
-		return Math.max(countJsonLines(value), minLines);
-	}, [value, minLines]);
+		return Math.min(Math.max(countJsonLines(value), minLines), cap);
+	}, [value, minLines, cap]);
 
 	return (
 		<div>
-			<div className={cn('border-border relative overflow-y-auto rounded-md border p-2.5', className)}>
+			{/* The code is always left to right, so the format button stays on the right and the editor leaves it room. */}
+			<div className={cn('border-border relative overflow-y-auto rounded-md border p-2.5 pr-12', className)}>
 				<JsonEditor value={value} setValue={handleChange} lines={lines} theme={theme} />
 				<TooltipProvider>
 					<Tooltip>
@@ -137,7 +174,7 @@ type JsonEditorProps = {
 	readOnly?: boolean;
 	isValid?: boolean;
 	enableFolding?: boolean;
-	/** Theme for the editor: 'light' or 'dark'. Defaults to 'light'. */
+	/** Theme for the editor: 'light' or 'dark'. Defaults to the document's theme (the `dark` class on `<html>`). */
 	theme?: 'light' | 'dark';
 };
 
@@ -148,8 +185,10 @@ export const JsonEditor = ({
 	readOnly = false,
 	isValid = true,
 	enableFolding = false,
-	theme = 'light',
+	theme: themeProp,
 }: JsonEditorProps) => {
+	const pageTheme = useDocumentTheme();
+	const theme = themeProp ?? pageTheme;
 	const editorProps: IAceEditorProps = {
 		mode: 'json',
 		theme: theme === 'light' ? 'textmate' : 'cloud9_night',
@@ -191,6 +230,124 @@ export const validateJson = (text: string) => {
 	} catch (error) {
 		return (error as SyntaxError).message;
 	}
+};
+
+/**
+ * Where `text` first stops being valid JSON, as a 0-based character offset (null when it parses). Engines word
+ * syntax errors differently and often leave out the position, which makes a mistake on line 4,500 hard to find.
+ */
+export const findJsonErrorOffset = (text: string): number | null => {
+	let i = 0;
+	const fail = (at = i): never => {
+		throw new JsonOffsetError(at);
+	};
+	const whitespace = () => {
+		while (i < text.length && ' \n\r\t'.includes(text[i])) i += 1;
+	};
+	const string = () => {
+		i += 1;
+		while (i < text.length) {
+			const char = text[i];
+			if (char === '"') {
+				i += 1;
+				return;
+			}
+			if (char === '\\') {
+				const escape = text[i + 1];
+				if (escape === 'u') {
+					if (!/^[0-9a-fA-F]{4}$/.test(text.slice(i + 2, i + 6))) fail(i);
+					i += 6;
+				} else if (escape !== undefined && '"\\/bfnrt'.includes(escape)) i += 2;
+				else fail(i + 1);
+			} else if (char < ' ') fail(i);
+			else i += 1;
+		}
+		fail(text.length);
+	};
+	const value = (): void => {
+		whitespace();
+		const char = text[i];
+		if (char === '{') {
+			i += 1;
+			whitespace();
+			if (text[i] === '}') {
+				i += 1;
+				return;
+			}
+			for (;;) {
+				whitespace();
+				if (text[i] !== '"') fail();
+				string();
+				whitespace();
+				if (text[i] !== ':') fail();
+				i += 1;
+				value();
+				whitespace();
+				if (text[i] === ',') {
+					i += 1;
+					continue;
+				}
+				if (text[i] === '}') {
+					i += 1;
+					return;
+				}
+				fail();
+			}
+		} else if (char === '[') {
+			i += 1;
+			whitespace();
+			if (text[i] === ']') {
+				i += 1;
+				return;
+			}
+			for (;;) {
+				value();
+				whitespace();
+				if (text[i] === ',') {
+					i += 1;
+					continue;
+				}
+				if (text[i] === ']') {
+					i += 1;
+					return;
+				}
+				fail();
+			}
+		} else if (char === '"') string();
+		else if (char === '-' || (char >= '0' && char <= '9')) {
+			const number = /^-?(0|[1-9]\d*)(\.\d+)?([eE][+-]?\d+)?/.exec(text.slice(i, i + 64));
+			if (!number) fail();
+			i += number![0].length;
+		} else if (text.startsWith('true', i)) i += 4;
+		else if (text.startsWith('false', i)) i += 5;
+		else if (text.startsWith('null', i)) i += 4;
+		else fail();
+	};
+
+	try {
+		value();
+		whitespace();
+		if (i < text.length) fail();
+		return null;
+	} catch (error) {
+		return error instanceof JsonOffsetError ? error.offset : null;
+	}
+};
+
+class JsonOffsetError extends Error {
+	constructor(readonly offset: number) {
+		super('Invalid JSON');
+	}
+}
+
+/** The engine's message plus the line and column of the first error ("... (line 4,500, column 3)"). */
+export const describeJsonError = (text: string, message: string) => {
+	const offset = findJsonErrorOffset(text);
+	if (offset === null) return message;
+	const before = text.slice(0, offset);
+	const line = before.split('\n').length;
+	const column = offset - before.lastIndexOf('\n');
+	return `${message} (line ${line.toLocaleString('en-US')}, column ${column})`;
 };
 
 const prettifyJson = (text: string) => {

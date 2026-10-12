@@ -9,6 +9,9 @@ import { Checkbox } from './checkbox';
 import { InputGroup, InputGroupAddon, InputGroupInput } from './input-group';
 import { ScrollArea } from './scroll-area';
 
+// Module-level so the default keeps one identity and the filter memo below is not recomputed on every render.
+const DEFAULT_SEARCH_FIELDS = ['name', 'title', 'label'];
+
 interface RecordPickerProps {
 	records: any[];
 	linkedRecordIds: Set<string>;
@@ -28,7 +31,7 @@ export function RecordPicker({
 	isLinking,
 	getRecordLabel,
 	getRecordId,
-	searchFields = ['name', 'title', 'label'],
+	searchFields = DEFAULT_SEARCH_FIELDS,
 	placeholder = 'Search records...',
 	maxHeight = '300px',
 }: RecordPickerProps) {
@@ -41,11 +44,12 @@ export function RecordPicker({
 			return records;
 		}
 
+		// The row's own label is always searchable, so a query can never miss text the user can see.
 		return matchSorter(records, debouncedSearchQuery, {
-			keys: searchFields,
+			keys: [...searchFields, (record: any) => String(getRecordLabel(record) ?? '')],
 			threshold: matchSorter.rankings.CONTAINS,
 		});
-	}, [records, debouncedSearchQuery, searchFields]);
+	}, [records, debouncedSearchQuery, searchFields, getRecordLabel]);
 
 	// Separate linked and unlinked records
 	const { linkedRecords, unlinkableRecords } = useMemo(() => {
@@ -87,7 +91,7 @@ export function RecordPicker({
 
 			{/* Records List */}
 			<ScrollArea style={{ maxHeight }} className='scrollbar-neutral-thin'>
-				<div className='space-y-2 pr-2'>
+				<div className='space-y-2 pe-2'>
 					{/* Unlinkable Records */}
 					{unlinkableRecords.length > 0 && (
 						<div className='space-y-1'>

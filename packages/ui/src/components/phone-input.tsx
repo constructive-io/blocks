@@ -17,6 +17,7 @@ import {
 	ComboboxList,
 	ComboboxPopup,
 	ComboboxTrigger,
+	useComboboxFilter,
 } from './combobox';
 import { InputGroup, InputGroupInput } from './input-group';
 
@@ -155,6 +156,8 @@ function PhoneInput({
 			initialValueFormat="national"
 			disabled={disabled}
 			addInternationalOption={false}
+			// A number past the country's longest valid length is not E.164; stop accepting digits there.
+			limitMaxLength
 			focusInputOnCountrySelection
 			containerComponent={PhoneInputGroup}
 			countrySelectComponent={CountrySelect}
@@ -206,16 +209,27 @@ function CountrySelect({
 		[options],
 	);
 	const selected = items.find((item) => item.value === value) ?? null;
+	// Rows show their calling code, so the picker matches on it as well as on the name ("+44", "44", "kingdom").
+	const { contains } = useComboboxFilter();
+	const matches = (item: CountryItem, query: string) => contains(item, query, (country) => `${country.label} ${country.code}`);
 
 	return (
-		<Combobox items={items} value={selected} onValueChange={(next) => next && onChange(next.value)} disabled={disabled}>
+		<Combobox
+			items={items}
+			value={selected}
+			filter={matches}
+			onValueChange={(next) => next && onChange(next.value)}
+			disabled={disabled}
+		>
 			<ComboboxTrigger
 				aria-label={selected ? labels.country.replace('{{country}}', selected.label) : labels.countryFallback}
 				data-slot="phone-input-country"
 				className="flex shrink-0 cursor-pointer items-center gap-2 self-stretch border-e border-input ps-3 pe-2 text-sm tabular-nums text-foreground outline-none hover:bg-accent/60 focus-visible:bg-accent/60 disabled:cursor-not-allowed data-popup-open:bg-accent/60"
 			>
 				{selected && <PhoneFlag country={selected.value} countryName={selected.label} />}
-				<span>{selected?.code}</span>
+				<span dir="ltr" className="[unicode-bidi:isolate]">
+					{selected?.code}
+				</span>
 				<ChevronDownIcon className="size-3.5 text-muted-foreground" aria-hidden />
 			</ComboboxTrigger>
 			<ComboboxPopup style={{ width: '17rem' }} align="start">
@@ -228,8 +242,12 @@ function CountrySelect({
 						<ComboboxItem key={item.value} value={item}>
 							<span className="flex items-center gap-2">
 								<PhoneFlag country={item.value} countryName={item.label} />
-								<span className="min-w-0 flex-1 truncate">{item.label}</span>
-								<span className="text-xs tabular-nums text-muted-foreground">{item.code}</span>
+								<span className="min-w-0 flex-1 truncate" title={item.label}>
+									{item.label}
+								</span>
+								<span dir="ltr" className="text-xs tabular-nums text-muted-foreground [unicode-bidi:isolate]">
+									{item.code}
+								</span>
 							</span>
 						</ComboboxItem>
 					)}

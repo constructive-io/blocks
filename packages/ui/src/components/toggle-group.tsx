@@ -46,7 +46,8 @@ function ToggleGroup({
 				data-multiple={multiple || undefined}
 				multiple={multiple}
 				className={cn(
-					'group/toggle-group relative inline-flex items-center outline-none',
+					// `max-w-full flex-wrap`: a long row of labels wraps inside its container instead of widening the page.
+					'group/toggle-group relative inline-flex max-w-full flex-wrap items-center outline-none',
 					'data-[orientation=vertical]:flex-col',
 					spacing > 0 && 'data-[orientation=horizontal]:gap-1 data-[orientation=vertical]:gap-1',
 					className,
@@ -68,6 +69,7 @@ function ToggleGroupItem({
 	className,
 	variant,
 	size,
+	children,
 	...props
 }: React.ComponentProps<typeof TogglePrimitive> & {
 	variant?: VariantProps<typeof toggleVariants>['variant'];
@@ -85,11 +87,13 @@ function ToggleGroupItem({
 				'relative shrink-0',
 				// Attached group (spacing 0): collapse shared borders, square the
 				// inner corners, keep the outer radius on the first/last item.
+				// The orientation lives on the group root, not on the items, so these read it from the group. The sliding
+				// highlight is the group's first child, which is why the ends are `*-of-type` (the items), not `first`/`last`.
 				'group-data-[spacing=0]/toggle-group:rounded-none',
-				'group-data-[spacing=0]/toggle-group:data-[orientation=horizontal]:-ml-px',
-				'group-data-[spacing=0]/toggle-group:data-[orientation=horizontal]:first:ml-0 group-data-[spacing=0]/toggle-group:data-[orientation=horizontal]:first:rounded-l-md group-data-[spacing=0]/toggle-group:data-[orientation=horizontal]:last:rounded-r-md',
-				'group-data-[spacing=0]/toggle-group:data-[orientation=vertical]:-mt-px',
-				'group-data-[spacing=0]/toggle-group:data-[orientation=vertical]:first:mt-0 group-data-[spacing=0]/toggle-group:data-[orientation=vertical]:first:rounded-t-md group-data-[spacing=0]/toggle-group:data-[orientation=vertical]:last:rounded-b-md',
+				'group-data-[spacing=0]/toggle-group:group-data-[orientation=horizontal]/toggle-group:-ms-px',
+				'group-data-[spacing=0]/toggle-group:group-data-[orientation=horizontal]/toggle-group:first-of-type:ms-0 group-data-[spacing=0]/toggle-group:group-data-[orientation=horizontal]/toggle-group:first-of-type:rounded-s-md group-data-[spacing=0]/toggle-group:group-data-[orientation=horizontal]/toggle-group:last-of-type:rounded-e-md',
+				'group-data-[spacing=0]/toggle-group:group-data-[orientation=vertical]/toggle-group:-mt-px',
+				'group-data-[spacing=0]/toggle-group:group-data-[orientation=vertical]/toggle-group:first-of-type:mt-0 group-data-[spacing=0]/toggle-group:group-data-[orientation=vertical]/toggle-group:first-of-type:rounded-t-md group-data-[spacing=0]/toggle-group:group-data-[orientation=vertical]/toggle-group:last-of-type:rounded-b-md',
 				'focus-visible:z-10',
 				// In single-select the FluidHighlight pill supplies the fill; in
 				// multiple each item paints its own pressed background.
@@ -97,7 +101,12 @@ function ToggleGroupItem({
 				className,
 			)}
 			{...props}
-		/>
+		>
+			{/* Text nodes become their own flex items, so a label longer than the container ends in an ellipsis. */}
+			{React.Children.map(children, (child) =>
+				typeof child === 'string' || typeof child === 'number' ? <span className='min-w-0 truncate' dir='auto'>{child}</span> : child,
+			)}
+		</TogglePrimitive>
 	);
 }
 

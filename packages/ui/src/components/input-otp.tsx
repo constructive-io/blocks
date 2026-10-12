@@ -53,13 +53,23 @@ interface SlotSelection {
 type SelectionDirection = 'forward' | 'backward' | 'none';
 
 const DIGITS_ONLY = /\D/g;
+// Arabic-Indic, Persian, Devanagari, Bengali, Thai and full-width digits come from native numeric keyboards and IMEs.
+// They map to ASCII before everything else is dropped, so a code typed or pasted in them is not silently discarded.
+const NON_ASCII_DIGITS = /[\u0660-\u0669\u06F0-\u06F9\u0966-\u096F\u09E6-\u09EF\u0E50-\u0E59\uFF10-\uFF19]/g;
+const ZERO_CODE_POINTS = [0x0660, 0x06f0, 0x0966, 0x09e6, 0x0e50, 0xff10];
+const toAsciiDigits = (raw: string) =>
+	raw.replace(NON_ASCII_DIGITS, (char) => {
+		const code = char.charCodeAt(0);
+		const zero = ZERO_CODE_POINTS.find((start) => code >= start && code <= start + 9)!;
+		return String(code - zero);
+	});
 // Chrome restores autofill styling and the caret position a beat after a value change, so the mirror re-reads them.
 const RESYNC_DELAYS = [0, 10, 50];
 // A hard on/off blink, like a text caret, rather than a fade.
 const CARET_BLINK = { opacity: [1, 1, 0, 0] };
 const CARET_TIMING: Transition = { duration: 1, times: [0, 0.5, 0.5, 1], ease: 'linear', repeat: Infinity };
 
-const toCode = (raw: string, length: number) => raw.replace(DIGITS_ONLY, '').slice(0, length);
+const toCode = (raw: string, length: number) => toAsciiDigits(raw).replace(DIGITS_ONLY, '').slice(0, length);
 
 function InputOtp({
 	length = 6,
@@ -187,7 +197,7 @@ function InputOtp({
 		// and iOS pastes over the whole field rather than at the caret.
 		event.preventDefault();
 		const input = event.currentTarget;
-		const pasted = event.clipboardData.getData('text/plain').replace(DIGITS_ONLY, '');
+		const pasted = toAsciiDigits(event.clipboardData.getData('text/plain')).replace(DIGITS_ONLY, '');
 		if (pasted === '') return;
 		const start = input.selectionStart ?? code.length;
 		const end = input.selectionEnd ?? start;
@@ -223,11 +233,17 @@ function InputOtp({
 			data-size={size}
 			// Chrome Translate wraps text nodes in <font>, which breaks React's next update; a code is never translatable.
 			translate="no"
+			// Digits read left to right in every script, so the row, the caret mirror, and the slot order stay LTR in RTL pages.
+			dir="ltr"
 			className={cn('w-full', size === 'sm' ? 'max-w-[15.5rem]' : 'max-w-[21rem]', className)}
 		>
 			<div
 				ref={rowRef}
-				className={cn('group/otp relative flex w-full items-center', size === 'sm' ? 'gap-1.5' : 'gap-1 sm:gap-2')}
+				// Gaps are a share of the row, not rem, so they cannot eat the slots when the root font size is raised.
+				className={cn(
+					'group/otp relative flex w-full items-center',
+					size === 'sm' ? 'gap-[min(0.375rem,2.5%)]' : 'gap-[min(0.25rem,2.5%)] sm:gap-[min(0.5rem,2.5%)]',
+				)}
 			>
 				{Array.from({ length }, (_, index) => {
 					const digit = code[index];
@@ -244,7 +260,8 @@ function InputOtp({
 							className={cn(
 								'relative flex min-w-0 flex-1 items-center justify-center overflow-hidden font-mono tabular-nums',
 								size === 'sm' ? 'h-9 max-w-9 rounded-md text-base' : 'h-11 max-w-10 rounded-lg text-lg sm:h-12 sm:max-w-12',
-								gapBefore && (size === 'sm' ? 'ml-1.5' : 'ml-1 sm:ml-2'),
+								gapBefore &&
+									(size === 'sm' ? 'ms-[min(0.375rem,2.5%)]' : 'ms-[min(0.25rem,2.5%)] sm:ms-[min(0.5rem,2.5%)]'),
 								'border border-input bg-background text-foreground shadow-xs dark:bg-input/32',
 								'transition-[background-color,border-color] duration-150 ease-out motion-reduce:transition-none',
 								!isDisabled && 'group-hover/otp:border-ring/50',

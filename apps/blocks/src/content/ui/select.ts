@@ -53,6 +53,12 @@ export const selectDocs = definePrimitiveDocs({
         { name: 'value', type: 'string', description: 'Controlled selected value.' },
         { name: 'defaultValue', type: 'string', description: 'Initial value in uncontrolled usage.' },
         {
+          name: 'items',
+          type: 'Record<string, ReactNode> | { value: string; label: ReactNode }[]',
+          description:
+            'Labels for the trigger. When omitted, Select reads them from the SelectItem, SelectRichItem, and SelectFieldItem elements it renders directly; items rendered by a wrapper component are read once the list has opened, so pass items when the label must show before that.',
+        },
+        {
           name: 'onValueChange',
           type: '(value: string) => void',
           description: 'Runs when the selected value changes.',
@@ -109,6 +115,12 @@ export const selectDocs = definePrimitiveDocs({
           type: 'boolean',
           default: 'false',
           description: 'Aligns the selected item with the trigger when enabled.',
+        },
+        {
+          name: 'emptyMessage',
+          type: 'ReactNode',
+          default: "'No options'",
+          description: 'Shown inside the popup while the list contains no option.',
         },
         {
           name: 'position',

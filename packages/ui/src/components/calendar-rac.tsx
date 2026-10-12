@@ -31,17 +31,19 @@ function CalendarHeader() {
 			<Button
 				slot='previous'
 				className='text-muted-foreground/80 hover:bg-accent hover:text-foreground focus-visible:ring-ring/50 flex size-9
-					items-center justify-center rounded-md transition-[color,box-shadow] outline-none focus-visible:ring-[3px]'
+					items-center justify-center rounded-md transition-[color,box-shadow] outline-none focus-visible:ring-[3px]
+					data-disabled:pointer-events-none data-disabled:opacity-30'
 			>
-				<ChevronLeftIcon size={16} />
+				<ChevronLeftIcon size={16} className='rtl:rotate-180' />
 			</Button>
 			<HeadingRac className='grow text-center text-sm font-medium' />
 			<Button
 				slot='next'
 				className='text-muted-foreground/80 hover:bg-accent hover:text-foreground focus-visible:ring-ring/50 flex size-9
-					items-center justify-center rounded-md transition-[color,box-shadow] outline-none focus-visible:ring-[3px]'
+					items-center justify-center rounded-md transition-[color,box-shadow] outline-none focus-visible:ring-[3px]
+					data-disabled:pointer-events-none data-disabled:opacity-30'
 			>
-				<ChevronRightIcon size={16} />
+				<ChevronRightIcon size={16} className='rtl:rotate-180' />
 			</Button>
 		</header>
 	);
@@ -82,7 +84,7 @@ function CalendarGridComponent({ isRange = false }: { isRange?: boolean }) {
 							// Today indicator styles
 							date.compare(now) === 0 &&
 								cn(
-									`after:bg-primary after:pointer-events-none after:absolute after:start-1/2 after:bottom-1 after:z-10
+									`after:bg-primary after:pointer-events-none after:absolute after:left-1/2 after:bottom-1 after:z-10
 									after:size-[3px] after:-translate-x-1/2 after:rounded-full`,
 									isRange
 										? 'data-selection-end:after:bg-background data-selection-start:after:bg-background'

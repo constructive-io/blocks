@@ -235,6 +235,9 @@ export interface MultiSelectRef {
 	focus: () => void;
 }
 
+/** How many selected labels the live region reads out; the rest are summarised as a count. */
+const ANNOUNCED_LABELS = 5;
+
 /**
  * Individual option item component
  */
@@ -261,7 +264,9 @@ function OptionItem({
 			aria-selected={isSelected}
 			aria-disabled={option.disabled}
 			data-highlighted={isHighlighted}
-			data-selected={isSelected}
+			// Not `data-selected`: FluidHighlight reads `data-selected="true"` as "the highlighted row" (cmdk's convention),
+			// which would pin the highlight pill to the first checked option.
+			data-checked={isSelected}
 			data-disabled={option.disabled}
 			tabIndex={-1}
 			className={cn(
@@ -276,20 +281,29 @@ function OptionItem({
 					onSelect();
 				}
 			}}
-			onMouseEnter={() => setHighlightedIndex(index)}
+			// Pointer movement, not `mouseenter`: a keyboard move that scrolls the list under a resting pointer must not
+			// hand the highlight to whatever row ends up beneath it.
+			onMouseMove={(event) => {
+				if ((event.movementX !== 0 || event.movementY !== 0) && !isHighlighted) setHighlightedIndex(index);
+			}}
 		>
 			<div
 				className={cn(
-					'border-primary mr-2 flex h-4 w-4 items-center justify-center rounded-sm border',
+					'border-primary me-2 flex h-4 w-4 shrink-0 items-center justify-center rounded-sm border',
 					isSelected ? 'bg-primary text-primary-foreground' : 'opacity-60 [&_svg]:invisible',
 				)}
 				aria-hidden='true'
 			>
 				<CheckIcon className='h-4 w-4' />
 			</div>
-			{option.icon && <option.icon className='text-muted-foreground mr-2 h-4 w-4' aria-hidden='true' />}
-			<span>{option.label}</span>
-			{option.description && <span className='text-muted-foreground ml-2 text-xs'>{option.description}</span>}
+			{option.icon && <option.icon className='text-muted-foreground me-2 h-4 w-4 shrink-0' aria-hidden='true' />}
+			{/* The description sits beside the label while it fits and wraps under it when it does not. */}
+			<div className='flex min-w-0 flex-1 flex-wrap items-baseline gap-x-2'>
+				<span className='min-w-0 [overflow-wrap:anywhere]'>{option.label}</span>
+				{option.description && (
+					<span className='text-muted-foreground min-w-0 text-xs [overflow-wrap:anywhere]'>{option.description}</span>
+				)}
+			</div>
 		</div>
 	);
 }
@@ -552,27 +566,28 @@ export const MultiSelect = React.forwardRef<MultiSelectRef, MultiSelectProps>(
 			setIsPopoverOpen((prev) => !prev);
 		};
 
-		const clearExtraOptions = () => {
-			if (disabled) return;
-			const newSelectedValues = selectedValues.slice(0, responsiveSettings.maxCount);
-			setSelectedValues(newSelectedValues);
-			onValueChange(newSelectedValues);
-		};
-
 		// Handle keyboard navigation in dropdown
 		const handleKeyDown = React.useCallback(
 			(event: React.KeyboardEvent) => {
 				const optionsCount = flatFilteredOptions.length;
 				if (optionsCount === 0) return;
 
+				// Keep the highlighted option on screen; the list only scrolls for keyboard moves, not for hover.
+				const moveHighlight = (next: number) => {
+					setHighlightedIndex(next);
+					requestAnimationFrame(() => {
+						listRef.current?.querySelectorAll<HTMLElement>('[role="option"]')[next]?.scrollIntoView({ block: 'nearest' });
+					});
+				};
+
 				switch (event.key) {
 					case 'ArrowDown':
 						event.preventDefault();
-						setHighlightedIndex((prev) => (prev < optionsCount - 1 ? prev + 1 : 0));
+						moveHighlight(highlightedIndex < optionsCount - 1 ? highlightedIndex + 1 : 0);
 						break;
 					case 'ArrowUp':
 						event.preventDefault();
-						setHighlightedIndex((prev) => (prev > 0 ? prev - 1 : optionsCount - 1));
+						moveHighlight(highlightedIndex > 0 ? highlightedIndex - 1 : optionsCount - 1);
 						break;
 					case 'Enter':
 						event.preventDefault();
@@ -616,7 +631,9 @@ export const MultiSelect = React.forwardRef<MultiSelectRef, MultiSelectProps>(
 			const effectiveMinWidth = minWidth || defaultMinWidth;
 			const effectiveMaxWidth = maxWidth || '100%';
 			return {
-				minWidth: effectiveMinWidth,
+				// A fixed minimum never exceeds the room the trigger (its container) or the popup (the viewport) really has.
+				minWidth: `min(${effectiveMinWidth}, 100%)`,
+				popupMinWidth: `min(${effectiveMinWidth}, var(--available-width, 100vw))`,
 				maxWidth: effectiveMaxWidth,
 				width: autoSize ? 'auto' : '100%',
 			};
@@ -673,10 +690,14 @@ export const MultiSelect = React.forwardRef<MultiSelectRef, MultiSelectProps>(
 					<div id={selectedCountId} className='sr-only' aria-live='polite' style={{ width: 1 }}>
 						{selectedValues.length === 0
 							? 'No options selected'
-							: `${selectedValues.length} option${selectedValues.length === 1 ? '' : 's'} selected: ${selectedValues
+							: // Read the count and the first few labels, not every label on each change.
+								`${selectedValues.length} option${selectedValues.length === 1 ? '' : 's'} selected: ${selectedValues
+									.slice(0, ANNOUNCED_LABELS)
 									.map((value) => getOptionByValue(value)?.label)
 									.filter(Boolean)
-									.join(', ')}`}
+									.join(', ')}${
+									selectedValues.length > ANNOUNCED_LABELS ? ` and ${selectedValues.length - ANNOUNCED_LABELS} more` : ''
+								}`}
 					</div>
 
 					<PopoverTrigger asChild>
@@ -695,12 +716,12 @@ export const MultiSelect = React.forwardRef<MultiSelectRef, MultiSelectProps>(
 							aria-haspopup='listbox'
 							aria-controls={isPopoverOpen ? listboxId : undefined}
 							aria-describedby={`${triggerDescriptionId} ${selectedCountId}`}
-							aria-label={`Multi-select: ${selectedValues.length} of ${
-								getAllOptions().length
-							} options selected. ${placeholder}`}
+							aria-label={`Multi-select: ${selectedValues.length} of ${getAllOptions().length} option${
+								getAllOptions().length === 1 ? '' : 's'
+							} selected. ${placeholder}`}
 							className={cn(
 								`border-input/70 focus-visible:border-ring/60 focus-visible:ring-ring/35 flex items-center
-									justify-between rounded-md border bg-transparent pr-1 pl-2 shadow-xs transition-[color,box-shadow,scale]
+									justify-between rounded-md border bg-transparent pe-1 ps-2 shadow-xs transition-[color,box-shadow,scale]
 									duration-(--duration-moderate) ease-out outline-none focus-visible:ring-[3px] motion-safe:active:not-disabled:scale-[0.96]
 									motion-reduce:transition-[color,box-shadow] disabled:pointer-events-none disabled:opacity-64`,
 								singleLine ? 'h-8 min-h-8 py-0.5 text-xs' : 'h-auto min-h-10 py-2 text-sm',
@@ -716,11 +737,13 @@ export const MultiSelect = React.forwardRef<MultiSelectRef, MultiSelectProps>(
 							}}
 						>
 							{selectedValues.length > 0 ? (
-								<div className='flex w-full items-center justify-between'>
+								<div className='flex w-full min-w-0 items-center justify-between'>
+									{/* `min-w-0` here and `shrink-0` on the actions below keep long chips inside the control. */}
 									<div
 										className={cn(
-											'flex items-center gap-1',
-											singleLine ? 'multiselect-singleline-scroll overflow-x-auto' : 'flex-wrap',
+											'flex min-w-0 items-center gap-1',
+											// Many chips scroll inside the control instead of making it taller than the screen.
+											singleLine ? 'multiselect-singleline-scroll overflow-x-auto' : 'max-h-32 flex-wrap overflow-y-auto',
 											responsiveSettings.compactMode && 'gap-0.5',
 										)}
 									>
@@ -745,13 +768,16 @@ export const MultiSelect = React.forwardRef<MultiSelectRef, MultiSelectProps>(
 												return (
 													<Badge
 														key={value}
+														title={option.label}
 														className={cn(
 															multiSelectVariants({ variant }),
 															customStyle?.gradient && 'border-transparent text-white',
 															responsiveSettings.compactMode && 'px-1.5 py-0.5 text-xs',
 															singleLine && 'py-0.5',
-															screenSize === 'mobile' && 'max-w-[120px] truncate',
-															singleLine && 'flex-shrink-0 whitespace-nowrap',
+															// A chip never outgrows the control; a longer label ends in an ellipsis (full text in `title`).
+															// In the single scrolling line chips keep their width instead.
+															'max-w-full min-w-0',
+															singleLine ? 'shrink-0 whitespace-nowrap' : 'shrink',
 															'[&>svg]:pointer-events-auto',
 														)}
 														style={badgeStyle}
@@ -759,8 +785,8 @@ export const MultiSelect = React.forwardRef<MultiSelectRef, MultiSelectProps>(
 														{IconComponent && !responsiveSettings.hideIcons && (
 															<IconComponent
 																className={cn(
-																	'mr-2 h-4 w-4',
-																	responsiveSettings.compactMode && 'mr-1 h-3 w-3',
+																	'me-2 h-4 w-4 shrink-0',
+																	responsiveSettings.compactMode && 'me-1 h-3 w-3',
 																	customStyle?.iconColor && 'text-current',
 																)}
 																{...(customStyle?.iconColor && {
@@ -768,7 +794,9 @@ export const MultiSelect = React.forwardRef<MultiSelectRef, MultiSelectProps>(
 																})}
 															/>
 														)}
-														<span className={cn(screenSize === 'mobile' && 'truncate')}>{option.label}</span>
+														<span className='min-w-0 truncate' dir='auto'>
+															{option.label}
+														</span>
 														<div
 															role='button'
 															tabIndex={0}
@@ -784,7 +812,7 @@ export const MultiSelect = React.forwardRef<MultiSelectRef, MultiSelectProps>(
 																}
 															}}
 															aria-label={`Remove ${option.label} from selection`}
-															className="relative -my-1.5 -mr-1.5 ml-1 flex h-7 w-7 cursor-pointer items-center justify-center rounded-sm p-2 after:absolute after:-inset-1 after:content-[''] hover:bg-white/20 focus-visible:ring-[3px] focus-visible:ring-white/50 focus-visible:outline-none"
+															className="relative -my-1.5 -me-1.5 ms-1 flex h-7 w-7 shrink-0 cursor-pointer items-center justify-center rounded-sm p-2 pointer-coarse:after:absolute pointer-coarse:after:-inset-1 pointer-coarse:after:content-[''] hover:bg-white/20 focus-visible:ring-[3px] focus-visible:ring-white/50 focus-visible:outline-none"
 														>
 															<XCircle className={cn('h-3 w-3', responsiveSettings.compactMode && 'h-2.5 w-2.5')} />
 														</div>
@@ -793,40 +821,22 @@ export const MultiSelect = React.forwardRef<MultiSelectRef, MultiSelectProps>(
 											})
 											.filter(Boolean)}
 										{selectedValues.length > responsiveSettings.maxCount && (
+											// Plain text: the extra selections are managed in the popover, so one stray click on the trigger
+											// can no longer drop them all.
 											<Badge
 												className={cn(
 													'text-foreground border-foreground/10 bg-transparent',
 													multiSelectVariants({ variant }),
 													responsiveSettings.compactMode && 'px-1.5 py-0.5 text-xs',
-													singleLine && 'flex-shrink-0 whitespace-nowrap',
+													singleLine && 'shrink-0 whitespace-nowrap',
 													'[&>svg]:pointer-events-auto',
 												)}
 											>
-												{`+ ${selectedValues.length - responsiveSettings.maxCount} more`}
-												<div
-													role='button'
-													tabIndex={0}
-													onClick={(event) => {
-														event.stopPropagation();
-														clearExtraOptions();
-													}}
-													onKeyDown={(event) => {
-														if (event.key === 'Enter' || event.key === ' ') {
-															event.preventDefault();
-															event.stopPropagation();
-															clearExtraOptions();
-														}
-													}}
-													aria-label='Clear extra selected options'
-													className="relative -my-1.5 -mr-1.5 ml-1 flex h-7 w-7 cursor-pointer items-center justify-center rounded-sm p-2 after:absolute after:-inset-1 after:content-[''] hover:bg-white/20 focus-visible:ring-[3px]
-														focus-visible:ring-white/50 focus-visible:outline-none"
-												>
-													<XCircle className={cn('h-3 w-3', responsiveSettings.compactMode && 'h-2.5 w-2.5')} />
-												</div>
+												<span dir='ltr'>{`+ ${selectedValues.length - responsiveSettings.maxCount} more`}</span>
 											</Badge>
 										)}
 									</div>
-									<div className='flex items-center justify-between'>
+									<div className='flex shrink-0 items-center justify-between'>
 										<div
 											role='button'
 											tabIndex={0}
@@ -841,9 +851,9 @@ export const MultiSelect = React.forwardRef<MultiSelectRef, MultiSelectProps>(
 													handleClear();
 												}
 											}}
-											aria-label={`Clear all ${selectedValues.length} selected options`}
+											aria-label={`Clear all ${selectedValues.length} selected option${selectedValues.length === 1 ? '' : 's'}`}
 											className="text-muted-foreground hover:text-foreground relative mx-1 -my-1.5 flex h-7 w-7
-												cursor-pointer items-center justify-center rounded-sm after:absolute after:-inset-1 after:content-[''] focus-visible:ring-[3px] focus-visible:ring-ring/50
+												cursor-pointer items-center justify-center rounded-sm pointer-coarse:after:absolute pointer-coarse:after:-inset-1 pointer-coarse:after:content-[''] focus-visible:ring-[3px] focus-visible:ring-ring/50
 												focus-visible:outline-none"
 										>
 											<XIcon className='h-4 w-4' />
@@ -853,9 +863,9 @@ export const MultiSelect = React.forwardRef<MultiSelectRef, MultiSelectProps>(
 									</div>
 								</div>
 							) : (
-								<div className='mx-auto flex w-full items-center justify-between'>
-									<span className='text-subtle-foreground mx-1 text-sm'>{placeholder}</span>
-									<ChevronDown className='text-muted-foreground mx-1 h-4 cursor-pointer' />
+								<div className='mx-auto flex w-full min-w-0 items-center justify-between'>
+									<span className='text-subtle-foreground mx-1 min-w-0 truncate text-sm'>{placeholder}</span>
+									<ChevronDown className='text-muted-foreground mx-1 h-4 shrink-0 cursor-pointer' />
 								</div>
 							)}
 						</button>
@@ -865,7 +875,7 @@ export const MultiSelect = React.forwardRef<MultiSelectRef, MultiSelectProps>(
 						aria-label='Available options'
 						className={cn('w-(--anchor-width) overflow-hidden p-0', popoverClassName)}
 						style={{
-							minWidth: widthConstraints.minWidth,
+							minWidth: widthConstraints.popupMinWidth,
 							maxWidth: widthConstraints.maxWidth,
 							width: widthConstraints.width === 'auto' ? 'auto' : undefined,
 							maxHeight: effectiveDropdownMaxHeight,
@@ -878,7 +888,7 @@ export const MultiSelect = React.forwardRef<MultiSelectRef, MultiSelectProps>(
 							{/* Search Input */}
 							{searchable && (
 								<div className='flex items-center border-b px-3'>
-									<SearchIcon className='text-muted-foreground mr-2 h-4 w-4 shrink-0 opacity-50' />
+									<SearchIcon className='text-muted-foreground me-2 h-4 w-4 shrink-0 opacity-50' />
 									<input
 										ref={searchInputRef}
 										id={searchInputId}
@@ -897,7 +907,7 @@ export const MultiSelect = React.forwardRef<MultiSelectRef, MultiSelectProps>(
 								ref={listRef}
 								role='listbox'
 								aria-multiselectable='true'
-								className='multiselect-scrollbar scrollbar-neutral-thin relative overscroll-contain min-h-0 flex-1 overflow-y-auto p-1'
+								className='multiselect-scrollbar scrollbar-neutral-thin relative min-h-0 flex-1 scroll-py-1 overflow-y-auto overscroll-contain p-1'
 							>
 								<FluidHighlight />
 								{totalFilteredCount === 0 ? (
@@ -949,8 +959,21 @@ export const MultiSelect = React.forwardRef<MultiSelectRef, MultiSelectProps>(
 								)}
 							</div>
 
-							{/* Footer */}
-							{footerContent && <div className='border-t p-1'>{footerContent}</div>}
+							{/* Footer: clearing the selection lives here, not in the trigger, so a stray click cannot drop it. */}
+							{(selectedValues.length > 0 || footerContent) && (
+								<div className='border-t p-1'>
+									{selectedValues.length > 0 && !disabled && (
+										<button
+											type='button'
+											className='text-muted-foreground hover:text-foreground focus-visible:ring-ring/50 w-full rounded-sm px-2 py-1.5 text-start text-sm outline-none focus-visible:ring-[3px]'
+											onClick={handleClear}
+										>
+											{`Clear selection (${selectedValues.length})`}
+										</button>
+									)}
+									{footerContent}
+								</div>
+							)}
 						</div>
 					</PopoverContent>
 				</Popover>
