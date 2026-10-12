@@ -230,7 +230,7 @@ export function PlanPriceTable({ plans, provider, mode = 'live', subscribers, on
 								{plan.fallback ? <ToneBadge tone="neutral">Free fallback</ToneBadge> : null}
 								{subscribers?.[plan.id] !== undefined ? (
 									<span className="text-xs text-muted-foreground tabular-nums">
-										{f.quantity(subscribers[plan.id]!)} {plural(subscribers[plan.id]!, { one: 'subscriber', other: 'subscribers' }, f.locale)}
+										{f.quantity(subscribers[plan.id]!)} {plural(subscribers[plan.id]!, { one: 'subscriber', other: 'subscribers' })}
 									</span>
 								) : null}
 							</span>
@@ -439,7 +439,7 @@ export function CreditPackTable({ packs, creditsPerCent = 1, onToggle, className
 								)}
 							</td>
 							<td className="text-muted-foreground">
-								{pack.expiresAfterDays ? `${f.quantity(pack.expiresAfterDays)} ${plural(pack.expiresAfterDays, { one: 'day', other: 'days' }, f.locale)}` : 'Never'}
+								{pack.expiresAfterDays ? `${f.quantity(pack.expiresAfterDays)} ${plural(pack.expiresAfterDays, { one: 'day', other: 'days' })}` : 'Never'}
 							</td>
 							<td className="text-end">
 								<Switch

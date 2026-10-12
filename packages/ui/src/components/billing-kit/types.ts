@@ -64,7 +64,11 @@ export type Plan = {
 	/** Priced by sales rather than checkout. */
 	contactSales?: boolean;
 	active: boolean;
-	/** The free fallback plan an overdue subscription is downgraded to. */
+	/**
+	 * The free fallback plan an overdue subscription is downgraded to. A plan with
+	 * no price rows counts as retired and is hidden from `PlanComparison` unless it
+	 * is `fallback` (or `contactSales`), so a free tier without a price row sets it.
+	 */
 	fallback?: boolean;
 	externalId?: string;
 	syncState?: SyncState;

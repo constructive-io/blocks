@@ -3,6 +3,7 @@
 import * as React from 'react';
 
 import { cn } from '../../lib/utils';
+import { type DiffLine, diffLines } from './line-diff';
 import type { InlineDiffSource } from './types';
 
 type InlineDiffProps = {
@@ -12,73 +13,19 @@ type InlineDiffProps = {
 	maxLines?: number;
 };
 
-type DiffLine = { type: 'context' | 'add' | 'del'; text: string };
-
 /** Unchanged lines kept on each side of a change. */
 const CONTEXT_LINES = 2;
-
-/** Beyond this many table cells the exact diff costs too much, so the changed block is shown as removed then added. */
-const MAX_DIFF_CELLS = 4_000_000;
-
-const context = (text: string): DiffLine => ({ type: 'context', text });
-const added = (text: string): DiffLine => ({ type: 'add', text });
-const removed = (text: string): DiffLine => ({ type: 'del', text });
-
-/** Longest-common-subsequence diff of two line lists, in order. */
-function diffLines(a: string[], b: string[]): DiffLine[] {
-	if (a.length === 0) return b.map(added);
-	if (b.length === 0) return a.map(removed);
-	if (a.length * b.length > MAX_DIFF_CELLS) return [...a.map(removed), ...b.map(added)];
-
-	const cols = b.length + 1;
-	// table[i][j] is the length of the longest common subsequence of a[i..] and b[j..].
-	const table = new Uint32Array((a.length + 1) * cols);
-	for (let i = a.length - 1; i >= 0; i--) {
-		for (let j = b.length - 1; j >= 0; j--) {
-			table[i * cols + j] = a[i] === b[j] ? table[(i + 1) * cols + j + 1]! + 1 : Math.max(table[(i + 1) * cols + j]!, table[i * cols + j + 1]!);
-		}
-	}
-
-	const lines: DiffLine[] = [];
-	let i = 0;
-	let j = 0;
-	while (i < a.length && j < b.length) {
-		if (a[i] === b[j]) {
-			lines.push(context(a[i]!));
-			i += 1;
-			j += 1;
-		} else if (table[(i + 1) * cols + j]! >= table[i * cols + j + 1]!) {
-			lines.push(removed(a[i]!));
-			i += 1;
-		} else {
-			lines.push(added(b[j]!));
-			j += 1;
-		}
-	}
-	for (; i < a.length; i++) lines.push(removed(a[i]!));
-	for (; j < b.length; j++) lines.push(added(b[j]!));
-	return lines;
-}
 
 /**
  * Line diff between two texts, in order: unchanged lines as `context`, removed
  * lines as `del`, new lines as `add`. A line that also appears elsewhere is
  * matched by position, so a repeated line is shown as added or removed rather
- * than hidden. The common head and tail are trimmed before the comparison, so a
- * small edit to a long file stays cheap.
+ * than hidden. The common head and tail are trimmed before the comparison, and
+ * a long file is compared by its edits rather than by a table of every pair of
+ * lines, so a few edits stay cheap however far apart they are.
  */
 function lineDiff(before: string, after: string): DiffLine[] {
-	const a = before.split('\n');
-	const b = after.split('\n');
-	let head = 0;
-	while (head < a.length && head < b.length && a[head] === b[head]) head += 1;
-	let tailA = a.length;
-	let tailB = b.length;
-	while (tailA > head && tailB > head && a[tailA - 1] === b[tailB - 1]) {
-		tailA -= 1;
-		tailB -= 1;
-	}
-	return [...a.slice(0, head).map(context), ...diffLines(a.slice(head, tailA), b.slice(head, tailB)), ...a.slice(tailA).map(context)];
+	return diffLines(before.split('\n'), after.split('\n'));
 }
 
 type DiffRow = DiffLine | { type: 'gap'; count: number };

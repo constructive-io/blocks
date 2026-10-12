@@ -8,8 +8,8 @@ import { Button } from '../button';
 import { Dialog, DialogDescription, DialogFooter, DialogHeader, DialogPopup, DialogTitle } from '../dialog';
 import { focusRingClass } from '../workspace-kit/primitives';
 import { useBillingFormat } from './context';
-import { isUnlimited, unitFor } from './format';
-import { type EntitlementRow, isPlanAvailable, priceFor } from './plan';
+import { INTERVAL_PHRASE, isUnlimited, unitFor } from './format';
+import { type EntitlementRow, isPlanAvailable, priceFor, resolvePrice } from './plan';
 import { hasFeature, type BillingProviderDescriptor } from './providers';
 import { dashedRule } from './surface';
 import type { Balance, LimitCounter, Plan, PlanPrice, Subscription } from './types';
@@ -105,7 +105,7 @@ export function PlanChangeDialog({
 	const timingId = React.useId();
 
 	const diffs = React.useMemo(() => (targetPlan ? diffPlans(currentPlan, targetPlan, rows) : []), [currentPlan, rows, targetPlan]);
-	const price = targetPlan ? (priceFor(targetPlan, interval) ?? priceFor(targetPlan, 'month') ?? priceFor(targetPlan, 'year')) : undefined;
+	const price = targetPlan ? resolvePrice(targetPlan, interval) : undefined;
 	// A plan whose prices were all retired cannot be started or switched to; it is not a free plan.
 	const offered = targetPlan ? isPlanAvailable(targetPlan) : false;
 	const downgrade = isDowngrade(currentPlan, targetPlan, diffs);
@@ -130,7 +130,7 @@ export function PlanChangeDialog({
 		const limitConflicts = limits.flatMap((limit) => {
 			const max = targetPlan.limits[limit.name];
 			return max !== undefined && !isUnlimited(max) && limit.used > max
-				? [`${f.quantity(limit.used)} ${unitFor(limit.used, limit.unit, limit.unitSingular, f.locale)} in use; ${targetPlan.displayName} allows ${f.quantity(max)}.`]
+				? [`${f.quantity(limit.used)} ${unitFor(limit.used, limit.unit, limit.unitSingular)} in use; ${targetPlan.displayName} allows ${f.quantity(max)}.`]
 				: [];
 		});
 		const meterRows = new Map(rows.filter((row) => row.kind === 'meter').map((row) => [row.key, row]));
@@ -175,7 +175,7 @@ export function PlanChangeDialog({
 						{!offered
 							? 'No longer offered.'
 							: price && paid
-								? `${f.money(price.amount)} ${interval === 'year' && price.interval === 'year' ? 'per year' : 'per month'}${priceFor(targetPlan, price.interval, 'metered') ? ', plus usage past the allowance' : ''}.`
+								? `${f.money(price.amount)} ${INTERVAL_PHRASE[price.interval]}${priceFor(targetPlan, price.interval, 'metered') ? ', plus usage past the allowance' : ''}.`
 								: targetPlan.contactSales
 									? 'Custom pricing.'
 									: 'No charge.'}

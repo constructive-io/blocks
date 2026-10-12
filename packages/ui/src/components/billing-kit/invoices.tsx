@@ -172,7 +172,7 @@ export function AdjustmentList({ items, className }: { items: RefundOrDispute[];
 						<span className="block font-medium text-foreground">{f.money(item.amount, { precise: true })}</span>
 						{item.creditAmount ? (
 							<span className="block text-xs text-muted-foreground">
-								−{f.quantity(item.creditAmount)} {plural(item.creditAmount, { one: 'credit', other: 'credits' }, f.locale)}
+								−{f.quantity(item.creditAmount)} {plural(item.creditAmount, { one: 'credit', other: 'credits' })}
 							</span>
 						) : null}
 					</span>

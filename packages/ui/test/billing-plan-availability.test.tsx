@@ -120,3 +120,65 @@ describe('a plan with no active price', () => {
 		expect(onConfirm).toHaveBeenCalledOnce();
 	});
 });
+
+const monthlyPrice = { id: 'price-solo-month', interval: 'month', usageType: 'licensed', amount: { amountMinor: 4_900, currency: 'usd' }, active: true } as const;
+const yearlyPrice = { id: 'price-solo-year', interval: 'year', usageType: 'licensed', amount: { amountMinor: 49_000, currency: 'usd' }, active: true } as const;
+const withPrices = (name: string, prices: Plan['prices']): Plan => ({ ...pro, id: `plan-${name}`, name, displayName: name, prices, recommended: false });
+const yearlyOnly = withPrices('Annual only', [yearlyPrice]);
+const monthlyOnly = withPrices('Monthly only', [monthlyPrice]);
+const both = withPrices('Both', [monthlyPrice, yearlyPrice]);
+
+const description = () => document.body.querySelector('[data-slot="dialog-description"]')?.textContent ?? '';
+
+describe('the price a plan is shown, previewed and handed over with', () => {
+	it('names the price period from the price the dialog charges, not from the interval switch', async () => {
+		const onConfirm = vi.fn();
+		await render(<PlanChangeDialog open onOpenChange={() => {}} currentPlan={free} targetPlan={yearlyOnly} interval="month" rows={[]} onConfirm={onConfirm} />);
+		expect(description()).toBe('$490 per year.');
+		await act(async () => buttonNamed(/Upgrade now/)!.click());
+		expect(onConfirm).toHaveBeenCalledWith(expect.objectContaining({ price: expect.objectContaining({ id: 'price-solo-year', interval: 'year' }) }));
+	});
+
+	it('still reads per month for a monthly price and per year when the yearly price is the one chosen', async () => {
+		await render(<PlanChangeDialog open onOpenChange={() => {}} currentPlan={free} targetPlan={both} interval="month" rows={[]} onConfirm={() => {}} />);
+		expect(description()).toBe('$49 per month.');
+		await act(async () => root!.render(<PlanChangeDialog open onOpenChange={() => {}} currentPlan={free} targetPlan={both} interval="year" rows={[]} onConfirm={() => {}} />));
+		expect(description()).toBe('$490 per year.');
+		await act(async () => root!.render(<PlanChangeDialog open onOpenChange={() => {}} currentPlan={free} targetPlan={monthlyOnly} interval="year" rows={[]} onConfirm={() => {}} />));
+		expect(description()).toBe('$49 per month.');
+	});
+
+	it('hands onSelect the price its card shows, even when it is not the toggled interval', async () => {
+		const onSelect = vi.fn();
+		await render(<PlanComparison plans={[free, yearlyOnly, both, enterprise]} currentPlanId={free.id} interval="month" rows={[]} onSelect={onSelect} />);
+		expect(text()).toContain('$490/yr');
+		await act(async () => buttonNamed(/Upgrade to Annual only/)!.click());
+		expect(onSelect).toHaveBeenLastCalledWith(expect.objectContaining({ id: 'plan-Annual only' }), expect.objectContaining({ id: 'price-solo-year' }));
+		await act(async () => buttonNamed(/Upgrade to Both/)!.click());
+		expect(onSelect).toHaveBeenLastCalledWith(expect.objectContaining({ id: 'plan-Both' }), expect.objectContaining({ id: 'price-solo-month' }));
+		await act(async () => buttonNamed(/Talk to sales/)!.click());
+		expect(onSelect).toHaveBeenLastCalledWith(expect.objectContaining({ id: 'plan-enterprise' }), undefined);
+	});
+
+	it('shows the account its own retired price instead of "Unavailable" when the host passes it', async () => {
+		await render(<PlanComparison plans={[free, legacy, pro]} currentPlanId={legacy.id} currentPrice={legacy.prices[0]} interval="month" rows={[]} />);
+		expect(text()).toContain('$19/mo');
+		expect(text()).not.toContain('Unavailable');
+		expect(text()).not.toContain('No longer offered');
+		// Only the account's own plan takes the price; a retired plan the account is not on stays unavailable.
+		await act(async () => root!.render(<PlanComparison plans={[free, legacy, pro]} currentPlanId={pro.id} currentPrice={pro.prices[0]} interval="month" rows={[]} />));
+		expect(text()).not.toContain('Starter 2024');
+	});
+
+	it('compares an active current price at the chosen interval, and shows a retired price on a plan that is otherwise on offer', async () => {
+		const yearly = pro.prices.find((price) => price.interval === 'year')!;
+		await render(<PlanComparison plans={[free, pro]} currentPlanId={pro.id} currentPrice={yearly} interval="month" rows={[]} />);
+		expect(text()).toContain('$25/mo');
+		expect(text()).not.toContain('$250/yr');
+		// A grandfathered price: the plan sells at $25 today, but this account pays $19.
+		const grandfathered = { ...pro.prices[0]!, id: 'price-pro-2023', amount: { amountMinor: 1_900, currency: 'usd' }, active: false };
+		await act(async () => root!.render(<PlanComparison plans={[free, { ...pro, prices: [...pro.prices, grandfathered] }]} currentPlanId={pro.id} currentPrice={grandfathered} interval="month" rows={[]} />));
+		expect(text()).toContain('$19/mo');
+		expect(text()).not.toContain('$25/mo');
+	});
+});

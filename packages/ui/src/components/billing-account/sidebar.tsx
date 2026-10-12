@@ -99,7 +99,7 @@ export function BillingAccountSidebar({ collapsed = false, onCollapsedChange, dr
 										{subscription.cancelAt ? 'Ends' : 'Renews'} {f.date(subscription.cancelAt ?? subscription.currentPeriodEnd, 'short')}
 									</span>
 									<span className={cn('shrink-0 whitespace-nowrap', daysLeft <= 3 && 'font-medium text-foreground')}>
-										{daysLeft === 0 ? 'Today' : `${f.quantity(daysLeft)} ${plural(daysLeft, { one: 'day', other: 'days' }, f.locale)} left`}
+										{daysLeft === 0 ? 'Today' : `${f.quantity(daysLeft)} ${plural(daysLeft, { one: 'day', other: 'days' })} left`}
 									</span>
 								</p>
 							</>
@@ -118,7 +118,7 @@ export function BillingAccountSidebar({ collapsed = false, onCollapsedChange, dr
 						'Usage',
 						Gauge,
 						pressing > 0 ? <NavCount value={pressing} tone="warning" /> : null,
-						pressing > 0 ? `${f.quantity(pressing)} ${plural(pressing, { one: 'meter', other: 'meters' }, f.locale)} near the limit` : undefined,
+						pressing > 0 ? `${f.quantity(pressing)} ${plural(pressing, { one: 'meter', other: 'meters' })} near the limit` : undefined,
 					)}
 					{row('plans', 'Plans', Layers)}
 					{row('credits', 'Credits', Coins, creditsLeft !== null ? <NavCount value={f.quantity(creditsLeft, true)} /> : null)}

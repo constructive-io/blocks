@@ -31,7 +31,7 @@ export function BillingPlansView() {
 		>
 			<AccountBanner />
 			<IntervalSwitch value={interval} onChange={setBillingInterval} savings={catalogSavings(plans)} className="@xl/view:hidden" />
-			<PlanComparison plans={plans} currentPlanId={plan?.id} interval={interval} rows={data.comparisonRows} onSelect={(next) => choosePlan(next, interval)} readOnly={!canManage} />
+			<PlanComparison plans={plans} currentPlanId={plan?.id} currentPrice={current} interval={interval} rows={data.comparisonRows} onSelect={(next) => choosePlan(next, interval)} readOnly={!canManage} />
 			<div className="grid grid-cols-1 gap-2 text-[0.8125rem] text-muted-foreground @3xl/view:grid-cols-2">
 				{metered ? (
 					<p className="text-pretty">

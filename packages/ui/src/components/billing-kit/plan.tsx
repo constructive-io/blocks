@@ -23,9 +23,22 @@ export function priceFor(plan: Plan, interval: BillingInterval, usageType: PlanP
 }
 
 /**
+ * The price a plan is shown, previewed and started with for an interval: the
+ * price for that interval, else the monthly one, else the yearly one, so a plan
+ * sold for only one period still has a price. The card, the change preview and
+ * the price handed to the host all read it from here, so they cannot disagree;
+ * name the period from the result's own `interval`, not from the one asked for.
+ */
+export function resolvePrice(plan: Plan, interval: BillingInterval) {
+	return priceFor(plan, interval) ?? priceFor(plan, 'month') ?? priceFor(plan, 'year');
+}
+
+/**
  * Whether a plan can be chosen right now: priced by sales, the free fallback, or
  * carrying at least one active price. A plan whose every price was retired is
- * not free, so it is neither offered nor started.
+ * not free, so it is neither offered nor started. A free tier modelled without
+ * a price row has to be marked `fallback`, or it counts as retired and
+ * `PlanComparison` hides it.
  */
 export function isPlanAvailable(plan: Plan) {
 	return Boolean(plan.contactSales || plan.fallback || plan.prices.some((price) => price.active));
@@ -65,7 +78,7 @@ type PriceTagProps = {
  */
 export function PriceTag({ plan, interval, price: priceOverride, size = 'md', reserveNote = false, className }: PriceTagProps) {
 	const f = useBillingFormat();
-	const price = priceOverride ?? priceFor(plan, interval) ?? priceFor(plan, 'month') ?? priceFor(plan, 'year');
+	const price = priceOverride ?? resolvePrice(plan, interval);
 	const metered = priceFor(plan, price?.interval ?? interval, 'metered');
 	const big = size === 'lg' ? 'text-3xl' : 'text-2xl';
 	const retired = !plan.contactSales && !priceOverride && !isPlanAvailable(plan);
@@ -246,8 +259,10 @@ type PlanComparisonProps = {
 	currentPlanId?: string;
 	interval: 'month' | 'year';
 	rows: EntitlementRow[];
-	/** Called with the chosen plan and the licensed price for the interval (absent for contact-sales plans). */
+	/** Called with the chosen plan and the price its card shows: the price for the interval, else the plan's monthly or yearly one (absent for contact-sales plans). */
 	onSelect?: (plan: Plan, price: PlanPrice | undefined) => void;
+	/** The price the account pays today. When it was retired, the account's own plan shows it, so a plan or price withdrawn after the account chose it still reads as what the account pays rather than "Unavailable" or today's price. An active price is compared at the chosen interval like every other plan. */
+	currentPrice?: PlanPrice;
 	/** Plan waiting on a host call; its button shows a busy state. */
 	pendingPlanId?: string;
 	/** Hides actions, e.g. for members who cannot manage billing. */
@@ -260,7 +275,7 @@ type PlanComparisonProps = {
  * entitlement rows that differ between them. Cards stack in narrow
  * containers; the order of `plans` is the upgrade order.
  */
-export function PlanComparison({ plans: allPlans, currentPlanId, interval, rows, onSelect, pendingPlanId, readOnly, className }: PlanComparisonProps) {
+export function PlanComparison({ plans: allPlans, currentPlanId, currentPrice, interval, rows, onSelect, pendingPlanId, readOnly, className }: PlanComparisonProps) {
 	// A plan whose prices were all retired is not on offer; the account's own plan stays so it can still see where it is.
 	const plans = allPlans.filter((plan) => plan.id === currentPlanId || isPlanAvailable(plan));
 	const currentIndex = plans.findIndex((plan) => plan.id === currentPlanId);
@@ -269,7 +284,7 @@ export function PlanComparison({ plans: allPlans, currentPlanId, interval, rows,
 		<ul className={cn('grid grid-cols-1 gap-3 @2xl/view:grid-cols-2', WIDE_COLUMNS[Math.min(plans.length, 4)], className)}>
 			{plans.map((plan, index) => {
 				const current = plan.id === currentPlanId;
-				const price = priceFor(plan, interval) ?? priceFor(plan, 'month');
+				const price = resolvePrice(plan, interval);
 				const direction = currentIndex === -1 || index > currentIndex ? 'up' : 'down';
 				const label = current ? 'Current plan' : plan.contactSales ? 'Talk to sales' : direction === 'up' ? `Upgrade to ${plan.displayName}` : `Switch to ${plan.displayName}`;
 				return (
@@ -287,7 +302,7 @@ export function PlanComparison({ plans: allPlans, currentPlanId, interval, rows,
 										<ToneBadge tone="neutral">Current</ToneBadge>
 									) : null}
 								</div>
-								<PriceTag plan={plan} interval={interval} reserveNote />
+								<PriceTag plan={plan} interval={interval} price={current && currentPrice && !currentPrice.active ? currentPrice : undefined} reserveNote />
 								<p title={plan.description} className="line-clamp-2 min-h-10 text-pretty text-[0.8125rem] text-muted-foreground [overflow-wrap:anywhere]">
 									{plan.description}
 								</p>

@@ -5,6 +5,7 @@ import * as React from 'react';
 
 import { cn } from '../../lib/utils';
 import { Tooltip, TooltipContent, TooltipTrigger } from '../tooltip';
+import { useImageFailed } from './use-image-failed';
 
 type SourceProps = {
 	href?: string;
@@ -19,13 +20,14 @@ type SourceProps = {
 
 /** The site's icon, or a document glyph when there is none or it does not load. */
 function SourceFavicon({ src }: { src?: string }) {
-	const [failed, setFailed] = React.useState(false);
+	const { failed, ref, onError } = useImageFailed();
 	return src && !failed ? (
 		// eslint-disable-next-line @next/next/no-img-element
 		<img
+			ref={ref}
 			src={src}
 			alt=""
-			onError={() => setFailed(true)}
+			onError={onError}
 			className="size-3.5 rounded-sm outline outline-1 outline-black/10 dark:outline-white/10"
 		/>
 	) : (

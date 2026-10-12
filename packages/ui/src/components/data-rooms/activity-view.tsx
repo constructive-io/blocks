@@ -9,7 +9,7 @@ import { enterClass, FilterGroup, focusRingClass, formatCount, staggerStyle, Vie
 import { dashedRule, EmptyState, Panel } from '../workspace-kit/surface';
 import { folderName, visibleActivity } from './access';
 import { useDataRooms } from './data-rooms-context';
-import { addDays, formatDuration } from './format';
+import { addDays, formatDuration, isUnsetDate } from './format';
 import { ChoiceSelect, PersonAvatar } from './parts';
 import type { ActivityEvent, ActivityKind } from './types';
 
@@ -179,7 +179,7 @@ export function ActivityView() {
 		const key = format.dayKey(event.at);
 		let day = days[days.length - 1];
 		if (!day || day.key !== key) {
-			day = { key, label: Date.parse(event.at) === 0 ? 'Undated' : key === todayKey ? 'Today' : key === yesterdayKey ? 'Yesterday' : format.date(event.at), events: [] };
+			day = { key, label: isUnsetDate(event.at) ? 'Undated' : key === todayKey ? 'Today' : key === yesterdayKey ? 'Yesterday' : format.date(event.at), events: [] };
 			days.push(day);
 		}
 		day.events.push(event);

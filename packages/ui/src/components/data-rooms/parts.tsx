@@ -4,6 +4,7 @@ import { Archive, File, FileImage, FileSpreadsheet, FileText, Presentation, type
 import * as React from 'react';
 
 import { cn } from '../../lib/utils';
+import { useImageFailed } from '../ai/use-image-failed';
 import { Select, SelectGroup, SelectGroupLabel, SelectItem, SelectPopup, SelectTrigger, SelectValue } from '../select';
 import { ToneBadge, type Tone } from '../workspace-kit/primitives';
 import { ALL_PERMISSIONS, PERMISSION_COPY, type AccessLevel } from './access';
@@ -28,8 +29,8 @@ function tintFor(id: string) {
 
 /** A photo that gives way to the person's initials when it does not load. */
 function AvatarPhoto({ src, fallback }: { src: string; fallback: React.ReactNode }) {
-	const [failed, setFailed] = React.useState(false);
-	return failed ? <>{fallback}</> : <img src={src} alt="" className="size-full object-cover" onError={() => setFailed(true)} />;
+	const { failed, ref, onError } = useImageFailed();
+	return failed ? <>{fallback}</> : <img ref={ref} src={src} alt="" className="size-full object-cover" onError={onError} />;
 }
 
 /**

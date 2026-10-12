@@ -40,7 +40,7 @@ export function LimitList({ limits, className }: LimitListProps) {
 										{isUnlimited(limit.max) ? 'unlimited' : f.quantity(limit.max)}
 									</span>
 								</span>
-								<span className="text-muted-foreground"> {unitFor(limit.max, limit.unit, limit.unitSingular, f.locale)}</span>
+								<span className="text-muted-foreground"> {unitFor(limit.max, limit.unit, limit.unitSingular)}</span>
 							</span>
 						</div>
 						<AllowanceBar used={limit.used} limit={limit.max} label={limit.label} size="sm" soft={limit.softMax && limit.max > 0 ? limit.softMax / limit.max : undefined} />
@@ -90,7 +90,7 @@ export function FeatureCapList({ caps, onUnlock, className }: FeatureCapListProp
 						{cap.kind === 'number' && on ? (
 							<span className="max-w-[50%] min-w-0 text-end text-[0.8125rem] text-foreground tabular-nums [overflow-wrap:anywhere]">
 								{f.quantity(cap.value)}
-								{cap.unit ? <span className="text-muted-foreground"> {unitFor(cap.value, cap.unit, cap.unitSingular, f.locale)}</span> : null}
+								{cap.unit ? <span className="text-muted-foreground"> {unitFor(cap.value, cap.unit, cap.unitSingular)}</span> : null}
 							</span>
 						) : !on && onUnlock ? (
 							<Button size="xs" variant="ghost" onClick={() => onUnlock(cap)}>

@@ -246,12 +246,25 @@ export function useScrollFade<T extends HTMLElement>() {
 		};
 		update();
 		node.addEventListener('scroll', update, { passive: true });
-		const observer = typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(update);
-		observer?.observe(node);
-		for (const child of Array.from(node.children)) observer?.observe(child);
+		const resize = typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(update);
+		resize?.observe(node);
+		for (const child of Array.from(node.children)) resize?.observe(child);
+		// A size observer reports only the elements it was given, and a row that grows past its width because a child was added resizes nothing it watches. Children come and go (a filtered row, a tab that appears), so watch for them too.
+		const mutation =
+			typeof MutationObserver === 'undefined'
+				? null
+				: new MutationObserver((records) => {
+						for (const record of records) {
+							for (const removed of Array.from(record.removedNodes)) if (removed.nodeType === 1) resize?.unobserve(removed as Element);
+							for (const added of Array.from(record.addedNodes)) if (added.nodeType === 1) resize?.observe(added as Element);
+						}
+						update();
+					});
+		mutation?.observe(node, { childList: true });
 		return () => {
 			node.removeEventListener('scroll', update);
-			observer?.disconnect();
+			resize?.disconnect();
+			mutation?.disconnect();
 		};
 	}, [node]);
 	const { before, after, rtl } = edges;
@@ -284,14 +297,29 @@ export function formatCount(value: number, locale = 'en-US') {
 
 type PluralForms = { one: string; other: string; zero?: string; two?: string; few?: string; many?: string };
 
+const pluralRules = new Map<string, Intl.PluralRules>();
+
 /**
  * Picks the noun form for a count with `Intl.PluralRules`, so `1` reads "1
- * skill" and `2` reads "2 skills" (and languages with more forms can pass
- * them). Falls back to `other` for a form that was not supplied.
+ * skill" and `2` reads "2 skills". Falls back to `other` for a form that was
+ * not supplied.
+ *
+ * The forms are English unless `locale` says otherwise, and the choice follows
+ * the rules of the language they are written in, not of the page's formatting
+ * locale: Japanese has no "one" form, so English forms picked by Japanese rules
+ * would read "1 skills". Pass `locale` only together with forms written for it,
+ * such as `plural(n, { one, few, many, other }, 'ru')`.
  */
 export function plural(count: number, forms: PluralForms, locale = 'en-US') {
-	return forms[new Intl.PluralRules(locale).select(count)] ?? forms.other;
+	let rules = pluralRules.get(locale);
+	if (!rules) {
+		rules = new Intl.PluralRules(locale);
+		pluralRules.set(locale, rules);
+	}
+	return forms[rules.select(count)] ?? forms.other;
 }
+
+const listFormats = new Map<string, Intl.ListFormat>();
 
 /**
  * Joins names for a sentence, showing the first `max` and a count of the rest:
@@ -301,17 +329,42 @@ export function plural(count: number, forms: PluralForms, locale = 'en-US') {
 export function nameList(names: readonly string[], { max = 3, locale = 'en-US' }: { max?: number; locale?: string } = {}) {
 	const shown = names.slice(0, max);
 	const rest = names.length - shown.length;
-	return new Intl.ListFormat(locale, { type: 'conjunction' }).format(rest > 0 ? [...shown, `${formatCount(rest, locale)} more`] : shown);
+	let format = listFormats.get(locale);
+	if (!format) {
+		format = new Intl.ListFormat(locale, { type: 'conjunction' });
+		listFormats.set(locale, format);
+	}
+	return format.format(rest > 0 ? [...shown, `${formatCount(rest, locale)} more`] : shown);
 }
 
 type MiddleTruncateProps = {
 	text: string;
-	/** Characters kept visible at the end. Defaults to the extension plus four characters, or eight. */
+	/** Characters kept visible at the end. Defaults to the extension plus four characters, or eight. `0` keeps none: an ordinary line that ends in an ellipsis. */
 	tail?: number;
 	className?: string;
 };
 
 const EXTENSION = /\.[A-Za-z0-9]{1,8}$/;
+
+// Built once. Grapheme boundaries do not depend on the locale, so the server and the browser cut a name alike.
+const segmenter = typeof Intl !== 'undefined' && typeof Intl.Segmenter === 'function' ? new Intl.Segmenter(undefined, { granularity: 'grapheme' }) : null;
+
+/** The characters a reader sees: a letter with its accent or an emoji sequence is one piece, never cut in half. */
+function graphemes(text: string) {
+	return segmenter ? Array.from(segmenter.segment(text), (part) => part.segment) : Array.from(text);
+}
+
+/** The text split into what the line gives up first and what it keeps, or `null` when it is too short to bother. */
+function splitMiddle(text: string, tail: number | undefined): [head: string, end: string] | null {
+	const extension = EXTENSION.exec(text)?.[0];
+	const asked = tail ?? (extension ? extension.length + 4 : 8);
+	const keep = Number.isFinite(asked) ? Math.max(0, Math.floor(asked)) : 0;
+	// A text is never longer in characters than in UTF-16 units, so a short name skips the segmenter.
+	if (keep === 0 || text.length <= keep * 2) return null;
+	const pieces = graphemes(text);
+	if (pieces.length <= keep * 2) return null;
+	return [pieces.slice(0, -keep).join(''), pieces.slice(-keep).join('')];
+}
 
 /**
  * Shortens the middle of a long unbroken name such as a file name, so the end
@@ -319,19 +372,16 @@ const EXTENSION = /\.[A-Za-z0-9]{1,8}$/;
  * The full text is in `title` and in the accessible name.
  */
 export function MiddleTruncate({ text, tail, className }: MiddleTruncateProps) {
-	const chars = Array.from(text);
-	const extension = EXTENSION.exec(text)?.[0];
-	const keep = tail ?? (extension ? extension.length + 4 : 8);
-	const split = chars.length > keep * 2;
+	const parts = React.useMemo(() => splitMiddle(text, tail), [text, tail]);
 	return (
 		<span title={text} className={cn('flex min-w-0 max-w-full', className)}>
 			<span className="sr-only">{text}</span>
 			<span aria-hidden="true" className="truncate">
-				{split ? chars.slice(0, -keep).join('') : text}
+				{parts ? parts[0] : text}
 			</span>
-			{split ? (
+			{parts ? (
 				<span aria-hidden="true" className="shrink-0 whitespace-pre">
-					{chars.slice(-keep).join('')}
+					{parts[1]}
 				</span>
 			) : null}
 		</span>

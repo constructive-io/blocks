@@ -24,9 +24,14 @@ function escapeHtml(value: string): string {
  * `*` starts emphasis only in front of text, at the start of a word, and ends
  * it only right after text. That keeps `A * B * C`, `src/**\/*.test.ts` and
  * `*.md files` as the characters the writer typed instead of eating them.
+ *
+ * The text between the markers cannot contain the marker itself (`**` for
+ * strong, `***` for both), so an opener that never finds its closer gives up at
+ * the next marker instead of scanning to the end of the line: a long line of
+ * unmatched `**` takes time in proportion to its length, not its square.
  */
-const STRONG_EM = /(?<![\w*])\*\*\*(?=[^\s*])([^\n]*?[^\s*])\*\*\*(?![\w*])/g;
-const STRONG = /(?<![\w*])\*\*(?=[^\s*])([^\n]*?[^\s*])\*\*(?![\w*])/g;
+const STRONG_EM = /(?<![\w*])\*\*\*(?=[^\s*])((?:[^*\n]|\*(?!\*\*))*?[^\s*])\*\*\*(?![\w*])/g;
+const STRONG = /(?<![\w*])\*\*(?=[^\s*])((?:[^*\n]|\*(?!\*))*?[^\s*])\*\*(?![\w*])/g;
 const EM = /(?<![\w*])\*(?=[^\s*])([^\n*]*?[^\s*])\*(?![\w*])/g;
 
 /**

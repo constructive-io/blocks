@@ -26,6 +26,7 @@ import { useCommand } from './use-command';
  */
 export function DocumentsTab({ room }: { room: Room }) {
 	const { data, actingId, can, openDocument, openShare, format } = useDataRooms();
+	const compareNames = format.compare;
 	const command = useCommand();
 	const [folder, setFolder] = React.useState('/');
 	const [query, setQuery] = React.useState('');
@@ -74,12 +75,14 @@ export function DocumentsTab({ room }: { room: Room }) {
 	);
 
 	const needle = query.trim().toLowerCase();
-	const shown = needle
-		? documents.filter((document) => document.name.toLowerCase().includes(needle))
-		: documents.filter((document) => normalizeFolder(document.folder) === normalizeFolder(folder));
 	const subfolders = needle ? [] : childFolders(folders, folder);
-	// Numeric collation, so "Exhibit 2" sorts before "Exhibit 10".
-	const sorted = [...shown].sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true }));
+	// Sorted only when what is shown changes: a selection or a hover re-renders this tab without touching the list.
+	const sorted = React.useMemo(() => {
+		const shown = needle
+			? documents.filter((document) => document.name.toLowerCase().includes(needle))
+			: documents.filter((document) => normalizeFolder(document.folder) === normalizeFolder(folder));
+		return shown.sort((a, b) => compareNames(a.name, b.name));
+	}, [compareNames, documents, folder, needle]);
 	const liveShares = (document: DataRoomDocument) =>
 		data.shares.filter(
 			(share) =>

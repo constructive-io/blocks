@@ -108,7 +108,7 @@ export function BillingOverviewView() {
 					className={enterClass}
 					style={next()}
 					title="Usage this period"
-					description={daysLeft !== null ? `${f.quantity(daysLeft)} ${plural(daysLeft, { one: 'day', other: 'days' }, f.locale)} until the period resets.` : undefined}
+					description={daysLeft !== null ? `${f.quantity(daysLeft)} ${plural(daysLeft, { one: 'day', other: 'days' })} until the period resets.` : undefined}
 					actions={link('usage', 'All usage')}
 				>
 					<PoolGrid meters={data.meters} balances={data.balances} onSelect={openMeter} />

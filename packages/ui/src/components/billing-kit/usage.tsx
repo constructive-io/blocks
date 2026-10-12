@@ -174,7 +174,7 @@ export function UsageTree({ meters, balances, onSelectMeter, defaultCollapsed = 
 												<bdi>{pool.meter.displayName}</bdi>
 											</span>
 											<span className="text-xs whitespace-nowrap text-muted-foreground tabular-nums">
-												{f.quantity(pool.children.length)} {plural(pool.children.length, { one: 'meter', other: 'meters' }, f.locale)}
+												{f.quantity(pool.children.length)} {plural(pool.children.length, { one: 'meter', other: 'meters' })}
 											</span>
 										</span>
 										<AllowanceBar used={used} limit={limit} label={`${pool.meter.displayName} pool`} planMarker={pool.balance?.planLimit} />
@@ -334,7 +334,7 @@ export function MeterDetailSheet({ meter, balance, pool, rateWindows = [], perio
 						) : meter.creditCost ? (
 							<>
 								When the allowance runs out, each {meter.unitSingular ?? singularize(meter.unit)} costs{' '}
-								<span className="font-medium text-foreground tabular-nums">{meter.creditCost}</span> {plural(meter.creditCost, { one: 'credit', other: 'credits' }, f.locale)} from{' '}
+								<span className="font-medium text-foreground tabular-nums">{meter.creditCost}</span> {plural(meter.creditCost, { one: 'credit', other: 'credits' })} from{' '}
 								{pool && pool.slug !== UNIVERSAL_METER ? (
 									<>
 										<span className="text-foreground">{pool.displayName}</span>, then from Universal credits.

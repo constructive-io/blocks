@@ -35,9 +35,9 @@ export const isUnlimited = (limit: number) => limit < 0;
 
 // Intl constructors are slow and every list row formats several values, so
 // each distinct option set is built once per module.
-const formatters = new Map<string, Intl.NumberFormat | Intl.DateTimeFormat | Intl.RelativeTimeFormat | Intl.ListFormat>();
+const formatters = new Map<string, Intl.NumberFormat | Intl.DateTimeFormat | Intl.RelativeTimeFormat | Intl.ListFormat | Intl.PluralRules>();
 
-function cached<T extends Intl.NumberFormat | Intl.DateTimeFormat | Intl.RelativeTimeFormat | Intl.ListFormat>(key: string, create: () => T): T {
+function cached<T extends Intl.NumberFormat | Intl.DateTimeFormat | Intl.RelativeTimeFormat | Intl.ListFormat | Intl.PluralRules>(key: string, create: () => T): T {
 	let formatter = formatters.get(key) as T | undefined;
 	if (!formatter) {
 		formatter = create();
@@ -231,6 +231,8 @@ export function periodProgress(start: string, end: string, now: string) {
 
 export const INTERVAL_SUFFIX: Record<BillingInterval, string> = { month: '/mo', year: '/yr', one_time: ' once' };
 export const INTERVAL_LABEL: Record<BillingInterval, string> = { month: 'Monthly', year: 'Yearly', one_time: 'One time' };
+/** How a sentence says what a price covers: "$49 per month". */
+export const INTERVAL_PHRASE: Record<BillingInterval, string> = { month: 'per month', year: 'per year', one_time: 'once' };
 
 /* ------------------------------------------------------------------ *
  * Presentations
@@ -333,21 +335,71 @@ export const READINESS: Record<ReadinessStatus, Presentation> = {
 };
 
 /**
+ * Plurals the suffix rules in `singularize` would get wrong: words that do not
+ * change, and `-ie`, `-is`, `-us` and Latin words whose plural looks like a
+ * regular one. Units a host needs beyond these set `unitSingular`.
+ */
+const SINGULARS: Record<string, string> = {
+	series: 'series',
+	species: 'species',
+	news: 'news',
+	movies: 'movie',
+	cookies: 'cookie',
+	calories: 'calorie',
+	selfies: 'selfie',
+	zombies: 'zombie',
+	ties: 'tie',
+	pies: 'pie',
+	analyses: 'analysis',
+	aliases: 'alias',
+	buses: 'bus',
+	bonuses: 'bonus',
+	statuses: 'status',
+	viruses: 'virus',
+	campuses: 'campus',
+	indices: 'index',
+	matrices: 'matrix',
+	vertices: 'vertex',
+};
+
+function singularWord(word: string) {
+	const known = SINGULARS[word];
+	if (known) return known;
+	if (/[^aeiou]ies$/.test(word)) return `${word.slice(0, -3)}y`;
+	if (/(ss|us|is)$/.test(word)) return word;
+	if (/(sh|ch|x|z|ss)es$/.test(word)) return word.slice(0, -2);
+	return word.replace(/s$/, '');
+}
+
+/**
  * Singular of a plural English unit label (`queries` becomes "query"). Anything
  * that is not a plain lowercase word, such as `GB` or `Mbps`, is returned as is;
- * hosts with irregular units set `unitSingular` instead.
+ * hosts with irregular units set `unitSingular` instead. Only the last word of
+ * a phrase or hyphenated unit changes (`active users`, `gigabyte-hours`).
  */
 export function singularize(unit: string) {
 	if (!/^[a-z][a-z -]*$/.test(unit)) return unit;
-	if (/[^aeiou]ies$/.test(unit)) return `${unit.slice(0, -3)}y`;
-	if (/(ss|us|is)$/.test(unit)) return unit;
-	if (/(sh|ch|x|z|ss)es$/.test(unit)) return unit.slice(0, -2);
-	return unit.replace(/s$/, '');
+	const lead = Math.max(unit.lastIndexOf(' '), unit.lastIndexOf('-')) + 1;
+	return unit.slice(0, lead) + singularWord(unit.slice(lead));
 }
 
-/** The unit label that goes with a count: `1 seat`, `2 seats`. */
-export function unitFor(count: number, unit: string, unitSingular: string | undefined, locale: string) {
-	return new Intl.PluralRules(locale).select(count) === 'one' ? (unitSingular ?? singularize(unit)) : unit;
+/**
+ * The unit label that goes with a count: `1 seat`, `2 seats`. `unit` is the
+ * plural label and `unitSingular` the label for one, both English like the rest
+ * of the kit's copy, so the choice follows English rules whatever the page is
+ * formatted in. Pass `locale` only when both labels are written for that
+ * locale; without a `unitSingular` nothing can be derived outside English.
+ * The unlimited sentinel (`-1`) is no count: it reads as the plural and never
+ * reaches the plural rules, which would call it one.
+ */
+export function unitFor(count: number, unit: string, unitSingular?: string, locale = 'en-US') {
+	if (isUnlimited(count)) return unit;
+	if (pluralRules(locale).select(count) !== 'one') return unit;
+	return unitSingular ?? (/^en(?:-|$)/i.test(locale) ? singularize(unit) : unit);
+}
+
+function pluralRules(locale: string) {
+	return cached(`p|${locale}`, () => new Intl.PluralRules(locale));
 }
 
 /** Humanizes a slug for fallbacks: `object_storage_gb` → `Object storage gb`. */

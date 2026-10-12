@@ -100,8 +100,8 @@ export function CreditWallet({ balance, grants, creditsPerCent = 1, currency = '
 			{expiring?.expiresAt ? (
 				<p className={cn('border-t bg-muted/50 px-4 py-2.5 text-xs text-muted-foreground', dashedRule)}>
 					<span className="font-medium text-foreground tabular-nums">{f.quantity(expiring.remaining)}</span>{' '}
-					{plural(expiring.remaining, { one: 'credit expires', other: 'credits expire' }, f.locale)} {f.relative(expiring.expiresAt)} ({f.date(expiring.expiresAt)}).{' '}
-					{plural(expiring.remaining, { one: 'It is', other: 'They are' }, f.locale)} spent first.
+					{plural(expiring.remaining, { one: 'credit expires', other: 'credits expire' })} {f.relative(expiring.expiresAt)} ({f.date(expiring.expiresAt)}).{' '}
+					{plural(expiring.remaining, { one: 'It is', other: 'They are' })} spent first.
 				</p>
 			) : null}
 		</Bezel>
@@ -189,7 +189,7 @@ export function CreditPackGrid({ packs, onBuy, pendingPackId, readOnly, classNam
 							</div>
 							<div>
 								<p className="text-2xl font-semibold tracking-tight text-foreground tabular-nums [overflow-wrap:anywhere]">
-									{f.quantity(pack.amount)} <span className="text-sm font-normal text-muted-foreground">{plural(pack.amount, { one: 'credit', other: 'credits' }, f.locale)}</span>
+									{f.quantity(pack.amount)} <span className="text-sm font-normal text-muted-foreground">{plural(pack.amount, { one: 'credit', other: 'credits' })}</span>
 								</p>
 								<p className="text-xs text-muted-foreground tabular-nums">
 									{f.money({ ...pack.price, amountMinor: Math.round((pack.price.amountMinor / pack.amount) * 1000) }, { precise: true })} per 1,000
@@ -203,7 +203,7 @@ export function CreditPackGrid({ packs, onBuy, pendingPackId, readOnly, classNam
 						</div>
 						<div className={cn('flex flex-wrap items-center justify-between gap-x-3 gap-y-2 border-t bg-muted/50 px-4 py-2.5', dashedRule)}>
 							<span className="text-xs text-muted-foreground">
-								{pack.expiresAfterDays ? `Expires after ${f.quantity(pack.expiresAfterDays)} ${plural(pack.expiresAfterDays, { one: 'day', other: 'days' }, f.locale)}` : 'Never expires'}
+								{pack.expiresAfterDays ? `Expires after ${f.quantity(pack.expiresAfterDays)} ${plural(pack.expiresAfterDays, { one: 'day', other: 'days' })}` : 'Never expires'}
 							</span>
 							{readOnly ? (
 								<span className="text-sm font-medium text-foreground tabular-nums">{f.money(pack.price)}</span>

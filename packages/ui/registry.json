@@ -4352,6 +4352,10 @@
           "type": "registry:component"
         },
         {
+          "path": "registry/constructive/blocks/ai/line-diff.ts",
+          "type": "registry:component"
+        },
+        {
           "path": "registry/constructive/blocks/ai/mark-tile.tsx",
           "type": "registry:component"
         },
@@ -4449,6 +4453,10 @@
         },
         {
           "path": "registry/constructive/blocks/ai/usage-notice.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/ai/use-image-failed.ts",
           "type": "registry:component"
         },
         {

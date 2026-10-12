@@ -100,7 +100,8 @@ function ContextRing({ usage, size = 24, stroke = 2, className }: ContextRingPro
 	if (!usage) tooltip = 'No usage yet';
 	else if (usage.tokens === null) tooltip = 'Recomputing after compaction…';
 	else {
-		tooltip = `${Math.round(pct)}% used · ${formatCompact(usage.tokens)} / ${formatCompact(usage.contextWindow)}`;
+		// The ring stops at full, but the label says how far past the window the context is.
+		tooltip = `${Math.round(Math.max(0, reported ?? 0))}% used · ${formatCompact(usage.tokens)} / ${formatCompact(usage.contextWindow)}`;
 	}
 
 	return (

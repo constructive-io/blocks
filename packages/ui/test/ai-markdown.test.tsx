@@ -65,4 +65,20 @@ describe('renderBasicMarkdown', () => {
 		expect(html).toContain('href="https://example.com/path"');
 		expect(html).toContain('rel="noreferrer noopener"');
 	});
+
+	it('keeps several emphasised phrases on one line separate', () => {
+		const html = renderBasicMarkdown('**one** and **two**, *three* and ***four***; 5 ** 3 and 2**3 stay plain');
+		expect(html).toContain('<strong>one</strong> and <strong>two</strong>, <em>three</em> and <strong><em>four</em></strong>');
+		expect(html).toContain('5 ** 3 and 2**3 stay plain');
+	});
+
+	it('takes time proportional to the text on a very long line of unmatched openers', () => {
+		// Each opener below has no closer, so a pattern that scans to the end of the line for every opener is quadratic in the line.
+		const started = performance.now();
+		for (const unit of ['**a ', '***a ', '**a**b ']) {
+			const html = renderBasicMarkdown(unit.repeat(16_000));
+			expect(html.startsWith('<p class="ai-md-p">')).toBe(true);
+		}
+		expect(performance.now() - started).toBeLessThan(1000);
+	});
 });

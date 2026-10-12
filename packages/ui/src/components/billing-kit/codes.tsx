@@ -89,7 +89,7 @@ type CodeGrantListProps = {
 export function CodeGrantList({ items, describe, compact = false, className }: CodeGrantListProps) {
 	const f = useBillingFormat();
 	const lifetime = (item: CodeGrantListProps['items'][number]) =>
-		item.expiresAt ? `expires ${f.date(item.expiresAt)}` : item.expiresAfterDays ? `lasts ${f.quantity(item.expiresAfterDays)} ${plural(item.expiresAfterDays, { one: 'day', other: 'days' }, f.locale)}` : item.creditType === 'period' ? 'resets each period' : 'never expires';
+		item.expiresAt ? `expires ${f.date(item.expiresAt)}` : item.expiresAfterDays ? `lasts ${f.quantity(item.expiresAfterDays)} ${plural(item.expiresAfterDays, { one: 'day', other: 'days' })}` : item.creditType === 'period' ? 'resets each period' : 'never expires';
 	if (compact) {
 		return (
 			<ul className={cn('flex flex-col gap-0.5', className)}>
