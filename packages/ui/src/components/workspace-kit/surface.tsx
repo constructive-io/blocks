@@ -36,7 +36,7 @@ export function TableSurface({ children, className, minWidth = '40rem' }: { chil
 	return (
 		<div className={cn(surfaceInsetClass, 'rounded-xl bg-card shadow-card', className)}>
 			<SurfaceBody>
-				<div ref={ref} className="overflow-x-auto" style={style}>
+				<div ref={ref} className="relative overflow-x-auto" style={style}>
 					<table className="w-full border-collapse text-[0.8125rem]" style={{ minWidth }}>
 						{children}
 					</table>

@@ -344,9 +344,9 @@ function ThreadDetail({ thread, onBack, patch }: ThreadDetailProps) {
 						),
 					)}
 					{working ? (
-						<p className="flex items-center gap-2 px-1 text-[0.8125rem]">
-							<Bot aria-hidden="true" className="size-3.5 text-muted-foreground" />
-							<TextShimmer className="font-normal">
+						<p className="flex items-start gap-2 px-1 text-[0.8125rem]">
+							<Bot aria-hidden="true" className="mt-0.5 size-3.5 shrink-0 text-muted-foreground" />
+							<TextShimmer className="min-w-0 font-normal [overflow-wrap:anywhere]">
 								{agent} · {thread.activity ?? 'Working'}
 							</TextShimmer>
 						</p>

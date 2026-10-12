@@ -150,7 +150,7 @@ function DiffTable<T extends DiffTableRowBase>({
 													<div
 														key={i}
 														className={cn(
-															'px-3 py-2 text-success',
+															'min-w-0 px-3 py-2 text-success [overflow-wrap:anywhere]',
 															i === 0 && 'font-medium',
 														)}
 													>

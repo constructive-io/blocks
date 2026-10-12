@@ -3412,7 +3412,8 @@
       "docs": "Import: `import { WorkspaceShell, SidebarFrame, NavSection, NavRow, ViewFrame, Panel, CanvasSurface, useCanvasViewport } from '@/components/ui/workspace-kit'`. Render your sidebar through the `sidebar` render prop (it is called once for the rail and once for the drawer) and your views as children; `ViewFrame` and `NavMenuButton` open the drawer below the `3xl` container width.",
       "dependencies": [
         "lucide-react",
-        "motion@^13.4.0"
+        "motion@^13.4.0",
+        "@base-ui/react"
       ],
       "registryDependencies": [
         "cn",
@@ -3638,7 +3639,8 @@
       ],
       "docs": "Import: `import { DataRooms, DATA_ROOMS_DEMO } from '@/components/ui/data-rooms'`. Pass your workspace as `data`, apply every change through `onCommand` (reject to keep a dialog open), and handle downloads and view logging through `onAction`. `effectiveAccess` explains who can do what; your server still decides every request.",
       "dependencies": [
-        "lucide-react"
+        "lucide-react",
+        "@base-ui/react"
       ],
       "registryDependencies": [
         "cn",

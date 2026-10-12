@@ -43,7 +43,7 @@ const position = (time: string) => `${(minutes(time) / DAY_MINUTES) * 100}%`;
 /** A running schedule's name shimmers; everything else is plain text. */
 function AgentName({ name, running, className }: { name: string; running: boolean; className?: string }) {
 	return running ? (
-		<TextShimmer className={cn('font-normal', className)}>{name}</TextShimmer>
+		<TextShimmer className={cn('max-w-full truncate align-bottom font-normal', className)}>{name}</TextShimmer>
 	) : (
 		<span className={className}>{name}</span>
 	);
@@ -358,7 +358,7 @@ function ScheduleCard({ controller }: ScheduleCardProps) {
 						</span>
 					</div>
 					{!active && schedule.pausedNote ? <p className="-mt-1.5 px-3.5 pb-3 text-xs text-muted-foreground [overflow-wrap:anywhere]">{schedule.pausedNote}</p> : null}
-					<div className={cn('flex items-center gap-2 px-3.5 py-2.5', DIVIDER)}>
+					<div className={cn('flex flex-wrap items-center gap-x-2 gap-y-1 px-3.5 py-2.5', DIVIDER)}>
 						<RunHistory history={history} />
 						<button
 							type="button"
