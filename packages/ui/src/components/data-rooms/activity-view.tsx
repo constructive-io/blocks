@@ -5,7 +5,7 @@ import * as React from 'react';
 
 import { cn } from '../../lib/utils';
 import { Button } from '../button';
-import { enterClass, FilterGroup, focusRingClass, staggerStyle, ViewFrame } from '../workspace-kit/primitives';
+import { enterClass, FilterGroup, focusRingClass, formatCount, staggerStyle, ViewFrame } from '../workspace-kit/primitives';
 import { dashedRule, EmptyState, Panel } from '../workspace-kit/surface';
 import { folderName, visibleActivity } from './access';
 import { useDataRooms } from './data-rooms-context';
@@ -35,7 +35,7 @@ function LinkButton({ children, onClick }: { children: React.ReactNode; onClick:
 		<button
 			type="button"
 			onClick={onClick}
-			className={cn('cursor-pointer rounded-sm font-medium text-foreground underline-offset-4 hover:underline', focusRingClass)}
+			className={cn('cursor-pointer rounded-sm text-start font-medium text-foreground underline-offset-4 [overflow-wrap:anywhere] hover:underline', focusRingClass)}
 		>
 			{children}
 		</button>
@@ -179,7 +179,7 @@ export function ActivityView() {
 		const key = format.dayKey(event.at);
 		let day = days[days.length - 1];
 		if (!day || day.key !== key) {
-			day = { key, label: key === todayKey ? 'Today' : key === yesterdayKey ? 'Yesterday' : format.date(event.at), events: [] };
+			day = { key, label: Date.parse(event.at) === 0 ? 'Undated' : key === todayKey ? 'Today' : key === yesterdayKey ? 'Yesterday' : format.date(event.at), events: [] };
 			days.push(day);
 		}
 		day.events.push(event);
@@ -237,17 +237,18 @@ export function ActivityView() {
 							{day.events.map((event, index) => (
 								<li key={event.id} className={cn('flex items-start gap-3 px-4 py-2.5', index > 0 && cn('border-t', dashedRule))}>
 									<PersonAvatar person={person(event.actorId)} size="sm" className="mt-px" />
-									<p className="min-w-0 flex-1 text-pretty text-[13px] text-foreground">
+									<p className="min-w-0 flex-1 text-pretty text-[0.8125rem] text-foreground [overflow-wrap:anywhere]">
 										<ActivitySentence event={event} />
 									</p>
-									<span className="flex shrink-0 flex-col items-end gap-0.5 text-right">
+									<span className="flex shrink-0 flex-col items-end gap-0.5 text-end">
 										<time dateTime={event.at} className="text-xs text-muted-foreground tabular-nums">
 											{format.time(event.at)}
 										</time>
 										<button
 											type="button"
+											title={room(event.roomId)?.name}
 											onClick={() => openRoom(event.roomId)}
-											className={cn('hidden max-w-[10rem] cursor-pointer truncate rounded-sm text-[11px] text-subtle-foreground hover:text-foreground @md/view:block', focusRingClass)}
+											className={cn('hidden max-w-[10rem] cursor-pointer truncate rounded-sm text-[0.6875rem] text-subtle-foreground hover:text-foreground @md/view:block', focusRingClass)}
 										>
 											{room(event.roomId)?.name ?? 'Room'}
 										</button>
@@ -263,7 +264,7 @@ export function ActivityView() {
 				<div className="flex justify-center">
 					<Button size="sm" variant="outline" onClick={() => setLimit((current) => current + PAGE)}>
 						Show more
-						<span className="text-muted-foreground tabular-nums">{filtered.length - limit}</span>
+						<span className="text-muted-foreground tabular-nums">{formatCount(filtered.length - limit)}</span>
 					</Button>
 				</div>
 			) : null}

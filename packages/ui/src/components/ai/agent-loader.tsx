@@ -236,7 +236,7 @@ function AgentLoader({
 				className={cn('inline-flex w-fit items-center gap-2.5', className)}
 			>
 				<PixelGrid variant={variant} reducedMotion={reducedMotion} />
-				<TextShimmer className="text-[13px]">{statusText}</TextShimmer>
+				<TextShimmer className="text-[0.8125rem]">{statusText}</TextShimmer>
 				{showElapsed ? (
 					<span className="font-mono text-xs tabular-nums text-muted-foreground">
 						{formatElapsed(elapsed)}

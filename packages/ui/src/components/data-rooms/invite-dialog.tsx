@@ -136,11 +136,11 @@ function InviteForm({ room, onDone }: { room: Room; onDone: () => void }) {
 		<form onSubmit={submit} noValidate className="flex min-h-0 flex-col">
 			<DialogHeader variant="band" className="gap-1.5">
 				<DialogTitle className="text-base font-medium">Invite to {room.name}</DialogTitle>
-				<DialogDescription className="text-[13px]">People from {data.org.name} join right away. Everyone else joins as a guest.</DialogDescription>
+				<DialogDescription className="text-[0.8125rem]">People from {data.org.name} join right away. Everyone else joins as a guest.</DialogDescription>
 			</DialogHeader>
 			<div className="flex min-h-0 flex-col gap-4 overflow-y-auto px-6 pb-5">
 				<div className="flex flex-col gap-1.5">
-					<label htmlFor={`${listId}-input`} className="text-[13px] font-medium text-foreground">
+					<label htmlFor={`${listId}-input`} className="text-[0.8125rem] font-medium text-foreground">
 						Emails
 					</label>
 					<div
@@ -153,13 +153,13 @@ function InviteForm({ room, onDone }: { room: Room; onDone: () => void }) {
 							<span
 								key={token.email}
 								className={cn(
-									'inline-flex h-6 max-w-full items-center gap-1 rounded-[6px] border pr-0.5 pl-1 text-xs',
+									'inline-flex h-6 max-w-full items-center gap-1 rounded-[6px] border pe-0.5 ps-1 text-xs',
 									token.person && !token.person.guest ? 'border-border bg-muted/60 text-foreground' : 'border-dashed border-foreground/30 text-foreground',
 								)}
 							>
-								{token.person ? <PersonAvatar person={token.person} size="xs" className="size-4 text-[8px]" /> : null}
-								<span className="truncate">{token.person?.name ?? token.email}</span>
-								{!token.person || token.person.guest ? <span className="text-[10px] text-muted-foreground">Guest</span> : null}
+								{token.person ? <PersonAvatar person={token.person} size="xs" className="size-4 text-[0.5rem]" /> : null}
+								<span title={token.person?.name ?? token.email} className="truncate">{token.person?.name ?? token.email}</span>
+								{!token.person || token.person.guest ? <span className="text-[0.625rem] text-muted-foreground">Guest</span> : null}
 								<button
 									type="button"
 									aria-label={`Remove ${token.email}`}
@@ -208,7 +208,7 @@ function InviteForm({ room, onDone }: { room: Room; onDone: () => void }) {
 								add(splitEmails(text));
 							}}
 							onBlur={commitDraft}
-							className="h-6 min-w-32 flex-1 bg-transparent px-1 text-[13px] text-foreground outline-none placeholder:text-subtle-foreground pointer-coarse:text-base"
+							className="h-6 min-w-32 flex-1 bg-transparent px-1 text-[0.8125rem] text-foreground outline-none placeholder:text-subtle-foreground pointer-coarse:text-base"
 						/>
 					</div>
 					{suggestions.length ? (
@@ -219,12 +219,12 @@ function InviteForm({ room, onDone }: { room: Room; onDone: () => void }) {
 										type="button"
 										onMouseDown={(event) => event.preventDefault()}
 										onClick={() => pick(person)}
-										className={cn('flex w-full cursor-pointer items-center gap-2 rounded-[5px] px-2 py-1.5 text-left hover:bg-overlay-hover', focusRingClass)}
+										className={cn('flex w-full cursor-pointer items-center gap-2 rounded-[5px] px-2 py-1.5 text-start hover:bg-overlay-hover', focusRingClass)}
 									>
 										<PersonAvatar person={person} size="sm" />
 										<span className="min-w-0 flex-1">
-											<span className="block truncate text-[13px] text-foreground">{person.name}</span>
-											<span className="block truncate text-xs text-muted-foreground">{person.email}</span>
+											<span title={person.name} className="block truncate text-[0.8125rem] text-foreground">{person.name}</span>
+											<span title={person.email} className="block truncate text-xs text-muted-foreground">{person.email}</span>
 										</span>
 										{person.guest ? <span className="text-xs text-muted-foreground">Guest</span> : null}
 									</button>
@@ -236,13 +236,13 @@ function InviteForm({ room, onDone }: { room: Room; onDone: () => void }) {
 
 				{guests.length ? (
 					guestsBlocked ? (
-						<p role="alert" className="flex items-start gap-2 rounded-md bg-destructive/10 px-3 py-2 text-[13px] text-destructive">
+						<p role="alert" className="flex items-start gap-2 rounded-md bg-destructive/10 px-3 py-2 text-[0.8125rem] text-destructive">
 							<TriangleAlert aria-hidden="true" className="mt-0.5 size-3.5 shrink-0" />
 							{data.org.name} doesn’t allow guests from outside the organization. Remove {guests.length === 1 ? 'that email' : 'those emails'} or ask an
 							organization admin.
 						</p>
 					) : (
-						<p className="flex items-start gap-2 rounded-md bg-muted/60 px-3 py-2 text-[13px] text-muted-foreground">
+						<p className="flex items-start gap-2 rounded-md bg-muted/60 px-3 py-2 text-[0.8125rem] text-muted-foreground">
 							<Info aria-hidden="true" className="mt-0.5 size-3.5 shrink-0" />
 							<span>
 								<span className="text-foreground tabular-nums">{guests.length}</span> {guests.length === 1 ? 'person' : 'people'} outside {data.org.name} will join as
@@ -253,7 +253,7 @@ function InviteForm({ room, onDone }: { room: Room; onDone: () => void }) {
 				) : null}
 
 				<div className="flex flex-col gap-1.5">
-					<label htmlFor={`${listId}-role`} className="text-[13px] font-medium text-foreground">
+					<label htmlFor={`${listId}-role`} className="text-[0.8125rem] font-medium text-foreground">
 						Role
 					</label>
 					<ChoiceSelect
@@ -270,13 +270,13 @@ function InviteForm({ room, onDone }: { room: Room; onDone: () => void }) {
 				</div>
 
 				<div className="flex flex-col gap-1.5">
-					<span className="text-[13px] font-medium text-foreground">Access ends</span>
+					<span className="text-[0.8125rem] font-medium text-foreground">Access ends</span>
 					<AccessEndPicker room={room} value={ending} onChange={setEnding} />
 					{expiresAt ? <p className="text-xs text-muted-foreground tabular-nums">On {format.date(expiresAt)}</p> : null}
 				</div>
 
 				<div className="flex flex-col gap-1.5">
-					<label htmlFor={`${listId}-message`} className="text-[13px] font-medium text-foreground">
+					<label htmlFor={`${listId}-message`} className="text-[0.8125rem] font-medium text-foreground">
 						Message <span className="font-normal text-muted-foreground">(optional)</span>
 					</label>
 					<Textarea
@@ -285,12 +285,12 @@ function InviteForm({ room, onDone }: { room: Room; onDone: () => void }) {
 						value={message}
 						onChange={(event) => setMessage(event.target.value)}
 						placeholder="Add a note to the invite"
-						className="text-[13px]"
+						className="text-[0.8125rem]"
 					/>
 				</div>
 
 				{error ? (
-					<p role="alert" className="text-[13px] text-destructive">
+					<p role="alert" className="text-[0.8125rem] text-destructive">
 						{error}
 					</p>
 				) : null}

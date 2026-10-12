@@ -8,8 +8,8 @@ type MarkTileProps = React.ComponentProps<'span'> & {
 };
 
 const SIZE = {
-	xs: 'size-4 rounded-[5px] text-[9px] [&_svg:not([class*=size-])]:size-2.5',
-	sm: 'size-6 rounded-md text-[11px] [&_svg:not([class*=size-])]:size-3.5',
+	xs: 'size-4 rounded-[5px] text-[0.5625rem] [&_svg:not([class*=size-])]:size-2.5',
+	sm: 'size-6 rounded-md text-[0.6875rem] [&_svg:not([class*=size-])]:size-3.5',
 	md: 'size-8 rounded-lg text-sm [&_svg:not([class*=size-])]:size-4',
 } as const;
 

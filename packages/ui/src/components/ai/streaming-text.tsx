@@ -85,7 +85,7 @@ function StreamingText({
 
 	return (
 		<div data-slot="streaming-text" className={cn('flex w-full flex-col gap-3', className)}>
-			<div className="text-[13px] leading-relaxed text-pretty text-foreground">
+			<div className="text-[0.8125rem] leading-relaxed text-pretty text-foreground">
 				{tokens
 					? tokens.slice(0, visible).map((tok, i) => {
 							if (tok.type === 'cite') {
@@ -96,7 +96,7 @@ function StreamingText({
 											title={src?.title ?? tok.id}
 											href={src?.href}
 											description={src?.description}
-											className="align-super text-[10px]"
+											className="align-super text-[0.625rem]"
 										/>
 									</sup>
 								);

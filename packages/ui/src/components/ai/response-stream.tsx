@@ -75,7 +75,7 @@ function ResponseStream({
 			{streaming ? (
 				<span
 					aria-hidden
-					className="ml-0.5 inline-block h-3.5 w-px translate-y-0.5 bg-foreground/70 animate-pulse motion-reduce:animate-none"
+					className="ms-0.5 inline-block h-3.5 w-px translate-y-0.5 bg-foreground/70 animate-pulse motion-reduce:animate-none"
 				/>
 			) : null}
 		</span>

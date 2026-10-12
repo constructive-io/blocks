@@ -52,32 +52,42 @@ export function StandingTable({ databases, onHold, onRelease, pendingId, classNa
 									<td>
 										<span className="flex items-center gap-2.5">
 											<Database aria-hidden="true" className="size-3.5 shrink-0 text-muted-foreground" />
-											<span className="min-w-0">
-												<span className="block truncate font-medium text-foreground">{database.name}</span>
-												<span className="block truncate text-xs text-muted-foreground">{database.region ?? database.id}</span>
+											<span className="min-w-0 max-w-[18rem]">
+												<span title={database.name} className="line-clamp-2 block font-medium text-foreground [overflow-wrap:anywhere]">
+													<bdi>{database.name}</bdi>
+												</span>
+												<span title={database.region ?? database.id} className="block truncate text-xs text-muted-foreground">
+													{database.region ?? database.id}
+												</span>
 											</span>
 										</span>
 									</td>
-									<td className="text-muted-foreground">{database.ownerName ?? '—'}</td>
+									<td className="max-w-[14rem] text-muted-foreground [overflow-wrap:anywhere]">
+										<bdi>{database.ownerName ?? '—'}</bdi>
+									</td>
 									<td>
 										{reason ? (
 											<span className="flex flex-col items-start gap-1">
 												<StatusBadge presentation={SUSPENSION_REASON[reason]} />
-												{database.note ? <span className="text-xs text-muted-foreground">{database.note}</span> : null}
+												{database.note ? (
+													<span title={database.note} className="line-clamp-3 max-w-[16rem] text-xs text-muted-foreground [overflow-wrap:anywhere]">
+														{database.note}
+													</span>
+												) : null}
 											</span>
 										) : (
 											<ToneBadge tone="success">Serving</ToneBadge>
 										)}
 									</td>
-									<td className="text-muted-foreground tabular-nums">{database.suspendedAt ? f.date(database.suspendedAt, 'medium', true) : '—'}</td>
-									<td className="text-right whitespace-nowrap">
+									<td className="whitespace-nowrap text-muted-foreground tabular-nums">{database.suspendedAt ? f.date(database.suspendedAt, 'medium', true) : '—'}</td>
+									<td className="text-end whitespace-nowrap">
 										{reason && onRelease ? (
 											<Button size="xs" variant="outline" disabled={busy} aria-busy={busy || undefined} onClick={() => onRelease(database)}>
 												{busy ? 'Releasing…' : reason === 'admin' ? 'Lift hold' : 'Restore'}
 											</Button>
 										) : null}
 										{reason !== 'admin' && onHold ? (
-											<Button size="xs" variant="destructive-outline" className="ml-2" disabled={busy} onClick={() => onHold(database)}>
+											<Button size="xs" variant="destructive-outline" className="ms-2" disabled={busy} onClick={() => onHold(database)}>
 												Hold
 											</Button>
 										) : null}

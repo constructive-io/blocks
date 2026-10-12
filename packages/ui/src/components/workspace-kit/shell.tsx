@@ -134,7 +134,7 @@ function WorkspaceShell({
 		>
 			<a
 				href={`#${mainId}`}
-				className="sr-only z-50 rounded-md bg-card px-3 py-2 text-sm shadow-card focus:not-sr-only focus:absolute focus:top-2 focus:left-2"
+				className="sr-only z-50 rounded-md bg-card px-3 py-2 text-sm shadow-card focus:not-sr-only focus:absolute focus:top-2 focus:start-2"
 			>
 				Skip to main content
 			</a>

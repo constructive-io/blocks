@@ -72,12 +72,12 @@ function Citations({ answer }: { answer: AssistantAnswer }) {
 						<button
 							type="button"
 							onClick={() => openDocument(doc.id)}
-							className={cn('flex w-full cursor-pointer items-start gap-2.5 rounded-lg bg-card px-2.5 py-2 text-left shadow-card hover:bg-muted', focusRingClass)}
+							className={cn('flex w-full cursor-pointer items-start gap-2.5 rounded-lg bg-card px-2.5 py-2 text-start shadow-card hover:bg-muted', focusRingClass)}
 						>
 							<DocumentGlyph kind={doc.kind} size="sm" className="mt-px" />
 							<span className="min-w-0 flex-1">
 								<span className="flex items-baseline gap-1.5">
-									<span className="min-w-0 truncate text-[13px] font-medium text-foreground">{doc.name}</span>
+									<span title={doc.name} className="min-w-0 truncate text-[0.8125rem] font-medium text-foreground">{doc.name}</span>
 									{citation.page ? <span className="shrink-0 text-xs text-muted-foreground tabular-nums">p. {citation.page}</span> : null}
 								</span>
 								{citation.quote ? <span className="mt-0.5 line-clamp-2 text-xs text-muted-foreground">“{citation.quote}”</span> : null}
@@ -171,7 +171,7 @@ export function RoomAssistant({ room, onClose }: { room: Room; onClose: () => vo
 									<Sparkles aria-hidden="true" className="size-4" />
 								</span>
 								<p className="text-sm font-medium text-foreground">What do you want to know?</p>
-								<p className="max-w-64 text-[13px] text-pretty text-muted-foreground">Answers cite the documents they come from, so you can check them.</p>
+								<p className="max-w-64 text-[0.8125rem] text-pretty text-muted-foreground">Answers cite the documents they come from, so you can check them.</p>
 							</div>
 							{data.assistant?.suggestions.length ? (
 								<PromptSuggestions label="Try asking">
@@ -189,26 +189,26 @@ export function RoomAssistant({ room, onClose }: { room: Room; onClose: () => vo
 							const doc = turn.documentId ? document(turn.documentId) : undefined;
 							return (
 								<div key={turn.id} className={cn('flex max-w-[88%] flex-col items-end gap-1 self-end', enterClass)}>
-									<p className="rounded-2xl rounded-br-md bg-primary px-3 py-2 text-sm leading-5 text-pretty text-primary-foreground">{turn.text}</p>
-									{doc ? <span className="px-1 text-[11px] text-subtle-foreground">About {doc.name}</span> : null}
+									<p className="rounded-2xl rounded-ee-md bg-primary px-3 py-2 text-sm leading-5 text-pretty text-primary-foreground">{turn.text}</p>
+									{doc ? <span className="px-1 text-[0.6875rem] text-subtle-foreground">About {doc.name}</span> : null}
 								</div>
 							);
 						}
 						if (turn.role === 'error') {
 							return (
-								<p key={turn.id} role="alert" className={cn('rounded-xl border border-destructive/30 bg-destructive/5 px-3 py-2 text-[13px] text-destructive', enterClass)}>
+								<p key={turn.id} role="alert" className={cn('rounded-xl border border-destructive/30 bg-destructive/5 px-3 py-2 text-[0.8125rem] text-destructive', enterClass)}>
 									{turn.text}
 								</p>
 							);
 						}
 						return (
 							<div key={turn.id} className={cn('flex flex-col', enterClass)}>
-								<span className="mb-1 flex items-center gap-1 text-[11px] text-muted-foreground">
+								<span className="mb-1 flex items-center gap-1 text-[0.6875rem] text-muted-foreground">
 									<Sparkles aria-hidden="true" className="size-3" />
 									Assistant
 								</span>
 								{turn.status === 'searching' || !turn.answer ? (
-									<TextShimmer className="text-[13px] font-normal">Searching documents you can open…</TextShimmer>
+									<TextShimmer className="text-[0.8125rem] font-normal">Searching documents you can open…</TextShimmer>
 								) : (
 									<>
 										<p className="text-sm leading-6 text-pretty text-foreground">

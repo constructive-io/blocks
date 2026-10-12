@@ -59,8 +59,8 @@ function TaskRow({
 						/>
 					</svg>
 					{progress != null ? (
-						<span className="relative text-[10px] font-semibold tabular-nums text-foreground">
-							{Math.round(progress)}
+						<span className="relative text-[0.625rem] font-semibold tabular-nums text-foreground">
+							{Math.round(Math.max(0, Math.min(100, progress)))}
 						</span>
 					) : (
 						<Loader2 className="relative size-3 animate-spin text-muted-foreground motion-reduce:animate-none" />
@@ -82,12 +82,12 @@ function TaskRow({
 
 	const pill =
 		status === 'completed' ? (
-			<span className="inline-flex h-5 items-center rounded-full bg-success/10 px-2 text-[11.5px] font-medium text-success">
+			<span className="inline-flex h-5 items-center rounded-full bg-success/10 px-2 text-[0.71875rem] font-medium text-success">
 				Completed
 			</span>
 		) : status === 'failed' ? (
 			<span className="inline-flex items-center gap-1">
-				<span className="inline-flex h-5 items-center rounded-full bg-destructive/10 px-2 text-[11.5px] font-medium text-destructive">
+				<span className="inline-flex h-5 items-center rounded-full bg-destructive/10 px-2 text-[0.71875rem] font-medium text-destructive">
 					Failed
 				</span>
 				{onRetry ? (
@@ -102,8 +102,14 @@ function TaskRow({
 		<div className="flex min-w-0 flex-1 items-center gap-2.5">
 			{badge}
 			<div className="min-w-0 flex-1">
-				<div className="truncate text-[13px] font-medium text-foreground">{label}</div>
-				{meta ? <div className="truncate text-[12px] text-muted-foreground">{meta}</div> : null}
+				<div title={typeof label === 'string' ? label : undefined} className="truncate text-[0.8125rem] font-medium text-foreground">
+					{label}
+				</div>
+				{meta ? (
+					<div title={typeof meta === 'string' ? meta : undefined} className="truncate text-[0.75rem] text-muted-foreground">
+						{meta}
+					</div>
+				) : null}
 			</div>
 			{pill}
 			{hasDetails ? (
@@ -125,14 +131,14 @@ function TaskRow({
 		>
 			{hasDetails ? (
 				<Collapsible defaultOpen={defaultOpen} className="group/collapsible">
-					<CollapsibleTrigger className="w-full text-left">{header}</CollapsibleTrigger>
-					<CollapsiblePanel innerClassName="py-1.5 pl-8">
+					<CollapsibleTrigger className="w-full text-start">{header}</CollapsibleTrigger>
+					<CollapsiblePanel innerClassName="py-1.5 ps-8">
 						<ul className="space-y-1">
 							{details!.map((d, i) => (
-								<li key={i} className="flex items-center justify-between gap-2 text-[12px]">
-									<span className="text-muted-foreground">{d.label}</span>
+								<li key={i} className="flex items-center justify-between gap-2 text-[0.75rem]">
+									<span className="min-w-0 text-muted-foreground [overflow-wrap:anywhere]">{d.label}</span>
 									{d.meta ? (
-										<span className="font-mono tabular-nums text-muted-foreground/80">{d.meta}</span>
+										<span className="max-w-[55%] min-w-0 text-end font-mono tabular-nums text-muted-foreground/80 [overflow-wrap:anywhere]">{d.meta}</span>
 									) : null}
 								</li>
 							))}

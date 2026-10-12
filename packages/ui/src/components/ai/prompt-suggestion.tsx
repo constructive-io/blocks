@@ -18,7 +18,7 @@ function PromptSuggestion({ children, onClick, className }: PromptSuggestionProp
 			onClick={onClick}
 			className={cn(
 				'inline-flex max-w-full items-center rounded-full border border-border bg-background px-3 py-1.5',
-				'text-left text-[13px] text-foreground shadow-xs',
+				'text-start text-[0.8125rem] text-foreground shadow-xs',
 				'transition-[background-color,box-shadow,transform] duration-(--duration-moderate) ease-out',
 				'hover:bg-accent hover:shadow-card',
 				'motion-safe:active:scale-[0.98]',
@@ -41,7 +41,7 @@ function PromptSuggestions({ children, className, label = 'Follow-ups' }: Prompt
 	return (
 		<div data-slot="prompt-suggestions" className={cn('flex flex-col gap-2', className)}>
 			{label ? (
-				<div className="text-[12px] font-medium text-muted-foreground">{label}</div>
+				<div className="text-[0.75rem] font-medium text-muted-foreground">{label}</div>
 			) : null}
 			<div className="flex flex-wrap gap-1.5">{children}</div>
 		</div>

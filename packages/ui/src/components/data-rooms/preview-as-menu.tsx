@@ -41,7 +41,7 @@ export function PreviewAsMenu({ room }: { room: Room }) {
 	const item = (entry: (typeof people)[number]) => (
 		<DropdownMenuItem key={entry.person.id} className="gap-2" onClick={() => setPreviewAs(entry.person.id)}>
 			<PersonAvatar person={entry.person} size="xs" />
-			<span className="min-w-0 flex-1 truncate">{entry.person.name}</span>
+			<span title={entry.person.name} className="min-w-0 flex-1 truncate">{entry.person.name}</span>
 			<span className="shrink-0 text-xs text-muted-foreground">{entry.person.id === previewAs ? <Check aria-label="Previewing" className="size-3.5" /> : hint(entry)}</span>
 		</DropdownMenuItem>
 	);
@@ -60,7 +60,7 @@ export function PreviewAsMenu({ room }: { room: Room }) {
 								focusRingClass,
 							)}
 						>
-							{previewing ? <PersonAvatar person={previewing} size="xs" className="size-5 text-[9px]" /> : <Eye aria-hidden="true" className="size-3.5" />}
+							{previewing ? <PersonAvatar person={previewing} size="xs" className="size-5 text-[0.5625rem]" /> : <Eye aria-hidden="true" className="size-3.5" />}
 						</DropdownMenuTrigger>
 					}
 				/>
@@ -96,7 +96,7 @@ export function PreviewAsMenu({ room }: { room: Room }) {
 							</DropdownMenuGroup>
 						</>
 					) : null}
-					{!shown.length && needle ? <p className="px-2 py-1.5 text-[13px] text-muted-foreground">No one matches.</p> : null}
+					{!shown.length && needle ? <p className="px-2 py-1.5 text-[0.8125rem] text-muted-foreground">No one matches.</p> : null}
 				</div>
 			</DropdownMenuContent>
 		</DropdownMenu>

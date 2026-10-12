@@ -1,5 +1,6 @@
 import * as React from 'react';
 
+import { initials } from '../../lib/initials';
 import { cn } from '../../lib/utils';
 import { MarkTile } from '../ai/mark-tile';
 import type { Integration } from './types';
@@ -12,8 +13,9 @@ type IntegrationMarkProps = {
 	className?: string;
 };
 
+/** The first letter of the name in any script (`Évernote` is É, `ВКонтакте` is В), or "?" when there is none. */
 function monogram(name: string) {
-	return name.replace(/[^A-Za-z0-9]/g, '').charAt(0).toUpperCase() || '?';
+	return initials(name, { max: 1 }) ?? '?';
 }
 
 /**

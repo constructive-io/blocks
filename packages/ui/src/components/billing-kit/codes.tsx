@@ -7,7 +7,7 @@ import { cn } from '../../lib/utils';
 import { Button } from '../button';
 import { Dialog, DialogDescription, DialogFooter, DialogHeader, DialogPopup, DialogTitle } from '../dialog';
 import { Input } from '../input';
-import { enterClass } from '../workspace-kit/primitives';
+import { enterClass, plural } from '../workspace-kit/primitives';
 import { useBillingFormat } from './context';
 import { CREDIT_TYPE, humanize, REDEEM_REFUSAL } from './format';
 import { dashedRule, EmptyState, IconTile } from './surface';
@@ -89,7 +89,7 @@ type CodeGrantListProps = {
 export function CodeGrantList({ items, describe, compact = false, className }: CodeGrantListProps) {
 	const f = useBillingFormat();
 	const lifetime = (item: CodeGrantListProps['items'][number]) =>
-		item.expiresAt ? `expires ${f.date(item.expiresAt)}` : item.expiresAfterDays ? `lasts ${item.expiresAfterDays} days` : item.creditType === 'period' ? 'resets each period' : 'never expires';
+		item.expiresAt ? `expires ${f.date(item.expiresAt)}` : item.expiresAfterDays ? `lasts ${f.quantity(item.expiresAfterDays)} ${plural(item.expiresAfterDays, { one: 'day', other: 'days' }, f.locale)}` : item.creditType === 'period' ? 'resets each period' : 'never expires';
 	if (compact) {
 		return (
 			<ul className={cn('flex flex-col gap-0.5', className)}>
@@ -97,7 +97,7 @@ export function CodeGrantList({ items, describe, compact = false, className }: C
 					const target = describe(item.target);
 					return (
 						<li key={targetKey(item.target)} className="tabular-nums">
-							<span className="text-foreground">+{f.quantity(item.amount)}</span> <span className="text-muted-foreground">{target.label}</span>
+							<span className="text-foreground">+{f.quantity(item.amount)}</span> <span className="text-muted-foreground [overflow-wrap:anywhere]">{target.label}</span>
 						</li>
 					);
 				})}
@@ -112,12 +112,12 @@ export function CodeGrantList({ items, describe, compact = false, className }: C
 					<li key={targetKey(item.target)} className={cn('flex items-center gap-3 py-2.5', index > 0 && cn('border-t', dashedRule))}>
 						<IconTile icon={Gift} tone="primary" />
 						<span className="min-w-0 flex-1">
-							<span className="block text-[13px] text-foreground">{target.label}</span>
+							<span className="block text-[0.8125rem] text-foreground [overflow-wrap:anywhere]">{target.label}</span>
 							<span className="block text-xs text-muted-foreground">
 								{CREDIT_TYPE[item.creditType].label} · {lifetime(item)}
 							</span>
 						</span>
-						<span className="text-right tabular-nums">
+						<span className="text-end tabular-nums">
 							<span className="block text-sm font-semibold text-foreground">+{f.quantity(item.amount)}</span>
 							{target.unit ? <span className="block text-xs text-muted-foreground">{target.unit}</span> : null}
 						</span>
@@ -203,7 +203,7 @@ export function RedeemCodeDialog({ open, onOpenChange, onRedeem, describe, initi
 								<Check aria-hidden="true" className="size-5" />
 							</span>
 							<DialogTitle className="text-base font-medium">Credits added</DialogTitle>
-							<DialogDescription className="text-[13px]">
+							<DialogDescription className="text-[0.8125rem]">
 								<span className="font-mono text-foreground">{phase.redemption.code}</span> is redeemed{accountName ? ` on ${accountName}` : ''}.
 							</DialogDescription>
 						</DialogHeader>
@@ -244,7 +244,7 @@ export function RedeemCodeDialog({ open, onOpenChange, onRedeem, describe, initi
 								<Ticket aria-hidden="true" className="size-4 text-muted-foreground" />
 								Redeem a code
 							</DialogTitle>
-							<DialogDescription className="text-[13px]">
+							<DialogDescription className="text-[0.8125rem]">
 								Codes add credits{accountName ? ` to ${accountName}` : ''} right away. Each account can use a code once.
 							</DialogDescription>
 						</DialogHeader>
@@ -268,7 +268,7 @@ export function RedeemCodeDialog({ open, onOpenChange, onRedeem, describe, initi
 								className="h-10 font-mono text-base tracking-wider uppercase placeholder:tracking-normal"
 							/>
 							{refused ? (
-								<p id={messageId} role="alert" className="text-[13px] text-destructive">
+								<p id={messageId} role="alert" className="text-[0.8125rem] text-destructive">
 									{refusalMessage(refused.reason, refused.message)}
 								</p>
 							) : null}
@@ -371,10 +371,12 @@ export function RedemptionList({ redemptions, describe, showAccount = false, cla
 				.map((redemption, index) => (
 					<li key={redemption.id} className={cn('flex flex-wrap items-start gap-x-4 gap-y-1 py-2.5', index > 0 && cn('border-t', dashedRule))}>
 						<span className="min-w-0 flex-1 basis-40">
-							<span className="block text-[13px] text-foreground">{showAccount ? (redemption.accountName ?? redemption.accountId) : <code className="font-mono">{redemption.code}</code>}</span>
+							<span className="block text-[0.8125rem] text-foreground [overflow-wrap:anywhere]">
+								{showAccount ? <bdi>{redemption.accountName ?? redemption.accountId}</bdi> : <code className="font-mono">{redemption.code}</code>}
+							</span>
 							<span className="block text-xs text-muted-foreground tabular-nums">{f.date(redemption.redeemedAt, 'medium', true)}</span>
 						</span>
-						<CodeGrantList items={redemption.items} describe={describe} compact className="text-right text-xs" />
+						<CodeGrantList items={redemption.items} describe={describe} compact className="text-end text-xs" />
 					</li>
 				))}
 		</ol>

@@ -118,7 +118,8 @@ export function useCanvasViewport(contentWidth: number, options: CanvasViewportO
 		const fitZoom = Math.min(1, availableWidth / contentWidth, contentHeight ? availableHeight / contentHeight : 1);
 		const zoom = Math.max(minFitZoom, Math.floor(fitZoom * 20) / 20);
 		return {
-			x: Math.round((width - contentWidth * zoom) / 2 - originX * zoom),
+			// Content wider than the view starts at the edge instead of being centred, which would cut off both sides with nothing to say there is more.
+			x: Math.max(side, Math.round((width - contentWidth * zoom) / 2)) - originX * zoom,
 			y: Math.round(top + Math.max(0, (availableHeight - contentHeight * zoom) / 2) - originY * zoom),
 			zoom,
 		};
@@ -347,6 +348,8 @@ export function CanvasSurface({ viewport, label, layerRef, children, overlay, on
 	return (
 		<div
 			ref={viewport.attach}
+			// A canvas is a diagram placed by physical offset, so it keeps one orientation in every language.
+			dir="ltr"
 			tabIndex={0}
 			role="region"
 			aria-roledescription="canvas"
@@ -380,7 +383,7 @@ export function CanvasSurface({ viewport, label, layerRef, children, overlay, on
 				/>
 				<div
 					ref={layerRef}
-					className="absolute top-0 left-0 will-change-transform"
+					className="absolute top-0 start-0 will-change-transform"
 					style={{
 						transform: `translate(${view.x}px, ${view.y}px) scale(${view.zoom})`,
 						transformOrigin: '0 0',
@@ -414,7 +417,7 @@ export function CanvasZoomControls({ viewport, fit = false, className }: { viewp
 				type="button"
 				aria-label={`Zoom ${percent}%, reset to 100%`}
 				onClick={() => viewport.zoomTo(1)}
-				className={cn('h-7 w-12 cursor-pointer rounded-md text-[13px] text-foreground tabular-nums hover:bg-overlay-hover', pressClass, focusRingClass)}
+				className={cn('h-7 w-12 cursor-pointer rounded-md text-[0.8125rem] text-foreground tabular-nums hover:bg-overlay-hover', pressClass, focusRingClass)}
 			>
 				{percent}%
 			</button>

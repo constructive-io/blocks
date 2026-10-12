@@ -1,3 +1,4 @@
+import { initials as initialsOf } from '../../lib/initials';
 import type { DocumentKind } from './types';
 
 export type DataRoomsFormatOptions = { locale: string; timeZone: string; now: string };
@@ -13,6 +14,8 @@ export function addDays(iso: string, days: number) {
 /** "Sep 24", or "Sep 24, 2025" outside the current year. */
 export function formatDate(iso: string, { locale, timeZone, now }: DataRoomsFormatOptions, withTime = false) {
 	const date = new Date(iso);
+	// A zero timestamp is an unset value, not a date anyone means.
+	if (date.getTime() === 0) return '—';
 	const sameYear = new Date(now).getUTCFullYear() === date.getUTCFullYear();
 	return new Intl.DateTimeFormat(locale, {
 		month: 'short',
@@ -25,6 +28,7 @@ export function formatDate(iso: string, { locale, timeZone, now }: DataRoomsForm
 }
 
 export function formatTime(iso: string, { locale, timeZone }: DataRoomsFormatOptions) {
+	if (Date.parse(iso) === 0) return '—';
 	return new Intl.DateTimeFormat(locale, { hour: 'numeric', minute: '2-digit', timeZone }).format(new Date(iso));
 }
 
@@ -33,9 +37,18 @@ export function dayKey(iso: string, timeZone: string) {
 	return new Intl.DateTimeFormat('en-CA', { timeZone, year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date(iso));
 }
 
-/** "just now", "12 min ago", "3 h ago", "yesterday", "4 days ago", then a date. */
+/** "just now", "12 min ago", "3 h ago", "yesterday", "4 days ago", then a date; "in 12 min", "tomorrow" and so on for a time ahead. */
 export function formatRelative(iso: string, options: DataRoomsFormatOptions) {
+	if (Date.parse(iso) === 0) return '—';
 	const diff = Date.parse(options.now) - Date.parse(iso);
+	if (diff < 0 && -diff >= 60_000) {
+		const ahead = -diff;
+		if (ahead < 3_600_000) return `in ${Math.floor(ahead / 60_000)} min`;
+		if (ahead < DAY) return `in ${Math.floor(ahead / 3_600_000)} h`;
+		if (ahead < 2 * DAY) return 'tomorrow';
+		if (ahead < 7 * DAY) return `in ${Math.floor(ahead / DAY)} days`;
+		return formatDate(iso, options);
+	}
 	if (diff < 60_000) return 'just now';
 	if (diff < 3_600_000) return `${Math.floor(diff / 60_000)} min ago`;
 	if (diff < DAY) return `${Math.floor(diff / 3_600_000)} h ago`;
@@ -61,7 +74,7 @@ export function formatDeadline(iso: string, options: DataRoomsFormatOptions) {
 }
 
 export function formatBytes(bytes: number, locale = 'en-US') {
-	const units = ['B', 'KB', 'MB', 'GB'];
+	const units = ['B', 'KB', 'MB', 'GB', 'TB', 'PB'];
 	let value = bytes;
 	let unit = 0;
 	while (value >= 1024 && unit < units.length - 1) {
@@ -88,15 +101,9 @@ export function firstName(name: string) {
 	return name.trim().split(/\s+/)[0] ?? name;
 }
 
-/** Up to two initials: "Dana Chen" → "DC". */
+/** Up to two initials: "Dana Chen" → "DC". Empty when the name has nothing to show; callers fall back to an icon or "?". */
 export function initials(name: string) {
-	return name
-		.split(/\s+/)
-		.filter(Boolean)
-		.slice(0, 2)
-		.map((word) => word[0] ?? '')
-		.join('')
-		.toUpperCase();
+	return initialsOf(name) ?? '';
 }
 
 /** A readable name for an email nobody has a profile for yet: "jo.park@x.com" → "Jo Park". */

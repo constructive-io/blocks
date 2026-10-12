@@ -121,7 +121,7 @@ function DataRoomsSidebar({ collapsed: collapsedProp = false, onCollapsedChange,
 								<PersonAvatar person={previewing} size="sm" />
 								<div className="min-w-0 flex-1">
 									<p className="text-xs text-muted-foreground">Previewing as</p>
-									<p className="truncate text-[13px] font-medium text-foreground">{previewing.name}</p>
+									<p title={previewing.name} className="truncate text-[0.8125rem] font-medium text-foreground">{previewing.name}</p>
 								</div>
 								<Button size="xs" variant="outline" onClick={() => setPreviewAs(null)}>
 									Exit
@@ -176,7 +176,7 @@ function DataRoomsSidebar({ collapsed: collapsedProp = false, onCollapsedChange,
 				</ul>
 				<hr className="border-sidebar-border" />
 				<div className="flex flex-col gap-1">
-					<div className={cn('flex h-7 items-center gap-2 pl-2', collapsed && 'justify-center pl-0')}>
+					<div className={cn('flex h-7 items-center gap-2 ps-2', collapsed && 'justify-center ps-0')}>
 						{collapsed ? null : (
 							<h2 id={headingId} className="flex-1 truncate text-xs text-muted-foreground">
 								Rooms
@@ -189,7 +189,7 @@ function DataRoomsSidebar({ collapsed: collapsedProp = false, onCollapsedChange,
 						) : null}
 					</div>
 					{groups.length === 0 ? (
-						collapsed ? null : <p className="px-2 py-1 text-[13px] text-muted-foreground">{query ? 'No rooms match.' : 'No rooms yet.'}</p>
+						collapsed ? null : <p className="px-2 py-1 text-[0.8125rem] text-muted-foreground">{query ? 'No rooms match.' : 'No rooms yet.'}</p>
 					) : (
 						<div aria-labelledby={collapsed ? undefined : headingId} aria-label={collapsed ? 'Rooms' : undefined} className="flex flex-col gap-1" role="group">
 							{groups.map((group) => {
@@ -203,13 +203,13 @@ function DataRoomsSidebar({ collapsed: collapsedProp = false, onCollapsedChange,
 												aria-expanded={!folded}
 												onClick={() => toggleUnit(group.unitId)}
 												className={cn(
-													'flex h-6 cursor-pointer items-center gap-1 rounded-md pr-2 text-left text-[11px] text-subtle-foreground hover:text-foreground',
+													'flex h-6 cursor-pointer items-center gap-1 rounded-md pe-2 text-start text-[0.6875rem] text-subtle-foreground hover:text-foreground',
 													focusRingClass,
 												)}
 												style={{ paddingLeft: 4 + group.depth * 8 }}
 											>
-												<ChevronRight aria-hidden="true" className={cn('size-3 shrink-0', !folded && 'rotate-90')} />
-												<span className="truncate">{name}</span>
+												<ChevronRight aria-hidden="true" className={cn('size-3 shrink-0', !folded ? 'rotate-90' : 'rtl:-scale-x-100')} />
+												<span title={name} className="truncate">{name}</span>
 											</button>
 										)}
 										{folded ? null : (
@@ -225,7 +225,7 @@ function DataRoomsSidebar({ collapsed: collapsedProp = false, onCollapsedChange,
 															active={open}
 															leading={
 																collapsed ? (
-																	<span aria-hidden="true" className="grid size-5 shrink-0 place-items-center text-[11px] tracking-tight">
+																	<span aria-hidden="true" className="grid size-5 shrink-0 place-items-center text-[0.6875rem] tracking-tight">
 																		{initials(room.name)}
 																	</span>
 																) : (
@@ -234,7 +234,7 @@ function DataRoomsSidebar({ collapsed: collapsedProp = false, onCollapsedChange,
 															}
 															labelNode={
 																<span className="flex min-w-0 items-center gap-1.5">
-																	<span className="truncate">{room.name}</span>
+																	<span title={room.name} className="truncate">{room.name}</span>
 																	{room.policies.restricted ? <Lock aria-hidden="true" className="size-3 shrink-0 text-subtle-foreground" /> : null}
 																	<span className="sr-only">
 																		{room.policies.restricted ? ', restricted' : ''}

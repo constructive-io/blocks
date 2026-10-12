@@ -64,18 +64,18 @@ function RecommendationCard({
 			)}
 		>
 			<div className="space-y-3 p-3">
-				<div className="text-[12px] font-medium text-muted-foreground">{title}</div>
-				<div className="text-[13px] text-pretty leading-relaxed text-foreground">{displayBody}</div>
+				<div className="text-[0.75rem] font-medium text-muted-foreground">{title}</div>
+				<div className="text-[0.8125rem] text-pretty leading-relaxed text-foreground [overflow-wrap:anywhere]">{displayBody}</div>
 
 				{pct != null ? (
 					<div className="space-y-1">
-						<div className="flex items-center justify-between text-[11px] text-muted-foreground">
+						<div className="flex items-center justify-between text-[0.6875rem] text-muted-foreground">
 							<span>{confidenceLabel ?? 'Confidence'}</span>
 							<span className="tabular-nums font-medium text-foreground">{pct}%</span>
 						</div>
 						<div className="h-1.5 overflow-hidden rounded-full bg-muted">
 							<div
-								className="h-full origin-left rounded-full bg-primary transition-transform duration-(--duration-slow) ease-out motion-reduce:transition-none"
+								className="h-full origin-left rounded-full bg-primary rtl:origin-right transition-transform duration-(--duration-slow) ease-out motion-reduce:transition-none"
 								style={{ transform: `scaleX(${pct / 100})` }}
 							/>
 						</div>
@@ -87,7 +87,7 @@ function RecommendationCard({
 						<CollapsibleTrigger
 							className={cn(
 								// outer card is rounded-lg + p-3 → inner uses rounded-md for concentric radii
-								'flex w-full items-center justify-between rounded-md border border-border px-2.5 py-1.5 text-[12.5px]',
+								'flex w-full items-center justify-between rounded-md border border-border px-2.5 py-1.5 text-[0.78125rem]',
 								'text-muted-foreground hover:bg-accent hover:text-foreground',
 							)}
 						>
@@ -107,7 +107,7 @@ function RecommendationCard({
 													setInternalId(opt.id);
 												}}
 												className={cn(
-													'flex w-full items-start gap-2 rounded-md px-2 py-1.5 text-left text-[13px]',
+													'flex w-full items-start gap-2 rounded-md px-2 py-1.5 text-start text-[0.8125rem]',
 													'hover:bg-accent',
 													on && 'bg-accent',
 												)}
@@ -121,9 +121,9 @@ function RecommendationCard({
 													{on ? <Check className="size-2.5" strokeWidth={3} /> : null}
 												</span>
 												<span className="min-w-0 flex-1">
-													<span className="font-medium text-foreground">{opt.label}</span>
+													<span className="font-medium text-foreground [overflow-wrap:anywhere]">{opt.label}</span>
 													{opt.badge ? (
-														<span className="ml-1.5 text-[11px] text-muted-foreground">{opt.badge}</span>
+														<span className="ms-1.5 text-[0.6875rem] text-muted-foreground">{opt.badge}</span>
 													) : null}
 												</span>
 											</button>
@@ -135,10 +135,11 @@ function RecommendationCard({
 					</Collapsible>
 				) : null}
 
-				<div className="flex justify-end">
+				<div className="flex flex-wrap justify-end">
 					<Button
 						type="button"
 						size="sm"
+						wrap
 						onClick={() => onAccept?.(selectedId)}
 					>
 						{acceptLabel}

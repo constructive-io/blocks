@@ -1,8 +1,9 @@
 'use client';
 
-import { ChevronsUpDown, Monitor, Moon, Sun, SunMoon } from 'lucide-react';
+import { Building2, ChevronsUpDown, Monitor, Moon, Sun, SunMoon } from 'lucide-react';
 import * as React from 'react';
 
+import { initials } from '../../lib/initials';
 import { cn } from '../../lib/utils';
 import { DropdownMenuTrigger } from '../dropdown-menu';
 import { focusRingClass, Segmented } from './primitives';
@@ -26,14 +27,9 @@ export function AppearanceRow({ value, onChange }: { value: WorkspaceTheme; onCh
 	);
 }
 
-/** Up to two initials for a name: "Northwind Labs" → "NL". */
+/** Up to two initials for a name: "Northwind Labs" → "NL". Empty for a name with nothing to show; `SwitcherTrigger` then draws an icon. */
 export function monogram(name: string) {
-	return name
-		.split(/\s+/)
-		.slice(0, 2)
-		.map((word) => word[0] ?? '')
-		.join('')
-		.toUpperCase();
+	return initials(name) ?? '';
 }
 
 type SwitcherTriggerProps = {
@@ -41,7 +37,7 @@ type SwitcherTriggerProps = {
 	label: string;
 	/** Name shown beside the glyph when the rail is expanded. */
 	name: string;
-	/** Tile content: an icon or a monogram. */
+	/** Tile content: an icon or a monogram. An empty value falls back to a building icon. */
 	glyph: React.ReactNode;
 	collapsed: boolean;
 };
@@ -52,15 +48,19 @@ export function SwitcherTrigger({ label, name, glyph, collapsed }: SwitcherTrigg
 		<DropdownMenuTrigger
 			aria-label={label}
 			className={cn(
-				'flex h-8 min-w-0 cursor-pointer items-center gap-2 rounded-md px-1.5 text-left hover:bg-overlay-hover data-popup-open:bg-overlay-hover',
+				'flex h-8 min-w-0 cursor-pointer items-center gap-2 rounded-md px-1.5 text-start hover:bg-overlay-hover data-popup-open:bg-overlay-hover',
 				focusRingClass,
 				collapsed ? 'w-8 justify-center px-0' : 'flex-1',
 			)}
 		>
-			<span className="grid size-5 shrink-0 place-items-center rounded-md bg-foreground text-[9px] font-semibold text-background">{glyph}</span>
+			<span className="grid size-5 shrink-0 place-items-center rounded-md bg-foreground text-[0.5625rem] font-semibold text-background">
+				{glyph || <Building2 aria-hidden="true" className="size-3" />}
+			</span>
 			{collapsed ? null : (
 				<>
-					<span className="min-w-0 flex-1 truncate text-sm font-medium text-foreground">{name}</span>
+					<span title={name} className="min-w-0 flex-1 truncate text-sm font-medium text-foreground">
+						<bdi>{name}</bdi>
+					</span>
 					<ChevronsUpDown aria-hidden="true" className="size-3.5 shrink-0 text-muted-foreground" />
 				</>
 			)}

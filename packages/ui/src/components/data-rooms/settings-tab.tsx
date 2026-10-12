@@ -19,7 +19,7 @@ import { useCommand } from './use-command';
 
 function ErrorLine({ error }: { error: string | null }) {
 	return error ? (
-		<p role="alert" className="text-[13px] text-destructive">
+		<p role="alert" className="text-[0.8125rem] text-destructive">
 			{error}
 		</p>
 	) : null;
@@ -71,7 +71,7 @@ function RoomDetails({ room }: { room: Room }) {
 				<FormField label="Description" htmlFor={`${id}-description`}>
 					<Textarea id={`${id}-description`} value={form.description} disabled={locked} rows={2} onChange={(event) => setForm({ ...form, description: event.target.value })} size="sm" />
 				</FormField>
-				<div className="grid gap-4 @md/view:grid-cols-2">
+				<div className="grid grid-cols-1 gap-4 @md/view:grid-cols-2">
 					<FormField label="Status" htmlFor={`${id}-status`} hint="Closing rooms show a badge; archived rooms leave the sidebar.">
 						<ChoiceSelect
 							id={`${id}-status`}
@@ -135,10 +135,10 @@ function Protection({ room }: { room: Room }) {
 					return (
 						<li key={protection.key} className={cn('flex items-center gap-4 py-2', index > 0 && cn('border-t', dashedRule))}>
 							<div className="min-w-0 flex-1">
-								<label htmlFor={id} className="text-[13px] font-medium text-foreground">
+								<label htmlFor={id} className="text-[0.8125rem] font-medium text-foreground">
 									{protection.label}
 								</label>
-								<p id={`${id}-description`} className="text-[13px] text-pretty text-muted-foreground">
+								<p id={`${id}-description`} className="text-[0.8125rem] text-pretty text-muted-foreground">
 									{protection.description}
 								</p>
 							</div>
@@ -255,24 +255,24 @@ function RoleEditor({ role }: { role: Role }) {
 				aria-expanded={expanded}
 				aria-controls={`${id}-panel`}
 				onClick={() => setExpanded((value) => !value)}
-				className={cn('-mx-1.5 flex w-[calc(100%+0.75rem)] cursor-pointer items-center gap-2 rounded-md px-1.5 py-1.5 text-left hover:bg-overlay-hover', focusRingClass)}
+				className={cn('-mx-1.5 flex w-[calc(100%+0.75rem)] cursor-pointer items-center gap-2 rounded-md px-1.5 py-1.5 text-start hover:bg-overlay-hover', focusRingClass)}
 			>
 				<ChevronRight
 					aria-hidden="true"
-					className={cn('size-3.5 shrink-0 text-muted-foreground transition-transform duration-(--duration-fast) motion-reduce:transition-none', expanded && 'rotate-90')}
+					className={cn('size-3.5 shrink-0 text-muted-foreground transition-transform duration-(--duration-fast) motion-reduce:transition-none', expanded ? 'rotate-90' : 'rtl:-scale-x-100')}
 				/>
 				<span className="min-w-0 flex-1">
-					<span className="text-[13px] font-medium text-foreground">{role.name}</span>
-					{role.isDefault ? <span className="ml-1.5 text-xs text-muted-foreground">Default</span> : null}
-					{role.description ? <span className="block truncate text-[13px] text-muted-foreground">{role.description}</span> : null}
+					<span className="text-[0.8125rem] font-medium text-foreground">{role.name}</span>
+					{role.isDefault ? <span className="ms-1.5 text-xs text-muted-foreground">Default</span> : null}
+					{role.description ? <span title={role.description} className="block truncate text-[0.8125rem] text-muted-foreground">{role.description}</span> : null}
 				</span>
 				<span className="shrink-0 text-xs text-muted-foreground tabular-nums">
 					{role.permissions.length} of {ALL_PERMISSIONS.length}
 				</span>
 			</button>
 			{expanded ? (
-				<div id={`${id}-panel`} className="flex flex-col gap-3 pt-2 pb-3 pl-6">
-					<div className="grid gap-3 @md/view:grid-cols-2">
+				<div id={`${id}-panel`} className="flex flex-col gap-3 pt-2 pb-3 ps-6">
+					<div className="grid grid-cols-1 gap-3 @md/view:grid-cols-2">
 						<FormField label="Name" htmlFor={`${id}-name`}>
 							<Input id={`${id}-name`} value={draft.name} disabled={locked} onChange={(event) => setDraft({ ...draft, name: event.target.value })} size="sm" />
 						</FormField>
@@ -286,11 +286,11 @@ function RoleEditor({ role }: { role: Role }) {
 						onClick={() => setAdvanced((value) => !value)}
 						className={cn('flex w-fit cursor-pointer items-center gap-1 rounded-sm text-xs text-muted-foreground hover:text-foreground', focusRingClass)}
 					>
-						<ChevronRight aria-hidden="true" className={cn('size-3 transition-transform duration-(--duration-fast) motion-reduce:transition-none', advanced && 'rotate-90')} />
+						<ChevronRight aria-hidden="true" className={cn('size-3 transition-transform duration-(--duration-fast) motion-reduce:transition-none', advanced ? 'rotate-90' : 'rtl:-scale-x-100')} />
 						Advanced: permissions
 					</button>
 					{advanced ? (
-						<fieldset className="grid gap-x-4 gap-y-2.5 rounded-lg border border-border bg-muted/30 p-3 @md/view:grid-cols-2">
+						<fieldset className="grid grid-cols-1 gap-x-4 gap-y-2.5 rounded-lg border border-border bg-muted/30 p-3 @md/view:grid-cols-2">
 							<legend className="sr-only">Permissions for {role.name}</legend>
 							{ALL_PERMISSIONS.map((permission) => {
 								const checkboxId = `${id}-${permission}`;
@@ -304,7 +304,7 @@ function RoleEditor({ role }: { role: Role }) {
 											className="mt-0.5"
 										/>
 										<span className="min-w-0">
-											<span className="block text-[13px] text-foreground">{PERMISSION_COPY[permission].label}</span>
+											<span className="block text-[0.8125rem] text-foreground">{PERMISSION_COPY[permission].label}</span>
 											<span className="block text-xs text-muted-foreground">{PERMISSION_COPY[permission].description}</span>
 										</span>
 									</label>
@@ -359,7 +359,7 @@ export function SettingsTab({ room }: { room: Room }) {
 	return (
 		<div className="min-h-0 flex-1 overflow-y-auto">
 			<div className="mx-auto flex w-full max-w-3xl flex-col gap-6 px-4 py-5 @3xl/view:px-6">
-				{locked ? <p className="rounded-lg bg-muted px-3 py-2 text-[13px] text-muted-foreground">Settings are read-only while previewing.</p> : null}
+				{locked ? <p className="rounded-lg bg-muted px-3 py-2 text-[0.8125rem] text-muted-foreground">Settings are read-only while previewing.</p> : null}
 				<RoomDetails room={room} />
 				<Protection room={room} />
 				{room.policies.requireAgreement ? <Agreement room={room} /> : null}

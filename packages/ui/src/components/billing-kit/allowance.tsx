@@ -30,8 +30,10 @@ type AllowanceBarProps = {
  * when exhausted. A tick marks where the plan allowance ends and purchased
  * credits begin. Unlimited allowances render as an empty dashed track.
  */
-export function AllowanceBar({ used, limit, label, soft = 0.8, planMarker, size = 'md', className }: AllowanceBarProps) {
+export function AllowanceBar({ used: usedProp, limit, label, soft = 0.8, planMarker, size = 'md', className }: AllowanceBarProps) {
 	const f = useBillingFormat();
+	// A negative count (a correction larger than what was used) is an empty bar, not an invalid width.
+	const used = Math.max(0, usedProp);
 	const unlimited = isUnlimited(limit);
 	const ratio = usageRatio(used, limit) ?? 0;
 	const level = usageLevel(used, limit, soft);
@@ -58,10 +60,10 @@ export function AllowanceBar({ used, limit, label, soft = 0.8, planMarker, size 
 		>
 			<div
 				className={cn('h-full rounded-full transition-[width] duration-(--duration-slow) ease-out motion-reduce:transition-none', FILL[level])}
-				style={{ width: `${Math.min(1, Number.isFinite(ratio) ? ratio : 1) * 100}%` }}
+				style={{ width: `${Math.max(0, Math.min(1, Number.isFinite(ratio) ? ratio : 1)) * 100}%` }}
 			/>
 			{markerAt !== null ? (
-				<span aria-hidden="true" className="absolute inset-y-0 w-px bg-background" style={{ left: `${markerAt * 100}%` }} />
+				<span aria-hidden="true" className="absolute inset-y-0 w-px bg-background" style={{ insetInlineStart: `${markerAt * 100}%` }} />
 			) : null}
 		</div>
 	);
@@ -79,12 +81,15 @@ type UsageFigureProps = {
 export function UsageFigure({ used, limit, unit, compact = true, className }: UsageFigureProps) {
 	const f = useBillingFormat();
 	return (
-		<span className={cn('text-[13px] whitespace-nowrap tabular-nums', className)}>
-			<span className="font-medium text-foreground">{f.quantity(used, compact)}</span>
-			<span className="text-muted-foreground">
-				{' / '}
-				{isUnlimited(limit) ? 'unlimited' : f.quantity(limit, compact)} {unit}
+		<span className={cn('text-[0.8125rem] tabular-nums [overflow-wrap:anywhere]', className)}>
+			<span className="whitespace-nowrap">
+				<span className="font-medium text-foreground">{f.quantity(used, compact)}</span>
+				<span className="text-muted-foreground">
+					{' / '}
+					{isUnlimited(limit) ? 'unlimited' : f.quantity(limit, compact)}
+				</span>
 			</span>
+			<span className="text-muted-foreground"> {unit}</span>
 		</span>
 	);
 }

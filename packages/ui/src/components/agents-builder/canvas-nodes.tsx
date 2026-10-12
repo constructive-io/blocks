@@ -19,7 +19,7 @@ const DIVIDER = 'border-t border-dashed border-foreground/10';
 
 export function NodeRow({ children, className }: { children: React.ReactNode; className?: string }) {
 	return (
-		<div className={cn('flex h-7 min-w-0 items-center gap-2 whitespace-nowrap px-2.5 text-[13px] text-foreground', className)}>{children}</div>
+		<div className={cn('flex h-7 min-w-0 items-center gap-2 whitespace-nowrap px-2.5 text-[0.8125rem] text-foreground', className)}>{children}</div>
 	);
 }
 
@@ -108,17 +108,17 @@ export function CanvasNode({ id, title, icon, tone = 'plain', meta, badge, stage
 				) : null
 			}
 		>
-			<div className="flex h-10 items-center gap-2 pr-2 pl-2">
+			<div className="flex h-10 items-center gap-2 pe-2 ps-2">
 				<NodeIconTile icon={icon} />
 				{loading ? (
-					<TextShimmer className="flex-1 text-[13px]">{title}</TextShimmer>
+					<TextShimmer className="flex-1 text-[0.8125rem]">{title}</TextShimmer>
 				) : (
 					<button
 						type="button"
 						aria-expanded={expanded}
 						onClick={onToggle}
 						className={cn(
-							'-ml-0.5 mr-auto flex h-7 shrink-0 cursor-pointer items-center gap-1 rounded-md px-0.5 text-left text-[13px] font-medium whitespace-nowrap text-foreground',
+							'-ms-0.5 me-auto flex h-7 shrink-0 cursor-pointer items-center gap-1 rounded-md px-0.5 text-start text-[0.8125rem] font-medium whitespace-nowrap text-foreground',
 							focusRingClass,
 						)}
 					>
@@ -155,7 +155,7 @@ export function Instructions({ open, onToggle }: { open: boolean; onToggle: () =
 				aria-expanded={open}
 				onClick={onToggle}
 				className={cn(
-					'mx-1 mt-1 flex h-7 cursor-pointer items-center gap-1 rounded-md px-1.5 text-left text-[11px] font-medium tracking-wide text-muted-foreground uppercase',
+					'mx-1 mt-1 flex h-7 cursor-pointer items-center gap-1 rounded-md px-1.5 text-start text-[0.6875rem] font-medium tracking-wide text-muted-foreground uppercase',
 					focusRingClass,
 				)}
 			>
@@ -188,7 +188,7 @@ export function Instructions({ open, onToggle }: { open: boolean; onToggle: () =
 						type="button"
 						onClick={() => emit({ type: 'edit-instructions', agentId: data.agent.id })}
 						className={cn(
-							'pointer-events-none absolute top-0 right-2 cursor-pointer rounded-md bg-card px-1.5 py-0.5 text-xs text-foreground opacity-0 shadow-card hover:bg-muted',
+							'pointer-events-none absolute top-0 end-2 cursor-pointer rounded-md bg-card px-1.5 py-0.5 text-xs text-foreground opacity-0 shadow-card hover:bg-muted',
 							'group-hover:pointer-events-auto group-hover:opacity-100 focus-visible:pointer-events-auto focus-visible:opacity-100 pointer-coarse:pointer-events-auto pointer-coarse:opacity-100',
 							focusRingClass,
 						)}

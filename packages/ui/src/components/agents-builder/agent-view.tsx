@@ -28,7 +28,7 @@ function AgentView({ autoplay = true }: { autoplay?: boolean }) {
 
 	return (
 		<div className="flex min-w-0 flex-1 flex-col">
-			<header className="flex h-12 shrink-0 items-center gap-1 border-b border-border px-3">
+			<header className="flex min-h-12 shrink-0 items-center gap-1 border-b border-border px-3">
 				<NavMenuButton />
 				<TooltipIconButton
 					label="Back to agents"
@@ -36,14 +36,16 @@ function AgentView({ autoplay = true }: { autoplay?: boolean }) {
 					className="text-foreground"
 					onClick={() => emit({ type: 'navigate', target: 'more-agents' })}
 				>
-					<ArrowLeft aria-hidden="true" className="size-3.5" />
+					<ArrowLeft aria-hidden="true" className="size-3.5 rtl:-scale-x-100" />
 				</TooltipIconButton>
-				<nav aria-label="Breadcrumb" className="flex min-w-0 flex-1 items-center gap-1.5 pl-1">
-					<span className="hidden text-[13px] text-muted-foreground @md/view:inline">Agents</span>
+				<nav aria-label="Breadcrumb" className="flex min-w-0 flex-1 items-center gap-1.5 ps-1">
+					<span className="hidden text-[0.8125rem] text-muted-foreground @md/view:inline">Agents</span>
 					<span aria-hidden="true" className="hidden text-sm text-subtle-foreground @md/view:inline">
 						/
 					</span>
-					<h1 className="truncate text-sm font-medium text-foreground">{data.agent.name}</h1>
+					<h1 title={data.agent.name} className="truncate text-sm font-medium text-foreground">
+						<bdi>{data.agent.name}</bdi>
+					</h1>
 				</nav>
 				<div className="flex shrink-0 items-center gap-2">
 					<Button size="xs" variant="outline" onClick={() => emit({ type: 'share-agent', agentId: data.agent.id })}>
@@ -71,7 +73,7 @@ function AgentView({ autoplay = true }: { autoplay?: boolean }) {
 							aria-checked={panelOpen === option.open}
 							onClick={() => startViewTransition(() => setPanelOpen(option.open))}
 							className={cn(
-								'h-8 cursor-pointer rounded-md text-[13px] pointer-coarse:h-9',
+								'h-8 cursor-pointer rounded-md text-[0.8125rem] pointer-coarse:h-9',
 								pressClass,
 								focusRingClass,
 								panelOpen === option.open ? 'bg-card text-foreground shadow-card' : 'text-muted-foreground hover:text-foreground',

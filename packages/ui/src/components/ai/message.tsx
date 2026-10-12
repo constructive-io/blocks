@@ -64,8 +64,10 @@ function MessageContent({
 	children,
 	...props
 }: MessageContentProps) {
+	// Plain text keeps the line breaks it was typed with, and an unbroken URL wraps inside the bubble.
 	const contentClassName = cn(
-		'min-w-0 max-w-[min(100%,42rem)] text-sm leading-relaxed text-foreground',
+		'min-w-0 max-w-[min(100%,42rem)] text-sm leading-relaxed text-foreground [overflow-wrap:anywhere]',
+		typeof children === 'string' && !markdown && 'whitespace-pre-wrap',
 		className,
 	);
 

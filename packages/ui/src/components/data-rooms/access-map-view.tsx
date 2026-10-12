@@ -111,14 +111,14 @@ function NodeBadge({ access }: { access: EffectiveAccess | undefined }) {
 		if (!ruledOut) return null;
 		const note =
 			ruledOut.reason === 'restricted' ? 'Not carried in: restricted room' : ruledOut.reason === 'expired' ? 'Access expired' : 'Not carried in by the organization';
-		return <span className="text-[11px] text-muted-foreground">{note}</span>;
+		return <span className="text-[0.6875rem] text-muted-foreground">{note}</span>;
 	}
 	const presentation = LEVEL_PRESENTATION[access.level];
 	const inherited = carried(access);
 	return (
 		<span className="flex items-center gap-1.5">
 			<ToneBadge tone={presentation.tone}>{presentation.label}</ToneBadge>
-			{inherited ? <span className="text-[11px] text-muted-foreground">inherited</span> : null}
+			{inherited ? <span className="text-[0.6875rem] text-muted-foreground">inherited</span> : null}
 		</span>
 	);
 }
@@ -146,12 +146,12 @@ function UnitNode({ box, access, dimmed }: { box: UnitBox; access?: EffectiveAcc
 			<div className="flex items-center gap-2">
 				<NodeIconTile icon={box.depth === 0 ? Building2 : Users} />
 				<div className="min-w-0 flex-1">
-					<p className="truncate text-[13px] font-medium text-foreground">{box.unit.name}</p>
-					<p className="truncate text-[11px] text-muted-foreground">{box.unit.kind}</p>
+					<p title={box.unit.name} className="truncate text-[0.8125rem] font-medium text-foreground">{box.unit.name}</p>
+					<p title={box.unit.kind} className="truncate text-[0.6875rem] text-muted-foreground">{box.unit.kind}</p>
 				</div>
 			</div>
 			<div className="mt-auto flex items-center justify-between gap-2">
-				<span className="text-[11px] text-muted-foreground tabular-nums">
+				<span className="text-[0.6875rem] text-muted-foreground tabular-nums">
 					{members.length} members · {admins} {admins === 1 ? 'admin' : 'admins'}
 				</span>
 				<NodeBadge access={access} />
@@ -179,18 +179,18 @@ function RoomNode({ box, access, dimmed }: { box: RoomBox; access?: EffectiveAcc
 				type="button"
 				onClick={() => openRoom(room.id)}
 				aria-label={`Open ${room.name}`}
-				className={cn('flex size-full cursor-pointer flex-col gap-1.5 p-3 text-left hover:bg-overlay-hover', focusRingClass)}
+				className={cn('flex size-full cursor-pointer flex-col gap-1.5 p-3 text-start hover:bg-overlay-hover', focusRingClass)}
 			>
 				<span className="flex items-start gap-2">
-					<span className="min-w-0 flex-1 truncate text-[13px] font-medium text-foreground">{room.name}</span>
+					<span title={room.name} className="min-w-0 flex-1 truncate text-[0.8125rem] font-medium text-foreground">{room.name}</span>
 					<span className="flex shrink-0 gap-1 text-muted-foreground">
 						{POLICY_ICONS.filter((policy) => room.policies[policy.key]).map((policy) => (
 							<policy.icon key={policy.key} aria-label={policy.label} className="size-3" />
 						))}
 					</span>
 				</span>
-				<span className="line-clamp-2 text-[11px] text-muted-foreground">{room.description}</span>
-				<span className="text-[11px] text-muted-foreground tabular-nums">
+				<span className="line-clamp-2 text-[0.6875rem] text-muted-foreground">{room.description}</span>
+				<span className="text-[0.6875rem] text-muted-foreground tabular-nums">
 					{people.length} people · {guests} {guests === 1 ? 'guest' : 'guests'} · {documents} docs
 				</span>
 				<span className="mt-auto flex min-h-5 items-center">
@@ -252,14 +252,14 @@ function InheritancePanel() {
 					return (
 						<li key={row.key} className={cn('flex items-start gap-3 py-2', index > 0 && cn('border-t', dashedRule))}>
 							<div className="min-w-0 flex-1">
-								<label htmlFor={id} className="text-[13px] font-medium text-foreground">
+								<label htmlFor={id} className="text-[0.8125rem] font-medium text-foreground">
 									{row.label}
 								</label>
 								<p className="text-pretty text-xs text-muted-foreground">{row.description}</p>
 							</div>
 							<Switch
 								id={id}
-								className="-my-2.5 -mr-1.5"
+								className="-my-2.5 -me-1.5"
 								checked={data.inheritance[row.key]}
 								disabled={disabled || pending}
 								onCheckedChange={(checked) => void run({ type: 'update-inheritance', inheritance: { ...data.inheritance, [row.key]: checked } })}
@@ -269,7 +269,7 @@ function InheritancePanel() {
 				})}
 			</ul>
 			{error ? (
-				<p role="alert" className="mt-2 text-[13px] text-destructive">
+				<p role="alert" className="mt-2 text-[0.8125rem] text-destructive">
 					{error}
 				</p>
 			) : null}
@@ -314,7 +314,7 @@ export function AccessMapView() {
 				{/* The prompt and the picker it asks for read as one line, above both the map and the panel, so those two
 				    share a top edge. The prompt never changes, so the picker stays put; the result follows it. */}
 				<div className="flex flex-wrap items-center gap-x-2 gap-y-1.5 px-1">
-					<p className="text-[13px] text-muted-foreground">Pick a person to see where their access reaches.</p>
+					<p className="text-[0.8125rem] text-muted-foreground">Pick a person to see where their access reaches.</p>
 					<label htmlFor={selectId} className="sr-only">
 						Show access for
 					</label>
@@ -329,7 +329,7 @@ export function AccessMapView() {
 							...guests.map((entry) => ({ value: entry.id, label: entry.company ? `${entry.name} · ${entry.company}` : entry.name, group: 'Guests' })),
 						]}
 					/>
-					<p aria-live="polite" className="text-[13px] font-medium text-foreground tabular-nums">
+					<p aria-live="polite" className="text-[0.8125rem] font-medium text-foreground tabular-nums">
 						{chosen ? `Can enter ${reach} of ${layout.rooms.length} rooms.` : null}
 					</p>
 				</div>
@@ -341,7 +341,7 @@ export function AccessMapView() {
 							onPaneClick={() => setSelected('')}
 							overlay={<CanvasZoomControls viewport={viewport} fit />}
 						>
-							<svg aria-hidden="true" className="pointer-events-none absolute top-0 left-0 overflow-visible" width={layout.width} height={layout.height}>
+							<svg aria-hidden="true" className="pointer-events-none absolute top-0 start-0 overflow-visible" width={layout.width} height={layout.height}>
 								{layout.wires.map((wire) => (
 									<CanvasWire key={wire.id} start={wire.start} end={wire.end} axis="vertical" tone={wireTone(wire)} />
 								))}

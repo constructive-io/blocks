@@ -38,7 +38,7 @@ function RecommendationRow({ recommendation, onPick }: { recommendation: ChatRec
 				aria-label={label}
 				onClick={onPick}
 				className={cn(
-					'flex min-h-8 w-full cursor-pointer flex-wrap items-center gap-x-2 gap-y-1 rounded-md px-1.5 py-1 text-left text-sm text-foreground hover:bg-overlay-hover pointer-coarse:min-h-11',
+					'flex min-h-8 w-full cursor-pointer flex-wrap items-center gap-x-2 gap-y-1 rounded-md px-1.5 py-1 text-start text-sm text-foreground hover:bg-overlay-hover pointer-coarse:min-h-11',
 					focusRingClass,
 				)}
 			>
@@ -140,7 +140,7 @@ function ChatView() {
 							{composer('Ask anything, or type @ to mention an agent')}
 						</div>
 						<section style={staggerStyle(3)} aria-labelledby={recommendedId} className={cn('flex flex-col gap-1', enterClass)}>
-							<h2 id={recommendedId} className="px-1.5 text-[13px] text-muted-foreground">
+							<h2 id={recommendedId} className="px-1.5 text-[0.8125rem] text-muted-foreground">
 								Recommended for you
 							</h2>
 							<ul aria-labelledby={recommendedId} className="flex flex-col">

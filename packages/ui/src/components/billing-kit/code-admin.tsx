@@ -68,7 +68,7 @@ export function CodeItemsEditor({ items, onChange, targets, error }: CodeItemsEd
 				};
 				return (
 					<div key={index} className="grid grid-cols-[minmax(0,1fr)_6.5rem_auto] items-end gap-2 rounded-lg border border-border bg-muted/30 p-2.5 @lg/view:grid-cols-[minmax(0,1fr)_6.5rem_7.5rem_6rem_auto]">
-						<label className="flex flex-col gap-1 text-[11px] text-muted-foreground">
+						<label className="flex flex-col gap-1 text-[0.6875rem] text-muted-foreground">
 							Credits for
 							<select
 								className={nativeSelectClass}
@@ -82,7 +82,7 @@ export function CodeItemsEditor({ items, onChange, targets, error }: CodeItemsEd
 								{limits.length ? <optgroup label="Limits">{limits.map(renderOption)}</optgroup> : null}
 							</select>
 						</label>
-						<label className="flex flex-col gap-1 text-[11px] text-muted-foreground">
+						<label className="flex flex-col gap-1 text-[0.6875rem] text-muted-foreground">
 							Amount
 							<input
 								inputMode="numeric"
@@ -95,7 +95,7 @@ export function CodeItemsEditor({ items, onChange, targets, error }: CodeItemsEd
 						<TooltipIconButton label="Remove grant" size="sm" className="mb-1" disabled={items.length === 1} onClick={() => onChange(items.filter((_, at) => at !== index))}>
 							<Trash2 aria-hidden="true" className="size-3.5" />
 						</TooltipIconButton>
-						<label className="col-span-1 flex flex-col gap-1 text-[11px] text-muted-foreground @lg/view:col-auto @lg/view:row-start-1 @lg/view:col-start-3">
+						<label className="col-span-1 flex flex-col gap-1 text-[0.6875rem] text-muted-foreground @lg/view:col-auto @lg/view:row-start-1 @lg/view:col-start-3">
 							Type
 							<select className={nativeSelectClass} value={item.creditType} onChange={(event) => update(index, { creditType: event.target.value as CreditType })}>
 								{types.map((type) => (
@@ -105,7 +105,7 @@ export function CodeItemsEditor({ items, onChange, targets, error }: CodeItemsEd
 								))}
 							</select>
 						</label>
-						<label className="flex flex-col gap-1 text-[11px] text-muted-foreground @lg/view:row-start-1 @lg/view:col-start-4">
+						<label className="flex flex-col gap-1 text-[0.6875rem] text-muted-foreground @lg/view:row-start-1 @lg/view:col-start-4">
 							Lasts (days)
 							<input
 								inputMode="numeric"
@@ -242,12 +242,12 @@ export function CreditCodeDialog({ open, onOpenChange, code, targets, existingCo
 				<form onSubmit={submit} noValidate className="@container/view flex min-h-0 flex-col">
 					<DialogHeader className="gap-1.5 pb-3">
 						<DialogTitle className="text-base font-medium">{code ? `Edit ${code.code}` : 'New code'}</DialogTitle>
-						<DialogDescription className="text-[13px]">
+						<DialogDescription className="text-[0.8125rem]">
 							Each billing account can redeem a code once. Changes apply to future redemptions only.
 						</DialogDescription>
 					</DialogHeader>
 					<div className="flex min-h-0 flex-col gap-4 overflow-y-auto px-6 pb-5">
-						<div className="grid gap-3 @lg/view:grid-cols-2">
+						<div className="grid grid-cols-1 gap-3 @lg/view:grid-cols-2">
 							<div className="flex flex-col gap-1">
 								<label htmlFor={`${id}-code`} className="text-xs text-muted-foreground">
 									Code
@@ -280,7 +280,7 @@ export function CreditCodeDialog({ open, onOpenChange, code, targets, existingCo
 							</label>
 						</div>
 						<CodeItemsEditor items={form.items} onChange={(items) => set({ items })} targets={targets} error={errors.items} />
-						<div className="grid gap-3 @lg/view:grid-cols-3">
+						<div className="grid grid-cols-1 gap-3 @lg/view:grid-cols-3">
 							<div className="flex flex-col gap-1">
 								<label htmlFor={`${id}-max`} className="text-xs text-muted-foreground">
 									Redemptions allowed
@@ -315,7 +315,7 @@ export function CreditCodeDialog({ open, onOpenChange, code, targets, existingCo
 							</div>
 						</div>
 						{errors.save ? (
-							<p role="alert" className="text-[13px] text-destructive">
+							<p role="alert" className="text-[0.8125rem] text-destructive">
 								{errors.save}
 							</p>
 						) : null}
@@ -433,10 +433,10 @@ export function BulkCodeDialog({ open, onOpenChange, targets, existingCodes, onC
 					<>
 						<DialogHeader className="gap-1.5 pb-3">
 							<DialogTitle className="text-base font-medium">{f.quantity(created.length)} codes created</DialogTitle>
-							<DialogDescription className="text-[13px]">Each works once. Copy or download them now; they are also listed in the catalog.</DialogDescription>
+							<DialogDescription className="text-[0.8125rem]">Each works once. Copy or download them now; they are also listed in the catalog.</DialogDescription>
 						</DialogHeader>
 						<div className="px-6 pb-5">
-							<pre className="max-h-64 overflow-y-auto rounded-lg border border-border bg-muted/40 px-3 py-2 font-mono text-[13px] leading-6 text-foreground">{created.join('\n')}</pre>
+							<pre className="max-h-64 overflow-y-auto rounded-lg border border-border bg-muted/40 px-3 py-2 font-mono text-[0.8125rem] leading-6 text-foreground">{created.join('\n')}</pre>
 						</div>
 						<DialogFooter>
 							<Button size="sm" variant="ghost" onClick={download}>
@@ -465,10 +465,10 @@ export function BulkCodeDialog({ open, onOpenChange, targets, existingCodes, onC
 					<form onSubmit={submit} noValidate className="@container/view flex min-h-0 flex-col">
 						<DialogHeader className="gap-1.5 pb-3">
 							<DialogTitle className="text-base font-medium">Bulk create codes</DialogTitle>
-							<DialogDescription className="text-[13px]">Single-use codes that share what they grant, e.g. one per attendee.</DialogDescription>
+							<DialogDescription className="text-[0.8125rem]">Single-use codes that share what they grant, e.g. one per attendee.</DialogDescription>
 						</DialogHeader>
 						<div className="flex min-h-0 flex-col gap-4 overflow-y-auto px-6 pb-5">
-							<div className="grid gap-3 @lg/view:grid-cols-3">
+							<div className="grid grid-cols-1 gap-3 @lg/view:grid-cols-3">
 								<label htmlFor={`${id}-prefix`} className="flex flex-col gap-1 text-xs text-muted-foreground">
 									Prefix
 									<Input
@@ -505,7 +505,7 @@ export function BulkCodeDialog({ open, onOpenChange, targets, existingCodes, onC
 								<Input id={`${id}-note`} size="sm" value={note} onChange={(event) => setNote(event.target.value)} placeholder="Campus tour, Oct 2026" />
 							</label>
 							{errors.save ? (
-								<p role="alert" className="text-[13px] text-destructive">
+								<p role="alert" className="text-[0.8125rem] text-destructive">
 									{errors.save}
 								</p>
 							) : null}
@@ -552,7 +552,7 @@ export function CreditCodeTable({ codes, describe, onToggle, onOpen, className }
 					<th scope="col">Redeemed</th>
 					<th scope="col">Expires</th>
 					<th scope="col">Status</th>
-					<th scope="col" className="text-right">
+					<th scope="col" className="text-end">
 						Live
 					</th>
 					<th scope="col">
@@ -566,29 +566,33 @@ export function CreditCodeTable({ codes, describe, onToggle, onOpen, className }
 					const presentation = CODE_STATUS[status];
 					return (
 						<tr key={code.id} className={cn(tableRowClass, status !== 'active' && 'text-muted-foreground')}>
-							<th scope="row" className="px-4 py-2 text-left font-normal">
-								<code className="block font-mono text-[13px] text-foreground">{code.code}</code>
-								{code.note || code.batch ? <span className="block text-xs text-muted-foreground">{code.note ?? code.batch}</span> : null}
+							<th scope="row" className="max-w-[18rem] px-4 py-2 text-start font-normal">
+								<code className="block font-mono text-[0.8125rem] text-foreground [overflow-wrap:anywhere]">{code.code}</code>
+								{code.note || code.batch ? (
+									<span title={code.note ?? code.batch} className="line-clamp-2 block text-xs text-muted-foreground [overflow-wrap:anywhere]">
+										{code.note ?? code.batch}
+									</span>
+								) : null}
 							</th>
 							<td className="text-xs">
 								<CodeGrantList items={code.items} describe={describe} compact />
 							</td>
 							<td>
-								<span className="flex items-center gap-2 tabular-nums">
+								<span className="flex items-center gap-2 whitespace-nowrap tabular-nums">
 									{code.maxRedemptions !== null ? (
-										<span aria-hidden="true" className="h-1 w-14 overflow-hidden rounded-full bg-foreground/[0.07]">
-											<span className="block h-full rounded-full bg-foreground/50" style={{ width: `${Math.min(1, code.redemptions / code.maxRedemptions) * 100}%` }} />
+										<span aria-hidden="true" className="h-1 w-14 shrink-0 overflow-hidden rounded-full bg-foreground/[0.07]">
+											<span className="block h-full rounded-full bg-foreground/50" style={{ width: `${Math.min(1, code.redemptions / Math.max(1, code.maxRedemptions)) * 100}%` }} />
 										</span>
 									) : null}
 									{f.quantity(code.redemptions)}
 									{code.maxRedemptions !== null ? ` / ${f.quantity(code.maxRedemptions)}` : ''}
 								</span>
 							</td>
-							<td className="tabular-nums">{code.expiresAt ? f.date(code.expiresAt) : 'Never'}</td>
+							<td className="whitespace-nowrap tabular-nums">{code.expiresAt ? f.date(code.expiresAt) : 'Never'}</td>
 							<td>
 								<ToneBadge tone={presentation.tone}>{presentation.label}</ToneBadge>
 							</td>
-							<td className="text-right">
+							<td className="text-end">
 								<Switch
 									className="-my-3"
 									aria-label={`${code.active ? 'Pause' : 'Resume'} ${code.code}`}
@@ -597,7 +601,7 @@ export function CreditCodeTable({ codes, describe, onToggle, onOpen, className }
 									onCheckedChange={(active) => onToggle?.(code, active)}
 								/>
 							</td>
-							<td className="text-right">
+							<td className="text-end">
 								{onOpen ? (
 									<button
 										type="button"
@@ -605,7 +609,7 @@ export function CreditCodeTable({ codes, describe, onToggle, onOpen, className }
 										onClick={() => onOpen(code)}
 										className={cn('grid size-7 cursor-pointer place-items-center rounded-md text-muted-foreground hover:bg-overlay-hover hover:text-foreground', focusRingClass)}
 									>
-										<ChevronRight aria-hidden="true" className="size-3.5" />
+										<ChevronRight aria-hidden="true" className="size-3.5 rtl:-scale-x-100" />
 									</button>
 								) : null}
 							</td>
@@ -645,8 +649,8 @@ export function CreditCodeSheet({ code, open, onOpenChange, redemptions, describ
 		<Sheet open={open} onOpenChange={onOpenChange}>
 			<SheetContent side="right" className="w-[30rem] max-w-[94vw] gap-0 p-0 sm:max-w-[30rem]">
 				<div className="flex flex-col gap-3 border-b border-border px-5 pt-5 pb-4">
-					<div className="flex flex-wrap items-center gap-2 pr-8">
-						<SheetTitle className="font-mono text-base font-medium">{code.code}</SheetTitle>
+					<div className="flex flex-wrap items-center gap-2 pe-8">
+						<SheetTitle className="min-w-0 font-mono text-base font-medium [overflow-wrap:anywhere]">{code.code}</SheetTitle>
 						<ToneBadge tone={presentation.tone}>{presentation.label}</ToneBadge>
 						<TooltipIconButton
 							label={copied ? 'Copied' : 'Copy code'}
@@ -661,7 +665,7 @@ export function CreditCodeSheet({ code, open, onOpenChange, redemptions, describ
 							{copied ? <Check aria-hidden="true" className="size-3.5" /> : <Copy aria-hidden="true" className="size-3.5" />}
 						</TooltipIconButton>
 					</div>
-					<SheetDescription className="text-[13px]">{code.note ?? 'Each billing account can redeem it once.'}</SheetDescription>
+					<SheetDescription className="text-[0.8125rem]">{code.note ?? 'Each billing account can redeem it once.'}</SheetDescription>
 					<div className="flex gap-2">
 						{onEdit ? (
 							<Button size="xs" variant="outline" onClick={() => onEdit(code)}>

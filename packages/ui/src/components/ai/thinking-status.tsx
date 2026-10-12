@@ -75,7 +75,7 @@ function ThinkingStatus({
 			role="status"
 			aria-live="polite"
 			data-slot="thinking-status"
-			className={cn('flex h-7 items-center gap-2 text-[13px]', className)}
+			className={cn('flex h-7 items-center gap-2 text-[0.8125rem]', className)}
 			{...props}
 		>
 			<ThinkingGlyph />

@@ -211,7 +211,7 @@ function CodeBlock({
 						{filename ? (
 							<span
 								data-slot="code-block-filename"
-								className="min-w-0 truncate font-mono text-[12px] text-foreground/80"
+								className="min-w-0 truncate font-mono text-[0.75rem] text-foreground/80"
 								title={filename}
 							>
 								{filename}
@@ -219,7 +219,7 @@ function CodeBlock({
 						) : language ? (
 							<span
 								data-slot="code-block-language"
-								className="min-w-0 truncate font-mono text-[12px] text-foreground/80"
+								className="min-w-0 truncate font-mono text-[0.75rem] text-foreground/80"
 							>
 								{language}
 							</span>
@@ -231,7 +231,7 @@ function CodeBlock({
 								className={cn(
 									'inline-flex shrink-0 items-center rounded-md px-1.5 py-0.5',
 									'border border-border bg-background/50',
-									'font-sans text-[10px] font-medium tracking-wide text-muted-foreground uppercase',
+									'font-sans text-[0.625rem] font-medium tracking-wide text-muted-foreground uppercase',
 								)}
 							>
 								{language}
@@ -242,7 +242,7 @@ function CodeBlock({
 						{collapsible ? (
 							<span
 								data-slot="code-block-meta"
-								className="hidden shrink-0 font-sans text-[11px] tabular-nums text-muted-foreground/70 sm:inline"
+								className="hidden shrink-0 font-sans text-[0.6875rem] tabular-nums text-muted-foreground/70 sm:inline"
 							>
 								{lineCount} lines
 							</span>
@@ -320,7 +320,7 @@ function CodeBlock({
 						onClick={() => setExpanded(!expanded)}
 						className={cn(
 							'flex w-full items-center justify-center gap-1.5 px-3 py-2',
-							'text-[12px] font-medium text-muted-foreground',
+							'text-[0.75rem] font-medium text-muted-foreground',
 							'outline-none transition-[color,background-color,border-color,text-decoration-color,fill,stroke,box-shadow] duration-(--duration-moderate)',
 							'hover:bg-muted/70 hover:text-foreground',
 							'focus-visible:bg-muted/70 focus-visible:text-foreground focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:ring-inset',

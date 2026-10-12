@@ -58,7 +58,7 @@ function GrantChain({ grant, room }: { grant: AccessGrant; room: Room }) {
 					<FolderSymlink className="size-3.5" />
 				</span>
 				<span className="min-w-0 flex-1">
-					<span className="block text-[13px] font-medium text-foreground">{folderName(grant.folder)}</span>
+					<span className="block text-[0.8125rem] font-medium text-foreground">{folderName(grant.folder)}</span>
 					<span className="block text-xs text-muted-foreground">{text}</span>
 					{grant.expiresAt ? (
 						<span className={cn('mt-1 block text-xs tabular-nums', days !== null && days <= 7 ? 'text-warning' : 'text-muted-foreground')}>
@@ -83,11 +83,11 @@ function GrantChain({ grant, room }: { grant: AccessGrant; room: Room }) {
 	return (
 		<li className="rounded-lg border border-border bg-card p-3 shadow-2xs">
 			<ol className="relative flex flex-col gap-3">
-				{steps.length > 1 ? <span aria-hidden="true" className="absolute top-3 bottom-3 left-3 w-px bg-border" /> : null}
+				{steps.length > 1 ? <span aria-hidden="true" className="absolute top-3 bottom-3 start-3 w-px bg-border" /> : null}
 				{steps.map((step, index) => (
 					<li key={step.key} className="relative flex items-center gap-2.5">
 						<StepTile kind={step.kind} room={room} />
-						<span className={cn('min-w-0 flex-1 truncate text-[13px]', step.held ? 'font-medium text-foreground' : 'text-muted-foreground')}>{step.name}</span>
+						<span title={step.name} className={cn('min-w-0 flex-1 truncate text-[0.8125rem]', step.held ? 'font-medium text-foreground' : 'text-muted-foreground')}>{step.name}</span>
 						{step.held ? (
 							<StatusBadge presentation={badge} />
 						) : index > 0 ? (
@@ -145,7 +145,7 @@ export function AccessTraceSheet({ request, onOpenChange }: AccessTraceSheetProp
 				<div className="flex flex-col gap-3 border-b border-border bg-muted/50 px-5 pt-5 pb-4">
 					<div className="flex flex-col gap-1">
 						<SheetTitle className="text-base font-medium">Why can {first} open this?</SheetTitle>
-						<SheetDescription className="text-[13px]">Access to {room.name}, and where it comes from.</SheetDescription>
+						<SheetDescription className="text-[0.8125rem]">Access to {room.name}, and where it comes from.</SheetDescription>
 					</div>
 					<div className="flex items-center justify-between gap-3">
 						<PersonLine person={subject} />
@@ -167,7 +167,7 @@ export function AccessTraceSheet({ request, onOpenChange }: AccessTraceSheetProp
 								))}
 							</ol>
 						) : (
-							<p className="flex items-start gap-2 rounded-lg bg-muted/60 px-3 py-2.5 text-[13px] text-muted-foreground">
+							<p className="flex items-start gap-2 rounded-lg bg-muted/60 px-3 py-2.5 text-[0.8125rem] text-muted-foreground">
 								<Info aria-hidden="true" className="mt-0.5 size-3.5 shrink-0" />
 								{first} has no access to this room right now.
 							</p>
@@ -176,7 +176,7 @@ export function AccessTraceSheet({ request, onOpenChange }: AccessTraceSheetProp
 
 					{result.limits.length ? (
 						<Section title="Limits">
-							<ul className="flex flex-col gap-1.5 text-[13px] text-foreground">
+							<ul className="flex flex-col gap-1.5 text-[0.8125rem] text-foreground">
 								{result.limits.map((limit) => (
 									<li key={limit.reason}>{limitText(limit)}</li>
 								))}
@@ -188,7 +188,7 @@ export function AccessTraceSheet({ request, onOpenChange }: AccessTraceSheetProp
 						<Section title="Not counted">
 							<ul className="flex flex-col gap-1.5">
 								{result.ignored.map((entry, index) => (
-									<li key={entry.membershipId ?? entry.shareId ?? index} className="flex items-start gap-2 text-[13px] text-muted-foreground">
+									<li key={entry.membershipId ?? entry.shareId ?? index} className="flex items-start gap-2 text-[0.8125rem] text-muted-foreground">
 										<Ban aria-hidden="true" className="mt-0.5 size-3.5 shrink-0 text-subtle-foreground" />
 										{describeIgnored(data, entry, (iso) => format.date(iso))}
 									</li>
@@ -213,7 +213,7 @@ export function AccessTraceSheet({ request, onOpenChange }: AccessTraceSheetProp
 						/>
 						{checked ? (
 							<div className="flex flex-col gap-2 rounded-lg bg-muted/60 p-3">
-								<p className="text-[13px] text-foreground">
+								<p className="text-[0.8125rem] text-foreground">
 									{checked.permissions.includes('view') ? `${first} can open it.` : `${first} can’t open it.`}
 								</p>
 								<PermissionChips permissions={checked.permissions} compact />

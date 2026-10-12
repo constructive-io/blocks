@@ -3418,7 +3418,8 @@
         "cn",
         "tooltip",
         "sheet",
-        "dropdown-menu"
+        "dropdown-menu",
+        "initials"
       ],
       "files": [
         {
@@ -3491,6 +3492,7 @@
         "kbd",
         "switch",
         "avatar",
+        "initials",
         "spinner",
         "workspace-kit"
       ],
@@ -3645,6 +3647,7 @@
         "button",
         "checkbox",
         "dialog",
+        "initials",
         "dropdown-menu",
         "input",
         "select",

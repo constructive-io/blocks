@@ -94,14 +94,14 @@ function Reasoning({
 		>
 			<CollapsibleTrigger
 				className={cn(
-					'group flex w-fit max-w-full items-center gap-1.5 rounded-md px-1.5 py-1.5 text-left text-[13px]',
+					'group flex w-fit max-w-full items-center gap-1.5 rounded-md px-1.5 py-1.5 text-start text-[0.8125rem]',
 					'text-muted-foreground transition-[box-shadow] duration-(--duration-moderate) hover:bg-accent hover:text-foreground',
 					'focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50',
 				)}
 			>
 				<Brain className="size-3.5 shrink-0 opacity-80" />
 				{isStreaming ? (
-					<TextShimmer className="text-[13px] font-medium tabular-nums">{label}</TextShimmer>
+					<TextShimmer className="text-[0.8125rem] font-medium tabular-nums">{label}</TextShimmer>
 				) : (
 					<span className="font-medium tabular-nums">{label}</span>
 				)}
@@ -111,16 +111,16 @@ function Reasoning({
 				/>
 			</CollapsibleTrigger>
 			<CollapsiblePanel innerClassName="py-0">
-				<div className="my-1 ml-1.5 border-l border-border/70 py-1 pl-3">
+				<div className="my-1 ms-1.5 border-s border-border/70 py-1 ps-3">
 					{markdown && typeof body === 'string' ? (
 						<Markdown
 							streaming={isStreaming}
-							className="text-[13px] text-muted-foreground"
+							className="text-[0.8125rem] text-muted-foreground"
 						>
 							{body}
 						</Markdown>
 					) : (
-						<div className="whitespace-pre-wrap text-[13px] leading-relaxed text-muted-foreground">
+						<div className="whitespace-pre-wrap text-[0.8125rem] leading-relaxed text-muted-foreground">
 							{body}
 						</div>
 					)}

@@ -11,15 +11,17 @@ import {
 	Plus,
 	SearchX,
 	Server,
+	User,
 } from 'lucide-react';
 import * as React from 'react';
 
+import { initials } from '../../lib/initials';
 import { cn } from '../../lib/utils';
 import { Avatar, AvatarFallback, AvatarImage } from '../avatar';
 import { Button } from '../button';
 import { Popover, PopoverContent, PopoverTrigger } from '../popover';
 import { useAgentsBuilder } from './agents-builder-context';
-import { focusRingClass, pressClass, SearchField, SurfaceBody, surfaceInsetClass, type Tone, ToneBadge, ViewHeader } from '../workspace-kit/primitives';
+import { focusRingClass, formatCount, plural, pressClass, SearchField, SurfaceBody, surfaceInsetClass, type Tone, ToneBadge, ViewHeader } from '../workspace-kit/primitives';
 import type { Skill, SkillType, StarterPack } from './types';
 import { startViewTransition, ViewAnimation } from '../workspace-kit/view-transition';
 
@@ -45,7 +47,7 @@ function RevealChip({ children, ...props }: React.ComponentProps<'button'>) {
 			type="button"
 			{...props}
 			className={cn(
-				'absolute top-1/2 right-2 -translate-y-1/2 cursor-pointer rounded-md bg-card px-1.5 py-0.5 text-xs text-foreground shadow-card hover:bg-muted',
+				'absolute end-2 top-1/2 -translate-y-1/2 cursor-pointer rounded-md bg-card px-1.5 py-0.5 text-xs text-foreground shadow-card hover:bg-muted',
 				focusRingClass,
 				'opacity-0 group-hover/row:opacity-100 focus-visible:opacity-100 data-popup-open:opacity-100 pointer-coarse:opacity-100',
 				props.className,
@@ -72,7 +74,7 @@ function SortHeader({
 		<th
 			scope="col"
 			aria-sort={active ? sort?.direction : undefined}
-			className="h-10 border-r border-border px-3 text-left text-xs font-normal text-muted-foreground last:border-r-0"
+			className="h-10 border-e border-border px-3 text-start text-xs font-normal text-muted-foreground last:border-e-0"
 		>
 			{column ? (
 				<button
@@ -107,12 +109,17 @@ function AgentLinks({ skill }: { skill: Skill }) {
 
 	return (
 		<div className="flex min-w-0 items-center gap-2">
-			<span className="min-w-0 flex-1 truncate">
+			{/* Each name is its own flex item, so a long first name shrinks alongside the others instead of hiding them. */}
+			<span className="flex min-w-0 flex-1 items-center">
 				{inline.map((agentId, index) => (
 					<React.Fragment key={agentId}>
-						{index > 0 ? <span className="text-link">, </span> : null}
-						<button type="button" className={link} onClick={() => openAgent(agentId)}>
-							{agentName(agentId)}
+						{index > 0 ? (
+							<span aria-hidden="true" className="me-1 shrink-0 text-link">
+								,
+							</span>
+						) : null}
+						<button type="button" title={agentName(agentId)} className={cn(link, 'min-w-0 truncate')} onClick={() => openAgent(agentId)}>
+							<bdi>{agentName(agentId)}</bdi>
 						</button>
 					</React.Fragment>
 				))}
@@ -120,7 +127,7 @@ function AgentLinks({ skill }: { skill: Skill }) {
 			{rest.length ? (
 				<Popover>
 					<PopoverTrigger
-						aria-label={`Show ${rest.length} more ${rest.length === 1 ? 'agent' : 'agents'} for ${skill.name}`}
+						aria-label={`Show ${formatCount(rest.length)} more ${plural(rest.length, { one: 'agent', other: 'agents' })} for ${skill.name}`}
 						className={cn(
 							'inline-flex h-5 shrink-0 cursor-pointer items-center gap-0.5 rounded-[5px] bg-card px-1 text-xs text-foreground tabular-nums shadow-card hover:bg-muted',
 							pressClass,
@@ -128,18 +135,18 @@ function AgentLinks({ skill }: { skill: Skill }) {
 						)}
 					>
 						<Plus aria-hidden="true" className="size-2.5" />
-						{rest.length}
+						{formatCount(rest.length)}
 					</PopoverTrigger>
-					<PopoverContent side="bottom" align="center" className="w-auto min-w-40 p-1.5">
-						<ul className="flex flex-col">
+					<PopoverContent side="bottom" align="center" className="w-auto max-w-72 min-w-40 p-1.5">
+						<ul className="flex max-h-64 flex-col overflow-y-auto overscroll-contain">
 							{rest.map((agentId) => (
 								<li key={agentId}>
 									<button
 										type="button"
 										onClick={() => openAgent(agentId)}
-										className="w-full cursor-pointer rounded-sm px-2 py-1 text-left text-[13px] text-link outline-none hover:bg-overlay-hover focus-visible:ring-[3px] focus-visible:ring-ring/50"
+										className="w-full cursor-pointer rounded-sm px-2 py-1 text-start text-[0.8125rem] text-link [overflow-wrap:anywhere] outline-none hover:bg-overlay-hover focus-visible:ring-[3px] focus-visible:ring-ring/50"
 									>
-										{agentName(agentId)}
+										<bdi>{agentName(agentId)}</bdi>
 									</button>
 								</li>
 							))}
@@ -165,26 +172,36 @@ function SkillCard({ skill }: { skill: Skill }) {
 	const { emit } = useAgentsBuilder();
 	return (
 		<li className="flex flex-col gap-2 rounded-xl bg-card p-3 shadow-card">
-			<div className="flex items-center gap-2">
+			<div className="flex flex-wrap items-center gap-x-2 gap-y-1">
 				<button
 					type="button"
+					title={skill.name}
 					onClick={() => emit({ type: 'open-skill', skillId: skill.id })}
-					className={cn('min-w-0 truncate rounded-sm text-left text-sm font-medium text-foreground hover:underline', focusRingClass)}
+					className={cn('line-clamp-2 min-w-0 flex-1 basis-32 rounded-sm text-start text-sm font-medium text-foreground [overflow-wrap:anywhere] hover:underline', focusRingClass)}
 				>
-					{skill.name}
+					<bdi>{skill.name}</bdi>
 				</button>
 				<ToneBadge tone={TYPE_TONE[skill.type]}>{skill.type}</ToneBadge>
-				<UpdatedLabel skill={skill} className="ml-auto shrink-0 text-xs text-muted-foreground tabular-nums" />
+				<UpdatedLabel skill={skill} className="ms-auto shrink-0 text-xs text-muted-foreground tabular-nums" />
 			</div>
-			<p className="text-pretty text-[13px] text-muted-foreground">{skill.description}</p>
-			<div className="flex items-center gap-2 text-[13px]">
-				<Avatar className="size-5 outline-1 -outline-offset-1 outline-black/10 dark:outline-white/10">
+			<p title={skill.description} className="line-clamp-3 text-pretty text-[0.8125rem] text-muted-foreground [overflow-wrap:anywhere]">
+				{skill.description}
+			</p>
+			<div className="flex items-center gap-2 text-[0.8125rem]">
+				<Avatar className="size-5 shrink-0 outline-1 -outline-offset-1 outline-black/10 dark:outline-white/10">
 					{skill.author.avatarUrl ? <AvatarImage src={skill.author.avatarUrl} alt="" /> : null}
-					<AvatarFallback className="text-[10px]">{skill.author.name.charAt(0)}</AvatarFallback>
+					<AvatarFallback className="text-[0.625rem]">{initials(skill.author.name, { max: 1 }) ?? <User className="size-3" />}</AvatarFallback>
 				</Avatar>
-				<span className="shrink-0 text-foreground">{skill.author.name}</span>
-				<span aria-hidden="true" className="text-subtle-foreground">·</span>
-				<AgentLinks skill={skill} />
+				{/* The author name gives up width before the agents do, and the divider only shows when there are agents to divide from. */}
+				<span title={skill.author.name} className={cn('min-w-0 truncate text-foreground', skill.agentIds.length > 0 && 'max-w-[55%]')}>
+					<bdi>{skill.author.name}</bdi>
+				</span>
+				{skill.agentIds.length > 0 ? (
+					<>
+						<span aria-hidden="true" className="text-subtle-foreground">·</span>
+						<AgentLinks skill={skill} />
+					</>
+				) : null}
 			</div>
 		</li>
 	);
@@ -240,7 +257,7 @@ function SkillsView() {
 			),
 		);
 
-	const cell = 'border-r border-border px-3 py-3 align-middle last:border-r-0';
+	const cell = 'border-e border-border px-3 py-3 align-middle last:border-e-0';
 	const starterId = React.useId();
 	const individualId = React.useId();
 
@@ -277,7 +294,7 @@ function SkillsView() {
 											<Button
 												size="xs"
 												variant="outline"
-												className="ml-auto"
+												className="ms-auto"
 												aria-label={`Add all ${pack.title} skills`}
 												onClick={() => emit({ type: 'add-starter-pack', packId: pack.id })}
 											>
@@ -286,11 +303,13 @@ function SkillsView() {
 											</Button>
 										</div>
 										<div className="flex flex-col gap-0.5">
-											<h3 className="text-sm font-medium text-foreground">{pack.title}</h3>
-											<p className="text-pretty text-[13px] text-muted-foreground">{pack.description}</p>
+											<h3 className="text-sm font-medium text-foreground [overflow-wrap:anywhere]">{pack.title}</h3>
+											<p title={pack.description} className="line-clamp-4 text-pretty text-[0.8125rem] text-muted-foreground [overflow-wrap:anywhere]">
+												{pack.description}
+											</p>
 										</div>
-										<p className="text-[13px] text-muted-foreground tabular-nums">
-											{pack.skillCount} skills · {pack.installs} installs
+										<p className="text-[0.8125rem] text-muted-foreground tabular-nums">
+											{formatCount(pack.skillCount)} {plural(pack.skillCount, { one: 'skill', other: 'skills' })} · {pack.installs} {pack.installs === '1' ? 'install' : 'installs'}
 										</p>
 									</li>
 								);
@@ -304,18 +323,18 @@ function SkillsView() {
 								Individual skills
 							</h2>
 							<span className="inline-flex h-5 min-w-5 items-center justify-center rounded-[5px] bg-muted px-1 text-xs text-muted-foreground tabular-nums">
-								{data.skills.length}
+								{formatCount(data.skills.length)}
 							</span>
 							<SearchField
 								label="Search skills"
 								value={query}
 								placeholder="Search by name, type, etc…"
-								className="order-last w-full @md/view:order-none @md/view:ml-auto @md/view:w-56"
+								className="order-last w-full @md/view:order-none @md/view:ms-auto @md/view:w-56"
 								onChange={(event) => setQuery(event.target.value)}
 							/>
 						</div>
 						<div role="status" className="sr-only">
-							{term ? `${skills.length} ${skills.length === 1 ? 'skill' : 'skills'} match your search` : ''}
+							{term ? `${formatCount(skills.length)} ${plural(skills.length, { one: 'skill matches', other: 'skills match' })} your search` : ''}
 						</div>
 
 						{skills.length === 0 ? (
@@ -360,14 +379,18 @@ function SkillsView() {
 											{skills.map((skill) => (
 												<ViewAnimation key={skill.id}>
 													<tr className="group/row border-b border-border last:border-b-0 hover:bg-muted/30">
-														<th scope="row" className={cn(cell, 'relative text-left font-normal text-foreground')}>
-															<span className="block truncate group-focus-within/row:pr-12 group-hover/row:pr-12 pointer-coarse:pr-12">{skill.name}</span>
+														<th scope="row" className={cn(cell, 'relative text-start font-normal text-foreground')}>
+															<span title={skill.name} className="block truncate group-focus-within/row:pe-12 group-hover/row:pe-12 pointer-coarse:pe-12">
+																<bdi>{skill.name}</bdi>
+															</span>
 															<RevealChip aria-label={`Open ${skill.name}`} onClick={() => emit({ type: 'open-skill', skillId: skill.id })}>
 																Open
 															</RevealChip>
 														</th>
 														<td className={cn(cell, 'relative text-muted-foreground')}>
-															<span className="block truncate group-focus-within/row:pr-12 group-hover/row:pr-12 pointer-coarse:pr-12">{skill.description}</span>
+															<span title={skill.description} className="block truncate group-focus-within/row:pe-12 group-hover/row:pe-12 pointer-coarse:pe-12">
+																{skill.description}
+															</span>
 															<Popover>
 																<PopoverTrigger
 																	aria-label={`Show the full description of ${skill.name}`}
@@ -375,7 +398,7 @@ function SkillsView() {
 																>
 																	Show
 																</PopoverTrigger>
-																<PopoverContent side="bottom" align="center" className="w-72 p-3 text-pretty text-[13px] leading-5">
+																<PopoverContent side="bottom" align="center" className="max-h-72 w-72 max-w-[min(18rem,92vw)] overflow-y-auto p-3 text-[0.8125rem] leading-5 text-pretty [overflow-wrap:anywhere]">
 																	{skill.description}
 																</PopoverContent>
 															</Popover>
@@ -388,11 +411,13 @@ function SkillsView() {
 														</td>
 														<td className={cell}>
 															<span className="flex min-w-0 items-center gap-2 text-foreground">
-																<Avatar className="size-6 outline-1 -outline-offset-1 outline-black/10 dark:outline-white/10">
+																<Avatar className="size-6 shrink-0 outline-1 -outline-offset-1 outline-black/10 dark:outline-white/10">
 																	{skill.author.avatarUrl ? <AvatarImage src={skill.author.avatarUrl} alt="" /> : null}
-																	<AvatarFallback className="text-[11px]">{skill.author.name.charAt(0)}</AvatarFallback>
+																	<AvatarFallback className="text-[0.6875rem]">{initials(skill.author.name, { max: 1 }) ?? <User className="size-3" />}</AvatarFallback>
 																</Avatar>
-																<span className="truncate">{skill.author.name}</span>
+																<span title={skill.author.name} className="truncate">
+																	<bdi>{skill.author.name}</bdi>
+																</span>
 															</span>
 														</td>
 														<td className={cn(cell, 'text-muted-foreground tabular-nums')}>

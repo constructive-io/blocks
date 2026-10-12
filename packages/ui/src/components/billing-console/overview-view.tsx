@@ -4,7 +4,7 @@ import { ArrowRight, CircleCheck, Hourglass, LayoutDashboard, type LucideIcon, P
 
 import { cn } from '../../lib/utils';
 import { useBillingFormat } from '../billing-kit/context';
-import { type Tone } from '../billing-kit/format';
+import { formatNames, humanize, type Tone } from '../billing-kit/format';
 import { Bezel, IconTile, Panel, StatTile } from '../billing-kit/surface';
 import type { Money } from '../billing-kit/types';
 import { enterClass, focusRingClass, staggerStyle, ViewFrame } from '../workspace-kit/primitives';
@@ -31,7 +31,7 @@ function RevenueBars({ trend }: { trend: Money[] }) {
 					<div key={index} className="relative flex h-full flex-1 items-end">
 						<span className={cn('w-full rounded-[4px]', last ? 'bg-primary/80' : 'bg-foreground/[0.12]')} style={{ height: `${Math.max(4, (money.amountMinor / max) * 100)}%` }} />
 						{last ? (
-							<span className="absolute inset-x-0 text-center text-[11px] font-medium text-foreground tabular-nums" style={{ bottom: `calc(${(money.amountMinor / max) * 100}% + 4px)` }}>
+							<span className="absolute inset-x-0 text-center text-[0.6875rem] font-medium text-foreground tabular-nums" style={{ bottom: `calc(${(money.amountMinor / max) * 100}% + 4px)` }}>
 								{f.money(money, { compact: true })}
 							</span>
 						) : null}
@@ -55,8 +55,12 @@ export function ConsoleOverviewView() {
 	const previous = trend.at(-2)?.amountMinor;
 	const growth = previous ? (mrr - previous) / previous : null;
 	const mix = plans
-		.map((plan) => ({ plan, count: data.customers.filter((customer) => customer.planId === plan.id).length }))
+		.map((plan) => ({ id: plan.id, name: plan.displayName, count: data.customers.filter((customer) => customer.planId === plan.id).length }))
 		.filter((entry) => entry.count > 0);
+	// Customers on a plan the catalog no longer lists still count; leaving them out would make the bar add up to less than the customer total.
+	const known = new Set(plans.map((plan) => plan.id));
+	const unlisted = data.customers.filter((customer) => !known.has(customer.planId));
+	if (unlisted.length > 0) mix.push({ id: 'other-plans', name: unlisted.every((customer) => customer.planId === unlisted[0]!.planId) ? humanize(unlisted[0]!.planId) : 'Other plans', count: unlisted.length });
 
 	const items: AttentionItem[] = [];
 	const failing = health.checks.filter((check) => check.status === 'fail');
@@ -80,7 +84,7 @@ export function ConsoleOverviewView() {
 		});
 	const review = data.customers.filter((customer) => customer.lifecycle === 'review_required');
 	if (review.length > 0)
-		items.push({ id: 'review', icon: ShieldAlert, tone: 'warning', title: `${review.length} provider ${review.length === 1 ? 'change needs' : 'changes need'} review`, detail: review.map((customer) => customer.name).join(', '), view: 'customers' });
+		items.push({ id: 'review', icon: ShieldAlert, tone: 'warning', title: `${review.length} provider ${review.length === 1 ? 'change needs' : 'changes need'} review`, detail: formatNames(review.map((customer) => customer.name), f.locale), view: 'customers' });
 	const syncing = plans.flatMap((plan) => [plan, ...plan.prices]).filter((item) => item.syncState === 'pending' || item.syncState === 'failed');
 	if (syncing.length > 0)
 		items.push({ id: 'sync', icon: RefreshCcw, tone: 'info', title: `${syncing.length} catalog ${syncing.length === 1 ? 'item is' : 'items are'} still syncing`, detail: 'Checkout uses the provider copy, so wait for these before announcing a price.', view: 'catalog' });
@@ -88,23 +92,23 @@ export function ConsoleOverviewView() {
 		items.push({ id: 'usage-sync', icon: RefreshCcw, tone: 'danger', title: `${data.usageSync.failed} usage reports failed`, detail: 'They stay pending and are retried with the same idempotent id.', view: 'provider' });
 	const suspended = standing.filter((database) => database.suspendedReason);
 	if (suspended.length > 0)
-		items.push({ id: 'standing', icon: ShieldAlert, tone: 'danger', title: `${suspended.length} ${suspended.length === 1 ? 'database is' : 'databases are'} suspended`, detail: suspended.map((database) => database.name).join(', '), view: 'standing' });
+		items.push({ id: 'standing', icon: ShieldAlert, tone: 'danger', title: `${suspended.length} ${suspended.length === 1 ? 'database is' : 'databases are'} suspended`, detail: formatNames(suspended.map((database) => database.name), f.locale), view: 'standing' });
 
 	const attention = items.filter((item) => views.includes(item.view));
 
 	return (
 		<ViewFrame icon={LayoutDashboard} title="Overview">
-			<Bezel className={enterClass} innerClassName="grid grid-cols-2 gap-x-6 gap-y-5 p-4 @3xl/view:grid-cols-4">
+			<Bezel className={enterClass} innerClassName="grid grid-cols-[repeat(auto-fit,minmax(10rem,1fr))] gap-x-6 gap-y-5 p-4">
 				<StatTile icon={Wallet} label="Monthly recurring" value={f.money({ amountMinor: mrr, currency: settings.currency })} hint={growth !== null ? `${growth >= 0 ? '+' : ''}${f.percent(growth)} vs last month` : undefined} />
 				<StatTile icon={Users} label="Customers" value={f.quantity(data.customers.length)} hint={`${data.customers.filter((customer) => customer.mrr.amountMinor > 0).length} paying`} />
 				<StatTile icon={Hourglass} label="At risk" value={f.money({ amountMinor: sum(atRisk.map((customer) => customer.mrr)), currency: settings.currency })} hint={`${atRisk.length} overdue`} />
 				<StatTile icon={PackageCheck} label="Active plans" value={plans.filter((plan) => plan.active).length} hint={`${plans.reduce((total, plan) => total + plan.prices.filter((price) => price.active).length, 0)} live prices`} />
 			</Bezel>
 
-			<div className="grid gap-4 @4xl/view:grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)]">
+			<div className="grid grid-cols-1 gap-4 @4xl/view:grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)]">
 				<Panel className={enterClass} style={staggerStyle(1)} title="Needs attention" description={attention.length ? undefined : 'Nothing right now.'}>
 					{attention.length === 0 ? (
-						<p className="flex items-center gap-2 text-[13px] text-muted-foreground">
+						<p className="flex items-center gap-2 text-[0.8125rem] text-muted-foreground">
 							<CircleCheck aria-hidden="true" className="size-4 text-success" />
 							Payments, catalog, and standing are all in order.
 						</p>
@@ -115,14 +119,16 @@ export function ConsoleOverviewView() {
 									<button
 										type="button"
 										onClick={() => setView(item.view)}
-										className={cn('-mx-2 flex w-[calc(100%+1rem)] cursor-pointer items-start gap-3 rounded-lg px-2 py-2 text-left hover:bg-overlay-hover', focusRingClass)}
+										className={cn('-mx-2 flex w-[calc(100%+1rem)] cursor-pointer items-start gap-3 rounded-lg px-2 py-2 text-start hover:bg-overlay-hover', focusRingClass)}
 									>
 										<IconTile icon={item.icon} tone={item.tone} />
 										<span className="min-w-0 flex-1">
-											<span className="block text-[13px] font-medium text-foreground">{item.title}</span>
-											<span className="block text-pretty text-xs text-muted-foreground">{item.detail}</span>
+											<span className="block text-[0.8125rem] font-medium text-foreground [overflow-wrap:anywhere]">{item.title}</span>
+											<span title={item.detail} className="line-clamp-3 block text-pretty text-xs text-muted-foreground [overflow-wrap:anywhere]">
+												{item.detail}
+											</span>
 										</span>
-										<ArrowRight aria-hidden="true" className="mt-1.5 size-3.5 shrink-0 text-subtle-foreground" />
+										<ArrowRight aria-hidden="true" className="mt-1.5 size-3.5 shrink-0 text-subtle-foreground rtl:-scale-x-100" />
 									</button>
 								</li>
 							))}
@@ -138,15 +144,15 @@ export function ConsoleOverviewView() {
 					<Panel className={enterClass} style={staggerStyle(3)} title="Customers by plan">
 						<div aria-hidden="true" className="flex h-2 gap-px overflow-hidden rounded-full bg-foreground/[0.07]">
 							{mix.map((entry, index) => (
-								<span key={entry.plan.id} className={PLAN_COLORS[index % PLAN_COLORS.length]} style={{ width: `${(entry.count / data.customers.length) * 100}%` }} />
+								<span key={entry.id} className={PLAN_COLORS[index % PLAN_COLORS.length]} style={{ width: `${(entry.count / data.customers.length) * 100}%` }} />
 							))}
 						</div>
-						<ul className="mt-3 flex flex-col gap-1.5 text-[13px]">
+						<ul className="mt-3 flex flex-col gap-1.5 text-[0.8125rem]">
 							{mix.map((entry, index) => (
-								<li key={entry.plan.id} className="flex items-center gap-2">
-									<span aria-hidden="true" className={cn('size-2 rounded-[3px]', PLAN_COLORS[index % PLAN_COLORS.length])} />
-									<span className="flex-1 text-foreground">{entry.plan.displayName}</span>
-									<span className="text-muted-foreground tabular-nums">{entry.count}</span>
+								<li key={entry.id} className="flex items-center gap-2">
+									<span aria-hidden="true" className={cn('size-2 shrink-0 rounded-[3px]', PLAN_COLORS[index % PLAN_COLORS.length])} />
+									<span className="min-w-0 flex-1 text-foreground [overflow-wrap:anywhere]">{entry.name}</span>
+									<span className="text-muted-foreground tabular-nums">{f.quantity(entry.count)}</span>
 								</li>
 							))}
 						</ul>

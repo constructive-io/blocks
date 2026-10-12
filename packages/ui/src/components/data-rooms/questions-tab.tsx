@@ -52,15 +52,15 @@ function QuestionRow({ question, selected, onSelect }: { question: QuestionThrea
 				type="button"
 				aria-current={selected ? 'true' : undefined}
 				onClick={onSelect}
-				className={cn('flex w-full cursor-pointer items-start gap-3 rounded-lg px-2.5 py-2.5 text-left', focusRingClass, selected ? 'bg-muted' : 'hover:bg-overlay-hover')}
+				className={cn('flex w-full cursor-pointer items-start gap-3 rounded-lg px-2.5 py-2.5 text-start', focusRingClass, selected ? 'bg-muted' : 'hover:bg-overlay-hover')}
 			>
 				<PersonAvatar person={asker} />
 				<span className="flex min-w-0 flex-1 flex-col gap-0.5">
 					<span className="flex items-baseline gap-2">
-						<span className={cn('min-w-0 flex-1 truncate text-sm text-foreground', question.status === 'open' && 'font-medium')}>{question.title}</span>
+						<span title={question.title} className={cn('min-w-0 flex-1 truncate text-sm text-foreground', question.status === 'open' && 'font-medium')}>{question.title}</span>
 						<span className="shrink-0 text-xs text-subtle-foreground tabular-nums">{format.relative(question.askedAt)}</span>
 					</span>
-					<span className="truncate text-[13px] text-muted-foreground">
+					<span className="truncate text-[0.8125rem] text-muted-foreground">
 						{asker?.name ?? 'Someone'}
 						{asker?.company ? ` · ${asker.company}` : ''}
 					</span>
@@ -72,7 +72,7 @@ function QuestionRow({ question, selected, onSelect }: { question: QuestionThrea
 								Assigned to you
 							</span>
 						) : null}
-						{doc ? <span className="min-w-0 truncate text-xs text-subtle-foreground">{doc.name}</span> : null}
+						{doc ? <span title={doc.name} className="min-w-0 truncate text-xs text-subtle-foreground">{doc.name}</span> : null}
 					</span>
 				</span>
 			</button>
@@ -103,7 +103,7 @@ function DraftCard({
 				<SurfaceBody>
 					<header className="flex h-10 items-center gap-2 px-3">
 						<Sparkles aria-hidden="true" className="size-3.5 text-primary" />
-						<span className="min-w-0 flex-1 truncate text-[13px] font-medium text-foreground">Drafted answer</span>
+						<span className="min-w-0 flex-1 truncate text-[0.8125rem] font-medium text-foreground">Drafted answer</span>
 						<span className="text-xs text-muted-foreground">From documents the asker can open</span>
 					</header>
 					<p className="border-t border-dashed border-foreground/10 px-3 py-2.5 text-sm leading-5 text-pretty text-foreground">{draft.body}</p>
@@ -118,7 +118,7 @@ function DraftCard({
 											className={cn('inline-flex h-6 max-w-56 cursor-pointer items-center gap-1.5 rounded-md bg-card px-1.5 text-xs text-foreground shadow-card hover:bg-muted', focusRingClass)}
 										>
 											<DocumentGlyph kind={doc.kind} size="sm" className="size-4 rounded-[4px]" />
-											<span className="truncate">{doc.name}</span>
+											<span title={doc.name} className="truncate">{doc.name}</span>
 											{citation.page ? <span className="shrink-0 text-muted-foreground tabular-nums">p. {citation.page}</span> : null}
 										</button>
 									</li>
@@ -161,11 +161,11 @@ function QuestionDetail({ question, onBack }: { question: QuestionThread; onBack
 	return (
 		<div className="flex min-w-0 flex-1 flex-col">
 			<header className="flex min-h-14 shrink-0 items-center gap-2.5 border-b border-border px-3 py-2">
-				<TooltipIconButton label="Back to questions" side="bottom" className="-ml-1 text-foreground @3xl/view:hidden" onClick={onBack}>
-					<ArrowLeft aria-hidden="true" className="size-3.5" />
+				<TooltipIconButton label="Back to questions" side="bottom" className="-ms-1 text-foreground @3xl/view:hidden" onClick={onBack}>
+					<ArrowLeft aria-hidden="true" className="size-3.5 rtl:-scale-x-100" />
 				</TooltipIconButton>
 				<div className="flex min-w-0 flex-1 flex-col gap-1">
-					<h2 className="truncate text-sm font-medium text-foreground">{question.title}</h2>
+					<h2 title={question.title} className="truncate text-sm font-medium text-foreground">{question.title}</h2>
 					<div className="flex min-w-0 flex-wrap items-center gap-1.5">
 						<ToneBadge tone={STATUS[question.status].tone}>{STATUS[question.status].label}</ToneBadge>
 						{doc ? (
@@ -175,7 +175,7 @@ function QuestionDetail({ question, onBack }: { question: QuestionThread; onBack
 								className={cn('inline-flex h-5 min-w-0 cursor-pointer items-center gap-1 rounded-[5px] px-1 text-xs text-muted-foreground hover:bg-overlay-hover hover:text-foreground', focusRingClass)}
 							>
 								<DocumentGlyph kind={doc.kind} size="sm" className="size-4 rounded-[4px]" />
-								<span className="truncate">{doc.name}</span>
+								<span title={doc.name} className="truncate">{doc.name}</span>
 							</button>
 						) : null}
 					</div>
@@ -204,7 +204,7 @@ function QuestionDetail({ question, onBack }: { question: QuestionThread; onBack
 							<li key={message.id} className={cn('flex gap-3', enterClass)}>
 								<PersonAvatar person={author} />
 								<div className="min-w-0 flex-1">
-									<p className="flex flex-wrap items-baseline gap-x-1.5 text-[13px]">
+									<p className="flex flex-wrap items-baseline gap-x-1.5 text-[0.8125rem]">
 										<span className="font-medium text-foreground">{author?.name ?? 'Someone'}</span>
 										{author?.company ? <span className="text-muted-foreground">{author.company}</span> : null}
 										{asker ? null : <span className="text-muted-foreground">answered</span>}
@@ -226,7 +226,7 @@ function QuestionDetail({ question, onBack }: { question: QuestionThread; onBack
 			{manages && question.status !== 'closed' ? (
 				<div className="mx-auto flex w-full max-w-2xl shrink-0 flex-col gap-2 px-3 pb-4 @md/view:px-5">
 					{command.error ? (
-						<p role="alert" className="text-[13px] text-destructive">
+						<p role="alert" className="text-[0.8125rem] text-destructive">
 							{command.error}
 						</p>
 					) : null}
@@ -262,7 +262,7 @@ function QuestionDetail({ question, onBack }: { question: QuestionThread; onBack
 					</div>
 				</div>
 			) : command.error ? (
-				<p role="alert" className="mx-auto w-full max-w-2xl px-5 pb-4 text-[13px] text-destructive">
+				<p role="alert" className="mx-auto w-full max-w-2xl px-5 pb-4 text-[0.8125rem] text-destructive">
 					{command.error}
 				</p>
 			) : null}
@@ -306,7 +306,7 @@ function AskForm({ room, onDone, onCancel }: { room: Room; onDone: () => void; o
 				options={[{ value: '', label: 'No specific document' }, ...documents.map((doc) => ({ value: doc.id, label: doc.name }))]}
 			/>
 			{command.error ? (
-				<p role="alert" className="text-[13px] text-destructive">
+				<p role="alert" className="text-[0.8125rem] text-destructive">
 					{command.error}
 				</p>
 			) : null}
@@ -351,7 +351,7 @@ export function QuestionsTab({ room }: { room: Room }) {
 		<div className="flex min-h-0 flex-1">
 			<section
 				aria-label="Questions"
-				className={cn('min-h-0 w-full flex-col border-border @3xl/view:flex @3xl/view:w-[340px] @3xl/view:shrink-0 @3xl/view:border-r', showThread ? 'hidden' : 'flex')}
+				className={cn('min-h-0 w-full flex-col border-border @3xl/view:flex @3xl/view:w-[340px] @3xl/view:shrink-0 @3xl/view:border-e', showThread ? 'hidden' : 'flex')}
 			>
 				<div className="flex items-center gap-2 px-3 pt-3 pb-2">
 					<SearchField label="Search questions" value={query} placeholder="Search questions…" className="min-w-0 flex-1" onChange={(event) => setQuery(event.target.value)} />

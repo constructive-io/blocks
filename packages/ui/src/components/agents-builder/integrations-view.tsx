@@ -8,7 +8,7 @@ import { Button } from '../button';
 import { useAgentsBuilder } from './agents-builder-context';
 import { buildIntegrationSections, type IntegrationScope } from './integration-sections';
 import { IntegrationMark } from './integration-mark';
-import { focusRingClass, pressClass, scrollRowClass, SearchField, ViewHeader } from '../workspace-kit/primitives';
+import { focusRingClass, pressClass, scrollRowClass, SearchField, useScrollFade, ViewHeader } from '../workspace-kit/primitives';
 import type { Integration } from './types';
 import { startViewTransition, ViewAnimation } from '../workspace-kit/view-transition';
 
@@ -17,15 +17,19 @@ const NOISE_TILE =
 	"url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='g' x='0' y='0' width='100%25' height='100%25'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23g)'/%3E%3C/svg%3E\")";
 
 const BUBBLES = [
-	'left-[6%] top-[18%] size-10',
-	'left-[2%] -bottom-[18%] size-28',
-	'right-[8%] top-[12%] size-6',
-	'-right-[4%] -bottom-[30%] size-40',
-	'left-[34%] -top-[20%] size-16',
-	'right-[30%] bottom-[8%] size-4',
+	'start-[6%] top-[18%] size-10',
+	'start-[2%] -bottom-[18%] size-28',
+	'end-[8%] top-[12%] size-6',
+	'-end-[4%] -bottom-[30%] size-40',
+	'start-[34%] -top-[20%] size-16',
+	'end-[30%] bottom-[8%] size-4',
 ];
 /** Staggers the highlight chips once there is room; they stack centred on narrow containers. */
-const CHIP_OFFSETS = ['@2xl/view:-translate-x-16', '@2xl/view:translate-x-24', '@2xl/view:-translate-x-10'];
+const CHIP_OFFSETS = [
+	'@2xl/view:max-w-[calc(100%-8rem)] @2xl/view:-translate-x-16',
+	'@2xl/view:max-w-[calc(100%-12rem)] @2xl/view:translate-x-24',
+	'@2xl/view:max-w-[calc(100%-5rem)] @2xl/view:-translate-x-10',
+];
 
 const SCOPES: { value: IntegrationScope; label: string; icon: LucideIcon }[] = [
 	{ value: 'all', label: 'All', icon: LayoutGrid },
@@ -39,8 +43,12 @@ function IntegrationRow({ integration }: { integration: Integration }) {
 		<li className="flex min-h-14 items-center gap-3 py-2">
 			<IntegrationMark integration={integration} size="md" />
 			<div className="min-w-0 flex-1">
-				<p className="truncate text-sm font-medium text-foreground">{integration.name}</p>
-				<p className="truncate text-[13px] text-muted-foreground">{integration.description}</p>
+				<p title={integration.name} className="truncate text-sm font-medium text-foreground">
+					<bdi>{integration.name}</bdi>
+				</p>
+				<p title={integration.description} className="truncate text-[0.8125rem] text-muted-foreground">
+					{integration.description}
+				</p>
 			</div>
 			{isConnected(integration.id) ? (
 				<Button
@@ -88,12 +96,12 @@ function Hero() {
 				<span
 					key={highlight.text}
 					className={cn(
-						'flex h-9 max-w-full items-center gap-2 rounded-full bg-card/85 pr-3.5 pl-1.5 text-[13px] text-foreground shadow-card backdrop-blur-sm',
+						'flex h-9 max-w-full items-center gap-2 rounded-full bg-card/85 pe-3.5 ps-1.5 text-[0.8125rem] text-foreground shadow-card backdrop-blur-sm',
 						CHIP_OFFSETS[index % CHIP_OFFSETS.length],
 					)}
 				>
 					<IntegrationMark integration={integration(highlight.integrationId)} className="rounded-full" />
-					<span className="truncate">{highlight.text}</span>
+					<span title={highlight.text} className="truncate">{highlight.text}</span>
 				</span>
 			))}
 		</div>
@@ -110,6 +118,7 @@ function IntegrationsView() {
 	const [query, setQuery] = React.useState('');
 	const [activeCategory, setActiveCategory] = React.useState<string | null>(null);
 	const scrollRef = React.useRef<HTMLDivElement>(null);
+	const chipFade = useScrollFade<HTMLDivElement>();
 	const idPrefix = React.useId();
 	const sectionId = (id: string) => `${idPrefix}-${id}`;
 
@@ -135,8 +144,9 @@ function IntegrationsView() {
 		return () => observer.disconnect();
 	}, [sectionKey]);
 
-	const chipClass = cn('h-8 shrink-0 cursor-pointer rounded-full px-3 text-[13px] whitespace-nowrap pointer-coarse:h-9', pressClass, focusRingClass);
-	const railItem = cn('flex h-8 w-full cursor-pointer items-center gap-2 rounded-md px-2 text-left text-sm', focusRingClass);
+	const chipClass = cn('h-8 shrink-0 cursor-pointer rounded-full px-3 text-[0.8125rem] whitespace-nowrap pointer-coarse:h-9', pressClass, focusRingClass);
+	// min-h rather than h: a category name that wraps grows its own row instead of printing over the next one.
+	const railItem = cn('flex min-h-8 w-full cursor-pointer items-center gap-2 rounded-md px-2 py-1 text-start text-sm [overflow-wrap:anywhere]', focusRingClass);
 
 	return (
 		<div className="flex min-w-0 flex-1 flex-col">
@@ -155,7 +165,7 @@ function IntegrationsView() {
 			</ViewHeader>
 
 			<div className="flex min-h-0 flex-1">
-				<div role="listbox" aria-label="Filter sources" className="hidden w-52 shrink-0 flex-col gap-3 overflow-y-auto border-r border-border p-2.5 @3xl/view:flex">
+				<div role="listbox" aria-label="Filter sources" className="hidden w-52 shrink-0 flex-col gap-3 overflow-y-auto border-e border-border p-2.5 @3xl/view:flex">
 					<div role="group" className="flex flex-col gap-0.5">
 						{SCOPES.map(({ value, label, icon: Icon }) => (
 							<button
@@ -171,7 +181,7 @@ function IntegrationsView() {
 								}
 								className={cn(railItem, 'text-foreground', scope === value ? 'bg-muted' : 'hover:bg-overlay-hover')}
 							>
-								<Icon aria-hidden="true" className="size-3.5 text-muted-foreground" />
+								<Icon aria-hidden="true" className="size-3.5 shrink-0 text-muted-foreground" />
 								{label}
 							</button>
 						))}
@@ -203,7 +213,7 @@ function IntegrationsView() {
 
 				<div ref={scrollRef} className="min-w-0 flex-1 overflow-y-auto">
 					<div className="flex flex-col gap-6 p-3 pb-10 @md/view:gap-8">
-						<div role="group" aria-label="Filter sources" className={cn(scrollRowClass, '-mx-3 flex gap-1.5 px-3 @3xl/view:hidden')}>
+						<div role="group" aria-label="Filter sources" ref={chipFade.ref} style={chipFade.style} className={cn(scrollRowClass, '-mx-3 flex gap-1.5 px-3 @3xl/view:hidden')}>
 							{SCOPES.map(({ value, label }) => (
 								<button
 									key={value}
@@ -251,7 +261,7 @@ function IntegrationsView() {
 											aria-labelledby={`${sectionId(section.id)}-heading`}
 											className="scroll-mt-3 px-1 @md/view:px-6"
 										>
-											<h2 id={`${sectionId(section.id)}-heading`} className="mb-1 text-[13px] text-muted-foreground">
+											<h2 id={`${sectionId(section.id)}-heading`} className="mb-1 text-[0.8125rem] text-muted-foreground">
 												{section.label}
 											</h2>
 											<ul className="grid grid-cols-1 gap-x-10 @4xl/view:grid-cols-2">

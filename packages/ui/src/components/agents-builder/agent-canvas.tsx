@@ -109,12 +109,12 @@ function AgentCanvas({ state, panelOpen, onTogglePanel }: AgentCanvasProps) {
 						side="right"
 						variant="raised"
 						aria-pressed={!panelOpen}
-						className="absolute top-3 left-3 z-10 hidden @4xl/view:grid"
+						className="absolute top-3 start-3 z-10 hidden @4xl/view:grid"
 						onClick={onTogglePanel}
 					>
 						<PanelLeft
 							aria-hidden="true"
-							className={cn('size-3.5 transition-transform duration-(--duration-slow) ease-out', !panelOpen && '-scale-x-100')}
+							className={cn('size-3.5 transition-transform duration-(--duration-slow) ease-out', !panelOpen ? '-scale-x-100 rtl:scale-x-100' : 'rtl:-scale-x-100')}
 						/>
 					</TooltipIconButton>
 					<CanvasZoomControls viewport={viewport} />
@@ -130,7 +130,9 @@ function AgentCanvas({ state, panelOpen, onTogglePanel }: AgentCanvasProps) {
 							<RowIcon icon={Clock} />
 							<span>{agent.schedule.when}</span>
 							<Dot />
-							<span className="truncate text-muted-foreground">{agent.schedule.label}</span>
+							<span title={agent.schedule.label} className="truncate text-muted-foreground">
+								{agent.schedule.label}
+							</span>
 						</NodeRow>
 						<NodeRow>
 							<RowIcon icon={Repeat} />
@@ -144,12 +146,14 @@ function AgentCanvas({ state, panelOpen, onTogglePanel }: AgentCanvasProps) {
 					<NodeCard>
 						<NodeRow>
 							<IntegrationMark integration={integration(agent.trigger.integrationId)} size="xs" />
-							<span className="truncate">{agent.trigger.label}</span>
+							<span title={agent.trigger.label} className="truncate">
+								{agent.trigger.label}
+							</span>
 						</NodeRow>
 						<NodeRow className="gap-1">
 							{agent.trigger.conditions.map((condition, index) => (
 								<React.Fragment key={condition}>
-									{index > 0 ? <ToneBadge tone="neutral" className="h-[18px] px-1 text-[11px]">AND</ToneBadge> : null}
+									{index > 0 ? <ToneBadge tone="neutral" className="h-[18px] px-1 text-[0.6875rem]">AND</ToneBadge> : null}
 									<span className="font-mono text-xs">{condition}</span>
 								</React.Fragment>
 							))}
@@ -175,7 +179,9 @@ function AgentCanvas({ state, panelOpen, onTogglePanel }: AgentCanvasProps) {
 						{agent.memory.map((memory) => (
 							<NodeRow key={memory}>
 								<RowIcon icon={FileText} />
-								<span className="truncate">{memory}</span>
+								<span title={memory} className="truncate">
+									{memory}
+								</span>
 							</NodeRow>
 						))}
 					</NodeCard>
@@ -185,7 +191,7 @@ function AgentCanvas({ state, panelOpen, onTogglePanel }: AgentCanvasProps) {
 			<div className="absolute top-0 flex flex-col gap-4" style={{ left: COLUMNS[1] }}>
 				<CanvasNode {...node('agent', 'Agent', Bot)}>
 					<NodeCard className="gap-0.5 px-2.5 py-2">
-						<p className="text-[13px] font-medium text-foreground">{agent.title}</p>
+						<p className="text-[0.8125rem] font-medium text-foreground">{agent.title}</p>
 						<p className="text-xs leading-[18px] text-muted-foreground">{agent.tagline}</p>
 					</NodeCard>
 					<Instructions open={nodes.isOpen('instructions')} onToggle={() => nodes.toggle('instructions')} />
@@ -202,7 +208,7 @@ function AgentCanvas({ state, panelOpen, onTogglePanel }: AgentCanvasProps) {
 								aria-expanded={moreTools}
 								onClick={() => setMoreTools((value) => !value)}
 								className={cn(
-									'm-1 flex h-7 w-[calc(100%-8px)] cursor-pointer items-center gap-2 rounded-md px-1.5 text-left text-[13px] text-muted-foreground hover:bg-overlay-hover hover:text-foreground',
+									'm-1 flex h-7 w-[calc(100%-8px)] cursor-pointer items-center gap-2 rounded-md px-1.5 text-start text-[0.8125rem] text-muted-foreground hover:bg-overlay-hover hover:text-foreground',
 									focusRingClass,
 								)}
 							>
@@ -219,7 +225,9 @@ function AgentCanvas({ state, panelOpen, onTogglePanel }: AgentCanvasProps) {
 						{tools.map((tool) => (
 							<NodeRow key={tool.id}>
 								<IntegrationMark integration={integration(tool.integrationId)} size="xs" />
-								<span className="truncate">{tool.label}</span>
+								<span title={tool.label} className="truncate">
+									{tool.label}
+								</span>
 							</NodeRow>
 						))}
 					</NodeCard>
@@ -229,7 +237,9 @@ function AgentCanvas({ state, panelOpen, onTogglePanel }: AgentCanvasProps) {
 						{agent.subagents.map((name) => (
 							<NodeRow key={name}>
 								<RowIcon icon={Bot} />
-								<span className="truncate font-mono text-xs">{name}</span>
+								<span title={name} className="truncate font-mono text-xs">
+									{name}
+								</span>
 							</NodeRow>
 						))}
 					</NodeCard>
@@ -239,7 +249,9 @@ function AgentCanvas({ state, panelOpen, onTogglePanel }: AgentCanvasProps) {
 						{agent.skills.map((name) => (
 							<NodeRow key={name}>
 								<RowIcon icon={Sparkles} />
-								<span className="truncate">{name}</span>
+								<span title={name} className="truncate">
+									{name}
+								</span>
 							</NodeRow>
 						))}
 					</NodeCard>

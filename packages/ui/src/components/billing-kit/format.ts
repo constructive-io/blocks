@@ -59,6 +59,16 @@ export function formatList(items: string[], locale: string) {
 	return cached(`l|${locale}`, () => new Intl.ListFormat(locale, { type: 'conjunction' })).format(items);
 }
 
+/**
+ * "a, b, c, and 12 more": at most `max` names, then a count of the rest, so a
+ * notice about fifteen databases is a sentence to read rather than a wall.
+ */
+export function formatNames(names: readonly string[], locale: string, max = 3) {
+	const shown = names.slice(0, max);
+	const rest = names.length - shown.length;
+	return formatList(rest > 0 ? [...shown, `${numberFormat(locale, {}).format(rest)} more`] : shown, locale);
+}
+
 /* ------------------------------------------------------------------ *
  * Numbers and money
  * ------------------------------------------------------------------ */
@@ -101,6 +111,14 @@ export function formatQuantity(value: number, options: Pick<BillingFormatOptions
 	}).format(value);
 }
 
+/**
+ * A plan limit as a contract states it: exact with digit grouping below a
+ * million (`12,345 GB`, never `12.3K GB`), compact only from there (`1.2M`).
+ */
+export function formatLimit(value: number, options: Pick<BillingFormatOptions, 'locale'>) {
+	return formatQuantity(value, { locale: options.locale, compact: Math.abs(value) >= 1_000_000 });
+}
+
 /** Share of a limit used, or `null` when the limit is unlimited. Zero limits count as fully used once anything is used. */
 export function usageRatio(used: number, limit: number): number | null {
 	if (isUnlimited(limit)) return null;
@@ -121,25 +139,46 @@ export function usageLevel(used: number, limit: number, soft = 0.8): UsageLevel 
 
 export function formatPercent(ratio: number, locale: string) {
 	if (!Number.isFinite(ratio)) return '100%+';
-	return numberFormat(locale, { style: 'percent', maximumFractionDigits: ratio < 0.1 && ratio > 0 ? 1 : 0 }).format(ratio);
+	const digits = ratio < 0.1 && ratio > 0 ? 1 : 0;
+	// A pool at 99.95% is not full: keep a ratio below 1 from rounding up to "100%".
+	const shown = ratio < 1 && Math.round(ratio * 10 ** (2 + digits)) / 10 ** (2 + digits) >= 1 ? 0.99 : ratio;
+	return numberFormat(locale, { style: 'percent', maximumFractionDigits: digits }).format(shown);
 }
 
 /* ------------------------------------------------------------------ *
  * Dates
  * ------------------------------------------------------------------ */
 
-export function formatDate(iso: string, options: BillingFormatOptions & { style?: 'short' | 'medium' | 'long'; withTime?: boolean }) {
+/** A zero timestamp (`1970-01-01T00:00:00Z`) is how an unset value arrives, not a date anyone means. */
+export function isUnsetDate(iso: string) {
+	return new Date(iso).getTime() === 0;
+}
+
+/**
+ * `short` leaves the year out for dates in the current year (`Jan 1`) and adds
+ * it for any other year (`Jan 1, 2027`), so a yearly period never reads
+ * `Jan 1 - Jan 1`. Pass `now` to say which year is current. An unset (epoch
+ * zero) timestamp renders as an em dash.
+ */
+export function formatDate(iso: string, options: BillingFormatOptions & { style?: 'short' | 'medium' | 'long'; withTime?: boolean; now?: string }) {
 	const date = new Date(iso);
 	if (Number.isNaN(date.getTime())) return iso;
+	if (date.getTime() === 0) return '—';
 	const style = options.style ?? 'medium';
+	const otherYear = style === 'short' && options.now ? yearOf(iso, options.timeZone) !== yearOf(options.now, options.timeZone) : false;
 	return dateFormat(options.locale, {
 		timeZone: options.timeZone,
 		month: style === 'long' ? 'long' : 'short',
 		day: 'numeric',
-		year: style === 'short' ? undefined : 'numeric',
+		year: style === 'short' && !otherYear ? undefined : 'numeric',
 		hour: options.withTime ? 'numeric' : undefined,
 		minute: options.withTime ? '2-digit' : undefined,
 	}).format(date);
+}
+
+function yearOf(iso: string, timeZone: string) {
+	const date = new Date(iso);
+	return Number.isNaN(date.getTime()) ? '' : dateFormat('en-US', { timeZone, year: 'numeric' }).format(date);
 }
 
 /** Clock time only, e.g. "2:12 PM". */
@@ -167,9 +206,20 @@ export function daysUntil(iso: string, now: string) {
 	return Math.round((new Date(iso).getTime() - new Date(now).getTime()) / DAY);
 }
 
-/** "in 3 days", "tomorrow", "2 days ago". */
-export function formatRelativeDays(iso: string, now: string, locale: string) {
-	return cached(`r|${locale}`, () => new Intl.RelativeTimeFormat(locale, { numeric: 'auto' })).format(daysUntil(iso, now), 'day');
+/**
+ * Calendar days from `now` to `iso` in a time zone: 9 hours from now across
+ * midnight is tomorrow, and 9 hours from now on the same date is today.
+ */
+export function calendarDaysUntil(iso: string, now: string, timeZone = 'UTC') {
+	if (Number.isNaN(new Date(iso).getTime()) || Number.isNaN(new Date(now).getTime())) return NaN;
+	return Math.round((Date.parse(`${dayKey(iso, timeZone)}T00:00:00Z`) - Date.parse(`${dayKey(now, timeZone)}T00:00:00Z`)) / DAY);
+}
+
+/** "in 3 days", "tomorrow", "2 days ago", counted in calendar days of the given time zone. */
+export function formatRelativeDays(iso: string, now: string, locale: string, timeZone = 'UTC') {
+	const days = calendarDaysUntil(iso, now, timeZone);
+	if (!Number.isFinite(days)) return iso;
+	return cached(`r|${locale}`, () => new Intl.RelativeTimeFormat(locale, { numeric: 'auto' })).format(days, 'day');
 }
 
 /** Share of the period elapsed at `now`, clamped to 0..1. */
@@ -281,6 +331,24 @@ export const READINESS: Record<ReadinessStatus, Presentation> = {
 	pending: { label: 'Checking', tone: 'info' },
 	skipped: { label: 'Skipped', tone: 'neutral' },
 };
+
+/**
+ * Singular of a plural English unit label (`queries` becomes "query"). Anything
+ * that is not a plain lowercase word, such as `GB` or `Mbps`, is returned as is;
+ * hosts with irregular units set `unitSingular` instead.
+ */
+export function singularize(unit: string) {
+	if (!/^[a-z][a-z -]*$/.test(unit)) return unit;
+	if (/[^aeiou]ies$/.test(unit)) return `${unit.slice(0, -3)}y`;
+	if (/(ss|us|is)$/.test(unit)) return unit;
+	if (/(sh|ch|x|z|ss)es$/.test(unit)) return unit.slice(0, -2);
+	return unit.replace(/s$/, '');
+}
+
+/** The unit label that goes with a count: `1 seat`, `2 seats`. */
+export function unitFor(count: number, unit: string, unitSingular: string | undefined, locale: string) {
+	return new Intl.PluralRules(locale).select(count) === 'one' ? (unitSingular ?? singularize(unit)) : unit;
+}
 
 /** Humanizes a slug for fallbacks: `object_storage_gb` → `Object storage gb`. */
 export function humanize(value: string) {

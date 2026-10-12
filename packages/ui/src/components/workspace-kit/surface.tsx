@@ -4,7 +4,7 @@ import type { LucideIcon } from 'lucide-react';
 import * as React from 'react';
 
 import { cn } from '../../lib/utils';
-import { focusRingClass, SurfaceBody, surfaceInsetClass, TONE_COLOR, ToneBadge, type Tone } from './primitives';
+import { focusRingClass, SurfaceBody, surfaceInsetClass, TONE_COLOR, ToneBadge, type Tone, useScrollFade } from './primitives';
 
 /** A status as the UI shows it: a short label and the tone that colours it. */
 export type Presentation = { label: string; tone: Tone; description?: string };
@@ -13,29 +13,34 @@ export type Presentation = { label: string; tone: Tone; description?: string };
 export const dashedRule = 'border-dashed border-foreground/10';
 
 /** Header row and body row classes shared by every workspace table. */
-export const tableHeadClass = 'bg-muted/60 text-left text-xs font-normal text-muted-foreground [&_th]:px-4 [&_th]:py-2 [&_th]:font-normal';
+// `th` centres itself unless its row sets an explicit alignment, and `start` is not explicit, so the head names both directions.
+export const tableHeadClass = 'bg-muted/60 text-left rtl:text-right text-xs font-normal text-muted-foreground [&_th]:px-4 [&_th]:py-2 [&_th]:font-normal';
 export const tableRowClass = 'border-t border-border align-middle [&_td]:px-4 [&_td]:py-2.5';
 /**
  * Heading row that opens a group of body rows, tinted like the header so the
  * break reads without a heavier line. Pair it with `<th scope="rowgroup" colSpan>`.
  */
 export const tableGroupRowClass =
-	'border-t border-border bg-muted/60 [&_th]:px-4 [&_th]:py-1.5 [&_th]:text-left [&_th]:text-xs [&_th]:font-medium [&_th]:text-muted-foreground';
+	'border-t border-border bg-muted/60 [&_th]:px-4 [&_th]:py-1.5 [&_th]:text-start [&_th]:text-xs [&_th]:font-medium [&_th]:text-muted-foreground';
 
 /** A native select styled like the kit's inputs. */
-export const nativeSelectClass = cn('h-8 rounded-md border border-border bg-card px-2 text-[13px] text-foreground shadow-2xs', focusRingClass);
+export const nativeSelectClass = cn('h-8 rounded-md border border-border bg-card px-2 text-[0.8125rem] text-foreground shadow-2xs', focusRingClass);
 
 /**
  * Card around a table that scrolls sideways below `minWidth`, keeping the card
- * edge visible over full-bleed header rows.
+ * edge visible over full-bleed header rows. An edge fades while there is more
+ * to scroll to, so a table cut off on a phone reads as scrollable.
  */
 export function TableSurface({ children, className, minWidth = '40rem' }: { children: React.ReactNode; className?: string; minWidth?: string }) {
+	const { ref, style } = useScrollFade<HTMLDivElement>();
 	return (
 		<div className={cn(surfaceInsetClass, 'rounded-xl bg-card shadow-card', className)}>
-			<SurfaceBody className="overflow-x-auto">
-				<table className="w-full border-collapse text-[13px]" style={{ minWidth }}>
-					{children}
-				</table>
+			<SurfaceBody>
+				<div ref={ref} className="overflow-x-auto" style={style}>
+					<table className="w-full border-collapse text-[0.8125rem]" style={{ minWidth }}>
+						{children}
+					</table>
+				</div>
 			</SurfaceBody>
 		</div>
 	);
@@ -74,13 +79,13 @@ export function Panel({ title, description, actions, footer, bodyClassName, clas
 			<SurfaceBody className="flex flex-col">
 				{title || actions ? (
 					<header className="flex flex-wrap items-start gap-x-3 gap-y-2 px-4 pt-3.5 pb-3">
-						<div className="min-w-0 flex-1">
+						<div className="min-w-0 flex-1 basis-48">
 							{title ? (
 								<h2 id={headingId} className="text-sm font-medium text-foreground">
 									{title}
 								</h2>
 							) : null}
-							{description ? <p className="mt-0.5 text-pretty text-[13px] text-muted-foreground">{description}</p> : null}
+							{description ? <p className="mt-0.5 text-pretty text-[0.8125rem] text-muted-foreground">{description}</p> : null}
 						</div>
 						{actions ? <div className="flex shrink-0 items-center gap-2">{actions}</div> : null}
 					</header>
@@ -122,7 +127,7 @@ export function StatTile({ label, value, hint, icon: Icon, className }: StatTile
 				{Icon ? <Icon aria-hidden="true" className="size-3.5 shrink-0" /> : null}
 				{label}
 			</span>
-			<span className="truncate text-xl font-semibold tracking-tight text-foreground tabular-nums">{value}</span>
+			<span className="text-xl font-semibold tracking-tight text-foreground tabular-nums [overflow-wrap:anywhere]">{value}</span>
 			{hint ? <span className="text-xs text-muted-foreground tabular-nums">{hint}</span> : null}
 		</div>
 	);
@@ -136,11 +141,11 @@ type KeyValueListProps = {
 /** Label and value rows separated by dashed rules. */
 export function KeyValueList({ items, className }: KeyValueListProps) {
 	return (
-		<dl className={cn('flex flex-col text-[13px]', className)}>
+		<dl className={cn('flex flex-col text-[0.8125rem]', className)}>
 			{items.map((item, index) => (
 				<div key={item.key ?? index} className={cn('flex items-baseline justify-between gap-4 py-2', index > 0 && cn('border-t', dashedRule))}>
 					<dt className="text-muted-foreground">{item.label}</dt>
-					<dd className="min-w-0 text-right text-foreground tabular-nums">{item.value}</dd>
+					<dd className="min-w-0 text-end text-foreground tabular-nums [overflow-wrap:anywhere]">{item.value}</dd>
 				</div>
 			))}
 		</dl>
@@ -164,7 +169,7 @@ export function EmptyState({ icon: Icon, title, description, action, className }
 			</span>
 			<div className="max-w-sm">
 				<p className="text-sm font-medium text-foreground">{title}</p>
-				{description ? <p className="mt-1 text-pretty text-[13px] text-muted-foreground">{description}</p> : null}
+				{description ? <p className="mt-1 text-pretty text-[0.8125rem] text-muted-foreground">{description}</p> : null}
 			</div>
 			{action}
 		</div>
@@ -176,10 +181,10 @@ export function SectionHeading({ title, description, actions, id }: { title: Rea
 	return (
 		<div className="flex flex-wrap items-end justify-between gap-x-4 gap-y-2">
 			<div className="min-w-0">
-				<h2 id={id} className="text-[15px] font-medium tracking-tight text-foreground">
+				<h2 id={id} className="text-[0.9375rem] font-medium tracking-tight text-foreground">
 					{title}
 				</h2>
-				{description ? <p className="mt-0.5 text-pretty text-[13px] text-muted-foreground">{description}</p> : null}
+				{description ? <p className="mt-0.5 text-pretty text-[0.8125rem] text-muted-foreground">{description}</p> : null}
 			</div>
 			{actions ? <div className="flex items-center gap-2">{actions}</div> : null}
 		</div>

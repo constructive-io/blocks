@@ -19,7 +19,7 @@ import * as React from 'react';
 
 import { cn } from '../../lib/utils';
 import { Button } from '../button';
-import { enterClass, focusRingClass, pressClass, staggerStyle, ToneBadge, ViewFrame, type Tone } from '../workspace-kit/primitives';
+import { enterClass, focusRingClass, formatCount, plural, pressClass, staggerStyle, ToneBadge, ViewFrame, type Tone } from '../workspace-kit/primitives';
 import { Bezel, EmptyState, IconTile, Panel, SectionHeading } from '../workspace-kit/surface';
 import { canEnterRoom, folderName, needsAgreement, roomPeople, unitChain, visibleDocuments } from './access';
 import { useDataRooms } from './data-rooms-context';
@@ -197,15 +197,18 @@ function AttentionPanel({ rows }: { rows: AttentionRow[] }) {
 						<button
 							type="button"
 							onClick={() => openRoom(row.roomId, row.tab)}
-							className={cn('flex w-full cursor-pointer items-center gap-3 rounded-lg px-2 py-2 text-left hover:bg-overlay-hover', focusRingClass)}
+							className={cn('flex w-full cursor-pointer items-center gap-3 rounded-lg px-2 py-2 text-start hover:bg-overlay-hover', focusRingClass)}
 						>
 							<IconTile icon={row.icon} tone={row.tone} />
+							{/* The end of the title is where the meaning is ("from Dana Chen", "ends in 3 days"), so it wraps rather than truncates. */}
 							<span className="min-w-0 flex-1">
-								<span className="block truncate text-[13px] text-foreground">{row.title}</span>
-								<span className="block truncate text-xs text-muted-foreground tabular-nums">{row.detail}</span>
+								<span className="line-clamp-2 block text-[0.8125rem] text-foreground [overflow-wrap:anywhere]">{row.title}</span>
+								<span title={row.detail} className="block truncate text-xs text-muted-foreground tabular-nums">
+									{row.detail}
+								</span>
 							</span>
 							<span className="hidden shrink-0 text-xs text-muted-foreground @md/view:inline">{row.action}</span>
-							<ChevronRight aria-hidden="true" className="size-3.5 shrink-0 text-subtle-foreground" />
+							<ChevronRight aria-hidden="true" className="size-3.5 shrink-0 text-subtle-foreground rtl:-scale-x-100" />
 						</button>
 					</li>
 				))}
@@ -228,7 +231,7 @@ const AVATAR_LIMIT = 4;
 function Stat({ value, one, many }: { value: number; one: string; many: string }) {
 	return (
 		<span className="whitespace-nowrap">
-			<span className="font-medium text-foreground tabular-nums">{value}</span> {value === 1 ? one : many}
+			<span className="font-medium text-foreground tabular-nums">{formatCount(value)}</span> {plural(value, { one, other: many })}
 		</span>
 	);
 }
@@ -254,13 +257,19 @@ function RoomCard({ room, index }: { room: Room; index: number }) {
 			<button
 				type="button"
 				onClick={() => openRoom(room.id)}
-				className={cn('group block h-full w-full cursor-pointer rounded-[14px] text-left', pressClass, focusRingClass)}
+				className={cn('group block h-full w-full cursor-pointer rounded-[14px] text-start', pressClass, focusRingClass)}
 			>
 				<Bezel className="h-full group-hover:border-foreground/[0.12]" innerClassName="flex h-full flex-col gap-3 p-3.5">
 					<span className="flex items-start gap-2">
 						<span className="min-w-0 flex-1">
-							<span className="block truncate text-sm font-medium text-foreground">{room.name}</span>
-							{room.description ? <span className="mt-0.5 line-clamp-2 block text-pretty text-[13px] text-muted-foreground">{room.description}</span> : null}
+							<span title={room.name} className="line-clamp-2 block text-sm font-medium text-foreground [overflow-wrap:anywhere]">
+								<bdi>{room.name}</bdi>
+							</span>
+							{room.description ? (
+								<span title={room.description} className="mt-0.5 line-clamp-2 block text-pretty text-[0.8125rem] text-muted-foreground [overflow-wrap:anywhere]">
+									{room.description}
+								</span>
+							) : null}
 						</span>
 						{room.status === 'closing' ? (
 							<ToneBadge tone="warning">Closing</ToneBadge>
@@ -272,7 +281,7 @@ function RoomCard({ room, index }: { room: Room; index: number }) {
 					{policies.length ? (
 						<span className="flex flex-wrap gap-1">
 							{policies.map((chip) => (
-								<span key={chip.key} className="inline-flex h-5 items-center gap-1 rounded-[5px] bg-muted/70 px-1.5 text-[11px] text-muted-foreground">
+								<span key={chip.key} className="inline-flex h-5 items-center gap-1 rounded-[5px] bg-muted/70 px-1.5 text-[0.6875rem] text-muted-foreground">
 									<chip.icon aria-hidden="true" className="size-3" />
 									{chip.label}
 								</span>
@@ -280,7 +289,7 @@ function RoomCard({ room, index }: { room: Room; index: number }) {
 						</span>
 					) : null}
 
-					<span className="mt-auto flex flex-wrap gap-x-4 gap-y-1 text-[13px] text-muted-foreground">
+					<span className="mt-auto flex flex-wrap gap-x-4 gap-y-1 text-[0.8125rem] text-muted-foreground">
 						<Stat value={documents} one="document" many="documents" />
 						{manages ? <Stat value={people.length} one="person" many="people" /> : null}
 						<Stat value={questions} one="open question" many="open questions" />
@@ -288,7 +297,9 @@ function RoomCard({ room, index }: { room: Room; index: number }) {
 
 					<span className="flex items-center gap-2 border-t border-dashed border-foreground/10 pt-2.5 text-xs text-muted-foreground">
 						<ToneBadge tone={level.tone}>{mine.level === 'none' ? 'Folder access' : level.label}</ToneBadge>
-						<span className="min-w-0 flex-1 truncate">{last ? `Last activity ${format.relative(last)}` : 'No activity yet'}</span>
+						<span className="min-w-0 flex-1 truncate" title={last ? `Last activity ${format.relative(last)}` : undefined}>
+							{last ? `Last activity ${format.relative(last)}` : 'No activity yet'}
+						</span>
 						{people.length ? (
 							<span className="flex shrink-0 items-center" aria-label={`${people.length} people with access`}>
 								<span className="flex -space-x-1">
@@ -297,8 +308,8 @@ function RoomCard({ room, index }: { room: Room; index: number }) {
 									))}
 								</span>
 								{people.length > AVATAR_LIMIT ? (
-									<span aria-hidden="true" className="ml-1 text-[11px] text-muted-foreground tabular-nums">
-										+{people.length - AVATAR_LIMIT}
+									<span aria-hidden="true" className="ms-1 text-[0.6875rem] text-muted-foreground tabular-nums">
+										+{formatCount(people.length - AVATAR_LIMIT)}
 									</span>
 								) : null}
 							</span>
@@ -352,9 +363,9 @@ export function HomeView() {
 			}
 		>
 			<div className={enterClass}>
-				<p className="text-xl font-semibold tracking-tight text-foreground">Welcome back, {greeting}</p>
-				<p className="mt-1 text-[13px] text-muted-foreground tabular-nums">
-					{roomCount} {roomCount === 1 ? 'room' : 'rooms'}
+				<p className="text-xl font-semibold tracking-tight text-foreground [overflow-wrap:anywhere]">Welcome back, {greeting}</p>
+				<p className="mt-1 text-[0.8125rem] text-muted-foreground tabular-nums">
+					{formatCount(roomCount)} {plural(roomCount, { one: 'room', other: 'rooms' })}
 					{needing ? ` · ${needing} ${needing === 1 ? 'needs' : 'need'} your attention` : ' · nothing needs your attention'}
 				</p>
 			</div>
@@ -387,7 +398,7 @@ export function HomeView() {
 								title={owner?.name ?? 'Rooms'}
 								description={owner ? (depth === 0 ? owner.kind : `${owner.kind} · ${unitChain(data, group.unitId).slice(1).reverse().map((entry) => entry.name).join(' / ')}`) : undefined}
 							/>
-							<ul className="grid gap-3 @2xl/view:grid-cols-2 @5xl/view:grid-cols-3">
+							<ul className="grid grid-cols-1 gap-3 @2xl/view:grid-cols-2 @5xl/view:grid-cols-3">
 								{group.rooms.map((room) => (
 									<RoomCard key={room.id} room={room} index={index++} />
 								))}

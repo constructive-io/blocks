@@ -7,7 +7,7 @@ import { cn } from '../../lib/utils';
 import { Button } from '../button';
 import { Switch } from '../switch';
 import { Tooltip, TooltipContent, TooltipTrigger } from '../tooltip';
-import { focusRingClass, ToneBadge } from '../workspace-kit/primitives';
+import { focusRingClass, plural, ToneBadge } from '../workspace-kit/primitives';
 import { useBillingFormat } from './context';
 import { humanize, INTERVAL_LABEL, isUnlimited } from './format';
 import type { EntitlementRow } from './plan';
@@ -55,8 +55,19 @@ function MatrixCell({ plan, row, numeric, onChange, dirty }: { plan: Plan; row: 
 		);
 	}
 
-	const shown = value === undefined ? '—' : isUnlimited(value) ? '∞' : f.quantity(value, true);
-	if (!onChange) return <span className={cn('tabular-nums', value === undefined ? 'text-subtle-foreground' : 'text-foreground')}>{shown}</span>;
+	const shown = value === undefined ? '—' : isUnlimited(value) ? '∞' : f.limit(value);
+	if (!onChange) {
+		return (
+			<span
+				title={value !== undefined && !isUnlimited(value) && shown !== f.quantity(value) ? f.quantity(value) : undefined}
+				className={cn('tabular-nums', value === undefined ? 'text-subtle-foreground' : 'text-foreground')}
+			>
+				{shown}
+			</span>
+		);
+	}
+	const formatted = value === undefined ? '' : isUnlimited(value) ? '∞' : f.quantity(value);
+	const text = draft ?? formatted;
 
 	const commit = () => {
 		if (draft === null) return;
@@ -71,7 +82,7 @@ function MatrixCell({ plan, row, numeric, onChange, dirty }: { plan: Plan; row: 
 			<input
 				aria-label={label}
 				inputMode="numeric"
-				value={draft ?? (value === undefined ? '' : isUnlimited(value) ? '∞' : f.quantity(value))}
+				value={text}
 				placeholder="—"
 				onFocus={(event) => {
 					setDraft(value === undefined ? '' : isUnlimited(value) ? '∞' : String(value));
@@ -87,8 +98,9 @@ function MatrixCell({ plan, row, numeric, onChange, dirty }: { plan: Plan; row: 
 						event.currentTarget.blur();
 					}
 				}}
+				style={{ width: `${Math.max(formatted.length, text.length, 1) + 3}ch` }}
 				className={cn(
-					'h-7 w-24 rounded-md border bg-transparent px-2 text-right text-[13px] tabular-nums outline-none',
+					'h-7 min-w-24 rounded-md border bg-transparent px-2 text-end text-[0.8125rem] tabular-nums outline-none',
 					'border-transparent hover:border-border focus:border-border focus:bg-card focus:ring-[3px] focus:ring-ring/50',
 					dirty && 'border-primary/30 bg-primary/[0.06]',
 				)}
@@ -127,11 +139,11 @@ export function EntitlementMatrix({ plans, groups, onChange, dirty, className }:
 		<TableSurface className={className} minWidth={`${14 + plans.length * 9}rem`}>
 			<thead className={tableHeadClass}>
 				<tr>
-					<th scope="col" className="sticky left-0 z-10 w-56 bg-[color-mix(in_oklab,var(--muted)_60%,var(--card))]">
+					<th scope="col" className="sticky start-0 z-10 w-56 bg-[color-mix(in_oklab,var(--muted)_60%,var(--card))]">
 						Entitlement
 					</th>
 					{plans.map((plan) => (
-						<th key={plan.id} scope="col" className="text-right">
+						<th key={plan.id} scope="col" className="text-end">
 							<span className="text-foreground">{plan.displayName}</span>
 						</th>
 					))}
@@ -146,12 +158,12 @@ export function EntitlementMatrix({ plans, groups, onChange, dirty, className }:
 					</tr>
 					{group.rows.map((row) => (
 						<tr key={`${row.kind}:${row.key}`} className={tableRowClass}>
-							<th scope="row" className="sticky left-0 z-10 bg-card px-4 py-2 text-left font-normal">
-								<span className="block text-foreground">{row.label}</span>
-								<span className="block font-mono text-[11px] text-subtle-foreground">{row.key}</span>
+							<th scope="row" className="sticky start-0 z-10 bg-card px-4 py-2 text-start font-normal">
+								<span className="block text-foreground [overflow-wrap:anywhere]">{row.label}</span>
+								<span className="block font-mono text-[0.6875rem] text-subtle-foreground [overflow-wrap:anywhere]">{row.key}</span>
 							</th>
 							{plans.map((plan) => (
-								<td key={plan.id} className="text-right">
+								<td key={plan.id} className="text-end">
 									<MatrixCell
 										plan={plan}
 										row={row}
@@ -199,11 +211,11 @@ export function PlanPriceTable({ plans, provider, mode = 'live', subscribers, on
 				<tr>
 					<th scope="col">Plan / price</th>
 					<th scope="col">Billing</th>
-					<th scope="col" className="text-right">
+					<th scope="col" className="text-end">
 						Amount
 					</th>
 					<th scope="col">Provider</th>
-					<th scope="col" className="text-right">
+					<th scope="col" className="text-end">
 						Active
 					</th>
 				</tr>
@@ -213,15 +225,17 @@ export function PlanPriceTable({ plans, provider, mode = 'live', subscribers, on
 					<tr className="border-t border-border bg-muted/30 [&_td]:px-4 [&_td]:py-2">
 						<td colSpan={2}>
 							<span className="flex flex-wrap items-center gap-2">
-								<span className="font-medium text-foreground">{plan.displayName}</span>
-								<span className="font-mono text-[11px] text-subtle-foreground">{plan.name}</span>
+								<span className="min-w-0 font-medium text-foreground [overflow-wrap:anywhere]">{plan.displayName}</span>
+								<span className="min-w-0 font-mono text-[0.6875rem] text-subtle-foreground [overflow-wrap:anywhere]">{plan.name}</span>
 								{plan.fallback ? <ToneBadge tone="neutral">Free fallback</ToneBadge> : null}
 								{subscribers?.[plan.id] !== undefined ? (
-									<span className="text-xs text-muted-foreground tabular-nums">{f.quantity(subscribers[plan.id]!)} subscribers</span>
+									<span className="text-xs text-muted-foreground tabular-nums">
+										{f.quantity(subscribers[plan.id]!)} {plural(subscribers[plan.id]!, { one: 'subscriber', other: 'subscribers' }, f.locale)}
+									</span>
 								) : null}
 							</span>
 						</td>
-						<td className="text-right">
+						<td className="text-end">
 							{onAddPrice ? (
 								<Button size="xs" variant="ghost" onClick={() => onAddPrice(plan)}>
 									<Plus aria-hidden="true" />
@@ -235,7 +249,7 @@ export function PlanPriceTable({ plans, provider, mode = 'live', subscribers, on
 								{plan.externalId ? <ExternalRef provider={provider} kind="product" id={plan.externalId} mode={mode} /> : null}
 							</span>
 						</td>
-						<td className="text-right">
+						<td className="text-end">
 							<Switch
 								className={tableSwitchClass}
 								aria-label={`${plan.active ? 'Retire' : 'Offer'} ${plan.displayName}`}
@@ -247,7 +261,7 @@ export function PlanPriceTable({ plans, provider, mode = 'live', subscribers, on
 					</tr>
 					{plan.prices.map((price) => (
 						<tr key={price.id} className={cn(tableRowClass, !price.active && 'text-muted-foreground')}>
-							<td className="pl-9!">
+							<td className="ps-9!">
 								<span className="flex items-center gap-2">
 									<span className={price.active ? 'text-foreground' : undefined}>{INTERVAL_LABEL[price.interval]}</span>
 									{price.discountPercent ? <ToneBadge tone="success">−{price.discountPercent}%</ToneBadge> : null}
@@ -256,7 +270,7 @@ export function PlanPriceTable({ plans, provider, mode = 'live', subscribers, on
 							<td>
 								<ToneBadge tone={price.usageType === 'metered' ? 'violet' : 'neutral'}>{price.usageType === 'metered' ? 'Usage (credits)' : 'Flat'}</ToneBadge>
 							</td>
-							<td className="text-right tabular-nums">
+							<td className="text-end tabular-nums">
 								{price.usageType === 'metered' ? (
 									<Tooltip>
 										<TooltipTrigger render={<span className="inline-flex items-center gap-1 text-muted-foreground" tabIndex={0} />}>
@@ -275,7 +289,7 @@ export function PlanPriceTable({ plans, provider, mode = 'live', subscribers, on
 									{price.externalId ? <ExternalRef provider={provider} kind="price" id={price.externalId} mode={mode} /> : null}
 								</span>
 							</td>
-							<td className="text-right">
+							<td className="text-end">
 								<Switch
 									className={tableSwitchClass}
 									aria-label={`${price.active ? 'Retire' : 'Offer'} the ${INTERVAL_LABEL[price.interval].toLowerCase()} ${plan.displayName} price`}
@@ -316,12 +330,12 @@ export function MeterCatalogTable({ meters, onToggle, className }: MeterCatalogT
 				<tr>
 					<th scope="col">Meter</th>
 					<th scope="col">Unit</th>
-					<th scope="col" className="text-right">
+					<th scope="col" className="text-end">
 						Credit cost
 					</th>
 					<th scope="col">Resets</th>
 					<th scope="col">Counts</th>
-					<th scope="col" className="text-right">
+					<th scope="col" className="text-end">
 						Active
 					</th>
 				</tr>
@@ -335,12 +349,12 @@ export function MeterCatalogTable({ meters, onToggle, className }: MeterCatalogT
 					</tr>
 					{rows.map((meter) => (
 						<tr key={meter.slug} className={cn(tableRowClass, !meter.active && 'text-muted-foreground')}>
-							<th scope="row" className="px-4 py-2 text-left font-normal">
-								<span className="block text-foreground">{meter.displayName}</span>
-								<span className="block font-mono text-[11px] text-subtle-foreground">{meter.slug}</span>
+							<th scope="row" className="px-4 py-2 text-start font-normal">
+								<span className="block text-foreground [overflow-wrap:anywhere]">{meter.displayName}</span>
+								<span className="block font-mono text-[0.6875rem] text-subtle-foreground [overflow-wrap:anywhere]">{meter.slug}</span>
 							</th>
 							<td className="text-muted-foreground">{meter.unit}</td>
-							<td className="text-right tabular-nums">
+							<td className="text-end tabular-nums">
 								{meter.creditCost === null ? <span className="text-subtle-foreground">No fallback</span> : meter.creditCost === 0 ? 'Free' : `${f.quantity(meter.creditCost)} cr`}
 							</td>
 							<td className="text-muted-foreground">
@@ -348,7 +362,7 @@ export function MeterCatalogTable({ meters, onToggle, className }: MeterCatalogT
 								{meter.rolloverCap ? ` · rolls ${f.quantity(meter.rolloverCap, true)}` : ''}
 							</td>
 							<td className="text-muted-foreground">{meter.aggregation === 'peak' ? 'Peak' : 'Sum'}</td>
-							<td className="text-right">
+							<td className="text-end">
 								<Switch
 									className={tableSwitchClass}
 									aria-label={`${meter.active ? 'Pause' : 'Resume'} ${meter.displayName}`}
@@ -385,17 +399,17 @@ export function CreditPackTable({ packs, creditsPerCent = 1, onToggle, className
 			<thead className={tableHeadClass}>
 				<tr>
 					<th scope="col">Pack</th>
-					<th scope="col" className="text-right">
+					<th scope="col" className="text-end">
 						Credits
 					</th>
-					<th scope="col" className="text-right">
+					<th scope="col" className="text-end">
 						Advertised
 					</th>
-					<th scope="col" className="text-right">
+					<th scope="col" className="text-end">
 						Charged
 					</th>
 					<th scope="col">Expiry</th>
-					<th scope="col" className="text-right">
+					<th scope="col" className="text-end">
 						Active
 					</th>
 				</tr>
@@ -406,13 +420,13 @@ export function CreditPackTable({ packs, creditsPerCent = 1, onToggle, className
 					const refused = pack.price.amountMinor < charged;
 					return (
 						<tr key={pack.id} className={cn(tableRowClass, !pack.active && 'text-muted-foreground')}>
-							<th scope="row" className="px-4 py-2 text-left font-normal">
-								<span className="block text-foreground">{pack.displayName}</span>
-								<span className="block font-mono text-[11px] text-subtle-foreground">{pack.slug}</span>
+							<th scope="row" className="px-4 py-2 text-start font-normal">
+								<span className="block text-foreground [overflow-wrap:anywhere]">{pack.displayName}</span>
+								<span className="block font-mono text-[0.6875rem] text-subtle-foreground [overflow-wrap:anywhere]">{pack.slug}</span>
 							</th>
-							<td className="text-right tabular-nums">{f.quantity(pack.amount)}</td>
-							<td className="text-right tabular-nums">{f.money(pack.price, { precise: true })}</td>
-							<td className="text-right tabular-nums">
+							<td className="text-end tabular-nums">{f.quantity(pack.amount)}</td>
+							<td className="text-end tabular-nums">{f.money(pack.price, { precise: true })}</td>
+							<td className="text-end tabular-nums">
 								{refused ? (
 									<Tooltip>
 										<TooltipTrigger render={<span tabIndex={0} className="inline-flex" />}>
@@ -424,8 +438,10 @@ export function CreditPackTable({ packs, creditsPerCent = 1, onToggle, className
 									<span className="text-foreground">{f.money({ ...pack.price, amountMinor: charged }, { precise: true })}</span>
 								)}
 							</td>
-							<td className="text-muted-foreground">{pack.expiresAfterDays ? `${pack.expiresAfterDays} days` : 'Never'}</td>
-							<td className="text-right">
+							<td className="text-muted-foreground">
+								{pack.expiresAfterDays ? `${f.quantity(pack.expiresAfterDays)} ${plural(pack.expiresAfterDays, { one: 'day', other: 'days' }, f.locale)}` : 'Never'}
+							</td>
+							<td className="text-end">
 								<Switch
 									className={tableSwitchClass}
 									aria-label={`${pack.active ? 'Stop selling' : 'Sell'} ${pack.displayName}`}

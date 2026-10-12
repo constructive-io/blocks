@@ -4,12 +4,15 @@ import { ChevronRight, FolderClosed, FolderOpen } from 'lucide-react';
 import * as React from 'react';
 
 import { cn } from '../../lib/utils';
-import { focusRingClass } from '../workspace-kit/primitives';
+import { focusRingClass, formatCount } from '../workspace-kit/primitives';
 import { folderContains, folderName, normalizeFolder, parentFolder } from './access';
 import type { DataRoomDocument } from './types';
 
 /** What the room root is called in the tree, breadcrumb, and pickers. */
 export const ROOT_LABEL = 'All documents';
+
+/** Indentation stops growing here, so a deeply nested folder still has room for its name. */
+const MAX_INDENT_LEVELS = 5;
 
 /** Immediate child folders of `folder` among `folders`. */
 export function childFolders(folders: readonly string[], folder: string) {
@@ -65,13 +68,13 @@ export function FolderTree({ folders, documents, current, searching, onSelect, n
 		});
 
 	return (
-		<nav aria-label="Folders" className="hidden w-60 shrink-0 flex-col gap-0.5 overflow-y-auto border-r border-border p-2 @3xl/view:flex">
+		<nav aria-label="Folders" className="hidden w-60 shrink-0 flex-col gap-0.5 overflow-y-auto border-e border-border p-2 @3xl/view:flex">
 			<ul className="flex flex-col gap-0.5">
 				{tree.map((node) => {
 					const active = node.path === open && !searching;
 					const expanded = !collapsed.has(node.path);
 					return (
-						<li key={node.path} className="flex items-center" style={{ paddingLeft: node.depth * 12 }}>
+						<li key={node.path} className="flex items-center" style={{ paddingInlineStart: Math.min(node.depth, MAX_INDENT_LEVELS) * 12 }}>
 							{childFolders(folders, node.path).length > 0 ? (
 								<button
 									type="button"
@@ -80,7 +83,7 @@ export function FolderTree({ folders, documents, current, searching, onSelect, n
 									onClick={() => toggle(node.path)}
 									className={cn('grid size-6 shrink-0 cursor-pointer place-items-center rounded-md text-muted-foreground hover:bg-overlay-hover hover:text-foreground', focusRingClass)}
 								>
-									<ChevronRight aria-hidden="true" className={cn('size-3.5 transition-transform duration-(--duration-fast) motion-reduce:transition-none', expanded && 'rotate-90')} />
+									<ChevronRight aria-hidden="true" className={cn('size-3.5 transition-transform duration-(--duration-fast) motion-reduce:transition-none', expanded ? 'rotate-90' : 'rtl:-scale-x-100')} />
 								</button>
 							) : (
 								<span aria-hidden="true" className="size-6 shrink-0" />
@@ -90,7 +93,7 @@ export function FolderTree({ folders, documents, current, searching, onSelect, n
 								aria-current={active ? 'true' : undefined}
 								onClick={() => onSelect(node.path)}
 								className={cn(
-									'group/folder flex h-7 min-w-0 flex-1 cursor-pointer items-center gap-2 rounded-md px-1.5 text-left text-[13px]',
+									'group/folder flex h-7 min-w-0 flex-1 cursor-pointer items-center gap-2 rounded-md px-1.5 text-start text-[0.8125rem]',
 									focusRingClass,
 									active ? 'bg-sidebar-accent font-medium text-foreground' : 'text-foreground/90 hover:bg-overlay-hover',
 								)}
@@ -100,9 +103,11 @@ export function FolderTree({ folders, documents, current, searching, onSelect, n
 								) : (
 									<FolderClosed aria-hidden="true" className="size-3.5 shrink-0 text-muted-foreground" />
 								)}
-								<span className="min-w-0 flex-1 truncate">{folderName(node.path, ROOT_LABEL)}</span>
-								<span className={cn('text-xs text-subtle-foreground tabular-nums', !active && 'opacity-0 group-hover/folder:opacity-100 group-focus-visible/folder:opacity-100')}>
-									{node.count}
+								<span title={folderName(node.path, ROOT_LABEL)} className="min-w-0 flex-1 truncate">
+									{folderName(node.path, ROOT_LABEL)}
+								</span>
+								<span className={cn('shrink-0 text-xs text-subtle-foreground tabular-nums', !active && 'opacity-0 group-hover/folder:opacity-100 group-focus-visible/folder:opacity-100')}>
+									{formatCount(node.count)}
 								</span>
 							</button>
 						</li>

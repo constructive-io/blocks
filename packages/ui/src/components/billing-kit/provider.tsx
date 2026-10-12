@@ -25,7 +25,7 @@ import { dashedRule, StatusBadge } from './surface';
 import type { BillingHealth, ProviderConnection, ProviderMode, ReadinessCheck, SyncState } from './types';
 
 const SIZE = {
-	sm: 'size-5 rounded-[5px] text-[10px]',
+	sm: 'size-5 rounded-[5px] text-[0.625rem]',
 	md: 'size-7 rounded-[7px] text-xs',
 	lg: 'size-9 rounded-[9px] text-sm',
 } as const;
@@ -77,9 +77,11 @@ export function ExternalRef({ provider, kind, id, mode = 'live', className }: Ex
 		return () => window.clearTimeout(timer);
 	}, [copied]);
 	return (
-		<span className={cn('inline-flex h-6 max-w-full items-center gap-0.5 rounded-md border border-border bg-muted/50 pr-0.5 pl-1.5', className)}>
-			{provider ? <ProviderMark provider={provider} size="sm" className="mr-1 size-3.5 rounded-[3px] text-[8px]" /> : null}
-			<code className="truncate font-mono text-[11px] text-muted-foreground">{id}</code>
+		<span className={cn('inline-flex h-6 max-w-full items-center gap-0.5 rounded-md border border-border bg-muted/50 pe-0.5 ps-1.5', className)}>
+			{provider ? <ProviderMark provider={provider} size="sm" className="me-1 size-3.5 rounded-[3px] text-[0.5rem]" /> : null}
+			<code title={id} className="truncate font-mono text-[0.6875rem] text-muted-foreground">
+				{id}
+			</code>
 			<TooltipIconButton
 				label={copied ? 'Copied' : `Copy ${kind} id`}
 				size="sm"
@@ -182,12 +184,12 @@ export function ReadinessChecklist({ provider, health, onRunCheck, running, clas
 								<Icon aria-hidden="true" className="size-3" />
 							</span>
 							<span className="min-w-0 flex-1">
-								<span className="block text-[13px] text-foreground">
+								<span className="block text-[0.8125rem] text-foreground">
 									{copy.label}
 									<span className="sr-only">, {check.status}</span>
 								</span>
 								{check.detail || copy.help ? (
-									<span className={cn('block text-xs', check.status === 'fail' ? 'text-destructive' : 'text-muted-foreground')}>{check.detail ?? copy.help}</span>
+									<span className={cn('block text-xs [overflow-wrap:anywhere]', check.status === 'fail' ? 'text-destructive' : 'text-muted-foreground')}>{check.detail ?? copy.help}</span>
 								) : null}
 							</span>
 						</li>
@@ -195,9 +197,9 @@ export function ReadinessChecklist({ provider, health, onRunCheck, running, clas
 				})}
 			</ol>
 			{health.nextStep && !health.ready && !running ? (
-				<p className={cn('mt-1 flex gap-2 rounded-lg bg-warning/10 px-3 py-2 text-[13px] text-foreground')}>
+				<p className={cn('mt-1 flex gap-2 rounded-lg bg-warning/10 px-3 py-2 text-[0.8125rem] text-foreground')}>
 					<TriangleAlert aria-hidden="true" className="mt-0.5 size-3.5 shrink-0 text-warning" />
-					{health.nextStep}
+					<span className="min-w-0 [overflow-wrap:anywhere]">{health.nextStep}</span>
 				</p>
 			) : null}
 		</div>
@@ -260,7 +262,7 @@ export function ProviderCredentialForm({ provider, connection, onSave, submitLab
 				const error = errors[field.name];
 				return (
 					<div key={field.name} className="flex flex-col gap-1.5">
-						<label htmlFor={id} className="flex items-center justify-between gap-2 text-[13px] font-medium text-foreground">
+						<label htmlFor={id} className="flex items-center justify-between gap-2 text-[0.8125rem] font-medium text-foreground">
 							<span className="flex items-center gap-1.5">
 								{field.kind === 'secret' ? <KeyRound aria-hidden="true" className="size-3.5 text-muted-foreground" /> : null}
 								{field.label}
@@ -285,7 +287,7 @@ export function ProviderCredentialForm({ provider, connection, onSave, submitLab
 								if (errors[field.name]) setErrors(({ [field.name]: _, ...rest }) => rest);
 								setState('idle');
 							}}
-							className="font-mono text-[13px]"
+							className="font-mono text-[0.8125rem]"
 						/>
 						<p id={`${id}-help`} className={cn('text-xs', error ? 'text-destructive' : 'text-muted-foreground')}>
 							{error ?? field.help}
@@ -299,7 +301,7 @@ export function ProviderCredentialForm({ provider, connection, onSave, submitLab
 				</p>
 			) : null}
 			{failure ? (
-				<p role="alert" className="text-[13px] text-destructive">
+				<p role="alert" className="text-[0.8125rem] text-destructive">
 					{failure}
 				</p>
 			) : null}
@@ -340,7 +342,7 @@ export function ProviderCard({ provider, connection, active, onSelect, className
 				<span className="mt-0.5 block text-pretty text-xs text-muted-foreground">{provider.description}</span>
 				<span className="mt-2 flex flex-wrap gap-1">
 					{provider.features.slice(0, 5).map((feature) => (
-						<span key={feature} className="rounded-[4px] bg-muted px-1.5 py-0.5 text-[11px] text-muted-foreground">
+						<span key={feature} className="rounded-[4px] bg-muted px-1.5 py-0.5 text-[0.6875rem] text-muted-foreground">
 							{featureLabel(provider, feature)}
 						</span>
 					))}
@@ -348,7 +350,7 @@ export function ProviderCard({ provider, connection, active, onSelect, className
 			</span>
 		</>
 	);
-	const classes = cn('flex w-full items-start gap-3 rounded-xl border px-3.5 py-3 text-left', active ? 'border-primary/30 bg-primary/[0.04]' : 'border-border bg-card', className);
+	const classes = cn('flex w-full items-start gap-3 rounded-xl border px-3.5 py-3 text-start', active ? 'border-primary/30 bg-primary/[0.04]' : 'border-border bg-card', className);
 	return onSelect && !soon ? (
 		<button type="button" onClick={onSelect} className={cn(classes, 'cursor-pointer hover:bg-muted/40', pressClass, focusRingClass)}>
 			{body}
@@ -404,12 +406,12 @@ export function ProviderConnectDialog({ providers, activeProviderId, connection,
 							<div className="flex items-center gap-2">
 								{provider ? (
 									<TooltipIconButton label="Back to providers" size="sm" onClick={() => startViewTransition(() => setChosen(undefined))}>
-										<ArrowLeft aria-hidden="true" className="size-3.5" />
+										<ArrowLeft aria-hidden="true" className="size-3.5 rtl:-scale-x-100" />
 									</TooltipIconButton>
 								) : null}
 								<DialogTitle className="text-base font-medium">{provider ? `Connect ${provider.name}` : 'Choose a payment provider'}</DialogTitle>
 							</div>
-							<DialogDescription className="text-[13px]">
+							<DialogDescription className="text-[0.8125rem]">
 								{provider
 									? 'Keys are stored as write-only secrets for this database and are never shown again.'
 									: 'One provider handles checkout, subscriptions, and invoices at a time. You can switch later.'}
@@ -419,7 +421,7 @@ export function ProviderConnectDialog({ providers, activeProviderId, connection,
 							{provider ? (
 								<div className="flex flex-col gap-4">
 									{switching ? (
-										<div role="note" className="flex gap-2 rounded-lg bg-warning/10 px-3 py-2.5 text-[13px] text-foreground">
+										<div role="note" className="flex gap-2 rounded-lg bg-warning/10 px-3 py-2.5 text-[0.8125rem] text-foreground">
 											<TriangleAlert aria-hidden="true" className="mt-0.5 size-3.5 shrink-0 text-warning" />
 											<span className="text-pretty">
 												New checkouts will use {provider.name}. Existing subscriptions stay on {active!.name} until each customer is moved, so keep{' '}

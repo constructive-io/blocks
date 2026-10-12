@@ -39,7 +39,7 @@ function PromptInputAttachment({
 			data-slot="prompt-input-attachment"
 			data-status={status}
 			className={cn(
-				'relative flex h-10 max-w-56 min-w-0 items-center gap-2 rounded-lg bg-muted/70 pr-1.5 pl-1 text-left dark:bg-muted',
+				'relative flex h-10 max-w-56 min-w-0 items-center gap-2 rounded-lg bg-muted/70 pe-1.5 ps-1 text-start dark:bg-muted',
 				status === 'error' && 'bg-destructive/8 dark:bg-destructive/16',
 				className,
 			)}
@@ -57,7 +57,7 @@ function PromptInputAttachment({
 				)}
 			</MarkTile>
 			<div className="min-w-0 flex-1 leading-tight">
-				<p className="truncate text-[13px] text-foreground">{name}</p>
+				<p title={name} className="truncate text-[0.8125rem] text-foreground">{name}</p>
 				{meta ? (
 					<p className={cn('truncate text-xs', status === 'error' ? 'text-destructive' : 'text-muted-foreground')}>{meta}</p>
 				) : null}

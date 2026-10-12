@@ -9,7 +9,7 @@ import { Switch } from '../switch';
 import { ToneBadge, TooltipIconButton } from '../workspace-kit/primitives';
 import { AllowanceBar } from './allowance';
 import { useBillingFormat } from './context';
-import { isUnlimited, usageLevel } from './format';
+import { isUnlimited, unitFor, usageLevel } from './format';
 import { dashedRule, EmptyState, nativeSelectClass } from './surface';
 import type { FeatureCap, LimitCounter, UsageAlert } from './types';
 
@@ -27,17 +27,20 @@ export function LimitList({ limits, className }: LimitListProps) {
 				const level = usageLevel(limit.used, limit.max, limit.softMax && limit.max > 0 ? limit.softMax / limit.max : 0.8);
 				return (
 					<li key={limit.name} className={cn('flex flex-col gap-2 py-3', index > 0 && cn('border-t', dashedRule))}>
-						<div className="flex items-baseline justify-between gap-3">
-							<span className="text-[13px] text-foreground">
+						<div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
+							<span className="min-w-0 text-[0.8125rem] text-foreground [overflow-wrap:anywhere]">
 								{limit.label}
 								{limit.window ? <span className="text-muted-foreground"> · {limit.window}</span> : null}
 							</span>
-							<span className="text-[13px] tabular-nums">
-								<span className={cn('font-medium', level === 'exhausted' || level === 'over' ? 'text-destructive' : 'text-foreground')}>{f.quantity(limit.used)}</span>
-								<span className="text-muted-foreground">
-									{' of '}
-									{isUnlimited(limit.max) ? 'unlimited' : f.quantity(limit.max)} {limit.unit}
+							<span className="text-[0.8125rem] tabular-nums [overflow-wrap:anywhere]">
+								<span className="whitespace-nowrap">
+									<span className={cn('font-medium', level === 'exhausted' || level === 'over' ? 'text-destructive' : 'text-foreground')}>{f.quantity(limit.used)}</span>
+									<span className="text-muted-foreground">
+										{' of '}
+										{isUnlimited(limit.max) ? 'unlimited' : f.quantity(limit.max)}
+									</span>
 								</span>
+								<span className="text-muted-foreground"> {unitFor(limit.max, limit.unit, limit.unitSingular, f.locale)}</span>
 							</span>
 						</div>
 						<AllowanceBar used={limit.used} limit={limit.max} label={limit.label} size="sm" soft={limit.softMax && limit.max > 0 ? limit.softMax / limit.max : undefined} />
@@ -62,7 +65,7 @@ type FeatureCapListProps = {
 export function FeatureCapList({ caps, onUnlock, className }: FeatureCapListProps) {
 	const f = useBillingFormat();
 	return (
-		<ul className={cn('grid gap-2 @xl/view:grid-cols-2', className)}>
+		<ul className={cn('grid grid-cols-1 gap-2 @xl/view:grid-cols-2', className)}>
 			{caps.map((cap) => {
 				const on = cap.value > 0;
 				return (
@@ -74,16 +77,20 @@ export function FeatureCapList({ caps, onUnlock, className }: FeatureCapListProp
 							{on ? <Check className="size-3" /> : <Lock className="size-3" />}
 						</span>
 						<span className="min-w-0 flex-1">
-							<span className="flex items-center gap-2 text-[13px] font-medium text-foreground">
+							<span className="flex items-center gap-2 text-[0.8125rem] font-medium text-foreground [overflow-wrap:anywhere]">
 								{cap.label}
 								<span className="sr-only">{on ? ', included' : ', not included'}</span>
 							</span>
-							{cap.description ? <span className="mt-0.5 block text-pretty text-xs text-muted-foreground">{cap.description}</span> : null}
+							{cap.description ? (
+								<span title={cap.description} className="mt-0.5 line-clamp-3 block text-pretty text-xs text-muted-foreground [overflow-wrap:anywhere]">
+									{cap.description}
+								</span>
+							) : null}
 						</span>
 						{cap.kind === 'number' && on ? (
-							<span className="text-[13px] text-foreground tabular-nums">
+							<span className="max-w-[50%] min-w-0 text-end text-[0.8125rem] text-foreground tabular-nums [overflow-wrap:anywhere]">
 								{f.quantity(cap.value)}
-								{cap.unit ? <span className="text-muted-foreground"> {cap.unit}</span> : null}
+								{cap.unit ? <span className="text-muted-foreground"> {unitFor(cap.value, cap.unit, cap.unitSingular, f.locale)}</span> : null}
 							</span>
 						) : !on && onUnlock ? (
 							<Button size="xs" variant="ghost" onClick={() => onUnlock(cap)}>
@@ -112,6 +119,7 @@ type UsageAlertListProps = {
  * Each row toggles; new alerts pick a target and a percentage.
  */
 export function UsageAlertList({ alerts, targets, onChange, readOnly, className }: UsageAlertListProps) {
+	const f = useBillingFormat();
 	const [chosenTarget, setTarget] = React.useState(targets[0]?.value ?? '');
 	// Fall back to the first target when the chosen one is no longer offered.
 	const target = targets.some((candidate) => candidate.value === chosenTarget) ? chosenTarget : (targets[0]?.value ?? '');
@@ -135,9 +143,11 @@ export function UsageAlertList({ alerts, targets, onChange, readOnly, className 
 								disabled={readOnly}
 								onCheckedChange={(enabled) => onChange(alerts.map((candidate) => (candidate.id === alert.id ? { ...candidate, enabled } : candidate)))}
 							/>
-							<span className={cn('min-w-0 flex-1 truncate text-[13px]', alert.enabled ? 'text-foreground' : 'text-muted-foreground')}>{label(alert.target)}</span>
+							<span title={label(alert.target)} className={cn('line-clamp-2 min-w-0 flex-1 text-[0.8125rem] [overflow-wrap:anywhere]', alert.enabled ? 'text-foreground' : 'text-muted-foreground')}>
+								<bdi>{label(alert.target)}</bdi>
+							</span>
 							<ToneBadge tone={alert.enabled ? 'warning' : 'neutral'}>
-								at {alert.threshold}
+								at {f.quantity(alert.threshold)}
 								{alert.kind === 'percent' ? '%' : ''}
 							</ToneBadge>
 							{readOnly ? null : (
@@ -180,7 +190,7 @@ export function UsageAlertList({ alerts, targets, onChange, readOnly, className 
 					</label>
 					<label htmlFor={thresholdId} className="flex w-24 flex-col gap-1 text-xs text-muted-foreground">
 						At
-						<span className="flex h-8 items-center rounded-md border border-border bg-card pr-2 shadow-2xs focus-within:ring-[3px] focus-within:ring-ring/50">
+						<span className="flex h-8 items-center rounded-md border border-border bg-card pe-2 shadow-2xs focus-within:ring-[3px] focus-within:ring-ring/50">
 							<input
 								id={thresholdId}
 								type="number"
@@ -188,9 +198,9 @@ export function UsageAlertList({ alerts, targets, onChange, readOnly, className 
 								max={100}
 								value={threshold}
 								onChange={(event) => setThreshold(Math.min(100, Math.max(1, Number(event.target.value) || 1)))}
-								className="h-full w-full min-w-0 bg-transparent px-2 text-[13px] text-foreground tabular-nums outline-none"
+								className="h-full w-full min-w-0 bg-transparent px-2 text-[0.8125rem] text-foreground tabular-nums outline-none"
 							/>
-							<span className="text-[13px] text-muted-foreground">%</span>
+							<span className="text-[0.8125rem] text-muted-foreground">%</span>
 						</span>
 					</label>
 					<Button type="submit" size="sm" variant="outline">

@@ -67,7 +67,7 @@ function Steps({
 		>
 			<CollapsibleTrigger
 				className={cn(
-					'group flex w-fit max-w-full items-center gap-1.5 rounded-md px-1.5 py-1.5 text-[13px]',
+					'group flex w-fit max-w-full items-center gap-1.5 rounded-md px-1.5 py-1.5 text-[0.8125rem]',
 					'text-muted-foreground hover:bg-accent hover:text-foreground',
 				)}
 			>
@@ -161,7 +161,7 @@ function Step({ children, title, description, status = 'pending', className }: S
 
 			<div
 				className={cn(
-					'min-w-0 flex-1 text-[13px]',
+					'min-w-0 flex-1 text-[0.8125rem]',
 					// Space between steps lives on content; last step has none
 					'pb-3.5 group-last/step:pb-0',
 				)}
@@ -182,7 +182,7 @@ function Step({ children, title, description, status = 'pending', className }: S
 					{title}
 				</div>
 				{description ? (
-					<div className="mt-1 break-words text-[12px] leading-snug text-muted-foreground">
+					<div className="mt-1 break-words text-[0.75rem] leading-snug text-muted-foreground">
 						{description}
 					</div>
 				) : null}
@@ -190,10 +190,10 @@ function Step({ children, title, description, status = 'pending', className }: S
 					<div
 						data-slot="step-body"
 						className={cn(
-							'mt-1.5 min-w-0 break-words text-[12px] leading-snug text-muted-foreground',
+							'mt-1.5 min-w-0 break-words text-[0.75rem] leading-snug text-muted-foreground',
 							// Nested pre/code from agent output
-							'[&_pre]:mt-1.5 [&_pre]:max-w-full [&_pre]:overflow-x-auto [&_pre]:rounded-md [&_pre]:border [&_pre]:border-border [&_pre]:bg-muted/40 [&_pre]:p-2 [&_pre]:font-mono [&_pre]:text-[11px] [&_pre]:leading-relaxed',
-							'[&_code]:rounded-sm [&_code]:bg-muted/50 [&_code]:px-1 [&_code]:py-px [&_code]:font-mono [&_code]:text-[11.5px]',
+							'[&_pre]:mt-1.5 [&_pre]:max-w-full [&_pre]:overflow-x-auto [&_pre]:rounded-md [&_pre]:border [&_pre]:border-border [&_pre]:bg-muted/40 [&_pre]:p-2 [&_pre]:font-mono [&_pre]:text-[0.6875rem] [&_pre]:leading-relaxed',
+							'[&_code]:rounded-sm [&_code]:bg-muted/50 [&_code]:px-1 [&_code]:py-px [&_code]:font-mono [&_code]:text-[0.71875rem]',
 						)}
 					>
 						{children}

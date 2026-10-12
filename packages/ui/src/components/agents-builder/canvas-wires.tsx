@@ -75,7 +75,7 @@ function CanvasWires({ stages, layoutKey, animate }: CanvasWiresProps) {
 	}, [layoutKey, stages]);
 
 	return (
-		<svg ref={svgRef} aria-hidden="true" className="pointer-events-none absolute top-0 left-0 overflow-visible" width="1" height="1">
+		<svg ref={svgRef} aria-hidden="true" className="pointer-events-none absolute top-0 start-0 overflow-visible" width="1" height="1">
 			{wires.map((wire) => (
 				<CanvasWire key={wire.id} start={wire.start} end={wire.end} tone={wire.tone} animated={wire.animated && animate} />
 			))}

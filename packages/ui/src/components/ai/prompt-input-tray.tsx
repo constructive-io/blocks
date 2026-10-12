@@ -64,7 +64,7 @@ function PromptInputTrayRow({ icon, children, actions, className, ...props }: Pr
 	return (
 		<div
 			data-slot="prompt-input-tray-row"
-			className={cn('flex min-h-8 items-center gap-2 px-2.5 py-1 text-[13px] text-foreground', className)}
+			className={cn('flex min-h-8 items-center gap-2 px-2.5 py-1 text-[0.8125rem] text-foreground', className)}
 			{...props}
 		>
 			{icon ? (

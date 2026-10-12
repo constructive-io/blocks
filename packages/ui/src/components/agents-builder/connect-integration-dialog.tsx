@@ -94,7 +94,7 @@ function ConnectFlow({ integration, appName, onAuthorize = simulateAuthorize, on
 				<IntegrationMark integration={integration} size="md" />
 				<div className="flex flex-col gap-1">
 					<DialogTitle className="text-base font-medium">Connect {integration.name}</DialogTitle>
-					<DialogDescription className="text-[13px]">
+					<DialogDescription className="text-[0.8125rem]">
 						Your agents get <span className="tabular-nums">{toolCount}</span> new {toolCount === 1 ? 'tool' : 'tools'} once
 						this is connected
 					</DialogDescription>
@@ -105,7 +105,7 @@ function ConnectFlow({ integration, appName, onAuthorize = simulateAuthorize, on
 				<li className="flex gap-3">
 					<div className="flex flex-col items-center">
 						<StepMarker index={1} state={signedIn ? 'done' : 'active'} />
-						<span aria-hidden="true" className="my-1 w-px flex-1 border-l border-dashed border-border" />
+						<span aria-hidden="true" className="my-1 w-px flex-1 border-s border-dashed border-border" />
 					</div>
 					<div className="min-w-0 flex-1 pb-5">
 						<p className={cn('flex h-6 items-center text-sm', signedIn ? 'text-muted-foreground' : 'font-medium text-foreground')}>
@@ -113,10 +113,10 @@ function ConnectFlow({ integration, appName, onAuthorize = simulateAuthorize, on
 						</p>
 						{phase === 'sign-in' ? (
 							<div className="mt-2 flex flex-col gap-3">
-								<p className="text-[13px] text-muted-foreground">
+								<p className="text-[0.8125rem] text-muted-foreground">
 									Authorization happens on {integration.vendor}&apos;s side. Takes about a minute
 								</p>
-								<ul className="divide-y divide-border overflow-hidden rounded-lg border border-border text-[13px] text-foreground">
+								<ul className="divide-y divide-border overflow-hidden rounded-lg border border-border text-[0.8125rem] text-foreground">
 									<li className="flex min-h-10 flex-wrap items-center gap-1 px-3 py-2">
 										A new tab opens at
 										<span className="inline-flex h-5 items-center rounded-[5px] border border-border bg-muted px-1 font-mono text-xs">
@@ -137,11 +137,11 @@ function ConnectFlow({ integration, appName, onAuthorize = simulateAuthorize, on
 						) : null}
 						{phase === 'authorizing' ? (
 							<div className="mt-2 flex flex-col gap-2">
-								<p role="status" className="flex h-10 items-center gap-2 rounded-lg border border-border px-3 text-[13px] text-foreground">
+								<p role="status" className="flex h-10 items-center gap-2 rounded-lg border border-border px-3 text-[0.8125rem] text-foreground">
 									<Spinner aria-hidden="true" role={undefined} className="size-3.5 text-muted-foreground" strokeWidth={1.5} />
 									Authorizing
 								</p>
-								<p className="text-[13px] text-muted-foreground">
+								<p className="text-[0.8125rem] text-muted-foreground">
 									Window not showing up?{' '}
 									<button
 										type="button"
@@ -167,8 +167,8 @@ function ConnectFlow({ integration, appName, onAuthorize = simulateAuthorize, on
 									{integration.tools.map((tool) => {
 										const id = `connect-${integration.id}-${tool.id}`;
 										return (
-											<li key={tool.id} className="flex h-11 items-center gap-2 pr-1 pl-3">
-												<label htmlFor={id} className="min-w-0 flex-1 truncate text-[13px] text-foreground">
+											<li key={tool.id} className="flex h-11 items-center gap-2 pe-1 ps-3">
+												<label htmlFor={id} className="min-w-0 flex-1 truncate text-[0.8125rem] text-foreground">
 													{tool.name}
 												</label>
 												<span

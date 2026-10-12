@@ -2,6 +2,7 @@
 
 import {
 	Blocks,
+	Bot,
 	CalendarClock,
 	ChartColumn,
 	GraduationCap,
@@ -16,11 +17,12 @@ import {
 } from 'lucide-react';
 import * as React from 'react';
 
+import { initials } from '../../lib/initials';
 import { cn } from '../../lib/utils';
 import { TextShimmer } from '../ai/text-shimmer';
 import { Kbd, KbdGroup } from '../kbd';
 import { NavIcon, NavRow } from '../workspace-kit/nav';
-import { SearchField, TooltipIconButton } from '../workspace-kit/primitives';
+import { formatCount, SearchField, TooltipIconButton } from '../workspace-kit/primitives';
 import { AppPicker } from './app-picker';
 import { useAgentsBuilder } from './agents-builder-context';
 import { IntegrationMark } from './integration-mark';
@@ -29,15 +31,6 @@ import { WorkspaceMenu } from './workspace-menu';
 
 /** Agents listed before "More agents". */
 const SIDEBAR_AGENT_LIMIT = 6;
-
-function monogram(name: string) {
-	return name
-		.split(/\s+/)
-		.slice(0, 2)
-		.map((word) => word[0])
-		.join('')
-		.toUpperCase();
-}
 
 /**
  * Agent roster label. Focus reads through weight and colour alone; a running
@@ -56,10 +49,10 @@ function AgentLabel({ agent, open }: { agent: AgentSummary; open: boolean }) {
 
 /** Collapsed-rail stand-in for an agent: its initials, styled like the label. */
 function AgentMonogram({ agent, open }: { agent: AgentSummary; open: boolean }) {
-	const text = monogram(agent.name);
+	const text = initials(agent.name);
 	return (
-		<span aria-hidden="true" className="grid size-5 shrink-0 place-items-center text-[11px] tracking-tight tabular-nums">
-			{agent.running ? <TextShimmer className={open ? 'font-semibold' : 'font-medium'}>{text}</TextShimmer> : text}
+		<span aria-hidden="true" className="grid size-5 shrink-0 place-items-center text-[0.6875rem] tracking-tight tabular-nums">
+			{text === null ? <Bot className="size-3.5" /> : agent.running ? <TextShimmer className={open ? 'font-semibold' : 'font-medium'}>{text}</TextShimmer> : text}
 		</span>
 	);
 }
@@ -129,7 +122,7 @@ function AgentsBuilderSidebar({ collapsed: collapsedProp = false, onCollapsedCha
 			data-collapsed={collapsed || undefined}
 			className={cn(
 				'flex h-full shrink-0 flex-col bg-sidebar',
-				drawer ? 'w-full' : cn('border-r border-sidebar-border', collapsed ? 'w-[52px]' : 'w-56'),
+				drawer ? 'w-full' : cn('border-e border-sidebar-border', collapsed ? 'w-[52px]' : 'w-56'),
 				className,
 			)}
 		>
@@ -141,7 +134,7 @@ function AgentsBuilderSidebar({ collapsed: collapsedProp = false, onCollapsedCha
 					</TooltipIconButton>
 				) : collapsed ? null : (
 					<TooltipIconButton label="Collapse sidebar" aria-expanded onClick={() => onCollapsedChange?.(true)}>
-						<PanelLeft aria-hidden="true" className="size-3.5" />
+						<PanelLeft aria-hidden="true" className="size-3.5 rtl:-scale-x-100" />
 					</TooltipIconButton>
 				)}
 			</div>
@@ -151,7 +144,7 @@ function AgentsBuilderSidebar({ collapsed: collapsedProp = false, onCollapsedCha
 				{collapsed ? (
 					<div className="flex flex-col items-center gap-1">
 						<TooltipIconButton label="Expand sidebar" side="right" size="lg" aria-expanded={false} onClick={() => onCollapsedChange?.(false)}>
-							<PanelLeft aria-hidden="true" className="size-3.5 -scale-x-100" />
+							<PanelLeft aria-hidden="true" className="size-3.5 -scale-x-100 rtl:scale-x-100" />
 						</TooltipIconButton>
 						<TooltipIconButton label={`Search ${data.workspace.name}`} side="right" size="lg" variant="raised" onClick={focusSearch}>
 							<Search aria-hidden="true" className="size-3.5" />
@@ -171,8 +164,8 @@ function AgentsBuilderSidebar({ collapsed: collapsedProp = false, onCollapsedCha
 						}}
 						trailing={
 							<KbdGroup aria-hidden="true" className="text-muted-foreground pointer-coarse:hidden">
-								<Kbd className="h-4 min-w-4 px-0.5 text-[10px]">⌘</Kbd>
-								<Kbd className="h-4 min-w-4 px-0.5 text-[10px]">K</Kbd>
+								<Kbd className="h-4 min-w-4 px-0.5 text-[0.625rem]">⌘</Kbd>
+								<Kbd className="h-4 min-w-4 px-0.5 text-[0.625rem]">K</Kbd>
 							</KbdGroup>
 						}
 					/>
@@ -195,8 +188,8 @@ function AgentsBuilderSidebar({ collapsed: collapsedProp = false, onCollapsedCha
 								<span className="relative grid shrink-0 place-items-center">
 									<NavIcon icon={Inbox} active={view === 'inbox'} />
 									{collapsed && needsYou > 0 ? (
-										<span aria-hidden="true" className="absolute -top-1 -right-1.5 text-[9px] leading-none font-semibold text-foreground tabular-nums">
-											{needsYou}
+										<span aria-hidden="true" className="absolute -top-1 -end-1.5 text-[0.5625rem] leading-none font-semibold text-foreground tabular-nums">
+											{formatCount(needsYou)}
 										</span>
 									) : null}
 								</span>
@@ -204,7 +197,7 @@ function AgentsBuilderSidebar({ collapsed: collapsedProp = false, onCollapsedCha
 							trailing={
 								needsYou > 0 ? (
 									<span aria-hidden="true" className="text-xs text-muted-foreground tabular-nums">
-										{needsYou}
+										{formatCount(needsYou)}
 									</span>
 								) : null
 							}
@@ -219,7 +212,7 @@ function AgentsBuilderSidebar({ collapsed: collapsedProp = false, onCollapsedCha
 					</ul>
 					<hr className="border-sidebar-border" />
 					<div className="flex flex-col gap-1">
-						<div className={cn('flex h-7 items-center gap-2 pl-2', collapsed && 'justify-center pl-0')}>
+						<div className={cn('flex h-7 items-center gap-2 ps-2', collapsed && 'justify-center ps-0')}>
 							{collapsed ? null : (
 								<h2 id={headingId} className="flex-1 truncate text-xs text-muted-foreground">
 									Agents
@@ -276,7 +269,7 @@ function AgentsBuilderSidebar({ collapsed: collapsedProp = false, onCollapsedCha
 							<h2 id={connectId} className="text-sm font-medium text-foreground">
 								Connect more sources
 							</h2>
-							<p className="mt-1 text-pretty text-[13px] leading-5 text-muted-foreground">Every source you add sharpens the answers.</p>
+							<p className="mt-1 text-pretty text-[0.8125rem] leading-5 text-muted-foreground">Every source you add sharpens the answers.</p>
 						</div>
 						<AppPicker collapsed={false} onPick={onNavigate} />
 					</div>
@@ -285,7 +278,7 @@ function AgentsBuilderSidebar({ collapsed: collapsedProp = false, onCollapsedCha
 							const app = integration(id);
 							return app ? (
 								<li key={id}>
-									<IntegrationMark integration={app} className="size-5 rounded-[5px] text-[10px] ring-2 ring-sidebar" />
+									<IntegrationMark integration={app} className="size-5 rounded-[5px] text-[0.625rem] ring-2 ring-sidebar" />
 									<span className="sr-only">{app.name}</span>
 								</li>
 							) : null;

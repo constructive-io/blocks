@@ -18,16 +18,11 @@ type ContextRingProps = {
 	className?: string;
 };
 
+const compactNumber = new Intl.NumberFormat('en-US', { notation: 'compact', maximumFractionDigits: 1 });
+
+/** `1048576` is "1M", `999500` is "999.5K" and `9960` is "10K": rounding rolls up to the next unit instead of printing "1000K" or "10.0K". */
 function formatCompact(n: number): string {
-	if (n >= 1_000_000) {
-		const m = n / 1_000_000;
-		return `${Number.isInteger(m) ? m : m.toFixed(m < 10 ? 2 : 1)}M`;
-	}
-	if (n >= 1_000) {
-		const k = n / 1_000;
-		return `${Number.isInteger(k) ? k : k.toFixed(k < 10 ? 1 : 0)}K`;
-	}
-	return String(n);
+	return Number.isFinite(n) ? compactNumber.format(n) : String(n);
 }
 
 type MeterTone = 'idle' | 'ok' | 'warn' | 'critical' | 'recomputing';
@@ -83,7 +78,9 @@ function ContextRing({ usage, size = 24, stroke = 2, className }: ContextRingPro
 	const center = size / 2;
 	const glowPad = snap(Math.max(4, size * 0.18));
 	const recomputing = !!usage && usage.tokens === null;
-	const pct = usage && usage.percent != null ? Math.max(0, Math.min(100, usage.percent)) : 0;
+	// Without a reported percent, the ring still reads the tokens against the window rather than sitting empty beside a tooltip with real numbers.
+	const reported = usage?.percent ?? (usage && usage.tokens !== null && usage.contextWindow > 0 ? (usage.tokens / usage.contextWindow) * 100 : null);
+	const pct = reported != null ? Math.max(0, Math.min(100, reported)) : 0;
 	const tone = meterTone(pct, recomputing, !!usage);
 	const color = toneStroke(tone);
 	const hit = Math.max(size, 32);
@@ -103,7 +100,7 @@ function ContextRing({ usage, size = 24, stroke = 2, className }: ContextRingPro
 	if (!usage) tooltip = 'No usage yet';
 	else if (usage.tokens === null) tooltip = 'Recomputing after compaction…';
 	else {
-		tooltip = `${Math.round(usage.percent ?? 0)}% used · ${formatCompact(usage.tokens)} / ${formatCompact(usage.contextWindow)}`;
+		tooltip = `${Math.round(pct)}% used · ${formatCompact(usage.tokens)} / ${formatCompact(usage.contextWindow)}`;
 	}
 
 	return (

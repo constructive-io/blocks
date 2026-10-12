@@ -29,8 +29,14 @@ function WorkspaceMenu({ collapsed }: { collapsed: boolean }) {
 			<DropdownMenuContent align="start" className="w-64">
 				<div className="flex items-center gap-2 px-2 pt-1 pb-2">
 					<span className="min-w-0 flex-1">
-						<span className="block truncate text-sm font-medium">{data.workspace.name}</span>
-						{data.workspace.databaseName ? <span className="block truncate font-mono text-[11px] text-muted-foreground">{data.workspace.databaseName}</span> : null}
+						<span title={data.workspace.name} className="block truncate text-sm font-medium">
+							<bdi>{data.workspace.name}</bdi>
+						</span>
+						{data.workspace.databaseName ? (
+							<span title={data.workspace.databaseName} className="block truncate font-mono text-[0.6875rem] text-muted-foreground">
+								{data.workspace.databaseName}
+							</span>
+						) : null}
 					</span>
 					<ToneBadge tone={platform ? 'primary' : 'violet'}>{platform ? 'Platform' : 'Tenant'}</ToneBadge>
 				</div>
@@ -121,8 +127,8 @@ export function BillingConsoleSidebar({ collapsed = false, onCollapsedChange, dr
 					>
 						<div className="flex items-center gap-2">
 							{provider ? <ProviderMark provider={provider} size="sm" /> : null}
-							<p className="min-w-0 flex-1 truncate text-sm font-medium text-foreground">{settings.enableBilling ? 'Billing is live' : 'Billing is off'}</p>
-							{connection ? <span className="text-xs text-muted-foreground">{modeLabel(provider, connection.mode)}</span> : null}
+							<p title={settings.enableBilling ? 'Billing is live' : 'Billing is off'} className="min-w-0 flex-1 truncate text-sm font-medium text-foreground">{settings.enableBilling ? 'Billing is live' : 'Billing is off'}</p>
+							{connection ? <span className="shrink-0 text-xs text-muted-foreground">{modeLabel(provider, connection.mode)}</span> : null}
 						</div>
 						<div aria-hidden="true" className="mt-3 flex h-1 gap-px overflow-hidden rounded-full bg-foreground/[0.07]">
 							{health.checks.map((check) => (

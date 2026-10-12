@@ -62,15 +62,17 @@ function AgentDraftCard({
 		>
 			<Collapsible defaultOpen={defaultOpen}>
 				<div className="flex h-10 items-center gap-2 px-2">
-					<CollapsibleTrigger className="group flex min-w-0 flex-1 cursor-pointer items-center justify-start gap-2 rounded-md font-normal py-1 text-left outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50">
+					<CollapsibleTrigger className="group flex min-w-0 flex-1 cursor-pointer items-center justify-start gap-2 rounded-md font-normal py-1 text-start outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50">
 						<ChevronRight
 							aria-hidden="true"
-							className="size-3.5 shrink-0 text-muted-foreground transition-transform duration-(--duration-moderate) ease-out group-data-panel-open:rotate-90 motion-reduce:transition-none"
+							className="size-3.5 shrink-0 text-muted-foreground transition-transform duration-(--duration-moderate) ease-out group-data-panel-open:rotate-90 motion-reduce:transition-none rtl:-scale-x-100 rtl:group-data-panel-open:scale-x-100"
 						/>
 						<MarkTile className="size-5 [&_svg:not([class*=size-])]:size-3">
 							<Bot />
 						</MarkTile>
-						<span className="truncate font-mono text-[13px] text-foreground">{name}</span>
+						<span title={typeof name === 'string' ? name : undefined} className="truncate font-mono text-[0.8125rem] text-foreground">
+							{name}
+						</span>
 					</CollapsibleTrigger>
 					{badge ? (
 						<span className="inline-flex h-5 shrink-0 items-center rounded-[5px] border border-border px-1.5 text-xs text-muted-foreground">
@@ -80,11 +82,11 @@ function AgentDraftCard({
 				</div>
 				<CollapsiblePanel>
 					{schedule || tools.length ? (
-						<dl className="grid grid-cols-[5.5rem_1fr] gap-x-3 gap-y-2 border-t border-border px-4 py-3 text-[13px]">
+						<dl className="grid grid-cols-[5.5rem_minmax(0,1fr)] gap-x-3 gap-y-2 border-t border-border px-4 py-3 text-[0.8125rem]">
 							{schedule ? (
 								<>
 									<dt className="text-muted-foreground">Runs</dt>
-									<dd className="text-foreground">{schedule}</dd>
+									<dd className="min-w-0 text-foreground [overflow-wrap:anywhere]">{schedule}</dd>
 								</>
 							) : null}
 							{tools.length ? (
@@ -100,18 +102,20 @@ function AgentDraftCard({
 												) : null,
 											)}
 										</span>
-										<span className="truncate">{tools.map((tool) => tool.label).join(', ')}</span>
+										<span title={tools.map((tool) => tool.label).join(', ')} className="truncate">
+											{tools.map((tool) => tool.label).join(', ')}
+										</span>
 									</dd>
 								</>
 							) : null}
 						</dl>
 					) : null}
 					{steps.length ? (
-						<ol className="flex flex-col gap-1.5 border-t border-border px-4 py-3 text-[13px] text-muted-foreground">
+						<ol className="flex flex-col gap-1.5 border-t border-border px-4 py-3 text-[0.8125rem] text-muted-foreground">
 							{steps.map((step, index) => (
 								<li key={index} className="flex gap-3">
-									<span className="w-3 shrink-0 text-right tabular-nums text-subtle-foreground">{index + 1}</span>
-									<span className="text-pretty">{step}</span>
+									<span className="w-3 shrink-0 text-end tabular-nums text-subtle-foreground">{index + 1}</span>
+									<span className="min-w-0 text-pretty [overflow-wrap:anywhere]">{step}</span>
 								</li>
 							))}
 						</ol>
@@ -119,10 +123,10 @@ function AgentDraftCard({
 				</CollapsiblePanel>
 			</Collapsible>
 			{actions.length ? (
-				<div className="flex items-center gap-2 border-t border-border p-2">
+				<div className="flex flex-wrap items-center gap-2 border-t border-border p-2">
 					{chosen ? (
-						<span className="inline-flex h-7 items-center gap-1.5 rounded-md bg-muted px-2 text-[13px] text-foreground">
-							<Check aria-hidden="true" className={cn('size-3.5', iconEnterClass)} />
+						<span className="inline-flex min-h-7 max-w-full items-center gap-1.5 rounded-md bg-muted px-2 py-1 text-[0.8125rem] text-foreground [overflow-wrap:anywhere]">
+							<Check aria-hidden="true" className={cn('size-3.5 shrink-0', iconEnterClass)} />
 							{chosen.chosenLabel ?? chosen.label}
 						</span>
 					) : (
@@ -130,6 +134,7 @@ function AgentDraftCard({
 							<Button
 								key={action.id}
 								size="xs"
+								wrap
 								variant={action.variant ?? (index === 0 ? 'default' : 'outline')}
 								onClick={() => onAction?.(action.id)}
 							>
