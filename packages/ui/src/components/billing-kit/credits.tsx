@@ -3,9 +3,10 @@
 import { Coins, Gift, Sparkles } from 'lucide-react';
 import * as React from 'react';
 
+import { plural } from '../../lib/intl';
 import { cn } from '../../lib/utils';
 import { Button } from '../button';
-import { plural, ToneBadge } from '../workspace-kit/primitives';
+import { ToneBadge } from '../workspace-kit/primitives';
 import { useBillingFormat } from './context';
 import { CREDIT_SOURCE, CREDIT_TYPE, daysUntil, isUnlimited } from './format';
 import { Bezel, dashedRule, EmptyState, StatusBadge } from './surface';

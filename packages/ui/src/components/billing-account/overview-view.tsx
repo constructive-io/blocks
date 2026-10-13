@@ -2,6 +2,7 @@
 
 import { ArrowRight, Coins, LayoutDashboard, Lock, Ticket } from 'lucide-react';
 
+import { plural } from '../../lib/intl';
 import { Button } from '../button';
 import { useBillingFormat } from '../billing-kit/context';
 import { CreditWallet } from '../billing-kit/credits';
@@ -12,7 +13,7 @@ import { CurrentPlanCard } from '../billing-kit/plan';
 import { hasFeature } from '../billing-kit/providers';
 import { Panel } from '../billing-kit/surface';
 import { buildUsageTree, PoolGrid } from '../billing-kit/usage';
-import { enterClass, plural, staggerStyle, ViewFrame } from '../workspace-kit/primitives';
+import { enterClass, staggerStyle, ViewFrame } from '../workspace-kit/primitives';
 import { AccountBanner } from './account-banner';
 import { useBillingAccount } from './billing-account-context';
 

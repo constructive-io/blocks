@@ -5,7 +5,7 @@ import { PlusIcon } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { NavCount, NavRow, NavSection } from '../workspace-kit/nav';
 import { TooltipIconButton } from '../workspace-kit/primitives';
-import { MiddleTruncate } from './middle-truncate';
+import { MiddleTruncate } from '../workspace-kit/middle-truncate';
 import type { BucketVisibility, StorageBucket } from './types';
 import { bucketDisplayName, formatCount } from './utils';
 import { VISIBILITY } from './visibility-badge';

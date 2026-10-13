@@ -21,12 +21,8 @@ export {
 	enterClass,
 	FilterGroup,
 	focusRingClass,
-	formatCount,
 	hitAreaClass,
-	MiddleTruncate,
-	nameList,
 	NavMenuButton,
-	plural,
 	pressClass,
 	scrollRowClass,
 	SearchField,
@@ -38,11 +34,13 @@ export {
 	ToneBadge,
 	TooltipIconButton,
 	useInert,
-	useScrollFade,
 	ViewFrame,
 	ViewHeader,
 } from './primitives';
 export type { Tone } from './primitives';
+export { formatCount, nameList, plural } from '../../lib/intl';
+export { useScrollFade } from '../../lib/use-scroll-fade';
+export { MiddleTruncate } from './middle-truncate';
 export { prefersReducedMotion, useReducedMotion } from './reduced-motion';
 export { useWorkspaceShell, WorkspaceShell, WorkspaceShellContext } from './shell';
 export {

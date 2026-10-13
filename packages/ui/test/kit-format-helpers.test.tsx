@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 
 import { formatCompact } from '../src/components/ai/context-ring';
 import { formatDuration } from '../src/components/ai/format-duration';
-import { calendarDaysUntil, formatDate, formatLimit, formatNames, formatPercent, formatRelativeDays, singularize, unitFor } from '../src/components/billing-kit/format';
+import { calendarDaysUntil, formatDate, formatLimit, formatPercent, formatRelativeDays, singularize, unitFor } from '../src/components/billing-kit/format';
 import { dayKey, formatBytes, formatDate as formatRoomDate, formatDeadline, formatRelative, formatTime as formatRoomTime } from '../src/components/data-rooms/format';
 import { formatCount, MiddleTruncate, nameList, plural } from '../src/components/workspace-kit';
 
@@ -93,11 +93,6 @@ describe('billing formatting', () => {
 			'active users': 'active user',
 			'api-calls': 'api-call',
 		});
-	});
-
-	it('lists three names and counts the rest', () => {
-		expect(formatNames(['a', 'b'], 'en-US')).toBe('a and b');
-		expect(formatNames(['a', 'b', 'c', 'd', 'e'], 'en-US')).toBe('a, b, c, and 2 more');
 	});
 });
 
@@ -194,8 +189,8 @@ describe('workspace kit helpers', () => {
 
 	it('draws a plain truncated line when no tail is asked for', () => {
 		const html = renderToStaticMarkup(<MiddleTruncate text={`${'z'.repeat(60)}.pdf`} tail={0} />);
-		expect(html).not.toContain('shrink-0');
-		expect(html).toContain('truncate');
+		expect(html).not.toContain('aria-hidden');
+		expect(html).toContain('text-ellipsis');
 		expect(html).toContain(`${'z'.repeat(60)}.pdf`);
 	});
 
@@ -204,8 +199,8 @@ describe('workspace kit helpers', () => {
 		const html = renderToStaticMarkup(<MiddleTruncate text={name} />);
 		expect(html).toContain(`title="${name}"`);
 		expect(html).toContain(`<span class="sr-only">${name}</span>`);
-		expect(html).toMatch(/shrink-0 whitespace-pre"[^>]*>_v12\.pdf</);
+		expect(html).toMatch(/shrink-0[^"]*"[^>]*>_v12\.pdf</);
 		const short = renderToStaticMarkup(<MiddleTruncate text="Notes.pdf" />);
-		expect(short).not.toContain('shrink-0');
+		expect(short).not.toContain('aria-hidden');
 	});
 });

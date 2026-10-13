@@ -4,7 +4,8 @@ import type { LucideIcon } from 'lucide-react';
 import * as React from 'react';
 
 import { cn } from '../../lib/utils';
-import { focusRingClass, SurfaceBody, surfaceInsetClass, TONE_COLOR, ToneBadge, type Tone, useScrollFade } from './primitives';
+import { focusRingClass, SurfaceBody, surfaceInsetClass, TONE_COLOR, ToneBadge, type Tone } from './primitives';
+import { useScrollFade } from '../../lib/use-scroll-fade';
 
 /** A status as the UI shows it: a short label and the tone that colours it. */
 export type Presentation = { label: string; tone: Tone; description?: string };

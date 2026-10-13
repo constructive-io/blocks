@@ -106,8 +106,6 @@ export function PlanChangeDialog({
 
 	const diffs = React.useMemo(() => (targetPlan ? diffPlans(currentPlan, targetPlan, rows) : []), [currentPlan, rows, targetPlan]);
 	const price = targetPlan ? resolvePrice(targetPlan, interval) : undefined;
-	// A plan whose prices were all retired cannot be started or switched to; it is not a free plan.
-	const offered = targetPlan ? isPlanAvailable(targetPlan) : false;
 	const downgrade = isDowngrade(currentPlan, targetPlan, diffs);
 	const canSchedule = Boolean(subscription) && hasFeature(provider, 'scheduledChanges');
 	const paid = Boolean(price && price.amount.amountMinor > 0);
@@ -147,9 +145,10 @@ export function PlanChangeDialog({
 			: null;
 
 	if (!targetPlan) return null;
+	// A plan whose prices were all retired cannot be started or switched to; it is not a free plan.
+	if (!isPlanAvailable(targetPlan)) return <UnavailablePlanDialog open={open} onOpenChange={onOpenChange} plan={targetPlan} switching={Boolean(currentPlan)} />;
 
 	const confirm = async () => {
-		if (!offered) return;
 		setBusy(true);
 		setError(null);
 		try {
@@ -172,23 +171,15 @@ export function PlanChangeDialog({
 						{currentPlan ? `${downgrade ? 'Switch' : 'Upgrade'} to ${targetPlan.displayName}` : `Start ${targetPlan.displayName}`}
 					</DialogTitle>
 					<DialogDescription className="text-[0.8125rem]">
-						{!offered
-							? 'No longer offered.'
-							: price && paid
-								? `${f.money(price.amount)} ${INTERVAL_PHRASE[price.interval]}${priceFor(targetPlan, price.interval, 'metered') ? ', plus usage past the allowance' : ''}.`
-								: targetPlan.contactSales
-									? 'Custom pricing.'
-									: 'No charge.'}
+						{price && paid
+							? `${f.money(price.amount)} ${INTERVAL_PHRASE[price.interval]}${priceFor(targetPlan, price.interval, 'metered') ? ', plus usage past the allowance' : ''}.`
+							: targetPlan.contactSales
+								? 'Custom pricing.'
+								: 'No charge.'}
 					</DialogDescription>
 				</DialogHeader>
 				<div className="flex flex-col gap-4 px-6 pb-5">
-					{!offered ? (
-						<div role="note" className="flex gap-2 rounded-lg bg-warning/10 px-3 py-2.5 text-[0.8125rem] text-foreground">
-							<TriangleAlert aria-hidden="true" className="mt-0.5 size-3.5 shrink-0 text-warning" />
-							<p className="text-pretty [overflow-wrap:anywhere]">{targetPlan.displayName} has no active price, so it can’t be started or switched to. Choose another plan.</p>
-						</div>
-					) : null}
-					{offered && diffs.length > 0 ? (
+					{diffs.length > 0 ? (
 						<ul aria-label="What changes" className="flex flex-col rounded-lg border border-border px-3 py-1 text-[0.8125rem]">
 							{diffs.map((diff, index) => (
 								<li key={`${diff.row.kind}:${diff.row.key}`} className={cn('flex items-center gap-2 py-1.5', index > 0 && cn('border-t', dashedRule))}>
@@ -215,7 +206,7 @@ export function PlanChangeDialog({
 						</ul>
 					) : null}
 
-					{offered && (conflicts.limits.length > 0 || meterNote) ? (
+					{conflicts.limits.length > 0 || meterNote ? (
 						<div role="note" className="flex gap-2 rounded-lg bg-warning/10 px-3 py-2.5 text-[0.8125rem] text-foreground">
 							<TriangleAlert aria-hidden="true" className="mt-0.5 size-3.5 shrink-0 text-warning" />
 							<div className="flex flex-col gap-1.5 text-pretty">
@@ -234,7 +225,7 @@ export function PlanChangeDialog({
 						</div>
 					) : null}
 
-					{offered && canSchedule && !checkout ? (
+					{canSchedule && !checkout ? (
 						<fieldset className="flex flex-col gap-2">
 							<legend id={timingId} className="mb-2 text-xs text-muted-foreground">
 								When should it apply?
@@ -269,7 +260,7 @@ export function PlanChangeDialog({
 						</fieldset>
 					) : null}
 
-					{offered && checkout ? (
+					{checkout ? (
 						<p className="flex items-start gap-2 text-[0.8125rem] text-muted-foreground">
 							<ExternalLink aria-hidden="true" className="mt-0.5 size-3.5 shrink-0" />
 							You’ll finish payment on {provider?.name ?? 'the provider'}’s secure checkout. Nothing is charged until you confirm there.
@@ -286,8 +277,36 @@ export function PlanChangeDialog({
 					<Button variant="outline" size="sm" disabled={busy} onClick={() => onOpenChange(false)}>
 						Cancel
 					</Button>
-					<Button size="sm" disabled={busy || !offered} aria-busy={busy || undefined} onClick={confirm}>
-						{!offered ? 'Unavailable' : busy ? 'Working…' : checkout ? 'Continue to checkout' : timing === 'period_end' ? 'Schedule change' : downgrade ? 'Switch now' : 'Upgrade now'}
+					<Button size="sm" disabled={busy} aria-busy={busy || undefined} onClick={confirm}>
+						{busy ? 'Working…' : checkout ? 'Continue to checkout' : timing === 'period_end' ? 'Schedule change' : downgrade ? 'Switch now' : 'Upgrade now'}
+					</Button>
+				</DialogFooter>
+			</DialogPopup>
+		</Dialog>
+	);
+}
+
+/** What the dialog shows for a plan whose every price was retired: why it can't be chosen, and no way to confirm. */
+function UnavailablePlanDialog({ open, onOpenChange, plan, switching }: { open: boolean; onOpenChange: (open: boolean) => void; plan: Plan; switching: boolean }) {
+	return (
+		<Dialog open={open} onOpenChange={onOpenChange}>
+			<DialogPopup className="max-w-md">
+				<DialogHeader className="gap-1.5 pb-3">
+					<DialogTitle className="text-base font-medium">{switching ? `Switch to ${plan.displayName}` : `Start ${plan.displayName}`}</DialogTitle>
+					<DialogDescription className="text-[0.8125rem]">No longer offered.</DialogDescription>
+				</DialogHeader>
+				<div className="px-6 pb-5">
+					<div role="note" className="flex gap-2 rounded-lg bg-warning/10 px-3 py-2.5 text-[0.8125rem] text-foreground">
+						<TriangleAlert aria-hidden="true" className="mt-0.5 size-3.5 shrink-0 text-warning" />
+						<p className="text-pretty [overflow-wrap:anywhere]">{plan.displayName} has no active price, so it can’t be started or switched to. Choose another plan.</p>
+					</div>
+				</div>
+				<DialogFooter>
+					<Button variant="outline" size="sm" onClick={() => onOpenChange(false)}>
+						Cancel
+					</Button>
+					<Button size="sm" disabled>
+						Unavailable
 					</Button>
 				</DialogFooter>
 			</DialogPopup>

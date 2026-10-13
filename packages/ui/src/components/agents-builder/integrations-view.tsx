@@ -8,7 +8,8 @@ import { Button } from '../button';
 import { useAgentsBuilder } from './agents-builder-context';
 import { buildIntegrationSections, type IntegrationScope } from './integration-sections';
 import { IntegrationMark } from './integration-mark';
-import { focusRingClass, pressClass, scrollRowClass, SearchField, useScrollFade, ViewHeader } from '../workspace-kit/primitives';
+import { focusRingClass, pressClass, scrollRowClass, SearchField, ViewHeader } from '../workspace-kit/primitives';
+import { useScrollFade } from '../../lib/use-scroll-fade';
 import type { Integration } from './types';
 import { startViewTransition, ViewAnimation } from '../workspace-kit/view-transition';
 

@@ -17,12 +17,13 @@ import {
 } from 'lucide-react';
 import * as React from 'react';
 
+import { formatCount } from '../../lib/intl';
 import { initials } from '../../lib/initials';
 import { cn } from '../../lib/utils';
 import { TextShimmer } from '../ai/text-shimmer';
 import { Kbd, KbdGroup } from '../kbd';
 import { NavIcon, NavRow } from '../workspace-kit/nav';
-import { formatCount, SearchField, TooltipIconButton } from '../workspace-kit/primitives';
+import { SearchField, TooltipIconButton } from '../workspace-kit/primitives';
 import { AppPicker } from './app-picker';
 import { useAgentsBuilder } from './agents-builder-context';
 import { IntegrationMark } from './integration-mark';

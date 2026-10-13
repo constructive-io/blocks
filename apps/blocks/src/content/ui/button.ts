@@ -83,6 +83,13 @@ export const buttonDocs = definePrimitiveDocs({
           description: 'Merges Button props and classes onto its single child instead of rendering a button element.',
         },
         {
+          name: 'focusableWhenDisabled',
+          type: 'boolean',
+          default: 'false',
+          description:
+            'Keeps a disabled button focusable and hoverable, disabled with aria-disabled instead, so a tooltip explaining why can still open. TooltipTrigger sets it on a Button child.',
+        },
+        {
           name: 'type',
           type: "'button' | 'submit' | 'reset'",
           default: "'button'",

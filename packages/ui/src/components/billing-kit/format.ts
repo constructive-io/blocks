@@ -1,3 +1,4 @@
+import { dateFormat, listFormat, numberFormat, pluralRules, relativeTimeFormat } from '../../lib/intl';
 import type {
 	BillingHealth,
 	BillingInterval,
@@ -29,44 +30,12 @@ export type Presentation = { label: string; tone: Tone; description?: string };
 
 export const isUnlimited = (limit: number) => limit < 0;
 
-/* ------------------------------------------------------------------ *
- * Cached Intl formatters
- * ------------------------------------------------------------------ */
-
-// Intl constructors are slow and every list row formats several values, so
-// each distinct option set is built once per module.
-const formatters = new Map<string, Intl.NumberFormat | Intl.DateTimeFormat | Intl.RelativeTimeFormat | Intl.ListFormat | Intl.PluralRules>();
-
-function cached<T extends Intl.NumberFormat | Intl.DateTimeFormat | Intl.RelativeTimeFormat | Intl.ListFormat | Intl.PluralRules>(key: string, create: () => T): T {
-	let formatter = formatters.get(key) as T | undefined;
-	if (!formatter) {
-		formatter = create();
-		formatters.set(key, formatter);
-	}
-	return formatter;
-}
-
-export function numberFormat(locale: string, options: Intl.NumberFormatOptions) {
-	return cached(`n|${locale}|${JSON.stringify(options)}`, () => new Intl.NumberFormat(locale, options));
-}
-
-export function dateFormat(locale: string, options: Intl.DateTimeFormatOptions) {
-	return cached(`d|${locale}|${JSON.stringify(options)}`, () => new Intl.DateTimeFormat(locale, options));
-}
+// Cached Intl formatters, shared with the other kits.
+export { dateFormat, numberFormat } from '../../lib/intl';
 
 /** "a, b, and c" in the given locale. */
 export function formatList(items: string[], locale: string) {
-	return cached(`l|${locale}`, () => new Intl.ListFormat(locale, { type: 'conjunction' })).format(items);
-}
-
-/**
- * "a, b, c, and 12 more": at most `max` names, then a count of the rest, so a
- * notice about fifteen databases is a sentence to read rather than a wall.
- */
-export function formatNames(names: readonly string[], locale: string, max = 3) {
-	const shown = names.slice(0, max);
-	const rest = names.length - shown.length;
-	return formatList(rest > 0 ? [...shown, `${numberFormat(locale, {}).format(rest)} more`] : shown, locale);
+	return listFormat(locale).format(items);
 }
 
 /* ------------------------------------------------------------------ *
@@ -149,11 +118,6 @@ export function formatPercent(ratio: number, locale: string) {
  * Dates
  * ------------------------------------------------------------------ */
 
-/** A zero timestamp (`1970-01-01T00:00:00Z`) is how an unset value arrives, not a date anyone means. */
-export function isUnsetDate(iso: string) {
-	return new Date(iso).getTime() === 0;
-}
-
 /**
  * `short` leaves the year out for dates in the current year (`Jan 1`) and adds
  * it for any other year (`Jan 1, 2027`), so a yearly period never reads
@@ -219,7 +183,7 @@ export function calendarDaysUntil(iso: string, now: string, timeZone = 'UTC') {
 export function formatRelativeDays(iso: string, now: string, locale: string, timeZone = 'UTC') {
 	const days = calendarDaysUntil(iso, now, timeZone);
 	if (!Number.isFinite(days)) return iso;
-	return cached(`r|${locale}`, () => new Intl.RelativeTimeFormat(locale, { numeric: 'auto' })).format(days, 'day');
+	return relativeTimeFormat(locale).format(days, 'day');
 }
 
 /** Share of the period elapsed at `now`, clamped to 0..1. */
@@ -396,10 +360,6 @@ export function unitFor(count: number, unit: string, unitSingular?: string, loca
 	if (isUnlimited(count)) return unit;
 	if (pluralRules(locale).select(count) !== 'one') return unit;
 	return unitSingular ?? (/^en(?:-|$)/i.test(locale) ? singularize(unit) : unit);
-}
-
-function pluralRules(locale: string) {
-	return cached(`p|${locale}`, () => new Intl.PluralRules(locale));
 }
 
 /** Humanizes a slug for fallbacks: `object_storage_gb` → `Object storage gb`. */

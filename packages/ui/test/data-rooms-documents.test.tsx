@@ -62,7 +62,11 @@ afterEach(async () => {
 	vi.unstubAllGlobals();
 });
 
-const rowNames = () => [...container.querySelectorAll('tbody tr')].map((row) => row.querySelector('.sr-only')?.textContent).filter((name): name is string => Boolean(name && NAMES.includes(name)));
+// A document name carries its full text as a tooltip, whether or not it is cut.
+const rowNames = () =>
+	[...container.querySelectorAll('tbody tr')]
+		.map((row) => [...row.querySelectorAll('[title]')].map((node) => node.getAttribute('title')).find((title) => title && NAMES.includes(title)))
+		.filter((name): name is string => Boolean(name));
 
 async function openDocuments(locale?: string) {
 	await act(async () => root.render(<DataRooms data={data} defaultView="room" defaultRoomId="room-atlas" defaultTab="documents" locale={locale} />));

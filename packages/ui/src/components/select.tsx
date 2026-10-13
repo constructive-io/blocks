@@ -29,8 +29,7 @@ function textOf(node: React.ReactNode): string {
   return "";
 }
 
-/** Reads `value -> label` from the <SelectItem>s declared in `children` (groups and fragments included). */
-function collectItemLabels(children: React.ReactNode, labels: SelectLabels = {}): SelectLabels {
+function collectInto(children: React.ReactNode, labels: SelectLabels) {
   React.Children.forEach(children, (child) => {
     if (!React.isValidElement<{ value?: unknown; children?: React.ReactNode; label?: React.ReactNode; name?: string }>(child)) {
       return;
@@ -40,29 +39,22 @@ function collectItemLabels(children: React.ReactNode, labels: SelectLabels = {})
       const text = child.type === SelectFieldItem ? (name ?? "") : textOf(child.type === SelectRichItem ? (label ?? inner) : inner).trim();
       if (typeof value === "string" && text) labels[value] = text;
     } else if (inner) {
-      collectItemLabels(inner, labels);
+      collectInto(inner, labels);
     }
   });
-  return labels;
 }
 
-function hasLabels(labels: SelectLabels): boolean {
-  for (const key in labels) {
-    if (Object.prototype.hasOwnProperty.call(labels, key)) return true;
-  }
-  return false;
+/** Reads `value -> label` from the <SelectItem>s declared in `children` (groups, fragments and nested markup included). */
+function collectItemLabels(children: React.ReactNode): SelectLabels {
+  const labels: SelectLabels = {};
+  collectInto(children, labels);
+  return Object.keys(labels).length > 0 ? labels : NO_LABELS;
 }
 
 function sameLabels(a: SelectLabels, b: SelectLabels): boolean {
   if (a === b) return true;
   const keys = Object.keys(b);
   return keys.length === Object.keys(a).length && keys.every((key) => a[key] === b[key]);
-}
-
-function mergeLabels(registered: SelectLabels, declared: SelectLabels): SelectLabels {
-  if (!hasLabels(registered)) return declared;
-  if (!hasLabels(declared)) return registered;
-  return { ...registered, ...declared };
 }
 
 /** Keeps the same object while the labels are unchanged, so Base UI is not handed a new `items` on every render. */
@@ -74,155 +66,32 @@ function useStableLabels(next: SelectLabels): SelectLabels {
   return next;
 }
 
-function addValues(into: Set<string>, value: unknown) {
-  if (typeof value === "string") into.add(value);
-  else if (Array.isArray(value)) value.forEach((entry) => addValues(into, entry));
-}
-
-/**
- * The labels of items a wrapper component renders (so `children` does not show them), as a small external store: items
- * report themselves from an effect and Select subscribes, so nothing is read from a ref while rendering.
- *
- * An entry goes when its last item unmounts, so the store holds the items that exist and nothing else. The values in
- * `keep` (the selection) are the exception: they keep their label while their item is not mounted, which is what keeps
- * the trigger labelled when the list is closed or no longer includes the selected item.
- */
-function createLabelRegistry() {
-  const entries = new Map<string, { label: string; count: number }>();
-  const listeners = new Set<() => void>();
-  let keepValues: ReadonlySet<string> = new Set();
-  let version = 0;
-  let snapshot: SelectLabels = NO_LABELS;
-  let snapshotVersion = 0;
-
-  // Only a change to what a reader would see bumps the version, so equal registrations cost nothing downstream.
-  const changed = () => {
-    version += 1;
-    listeners.forEach((listener) => listener());
-  };
-
-  return {
-    subscribe(listener: () => void) {
-      listeners.add(listener);
-      return () => {
-        listeners.delete(listener);
-      };
-    },
-    getVersion: () => version,
-    /** The labels as one object: the same object until a label is added, changed or removed. */
-    read(): SelectLabels {
-      if (snapshotVersion !== version) {
-        snapshot = entries.size === 0 ? NO_LABELS : Object.fromEntries(Array.from(entries, ([value, entry]) => [value, entry.label]));
-        snapshotVersion = version;
-      }
-      return snapshot;
-    },
-    register(value: string, label: string) {
-      const entry = entries.get(value);
-      if (!entry) {
-        entries.set(value, { label, count: 1 });
-        changed();
-        return;
-      }
-      entry.count += 1;
-      if (entry.label !== label) {
-        entry.label = label;
-        changed();
-      }
-    },
-    unregister(value: string) {
-      const entry = entries.get(value);
-      if (!entry) return;
-      entry.count -= 1;
-      if (entry.count <= 0 && !keepValues.has(value)) {
-        entries.delete(value);
-        changed();
-      }
-    },
-    keep(values: ReadonlySet<string>) {
-      keepValues = values;
-      let removed = false;
-      entries.forEach((entry, value) => {
-        if (entry.count <= 0 && !values.has(value)) {
-          entries.delete(value);
-          removed = true;
-        }
-      });
-      if (removed) changed();
-    },
-  };
-}
-
-type SelectLabelRegistry = ReturnType<typeof createLabelRegistry>;
-
-const SelectLabelContext = React.createContext<{ declared: SelectLabels; registry: SelectLabelRegistry } | null>(null);
-
-const getServerVersion = () => 0;
-
-const useIsomorphicLayoutEffect = typeof window === "undefined" ? React.useEffect : React.useLayoutEffect;
-
-function useRegisterSelectLabel(value: unknown, label: string) {
-  const context = React.useContext(SelectLabelContext);
-  const registry = context?.registry;
-  // Select already reads the label of an item declared in `children`; only an item it cannot see reports itself.
-  const declared = typeof value === "string" && context?.declared[value] === label;
-
-  React.useEffect(() => {
-    if (!registry || declared || typeof value !== "string" || !label) return;
-    registry.register(value, label);
-    return () => registry.unregister(value);
-  }, [registry, declared, value, label]);
-}
-
 /**
  * Base UI shows the raw `value` in the trigger unless it is given `items`. Pass `items` for full control (the children
- * are then not read at all); without it the labels are read from the declared <SelectItem>s, so `defaultValue="editor"`
- * shows "Editor", not `editor`. Items rendered by a wrapper component report their label while they are mounted, so
- * they are picked up once the list has opened and the selected value keeps its label from then on; pass `items` if the
- * label must show before that.
+ * are then not read at all); without it the labels are read from the <SelectItem>s declared in `children`, so
+ * `defaultValue="editor"` shows "Editor", not `editor`. Items rendered by a wrapper component are not visible from
+ * here: pass `items` when the options come from one.
  */
 function Select({ onValueChange, items, children, ...props }: SelectProps) {
-  const hasItems = items != null;
-  const [registry] = React.useState(createLabelRegistry);
-  // What was last picked: for an uncontrolled Select that is the selection, for a controlled one it covers the moment
-  // before the host hands the new value back.
-  const [picked, setPicked] = React.useState<unknown>(props.defaultValue);
-  const { value } = props;
-
-  const declared = useStableLabels(hasItems ? NO_LABELS : collectItemLabels(children));
-  React.useSyncExternalStore(registry.subscribe, registry.getVersion, getServerVersion);
-  const registered = registry.read();
-  const labels = React.useMemo(() => mergeLabels(registered, declared), [registered, declared]);
-  const context = React.useMemo(() => (hasItems ? null : { declared, registry }), [hasItems, declared, registry]);
-
-  // A layout effect, because a commit runs every layout effect before any passive cleanup: the selection is current
-  // when items that unmount in this same commit unregister, whatever order the host changed the value and the items in.
-  useIsomorphicLayoutEffect(() => {
-    if (hasItems) return;
-    const selected = new Set<string>();
-    addValues(selected, value);
-    addValues(selected, picked);
-    registry.keep(selected);
-  }, [registry, hasItems, value, picked]);
+  const declared = useStableLabels(items != null ? NO_LABELS : collectItemLabels(children));
 
   return (
-    <SelectLabelContext.Provider value={context}>
-      <SelectPrimitive.Root<string>
-        items={items ?? (hasLabels(labels) ? labels : undefined)}
-        onValueChange={(next, _eventDetails) => {
-          // Base UI also reports `null` when it resets the value because the selected item unmounted. A controlled host
-          // never sees that, and it must not erase the value that was just picked and is on its way back.
-          if (next != null || value === undefined) setPicked(next);
-          // Only call callback when there's an actual value (not null/undefined)
-          if (next != null) {
-            onValueChange?.(next);
-          }
-        }}
-        {...props}
-      >
-        {children}
-      </SelectPrimitive.Root>
-    </SelectLabelContext.Provider>
+    <SelectPrimitive.Root<string>
+      items={items ?? (declared === NO_LABELS ? undefined : declared)}
+      onValueChange={
+        onValueChange
+          ? (value, _eventDetails) => {
+              // Only call callback when there's an actual value (not null/undefined)
+              if (value != null) {
+                onValueChange(value);
+              }
+            }
+          : undefined
+      }
+      {...props}
+    >
+      {children}
+    </SelectPrimitive.Root>
   );
 }
 
@@ -360,7 +229,6 @@ function SelectItem({
   children,
   ...props
 }: SelectPrimitive.Item.Props) {
-  useRegisterSelectLabel(props.value, textOf(children).trim());
   return (
     <SelectPrimitive.Item
       className={cn(
@@ -444,7 +312,6 @@ function SelectRichItem({
   icon,
   ...props
 }: SelectRichItemProps) {
-  useRegisterSelectLabel(props.value, textOf(label ?? children).trim());
   return (
     <SelectPrimitive.Item
       className={cn(
@@ -503,7 +370,6 @@ function SelectFieldItem({
   type,
   ...props
 }: SelectFieldItemProps) {
-  useRegisterSelectLabel(props.value, name);
   return (
     <SelectPrimitive.Item
       className={cn(

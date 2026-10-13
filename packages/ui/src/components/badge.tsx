@@ -1,6 +1,7 @@
 import * as React from 'react';
 import { cva, type VariantProps } from 'class-variance-authority';
 
+import { truncateTextRuns } from '../lib/text-runs';
 import { cn } from '../lib/utils';
 
 const badgeVariants = cva(
@@ -36,53 +37,10 @@ const badgeVariants = cva(
 type BadgeProps = React.HTMLAttributes<HTMLSpanElement> & VariantProps<typeof badgeVariants>;
 
 const LONG_TEXT = 24;
-const COLLAPSIBLE_WHITESPACE = /^[ \t\n\f\r]*$/;
-
-/**
- * Each run of text and numbers is wrapped once, so a badge wider than its container
- * truncates with an ellipsis (`text-overflow` does not apply to the flex container
- * itself). A run is wrapped as a whole: `{count}%` is one flex item, as it is without
- * the wrapper, so no `gap` opens inside it. Elements stay as they are, and the padding
- * and negative margin keep tall glyphs (Thai tone marks, stacked Vietnamese) from being
- * clipped by the overflow.
- *
- * `text` is the whole label when the badge holds nothing else, for the full-text tooltip.
- */
-function truncatable(children: React.ReactNode) {
-	const nodes: React.ReactNode[] = [];
-	let run = '';
-	let text = '';
-	let onlyText = true;
-
-	const flush = () => {
-		// A run of collapsible whitespace between elements is not a flex item for a browser either.
-		if (!COLLAPSIBLE_WHITESPACE.test(run)) {
-			nodes.push(
-				<span key={`text-${nodes.length}`} className="-my-0.5 min-w-0 truncate py-0.5">
-					{run}
-				</span>,
-			);
-		}
-		run = '';
-	};
-
-	for (const child of React.Children.toArray(children)) {
-		if (typeof child === 'string' || typeof child === 'number') {
-			run += child;
-			text += child;
-		} else {
-			flush();
-			nodes.push(child);
-			onlyText = false;
-		}
-	}
-	flush();
-
-	return { nodes, text: onlyText ? text : undefined };
-}
-
 const Badge = React.forwardRef<HTMLSpanElement, BadgeProps>(({ className, variant, size, children, ...props }, ref) => {
-	const { nodes, text } = truncatable(children);
+	// The padding and negative margin keep tall glyphs (Thai tone marks, stacked Vietnamese) from being clipped by the
+	// truncation's overflow.
+	const { nodes, text } = truncateTextRuns(children, '-my-0.5 min-w-0 truncate py-0.5');
 
 	return (
 		<span

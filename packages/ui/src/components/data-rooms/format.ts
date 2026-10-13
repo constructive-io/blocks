@@ -1,4 +1,5 @@
 import { initials as initialsOf } from '../../lib/initials';
+import { dateFormat, isUnsetDate, numberFormat } from '../../lib/intl';
 import type { DocumentKind } from './types';
 
 export type DataRoomsFormatOptions = { locale: string; timeZone: string; now: string };
@@ -11,34 +12,6 @@ export function addDays(iso: string, days: number) {
 	return new Date(Date.parse(iso) + days * DAY_MS).toISOString();
 }
 
-/** A date nobody set: the zero timestamp a host sends for "none", an empty string, or text that is not a date. */
-export function isUnsetDate(iso: string) {
-	const time = Date.parse(iso);
-	return time === 0 || Number.isNaN(time);
-}
-
-// Intl formats are slow to build and a table asks for several per row, so each distinct set of options is built once.
-const formats = new Map<string, Intl.DateTimeFormat | Intl.NumberFormat>();
-
-function dateFormat(locale: string, options: Intl.DateTimeFormatOptions) {
-	const key = `d|${locale}|${JSON.stringify(options)}`;
-	let format = formats.get(key) as Intl.DateTimeFormat | undefined;
-	if (!format) {
-		format = new Intl.DateTimeFormat(locale, options);
-		formats.set(key, format);
-	}
-	return format;
-}
-
-function numberFormat(locale: string, options?: Intl.NumberFormatOptions) {
-	const key = `n|${locale}|${JSON.stringify(options ?? {})}`;
-	let format = formats.get(key) as Intl.NumberFormat | undefined;
-	if (!format) {
-		format = new Intl.NumberFormat(locale, options);
-		formats.set(key, format);
-	}
-	return format;
-}
 
 /** "Sep 24", or "Sep 24, 2025" outside the current year. A date nobody set is a dash. */
 export function formatDate(iso: string, { locale, timeZone, now }: DataRoomsFormatOptions, withTime = false) {
@@ -123,9 +96,7 @@ export function formatDuration(seconds: number) {
 	return `${Math.floor(minutes / 60)}h ${String(minutes % 60).padStart(2, '0')}m`;
 }
 
-export function formatCount(value: number, locale = 'en-US') {
-	return numberFormat(locale).format(value);
-}
+export { formatCount } from '../../lib/intl';
 
 /** "Dana Chen" → "Dana". */
 export function firstName(name: string) {

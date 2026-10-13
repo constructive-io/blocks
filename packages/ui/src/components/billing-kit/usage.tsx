@@ -3,9 +3,10 @@
 import { ChevronRight, Infinity as InfinityIcon, Layers } from 'lucide-react';
 import * as React from 'react';
 
+import { plural } from '../../lib/intl';
 import { cn } from '../../lib/utils';
 import { Sheet, SheetContent, SheetDescription, SheetTitle } from '../sheet';
-import { focusRingClass, plural, ToneBadge } from '../workspace-kit/primitives';
+import { focusRingClass, ToneBadge } from '../workspace-kit/primitives';
 import { AllowanceBar, Sparkline, UsageFigure } from './allowance';
 import { useBillingFormat } from './context';
 import { daysUntil, isUnlimited, singularize, usageLevel, usageRatio } from './format';

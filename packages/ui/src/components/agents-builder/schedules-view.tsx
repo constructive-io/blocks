@@ -3,6 +3,7 @@
 import { CalendarClock, ChevronDown, LayoutGrid, Play, Plus, Rows3, Send } from 'lucide-react';
 import * as React from 'react';
 
+import { formatCount, nameList, plural } from '../../lib/intl';
 import { cn } from '../../lib/utils';
 import { iconEnterClass } from '../ai/mark-tile';
 import { TextShimmer } from '../ai/text-shimmer';
@@ -12,7 +13,7 @@ import { Switch } from '../switch';
 import { useAgentsBuilder } from './agents-builder-context';
 import { IntegrationMark } from './integration-mark';
 import { usePlaybackClock } from './playback';
-import { enterClass, FilterGroup, focusRingClass, formatCount, nameList, plural, SurfaceBody, surfaceInsetClass, useInert, ViewHeader } from '../workspace-kit/primitives';
+import { enterClass, FilterGroup, focusRingClass, SurfaceBody, surfaceInsetClass, useInert, ViewHeader } from '../workspace-kit/primitives';
 import type { AgentSchedule, ScheduleRunStatus } from './types';
 import { RUN_TIMING } from './use-agent-run';
 import { startViewTransition, ViewAnimation } from '../workspace-kit/view-transition';

@@ -30,26 +30,7 @@ export function humanizeBytes(bytes: number | null | undefined): string {
 	return `${formatted} ${units[exponent]}`;
 }
 
-const COUNT_FORMATS = new Map<string, Intl.NumberFormat>();
-
-/**
- * Thousands-separated count. The default locale is fixed (`en-US`) so it renders the same on the server and in
- * the browser; pass the host's locale (for example `de-DE`) to show the reader's own separators.
- */
-export function formatCount(value: number, locale = 'en-US'): string {
-	if (!Number.isFinite(value)) return '—';
-	let format = COUNT_FORMATS.get(locale);
-	if (!format) {
-		try {
-			format = new Intl.NumberFormat(locale);
-		} catch {
-			// An invalid locale tag must not break the list; fall back to the fixed default.
-			format = COUNT_FORMATS.get('en-US') ?? new Intl.NumberFormat('en-US');
-		}
-		COUNT_FORMATS.set(locale, format);
-	}
-	return format.format(value);
-}
+export { formatCount } from '../../lib/intl';
 
 // Built once: `toLocaleDateString` creates a formatter on every call, which adds up across table rows.
 const DATE = new Intl.DateTimeFormat(undefined, { year: 'numeric', month: 'short', day: 'numeric' });

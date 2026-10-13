@@ -3,11 +3,12 @@
 import { Check, Gift, Ticket } from 'lucide-react';
 import * as React from 'react';
 
+import { plural } from '../../lib/intl';
 import { cn } from '../../lib/utils';
 import { Button } from '../button';
 import { Dialog, DialogDescription, DialogFooter, DialogHeader, DialogPopup, DialogTitle } from '../dialog';
 import { Input } from '../input';
-import { enterClass, plural } from '../workspace-kit/primitives';
+import { enterClass } from '../workspace-kit/primitives';
 import { useBillingFormat } from './context';
 import { CREDIT_TYPE, humanize, REDEEM_REFUSAL } from './format';
 import { dashedRule, EmptyState, IconTile } from './surface';

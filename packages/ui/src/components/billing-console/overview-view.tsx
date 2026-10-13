@@ -4,7 +4,8 @@ import { ArrowRight, CircleCheck, Hourglass, LayoutDashboard, type LucideIcon, P
 
 import { cn } from '../../lib/utils';
 import { useBillingFormat } from '../billing-kit/context';
-import { formatNames, humanize, type Tone } from '../billing-kit/format';
+import { nameList } from '../../lib/intl';
+import { humanize, type Tone } from '../billing-kit/format';
 import { Bezel, IconTile, Panel, StatTile } from '../billing-kit/surface';
 import type { Money } from '../billing-kit/types';
 import { enterClass, focusRingClass, staggerStyle, ViewFrame } from '../workspace-kit/primitives';
@@ -84,7 +85,7 @@ export function ConsoleOverviewView() {
 		});
 	const review = data.customers.filter((customer) => customer.lifecycle === 'review_required');
 	if (review.length > 0)
-		items.push({ id: 'review', icon: ShieldAlert, tone: 'warning', title: `${review.length} provider ${review.length === 1 ? 'change needs' : 'changes need'} review`, detail: formatNames(review.map((customer) => customer.name), f.locale), view: 'customers' });
+		items.push({ id: 'review', icon: ShieldAlert, tone: 'warning', title: `${review.length} provider ${review.length === 1 ? 'change needs' : 'changes need'} review`, detail: nameList(review.map((customer) => customer.name), { locale: f.locale }), view: 'customers' });
 	const syncing = plans.flatMap((plan) => [plan, ...plan.prices]).filter((item) => item.syncState === 'pending' || item.syncState === 'failed');
 	if (syncing.length > 0)
 		items.push({ id: 'sync', icon: RefreshCcw, tone: 'info', title: `${syncing.length} catalog ${syncing.length === 1 ? 'item is' : 'items are'} still syncing`, detail: 'Checkout uses the provider copy, so wait for these before announcing a price.', view: 'catalog' });
@@ -92,7 +93,7 @@ export function ConsoleOverviewView() {
 		items.push({ id: 'usage-sync', icon: RefreshCcw, tone: 'danger', title: `${data.usageSync.failed} usage reports failed`, detail: 'They stay pending and are retried with the same idempotent id.', view: 'provider' });
 	const suspended = standing.filter((database) => database.suspendedReason);
 	if (suspended.length > 0)
-		items.push({ id: 'standing', icon: ShieldAlert, tone: 'danger', title: `${suspended.length} ${suspended.length === 1 ? 'database is' : 'databases are'} suspended`, detail: formatNames(suspended.map((database) => database.name), f.locale), view: 'standing' });
+		items.push({ id: 'standing', icon: ShieldAlert, tone: 'danger', title: `${suspended.length} ${suspended.length === 1 ? 'database is' : 'databases are'} suspended`, detail: nameList(suspended.map((database) => database.name), { locale: f.locale }), view: 'standing' });
 
 	const attention = items.filter((item) => views.includes(item.view));
 

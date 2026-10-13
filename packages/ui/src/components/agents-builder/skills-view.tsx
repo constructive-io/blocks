@@ -15,13 +15,14 @@ import {
 } from 'lucide-react';
 import * as React from 'react';
 
+import { formatCount, plural } from '../../lib/intl';
 import { initials } from '../../lib/initials';
 import { cn } from '../../lib/utils';
 import { Avatar, AvatarFallback, AvatarImage } from '../avatar';
 import { Button } from '../button';
 import { Popover, PopoverContent, PopoverTrigger } from '../popover';
 import { useAgentsBuilder } from './agents-builder-context';
-import { focusRingClass, formatCount, plural, pressClass, SearchField, SurfaceBody, surfaceInsetClass, type Tone, ToneBadge, ViewHeader } from '../workspace-kit/primitives';
+import { focusRingClass, pressClass, SearchField, SurfaceBody, surfaceInsetClass, type Tone, ToneBadge, ViewHeader } from '../workspace-kit/primitives';
 import type { Skill, SkillType, StarterPack } from './types';
 import { startViewTransition, ViewAnimation } from '../workspace-kit/view-transition';
 

@@ -1,3 +1,5 @@
+import { graphemeSegmenter } from './intl';
+
 /**
  * Initials for an avatar fallback, safe for any script.
  *
@@ -28,10 +30,6 @@ export interface InitialsOptions {
 	locale?: string | string[];
 }
 
-const segmenter =
-	typeof Intl !== 'undefined' && typeof Intl.Segmenter === 'function'
-		? new Intl.Segmenter(undefined, { granularity: 'grapheme' })
-		: null;
 
 // Approximation for runtimes without Intl.Segmenter: a flag, or one code point
 // plus its combining marks, variation selector, skin tone and ZWJ continuations.
@@ -44,8 +42,8 @@ const GENERATIONAL_SUFFIX = /^(?:jr|sr|ii|iii|iv|phd|md|esq)$/i;
 const EMAIL = /^[^\s@]+@[^\s@]+$/;
 
 function firstGrapheme(text: string): string {
-	if (segmenter) {
-		for (const { segment } of segmenter.segment(text)) return segment;
+	if (graphemeSegmenter) {
+		for (const { segment } of graphemeSegmenter.segment(text)) return segment;
 		return '';
 	}
 	return GRAPHEME_FALLBACK.exec(text)?.[0] ?? '';

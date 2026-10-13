@@ -5,6 +5,7 @@ import { Toggle as TogglePrimitive } from '@base-ui/react/toggle';
 import { ToggleGroup as ToggleGroupPrimitive } from '@base-ui/react/toggle-group';
 import { cva, type VariantProps } from 'class-variance-authority';
 
+import { truncateTextRuns } from '../lib/text-runs';
 import { cn } from '../lib/utils';
 import { FluidHighlight } from '../lib/motion/fluid-highlight';
 import { toggleVariants } from './toggle';
@@ -65,39 +66,6 @@ function ToggleGroup({
 	);
 }
 
-// A run of only whitespace never becomes a flex item in a browser, so it is dropped rather than wrapped (an empty span would add a gap).
-const BLANK = /^[ \t\n\f\r]*$/;
-
-/**
- * Wraps each contiguous run of text (strings and numbers) in ONE truncating element and leaves elements alone, so a
- * label longer than the container ends in an ellipsis. A run is wrapped once, not per child: `Likes {count}` is a
- * single flex item, where one item per child would open a gap between them. Same rule as Badge.
- */
-function truncatable(children: React.ReactNode) {
-	const out: React.ReactNode[] = [];
-	let run = '';
-	const flush = () => {
-		if (!BLANK.test(run)) {
-			out.push(
-				<span key={`text-${out.length}`} className='min-w-0 truncate' dir='auto'>
-					{run}
-				</span>,
-			);
-		}
-		run = '';
-	};
-	for (const child of React.Children.toArray(children)) {
-		if (typeof child === 'string' || typeof child === 'number') {
-			run += child;
-		} else {
-			flush();
-			out.push(child);
-		}
-	}
-	flush();
-	return out;
-}
-
 function ToggleGroupItem({
 	className,
 	variant,
@@ -135,7 +103,7 @@ function ToggleGroupItem({
 			)}
 			{...props}
 		>
-			{truncatable(children)}
+			{truncateTextRuns(children).nodes}
 		</TogglePrimitive>
 	);
 }

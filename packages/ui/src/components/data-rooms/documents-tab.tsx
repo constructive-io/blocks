@@ -3,13 +3,15 @@
 import { ChevronDown, ChevronRight, FolderClosed, FolderInput, FolderOpen, FolderPlus, FolderSearch, MoreHorizontal, Search, Share2, Upload } from 'lucide-react';
 import * as React from 'react';
 
+import { plural } from '../../lib/intl';
 import { cn } from '../../lib/utils';
 import { TextShimmer } from '../ai/text-shimmer';
 import { Button } from '../button';
 import { Checkbox } from '../checkbox';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuTrigger } from '../dropdown-menu';
 import { Tooltip, TooltipContent, TooltipTrigger } from '../tooltip';
-import { focusRingClass, MiddleTruncate, plural, pressClass, SearchField, ToneBadge, TooltipIconButton } from '../workspace-kit/primitives';
+import { focusRingClass, pressClass, SearchField, ToneBadge, TooltipIconButton } from '../workspace-kit/primitives';
+import { MiddleTruncate } from '../workspace-kit/middle-truncate';
 import { EmptyState, TableSurface, tableHeadClass, tableRowClass } from '../workspace-kit/surface';
 import { folderContains, folderName, normalizeFolder, parentFolder, roomFolders, visibleDocuments } from './access';
 import { useDataRooms } from './data-rooms-context';

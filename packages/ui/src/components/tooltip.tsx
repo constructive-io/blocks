@@ -5,6 +5,7 @@ import { Tooltip as TooltipPrimitive } from '@base-ui/react/tooltip';
 
 import { useFloatingOverlayPortalProps } from '@constructive-io/ui/portal';
 import { cn } from '../lib/utils';
+import { Button, type ButtonProps } from './button';
 
 type TooltipProviderProps = React.ComponentProps<typeof TooltipPrimitive.Provider> & {
 	/** @deprecated Use delay instead */
@@ -31,16 +32,13 @@ type TooltipTriggerProps = React.ComponentProps<typeof TooltipPrimitive.Trigger>
 };
 
 /**
- * Read by Button. A natively disabled button gets no pointer or focus events, so a tooltip explaining why it is
- * disabled would never open. Marked, the button stays the same element in the same place, hoverable and focusable,
- * and is disabled with `aria-disabled` instead. Keep the name in step with button.tsx.
+ * A natively disabled button gets no pointer or focus events, so a tooltip explaining why it is disabled would never
+ * open. A `Button` child is kept focusable while disabled instead: the same element in the same place, disabled with
+ * `aria-disabled`. Any other element stays natively disabled.
  */
-const FOCUSABLE_WHEN_DISABLED = 'data-focusable-when-disabled';
-
 function keepFocusableWhenDisabled(element: React.ReactElement) {
-	// A DOM element ignores the attribute and stays natively disabled; only components that read it change.
-	if (typeof element.type === 'string' || !(element.props as { disabled?: boolean }).disabled) return element;
-	return React.cloneElement(element, { [FOCUSABLE_WHEN_DISABLED]: '' } as Record<string, string>);
+	if (element.type !== Button) return element;
+	return React.cloneElement(element as React.ReactElement<ButtonProps>, { focusableWhenDisabled: true });
 }
 
 function TooltipTrigger({ delay = 600, asChild, children, render, ...props }: TooltipTriggerProps) {

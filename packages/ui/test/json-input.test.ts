@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
-import { describeJsonError, findJsonErrorOffset, validateJson } from '../src/components/json-input';
+import { validateJson } from '../src/components/json-input';
+import { describeJsonError, findJsonErrorOffset } from '../src/lib/json-error-position';
 
 const valid = [
 	'{}',

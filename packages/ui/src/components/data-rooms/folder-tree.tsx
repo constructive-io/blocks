@@ -3,8 +3,9 @@
 import { ChevronRight, FolderClosed, FolderOpen } from 'lucide-react';
 import * as React from 'react';
 
+import { formatCount } from '../../lib/intl';
 import { cn } from '../../lib/utils';
-import { focusRingClass, formatCount } from '../workspace-kit/primitives';
+import { focusRingClass } from '../workspace-kit/primitives';
 import { folderContains, folderName, normalizeFolder, parentFolder } from './access';
 import type { DataRoomDocument } from './types';
 

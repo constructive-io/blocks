@@ -134,7 +134,7 @@ describe('a disabled control as a tooltip trigger', () => {
 		await act(async () => button.click());
 		expect(onClick).toHaveBeenCalledTimes(2);
 		expect(host.querySelector('button')).toBe(button);
-		expect(button.hasAttribute('aria-disabled')).toBe(false);
+		expect(button.getAttribute('aria-disabled') ?? 'false').toBe('false');
 		expect(button.hasAttribute('data-disabled')).toBe(false);
 
 		// A new element each time would remount: lose focus, restart transitions, reset anything inside it.
@@ -163,7 +163,7 @@ describe('a disabled control as a tooltip trigger', () => {
 		expect(host.children).toHaveLength(1);
 		expect(host.firstElementChild).toBe(input);
 		expect(input.disabled).toBe(true);
-		expect(input.hasAttribute('data-focusable-when-disabled')).toBe(false);
+		expect(input.hasAttribute('aria-disabled')).toBe(false);
 		expect(input.hasAttribute('aria-disabled')).toBe(false);
 	});
 
@@ -225,7 +225,7 @@ describe('Button disabled but focusable', () => {
 	it('does nothing on a click when it renders someone else’s element', async () => {
 		const onClick = vi.fn();
 		const host = await render(
-			<Button asChild disabled data-focusable-when-disabled="" onClick={onClick}>
+			<Button asChild disabled focusableWhenDisabled onClick={onClick}>
 				<a href="#destination">Open</a>
 			</Button>,
 		);
@@ -246,7 +246,7 @@ describe('Button disabled but focusable', () => {
 		const button = host.querySelector('button')!;
 
 		expect(button.disabled).toBe(true);
-		expect(button.hasAttribute('aria-disabled')).toBe(false);
+		expect(button.getAttribute('aria-disabled') ?? 'false').toBe('false');
 		expect(button.hasAttribute('data-disabled')).toBe(false);
 	});
 });

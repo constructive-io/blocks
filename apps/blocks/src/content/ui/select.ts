@@ -56,7 +56,7 @@ export const selectDocs = definePrimitiveDocs({
           name: 'items',
           type: 'Record<string, ReactNode> | { value: string; label: ReactNode }[]',
           description:
-            'Labels for the trigger. When omitted, Select reads them from the SelectItem, SelectRichItem, and SelectFieldItem elements it renders directly; items rendered by a wrapper component are read once the list has opened, so pass items when the label must show before that.',
+            'Labels for the trigger. When omitted, Select reads them from the SelectItem, SelectRichItem, and SelectFieldItem elements it renders directly; pass items when the options are rendered by a wrapper component, which Select cannot see into.',
         },
         {
           name: 'onValueChange',

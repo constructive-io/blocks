@@ -1,4 +1,5 @@
 import * as React from 'react';
+import { Button as BaseButton } from '@base-ui/react/button';
 import { cva, type VariantProps } from 'class-variance-authority';
 
 import { Slot } from '../lib/slot';
@@ -78,61 +79,47 @@ interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
 	wrap?: boolean;
 	/** When true, merges props onto the child element instead of rendering a button */
 	asChild?: boolean;
-}
-
-/**
- * `TooltipTrigger` puts this attribute on a disabled child. A natively disabled button gets no pointer or focus
- * events, so a tooltip saying why it is disabled would never open; with the attribute the button stays the same
- * element in the same place and is disabled with `aria-disabled` instead. Keep the name in step with tooltip.tsx.
- */
-const FOCUSABLE_WHEN_DISABLED = 'data-focusable-when-disabled';
-
-// What a native disabled button never receives. A button that is disabled but focusable drops them too, so a menu
-// or dialog trigger composed onto it cannot open and a consumer's handler cannot run.
-const ACTIVATION_HANDLERS = [
-	'onClick',
-	'onDoubleClick',
-	'onMouseDown',
-	'onMouseUp',
-	'onPointerDown',
-	'onPointerUp',
-	'onTouchStart',
-	'onTouchEnd',
-	'onKeyDown',
-	'onKeyUp',
-] as const;
-
-// Enter and Space on a focused button click it; cancelling that also stops a submit button from submitting.
-const preventActivation = (event: React.SyntheticEvent) => event.preventDefault();
-
-function focusableDisabledProps(props: React.ButtonHTMLAttributes<HTMLButtonElement>) {
-	const rest: Record<string, unknown> = { ...props };
-	for (const handler of ACTIVATION_HANDLERS) delete rest[handler];
-	return { ...rest, 'aria-disabled': true, 'data-disabled': '', onClick: preventActivation };
+	/**
+	 * Keeps the button focusable and hoverable while disabled, disabled with `aria-disabled` instead, so a tooltip
+	 * explaining why it is disabled can still open. `TooltipTrigger` sets it on a `Button` child.
+	 */
+	focusableWhenDisabled?: boolean;
 }
 
 const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
-	({ className, variant, size, static: isStatic, wrap, asChild, children, type = 'button', disabled, ...props }, ref) => {
+	({ className, variant, size, static: isStatic, wrap, asChild, focusableWhenDisabled, children, type = 'button', ...props }, ref) => {
 		const buttonClasses = cn(buttonVariants({ className, size, static: isStatic, variant, wrap }));
-		const Comp = asChild ? Slot : 'button';
-		const stateProps = disabled && FOCUSABLE_WHEN_DISABLED in props ? focusableDisabledProps(props) : { ...props, disabled };
 
-		if (asChild) {
-			const SlottedComp = Comp as typeof Slot;
+		// Base UI keeps a disabled button focusable, marks it `aria-disabled` and swallows the events a native disabled
+		// button never receives, so a composed menu or dialog trigger cannot open and a consumer handler cannot run. It
+		// renders the same element enabled or disabled, so toggling keeps focus and what the element holds.
+		if (focusableWhenDisabled) {
 			return (
-				<SlottedComp
-					ref={ref as React.Ref<HTMLElement>}
+				<BaseButton
+					ref={ref}
+					focusableWhenDisabled
+					nativeButton={!asChild}
+					render={asChild && React.isValidElement(children) ? children : undefined}
+					type={asChild ? undefined : type}
 					className={buttonClasses}
 					data-slot="button"
-					{...stateProps}
+					{...props}
 				>
+					{asChild ? undefined : children}
+				</BaseButton>
+			);
+		}
+
+		if (asChild) {
+			return (
+				<Slot ref={ref as React.Ref<HTMLElement>} className={buttonClasses} data-slot="button" {...props}>
 					{children}
-				</SlottedComp>
+				</Slot>
 			);
 		}
 
 		return (
-			<button ref={ref} type={type} className={buttonClasses} data-slot="button" {...stateProps}>
+			<button ref={ref} type={type} className={buttonClasses} data-slot="button" {...props}>
 				{children}
 			</button>
 		);

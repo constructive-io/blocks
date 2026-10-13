@@ -8,6 +8,7 @@ import { cva, type VariantProps } from 'class-variance-authority';
 import { PanelLeftIcon } from 'lucide-react';
 
 import { useIsMobile } from '../lib/use-mobile';
+import { truncateTextRuns } from '../lib/text-runs';
 import { cn } from '../lib/utils';
 import { Button } from './button';
 import { Input } from './input';
@@ -477,7 +478,7 @@ function SidebarMenuItem({ className, ...props }: React.ComponentProps<'li'>) {
 const sidebarMenuButtonVariants = cva(
 	`peer/menu-button group/menu-button flex w-full items-center gap-2 overflow-hidden rounded-md p-2 text-start text-sm
 	ring-sidebar-ring/50 outline-hidden transition-[width,height,padding] group-has-data-[sidebar=menu-action]/menu-item:pe-8
-	group-has-data-[sidebar=menu-badge]/menu-item:pe-[calc(var(--sidebar-menu-badge-width,1.5rem)+0.5rem)]
+	group-has-data-[sidebar=menu-badge]/menu-item:pe-15
 	group-data-[collapsible=icon]:size-8! group-data-[collapsible=icon]:p-2! hover:bg-sidebar-accent
 	hover:text-sidebar-accent-foreground focus-visible:ring-[3px] active:bg-sidebar-accent
 	active:text-sidebar-accent-foreground disabled:pointer-events-none disabled:opacity-64
@@ -598,64 +599,17 @@ function SidebarMenuAction({
 	});
 }
 
-const BADGE_WIDTH_VAR = '--sidebar-menu-badge-width';
-
-// Layout effects that only observe: on the server `useEffect` stands in, so React 18 does not warn while rendering.
-const useIsomorphicLayoutEffect = typeof window === 'undefined' ? React.useEffect : React.useLayoutEffect;
-
-let badgeObserver: ResizeObserver | undefined;
-let observedBadges = 0;
-
-/**
- * One observer serves every badge. Its first notification arrives with all of them, so their widths are read
- * together and only then written: a read after each write would make the browser lay the whole list out again
- * for every badge.
- */
-function publishBadgeWidths(entries: ResizeObserverEntry[]) {
-	const widths = entries.map((entry) => entry.borderBoxSize?.[0]?.inlineSize ?? (entry.target as HTMLElement).offsetWidth);
-	entries.forEach((entry, index) => {
-		(entry.target.parentElement as HTMLElement | null)?.style.setProperty(BADGE_WIDTH_VAR, `${widths[index]}px`);
-	});
-}
-
-function observeBadge(badge: HTMLElement) {
-	if (typeof ResizeObserver === 'undefined') return;
-	badgeObserver ??= new ResizeObserver(publishBadgeWidths);
-	badgeObserver.observe(badge);
-	observedBadges += 1;
-	return () => {
-		badgeObserver?.unobserve(badge);
-		observedBadges -= 1;
-		if (observedBadges === 0) {
-			badgeObserver?.disconnect();
-			badgeObserver = undefined;
-		}
-	};
-}
-
-function SidebarMenuBadge({ className, ...props }: React.ComponentProps<'div'>) {
-	const ref = React.useRef<HTMLDivElement>(null);
-
-	// The badge is absolutely positioned, so the label beside it cannot see how wide it is. Publish the width on the
-	// item and the button reserves exactly that much room (see `sidebarMenuButtonVariants`).
-	useIsomorphicLayoutEffect(() => {
-		const badge = ref.current;
-		const item = badge?.parentElement;
-		if (!badge || !item) return;
-		const stop = observeBadge(badge);
-		return () => {
-			stop?.();
-			item.style.removeProperty(BADGE_WIDTH_VAR);
-		};
-	}, []);
-
+function SidebarMenuBadge({ className, children, ...props }: React.ComponentProps<'div'>) {
+	// The badge is absolutely positioned, so the label beside it cannot see how wide it is. It is capped instead, and the
+	// button reserves room for the cap (see `sidebarMenuButtonVariants`); a longer count ends in an ellipsis.
+	const { nodes, text } = truncateTextRuns(children);
 	return (
 		<div
-			ref={ref}
 			data-slot='sidebar-menu-badge'
 			data-sidebar='menu-badge'
+			title={text && text.length > 5 ? text : undefined}
 			className={cn(
-				`pointer-events-none absolute end-1 flex h-5 min-w-5 items-center justify-center rounded-md px-1
+				`pointer-events-none absolute end-1 flex h-5 max-w-12 min-w-5 items-center justify-center overflow-hidden rounded-md px-1
 				text-xs font-medium text-sidebar-foreground tabular-nums select-none group-data-[collapsible=icon]:hidden
 				peer-hover/menu-button:text-sidebar-accent-foreground peer-data-[size=default]/menu-button:top-1.5
 				peer-data-[size=lg]/menu-button:top-2.5 peer-data-[size=sm]/menu-button:top-1
@@ -663,7 +617,9 @@ function SidebarMenuBadge({ className, ...props }: React.ComponentProps<'div'>) 
 				className,
 			)}
 			{...props}
-		/>
+		>
+			{nodes}
+		</div>
 	);
 }
 

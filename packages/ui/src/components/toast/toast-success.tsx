@@ -3,17 +3,9 @@
 import { CheckCircleIcon } from 'lucide-react';
 import { toast } from 'sonner';
 
-import { ToastCard, type ToastTone } from './toast-card';
+import { ToastCard, type ToastProps, type ToastTone } from './toast-card';
 
-export interface ToastSuccessProps {
-	message: string;
-	description?: string;
-	action?: {
-		label: string;
-		onClick: () => void;
-	};
-	onDismiss?: () => void;
-}
+export type ToastSuccessProps = ToastProps;
 
 const tone: ToastTone = {
 	border: 'border-green-200/60 dark:border-green-800/50',

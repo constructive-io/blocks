@@ -7,7 +7,7 @@ import { cn } from '../../lib/utils';
 import { Button } from '../button';
 import { TooltipIconButton } from '../workspace-kit/primitives';
 import { FileGlyph } from './file-type-icon';
-import { MiddleTruncate } from './middle-truncate';
+import { MiddleTruncate } from '../workspace-kit/middle-truncate';
 import type { UploadItem } from './types';
 import { humanizeBytes } from './utils';
 

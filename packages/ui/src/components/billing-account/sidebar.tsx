@@ -3,12 +3,13 @@
 import { Activity, Coins, Gauge, Layers, LayoutDashboard, Receipt } from 'lucide-react';
 import * as React from 'react';
 
+import { plural } from '../../lib/intl';
 import { cn } from '../../lib/utils';
 import { useBillingFormat } from '../billing-kit/context';
 import { daysUntil, isUnlimited, LIFECYCLE, usageLevel } from '../billing-kit/format';
 import { PeriodTrack } from '../billing-kit/allowance';
 import { NavCount, NavIcon, NavRow, NavSection, SidebarFrame } from '../workspace-kit/nav';
-import { plural } from '../workspace-kit/primitives';
+
 import { AccountMenu } from './account-menu';
 import { useBillingAccount } from './billing-account-context';
 import type { BillingAccountView } from './types';

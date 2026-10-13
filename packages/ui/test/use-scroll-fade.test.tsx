@@ -3,7 +3,7 @@ import { act } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { useScrollFade } from '../src/components/workspace-kit';
+import { useScrollFade } from '../src/lib/use-scroll-fade';
 
 globalThis.IS_REACT_ACT_ENVIRONMENT = true;
 

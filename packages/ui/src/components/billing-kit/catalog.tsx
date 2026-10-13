@@ -3,11 +3,12 @@
 import { Infinity as InfinityIcon, Lock, Plus } from 'lucide-react';
 import * as React from 'react';
 
+import { plural } from '../../lib/intl';
 import { cn } from '../../lib/utils';
 import { Button } from '../button';
 import { Switch } from '../switch';
 import { Tooltip, TooltipContent, TooltipTrigger } from '../tooltip';
-import { focusRingClass, plural, ToneBadge } from '../workspace-kit/primitives';
+import { focusRingClass, ToneBadge } from '../workspace-kit/primitives';
 import { useBillingFormat } from './context';
 import { humanize, INTERVAL_LABEL, isUnlimited } from './format';
 import type { EntitlementRow } from './plan';

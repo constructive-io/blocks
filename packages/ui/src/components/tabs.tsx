@@ -4,13 +4,12 @@ import * as React from 'react';
 import { Tabs as TabsPrimitive } from '@base-ui/react/tabs';
 
 import { useMergedRefs } from '../lib/compose-refs';
+import { useScrollFade } from '../lib/use-scroll-fade';
 import { cn } from '../lib/utils';
 
 function Tabs({ className, ...props }: React.ComponentProps<typeof TabsPrimitive.Root>) {
 	return <TabsPrimitive.Root data-slot="tabs" className={cn('flex flex-col gap-2', className)} {...props} />;
 }
-
-const FADE = '1.5rem';
 
 /** Scrolls `scroller` along its inline axis just far enough to show `target`; the page never moves. */
 function revealInline(scroller: HTMLElement, target: HTMLElement) {
@@ -25,56 +24,24 @@ function revealInline(scroller: HTMLElement, target: HTMLElement) {
  * container, edges fade where more tabs are hidden, and the active tab is scrolled into view.
  */
 function TabsList({ className, children, style, ...props }: React.ComponentProps<typeof TabsPrimitive.List>) {
-	const listRef = React.useRef<HTMLDivElement | null>(null);
-	// The list's own ref and the one the consumer passes, merged once so React does not detach and attach them every render.
-	const ref = useMergedRefs(listRef, props.ref);
-	// Physical sides that have more tabs behind them, so the fade masks the right edge in both text directions.
-	const [hidden, setHidden] = React.useState({ left: false, right: false });
-
-	const revealActive = React.useCallback(() => {
-		const list = listRef.current;
-		const active = list?.querySelector<HTMLElement>('[data-active]');
-		if (list && active && list.scrollWidth > list.clientWidth) revealInline(list, active);
-	}, []);
+	const fade = useScrollFade<HTMLDivElement>();
+	// The fade's ref and the one the consumer passes, merged once so React does not detach and attach them every render.
+	const ref = useMergedRefs(fade.ref, props.ref);
+	const { node: list, overflowing } = fade;
 
 	React.useEffect(() => {
-		const list = listRef.current;
-		if (!list) return;
-
-		const measure = () => {
-			const rtl = getComputedStyle(list).direction === 'rtl';
-			const distance = Math.abs(list.scrollLeft);
-			const room = list.scrollWidth - list.clientWidth;
-			const before = room > 1 && distance > 1;
-			const after = room > 1 && room - distance > 1;
-			const next = { left: rtl ? after : before, right: rtl ? before : after };
-			setHidden((current) => (current.left === next.left && current.right === next.right ? current : next));
+		if (!list || !overflowing) return;
+		const revealActive = () => {
+			const active = list.querySelector<HTMLElement>('[data-active]');
+			if (active) revealInline(list, active);
 		};
-		measure();
-		list.addEventListener('scroll', measure, { passive: true });
-		const resizeObserver = typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(measure);
-		resizeObserver?.observe(list);
-		// Tabs added or removed, or a new tab becoming active.
-		const mutationObserver = new MutationObserver((records) => {
-			measure();
-			if (records.some((record) => record.type === 'attributes')) revealActive();
-		});
-		mutationObserver.observe(list, { childList: true, subtree: true, attributes: true, attributeFilter: ['data-active'] });
-		return () => {
-			list.removeEventListener('scroll', measure);
-			resizeObserver?.disconnect();
-			mutationObserver.disconnect();
-		};
-	}, [revealActive]);
-
-	const overflowing = hidden.left || hidden.right;
-	// The list only becomes a scroller once it overflows, so the initially active tab is revealed then.
-	React.useEffect(() => {
-		if (overflowing) revealActive();
-	}, [overflowing, revealActive]);
-	const mask = overflowing
-		? `linear-gradient(to right, transparent, black ${hidden.left ? FADE : '0px'}, black calc(100% - ${hidden.right ? FADE : '0px'}), transparent)`
-		: undefined;
+		// The list only becomes a scroller once it overflows, so the active tab is revealed then, and again whenever
+		// another tab becomes active.
+		revealActive();
+		const observer = new MutationObserver(revealActive);
+		observer.observe(list, { subtree: true, attributes: true, attributeFilter: ['data-active'] });
+		return () => observer.disconnect();
+	}, [list, overflowing]);
 
 	return (
 		<TabsPrimitive.List
@@ -85,7 +52,7 @@ function TabsList({ className, children, style, ...props }: React.ComponentProps
 				overflowing && 'justify-start overflow-x-auto overscroll-x-contain [scrollbar-width:none] [&::-webkit-scrollbar]:hidden',
 				className,
 			)}
-			style={{ ...style, maskImage: mask, WebkitMaskImage: mask }}
+			style={fade.style ? { ...style, ...fade.style } : style}
 			{...props}
 			ref={ref}
 		>

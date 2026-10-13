@@ -9,7 +9,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSepara
 import { focusRingClass, pressClass, TooltipIconButton } from '../workspace-kit/primitives';
 import { TableSurface, tableHeadClass, tableRowClass } from '../workspace-kit/surface';
 import { FileGlyph } from './file-type-icon';
-import { MiddleTruncate } from './middle-truncate';
+import { MiddleTruncate } from '../workspace-kit/middle-truncate';
 import type { ObjectSort, ObjectSortColumn, StorageObject } from './types';
 import { formatDate, humanizeBytes, keyFolder, objectDisplayName, shortMimeLabel } from './utils';
 

@@ -17,9 +17,10 @@ import {
 } from 'lucide-react';
 import * as React from 'react';
 
+import { formatCount, plural } from '../../lib/intl';
 import { cn } from '../../lib/utils';
 import { Button } from '../button';
-import { enterClass, focusRingClass, formatCount, plural, pressClass, staggerStyle, ToneBadge, ViewFrame, type Tone } from '../workspace-kit/primitives';
+import { enterClass, focusRingClass, pressClass, staggerStyle, ToneBadge, ViewFrame, type Tone } from '../workspace-kit/primitives';
 import { Bezel, EmptyState, IconTile, Panel, SectionHeading } from '../workspace-kit/surface';
 import { canEnterRoom, folderName, needsAgreement, roomPeople, unitChain, visibleDocuments } from './access';
 import { useDataRooms } from './data-rooms-context';

@@ -5,7 +5,8 @@ import * as React from 'react';
 
 import { cn } from '../../lib/utils';
 import { useBillingFormat } from './context';
-import { dayKey, isUnsetDate, LEDGER_ENTRY } from './format';
+import { isUnsetDate } from '../../lib/intl';
+import { dayKey, LEDGER_ENTRY } from './format';
 import { dashedRule, EmptyState, StatusBadge } from './surface';
 import type { LedgerEntry, Meter } from './types';
 

@@ -3,13 +3,14 @@
 import { Activity, Download } from 'lucide-react';
 import * as React from 'react';
 
+import { formatCount, isUnsetDate } from '../../lib/intl';
 import { cn } from '../../lib/utils';
 import { Button } from '../button';
-import { enterClass, FilterGroup, focusRingClass, formatCount, staggerStyle, ViewFrame } from '../workspace-kit/primitives';
+import { enterClass, FilterGroup, focusRingClass, staggerStyle, ViewFrame } from '../workspace-kit/primitives';
 import { dashedRule, EmptyState, Panel } from '../workspace-kit/surface';
 import { folderName, visibleActivity } from './access';
 import { useDataRooms } from './data-rooms-context';
-import { addDays, formatDuration, isUnsetDate } from './format';
+import { addDays, formatDuration } from './format';
 import { ChoiceSelect, PersonAvatar } from './parts';
 import type { ActivityEvent, ActivityKind } from './types';
 

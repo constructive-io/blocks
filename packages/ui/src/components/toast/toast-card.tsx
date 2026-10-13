@@ -25,8 +25,8 @@ export interface ToastTone {
 	action: string;
 }
 
-export interface ToastCardProps {
-	toastId: string | number;
+/** What every toast variant takes: `toast.error(props)`, `toast.success(props)` and so on. */
+export interface ToastProps {
 	message: string;
 	description?: string;
 	action?: {
@@ -34,6 +34,10 @@ export interface ToastCardProps {
 		onClick: () => void;
 	};
 	onDismiss?: () => void;
+}
+
+export interface ToastCardProps extends ToastProps {
+	toastId: string | number;
 	icon: React.ComponentType<{ className?: string; size?: number; 'aria-hidden'?: boolean | 'true' | 'false' }>;
 	closeLabel: string;
 	tone: ToastTone;

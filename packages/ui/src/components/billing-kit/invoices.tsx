@@ -3,8 +3,9 @@
 import { ChevronRight, CircleDollarSign, CreditCard, FileText, Landmark, type LucideIcon, Receipt, Scale, Undo2, Wallet } from 'lucide-react';
 import * as React from 'react';
 
+import { plural } from '../../lib/intl';
 import { cn } from '../../lib/utils';
-import { focusRingClass, plural, ToneBadge } from '../workspace-kit/primitives';
+import { focusRingClass, ToneBadge } from '../workspace-kit/primitives';
 import { useBillingFormat } from './context';
 import { dayKey, INVOICE_STATUS } from './format';
 import { dashedRule, EmptyState, IconTile, StatusBadge, TableSurface, tableHeadClass, tableRowClass } from './surface';

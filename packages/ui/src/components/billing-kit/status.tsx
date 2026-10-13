@@ -6,7 +6,8 @@ import * as React from 'react';
 import { cn } from '../../lib/utils';
 import { TextShimmer } from '../ai/text-shimmer';
 import { useBillingFormat } from './context';
-import { formatNames, LIFECYCLE, type Tone } from './format';
+import { nameList } from '../../lib/intl';
+import { LIFECYCLE, type Tone } from './format';
 import { IconTile, StatusBadge, TONE_COLOR } from './surface';
 import type { BillingLifecycle, DatabaseStanding, Subscription } from './types';
 
@@ -75,7 +76,7 @@ export function BillingStatusBanner({ lifecycle, subscription, planName, databas
 	const f = useBillingFormat();
 	const held = databases.filter((database) => database.suspendedReason === 'admin');
 	const suspended = databases.filter((database) => database.suspendedReason === 'billing');
-	const names = (list: DatabaseStanding[]) => formatNames(list.map((database) => database.name), f.locale);
+	const names = (list: DatabaseStanding[]) => nameList(list.map((database) => database.name), { locale: f.locale });
 
 	let state: BannerState | null = null;
 	let notice: Omit<NoticeProps, 'actions'> | null = null;

@@ -367,6 +367,7 @@ export function AiRegistrySmokeConsumer() {
 			'src/shared/motion/fluid-highlight.tsx',
 			'src/shared/motion/tuning.ts',
 			'src/shared/slot.tsx',
+			'src/shared/text-runs.tsx',
 			'src/shared/utils.ts',
 		],
 		expectedCss: [...aiCssFragments],

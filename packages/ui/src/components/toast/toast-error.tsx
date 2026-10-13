@@ -3,17 +3,9 @@
 import { AlertCircleIcon } from 'lucide-react';
 import { toast } from 'sonner';
 
-import { ToastCard, type ToastTone } from './toast-card';
+import { ToastCard, type ToastProps, type ToastTone } from './toast-card';
 
-export interface ToastErrorProps {
-	message: string;
-	description?: string;
-	action?: {
-		label: string;
-		onClick: () => void;
-	};
-	onDismiss?: () => void;
-}
+export type ToastErrorProps = ToastProps;
 
 const tone: ToastTone = {
 	border: 'border-destructive/20',

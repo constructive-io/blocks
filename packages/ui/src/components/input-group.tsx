@@ -3,6 +3,7 @@
 import { cva, type VariantProps } from "class-variance-authority";
 import * as React from "react";
 
+import { truncateTextRuns } from "../lib/text-runs";
 import { cn } from "../lib/utils";
 import { Input, type InputProps } from "./input";
 import { Textarea, type TextareaProps } from "./textarea";
@@ -71,39 +72,6 @@ function InputGroupAddon({
   );
 }
 
-// A run of only whitespace never becomes a flex item in a browser, so it is dropped rather than wrapped (an empty span would add a gap).
-const BLANK = /^[ \t\n\f\r]*$/;
-
-/**
- * Wraps each contiguous run of text (strings and numbers) in ONE truncating element and leaves elements alone, so a
- * long prefix ends in an ellipsis instead of wrapping or clipping. A run is wrapped once, not per child: `{used}/{max}`
- * is a single flex item, where one item per child would open a gap between them. Same rule as Badge.
- */
-function truncatable(children: React.ReactNode) {
-  const out: React.ReactNode[] = [];
-  let run = "";
-  const flush = () => {
-    if (!BLANK.test(run)) {
-      out.push(
-        <span key={`text-${out.length}`} className="min-w-0 truncate" dir="auto">
-          {run}
-        </span>,
-      );
-    }
-    run = "";
-  };
-  for (const child of React.Children.toArray(children)) {
-    if (typeof child === "string" || typeof child === "number") {
-      run += child;
-    } else {
-      flush();
-      out.push(child);
-    }
-  }
-  flush();
-  return out;
-}
-
 function InputGroupText({ className, children, ...props }: React.ComponentProps<"span">) {
   return (
     <span
@@ -114,7 +82,7 @@ function InputGroupText({ className, children, ...props }: React.ComponentProps<
       )}
       {...props}
     >
-      {truncatable(children)}
+      {truncateTextRuns(children).nodes}
     </span>
   );
 }

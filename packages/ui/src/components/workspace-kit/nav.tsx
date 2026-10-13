@@ -3,9 +3,10 @@
 import { Loader2, type LucideIcon, PanelLeft, X } from 'lucide-react';
 import * as React from 'react';
 
+import { formatCount } from '../../lib/intl';
 import { cn } from '../../lib/utils';
 import { Tooltip, TooltipContent, TooltipTrigger } from '../tooltip';
-import { focusRingClass, formatCount, TooltipIconButton } from './primitives';
+import { focusRingClass, TooltipIconButton } from './primitives';
 
 const ROW = cn('relative flex h-8 cursor-pointer items-center rounded-md text-start text-sm pointer-coarse:h-10', focusRingClass);
 

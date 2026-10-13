@@ -21,7 +21,7 @@ import { cn } from '../../lib/utils';
 import { TooltipIconButton } from '../workspace-kit/primitives';
 import { Bezel, dashedRule, KeyValueList } from '../workspace-kit/surface';
 import { FileGlyph } from './file-type-icon';
-import { MiddleTruncate } from './middle-truncate';
+import { MiddleTruncate } from '../workspace-kit/middle-truncate';
 import type { StorageObject } from './types';
 import { formatDateTime, humanizeBytes, objectDisplayName } from './utils';
 import { ObjectStatusBadge, VisibilityBadge } from './visibility-badge';

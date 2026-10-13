@@ -9,7 +9,7 @@ import { SidebarFrame } from '../workspace-kit/nav';
 import { SearchField, ViewHeader } from '../workspace-kit/primitives';
 import { WorkspaceShell, type WorkspaceSidebarRenderProps } from '../workspace-kit/shell';
 import { BucketRail } from './bucket-rail';
-import { MiddleTruncate } from './middle-truncate';
+import { MiddleTruncate } from '../workspace-kit/middle-truncate';
 import { ObjectTable } from './object-table';
 import { ObjectSelectionBar, ObjectSortMenu } from './object-toolbar';
 import { StorageBreadcrumb, type StorageBreadcrumbSegment } from './storage-breadcrumb';

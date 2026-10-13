@@ -4,6 +4,8 @@ import { useDirection } from '@base-ui/react/direction-provider';
 import { type LucideIcon, Menu, Search } from 'lucide-react';
 import * as React from 'react';
 
+import { formatCount } from '../../lib/intl';
+import { useScrollFade } from '../../lib/use-scroll-fade';
 import { cn } from '../../lib/utils';
 import { Tooltip, TooltipContent, TooltipTrigger } from '../tooltip';
 import { useWorkspaceShell } from './shell';
@@ -224,57 +226,6 @@ export function ViewFrame({ icon, title, actions, label, maxWidth = 'max-w-6xl',
 	);
 }
 
-/** Which edges of a sideways scroller still have content past them, and which way the text runs. */
-type ScrollEdges = { before: boolean; after: boolean; rtl: boolean };
-
-/**
- * Tracks a sideways scroller and returns a `style` that fades each edge that
- * still has content past it, so a row or table cut off at the edge reads as
- * scrollable instead of ending in a hard cut.
- */
-export function useScrollFade<T extends HTMLElement>() {
-	// A callback ref, so the fade follows the scroller even when it mounts after the component does.
-	const [node, ref] = React.useState<T | null>(null);
-	const [edges, setEdges] = React.useState<ScrollEdges>({ before: false, after: false, rtl: false });
-	React.useEffect(() => {
-		if (!node) return;
-		const update = () => {
-			const room = node.scrollWidth - node.clientWidth;
-			const offset = Math.abs(node.scrollLeft);
-			const next = { before: room > 1 && offset > 1, after: room > 1 && offset < room - 1, rtl: getComputedStyle(node).direction === 'rtl' };
-			setEdges((current) => (current.before === next.before && current.after === next.after && current.rtl === next.rtl ? current : next));
-		};
-		update();
-		node.addEventListener('scroll', update, { passive: true });
-		const resize = typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(update);
-		resize?.observe(node);
-		for (const child of Array.from(node.children)) resize?.observe(child);
-		// A size observer reports only the elements it was given, and a row that grows past its width because a child was added resizes nothing it watches. Children come and go (a filtered row, a tab that appears), so watch for them too.
-		const mutation =
-			typeof MutationObserver === 'undefined'
-				? null
-				: new MutationObserver((records) => {
-						for (const record of records) {
-							for (const removed of Array.from(record.removedNodes)) if (removed.nodeType === 1) resize?.unobserve(removed as Element);
-							for (const added of Array.from(record.addedNodes)) if (added.nodeType === 1) resize?.observe(added as Element);
-						}
-						update();
-					});
-		mutation?.observe(node, { childList: true });
-		return () => {
-			node.removeEventListener('scroll', update);
-			resize?.disconnect();
-			mutation?.disconnect();
-		};
-	}, [node]);
-	const { before, after, rtl } = edges;
-	if (!before && !after) return { ref, style: undefined };
-	const left = rtl ? after : before;
-	const right = rtl ? before : after;
-	const mask = `linear-gradient(to right, ${left ? 'transparent, #000 1.5rem' : '#000, #000'}, ${right ? '#000 calc(100% - 1.5rem), transparent' : '#000, #000'})`;
-	return { ref, style: { maskImage: mask, WebkitMaskImage: mask } as React.CSSProperties };
-}
-
 /**
  * Sideways-scrolling row whose children keep their shadows. A scroll container
  * clips everything outside its padding box, which would shave the ring and
@@ -282,111 +233,6 @@ export function useScrollFade<T extends HTMLElement>() {
  * give them room without moving the row.
  */
 export const scrollRowClass = '-m-2 overflow-x-auto p-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden';
-
-const countFormatters = new Map<string, Intl.NumberFormat>();
-
-/** Groups the digits of a count shown beside a label: `1284` becomes "1,284". Defaults to en-US so server and client agree. */
-export function formatCount(value: number, locale = 'en-US') {
-	let formatter = countFormatters.get(locale);
-	if (!formatter) {
-		formatter = new Intl.NumberFormat(locale);
-		countFormatters.set(locale, formatter);
-	}
-	return formatter.format(value);
-}
-
-type PluralForms = { one: string; other: string; zero?: string; two?: string; few?: string; many?: string };
-
-const pluralRules = new Map<string, Intl.PluralRules>();
-
-/**
- * Picks the noun form for a count with `Intl.PluralRules`, so `1` reads "1
- * skill" and `2` reads "2 skills". Falls back to `other` for a form that was
- * not supplied.
- *
- * The forms are English unless `locale` says otherwise, and the choice follows
- * the rules of the language they are written in, not of the page's formatting
- * locale: Japanese has no "one" form, so English forms picked by Japanese rules
- * would read "1 skills". Pass `locale` only together with forms written for it,
- * such as `plural(n, { one, few, many, other }, 'ru')`.
- */
-export function plural(count: number, forms: PluralForms, locale = 'en-US') {
-	let rules = pluralRules.get(locale);
-	if (!rules) {
-		rules = new Intl.PluralRules(locale);
-		pluralRules.set(locale, rules);
-	}
-	return forms[rules.select(count)] ?? forms.other;
-}
-
-const listFormats = new Map<string, Intl.ListFormat>();
-
-/**
- * Joins names for a sentence, showing the first `max` and a count of the rest:
- * "a, b, c, and 12 more". Fifteen names are a number to act on, not a paragraph
- * to read.
- */
-export function nameList(names: readonly string[], { max = 3, locale = 'en-US' }: { max?: number; locale?: string } = {}) {
-	const shown = names.slice(0, max);
-	const rest = names.length - shown.length;
-	let format = listFormats.get(locale);
-	if (!format) {
-		format = new Intl.ListFormat(locale, { type: 'conjunction' });
-		listFormats.set(locale, format);
-	}
-	return format.format(rest > 0 ? [...shown, `${formatCount(rest, locale)} more`] : shown);
-}
-
-type MiddleTruncateProps = {
-	text: string;
-	/** Characters kept visible at the end. Defaults to the extension plus four characters, or eight. `0` keeps none: an ordinary line that ends in an ellipsis. */
-	tail?: number;
-	className?: string;
-};
-
-const EXTENSION = /\.[A-Za-z0-9]{1,8}$/;
-
-// Built once. Grapheme boundaries do not depend on the locale, so the server and the browser cut a name alike.
-const segmenter = typeof Intl !== 'undefined' && typeof Intl.Segmenter === 'function' ? new Intl.Segmenter(undefined, { granularity: 'grapheme' }) : null;
-
-/** The characters a reader sees: a letter with its accent or an emoji sequence is one piece, never cut in half. */
-function graphemes(text: string) {
-	return segmenter ? Array.from(segmenter.segment(text), (part) => part.segment) : Array.from(text);
-}
-
-/** The text split into what the line gives up first and what it keeps, or `null` when it is too short to bother. */
-function splitMiddle(text: string, tail: number | undefined): [head: string, end: string] | null {
-	const extension = EXTENSION.exec(text)?.[0];
-	const asked = tail ?? (extension ? extension.length + 4 : 8);
-	const keep = Number.isFinite(asked) ? Math.max(0, Math.floor(asked)) : 0;
-	// A text is never longer in characters than in UTF-16 units, so a short name skips the segmenter.
-	if (keep === 0 || text.length <= keep * 2) return null;
-	const pieces = graphemes(text);
-	if (pieces.length <= keep * 2) return null;
-	return [pieces.slice(0, -keep).join(''), pieces.slice(-keep).join('')];
-}
-
-/**
- * Shortens the middle of a long unbroken name such as a file name, so the end
- * that tells two names apart (the extension, a version suffix) stays visible.
- * The full text is in `title` and in the accessible name.
- */
-export function MiddleTruncate({ text, tail, className }: MiddleTruncateProps) {
-	const parts = React.useMemo(() => splitMiddle(text, tail), [text, tail]);
-	return (
-		<span title={text} className={cn('flex min-w-0 max-w-full', className)}>
-			<span className="sr-only">{text}</span>
-			<span aria-hidden="true" className="truncate">
-				{parts ? parts[0] : text}
-			</span>
-			{parts ? (
-				<span aria-hidden="true" className="shrink-0 whitespace-pre">
-					{parts[1]}
-				</span>
-			) : null}
-		</span>
-	);
-}
 
 type FilterGroupProps<T extends string> = {
 	label: string;
