@@ -21,7 +21,7 @@ export function BillingCreditsView() {
 
 	return (
 		<ViewFrame icon={Coins} title="Credits">
-			<div className={canRedeem && universal ? 'grid gap-4 @4xl/view:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)]' : 'grid gap-4'}>
+			<div className={canRedeem && universal ? 'grid grid-cols-1 gap-4 @4xl/view:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)]' : 'grid grid-cols-1 gap-4'}>
 				{universal ? <CreditWallet balance={universal} grants={data.grants} creditsPerCent={data.creditsPerCent} currency={data.currency} /> : null}
 				{canRedeem ? (
 					<Panel title="Redeem a code" description="Gift codes add credits, often compute, right away. Each works once per account.">
@@ -45,7 +45,7 @@ export function BillingCreditsView() {
 				</section>
 			) : null}
 
-			<div className={canRedeem || redemptions.length > 0 ? 'grid gap-4 @4xl/view:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)]' : 'grid gap-4'}>
+			<div className={canRedeem || redemptions.length > 0 ? 'grid grid-cols-1 gap-4 @4xl/view:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)]' : 'grid grid-cols-1 gap-4'}>
 				<Panel title="Your credits" description="Listed in the order they are spent.">
 					<CreditGrantList grants={data.grants} meterName={meterName} />
 				</Panel>

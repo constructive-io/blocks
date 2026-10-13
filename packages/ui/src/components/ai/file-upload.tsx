@@ -128,7 +128,7 @@ function FileUpload({
 				)}
 			>
 				<Upload className={cn('text-muted-foreground', variant === 'compact' ? 'size-4' : 'size-5')} />
-				<div className="text-[13px] font-medium text-foreground">Drop files or click to upload</div>
+				<div className="text-[0.8125rem] font-medium text-foreground">Drop files or click to upload</div>
 				{variant === 'compact' ? null : (
 					<div className="text-xs text-muted-foreground">
 						{multiple ? 'Multiple files supported' : 'Single file'}
@@ -140,10 +140,10 @@ function FileUpload({
 					{files.map((file, i) => (
 						<li
 							key={`${file.name}-${i}`}
-							className="flex items-center gap-2 rounded-md border border-border bg-card px-2 py-1.5 text-[12.5px]"
+							className="flex items-center gap-2 rounded-md border border-border bg-card px-2 py-1.5 text-[0.78125rem]"
 						>
 							<Paperclip className="size-3.5 shrink-0 text-muted-foreground" />
-							<span className="min-w-0 flex-1 truncate font-medium">{file.name}</span>
+							<span title={file.name} className="min-w-0 flex-1 truncate font-medium">{file.name}</span>
 							<span className="shrink-0 tabular-nums text-muted-foreground">
 								{formatBytes(file.size)}
 							</span>

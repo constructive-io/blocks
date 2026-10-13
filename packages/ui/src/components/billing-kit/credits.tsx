@@ -3,6 +3,7 @@
 import { Coins, Gift, Sparkles } from 'lucide-react';
 import * as React from 'react';
 
+import { plural } from '../../lib/intl';
 import { cn } from '../../lib/utils';
 import { Button } from '../button';
 import { ToneBadge } from '../workspace-kit/primitives';
@@ -66,20 +67,20 @@ export function CreditWallet({ balance, grants, creditsPerCent = 1, currency = '
 	return (
 		<Bezel className={className} style={style} innerClassName="flex flex-col">
 			<div className="flex flex-col gap-4 p-4">
-				<div className="flex items-start justify-between gap-3">
-					<div>
+				<div className="flex flex-wrap items-start justify-between gap-x-3 gap-y-2">
+					<div className="min-w-0">
 						<p className="flex items-center gap-1.5 text-xs text-muted-foreground">
 							<Coins aria-hidden="true" className="size-3.5" />
 							Universal credits left
 						</p>
-						<p className="mt-1 text-2xl font-semibold tracking-tight text-foreground tabular-nums">{available === null ? 'Unlimited' : f.quantity(available)}</p>
+						<p className="mt-1 text-2xl font-semibold tracking-tight text-foreground tabular-nums [overflow-wrap:anywhere]">{available === null ? 'Unlimited' : f.quantity(available)}</p>
 						{available !== null ? (
 							<p className="text-xs text-muted-foreground tabular-nums">
 								≈ {f.money({ amountMinor: Math.floor(available / creditsPerCent), currency })} of usage · {f.quantity(balance.currentUsage)} used this period
 							</p>
 						) : null}
 					</div>
-					{actions ? <div className="flex shrink-0 gap-2">{actions}</div> : null}
+					{actions ? <div className="flex shrink-0 flex-wrap gap-2">{actions}</div> : null}
 				</div>
 				<div className="flex flex-col gap-2">
 					<div role="img" aria-label="How your credits are made up" className="flex h-1.5 gap-px overflow-hidden rounded-full bg-foreground/[0.07]">
@@ -99,8 +100,9 @@ export function CreditWallet({ balance, grants, creditsPerCent = 1, currency = '
 			</div>
 			{expiring?.expiresAt ? (
 				<p className={cn('border-t bg-muted/50 px-4 py-2.5 text-xs text-muted-foreground', dashedRule)}>
-					<span className="font-medium text-foreground tabular-nums">{f.quantity(expiring.remaining)}</span> credits expire {f.relative(expiring.expiresAt)} (
-					{f.date(expiring.expiresAt)}). They are spent first.
+					<span className="font-medium text-foreground tabular-nums">{f.quantity(expiring.remaining)}</span>{' '}
+					{plural(expiring.remaining, { one: 'credit expires', other: 'credits expire' })} {f.relative(expiring.expiresAt)} ({f.date(expiring.expiresAt)}).{' '}
+					{plural(expiring.remaining, { one: 'It is', other: 'They are' })} spent first.
 				</p>
 			) : null}
 		</Bezel>
@@ -130,24 +132,24 @@ export function CreditGrantList({ grants, meterName, className }: CreditGrantLis
 					<li key={grant.id} className={cn('flex flex-wrap items-center gap-x-4 gap-y-2 py-3', index > 0 && cn('border-t', dashedRule))}>
 						<div className="flex min-w-0 flex-1 basis-48 flex-col gap-1">
 							<span className="flex flex-wrap items-center gap-2">
-								<span className="text-[13px] font-medium text-foreground">{grant.reason ?? CREDIT_SOURCE[grant.source]}</span>
+								<span className="min-w-0 text-[0.8125rem] font-medium text-foreground [overflow-wrap:anywhere]">{grant.reason ?? CREDIT_SOURCE[grant.source]}</span>
 								<StatusBadge presentation={CREDIT_TYPE[grant.creditType]} />
 								{grant.id === firstSpent ? <ToneBadge tone="neutral">Spent next</ToneBadge> : null}
 							</span>
-							<span className="text-xs text-muted-foreground">
+							<span className="text-xs text-muted-foreground [overflow-wrap:anywhere]">
 								{CREDIT_SOURCE[grant.source]} · {f.date(grant.createdAt)}
 								{grant.meterSlug !== 'universal' && meterName ? ` · ${meterName(grant.meterSlug)}` : ''}
 							</span>
 						</div>
-						<div className="flex w-40 flex-col gap-1">
+						<div className="flex max-w-full min-w-40 flex-col gap-1">
 							<div className="flex h-1 overflow-hidden rounded-full bg-foreground/[0.07]">
 								<span className="rounded-full bg-primary/70" style={{ width: `${grant.amount ? (grant.remaining / grant.amount) * 100 : 0}%` }} />
 							</div>
-							<span className="text-xs text-muted-foreground tabular-nums">
+							<span className="text-xs text-muted-foreground tabular-nums [overflow-wrap:anywhere]">
 								<span className="text-foreground">{f.quantity(grant.remaining)}</span> of {f.quantity(grant.amount)} left
 							</span>
 						</div>
-						<span className={cn('w-28 text-right text-xs tabular-nums', soon ? 'font-medium text-warning' : 'text-muted-foreground')}>
+						<span className={cn('min-w-28 text-end text-xs tabular-nums', soon ? 'font-medium text-warning' : 'text-muted-foreground')}>
 							{grant.expiresAt ? `Expires ${f.date(grant.expiresAt, 'short')}` : grant.creditType === 'period' ? 'Resets at period end' : 'Never expires'}
 						</span>
 					</li>
@@ -172,13 +174,13 @@ export function CreditPackGrid({ packs, onBuy, pendingPackId, readOnly, classNam
 	const f = useBillingFormat();
 	const active = packs.filter((pack) => pack.active);
 	return (
-		<ul className={cn('grid gap-3 @xl/view:grid-cols-2 @4xl/view:grid-cols-3', className)}>
+		<ul className={cn('grid grid-cols-1 gap-3 @xl/view:grid-cols-2 @4xl/view:grid-cols-3', className)}>
 			{active.map((pack) => (
 				<li key={pack.id} className="flex">
 					<Bezel muted={!pack.featured} className={cn('flex w-full', pack.featured && 'border-primary/25 bg-primary/[0.06]')} innerClassName="flex flex-col">
 						<div className="flex flex-1 flex-col gap-3 p-4">
 							<div className="flex items-center justify-between gap-2">
-								<h3 className="text-sm font-medium text-foreground">{pack.displayName}</h3>
+								<h3 className="min-w-0 text-sm font-medium text-foreground [overflow-wrap:anywhere]">{pack.displayName}</h3>
 								{pack.featured ? (
 									<ToneBadge tone="primary">
 										<Sparkles aria-hidden="true" />
@@ -187,17 +189,23 @@ export function CreditPackGrid({ packs, onBuy, pendingPackId, readOnly, classNam
 								) : null}
 							</div>
 							<div>
-								<p className="text-2xl font-semibold tracking-tight text-foreground tabular-nums">
-									{f.quantity(pack.amount)} <span className="text-sm font-normal text-muted-foreground">credits</span>
+								<p className="text-2xl font-semibold tracking-tight text-foreground tabular-nums [overflow-wrap:anywhere]">
+									{f.quantity(pack.amount)} <span className="text-sm font-normal text-muted-foreground">{plural(pack.amount, { one: 'credit', other: 'credits' })}</span>
 								</p>
 								<p className="text-xs text-muted-foreground tabular-nums">
 									{f.money({ ...pack.price, amountMinor: Math.round((pack.price.amountMinor / pack.amount) * 1000) }, { precise: true })} per 1,000
 								</p>
 							</div>
-							{pack.description ? <p className="text-pretty text-[13px] text-muted-foreground">{pack.description}</p> : null}
+							{pack.description ? (
+								<p title={pack.description} className="line-clamp-3 text-pretty text-[0.8125rem] text-muted-foreground [overflow-wrap:anywhere]">
+									{pack.description}
+								</p>
+							) : null}
 						</div>
-						<div className={cn('flex items-center justify-between gap-3 border-t bg-muted/50 px-4 py-2.5', dashedRule)}>
-							<span className="text-xs text-muted-foreground">{pack.expiresAfterDays ? `Expires after ${pack.expiresAfterDays} days` : 'Never expires'}</span>
+						<div className={cn('flex flex-wrap items-center justify-between gap-x-3 gap-y-2 border-t bg-muted/50 px-4 py-2.5', dashedRule)}>
+							<span className="text-xs text-muted-foreground">
+								{pack.expiresAfterDays ? `Expires after ${f.quantity(pack.expiresAfterDays)} ${plural(pack.expiresAfterDays, { one: 'day', other: 'days' })}` : 'Never expires'}
+							</span>
 							{readOnly ? (
 								<span className="text-sm font-medium text-foreground tabular-nums">{f.money(pack.price)}</span>
 							) : (

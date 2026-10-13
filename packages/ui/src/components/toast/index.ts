@@ -4,6 +4,7 @@ import { showSuccessToast } from './toast-success';
 import { showWarningToast } from './toast-warning';
 
 // Re-export types for convenience
+export type { ToastProps } from './toast-card';
 export type { ToastErrorProps } from './toast-error';
 export type { ToastInfoProps } from './toast-info';
 export type { ToastSuccessProps } from './toast-success';

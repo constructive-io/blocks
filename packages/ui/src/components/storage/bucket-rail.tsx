@@ -5,6 +5,7 @@ import { PlusIcon } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { NavCount, NavRow, NavSection } from '../workspace-kit/nav';
 import { TooltipIconButton } from '../workspace-kit/primitives';
+import { MiddleTruncate } from '../workspace-kit/middle-truncate';
 import type { BucketVisibility, StorageBucket } from './types';
 import { bucketDisplayName, formatCount } from './utils';
 import { VISIBILITY } from './visibility-badge';
@@ -22,6 +23,8 @@ interface BucketRailProps {
 	busyBucketId?: string | null;
 	/** When false, only the selected bucket is enabled, e.g. while policy forbids switching. */
 	selectable?: boolean;
+	/** Locale for the counts (for example `de-DE`). Default: `en-US`, so the server and the browser agree. */
+	locale?: string;
 	className?: string;
 }
 
@@ -39,6 +42,7 @@ export function BucketRail({
 	title = 'Buckets',
 	busyBucketId,
 	selectable = true,
+	locale,
 	className,
 }: BucketRailProps) {
 	return (
@@ -59,7 +63,12 @@ export function BucketRail({
 					const { icon: Icon, label: visibility } = VISIBILITY[bucket.visibility] ?? VISIBILITY.private;
 					const unprovisioned = bucket.provisioned === false;
 					const name = bucketDisplayName(bucket);
-					const details = [visibility, unprovisioned ? 'not provisioned' : null, bucket.objectCount != null ? `${bucket.objectCount} files` : null]
+					const count = bucket.objectCount;
+					const details = [
+						visibility,
+						unprovisioned ? 'not provisioned' : null,
+						count != null ? `${formatCount(count, locale)} ${count === 1 ? 'file' : 'files'}` : null,
+					]
 						.filter(Boolean)
 						.join(', ');
 					return (
@@ -68,7 +77,8 @@ export function BucketRail({
 							label={`${name}, ${details}`}
 							labelNode={
 								<>
-									{name}
+									{/* The row's own title carries the details; a title here would hide it. */}
+									<MiddleTruncate text={name} title={false} />
 									<span className="sr-only">, {details}</span>
 								</>
 							}
@@ -80,11 +90,11 @@ export function BucketRail({
 							leading={<Icon aria-hidden="true" className={cn('size-3.5 shrink-0', active ? 'text-foreground' : 'text-muted-foreground')} />}
 							trailing={
 								unprovisioned ? (
-									<span aria-hidden="true" className="text-[11px] text-subtle-foreground">
+									<span aria-hidden="true" className="text-[0.6875rem] text-subtle-foreground">
 										Off
 									</span>
 								) : bucket.objectCount != null ? (
-									<NavCount value={formatCount(bucket.objectCount)} />
+									<NavCount value={formatCount(bucket.objectCount, locale)} />
 								) : null
 							}
 							onClick={() => onSelectBucket(bucket.id)}

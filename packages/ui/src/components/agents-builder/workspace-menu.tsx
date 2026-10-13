@@ -57,7 +57,7 @@ function WorkspaceMenu({ collapsed }: { collapsed: boolean }) {
 		>
 			<Icon aria-hidden="true" />
 			{label}
-			{submenu ? <ChevronRight aria-hidden="true" className="ml-auto" /> : null}
+			{submenu ? <ChevronRight aria-hidden="true" className="ms-auto rtl:-scale-x-100" /> : null}
 		</DropdownMenuItem>
 	);
 
@@ -66,7 +66,7 @@ function WorkspaceMenu({ collapsed }: { collapsed: boolean }) {
 			<DropdownMenuTrigger
 				aria-label="Workspace menu"
 				className={cn(
-					'flex h-8 min-w-0 cursor-pointer items-center gap-2 rounded-md px-1.5 text-left hover:bg-overlay-hover data-popup-open:bg-overlay-hover',
+					'flex h-8 min-w-0 cursor-pointer items-center gap-2 rounded-md px-1.5 text-start hover:bg-overlay-hover data-popup-open:bg-overlay-hover',
 					focusRingClass,
 					collapsed ? 'w-8 justify-center px-0' : 'flex-1',
 				)}
@@ -76,7 +76,9 @@ function WorkspaceMenu({ collapsed }: { collapsed: boolean }) {
 				</span>
 				{collapsed ? null : (
 					<>
-						<span className="truncate text-sm font-medium text-foreground">{data.workspace.name}</span>
+						<span title={data.workspace.name} className="min-w-0 flex-1 truncate text-sm font-medium text-foreground">
+							<bdi>{data.workspace.name}</bdi>
+						</span>
 						<ChevronsUpDown aria-hidden="true" className="size-3.5 shrink-0 text-muted-foreground" />
 					</>
 				)}

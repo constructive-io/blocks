@@ -56,6 +56,7 @@ const aiFiles = [
 	'image.tsx',
 	'index.ts',
 	'inline-diff.tsx',
+	'line-diff.ts',
 	'mark-tile.tsx',
 	'markdown.tsx',
 	'message.tsx',
@@ -81,6 +82,7 @@ const aiFiles = [
 	'tool.tsx',
 	'types.ts',
 	'usage-notice.tsx',
+	'use-image-failed.ts',
 	'use-throttled-text.ts',
 ] as const;
 
@@ -365,6 +367,7 @@ export function AiRegistrySmokeConsumer() {
 			'src/shared/motion/fluid-highlight.tsx',
 			'src/shared/motion/tuning.ts',
 			'src/shared/slot.tsx',
+			'src/shared/text-runs.tsx',
 			'src/shared/utils.ts',
 		],
 		expectedCss: [...aiCssFragments],

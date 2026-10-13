@@ -53,22 +53,28 @@ function ConnectPrompt({
 				</MarkTile>
 			) : null}
 			<div className="min-w-40 flex-1">
-				<p className="truncate text-sm font-medium text-foreground">{name}</p>
-				{description ? <p className="truncate text-[13px] text-muted-foreground">{description}</p> : null}
+				<p title={typeof name === 'string' ? name : undefined} className="line-clamp-2 text-sm font-medium text-foreground [overflow-wrap:anywhere]">
+					{name}
+				</p>
+				{description ? (
+					<p title={typeof description === 'string' ? description : undefined} className="line-clamp-2 text-[0.8125rem] text-muted-foreground [overflow-wrap:anywhere]">
+						{description}
+					</p>
+				) : null}
 			</div>
 			{settled ? (
-				<span className="ml-auto inline-flex h-7 items-center gap-1.5 rounded-md bg-muted px-2 text-[13px] text-foreground">
+				<span className="ms-auto inline-flex h-7 shrink-0 items-center gap-1.5 rounded-md bg-muted px-2 text-[0.8125rem] text-foreground">
 					{status === 'connected' ? <Check aria-hidden="true" className={cn('size-3.5', iconEnterClass)} /> : null}
 					{status === 'connected' ? 'Connected' : 'Skipped'}
 				</span>
 			) : (
-				<div className="ml-auto flex shrink-0 items-center gap-2">
+				<div className="ms-auto flex max-w-full flex-wrap items-center justify-end gap-2">
 					{skipLabel && onSkip ? (
-						<Button size="xs" variant="outline" disabled={status === 'connecting'} onClick={onSkip}>
+						<Button size="xs" variant="outline" wrap disabled={status === 'connecting'} onClick={onSkip}>
 							{skipLabel}
 						</Button>
 					) : null}
-					<Button size="xs" disabled={status === 'connecting'} onClick={onConnect}>
+					<Button size="xs" wrap disabled={status === 'connecting'} onClick={onConnect}>
 						{connectLabel}
 					</Button>
 				</div>

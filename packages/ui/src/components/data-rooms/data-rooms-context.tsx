@@ -29,6 +29,8 @@ export type DataRoomsFormat = {
 	deadline: (iso: string) => string;
 	bytes: (bytes: number) => string;
 	count: (value: number) => string;
+	/** Orders two names in the template's locale, with numbers by value ("Exhibit 2" before "Exhibit 10"). */
+	compare: (left: string, right: string) => number;
 };
 
 export type ShareRequest = { roomId: string; folder?: string; personId?: string };

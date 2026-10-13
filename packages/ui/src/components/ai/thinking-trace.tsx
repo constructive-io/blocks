@@ -91,7 +91,7 @@ function ThinkingTrace({
 			<Collapsible open={open} onOpenChange={setOpen}>
 				<CollapsibleTrigger
 					className={cn(
-						'group -mx-1.5 flex w-fit items-center gap-2 rounded-md px-1.5 py-1.5 text-left',
+						'group -mx-1.5 flex w-fit items-center gap-2 rounded-md px-1.5 py-1.5 text-start',
 						'hover:bg-accent',
 					)}
 				>
@@ -102,11 +102,11 @@ function ThinkingTrace({
 						)}
 					/>
 					{isStreaming ? (
-						<TextShimmer className="text-[13px] font-medium whitespace-nowrap">
+						<TextShimmer className="text-[0.8125rem] font-medium whitespace-nowrap">
 							{workingLabel}
 						</TextShimmer>
 					) : (
-						<span className="text-[13px] font-medium whitespace-nowrap text-muted-foreground animate-[fade-in_350ms_ease-out_both] motion-reduce:animate-none">
+						<span className="text-[0.8125rem] font-medium whitespace-nowrap text-muted-foreground animate-[fade-in_350ms_ease-out_both] motion-reduce:animate-none">
 							{settledLabel}
 						</span>
 					)}
@@ -114,11 +114,11 @@ function ThinkingTrace({
 				</CollapsibleTrigger>
 
 				<CollapsiblePanel innerClassName="py-0">
-					<div className="relative mt-1 ml-1.5 border-l border-border/70 pl-3">
+					<div className="relative mt-1 ms-1.5 border-s border-border/70 ps-3">
 						{mode === 'search' && query ? (
-							<div className="mb-2 flex items-center gap-1.5 text-[12px] text-muted-foreground">
+							<div className="mb-2 flex items-center gap-1.5 text-[0.75rem] text-muted-foreground">
 								<Globe className="size-3 shrink-0" />
-								<span className="truncate font-mono">{query}</span>
+								<span title={query} className="truncate font-mono">{query}</span>
 							</div>
 						) : null}
 						<ul className="flex flex-col gap-1.5">
@@ -127,7 +127,7 @@ function ThinkingTrace({
 								return (
 									<li
 										key={`${row.primary}-${index}`}
-										className="flex min-w-0 items-start gap-2 text-[13px] animate-[ai-fade-up_300ms_cubic-bezier(0.23,1,0.32,1)_both] motion-reduce:animate-none"
+										className="flex min-w-0 items-start gap-2 text-[0.8125rem] animate-[ai-fade-up_300ms_cubic-bezier(0.23,1,0.32,1)_both] motion-reduce:animate-none"
 										style={{ animationDelay: `${Math.min(index, 6) * 40}ms` }}
 									>
 										<span className="mt-0.5 shrink-0">
@@ -155,7 +155,7 @@ function ThinkingTrace({
 												<span
 													className={cn(
 														'text-foreground',
-														row.mono && 'font-mono text-[12px]',
+														row.mono && 'font-mono text-[0.75rem]',
 														mode === 'reasoning' && 'text-muted-foreground',
 													)}
 												>
@@ -165,20 +165,20 @@ function ThinkingTrace({
 											{row.secondary ? (
 												<span
 													className={cn(
-														'ml-1.5 text-muted-foreground',
-														row.mono && 'font-mono text-[12px]',
+														'ms-1.5 text-muted-foreground',
+														row.mono && 'font-mono text-[0.75rem]',
 													)}
 												>
 													{row.secondary}
 												</span>
 											) : null}
 											{(row.add != null || row.del != null) && (
-												<span className="ml-1.5 font-mono text-[11px] tabular-nums">
+												<span className="ms-1.5 font-mono text-[0.6875rem] tabular-nums">
 													{row.add != null ? (
 														<span className="text-success">+{row.add}</span>
 													) : null}
 													{row.del != null ? (
-														<span className="ml-1 text-destructive">-{row.del}</span>
+														<span className="ms-1 text-destructive">-{row.del}</span>
 													) : null}
 												</span>
 											)}

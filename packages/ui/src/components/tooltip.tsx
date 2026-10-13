@@ -5,6 +5,7 @@ import { Tooltip as TooltipPrimitive } from '@base-ui/react/tooltip';
 
 import { useFloatingOverlayPortalProps } from '@constructive-io/ui/portal';
 import { cn } from '../lib/utils';
+import { Button, type ButtonProps } from './button';
 
 type TooltipProviderProps = React.ComponentProps<typeof TooltipPrimitive.Provider> & {
 	/** @deprecated Use delay instead */
@@ -30,14 +31,26 @@ type TooltipTriggerProps = React.ComponentProps<typeof TooltipPrimitive.Trigger>
 	asChild?: boolean;
 };
 
+/**
+ * A natively disabled button gets no pointer or focus events, so a tooltip explaining why it is disabled would never
+ * open. A `Button` child is kept focusable while disabled instead: the same element in the same place, disabled with
+ * `aria-disabled`. Any other element stays natively disabled.
+ */
+function keepFocusableWhenDisabled(element: React.ReactElement) {
+	if (element.type !== Button) return element;
+	return React.cloneElement(element as React.ReactElement<ButtonProps>, { focusableWhenDisabled: true });
+}
+
 function TooltipTrigger({ delay = 600, asChild, children, render, ...props }: TooltipTriggerProps) {
-	const childRender = render === undefined && asChild && React.isValidElement(children) ? children : undefined;
+	// A trigger with its own `disabled` shows no tooltip, so there is nothing for a focusable button to open.
+	const focusable = (element: React.ReactElement) => (props.disabled ? element : keepFocusableWhenDisabled(element));
+	const childRender = render === undefined && asChild && React.isValidElement(children) ? focusable(children) : undefined;
 
 	return (
 		<TooltipPrimitive.Trigger
 			data-slot="tooltip-trigger"
 			delay={delay}
-			render={render ?? childRender}
+			render={React.isValidElement(render) ? focusable(render) : (render ?? childRender)}
 			{...props}
 		>
 			{childRender ? undefined : children}
@@ -63,6 +76,12 @@ function TooltipContent({
 }: TooltipContentProps) {
 	const { container, zIndexClass } = useFloatingOverlayPortalProps();
 
+	// Nothing to say: render no bubble rather than an empty 18x10 box.
+	const hasContent = React.Children.toArray(children).some((child) =>
+		typeof child === 'string' ? child.trim() !== '' : true,
+	);
+	if (!hasContent) return null;
+
 	return (
 		<TooltipPrimitive.Portal container={container}>
 			<TooltipPrimitive.Positioner side={side} align={align} sideOffset={sideOffset} className={zIndexClass}>
@@ -70,7 +89,7 @@ function TooltipContent({
 					data-slot="tooltip-content"
 					className={cn(
 						`bg-popover text-popover-foreground origin-(--transform-origin) relative max-w-70 rounded-md border px-2 py-1 shadow-lg
-						text-xs transition-[scale,opacity,translate] duration-(--duration-moderate) ease-out data-starting-style:scale-95
+						text-xs [overflow-wrap:anywhere] transition-[scale,opacity,translate] duration-(--duration-moderate) ease-out data-starting-style:scale-95
 						data-ending-style:scale-95 data-starting-style:opacity-0 data-ending-style:opacity-0
 						data-[side=bottom]:data-starting-style:-translate-y-2
 						data-[side=left]:data-starting-style:translate-x-2

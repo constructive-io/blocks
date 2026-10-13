@@ -18,12 +18,35 @@ import type { OrgChartEdge, OrgChartNodeData } from './org-chart.types';
 import { personName } from './org-chart-utils';
 import { OrgChartWires } from './org-chart-wires';
 
-/** Container width at or below which cards switch to their compact size. */
+/** Container width, at the default root font size, at or below which cards switch to their compact size. */
 const COMPACT_MAX_WIDTH = 639;
 /** Pointer travel, in screen pixels, before a press on a card becomes a drag. */
 const DRAG_THRESHOLD = 4;
 const CANVAS_INSET = { side: 24, top: 24, bottom: 64 };
 const EMPTY_SET: ReadonlySet<string> = new Set();
+
+/** The user's root font size over the 16px default: 1 normally, 2 at 200% text. */
+function rootFontScale() {
+	const size = parseFloat(getComputedStyle(document.documentElement).fontSize);
+	return Number.isFinite(size) && size > 0 ? Math.round((size / 16) * 100) / 100 : 1;
+}
+
+/** Card text and avatars are sized in rem, so the card geometry follows the root font size instead of clipping it. */
+function useRemScale() {
+	const [scale, setScale] = React.useState(1);
+	React.useEffect(() => {
+		const update = () => setScale(rootFontScale());
+		update();
+		window.addEventListener('resize', update);
+		const observer = new MutationObserver(update);
+		observer.observe(document.documentElement, { attributes: true, attributeFilter: ['style', 'class'] });
+		return () => {
+			window.removeEventListener('resize', update);
+			observer.disconnect();
+		};
+	}, []);
+	return scale;
+}
 
 interface OrgChartPropsBase {
 	/** Additional classes for the chart container (e.g. `"h-full"` to fill parent). Default height: 600px. */
@@ -87,9 +110,14 @@ function findNode(layer: HTMLElement | null, id: string) {
 	return null;
 }
 
-/** The neighbour at the same depth, left (-1) or right (+1), across subtrees. */
+/**
+ * The neighbour at the same depth, left (-1) or right (+1), across subtrees. A stacked report's own column and
+ * its siblings' columns are skipped: the stack handles those, so this only leaves the stack.
+ */
 function sideNeighbour(layout: OrgLayout, person: PlacedPerson, direction: -1 | 1) {
-	const row = layout.people.filter((candidate) => candidate.depth === person.depth).sort((a, b) => a.x - b.x);
+	const row = layout.people
+		.filter((candidate) => candidate.depth === person.depth && !(person.stack && candidate !== person && candidate.stack && candidate.parentId === person.parentId))
+		.sort((a, b) => a.x - b.x || a.y - b.y);
 	return row[row.indexOf(person) + direction];
 }
 
@@ -131,8 +159,10 @@ function OrgChartInner(props: OrgChartProps) {
 	const press = React.useRef<Press | null>(null);
 	const animate = !useReducedMotion();
 
+	const scale = useRemScale();
 	const index = React.useMemo(() => indexEdges(edges), [edges]);
-	const layout = React.useMemo(() => computeLayout(index, compact, collapsed), [index, compact, collapsed]);
+	const layout = React.useMemo(() => computeLayout(index, compact, collapsed, scale), [index, compact, collapsed, scale]);
+	const inset = React.useMemo(() => ({ side: CANVAS_INSET.side * scale, top: CANVAS_INSET.top * scale, bottom: CANVAS_INSET.bottom * scale }), [scale]);
 	const selected = selectedId ? layout.byId.get(selectedId) : undefined;
 	const tabStopId = activeId && layout.byId.has(activeId) ? activeId : (layout.people[0]?.data.id ?? null);
 
@@ -152,18 +182,18 @@ function OrgChartInner(props: OrgChartProps) {
 		maxZoom: 1.5,
 		// Past this the names are unreadable; frame the top of the tree instead of all of it.
 		minFitZoom: compact ? 0.7 : 0.5,
-		inset: CANVAS_INSET,
+		inset,
 	});
 
 	React.useEffect(() => {
 		const container = containerRef.current;
 		if (!container || typeof ResizeObserver === 'undefined') return;
-		const measure = () => setCompact(container.clientWidth <= COMPACT_MAX_WIDTH);
+		const measure = () => setCompact(container.clientWidth <= COMPACT_MAX_WIDTH * scale);
 		measure();
 		const observer = new ResizeObserver(measure);
 		observer.observe(container);
 		return () => observer.disconnect();
-	}, []);
+	}, [scale]);
 
 	// Ease a person into view once they are laid out (after unfolding their managers), framing
 	// where their card will settle rather than where it is mid-spring.
@@ -390,19 +420,21 @@ function OrgChartInner(props: OrgChartProps) {
 					event.preventDefault();
 					focusPerson(next);
 				};
+				// A stacked report moves through its columns: up and down within one, left and right between them.
+				const { stack } = person;
 				switch (event.key) {
 					case 'ArrowUp':
-						return go(person.parentId ?? undefined);
+						return go((stack?.up ?? person.parentId) || undefined);
 					case 'ArrowDown':
 						if (person.collapsed) {
 							event.preventDefault();
 							return toggle(id);
 						}
-						return go(person.childIds[0]);
+						return go(stack ? stack.down : person.childIds[0]);
 					case 'ArrowLeft':
-						return go(sideNeighbour(layout, person, -1)?.data.id);
+						return go(stack?.left ?? sideNeighbour(layout, person, -1)?.data.id);
 					case 'ArrowRight':
-						return go(sideNeighbour(layout, person, 1)?.data.id);
+						return go(stack?.right ?? sideNeighbour(layout, person, 1)?.data.id);
 					case 'Home':
 						return go(layout.people[0]?.data.id);
 					case 'Enter':

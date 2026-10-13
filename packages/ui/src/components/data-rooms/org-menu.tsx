@@ -33,8 +33,8 @@ function OrgMenu({ collapsed }: { collapsed: boolean }) {
 			<DropdownMenuContent align="start" className="w-60">
 				{viewer ? (
 					<DropdownMenuLabel className="flex flex-col gap-0.5 font-normal">
-						<span className="truncate text-[13px] font-medium text-foreground">{viewer.name}</span>
-						<span className="truncate text-xs text-muted-foreground">{viewer.email}</span>
+						<span title={viewer.name} className="truncate text-[0.8125rem] font-medium text-foreground">{viewer.name}</span>
+						<span title={viewer.email} className="truncate text-xs text-muted-foreground">{viewer.email}</span>
 					</DropdownMenuLabel>
 				) : null}
 				<DropdownMenuSeparator />

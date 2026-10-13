@@ -43,7 +43,7 @@ function ToolTrace({ title = 'Read tools', icon, steps, className, ...props }: T
 		<ol data-slot="tool-trace" className={cn('flex flex-col gap-2', className)} {...props}>
 			<li className="flex h-7 items-center gap-2">
 				<MarkTile>{icon ?? <BookOpen />}</MarkTile>
-				<span className="text-[13px] text-foreground">{title}</span>
+				<span className="text-[0.8125rem] text-foreground">{title}</span>
 			</li>
 			{steps.map((step, index) => {
 				const status = step.status ?? 'done';
@@ -66,7 +66,7 @@ function ToolTrace({ title = 'Read tools', icon, steps, className, ...props }: T
 						{step.icon ? <MarkTile className="text-foreground">{step.icon}</MarkTile> : null}
 						<span
 							className={cn(
-								'truncate text-[13px]',
+								'truncate text-[0.8125rem]',
 								status === 'running' ? 'text-foreground' : 'text-muted-foreground',
 							)}
 						>

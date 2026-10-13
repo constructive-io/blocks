@@ -1501,6 +1501,137 @@
       ]
     },
     {
+      "name": "initials",
+      "type": "registry:lib",
+      "title": "initials",
+      "description": "Avatar-fallback initials from a name or email: grapheme-safe, non-Latin safe, returns null when empty so callers can show an icon.",
+      "categories": [
+        "utility"
+      ],
+      "docs": "Import: `import { initials } from '@/lib/initials'`",
+      "files": [
+        {
+          "path": "registry/constructive/lib/initials.ts",
+          "type": "registry:lib"
+        }
+      ],
+      "registryDependencies": [
+        "intl"
+      ]
+    },
+    {
+      "name": "initial-focus",
+      "type": "registry:lib",
+      "title": "initial-focus",
+      "description": "Initial focus for overlays that scroll: keeps the first tabbable element when it is on screen, otherwise focuses the overlay so it opens at its top.",
+      "categories": [
+        "utility"
+      ],
+      "docs": "Import: `import { scrollSafeInitialFocus } from '@/lib/initial-focus'`",
+      "files": [
+        {
+          "path": "registry/constructive/lib/initial-focus.ts",
+          "type": "registry:lib"
+        }
+      ]
+    },
+    {
+      "name": "compose-refs",
+      "type": "registry:lib",
+      "title": "compose-refs",
+      "description": "Merges refs into one stable callback ref that keeps React 19 ref cleanup functions working, plus a hook that memoizes it.",
+      "categories": [
+        "utility"
+      ],
+      "docs": "Import: `import { mergeRefs, useMergedRefs } from '@/lib/compose-refs'`",
+      "files": [
+        {
+          "path": "registry/constructive/lib/compose-refs.ts",
+          "type": "registry:lib"
+        }
+      ]
+    },
+    {
+      "name": "intl",
+      "type": "registry:lib",
+      "title": "intl",
+      "description": "Cached Intl formatters plus count, plural, name-list, unset-date and grapheme helpers shared by the kits; an invalid locale falls back to en-US.",
+      "categories": [
+        "utility"
+      ],
+      "docs": "Import: `import { formatCount, plural, nameList, numberFormat, graphemes } from '@/lib/intl'`",
+      "files": [
+        {
+          "path": "registry/constructive/lib/intl.ts",
+          "type": "registry:lib"
+        }
+      ]
+    },
+    {
+      "name": "text-runs",
+      "type": "registry:lib",
+      "title": "text-runs",
+      "description": "Wraps each run of text children in one truncating span so flex labels end in an ellipsis without splitting interpolated text.",
+      "categories": [
+        "utility"
+      ],
+      "docs": "Import: `import { truncateTextRuns } from '@/lib/text-runs'`",
+      "files": [
+        {
+          "path": "registry/constructive/lib/text-runs.tsx",
+          "type": "registry:lib"
+        }
+      ]
+    },
+    {
+      "name": "use-scroll-fade",
+      "type": "registry:lib",
+      "title": "use-scroll-fade",
+      "description": "Hook that fades the edges of a sideways scroller that still have content past them, in either text direction.",
+      "categories": [
+        "utility"
+      ],
+      "docs": "Import: `import { useScrollFade } from '@/lib/use-scroll-fade'`",
+      "files": [
+        {
+          "path": "registry/constructive/lib/use-scroll-fade.ts",
+          "type": "registry:lib"
+        }
+      ]
+    },
+    {
+      "name": "use-document-theme",
+      "type": "registry:lib",
+      "title": "use-document-theme",
+      "description": "Hook that follows the dark class on <html>, sharing one observer across every subscriber.",
+      "categories": [
+        "utility"
+      ],
+      "docs": "Import: `import { useDocumentTheme } from '@/lib/use-document-theme'`",
+      "files": [
+        {
+          "path": "registry/constructive/lib/use-document-theme.ts",
+          "type": "registry:lib"
+        }
+      ]
+    },
+    {
+      "name": "json-error-position",
+      "type": "registry:lib",
+      "title": "json-error-position",
+      "description": "Finds where a JSON text first stops being valid and adds the line and column to a parse error message.",
+      "categories": [
+        "utility"
+      ],
+      "docs": "Import: `import { describeJsonError, findJsonErrorOffset } from '@/lib/json-error-position'`",
+      "files": [
+        {
+          "path": "registry/constructive/lib/json-error-position.ts",
+          "type": "registry:lib"
+        }
+      ]
+    },
+    {
       "name": "use-controllable-state",
       "type": "registry:hook",
       "title": "useControllableState",
@@ -1623,6 +1754,7 @@
       ],
       "docs": "Import: `import { Button } from '@/components/ui/button'`",
       "dependencies": [
+        "@base-ui/react",
         "class-variance-authority"
       ],
       "registryDependencies": [
@@ -1672,7 +1804,8 @@
         "class-variance-authority"
       ],
       "registryDependencies": [
-        "cn"
+        "cn",
+        "text-runs"
       ],
       "files": [
         {
@@ -1812,7 +1945,7 @@
       "categories": [
         "primitive"
       ],
-      "docs": "Import: `import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert'`",
+      "docs": "Import: `import { Alert, AlertTitle, AlertDescription, AlertAction } from '@/components/ui/alert'`",
       "dependencies": [
         "class-variance-authority"
       ],
@@ -1991,7 +2124,8 @@
         "class-variance-authority"
       ],
       "registryDependencies": [
-        "cn"
+        "cn",
+        "text-runs"
       ],
       "files": [
         {
@@ -2016,7 +2150,8 @@
       "registryDependencies": [
         "cn",
         "toggle",
-        "fluid-highlight"
+        "fluid-highlight",
+        "text-runs"
       ],
       "files": [
         {
@@ -2171,7 +2306,8 @@
       ],
       "registryDependencies": [
         "cn",
-        "portal"
+        "portal",
+        "button"
       ],
       "files": [
         {
@@ -2218,6 +2354,8 @@
       ],
       "registryDependencies": [
         "cn",
+        "compose-refs",
+        "initial-focus",
         "portal",
         "button",
         "scroll-area"
@@ -2243,6 +2381,8 @@
       ],
       "registryDependencies": [
         "cn",
+        "compose-refs",
+        "initial-focus",
         "portal",
         "button"
       ],
@@ -2295,6 +2435,7 @@
       ],
       "registryDependencies": [
         "cn",
+        "initial-focus",
         "portal",
         "motion-config",
         "motion-tuning"
@@ -2342,7 +2483,9 @@
         "@base-ui/react"
       ],
       "registryDependencies": [
-        "cn"
+        "cn",
+        "compose-refs",
+        "use-scroll-fade"
       ],
       "files": [
         {
@@ -2540,7 +2683,8 @@
       ],
       "registryDependencies": [
         "cn",
-        "input"
+        "input",
+        "text-runs"
       ],
       "files": [
         {
@@ -2800,7 +2944,8 @@
         "separator",
         "sheet",
         "skeleton",
-        "tooltip"
+        "tooltip",
+        "text-runs"
       ],
       "files": [
         {
@@ -2849,7 +2994,9 @@
       "registryDependencies": [
         "cn",
         "button",
-        "tooltip"
+        "tooltip",
+        "use-document-theme",
+        "json-error-position"
       ],
       "files": [
         {
@@ -2868,13 +3015,22 @@
       ],
       "docs": "Import: `import { Toaster } from '@/components/ui/sonner'`",
       "dependencies": [
-        "sonner"
+        "sonner",
+        "lucide-react"
       ],
-      "registryDependencies": [],
+      "registryDependencies": [
+        "button",
+        "dialog",
+        "use-document-theme"
+      ],
       "files": [
         {
           "path": "registry/constructive/ui/sonner.tsx",
           "type": "registry:ui"
+        },
+        {
+          "path": "registry/constructive/blocks/toast/toast-details.tsx",
+          "type": "registry:component"
         }
       ]
     },
@@ -3086,6 +3242,7 @@
         "command",
         "dialog",
         "dropdown-menu",
+        "initials",
         "tooltip",
         "workspace-kit"
       ],
@@ -3158,7 +3315,8 @@
         "badge",
         "button",
         "dropdown-menu",
-        "workspace-kit"
+        "workspace-kit",
+        "intl"
       ],
       "files": [
         {
@@ -3396,13 +3554,17 @@
       "docs": "Import: `import { WorkspaceShell, SidebarFrame, NavSection, NavRow, ViewFrame, Panel, CanvasSurface, useCanvasViewport } from '@/components/ui/workspace-kit'`. Render your sidebar through the `sidebar` render prop (it is called once for the rail and once for the drawer) and your views as children; `ViewFrame` and `NavMenuButton` open the drawer below the `3xl` container width.",
       "dependencies": [
         "lucide-react",
-        "motion@^13.4.0"
+        "motion@^13.4.0",
+        "@base-ui/react"
       ],
       "registryDependencies": [
         "cn",
         "tooltip",
         "sheet",
-        "dropdown-menu"
+        "dropdown-menu",
+        "initials",
+        "intl",
+        "use-scroll-fade"
       ],
       "files": [
         {
@@ -3415,6 +3577,10 @@
         },
         {
           "path": "registry/constructive/blocks/workspace-kit/menu.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/workspace-kit/middle-truncate.tsx",
           "type": "registry:component"
         },
         {
@@ -3475,8 +3641,10 @@
         "kbd",
         "switch",
         "avatar",
+        "initials",
         "spinner",
-        "workspace-kit"
+        "workspace-kit",
+        "intl"
       ],
       "files": [
         {
@@ -3620,7 +3788,8 @@
       ],
       "docs": "Import: `import { DataRooms, DATA_ROOMS_DEMO } from '@/components/ui/data-rooms'`. Pass your workspace as `data`, apply every change through `onCommand` (reject to keep a dialog open), and handle downloads and view logging through `onAction`. `effectiveAccess` explains who can do what; your server still decides every request.",
       "dependencies": [
-        "lucide-react"
+        "lucide-react",
+        "@base-ui/react"
       ],
       "registryDependencies": [
         "cn",
@@ -3629,6 +3798,7 @@
         "button",
         "checkbox",
         "dialog",
+        "initials",
         "dropdown-menu",
         "input",
         "select",
@@ -3636,7 +3806,8 @@
         "switch",
         "textarea",
         "tooltip",
-        "workspace-kit"
+        "workspace-kit",
+        "intl"
       ],
       "files": [
         {
@@ -3803,7 +3974,8 @@
         "switch",
         "tooltip",
         "ai",
-        "workspace-kit"
+        "workspace-kit",
+        "intl"
       ],
       "files": [
         {
@@ -3916,7 +4088,8 @@
         "dropdown-menu",
         "button",
         "billing-kit",
-        "workspace-kit"
+        "workspace-kit",
+        "intl"
       ],
       "files": [
         {
@@ -4004,7 +4177,8 @@
         "input",
         "switch",
         "billing-kit",
-        "workspace-kit"
+        "workspace-kit",
+        "intl"
       ],
       "files": [
         {
@@ -4143,7 +4317,8 @@
         "lucide-react"
       ],
       "registryDependencies": [
-        "button"
+        "button",
+        "sonner"
       ],
       "files": [
         {
@@ -4164,6 +4339,10 @@
         },
         {
           "path": "registry/constructive/blocks/toast/toast-info.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/toast/toast-card.tsx",
           "type": "registry:component"
         }
       ]
@@ -4301,6 +4480,10 @@
           "type": "registry:component"
         },
         {
+          "path": "registry/constructive/blocks/ai/line-diff.ts",
+          "type": "registry:component"
+        },
+        {
           "path": "registry/constructive/blocks/ai/mark-tile.tsx",
           "type": "registry:component"
         },
@@ -4398,6 +4581,10 @@
         },
         {
           "path": "registry/constructive/blocks/ai/usage-notice.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/ai/use-image-failed.ts",
           "type": "registry:component"
         },
         {

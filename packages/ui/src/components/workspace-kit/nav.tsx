@@ -3,11 +3,12 @@
 import { Loader2, type LucideIcon, PanelLeft, X } from 'lucide-react';
 import * as React from 'react';
 
+import { formatCount } from '../../lib/intl';
 import { cn } from '../../lib/utils';
 import { Tooltip, TooltipContent, TooltipTrigger } from '../tooltip';
 import { focusRingClass, TooltipIconButton } from './primitives';
 
-const ROW = cn('relative flex h-8 cursor-pointer items-center rounded-md text-left text-sm pointer-coarse:h-10', focusRingClass);
+const ROW = cn('relative flex h-8 cursor-pointer items-center rounded-md text-start text-sm pointer-coarse:h-10', focusRingClass);
 
 /** Full-width row with a label, or a centred square matching the rail's icon buttons. */
 const rowShape = (collapsed: boolean) => (collapsed ? 'size-8 shrink-0 justify-center pointer-coarse:size-10' : 'w-full gap-2 px-2');
@@ -59,7 +60,9 @@ function NavRow({ label, collapsed, active, leading, labelNode, trailing, muted,
 			{leading}
 			{collapsed ? null : (
 				<>
-					<span className="min-w-0 flex-1 truncate">{labelNode ?? label}</span>
+					<span title={label} className="min-w-0 flex-1 truncate">
+						<bdi>{labelNode ?? label}</bdi>
+					</span>
 					{busy ? <Loader2 aria-hidden="true" className="size-3.5 shrink-0 text-muted-foreground motion-safe:animate-spin" /> : trailing}
 				</>
 			)}
@@ -127,8 +130,11 @@ function NavIcon({ icon: Icon, active }: { icon: LucideIcon; active?: boolean })
 	return <Icon aria-hidden="true" className={cn('size-3.5 shrink-0', active ? 'text-foreground' : 'text-muted-foreground')} />;
 }
 
-/** Quiet trailing count for a nav row; hidden from assistive tech, which reads the label instead. */
-function NavCount({ value, tone = 'muted' }: { value: React.ReactNode; tone?: 'muted' | 'warning' | 'danger' }) {
+/**
+ * Quiet trailing count for a nav row; hidden from assistive tech, which reads
+ * the label instead. A number is grouped (`1,284`); pass a string to format it yourself.
+ */
+function NavCount({ value, tone = 'muted', locale }: { value: React.ReactNode; tone?: 'muted' | 'warning' | 'danger'; locale?: string }) {
 	return (
 		<span
 			aria-hidden="true"
@@ -139,7 +145,7 @@ function NavCount({ value, tone = 'muted' }: { value: React.ReactNode; tone?: 'm
 				tone === 'danger' && 'font-medium text-destructive',
 			)}
 		>
-			{value}
+			{typeof value === 'number' ? formatCount(value, locale) : value}
 		</span>
 	);
 }
@@ -160,7 +166,7 @@ function NavSection({ title, collapsed, action, children }: NavSectionProps) {
 		<div className="flex w-full flex-col gap-1">
 			{/* In the icon rail a heading has nothing to show, so only an action keeps the row. */}
 			{(title && !collapsed) || action ? (
-				<div className={cn('flex h-7 items-center gap-2 pl-2', collapsed && 'justify-center pl-0')}>
+				<div className={cn('flex h-7 items-center gap-2 ps-2', collapsed && 'justify-center ps-0')}>
 					{collapsed || !title ? null : (
 						<h2 id={headingId} className="flex-1 truncate text-xs text-muted-foreground">
 							{title}
@@ -209,7 +215,7 @@ function SidebarFrame({ label, menu, collapsed: collapsedProp, onCollapsedChange
 			data-collapsed={collapsed || undefined}
 			className={cn(
 				'flex h-full shrink-0 flex-col bg-sidebar',
-				drawer ? 'w-full' : cn('border-r border-sidebar-border', collapsed ? 'w-[52px]' : 'w-56'),
+				drawer ? 'w-full' : cn('border-e border-sidebar-border', collapsed ? 'w-[52px]' : 'w-56'),
 				className,
 			)}
 		>
@@ -221,7 +227,7 @@ function SidebarFrame({ label, menu, collapsed: collapsedProp, onCollapsedChange
 					</TooltipIconButton>
 				) : collapsed ? null : (
 					<TooltipIconButton label="Collapse sidebar" aria-expanded onClick={() => onCollapsedChange?.(true)}>
-						<PanelLeft aria-hidden="true" className="size-3.5" />
+						<PanelLeft aria-hidden="true" className="size-3.5 rtl:-scale-x-100" />
 					</TooltipIconButton>
 				)}
 			</div>
@@ -229,7 +235,7 @@ function SidebarFrame({ label, menu, collapsed: collapsedProp, onCollapsedChange
 			<div className={cn('-mt-1 flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto px-2.5 pt-1 pb-3', collapsed && 'items-center px-2')}>
 				{collapsed ? (
 					<TooltipIconButton label="Expand sidebar" side="right" size="lg" aria-expanded={false} onClick={() => onCollapsedChange?.(false)}>
-						<PanelLeft aria-hidden="true" className="size-3.5 -scale-x-100" />
+						<PanelLeft aria-hidden="true" className="size-3.5 -scale-x-100 rtl:scale-x-100" />
 					</TooltipIconButton>
 				) : null}
 				{children}

@@ -1,20 +1,23 @@
 import * as React from 'react';
 import { cva, type VariantProps } from 'class-variance-authority';
 
+import { truncateTextRuns } from '../lib/text-runs';
 import { cn } from '../lib/utils';
 
 const badgeVariants = cva(
-	"relative inline-flex shrink-0 items-center justify-center gap-1 whitespace-nowrap rounded-sm border border-transparent font-medium outline-none transition-shadow focus-visible:ring-[3px] focus-visible:ring-ring/50 disabled:pointer-events-none disabled:opacity-64 [&_svg:not([class*='size-'])]:size-3 [&_svg]:pointer-events-none [&_svg]:shrink-0 [button,a&]:cursor-pointer [button,a&]:pointer-coarse:min-h-11 [button,a&]:pointer-coarse:min-w-11",
+	"relative inline-flex max-w-full shrink-0 items-center justify-center gap-1 whitespace-nowrap rounded-sm border border-transparent font-medium outline-none transition-shadow focus-visible:ring-[3px] focus-visible:ring-ring/50 disabled:pointer-events-none disabled:opacity-64 [&_svg:not([class*='size-'])]:size-3 [&_svg]:pointer-events-none [&_svg]:shrink-0 [button,a&]:cursor-pointer [button,a&]:pointer-coarse:min-h-11 [button,a&]:pointer-coarse:min-w-11",
 	{
 		defaultVariants: {
 			size: 'default',
 			variant: 'default',
 		},
 		variants: {
+			// The min-width (not for empty dot-style badges) keeps a single character from
+			// rendering as a thin sliver.
 			size: {
-				default: 'px-[calc(--spacing(1)-1px)] text-xs',
-				lg: 'px-[calc(--spacing(1.5)-1px)] text-sm',
-				sm: 'rounded-[calc(var(--radius-sm)-2px)] px-[calc(--spacing(1)-1px)] text-[.625rem]',
+				default: 'px-[calc(--spacing(1)-1px)] text-xs [&:not(:empty)]:min-w-[1.125rem]',
+				lg: 'px-[calc(--spacing(1.5)-1px)] text-sm [&:not(:empty)]:min-w-[1.375rem]',
+				sm: 'rounded-[calc(var(--radius-sm)-2px)] px-[calc(--spacing(1)-1px)] text-[.625rem] [&:not(:empty)]:min-w-4',
 			},
 			variant: {
 				default: 'bg-primary text-primary-foreground [button,a&]:hover:bg-primary/90',
@@ -33,9 +36,24 @@ const badgeVariants = cva(
 
 type BadgeProps = React.HTMLAttributes<HTMLSpanElement> & VariantProps<typeof badgeVariants>;
 
-const Badge = React.forwardRef<HTMLSpanElement, BadgeProps>(({ className, variant, size, ...props }, ref) => (
-	<span ref={ref} data-slot="badge" className={cn(badgeVariants({ variant, size }), className)} {...props} />
-));
+const LONG_TEXT = 24;
+const Badge = React.forwardRef<HTMLSpanElement, BadgeProps>(({ className, variant, size, children, ...props }, ref) => {
+	// The padding and negative margin keep tall glyphs (Thai tone marks, stacked Vietnamese) from being clipped by the
+	// truncation's overflow.
+	const { nodes, text } = truncateTextRuns(children, '-my-0.5 min-w-0 truncate py-0.5');
+
+	return (
+		<span
+			ref={ref}
+			data-slot="badge"
+			title={text && text.length > LONG_TEXT ? text : undefined}
+			className={cn(badgeVariants({ variant, size }), className)}
+			{...props}
+		>
+			{nodes}
+		</span>
+	);
+});
 
 Badge.displayName = 'Badge';
 

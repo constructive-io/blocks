@@ -1,6 +1,6 @@
 'use client';
 
-import React, { PropsWithChildren, useRef } from 'react';
+import React, { createContext, PropsWithChildren, useContext, useRef } from 'react';
 import { cva, type VariantProps } from 'class-variance-authority';
 import {
 	motion,
@@ -29,9 +29,17 @@ const DEFAULT_MAGNIFICATION = 60;
 const DEFAULT_DISTANCE = 140;
 
 const dockVariants = cva(
-	// Solid themed surface (no glass/blur)
-	'mx-auto mt-8 flex h-[58px] w-max items-center justify-center gap-2 rounded-xl bg-card p-2 shadow-card',
+	// Solid themed surface (no glass/blur). Icons wrap onto another row rather than push the page wide.
+	'mx-auto mt-8 flex min-h-[58px] w-max max-w-full flex-wrap items-center justify-center gap-2 rounded-xl bg-card p-2 shadow-card empty:hidden',
 );
+
+/** What the dock hands every icon, however deeply the icons are nested (fragments, wrappers). */
+const DockContext = createContext<{
+	mouseX: MotionValue<number>;
+	size: number;
+	magnification: number;
+	distance: number;
+} | null>(null);
 
 const Dock = React.forwardRef<HTMLDivElement, DockProps>(
 	(
@@ -48,36 +56,28 @@ const Dock = React.forwardRef<HTMLDivElement, DockProps>(
 	) => {
 		const mouseX = useMotionValue(Infinity);
 		const prefersReducedMotion = useReducedMotion();
-
-		const renderChildren = () => {
-			return React.Children.map(children, (child) => {
-				if (React.isValidElement<DockIconProps>(child) && child.type === DockIcon) {
-					return React.cloneElement(child, {
-						...child.props,
-						mouseX: mouseX,
-						size: iconSize,
-						magnification: iconMagnification,
-						distance: iconDistance,
-					});
-				}
-				return child;
-			});
-		};
+		const context = React.useMemo(
+			() => ({ mouseX, size: iconSize, magnification: iconMagnification, distance: iconDistance }),
+			[mouseX, iconSize, iconMagnification, iconDistance],
+		);
 
 		return (
-			<motion.div
-				ref={ref}
-				onMouseMove={prefersReducedMotion ? undefined : (event) => mouseX.set(event.pageX)}
-				onMouseLeave={prefersReducedMotion ? undefined : () => mouseX.set(Infinity)}
-				{...props}
-				className={cn(dockVariants({ className }), {
-					'items-start': direction === 'top',
-					'items-center': direction === 'middle',
-					'items-end': direction === 'bottom',
-				})}
-			>
-				{renderChildren()}
-			</motion.div>
+			<DockContext.Provider value={context}>
+				<motion.div
+					ref={ref}
+					// `clientX`: the icons' rects are viewport-relative, `pageX` drifts by the scroll offset.
+					onMouseMove={prefersReducedMotion ? undefined : (event) => mouseX.set(event.clientX)}
+					onMouseLeave={prefersReducedMotion ? undefined : () => mouseX.set(Infinity)}
+					{...props}
+					className={cn(dockVariants({ className }), {
+						'items-start': direction === 'top',
+						'items-center': direction === 'middle',
+						'items-end': direction === 'bottom',
+					})}
+				>
+					{children}
+				</motion.div>
+			</DockContext.Provider>
 		);
 	},
 );
@@ -95,17 +95,36 @@ export interface DockIconProps extends Omit<MotionProps & React.HTMLAttributes<H
 }
 
 const DockIcon = ({
-	size = DEFAULT_SIZE,
-	magnification = DEFAULT_MAGNIFICATION,
-	distance = DEFAULT_DISTANCE,
-	mouseX,
+	size: sizeProp = DEFAULT_SIZE,
+	magnification: magnificationProp = DEFAULT_MAGNIFICATION,
+	distance: distanceProp = DEFAULT_DISTANCE,
+	mouseX: mouseXProp,
 	className,
 	children,
+	onKeyDown,
 	...props
 }: DockIconProps) => {
 	const ref = useRef<HTMLDivElement>(null);
 	const prefersReducedMotion = useReducedMotion();
+	// The dock's settings win inside a dock (as they always did); the props apply standalone.
+	const dock = useContext(DockContext);
+	const size = dock?.size ?? sizeProp;
+	const magnification = dock?.magnification ?? magnificationProp;
+	const distance = dock?.distance ?? distanceProp;
+	const mouseX = dock?.mouseX ?? mouseXProp;
 	const padding = Math.max(6, size * 0.2);
+	// An icon with a click handler is a button: reachable and operable from the keyboard.
+	const interactive = typeof props.onClick === 'function' && props.role === undefined;
+	// The consumer's handler runs first and can cancel the press. Enter and Space only press the icon itself:
+	// a key from a link or button inside it belongs to that element, and pressing the icon would cancel it.
+	const handleKeyDown = (event: React.KeyboardEvent<HTMLDivElement>) => {
+		onKeyDown?.(event);
+		if (!interactive || event.defaultPrevented || event.target !== event.currentTarget) return;
+		if (event.key === 'Enter' || event.key === ' ') {
+			event.preventDefault();
+			event.currentTarget.click();
+		}
+	};
 	const defaultMouseX = useMotionValue(Infinity);
 
 	const distanceCalc = useTransform(mouseX ?? defaultMouseX, (val: number) => {
@@ -125,6 +144,7 @@ const DockIcon = ({
 		<motion.div
 			ref={ref}
 			style={{ width: prefersReducedMotion ? size : scaleSize, height: prefersReducedMotion ? size : scaleSize, padding }}
+			{...(interactive ? { role: 'button', tabIndex: 0 } : {})}
 			className={cn(
 				// Solid hover target with theme-aware colors
 				'flex aspect-square cursor-pointer items-center justify-center rounded-full bg-transparent',
@@ -133,6 +153,7 @@ const DockIcon = ({
 				className,
 			)}
 			{...props}
+			onKeyDown={handleKeyDown}
 		>
 			{children}
 		</motion.div>

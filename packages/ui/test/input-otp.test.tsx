@@ -65,6 +65,18 @@ describe('InputOtp', () => {
 		expect(value()).toBe('4');
 	});
 
+	it('keeps digits typed or pasted in other numeral systems', async () => {
+		await render(<Harness />);
+		await type(field(), '\u0661\u0662\u0663');
+		expect(value()).toBe('123');
+		await type(field(), '\u06F4\u06F5\u06F6');
+		expect(value()).toBe('456');
+		await type(field(), '\uFF17\uFF18\u0969');
+		expect(value()).toBe('783');
+		await paste(field(), '\u0664\u0665\u0666 \u0667\u0668\u0669');
+		expect(value()).toBe('456789');
+	});
+
 	it('strips separators from a pasted code and reports completion', async () => {
 		const onComplete = vi.fn();
 		await render(<Harness onComplete={onComplete} />);
@@ -100,5 +112,15 @@ describe('InputOtp', () => {
 		expect(field().getAttribute('aria-label')).toBe('Verification code');
 		expect(field().getAttribute('aria-invalid')).toBe('true');
 		expect(slots().every((slot) => slot.getAttribute('aria-hidden') === 'true')).toBe(true);
+	});
+
+	it('stays left to right inside a right-to-left page', async () => {
+		await render(
+			<div dir="rtl">
+				<InputOtp aria-label="Verification code" groupEvery={3} />
+			</div>,
+		);
+
+		expect(container!.querySelector('[data-slot="input-otp"]')?.getAttribute('dir')).toBe('ltr');
 	});
 });

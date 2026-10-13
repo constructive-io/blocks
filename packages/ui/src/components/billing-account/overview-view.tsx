@@ -2,6 +2,7 @@
 
 import { ArrowRight, Coins, LayoutDashboard, Lock, Ticket } from 'lucide-react';
 
+import { plural } from '../../lib/intl';
 import { Button } from '../button';
 import { useBillingFormat } from '../billing-kit/context';
 import { CreditWallet } from '../billing-kit/credits';
@@ -11,7 +12,7 @@ import { LedgerTimeline } from '../billing-kit/ledger';
 import { CurrentPlanCard } from '../billing-kit/plan';
 import { hasFeature } from '../billing-kit/providers';
 import { Panel } from '../billing-kit/surface';
-import { PoolGrid } from '../billing-kit/usage';
+import { buildUsageTree, PoolGrid } from '../billing-kit/usage';
 import { enterClass, staggerStyle, ViewFrame } from '../workspace-kit/primitives';
 import { AccountBanner } from './account-banner';
 import { useBillingAccount } from './billing-account-context';
@@ -29,11 +30,13 @@ export function BillingOverviewView() {
 	const account = data.accounts.find((candidate) => candidate.id === data.accountId);
 	const daysLeft = subscription ? Math.max(0, daysUntil(subscription.currentPeriodEnd, f.now)) : null;
 	const recent = [...data.ledger].sort((a, b) => b.at.localeCompare(a.at)).slice(0, 5);
+	// With only universal credits there are no pool tiles to show, and an empty panel is worse than none.
+	const hasPools = (buildUsageTree(data.meters, data.balances)?.children ?? []).some((node) => node.balance);
 	const link = (target: (typeof views)[number], label: string) =>
 		views.includes(target) ? (
 			<Button size="xs" variant="ghost" onClick={() => setView(target)}>
 				{label}
-				<ArrowRight aria-hidden="true" />
+				<ArrowRight aria-hidden="true" className="rtl:-scale-x-100" />
 			</Button>
 		) : null;
 	let step = 0;
@@ -62,13 +65,13 @@ export function BillingOverviewView() {
 			}
 		>
 			{canManage ? null : (
-				<p className="flex items-center gap-2 rounded-lg bg-muted/60 px-3 py-2 text-[13px] text-muted-foreground">
+				<p className="flex items-center gap-2 rounded-lg bg-muted/60 px-3 py-2 text-[0.8125rem] text-muted-foreground">
 					<Lock aria-hidden="true" className="size-3.5 shrink-0" />
 					You can see {account?.name ?? 'this account'}’s billing. Only owners and admins can change it.
 				</p>
 			)}
 			<AccountBanner />
-			<div className={universal ? 'grid gap-4 @4xl/view:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)]' : 'grid gap-4'}>
+			<div className={universal ? 'grid grid-cols-1 gap-4 @4xl/view:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)]' : 'grid grid-cols-1 gap-4'}>
 				{plan ? (
 					<CurrentPlanCard
 						className={enterClass}
@@ -101,12 +104,12 @@ export function BillingOverviewView() {
 				) : null}
 			</div>
 
-			{data.balances.length > 0 ? (
+			{hasPools ? (
 				<Panel
 					className={enterClass}
 					style={next()}
 					title="Usage this period"
-					description={daysLeft !== null ? `${daysLeft} ${daysLeft === 1 ? 'day' : 'days'} until the period resets.` : undefined}
+					description={daysLeft !== null ? `${f.quantity(daysLeft)} ${plural(daysLeft, { one: 'day', other: 'days' })} until the period resets.` : undefined}
 					actions={link('usage', 'All usage')}
 				>
 					<PoolGrid meters={data.meters} balances={data.balances} onSelect={openMeter} />
@@ -114,7 +117,7 @@ export function BillingOverviewView() {
 			) : null}
 
 			{data.limits.length > 0 || recent.length > 0 ? (
-				<div className={data.limits.length > 0 && recent.length > 0 ? 'grid gap-4 @4xl/view:grid-cols-2' : 'grid gap-4'}>
+				<div className={data.limits.length > 0 && recent.length > 0 ? 'grid grid-cols-1 gap-4 @4xl/view:grid-cols-2' : 'grid grid-cols-1 gap-4'}>
 					{data.limits.length > 0 ? (
 						<Panel className={enterClass} style={next()} title="Limits" description="Counted resources on your plan.">
 							<LimitList limits={data.limits} />

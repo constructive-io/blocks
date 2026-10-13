@@ -3,6 +3,7 @@
 import { ChevronDown, ChevronRight, FolderClosed, FolderInput, FolderOpen, FolderPlus, FolderSearch, MoreHorizontal, Search, Share2, Upload } from 'lucide-react';
 import * as React from 'react';
 
+import { plural } from '../../lib/intl';
 import { cn } from '../../lib/utils';
 import { TextShimmer } from '../ai/text-shimmer';
 import { Button } from '../button';
@@ -10,6 +11,7 @@ import { Checkbox } from '../checkbox';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuTrigger } from '../dropdown-menu';
 import { Tooltip, TooltipContent, TooltipTrigger } from '../tooltip';
 import { focusRingClass, pressClass, SearchField, ToneBadge, TooltipIconButton } from '../workspace-kit/primitives';
+import { MiddleTruncate } from '../workspace-kit/middle-truncate';
 import { EmptyState, TableSurface, tableHeadClass, tableRowClass } from '../workspace-kit/surface';
 import { folderContains, folderName, normalizeFolder, parentFolder, roomFolders, visibleDocuments } from './access';
 import { useDataRooms } from './data-rooms-context';
@@ -26,6 +28,7 @@ import { useCommand } from './use-command';
  */
 export function DocumentsTab({ room }: { room: Room }) {
 	const { data, actingId, can, openDocument, openShare, format } = useDataRooms();
+	const compareNames = format.compare;
 	const command = useCommand();
 	const [folder, setFolder] = React.useState('/');
 	const [query, setQuery] = React.useState('');
@@ -74,11 +77,14 @@ export function DocumentsTab({ room }: { room: Room }) {
 	);
 
 	const needle = query.trim().toLowerCase();
-	const shown = needle
-		? documents.filter((document) => document.name.toLowerCase().includes(needle))
-		: documents.filter((document) => normalizeFolder(document.folder) === normalizeFolder(folder));
 	const subfolders = needle ? [] : childFolders(folders, folder);
-	const sorted = [...shown].sort((a, b) => a.name.localeCompare(b.name));
+	// Sorted only when what is shown changes: a selection or a hover re-renders this tab without touching the list.
+	const sorted = React.useMemo(() => {
+		const shown = needle
+			? documents.filter((document) => document.name.toLowerCase().includes(needle))
+			: documents.filter((document) => normalizeFolder(document.folder) === normalizeFolder(folder));
+		return shown.sort((a, b) => compareNames(a.name, b.name));
+	}, [compareNames, documents, folder, needle]);
 	const liveShares = (document: DataRoomDocument) =>
 		data.shares.filter(
 			(share) =>
@@ -150,9 +156,9 @@ export function DocumentsTab({ room }: { room: Room }) {
 							options={folders.map((path) => ({ value: path, label: path === '/' ? ROOT_LABEL : path.slice(1) }))}
 						/>
 					</label>
-					<nav aria-label="Folder path" className="hidden min-w-0 flex-1 items-center gap-1 text-[13px] @3xl/view:flex">
+					<nav aria-label="Folder path" className="hidden min-w-0 flex-1 items-center gap-1 text-[0.8125rem] @3xl/view:flex">
 						{needle ? (
-						<span className="text-muted-foreground">
+						<span className="min-w-0 truncate text-muted-foreground" title={`Results for “${query.trim()}” across folders you can open`}>
 							Results for “{query.trim()}” across folders you can open
 						</span>
 					) : (
@@ -160,14 +166,15 @@ export function DocumentsTab({ room }: { room: Room }) {
 							const last = index === crumbs.length - 1;
 							return (
 								<React.Fragment key={path}>
-									{index > 0 ? <ChevronRight aria-hidden="true" className="size-3.5 shrink-0 text-subtle-foreground" /> : null}
+									{index > 0 ? <ChevronRight aria-hidden="true" className="size-3.5 shrink-0 text-subtle-foreground rtl:-scale-x-100" /> : null}
 									{last ? (
-										<span aria-current="location" className="truncate font-medium text-foreground">
+										<span aria-current="location" title={folderName(path, ROOT_LABEL)} className="truncate font-medium text-foreground">
 											{folderName(path, ROOT_LABEL)}
 										</span>
 									) : (
 										<button
 											type="button"
+											title={folderName(path, ROOT_LABEL)}
 											onClick={() => go(path)}
 											className={cn('cursor-pointer truncate rounded-sm text-muted-foreground hover:text-foreground', focusRingClass)}
 										>
@@ -179,7 +186,7 @@ export function DocumentsTab({ room }: { room: Room }) {
 						})
 					)}
 					</nav>
-					<div className="ml-auto flex items-center gap-1.5">
+					<div className="ms-auto flex items-center gap-1.5">
 						{searchOpen || query ? (
 							<SearchField
 								label="Search documents"
@@ -210,32 +217,37 @@ export function DocumentsTab({ room }: { room: Room }) {
 								</DropdownMenuTrigger>
 								<DropdownMenuContent align="end" className="w-56">
 									<DropdownMenuLabel>Move to</DropdownMenuLabel>
-									{allFolders.map((path) => (
-										<DropdownMenuItem
-											key={path}
-											disabled={path === normalizeFolder(folder) || command.pending || command.locked}
-											className="gap-2 [&_svg]:size-3.5 [&_svg]:text-muted-foreground"
-											onClick={async () => {
-												if (await command.run({ type: 'move-documents', documentIds: [...selected], folder: path })) setSelected(new Set());
-											}}
-										>
-											<FolderClosed aria-hidden="true" />
-											<span className="truncate">{path === '/' ? ROOT_LABEL : path.slice(1)}</span>
-										</DropdownMenuItem>
-									))}
+									{/* A room can have hundreds of folders; the list scrolls inside the menu. */}
+									<div role="group" aria-label="Folders" className="max-h-64 overflow-y-auto overscroll-contain">
+										{allFolders.map((path) => (
+											<DropdownMenuItem
+												key={path}
+												disabled={path === normalizeFolder(folder) || command.pending || command.locked}
+												className="gap-2 [&_svg]:size-3.5 [&_svg]:text-muted-foreground"
+												onClick={async () => {
+													if (await command.run({ type: 'move-documents', documentIds: [...selected], folder: path })) setSelected(new Set());
+												}}
+											>
+												<FolderClosed aria-hidden="true" className="shrink-0" />
+												<span title={path === '/' ? ROOT_LABEL : path.slice(1)} className="truncate">
+													{path === '/' ? ROOT_LABEL : path.slice(1)}
+												</span>
+											</DropdownMenuItem>
+										))}
+									</div>
 								</DropdownMenuContent>
 							</DropdownMenu>
 						) : null}
 						{canUpload ? (
 							<div className="flex items-center">
-								<Button size="xs" className={cn(addItems && 'rounded-r-none')} disabled={command.pending || command.locked} onClick={() => fileInput.current?.click()}>
+								<Button size="xs" className={cn(addItems && 'rounded-e-none')} disabled={command.pending || command.locked} onClick={() => fileInput.current?.click()}>
 									<Upload aria-hidden="true" />
 									Upload
 								</Button>
 								{addItems ? (
 									<DropdownMenu>
 										<DropdownMenuTrigger
-											render={<Button size="xs" aria-label="More ways to add" className="rounded-l-none border-l border-l-primary-foreground/25 px-1.5" />}
+											render={<Button size="xs" aria-label="More ways to add" className="rounded-s-none border-s border-s-primary-foreground/25 px-1.5" />}
 										>
 											<ChevronDown aria-hidden="true" />
 										</DropdownMenuTrigger>
@@ -307,7 +319,7 @@ export function DocumentsTab({ room }: { room: Room }) {
 								onKeyDown={(event) => {
 									if (event.key === 'Escape') setNewFolder(null);
 								}}
-								className="min-w-0 flex-1 bg-transparent text-[13px] outline-none placeholder:text-subtle-foreground"
+								className="min-w-0 flex-1 bg-transparent text-[0.8125rem] outline-none placeholder:text-subtle-foreground"
 							/>
 						</label>
 						<Button type="submit" size="xs" disabled={!newFolder.trim() || command.pending || command.locked}>
@@ -320,7 +332,7 @@ export function DocumentsTab({ room }: { room: Room }) {
 				) : null}
 
 				{command.error ? (
-					<p role="alert" className="mx-4 mb-2 shrink-0 rounded-md bg-destructive/8 px-3 py-2 text-[13px] text-destructive">
+					<p role="alert" className="mx-4 mb-2 shrink-0 rounded-md bg-destructive/8 px-3 py-2 text-[0.8125rem] text-destructive">
 						{command.error}
 					</p>
 				) : null}
@@ -356,10 +368,10 @@ export function DocumentsTab({ room }: { room: Room }) {
 										</th>
 									) : null}
 									<th scope="col">Name</th>
-									<th scope="col" className="w-32">
+									<th scope="col" className="w-32 whitespace-nowrap">
 										Updated
 									</th>
-									<th scope="col" className="w-24 text-right">
+									<th scope="col" className="w-24 text-end">
 										Size
 									</th>
 								</tr>
@@ -368,23 +380,28 @@ export function DocumentsTab({ room }: { room: Room }) {
 								{subfolders.map((path) => (
 									<tr key={path} className={cn(tableRowClass, 'cursor-pointer hover:bg-overlay-hover')} onClick={() => go(path)}>
 										{canEdit ? <td /> : null}
-										<td>
+										<td className="w-full max-w-0">
 											<button
 												type="button"
 												onClick={(event) => {
 													event.stopPropagation();
 													go(path);
 												}}
-												className={cn('flex cursor-pointer items-center gap-2.5 rounded-sm text-left', focusRingClass)}
+												className={cn('flex max-w-full min-w-0 cursor-pointer items-center gap-2.5 rounded-sm text-start', focusRingClass)}
 											>
 												<span aria-hidden="true" className="grid size-7 shrink-0 place-items-center rounded-[7px] bg-muted text-muted-foreground">
 													<FolderClosed className="size-3.5" />
 												</span>
-												<span className="font-medium text-foreground">{folderName(path)}</span>
+												<span title={folderName(path)} className="min-w-0 truncate font-medium text-foreground">
+													{folderName(path)}
+												</span>
 											</button>
 										</td>
-										<td className="text-muted-foreground tabular-nums">
-											{documents.filter((document) => folderContains(path, document.folder)).length} documents
+										<td className="whitespace-nowrap text-muted-foreground tabular-nums">
+											{(() => {
+												const count = documents.filter((document) => folderContains(path, document.folder)).length;
+												return `${format.count(count)} ${plural(count, { one: 'document', other: 'documents' })}`;
+											})()}
 										</td>
 										<td />
 									</tr>
@@ -406,26 +423,31 @@ export function DocumentsTab({ room }: { room: Room }) {
 													<Checkbox aria-label={`Select ${document.name}`} checked={checked} onCheckedChange={() => toggle(document.id)} />
 												</td>
 											) : null}
-											<td>
+											<td className="w-full max-w-0">
 												<button
 													type="button"
 													onClick={(event) => {
 														event.stopPropagation();
 														openDocument(document.id);
 													}}
-													className={cn('flex min-w-0 cursor-pointer items-center gap-2.5 rounded-sm text-left', focusRingClass)}
+													className={cn('flex max-w-full min-w-0 cursor-pointer items-center gap-2.5 rounded-sm text-start', focusRingClass)}
 												>
 													<DocumentGlyph kind={document.kind} />
-													<span className="min-w-0">
-														<span className="flex flex-wrap items-center gap-1.5">
+													<span className="min-w-0 flex-1">
+														<span className="flex items-center gap-1.5">
 															{document.status === 'processing' ? (
 																<TextShimmer className="truncate font-medium">{document.name}</TextShimmer>
 															) : (
-																<span className="truncate font-medium text-foreground">{document.name}</span>
+																// The end of a file name (version, extension) is what tells two files apart, so only the middle gives way.
+																<MiddleTruncate text={document.name} className="font-medium text-foreground" />
 															)}
-															{latest && latest.number > 1 ? <span className="text-xs text-muted-foreground tabular-nums">v{latest.number}</span> : null}
+															{latest && latest.number > 1 ? <span className="shrink-0 text-xs text-muted-foreground tabular-nums">v{latest.number}</span> : null}
 														</span>
-														{needle ? <span className="block truncate text-xs text-muted-foreground">{document.folder === '/' ? ROOT_LABEL : document.folder.slice(1)}</span> : null}
+														{needle ? (
+															<span title={document.folder === '/' ? ROOT_LABEL : document.folder.slice(1)} className="block truncate text-xs text-muted-foreground">
+																{document.folder === '/' ? ROOT_LABEL : document.folder.slice(1)}
+															</span>
+														) : null}
 													</span>
 												</button>
 												<span className="mt-1 flex flex-wrap gap-1 empty:hidden">
@@ -434,8 +456,8 @@ export function DocumentsTab({ room }: { room: Room }) {
 													{shares ? <Badge label={`Shared with ${shares}`} tone="info" /> : null}
 												</span>
 											</td>
-											<td className="text-muted-foreground tabular-nums">{format.relative(document.updatedAt)}</td>
-											<td className="text-right text-muted-foreground tabular-nums">{format.bytes(document.size)}</td>
+											<td className="whitespace-nowrap text-muted-foreground tabular-nums">{format.relative(document.updatedAt)}</td>
+											<td className="text-end whitespace-nowrap text-muted-foreground tabular-nums">{format.bytes(document.size)}</td>
 										</tr>
 									);
 								})}
@@ -449,7 +471,7 @@ export function DocumentsTab({ room }: { room: Room }) {
 						aria-hidden="true"
 						className="pointer-events-none absolute inset-2 grid place-items-center rounded-xl border-2 border-dashed border-primary/50 bg-[color-mix(in_oklab,var(--primary)_6%,var(--background))]/90"
 					>
-						<span className="flex items-center gap-2 text-[13px] font-medium text-foreground">
+						<span className="flex items-center gap-2 text-[0.8125rem] font-medium text-foreground">
 							<Upload className="size-3.5" />
 							Drop to upload to {folderName(folder, ROOT_LABEL)}
 						</span>

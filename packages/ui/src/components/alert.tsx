@@ -16,6 +16,8 @@ const alertVariants = cva(
 		'has-[>svg]:grid-cols-[1rem_minmax(0,1fr)] has-[>svg]:gap-x-3',
 		"[&>svg]:col-start-1 [&>svg]:row-span-full [&>svg]:mt-0.5 [&>svg]:size-4 [&>svg]:shrink-0 [&>svg]:text-current",
 		'[&>svg]:pointer-events-none',
+		// Anything else (an action, a link row) lines up with the text instead of landing in the icon column.
+		'[&>*:not(svg)]:col-start-2 [&>[data-slot=button]]:justify-self-start',
 		'shadow-xs',
 	].join(' '),
 	{
@@ -60,7 +62,8 @@ const AlertTitle = React.forwardRef<HTMLHeadingElement, React.HTMLAttributes<HTM
 			ref={ref}
 			data-slot="alert-title"
 			className={cn(
-				'col-start-2 min-h-4 font-medium leading-snug tracking-tight',
+				// `empty:hidden`: a title that came back empty must not reserve a blank row.
+				'col-start-2 font-medium leading-snug tracking-tight empty:hidden',
 				// Keep title on the semantic color; default uses card foreground
 				'text-current',
 				className,
@@ -77,13 +80,14 @@ const AlertDescription = React.forwardRef<HTMLDivElement, React.HTMLAttributes<H
 			ref={ref}
 			data-slot="alert-description"
 			className={cn(
-				'col-start-2 text-pretty text-sm leading-relaxed',
-				// Default: muted body. Semantic variants: slightly softer than title for hierarchy.
+				'col-start-2 text-pretty text-sm leading-relaxed [overflow-wrap:anywhere]',
+				// Default: muted body. Semantic variants use the full variant colour: the old /85
+				// alpha dropped light-theme contrast to about 3.8:1; the weight still sets the hierarchy.
 				'text-muted-foreground',
-				'group-data-[variant=destructive]/alert:text-destructive/85',
-				'group-data-[variant=info]/alert:text-info-foreground/85',
-				'group-data-[variant=success]/alert:text-success-foreground/85',
-				'group-data-[variant=warning]/alert:text-warning-foreground/85',
+				'group-data-[variant=destructive]/alert:text-destructive',
+				'group-data-[variant=info]/alert:text-info-foreground',
+				'group-data-[variant=success]/alert:text-success-foreground',
+				'group-data-[variant=warning]/alert:text-warning-foreground',
 				'[&_p]:leading-relaxed',
 				// Inline code with spacing that won't glue to neighbors
 				'[&_code]:mx-0.5 [&_code]:rounded-md [&_code]:bg-foreground/6 [&_code]:px-1.5 [&_code]:py-0.5',
@@ -96,5 +100,18 @@ const AlertDescription = React.forwardRef<HTMLDivElement, React.HTMLAttributes<H
 );
 AlertDescription.displayName = 'AlertDescription';
 
-export { Alert, AlertTitle, AlertDescription, alertVariants };
+/** Row for a button or link under the text, aligned with the title (not the icon). */
+const AlertAction = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElement>>(
+	({ className, ...props }, ref) => (
+		<div
+			ref={ref}
+			data-slot="alert-action"
+			className={cn('col-start-2 mt-1 flex flex-wrap items-center gap-2', className)}
+			{...props}
+		/>
+	),
+);
+AlertAction.displayName = 'AlertAction';
+
+export { Alert, AlertTitle, AlertDescription, AlertAction, alertVariants };
 export type { AlertProps };

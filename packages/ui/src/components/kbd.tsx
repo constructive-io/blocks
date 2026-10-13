@@ -16,7 +16,7 @@ function Kbd({ className, ...props }: KbdProps) {
 		<kbd
 			data-slot="kbd"
 			className={cn(
-				'pointer-events-none inline-flex h-5 min-w-5 select-none items-center justify-center gap-0.5 rounded-[5px] px-1 align-middle font-sans text-[11px] font-medium leading-none tabular-nums [&_svg]:size-3',
+				'pointer-events-none inline-flex h-5 min-w-5 shrink-0 select-none items-center justify-center gap-0.5 rounded-[5px] px-1 align-middle font-sans text-[0.6875rem] font-medium leading-none whitespace-nowrap tabular-nums [&_svg]:size-3',
 				'bg-[color-mix(in_oklab,currentColor_9%,transparent)]',
 				'shadow-[inset_0_0_0_1px_color-mix(in_oklab,currentColor_16%,transparent),inset_0_-1px_0_color-mix(in_oklab,currentColor_18%,transparent)]',
 				className,

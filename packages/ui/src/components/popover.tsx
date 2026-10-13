@@ -91,13 +91,16 @@ function PopoverContent({
 				<PopoverPrimitive.Popup
 					data-slot="popover-content"
 					className={cn(
-						`bg-popover text-popover-foreground origin-(--transform-origin) w-72 rounded-lg border p-4 shadow-lg outline-hidden
+						`bg-popover text-popover-foreground origin-(--transform-origin) max-h-(--available-height) w-72 max-w-(--available-width)
+						rounded-lg border p-4 shadow-lg outline-hidden [overflow-wrap:break-word]
 						transition-[scale,opacity,translate] duration-(--duration-moderate) ease-out data-starting-style:scale-95
 						data-ending-style:scale-95 data-starting-style:opacity-0 data-ending-style:opacity-0
 						data-[side=bottom]:data-starting-style:-translate-y-2
 						data-[side=left]:data-starting-style:translate-x-2
 						data-[side=right]:data-starting-style:-translate-x-2
 						data-[side=top]:data-starting-style:translate-y-2 motion-reduce:transition-none`,
+						// Capped to the room Base UI measured and scrolled inside. The arrow sits outside the box, so an arrowed popover keeps `overflow: visible`.
+						!showArrow && 'overflow-y-auto overscroll-contain',
 						className,
 					)}
 					{...props}
@@ -125,7 +128,7 @@ function PopoverTitle({ className, ...props }: React.ComponentProps<typeof Popov
 	return (
 		<PopoverPrimitive.Title
 			data-slot="popover-title"
-			className={cn('font-medium leading-none', className)}
+			className={cn('font-medium leading-tight', className)}
 			{...props}
 		/>
 	);

@@ -47,11 +47,11 @@ function PlaceholderPages({ document, viewer, watermark, stamp }: { document: Da
 						className="relative isolate aspect-[1/1.414] overflow-hidden rounded-md bg-[color-mix(in_oklab,white_94%,var(--card))] shadow-card dark:bg-[color-mix(in_oklab,white_8%,var(--card))]"
 					>
 						{sheet ? (
-							<div aria-hidden="true" className="absolute inset-[8%] grid grid-cols-5 grid-rows-[repeat(14,1fr)] border-t border-l border-foreground/10">
+							<div aria-hidden="true" className="absolute inset-[8%] grid grid-cols-5 grid-rows-[repeat(14,1fr)] border-t border-s border-foreground/10">
 								{Array.from({ length: 70 }, (_, cell) => (
 									<span
 										key={cell}
-										className={cn('border-r border-b border-foreground/10', cell < 5 && 'bg-foreground/[0.06]', cell % 5 === 0 && cell >= 5 && 'bg-foreground/[0.03]')}
+										className={cn('border-e border-b border-foreground/10', cell < 5 && 'bg-foreground/[0.06]', cell % 5 === 0 && cell >= 5 && 'bg-foreground/[0.03]')}
 									/>
 								))}
 							</div>
@@ -68,7 +68,7 @@ function PlaceholderPages({ document, viewer, watermark, stamp }: { document: Da
 								{Array.from({ length: 14 }, (_, row) => (
 									<span
 										key={row}
-										className="text-[11px] font-medium whitespace-nowrap text-foreground/10"
+										className="text-[0.6875rem] font-medium whitespace-nowrap text-foreground/10"
 										style={{ marginLeft: `${(row % 2) * -12}%` }}
 									>
 										{`${label}\u2003·\u2003`.repeat(4)}
@@ -76,7 +76,7 @@ function PlaceholderPages({ document, viewer, watermark, stamp }: { document: Da
 								))}
 							</div>
 						) : null}
-						<figcaption className="absolute right-2 bottom-1.5 text-[10px] text-subtle-foreground tabular-nums">{page + 1}</figcaption>
+						<figcaption className="absolute end-2 bottom-1.5 text-[0.625rem] text-subtle-foreground tabular-nums">{page + 1}</figcaption>
 					</figure>
 				))}
 			</div>
@@ -135,11 +135,11 @@ export function DocumentSheet() {
 			<SheetContent side="right" className="@container/sheet w-[44rem] max-w-[96vw] gap-0 p-0 sm:max-w-[44rem]">
 				{document && room ? (
 					<>
-						<div className="flex shrink-0 items-start gap-3 border-b border-border bg-muted/50 px-5 pt-5 pb-4 pr-12">
+						<div className="flex shrink-0 items-start gap-3 border-b border-border bg-muted/50 px-5 pt-5 pb-4 pe-12">
 							<DocumentGlyph kind={document.kind} size="lg" />
 							<div className="min-w-0 flex-1">
 								<SheetTitle className="text-base font-medium break-words">{document.name}</SheetTitle>
-								<SheetDescription className="mt-0.5 text-[13px] tabular-nums">
+								<SheetDescription className="mt-0.5 text-[0.8125rem] tabular-nums">
 									{document.folder === '/' ? room.name : document.folder.slice(1)} · {documentKindLabel(document.kind)} · {format.bytes(document.size)}
 									{latest ? ` · v${latest.number}` : ''}
 								</SheetDescription>
@@ -181,7 +181,7 @@ export function DocumentSheet() {
 								value={active}
 								options={tabs}
 								onChange={(next) => startViewTransition(() => setTab(next))}
-								className="ml-auto"
+								className="ms-auto"
 							/>
 						</div>
 						<div className="min-h-0 flex-1 overflow-y-auto px-5 py-5">
@@ -201,11 +201,11 @@ export function DocumentSheet() {
 												const uploader = person(version.uploadedBy);
 												return (
 													<li key={version.id} className={cn('flex items-center gap-3 py-3', index > 0 && cn('border-t', dashedRule))}>
-														<span className="w-8 shrink-0 text-[13px] font-medium text-foreground tabular-nums">v{version.number}</span>
+														<span className="w-8 shrink-0 text-[0.8125rem] font-medium text-foreground tabular-nums">v{version.number}</span>
 														<span className="min-w-0 flex-1">
-															<span className="flex items-center gap-1.5 text-[13px] text-foreground">
+															<span className="flex items-center gap-1.5 text-[0.8125rem] text-foreground">
 																<PersonAvatar person={uploader} size="xs" />
-																<span className="truncate">{uploader?.name ?? 'Someone'}</span>
+																<span title={uploader?.name ?? 'Someone'} className="truncate">{uploader?.name ?? 'Someone'}</span>
 																{index === 0 ? <ToneBadge tone="success">Current</ToneBadge> : null}
 															</span>
 															<span className="mt-0.5 block text-xs text-muted-foreground tabular-nums">
@@ -229,7 +229,7 @@ export function DocumentSheet() {
 
 									{active === 'access' ? (
 										<div className="flex flex-col gap-3">
-											<p className="text-[13px] text-muted-foreground tabular-nums">
+											<p className="text-[0.8125rem] text-muted-foreground tabular-nums">
 												{readers.length} {readers.length === 1 ? 'person can' : 'people can'} open this document. Select someone to see why.
 											</p>
 											<ul className="flex flex-col">
@@ -241,7 +241,7 @@ export function DocumentSheet() {
 															<button
 																type="button"
 																onClick={() => openTrace(reader.id, room.id)}
-																className={cn('-mx-2 flex w-[calc(100%+1rem)] cursor-pointer items-center gap-3 rounded-md px-2 py-2.5 text-left hover:bg-overlay-hover', focusRingClass)}
+																className={cn('-mx-2 flex w-[calc(100%+1rem)] cursor-pointer items-center gap-3 rounded-md px-2 py-2.5 text-start hover:bg-overlay-hover', focusRingClass)}
 															>
 																<PersonLine person={reader} className="flex-1" />
 																{viaShare ? <span className="hidden text-xs text-muted-foreground @md/sheet:inline">Folder access</span> : null}
@@ -262,7 +262,7 @@ export function DocumentSheet() {
 													return (
 														<li key={event.id} className={cn('flex items-center gap-3 py-2.5', index > 0 && cn('border-t', dashedRule))}>
 															<PersonAvatar person={actor} size="sm" />
-															<span className="min-w-0 flex-1 text-[13px]">
+															<span className="min-w-0 flex-1 text-[0.8125rem]">
 																<span className="font-medium text-foreground">{actor?.name ?? 'Someone'}</span>{' '}
 																<span className="text-muted-foreground">{VERB[event.kind]}</span>
 																{event.kind === 'view' && event.seconds ? (

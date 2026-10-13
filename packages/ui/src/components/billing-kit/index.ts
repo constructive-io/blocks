@@ -22,7 +22,7 @@ export {
 export { AllowanceBar, PeriodTrack, Sparkline, UsageFigure } from './allowance';
 export { BillingStatusBanner, LifecycleBadge, Notice } from './status';
 export type { BannerState } from './status';
-export { catalogSavings, CurrentPlanCard, IntervalSwitch, PlanComparison, PriceTag, priceFor, yearlySavings } from './plan';
+export { catalogSavings, CurrentPlanCard, IntervalSwitch, isPlanAvailable, PlanComparison, PriceTag, priceFor, yearlySavings } from './plan';
 export type { EntitlementRow } from './plan';
 export { PlanChangeDialog } from './plan-change-dialog';
 export type { PlanChangeRequest, PlanChangeTiming } from './plan-change-dialog';

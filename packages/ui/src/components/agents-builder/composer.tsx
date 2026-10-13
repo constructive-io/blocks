@@ -19,7 +19,7 @@ function ComposerModelSelector({ value, onChange }: { value: ModelSelection; onC
 			data.models.map(({ integrationId, ...model }) => ({
 				...model,
 				icon: integrationId ? (
-					<span className="text-[10px]">
+					<span className="text-[0.625rem]">
 						<IntegrationMark integration={integration(integrationId)} bare />
 					</span>
 				) : model.provider === 'Router' ? (
@@ -36,7 +36,7 @@ function ComposerModelSelector({ value, onChange }: { value: ModelSelection; onC
 			pinnedIds={data.modelSections?.pinnedIds}
 			recentIds={data.modelSections?.recentIds}
 			recommendedIds={data.modelSections?.recommendedIds}
-			triggerClassName="h-7 px-1.5"
+			triggerClassName="h-7 min-w-0 px-1.5"
 		/>
 	);
 }
@@ -94,13 +94,14 @@ function Composer({ placeholder, ariaLabel, onSubmit, surface, model, onModelCha
 						className="min-h-9 px-1.5 py-1"
 					/>
 					<PromptInputActions className="justify-between px-0">
-						<div className="flex items-center gap-1">
+						{/* min-w-0 lets a long model name truncate inside the picker instead of pushing Send out of the card. */}
+						<div className="flex min-w-0 flex-1 items-center gap-1">
 							<PromptInputAction tooltip="Attach a file">
 								<Button
 									size="icon-xs"
 									variant="outline"
 									aria-label="Attach a file"
-									className="size-7"
+									className="size-7 shrink-0"
 									onClick={() => emit({ type: 'attach-file', surface })}
 								>
 									<Paperclip className="size-3.5" />
@@ -114,7 +115,7 @@ function Composer({ placeholder, ariaLabel, onSubmit, surface, model, onModelCha
 								variant={canSend ? 'default' : 'secondary'}
 								aria-label="Send"
 								disabled={!canSend}
-								className="size-7"
+								className="size-7 shrink-0"
 								onClick={submit}
 							>
 								<ArrowUp className="size-3.5" />

@@ -6,6 +6,7 @@ import * as React from 'react';
 import { cn } from '../../lib/utils';
 import { TextShimmer } from '../ai/text-shimmer';
 import { useBillingFormat } from './context';
+import { nameList } from '../../lib/intl';
 import { LIFECYCLE, type Tone } from './format';
 import { IconTile, StatusBadge, TONE_COLOR } from './surface';
 import type { BillingLifecycle, DatabaseStanding, Subscription } from './types';
@@ -43,8 +44,8 @@ export function Notice({ tone, icon, title, description, actions, className, rol
 		>
 			<IconTile icon={icon} tone={tone} />
 			<div className="min-w-0 flex-1 basis-56 pt-0.5">
-				<p className="text-sm font-medium text-foreground">{title}</p>
-				{description ? <div className="mt-0.5 text-pretty text-[13px] text-muted-foreground">{description}</div> : null}
+				<p className="text-sm font-medium text-foreground [overflow-wrap:anywhere]">{title}</p>
+				{description ? <div className="mt-0.5 text-pretty text-[0.8125rem] text-muted-foreground [overflow-wrap:anywhere]">{description}</div> : null}
 			</div>
 			{actions ? <div className="flex shrink-0 flex-wrap items-center gap-2 self-center">{actions}</div> : null}
 		</div>
@@ -75,7 +76,7 @@ export function BillingStatusBanner({ lifecycle, subscription, planName, databas
 	const f = useBillingFormat();
 	const held = databases.filter((database) => database.suspendedReason === 'admin');
 	const suspended = databases.filter((database) => database.suspendedReason === 'billing');
-	const names = (list: DatabaseStanding[]) => list.map((database) => database.name).join(', ');
+	const names = (list: DatabaseStanding[]) => nameList(list.map((database) => database.name), { locale: f.locale });
 
 	let state: BannerState | null = null;
 	let notice: Omit<NoticeProps, 'actions'> | null = null;

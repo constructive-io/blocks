@@ -68,7 +68,7 @@ interface BucketConfigSheetProps {
 
 const VISIBILITY_OPTIONS: BucketVisibility[] = ['private', 'public', 'temp'];
 
-const FIELD_LABEL = 'text-[13px] font-medium text-foreground';
+const FIELD_LABEL = 'text-[0.8125rem] font-medium text-foreground';
 const FIELD_HINT = 'text-xs text-muted-foreground';
 
 function toFormValue(initial?: Partial<StorageBucket>): BucketConfigValue {
@@ -114,9 +114,9 @@ function BucketConfigForm({
 
 	return (
 		<form onSubmit={handleSubmit} className='flex min-h-0 flex-1 flex-col'>
-			<SheetHeader className='space-y-1 p-4 pr-12 pb-3 text-left'>
+			<SheetHeader className='space-y-1 p-4 pe-12 pb-3 text-start'>
 				<SheetTitle className='text-sm font-medium'>{mode === 'create' ? 'New bucket' : 'Edit bucket'}</SheetTitle>
-				<SheetDescription className='text-[13px]'>
+				<SheetDescription className='text-[0.8125rem]'>
 					{mode === 'create'
 						? 'Configure a new storage bucket.'
 						: 'Update this bucket’s configuration.'}
@@ -130,9 +130,10 @@ function BucketConfigForm({
 					<Input
 						id='bucket-key'
 						value={value.key}
-						disabled={mode === 'edit'}
+						// Read-only rather than disabled: a disabled field can neither be scrolled nor selected, so a long key stayed cut off.
+						readOnly={mode === 'edit'}
 						placeholder='my-bucket'
-						className='font-mono'
+						className='font-mono read-only:bg-muted/50 read-only:text-muted-foreground'
 						autoComplete='off'
 						aria-invalid={keyMissing || undefined}
 						onChange={(event) => set('key', event.target.value)}
@@ -161,7 +162,7 @@ function BucketConfigForm({
 								>
 									<Icon aria-hidden='true' className='size-4 shrink-0 text-muted-foreground' />
 									<span className='flex min-w-0 flex-1 flex-col gap-0.5'>
-										<span className='text-[13px] font-medium text-foreground'>{label}</span>
+										<span className='text-[0.8125rem] font-medium text-foreground'>{label}</span>
 										<span className={FIELD_HINT}>{hint}</span>
 									</span>
 									<RadioGroupItem id={`visibility-${option}`} value={option} />
@@ -222,7 +223,7 @@ function BucketConfigForm({
 									set('maxFileSize', event.target.value === '' ? null : Number(event.target.value))
 								}
 							/>
-							<span className='text-[13px] text-muted-foreground'>bytes</span>
+							<span className='text-[0.8125rem] text-muted-foreground'>bytes</span>
 							{value.maxFileSize ? (
 								<span className='ml-auto text-xs text-muted-foreground tabular-nums'>≈ {humanizeBytes(value.maxFileSize)}</span>
 							) : null}
@@ -257,10 +258,11 @@ function BucketConfigForm({
 				)}
 			</div>
 
-			<SheetFooter className={cn('gap-2 border-t bg-muted/40 p-3 sm:space-x-0', dashedRule)}>
+			<SheetFooter className={cn('border-t bg-muted/40 p-3', dashedRule)}>
 				<Button
 					type='button'
 					size='sm'
+					wrap
 					variant='outline'
 					onClick={() => {
 						onCancel?.();
@@ -269,7 +271,7 @@ function BucketConfigForm({
 				>
 					Cancel
 				</Button>
-				<Button type='submit' size='sm' disabled={keyMissing}>
+				<Button type='submit' size='sm' wrap disabled={keyMissing}>
 					{mode === 'create' ? 'Create bucket' : 'Save changes'}
 				</Button>
 			</SheetFooter>
@@ -346,7 +348,9 @@ function ChipsInput({ value, onChange, placeholder, ariaLabel }: ChipsInputProps
 		>
 			{value.map((chip, index) => (
 				<ToneBadge key={chip} tone='neutral' className='max-w-full pr-0.5 font-mono'>
-					<span className='truncate'>{chip}</span>
+					<span className='truncate' title={chip}>
+						{chip}
+					</span>
 					<button
 						type='button'
 						aria-label={`Remove ${chip}`}
@@ -371,7 +375,7 @@ function ChipsInput({ value, onChange, placeholder, ariaLabel }: ChipsInputProps
 				onBlur={commit}
 				placeholder={value.length === 0 ? placeholder : undefined}
 				aria-label={ariaLabel}
-				className='min-w-24 flex-1 bg-transparent text-[13px] outline-none placeholder:text-subtle-foreground'
+				className='min-w-24 flex-1 bg-transparent text-[0.8125rem] outline-none placeholder:text-subtle-foreground'
 			/>
 		</div>
 	);

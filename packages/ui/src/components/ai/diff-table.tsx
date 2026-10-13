@@ -78,11 +78,11 @@ function DiffTable<T extends DiffTableRowBase>({
 		>
 			{title ? (
 				<div className="flex items-center justify-between border-b border-border px-3 py-2">
-					<span className="text-[12.5px] font-medium text-foreground">{title}</span>
+					<span className="text-[0.78125rem] font-medium text-foreground">{title}</span>
 				</div>
 			) : null}
 			<div className="overflow-x-auto">
-				<table className="w-full border-collapse text-left text-[13px]">
+				<table className="w-full border-collapse text-start text-[0.8125rem]">
 					<thead>
 						<tr className="border-b border-border">
 							{columns.map((col) => (
@@ -90,7 +90,7 @@ function DiffTable<T extends DiffTableRowBase>({
 									key={col.id}
 									scope="col"
 									className={cn(
-										'px-3 py-2 text-[12px] font-medium text-muted-foreground',
+										'px-3 py-2 text-[0.75rem] font-medium text-muted-foreground',
 										col.className,
 									)}
 								>
@@ -150,7 +150,7 @@ function DiffTable<T extends DiffTableRowBase>({
 													<div
 														key={i}
 														className={cn(
-															'px-3 py-2 text-success',
+															'min-w-0 px-3 py-2 text-success [overflow-wrap:anywhere]',
 															i === 0 && 'font-medium',
 														)}
 													>

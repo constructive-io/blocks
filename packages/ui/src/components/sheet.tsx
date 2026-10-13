@@ -6,6 +6,7 @@ import { cva, type VariantProps } from 'class-variance-authority';
 import { X } from 'lucide-react';
 import { AnimatePresence, motion, type HTMLMotionProps, type Transition } from 'motion/react';
 
+import { scrollSafeInitialFocus } from '../lib/initial-focus';
 import { easings, tierExit, tierSpring } from '../lib/motion/motion-config';
 import { useSpringTiers } from '../lib/motion/tuning';
 import { useControllableState } from '../lib/use-controllable-state';
@@ -320,11 +321,13 @@ function SheetOverlay({ className, asChild: _asChild, forceMount: _forceMount, .
 	);
 }
 
-const sheetVariants = cva('fixed flex flex-col gap-3 bg-background p-4 shadow-lg', {
+// The panel scrolls itself: content taller than the viewport used to be clipped with no way to reach it. Callers that manage their own
+// scroll region (a `flex-1 min-h-0 overflow-y-auto` body) are unaffected because the sheet then never overflows.
+const sheetVariants = cva('fixed flex flex-col gap-3 overflow-y-auto overscroll-contain bg-background p-4 shadow-lg outline-hidden [overflow-wrap:break-word]', {
 	variants: {
 		side: {
-			top: 'inset-x-0 top-0 border-b',
-			bottom: 'inset-x-0 bottom-0 border-t',
+			top: 'inset-x-0 top-0 max-h-dvh border-b',
+			bottom: 'inset-x-0 bottom-0 max-h-dvh border-t',
 			left: 'inset-y-0 left-0 h-full w-3/4 border-r sm:max-w-sm',
 			right: 'inset-y-0 right-0 h-full w-3/4 border-l sm:max-w-sm',
 		},
@@ -456,6 +459,7 @@ function SheetContent({
 	onPointerDownOutside: _onPointerDownOutside,
 	onEscapeKeyDown: _onEscapeKeyDown,
 	onFocusOutside: _onFocusOutside,
+	initialFocus,
 	...props
 }: SheetContentProps) {
 	const { isOpen, depth, sheetId } = useSheet();
@@ -546,6 +550,9 @@ function SheetContent({
 						data-slot="sheet-content"
 						data-sheet-depth={depth}
 						data-sheet-id={sheetId}
+						// A sheet that scrolls opens at its top, not scrolled to a footer button that is first in tab order.
+						// Leaving `initialFocus` out and passing `undefined` are the same thing: both get this default.
+						initialFocus={initialFocus ?? scrollSafeInitialFocus(() => contentRef.current)}
 						{...props}
 						render={
 							<motion.div
@@ -575,7 +582,7 @@ function SheetContent({
 						{showClose && (
 							<SheetPrimitive.Close
 								data-slot="sheet-close"
-								className='data-[open]:bg-secondary absolute top-4 right-4
+								className='data-[open]:bg-secondary absolute top-4 end-4
 									rounded-sm opacity-70 transition-opacity hover:opacity-100 focus-visible:ring-[3px] focus-visible:ring-ring/50
 								 disabled:pointer-events-none'
 							>
@@ -602,9 +609,10 @@ function SheetHeader({ className, variant = 'default', ...props }: SheetHeaderPr
 			data-variant={variant}
 			className={cn(
 				'flex flex-col space-y-2',
-				variant === 'default' && 'pb-4 text-center sm:text-left',
+				// `pe-6` keeps the title clear of the close button.
+				variant === 'default' && 'pb-4 pe-6 text-center sm:text-start',
 				// Bleeds through SheetContent's p-4 to the panel edges.
-				variant === 'band' && '-mx-4 -mt-4 border-b bg-muted/50 p-4 pr-12 text-left',
+				variant === 'band' && '-mx-4 -mt-4 border-b bg-muted/50 p-4 pe-12 text-start',
 				className,
 			)}
 			{...props}
@@ -623,9 +631,9 @@ function SheetFooter({ className, variant = 'default', ...props }: SheetFooterPr
 			data-slot="sheet-footer"
 			data-variant={variant}
 			className={cn(
-				'flex flex-col-reverse sm:flex-row sm:justify-end sm:space-x-2',
+				'flex flex-col-reverse gap-2 sm:flex-row sm:flex-wrap sm:justify-end',
 				variant === 'default' && 'pt-4',
-				variant === 'band' && '-mx-4 mt-auto -mb-4 gap-2 border-t bg-muted/50 px-4 py-3 sm:space-x-0',
+				variant === 'band' && '-mx-4 mt-auto -mb-4 border-t bg-muted/50 px-4 py-3',
 				className,
 			)}
 			{...props}

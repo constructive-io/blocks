@@ -1,3 +1,4 @@
+import { dateFormat, listFormat, numberFormat, pluralRules, relativeTimeFormat } from '../../lib/intl';
 import type {
 	BillingHealth,
 	BillingInterval,
@@ -29,34 +30,12 @@ export type Presentation = { label: string; tone: Tone; description?: string };
 
 export const isUnlimited = (limit: number) => limit < 0;
 
-/* ------------------------------------------------------------------ *
- * Cached Intl formatters
- * ------------------------------------------------------------------ */
-
-// Intl constructors are slow and every list row formats several values, so
-// each distinct option set is built once per module.
-const formatters = new Map<string, Intl.NumberFormat | Intl.DateTimeFormat | Intl.RelativeTimeFormat | Intl.ListFormat>();
-
-function cached<T extends Intl.NumberFormat | Intl.DateTimeFormat | Intl.RelativeTimeFormat | Intl.ListFormat>(key: string, create: () => T): T {
-	let formatter = formatters.get(key) as T | undefined;
-	if (!formatter) {
-		formatter = create();
-		formatters.set(key, formatter);
-	}
-	return formatter;
-}
-
-export function numberFormat(locale: string, options: Intl.NumberFormatOptions) {
-	return cached(`n|${locale}|${JSON.stringify(options)}`, () => new Intl.NumberFormat(locale, options));
-}
-
-export function dateFormat(locale: string, options: Intl.DateTimeFormatOptions) {
-	return cached(`d|${locale}|${JSON.stringify(options)}`, () => new Intl.DateTimeFormat(locale, options));
-}
+// Cached Intl formatters, shared with the other kits.
+export { dateFormat, numberFormat } from '../../lib/intl';
 
 /** "a, b, and c" in the given locale. */
 export function formatList(items: string[], locale: string) {
-	return cached(`l|${locale}`, () => new Intl.ListFormat(locale, { type: 'conjunction' })).format(items);
+	return listFormat(locale).format(items);
 }
 
 /* ------------------------------------------------------------------ *
@@ -101,6 +80,14 @@ export function formatQuantity(value: number, options: Pick<BillingFormatOptions
 	}).format(value);
 }
 
+/**
+ * A plan limit as a contract states it: exact with digit grouping below a
+ * million (`12,345 GB`, never `12.3K GB`), compact only from there (`1.2M`).
+ */
+export function formatLimit(value: number, options: Pick<BillingFormatOptions, 'locale'>) {
+	return formatQuantity(value, { locale: options.locale, compact: Math.abs(value) >= 1_000_000 });
+}
+
 /** Share of a limit used, or `null` when the limit is unlimited. Zero limits count as fully used once anything is used. */
 export function usageRatio(used: number, limit: number): number | null {
 	if (isUnlimited(limit)) return null;
@@ -121,25 +108,41 @@ export function usageLevel(used: number, limit: number, soft = 0.8): UsageLevel 
 
 export function formatPercent(ratio: number, locale: string) {
 	if (!Number.isFinite(ratio)) return '100%+';
-	return numberFormat(locale, { style: 'percent', maximumFractionDigits: ratio < 0.1 && ratio > 0 ? 1 : 0 }).format(ratio);
+	const digits = ratio < 0.1 && ratio > 0 ? 1 : 0;
+	// A pool at 99.95% is not full: keep a ratio below 1 from rounding up to "100%".
+	const shown = ratio < 1 && Math.round(ratio * 10 ** (2 + digits)) / 10 ** (2 + digits) >= 1 ? 0.99 : ratio;
+	return numberFormat(locale, { style: 'percent', maximumFractionDigits: digits }).format(shown);
 }
 
 /* ------------------------------------------------------------------ *
  * Dates
  * ------------------------------------------------------------------ */
 
-export function formatDate(iso: string, options: BillingFormatOptions & { style?: 'short' | 'medium' | 'long'; withTime?: boolean }) {
+/**
+ * `short` leaves the year out for dates in the current year (`Jan 1`) and adds
+ * it for any other year (`Jan 1, 2027`), so a yearly period never reads
+ * `Jan 1 - Jan 1`. Pass `now` to say which year is current. An unset (epoch
+ * zero) timestamp renders as an em dash.
+ */
+export function formatDate(iso: string, options: BillingFormatOptions & { style?: 'short' | 'medium' | 'long'; withTime?: boolean; now?: string }) {
 	const date = new Date(iso);
 	if (Number.isNaN(date.getTime())) return iso;
+	if (date.getTime() === 0) return '—';
 	const style = options.style ?? 'medium';
+	const otherYear = style === 'short' && options.now ? yearOf(iso, options.timeZone) !== yearOf(options.now, options.timeZone) : false;
 	return dateFormat(options.locale, {
 		timeZone: options.timeZone,
 		month: style === 'long' ? 'long' : 'short',
 		day: 'numeric',
-		year: style === 'short' ? undefined : 'numeric',
+		year: style === 'short' && !otherYear ? undefined : 'numeric',
 		hour: options.withTime ? 'numeric' : undefined,
 		minute: options.withTime ? '2-digit' : undefined,
 	}).format(date);
+}
+
+function yearOf(iso: string, timeZone: string) {
+	const date = new Date(iso);
+	return Number.isNaN(date.getTime()) ? '' : dateFormat('en-US', { timeZone, year: 'numeric' }).format(date);
 }
 
 /** Clock time only, e.g. "2:12 PM". */
@@ -167,9 +170,20 @@ export function daysUntil(iso: string, now: string) {
 	return Math.round((new Date(iso).getTime() - new Date(now).getTime()) / DAY);
 }
 
-/** "in 3 days", "tomorrow", "2 days ago". */
-export function formatRelativeDays(iso: string, now: string, locale: string) {
-	return cached(`r|${locale}`, () => new Intl.RelativeTimeFormat(locale, { numeric: 'auto' })).format(daysUntil(iso, now), 'day');
+/**
+ * Calendar days from `now` to `iso` in a time zone: 9 hours from now across
+ * midnight is tomorrow, and 9 hours from now on the same date is today.
+ */
+export function calendarDaysUntil(iso: string, now: string, timeZone = 'UTC') {
+	if (Number.isNaN(new Date(iso).getTime()) || Number.isNaN(new Date(now).getTime())) return NaN;
+	return Math.round((Date.parse(`${dayKey(iso, timeZone)}T00:00:00Z`) - Date.parse(`${dayKey(now, timeZone)}T00:00:00Z`)) / DAY);
+}
+
+/** "in 3 days", "tomorrow", "2 days ago", counted in calendar days of the given time zone. */
+export function formatRelativeDays(iso: string, now: string, locale: string, timeZone = 'UTC') {
+	const days = calendarDaysUntil(iso, now, timeZone);
+	if (!Number.isFinite(days)) return iso;
+	return relativeTimeFormat(locale).format(days, 'day');
 }
 
 /** Share of the period elapsed at `now`, clamped to 0..1. */
@@ -181,6 +195,8 @@ export function periodProgress(start: string, end: string, now: string) {
 
 export const INTERVAL_SUFFIX: Record<BillingInterval, string> = { month: '/mo', year: '/yr', one_time: ' once' };
 export const INTERVAL_LABEL: Record<BillingInterval, string> = { month: 'Monthly', year: 'Yearly', one_time: 'One time' };
+/** How a sentence says what a price covers: "$49 per month". */
+export const INTERVAL_PHRASE: Record<BillingInterval, string> = { month: 'per month', year: 'per year', one_time: 'once' };
 
 /* ------------------------------------------------------------------ *
  * Presentations
@@ -281,6 +297,70 @@ export const READINESS: Record<ReadinessStatus, Presentation> = {
 	pending: { label: 'Checking', tone: 'info' },
 	skipped: { label: 'Skipped', tone: 'neutral' },
 };
+
+/**
+ * Plurals the suffix rules in `singularize` would get wrong: words that do not
+ * change, and `-ie`, `-is`, `-us` and Latin words whose plural looks like a
+ * regular one. Units a host needs beyond these set `unitSingular`.
+ */
+const SINGULARS: Record<string, string> = {
+	series: 'series',
+	species: 'species',
+	news: 'news',
+	movies: 'movie',
+	cookies: 'cookie',
+	calories: 'calorie',
+	selfies: 'selfie',
+	zombies: 'zombie',
+	ties: 'tie',
+	pies: 'pie',
+	analyses: 'analysis',
+	aliases: 'alias',
+	buses: 'bus',
+	bonuses: 'bonus',
+	statuses: 'status',
+	viruses: 'virus',
+	campuses: 'campus',
+	indices: 'index',
+	matrices: 'matrix',
+	vertices: 'vertex',
+};
+
+function singularWord(word: string) {
+	const known = SINGULARS[word];
+	if (known) return known;
+	if (/[^aeiou]ies$/.test(word)) return `${word.slice(0, -3)}y`;
+	if (/(ss|us|is)$/.test(word)) return word;
+	if (/(sh|ch|x|z|ss)es$/.test(word)) return word.slice(0, -2);
+	return word.replace(/s$/, '');
+}
+
+/**
+ * Singular of a plural English unit label (`queries` becomes "query"). Anything
+ * that is not a plain lowercase word, such as `GB` or `Mbps`, is returned as is;
+ * hosts with irregular units set `unitSingular` instead. Only the last word of
+ * a phrase or hyphenated unit changes (`active users`, `gigabyte-hours`).
+ */
+export function singularize(unit: string) {
+	if (!/^[a-z][a-z -]*$/.test(unit)) return unit;
+	const lead = Math.max(unit.lastIndexOf(' '), unit.lastIndexOf('-')) + 1;
+	return unit.slice(0, lead) + singularWord(unit.slice(lead));
+}
+
+/**
+ * The unit label that goes with a count: `1 seat`, `2 seats`. `unit` is the
+ * plural label and `unitSingular` the label for one, both English like the rest
+ * of the kit's copy, so the choice follows English rules whatever the page is
+ * formatted in. Pass `locale` only when both labels are written for that
+ * locale; without a `unitSingular` nothing can be derived outside English.
+ * The unlimited sentinel (`-1`) is no count: it reads as the plural and never
+ * reaches the plural rules, which would call it one.
+ */
+export function unitFor(count: number, unit: string, unitSingular?: string, locale = 'en-US') {
+	if (isUnlimited(count)) return unit;
+	if (pluralRules(locale).select(count) !== 'one') return unit;
+	return unitSingular ?? (/^en(?:-|$)/i.test(locale) ? singularize(unit) : unit);
+}
 
 /** Humanizes a slug for fallbacks: `object_storage_gb` → `Object storage gb`. */
 export function humanize(value: string) {

@@ -4,10 +4,11 @@ import * as React from 'react';
 import { Toggle as TogglePrimitive } from '@base-ui/react/toggle';
 import { cva, type VariantProps } from 'class-variance-authority';
 
+import { truncateTextRuns } from '../lib/text-runs';
 import { cn } from '../lib/utils';
 
 const toggleVariants = cva(
-	`group/toggle inline-flex shrink-0 cursor-pointer items-center justify-center gap-1.5 whitespace-nowrap
+	`group/toggle inline-flex max-w-full shrink-0 cursor-pointer items-center justify-center gap-1.5 whitespace-nowrap
 		rounded-md text-sm font-medium outline-none
 		transition-[box-shadow,scale] duration-(--duration-moderate) ease-out
 		hover:bg-muted hover:text-foreground
@@ -39,13 +40,15 @@ const toggleVariants = cva(
 type ToggleProps = React.ComponentProps<typeof TogglePrimitive> &
 	VariantProps<typeof toggleVariants>;
 
-function Toggle({ className, variant, size, ...props }: ToggleProps) {
+function Toggle({ className, variant, size, children, ...props }: ToggleProps) {
 	return (
 		<TogglePrimitive
 			data-slot="toggle"
 			className={cn(toggleVariants({ variant, size }), 'data-[pressed]:bg-accent', className)}
 			{...props}
-		/>
+		>
+			{truncateTextRuns(children).nodes}
+		</TogglePrimitive>
 	);
 }
 

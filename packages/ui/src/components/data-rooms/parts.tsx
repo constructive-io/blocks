@@ -4,6 +4,7 @@ import { Archive, File, FileImage, FileSpreadsheet, FileText, Presentation, type
 import * as React from 'react';
 
 import { cn } from '../../lib/utils';
+import { useImageFailed } from '../ai/use-image-failed';
 import { Select, SelectGroup, SelectGroupLabel, SelectItem, SelectPopup, SelectTrigger, SelectValue } from '../select';
 import { ToneBadge, type Tone } from '../workspace-kit/primitives';
 import { ALL_PERMISSIONS, PERMISSION_COPY, type AccessLevel } from './access';
@@ -11,10 +12,10 @@ import { initials } from './format';
 import type { DocumentKind, Permission, Person } from './types';
 
 const AVATAR_SIZE = {
-	xs: 'size-5 text-[9px]',
-	sm: 'size-6 text-[10px]',
-	md: 'size-8 text-[11px]',
-	lg: 'size-10 text-[13px]',
+	xs: 'size-5 text-[0.5625rem]',
+	sm: 'size-6 text-[0.625rem]',
+	md: 'size-8 text-[0.6875rem]',
+	lg: 'size-10 text-[0.8125rem]',
 } as const;
 
 /** Stable, quiet tint per person so avatars are told apart without loud colour. */
@@ -26,12 +27,19 @@ function tintFor(id: string) {
 	return AVATAR_TINTS[hash % AVATAR_TINTS.length]!;
 }
 
+/** A photo that gives way to the person's initials when it does not load. */
+function AvatarPhoto({ src, fallback }: { src: string; fallback: React.ReactNode }) {
+	const { failed, ref, onError } = useImageFailed();
+	return failed ? <>{fallback}</> : <img ref={ref} src={src} alt="" className="size-full object-cover" onError={onError} />;
+}
+
 /**
  * Initials (or a photo) on a round tile with a faint inset outline, so pale
  * avatars keep their edge on any surface. Guests get a dashed ring.
  */
 export function PersonAvatar({ person, size = 'md', className }: { person: Person | undefined; size?: keyof typeof AVATAR_SIZE; className?: string }) {
 	const tint = person ? tintFor(person.id) : 'var(--muted-foreground)';
+	const letters = person ? initials(person.name) || '?' : '?';
 	return (
 		<span
 			aria-hidden="true"
@@ -45,7 +53,7 @@ export function PersonAvatar({ person, size = 'md', className }: { person: Perso
 				color: `color-mix(in oklab, ${tint}, var(--foreground) 45%)`,
 			}}
 		>
-			{person?.avatarUrl ? <img src={person.avatarUrl} alt="" className="size-full object-cover" /> : person ? initials(person.name) : '?'}
+			{person?.avatarUrl ? <AvatarPhoto key={person.avatarUrl} src={person.avatarUrl} fallback={letters} /> : letters}
 			{person?.guest ? <span className="pointer-events-none absolute inset-0 rounded-full border border-dashed border-foreground/30" /> : null}
 		</span>
 	);
@@ -58,7 +66,9 @@ export function PersonLine({ person, detail, className }: { person: Person | und
 			<PersonAvatar person={person} />
 			<span className="min-w-0">
 				<span className="flex items-center gap-1.5">
-					<span className="truncate text-[13px] font-medium text-foreground">{person?.name ?? 'Someone'}</span>
+					<span title={person?.name} className="truncate text-[0.8125rem] font-medium text-foreground">
+						<bdi>{person?.name ?? 'Someone'}</bdi>
+					</span>
 					{person?.guest ? <ToneBadge tone="neutral">Guest</ToneBadge> : null}
 				</span>
 				<span className="block truncate text-xs text-muted-foreground">{detail ?? (person?.guest ? person.company : person?.title) ?? person?.email}</span>
@@ -121,7 +131,7 @@ export function PermissionChips({ permissions, compact = false, className }: { p
 					<li
 						key={permission}
 						className={cn(
-							'inline-flex h-5 items-center rounded-[5px] border px-1.5 text-[11px]',
+							'inline-flex h-5 items-center rounded-[5px] border px-1.5 text-[0.6875rem]',
 							on ? 'border-border bg-card text-foreground shadow-2xs' : 'border-transparent text-subtle-foreground line-through decoration-foreground/20',
 							compact && !on && 'hidden',
 						)}
@@ -139,7 +149,7 @@ export function PermissionChips({ permissions, compact = false, className }: { p
 export function FormField({ label, htmlFor, hint, children }: { label: string; htmlFor: string; hint?: React.ReactNode; children: React.ReactNode }) {
 	return (
 		<div className="flex flex-col gap-1.5">
-			<label htmlFor={htmlFor} className="text-[13px] font-medium text-foreground">
+			<label htmlFor={htmlFor} className="text-[0.8125rem] font-medium text-foreground">
 				{label}
 			</label>
 			{children}
@@ -175,7 +185,7 @@ export function ChoiceSelect({ value, options, onValueChange, label, id, describ
 	}
 	return (
 		<Select value={value} onValueChange={onValueChange} items={options} disabled={disabled}>
-			<SelectTrigger id={id} size="sm" aria-label={label} aria-describedby={describedBy} className={cn('min-w-0 text-[13px]', className)}>
+			<SelectTrigger id={id} size="sm" aria-label={label} aria-describedby={describedBy} className={cn('min-w-0 text-[0.8125rem]', className)}>
 				<SelectValue />
 			</SelectTrigger>
 			<SelectPopup>

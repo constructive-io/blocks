@@ -3,11 +3,13 @@
 import { Activity, Coins, Gauge, Layers, LayoutDashboard, Receipt } from 'lucide-react';
 import * as React from 'react';
 
+import { plural } from '../../lib/intl';
 import { cn } from '../../lib/utils';
 import { useBillingFormat } from '../billing-kit/context';
 import { daysUntil, isUnlimited, LIFECYCLE, usageLevel } from '../billing-kit/format';
 import { PeriodTrack } from '../billing-kit/allowance';
 import { NavCount, NavIcon, NavRow, NavSection, SidebarFrame } from '../workspace-kit/nav';
+
 import { AccountMenu } from './account-menu';
 import { useBillingAccount } from './billing-account-context';
 import type { BillingAccountView } from './types';
@@ -84,18 +86,21 @@ export function BillingAccountSidebar({ collapsed = false, onCollapsedChange, dr
 						)}
 					>
 						<p className="flex items-center justify-between gap-2 text-sm">
-							<span className="truncate font-medium text-foreground">{plan?.displayName ?? 'No plan'}</span>
-							<span className={cn('text-xs', attention ? 'font-medium text-warning' : 'text-muted-foreground')}>{LIFECYCLE[lifecycle].label}</span>
+							{/* Without a plan the lifecycle label ("No plan", "Ended") already says it, so it is not repeated. */}
+							<span title={plan?.displayName} className="min-w-0 truncate font-medium text-foreground">
+								{plan?.displayName ?? LIFECYCLE[lifecycle].label}
+							</span>
+							{plan ? <span className={cn('shrink-0 text-xs', attention ? 'font-medium text-warning' : 'text-muted-foreground')}>{LIFECYCLE[lifecycle].label}</span> : null}
 						</p>
 						{subscription && daysLeft !== null ? (
 							<>
 								<PeriodTrack start={subscription.currentPeriodStart} end={subscription.currentPeriodEnd} tone={attention ? 'warning' : 'default'} className="mt-3" />
 								<p className="mt-2 flex items-baseline justify-between gap-2 text-xs text-muted-foreground tabular-nums">
-									<span>
+									<span className="min-w-0">
 										{subscription.cancelAt ? 'Ends' : 'Renews'} {f.date(subscription.cancelAt ?? subscription.currentPeriodEnd, 'short')}
 									</span>
-									<span className={daysLeft <= 3 ? 'font-medium text-foreground' : undefined}>
-										{daysLeft === 0 ? 'Today' : `${daysLeft} ${daysLeft === 1 ? 'day' : 'days'} left`}
+									<span className={cn('shrink-0 whitespace-nowrap', daysLeft <= 3 && 'font-medium text-foreground')}>
+										{daysLeft === 0 ? 'Today' : `${f.quantity(daysLeft)} ${plural(daysLeft, { one: 'day', other: 'days' })} left`}
 									</span>
 								</p>
 							</>
@@ -114,7 +119,7 @@ export function BillingAccountSidebar({ collapsed = false, onCollapsedChange, dr
 						'Usage',
 						Gauge,
 						pressing > 0 ? <NavCount value={pressing} tone="warning" /> : null,
-						pressing > 0 ? `${pressing} ${pressing === 1 ? 'meter' : 'meters'} near the limit` : undefined,
+						pressing > 0 ? `${f.quantity(pressing)} ${plural(pressing, { one: 'meter', other: 'meters' })} near the limit` : undefined,
 					)}
 					{row('plans', 'Plans', Layers)}
 					{row('credits', 'Credits', Coins, creditsLeft !== null ? <NavCount value={f.quantity(creditsLeft, true)} /> : null)}

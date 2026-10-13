@@ -101,7 +101,7 @@ function TableGroupRow({ colSpan, className, children, ...props }: TableGroupRow
 			<th
 				scope="rowgroup"
 				colSpan={colSpan}
-				className="h-9 px-4 text-left align-middle text-xs font-medium text-muted-foreground"
+				className="h-9 px-4 text-start align-middle text-xs font-medium text-muted-foreground"
 			>
 				{children}
 			</th>
@@ -114,9 +114,9 @@ function TableHead({ className, ...props }: React.ComponentProps<'th'>) {
 		<th
 			data-slot="table-head"
 			className={cn(
-				'h-11 px-4 text-left align-middle text-xs font-medium tracking-wide text-muted-foreground',
+				'h-11 px-4 text-start align-middle text-xs font-medium tracking-wide text-muted-foreground',
 				'whitespace-nowrap',
-				'[&:has([role=checkbox])]:w-px [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-px',
+				'[&:has([role=checkbox])]:w-px [&:has([role=checkbox])]:pe-0 [&>[role=checkbox]]:translate-y-px',
 				className,
 			)}
 			{...props}
@@ -124,13 +124,23 @@ function TableHead({ className, ...props }: React.ComponentProps<'th'>) {
 	);
 }
 
-function TableCell({ className, ...props }: React.ComponentProps<'td'>) {
+type TableCellProps = React.ComponentProps<'td'> & {
+	/**
+	 * Clip a long value with an ellipsis instead of letting it widen the whole column. The column takes the
+	 * width left over by its neighbours, so give those a width (or `w-px` for shrink-to-fit); add a `title`
+	 * with the full value, since the cell never wraps.
+	 */
+	truncate?: boolean;
+};
+
+function TableCell({ className, truncate, ...props }: TableCellProps) {
 	return (
 		<td
 			data-slot="table-cell"
 			className={cn(
 				'px-4 py-3 align-middle whitespace-nowrap',
-				'[&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-px',
+				'[&:has([role=checkbox])]:pe-0 [&>[role=checkbox]]:translate-y-px',
+				truncate && 'max-w-0 truncate',
 				className,
 			)}
 			{...props}
@@ -159,4 +169,4 @@ export {
 	TableHeader,
 	TableRow,
 };
-export type { TableGroupRowProps, TableProps };
+export type { TableCellProps, TableGroupRowProps, TableProps };

@@ -40,7 +40,7 @@ export const alertDialogDocs = definePrimitiveDocs({
   accessibility: [
     'Every AlertDialogContent needs an AlertDialogTitle and an AlertDialogDescription that state the decision and its consequence without relying on color or iconography.',
     'Give both outcomes specific labels. Keep AlertDialogCancel available, and place initial focus on the least destructive choice when accidental confirmation would be costly.',
-    'Base UI traps focus while the alert is open, closes it with Escape, and returns focus to the trigger. Do not make outside interaction the only way to cancel.',
+    'Base UI traps focus while the alert is open, closes it with Escape, and returns focus to the trigger. When the content scrolls and the first control is below the fold, focus goes to the popup itself so it opens at the top. Do not make outside interaction the only way to cancel.',
   ],
   api: [
     {

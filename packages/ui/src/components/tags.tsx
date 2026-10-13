@@ -108,7 +108,8 @@ export const TagsTrigger = ({ className, children, ...props }: TagsTriggerProps)
 			variant='outline'
 			{...props}
 		>
-			<div className='flex flex-wrap items-center gap-1'>
+			{/* `min-w-0 max-w-full` lets long tags shrink to the trigger; `max-h-32` scrolls a crowded field instead of growing it. */}
+			<div className='flex max-h-32 max-w-full min-w-0 flex-wrap items-center gap-1 overflow-y-auto'>
 				{children}
 				<span className='text-subtle-foreground px-2 py-px'>Select a tag...</span>
 			</div>
@@ -126,12 +127,14 @@ export const TagsValue = ({ className, children, onRemove, ...props }: TagsValue
 	};
 
 	return (
-		<Badge className={cn('flex items-center gap-2', className)} {...props}>
-			{children}
+		<Badge className={cn('flex max-w-full min-w-0 shrink items-center gap-2', className)} {...props}>
+			<span className='min-w-0 truncate' dir='auto' title={typeof children === 'string' ? children : undefined}>
+				{children}
+			</span>
 			{onRemove && (
 				// biome-ignore lint/a11y/noStaticElementInteractions: "This is a clickable badge"
 				// biome-ignore lint/a11y/useKeyWithClickEvents: "This is a clickable badge"
-				<div className='hover:text-muted-foreground size-auto cursor-pointer' onClick={handleRemove}>
+				<div className='hover:text-muted-foreground size-auto shrink-0 cursor-pointer' onClick={handleRemove}>
 					<XIcon size={12} />
 				</div>
 			)}

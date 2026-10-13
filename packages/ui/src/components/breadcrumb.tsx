@@ -16,7 +16,7 @@ function BreadcrumbList({ className, ...props }: React.ComponentProps<'ol'>) {
 		<ol
 			data-slot="breadcrumb-list"
 			className={cn(
-				'text-muted-foreground/50 flex flex-wrap items-center gap-1.5 text-sm break-words sm:gap-2.5',
+				'text-muted-foreground/50 flex flex-wrap items-center gap-1.5 text-sm [overflow-wrap:anywhere] sm:gap-2.5',
 				className,
 			)}
 			{...props}
@@ -25,7 +25,7 @@ function BreadcrumbList({ className, ...props }: React.ComponentProps<'ol'>) {
 }
 
 function BreadcrumbItem({ className, ...props }: React.ComponentProps<'li'>) {
-	return <li data-slot="breadcrumb-item" className={cn('inline-flex items-center gap-1.5', className)} {...props} />;
+	return <li data-slot="breadcrumb-item" className={cn('inline-flex min-w-0 items-center gap-1.5', className)} {...props} />;
 }
 
 function BreadcrumbLink({
@@ -44,7 +44,7 @@ function BreadcrumbLink({
 		defaultTagName: 'a',
 		props: mergeProps<'a'>(
 			{
-				className: cn('text-muted-foreground/60 hover:text-foreground', className),
+				className: cn('text-muted-foreground hover:text-foreground', className),
 				children: childRender ? undefined : children,
 			},
 			props,
@@ -72,7 +72,7 @@ function BreadcrumbPage({ className, ...props }: React.ComponentProps<'span'>) {
 function BreadcrumbSeparator({ children, className, ...props }: React.ComponentProps<'li'>) {
 	return (
 		<li data-slot="breadcrumb-separator" role='presentation' aria-hidden='true' className={cn('text-subtle-foreground', className)} {...props}>
-			{children ?? <ChevronRightIcon size={16} />}
+			{children ?? <ChevronRightIcon size={16} className='rtl:rotate-180' />}
 		</li>
 	);
 }

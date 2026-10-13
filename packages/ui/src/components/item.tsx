@@ -44,8 +44,8 @@ const itemVariants = cva(
 			},
 			size: {
 				default: 'p-3',
-				sm: 'gap-2.5 px-3 py-2.5 text-[13px]',
-				xs: 'gap-2 px-2.5 py-2 text-[12px]',
+				sm: 'gap-2.5 px-3 py-2.5 text-[0.8125rem]',
+				xs: 'gap-2 px-2.5 py-2 text-[0.75rem]',
 			},
 		},
 		defaultVariants: {
@@ -119,7 +119,9 @@ function ItemContent({ className, ...props }: ItemContentProps) {
 	return (
 		<div
 			data-slot="item-content"
-			className={cn('flex min-w-0 flex-1 flex-col gap-0.5 [&+[data-slot=item-content]]:flex-none', className)}
+			// `basis-32` is the floor: when the actions would squeeze the text below it, the
+			// Item wraps them onto their own line instead of crushing the column.
+			className={cn('flex min-w-0 flex-1 basis-32 flex-col gap-0.5 [&+[data-slot=item-content]]:max-w-full [&+[data-slot=item-content]]:flex-none', className)}
 			{...props}
 		/>
 	);
@@ -127,28 +129,40 @@ function ItemContent({ className, ...props }: ItemContentProps) {
 
 type ItemTitleProps = React.ComponentProps<'div'>;
 
-function ItemTitle({ className, ...props }: ItemTitleProps) {
+function ItemTitle({ className, children, ...props }: ItemTitleProps) {
 	return (
 		<div
 			data-slot="item-title"
-			className={cn('line-clamp-1 flex w-fit items-center gap-1.5 text-[13px] font-medium text-pretty', className)}
+			title={typeof children === 'string' ? children : undefined}
+			// Text-only titles clamp to two lines with an ellipsis. `line-clamp` needs
+			// `display: -webkit-box`, which would stack inline children such as a Badge, so
+			// titles that hold elements stay a flex row (their text still wraps).
+			className={cn(
+				'flex w-fit max-w-full items-center gap-1.5 text-[0.8125rem] font-medium text-pretty [overflow-wrap:anywhere] [&:not(:has(>*))]:line-clamp-2',
+				className,
+			)}
 			{...props}
-		/>
+		>
+			{children}
+		</div>
 	);
 }
 
 type ItemDescriptionProps = React.ComponentProps<'p'>;
 
-function ItemDescription({ className, ...props }: ItemDescriptionProps) {
+function ItemDescription({ className, children, ...props }: ItemDescriptionProps) {
 	return (
 		<p
 			data-slot="item-description"
+			title={typeof children === 'string' ? children : undefined}
 			className={cn(
-				'line-clamp-2 text-pretty text-[12px] leading-5 text-muted-foreground [&>a]:underline [&>a]:underline-offset-4 [&>a:hover]:text-link',
+				'line-clamp-2 text-pretty text-[0.75rem] leading-5 text-muted-foreground [overflow-wrap:anywhere] [&>a]:underline [&>a]:underline-offset-4 [&>a:hover]:text-link',
 				className,
 			)}
 			{...props}
-		/>
+		>
+			{children}
+		</p>
 	);
 }
 
@@ -158,7 +172,7 @@ function ItemActions({ className, ...props }: ItemActionsProps) {
 	return (
 		<div
 			data-slot="item-actions"
-			className={cn('flex items-center gap-2', className)}
+			className={cn('flex max-w-full flex-wrap items-center justify-end gap-2 ms-auto', className)}
 			{...props}
 		/>
 	);
@@ -170,7 +184,7 @@ function ItemHeader({ className, ...props }: ItemHeaderProps) {
 	return (
 		<div
 			data-slot="item-header"
-			className={cn('flex basis-full items-center justify-between gap-2', className)}
+			className={cn('flex min-w-0 basis-full items-center justify-between gap-2', className)}
 			{...props}
 		/>
 	);
@@ -182,7 +196,7 @@ function ItemFooter({ className, ...props }: ItemFooterProps) {
 	return (
 		<div
 			data-slot="item-footer"
-			className={cn('flex basis-full items-center justify-between gap-2', className)}
+			className={cn('flex min-w-0 basis-full items-center justify-between gap-2', className)}
 			{...props}
 		/>
 	);

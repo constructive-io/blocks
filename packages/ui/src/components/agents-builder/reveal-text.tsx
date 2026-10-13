@@ -37,7 +37,7 @@ function RevealText({ text, revealing, duration, className }: RevealTextProps) {
 	}, [duration, revealing, text]);
 
 	return (
-		<p className={cn('text-pretty text-sm', className)}>
+		<p className={cn('text-pretty text-sm [overflow-wrap:anywhere]', className)}>
 			{text.slice(0, shown)}
 			{shown < text.length ? (
 				<span aria-hidden="true" className="text-transparent">

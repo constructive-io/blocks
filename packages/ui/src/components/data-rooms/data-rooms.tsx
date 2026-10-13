@@ -159,6 +159,8 @@ function DataRooms({
 	const room = local.rooms.find((candidate) => candidate.id === roomId);
 	const view: DataRoomsView = requestedView === 'room' && !room ? 'home' : views.includes(requestedView) ? requestedView : (views[0] ?? 'home');
 
+	// One collator per locale: a comparator that builds its own for every pair is the slowest part of sorting a long list.
+	const collator = React.useMemo(() => new Intl.Collator(locale, { numeric: true }), [locale]);
 	const format = React.useMemo<DataRoomsFormat>(() => {
 		const options = { locale, timeZone, now: local.clock };
 		return {
@@ -169,8 +171,9 @@ function DataRooms({
 			deadline: (iso) => formatDeadline(iso, options),
 			bytes: (bytes) => formatBytes(bytes, locale),
 			count: (value) => formatCount(value, locale),
+			compare: (left, right) => collator.compare(left, right),
 		};
-	}, [local.clock, locale, timeZone]);
+	}, [collator, local.clock, locale, timeZone]);
 
 	const context = React.useMemo<DataRoomsContextValue>(() => {
 		const emit = (action: DataRoomsAction) => onActionRef.current?.(action);

@@ -1,10 +1,12 @@
 'use client';
 
 import * as React from 'react';
-import { useEffect, useMemo, useState, Suspense } from 'react';
+import { useEffect, useMemo, useState, useSyncExternalStore, Suspense } from 'react';
 import { CheckCircle2, CircleAlert, Loader2, WandSparkles } from 'lucide-react';
 import type { IAceEditorProps } from 'react-ace';
 
+import { describeJsonError } from '../lib/json-error-position';
+import { useDocumentTheme } from '../lib/use-document-theme';
 import { cn } from '../lib/utils';
 
 import { Button } from './button';
@@ -66,13 +68,43 @@ type JsonInputProps = {
 	value: string;
 	setValue: (value: string) => void;
 	minLines?: number;
+	/** Tallest the editor grows, in lines; longer documents scroll inside it. Defaults to what fits in 40% of the viewport. */
+	maxLines?: number;
 	className?: string;
-	/** Theme for the editor: 'light' or 'dark'. Defaults to 'light'. */
+	/** Theme for the editor: 'light' or 'dark'. Defaults to the document's theme (the `dark` class on `<html>`). */
 	theme?: 'light' | 'dark';
 };
 
-export const JsonInput = ({ value = '', setValue, minLines = 16, className, theme = 'light' }: JsonInputProps) => {
+// Ace draws a 14px line about 19px tall.
+const LINE_HEIGHT = 19;
+
+const viewportListeners = new Set<() => void>();
+const notifyViewport = () => viewportListeners.forEach((notify) => notify());
+
+/** One resize listener serves every editor on the page; it is added with the first and removed with the last. */
+function subscribeToViewport(listener: () => void) {
+	viewportListeners.add(listener);
+	if (viewportListeners.size === 1) window.addEventListener('resize', notifyViewport);
+	return () => {
+		viewportListeners.delete(listener);
+		if (viewportListeners.size === 0) window.removeEventListener('resize', notifyViewport);
+	};
+}
+
+/** The number of editor lines that fit in 40% of the viewport (client-side; a fixed fallback during SSR). */
+function useViewportLines() {
+	return useSyncExternalStore(
+		subscribeToViewport,
+		() => Math.max(1, Math.floor((window.innerHeight * 0.4) / LINE_HEIGHT)),
+		() => 24,
+	);
+}
+
+export const JsonInput = ({ value = '', setValue, minLines = 16, maxLines, className, theme: themeProp }: JsonInputProps) => {
 	const [jsonState, setJsonState] = useState<JsonState>({ state: 'empty' });
+	const viewportLines = useViewportLines();
+	const pageTheme = useDocumentTheme(themeProp === undefined);
+	const theme = themeProp ?? pageTheme;
 
 	const handleChange = (val: string) => {
 		setJsonState({ state: 'loading' });
@@ -84,7 +116,7 @@ export const JsonInput = ({ value = '', setValue, minLines = 16, className, them
 			const error = validateJson(value);
 
 			if (value.trim().length === 0) setJsonState({ state: 'empty' });
-			else if (error) setJsonState({ state: 'error', errMsg: error });
+			else if (error) setJsonState({ state: 'error', errMsg: describeJsonError(value, error) });
 			else setJsonState({ state: 'success' });
 		}, 400);
 
@@ -94,13 +126,15 @@ export const JsonInput = ({ value = '', setValue, minLines = 16, className, them
 	const { icon, text, className: textClassName } = displayJsonState(jsonState);
 	const isValidJson = validateJson(value) === null;
 
+	const cap = Math.max(minLines, maxLines ?? viewportLines);
 	const lines = useMemo(() => {
-		return Math.max(countJsonLines(value), minLines);
-	}, [value, minLines]);
+		return Math.min(Math.max(countJsonLines(value), minLines), cap);
+	}, [value, minLines, cap]);
 
 	return (
 		<div>
-			<div className={cn('border-border relative overflow-y-auto rounded-md border p-2.5', className)}>
+			{/* The code is always left to right, so the format button stays on the right and the editor leaves it room. */}
+			<div className={cn('border-border relative overflow-y-auto rounded-md border p-2.5 pr-12', className)}>
 				<JsonEditor value={value} setValue={handleChange} lines={lines} theme={theme} />
 				<TooltipProvider>
 					<Tooltip>
@@ -137,7 +171,7 @@ type JsonEditorProps = {
 	readOnly?: boolean;
 	isValid?: boolean;
 	enableFolding?: boolean;
-	/** Theme for the editor: 'light' or 'dark'. Defaults to 'light'. */
+	/** Theme for the editor: 'light' or 'dark'. Defaults to the document's theme (the `dark` class on `<html>`). */
 	theme?: 'light' | 'dark';
 };
 
@@ -148,8 +182,10 @@ export const JsonEditor = ({
 	readOnly = false,
 	isValid = true,
 	enableFolding = false,
-	theme = 'light',
+	theme: themeProp,
 }: JsonEditorProps) => {
+	const pageTheme = useDocumentTheme(themeProp === undefined);
+	const theme = themeProp ?? pageTheme;
 	const editorProps: IAceEditorProps = {
 		mode: 'json',
 		theme: theme === 'light' ? 'textmate' : 'cloud9_night',

@@ -5,6 +5,10 @@ import type * as React from 'react';
 
 import { cn } from '../lib/utils';
 
+// Emails, URLs and phone numbers read left to right in every script. On a right-to-left page they would otherwise be
+// right-aligned and clip their start, which is the part that identifies them.
+const LEFT_TO_RIGHT_TYPES = new Set(['email', 'url', 'tel']);
+
 type InputProps = Omit<InputPrimitive.Props & React.RefAttributes<HTMLInputElement>, 'size'> & {
 	size?: 'sm' | 'default' | 'lg' | number;
 	unstyled?: boolean;
@@ -43,7 +47,7 @@ function Input({ className, size = 'default', unstyled = false, ...props }: Inpu
 		>
 			<InputPrimitive
 				className={cn(
-					'w-full min-w-0 rounded-[inherit] bg-transparent px-[calc(--spacing(3)-1px)] outline-none pointer-coarse:min-h-11',
+					'w-full min-w-0 text-ellipsis rounded-[inherit] bg-transparent px-[calc(--spacing(3)-1px)] outline-none pointer-coarse:min-h-11',
 					isFloating
 						? 'h-11 pt-4.5 pb-1 leading-none placeholder:text-transparent sm:h-10'
 						: 'h-8.5 leading-8.5 placeholder:text-subtle-foreground sm:h-7.5 sm:leading-7.5',
@@ -59,6 +63,7 @@ function Input({ className, size = 'default', unstyled = false, ...props }: Inpu
 						'text-muted-foreground file:me-3 file:bg-transparent file:font-medium file:text-foreground file:text-sm',
 				)}
 				data-slot="input"
+				dir={LEFT_TO_RIGHT_TYPES.has(props.type ?? '') ? 'ltr' : undefined}
 				size={typeof size === 'number' ? size : undefined}
 				{...props}
 			/>

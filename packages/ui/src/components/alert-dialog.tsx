@@ -4,6 +4,8 @@ import * as React from 'react';
 import { AlertDialog as AlertDialogPrimitive } from '@base-ui/react/alert-dialog';
 
 import { ModalPortalScope, useRootPortalContainer } from '@constructive-io/ui/portal';
+import { useMergedRefs } from '../lib/compose-refs';
+import { scrollSafeInitialFocus } from '../lib/initial-focus';
 import { cn } from '../lib/utils';
 import { buttonVariants } from './button';
 
@@ -66,7 +68,9 @@ function AlertDialogOverlay({ className, ...props }: React.ComponentProps<typeof
 	);
 }
 
-function AlertDialogContent({ className, children, ...props }: React.ComponentProps<typeof AlertDialogPrimitive.Popup>) {
+function AlertDialogContent({ className, children, initialFocus, ...props }: React.ComponentProps<typeof AlertDialogPrimitive.Popup>) {
+	const popupRef = React.useRef<HTMLDivElement>(null);
+	const ref = useMergedRefs(popupRef, props.ref);
 	return (
 		<AlertDialogPortal>
 			<AlertDialogOverlay />
@@ -74,12 +78,16 @@ function AlertDialogContent({ className, children, ...props }: React.ComponentPr
 				data-slot="alert-dialog-content"
 				className={cn(
 					`bg-background fixed top-1/2 left-1/2 z-[var(--z-layer-modal-content)] grid max-h-[calc(100%-2rem)] w-full max-w-[calc(100%-2rem)]
-					-translate-x-1/2 -translate-y-1/2 gap-4 overflow-y-auto rounded-xl border p-6 shadow-lg
+					-translate-x-1/2 -translate-y-1/2 grid-cols-[minmax(0,1fr)] gap-4 overflow-y-auto overscroll-contain rounded-xl border p-6 shadow-lg outline-hidden [overflow-wrap:break-word]
 					transition-[opacity,scale] duration-(--duration-slow) data-[ending-style]:scale-95 data-[starting-style]:scale-95
 					data-[ending-style]:opacity-0 data-[starting-style]:opacity-0 sm:max-w-100`,
 					className,
 				)}
+				// A popup that scrolls opens at its top, not scrolled to the footer button that is first in tab order.
+				// Leaving `initialFocus` out and passing `undefined` are the same thing: both get this default.
+				initialFocus={initialFocus ?? scrollSafeInitialFocus(() => popupRef.current)}
 				{...props}
+				ref={ref}
 			>
 				{/* ModalPortalScope creates a scoped portal container for floating elements inside */}
 				<ModalPortalScope>
@@ -94,7 +102,7 @@ function AlertDialogHeader({ className, ...props }: React.ComponentProps<'div'>)
 	return (
 		<div
 			data-slot="alert-dialog-header"
-			className={cn('flex flex-col gap-1 text-center sm:text-left', className)}
+			className={cn('flex flex-col gap-1 text-center sm:text-start', className)}
 			{...props}
 		/>
 	);
@@ -104,7 +112,7 @@ function AlertDialogFooter({ className, ...props }: React.ComponentProps<'div'>)
 	return (
 		<div
 			data-slot="alert-dialog-footer"
-			className={cn('flex flex-col-reverse gap-3 sm:flex-row sm:justify-end', className)}
+			className={cn('flex flex-col-reverse gap-3 sm:flex-row sm:flex-wrap sm:justify-end', className)}
 			{...props}
 		/>
 	);
@@ -155,7 +163,8 @@ function AlertDialogAction({
 	return (
 		<AlertDialogPrimitive.Close
 			data-slot="alert-dialog-action"
-			className={cn(buttonVariants(), className)}
+			// Confirm and cancel labels are often long once translated, so they wrap rather than spill out of the dialog.
+			className={cn(buttonVariants({ wrap: true }), className)}
 			nativeButton={nativeButton ?? (childRender ? true : undefined)}
 			render={render ?? childRender}
 			{...props}
@@ -182,7 +191,7 @@ function AlertDialogCancel({
 	return (
 		<AlertDialogPrimitive.Close
 			data-slot="alert-dialog-cancel"
-			className={cn(buttonVariants({ variant: 'outline' }), className)}
+			className={cn(buttonVariants({ variant: 'outline', wrap: true }), className)}
 			nativeButton={nativeButton ?? (childRender ? true : undefined)}
 			render={render ?? childRender}
 			{...props}

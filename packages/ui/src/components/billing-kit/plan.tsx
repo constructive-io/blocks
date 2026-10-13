@@ -1,6 +1,6 @@
 'use client';
 
-import { Check, Minus, Sparkles } from 'lucide-react';
+import { Check, Minus, Sparkles, Tag } from 'lucide-react';
 import * as React from 'react';
 
 import { cn } from '../../lib/utils';
@@ -10,7 +10,7 @@ import { PeriodTrack } from './allowance';
 import { useBillingFormat } from './context';
 import { INTERVAL_SUFFIX, isUnlimited } from './format';
 import { LifecycleBadge } from './status';
-import { Bezel, dashedRule } from './surface';
+import { Bezel, dashedRule, EmptyState } from './surface';
 import type { BillingInterval, BillingLifecycle, Money, Plan, PlanPrice, Subscription } from './types';
 
 /* ------------------------------------------------------------------ *
@@ -20,6 +20,28 @@ import type { BillingInterval, BillingLifecycle, Money, Plan, PlanPrice, Subscri
 /** The active price for an interval and usage type. */
 export function priceFor(plan: Plan, interval: BillingInterval, usageType: PlanPrice['usageType'] = 'licensed') {
 	return plan.prices.find((price) => price.active && price.interval === interval && price.usageType === usageType);
+}
+
+/**
+ * The price a plan is shown, previewed and started with for an interval: the
+ * price for that interval, else the monthly one, else the yearly one, so a plan
+ * sold for only one period still has a price. The card, the change preview and
+ * the price handed to the host all read it from here, so they cannot disagree;
+ * name the period from the result's own `interval`, not from the one asked for.
+ */
+export function resolvePrice(plan: Plan, interval: BillingInterval) {
+	return priceFor(plan, interval) ?? priceFor(plan, 'month') ?? priceFor(plan, 'year');
+}
+
+/**
+ * Whether a plan can be chosen right now: priced by sales, the free fallback, or
+ * carrying at least one active price. A plan whose every price was retired is
+ * not free, so it is neither offered nor started. A free tier modelled without
+ * a price row has to be marked `fallback`, or it counts as retired and
+ * `PlanComparison` hides it.
+ */
+export function isPlanAvailable(plan: Plan) {
+	return Boolean(plan.contactSales || plan.fallback || plan.prices.some((price) => price.active));
 }
 
 /** Percent saved by paying yearly instead of twelve monthly payments, or null. */
@@ -42,35 +64,44 @@ export function catalogSavings(plans: Plan[]) {
 type PriceTagProps = {
 	plan: Plan;
 	interval: BillingInterval;
+	/** A specific price to show, e.g. the one a subscription is on even after it was retired. Defaults to the plan's active price. */
+	price?: PlanPrice;
 	size?: 'md' | 'lg';
 	/** Keeps the usage-note line even when empty, so side-by-side prices align. */
 	reserveNote?: boolean;
 	className?: string;
 };
 
-/** "$49/mo", "Free", or "Custom", with a quiet note when usage is billed on top. */
-export function PriceTag({ plan, interval, size = 'md', reserveNote = false, className }: PriceTagProps) {
+/**
+ * "$49/mo", "Free", "Custom", or "Unavailable" for a plan whose prices were all
+ * retired, with a quiet note when usage is billed on top.
+ */
+export function PriceTag({ plan, interval, price: priceOverride, size = 'md', reserveNote = false, className }: PriceTagProps) {
 	const f = useBillingFormat();
-	const price = priceFor(plan, interval) ?? priceFor(plan, 'month');
+	const price = priceOverride ?? resolvePrice(plan, interval);
 	const metered = priceFor(plan, price?.interval ?? interval, 'metered');
 	const big = size === 'lg' ? 'text-3xl' : 'text-2xl';
+	const retired = !plan.contactSales && !priceOverride && !isPlanAvailable(plan);
 	let figure: React.ReactNode;
 	if (plan.contactSales) figure = <span className={cn(big, 'font-semibold tracking-tight')}>Custom</span>;
+	else if (retired) figure = <span className={cn(big, 'font-semibold tracking-tight text-muted-foreground')}>Unavailable</span>;
 	else if (!price || price.amount.amountMinor === 0) figure = <span className={cn(big, 'font-semibold tracking-tight')}>Free</span>;
 	else {
 		const perMonth = price.interval === 'year' && interval === 'year';
 		const shown: Money = perMonth ? { ...price.amount, amountMinor: Math.round(price.amount.amountMinor / 12) } : price.amount;
 		figure = (
 			<>
-				<span className={cn(big, 'font-semibold tracking-tight')}>{f.money(shown)}</span>
-				<span className="text-[13px] text-muted-foreground">{perMonth ? '/mo, billed yearly' : INTERVAL_SUFFIX[price.interval]}</span>
+				<span className={cn(big, 'font-semibold tracking-tight [overflow-wrap:anywhere]')}>{f.money(shown)}</span>
+				<span className="text-[0.8125rem] whitespace-nowrap text-muted-foreground">{perMonth ? '/mo, billed yearly' : INTERVAL_SUFFIX[price.interval]}</span>
 			</>
 		);
 	}
 	return (
-		<div className={cn('flex flex-col gap-0.5', className)}>
-			<div className="flex items-baseline gap-1 text-foreground tabular-nums">{figure}</div>
-			{metered && !plan.contactSales ? (
+		<div className={cn('flex min-w-0 flex-col gap-0.5', className)}>
+			<div className="flex flex-wrap items-baseline gap-x-1 text-foreground tabular-nums">{figure}</div>
+			{retired ? (
+				<span className="text-xs text-muted-foreground">No longer offered</span>
+			) : metered && !plan.contactSales ? (
 				<span className="text-xs text-muted-foreground">Plus usage past the allowance</span>
 			) : reserveNote ? (
 				<span aria-hidden="true" className="text-xs">
@@ -131,6 +162,7 @@ export function CurrentPlanCard({ plan, subscription, lifecycle, nextInvoice, pl
 	const f = useBillingFormat();
 	const price = subscription?.priceId ? plan.prices.find((candidate) => candidate.id === subscription.priceId) : priceFor(plan, 'month');
 	const interval = price?.interval === 'year' ? 'year' : 'month';
+	const description = plan.description;
 	const change = subscription?.scheduledChange;
 	return (
 		<Bezel className={className} style={style} innerClassName="flex flex-col">
@@ -138,20 +170,24 @@ export function CurrentPlanCard({ plan, subscription, lifecycle, nextInvoice, pl
 				<div className="flex flex-col gap-3 @md:flex-row @md:items-start @md:justify-between">
 					<div className="min-w-0">
 						<p className="text-xs text-muted-foreground">Current plan</p>
-						<h2 className="mt-0.5 flex items-center gap-2 text-lg font-semibold tracking-tight text-foreground">
-							{plan.displayName}
+						<h2 className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-lg font-semibold tracking-tight text-foreground">
+							<span className="min-w-0 [overflow-wrap:anywhere]">{plan.displayName}</span>
 							<LifecycleBadge lifecycle={lifecycle} />
 						</h2>
-						{plan.description ? <p className="mt-1 text-pretty text-[13px] text-muted-foreground">{plan.description}</p> : null}
+						{description ? (
+							<p title={description} className="mt-1 line-clamp-3 text-pretty text-[0.8125rem] text-muted-foreground [overflow-wrap:anywhere]">
+								{description}
+							</p>
+						) : null}
 					</div>
-					<PriceTag plan={plan} interval={interval} className="@md:items-end @md:text-right" />
+					<PriceTag plan={plan} interval={interval} price={price} className="@md:shrink-0 @md:items-end @md:text-end" />
 				</div>
 				{subscription ? (
 					<div className="flex flex-col gap-2">
 						<PeriodTrack start={subscription.currentPeriodStart} end={subscription.currentPeriodEnd} tone={lifecycle === 'grace' ? 'warning' : 'default'} />
-						<div className="flex justify-between text-xs text-muted-foreground tabular-nums">
-							<span>{f.date(subscription.currentPeriodStart, 'short')}</span>
-							<span>
+						<div className="flex justify-between gap-3 text-xs text-muted-foreground tabular-nums">
+							<span className="shrink-0 whitespace-nowrap">{f.date(subscription.currentPeriodStart, 'short')}</span>
+							<span className="min-w-0 text-end [overflow-wrap:anywhere]">
 								{subscription.cancelAt ? 'Ends' : change ? `${planName?.(change.planId) ?? 'Changes'} from` : 'Renews'}{' '}
 								{f.date(subscription.cancelAt ?? change?.effectiveAt ?? subscription.currentPeriodEnd, 'short')}
 							</span>
@@ -168,7 +204,7 @@ export function CurrentPlanCard({ plan, subscription, lifecycle, nextInvoice, pl
 					) : (
 						<span />
 					)}
-					{actions ? <div className="flex items-center gap-2">{actions}</div> : null}
+					{actions ? <div className="flex flex-wrap items-center gap-2">{actions}</div> : null}
 				</div>
 			) : null}
 		</Bezel>
@@ -207,9 +243,10 @@ function EntitlementValue({ plan, row }: { plan: Plan; row: EntitlementRow }) {
 		);
 	}
 	if (isUnlimited(value)) return <span className="text-foreground">Unlimited</span>;
+	const shown = f.limit(value);
 	return (
-		<span className="text-foreground tabular-nums">
-			{f.quantity(value, true)}
+		<span title={shown === f.quantity(value) ? undefined : f.quantity(value)} className="text-foreground tabular-nums">
+			{shown}
 			{row.unit ? <span className="text-muted-foreground"> {row.unit}</span> : null}
 		</span>
 	);
@@ -222,8 +259,10 @@ type PlanComparisonProps = {
 	currentPlanId?: string;
 	interval: 'month' | 'year';
 	rows: EntitlementRow[];
-	/** Called with the chosen plan and the licensed price for the interval (absent for contact-sales plans). */
+	/** Called with the chosen plan and the price its card shows: the price for the interval, else the plan's monthly or yearly one (absent for contact-sales plans). */
 	onSelect?: (plan: Plan, price: PlanPrice | undefined) => void;
+	/** The price the account pays today. When it was retired, the account's own plan shows it, so a plan or price withdrawn after the account chose it still reads as what the account pays rather than "Unavailable" or today's price. An active price is compared at the chosen interval like every other plan. */
+	currentPrice?: PlanPrice;
 	/** Plan waiting on a host call; its button shows a busy state. */
 	pendingPlanId?: string;
 	/** Hides actions, e.g. for members who cannot manage billing. */
@@ -236,13 +275,16 @@ type PlanComparisonProps = {
  * entitlement rows that differ between them. Cards stack in narrow
  * containers; the order of `plans` is the upgrade order.
  */
-export function PlanComparison({ plans, currentPlanId, interval, rows, onSelect, pendingPlanId, readOnly, className }: PlanComparisonProps) {
+export function PlanComparison({ plans: allPlans, currentPlanId, currentPrice, interval, rows, onSelect, pendingPlanId, readOnly, className }: PlanComparisonProps) {
+	// A plan whose prices were all retired is not on offer; the account's own plan stays so it can still see where it is.
+	const plans = allPlans.filter((plan) => plan.id === currentPlanId || isPlanAvailable(plan));
 	const currentIndex = plans.findIndex((plan) => plan.id === currentPlanId);
+	if (plans.length === 0) return <EmptyState icon={Tag} title="No plans available" description="There are no plans to choose from right now." className={className} />;
 	return (
-		<ul className={cn('grid gap-3 @2xl/view:grid-cols-2', WIDE_COLUMNS[Math.min(plans.length, 4)], className)}>
+		<ul className={cn('grid grid-cols-1 gap-3 @2xl/view:grid-cols-2', WIDE_COLUMNS[Math.min(plans.length, 4)], className)}>
 			{plans.map((plan, index) => {
 				const current = plan.id === currentPlanId;
-				const price = priceFor(plan, interval) ?? priceFor(plan, 'month');
+				const price = resolvePrice(plan, interval);
 				const direction = currentIndex === -1 || index > currentIndex ? 'up' : 'down';
 				const label = current ? 'Current plan' : plan.contactSales ? 'Talk to sales' : direction === 'up' ? `Upgrade to ${plan.displayName}` : `Switch to ${plan.displayName}`;
 				return (
@@ -250,7 +292,7 @@ export function PlanComparison({ plans, currentPlanId, interval, rows, onSelect,
 						<Bezel muted={!plan.recommended} className={cn('flex w-full', plan.recommended && 'border-primary/25 bg-primary/[0.06]')} innerClassName="flex flex-col">
 							<div className="flex flex-col gap-3 p-4">
 								<div className="flex items-center justify-between gap-2">
-									<h3 className="text-sm font-medium text-foreground">{plan.displayName}</h3>
+									<h3 className="min-w-0 text-sm font-medium text-foreground [overflow-wrap:anywhere]">{plan.displayName}</h3>
 									{plan.recommended ? (
 										<ToneBadge tone="primary">
 											<Sparkles aria-hidden="true" />
@@ -260,11 +302,14 @@ export function PlanComparison({ plans, currentPlanId, interval, rows, onSelect,
 										<ToneBadge tone="neutral">Current</ToneBadge>
 									) : null}
 								</div>
-								<PriceTag plan={plan} interval={interval} reserveNote />
-								<p className="line-clamp-2 min-h-10 text-pretty text-[13px] text-muted-foreground">{plan.description}</p>
+								<PriceTag plan={plan} interval={interval} price={current && currentPrice && !currentPrice.active ? currentPrice : undefined} reserveNote />
+								<p title={plan.description} className="line-clamp-2 min-h-10 text-pretty text-[0.8125rem] text-muted-foreground [overflow-wrap:anywhere]">
+									{plan.description}
+								</p>
 								{readOnly ? null : (
 									<Button
 										size="sm"
+										wrap
 										variant={current ? 'outline' : plan.recommended ? 'default' : 'outline'}
 										disabled={current || pendingPlanId !== undefined}
 										aria-busy={pendingPlanId === plan.id || undefined}
@@ -275,21 +320,21 @@ export function PlanComparison({ plans, currentPlanId, interval, rows, onSelect,
 								)}
 							</div>
 							{plan.highlights?.length ? (
-								<ul className={cn('flex flex-col gap-1.5 border-t px-4 py-3 text-[13px] text-foreground', dashedRule)}>
+								<ul className={cn('flex flex-col gap-1.5 border-t px-4 py-3 text-[0.8125rem] text-foreground', dashedRule)}>
 									{plan.highlights.map((highlight) => (
 										<li key={highlight} className="flex gap-2">
 											<Check aria-hidden="true" className="mt-0.5 size-3.5 shrink-0 text-muted-foreground" />
-											{highlight}
+											<span className="min-w-0 [overflow-wrap:anywhere]">{highlight}</span>
 										</li>
 									))}
 								</ul>
 							) : null}
 							{rows.length ? (
-								<dl className={cn('mt-auto flex flex-col border-t bg-muted/40 px-4 py-2 text-[13px]', dashedRule)}>
+								<dl className={cn('mt-auto flex flex-col border-t bg-muted/40 px-4 py-2 text-[0.8125rem]', dashedRule)}>
 									{rows.map((row) => (
 										<div key={`${row.kind}:${row.key}`} className="flex items-center justify-between gap-3 py-1">
-											<dt className="text-muted-foreground">{row.label}</dt>
-											<dd>
+											<dt className="min-w-0 text-muted-foreground [overflow-wrap:anywhere]">{row.label}</dt>
+											<dd className="shrink-0 text-end">
 												<EntitlementValue plan={plan} row={row} />
 											</dd>
 										</div>

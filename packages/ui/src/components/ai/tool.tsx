@@ -112,12 +112,14 @@ function Tool({
 				data-variant="chip"
 				data-status={status}
 				className={cn(
-					'inline-flex max-w-full items-center gap-1.5 rounded-md border border-border bg-muted/40 px-2 py-1 text-[12px]',
+					'inline-flex max-w-full items-center gap-1.5 rounded-md border border-border bg-muted/40 px-2 py-1 text-[0.75rem]',
 					className,
 				)}
 			>
 				<StatusIcon status={status} />
-				<span className="shrink-0 font-medium text-foreground">{name}</span>
+				<span title={name} className="max-w-[9rem] shrink-0 truncate font-medium text-foreground">
+					{name}
+				</span>
 				{summary ? (
 					<span className="min-w-0 truncate font-mono text-muted-foreground">{summary}</span>
 				) : null}
@@ -128,17 +130,20 @@ function Tool({
 	const trigger = (
 		<span
 			className={cn(
-				'flex min-w-0 max-w-full items-center gap-1.5 text-[13px] text-muted-foreground',
+				'flex min-w-0 max-w-full items-center gap-1.5 text-[0.8125rem] text-muted-foreground',
 				variant === 'card' && 'w-full justify-between font-normal',
 			)}
 		>
 			<span className="flex min-w-0 items-center gap-1.5">
 				<StatusIcon status={status} />
-				<span className="shrink-0 font-medium text-foreground/90">{name}</span>
+				{/* The name and summary share what is left and truncate; the status badge keeps its full width. */}
+				<span title={name} className="max-w-[45%] shrink-0 truncate font-medium text-foreground/90">
+					{name}
+				</span>
 				{summary ? (
 					<span
 						className={cn(
-							'min-w-0 truncate rounded-md bg-muted px-1.5 py-0.5 font-mono text-[11.5px] text-muted-foreground',
+							'min-w-0 truncate rounded-md bg-muted px-1.5 py-0.5 font-mono text-[0.71875rem] text-muted-foreground',
 						)}
 					>
 						{summary}
@@ -147,7 +152,7 @@ function Tool({
 				{variant === 'card' ? (
 					<span
 						className={cn(
-							'rounded-full border px-2 py-0.5 text-[11px] font-medium',
+							'shrink-0 rounded-full border px-2 py-0.5 text-[0.6875rem] font-medium',
 							statusBadge(status).className,
 						)}
 					>
@@ -170,7 +175,7 @@ function Tool({
 				data-slot="tool"
 				data-variant={variant}
 				data-status={status}
-				className={cn('flex w-full items-center py-0.5 text-left', className)}
+				className={cn('flex w-full items-center py-0.5 text-start', className)}
 			>
 				{trigger}
 			</div>
@@ -178,13 +183,13 @@ function Tool({
 	}
 
 	const body = (
-		<div className="space-y-2 text-[12.5px]">
+		<div className="space-y-2 text-[0.78125rem]">
 			{children}
 			{detail?.map((line, i) => (
 				<div
 					key={i}
 					className={cn(
-						'font-mono leading-relaxed text-muted-foreground',
+						'font-mono leading-relaxed text-muted-foreground [overflow-wrap:anywhere]',
 						line.tone === 'add' && 'text-success',
 					)}
 				>
@@ -194,7 +199,7 @@ function Tool({
 			{input !== undefined ? (
 				<section>
 					<h4 className="mb-1 text-xs font-medium text-muted-foreground">Input</h4>
-					<pre className="max-h-40 overflow-auto rounded-md border border-border bg-background p-2 font-mono text-[11.5px] leading-relaxed">
+					<pre className="max-h-40 overflow-auto rounded-md border border-border bg-background p-2 font-mono text-[0.71875rem] leading-relaxed">
 						{formatValue(input)}
 					</pre>
 				</section>
@@ -202,13 +207,13 @@ function Tool({
 			{output !== undefined ? (
 				<section>
 					<h4 className="mb-1 text-xs font-medium text-muted-foreground">Output</h4>
-					<pre className="max-h-48 overflow-auto rounded-md border border-border bg-background p-2 font-mono text-[11.5px] leading-relaxed">
+					<pre className="max-h-48 overflow-auto rounded-md border border-border bg-background p-2 font-mono text-[0.71875rem] leading-relaxed">
 						{formatValue(output)}
 					</pre>
 				</section>
 			) : null}
 			{errorText ? (
-				<section className="rounded-md border border-destructive/30 bg-destructive/8 p-2 text-destructive">
+				<section className="rounded-md border border-destructive/30 bg-destructive/8 p-2 text-destructive [overflow-wrap:anywhere]">
 					{errorText}
 				</section>
 			) : null}
@@ -217,11 +222,13 @@ function Tool({
 					{diffs.map((d) => (
 						<span
 							key={d.file}
-							className="inline-flex items-center gap-1.5 rounded-md border border-border bg-muted/50 px-1.5 py-0.5 font-mono text-[11px]"
+							className="inline-flex max-w-full items-center gap-1.5 rounded-md border border-border bg-muted/50 px-1.5 py-0.5 font-mono text-[0.6875rem]"
 						>
-							<span className="text-foreground">{d.file}</span>
-							{d.add != null ? <span className="text-success">+{d.add}</span> : null}
-							{d.del != null ? <span className="text-destructive">-{d.del}</span> : null}
+							<span title={d.file} className="min-w-0 break-all text-foreground">
+								{d.file}
+							</span>
+							{d.add != null ? <span className="shrink-0 text-success">+{d.add}</span> : null}
+							{d.del != null ? <span className="shrink-0 text-destructive">-{d.del}</span> : null}
 						</span>
 					))}
 				</div>
@@ -260,14 +267,14 @@ function Tool({
 			>
 				<CollapsibleTrigger
 					className={cn(
-						'group/row -mx-1 flex min-h-8 w-[calc(100%+0.5rem)] min-w-0 items-center gap-2 rounded-md px-1 py-1 text-left',
+						'group/row -mx-1 flex min-h-8 w-[calc(100%+0.5rem)] min-w-0 items-center gap-2 rounded-md px-1 py-1 text-start',
 						'hover:bg-accent',
 						'pointer-coarse:min-h-11',
 					)}
 				>
 					{trigger}
 				</CollapsibleTrigger>
-				<CollapsiblePanel innerClassName="py-1 pl-5">
+				<CollapsiblePanel innerClassName="py-1 ps-5">
 					{body}
 				</CollapsiblePanel>
 			</Collapsible>
@@ -289,7 +296,7 @@ function ToolGroup({ label, children, defaultOpen = true, className }: ToolGroup
 			<Collapsible defaultOpen={defaultOpen} className="group/collapsible">
 				<CollapsibleTrigger
 					className={cn(
-						'-mx-1.5 flex w-fit items-center gap-1.5 rounded-md px-1.5 py-1.5 text-[12.5px]',
+						'-mx-1.5 flex w-fit items-center gap-1.5 rounded-md px-1.5 py-1.5 text-[0.78125rem]',
 						'text-muted-foreground hover:bg-accent hover:text-foreground',
 					)}
 				>

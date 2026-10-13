@@ -88,6 +88,13 @@ export const tableDocs = definePrimitiveDocs({
           type: 'number',
           description: 'Makes the cell span multiple columns, commonly for footer summaries.',
         },
+        {
+          name: 'truncate',
+          type: 'boolean',
+          default: 'false',
+          description:
+            'Clips a long value with an ellipsis so it cannot widen its column. The column takes the width its neighbours leave, so give those a width, and add a title with the full value.',
+        },
       ],
       upstream: htmlTable,
     },

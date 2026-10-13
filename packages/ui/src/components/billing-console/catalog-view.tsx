@@ -89,7 +89,7 @@ function EntitlementsTab({ changes, onChangesChange }: EntitlementsTabProps) {
 					changes.size === 0 && state.kind !== 'saved' && 'invisible',
 				)}
 			>
-				<span className="text-[13px] text-foreground tabular-nums">
+				<span className="text-[0.8125rem] text-foreground tabular-nums">
 					{state.kind === 'saved' && changes.size === 0 ? 'Entitlements saved' : `${changes.size} unsaved ${changes.size === 1 ? 'change' : 'changes'}`}
 				</span>
 				{state.kind === 'error' ? <span className="text-xs text-destructive">{state.message}</span> : null}

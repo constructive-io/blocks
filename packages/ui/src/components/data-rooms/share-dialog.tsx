@@ -81,7 +81,7 @@ function ShareForm({ request, onDone }: { request: ShareRequest; onDone: () => v
 		<form id={formId} onSubmit={submit} className="flex min-h-0 flex-col">
 			<DialogHeader variant="band" className="gap-1.5">
 				<DialogTitle className="text-base font-medium">Share a folder</DialogTitle>
-				<DialogDescription className="text-[13px]">People only see this folder and what’s inside it, not the rest of {room.name}.</DialogDescription>
+				<DialogDescription className="text-[0.8125rem]">People only see this folder and what’s inside it, not the rest of {room.name}.</DialogDescription>
 			</DialogHeader>
 			<div className="flex min-h-0 flex-col gap-4 overflow-y-auto px-6 pb-5">
 				<FormField label="Folder" htmlFor={`${formId}-folder`}>
@@ -95,7 +95,7 @@ function ShareForm({ request, onDone }: { request: ShareRequest; onDone: () => v
 				</FormField>
 
 				<fieldset className="flex flex-col gap-1.5">
-					<legend className="mb-1.5 text-[13px] font-medium text-foreground">
+					<legend className="mb-1.5 text-[0.8125rem] font-medium text-foreground">
 						People <span className="font-normal text-muted-foreground tabular-nums">{chosen.size ? `· ${chosen.size} selected` : ''}</span>
 					</legend>
 					<SearchField label="Find people" value={query} placeholder="Find people…" onChange={(event) => setQuery(event.target.value)} />
@@ -105,18 +105,18 @@ function ShareForm({ request, onDone }: { request: ShareRequest; onDone: () => v
 								<label className="flex cursor-pointer items-center gap-2.5 px-2.5 py-1.5 hover:bg-overlay-hover">
 									<Checkbox checked={chosen.has(candidate.id)} onCheckedChange={() => toggle(candidate.id)} />
 									<PersonAvatar person={candidate} size="sm" />
-									<span className="min-w-0 flex-1 truncate text-[13px] text-foreground">{candidate.name}</span>
+									<span title={candidate.name} className="min-w-0 flex-1 truncate text-[0.8125rem] text-foreground">{candidate.name}</span>
 									<span className="truncate text-xs text-muted-foreground">{candidate.guest ? candidate.company : candidate.title}</span>
 								</label>
 							</li>
 						))}
-						{candidates.length === 0 ? <li className="px-2.5 py-2 text-[13px] text-muted-foreground">No one matches.</li> : null}
+						{candidates.length === 0 ? <li className="px-2.5 py-2 text-[0.8125rem] text-muted-foreground">No one matches.</li> : null}
 					</ul>
 				</fieldset>
 
 				<fieldset className="flex flex-col gap-1.5">
-					<legend className="mb-1.5 text-[13px] font-medium text-foreground">They can</legend>
-					<div className="flex flex-wrap gap-x-4 gap-y-2 text-[13px]">
+					<legend className="mb-1.5 text-[0.8125rem] font-medium text-foreground">They can</legend>
+					<div className="flex flex-wrap gap-x-4 gap-y-2 text-[0.8125rem]">
 						<label className="flex items-center gap-2 text-muted-foreground">
 							<Checkbox checked disabled />
 							View and download
@@ -133,13 +133,13 @@ function ShareForm({ request, onDone }: { request: ShareRequest; onDone: () => v
 				</fieldset>
 
 				<div className="flex flex-col gap-1.5">
-					<span id={`${formId}-expiry`} className="text-[13px] font-medium text-foreground">
+					<span id={`${formId}-expiry`} className="text-[0.8125rem] font-medium text-foreground">
 						Access ends
 					</span>
 					<AccessEndPicker room={room} value={expiry} onChange={setExpiry} />
 				</div>
 
-				<p aria-live="polite" className="rounded-md bg-muted/60 px-3 py-2 text-[13px] text-pretty text-foreground">
+				<p aria-live="polite" className="rounded-md bg-muted/60 px-3 py-2 text-[0.8125rem] text-pretty text-foreground">
 					{summary}
 				</p>
 
@@ -152,7 +152,7 @@ function ShareForm({ request, onDone }: { request: ShareRequest; onDone: () => v
 								return (
 									<li key={share.id} className={cn('flex items-center gap-2.5 py-1.5', index > 0 && cn('border-t', dashedRule))}>
 										<PersonAvatar person={grantee} size="sm" />
-										<span className="min-w-0 flex-1 truncate text-[13px] text-foreground">{grantee?.name ?? 'Someone'}</span>
+										<span title={grantee?.name ?? 'Someone'} className="min-w-0 flex-1 truncate text-[0.8125rem] text-foreground">{grantee?.name ?? 'Someone'}</span>
 										<span className="text-xs text-muted-foreground tabular-nums">{share.expiresAt ? `until ${format.date(share.expiresAt)}` : 'no end date'}</span>
 										<Button type="button" size="xs" variant="ghost" disabled={command.pending || command.locked} onClick={() => void command.run({ type: 'revoke-share', shareId: share.id })}>
 											Revoke
@@ -165,7 +165,7 @@ function ShareForm({ request, onDone }: { request: ShareRequest; onDone: () => v
 				) : null}
 
 				{command.error ? (
-					<p role="alert" className="text-[13px] text-destructive">
+					<p role="alert" className="text-[0.8125rem] text-destructive">
 						{command.error}
 					</p>
 				) : null}

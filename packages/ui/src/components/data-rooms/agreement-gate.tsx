@@ -38,37 +38,37 @@ export function AgreementGate({ room }: { room: Room }) {
 				<header className="flex items-start gap-3 px-5 pt-5 pb-4">
 					<IconTile icon={FileSignature} tone="primary" />
 					<div className="min-w-0 flex-1">
-						<h2 className="text-[15px] font-medium tracking-tight text-foreground">{agreement.title}</h2>
-						<p className="mt-0.5 text-[13px] text-muted-foreground tabular-nums">
+						<h2 className="text-[0.9375rem] font-medium tracking-tight text-foreground">{agreement.title}</h2>
+						<p className="mt-0.5 text-[0.8125rem] text-muted-foreground tabular-nums">
 							Version {agreement.version}
 							{agreement.updatedAt ? ` · updated ${format.date(agreement.updatedAt)}` : ''}
 						</p>
 					</div>
 				</header>
 				{previous && previous.version < agreement.version ? (
-					<p role="note" className="mx-5 mb-3 rounded-lg bg-warning/10 px-3 py-2 text-[13px] text-foreground">
+					<p role="note" className="mx-5 mb-3 rounded-lg bg-warning/10 px-3 py-2 text-[0.8125rem] text-foreground">
 						The agreement changed since you accepted version {previous.version}. Accept the new version to keep reading.
 					</p>
 				) : null}
 				<div
 					tabIndex={0}
 					aria-label={`${agreement.title}, full text`}
-					className="mx-5 max-h-[50vh] overflow-y-auto rounded-lg border border-border bg-muted/40 px-4 py-3 text-[13px] leading-6 whitespace-pre-line text-pretty text-foreground outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50 [mask-image:linear-gradient(to_bottom,transparent,black_12px,black_calc(100%-16px),transparent)]"
+					className="mx-5 max-h-[50vh] overflow-y-auto rounded-lg border border-border bg-muted/40 px-4 py-3 text-[0.8125rem] leading-6 whitespace-pre-line text-pretty text-foreground outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50 [mask-image:linear-gradient(to_bottom,transparent,black_12px,black_calc(100%-16px),transparent)]"
 				>
 					{agreement.body}
 				</div>
 				<div className="flex flex-col gap-3 px-5 pt-4 pb-5">
-					<label htmlFor={checkboxId} className="flex cursor-pointer items-start gap-2.5 text-[13px] text-foreground">
+					<label htmlFor={checkboxId} className="flex cursor-pointer items-start gap-2.5 text-[0.8125rem] text-foreground">
 						<Checkbox id={checkboxId} checked={agreed} onCheckedChange={(checked) => setAgreed(checked === true)} disabled={command.locked} className="mt-0.5" />
 						I have read and agree to these terms
 					</label>
 					{previewing ? (
-						<p className="text-[13px] text-muted-foreground">
+						<p className="text-[0.8125rem] text-muted-foreground">
 							{previewing.name} sees this before entering. A preview can’t accept on their behalf.
 						</p>
 					) : null}
 					{command.error ? (
-						<p role="alert" className="text-[13px] text-destructive">
+						<p role="alert" className="text-[0.8125rem] text-destructive">
 							{command.error}
 						</p>
 					) : null}

@@ -1,5 +1,6 @@
 'use client';
 
+import { useDirection } from '@base-ui/react/direction-provider';
 import { Eye, Sparkles } from 'lucide-react';
 import * as React from 'react';
 
@@ -7,6 +8,7 @@ import { cn } from '../../lib/utils';
 import { Button } from '../button';
 import { Tooltip, TooltipContent, TooltipTrigger } from '../tooltip';
 import { focusRingClass, NavMenuButton, pressClass, scrollRowClass, ToneBadge, TooltipIconButton, useInert } from '../workspace-kit/primitives';
+import { useScrollFade } from '../../lib/use-scroll-fade';
 import { startViewTransition, ViewAnimation } from '../workspace-kit/view-transition';
 import { needsAgreement } from './access';
 import { AgreementGate } from './agreement-gate';
@@ -84,22 +86,28 @@ function RoomView({ room }: { room: Room }) {
 	const previewing = previewAs ? person(previewAs) : undefined;
 	const openQuestions = data.questions.filter((question) => question.roomId === room.id && question.status === 'open').length;
 	const tabId = React.useId();
+	const rtl = useDirection() === 'rtl';
+	const tabFade = useScrollFade<HTMLDivElement>();
+	const [forward, backward] = rtl ? ['ArrowLeft', 'ArrowRight'] : ['ArrowRight', 'ArrowLeft'];
 
 	const choose = (next: RoomTab) => startViewTransition(() => setTab(next));
 
 	return (
 		<div className="flex min-w-0 flex-1 flex-col">
-			<header className="flex h-12 shrink-0 items-center gap-3 border-b border-border px-3">
+			{/* Narrow: the sections wrap to their own full-width row under the name, so a long room name cannot squeeze them out. From 52rem: one row, the name capped at 40% (the five sections need about 22rem). */}
+			<header className="flex min-h-12 shrink-0 flex-wrap items-center gap-x-3 gap-y-0.5 border-b border-border px-3 py-1.5">
 				<NavMenuButton />
-				<div className="flex min-w-0 shrink items-center gap-1.5">
-					<h1 className="truncate text-sm font-medium text-foreground">{room.name}</h1>
+				<div className="flex min-w-0 flex-1 items-center gap-1.5 @min-[52rem]/view:max-w-[40%] @min-[52rem]/view:flex-none">
+					<h1 title={room.name} className="truncate text-sm font-medium text-foreground">
+						<bdi>{room.name}</bdi>
+					</h1>
 					<DeadlineDot room={room} />
 					{room.status === 'archived' ? <ToneBadge tone="neutral">Archived</ToneBadge> : null}
 				</div>
 				{gated ? (
-					<div className="flex-1" />
+					<div className="hidden flex-1 @min-[52rem]/view:block" />
 				) : (
-					<div className={cn(scrollRowClass, 'min-w-0 flex-1')}>
+					<div ref={tabFade.ref} style={tabFade.style} className={cn(scrollRowClass, 'order-last w-full min-w-0 @min-[52rem]/view:order-none @min-[52rem]/view:w-auto @min-[52rem]/view:flex-1')}>
 						<div role="tablist" aria-label={`${room.name} sections`} className="flex w-max gap-0.5">
 							{tabs.map((option) => {
 								const selected = option.value === active;
@@ -115,15 +123,15 @@ function RoomView({ room }: { room: Room }) {
 										tabIndex={selected ? 0 : -1}
 										onClick={() => choose(option.value)}
 										onKeyDown={(event) => {
-											if (event.key !== 'ArrowRight' && event.key !== 'ArrowLeft') return;
+											if (event.key !== forward && event.key !== backward) return;
 											event.preventDefault();
 											const index = tabs.findIndex((candidate) => candidate.value === active);
-											const next = tabs[(index + (event.key === 'ArrowRight' ? 1 : tabs.length - 1)) % tabs.length]!;
+											const next = tabs[(index + (event.key === forward ? 1 : tabs.length - 1)) % tabs.length]!;
 											choose(next.value);
 											event.currentTarget.parentElement?.querySelector<HTMLButtonElement>(`#${CSS.escape(`${tabId}-${next.value}`)}`)?.focus();
 										}}
 										className={cn(
-											'inline-flex h-7 shrink-0 cursor-pointer items-center gap-1.5 rounded-md px-2 text-[13px] pointer-coarse:h-9',
+											'inline-flex h-7 shrink-0 cursor-pointer items-center gap-1.5 rounded-md px-2 text-[0.8125rem] pointer-coarse:h-9',
 											pressClass,
 											focusRingClass,
 											selected ? 'bg-overlay-hover font-medium text-foreground' : 'text-muted-foreground hover:text-foreground',
@@ -159,10 +167,13 @@ function RoomView({ room }: { room: Room }) {
 			</header>
 
 			{previewing ? (
-				<div className="flex shrink-0 items-center gap-2 border-b border-border bg-[color-mix(in_oklab,var(--primary)_7%,var(--background))] px-4 py-2 text-[13px]">
+				<div className="flex shrink-0 items-center gap-2 border-b border-border bg-[color-mix(in_oklab,var(--primary)_7%,var(--background))] px-4 py-2 text-[0.8125rem]">
 					<Eye aria-hidden="true" className="size-3.5 shrink-0 text-primary" />
 					<p className="min-w-0 flex-1 truncate text-foreground">
-						Previewing as <span className="font-medium">{previewing.name}</span>
+						Previewing as{' '}
+						<span className="font-medium">
+							<bdi>{previewing.name}</bdi>
+						</span>
 						{previewing.company ? <span className="text-muted-foreground"> · {previewing.company}</span> : null}
 						<span className="hidden text-muted-foreground @xl/view:inline">. This is exactly what they can see and do.</span>
 					</p>
@@ -194,7 +205,7 @@ function RoomView({ room }: { room: Room }) {
 					ref={panelRef}
 					className={cn(
 						'flex shrink-0 overflow-hidden border-border transition-[width,opacity] duration-(--duration-slow) ease-(--ease-out) motion-reduce:transition-none',
-						panelOpen ? 'w-full opacity-100 @4xl/view:w-[380px] @4xl/view:border-l' : 'w-0 opacity-0',
+						panelOpen ? 'w-full opacity-100 @4xl/view:w-[380px] @4xl/view:border-s' : 'w-0 opacity-0',
 					)}
 				>
 					{canAsk ? <RoomAssistant room={room} onClose={() => startViewTransition(() => setAssistantOpen(false))} /> : null}

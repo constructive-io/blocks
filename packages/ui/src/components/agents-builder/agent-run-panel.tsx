@@ -41,13 +41,13 @@ function RunGroup({ group, play }: RunGroupProps) {
 	const [singular, plural] = GROUP_NOUN[group.id];
 	const heading = (
 		<>
-			<span className="text-foreground">{group.label}</span>
-			<span className="text-muted-foreground tabular-nums">
+			<span className="min-w-0 text-foreground [overflow-wrap:anywhere]">{group.label}</span>
+			<span className="shrink-0 text-muted-foreground tabular-nums">
 				· {group.items.length} {group.items.length === 1 ? singular : plural}
 			</span>
 		</>
 	);
-	const row = 'flex h-8 w-full items-center gap-1.5 px-2 text-left text-[13px]';
+	const row = 'flex min-h-8 w-full items-center gap-1.5 px-2 py-1 text-start text-[0.8125rem]';
 
 	return (
 		<li className={enterClass}>
@@ -66,8 +66,8 @@ function RunGroup({ group, play }: RunGroupProps) {
 					<ChevronRight
 						aria-hidden="true"
 						className={cn(
-							'size-3.5 text-muted-foreground transition-transform duration-(--duration-moderate) ease-out motion-reduce:transition-none',
-							open && 'rotate-90',
+							'size-3.5 shrink-0 text-muted-foreground transition-transform duration-(--duration-moderate) ease-out motion-reduce:transition-none',
+							open ? 'rotate-90' : 'rtl:-scale-x-100',
 						)}
 					/>
 					{heading}
@@ -81,9 +81,11 @@ function RunGroup({ group, play }: RunGroupProps) {
 			>
 				<ul ref={inertRef} className="min-h-0 overflow-hidden">
 					{group.items.slice(0, play.shown).map((item, index) => (
-						<li key={item} className={cn('flex h-7 items-center gap-2 pr-2 pl-[26px] text-[13px] text-muted-foreground', enterClass)}>
+						<li key={item} className={cn('flex h-7 items-center gap-2 pe-2 ps-[26px] text-[0.8125rem] text-muted-foreground', enterClass)}>
 							<MarkTile>{GROUP_ICON[group.id]}</MarkTile>
-							<span className="min-w-0 flex-1 truncate">{item}</span>
+							<span title={item} className="min-w-0 flex-1 truncate">
+								{item}
+							</span>
 							{index < play.done ? <Check aria-label="Done" className={cn('size-3 text-subtle-foreground', iconEnterClass)} /> : null}
 						</li>
 					))}
@@ -105,11 +107,11 @@ function ResultTable({ query }: { query: RunQuery }) {
 		<figure className={cn(surfaceInsetClass, 'rounded-lg bg-card shadow-card', enterClass)}>
 			<SurfaceBody>
 				<div className="overflow-x-auto">
-					<table className="w-full text-[13px] tabular-nums">
+					<table className="w-full text-[0.8125rem] tabular-nums">
 						<thead>
-							<tr className="border-b border-dashed border-foreground/10 text-left text-xs text-muted-foreground">
+							<tr className="border-b border-dashed border-foreground/10 text-start text-xs text-muted-foreground">
 								{query.columns.map((column, index) => (
-									<th key={column} scope="col" className={cn('h-8 px-3 font-medium whitespace-nowrap', index > 0 && 'text-right')}>
+									<th key={column} scope="col" className={cn('h-8 px-3 font-medium whitespace-nowrap', index > 0 && 'text-end')}>
 										{column}
 									</th>
 								))}
@@ -120,11 +122,11 @@ function ResultTable({ query }: { query: RunQuery }) {
 								<tr key={row.join()} className="h-8">
 									{row.map((cell, index) =>
 										index === 0 ? (
-											<th key={index} scope="row" className="px-3 text-left font-normal text-foreground">
+											<th key={index} scope="row" className="px-3 text-start font-normal text-foreground">
 												{cell}
 											</th>
 										) : (
-											<td key={index} className={cn('px-3 text-right text-foreground', cellTone(cell))}>
+											<td key={index} className={cn('px-3 text-end text-foreground', cellTone(cell))}>
 												{cell}
 											</td>
 										),
@@ -164,7 +166,7 @@ function ApprovalBlock({ approval, decision, done, onDecide }: { approval: RunAp
 				className={cn('max-w-none', enterClass)}
 				title={approval.title}
 				description={approval.description}
-				preview={<p className="rounded-md bg-muted/60 px-2.5 py-2 text-[13px] leading-5 text-pretty text-foreground">{approval.preview}</p>}
+				preview={<p className="rounded-md bg-muted/60 px-2.5 py-2 text-[0.8125rem] leading-5 text-pretty text-foreground [overflow-wrap:anywhere]">{approval.preview}</p>}
 				confirmLabel={approval.confirmLabel}
 				skipLabel={approval.skipLabel}
 				onConfirm={() => onDecide(true)}
@@ -175,9 +177,9 @@ function ApprovalBlock({ approval, decision, done, onDecide }: { approval: RunAp
 	const approved = decision === 'approved';
 	return (
 		<div className="flex flex-col gap-3">
-			<p className={cn('flex h-6 items-center gap-1.5 text-[13px] text-muted-foreground', enterClass)}>
-				<Check aria-hidden="true" className={cn('size-3.5', iconEnterClass)} />
-				{approved ? `You approved: ${approval.confirmLabel}` : `You chose: ${approval.skipLabel}`}
+			<p className={cn('flex min-h-6 items-center gap-1.5 text-[0.8125rem] text-muted-foreground [overflow-wrap:anywhere]', enterClass)}>
+				<Check aria-hidden="true" className={cn('size-3.5 shrink-0', iconEnterClass)} />
+				<span className="min-w-0">{approved ? `You approved: ${approval.confirmLabel}` : `You chose: ${approval.skipLabel}`}</span>
 			</p>
 			{approved ? (
 				<ToolTrace
@@ -205,13 +207,14 @@ function ApprovalBlock({ approval, decision, done, onDecide }: { approval: RunAp
 function CommandBar({ script, status, onStop }: { script: AgentRunScript; status: 'running' | 'awaiting' | 'done'; onStop: () => void }) {
 	return (
 		<div className="relative z-10 flex h-[50px] shrink-0 items-center gap-3 rounded-xl bg-card px-3 shadow-card">
-			<p className="flex min-w-0 flex-1 items-center gap-1.5 text-sm whitespace-nowrap text-foreground">
+			<p title={`${script.command.verb} ${script.command.skill} ${script.command.scope}`} className="flex min-w-0 flex-1 items-center gap-1.5 text-sm whitespace-nowrap text-foreground">
 				{script.command.verb}
-				<ToneBadge tone="primary">
-					<Zap aria-hidden="true" />
-					{script.command.skill}
+				{/* The skill chip shrinks and truncates, so a long skill name cannot print over the status badge. */}
+				<ToneBadge tone="primary" className="min-w-0 shrink">
+					<Zap aria-hidden="true" className="shrink-0" />
+					<span title={script.command.skill} className="truncate">{script.command.skill}</span>
 				</ToneBadge>
-				<span className="truncate">{script.command.scope}</span>
+				<span title={script.command.scope} className="truncate">{script.command.scope}</span>
 			</p>
 			{status === 'done' ? (
 				<span className="inline-flex h-6 items-center gap-1 rounded-md bg-muted px-1.5 text-xs text-muted-foreground">
@@ -263,7 +266,7 @@ function AgentRunPanel({ script, state, onStop }: AgentRunPanelProps) {
 	};
 
 	return (
-		<aside aria-label="Current run" className="flex h-full w-full shrink-0 flex-col p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] @4xl/view:w-[395px] @4xl/view:pr-0">
+		<aside aria-label="Current run" className="flex h-full w-full shrink-0 flex-col p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] @4xl/view:w-[395px] @4xl/view:pe-0">
 			<div className="group/run relative flex min-h-0 flex-1 flex-col">
 				<CommandBar
 					script={script}
@@ -358,20 +361,20 @@ function AgentRunPanel({ script, state, onStop }: AgentRunPanelProps) {
 							</div>
 						) : null}
 						{followUps.map((text, index) => (
-							<div key={index} className={cn('mx-3 rounded-xl bg-card px-3 py-2 text-sm text-foreground shadow-card', enterClass)}>
+							<div key={index} className={cn('mx-3 rounded-xl bg-card px-3 py-2 text-sm whitespace-pre-wrap text-foreground shadow-card [overflow-wrap:anywhere]', enterClass)}>
 								{text}
 							</div>
 						))}
 						{complete ? (
 							<div className={cn('flex items-center justify-between gap-2 px-3', enterClass)}>
-								<p className="flex h-7 items-center gap-2 text-[13px] text-muted-foreground">
+								<p className="flex h-7 items-center gap-2 text-[0.8125rem] text-muted-foreground">
 									<Check aria-hidden="true" className="size-3.5" />
 									Run complete
 								</p>
 								<FeedbackBar showRegenerate={false} copyText={script.findings?.paragraphs.join('\n\n')} />
 							</div>
 						) : awaiting ? (
-							<p className="flex h-7 items-center gap-2 px-3 text-[13px] text-muted-foreground">
+							<p className="flex h-7 items-center gap-2 px-3 text-[0.8125rem] text-muted-foreground">
 								<Hand aria-hidden="true" className="size-3.5" />
 								Waiting for your approval
 							</p>

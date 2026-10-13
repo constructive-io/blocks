@@ -13,7 +13,7 @@ export interface ProgressiveBlurScrollContainerProps {
 	scrollClassName?: string;
 	/** Minimum number of items to show blur (prevents blur on sparse content) */
 	minItemsForBlur?: number;
-	/** Current item count for minItemsForBlur check */
+	/** Current item count for the `minItemsForBlur` check. Leave it out and the threshold is ignored. */
 	itemCount?: number;
 	/** Props to pass to ProgressiveBlur */
 	blurProps?: Partial<ProgressiveBlurProps>;
@@ -30,7 +30,7 @@ export function ProgressiveBlurScrollContainer({
 	className,
 	scrollClassName,
 	minItemsForBlur = 0,
-	itemCount = 0,
+	itemCount,
 	blurProps,
 	showBlur = true,
 }: ProgressiveBlurScrollContainerProps) {
@@ -75,7 +75,7 @@ export function ProgressiveBlurScrollContainer({
 		return () => el.removeEventListener('scroll', checkScrollPosition);
 	}, [checkScrollPosition]);
 
-	const canShowBlur = showBlur && hasOverflow && (minItemsForBlur === 0 || itemCount > minItemsForBlur);
+	const canShowBlur = showBlur && hasOverflow && (minItemsForBlur === 0 || itemCount === undefined || itemCount > minItemsForBlur);
 
 	return (
 		<div className={cn('relative min-h-0 flex-1', className)}>

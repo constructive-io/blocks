@@ -3,6 +3,7 @@
 import { CalendarClock, ChevronDown, LayoutGrid, Play, Plus, Rows3, Send } from 'lucide-react';
 import * as React from 'react';
 
+import { formatCount, nameList, plural } from '../../lib/intl';
 import { cn } from '../../lib/utils';
 import { iconEnterClass } from '../ai/mark-tile';
 import { TextShimmer } from '../ai/text-shimmer';
@@ -43,7 +44,7 @@ const position = (time: string) => `${(minutes(time) / DAY_MINUTES) * 100}%`;
 /** A running schedule's name shimmers; everything else is plain text. */
 function AgentName({ name, running, className }: { name: string; running: boolean; className?: string }) {
 	return running ? (
-		<TextShimmer className={cn('font-normal', className)}>{name}</TextShimmer>
+		<TextShimmer className={cn('max-w-full truncate align-bottom font-normal', className)}>{name}</TextShimmer>
 	) : (
 		<span className={className}>{name}</span>
 	);
@@ -86,9 +87,11 @@ function DayTimeline({ schedules, runningIds, now, label }: DayTimelineProps) {
 			<SurfaceBody>
 				<header className="flex flex-wrap items-center gap-x-3 gap-y-1 px-4 pt-3.5 pb-2">
 					<h2 className="text-sm font-medium text-foreground">Today</h2>
-					<span className="text-[13px] text-muted-foreground">{label}</span>
-					<span className="ml-auto flex items-center gap-3 text-xs text-muted-foreground tabular-nums">
-						<span>{runsToday} runs</span>
+					<span className="text-[0.8125rem] text-muted-foreground">{label}</span>
+					<span className="ms-auto flex items-center gap-3 text-xs text-muted-foreground tabular-nums">
+						<span>
+							{formatCount(runsToday)} {plural(runsToday, { one: 'run', other: 'runs' })}
+						</span>
 						<span className="flex items-center gap-1.5">
 							<span aria-hidden="true" className="h-3 w-0.5 rounded-full bg-foreground/40" />
 							Done
@@ -103,17 +106,17 @@ function DayTimeline({ schedules, runningIds, now, label }: DayTimelineProps) {
 						</span>
 					</span>
 				</header>
-				<div ref={scrollRef} className="overflow-x-auto pr-4 pb-4 [scrollbar-width:thin]">
+				<div ref={scrollRef} dir="ltr" className="overflow-x-auto pe-4 pb-4 [scrollbar-width:thin]">
 					<div className="flex min-w-[560px] gap-3">
-						<ul ref={labelsRef} aria-hidden="true" className="sticky left-0 z-10 flex w-[calc(9.5rem+1rem)] shrink-0 flex-col bg-card pt-5 pl-4">
+						<ul ref={labelsRef} aria-hidden="true" className="sticky start-0 z-10 flex w-[calc(9.5rem+1rem)] shrink-0 flex-col bg-card pt-5 ps-4">
 							{rows.map((schedule) => (
-								<li key={schedule.id} className="flex h-7 min-w-0 items-center text-[13px] text-foreground">
+								<li key={schedule.id} className="flex h-7 min-w-0 items-center text-[0.8125rem] text-foreground">
 									<AgentName name={agentName(schedule.agentId)} running={runningIds.has(schedule.id)} className="truncate" />
 								</li>
 							))}
 						</ul>
 						<div className="relative min-w-0 flex-1">
-							<div aria-hidden="true" className="relative h-5 text-[11px] text-subtle-foreground tabular-nums">
+							<div aria-hidden="true" className="relative h-5 text-[0.6875rem] text-subtle-foreground tabular-nums">
 								{HOUR_MARKS.map((hour) => (
 									<span
 										key={hour}
@@ -152,7 +155,7 @@ function DayTimeline({ schedules, runningIds, now, label }: DayTimelineProps) {
 								})}
 							</ul>
 							<span ref={nowRef} aria-hidden="true" className="absolute top-5 bottom-6 w-px bg-primary" style={{ left: position(now) }} />
-							<p aria-hidden="true" className="relative mt-1 h-5 text-[11px] text-primary tabular-nums">
+							<p aria-hidden="true" className="relative mt-1 h-5 text-[0.6875rem] text-primary tabular-nums">
 								<span className="absolute -translate-x-1/2 rounded-[4px] bg-primary/10 px-1 leading-5" style={{ left: position(now) }}>
 									Now {now}
 								</span>
@@ -162,7 +165,7 @@ function DayTimeline({ schedules, runningIds, now, label }: DayTimelineProps) {
 				</div>
 				{quiet.length > 0 ? (
 					<p className="border-t border-dashed border-foreground/10 bg-muted/60 px-4 py-2 text-xs text-muted-foreground">
-						No runs today for {quiet.map((schedule) => schedule.name).join(', ')}.
+						No runs today for {nameList(quiet.map((schedule) => schedule.name))}.
 					</p>
 				) : null}
 			</SurfaceBody>
@@ -336,24 +339,27 @@ function ScheduleCard({ controller }: ScheduleCardProps) {
 							<button
 								type="button"
 								onClick={() => openAgent(schedule.agentId)}
-								className={cn('w-fit max-w-full cursor-pointer truncate rounded-sm text-left text-xs text-muted-foreground hover:text-foreground', focusRingClass)}
+								title={agent}
+								className={cn('w-fit max-w-full cursor-pointer truncate rounded-sm text-start text-xs text-muted-foreground hover:text-foreground', focusRingClass)}
 							>
 								<AgentName name={agent} running={running} />
 							</button>
-							<h3 className={cn('truncate text-sm font-medium', active ? 'text-foreground' : 'text-muted-foreground')}>{schedule.name}</h3>
+							<h3 title={schedule.name} className={cn('line-clamp-2 text-sm font-medium [overflow-wrap:anywhere]', active ? 'text-foreground' : 'text-muted-foreground')}>
+								<bdi>{schedule.name}</bdi>
+							</h3>
 						</div>
 						<ScheduleSwitch controller={controller} />
 					</header>
-					<div className="flex flex-wrap items-center gap-x-2 gap-y-1 px-3.5 pb-3 text-[13px]">
-						<CalendarClock aria-hidden="true" className="size-3.5 text-muted-foreground" />
-						<span className="text-foreground">{schedule.cadence}</span>
-						<span className="font-mono text-xs text-subtle-foreground">{schedule.cron}</span>
-						<span className="ml-auto text-xs text-muted-foreground tabular-nums">
+					<div className="flex flex-wrap items-center gap-x-2 gap-y-1 px-3.5 pb-3 text-[0.8125rem]">
+						<CalendarClock aria-hidden="true" className="size-3.5 shrink-0 text-muted-foreground" />
+						<span className="min-w-0 text-foreground [overflow-wrap:anywhere]">{schedule.cadence}</span>
+						<span className="min-w-0 font-mono text-xs text-subtle-foreground [overflow-wrap:anywhere]">{schedule.cron}</span>
+						<span className="ms-auto text-xs text-muted-foreground tabular-nums">
 							<NextRun controller={controller} />
 						</span>
 					</div>
-					{!active && schedule.pausedNote ? <p className="-mt-1.5 px-3.5 pb-3 text-xs text-muted-foreground">{schedule.pausedNote}</p> : null}
-					<div className={cn('flex items-center gap-2 px-3.5 py-2.5', DIVIDER)}>
+					{!active && schedule.pausedNote ? <p className="-mt-1.5 px-3.5 pb-3 text-xs text-muted-foreground [overflow-wrap:anywhere]">{schedule.pausedNote}</p> : null}
+					<div className={cn('flex flex-wrap items-center gap-x-2 gap-y-1 px-3.5 py-2.5', DIVIDER)}>
 						<RunHistory history={history} />
 						<button
 							type="button"
@@ -361,7 +367,7 @@ function ScheduleCard({ controller }: ScheduleCardProps) {
 							aria-controls={panelId}
 							onClick={() => setExpanded((value) => !value)}
 							className={cn(
-								'ml-auto flex h-7 shrink-0 cursor-pointer items-center gap-1 rounded-md px-1.5 text-xs whitespace-nowrap text-muted-foreground hover:bg-overlay-hover hover:text-foreground',
+								'ms-auto flex h-7 shrink-0 cursor-pointer items-center gap-1 rounded-md px-1.5 text-xs whitespace-nowrap text-muted-foreground hover:bg-overlay-hover hover:text-foreground',
 								focusRingClass,
 							)}
 						>
@@ -388,7 +394,7 @@ function ScheduleCard({ controller }: ScheduleCardProps) {
 											<span className="font-medium text-foreground">{STATUS_LABEL[lastRun.status]}</span>
 											{lastRun.when} · {lastRun.duration}
 										</p>
-										<p key={lastRun.when} className={cn('text-[13px] leading-5 text-pretty text-foreground', iconEnterClass)}>
+										<p key={lastRun.when} className={cn('text-[0.8125rem] leading-5 text-pretty text-foreground [overflow-wrap:anywhere]', iconEnterClass)}>
 											{lastRun.summary}
 										</p>
 									</div>
@@ -407,13 +413,15 @@ function ScheduleCard({ controller }: ScheduleCardProps) {
 					</div>
 					<footer className={cn('flex items-center gap-2 bg-muted/60 px-3.5 py-2', DIVIDER)}>
 						<Send aria-hidden="true" className="size-3.5 shrink-0 text-muted-foreground" />
-						<span className="min-w-0 truncate text-xs text-muted-foreground">{schedule.deliversTo}</span>
+						<span title={schedule.deliversTo} className="min-w-0 truncate text-xs text-muted-foreground">
+							{schedule.deliversTo}
+						</span>
 						<span className="flex shrink-0 -space-x-1">
 							{schedule.integrationIds.map((id) => (
 								<IntegrationMark key={id} integration={integration(id)} size="xs" className="ring-2 ring-muted" />
 							))}
 						</span>
-						<RunNowButton controller={controller} className="ml-auto" onRun={() => setExpanded(true)} />
+						<RunNowButton controller={controller} className="ms-auto" onRun={() => setExpanded(true)} />
 					</footer>
 				</SurfaceBody>
 			</div>
@@ -425,7 +433,7 @@ function ScheduleCard({ controller }: ScheduleCardProps) {
 function ScheduleTable({ controllers }: { controllers: ScheduleController[] }) {
 	const { agentName, integration, openAgent } = useAgentsBuilder();
 	const cell = 'h-14 px-3 align-middle';
-	const head = 'h-9 px-3 text-left text-xs font-medium text-muted-foreground whitespace-nowrap';
+	const head = 'h-9 px-3 text-start text-xs font-medium text-muted-foreground whitespace-nowrap';
 	return (
 		<div className={cn(surfaceInsetClass, 'rounded-xl bg-card shadow-card')}>
 			<SurfaceBody className="overflow-x-auto">
@@ -458,19 +466,26 @@ function ScheduleTable({ controllers }: { controllers: ScheduleController[] }) {
 							const { schedule, state, running } = controller;
 							return (
 								<tr key={schedule.id} className="border-b border-border last:border-b-0 hover:bg-muted/30">
-									<th scope="row" className={cn(cell, 'text-left font-normal')}>
-										<span className={cn('block truncate font-medium', state.active ? 'text-foreground' : 'text-muted-foreground')}>{schedule.name}</span>
+									<th scope="row" className={cn(cell, 'text-start font-normal')}>
+										<span title={schedule.name} className={cn('block truncate font-medium', state.active ? 'text-foreground' : 'text-muted-foreground')}>
+											<bdi>{schedule.name}</bdi>
+										</span>
 										<button
 											type="button"
+											title={agentName(schedule.agentId)}
 											onClick={() => openAgent(schedule.agentId)}
-											className={cn('block max-w-full cursor-pointer truncate rounded-sm text-left text-xs text-muted-foreground hover:text-foreground', focusRingClass)}
+											className={cn('block max-w-full cursor-pointer truncate rounded-sm text-start text-xs text-muted-foreground hover:text-foreground', focusRingClass)}
 										>
 											<AgentName name={agentName(schedule.agentId)} running={running} />
 										</button>
 									</th>
 									<td className={cell}>
-										<span className="block truncate text-foreground">{schedule.cadence}</span>
-										<span className="block truncate font-mono text-xs text-subtle-foreground">{schedule.cron}</span>
+										<span title={schedule.cadence} className="block truncate text-foreground">
+											{schedule.cadence}
+										</span>
+										<span title={schedule.cron} className="block truncate font-mono text-xs text-subtle-foreground">
+											{schedule.cron}
+										</span>
 									</td>
 									<td className={cn(cell, 'text-xs text-muted-foreground tabular-nums')}>
 										<NextRun controller={controller} />
@@ -485,13 +500,15 @@ function ScheduleTable({ controllers }: { controllers: ScheduleController[] }) {
 													<IntegrationMark key={id} integration={integration(id)} size="xs" className="ring-2 ring-card" />
 												))}
 											</span>
-											<span className="truncate text-xs text-muted-foreground">{schedule.deliversTo}</span>
+											<span title={schedule.deliversTo} className="truncate text-xs text-muted-foreground">
+												{schedule.deliversTo}
+											</span>
 										</span>
 									</td>
 									<td className={cell}>
 										<ScheduleSwitch controller={controller} />
 									</td>
-									<td className={cn(cell, 'text-right')}>
+									<td className={cn(cell, 'text-end')}>
 										<RunNowButton controller={controller} />
 									</td>
 								</tr>
@@ -555,7 +572,7 @@ function SchedulesView() {
 					</div>
 					<ViewAnimation>
 						{layout === 'cards' ? (
-							<div className="grid items-start gap-3 @3xl/view:grid-cols-2">
+							<div className="grid grid-cols-1 items-start gap-3 @3xl/view:grid-cols-2">
 								{visible.map((controller) => (
 									<ScheduleCard key={controller.schedule.id} controller={controller} />
 								))}

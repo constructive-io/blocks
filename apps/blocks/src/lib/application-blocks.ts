@@ -113,14 +113,14 @@ export function CompanyOrgChart({
         'Use edges when the host owns the current hierarchy. Use defaultEdges for optimistic local reparenting, and persist each accepted move through onReparent.',
     },
     composition: [
-      'The workspace canvas (shared with Agents Builder) owns pan, pinch, wheel, and keyboard zoom; the block lays flat reporting edges out as a tidy top-down tree and draws bezier wires between cards.',
+      'The workspace canvas (shared with Agents Builder) owns pan, pinch, wheel, and keyboard zoom; the block lays flat reporting edges out as a tidy top-down tree and draws bezier wires between cards. More than eight reports without a team of their own stack in columns of up to eight under their manager instead of running in one row.',
       'Selecting a person highlights their reporting chain and opens a details panel with their manager, direct reports, and actions; folded teams show a stacked card edge and the team size.',
       'Node menus delegate editing and removal to the host, so the chart never assumes a router, form system, or destructive-action policy.',
       'Loading and empty states are built in, while success and error messaging remain injectable through observer callbacks.',
     ],
     accessibility: [
       'Keep every displayName and positionTitle meaningful because the same labels identify node actions and reporting relationships.',
-      'The chart is an ARIA tree: Tab into it, move between people with the arrow keys, press Enter for details, and use Change manager to reassign without dragging.',
+      'The chart is an ARIA tree: Tab into it, move between people with the arrow keys (inside a stacked column, Up and Down move through the column and Left and Right move between columns), press Enter for details, and use Change manager to reassign without dragging.',
       'Confirm removal in the host workflow before changing data; the node menu reports intent and does not delete records itself.',
     ],
     api: [
@@ -376,6 +376,12 @@ export function AssetBrowser({
         type: '(files: FileList) => void',
         behavior:
           'Turns the file list into a drop target: dragging files over it shows where they will land, and dropping hands the files to the host.',
+      },
+      {
+        name: 'locale',
+        type: 'string',
+        behavior:
+          'Formats the counts in the rail, toolbar and selection bar with the reader\'s own separators (for example "de-DE"). Counts render with "en-US" separators by default so the server and browser agree.',
       },
       {
         name: 'title / defaultSidebarCollapsed',
@@ -713,7 +719,7 @@ export function AccountBilling({ data, now, changePlan, checkoutPack, redeem, op
       'Built on workspace-kit (the same shell as Agents Builder: sidebar rail, drawer, view frames, filter pills) and billing-kit, so every card, table, and dialog is reusable on its own.',
       'Overview: BillingStatusBanner (admin hold → suspension → grace → checkout pending → review → scheduled change), CurrentPlanCard, CreditWallet, PoolGrid, LimitList, LedgerTimeline, and FeatureCapList.',
       'Usage: headline StatTiles with a projection to period end, UsageTree (universal → category pools → meters, each with plan marker and credit cost), MeterDetailSheet with daily Sparkline and request windows, LimitList, UsageAlertList, and FeatureCapList.',
-      'Plans: IntervalSwitch and PlanComparison; choosing a plan opens PlanChangeDialog, which diffs entitlements, flags limits already exceeded, and offers “now” or “at period end” when the provider can schedule changes.',
+      'Plans: IntervalSwitch and PlanComparison, which hides plans with no active price except the account’s current one; choosing a plan opens PlanChangeDialog, which refuses a plan without an active price, which diffs entitlements, flags limits already exceeded, and offers “now” or “at period end” when the provider can schedule changes.',
       'Gift codes: RedeemCodeDialog opens from the overview, the credits view, the account menu, or a ?code= link (initialRedeemCode). The host answers with the redemption or a typed refusal (not found, paused, expired, used up, already redeemed, not eligible); the dialog lists every grant, and the credits, balances, limits, and ledger update right away.',
       'Credits: CreditWallet, RedeemCodeField, CreditPackGrid, CreditGrantList in draw-down order, and RedemptionList of codes this account redeemed. Invoices: payment method panel (PaymentMethodRow from the host’s paymentMethod summary, plus the provider portal), InvoiceTable with expandable lines, AdjustmentList. Activity: LedgerTimeline filtered by class.',
       'Provider-neutral: the active BillingProviderDescriptor decides which actions appear (hosted checkout, customer portal, scheduled changes) and how the provider is named, including merchant-of-record copy. Customers see the provider by name only; object ids and dashboard links stay in the console. Stripe ships as STRIPE_PROVIDER; hosts register others the same way.',
@@ -740,7 +746,7 @@ export function AccountBilling({ data, now, changePlan, checkoutPack, redeem, op
     buildingBlocks: [
       { name: 'BillingStatusBanner / Notice / LifecycleBadge', type: 'status', behavior: 'The one notice an account needs now, and lifecycle labels for active, grace, suspended, checkout pending, ended, and review required.' },
       { name: 'CurrentPlanCard / PriceTag / IntervalSwitch', type: 'plan', behavior: 'Plan, price, period progress, next invoice, and scheduled change.' },
-      { name: 'PlanComparison / PlanChangeDialog', type: 'plan', behavior: 'Side-by-side plans and the preview that diffs entitlements and picks timing.' },
+      { name: 'PlanComparison / PlanChangeDialog', type: 'plan', behavior: 'Side-by-side plans (plans without an active price are hidden) and the preview that diffs entitlements and picks timing.' },
       { name: 'UsageTree / PoolGrid / MeterDetailSheet', type: 'usage', behavior: 'The credit waterfall, busiest pools, and one meter in depth.' },
       { name: 'AllowanceBar / UsageFigure / Sparkline / PeriodTrack', type: 'primitives', behavior: 'Bars with soft thresholds and plan markers, figures, daily bars, and the billing period as a thin segmented bar, one segment per day.' },
       { name: 'CreditWallet / CreditGrantList / CreditPackGrid', type: 'credits', behavior: 'Balance composition, grants in spend order, and packs.' },

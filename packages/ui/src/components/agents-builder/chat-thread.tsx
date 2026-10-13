@@ -33,10 +33,48 @@ function StepsTrace({ steps, done }: { steps: ToolStep[]; done: number }) {
 	);
 }
 
+/**
+ * The user's own words, kept as typed: line breaks and indentation survive and an
+ * unbroken URL wraps instead of spilling out. The pinned opening message stays
+ * three lines tall until expanded, so a pasted prompt cannot cover the thread.
+ */
 function UserMessage({ text, pinned, onStop }: { text: string; pinned: boolean; onStop?: () => void }) {
+	const [expanded, setExpanded] = React.useState(false);
+	const [clamped, setClamped] = React.useState(false);
+	const body = React.useRef<HTMLParagraphElement>(null);
+	React.useEffect(() => {
+		const node = body.current;
+		if (!node || !pinned || expanded) return;
+		const measure = () => setClamped(node.scrollHeight > node.clientHeight + 1);
+		measure();
+		const observer = typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(measure);
+		observer?.observe(node);
+		return () => observer?.disconnect();
+	}, [expanded, pinned, text]);
 	const card = (
-		<div className={cn('flex min-h-12 items-center gap-3 rounded-xl bg-card py-2 pr-2 pl-3 shadow-card', !pinned && enterClass)}>
-			<p className="min-w-0 flex-1 text-pretty text-sm text-foreground">{text}</p>
+		<div className={cn('flex min-h-12 items-center gap-3 rounded-xl bg-card py-2 pe-2 ps-3 shadow-card', !pinned && enterClass)}>
+			<div className="min-w-0 flex-1">
+				<p
+					ref={body}
+					className={cn(
+						'text-sm text-pretty whitespace-pre-wrap text-foreground [overflow-wrap:anywhere]',
+						pinned && !expanded && 'line-clamp-3',
+						pinned && expanded && 'max-h-[40vh] overflow-y-auto',
+					)}
+				>
+					{text}
+				</p>
+				{pinned && (clamped || expanded) ? (
+					<button
+						type="button"
+						aria-expanded={expanded}
+						onClick={() => setExpanded((current) => !current)}
+						className="mt-1 cursor-pointer rounded-sm text-xs text-muted-foreground underline-offset-4 hover:text-foreground hover:underline focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:outline-none"
+					>
+						{expanded ? 'Show less' : 'Show more'}
+					</button>
+				) : null}
+			</div>
 			{onStop ? (
 				<TooltipIconButton label="Stop" className="bg-foreground text-background hover:bg-foreground/90 hover:text-background" onClick={onStop}>
 					<Square aria-hidden="true" className="size-3 fill-current" />

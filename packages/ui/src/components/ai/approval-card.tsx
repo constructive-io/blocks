@@ -116,7 +116,7 @@ function ApprovalCard({
 				<span className="flex size-6 items-center justify-center rounded-full bg-success text-white animate-[ai-fade-up_300ms_cubic-bezier(0.23,1,0.32,1)_both]">
 					<Check className="size-3.5" strokeWidth={3} />
 				</span>
-				<span className="text-[13px] font-medium text-foreground">Approved</span>
+				<span className="text-[0.8125rem] font-medium text-foreground">Approved</span>
 			</div>
 		);
 	}
@@ -136,10 +136,10 @@ function ApprovalCard({
 				<div className="flex items-start justify-between gap-2 px-3 pt-3">
 					<div className="min-w-0 space-y-1">
 						{title ? (
-							<div className="text-[13px] font-medium text-pretty text-foreground">{title}</div>
+							<div className="text-[0.8125rem] font-medium text-pretty text-foreground [overflow-wrap:anywhere]">{title}</div>
 						) : null}
 						{description ? (
-							<div className="text-xs text-pretty text-muted-foreground">{description}</div>
+							<div className="text-xs text-pretty text-muted-foreground [overflow-wrap:anywhere]">{description}</div>
 						) : null}
 					</div>
 					{onDismiss ? (
@@ -154,16 +154,17 @@ function ApprovalCard({
 						</Button>
 					) : null}
 				</div>
-				{preview ? <div className="px-3 pt-2">{preview}</div> : null}
-				<div className="flex items-center justify-end gap-1.5 px-3 py-2.5">
+				{preview ? <div className="min-w-0 overflow-x-auto px-3 pt-2 [overflow-wrap:anywhere]">{preview}</div> : null}
+				<div className="flex flex-wrap items-center justify-end gap-1.5 px-3 py-2.5">
 					{onSkip ? (
-						<Button type="button" variant="ghost" size="sm" onClick={onSkip}>
+						<Button type="button" variant="ghost" size="sm" wrap onClick={onSkip}>
 							{skipLabel}
 						</Button>
 					) : null}
 					<Button
 						type="button"
 						size="sm"
+						wrap
 						variant={destructive ? 'destructive' : 'default'}
 						onClick={() => {
 							setSent(true);
@@ -194,8 +195,8 @@ function ApprovalCard({
 				className="p-3 animate-[ai-fade-up_300ms_cubic-bezier(0.23,1,0.32,1)_both] motion-reduce:animate-none"
 			>
 				<div className="flex items-start justify-between gap-2">
-					<div className="text-[13px] font-medium text-pretty text-foreground">{question!.prompt}</div>
-					<div className="flex items-center gap-1">
+					<div className="min-w-0 text-[0.8125rem] font-medium text-pretty text-foreground [overflow-wrap:anywhere]">{question!.prompt}</div>
+					<div className="flex shrink-0 items-center gap-1">
 						{/* Progress pills */}
 						<div className="flex items-center gap-0.5" aria-hidden>
 							{progress.map((on, i) => (
@@ -226,7 +227,7 @@ function ApprovalCard({
 								onClick={() => toggleOption(option.id)}
 								className={cn(
 									// card rounded-lg + p-3 → option rows use rounded-md (concentric)
-									'-mx-1.5 flex min-h-10 items-start gap-2 rounded-md px-1.5 py-1.5 text-left text-[13px]',
+									'-mx-1.5 flex min-h-10 items-start gap-2 rounded-md px-1.5 py-1.5 text-start text-[0.8125rem]',
 									'transition-[box-shadow] duration-(--duration-moderate) hover:bg-accent',
 									'focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50',
 									on && 'bg-accent',
@@ -241,9 +242,9 @@ function ApprovalCard({
 									{on ? <Check className="size-2.5" strokeWidth={3} /> : null}
 								</span>
 								<span className="min-w-0">
-									<span className="font-medium text-foreground">{option.label}</span>
+									<span className="font-medium text-foreground [overflow-wrap:anywhere]">{option.label}</span>
 									{option.description ? (
-										<span className="mt-0.5 block text-xs text-muted-foreground">{option.description}</span>
+										<span className="mt-0.5 block text-xs text-muted-foreground [overflow-wrap:anywhere]">{option.description}</span>
 									) : null}
 								</span>
 							</button>

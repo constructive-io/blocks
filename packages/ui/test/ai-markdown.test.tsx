@@ -23,9 +23,62 @@ describe('renderBasicMarkdown', () => {
 		expect(html).toContain('const a = 1');
 	});
 
+	it('leaves asterisks the writer meant literally alone', () => {
+		const sum = renderBasicMarkdown('Net revenue = A * B * C');
+		expect(sum).toContain('A * B * C');
+		expect(sum).not.toContain('<em>');
+
+		const glob = renderBasicMarkdown('Run the tests in src/**/*.test.ts and any *.md files');
+		expect(glob).toContain('src/**/*.test.ts');
+		expect(glob).toContain('*.md files');
+		expect(glob).not.toMatch(/<(em|strong)>/);
+
+		const code = renderBasicMarkdown('Use `*x*` or `a*b*c` here');
+		expect(code).toContain('<code class="ai-md-code">*x*</code>');
+		expect(code).not.toContain('<em>');
+	});
+
+	it('still applies emphasis to real emphasis', () => {
+		expect(renderBasicMarkdown('a *slanted* word')).toContain('<em>slanted</em>');
+		expect(renderBasicMarkdown('**bold**.')).toContain('<strong>bold</strong>.');
+		expect(renderBasicMarkdown('***both***')).toContain('<strong><em>both</em></strong>');
+		expect(renderBasicMarkdown('**bold with *inner* italic**')).toContain('<strong>bold with <em>inner</em> italic</strong>');
+		expect(renderBasicMarkdown('* **lead** then text')).toContain('<li><strong>lead</strong> then text</li>');
+	});
+
+	it('keeps the line breaks the writer typed and starts a paragraph at a blank line', () => {
+		const html = renderBasicMarkdown('line one\nline two\n\nnext paragraph');
+		expect(html).toContain('<p class="ai-md-p">line one<br>line two</p>');
+		expect(html).toContain('<p class="ai-md-p">next paragraph</p>');
+		expect(html.match(/<p /g)).toHaveLength(2);
+	});
+
+	it('renders headings down to level six and ends a paragraph at a heading', () => {
+		const html = renderBasicMarkdown('intro\n#### Details\n###### Fine print');
+		expect(html).toContain('<p class="ai-md-p">intro</p>');
+		expect(html).toContain('<h4 class="ai-md-h">Details</h4>');
+		expect(html).toContain('<h6 class="ai-md-h">Fine print</h6>');
+	});
+
 	it('renders safe external links', () => {
 		const html = renderBasicMarkdown('[docs](https://example.com/path)');
 		expect(html).toContain('href="https://example.com/path"');
 		expect(html).toContain('rel="noreferrer noopener"');
+	});
+
+	it('keeps several emphasised phrases on one line separate', () => {
+		const html = renderBasicMarkdown('**one** and **two**, *three* and ***four***; 5 ** 3 and 2**3 stay plain');
+		expect(html).toContain('<strong>one</strong> and <strong>two</strong>, <em>three</em> and <strong><em>four</em></strong>');
+		expect(html).toContain('5 ** 3 and 2**3 stay plain');
+	});
+
+	it('takes time proportional to the text on a very long line of unmatched openers', () => {
+		// Each opener below has no closer, so a pattern that scans to the end of the line for every opener is quadratic in the line.
+		const started = performance.now();
+		for (const unit of ['**a ', '***a ', '**a**b ']) {
+			const html = renderBasicMarkdown(unit.repeat(16_000));
+			expect(html.startsWith('<p class="ai-md-p">')).toBe(true);
+		}
+		expect(performance.now() - started).toBeLessThan(1000);
 	});
 });

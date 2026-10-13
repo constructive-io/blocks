@@ -108,7 +108,7 @@ function CommandEmpty({
 }: React.ComponentProps<typeof CommandPrimitive.Empty>) {
   return (
     <CommandPrimitive.Empty
-      className={cn("not-empty:py-6", className)}
+      className={cn("text-center text-muted-foreground text-sm not-empty:px-2 not-empty:py-6", className)}
       data-slot="command-empty"
       {...props}
     />
@@ -171,6 +171,10 @@ function CommandCollection({ children }: { children: React.ReactNode }) {
   return <>{children}</>;
 }
 
+/**
+ * cmdk identifies an item by its `value` (or its text when `value` is omitted), so two items with the same value
+ * highlight together. Give items that can share a name a unique `value` and put the name in `keywords`.
+ */
 function CommandItem({
   className,
   ...props
@@ -178,7 +182,8 @@ function CommandItem({
   return (
     <CommandPrimitive.Item
       className={cn(
-        "relative flex cursor-default items-center gap-2 rounded-sm px-2 py-1.5 text-sm outline-none select-none pointer-coarse:min-h-11 data-[disabled=true]:pointer-events-none data-[selected=true]:text-accent-foreground data-[disabled=true]:opacity-64",
+        // `overflow-wrap:anywhere` lets an unbreakable label shrink and wrap, so the icon and shortcut keep their room.
+        "relative flex cursor-default items-center gap-2 rounded-sm px-2 py-1.5 text-sm outline-none select-none [overflow-wrap:anywhere] pointer-coarse:min-h-11 data-[disabled=true]:pointer-events-none data-[selected=true]:text-accent-foreground data-[disabled=true]:opacity-64 [&_svg]:shrink-0",
         className,
       )}
       data-slot="command-item"
@@ -200,16 +205,21 @@ function CommandSeparator({
   );
 }
 
-function CommandShortcut({ className, ...props }: React.ComponentProps<"kbd">) {
+function CommandShortcut({ className, children, ...props }: React.ComponentProps<"kbd">) {
   return (
     <span
       className={cn(
-        "ms-auto font-medium text-subtle-foreground text-xs tracking-widest",
+        "ms-auto shrink-0 whitespace-nowrap font-medium text-subtle-foreground text-xs tracking-widest",
         className,
       )}
       data-slot="command-shortcut"
       {...props}
-    />
+    >
+      {/* Key glyphs read left to right in every writing direction, so isolate them from the surrounding text. */}
+      <span dir="ltr" className="[unicode-bidi:isolate]">
+        {children}
+      </span>
+    </span>
   );
 }
 

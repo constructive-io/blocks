@@ -132,7 +132,7 @@ export function PeopleTab({ room }: { room: Room }) {
 					) : null}
 				</div>
 				{command.error ? (
-					<p role="alert" className="rounded-md bg-destructive/10 px-3 py-2 text-[13px] text-destructive">
+					<p role="alert" className="rounded-md bg-destructive/10 px-3 py-2 text-[0.8125rem] text-destructive">
 						{command.error}
 					</p>
 				) : null}
@@ -147,7 +147,7 @@ export function PeopleTab({ room }: { room: Room }) {
 										<th scope="col">Person</th>
 										<th scope="col">Role</th>
 										<th scope="col">Access from</th>
-										<th scope="col" className="text-right">
+										<th scope="col" className="text-end">
 											Expires
 										</th>
 										<th scope="col">
@@ -167,9 +167,13 @@ export function PeopleTab({ room }: { room: Room }) {
 														>
 															<MailX className="size-3.5" />
 														</span>
-														<span className="min-w-0">
-															<span className="block truncate text-[13px] font-medium text-foreground">{nameFromEmail(row.invite.email)}</span>
-															<span className="block truncate text-xs text-muted-foreground">{row.invite.email}</span>
+														<span className="min-w-0 max-w-[20rem]">
+															<span title={nameFromEmail(row.invite.email)} className="block truncate text-[0.8125rem] font-medium text-foreground">
+																{nameFromEmail(row.invite.email)}
+															</span>
+															<span title={row.invite.email} className="block truncate text-xs text-muted-foreground">
+																{row.invite.email}
+															</span>
 														</span>
 													</span>
 												</td>
@@ -177,8 +181,8 @@ export function PeopleTab({ room }: { room: Room }) {
 												<td>
 													<SourceLine source={{ icon: Mail, text: `Invite sent ${format.relative(row.invite.invitedAt)}` }} />
 												</td>
-												<td className="text-right text-muted-foreground tabular-nums">{row.invite.expiresAt ? format.deadline(row.invite.expiresAt) : '—'}</td>
-												<td className="w-10 text-right">
+												<td className="text-end text-muted-foreground tabular-nums">{row.invite.expiresAt ? format.deadline(row.invite.expiresAt) : '—'}</td>
+												<td className="w-10 text-end">
 													{manages ? (
 														<RowMenu label={`Actions for ${row.invite.email}`}>
 															<DropdownMenuItem
@@ -243,7 +247,9 @@ function SourceLine({ source }: { source: AccessSource }) {
 	return (
 		<span className="flex min-w-0 items-center gap-1.5 text-muted-foreground">
 			<source.icon aria-hidden="true" className="size-3.5 shrink-0 text-subtle-foreground" />
-			<span className="truncate">{source.text}</span>
+			<span title={source.text} className="truncate">
+				{source.text}
+			</span>
 		</span>
 	);
 }
@@ -288,7 +294,7 @@ function PersonRow({ row, room, source, manages, shares, disabled, onRun, onTrac
 	return (
 		<tr className={tableRowClass}>
 			<td>
-				<button type="button" onClick={onTrace} className={cn('-mx-1 flex min-w-0 cursor-pointer rounded-md px-1 py-0.5 text-left hover:bg-overlay-hover', focusRingClass)}>
+				<button type="button" onClick={onTrace} className={cn('-mx-1 flex max-w-[20rem] min-w-0 cursor-pointer rounded-md px-1 py-0.5 text-start hover:bg-overlay-hover', focusRingClass)}>
 					<PersonLine person={person} />
 					<span className="sr-only">, see why {first} has access</span>
 				</button>
@@ -298,7 +304,7 @@ function PersonRow({ row, room, source, manages, shares, disabled, onRun, onTrac
 					// Pulled left by the select's border and padding, so its text lines up with the plain roles above and below.
 					<ChoiceSelect
 						label={`Role for ${person.name}`}
-						className="-ml-2.5 w-auto min-w-32"
+						className="-ms-2.5 w-auto min-w-32"
 						disabled={disabled}
 						value={editable.roleId ?? data.roles.find((candidate) => candidate.isDefault)?.id ?? ''}
 						onValueChange={(roleId) => onRun({ type: 'update-membership', membershipId: editable.id, patch: { roleId } })}
@@ -317,10 +323,10 @@ function PersonRow({ row, room, source, manages, shares, disabled, onRun, onTrac
 			<td>
 				<SourceLine source={source} />
 			</td>
-			<td className={cn('text-right tabular-nums', days !== null && days <= 7 ? 'text-warning' : 'text-muted-foreground')}>
+			<td className={cn('text-end tabular-nums', days !== null && days <= 7 ? 'text-warning' : 'text-muted-foreground')}>
 				{expires ? format.deadline(expires) : '—'}
 			</td>
-			<td className="w-10 text-right">
+			<td className="w-10 text-end">
 				<RowMenu label={`Actions for ${person.name}`}>
 					<DropdownMenuItem className="gap-2 [&_svg]:size-3.5" onClick={onTrace}>
 						<Eye aria-hidden="true" />
@@ -400,13 +406,13 @@ function AccessMatrix({ room, people }: { room: Room; people: Extract<Row, { kin
 		<TableSurface minWidth={`${16 + columns.length * 8}rem`}>
 			<thead className={tableHeadClass}>
 				<tr>
-					<th scope="col" className="sticky left-0 z-10 bg-muted">
+					<th scope="col" className="sticky start-0 z-10 bg-muted">
 						Person
 					</th>
 					{columns.map((folder) => (
 						<th key={folder} scope="col" className="text-center">
 							<Tooltip>
-								<TooltipTrigger render={<span className="inline-block max-w-28 cursor-default truncate align-middle">{folder === '/' ? 'Root' : folderName(folder)}</span>} />
+								<TooltipTrigger render={<span title={folder === '/' ? 'Root' : folderName(folder)} className="inline-block max-w-28 cursor-default truncate align-middle">{folder === '/' ? 'Root' : folderName(folder)}</span>} />
 								<TooltipContent>{folder}</TooltipContent>
 							</Tooltip>
 						</th>
@@ -416,17 +422,19 @@ function AccessMatrix({ room, people }: { room: Room; people: Extract<Row, { kin
 			<tbody>
 				{people.map((row) => (
 					<tr key={row.id} className={cn(tableRowClass, 'cursor-pointer hover:bg-overlay-hover')} onClick={() => openTrace(row.person.id, room.id)}>
-						<th scope="row" className="sticky left-0 z-10 bg-card px-4 py-2.5 text-left font-normal">
+						<th scope="row" className="sticky start-0 z-10 bg-card px-4 py-2.5 text-start font-normal">
 							<button
 								type="button"
 								onClick={(event) => {
 									event.stopPropagation();
 									openTrace(row.person.id, room.id);
 								}}
-								className={cn('flex min-w-0 cursor-pointer items-center gap-2 rounded-md text-left', focusRingClass)}
+								className={cn('flex min-w-0 cursor-pointer items-center gap-2 rounded-md text-start', focusRingClass)}
 							>
 								<PersonAvatar person={row.person} size="sm" />
-								<span className="truncate text-[13px] text-foreground">{row.person.name}</span>
+								<span title={row.person.name} className="max-w-[16rem] truncate text-[0.8125rem] text-foreground">
+									<bdi>{row.person.name}</bdi>
+								</span>
 							</button>
 						</th>
 						{columns.map((folder) => (
@@ -477,7 +485,7 @@ function MatrixCell({ state, folder }: { state: CellState; folder: string }) {
 			{chips
 				.filter((chip) => chip.on)
 				.map((chip) => (
-					<span key={chip.letter} className="inline-grid h-4 min-w-4 place-items-center rounded-[4px] bg-muted px-0.5 text-[10px] font-medium text-muted-foreground tabular-nums">
+					<span key={chip.letter} className="inline-grid h-4 min-w-4 place-items-center rounded-[4px] bg-muted px-0.5 text-[0.625rem] font-medium text-muted-foreground tabular-nums">
 						<span aria-hidden="true">{chip.letter}</span>
 						<span className="sr-only">, {chip.label}</span>
 					</span>

@@ -14,9 +14,11 @@ import {
 	Pencil,
 	Sparkles,
 	type LucideIcon,
+	User,
 } from 'lucide-react';
 import * as React from 'react';
 
+import { initials } from '../../lib/initials';
 import { cn } from '../../lib/utils';
 import { ApprovalCard } from '../ai/approval-card';
 import { ChatContainer } from '../ai/chat-container';
@@ -57,24 +59,15 @@ type ThreadPatch = {
 	read?: boolean;
 };
 
-function initials(name: string) {
-	return name
-		.split(/\s+/)
-		.slice(0, 2)
-		.map((word) => word[0])
-		.join('')
-		.toUpperCase();
-}
-
 /** Contact initials with the channel as a small badge, framed with an inset outline. */
 function ContactAvatar({ thread, size = 'md' }: { thread: InboxThread; size?: 'md' | 'lg' }) {
 	const Icon = CHANNEL[thread.channel].icon;
 	return (
 		<span aria-hidden="true" className={cn('relative grid shrink-0 place-items-center', size === 'lg' ? 'size-9' : 'size-8')}>
-			<span className="grid size-full place-items-center rounded-full bg-muted text-[11px] font-medium text-foreground outline outline-1 -outline-offset-1 outline-black/10 dark:outline-white/10">
-				{thread.channel === 'slack' ? <Hash className="size-3.5 text-muted-foreground" /> : initials(thread.contact.name)}
+			<span className="grid size-full place-items-center rounded-full bg-muted text-[0.6875rem] font-medium text-foreground outline outline-1 -outline-offset-1 outline-black/10 dark:outline-white/10">
+				{thread.channel === 'slack' ? <Hash className="size-3.5 text-muted-foreground" /> : (initials(thread.contact.name) ?? <User className="size-3.5 text-muted-foreground" />)}
 			</span>
-			<span className="absolute -right-0.5 -bottom-0.5 grid size-4 place-items-center rounded-full bg-card text-muted-foreground shadow-card">
+			<span className="absolute -end-0.5 -bottom-0.5 grid size-4 place-items-center rounded-full bg-card text-muted-foreground shadow-card">
 				<Icon className="size-2.5" strokeWidth={2.25} />
 			</span>
 		</span>
@@ -126,7 +119,7 @@ function AgentLine({ thread }: { thread: ThreadView }) {
 				: `${name} drafted a reply`;
 	return (
 		<span className={cn('block truncate text-xs', thread.status === 'needs-you' ? 'text-foreground' : 'text-subtle-foreground')}>
-			{thread.status === 'needs-you' ? <Sparkles aria-hidden="true" className="mr-1 inline size-3 -translate-y-px text-primary" /> : null}
+			{thread.status === 'needs-you' ? <Sparkles aria-hidden="true" className="me-1 inline size-3 -translate-y-px text-primary" /> : null}
 			{text}
 		</span>
 	);
@@ -140,7 +133,7 @@ function ThreadRow({ thread, selected, onSelect }: { thread: ThreadView; selecte
 				aria-current={selected ? 'true' : undefined}
 				onClick={onSelect}
 				className={cn(
-					'flex w-full cursor-pointer items-start gap-3 rounded-lg px-2.5 py-2.5 text-left',
+					'flex w-full cursor-pointer items-start gap-3 rounded-lg px-2.5 py-2.5 text-start',
 					focusRingClass,
 					selected ? 'bg-muted' : 'hover:bg-overlay-hover',
 				)}
@@ -148,15 +141,17 @@ function ThreadRow({ thread, selected, onSelect }: { thread: ThreadView; selecte
 				<ContactAvatar thread={thread} />
 				<span className="flex min-w-0 flex-1 flex-col gap-0.5">
 					<span className="flex items-baseline gap-2">
-						<span className={cn('min-w-0 flex-1 truncate text-sm', thread.unread ? 'font-semibold text-foreground' : 'text-foreground')}>
-							{thread.contact.name}
+						<span title={thread.contact.name} className={cn('min-w-0 flex-1 truncate text-sm', thread.unread ? 'font-semibold text-foreground' : 'text-foreground')}>
+							<bdi>{thread.contact.name}</bdi>
 							{thread.contact.org ? <span className="font-normal text-muted-foreground"> · {thread.contact.org}</span> : null}
 						</span>
 						<span className={cn('shrink-0 text-xs tabular-nums', thread.unread ? 'font-medium text-foreground' : 'text-subtle-foreground')}>
 							{thread.time}
 						</span>
 					</span>
-					<span className={cn('truncate text-[13px]', thread.unread ? 'text-foreground' : 'text-muted-foreground')}>{preview(thread)}</span>
+					<span title={preview(thread)} className={cn('truncate text-[0.8125rem]', thread.unread ? 'text-foreground' : 'text-muted-foreground')}>
+						{preview(thread)}
+					</span>
 					<AgentLine thread={thread} />
 				</span>
 				{thread.unread ? <span className="sr-only">Unread</span> : null}
@@ -168,17 +163,17 @@ function ThreadRow({ thread, selected, onSelect }: { thread: ThreadView; selecte
 function Bubble({ message, agent }: { message: Extract<InboxMessage, { kind: 'message' }>; agent: string }) {
 	const inbound = message.from === 'contact';
 	return (
-		<div className={cn('flex max-w-[85%] flex-col gap-1', inbound ? 'items-start self-start' : 'items-end self-end', enterClass)}>
+		<div className={cn('flex max-w-[85%] min-w-0 flex-col gap-1', inbound ? 'items-start self-start' : 'items-end self-end', enterClass)}>
 			{inbound ? null : (
-				<span className="flex items-center gap-1 px-1 text-[11px] text-muted-foreground">
+				<span className="flex items-center gap-1 px-1 text-[0.6875rem] text-muted-foreground">
 					{message.from === 'agent' ? <Sparkles aria-hidden="true" className="size-3" /> : null}
 					{message.from === 'agent' ? agent : 'You'}
 				</span>
 			)}
 			<div
 				className={cn(
-					'rounded-2xl px-3 py-2 text-sm leading-5 text-pretty',
-					inbound ? 'rounded-bl-md bg-card text-foreground shadow-card' : 'rounded-br-md bg-primary text-primary-foreground',
+					'max-w-full rounded-2xl px-3 py-2 text-sm leading-5 text-pretty whitespace-pre-wrap [overflow-wrap:anywhere]',
+					inbound ? 'rounded-es-md bg-card text-foreground shadow-card' : 'rounded-ee-md bg-primary text-primary-foreground',
 				)}
 			>
 				{message.text}
@@ -191,13 +186,15 @@ function Bubble({ message, agent }: { message: Extract<InboxMessage, { kind: 'me
 					>
 						<FileSpreadsheet aria-hidden="true" className="size-4 shrink-0" />
 						<span className="flex min-w-0 flex-col">
-							<span className="truncate text-[13px] font-medium">{message.attachment.name}</span>
-							<span className="text-[11px] opacity-75 tabular-nums">{message.attachment.meta}</span>
+							<span title={message.attachment.name} className="truncate text-[0.8125rem] font-medium">
+								{message.attachment.name}
+							</span>
+							<span className="text-[0.6875rem] opacity-75 tabular-nums">{message.attachment.meta}</span>
 						</span>
 					</span>
 				) : null}
 			</div>
-			<span className="px-1 text-[11px] text-subtle-foreground tabular-nums">{message.time}</span>
+			<span className="px-1 text-[0.6875rem] text-subtle-foreground tabular-nums">{message.time}</span>
 		</div>
 	);
 }
@@ -207,8 +204,8 @@ function Activity({ message, live }: { message: Extract<InboxMessage, { kind: 'a
 	const steps = message.steps ?? [];
 	return (
 		<div className={cn('flex flex-col gap-2 rounded-xl border border-dashed border-foreground/10 px-3 py-2.5', enterClass)}>
-			<p className="text-xs leading-5 text-pretty text-muted-foreground">
-				<Bot aria-hidden="true" className="mr-1.5 inline size-3.5 -translate-y-px" />
+			<p className="text-xs leading-5 text-pretty text-muted-foreground [overflow-wrap:anywhere]">
+				<Bot aria-hidden="true" className="me-1.5 inline size-3.5 -translate-y-px" />
 				<span className="font-medium text-foreground">{agentName(message.agentId)}</span> {message.text}
 			</p>
 			{steps.length > 0 ? (
@@ -245,13 +242,15 @@ function DraftCard({ thread, onSend, onEdit, onDiscard }: DraftCardProps) {
 				<SurfaceBody>
 					<header className="flex h-10 items-center gap-2 px-3">
 						<Sparkles aria-hidden="true" className="size-3.5 text-primary" />
-						<span className="min-w-0 flex-1 truncate text-[13px] font-medium text-foreground">Draft from {agentName(thread.agentId)}</span>
+						<span className="min-w-0 flex-1 truncate text-[0.8125rem] font-medium text-foreground">Draft from {agentName(thread.agentId)}</span>
 						<span className="text-xs text-muted-foreground tabular-nums">{Math.round(draft.confidence * 100)}% confident</span>
 					</header>
-					<p className="border-t border-dashed border-foreground/10 px-3 py-2.5 text-sm leading-5 text-pretty text-foreground">{draft.text}</p>
+					<p className="border-t border-dashed border-foreground/10 px-3 py-2.5 text-sm leading-5 text-pretty whitespace-pre-wrap text-foreground [overflow-wrap:anywhere]">{draft.text}</p>
 					<div className="flex flex-wrap items-center gap-2 border-t border-dashed border-foreground/10 bg-muted/60 px-3 py-2">
 						{draft.sources?.length ? (
-							<p className="min-w-0 flex-1 truncate text-xs text-muted-foreground">Checked against {draft.sources.join(', ')}</p>
+							<p title={draft.sources.join(', ')} className="min-w-0 flex-1 truncate text-xs text-muted-foreground">
+								Checked against {draft.sources.join(', ')}
+							</p>
 						) : (
 							<span className="flex-1" />
 						)}
@@ -304,19 +303,22 @@ function ThreadDetail({ thread, onBack, patch }: ThreadDetailProps) {
 	return (
 		<div className="flex min-w-0 flex-1 flex-col">
 			<header className="flex h-14 shrink-0 items-center gap-2.5 border-b border-border px-3">
-				<TooltipIconButton label="Back to inbox" side="bottom" className="-ml-1 text-foreground @3xl/view:hidden" onClick={onBack}>
-					<ArrowLeft aria-hidden="true" className="size-3.5" />
+				<TooltipIconButton label="Back to inbox" side="bottom" className="-ms-1 text-foreground @3xl/view:hidden" onClick={onBack}>
+					<ArrowLeft aria-hidden="true" className="size-3.5 rtl:-scale-x-100" />
 				</TooltipIconButton>
 				<ContactAvatar thread={thread} size="lg" />
 				<div className="flex min-w-0 flex-1 flex-col">
-					<h2 className="truncate text-sm font-medium text-foreground">{thread.contact.name}</h2>
-					<p className="truncate text-xs text-muted-foreground">
+					<h2 title={thread.contact.name} className="truncate text-sm font-medium text-foreground">
+						<bdi>{thread.contact.name}</bdi>
+					</h2>
+					<p title={`${channel.label} · ${thread.contact.handle}`} className="truncate text-xs text-muted-foreground">
 						{channel.label} · {thread.contact.handle}
 					</p>
 				</div>
-				<span className="hidden shrink-0 items-center gap-1.5 text-xs text-muted-foreground @xl/view:flex">
-					<Bot aria-hidden="true" className="size-3.5" />
-					{working ? <TextShimmer className="font-normal">{agent}</TextShimmer> : agent}
+				{/* The agent label gives way before the contact name does. */}
+				<span title={agent} className="hidden max-w-[10rem] min-w-0 items-center gap-1.5 text-xs text-muted-foreground @xl/view:flex">
+					<Bot aria-hidden="true" className="size-3.5 shrink-0" />
+					<span className="truncate">{working ? <TextShimmer className="font-normal">{agent}</TextShimmer> : agent}</span>
 				</span>
 				{thread.status === 'done' ? (
 					<span className="inline-flex h-6 shrink-0 items-center gap-1 rounded-md bg-muted px-1.5 text-xs text-muted-foreground">
@@ -342,9 +344,9 @@ function ThreadDetail({ thread, onBack, patch }: ThreadDetailProps) {
 						),
 					)}
 					{working ? (
-						<p className="flex items-center gap-2 px-1 text-[13px]">
-							<Bot aria-hidden="true" className="size-3.5 text-muted-foreground" />
-							<TextShimmer className="font-normal">
+						<p className="flex items-start gap-2 px-1 text-[0.8125rem]">
+							<Bot aria-hidden="true" className="mt-0.5 size-3.5 shrink-0 text-muted-foreground" />
+							<TextShimmer className="min-w-0 font-normal [overflow-wrap:anywhere]">
 								{agent} · {thread.activity ?? 'Working'}
 							</TextShimmer>
 						</p>
@@ -404,7 +406,7 @@ function ThreadDetail({ thread, onBack, patch }: ThreadDetailProps) {
 				>
 					<PromptInputTextarea
 						aria-label={`Reply to ${thread.contact.name}`}
-						placeholder={thread.channel === 'slack' ? `Reply in ${thread.contact.handle}…` : `Reply to ${thread.contact.name.split(' ')[0]} ${channel.verb}…`}
+						placeholder={thread.channel === 'slack' ? `Reply in ${thread.contact.handle}…` : `Reply to ${thread.contact.name.trim().split(/\s+/)[0] || thread.contact.handle} ${channel.verb}…`}
 						className="min-h-9 px-1.5 py-1"
 					/>
 					<PromptInputActions className="justify-end px-0">
@@ -462,7 +464,7 @@ function InboxView() {
 				<section
 					aria-label="Conversations"
 					className={cn(
-						'min-h-0 w-full flex-col border-border @3xl/view:flex @3xl/view:w-[340px] @3xl/view:shrink-0 @3xl/view:border-r',
+						'min-h-0 w-full flex-col border-border @3xl/view:flex @3xl/view:w-[340px] @3xl/view:shrink-0 @3xl/view:border-e',
 						showThread ? 'hidden' : 'flex',
 					)}
 				>

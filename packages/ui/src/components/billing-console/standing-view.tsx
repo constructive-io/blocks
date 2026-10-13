@@ -44,7 +44,7 @@ function HoldDialog({
 			<DialogPopup className="max-w-md">
 				<DialogHeader className="gap-1.5 pb-3">
 					<DialogTitle className="text-base font-medium">Hold {database?.name}?</DialogTitle>
-					<DialogDescription className="text-[13px]">
+					<DialogDescription className="text-[0.8125rem]">
 						New connections are refused and open sessions close at their next statement. {SUSPENSION_REASON.admin.description}
 					</DialogDescription>
 				</DialogHeader>
@@ -106,7 +106,7 @@ export function ConsoleStandingView() {
 
 	return (
 		<ViewFrame icon={ShieldAlert} title="Standing">
-			<p className="max-w-2xl text-pretty text-[13px] text-muted-foreground">
+			<p className="max-w-2xl text-pretty text-[0.8125rem] text-muted-foreground">
 				Billing suspends a customer’s databases only after the grace period and the free-plan fallback leave nothing usable. Paying, changing plan, or a
 				credit grant restores them automatically. Admin holds outrank billing and are never lifted automatically.
 			</p>

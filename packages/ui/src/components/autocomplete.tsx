@@ -119,7 +119,7 @@ function AutocompleteItem({
   return (
     <AutocompletePrimitive.Item
       className={cn(
-        "relative flex min-h-8 cursor-default select-none items-center rounded-sm px-2 py-1 text-base outline-none pointer-coarse:min-h-11 sm:pointer-coarse:min-h-11 data-disabled:pointer-events-none data-highlighted:text-accent-foreground data-disabled:opacity-64 sm:min-h-7 sm:text-sm",
+        "relative flex min-h-8 cursor-default select-none items-center rounded-sm px-2 py-1 text-base outline-none [overflow-wrap:anywhere] pointer-coarse:min-h-11 sm:pointer-coarse:min-h-11 data-disabled:pointer-events-none data-highlighted:text-accent-foreground data-disabled:opacity-64 sm:min-h-7 sm:text-sm",
         className,
       )}
       data-slot="autocomplete-item"

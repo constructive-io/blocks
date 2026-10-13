@@ -13,9 +13,13 @@ function Slider({
 	value,
 	min = 0,
 	max = 100,
+	disabled,
 	'aria-label': ariaLabel,
 	...props
 }: SliderProps) {
+	// Base UI hides the thumb and indicator when `max <= min` (a range computed from a single data point, for
+	// example). Give the track a unit of range and disable it so the control stays visible instead of vanishing.
+	const degenerate = !(max > min);
 	const thumbCount = Array.isArray(value)
 		? value.length
 		: Array.isArray(defaultValue)
@@ -37,7 +41,8 @@ function Slider({
 			defaultValue={defaultValue}
 			value={value}
 			min={min}
-			max={max}
+			max={degenerate ? min + 1 : max}
+			disabled={disabled || degenerate}
 			thumbAlignment="edge"
 			{...props}
 		>

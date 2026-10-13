@@ -20,7 +20,7 @@ export const alertDocs = definePrimitiveDocs({
   usage: {
     demo: 'BasicAlertDemo',
     description:
-      'Compose AlertTitle and AlertDescription inside Alert. Add a direct-child icon when it helps identify the message without replacing its text.',
+      'Compose AlertTitle and AlertDescription inside Alert. Add a direct-child icon when it helps identify the message without replacing its text, and put a button or link under the text with AlertAction.',
   },
   examples: [
     {
@@ -57,6 +57,11 @@ export const alertDocs = definePrimitiveDocs({
     {
       name: 'AlertDescription',
       description: 'Supporting message container with variant-aware text treatment.',
+      upstream: reactDiv,
+    },
+    {
+      name: 'AlertAction',
+      description: 'Row for a button or link under the text, aligned with the title rather than the icon.',
       upstream: reactDiv,
     },
     {

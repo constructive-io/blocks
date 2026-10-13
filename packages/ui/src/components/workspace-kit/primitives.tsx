@@ -1,8 +1,11 @@
 'use client';
 
+import { useDirection } from '@base-ui/react/direction-provider';
 import { type LucideIcon, Menu, Search } from 'lucide-react';
 import * as React from 'react';
 
+import { formatCount } from '../../lib/intl';
+import { useScrollFade } from '../../lib/use-scroll-fade';
 import { cn } from '../../lib/utils';
 import { Tooltip, TooltipContent, TooltipTrigger } from '../tooltip';
 import { useWorkspaceShell } from './shell';
@@ -147,7 +150,7 @@ export function SearchField({ label, trailing, inputRef, className, ...props }: 
 			<input
 				ref={inputRef}
 				type="search"
-				className="min-w-0 flex-1 bg-transparent text-[13px] text-foreground outline-none placeholder:text-subtle-foreground pointer-coarse:text-base [&::-webkit-search-cancel-button]:hidden"
+				className="min-w-0 flex-1 bg-transparent text-[0.8125rem] text-foreground outline-none placeholder:text-subtle-foreground pointer-coarse:text-base [&::-webkit-search-cancel-button]:hidden"
 				{...props}
 			/>
 			{trailing}
@@ -166,22 +169,28 @@ type ViewHeaderProps = {
 export function NavMenuButton() {
 	const { openNav } = useWorkspaceShell();
 	return (
-		<TooltipIconButton label="Open navigation" side="bottom" className="-ml-1 text-foreground @3xl/ws:hidden" onClick={openNav}>
+		<TooltipIconButton label="Open navigation" side="bottom" className="-ms-1 text-foreground @3xl/ws:hidden" onClick={openNav}>
 			<Menu aria-hidden="true" className="size-4" />
 		</TooltipIconButton>
 	);
 }
 
-/** 48px view header: icon and title on the left, actions on the right. */
+/**
+ * View header at least 48px tall: icon and title on the left, actions on the
+ * right. The title keeps a floor of 8rem, so on a narrow view the actions wrap
+ * onto a second row instead of squeezing it to an ellipsis.
+ */
 export function ViewHeader({ icon: Icon, title, children, divider = true }: ViewHeaderProps) {
 	return (
-		<header className={cn('flex h-12 shrink-0 items-center gap-2 px-3', divider && 'border-b border-border')}>
+		<header className={cn('flex min-h-12 shrink-0 flex-wrap content-center items-center gap-x-2 gap-y-1 px-3 py-1.5', divider && 'border-b border-border')}>
 			<NavMenuButton />
-			<div className="flex min-w-0 flex-1 items-center gap-1.5">
+			<div className="flex min-w-0 flex-1 basis-32 items-center gap-1.5">
 				<Icon aria-hidden="true" className="hidden size-3.5 shrink-0 text-muted-foreground @3xl/ws:block" />
-				<h1 className="truncate text-sm font-medium text-foreground">{title}</h1>
+				<h1 title={typeof title === 'string' ? title : undefined} className="truncate text-sm font-medium text-foreground">
+					{title}
+				</h1>
 			</div>
-			{children ? <div className="flex shrink-0 items-center gap-2">{children}</div> : null}
+			{children ? <div className="ms-auto flex shrink-0 items-center gap-2">{children}</div> : null}
 		</header>
 	);
 }
@@ -236,12 +245,16 @@ type FilterGroupProps<T extends string> = {
 	className?: string;
 	/** Styles the scroll wrapper, e.g. to stop it shrinking in a toolbar. */
 	rootClassName?: string;
+	/** Locale for the counts. Defaults to en-US. */
+	locale?: string;
 };
 
 /** Single-choice filter pills with optional counts; scrolls sideways when narrow. */
-export function FilterGroup<T extends string>({ label, value, options, onChange, compact = false, className, rootClassName }: FilterGroupProps<T>) {
+export function FilterGroup<T extends string>({ label, value, options, onChange, compact = false, className, rootClassName, locale }: FilterGroupProps<T>) {
+	const rtl = useDirection() === 'rtl';
+	const { ref, style } = useScrollFade<HTMLDivElement>();
 	return (
-		<div className={cn(scrollRowClass, 'min-w-0', rootClassName)}>
+		<div ref={ref} style={style} className={cn(scrollRowClass, 'min-w-0', rootClassName)}>
 			<div role="radiogroup" aria-label={label} className={cn('flex w-max gap-1', className)}>
 				{options.map((option, index) => {
 					const active = value === option.value;
@@ -255,8 +268,8 @@ export function FilterGroup<T extends string>({ label, value, options, onChange,
 							onKeyDown={(event) => {
 								const nextIndex = event.key === 'Home' ? 0
 									: event.key === 'End' ? options.length - 1
-									: event.key === 'ArrowRight' || event.key === 'ArrowDown' ? (index + 1) % options.length
-									: event.key === 'ArrowLeft' || event.key === 'ArrowUp' ? (index - 1 + options.length) % options.length
+									: event.key === (rtl ? 'ArrowLeft' : 'ArrowRight') || event.key === 'ArrowDown' ? (index + 1) % options.length
+									: event.key === (rtl ? 'ArrowRight' : 'ArrowLeft') || event.key === 'ArrowUp' ? (index - 1 + options.length) % options.length
 									: undefined;
 								if (nextIndex === undefined) return;
 								event.preventDefault();
@@ -265,7 +278,7 @@ export function FilterGroup<T extends string>({ label, value, options, onChange,
 							}}
 							onClick={() => onChange(option.value)}
 							className={cn(
-								'inline-flex h-7 shrink-0 cursor-pointer items-center gap-1.5 rounded-md px-2 text-[13px] pointer-coarse:h-9',
+								'inline-flex h-7 shrink-0 cursor-pointer items-center gap-1.5 rounded-md px-2 text-[0.8125rem] pointer-coarse:h-9',
 								pressClass,
 								focusRingClass,
 								active ? 'bg-card font-medium text-foreground shadow-card' : 'text-muted-foreground hover:text-foreground',
@@ -274,7 +287,7 @@ export function FilterGroup<T extends string>({ label, value, options, onChange,
 							{option.icon ? <option.icon aria-hidden="true" className="size-3.5 shrink-0" /> : null}
 							<span className={compact && option.icon ? 'sr-only @md/view:not-sr-only' : undefined}>{option.label}</span>
 							{option.count === undefined ? null : (
-								<span className={cn('text-xs tabular-nums', active ? 'text-muted-foreground' : 'text-subtle-foreground')}>{option.count}</span>
+								<span className={cn('text-xs tabular-nums', active ? 'text-muted-foreground' : 'text-subtle-foreground')}>{formatCount(option.count, locale)}</span>
 							)}
 						</button>
 					);
@@ -313,7 +326,7 @@ export function Segmented<T extends string>({ label, value, options, onChange, c
 						aria-label={Icon ? option.label : undefined}
 						onClick={() => onChange(option.value)}
 						className={cn(
-							'grid h-7 flex-1 cursor-pointer place-items-center whitespace-nowrap rounded-[4px] px-2 text-[13px]',
+							'grid h-7 flex-1 cursor-pointer place-items-center whitespace-nowrap rounded-[4px] px-2 text-[0.8125rem]',
 							pressClass,
 							focusRingClass,
 							active ? 'bg-card font-medium text-foreground shadow-card' : 'text-muted-foreground hover:text-foreground',

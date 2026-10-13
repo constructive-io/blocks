@@ -10,6 +10,8 @@ type TextareaProps = React.ComponentProps<'textarea'> & {
 };
 
 function Textarea({ className, size = 'default', unstyled = false, ...props }: TextareaProps) {
+	const isFloating = props.placeholder === ' ';
+
 	return (
 		<span
 			className={
@@ -40,9 +42,11 @@ function Textarea({ className, size = 'default', unstyled = false, ...props }: T
 		>
 			<textarea
 				className={cn(
-					'field-sizing-content min-h-17.5 w-full rounded-[inherit] bg-transparent px-[calc(--spacing(3)-1px)] py-[calc(--spacing(1.5)-1px)] outline-none placeholder:text-subtle-foreground max-sm:min-h-20.5',
+					'field-sizing-content max-h-[40vh] min-h-17.5 w-full rounded-[inherit] bg-transparent px-[calc(--spacing(3)-1px)] py-[calc(--spacing(1.5)-1px)] outline-none placeholder:text-subtle-foreground max-sm:min-h-20.5',
 					size === 'sm' && 'min-h-16.5 px-[calc(--spacing(2.5)-1px)] py-[calc(--spacing(1)-1px)] max-sm:min-h-19.5',
 					size === 'lg' && 'min-h-18.5 py-[calc(--spacing(2)-1px)] max-sm:min-h-21.5',
+					// A floating label (FormControl) rests on the first line, so leave it a row of headroom.
+					isFloating && 'pt-[calc(--spacing(5)-1px)]',
 				)}
 				data-slot="textarea"
 				{...props}

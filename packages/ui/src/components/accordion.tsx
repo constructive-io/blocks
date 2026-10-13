@@ -38,7 +38,7 @@ function AccordionTrigger({ className, children, ...props }: AccordionTriggerPro
 			<AccordionPrimitive.Trigger
 				data-slot="accordion-trigger"
 				className={cn(
-					'group/accordion-trigger flex w-full flex-1 cursor-pointer items-center justify-between gap-4 py-3 text-left text-sm font-medium outline-none',
+					'group/accordion-trigger flex w-full flex-1 cursor-pointer items-center justify-between gap-4 py-3 text-start text-sm font-medium outline-none [overflow-wrap:anywhere]',
 					'hover:text-foreground',
 					'focus-visible:ring-[3px] focus-visible:ring-ring/50',
 					'disabled:pointer-events-none disabled:opacity-64',
@@ -71,7 +71,7 @@ function AccordionContent({ className, children, ...props }: AccordionContentPro
 			)}
 			{...props}
 		>
-			<div data-slot="accordion-content-inner" className="pb-3 text-[13px] leading-5 text-muted-foreground">
+			<div data-slot="accordion-content-inner" className="pb-3 text-[0.8125rem] leading-5 text-muted-foreground [overflow-wrap:anywhere]">
 				{children}
 			</div>
 		</AccordionPrimitive.Panel>

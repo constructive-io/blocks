@@ -132,7 +132,7 @@ function DailyChart({ days }: { days: { at: string; views: number; downloads: nu
 			}
 		>
 			<div className="flex gap-2">
-				<div aria-hidden="true" className="flex h-40 w-6 shrink-0 flex-col justify-between text-right text-[10px] text-subtle-foreground tabular-nums">
+				<div aria-hidden="true" className="flex h-40 w-6 shrink-0 flex-col justify-between text-end text-[0.625rem] text-subtle-foreground tabular-nums">
 					{ticks.map((tick) => (
 						<span key={tick} className="-translate-y-1/2 leading-none first:translate-y-0 last:translate-y-0">
 							{Math.round(tick)}
@@ -171,7 +171,7 @@ function DailyChart({ days }: { days: { at: string; views: number; downloads: nu
 							})}
 						</ul>
 					</div>
-					<div aria-hidden="true" className="mt-1.5 flex gap-1 text-[10px] text-subtle-foreground tabular-nums">
+					<div aria-hidden="true" className="mt-1.5 flex gap-1 text-[0.625rem] text-subtle-foreground tabular-nums">
 						{days.map((day, index) => (
 							<span key={day.at} className="min-w-0 flex-1 truncate text-center">
 								{index === days.length - 1 ? 'Today' : index % 3 === 1 ? format.date(day.at) : ''}
@@ -190,23 +190,23 @@ function MostRead({ rows }: { rows: { document: DataRoomDocument; stats: Documen
 	const { openDocument, format } = useDataRooms();
 	return (
 		<section aria-labelledby="insights-documents" className="flex min-w-0 flex-col gap-3">
-			<h2 id="insights-documents" className="text-[15px] font-medium tracking-tight text-foreground">
+			<h2 id="insights-documents" className="text-[0.9375rem] font-medium tracking-tight text-foreground">
 				Most read documents
 			</h2>
 			<TableSurface minWidth="30rem">
 				<thead className={tableHeadClass}>
 					<tr>
 						<th scope="col">Document</th>
-						<th scope="col" className="text-right">
+						<th scope="col" className="text-end">
 							Views
 						</th>
-						<th scope="col" className="text-right">
+						<th scope="col" className="text-end">
 							Readers
 						</th>
-						<th scope="col" className="text-right">
+						<th scope="col" className="text-end">
 							Downloads
 						</th>
-						<th scope="col" className="text-right">
+						<th scope="col" className="text-end">
 							Last viewed
 						</th>
 					</tr>
@@ -219,16 +219,16 @@ function MostRead({ rows }: { rows: { document: DataRoomDocument; stats: Documen
 									<button
 										type="button"
 										onClick={() => openDocument(doc.id)}
-										className={cn('-mx-1 flex max-w-full cursor-pointer items-center gap-2 rounded-md px-1 text-left hover:text-link', focusRingClass)}
+										className={cn('-mx-1 flex max-w-full cursor-pointer items-center gap-2 rounded-md px-1 text-start hover:text-link', focusRingClass)}
 									>
 										<DocumentGlyph kind={doc.kind} size="sm" />
-										<span className="truncate text-foreground">{doc.name}</span>
+										<span title={doc.name} className="truncate text-foreground">{doc.name}</span>
 									</button>
 								</td>
-								<td className="text-right text-foreground tabular-nums">{row.views}</td>
-								<td className="text-right text-muted-foreground tabular-nums">{row.readers.size}</td>
-								<td className="text-right text-muted-foreground tabular-nums">{row.downloads}</td>
-								<td className="text-right whitespace-nowrap text-muted-foreground tabular-nums">{format.relative(row.last)}</td>
+								<td className="text-end text-foreground tabular-nums">{row.views}</td>
+								<td className="text-end text-muted-foreground tabular-nums">{row.readers.size}</td>
+								<td className="text-end text-muted-foreground tabular-nums">{row.downloads}</td>
+								<td className="text-end whitespace-nowrap text-muted-foreground tabular-nums">{format.relative(row.last)}</td>
 							</tr>
 						);
 					})}
@@ -260,20 +260,20 @@ function Companies({ room, rows, totalViews }: { room: Room; rows: CompanyRow[];
 
 	return (
 		<section aria-labelledby="insights-companies" className="flex min-w-0 flex-col gap-3">
-			<h2 id="insights-companies" className="text-[15px] font-medium tracking-tight text-foreground">
+			<h2 id="insights-companies" className="text-[0.9375rem] font-medium tracking-tight text-foreground">
 				Engagement by company
 			</h2>
 			<TableSurface minWidth="30rem">
 				<thead className={tableHeadClass}>
 					<tr>
 						<th scope="col">Company</th>
-						<th scope="col" className="text-right">
+						<th scope="col" className="text-end">
 							Views
 						</th>
-						<th scope="col" className="text-right">
+						<th scope="col" className="text-end">
 							Reading
 						</th>
-						<th scope="col" className="text-right">
+						<th scope="col" className="text-end">
 							Last seen
 						</th>
 					</tr>
@@ -292,15 +292,15 @@ function Companies({ room, rows, totalViews }: { room: Room; rows: CompanyRow[];
 											aria-expanded={expanded}
 											onClick={() => toggle(row.name)}
 											className={cn(
-												'-mx-1 grid w-full cursor-pointer grid-cols-[0.875rem_minmax(0,1fr)] items-center gap-x-2 gap-y-1 rounded-md px-1 text-left',
+												'-mx-1 grid w-full cursor-pointer grid-cols-[0.875rem_minmax(0,1fr)] items-center gap-x-2 gap-y-1 rounded-md px-1 text-start',
 												focusRingClass,
 											)}
 										>
 											<ChevronRight
 												aria-hidden="true"
-												className={cn('size-3.5 text-muted-foreground transition-transform duration-(--duration-fast) motion-reduce:transition-none', expanded && 'rotate-90')}
+												className={cn('size-3.5 text-muted-foreground transition-transform duration-(--duration-fast) motion-reduce:transition-none', expanded ? 'rotate-90' : 'rtl:-scale-x-100')}
 											/>
-											<span className="truncate text-foreground">{row.name}</span>
+											<span title={row.name} className="truncate text-foreground">{row.name}</span>
 											<span className="col-start-2 flex min-w-0 items-center gap-2">
 												<span aria-hidden="true" className="h-1 w-16 shrink-0 overflow-hidden rounded-full bg-muted">
 													<span className="block h-full rounded-full bg-primary/70" style={{ width: `${Math.max(2, share * 100)}%` }} />
@@ -311,9 +311,9 @@ function Companies({ room, rows, totalViews }: { room: Room; rows: CompanyRow[];
 											</span>
 										</button>
 									</td>
-									<td className="text-right align-top whitespace-nowrap text-foreground tabular-nums">{row.views}</td>
-									<td className="text-right align-top whitespace-nowrap text-muted-foreground tabular-nums">{formatDuration(row.seconds)}</td>
-									<td className="text-right align-top whitespace-nowrap text-muted-foreground tabular-nums">{format.relative(row.last)}</td>
+									<td className="text-end align-top whitespace-nowrap text-foreground tabular-nums">{row.views}</td>
+									<td className="text-end align-top whitespace-nowrap text-muted-foreground tabular-nums">{formatDuration(row.seconds)}</td>
+									<td className="text-end align-top whitespace-nowrap text-muted-foreground tabular-nums">{format.relative(row.last)}</td>
 								</tr>
 								{expanded
 									? row.people.map((entry) => {
@@ -325,15 +325,15 @@ function Companies({ room, rows, totalViews }: { room: Room; rows: CompanyRow[];
 														<button
 															type="button"
 															onClick={() => openTrace(entry.personId, room.id)}
-															className={cn('-mx-1 ml-[calc(0.875rem+0.25rem)] flex max-w-full cursor-pointer items-center gap-2 rounded-md px-1 text-left hover:text-link', focusRingClass)}
+															className={cn('-mx-1 ms-[calc(0.875rem+0.25rem)] flex max-w-full cursor-pointer items-center gap-2 rounded-md px-1 text-start hover:text-link', focusRingClass)}
 														>
 															<PersonAvatar person={who} size="xs" />
-															<span className="truncate">{who?.name ?? 'Someone'}</span>
+															<span title={who?.name ?? 'Someone'} className="truncate">{who?.name ?? 'Someone'}</span>
 														</button>
 													</td>
-													<td className="text-right whitespace-nowrap tabular-nums">{entry.views}</td>
-													<td className="text-right whitespace-nowrap text-muted-foreground tabular-nums">{formatDuration(entry.seconds)}</td>
-													<td className="text-right whitespace-nowrap text-muted-foreground tabular-nums">{format.relative(entry.last)}</td>
+													<td className="text-end whitespace-nowrap tabular-nums">{entry.views}</td>
+													<td className="text-end whitespace-nowrap text-muted-foreground tabular-nums">{formatDuration(entry.seconds)}</td>
+													<td className="text-end whitespace-nowrap text-muted-foreground tabular-nums">{format.relative(entry.last)}</td>
 												</tr>
 											);
 										})
@@ -433,7 +433,7 @@ export function InsightsTab({ room }: { room: Room }) {
 							{quiet.map(({ person: who, last }, index) => (
 								<li key={who.id} className={cn('flex items-center gap-3 py-2', index > 0 && 'border-t border-dashed border-foreground/10')}>
 									<PersonAvatar person={who} size="sm" />
-									<span className="min-w-0 flex-1 truncate text-[13px] text-foreground">
+									<span className="min-w-0 flex-1 truncate text-[0.8125rem] text-foreground">
 										{who.name}
 										{who.company ? <span className="text-muted-foreground"> · {who.company}</span> : null}
 									</span>
@@ -454,7 +454,7 @@ export function InsightsTab({ room }: { room: Room }) {
 					</Panel>
 				) : null}
 
-				<div className={cn('grid gap-6 @min-[90rem]/view:grid-cols-2', enterClass)} style={staggerStyle(3)}>
+				<div className={cn('grid grid-cols-1 gap-6 @min-[90rem]/view:grid-cols-2', enterClass)} style={staggerStyle(3)}>
 					<MostRead rows={documents} />
 					<Companies room={room} rows={companies} totalViews={totalViews} />
 				</div>

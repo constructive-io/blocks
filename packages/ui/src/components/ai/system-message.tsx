@@ -24,7 +24,7 @@ function SystemMessage({
 		<Alert
 			data-slot="system-message"
 			variant={variant}
-			className={cn('text-left', className)}
+			className={cn('text-start', className)}
 			{...props}
 		>
 			{title ? <AlertTitle>{title}</AlertTitle> : null}

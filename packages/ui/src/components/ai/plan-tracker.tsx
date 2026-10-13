@@ -55,7 +55,7 @@ function PlanTracker({
 				>
 					<CollapsibleTrigger
 						className={cn(
-							'group flex w-full items-center gap-1.5 px-3 py-2 text-left text-[13px]',
+							'group flex w-full items-center gap-1.5 px-3 py-2 text-start text-[0.8125rem]',
 							'text-muted-foreground hover:text-foreground',
 						)}
 					>
@@ -64,7 +64,7 @@ function PlanTracker({
 							<span className="min-w-0 flex-1 truncate font-medium tabular-nums">{`${total}/${total} done`}</span>
 						) : focusStep ? (
 							<span className="min-w-0 flex-1 truncate font-medium">
-								<span className="mr-1.5 font-mono text-[12px] font-normal tabular-nums text-muted-foreground/60">
+								<span className="me-1.5 font-mono text-[0.75rem] font-normal tabular-nums text-muted-foreground/60">
 									{focusIndex + 1}/{total}
 								</span>
 								{focusStep.label}
@@ -92,7 +92,7 @@ function PlanTracker({
 
 function PlanRow({ step }: { step: PlanStep }) {
 	return (
-		<li className="flex items-center gap-2 rounded-md px-1.5 py-1 text-[13px]">
+		<li className="flex items-center gap-2 rounded-md px-1.5 py-1 text-[0.8125rem]">
 			<StepIcon status={step.status} />
 			<span
 				className={cn(

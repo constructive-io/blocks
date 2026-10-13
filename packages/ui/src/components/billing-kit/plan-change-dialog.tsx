@@ -8,8 +8,8 @@ import { Button } from '../button';
 import { Dialog, DialogDescription, DialogFooter, DialogHeader, DialogPopup, DialogTitle } from '../dialog';
 import { focusRingClass } from '../workspace-kit/primitives';
 import { useBillingFormat } from './context';
-import { isUnlimited } from './format';
-import { type EntitlementRow, priceFor } from './plan';
+import { INTERVAL_PHRASE, isUnlimited, unitFor } from './format';
+import { type EntitlementRow, isPlanAvailable, priceFor, resolvePrice } from './plan';
 import { hasFeature, type BillingProviderDescriptor } from './providers';
 import { dashedRule } from './surface';
 import type { Balance, LimitCounter, Plan, PlanPrice, Subscription } from './types';
@@ -76,7 +76,7 @@ function Value({ value, row }: { value: number | undefined; row: EntitlementRow 
 	if (value === undefined || value === 0) return <span className="text-subtle-foreground">{row.kind === 'cap' ? 'Off' : 'None'}</span>;
 	if (row.kind === 'cap' && value === 1) return <>On</>;
 	if (isUnlimited(value)) return <>Unlimited</>;
-	return <>{f.quantity(value, true)}</>;
+	return <>{f.limit(value)}</>;
 }
 
 /**
@@ -105,7 +105,7 @@ export function PlanChangeDialog({
 	const timingId = React.useId();
 
 	const diffs = React.useMemo(() => (targetPlan ? diffPlans(currentPlan, targetPlan, rows) : []), [currentPlan, rows, targetPlan]);
-	const price = targetPlan ? (priceFor(targetPlan, interval) ?? priceFor(targetPlan, 'month')) : undefined;
+	const price = targetPlan ? resolvePrice(targetPlan, interval) : undefined;
 	const downgrade = isDowngrade(currentPlan, targetPlan, diffs);
 	const canSchedule = Boolean(subscription) && hasFeature(provider, 'scheduledChanges');
 	const paid = Boolean(price && price.amount.amountMinor > 0);
@@ -128,7 +128,7 @@ export function PlanChangeDialog({
 		const limitConflicts = limits.flatMap((limit) => {
 			const max = targetPlan.limits[limit.name];
 			return max !== undefined && !isUnlimited(max) && limit.used > max
-				? [`${f.quantity(limit.used)} ${limit.unit} in use; ${targetPlan.displayName} allows ${f.quantity(max)}.`]
+				? [`${f.quantity(limit.used)} ${unitFor(limit.used, limit.unit, limit.unitSingular)} in use; ${targetPlan.displayName} allows ${f.quantity(max)}.`]
 				: [];
 		});
 		const meterRows = new Map(rows.filter((row) => row.kind === 'meter').map((row) => [row.key, row]));
@@ -145,6 +145,8 @@ export function PlanChangeDialog({
 			: null;
 
 	if (!targetPlan) return null;
+	// A plan whose prices were all retired cannot be started or switched to; it is not a free plan.
+	if (!isPlanAvailable(targetPlan)) return <UnavailablePlanDialog open={open} onOpenChange={onOpenChange} plan={targetPlan} switching={Boolean(currentPlan)} />;
 
 	const confirm = async () => {
 		setBusy(true);
@@ -168,15 +170,17 @@ export function PlanChangeDialog({
 					<DialogTitle className="text-base font-medium">
 						{currentPlan ? `${downgrade ? 'Switch' : 'Upgrade'} to ${targetPlan.displayName}` : `Start ${targetPlan.displayName}`}
 					</DialogTitle>
-					<DialogDescription className="text-[13px]">
+					<DialogDescription className="text-[0.8125rem]">
 						{price && paid
-							? `${f.money(price.amount)} ${interval === 'year' && price.interval === 'year' ? 'per year' : 'per month'}${priceFor(targetPlan, price.interval, 'metered') ? ', plus usage past the allowance' : ''}.`
-							: 'No charge.'}
+							? `${f.money(price.amount)} ${INTERVAL_PHRASE[price.interval]}${priceFor(targetPlan, price.interval, 'metered') ? ', plus usage past the allowance' : ''}.`
+							: targetPlan.contactSales
+								? 'Custom pricing.'
+								: 'No charge.'}
 					</DialogDescription>
 				</DialogHeader>
 				<div className="flex flex-col gap-4 px-6 pb-5">
 					{diffs.length > 0 ? (
-						<ul aria-label="What changes" className="flex flex-col rounded-lg border border-border px-3 py-1 text-[13px]">
+						<ul aria-label="What changes" className="flex flex-col rounded-lg border border-border px-3 py-1 text-[0.8125rem]">
 							{diffs.map((diff, index) => (
 								<li key={`${diff.row.kind}:${diff.row.key}`} className={cn('flex items-center gap-2 py-1.5', index > 0 && cn('border-t', dashedRule))}>
 									{diff.direction === 'up' ? (
@@ -184,12 +188,14 @@ export function PlanChangeDialog({
 									) : (
 										<ArrowDownRight aria-hidden="true" className="size-3.5 shrink-0 text-warning" />
 									)}
-									<span className="min-w-0 flex-1 truncate text-muted-foreground">{diff.row.label}</span>
-									<span className="flex items-center gap-1.5 text-foreground tabular-nums">
+									<span title={diff.row.label} className="min-w-0 flex-1 truncate text-muted-foreground">
+										{diff.row.label}
+									</span>
+									<span className="flex shrink-0 items-center gap-1.5 text-foreground tabular-nums">
 										<span className="text-muted-foreground">
 											<Value value={diff.from} row={diff.row} />
 										</span>
-										<ArrowRight aria-hidden="true" className="size-3 text-subtle-foreground" />
+										<ArrowRight aria-hidden="true" className="size-3 text-subtle-foreground rtl:-scale-x-100" />
 										<span className="font-medium">
 											<Value value={diff.to} row={diff.row} />
 										</span>
@@ -201,7 +207,7 @@ export function PlanChangeDialog({
 					) : null}
 
 					{conflicts.limits.length > 0 || meterNote ? (
-						<div role="note" className="flex gap-2 rounded-lg bg-warning/10 px-3 py-2.5 text-[13px] text-foreground">
+						<div role="note" className="flex gap-2 rounded-lg bg-warning/10 px-3 py-2.5 text-[0.8125rem] text-foreground">
 							<TriangleAlert aria-hidden="true" className="mt-0.5 size-3.5 shrink-0 text-warning" />
 							<div className="flex flex-col gap-1.5 text-pretty">
 								{conflicts.limits.length > 0 ? (
@@ -233,7 +239,7 @@ export function PlanChangeDialog({
 								<label
 									key={option.value}
 									className={cn(
-										'flex cursor-pointer items-start gap-2.5 rounded-lg border px-3 py-2.5 text-[13px] has-[:checked]:border-primary/40 has-[:checked]:bg-primary/[0.05]',
+										'flex cursor-pointer items-start gap-2.5 rounded-lg border px-3 py-2.5 text-[0.8125rem] has-[:checked]:border-primary/40 has-[:checked]:bg-primary/[0.05]',
 										'has-[:focus-visible]:ring-[3px] has-[:focus-visible]:ring-ring/50',
 									)}
 								>
@@ -255,14 +261,14 @@ export function PlanChangeDialog({
 					) : null}
 
 					{checkout ? (
-						<p className="flex items-start gap-2 text-[13px] text-muted-foreground">
+						<p className="flex items-start gap-2 text-[0.8125rem] text-muted-foreground">
 							<ExternalLink aria-hidden="true" className="mt-0.5 size-3.5 shrink-0" />
 							You’ll finish payment on {provider?.name ?? 'the provider'}’s secure checkout. Nothing is charged until you confirm there.
 						</p>
 					) : null}
 
 					{error ? (
-						<p role="alert" className="text-[13px] text-destructive">
+						<p role="alert" className="text-[0.8125rem] text-destructive">
 							{error}
 						</p>
 					) : null}
@@ -273,6 +279,34 @@ export function PlanChangeDialog({
 					</Button>
 					<Button size="sm" disabled={busy} aria-busy={busy || undefined} onClick={confirm}>
 						{busy ? 'Working…' : checkout ? 'Continue to checkout' : timing === 'period_end' ? 'Schedule change' : downgrade ? 'Switch now' : 'Upgrade now'}
+					</Button>
+				</DialogFooter>
+			</DialogPopup>
+		</Dialog>
+	);
+}
+
+/** What the dialog shows for a plan whose every price was retired: why it can't be chosen, and no way to confirm. */
+function UnavailablePlanDialog({ open, onOpenChange, plan, switching }: { open: boolean; onOpenChange: (open: boolean) => void; plan: Plan; switching: boolean }) {
+	return (
+		<Dialog open={open} onOpenChange={onOpenChange}>
+			<DialogPopup className="max-w-md">
+				<DialogHeader className="gap-1.5 pb-3">
+					<DialogTitle className="text-base font-medium">{switching ? `Switch to ${plan.displayName}` : `Start ${plan.displayName}`}</DialogTitle>
+					<DialogDescription className="text-[0.8125rem]">No longer offered.</DialogDescription>
+				</DialogHeader>
+				<div className="px-6 pb-5">
+					<div role="note" className="flex gap-2 rounded-lg bg-warning/10 px-3 py-2.5 text-[0.8125rem] text-foreground">
+						<TriangleAlert aria-hidden="true" className="mt-0.5 size-3.5 shrink-0 text-warning" />
+						<p className="text-pretty [overflow-wrap:anywhere]">{plan.displayName} has no active price, so it can’t be started or switched to. Choose another plan.</p>
+					</div>
+				</div>
+				<DialogFooter>
+					<Button variant="outline" size="sm" onClick={() => onOpenChange(false)}>
+						Cancel
+					</Button>
+					<Button size="sm" disabled>
+						Unavailable
 					</Button>
 				</DialogFooter>
 			</DialogPopup>

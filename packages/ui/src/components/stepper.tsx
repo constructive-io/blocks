@@ -89,7 +89,14 @@ function Stepper({
 			<div
 				data-slot="stepper"
 				className={cn(
-					`group/stepper inline-flex data-[orientation=horizontal]:w-full data-[orientation=horizontal]:flex-row
+					// Never wider than the container. Labels truncate before connectors shrink, and
+					// horizontal scrolls only as a last resort instead of widening the page.
+					// A scroll container clips on both axes, and a trigger reaches 4px past the row (`-my-1 py-1`) with a 3px
+					// focus ring around that. The 0.5rem of vertical padding keeps both inside the clip and the negative
+					// margin takes it back, so the stepper covers the height it always did. It adds nothing sideways: a box
+					// wider than its container would widen the page when the stepper runs edge to edge.
+					`group/stepper inline-flex max-w-full min-w-0 data-[orientation=horizontal]:-my-2 data-[orientation=horizontal]:w-full
+					data-[orientation=horizontal]:flex-row data-[orientation=horizontal]:overflow-x-auto data-[orientation=horizontal]:py-2
 					data-[orientation=vertical]:flex-col`,
 					className,
 				)}
@@ -128,8 +135,8 @@ function StepperItem({
 			<div
 				data-slot="stepper-item"
 				className={cn(
-					`group/step flex items-center group-data-[orientation=horizontal]/stepper:flex-row
-					group-data-[orientation=vertical]/stepper:flex-col`,
+					`group/step flex min-w-0 items-center group-data-[orientation=horizontal]/stepper:flex-row
+					group-data-[orientation=vertical]/stepper:flex-col group-data-[orientation=vertical]/stepper:items-start`,
 					className,
 				)}
 				data-state={state}
@@ -154,9 +161,9 @@ function StepperTrigger({ asChild = false, static: isStatic, className, children
 	const { step, isDisabled } = useStepItem();
 
 	const triggerClassName = cn(
-		`focus-visible:ring-ring/50 -my-1 inline-flex items-center gap-3 rounded-full py-1 transition-transform
+		`focus-visible:ring-ring/50 -my-1 inline-flex min-w-0 items-center gap-3 rounded-full py-1 transition-transform
 		duration-(--duration-moderate) ease-out outline-none focus-visible:z-10 focus-visible:ring-[3px]
-		disabled:pointer-events-none disabled:opacity-64`,
+		disabled:pointer-events-none disabled:opacity-64 [&>*]:min-w-0`,
 		!isStatic && 'motion-safe:hover:scale-105 motion-safe:active:not-disabled:scale-[0.96]',
 		className,
 	);
@@ -238,24 +245,36 @@ function StepperIndicator({ asChild = false, className, children, ...props }: St
 }
 
 // StepperTitle
-function StepperTitle({ className, ...props }: React.HTMLAttributes<HTMLHeadingElement>) {
+function StepperTitle({ className, children, ...props }: React.HTMLAttributes<HTMLHeadingElement>) {
 	return (
 		<h3
 			data-slot="stepper-title"
-			className={cn('text-sm font-medium transition-[color,background-color,border-color,text-decoration-color,fill,stroke,box-shadow] duration-(--duration-slow) ease-out', className)}
+			title={typeof children === 'string' ? children : undefined}
+			className={cn(
+				'text-sm font-medium [overflow-wrap:anywhere] group-data-[orientation=horizontal]/stepper:truncate transition-[color,background-color,border-color,text-decoration-color,fill,stroke,box-shadow] duration-(--duration-slow) ease-out',
+				className,
+			)}
 			{...props}
-		/>
+		>
+			{children}
+		</h3>
 	);
 }
 
 // StepperDescription
-function StepperDescription({ className, ...props }: React.HTMLAttributes<HTMLParagraphElement>) {
+function StepperDescription({ className, children, ...props }: React.HTMLAttributes<HTMLParagraphElement>) {
 	return (
 		<p
 			data-slot="stepper-description"
-			className={cn('text-muted-foreground text-sm transition-[color,background-color,border-color,text-decoration-color,fill,stroke,box-shadow] duration-(--duration-slow) ease-out', className)}
+			title={typeof children === 'string' ? children : undefined}
+			className={cn(
+				'text-muted-foreground text-sm [overflow-wrap:anywhere] group-data-[orientation=horizontal]/stepper:truncate transition-[color,background-color,border-color,text-decoration-color,fill,stroke,box-shadow] duration-(--duration-slow) ease-out',
+				className,
+			)}
 			{...props}
-		/>
+		>
+			{children}
+		</p>
 	);
 }
 
@@ -267,7 +286,8 @@ function StepperSeparator({ className, ...props }: React.HTMLAttributes<HTMLDivE
 			className={cn(
 				`bg-muted group-data-[state=completed]/step:bg-primary m-0.5 transition-[color,background-color,border-color,text-decoration-color,fill,stroke,box-shadow] duration-(--duration-slow) ease-out
 				group-data-[orientation=horizontal]/stepper:h-0.5 group-data-[orientation=horizontal]/stepper:w-full
-				group-data-[orientation=horizontal]/stepper:flex-1 group-data-[orientation=vertical]/stepper:h-12
+				group-data-[orientation=horizontal]/stepper:flex-1
+				group-data-[orientation=vertical]/stepper:ms-[calc(--spacing(3)-1px)] group-data-[orientation=vertical]/stepper:h-12
 				group-data-[orientation=vertical]/stepper:w-0.5`,
 				className,
 			)}

@@ -42,6 +42,7 @@ export const buttonDocs = definePrimitiveDocs({
     'Give every Button a concise accessible name. Add aria-label to icon-only buttons and keep decorative icons out of the accessibility tree.',
     'Button defaults type to "button" so it does not submit a form accidentally. Set type="submit" for the form’s submit action.',
     'Use disabled while an action cannot run. For pending work, pair disabled with aria-busy and visible status text rather than showing an unlabeled spinner alone.',
+    'Inside a TooltipTrigger a disabled Button is marked aria-disabled instead of disabled, so it stays focusable and hoverable and the tooltip can say why it is unavailable. It still ignores clicks, presses and submits.',
   ],
   api: [
     {
@@ -69,10 +70,24 @@ export const buttonDocs = definePrimitiveDocs({
           description: 'Disables the tactile press-scale animation when motion would distract from the interaction.',
         },
         {
+          name: 'wrap',
+          type: 'boolean',
+          default: 'false',
+          description:
+            'Lets a long or translated label wrap onto several lines instead of staying on one line. The height becomes a minimum and the button can shrink inside a flex row.',
+        },
+        {
           name: 'asChild',
           type: 'boolean',
           default: 'false',
           description: 'Merges Button props and classes onto its single child instead of rendering a button element.',
+        },
+        {
+          name: 'focusableWhenDisabled',
+          type: 'boolean',
+          default: 'false',
+          description:
+            'Keeps a disabled button focusable and hoverable, disabled with aria-disabled instead, so a tooltip explaining why can still open. TooltipTrigger sets it on a Button child.',
         },
         {
           name: 'type',
@@ -86,7 +101,7 @@ export const buttonDocs = definePrimitiveDocs({
     {
       name: 'buttonVariants',
       description:
-        'Public CVA helper for producing Button classes without rendering Button; it accepts the same variant, size, and static options.',
+        'Public CVA helper for producing Button classes without rendering Button; it accepts the same variant, size, static, and wrap options.',
       upstream: cva,
     },
   ],

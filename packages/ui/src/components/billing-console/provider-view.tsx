@@ -121,10 +121,10 @@ function CreditRate() {
 							setState('idle');
 						}}
 						aria-invalid={!valid || undefined}
-						className="h-8 w-28 rounded-md border border-border bg-card px-2 text-[13px] text-foreground tabular-nums shadow-2xs outline-none focus:ring-[3px] focus:ring-ring/50"
+						className="h-8 w-28 rounded-md border border-border bg-card px-2 text-[0.8125rem] text-foreground tabular-nums shadow-2xs outline-none focus:ring-[3px] focus:ring-ring/50"
 					/>
 				</label>
-				<p className="flex-1 pb-1.5 text-[13px] text-muted-foreground tabular-nums">
+				<p className="flex-1 pb-1.5 text-[0.8125rem] text-muted-foreground tabular-nums">
 					{valid ? (
 						<>
 							{f.quantity(1_000)} credits = <span className="text-foreground">{f.money({ amountMinor: 1_000 / parsed, currency: settings.currency }, { precise: true })}</span>
@@ -173,13 +173,13 @@ export function ConsoleProviderView() {
 								<ToneBadge tone="success">Active</ToneBadge>
 								<ToneBadge tone={connection.mode === 'live' ? 'primary' : 'amber'}>{`${modeLabel(provider, connection.mode)} mode`}</ToneBadge>
 							</p>
-							<p className="mt-0.5 text-[13px] text-muted-foreground">
+							<p className="mt-0.5 text-[0.8125rem] text-muted-foreground">
 								{connection.accountLabel ?? 'Connected account'}
 								{connection.connectedAt ? ` · connected ${f.date(connection.connectedAt)}` : ''}
 							</p>
 							<div className="mt-3 flex flex-wrap gap-1">
 								{provider.features.map((feature) => (
-									<span key={feature} className="rounded-[4px] bg-muted px-1.5 py-0.5 text-[11px] text-muted-foreground">
+									<span key={feature} className="rounded-[4px] bg-muted px-1.5 py-0.5 text-[0.6875rem] text-muted-foreground">
 										{featureLabel(provider, feature)}
 									</span>
 								))}
@@ -197,7 +197,7 @@ export function ConsoleProviderView() {
 							) : null}
 						</div>
 					</div>
-					<div className={cn('grid gap-x-6 border-t bg-muted/40 px-4 py-2 @3xl/view:grid-cols-2', dashedRule)}>
+					<div className={cn('grid grid-cols-1 gap-x-6 border-t bg-muted/40 px-4 py-2 @3xl/view:grid-cols-2', dashedRule)}>
 						<KeyValueList
 							items={provider.credentials
 								.filter((field) => field.kind === 'secret')
@@ -227,7 +227,7 @@ export function ConsoleProviderView() {
 				</Panel>
 			)}
 
-			<div className="grid gap-4 @4xl/view:grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)]">
+			<div className="grid grid-cols-1 gap-4 @4xl/view:grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)]">
 				<Panel title="Readiness" description="The daily check, or on demand. It runs as a background job.">
 					<ReadinessChecklist provider={provider} health={health} onRunCheck={runCheck} running={checking} />
 				</Panel>
@@ -257,7 +257,7 @@ export function ConsoleProviderView() {
 						title="Other providers"
 						description="One provider is active at a time. Switching keeps existing subscriptions on the old provider until each customer is moved."
 					/>
-					<ul className="grid gap-2 @3xl/view:grid-cols-2">
+					<ul className="grid grid-cols-1 gap-2 @3xl/view:grid-cols-2">
 						{others.map((candidate) => (
 							<li key={candidate.id}>
 								<ProviderCard provider={candidate} onSelect={() => openConnect(candidate.id)} />

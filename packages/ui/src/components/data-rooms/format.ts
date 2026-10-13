@@ -1,3 +1,5 @@
+import { initials as initialsOf } from '../../lib/initials';
+import { dateFormat, isUnsetDate, numberFormat } from '../../lib/intl';
 import type { DocumentKind } from './types';
 
 export type DataRoomsFormatOptions = { locale: string; timeZone: string; now: string };
@@ -10,11 +12,13 @@ export function addDays(iso: string, days: number) {
 	return new Date(Date.parse(iso) + days * DAY_MS).toISOString();
 }
 
-/** "Sep 24", or "Sep 24, 2025" outside the current year. */
+
+/** "Sep 24", or "Sep 24, 2025" outside the current year. A date nobody set is a dash. */
 export function formatDate(iso: string, { locale, timeZone, now }: DataRoomsFormatOptions, withTime = false) {
+	if (isUnsetDate(iso)) return '—';
 	const date = new Date(iso);
 	const sameYear = new Date(now).getUTCFullYear() === date.getUTCFullYear();
-	return new Intl.DateTimeFormat(locale, {
+	return dateFormat(locale, {
 		month: 'short',
 		day: 'numeric',
 		year: sameYear ? undefined : 'numeric',
@@ -25,17 +29,28 @@ export function formatDate(iso: string, { locale, timeZone, now }: DataRoomsForm
 }
 
 export function formatTime(iso: string, { locale, timeZone }: DataRoomsFormatOptions) {
-	return new Intl.DateTimeFormat(locale, { hour: 'numeric', minute: '2-digit', timeZone }).format(new Date(iso));
+	if (isUnsetDate(iso)) return '—';
+	return dateFormat(locale, { hour: 'numeric', minute: '2-digit', timeZone }).format(new Date(iso));
 }
 
-/** `YYYY-MM-DD` for the day `iso` falls on in `timeZone`. */
+/** `YYYY-MM-DD` for the day `iso` falls on in `timeZone`; empty for a date nobody set, so those group together. */
 export function dayKey(iso: string, timeZone: string) {
-	return new Intl.DateTimeFormat('en-CA', { timeZone, year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date(iso));
+	if (isUnsetDate(iso)) return '';
+	return dateFormat('en-CA', { timeZone, year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date(iso));
 }
 
-/** "just now", "12 min ago", "3 h ago", "yesterday", "4 days ago", then a date. */
+/** "just now", "12 min ago", "3 h ago", "yesterday", "4 days ago", then a date; "in 12 min", "tomorrow" and so on for a time ahead. */
 export function formatRelative(iso: string, options: DataRoomsFormatOptions) {
+	if (isUnsetDate(iso)) return '—';
 	const diff = Date.parse(options.now) - Date.parse(iso);
+	if (diff < 0 && -diff >= 60_000) {
+		const ahead = -diff;
+		if (ahead < 3_600_000) return `in ${Math.floor(ahead / 60_000)} min`;
+		if (ahead < DAY) return `in ${Math.floor(ahead / 3_600_000)} h`;
+		if (ahead < 2 * DAY) return 'tomorrow';
+		if (ahead < 7 * DAY) return `in ${Math.floor(ahead / DAY)} days`;
+		return formatDate(iso, options);
+	}
 	if (diff < 60_000) return 'just now';
 	if (diff < 3_600_000) return `${Math.floor(diff / 60_000)} min ago`;
 	if (diff < DAY) return `${Math.floor(diff / 3_600_000)} h ago`;
@@ -50,8 +65,9 @@ export function daysUntil(iso: string, now: string) {
 	return days < 0 ? Math.floor(days) : Math.round(days);
 }
 
-/** "in 3 days", "tomorrow", "today", or "ended Sep 2". */
+/** "in 3 days", "tomorrow", "today", or "ended Sep 2"; a dash when there is no deadline. */
 export function formatDeadline(iso: string, options: DataRoomsFormatOptions) {
+	if (isUnsetDate(iso)) return '—';
 	const days = daysUntil(iso, options.now);
 	if (days < 0) return `ended ${formatDate(iso, options)}`;
 	if (days === 0) return 'today';
@@ -61,14 +77,15 @@ export function formatDeadline(iso: string, options: DataRoomsFormatOptions) {
 }
 
 export function formatBytes(bytes: number, locale = 'en-US') {
-	const units = ['B', 'KB', 'MB', 'GB'];
+	const units = ['B', 'KB', 'MB', 'GB', 'TB', 'PB'];
 	let value = bytes;
 	let unit = 0;
-	while (value >= 1024 && unit < units.length - 1) {
+	// Compare the rounded value: 1,048,500 bytes is 1,023.9 KB, which would print as "1,024 KB" instead of "1 MB".
+	while (Math.round(value) >= 1024 && unit < units.length - 1) {
 		value /= 1024;
 		unit += 1;
 	}
-	return `${new Intl.NumberFormat(locale, { maximumFractionDigits: value < 10 && unit > 0 ? 1 : 0 }).format(value)} ${units[unit]}`;
+	return `${numberFormat(locale, { maximumFractionDigits: value < 10 && unit > 0 ? 1 : 0 }).format(value)} ${units[unit]}`;
 }
 
 /** "4m 20s", "45s", "1h 05m" for time spent reading. */
@@ -79,24 +96,16 @@ export function formatDuration(seconds: number) {
 	return `${Math.floor(minutes / 60)}h ${String(minutes % 60).padStart(2, '0')}m`;
 }
 
-export function formatCount(value: number, locale = 'en-US') {
-	return new Intl.NumberFormat(locale).format(value);
-}
+export { formatCount } from '../../lib/intl';
 
 /** "Dana Chen" → "Dana". */
 export function firstName(name: string) {
 	return name.trim().split(/\s+/)[0] ?? name;
 }
 
-/** Up to two initials: "Dana Chen" → "DC". */
+/** Up to two initials: "Dana Chen" → "DC". Empty when the name has nothing to show; callers fall back to an icon or "?". */
 export function initials(name: string) {
-	return name
-		.split(/\s+/)
-		.filter(Boolean)
-		.slice(0, 2)
-		.map((word) => word[0] ?? '')
-		.join('')
-		.toUpperCase();
+	return initialsOf(name) ?? '';
 }
 
 /** A readable name for an email nobody has a profile for yet: "jo.park@x.com" → "Jo Park". */

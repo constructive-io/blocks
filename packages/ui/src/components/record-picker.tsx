@@ -9,6 +9,19 @@ import { Checkbox } from './checkbox';
 import { InputGroup, InputGroupAddon, InputGroupInput } from './input-group';
 import { ScrollArea } from './scroll-area';
 
+// Module-level so the default keeps one identity and the filter memo below is not recomputed on every render.
+const DEFAULT_SEARCH_FIELDS = ['name', 'title', 'label'];
+const NO_LABELS: readonly string[] = [];
+
+/** Keeps the same array while its items are unchanged, so a memo keyed on it does not run again for an equal one. */
+function useStableArray<T>(next: readonly T[]): readonly T[] {
+	const [stable, setStable] = useState(next);
+	if (stable === next || (stable.length === next.length && stable.every((item, index) => item === next[index]))) return stable;
+	// Adjusting state while rendering: React re-renders at once, before anything is committed, and no ref is involved.
+	setStable(next);
+	return next;
+}
+
 interface RecordPickerProps {
 	records: any[];
 	linkedRecordIds: Set<string>;
@@ -28,24 +41,32 @@ export function RecordPicker({
 	isLinking,
 	getRecordLabel,
 	getRecordId,
-	searchFields = ['name', 'title', 'label'],
+	searchFields = DEFAULT_SEARCH_FIELDS,
 	placeholder = 'Search records...',
 	maxHeight = '300px',
 }: RecordPickerProps) {
 	const [searchQuery, setSearchQuery] = useState('');
 	const debouncedSearchQuery = useDebounce(searchQuery, 300);
 
+	const searching = debouncedSearchQuery.trim() !== '';
+	// The text each row shows, read only while a search runs. Hosts usually pass `getRecordLabel` inline, so it is a new
+	// function on every render; comparing the labels it returns keeps the much heavier search from running again for nothing.
+	const labels = useStableArray(searching ? records.map((record) => String(getRecordLabel(record) ?? '')) : NO_LABELS);
+	const fields = useStableArray(searchFields);
+
 	// Filter records based on search query
 	const filteredRecords = useMemo(() => {
-		if (!debouncedSearchQuery.trim()) {
+		if (!searching) {
 			return records;
 		}
 
+		// The row's own label is always searchable, so a query can never miss text the user can see.
+		const labelOf = new Map(records.map((record, index) => [record, labels[index]]));
 		return matchSorter(records, debouncedSearchQuery, {
-			keys: searchFields,
+			keys: [...fields, (record: any) => labelOf.get(record) ?? ''],
 			threshold: matchSorter.rankings.CONTAINS,
 		});
-	}, [records, debouncedSearchQuery, searchFields]);
+	}, [records, debouncedSearchQuery, searching, fields, labels]);
 
 	// Separate linked and unlinked records
 	const { linkedRecords, unlinkableRecords } = useMemo(() => {
@@ -87,7 +108,7 @@ export function RecordPicker({
 
 			{/* Records List */}
 			<ScrollArea style={{ maxHeight }} className='scrollbar-neutral-thin'>
-				<div className='space-y-2 pr-2'>
+				<div className='space-y-2 pe-2'>
 					{/* Unlinkable Records */}
 					{unlinkableRecords.length > 0 && (
 						<div className='space-y-1'>

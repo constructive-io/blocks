@@ -64,7 +64,11 @@ export type Plan = {
 	/** Priced by sales rather than checkout. */
 	contactSales?: boolean;
 	active: boolean;
-	/** The free fallback plan an overdue subscription is downgraded to. */
+	/**
+	 * The free fallback plan an overdue subscription is downgraded to. A plan with
+	 * no price rows counts as retired and is hidden from `PlanComparison` unless it
+	 * is `fallback` (or `contactSales`), so a free tier without a price row sets it.
+	 */
 	fallback?: boolean;
 	externalId?: string;
 	syncState?: SyncState;
@@ -78,6 +82,8 @@ export type Meter = {
 	displayName: string;
 	/** Plural unit label, e.g. `operations`, `gigabytes`, `credits`. */
 	unit: string;
+	/** Label for a count of one, e.g. `operation`. Derived from `unit` when omitted; set it for irregular units. */
+	unitSingular?: string;
 	meterType: MeterType;
 	aggregation: MeterAggregation;
 	/** Universal credits per unit when the meter's own quota runs out. `null` disables the fallback. */
@@ -239,6 +245,8 @@ export type LimitCounter = {
 	/** Non-blocking warning threshold. */
 	softMax?: number;
 	unit: string;
+	/** Label for a count of one, e.g. `seat`. Derived from `unit` when omitted. */
+	unitSingular?: string;
 	/** Time-windowed limits reset; shown next to the counter. */
 	window?: string;
 };
@@ -251,6 +259,8 @@ export type FeatureCap = {
 	value: number;
 	kind: 'switch' | 'number';
 	unit?: string;
+	/** Label for a count of one, e.g. `day`. Derived from `unit` when omitted. */
+	unitSingular?: string;
 };
 
 export type UsageAlert = {

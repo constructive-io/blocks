@@ -47,7 +47,7 @@ export function OrgChartMoveDialog({ index, personId, onOpenChange, onMove }: Or
 			<DialogPopup className="max-w-md">
 				<DialogHeader className="gap-1.5 pb-3">
 					<DialogTitle className="text-base font-medium">Change manager for {name}</DialogTitle>
-					<DialogDescription className="text-[13px]">
+					<DialogDescription className="text-[0.8125rem]">
 						{reportCount > 0
 							? `${name}'s ${reportCount === 1 ? 'report moves' : `${reportCount} reports move`} with them.`
 							: `Pick who ${name} reports to.`}
@@ -67,10 +67,16 @@ export function OrgChartMoveDialog({ index, personId, onOpenChange, onMove }: Or
 									className="gap-2.5"
 									onSelect={() => current && onMove(current.id, candidate.id)}
 								>
-									<PersonAvatar person={candidate} className="size-6 text-[10px]" />
+									<PersonAvatar person={candidate} className="size-6 text-[0.625rem]" />
 									<span className="min-w-0 flex-1">
-										<span className="block truncate text-[13px]">{personName(candidate)}</span>
-										{candidate.positionTitle ? <span className="block truncate text-xs text-muted-foreground">{candidate.positionTitle}</span> : null}
+										<span className="block truncate text-[0.8125rem]" title={personName(candidate)}>
+											{personName(candidate)}
+										</span>
+										{candidate.positionTitle ? (
+											<span className="block truncate text-xs text-muted-foreground" title={candidate.positionTitle}>
+												{candidate.positionTitle}
+											</span>
+										) : null}
 									</span>
 									{isCurrent ? <ToneBadge tone="neutral">Current</ToneBadge> : null}
 								</CommandItem>

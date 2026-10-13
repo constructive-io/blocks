@@ -16,6 +16,7 @@ import {
 } from '../dropdown-menu';
 import { enterClass, focusRingClass, pressClass, SearchField } from '../workspace-kit/primitives';
 import type { ObjectSort, ObjectSortColumn } from './types';
+import { formatCount } from './utils';
 
 const SORT_COLUMNS: { value: ObjectSortColumn; label: string }[] = [
 	{ value: 'filename', label: 'Name' },
@@ -35,6 +36,8 @@ interface ObjectSelectionBarProps {
 	onClearSelection?: () => void;
 	/** Float over the bottom of the list instead of sitting inline. */
 	floating?: boolean;
+	/** Locale for the counts (for example `de-DE`). Default: `en-US`, so the server and the browser agree. */
+	locale?: string;
 	className?: string;
 }
 
@@ -44,16 +47,21 @@ interface ObjectSelectionBarProps {
  * progress to screen readers; renders only the announcer when nothing is
  * selected.
  */
-export function ObjectSelectionBar({ selectedCount, onBulkDelete, bulkDeleteProgress, onClearSelection, floating = false, className }: ObjectSelectionBarProps) {
+export function ObjectSelectionBar({ selectedCount, onBulkDelete, bulkDeleteProgress, onClearSelection, floating = false, locale, className }: ObjectSelectionBarProps) {
 	const deleting = bulkDeleteProgress != null && bulkDeleteProgress.done < bulkDeleteProgress.total;
 	const failed = bulkDeleteProgress?.failed.length ?? 0;
 	const noun = selectedCount === 1 ? 'file' : 'files';
+	const done = bulkDeleteProgress ? formatCount(bulkDeleteProgress.done, locale) : '';
+	const total = bulkDeleteProgress ? formatCount(bulkDeleteProgress.total, locale) : '';
 	const progress = bulkDeleteProgress
 		? deleting
-			? ` Deleting ${bulkDeleteProgress.done} of ${bulkDeleteProgress.total}.`
-			: ` Deletion finished: ${bulkDeleteProgress.done} of ${bulkDeleteProgress.total} processed.`
+			? ` Deleting ${done} of ${total}.`
+			: ` Deletion finished: ${done} of ${total} processed.`
 		: '';
-	const status = selectedCount > 0 ? `${selectedCount} ${noun} selected.${progress}${failed > 0 ? ` ${failed} failed.` : ''}` : 'No files selected.';
+	const status =
+		selectedCount > 0
+			? `${formatCount(selectedCount, locale)} ${noun} selected.${progress}${failed > 0 ? ` ${formatCount(failed, locale)} failed.` : ''}`
+			: 'No files selected.';
 
 	return (
 		<>
@@ -63,13 +71,14 @@ export function ObjectSelectionBar({ selectedCount, onBulkDelete, bulkDeleteProg
 			{selectedCount > 0 ? (
 				<div
 					className={cn(
-						'flex h-9 items-center gap-1 rounded-lg pr-1 pl-3 text-[13px]',
+						// Wraps rather than spilling out of the pill when counts and the failure note get long.
+						'flex min-h-9 flex-wrap items-center gap-x-1 rounded-lg py-0.5 pe-1 ps-3 text-[0.8125rem]',
 						floating ? cn('bg-card shadow-card-lg', enterClass) : 'bg-muted/60',
 						className,
 					)}
 				>
-					<span className="font-medium text-foreground tabular-nums">{selectedCount} selected</span>
-					{failed > 0 ? <span className="text-xs text-destructive tabular-nums">· {failed} failed</span> : null}
+					<span className="font-medium whitespace-nowrap text-foreground tabular-nums">{formatCount(selectedCount, locale)} selected</span>
+					{failed > 0 ? <span className="text-xs whitespace-nowrap text-destructive tabular-nums">· {formatCount(failed, locale)} failed</span> : null}
 					<span aria-hidden="true" className="mx-1.5 h-4 w-px bg-border" />
 					{onBulkDelete ? (
 						<button
@@ -83,7 +92,7 @@ export function ObjectSelectionBar({ selectedCount, onBulkDelete, bulkDeleteProg
 							)}
 						>
 							{deleting ? <Loader2Icon aria-hidden="true" className="size-3.5 motion-safe:animate-spin" /> : <Trash2Icon aria-hidden="true" className="size-3.5" />}
-							<span className="tabular-nums">{deleting ? `Deleting ${bulkDeleteProgress.done}/${bulkDeleteProgress.total}` : 'Delete'}</span>
+							<span className="whitespace-nowrap tabular-nums">{deleting ? `Deleting ${done}/${total}` : 'Delete'}</span>
 						</button>
 					) : null}
 					{onClearSelection ? (
@@ -123,6 +132,8 @@ interface ObjectToolbarProps {
 	 */
 	bulkDeleteProgress?: BulkDeleteProgress;
 	onClearSelection?: () => void;
+	/** Locale for the counts (for example `de-DE`). Default: `en-US`. */
+	locale?: string;
 	className?: string;
 }
 
@@ -135,7 +146,7 @@ export function ObjectSortMenu({ sort, onSortChange }: Pick<ObjectToolbarProps, 
 			<DropdownMenuTrigger
 				aria-label={`Sort by ${active?.label ?? 'column'}, ${sort.direction === 'asc' ? 'ascending' : 'descending'}`}
 				className={cn(
-					'inline-flex h-7 shrink-0 cursor-pointer items-center gap-1.5 rounded-md border border-border bg-card px-2 text-[13px] text-foreground shadow-2xs hover:bg-muted data-[popup-open]:bg-muted',
+					'inline-flex h-7 shrink-0 cursor-pointer items-center gap-1.5 rounded-md border border-border bg-card px-2 text-[0.8125rem] text-foreground shadow-2xs hover:bg-muted data-[popup-open]:bg-muted',
 					pressClass,
 					focusRingClass,
 				)}
@@ -180,6 +191,7 @@ export function ObjectToolbar({
 	onBulkDelete,
 	bulkDeleteProgress,
 	onClearSelection,
+	locale,
 	className,
 }: ObjectToolbarProps) {
 	if (selectedCount > 0) {
@@ -189,6 +201,7 @@ export function ObjectToolbar({
 				onBulkDelete={onBulkDelete}
 				bulkDeleteProgress={bulkDeleteProgress}
 				onClearSelection={onClearSelection}
+				locale={locale}
 				className={className}
 			/>
 		);

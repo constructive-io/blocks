@@ -8,6 +8,7 @@ import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, Command
 import { Kbd } from '../kbd';
 import { Popover, PopoverContent, PopoverTrigger } from '../popover';
 import { Tooltip, TooltipContent, TooltipTrigger } from '../tooltip';
+import { formatCompact } from './context-ring';
 import { MarkTile } from './mark-tile';
 
 /** Prices in currency units per one million tokens. */
@@ -98,8 +99,7 @@ function formatPrice(amount: number, currency = 'USD') {
 }
 
 function formatTokens(tokens: number) {
-	if (tokens >= 1_000_000) return `${tokens / 1_000_000}M`;
-	return `${Math.round(tokens / 1000)}K`;
+	return formatCompact(tokens);
 }
 
 /** Blended cost used to rank models on the meter: output weighted 3:1, as in typical chat traffic. */
@@ -153,6 +153,9 @@ function PriceText({ pricing }: { pricing: AiModelPricing }) {
 	);
 }
 
+/** Tags shown on a model row before the rest collapse into a count. */
+const MAX_ROW_TAGS = 2;
+
 function Tag({ tag }: { tag: AiModelTag }) {
 	return (
 		<span
@@ -198,13 +201,13 @@ function LevelMenu({
 						onMouseDown={(event) => event.preventDefault()}
 						onClick={() => onPick(level.id)}
 						className={cn(
-							'flex min-h-8 w-full cursor-pointer items-center gap-2 rounded-sm px-2 py-1.5 text-left outline-none pointer-coarse:min-h-11',
+							'flex min-h-8 w-full cursor-pointer items-center gap-2 rounded-sm px-2 py-1.5 text-start outline-none pointer-coarse:min-h-11',
 							'hover:bg-overlay-hover focus-visible:ring-[3px] focus-visible:ring-ring/50',
 							checked && 'bg-overlay-hover',
 						)}
 					>
 						<span className="flex min-w-0 flex-1 flex-col">
-							<span className={cn('text-[13px]', checked ? 'font-medium text-foreground' : 'text-foreground/85')}>{level.label}</span>
+							<span className={cn('text-[0.8125rem]', checked ? 'font-medium text-foreground' : 'text-foreground/85')}>{level.label}</span>
 							{level.description ? <span className="text-xs text-muted-foreground">{level.description}</span> : null}
 						</span>
 						<Check aria-hidden="true" className={cn('size-3.5 shrink-0 text-foreground', checked ? 'opacity-100' : 'opacity-0')} />
@@ -246,8 +249,8 @@ function ModelDetails({
 			<div className="flex items-center gap-2 px-3 pt-3 pb-2">
 				<ModelGlyph model={model} />
 				<div className="min-w-0">
-					<p className="truncate text-[13px] font-medium text-foreground">{model.name}</p>
-					<p className="truncate text-xs text-muted-foreground">{model.description ?? model.provider}</p>
+					<p title={model.name} className="truncate text-[0.8125rem] font-medium text-foreground">{model.name}</p>
+					<p title={model.description ?? model.provider} className="truncate text-xs text-muted-foreground">{model.description ?? model.provider}</p>
 				</div>
 			</div>
 			<div className="px-1 pb-1">
@@ -256,17 +259,17 @@ function ModelDetails({
 			<dl className="grid grid-cols-2 gap-x-3 gap-y-2 border-t border-border px-3 py-2.5">
 				{facts.map((fact) => (
 					<div key={fact.label} className="min-w-0">
-						<dt className="truncate text-[11px] leading-4 text-muted-foreground">{fact.label}</dt>
+						<dt className="truncate text-[0.6875rem] leading-4 text-muted-foreground">{fact.label}</dt>
 						<dd className="truncate text-xs leading-4 text-foreground tabular-nums">{fact.value}</dd>
 					</div>
 				))}
 			</dl>
-			<p className="hidden h-8 items-center gap-1 border-t border-border px-3 text-[11px] text-muted-foreground pointer-fine:flex">
+			<p className="hidden h-8 items-center gap-1 border-t border-border px-3 text-[0.6875rem] text-muted-foreground pointer-fine:flex">
 				{model.levels && model.levels.length > 1 ? (
 					<>
 						<Kbd>←</Kbd>
 						<Kbd>→</Kbd>
-						<span className="mr-2">level</span>
+						<span className="me-2">level</span>
 					</>
 				) : null}
 				<Kbd>↵</Kbd>
@@ -433,7 +436,7 @@ function ModelSelector({
 
 	/** Right-aligned column with a fixed minimum width, so prices, blocks, and checks line up down the list. */
 	const trailing = (model: AiModel, pricing: AiModelPricing | undefined) => {
-		if (model.disabled && model.disabledReason) return <span className="truncate text-xs text-muted-foreground">{model.disabledReason}</span>;
+		if (model.disabled && model.disabledReason) return <span title={model.disabledReason} className="truncate text-xs text-muted-foreground">{model.disabledReason}</span>;
 		if (priceDisplay === 'none' || !pricing) return null;
 		if (isFree(pricing)) return <span className="text-xs font-medium text-link">Free</span>;
 		if (priceDisplay === 'price') return <PriceText pricing={pricing} />;
@@ -457,9 +460,15 @@ function ModelSelector({
 			>
 				<ModelGlyph model={model} />
 				<span className="flex min-w-0 flex-1 items-baseline gap-1.5">
-					<span className="truncate text-foreground">{model.name}</span>
-					{level ? <span className="shrink truncate text-muted-foreground">{level.label}</span> : null}
-					{tags?.map((tag) => <Tag key={tag} tag={tag} />)}
+					<span title={model.name} className="truncate text-foreground">{model.name}</span>
+					{level ? <span title={level.label} className="shrink truncate text-muted-foreground">{level.label}</span> : null}
+					{/* Two tags at most, so a model with many of them cannot squeeze its own name out of the row. */}
+					{tags?.slice(0, MAX_ROW_TAGS).map((tag) => <Tag key={tag} tag={tag} />)}
+					{tags && tags.length > MAX_ROW_TAGS ? (
+						<span title={tags.slice(MAX_ROW_TAGS).map((tag) => TAG_LABEL[tag]).join(', ')} className="shrink-0 text-xs text-muted-foreground tabular-nums">
+							+{tags.length - MAX_ROW_TAGS}
+						</span>
+					) : null}
 				</span>
 				<span className="flex min-w-14 shrink-0 justify-end text-muted-foreground">{trailing(model, pricing)}</span>
 				<Check
@@ -493,15 +502,15 @@ function ModelSelector({
 				disabled={disabled}
 				onClick={(event) => event.stopPropagation()}
 				className={cn(
-					'flex h-8 max-w-full min-w-0 cursor-pointer items-center gap-1.5 rounded-md px-2 text-[13px] text-foreground outline-none',
+					'flex h-8 max-w-full min-w-0 cursor-pointer items-center gap-1.5 rounded-md px-2 text-[0.8125rem] text-foreground outline-none',
 					'hover:bg-overlay-hover focus-visible:ring-[3px] focus-visible:ring-ring/50 data-popup-open:bg-overlay-hover',
 					'transition-transform duration-(--duration-fast) motion-safe:active:scale-[0.96] disabled:cursor-not-allowed disabled:opacity-64',
 					triggerClassName,
 				)}
 			>
 				{selected ? <ModelGlyph model={selected} /> : null}
-				<span className="truncate">{selected?.name ?? 'Choose a model'}</span>
-				{selectedLevel ? <span className="truncate text-muted-foreground">{selectedLevel.label}</span> : null}
+				<span title={selected?.name ?? 'Choose a model'} className="truncate">{selected?.name ?? 'Choose a model'}</span>
+				{selectedLevel ? <span title={selectedLevel.label} className="truncate text-muted-foreground">{selectedLevel.label}</span> : null}
 				<ChevronDown aria-hidden="true" className="size-3.5 shrink-0 text-muted-foreground" />
 			</PopoverTrigger>
 			<PopoverContent
@@ -523,7 +532,7 @@ function ModelSelector({
 						className="rounded-[inherit]"
 					>
 						<div className="relative border-b border-border">
-							<CommandInput value={query} onValueChange={setQuery} placeholder="Search models" className="pr-9" />
+							<CommandInput value={query} onValueChange={setQuery} placeholder="Search models" className="pe-9" />
 							{canTogglePrice ? (
 								<Tooltip>
 									<TooltipTrigger
@@ -534,7 +543,7 @@ function ModelSelector({
 												aria-pressed={priceDisplay === 'price'}
 												onClick={() => setPriceDisplay((current) => (current === 'price' ? 'meter' : 'price'))}
 												className={cn(
-													'absolute top-1/2 right-2.5 grid size-7 -translate-y-1/2 cursor-pointer place-items-center rounded-md outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50',
+													'absolute top-1/2 end-2.5 grid size-7 -translate-y-1/2 cursor-pointer place-items-center rounded-md outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50',
 													priceDisplay === 'price' ? 'bg-muted text-foreground' : 'text-muted-foreground hover:bg-overlay-hover hover:text-foreground',
 												)}
 											>

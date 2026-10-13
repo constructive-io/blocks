@@ -3,12 +3,13 @@
 import { ChevronRight, Infinity as InfinityIcon, Layers } from 'lucide-react';
 import * as React from 'react';
 
+import { plural } from '../../lib/intl';
 import { cn } from '../../lib/utils';
 import { Sheet, SheetContent, SheetDescription, SheetTitle } from '../sheet';
 import { focusRingClass, ToneBadge } from '../workspace-kit/primitives';
 import { AllowanceBar, Sparkline, UsageFigure } from './allowance';
 import { useBillingFormat } from './context';
-import { daysUntil, isUnlimited, usageLevel, usageRatio } from './format';
+import { daysUntil, isUnlimited, singularize, usageLevel, usageRatio } from './format';
 import { dashedRule, KeyValueList, Panel } from './surface';
 import type { Balance, Meter, RateWindow } from './types';
 
@@ -62,9 +63,12 @@ function MeterRow({ node, depth, onSelect }: MeterRowProps) {
 	const level = usageLevel(used, limit);
 	const content = (
 		<>
-			<span className="flex min-w-0 flex-1 flex-col gap-1.5">
+			{/* The name keeps a floor of 10rem; on a narrow view the figure wraps beneath it instead of squeezing it. */}
+			<span className="flex min-w-0 flex-1 basis-40 flex-col gap-1.5">
 				<span className="flex min-w-0 items-center gap-2">
-					<span className="truncate text-[13px] text-foreground">{meter.displayName}</span>
+					<span title={meter.displayName} className="line-clamp-2 min-w-0 text-[0.8125rem] text-foreground [overflow-wrap:anywhere]">
+						<bdi>{meter.displayName}</bdi>
+					</span>
 					{balance?.fallbackCredits ? (
 						<span className="hidden text-xs whitespace-nowrap text-muted-foreground tabular-nums @xl/view:inline">
 							drew {f.quantity(balance.fallbackCredits, true)} credits
@@ -75,14 +79,14 @@ function MeterRow({ node, depth, onSelect }: MeterRowProps) {
 				</span>
 				<AllowanceBar used={used} limit={limit} label={meter.displayName} size="sm" planMarker={balance?.planLimit} />
 			</span>
-			<span className="flex w-36 shrink-0 flex-col items-end gap-0.5">
+			<span className="ms-auto flex w-36 shrink-0 flex-col items-end gap-0.5 text-end">
 				<UsageFigure used={used} limit={limit} unit={meter.unit} className="text-xs" />
-				{meter.creditCost ? <span className="text-[11px] text-subtle-foreground tabular-nums">{meter.creditCost} cr / unit after</span> : null}
+				{meter.creditCost ? <span className="text-[0.6875rem] text-subtle-foreground tabular-nums">{meter.creditCost} cr / unit after</span> : null}
 			</span>
-			{onSelect ? <ChevronRight aria-hidden="true" className="size-3.5 shrink-0 text-subtle-foreground" /> : null}
+			{onSelect ? <ChevronRight aria-hidden="true" className="size-3.5 shrink-0 text-subtle-foreground rtl:-scale-x-100" /> : null}
 		</>
 	);
-	const className = cn('flex w-full items-center gap-4 py-2.5 pr-1 text-left', depth > 1 && 'pl-5');
+	const className = cn('flex w-full flex-wrap items-center gap-x-4 gap-y-1.5 py-2.5 pe-1 text-start', depth > 1 && 'ps-5');
 	return (
 		<li className={cn('border-t', dashedRule)}>
 			{onSelect ? (
@@ -110,6 +114,7 @@ type UsageTreeProps = {
  * meters that draw from it, and the universal backstop they all fall back to.
  */
 export function UsageTree({ meters, balances, onSelectMeter, defaultCollapsed = [], className }: UsageTreeProps) {
+	const f = useBillingFormat();
 	const tree = React.useMemo(() => buildUsageTree(meters, balances), [balances, meters]);
 	const [collapsed, setCollapsed] = React.useState<ReadonlySet<string>>(() => new Set(defaultCollapsed));
 	if (!tree) return null;
@@ -125,7 +130,7 @@ export function UsageTree({ meters, balances, onSelectMeter, defaultCollapsed = 
 						<Layers aria-hidden="true" className="size-3.5" />
 					</span>
 					<div className="min-w-0 flex-1 basis-48">
-						<p className="text-[13px] font-medium text-foreground">Universal credits</p>
+						<p className="text-[0.8125rem] font-medium text-foreground">Universal credits</p>
 						<p className="text-xs text-muted-foreground">Every pool falls back here once its own allowance runs out.</p>
 					</div>
 					<div className="flex w-full flex-col gap-1.5 @xl/view:w-56">
@@ -134,7 +139,7 @@ export function UsageTree({ meters, balances, onSelectMeter, defaultCollapsed = 
 					</div>
 				</div>
 			) : null}
-			<ul className="grid gap-3 @4xl/view:grid-cols-2">
+			<ul className="grid grid-cols-1 gap-3 @4xl/view:grid-cols-2">
 				{pools.map((pool) => {
 					const open = !collapsed.has(pool.meter.slug);
 					const panelId = `${pool.meter.slug}-meters`;
@@ -155,20 +160,27 @@ export function UsageTree({ meters, balances, onSelectMeter, defaultCollapsed = 
 											return next;
 										})
 									}
-									className={cn('-mx-1 flex w-[calc(100%+0.5rem)] cursor-pointer items-center gap-3 rounded-md px-1 py-3 text-left', focusRingClass)}
+									className={cn('-mx-1 flex w-[calc(100%+0.5rem)] cursor-pointer items-center gap-3 rounded-md px-1 py-3 text-start', focusRingClass)}
 								>
 									<ChevronRight
 										aria-hidden="true"
-										className={cn('size-3.5 shrink-0 text-muted-foreground transition-transform duration-(--duration-fast) motion-reduce:transition-none', open && 'rotate-90')}
+										className={cn(
+											'size-3.5 shrink-0 text-muted-foreground transition-transform duration-(--duration-fast) motion-reduce:transition-none',
+											open ? 'rotate-90' : 'rtl:-scale-x-100',
+										)}
 									/>
 									<span className="flex min-w-0 flex-1 flex-col gap-1.5">
-										<span className="flex items-center gap-2">
-											<span className="text-sm font-medium text-foreground">{pool.meter.displayName}</span>
-											<span className="text-xs text-muted-foreground tabular-nums">{pool.children.length} meters</span>
+										<span className="flex flex-wrap items-baseline gap-x-2">
+											<span title={pool.meter.displayName} className="line-clamp-2 min-w-0 text-sm font-medium text-foreground [overflow-wrap:anywhere]">
+												<bdi>{pool.meter.displayName}</bdi>
+											</span>
+											<span className="text-xs whitespace-nowrap text-muted-foreground tabular-nums">
+												{f.quantity(pool.children.length)} {plural(pool.children.length, { one: 'meter', other: 'meters' })}
+											</span>
 										</span>
 										<AllowanceBar used={used} limit={limit} label={`${pool.meter.displayName} pool`} planMarker={pool.balance?.planLimit} />
 									</span>
-									<span className="w-28 shrink-0 text-right">
+									<span className="w-28 shrink-0 text-end">
 										{isUnlimited(limit) ? (
 											<span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
 												<InfinityIcon aria-hidden="true" className="size-3.5" />
@@ -227,10 +239,12 @@ export function PoolGrid({ meters, balances, onSelect, limit = 6, className }: P
 				const body = (
 					<>
 						<span className="flex items-center justify-between gap-2">
-							<span className="truncate text-[13px] text-foreground">{pool.meter.displayName}</span>
+							<span title={pool.meter.displayName} className="line-clamp-2 min-w-0 text-[0.8125rem] text-foreground [overflow-wrap:anywhere]">
+								<bdi>{pool.meter.displayName}</bdi>
+							</span>
 							<span
 								className={cn(
-									'text-xs tabular-nums',
+									'shrink-0 text-xs tabular-nums',
 									level === 'warning' ? 'font-medium text-warning' : level === 'ok' ? 'text-muted-foreground' : 'font-medium text-destructive',
 								)}
 							>
@@ -240,7 +254,7 @@ export function PoolGrid({ meters, balances, onSelect, limit = 6, className }: P
 						<AllowanceBar used={balance.currentUsage} limit={balance.effectiveLimit} label={pool.meter.displayName} size="sm" />
 					</>
 				);
-				const className = 'flex w-full flex-col gap-2 rounded-lg border border-border bg-card px-3 py-2.5 text-left';
+				const className = 'flex w-full flex-col gap-2 rounded-lg border border-border bg-card px-3 py-2.5 text-start';
 				return (
 					<li key={pool.meter.slug}>
 						{onSelect ? (
@@ -286,13 +300,13 @@ export function MeterDetailSheet({ meter, balance, pool, rateWindows = [], perio
 			<SheetContent side="right" className="w-[26rem] max-w-[92vw] gap-0 p-0 sm:max-w-[26rem]">
 				<div className="flex flex-col gap-1 border-b border-border px-5 pt-5 pb-4">
 					<SheetTitle className="text-base font-medium">{meter.displayName}</SheetTitle>
-					<SheetDescription className="text-[13px]">
+					<SheetDescription className="text-[0.8125rem]">
 						{meter.description ?? `Measured in ${meter.unit}, ${meter.aggregation === 'peak' ? 'at its peak' : 'summed'} ${meter.periodInterval ? `each ${meter.periodInterval}` : 'without reset'}.`}
 					</SheetDescription>
 				</div>
 				<div className="flex min-h-0 flex-1 flex-col gap-5 overflow-y-auto px-5 py-5 [&>*]:shrink-0">
 					<div className="flex flex-col gap-2">
-						<div className="flex items-baseline justify-between">
+						<div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
 							<UsageFigure used={used} limit={limit} unit={meter.unit} compact={false} className="text-sm" />
 							{remaining !== null ? <span className="text-xs text-muted-foreground tabular-nums">{f.quantity(remaining, true)} left</span> : null}
 						</div>
@@ -315,13 +329,13 @@ export function MeterDetailSheet({ meter, balance, pool, rateWindows = [], perio
 							]}
 						/>
 					) : null}
-					<div className={cn('rounded-lg bg-muted/60 px-3 py-2.5 text-[13px] text-muted-foreground')}>
+					<div className={cn('rounded-lg bg-muted/60 px-3 py-2.5 text-[0.8125rem] text-muted-foreground')}>
 						{meter.meterType === 'usage_pool' ? (
 							<>Meters in this pool draw from it once their own allowance runs out; when the pool is empty they fall back to Universal credits.</>
 						) : meter.creditCost ? (
 							<>
-								When the allowance runs out, each {meter.unit.replace(/s$/, '')} costs{' '}
-								<span className="font-medium text-foreground tabular-nums">{meter.creditCost}</span> {meter.creditCost === 1 ? 'credit' : 'credits'} from{' '}
+								When the allowance runs out, each {meter.unitSingular ?? singularize(meter.unit)} costs{' '}
+								<span className="font-medium text-foreground tabular-nums">{meter.creditCost}</span> {plural(meter.creditCost, { one: 'credit', other: 'credits' })} from{' '}
 								{pool && pool.slug !== UNIVERSAL_METER ? (
 									<>
 										<span className="text-foreground">{pool.displayName}</span>, then from Universal credits.
@@ -337,10 +351,10 @@ export function MeterDetailSheet({ meter, balance, pool, rateWindows = [], perio
 					{windows.length > 0 ? (
 						<div className="flex flex-col gap-2">
 							<p className="text-xs text-muted-foreground">Request windows</p>
-							<ul className="flex flex-col gap-1.5 text-[13px]">
+							<ul className="flex flex-col gap-1.5 text-[0.8125rem]">
 								{windows.map((window) => (
-									<li key={window.id} className="flex items-center justify-between gap-3">
-										<span className="text-muted-foreground">
+									<li key={window.id} className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1">
+										<span className="min-w-0 text-muted-foreground [overflow-wrap:anywhere]">
 											{window.scope === 'entity' ? 'Whole account' : 'Per member'} · {window.window}
 										</span>
 										<span className="flex items-center gap-2 text-foreground tabular-nums">

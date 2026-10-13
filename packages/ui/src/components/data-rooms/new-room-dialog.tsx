@@ -94,13 +94,13 @@ function NewRoomForm({ unitId: initialUnit, onDone }: { unitId?: string; onDone:
 		<form onSubmit={submit} noValidate className="flex min-h-0 flex-col">
 			<DialogHeader variant="band" className="gap-1">
 				<DialogTitle className="text-base font-medium">New room</DialogTitle>
-				<DialogDescription className="text-[13px]">A private space for documents, people, and questions.</DialogDescription>
+				<DialogDescription className="text-[0.8125rem]">A private space for documents, people, and questions.</DialogDescription>
 			</DialogHeader>
 			<DialogPanel className="flex flex-col gap-4">
 				<FormField label="Name" htmlFor={`${id}-name`}>
 					<Input id={`${id}-name`} value={name} placeholder="Project Halcyon" autoFocus onChange={(event) => setName(event.target.value)} aria-invalid={invalid === 'Give the room a name.' || undefined} />
 				</FormField>
-				<div className="grid gap-4 sm:grid-cols-2">
+				<div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
 					<FormField label="Owned by" htmlFor={`${id}-unit`}>
 						<ChoiceSelect
 							id={`${id}-unit`}
@@ -119,20 +119,20 @@ function NewRoomForm({ unitId: initialUnit, onDone }: { unitId?: string; onDone:
 				</FormField>
 
 				<fieldset className="flex flex-col">
-					<legend className="mb-1 text-[13px] font-medium text-foreground">Protection</legend>
+					<legend className="mb-1 text-[0.8125rem] font-medium text-foreground">Protection</legend>
 					{POLICY_ROWS.map((row, index) => {
 						const switchId = `${id}-${row.key}`;
 						return (
 							<div key={row.key} className={cn('flex items-start gap-3 py-2', index > 0 && cn('border-t', dashedRule))}>
 								<div className="min-w-0 flex-1">
-									<label htmlFor={switchId} className="text-[13px] text-foreground">
+									<label htmlFor={switchId} className="text-[0.8125rem] text-foreground">
 										{row.label}
 									</label>
 									<p className="text-pretty text-xs text-muted-foreground">{row.description}</p>
 								</div>
 								<Switch
 									id={switchId}
-									className="-my-2.5 -mr-1.5"
+									className="-my-2.5 -me-1.5"
 									checked={policies[row.key]}
 									onCheckedChange={(checked) => setPolicies((current) => ({ ...current, [row.key]: checked }))}
 								/>
@@ -153,14 +153,14 @@ function NewRoomForm({ unitId: initialUnit, onDone }: { unitId?: string; onDone:
 				) : null}
 
 				{unitId ? (
-					<p aria-live="polite" className="flex gap-2 rounded-lg bg-muted/60 px-3 py-2.5 text-[13px] text-muted-foreground">
+					<p aria-live="polite" className="flex gap-2 rounded-lg bg-muted/60 px-3 py-2.5 text-[0.8125rem] text-muted-foreground">
 						<Info aria-hidden="true" className="mt-0.5 size-3.5 shrink-0" />
 						<span className="text-pretty">{joinNote(data, unitId, policies.restricted)}</span>
 					</p>
 				) : null}
 
 				{error ? (
-					<p role="alert" className="text-[13px] text-destructive">
+					<p role="alert" className="text-[0.8125rem] text-destructive">
 						{error}
 					</p>
 				) : null}

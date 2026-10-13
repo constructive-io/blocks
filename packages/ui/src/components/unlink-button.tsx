@@ -10,6 +10,7 @@ interface UnlinkButtonProps {
 	size?: 'sm' | 'xs';
 	variant?: 'destructive' | 'ghost';
 	className?: string;
+	/** Name the record being unlinked ("Unlink Acme Inc"); it is also the hover tooltip. */
 	'aria-label'?: string;
 }
 
@@ -29,13 +30,13 @@ export function UnlinkButton({
 			onClick={onUnlink}
 			disabled={disabled || isUnlinking}
 			className={cn(
-				'hover:bg-destructive/10 hover:text-destructive h-5 w-5 p-0',
+				'hover:bg-destructive/10 hover:text-destructive size-6 p-0',
 				'focus-visible:ring-[3px] focus-visible:ring-destructive/30',
 				isUnlinking && 'cursor-not-allowed opacity-50',
 				className,
 			)}
 			aria-label={ariaLabel}
-			title={isUnlinking ? 'Unlinking...' : 'Unlink record'}
+			title={isUnlinking ? 'Unlinking...' : ariaLabel}
 		>
 			{isUnlinking ? <RiLoader4Line className='h-3 w-3 animate-spin' /> : <RiCloseLine className='h-3 w-3' />}
 		</Button>

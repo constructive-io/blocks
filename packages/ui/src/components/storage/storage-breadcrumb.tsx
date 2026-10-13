@@ -38,10 +38,23 @@ const CRUMB = 'inline-flex h-6 min-w-0 max-w-48 items-center gap-1.5 rounded-md 
  */
 export function StorageBreadcrumb({ bucketKey, segments = [], onNavigate, disabled = false, className }: StorageBreadcrumbProps) {
 	const crumbs = [{ label: bucketKey, path: null as string | null }, ...segments.map((segment) => ({ label: segment.label, path: segment.path as string | null }))];
+	const navRef = React.useRef<HTMLElement>(null);
+	const location = crumbs[crumbs.length - 1]?.path ?? bucketKey;
+
+	// The row scrolls sideways, and the crumb that matters is the last one: bring it into view whenever the path changes.
+	React.useEffect(() => {
+		const nav = navRef.current;
+		const current = nav?.querySelector<HTMLElement>('[aria-current="location"]');
+		if (!nav || !current) return;
+		const frame = nav.getBoundingClientRect();
+		const box = current.getBoundingClientRect();
+		if (box.right > frame.right) nav.scrollBy({ left: box.right - frame.right + 8 });
+		else if (box.left < frame.left) nav.scrollBy({ left: box.left - frame.left - 8 });
+	}, [location, crumbs.length]);
 
 	return (
-		<nav aria-label="Folder path" className={cn(scrollRowClass, 'min-w-0', className)}>
-			<ol className="flex w-max items-center gap-0.5 text-[13px]">
+		<nav ref={navRef} aria-label="Folder path" className={cn(scrollRowClass, 'min-w-0', className)}>
+			<ol className="flex w-max items-center gap-0.5 text-[0.8125rem]">
 				{crumbs.map((crumb, index) => {
 					const last = index === crumbs.length - 1;
 					const content = (

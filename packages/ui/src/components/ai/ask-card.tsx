@@ -43,7 +43,7 @@ function QuestionHeading({ id, children }: { id?: string; children: React.ReactN
 	return (
 		<div className="flex min-h-7 items-start gap-2 px-1 py-1">
 			<CircleHelp aria-hidden="true" className="mt-0.5 size-4 shrink-0 text-muted-foreground" />
-			<p id={id} className="text-pretty text-sm text-foreground">
+			<p id={id} className="min-w-0 text-pretty text-sm text-foreground [overflow-wrap:anywhere]">
 				{children}
 			</p>
 		</div>
@@ -55,7 +55,7 @@ function KeyBadge({ children, active }: { children: React.ReactNode; active?: bo
 		<span
 			aria-hidden="true"
 			className={cn(
-				'grid size-5 shrink-0 place-items-center rounded-[5px] border text-[11px] font-medium tabular-nums',
+				'grid size-5 shrink-0 place-items-center rounded-[5px] border text-[0.6875rem] font-medium tabular-nums',
 				active ? 'border-primary bg-primary text-primary-foreground' : 'border-border bg-muted text-muted-foreground',
 			)}
 		>
@@ -80,7 +80,7 @@ function AskQuestionField({
 	const headingId = React.useId();
 	const otherValue = choice && 'other' in choice ? choice.other : '';
 	const rowClass =
-		'flex min-h-9 w-full items-center gap-2.5 rounded-sm border px-2 py-1.5 text-left text-sm outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50';
+		'flex min-h-9 w-full items-center gap-2.5 rounded-sm border px-2 py-1.5 text-start text-sm outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50';
 
 	return (
 		<div className="flex flex-col gap-1.5">
@@ -105,7 +105,7 @@ function AskQuestionField({
 							)}
 						>
 							<KeyBadge active={checked}>{KEYS[index]}</KeyBadge>
-							<span className="min-w-0 flex-1">{option.label}</span>
+							<span className="min-w-0 flex-1 [overflow-wrap:anywhere]">{option.label}</span>
 						</button>
 					);
 				})}
@@ -138,14 +138,16 @@ function AnswerChip({ children, muted }: { children: React.ReactNode; muted?: bo
 	return (
 		<span
 			className={cn(
-				'inline-flex h-6 max-w-full items-center gap-1.5 rounded-md border border-border bg-muted px-1.5 text-[13px]',
+				'inline-flex h-6 max-w-full items-center gap-1.5 rounded-md border border-border bg-muted px-1.5 text-[0.8125rem]',
 				muted ? 'text-muted-foreground' : 'text-foreground',
 			)}
 		>
 			{muted ? null : (
 				<CircleCheck aria-hidden="true" className={cn('size-3.5 shrink-0 fill-primary text-primary-foreground', iconEnterClass)} />
 			)}
-			<span className="truncate">{children}</span>
+			<span title={typeof children === 'string' ? children : undefined} className="truncate">
+				{children}
+			</span>
 		</span>
 	);
 }
@@ -191,7 +193,7 @@ function AskCard({
 					return (
 						<div key={question.id} className="flex flex-wrap items-center gap-x-2 gap-y-1">
 							<CircleHelp aria-hidden="true" className="size-4 shrink-0 text-muted-foreground" />
-							<p className="text-pretty text-sm text-foreground">{question.question}</p>
+							<p className="min-w-0 text-pretty text-sm text-foreground [overflow-wrap:anywhere]">{question.question}</p>
 							{label ? <AnswerChip>{label}</AnswerChip> : <AnswerChip muted>Skipped</AnswerChip>}
 						</div>
 					);
@@ -224,7 +226,7 @@ function AskCard({
 					}
 				/>
 			))}
-			<div className="flex items-center gap-2">
+			<div className="flex flex-wrap items-center gap-2">
 				<Button size="xs" disabled={disabled || !complete} onClick={() => onSubmit?.(choices)}>
 					{continueLabel}
 				</Button>

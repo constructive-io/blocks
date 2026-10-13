@@ -11,7 +11,7 @@ import { focusRingClass, Segmented, ToneBadge } from '../workspace-kit/primitive
 import { AllowanceBar, UsageFigure } from './allowance';
 import { useBillingFormat } from './context';
 import { CreditGrantList } from './credits';
-import { CREDIT_TYPE, isUnlimited, OPERATION_STATE } from './format';
+import { CREDIT_TYPE, humanize, isUnlimited, OPERATION_STATE } from './format';
 import { InvoiceTable } from './invoices';
 import { type BillingProviderDescriptor } from './providers';
 import { ExternalRef } from './provider';
@@ -31,7 +31,8 @@ type CustomerTableProps = {
 export function CustomerTable({ customers, plans, selectedId, onSelect, className }: CustomerTableProps) {
 	const f = useBillingFormat();
 	const planNames = new Map(plans.map((plan) => [plan.id, plan.displayName]));
-	const planName = (id: string) => planNames.get(id) ?? id;
+	// A customer can sit on a plan the catalog no longer lists; show its id as words rather than as a slug.
+	const planName = (id: string) => planNames.get(id) ?? humanize(id);
 	if (customers.length === 0) {
 		return <EmptyState icon={Users} title="No customers match" description="Try another filter or search." className={className} />;
 	}
@@ -42,7 +43,7 @@ export function CustomerTable({ customers, plans, selectedId, onSelect, classNam
 							<th scope="col">Customer</th>
 							<th scope="col">Plan</th>
 							<th scope="col">Status</th>
-							<th scope="col" className="text-right">
+							<th scope="col" className="text-end">
 								MRR
 							</th>
 							<th scope="col">Peak usage</th>
@@ -62,17 +63,19 @@ export function CustomerTable({ customers, plans, selectedId, onSelect, classNam
 											<span aria-hidden="true" className="grid size-7 shrink-0 place-items-center rounded-lg bg-muted text-muted-foreground">
 												<Icon className="size-3.5" />
 											</span>
-											<span className="min-w-0">
-												<span className="block truncate font-medium text-foreground">{customer.name}</span>
-												<span className="block truncate text-xs text-muted-foreground">
-													{customer.email ?? (customer.kind === 'organization' ? 'Organization' : 'Personal')} · since {f.date(customer.since, 'short')}
+											<span className="min-w-0 max-w-[18rem]">
+												<span title={customer.name} className="line-clamp-2 block font-medium text-foreground [overflow-wrap:anywhere]">
+													<bdi>{customer.name}</bdi>
+												</span>
+												<span title={customer.email ?? undefined} className="block truncate text-xs text-muted-foreground">
+													<bdi>{customer.email ?? (customer.kind === 'organization' ? 'Organization' : 'Personal')}</bdi> · since {f.date(customer.since, 'short')}
 												</span>
 											</span>
 										</span>
 									</td>
 									<td>
-										<span className="flex flex-col">
-											<span className="text-foreground">{planName(customer.planId)}</span>
+										<span className="flex max-w-[14rem] min-w-32 flex-col">
+											<span className="text-foreground [overflow-wrap:anywhere]">{planName(customer.planId)}</span>
 											{customer.scheduledChange ? (
 												<span className="flex items-center gap-1 text-xs text-muted-foreground">
 													<CalendarClock aria-hidden="true" className="size-3" />
@@ -84,7 +87,7 @@ export function CustomerTable({ customers, plans, selectedId, onSelect, classNam
 									<td>
 										<LifecycleBadge lifecycle={customer.lifecycle} />
 									</td>
-									<td className="text-right font-medium text-foreground tabular-nums">{f.money(customer.mrr)}</td>
+									<td className="text-end font-medium whitespace-nowrap text-foreground tabular-nums">{f.money(customer.mrr)}</td>
 									<td>
 										<span className="flex items-center gap-2">
 											<AllowanceBar used={customer.usagePeak} limit={100} label={`${customer.name} peak usage`} size="sm" className="w-16" />
@@ -94,11 +97,11 @@ export function CustomerTable({ customers, plans, selectedId, onSelect, classNam
 													customer.usagePeak >= 100 ? 'font-medium text-destructive' : customer.usagePeak >= 80 ? 'font-medium text-warning' : 'text-muted-foreground',
 												)}
 											>
-												{Math.round(customer.usagePeak)}%
+												{Math.max(0, Math.round(customer.usagePeak))}%
 											</span>
 										</span>
 									</td>
-									<td className="text-right">
+									<td className="text-end">
 										{onSelect ? (
 											<button
 												type="button"
@@ -106,7 +109,7 @@ export function CustomerTable({ customers, plans, selectedId, onSelect, classNam
 												onClick={() => onSelect(customer)}
 												className={cn('grid size-7 cursor-pointer place-items-center rounded-md text-muted-foreground hover:bg-overlay-hover hover:text-foreground', focusRingClass)}
 											>
-												<ChevronRight aria-hidden="true" className="size-3.5" />
+												<ChevronRight aria-hidden="true" className="size-3.5 rtl:-scale-x-100" />
 											</button>
 										) : null}
 									</td>
@@ -165,7 +168,7 @@ export function GrantCreditsForm({ customerId, meters, onGrant, onCancel }: Gran
 				}
 			}}
 		>
-			<div className="grid gap-3 @md/view:grid-cols-2">
+			<div className="grid grid-cols-1 gap-3 @md/view:grid-cols-2">
 				<label htmlFor={`${id}-meter`} className="flex flex-col gap-1 text-xs text-muted-foreground">
 					Meter
 					<select
@@ -196,17 +199,17 @@ export function GrantCreditsForm({ customerId, meters, onGrant, onCancel }: Gran
 				/>
 				<span>{CREDIT_TYPE[creditType].description}</span>
 			</div>
-			<div className="grid gap-3 @md/view:grid-cols-[8rem_1fr]">
+			<div className="grid grid-cols-1 gap-3 @md/view:grid-cols-[8rem_minmax(0,1fr)]">
 				<label htmlFor={`${id}-expires`} className="flex flex-col gap-1 text-xs text-muted-foreground">
 					Expires after
-					<span className="flex h-8 items-center rounded-md border border-border bg-card pr-2 shadow-2xs focus-within:ring-[3px] focus-within:ring-ring/50">
+					<span className="flex h-8 items-center rounded-md border border-border bg-card pe-2 shadow-2xs focus-within:ring-[3px] focus-within:ring-ring/50">
 						<input
 							id={`${id}-expires`}
 							inputMode="numeric"
 							value={expires}
 							placeholder="Never"
 							onChange={(event) => setExpires(event.target.value.replace(/\D/g, ''))}
-							className="h-full w-full min-w-0 bg-transparent px-2 text-[13px] text-foreground tabular-nums outline-none placeholder:text-subtle-foreground"
+							className="h-full w-full min-w-0 bg-transparent px-2 text-[0.8125rem] text-foreground tabular-nums outline-none placeholder:text-subtle-foreground"
 						/>
 						<span className="text-xs text-muted-foreground">days</span>
 					</span>
@@ -246,6 +249,8 @@ type CustomerDetailSheetProps = {
 	onGrantCredits?: (request: GrantCreditsRequest) => Promise<void> | void;
 	onRemoveOverride?: (customer: CustomerSummary, override: PlanOverride) => void;
 	onCancelScheduledChange?: (customer: CustomerSummary) => void;
+	/** What to show while `customer.detail` is absent: still loading (the default), or known to be unavailable. */
+	detailStatus?: 'loading' | 'unavailable';
 };
 
 /**
@@ -264,6 +269,7 @@ export function CustomerDetailSheet({
 	onGrantCredits,
 	onRemoveOverride,
 	onCancelScheduledChange,
+	detailStatus = 'loading',
 }: CustomerDetailSheetProps) {
 	const f = useBillingFormat();
 	const [granting, setGranting] = React.useState(false);
@@ -286,18 +292,18 @@ export function CustomerDetailSheet({
 		<Sheet open={open} onOpenChange={onOpenChange}>
 			<SheetContent side="right" className="w-[34rem] max-w-[94vw] gap-0 p-0 sm:max-w-[34rem]">
 				<div className="flex flex-col gap-3 border-b border-border px-5 pt-5 pb-4">
-					<div className="flex flex-wrap items-center gap-2 pr-8">
-						<SheetTitle className="text-base font-medium">{customer.name}</SheetTitle>
+					<div className="flex flex-wrap items-center gap-2 pe-8">
+						<SheetTitle className="min-w-0 text-base font-medium [overflow-wrap:anywhere]">{customer.name}</SheetTitle>
 						<LifecycleBadge lifecycle={customer.lifecycle} />
 					</div>
-					<SheetDescription className="text-[13px]">
+					<SheetDescription className="text-[0.8125rem]">
 						{plan?.displayName ?? customer.planId} · {f.money(customer.mrr)}/mo · customer since {f.date(customer.since)}
 					</SheetDescription>
 					{customer.externalId ? <ExternalRef provider={provider} kind="customer" id={customer.externalId} mode={mode} className="self-start" /> : null}
 				</div>
 				<div className="@container/view flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto bg-background px-5 py-5 [&>*]:shrink-0">
 					{customer.scheduledChange ? (
-						<div className="flex flex-wrap items-center gap-3 rounded-lg border border-info/25 bg-info/[0.06] px-3 py-2.5 text-[13px]">
+						<div className="flex flex-wrap items-center gap-3 rounded-lg border border-info/25 bg-info/[0.06] px-3 py-2.5 text-[0.8125rem]">
 							<CalendarClock aria-hidden="true" className="size-3.5 text-info" />
 							<span className="min-w-0 flex-1 text-foreground">
 								Moves to {plans.find((candidate) => candidate.id === customer.scheduledChange!.planId)?.displayName} on {f.date(customer.scheduledChange.effectiveAt)}
@@ -311,7 +317,9 @@ export function CustomerDetailSheet({
 					) : null}
 
 					{!detail ? (
-						<p className="text-[13px] text-muted-foreground">Loading details…</p>
+						<p role="status" className="text-[0.8125rem] text-muted-foreground">
+							{detailStatus === 'unavailable' ? 'Details are not available for this customer.' : 'Loading details…'}
+						</p>
 					) : (
 						<>
 							<Panel title="Balances" description="Busiest meters this period.">
@@ -321,7 +329,9 @@ export function CustomerDetailSheet({
 										return (
 											<li key={balance.meterSlug} className={cn('flex flex-col gap-1.5 py-2', index > 0 && cn('border-t', dashedRule))}>
 												<span className="flex items-center justify-between gap-3">
-													<span className="truncate text-[13px] text-foreground">{meter?.displayName ?? balance.meterSlug}</span>
+													<span title={meter?.displayName ?? balance.meterSlug} className="line-clamp-2 min-w-0 text-[0.8125rem] text-foreground [overflow-wrap:anywhere]">
+														<bdi>{meter?.displayName ?? balance.meterSlug}</bdi>
+													</span>
 													<UsageFigure used={balance.currentUsage} limit={balance.effectiveLimit} unit={meter?.unit ?? ''} className="text-xs" />
 												</span>
 												<AllowanceBar used={balance.currentUsage} limit={balance.effectiveLimit} label={meter?.displayName ?? balance.meterSlug} size="sm" planMarker={balance.planLimit} />
@@ -360,17 +370,17 @@ export function CustomerDetailSheet({
 
 							<Panel title="Overrides" description="Per-customer limits that beat the plan until they expire.">
 								{detail.overrides.length === 0 ? (
-									<p className="text-[13px] text-muted-foreground">None. This customer gets exactly what the plan says.</p>
+									<p className="text-[0.8125rem] text-muted-foreground">None. This customer gets exactly what the plan says.</p>
 								) : (
 									<ul className="flex flex-col">
 										{detail.overrides.map((override, index) => (
 											<li key={override.id} className={cn('flex items-center gap-3 py-2', index > 0 && cn('border-t', dashedRule))}>
 												<SlidersHorizontal aria-hidden="true" className="size-3.5 shrink-0 text-muted-foreground" />
 												<span className="min-w-0 flex-1">
-													<span className="block text-[13px] text-foreground">
-														{override.limitName} → {isUnlimited(override.maxValue) ? 'unlimited' : f.quantity(override.maxValue)}
+													<span className="block text-[0.8125rem] text-foreground [overflow-wrap:anywhere]">
+														{override.limitName} <span className="inline-block rtl:-scale-x-100">→</span> {isUnlimited(override.maxValue) ? 'unlimited' : f.quantity(override.maxValue)}
 													</span>
-													<span className="block text-xs text-muted-foreground">
+													<span className="block text-xs text-muted-foreground [overflow-wrap:anywhere]">
 														{override.reason ?? 'No reason given'}
 														{override.expiresAt ? ` · until ${f.date(override.expiresAt)}` : ''}
 													</span>
@@ -388,12 +398,12 @@ export function CustomerDetailSheet({
 
 							{detail.rateWindows.length > 0 ? (
 								<Panel title="Request windows" bodyClassName="p-0">
-									<table className="w-full border-collapse text-[13px]">
+									<table className="w-full border-collapse text-[0.8125rem]">
 										<thead className={tableHeadClass}>
 											<tr>
 												<th scope="col">Meter</th>
 												<th scope="col">Window</th>
-												<th scope="col" className="text-right">
+												<th scope="col" className="text-end">
 													Max
 												</th>
 											</tr>
@@ -408,7 +418,7 @@ export function CustomerDetailSheet({
 													<td className="text-muted-foreground">
 														{window.window} · lock {window.lockout}
 													</td>
-													<td className="text-right tabular-nums">
+													<td className="text-end tabular-nums">
 														<span className="inline-flex items-center gap-2">
 															{window.override ? <ToneBadge tone="primary">Override</ToneBadge> : null}
 															{isUnlimited(window.maxRequests) ? 'None' : f.quantity(window.maxRequests)}
@@ -425,10 +435,10 @@ export function CustomerDetailSheet({
 								<ol className="flex flex-col">
 									{detail.operations.map((operation, index) => (
 										<li key={operation.id} className={cn('flex flex-wrap items-center gap-x-3 gap-y-1 py-2', index > 0 && cn('border-t', dashedRule))}>
-											<code className="font-mono text-xs text-foreground">{operation.action}</code>
+											<code className="font-mono text-xs [overflow-wrap:anywhere] text-foreground">{operation.action}</code>
 											<StatusBadge presentation={OPERATION_STATE[operation.state]} />
-											<span className="ml-auto text-xs text-muted-foreground tabular-nums">{f.date(operation.createdAt, 'short', true)}</span>
-											{operation.errorCode ? <span className="w-full text-xs text-destructive">{operation.errorCode}</span> : null}
+											<span className="ms-auto text-xs text-muted-foreground tabular-nums">{f.date(operation.createdAt, 'short', true)}</span>
+											{operation.errorCode ? <span className="w-full text-xs text-destructive [overflow-wrap:anywhere]">{operation.errorCode}</span> : null}
 										</li>
 									))}
 								</ol>

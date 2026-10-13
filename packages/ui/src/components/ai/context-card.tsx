@@ -38,21 +38,25 @@ function ContextCard({
 			style={{ animationDelay: `${index * 60}ms` }}
 		>
 			<div className="flex items-start justify-between gap-2">
-				<h3 className="text-[13px] font-medium text-balance text-foreground">{title}</h3>
+				<h3 className="min-w-0 text-[0.8125rem] font-medium text-balance text-foreground [overflow-wrap:anywhere]">{title}</h3>
 				{meta ? (
-					<span className="shrink-0 text-[11px] tabular-nums text-muted-foreground">{meta}</span>
+					<span className="shrink-0 text-[0.6875rem] tabular-nums text-muted-foreground">{meta}</span>
 				) : null}
 			</div>
-			<p className="mt-1.5 text-[13px] text-pretty leading-relaxed text-muted-foreground">{body}</p>
+			<p className="mt-1.5 text-[0.8125rem] text-pretty leading-relaxed text-muted-foreground [overflow-wrap:anywhere]">{body}</p>
 			{(sourceType || sourceName) && (
-				<div className="mt-2.5 flex items-center gap-1.5 text-[12px] text-muted-foreground">
+				<div className="mt-2.5 flex flex-wrap items-center gap-x-1.5 gap-y-1 text-[0.75rem] text-muted-foreground">
 					<FileText className="size-3 shrink-0 opacity-70" />
 					{sourceType ? (
-						<Badge variant="secondary" className="h-5 px-1.5 text-[10px] font-medium">
+						<Badge variant="secondary" className="h-5 px-1.5 text-[0.625rem] font-medium">
 							{sourceType}
 						</Badge>
 					) : null}
-					{sourceName ? <span className="min-w-0 truncate">{sourceName}</span> : null}
+					{sourceName ? (
+						<span title={typeof sourceName === 'string' ? sourceName : undefined} className="max-w-full min-w-0 truncate">
+							{sourceName}
+						</span>
+					) : null}
 				</div>
 			)}
 		</article>
@@ -69,7 +73,7 @@ type ContextCardsProps = {
 function ContextCards({ children, className, label = 'Chunks', count }: ContextCardsProps) {
 	return (
 		<div data-slot="context-cards" className={cn('flex flex-col gap-2', className)}>
-			<div className="flex items-center gap-2 text-[12px] text-muted-foreground">
+			<div className="flex items-center gap-2 text-[0.75rem] text-muted-foreground">
 				<span className="font-medium">{label}</span>
 				{count != null ? (
 					<span className="tabular-nums text-muted-foreground/70">{count}</span>

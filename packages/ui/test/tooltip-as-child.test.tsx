@@ -3,6 +3,7 @@ import { act } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
+import { Button } from '../src/components/button';
 import { Tooltip, TooltipProvider, TooltipTrigger } from '../src/components/tooltip';
 
 globalThis.IS_REACT_ACT_ENVIRONMENT = true;
@@ -120,6 +121,24 @@ describe('TooltipTrigger asChild', () => {
 		await act(async () => link!.click());
 		expect(childClick).toHaveBeenCalledOnce();
 		expect(parentClick).toHaveBeenCalledOnce();
+	});
+
+	it('puts the trigger on an enabled button directly, without a wrapper', async () => {
+		const view = createTestRoot();
+
+		await view.render(
+			<TooltipProvider>
+				<Tooltip>
+					<TooltipTrigger asChild>
+						<Button>Rename</Button>
+					</TooltipTrigger>
+				</Tooltip>
+			</TooltipProvider>,
+		);
+
+		const trigger = view.container.querySelector('[data-slot="tooltip-trigger"]');
+		expect(trigger?.tagName).toBe('BUTTON');
+		expect(view.container.querySelector('span')).toBeNull();
 	});
 
 	it('keeps the normal trigger as a native button', async () => {
