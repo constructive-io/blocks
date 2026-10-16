@@ -180,7 +180,7 @@ export async function signUp(
   tenant: ProofTenant,
   credentials: ProofCredentials
 ): Promise<LiveSession> {
-  const data = await graphQL<Record<string, unknown>>(
+  await graphQL<Record<string, unknown>>(
     endpointUrl(tenant, 'auth'),
     SIGN_UP,
     { input: { email: credentials.email, password: credentials.password } }
