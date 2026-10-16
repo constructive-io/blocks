@@ -5,7 +5,6 @@ import { parseGraphQLError } from '../utils/auth-errors';
 import type { RegisterFormData } from '../utils/schemas';
 import { registerSchema } from '../utils/schemas';
 import { Button } from '@constructive-io/ui/button';
-import { Checkbox } from '@constructive-io/ui/checkbox';
 
 import { AuthErrorAlert } from './auth-error-alert';
 import { AuthLoadingButton } from './auth-loading-button';
@@ -27,7 +26,6 @@ export function SheetsRegisterForm({ onRegister, onShowLogin, defaultEmail = '' 
 			email: defaultEmail,
 			password: '',
 			confirmPassword: '',
-			rememberMe: true,
 		},
 		onSubmit: async ({ value }) => {
 			setError(null);
@@ -89,25 +87,6 @@ export function SheetsRegisterForm({ onRegister, onShowLogin, defaultEmail = '' 
 					)}
 				</form.Field>
 
-				<form.Field name='rememberMe'>
-					{(field) => (
-						<div className='flex items-center space-x-2'>
-							<Checkbox
-								id='rememberMe'
-								checked={field.state.value}
-								onCheckedChange={(checked) => {
-									field.handleChange(checked === true);
-								}}
-							/>
-							<label
-								htmlFor='rememberMe'
-								className='text-sm leading-none font-medium peer-disabled:cursor-not-allowed peer-disabled:opacity-70'
-							>
-								Remember me
-							</label>
-						</div>
-					)}
-				</form.Field>
 
 				<div className='pt-2'>
 					<AuthLoadingButton

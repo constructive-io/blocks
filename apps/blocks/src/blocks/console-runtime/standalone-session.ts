@@ -30,12 +30,7 @@ const SIGN_IN_MUTATION = /* GraphQL */ `
 const SIGN_UP_MUTATION = /* GraphQL */ `
   mutation ConsoleSignUp($input: SignUpInput!) {
     signUp(input: $input) {
-      result {
-        id
-        userId
-        accessToken
-        accessTokenExpiresAt
-      }
+      clientMutationId
     }
   }
 `;
@@ -70,6 +65,10 @@ export type ConsoleAuthenticationOutcome =
   | Readonly<{
       status: 'mfa-required';
       challengeToken: string;
+    }>
+  | Readonly<{
+      /** sign_up never signs anyone in; the tenant mails a sign-in link. */
+      status: 'check-email';
     }>;
 
 export type ConsoleAuthenticationOperation = 'signIn' | 'signUp';
@@ -577,8 +576,9 @@ export function createDatabaseScopedStandaloneSession(
           input: {
             email: credentials.email.trim(),
             password: credentials.password,
-            rememberMe: credentials.rememberMe === true,
-            credentialKind: 'bearer',
+            ...(field === 'signIn'
+              ? { rememberMe: credentials.rememberMe === true, credentialKind: 'bearer' }
+              : {}),
             ...(csrfToken ? { csrfToken } : {})
           }
         },
@@ -593,8 +593,12 @@ export function createDatabaseScopedStandaloneSession(
       ) {
         throw supersededAuthenticationError();
       }
-      const result = mutationRecord(payload, field);
-      if (field === 'signIn' && result?.mfaRequired === true) {
+      if (field === 'signUp') {
+        setAnonymous();
+        return { status: 'check-email' };
+      }
+      const result = mutationRecord(payload, 'signIn');
+      if (result?.mfaRequired === true) {
         const challengeToken = nonEmptyString(result.mfaChallengeToken);
         if (!challengeToken) {
           throw new ConsoleSessionOperationError(

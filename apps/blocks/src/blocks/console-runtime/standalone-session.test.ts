@@ -140,16 +140,7 @@ describe('database-scoped standalone session', () => {
 
   it('requests a distinct CSRF bootstrap for sign-up', async () => {
     const fetchImpl = vi.fn<typeof fetch>().mockResolvedValue(response({
-      data: {
-        signUp: {
-          result: {
-            id: 'session-1',
-            userId: 'user-1',
-            accessToken: 'secret-token',
-            accessTokenExpiresAt: '2030-01-01T00:00:00.000Z'
-          }
-        }
-      }
+      data: { signUp: { clientMutationId: null } }
     }));
     const csrfTokenProvider = vi.fn().mockResolvedValue('signup-csrf-token');
     const session = createDatabaseScopedStandaloneSession({
@@ -160,7 +151,9 @@ describe('database-scoped standalone session', () => {
       storage: { session: memoryStorage(), local: memoryStorage() }
     });
 
-    await session.signUp({ email: 'person@example.com', password: 'password' });
+    await expect(session.signUp({ email: 'person@example.com', password: 'password' }))
+      .resolves.toEqual({ status: 'check-email' });
+    expect(session.getSnapshot().status).toBe('anonymous');
 
     expect(csrfTokenProvider).toHaveBeenCalledWith(expect.objectContaining({
       operation: 'signUp'

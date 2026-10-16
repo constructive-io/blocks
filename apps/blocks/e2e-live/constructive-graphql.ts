@@ -64,7 +64,7 @@ const SIGN_IN = /* GraphQL */ `
 const SIGN_UP = /* GraphQL */ `
   mutation ConsoleKitProofSignUp($input: SignUpInput!) {
     signUp(input: $input) {
-      result { id userId accessToken accessTokenExpiresAt }
+      clientMutationId
     }
   }
 `;
@@ -183,9 +183,10 @@ export async function signUp(
   const data = await graphQL<Record<string, unknown>>(
     endpointUrl(tenant, 'auth'),
     SIGN_UP,
-    { input: { email: credentials.email, password: credentials.password, rememberMe: false } }
+    { input: { email: credentials.email, password: credentials.password } }
   );
-  return sessionFrom(data, 'signUp');
+  // sign_up never signs anyone in; the password just set does
+  return signIn(tenant, credentials);
 }
 
 export async function signOut(tenant: ProofTenant, token: string): Promise<void> {

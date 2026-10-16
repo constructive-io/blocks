@@ -43,14 +43,13 @@ export interface SignInMutationResult {
 export interface SignUpInput {
 	email: string;
 	password: string;
-	rememberMe?: boolean;
 }
 
 export type SignUpMutationVariables = MutationVariables<SignUpInput>;
 
 export interface SignUpMutationResult {
 	signUp?: {
-		result?: AuthResultRecord | null;
+		clientMutationId?: string | null;
 	} | null;
 }
 
