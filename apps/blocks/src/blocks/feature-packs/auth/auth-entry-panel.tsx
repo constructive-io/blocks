@@ -189,7 +189,7 @@ export function AuthEntryPanel({
           password,
           rememberMe
         });
-        onAuthenticated?.();
+        setFeedback('Check your email for a link to confirm your address and sign in.');
       } else if (mode === 'recover-password') {
         if (!actions?.recoverPassword) return;
         await actions.recoverPassword({ email: email.trim() });

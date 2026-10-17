@@ -1,11 +1,11 @@
 import { useRef, useState } from 'react';
 import { useForm } from '@tanstack/react-form';
+import { CheckCircleIcon } from 'lucide-react';
 
 import { parseGraphQLError } from '../utils/auth-errors';
 import type { RegisterFormData } from '../utils/schemas';
 import { registerSchema } from '../utils/schemas';
 import { Button } from '@constructive-io/ui/button';
-import { Checkbox } from '@constructive-io/ui/checkbox';
 
 import { AuthErrorAlert } from './auth-error-alert';
 import { AuthLoadingButton } from './auth-loading-button';
@@ -20,6 +20,7 @@ export interface SheetsRegisterFormProps {
 export function SheetsRegisterForm({ onRegister, onShowLogin, defaultEmail = '' }: SheetsRegisterFormProps) {
 	const [error, setError] = useState<string | null>(null);
 	const [isSubmitting, setIsSubmitting] = useState(false);
+	const [isSuccess, setIsSuccess] = useState(false);
 	const passwordInputRef = useRef<HTMLInputElement>(null);
 
 	const form = useForm({
@@ -27,7 +28,6 @@ export function SheetsRegisterForm({ onRegister, onShowLogin, defaultEmail = '' 
 			email: defaultEmail,
 			password: '',
 			confirmPassword: '',
-			rememberMe: true,
 		},
 		onSubmit: async ({ value }) => {
 			setError(null);
@@ -36,6 +36,7 @@ export function SheetsRegisterForm({ onRegister, onShowLogin, defaultEmail = '' 
 			try {
 				const validatedData = registerSchema.parse(value);
 				await onRegister(validatedData);
+				setIsSuccess(true);
 			} catch (err) {
 				setError(parseGraphQLError(err).message);
 			} finally {
@@ -43,6 +44,24 @@ export function SheetsRegisterForm({ onRegister, onShowLogin, defaultEmail = '' 
 			}
 		},
 	});
+
+	if (isSuccess) {
+		return (
+			<div className='space-y-5 text-center'>
+				<div className='flex justify-center'>
+					<div className='bg-success/10 flex h-12 w-12 items-center justify-center rounded-full'>
+						<CheckCircleIcon className='text-success h-6 w-6' />
+					</div>
+				</div>
+				<div className='space-y-1.5'>
+					<h3 className='text-lg font-semibold'>Check your email</h3>
+					<p className='text-muted-foreground text-sm'>
+						We&apos;ve sent a link to confirm your address and sign in.
+					</p>
+				</div>
+			</div>
+		);
+	}
 
 	return (
 		<div className='space-y-5'>
@@ -89,25 +108,6 @@ export function SheetsRegisterForm({ onRegister, onShowLogin, defaultEmail = '' 
 					)}
 				</form.Field>
 
-				<form.Field name='rememberMe'>
-					{(field) => (
-						<div className='flex items-center space-x-2'>
-							<Checkbox
-								id='rememberMe'
-								checked={field.state.value}
-								onCheckedChange={(checked) => {
-									field.handleChange(checked === true);
-								}}
-							/>
-							<label
-								htmlFor='rememberMe'
-								className='text-sm leading-none font-medium peer-disabled:cursor-not-allowed peer-disabled:opacity-70'
-							>
-								Remember me
-							</label>
-						</div>
-					)}
-				</form.Field>
 
 				<div className='pt-2'>
 					<AuthLoadingButton
