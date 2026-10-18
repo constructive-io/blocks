@@ -79,6 +79,27 @@ describe('authentication feature-pack flows', () => {
     expect(screen.getByText('Password must be at least 8 characters.')).toBeInTheDocument();
   });
 
+  it('tells a new account to confirm its email, then sign in with its password', async () => {
+    const user = userEvent.setup();
+    const signUp = vi.fn().mockResolvedValue(undefined);
+    const { container } = render(
+      <AuthFeaturePack
+        actions={{ signUp }}
+        mode='sign-up'
+        policy={{ signUp: true }}
+        view='entry'
+      />
+    );
+
+    await user.type(screen.getByRole('textbox', { name: 'Email address' }), 'ada@example.com');
+    await user.type(container.querySelector('input[name="password"]')!, 'correct horse');
+    await user.click(screen.getByRole('button', { name: 'Create account' }));
+
+    expect(await screen.findByRole('status')).toHaveTextContent(
+      'Check your email to confirm your address, then sign in with your password.'
+    );
+  });
+
   it('requires named confirmation and password step-up before requesting deletion', async () => {
     const user = userEvent.setup();
     const requestAccountDeletion = vi.fn().mockResolvedValue(undefined);
