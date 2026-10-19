@@ -1,3 +1,4 @@
+import { APP_KIT_BLOCKS } from './app-kit-blocks';
 import type { DocSectionId } from './doc-sections';
 
 export type ApplicationBlockApiRow = Readonly<{
@@ -7,7 +8,16 @@ export type ApplicationBlockApiRow = Readonly<{
 }>;
 
 export type ApplicationBlockDoc = Readonly<{
-  name: 'org-chart' | 'storage-browser' | 'agents-builder' | 'data-rooms' | 'billing-account' | 'billing-console';
+  name:
+    | 'org-chart'
+    | 'storage-browser'
+    | 'agents-builder'
+    | 'data-rooms'
+    | 'billing-account'
+    | 'billing-console'
+    | 'resource-kit'
+    | 'auth-pages'
+    | 'dashboard-tiles';
   /** Docs route when it is not `/blocks/<name>`, e.g. inside a section such as Billing. */
   href?: string;
   /** Section hub the block is listed under instead of its own nav item. */
@@ -849,6 +859,7 @@ export function OperatorBilling({ data, api }: OperatorBillingProps) {
       { name: 'StandingTable', type: 'platform', behavior: 'Billing suspensions and admin holds with hold and release.' },
     ],
   },
+  ...APP_KIT_BLOCKS,
 ];
 
 const APPLICATION_BLOCK_BY_NAME = new Map(

@@ -5,6 +5,9 @@ export type ApplicationDocId =
   | 'data-rooms'
   | 'billing-account'
   | 'billing-console'
+  | 'resource-kit'
+  | 'auth-pages'
+  | 'dashboard-tiles'
   | 'sheets'
   | 'schema-builder'
   | 'console-kit'
@@ -24,6 +27,9 @@ export const APPLICATION_DOC_SEQUENCE: readonly ApplicationDocLink[] = [
   { id: 'data-rooms', title: 'Data Rooms' },
   { id: 'billing-account', title: 'Billing Account', href: '/blocks/billing/account' },
   { id: 'billing-console', title: 'Billing Console', href: '/blocks/billing/console' },
+  { id: 'resource-kit', title: 'Resource Kit' },
+  { id: 'auth-pages', title: 'Auth Pages' },
+  { id: 'dashboard-tiles', title: 'Dashboard Tiles' },
   { id: 'sheets', title: 'Sheets' },
   { id: 'schema-builder', title: 'Schema Builder' },
   { id: 'console-kit', title: 'Console Kit' },

@@ -23,6 +23,15 @@ const OrgChartPreview = dynamic(() =>
 const StorageBrowserPreview = dynamic(() =>
   import('./storage-browser-preview').then((module) => module.StorageBrowserPreview),
 );
+const ResourceKitPreview = dynamic(() =>
+  import('./resource-kit-preview').then((module) => module.ResourceKitPreview),
+);
+const AuthPagesPreview = dynamic(() =>
+  import('./auth-pages-preview').then((module) => module.AuthPagesPreview),
+);
+const DashboardTilesPreview = dynamic(() =>
+  import('./dashboard-tiles-preview').then((module) => module.DashboardTilesPreview),
+);
 
 export function ApplicationBlockShowcaseCanvas({
   name,
@@ -33,6 +42,9 @@ export function ApplicationBlockShowcaseCanvas({
   if (name === 'data-rooms') return <DataRoomsPreview />;
   if (name === 'billing-account') return <BillingAccountPreview />;
   if (name === 'billing-console') return <BillingConsolePreview />;
+  if (name === 'resource-kit') return <ResourceKitPreview />;
+  if (name === 'auth-pages') return <AuthPagesPreview />;
+  if (name === 'dashboard-tiles') return <DashboardTilesPreview />;
   return name === 'org-chart' ? (
     <OrgChartPreview />
   ) : (
