@@ -1,3 +1,4 @@
+import { APP_KIT_BLOCKS } from '../app-kit-blocks';
 import { agentsBuilderBlock } from './agents-builder';
 import { billingAccountBlock } from './billing-account';
 import { billingConsoleBlock } from './billing-console';
@@ -18,6 +19,7 @@ export const APPLICATION_BLOCKS: readonly ApplicationBlockDoc[] = [
   dataRoomsBlock,
   billingAccountBlock,
   billingConsoleBlock,
+  ...APP_KIT_BLOCKS,
 ];
 
 const APPLICATION_BLOCK_BY_NAME = new Map(

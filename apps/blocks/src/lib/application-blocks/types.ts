@@ -14,7 +14,17 @@ export type ApplicationBlockExample = Readonly<{
 }>;
 
 export type ApplicationBlockDoc = Readonly<{
-  name: 'org-chart' | 'storage-browser' | 'agents-builder' | 'coding-agent' | 'data-rooms' | 'billing-account' | 'billing-console';
+  name:
+    | 'org-chart'
+    | 'storage-browser'
+    | 'agents-builder'
+    | 'coding-agent'
+    | 'data-rooms'
+    | 'billing-account'
+    | 'billing-console'
+    | 'resource-kit'
+    | 'auth-pages'
+    | 'dashboard-tiles';
   /** Docs route when it is not `/blocks/<name>`, e.g. inside a section such as Billing. */
   href?: string;
   /** Section hub the block is listed under instead of its own nav item. */

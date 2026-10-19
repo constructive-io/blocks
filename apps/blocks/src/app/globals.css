@@ -15,6 +15,9 @@
 @source '../../../../packages/ui/src/components/billing-kit';
 @source '../../../../packages/ui/src/components/billing-account';
 @source '../../../../packages/ui/src/components/billing-console';
+@source '../../../../packages/ui/src/components/resource-kit';
+@source '../../../../packages/ui/src/components/auth-pages';
+@source '../../../../packages/ui/src/components/dashboard-tiles';
 
 html {
   scroll-padding-top: 4.5rem;
