@@ -3231,7 +3231,7 @@
         "block",
         "application"
       ],
-      "docs": "Import: `import { OrgChart } from '@/components/ui/org-chart'`. Pass controlled `edges` or `defaultEdges` (flat `{ id, parentId }` reporting lines) and persist moves in `onReparent`. Tab into the chart and use the arrow keys to move between people; Enter opens their details.",
+      "docs": "Import from `@/components/ui/org-chart`. Lays out flat reporting lines as a top-down tree on a pannable, zoomable canvas. The chart owns layout, the viewport, folding, selection, and its details panel; the host owns the people and persists every move, edit, and removal through callbacks.\n\nThe canvas is 600px tall by default; pass `className=\"h-full\"` inside a bounded parent to fill it instead:\n```tsx\n'use client';\nimport { OrgChart, type OrgChartEdge } from '@/components/ui/org-chart';\n\nconst edges: OrgChartEdge[] = [\n  { id: 'alex', parentId: null, displayName: 'Alex Morgan', positionTitle: 'CEO', avatarUrl: null },\n  { id: 'sam', parentId: 'alex', displayName: 'Sam Rivera', positionTitle: 'VP Product', avatarUrl: null },\n];\n\n<div className=\"h-[720px]\">\n  <OrgChart\n    className=\"h-full\"\n    defaultEdges={edges}\n    onReparent={(childId, newParentId) => saveManager(childId, newParentId)}\n    onEditNode={(person) => openPositionEditor(person.id)}\n    onRemoveNode={(person) => confirmRemoval(person.id)}\n  />\n</div>\n```\nEvery `OrgChartEdge` key is required: `id`, `parentId` (null for a root), and the nullable `displayName`, `avatarUrl`, and `positionTitle`. Anyone whose manager is missing becomes a root and a cycle is broken, so bad data still shows everyone once.\n\n- Pass exactly one of `edges` or `defaultEdges`. With `edges` the chart is controlled and only changes when you pass new edges, so update them after `onReparent`. With `defaultEdges` it moves the card at once and moves it back if `onReparent` throws or rejects; new `defaultEdges` content resets it.\n- `onReparent(childId, newParentId, preserve: { positionTitle?: string | null }) => void | Promise<void>` fires on a drop onto a new manager or from the Change manager dialog. Moving someone under their own report is refused before it fires.\n- `onReparentSuccess(childName, parentName)` and `onReparentError(message)` are for your toasts; the chart shows none.\n- `onEditNode(node)` and `onRemoveNode(node)` add Edit position and Remove from chart to the card menu and details panel, and receive an `OrgChartNodeData`: the edge plus `childCount`, `isRoot`, and `isCompact`. Removal only reports intent, so confirm before changing data.\n- `onAddToChart()` adds an \"Add first person\" button to the empty state shown when there are no edges.\n- `editable` (default true) enables dragging and the card menu; `isLoading` shows a loading state; `showDetails` (default true) shows the details panel; `onSelectNode(node | null)` reports selection so you can render your own panel; `defaultCollapsedIds` folds those people's teams at first render.\n\nTab into the chart and use the arrow keys to move between people; Enter opens their details.",
       "dependencies": [
         "lucide-react"
       ],
@@ -3518,7 +3518,7 @@
         "block",
         "application"
       ],
-      "docs": "Import: `import { StorageBrowser } from '@/components/ui/storage'`",
+      "docs": "Import from `@/components/ui/storage`. `StorageBrowser` is fully controlled: it shows buckets in a sidebar and the open bucket's files with search, sort, selection, and drop-to-upload, while the host owns the buckets, objects, selection, query, sort, folder path, uploads, and every action. It fetches nothing, checks no permissions, and doesn't filter or sort `objects`, so pass them already matched to `query` and ordered by `sort`.\n\nIt fills its parent, so give the parent a bounded height:\n```tsx\n'use client';\nimport { useState } from 'react';\nimport { StorageBrowser, type ObjectSort, type StorageBucket, type StorageObject } from '@/components/ui/storage';\n\nconst buckets: StorageBucket[] = [{ id: 'b1', key: 'avatars', visibility: 'public', isPublic: true, allowCustomKeys: false }];\nconst objects: StorageObject[] = [{ id: 'o1', bucketId: 'b1', key: 'a.png', filename: 'a.png', mimeType: 'image/png', size: 20480, isPublic: true, createdAt: '2026-10-01T09:00:00Z' }];\n\nexport function Files() {\n  const [bucketId, setBucketId] = useState<string | null>('b1');\n  const [selectedIds, setSelectedIds] = useState<string[]>([]);\n  const [sort, setSort] = useState<ObjectSort>({ column: 'createdAt', direction: 'desc' });\n  const [query, setQuery] = useState('');\n  return (\n    <div className=\"h-[640px]\">\n      <StorageBrowser\n        buckets={buckets} selectedBucketId={bucketId} onSelectBucket={setBucketId}\n        objects={objects.filter((o) => o.bucketId === bucketId && (o.filename ?? o.key).includes(query))}\n        selectedIds={selectedIds} onSelectionChange={setSelectedIds}\n        sort={sort} onSortChange={setSort} query={query} onQueryChange={setQuery}\n        onOpenObject={openDetails} onUpload={pickFiles} onDropFiles={upload}\n        onDownload={download} onDelete={(o) => remove([o.id])} onBulkDelete={remove}\n      />\n    </div>\n  );\n}\n```\n`sort` is `{ column: 'filename' | 'size' | 'createdAt' | 'mimeType', direction: 'asc' | 'desc' }`.\n\n- `selectedBucketId` (string | null): with none chosen the pane asks for a bucket. `onNewBucket()`, `busyBucketId` (spinner on that row), and `bucketsSelectable` (default true) shape the sidebar.\n- Row actions, each `(object) => void` and hidden when omitted: `onOpenObject`, `onDownload`, `onCopyLink`, `onRename`, `onDelete`.\n- Folders: rows with `kind: 'folder'` open through `onOpenFolder(object)`; `segments: { label, path }[]` adds a breadcrumb, and `onNavigate(path | null)` gets null for the bucket root.\n- Upload: `onUpload()` adds the header button, `isUploading` disables it, and `onDropFiles(files: FileList)` makes the list a drop target.\n- Selection: `selectable` (default true), `onBulkDelete(ids)`, `bulkDeleteProgress: { done, total, failed: string[] }`, `onClearSelection()`.\n- States: `isLoading`, `emptyLabel` (empty-list text, e.g. no matches), and `emptyState`: `'empty-bucket'` keeps the header, while `'no-buckets' | 'no-access' | 'not-provisioned'` fill the pane; its buttons call `onEmptyStateAction` / `onEmptyStateSecondaryAction`.\n- `title` (default \"Storage\"), `defaultSidebarCollapsed`, `framed`, `locale`, `className`.\n\nRender these beside it: `ObjectDetailSheet` (`object: StorageObject | null`, `open`, `onOpenChange(open)`, `onDownload?`, `onCopyLink?`, `onRename?(id, newName)`, `onDelete?(id)`; image previews read `object.downloadUrl`), `BucketConfigSheet` (`mode: 'create' | 'edit'`, `initial?`, `open`, `onOpenChange`, `onSubmit(value)` with the bucket's editable fields), and `UploadDropzone` (`onFiles(files)`, `uploads?: { id, filename, size, progress, status: 'queued' | 'uploading' | 'done' | 'error' }[]`, `onCancel?(id)`).",
       "registryDependencies": [
         "storage",
         "storage-bucket-rail",
@@ -3551,7 +3551,7 @@
         "block",
         "application"
       ],
-      "docs": "Import: `import { WorkspaceShell, SidebarFrame, NavSection, NavRow, ViewFrame, Panel, CanvasSurface, useCanvasViewport } from '@/components/ui/workspace-kit'`. Render your sidebar through the `sidebar` render prop (it is called once for the rail and once for the drawer) and your views as children; `ViewFrame` and `NavMenuButton` open the drawer below the `3xl` container width.",
+      "docs": "Import everything from `@/components/ui/workspace-kit`. The shell, views, and surfaces the application templates are built from; all presentational, so the host owns data, routing, and state. Views size themselves to the container they get (container queries), not the viewport.\n\nApp shell with a sidebar and one view:\n```tsx\nimport { Inbox, Rows3 } from 'lucide-react';\nimport { Button } from '@/components/ui/button';\nimport { NavIcon, NavRow, NavSection, Panel, SidebarFrame, ToneBadge, ViewFrame, WorkspaceShell } from '@/components/ui/workspace-kit';\n\n<div className=\"h-dvh\">\n  <WorkspaceShell\n    sidebar={({ mode, collapsed, onCollapsedChange, onNavigate }) => (\n      <SidebarFrame label=\"Acme\" menu={<span className=\"px-1.5 text-sm font-medium\">Acme</span>} collapsed={collapsed} onCollapsedChange={onCollapsedChange} drawer={mode === 'drawer'} onClose={onNavigate}>\n        <NavSection title=\"Views\" collapsed={mode === 'rail' && collapsed}>\n          <NavRow label=\"Inbox\" href=\"/inbox\" active collapsed={mode === 'rail' && collapsed} leading={<NavIcon icon={Inbox} active />} onClick={onNavigate} />\n        </NavSection>\n      </SidebarFrame>\n    )}\n  >\n    <ViewFrame icon={Rows3} title=\"Orders\" actions={<Button size=\"sm\">New order</Button>}>\n      <Panel title=\"Today\" description=\"Orders placed since midnight.\">…</Panel>\n    </ViewFrame>\n  </WorkspaceShell>\n</div>\n```\nThe `sidebar` render prop is called twice: as the rail (from the `3xl` container width) and inside the mobile drawer; call `onNavigate` after a choice so the drawer closes.\n\nShell and navigation:\n- `WorkspaceShell` (`sidebar(props)`, children, `defaultSidebarCollapsed`, `framed` for a rounded app window, `slot`): fills its parent, so give the parent a height.\n- `SidebarFrame` (`label`, `menu` (top-left switcher), `collapsed`, `onCollapsedChange`, `drawer`, `onClose`, `footer`); `NavSection` (`title`, `collapsed`, `action`); `NavRow` (`label`, `collapsed`, `active`, `leading`, `trailing`, `href` + `renderLink(props)` for your router's link, or `onClick`; `busy`, `disabled`, `muted`); `NavIcon` (`icon`, `active`); `NavCount` (`value`, `tone`: muted | warning | danger); `RailTip` labels a rail control.\n- `SwitcherTrigger` (`label`, `name`, `glyph`, `collapsed`) and `monogram(name)` build the top-left switcher; `AppearanceRow` (`value`, `onChange`: light | dark | system) is the theme row for a menu.\n\nViews:\n- `ViewFrame` (`icon`, `title`, `actions`, `label`, `maxWidth` default `max-w-6xl`): a 48px header over a scrolling, centred column. `ViewHeader` (`icon`, `title`, children = actions, `divider`) is the header alone; `NavMenuButton` opens the drawer on narrow widths and is already in both.\n- `SectionHeading` (`title`, `description`, `actions`, `id`) separates groups of panels in a view.\n- `SearchField` (`label` (visually hidden), `trailing`, `inputRef`, plus input props such as `value`, `onChange`, `placeholder`): the compact toolbar search.\n- `FilterGroup` (`label`, `value`, `options: { value, label, count?, icon? }[]`, `onChange`, `compact`): single-choice filter pills that scroll sideways when narrow, e.g. `<FilterGroup label=\"Status\" value={status} onChange={setStatus} options={[{ value: 'all', label: 'All', count: 12 }, { value: 'open', label: 'Open', count: 3 }]} />`.\n- `Segmented` (`label`, `value`, `options: { value, label, icon? }[]`, `onChange`): a two-to-four option switch, e.g. `<Segmented label=\"Layout\" value={layout} onChange={setLayout} options={[{ value: 'cards', label: 'Cards' }, { value: 'table', label: 'Table' }]} />`.\n- `TooltipIconButton` (`label` (required, also the accessible name), `side`, `variant`: ghost | raised, `size`: sm | md | lg, `onClick`, icon as children).\n\nSurfaces:\n- `Panel` (`title`, `description`, `actions`, `footer`, `bodyClassName` (`p-0` for edge-to-edge content)): the standard card.\n- `TableSurface` (`minWidth` default `40rem`, below which it scrolls sideways): wraps table rows; style them with `tableHeadClass`, `tableRowClass`, and `tableGroupRowClass`, e.g. `<TableSurface><thead className={tableHeadClass}><tr><th>Name</th></tr></thead><tbody><tr className={tableRowClass}><td>Ada</td></tr></tbody></TableSurface>`.\n- `StatTile` (`label`, `value`, `hint`, `icon`): a label over a large figure; lay several in a grid inside a `Panel` or `Bezel`.\n- `KeyValueList` (`items: { label, value, key? }[]`): label-value rows with dashed rules.\n- `EmptyState` (`icon` (required), `title`, `description`, `action`): a centred empty, no-match, or error state.\n- `ToneBadge` (`tone`: neutral | primary | info | success | warning | danger | violet | amber, children, `onClick` makes it a button), e.g. `<ToneBadge tone=\"success\">Paid</ToneBadge>`; `StatusBadge` (`presentation: { label, tone }`) maps a status to one; `TONE_COLOR` gives each tone's CSS colour.\n- `IconTile` (`icon`, `tone`): a tinted glyph tile for rows and notices. `Bezel` (`muted`, `innerClassName`): a double-framed card for highlighted content.\n- `MiddleTruncate` (`text`, `tail` (characters kept at the end), `title`): shortens long names and keys in the middle, keeping their ending.\n\nHelpers: `formatCount(n, locale?)`, `plural(n, { one, other })`, `nameList(names, { max })`; `useScrollFade()` fades the edges of a sideways scroller; `focusRingClass`, `pressClass`, `hitAreaClass`, `dashedRule`, `nativeSelectClass`, `scrollRowClass`, `surfaceInsetClass` + `SurfaceBody` are the shared class names; `enterClass` + `staggerStyle(i)` stagger entrances; `useReducedMotion()`; `ViewAnimation` and `startViewTransition(update, ...types)` animate view swaps where supported (React 19.3) and fall back to an instant swap.\n\nCanvas (pan and zoom diagrams): `useCanvasViewport(contentWidth, { fit, contentHeight, minZoom, maxZoom })` returns the viewport for `CanvasSurface` (`viewport`, `label`, children in canvas units, `overlay`, `onPaneClick`) and `CanvasZoomControls` (`viewport`, `fit`); draw nodes with `NodeShell` (`tone`: plain | new | target, `selected`) and `NodeIconTile`, and links with `CanvasWire` (`start` and `end` as `[x, y]`, `tone`: rest | live | warn, `axis`, `animated`) or `wirePath(start, end)`.",
       "dependencies": [
         "lucide-react",
         "motion@^13.4.0",
@@ -3623,7 +3623,7 @@
         "application",
         "ai"
       ],
-      "docs": "Import: `import { AgentsBuilder, AGENTS_BUILDER_DEMO } from '@/components/ui/agents-builder'`. Pass your own `data` and handle side effects through `onAction`, `onConnectIntegration`, and `onAuthorizeIntegration`.",
+      "docs": "Import from `@/components/ui/agents-builder`. A complete agent workspace (chat, inbox, schedules, integrations, skills, and an agent view with a live run) that renders only what `data` holds: the block owns navigation between its views, the connect dialog, and scripted playback; the host owns the data, routing, OAuth, persistence, and every action it reports.\n\nIt fills its parent, so give the parent a bounded height:\n```tsx\n'use client';\nimport { AGENTS_BUILDER_DEMO, AgentsBuilder, type AgentsBuilderData } from '@/components/ui/agents-builder';\n\n// The type is large: spread the demo and replace what you have.\nconst data: AgentsBuilderData = {\n  ...AGENTS_BUILDER_DEMO,\n  workspace: { name: 'Acme', appName: 'Acme' },\n  agents: [{ id: 'revenue-analyst', name: 'Revenue Analyst', running: true }],\n};\n\n<div className=\"h-dvh\">\n  <AgentsBuilder\n    data={data}\n    onAuthorizeIntegration={(integration) => startOAuth(integration.id)}\n    onConnectIntegration={(integration, toolIds) => saveConnection(integration.id, toolIds)}\n    onAction={(action) => {\n      if (action.type === 'open-agent') router.push(`/agents/${action.agentId}`);\n    }}\n  />\n</div>\n```\n`data` holds `workspace` (`{ name, appName }`), `models`, `integrations` (`{ id, name, description, vendor, authDomain, connected, tools: { id, name, access: 'read' | 'write' }[] }`), `categories`, `featuredIntegrationIds`, `agents` (`{ id, name, running? }`), `inbox`, `schedules`, `clock`, `skills`, `starterPacks`, `recommendations`, `fallbackReply`, `followUpReply`, `agent` (the agent view's blueprint), `run`, `heroHighlights`, and `usage: { percent }`.\n\nChat is scripted and sends nothing to the host: a recommendation plays its `reply`, a first typed message plays `fallbackReply`, and later ones play `followUpReply`. For a chat answered by a live model, build it from the `ai` item's transcript and composer instead.\n\n- `view` / `defaultView` / `onViewChange(view)`: `'chat' | 'inbox' | 'schedules' | 'integrations' | 'skills' | 'agent'`, default `'chat'`.\n- `onAuthorizeIntegration(integration) => Promise<void>` runs the connect dialog's sign-in step: resolve to move on to choosing tools, reject to go back. Without it the dialog waits a moment and moves on.\n- `onConnectIntegration(integration, toolIds: string[]) => void | Promise<void>` saves the connection; reject to keep the dialog open. Once it resolves the integration shows as connected (tracked locally, seeded from each `connected` flag).\n- `onAction(action)` gets every control the block doesn't own: `navigate { target: 'usage' | 'settings' | 'more-agents' }`, `open-agent { agentId }` (`data.agent.id` opens the built-in view instead), `new-agent`, `search { query }`, `workspace-menu { item: 'organization' | 'profile' | 'support' | 'whats-new' | 'log-out' }`, `workspace-mode { mode: 'agents' | 'workbench' }`, `chat-history`, `attach-file { surface: 'chat' | 'run' }`, `send-follow-up { surface: 'run', text }`, `stop-run`, `approve-run { agentId, approved }`, `send-reply { threadId, text, drafted }`, `approve-thread-action { threadId }`, `new-schedule`, `toggle-schedule { scheduleId, active }`, `run-schedule { scheduleId }`, `share-agent` / `edit-instructions` / `set-identity { agentId }`, `request-app`, `manage-integration { integrationId }`, `create-skill`, `browse-skill-library`, `add-starter-pack { packId }`, `open-skill { skillId }`, `create-agent { draft: { name, schedule, integrationIds, steps } }`.\n- `theme` / `onThemeChange` (`'light' | 'dark' | 'system'`) only drive the menu's appearance switch; apply the theme yourself.\n- `defaultSidebarCollapsed`, `framed` (a rounded window on a canvas), `autoplayRun` (default true; false opens the run settled), `className`.",
       "dependencies": [
         "lucide-react",
         "motion@^13.4.0"
@@ -3786,7 +3786,7 @@
         "block",
         "application"
       ],
-      "docs": "Import: `import { DataRooms, DATA_ROOMS_DEMO } from '@/components/ui/data-rooms'`. Pass your workspace as `data`, apply every change through `onCommand` (reject to keep a dialog open), and handle downloads and view logging through `onAction`. `effectiveAccess` explains who can do what; your server still decides every request.",
+      "docs": "Import from `@/components/ui/data-rooms`. Document rooms for an organization and its sub-units, driven by one `data` object: the block owns navigation, dialogs, the viewer, and applying changes you accept; the host owns storage, file delivery, authorization, and the activity log. Its access rules only pick which controls appear; your server decides every request.\n\nIt fills its parent, so give the parent a bounded height:\n```tsx\n'use client';\nimport { DataRooms, type DataRoomsData } from '@/components/ui/data-rooms';\n\nconst at = '2026-09-30T10:00:00Z';\nconst data: DataRoomsData = {\n  clock: '2026-10-01T09:00:00Z', // \"now\" for dates and expiries\n  org: { name: 'Acme' },\n  viewerId: 'ada',\n  people: [{ id: 'ada', name: 'Ada Park', email: 'ada@acme.com' }],\n  units: [{ id: 'acme', parentId: null, name: 'Acme', kind: 'Company' }], // exactly one root\n  roles: [{ id: 'viewer', name: 'Viewer', permissions: ['view', 'download'], isDefault: true }],\n  memberships: [{ id: 'm1', personId: 'ada', scope: { kind: 'unit', id: 'acme' }, owner: true, status: 'active' }],\n  inheritance: { owners: true, admins: true, members: false, allowGuests: true },\n  rooms: [{ id: 'board', unitId: 'acme', name: 'Board pack', status: 'active', createdAt: at,\n    policies: { viewOnly: false, watermark: true, requireAgreement: false, restricted: false } }],\n  documents: [{ id: 'q3', roomId: 'board', folder: '/Financials', name: 'Q3.pdf', kind: 'pdf', size: 482000,\n    uploadedBy: 'ada', updatedAt: at, versions: [{ id: 'v1', number: 1, uploadedBy: 'ada', uploadedAt: at, size: 482000 }] }],\n  shares: [], invites: [], acceptances: [], activity: [], questions: [],\n};\n\n<div className=\"h-dvh\">\n  <DataRooms\n    data={data}\n    onCommand={(command) => save(command)}\n    onAction={(action) => track(action)}\n  />\n</div>\n```\n`DATA_ROOMS_DEMO` is a complete example.\n\n- `onCommand(command) => Promise<void> | void` makes every change: resolve once saved and the block applies it until you pass new `data`, or reject with an `Error` to keep the dialog open with its message. It isn't called while previewing as someone else. Types: `create-room { room }`, `update-room { roomId, patch }`, `invite { roomId, invites: { email, personId? }[], roleId, expiresAt?, message? }`, `revoke-invite { inviteId }`, `update-membership { membershipId, patch }`, `remove-membership { membershipId }`, `create-share { roomId, folder, personIds, can: { view, edit, delete }, expiresAt? }`, `revoke-share { shareId }`, `upload { roomId, folder, files: { name, size, kind, pages? }[] }` (metadata only, no bytes), `create-folder { roomId, path }`, `move-documents { documentIds, folder }`, `update-document { documentId, patch: { restrictions } }`, `update-inheritance { inheritance }`, `save-role { role }`, `accept-agreement { roomId, version }`, `ask-question { roomId, documentId?, title, body }`, `answer-question { questionId, body, close? }`, `set-question-status { questionId, status }`.\n- `onAction(action)`: `download { documentId, versionId? }`, `view-document { documentId }` (for your access log), `export-activity { roomId? }`, `search { query }`, `contact { personId }`, `org-menu { item: 'organization-settings' | 'profile' | 'support' | 'log-out' }`.\n- `onAskAssistant({ roomId, prompt, viewerId, documentId? })` resolves to `{ text, citations: { documentId, page?, quote? }[] }`; cite only what the asker can open. Without it, `data.assistant` answers.\n- `renderPreview(document, { viewer, watermark, viewOnly }) => ReactNode` draws viewer pages instead of placeholders.\n- `view` (`'home' | 'access-map' | 'activity' | 'room'`), `roomId`, `tab` (`'documents' | 'people' | 'questions' | 'insights' | 'settings'`), and `previewAs` (person id or null) each have a `default…` prop and an `on…Change`; `views` limits navigation.\n- `theme` / `onThemeChange` (menu switch only), `defaultSidebarCollapsed`, `framed`, `locale` / `timeZone` (default en-US, UTC), `className`.",
       "dependencies": [
         "lucide-react",
         "@base-ui/react"
@@ -4232,6 +4232,252 @@
       ]
     },
     {
+      "name": "resource-kit",
+      "type": "registry:block",
+      "title": "Resource Kit",
+      "description": "List, detail, and form screens generated from resource definitions: a view with search, sort, pagination, and empty and error states; a table that formats cells by field, shows option badges and relation labels, and folds columns in narrow panes; a create and edit sheet with validation, async relation pickers, and many-to-many links; a record view with has-many lists; and delete confirmation. Backend-neutral: data goes through an injected source, routing through an injected router.",
+      "categories": [
+        "block",
+        "application"
+      ],
+      "docs": "Import: `import { ResourceKitProvider, ResourcePage, RecordDetail, defineResource } from '@/components/ui/resource-kit'`. Describe each table with `defineResource({ name, label, singular, primaryKey, titleField, columns, formFields, fields, source })`, where `source` implements `list`, `get`, `create`, `update`, `remove`, and optionally `link` and `linked` for many-to-many fields. Wrap the app once in `<ResourceKitProvider router={{ Link, navigate, listHref, detailHref }} resources={[...]} icons={{ users: Users }}>` (it reuses an enclosing QueryClient or makes its own), then render `<ResourcePage resource=\"contacts\" />` on the list route and `<RecordDetail resource=\"contacts\" id={id} />` on the detail route. Writes invalidate the resource and every related one. `DataTable`, `EntityFormSheet`, `RelationPicker`, `DeleteDialog`, `ResourceNav`, and `createMemorySource` are exported for custom screens and prototypes.",
+      "dependencies": [
+        "@tanstack/react-query@^5",
+        "lucide-react"
+      ],
+      "registryDependencies": [
+        "cn",
+        "intl",
+        "use-debounce",
+        "alert",
+        "alert-dialog",
+        "button",
+        "combobox",
+        "dropdown-menu",
+        "field",
+        "input",
+        "input-group",
+        "select",
+        "sheet",
+        "spinner",
+        "switch",
+        "textarea",
+        "workspace-kit"
+      ],
+      "files": [
+        {
+          "path": "registry/constructive/blocks/resource-kit/context.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/resource-kit/data-table.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/resource-kit/delete-dialog.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/resource-kit/demo.ts",
+          "type": "registry:lib"
+        },
+        {
+          "path": "registry/constructive/blocks/resource-kit/entity-form-sheet.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/resource-kit/entity-form.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/resource-kit/field-control.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/resource-kit/field-value.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/resource-kit/fields.ts",
+          "type": "registry:lib"
+        },
+        {
+          "path": "registry/constructive/blocks/resource-kit/form-values.ts",
+          "type": "registry:lib"
+        },
+        {
+          "path": "registry/constructive/blocks/resource-kit/format.ts",
+          "type": "registry:lib"
+        },
+        {
+          "path": "registry/constructive/blocks/resource-kit/index.ts",
+          "type": "registry:lib"
+        },
+        {
+          "path": "registry/constructive/blocks/resource-kit/labels.ts",
+          "type": "registry:lib"
+        },
+        {
+          "path": "registry/constructive/blocks/resource-kit/list-controls.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/resource-kit/memory-source.ts",
+          "type": "registry:lib"
+        },
+        {
+          "path": "registry/constructive/blocks/resource-kit/queries.ts",
+          "type": "registry:lib"
+        },
+        {
+          "path": "registry/constructive/blocks/resource-kit/record-detail.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/resource-kit/related-list.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/resource-kit/relation-picker.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/resource-kit/resource-nav.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/resource-kit/resource-page.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/resource-kit/save-failure.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/resource-kit/types.ts",
+          "type": "registry:lib"
+        }
+      ]
+    },
+    {
+      "name": "auth-pages",
+      "type": "registry:block",
+      "title": "Auth Pages",
+      "description": "Public account screens for an app: sign-in, sign-up, check-email, verify-email, forgot-password, and reset-password panels and a centred page layout, with field validation, pending and failure states, and injected handlers that answer `{ ok: true }` or `{ ok: false, message }`, so they work with any router and any auth backend.",
+      "categories": [
+        "block",
+        "application"
+      ],
+      "docs": "Import: `import { AuthLayout, SignInPanel, SignUpPanel, VerifyEmailPanel } from '@/components/ui/auth-pages'`. Render one panel per route inside `AuthLayout`, pass your auth calls as handlers that return `{ ok: true }` or `{ ok: false, message }`, and pass your router's link once as `linkComponent` on the layout. Navigate after sign-in succeeds yourself; sign-up never expects a session and shows the check-email state instead.",
+      "dependencies": [
+        "lucide-react"
+      ],
+      "registryDependencies": [
+        "cn",
+        "alert",
+        "button",
+        "card",
+        "checkbox",
+        "field",
+        "input",
+        "input-group",
+        "spinner",
+        "workspace-kit"
+      ],
+      "files": [
+        {
+          "path": "registry/constructive/blocks/auth-pages/auth-card.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/auth-pages/auth-layout.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/auth-pages/check-email-panel.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/auth-pages/forgot-password-panel.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/auth-pages/index.ts",
+          "type": "registry:lib"
+        },
+        {
+          "path": "registry/constructive/blocks/auth-pages/password-input.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/auth-pages/reset-password-panel.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/auth-pages/sign-in-panel.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/auth-pages/sign-up-panel.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/auth-pages/types.ts",
+          "type": "registry:lib"
+        },
+        {
+          "path": "registry/constructive/blocks/auth-pages/use-auth-form.ts",
+          "type": "registry:lib"
+        },
+        {
+          "path": "registry/constructive/blocks/auth-pages/verify-email-panel.tsx",
+          "type": "registry:component"
+        }
+      ]
+    },
+    {
+      "name": "dashboard-tiles",
+      "type": "registry:block",
+      "title": "Dashboard Tiles",
+      "description": "Dashboard pieces for a resource-kit app: a stat tile on its own card that can link to its source, a count tile that reads a resource total (optionally filtered), the latest records of a resource, and a grid that lays them out by its own width.",
+      "categories": [
+        "block",
+        "application"
+      ],
+      "docs": "Import: `import { DashboardGrid, ResourceCountTile, RecentRecords, StatTile } from '@/components/ui/dashboard-tiles'`. Render inside `ResourceKitProvider`: `<DashboardGrid><ResourceCountTile resource=\"deals\" label=\"Open deals\" filters={{ status: 'open' }} /><StatTile label=\"Revenue\" value=\"$48,210\" hint=\"This month\" href=\"/invoices\" /><RecentRecords resource=\"contacts\" limit={5} /></DashboardGrid>`. Count tiles read `totalCount` from one-row `list` calls; `RecentRecords` follows the resource's `defaultSort` (or `createdAt` descending when there is none); pass `sort` to choose. `StatTile` also works without the provider.",
+      "dependencies": [
+        "lucide-react"
+      ],
+      "registryDependencies": [
+        "cn",
+        "intl",
+        "resource-kit",
+        "workspace-kit"
+      ],
+      "files": [
+        {
+          "path": "registry/constructive/blocks/dashboard-tiles/dashboard-grid.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/dashboard-tiles/index.ts",
+          "type": "registry:lib"
+        },
+        {
+          "path": "registry/constructive/blocks/dashboard-tiles/recent-records.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/dashboard-tiles/resource-count-tile.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/dashboard-tiles/stat-tile.tsx",
+          "type": "registry:component"
+        }
+      ]
+    },
+    {
       "name": "stack",
       "type": "registry:block",
       "title": "Stack Navigation",
@@ -4391,12 +4637,12 @@
       "name": "ai",
       "type": "registry:block",
       "title": "AI Kit",
-      "description": "Presentational primitives for AI and agentic chat UIs: composer, messages, reasoning, tools, HITL approval, plan tracking, and streaming surfaces.",
+      "description": "Presentational primitives for AI chat and agent UIs: a chat transcript of user and assistant messages in a conversation thread, with markdown and streaming, a composer (prompt input), conversation scrolling, reasoning, tool calls, human-in-the-loop approval, plan tracking, sources, and streaming surfaces for an assistant or agent conversation.",
       "categories": [
         "block",
         "ai"
       ],
-      "docs": "Import PromptInput, Message, Tool, Reasoning, and PlanTracker from the installed ai directory under your configured shadcn ui alias.",
+      "docs": "Import from `@/components/ui/ai` (the `ai` directory under your shadcn ui alias). Presentational only: the host owns the messages, streaming state, tool results, and model calls, and passes them in as props; there is no data hook.\n\nTranscript and composer, in a flex column with a bounded height (ChatContainer scrolls itself and sticks to the bottom while new content arrives, so give it `min-h-0 flex-1`; ScrollButton must sit inside it):\n```tsx\nimport { ArrowUp } from 'lucide-react';\nimport { Button } from '@/components/ui/button';\nimport { ChatContainer, ChatContainerContent, Message, MessageAvatar, MessageContent, PromptInput, PromptInputAction, PromptInputActions, PromptInputBody, PromptInputTextarea, ScrollButton } from '@/components/ui/ai';\n\n<div className=\"flex h-full min-h-0 flex-col\">\n  <ChatContainer className=\"min-h-0 flex-1\">\n    <ChatContainerContent>\n      {messages.map((m) => (\n        <Message key={m.id} from={m.role /* 'user' | 'assistant' | 'system' */}>\n          {m.role === 'assistant' ? <MessageAvatar fallback=\"AI\" /> : null}\n          <MessageContent markdown streaming={m.id === streamingId}>{m.text}</MessageContent>\n        </Message>\n      ))}\n    </ChatContainerContent>\n    <ScrollButton />\n  </ChatContainer>\n  <PromptInput value={draft} onValueChange={setDraft} onSubmit={send} isLoading={busy}>\n    <PromptInputBody>\n      <PromptInputTextarea placeholder=\"Message…\" />\n      <PromptInputActions className=\"justify-end\">\n        <PromptInputAction tooltip=\"Send\">\n          <Button type=\"button\" size=\"icon-sm\" aria-label=\"Send\" disabled={!draft.trim()} onClick={send}><ArrowUp /></Button>\n        </PromptInputAction>\n      </PromptInputActions>\n    </PromptInputBody>\n  </PromptInput>\n</div>\n```\nPromptInput is controlled with `value`/`onValueChange` (uncontrolled without them); Enter calls `onSubmit`, Shift+Enter inserts a newline, and the textarea grows to `maxHeight` (240px). `isLoading` or `disabled` disables the textarea; render your own Stop button in PromptInputActions while a run streams. MessageContent renders plain text by default; `markdown` renders markdown with code blocks, and `streaming` throttles those re-renders while tokens arrive. MessageActions/MessageAction (`tooltip`) hold per-message buttons; FeedbackBar (`onCopy`, `onRegenerate`, `onFeedback`) is a ready-made row of them. SystemMessage (`title`) is a centred notice in the transcript.\n\nOther families, each a controlled view of host state:\n- Tool (`name`, `status`: pending | running | success | error | aborted, or the input-/output- stream statuses; `summary`, `input`, `output`, `errorText`), grouped in ToolGroup (`label`). ToolTrace (`title`, `steps`) is a compact multi-step trace.\n- Reasoning (`content` or children, `isStreaming`, `durationMs`, `markdown`) is the collapsible thinking block; ThinkingBar (`text`, `onStop`) is the one-line live variant; ThinkingStatus (`label`, `elapsedSeconds`, `tokens`) shows elapsed time and tokens.\n- ThinkingTrace (`rows`, `mode`: steps | reasoning | search | coding, `isStreaming`) lists trace rows; Steps/Step (`title`, `status`: pending | running | done | error) is a collapsible checklist, also exported as ChainOfThought.\n- ApprovalCard (`title`, `description`, `questions`, `preview`, `destructive`, `onConfirm({ answers })`, `onSkip`) asks a person before a tool runs.\n- PlanTracker (`plan: { steps: { label, status: pending | in_progress | done }[] }`, `streaming`) pins the agent's plan above the composer; TaskList/TaskRow (`label`, `status`: pending | running | completed | failed, `progress`, `details`, `onRetry`) lists background tasks.\n- Sources/Source (`href`, `title`, `domain`, `favicon`) cite links; ContextCards/ContextCard (`title`, `body`, `sourceName`) show retrieved context; RecommendationCard (`body`, `confidence`, `alternatives`, `onAccept`) offers a choice.\n- MessageContent with `streaming` is the default for live replies. ResponseStream (`text`, `mode`: typewriter | fade) animates text you already have in full, e.g. a replayed reply; StreamingText (`text` or `tokens`, `streaming`, `sources`, `followUps`) is a self-contained answer with citations and follow-ups. useThrottledText throttles your own token renders.\n- PromptSuggestions/PromptSuggestion (`onClick`) offer starter prompts; FileUpload (`files`, `onFilesChange`, `variant`: dropzone | compact | button) attaches files; ContextRing (`usage: { tokens, contextWindow, percent }`) and UsageNotice (`percent`, `onAction`) show context and quota use.\n- InlineDiff (`source`) and DiffTable (`columns`, `rows`, `addedRows`) show proposed changes; CodeBlock and Markdown render code and markdown on their own; AgentLoader, Loader, and TextShimmer are loading states; AiImage shows a generated image with a fallback.",
       "dependencies": [
         "lucide-react",
         "sugar-high@^1.2.1"

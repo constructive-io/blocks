@@ -104,6 +104,9 @@ to endpoints, sessions, adapters, or tenant data.
 | Secure document rooms shared inside and outside an organization (roles, folder shares, agreements, Q&A, insights) | `data-rooms` |
 | Global commands and workflows | `command-palette` |
 | Metadata-driven data grid | `sheets` |
+| List, detail, and form screens for an app's own tables (relations, many-to-many, delete) | `resource-kit` |
+| Sign-in, sign-up, check-email, verify-email, and password reset screens | `auth-pages` |
+| An app's home screen with counts and recent records | `dashboard-tiles` |
 | PostgreSQL schema workspace | `schema-builder` |
 | Reporting hierarchy | `org-chart` |
 | Object storage workspace | `storage-browser` or a focused storage leaf |
