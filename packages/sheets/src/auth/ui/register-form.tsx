@@ -56,7 +56,7 @@ export function SheetsRegisterForm({ onRegister, onShowLogin, defaultEmail = '' 
 				<div className='space-y-1.5'>
 					<h3 className='text-lg font-semibold'>Check your email</h3>
 					<p className='text-muted-foreground text-sm'>
-						We&apos;ve sent a link to confirm your address and sign in.
+						We&apos;ve sent a link to confirm your address. Open it, then sign in with your password.
 					</p>
 				</div>
 			</div>
