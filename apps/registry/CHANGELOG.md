@@ -3,6 +3,38 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.5.0](https://github.com/constructive-io/blocks/compare/@constructive-io/registry@0.4.0...@constructive-io/registry@0.5.0) (2026-10-19)
+
+
+### Bug Fixes
+
+* **registry:** resolve initial-focus alias and document retired plans ([5f4dfee](https://github.com/constructive-io/blocks/commit/5f4dfee3900685c1e9e4c466de5ea6141a51cd75))
+* **registry:** resolve lib/motion imports to their registry items ([5a2ec61](https://github.com/constructive-io/blocks/commit/5a2ec610470b19376033b5582989e5dc7938e401))
+* **ui:** address react audit findings in overlay and data components ([fedf9dc](https://github.com/constructive-io/blocks/commit/fedf9dca2da89f42fcfa42a75148a24b85f1284f))
+* **ui:** harden primitive components against worst-case data ([f0af8ef](https://github.com/constructive-io/blocks/commit/f0af8ef364977265881479ce25cdb3c5dc915f7f))
+
+
+* feat(blocks)!: replace the billing blocks with the billing workspace ([15f7ca6](https://github.com/constructive-io/blocks/commit/15f7ca60ab2b7e77a8a023b103d9c780cd4d67a9))
+
+
+### Features
+
+* **blocks:** add the account-phone-numbers block ([1265bd8](https://github.com/constructive-io/blocks/commit/1265bd88b524e1970f3dfd4fed5ee29baf0ba119))
+* **blocks:** move console kit onto the workspace shell ([d0941e3](https://github.com/constructive-io/blocks/commit/d0941e332e5b32f33f6f107c166a33b57d4d4b24))
+* **ui:** add Data Rooms template ([db8350b](https://github.com/constructive-io/blocks/commit/db8350b6d0c929dda68bbf293c6a5d440d17423a))
+* **ui:** add the agents-builder registry template ([4d7db42](https://github.com/constructive-io/blocks/commit/4d7db420436fa0e25c9ae9ac5202699fd83f2add))
+* **ui:** rebuild the org chart on the workspace canvas ([f9da315](https://github.com/constructive-io/blocks/commit/f9da31518c3b675e5181892d1f667e9310128953))
+
+
+### BREAKING CHANGES
+
+* the billing-* registry blocks are removed; install
+billing-account, billing-console or billing-kit instead.
+
+
+
+
+
 # [0.4.0](https://github.com/constructive-io/blocks/compare/@constructive-io/registry@0.3.1...@constructive-io/registry@0.4.0) (2026-08-22)
 
 **Note:** Version bump only for package @constructive-io/registry

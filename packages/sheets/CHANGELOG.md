@@ -3,6 +3,24 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.12.0](https://github.com/constructive-io/blocks/compare/@constructive-io/sheets@0.11.0...@constructive-io/sheets@0.12.0) (2026-10-19)
+
+
+### Bug Fixes
+
+* **auth:** password sign-up shows check-email, never expects a session (planning[#2284](https://github.com/constructive-io/blocks/issues/2284)) ([c823486](https://github.com/constructive-io/blocks/commit/c8234862584ceeefda7c2ddf3fdc4479f16ad52d))
+* **auth:** sheets register shows check-email after sign-up ([b3cd735](https://github.com/constructive-io/blocks/commit/b3cd735d993f8ae014aa6432c5104433fda8dd0d))
+* **auth:** sign-up copy says confirm your email, then sign in with your password (planning[#2291](https://github.com/constructive-io/blocks/issues/2291)) ([69ced65](https://github.com/constructive-io/blocks/commit/69ced653cf9be9cc6d436a60759690d604e2bc22))
+
+
+### Features
+
+* **ui:** align the accent with the Constructive brand blue and add a link token ([02fc482](https://github.com/constructive-io/blocks/commit/02fc482e81b608f0c61f2ad16d88af786750d079)), closes [#00A2](https://github.com/constructive-io/blocks/issues/00A2)
+
+
+
+
+
 # [0.11.0](https://github.com/constructive-io/blocks/compare/@constructive-io/sheets@0.10.1...@constructive-io/sheets@0.11.0) (2026-08-22)
 
 **Note:** Version bump only for package @constructive-io/sheets

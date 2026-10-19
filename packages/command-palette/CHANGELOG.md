@@ -3,6 +3,17 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.7.1](https://github.com/constructive-io/blocks/compare/@constructive-io/command-palette@0.7.0...@constructive-io/command-palette@0.7.1) (2026-10-19)
+
+
+### Bug Fixes
+
+* **command-palette:** cancel stale loaders before advancing ([94d20bb](https://github.com/constructive-io/blocks/commit/94d20bb2e54545e38feb7102da3268ee23c25997))
+
+
+
+
+
 # [0.7.0](https://github.com/constructive-io/blocks/compare/@constructive-io/command-palette@0.6.0...@constructive-io/command-palette@0.7.0) (2026-08-22)
 
 **Note:** Version bump only for package @constructive-io/command-palette

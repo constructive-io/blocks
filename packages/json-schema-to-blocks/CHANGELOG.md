@@ -3,6 +3,17 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.5.1](https://github.com/constructive-io/blocks/compare/json-schema-to-blocks@0.5.0...json-schema-to-blocks@0.5.1) (2026-10-19)
+
+
+### Bug Fixes
+
+* **blocks-ui:** show option labels and keep pattern strings on one line ([cffa21b](https://github.com/constructive-io/blocks/commit/cffa21b007e66cc7be9147e0f1fd3b271b4e924a))
+
+
+
+
+
 # [0.5.0](https://github.com/constructive-io/blocks/compare/json-schema-to-blocks@0.4.0...json-schema-to-blocks@0.5.0) (2026-08-22)
 
 

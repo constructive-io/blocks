@@ -3,6 +3,62 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.13.0](https://github.com/constructive-io/blocks/compare/@constructive-io/ui@0.12.0...@constructive-io/ui@0.13.0) (2026-10-19)
+
+
+### Bug Fixes
+
+* **data-rooms:** put the access map picker beside its prompt ([6e9d3d8](https://github.com/constructive-io/blocks/commit/6e9d3d8b47185b8a94adac1913f6f0444723d5bc))
+* **storybook:** honor fullscreen layout and the theme background ([6b617dd](https://github.com/constructive-io/blocks/commit/6b617dd0e90527d766fec97997b2dca0b6adb256))
+* **ui,blocks:** spacing and alignment pass across every preview card ([d479ddc](https://github.com/constructive-io/blocks/commit/d479ddce5d55ed85171c362037b76c577d8c0b00))
+* **ui:** address react audit findings in inputs components ([cb04efa](https://github.com/constructive-io/blocks/commit/cb04efa1cd965403fb49d47482bac327957b19d4))
+* **ui:** address react audit findings in kit components ([d477736](https://github.com/constructive-io/blocks/commit/d4777362bbb57b2796066411ebfeba1f69bdd4c5))
+* **ui:** address react audit findings in overlay and data components ([fedf9dc](https://github.com/constructive-io/blocks/commit/fedf9dca2da89f42fcfa42a75148a24b85f1284f))
+* **ui:** address react audit findings in primitive components ([cdab56f](https://github.com/constructive-io/blocks/commit/cdab56f6c6a1b32187cd793b26798962412c564d))
+* **ui:** align FieldRow controls with the first label line ([d0fdf92](https://github.com/constructive-io/blocks/commit/d0fdf929cf957d5cb6b65fc9d264beecc5f7fcfd))
+* **ui:** centre collapsed rail rows and drop empty section headers ([01bfbb8](https://github.com/constructive-io/blocks/commit/01bfbb84fd08f78881d4cff684bda1f7933f084e))
+* **ui:** follow the Switch box change in kit tables and keep room tabs on one row ([92a9993](https://github.com/constructive-io/blocks/commit/92a9993415d98ac00ddb51d89e6342ba9e2ff9ef))
+* **ui:** harden composite kit components against worst-case data ([bde972d](https://github.com/constructive-io/blocks/commit/bde972d5f9353d3b9978400a417122d3a85d2a34))
+* **ui:** harden inputs components against worst-case data ([c305f4b](https://github.com/constructive-io/blocks/commit/c305f4b26367c30080f6b4a125e120038918e762))
+* **ui:** harden overlays, layout and data components against worst-case data ([49f8512](https://github.com/constructive-io/blocks/commit/49f85125080cf85149c429d5cbbe2a4dee360c32))
+* **ui:** harden primitive components against worst-case data ([f0af8ef](https://github.com/constructive-io/blocks/commit/f0af8ef364977265881479ce25cdb3c5dc915f7f))
+* **ui:** keep card edges and focus rings clear of overflow clipping ([8364813](https://github.com/constructive-io/blocks/commit/8364813e712b65e8c2c2358ab8642e06253739c5))
+* **ui:** keep the picked Select label when items unmount in the same commit ([1be2ed3](https://github.com/constructive-io/blocks/commit/1be2ed3caaab59482224cc8c3fee013bc08479ee))
+* **ui:** keep toast details in the host tree and restore focus ([826560d](https://github.com/constructive-io/blocks/commit/826560d24f330e20dc4d61f325d61569527ff958))
+* **ui:** keep truncated storage names whole for assistive tech ([20ee426](https://github.com/constructive-io/blocks/commit/20ee426983781c5ced61ac666786677c5c27765f))
+* **ui:** let nested overlays handle Escape before card dismissal ([f90acc2](https://github.com/constructive-io/blocks/commit/f90acc218679e9cc2c813db4ee86eac4c142fc58))
+* **ui:** make the text shimmer visible in light mode ([f3c4027](https://github.com/constructive-io/blocks/commit/f3c4027e903ab8597df84a987ee95bfb11f0a69f))
+* **ui:** match Badge's text-run rule in input-group, toggle and toggle-group ([655a0f0](https://github.com/constructive-io/blocks/commit/655a0f04bfb425a5aa96d62a0d9ab783ffe5ef17))
+* **ui:** spring the org chart's folds and stop drags sticking to the cursor ([0ff6b49](https://github.com/constructive-io/blocks/commit/0ff6b495642f2a6ea4fc5bbcb11df03f21c50d75))
+* **ui:** square only the shared edges of a button group and draw its divider over the fill ([b7386c8](https://github.com/constructive-io/blocks/commit/b7386c8a2ef55c470f3fd4e77dcf47f839a59a9d))
+* **ui:** wrap the inbox working line, schedule history row and diff table added row ([b914aa4](https://github.com/constructive-io/blocks/commit/b914aa4124d6c62e7dfa4651794727756c383e14))
+
+
+### Features
+
+* **ui:** add agent workspace primitives and model selector to the AI kit ([db6d3b5](https://github.com/constructive-io/blocks/commit/db6d3b5936416c0c86f6c3413075fd291a542eff))
+* **ui:** add Data Rooms template ([db8350b](https://github.com/constructive-io/blocks/commit/db8350b6d0c929dda68bbf293c6a5d440d17423a))
+* **ui:** add input-otp and phone-input primitives ([a791640](https://github.com/constructive-io/blocks/commit/a791640308bcbaf8aec0504a16e3775dce9e1ad9))
+* **ui:** add table group rows with matching tinted bands ([7a953c2](https://github.com/constructive-io/blocks/commit/7a953c2299c00f81f33a612df11d0a35d51ade98))
+* **ui:** add the agents-builder registry template ([4d7db42](https://github.com/constructive-io/blocks/commit/4d7db420436fa0e25c9ae9ac5202699fd83f2add))
+* **ui:** add the billing kit and billing account and console templates ([dd92e3c](https://github.com/constructive-io/blocks/commit/dd92e3c8f2c1fb165445318870fa94bdc4335391))
+* **ui:** add tinted header bands to dialogs and sheets ([958f405](https://github.com/constructive-io/blocks/commit/958f4052a515ec2af3479777a2f50d031dad2ddd))
+* **ui:** align the accent with the Constructive brand blue and add a link token ([02fc482](https://github.com/constructive-io/blocks/commit/02fc482e81b608f0c61f2ad16d88af786750d079)), closes [#00A2](https://github.com/constructive-io/blocks/issues/00A2)
+* **ui:** generalize billing provider descriptors and payment method display ([c0d2387](https://github.com/constructive-io/blocks/commit/c0d2387af977f45f90a673dd8bcde1885031453b))
+* **ui:** lighten light-theme hairlines to read thinner ([924eddb](https://github.com/constructive-io/blocks/commit/924eddbec9115f413e348e4ce353316f61b7cd4a))
+* **ui:** open model details as a side card in the model selector ([19eb0d6](https://github.com/constructive-io/blocks/commit/19eb0d6b9332fc7522fefd91cd03988dafcef46a))
+* **ui:** rebuild InputOtp on a single input with slot motion ([a1927e0](https://github.com/constructive-io/blocks/commit/a1927e0a6b76133be957d743d115d03bd3149e64))
+* **ui:** rebuild the org chart on the workspace canvas ([f9da315](https://github.com/constructive-io/blocks/commit/f9da31518c3b675e5181892d1f667e9310128953))
+* **ui:** rebuild the storage browser on the workspace shell ([bea14fc](https://github.com/constructive-io/blocks/commit/bea14fc19440a067a2855d6f9ad8933461686a4b))
+* **ui:** refined neutral + blue design system, motion tiers, and new primitives ([a4b4c50](https://github.com/constructive-io/blocks/commit/a4b4c50812312e30c234a95f38b87ce4b78d60ca))
+* **ui:** sharpen the light theme's surface tiers and hairlines ([5b20adf](https://github.com/constructive-io/blocks/commit/5b20adfd049e35fb485c8caf6b242401336f8ee6))
+* **ui:** strengthen status badge tints in light mode ([dafbc82](https://github.com/constructive-io/blocks/commit/dafbc8285b61a942ff27c4e453accc210c6f12e7))
+* **workspace-kit:** add a framed shell mode ([a93aafa](https://github.com/constructive-io/blocks/commit/a93aafa41bd4bb25158487c40c77d6557d26bfd3))
+
+
+
+
+
 # [0.12.0](https://github.com/constructive-io/blocks/compare/@constructive-io/ui@0.11.0...@constructive-io/ui@0.12.0) (2026-08-22)
 
 **Note:** Version bump only for package @constructive-io/ui

@@ -3,6 +3,23 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.9.0](https://github.com/constructive-io/blocks/compare/@constructive-io/schema-builder@0.8.0...@constructive-io/schema-builder@0.9.0) (2026-10-19)
+
+
+### Bug Fixes
+
+* **ui:** let nested overlays handle Escape before card dismissal ([f90acc2](https://github.com/constructive-io/blocks/commit/f90acc218679e9cc2c813db4ee86eac4c142fc58))
+
+
+### Features
+
+* **schema-builder:** rework the editor in the workspace style ([e8513e2](https://github.com/constructive-io/blocks/commit/e8513e20f96837c3f0869298d0ef2a546a2b1aab))
+* **ui:** align the accent with the Constructive brand blue and add a link token ([02fc482](https://github.com/constructive-io/blocks/commit/02fc482e81b608f0c61f2ad16d88af786750d079)), closes [#00A2](https://github.com/constructive-io/blocks/issues/00A2)
+
+
+
+
+
 # [0.8.0](https://github.com/constructive-io/blocks/compare/@constructive-io/schema-builder@0.7.1...@constructive-io/schema-builder@0.8.0) (2026-08-22)
 
 **Note:** Version bump only for package @constructive-io/schema-builder

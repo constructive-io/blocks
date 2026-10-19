@@ -3,6 +3,60 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.6.0](https://github.com/constructive-io/blocks/compare/blocks@0.5.0...blocks@0.6.0) (2026-10-19)
+
+
+### Bug Fixes
+
+* **auth:** password sign-up shows check-email, never expects a session (planning[#2284](https://github.com/constructive-io/blocks/issues/2284)) ([c823486](https://github.com/constructive-io/blocks/commit/c8234862584ceeefda7c2ddf3fdc4479f16ad52d))
+* **auth:** sheets register shows check-email after sign-up ([b3cd735](https://github.com/constructive-io/blocks/commit/b3cd735d993f8ae014aa6432c5104433fda8dd0d))
+* **auth:** sign-up copy says confirm your email, then sign in with your password (planning[#2291](https://github.com/constructive-io/blocks/issues/2291)) ([69ced65](https://github.com/constructive-io/blocks/commit/69ced653cf9be9cc6d436a60759690d604e2bc22))
+* **blocks:** give client code the Pages basePath so the Create preview iframe resolves ([adf0ea5](https://github.com/constructive-io/blocks/commit/adf0ea516801cb3ae06f48d5ca16339f4c42e850))
+* **blocks:** make the selected pack tab readable in dark mode ([dd83100](https://github.com/constructive-io/blocks/commit/dd831008912624fce29da0688bcfb3fb2e247909))
+* **registry:** resolve initial-focus alias and document retired plans ([5f4dfee](https://github.com/constructive-io/blocks/commit/5f4dfee3900685c1e9e4c466de5ea6141a51cd75))
+* **ui,blocks:** spacing and alignment pass across every preview card ([d479ddc](https://github.com/constructive-io/blocks/commit/d479ddce5d55ed85171c362037b76c577d8c0b00))
+* **ui:** address react audit findings in primitive components ([cdab56f](https://github.com/constructive-io/blocks/commit/cdab56f6c6a1b32187cd793b26798962412c564d))
+* **ui:** harden inputs components against worst-case data ([c305f4b](https://github.com/constructive-io/blocks/commit/c305f4b26367c30080f6b4a125e120038918e762))
+* **ui:** harden overlays, layout and data components against worst-case data ([49f8512](https://github.com/constructive-io/blocks/commit/49f85125080cf85149c429d5cbbe2a4dee360c32))
+* **ui:** harden primitive components against worst-case data ([f0af8ef](https://github.com/constructive-io/blocks/commit/f0af8ef364977265881479ce25cdb3c5dc915f7f))
+
+
+* feat(blocks)!: replace the billing blocks with the billing workspace ([15f7ca6](https://github.com/constructive-io/blocks/commit/15f7ca60ab2b7e77a8a023b103d9c780cd4d67a9))
+
+
+### Features
+
+* **blocks:** add the account-phone-numbers block ([1265bd8](https://github.com/constructive-io/blocks/commit/1265bd88b524e1970f3dfd4fed5ee29baf0ba119))
+* **blocks:** bring the docs sidebar onto the workspace scale ([48a74d9](https://github.com/constructive-io/blocks/commit/48a74d91347be431a664fef03f4d01eff19f7d6e))
+* **blocks:** document the agents builder and share one live preview shell ([e3136b3](https://github.com/constructive-io/blocks/commit/e3136b368b865d5d91a8680ca71f36a2afdb2500))
+* **blocks:** move console kit onto the workspace shell ([d0941e3](https://github.com/constructive-io/blocks/commit/d0941e332e5b32f33f6f107c166a33b57d4d4b24))
+* **blocks:** one action bar for the Create panel, balanced walls, and framed preview ([32bb5a6](https://github.com/constructive-io/blocks/commit/32bb5a6929946820d8062af5e4022f47726519c0))
+* **blocks:** refined docs chrome, primitive docs, and showcase restyle ([2768e19](https://github.com/constructive-io/blocks/commit/2768e191473e9d1db1599719f5db1ccb1dc1247d))
+* **blocks:** render the storage feature pack with the storage browser ([8a291bb](https://github.com/constructive-io/blocks/commit/8a291bb4677f9285fa63342e62302e2baf77f98f))
+* **blocks:** rework app access and organizations in the workspace style ([de8d6fe](https://github.com/constructive-io/blocks/commit/de8d6fea5031c3772d6c5afad2df5db53df79db1))
+* **blocks:** rework the notifications inbox in the workspace style ([14ed8fd](https://github.com/constructive-io/blocks/commit/14ed8fd6a70dee218dac6f503acef20511888f96))
+* **blocks:** show the phone numbers block on the Create platform wall ([0f60cdb](https://github.com/constructive-io/blocks/commit/0f60cdbf88ccbb950f6e3578a0af223cbd713e04))
+* **blocks:** theme playground at /blocks/create with preview walls, presets, and CLI install ([6155b78](https://github.com/constructive-io/blocks/commit/6155b783f1bd6b0f5b8ea55513b28faf120f7f45))
+* **ui:** add Data Rooms template ([db8350b](https://github.com/constructive-io/blocks/commit/db8350b6d0c929dda68bbf293c6a5d440d17423a))
+* **ui:** add input-otp and phone-input primitives ([a791640](https://github.com/constructive-io/blocks/commit/a791640308bcbaf8aec0504a16e3775dce9e1ad9))
+* **ui:** align the accent with the Constructive brand blue and add a link token ([02fc482](https://github.com/constructive-io/blocks/commit/02fc482e81b608f0c61f2ad16d88af786750d079)), closes [#00A2](https://github.com/constructive-io/blocks/issues/00A2)
+* **ui:** generalize billing provider descriptors and payment method display ([c0d2387](https://github.com/constructive-io/blocks/commit/c0d2387af977f45f90a673dd8bcde1885031453b))
+* **ui:** open model details as a side card in the model selector ([19eb0d6](https://github.com/constructive-io/blocks/commit/19eb0d6b9332fc7522fefd91cd03988dafcef46a))
+* **ui:** rebuild the org chart on the workspace canvas ([f9da315](https://github.com/constructive-io/blocks/commit/f9da31518c3b675e5181892d1f667e9310128953))
+* **ui:** rebuild the storage browser on the workspace shell ([bea14fc](https://github.com/constructive-io/blocks/commit/bea14fc19440a067a2855d6f9ad8933461686a4b))
+* **ui:** sharpen the light theme's surface tiers and hairlines ([5b20adf](https://github.com/constructive-io/blocks/commit/5b20adfd049e35fb485c8caf6b242401336f8ee6))
+* **workspace-kit:** add a framed shell mode ([a93aafa](https://github.com/constructive-io/blocks/commit/a93aafa41bd4bb25158487c40c77d6557d26bfd3))
+
+
+### BREAKING CHANGES
+
+* the billing-* registry blocks are removed; install
+billing-account, billing-console or billing-kit instead.
+
+
+
+
+
 # [0.5.0](https://github.com/constructive-io/blocks/compare/blocks@0.4.0...blocks@0.5.0) (2026-08-22)
 
 
