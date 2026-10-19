@@ -530,6 +530,126 @@ export function AiRegistrySmokeConsumer() {
 		strictNullChecks: true,
 	},
 	{
+		name: 'resource-kit',
+		consumer: `'use client';
+
+import { Users } from 'lucide-react';
+
+import {
+	createMemorySource,
+	defineResource,
+	RecordDetail,
+	ResourceKitProvider,
+	ResourcePage,
+	type ResourceRouter
+} from '@/components/ui/resource-kit';
+
+type Contact = { id: string; name: string; companyId: string | null; stage: string };
+
+const contacts = defineResource<Contact>({
+	name: 'contacts',
+	label: 'Contacts',
+	singular: 'Contact',
+	icon: 'users',
+	primaryKey: 'id',
+	titleField: 'name',
+	columns: ['name', 'stage'],
+	formFields: ['name', 'stage'],
+	fields: {
+		id: { name: 'id', label: 'ID', input: 'uuid', hidden: true },
+		name: { name: 'name', label: 'Name', input: 'text', required: true },
+		companyId: { name: 'companyId', label: 'Company', input: 'relation', relation: { resource: 'contacts' } },
+		stage: { name: 'stage', label: 'Stage', input: 'select', options: [{ value: 'lead', label: 'Lead', tone: 'info' }] }
+	},
+	source: createMemorySource<Contact>([])
+});
+
+export function ResourceKitSmokeConsumer({ router, id }: { router: ResourceRouter; id?: string }) {
+	return (
+		<ResourceKitProvider router={router} resources={[contacts]} icons={{ users: Users }}>
+			{id ? <RecordDetail resource="contacts" id={id} /> : <ResourcePage resource={contacts} />}
+		</ResourceKitProvider>
+	);
+}
+`,
+		expected: [
+			'src/components/ui/resource-kit/index.ts',
+			'src/components/ui/resource-kit/types.ts',
+			'src/components/ui/resource-kit/context.tsx',
+			'src/components/ui/resource-kit/queries.ts',
+			'src/components/ui/resource-kit/resource-page.tsx',
+			'src/components/ui/resource-kit/data-table.tsx',
+			'src/components/ui/resource-kit/entity-form-sheet.tsx',
+			'src/components/ui/resource-kit/relation-picker.tsx',
+			'src/components/ui/resource-kit/record-detail.tsx',
+			'src/components/ui/resource-kit/delete-dialog.tsx',
+			'src/components/ui/resource-kit/memory-source.ts',
+			'src/components/ui/workspace-kit/surface.tsx',
+			'src/components/ui/combobox.tsx',
+			'src/components/ui/sheet.tsx',
+			'src/components/ui/alert-dialog.tsx',
+		],
+		expectedPackages: ['@tanstack/react-query', 'lucide-react'],
+		strictNullChecks: true,
+	},
+	{
+		name: 'auth-pages',
+		consumer: `'use client';
+
+import { AuthLayout, SignInPanel, type AuthLinkComponent } from '@/components/ui/auth-pages';
+
+export function AuthPagesSmokeConsumer({ link }: { link: AuthLinkComponent }) {
+	return (
+		<AuthLayout brand={{ name: 'Acme' }} linkComponent={link}>
+			<SignInPanel
+				links={{ signUp: '/sign-up', forgotPassword: '/forgot-password' }}
+				onSubmit={async ({ email }) => (email ? { ok: true } : { ok: false, message: 'Enter an email address.' })}
+			/>
+		</AuthLayout>
+	);
+}
+`,
+		expected: [
+			'src/components/ui/auth-pages/index.ts',
+			'src/components/ui/auth-pages/auth-layout.tsx',
+			'src/components/ui/auth-pages/sign-in-panel.tsx',
+			'src/components/ui/auth-pages/sign-up-panel.tsx',
+			'src/components/ui/auth-pages/check-email-panel.tsx',
+			'src/components/ui/auth-pages/verify-email-panel.tsx',
+			'src/components/ui/auth-pages/forgot-password-panel.tsx',
+			'src/components/ui/auth-pages/reset-password-panel.tsx',
+			'src/components/ui/card.tsx',
+			'src/components/ui/field.tsx',
+		],
+		strictNullChecks: true,
+	},
+	{
+		name: 'dashboard-tiles',
+		consumer: `'use client';
+
+import { DashboardGrid, RecentRecords, ResourceCountTile, StatTile } from '@/components/ui/dashboard-tiles';
+
+export function DashboardTilesSmokeConsumer() {
+	return (
+		<DashboardGrid>
+			<ResourceCountTile resource="deals" label="Open deals" filters={{ status: 'open' }} />
+			<StatTile label="Revenue" value="$48,210" hint="This month" href="/invoices" />
+			<RecentRecords resource="contacts" limit={5} />
+		</DashboardGrid>
+	);
+}
+`,
+		expected: [
+			'src/components/ui/dashboard-tiles/index.ts',
+			'src/components/ui/dashboard-tiles/stat-tile.tsx',
+			'src/components/ui/dashboard-tiles/recent-records.tsx',
+			'src/components/ui/dashboard-tiles/dashboard-grid.tsx',
+			'src/components/ui/resource-kit/queries.ts',
+		],
+		expectedPackages: ['@tanstack/react-query'],
+		strictNullChecks: true,
+	},
+	{
 		name: 'sheets',
 		expectedPackages: ['@constructive-io/data'],
 		forbiddenPackages: ['@constructive-io/sheets'],
