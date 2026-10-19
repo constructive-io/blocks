@@ -102,9 +102,14 @@ type ToneBadgeProps = {
 /**
  * Tone fills mixed from `--tone`. On a white page the fill carries the colour and the
  * border only defines the edge; dark keeps a fainter fill under a stronger border.
+ * The light edge is translucent so it sits on any row tint, and where relative colours
+ * work its chroma is capped first: a translucent edge of a tone outside sRGB (the info
+ * blue) otherwise renders yellow at the rounded corners.
  */
 const toneBadgeClass = cn(
-	'border-[color-mix(in_oklab,var(--tone)_25%,transparent)] bg-[color-mix(in_oklab,var(--tone)_14%,transparent)]',
+	'[--tone-edge:color-mix(in_oklab,var(--tone)_25%,transparent)]',
+	'supports-[color:oklch(from_red_l_c_h)]:[--tone-edge:color-mix(in_oklab,oklch(from_var(--tone)_l_min(c,0.12)_h)_25%,transparent)]',
+	'border-(--tone-edge) bg-[color-mix(in_oklab,var(--tone)_14%,transparent)]',
 	'text-[color-mix(in_oklab,var(--tone),var(--foreground)_32%)]',
 	'dark:border-[color-mix(in_oklab,var(--tone)_35%,transparent)] dark:bg-[color-mix(in_oklab,var(--tone)_9%,transparent)]',
 );
