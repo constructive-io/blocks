@@ -234,7 +234,7 @@ type ViewFrameProps = {
  */
 export function ViewFrame({ icon, title, actions, label, maxWidth = 'max-w-6xl', className, children }: ViewFrameProps) {
 	return (
-		<section aria-label={label ?? (typeof title === 'string' ? title : undefined)} className="flex min-w-0 flex-1 flex-col">
+		<section aria-label={label ?? (typeof title === 'string' ? title : undefined)} className="flex min-h-0 min-w-0 flex-1 flex-col">
 			<ViewHeader icon={icon} title={title}>
 				{actions}
 			</ViewHeader>
