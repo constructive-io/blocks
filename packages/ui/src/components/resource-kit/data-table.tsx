@@ -9,7 +9,7 @@ import { focusRingClass, pressClass } from '../workspace-kit/primitives';
 import { TableSurface, tableHeadClass, tableRowClass } from '../workspace-kit/surface';
 import { useResourceDefinition, useResourceKit } from './context';
 import { FieldValue, LabelSkeleton, linkClass } from './field-value';
-import { fieldFormat, isSortable, recordId, visibleFields } from './fields';
+import { fieldFormat, isSortable, NUMERIC_FORMATS, recordId, visibleFields } from './fields';
 import { formatFieldText } from './format';
 import { useRelationLabels, useRowTitles } from './labels';
 import type { ListQuery, ResourceField, ResourceRef, ResourceRow } from './types';
@@ -51,7 +51,6 @@ function foldClass(index: number) {
 
 /** Badges, numbers, and dates: always short, so their columns fit the value and never cut it. */
 const SHORT_FORMATS = new Set(['badge', 'boolean', 'number', 'currency', 'percent', 'date', 'datetime', 'relative']);
-const END_ALIGNED = new Set(['number', 'currency', 'percent']);
 /** Free text and relations fit their value up to a width that grows with the table. */
 const TEXT_CAP = 'max-w-24 @md/table:max-w-28 @3xl/table:max-w-36 @5xl/table:max-w-48 @7xl/table:max-w-64';
 
@@ -67,7 +66,7 @@ function columnClasses(field: ResourceField, index: number): { cell: string; val
 	if (field.relation?.many || !SHORT_FORMATS.has(format)) return { cell: 'w-px', value: TEXT_CAP };
 	// A badge holds a short label, but an unknown value from the database can be long.
 	if (format === 'badge') return { cell: 'w-px whitespace-nowrap', value: 'max-w-36' };
-	return { cell: cn('w-px whitespace-nowrap', END_ALIGNED.has(format) && 'text-end') };
+	return { cell: cn('w-px whitespace-nowrap', NUMERIC_FORMATS.has(format) && 'text-end') };
 }
 
 function SortableHeader({ field, index, sort, onSortChange }: { field: ResourceField; index: number; sort?: Sort; onSortChange?: (sort: Sort) => void }) {
@@ -84,7 +83,7 @@ function SortableHeader({ field, index, sort, onSortChange }: { field: ResourceF
 						'-mx-1 inline-flex cursor-pointer items-center gap-1 rounded px-1 hover:text-foreground',
 						index === 0 && 'max-w-full',
 						active && 'text-foreground',
-						index > 0 && END_ALIGNED.has(fieldFormat(field)) && 'flex-row-reverse',
+						index > 0 && NUMERIC_FORMATS.has(fieldFormat(field)) && 'flex-row-reverse',
 						focusRingClass,
 					)}
 				>

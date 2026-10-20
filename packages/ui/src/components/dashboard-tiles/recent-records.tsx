@@ -9,7 +9,7 @@ import { fieldFormat, inSentence, recordId, visibleFields } from '../resource-ki
 import { errorMessage } from '../resource-kit/form-values';
 import { formatFieldText } from '../resource-kit/format';
 import { useRelationLabels, useRowTitles } from '../resource-kit/labels';
-import { useResourceList } from '../resource-kit/queries';
+import { queryFailure, useResourceList } from '../resource-kit/queries';
 import type { ListQuery, ResourceRef } from '../resource-kit/types';
 import { dashedRule, EmptyState, Panel } from '../workspace-kit/surface';
 
@@ -39,6 +39,7 @@ export function RecentRecords({ resource: resourceRef, limit = 5, sort, filters,
 	const order = sort ?? resource.defaultSort ?? (resource.fields.createdAt ? { field: 'createdAt', direction: 'desc' as const } : undefined);
 	const list = useResourceList(resource, { sort: order, offset: 0, limit, filters });
 	const rows = list.data?.rows ?? [];
+	const failure = queryFailure(list);
 	const columns = React.useMemo(() => visibleFields(resource, resource.columns).filter((field) => field.name !== resource.titleField), [resource]);
 	// One detail beside the title (the first column that is not a date) and the time on the right.
 	const detail = columns.find((field) => !DATE_FORMATS.has(fieldFormat(field)) && !field.relation?.many);
@@ -67,9 +68,9 @@ export function RecentRecords({ resource: resourceRef, limit = 5, sort, filters,
 						</li>
 					))}
 				</ul>
-			) : list.error || list.failureReason ? (
+			) : failure ? (
 				<p role="alert" className="px-4 pb-3 text-[0.8125rem] text-destructive [overflow-wrap:anywhere]">
-					{errorMessage(list.error ?? list.failureReason)}
+					{errorMessage(failure)}
 				</p>
 			) : rows.length === 0 ? (
 				<EmptyState icon={icon} title={`No ${label} yet`} className="py-6" />

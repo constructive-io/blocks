@@ -7,8 +7,6 @@ import { AuthCard, AuthFailure, AuthLinkButton, AuthSubmit, BackToSignIn } from 
 import type { VerifyEmailPanelProps } from './types';
 import { useAuthForm } from './use-auth-form';
 
-const NO_FIELDS = [] as const;
-
 /**
  * Confirms an email address from a verification link. It calls `onVerify` once
  * on mount (StrictMode's second effect run does not call it again), then shows
@@ -23,25 +21,22 @@ export function VerifyEmailPanel({
 	linkComponent,
 	className,
 }: VerifyEmailPanelProps) {
-	const form = useAuthForm(NO_FIELDS);
+	const form = useAuthForm({});
 	const [verified, setVerified] = React.useState(false);
 	const started = React.useRef(false);
-	const latestVerify = React.useRef(onVerify);
-	latestVerify.current = onVerify;
-	const latestSubmit = React.useRef(form.submit);
-	latestSubmit.current = form.submit;
 
-	const verify = React.useCallback(() => {
-		void latestSubmit.current({ run: () => latestVerify.current(), onSuccess: () => setVerified(true) });
-	}, []);
+	const verify = () => {
+		void form.submit({ run: onVerify, onSuccess: () => setVerified(true) });
+	};
 
+	// Mount only: the first render's `verify` is enough, and "Try again" uses the current one.
 	React.useEffect(() => {
 		if (started.current) return;
 		started.current = true;
 		verify();
-	}, [verify]);
+	}, []);
 
-	const footer = links?.signIn ? <BackToSignIn href={links.signIn} linkComponent={linkComponent} /> : null;
+	const footer = links?.signIn ? <BackToSignIn href={links.signIn} /> : null;
 	const onward = links?.continue ?? links?.signIn;
 
 	// Each state is its own card (`key`), so the result heading takes focus and is announced when it replaces the spinner.
@@ -53,12 +48,13 @@ export function VerifyEmailPanel({
 				focusTitle
 				icon={CircleCheckIcon}
 				key="verified"
+				linkComponent={linkComponent}
 				notice={notice}
 				title="Email verified"
 				tone="success"
 			>
 				{onward ? (
-					<AuthLinkButton href={onward} linkComponent={linkComponent}>
+					<AuthLinkButton href={onward}>
 						{links?.continue ? 'Continue' : 'Sign in'}
 					</AuthLinkButton>
 				) : null}
@@ -75,6 +71,7 @@ export function VerifyEmailPanel({
 				footer={footer}
 				icon={MailWarningIcon}
 				key="failed"
+				linkComponent={linkComponent}
 				notice={notice}
 				title="We could not verify your email"
 				tone="destructive"
@@ -97,6 +94,15 @@ export function VerifyEmailPanel({
 	}
 
 	return (
-		<AuthCard className={className} description={description} footer={footer} icon="spinner" key="verifying" notice={notice} title={title} />
+		<AuthCard
+			className={className}
+			description={description}
+			footer={footer}
+			icon="spinner"
+			key="verifying"
+			linkComponent={linkComponent}
+			notice={notice}
+			title={title}
+		/>
 	);
 }

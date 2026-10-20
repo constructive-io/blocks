@@ -1,45 +1,7 @@
 import * as React from 'react';
 
-import {
-	type AnyResource,
-	CRM_DEMO_ICONS,
-	CRM_DEMO_NOW,
-	RecordDetail,
-	ResourceKitProvider,
-	ResourceNav,
-	ResourcePage,
-	type ResourceRouter,
-} from '../../components/resource-kit';
+import { type AnyResource, CRM_DEMO_ICONS, CRM_DEMO_NOW, MemoryRoute, ResourceKitProvider, ResourceNav, useMemoryRouter } from '../../components/resource-kit';
 import { SidebarFrame, WorkspaceShell } from '../../components/workspace-kit';
-
-/** A router over component state, so stories navigate between list and detail without a framework. */
-export function useMemoryRouter(initialPath: string) {
-	const [path, setPath] = React.useState(initialPath);
-	const router = React.useMemo<ResourceRouter>(
-		() => ({
-			Link: ({ href, className, children, ...rest }: { href: string; className?: string; children: React.ReactNode } & React.ComponentProps<'a'>) => (
-				<a
-					{...rest}
-					href={href}
-					className={className}
-					onClick={(event) => {
-						rest.onClick?.(event);
-						if (event.defaultPrevented || event.metaKey || event.ctrlKey) return;
-						event.preventDefault();
-						setPath(href);
-					}}
-				>
-					{children}
-				</a>
-			),
-			navigate: setPath,
-			listHref: (resource) => `/${resource}`,
-			detailHref: (resource, id) => `/${resource}/${encodeURIComponent(id)}`,
-		}),
-		[],
-	);
-	return { path, router, setPath };
-}
 
 type StoryAppProps = {
 	resources: AnyResource[];
@@ -54,11 +16,6 @@ type StoryAppProps = {
 /** The resources inside the workspace shell with a resource nav, routed by path like a generated app. */
 export function StoryApp({ resources, initialPath, home, width, brand = 'Acme CRM' }: StoryAppProps) {
 	const { path, router } = useMemoryRouter(initialPath);
-	const [, name, id] = path.split('/');
-	let view: React.ReactNode;
-	if (!name) view = home ?? null;
-	else if (id) view = <RecordDetail key={path} resource={name} id={decodeURIComponent(id)} />;
-	else view = <ResourcePage key={name} resource={name} />;
 	return (
 		<div className="h-dvh min-h-[640px] p-2" style={width ? { width } : undefined}>
 			<div className="h-full overflow-hidden rounded-xl border border-border shadow-sm">
@@ -82,7 +39,7 @@ export function StoryApp({ resources, initialPath, home, width, brand = 'Acme CR
 							);
 						}}
 					>
-						{view}
+						<MemoryRoute path={path} home={home} />
 					</WorkspaceShell>
 				</ResourceKitProvider>
 			</div>

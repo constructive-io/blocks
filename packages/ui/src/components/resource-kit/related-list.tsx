@@ -8,12 +8,11 @@ import { Button } from '../button';
 import { EmptyState, SectionHeading } from '../workspace-kit/surface';
 import { useResourceIcon, useResourceKit } from './context';
 import { DataTable } from './data-table';
-import { DeleteDialog } from './delete-dialog';
-import { EntityFormSheet } from './entity-form-sheet';
 import { type HasManyRelation, inSentence } from './fields';
 import { errorMessage } from './form-values';
-import { useResourceList } from './queries';
-import type { AnyResource, ListQuery, ResourceRow } from './types';
+import { queryFailure, useResourceList } from './queries';
+import { useRecordDialogs } from './record-dialogs';
+import type { AnyResource, ListQuery } from './types';
 
 type RelatedListProps = {
 	parent: AnyResource;
@@ -32,10 +31,10 @@ export function RelatedList({ parent, parentId, relation, limit, readOnly }: Rel
 	const { resource, field } = relation;
 	const { locale } = useResourceKit();
 	const icon = useResourceIcon(resource);
-	const [sheet, setSheet] = React.useState<{ open: boolean; record: ResourceRow | null }>({ open: false, record: null });
-	const [deleting, setDeleting] = React.useState<{ open: boolean; record: ResourceRow | null }>({ open: false, record: null });
+	const records = useRecordDialogs(resource, { defaultValues: { [field.name]: parentId } });
 	const query: ListQuery = { sort: resource.defaultSort, offset: 0, limit, filters: { [field.name]: parentId } };
 	const list = useResourceList(resource, query);
+	const failure = queryFailure(list);
 	const columns = React.useMemo(() => resource.columns.filter((name) => name !== field.name), [resource.columns, field.name]);
 	const total = list.data?.totalCount ?? 0;
 	const headingId = React.useId();
@@ -57,7 +56,7 @@ export function RelatedList({ parent, parentId, relation, limit, readOnly }: Rel
 				description={list.data && total > limit ? `Showing the first ${formatCount(limit, locale)}.` : undefined}
 				actions={
 					readOnly ? null : (
-						<Button size="xs" variant="outline" onClick={() => setSheet({ open: true, record: null })} aria-label={`New ${inSentence(resource.singular)}`}>
+						<Button size="xs" variant="outline" onClick={records.create} aria-label={`New ${inSentence(resource.singular)}`}>
 							<PlusIcon aria-hidden="true" />
 							<span className="hidden @md/view:inline">New {inSentence(resource.singular)}</span>
 						</Button>
@@ -65,29 +64,20 @@ export function RelatedList({ parent, parentId, relation, limit, readOnly }: Rel
 				}
 			/>
 			{list.data && total === 0 && !list.isError ? (
-				<div className="rounded-xl bg-card shadow-card">
-					<EmptyState icon={icon} title={`No ${inSentence(resource.label)} yet`} className="py-6" />
-				</div>
+				<EmptyState icon={icon} title={`No ${inSentence(resource.label)} yet`} className="rounded-xl bg-card py-6 shadow-card" />
 			) : (
 				<DataTable
 					resource={resource}
 					rows={list.data?.rows ?? []}
 					columns={columns}
 					loading={list.isPending && !list.failureReason}
-					error={list.error || list.failureReason ? `Couldn’t load ${inSentence(resource.label)}: ${errorMessage(list.error ?? list.failureReason)}` : undefined}
+					error={failure ? `Couldn’t load ${inSentence(resource.label)}: ${errorMessage(failure)}` : undefined}
 					skeletonRows={Math.min(limit, 3)}
-					onEdit={readOnly ? undefined : (record) => setSheet({ open: true, record })}
-					onDelete={readOnly ? undefined : (record) => setDeleting({ open: true, record })}
+					onEdit={readOnly ? undefined : records.edit}
+					onDelete={readOnly ? undefined : records.remove}
 				/>
 			)}
-			<EntityFormSheet
-				resource={resource}
-				record={sheet.record}
-				open={sheet.open}
-				onOpenChange={(open) => setSheet((current) => ({ ...current, open }))}
-				defaultValues={{ [field.name]: parentId }}
-			/>
-			<DeleteDialog resource={resource} record={deleting.record} open={deleting.open} onOpenChange={(open) => setDeleting((current) => ({ ...current, open }))} />
+			{records.dialogs}
 		</section>
 	);
 }

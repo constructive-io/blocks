@@ -1,6 +1,6 @@
 'use client';
 
-import { CircleAlertIcon, PlusIcon, SearchXIcon } from 'lucide-react';
+import { PlusIcon, SearchXIcon } from 'lucide-react';
 import * as React from 'react';
 
 import { formatCount } from '../../lib/intl';
@@ -11,13 +11,13 @@ import { SearchField, ViewFrame } from '../workspace-kit/primitives';
 import { EmptyState } from '../workspace-kit/surface';
 import { useResourceDefinition, useResourceIcon, useResourceKit } from './context';
 import { DataTable } from './data-table';
-import { DeleteDialog } from './delete-dialog';
-import { EntityFormSheet } from './entity-form-sheet';
+import { LoadFailure } from './failures';
 import { inSentence } from './fields';
 import { errorMessage } from './form-values';
 import { ListPagination, SortMenu } from './list-controls';
 import { useResourceList } from './queries';
-import type { ListQuery, ResourceRef, ResourceRow } from './types';
+import { useRecordDialogs } from './record-dialogs';
+import type { ListQuery, ResourceRef } from './types';
 
 export type ResourcePageProps = {
 	resource: ResourceRef;
@@ -29,8 +29,6 @@ export type ResourcePageProps = {
 	readOnly?: boolean;
 	className?: string;
 };
-
-type SheetState = { open: boolean; record: ResourceRow | null };
 
 /**
  * A resource's list screen: the view header with the count and a create
@@ -46,8 +44,7 @@ export function ResourcePage({ resource: resourceRef, pageSize = 25, filters, re
 	const debounced = useDebounce(search.trim(), 250);
 	const [sort, setSort] = React.useState(resource.defaultSort);
 	const [offset, setOffset] = React.useState(0);
-	const [sheet, setSheet] = React.useState<SheetState>({ open: false, record: null });
-	const [deleting, setDeleting] = React.useState<{ open: boolean; record: ResourceRow | null }>({ open: false, record: null });
+	const records = useRecordDialogs(resource);
 
 	// A new search or sort starts from the first page, adjusted during render rather than in an effect.
 	const pageKey = `${debounced}\u0000${sort?.field}\u0000${sort?.direction}`;
@@ -69,8 +66,6 @@ export function ResourcePage({ resource: resourceRef, pageSize = 25, filters, re
 	// Deleting the last row of a later page steps back a page.
 	if (list.data && rows.length === 0 && offset > 0 && !list.isPlaceholderData) setOffset(Math.max(0, offset - pageSize));
 
-	const openCreate = () => setSheet({ open: true, record: null });
-
 	// A failed request is shown as soon as it fails, even while it retries: rows kept from an earlier search
 	// or page would otherwise read as this query's answer.
 	const failure = list.error ?? (list.isPlaceholderData || !list.data ? list.failureReason : null);
@@ -78,52 +73,37 @@ export function ResourcePage({ resource: resourceRef, pageSize = 25, filters, re
 
 	let body: React.ReactNode;
 	if (failure && !stale) {
-		body = (
-			<div className="rounded-xl bg-card shadow-card">
-				<EmptyState
-					icon={CircleAlertIcon}
-					title={`Couldn’t load ${noun}`}
-					description={<span className="[overflow-wrap:anywhere]">{errorMessage(failure)}</span>}
-					action={
-						<Button size="sm" variant="outline" onClick={() => void list.refetch()}>
-							Try again
-						</Button>
-					}
-				/>
-			</div>
-		);
+		body = <LoadFailure what={noun} error={failure} onRetry={() => void list.refetch()} />;
 	} else if (list.data && totalCount === 0 && !debounced) {
 		body = (
-			<div className="rounded-xl bg-card shadow-card">
-				<EmptyState
-					icon={icon}
-					title={`No ${noun} yet`}
-					description={readOnly ? undefined : `Create the first ${singular} to see it here.`}
-					action={
-						readOnly ? undefined : (
-							<Button size="sm" onClick={openCreate}>
-								<PlusIcon aria-hidden="true" />
-								New {singular}
-							</Button>
-						)
-					}
-				/>
-			</div>
+			<EmptyState
+				className="rounded-xl bg-card shadow-card"
+				icon={icon}
+				title={`No ${noun} yet`}
+				description={readOnly ? undefined : `Create the first ${singular} to see it here.`}
+				action={
+					readOnly ? undefined : (
+						<Button size="sm" onClick={records.create}>
+							<PlusIcon aria-hidden="true" />
+							New {singular}
+						</Button>
+					)
+				}
+			/>
 		);
 	} else if (list.data && totalCount === 0) {
 		body = (
-			<div className="rounded-xl bg-card shadow-card">
-				<EmptyState
-					icon={SearchXIcon}
-					title={<span className="[overflow-wrap:anywhere]">No {noun} match “{debounced}”</span>}
-					description="Try a different search."
-					action={
-						<Button size="sm" variant="outline" onClick={() => setSearch('')}>
-							Clear search
-						</Button>
-					}
-				/>
-			</div>
+			<EmptyState
+				className="rounded-xl bg-card shadow-card"
+				icon={SearchXIcon}
+				title={<span className="[overflow-wrap:anywhere]">No {noun} match “{debounced}”</span>}
+				description="Try a different search."
+				action={
+					<Button size="sm" variant="outline" onClick={() => setSearch('')}>
+						Clear search
+					</Button>
+				}
+			/>
 		);
 	} else {
 		body = (
@@ -135,8 +115,8 @@ export function ResourcePage({ resource: resourceRef, pageSize = 25, filters, re
 				skeletonRows={Math.min(pageSize, 8)}
 				sort={sort}
 				onSortChange={setSort}
-				onEdit={readOnly ? undefined : (record) => setSheet({ open: true, record })}
-				onDelete={readOnly ? undefined : (record) => setDeleting({ open: true, record })}
+				onEdit={readOnly ? undefined : records.edit}
+				onDelete={readOnly ? undefined : records.remove}
 				className={cn(list.isPlaceholderData && 'opacity-70 transition-opacity')}
 			/>
 		);
@@ -155,7 +135,7 @@ export function ResourcePage({ resource: resourceRef, pageSize = 25, filters, re
 				}
 				actions={
 					readOnly ? null : (
-						<Button size="sm" className="h-7" onClick={openCreate} aria-label={`New ${singular}`}>
+						<Button size="sm" className="h-7" onClick={records.create} aria-label={`New ${singular}`}>
 							<PlusIcon aria-hidden="true" />
 							<span className="hidden @md/view:inline">New {singular}</span>
 						</Button>
@@ -180,13 +160,7 @@ export function ResourcePage({ resource: resourceRef, pageSize = 25, filters, re
 				{body}
 				{list.data ? <ListPagination offset={offset} limit={pageSize} totalCount={totalCount} onOffsetChange={setOffset} locale={locale} /> : null}
 			</ViewFrame>
-			<EntityFormSheet resource={resource} record={sheet.record} open={sheet.open} onOpenChange={(open) => setSheet((current) => ({ ...current, open }))} />
-			<DeleteDialog
-				resource={resource}
-				record={deleting.record}
-				open={deleting.open}
-				onOpenChange={(open) => setDeleting((current) => ({ ...current, open }))}
-			/>
+			{records.dialogs}
 		</div>
 	);
 }

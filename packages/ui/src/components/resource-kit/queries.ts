@@ -16,6 +16,9 @@ export const resourceKeys = {
 	linked: (resource: string, id: string, field: string) => ['resource-kit', resource, 'linked', id, field] as const,
 };
 
+/** Why a query failed, from its first failed attempt rather than after the retries, so a broken read never passes for an empty one. */
+export const queryFailure = (query: { error: unknown; failureReason: unknown }) => query.error ?? query.failureReason;
+
 /** One page of a resource. Keeps the previous page on screen while the next loads. */
 export function useResourceList(resource: AnyResource, query: ListQuery, options: { enabled?: boolean } = {}) {
 	return useQuery({
@@ -26,22 +29,25 @@ export function useResourceList(resource: AnyResource, query: ListQuery, options
 	});
 }
 
+/** The query for one record, shared by the detail view and every label that names it. */
+export const recordQuery = (resource: AnyResource, id: string) => ({
+	queryKey: resourceKeys.detail(resource.name, id),
+	queryFn: () => resource.source.get(id),
+});
+
+/** The query for the ids linked through a many-to-many field: an empty list when the source cannot say. */
+export const linkedQuery = (resource: AnyResource, id: string, field: string) => ({
+	queryKey: resourceKeys.linked(resource.name, id, field),
+	queryFn: () => (resource.source.linked ? resource.source.linked(id, field) : Promise.resolve([])),
+});
+
 export function useResourceRecord(resource: AnyResource, id: string | null | undefined) {
-	return useQuery({
-		queryKey: resourceKeys.detail(resource.name, id ?? ''),
-		queryFn: () => resource.source.get(id!),
-		enabled: Boolean(id),
-	});
+	return useQuery({ ...recordQuery(resource, id ?? ''), enabled: Boolean(id) });
 }
 
 /** The ids linked through a many-to-many field, or an empty list when the source cannot say. */
 export function useLinkedIds(resource: AnyResource, id: string | null | undefined, field: string, options: { enabled?: boolean } = {}) {
-	const linked = resource.source.linked?.bind(resource.source);
-	return useQuery({
-		queryKey: resourceKeys.linked(resource.name, id ?? '', field),
-		queryFn: () => (linked ? linked(id!, field) : Promise.resolve([])),
-		enabled: Boolean(id) && (options.enabled ?? true),
-	});
+	return useQuery({ ...linkedQuery(resource, id ?? '', field), enabled: Boolean(id) && (options.enabled ?? true) });
 }
 
 /** Invalidates a resource and every resource related to it, so lists, details, related lists, and labels refetch. */

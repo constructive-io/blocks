@@ -4,23 +4,20 @@ import { CheckIcon, CircleAlertIcon, MinusIcon } from 'lucide-react';
 import * as React from 'react';
 
 import { cn } from '../../lib/utils';
-import { focusRingClass, ToneBadge, type Tone } from '../workspace-kit/primitives';
+import { focusRingClass, ToneBadge } from '../workspace-kit/primitives';
 import { useResourceKit } from './context';
-import { fieldFormat, isManyRelation, recordId } from './fields';
+import { fieldFormat, isManyRelation, NUMERIC_FORMATS, recordId } from './fields';
 import { errorMessage } from './form-values';
 import { formatFieldText, optionFor } from './format';
 import { type RelationLabel, useRecordLabels } from './labels';
-import { useLinkedIds } from './queries';
-import type { AnyResource, FieldTone, ResourceField, ResourceRow } from './types';
-
-const TONE: Record<FieldTone, Tone> = { neutral: 'neutral', info: 'info', success: 'success', warning: 'warning', danger: 'danger' };
+import { queryFailure, useLinkedIds } from './queries';
+import type { AnyResource, ResourceField, ResourceRow } from './types';
 
 export const linkClass = cn('rounded-sm text-foreground underline-offset-4 hover:underline', focusRingClass);
 const chipClass = cn(
 	'inline-flex h-5 max-w-full min-w-0 items-center rounded-[5px] border border-border bg-muted/60 px-1.5 text-xs text-muted-foreground hover:text-foreground',
 	focusRingClass,
 );
-const NUMERIC_FORMATS = new Set(['number', 'currency', 'percent']);
 const DATE_FORMATS = new Set(['date', 'datetime']);
 
 /** A quiet dash for a value nobody set, named for screen readers. */
@@ -89,7 +86,7 @@ export function FieldValue({ resource, field, row, relation, truncate = false, c
 		const option = optionFor(field, value);
 		const label = option?.label ?? String(value);
 		return (
-			<ToneBadge tone={TONE[option?.tone ?? 'neutral']} className={cn('max-w-full', className)}>
+			<ToneBadge tone={option?.tone ?? 'neutral'} className={cn('max-w-full', className)}>
 				<span dir="auto" title={label} className="min-w-0 truncate">
 					{label}
 				</span>
@@ -165,7 +162,7 @@ function ManyRelationValue({ resource, field, row, truncate, className }: { reso
 	}, [embedded, linked.data, labelField, target?.primaryKey]);
 	const { labels, missing } = useRecordLabels(target, ids, labelField, known);
 
-	const linkFailure = embedded ? null : (linked.error ?? linked.failureReason);
+	const linkFailure = embedded ? null : queryFailure(linked);
 	// A failed read is not "no links": say so, with the reason on hover.
 	if (linkFailure && !linked.data) {
 		return (

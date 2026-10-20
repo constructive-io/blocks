@@ -1,6 +1,5 @@
 'use client';
 
-import { keepPreviousData, useQuery } from '@tanstack/react-query';
 import { CircleAlertIcon } from 'lucide-react';
 import * as React from 'react';
 
@@ -25,7 +24,7 @@ import { useResourceDefinition } from './context';
 import { inSentence, recordId } from './fields';
 import { errorMessage } from './form-values';
 import { useRecordLabels, useRowTitles } from './labels';
-import { resourceKeys } from './queries';
+import { queryFailure, useResourceList } from './queries';
 import type { ListQuery, ResourceRef } from './types';
 
 /** One choosable record: its id and the text that names it. */
@@ -80,16 +79,11 @@ export function RelationPicker(props: RelationPickerProps) {
 		setShown(limit);
 	}
 	const query: ListQuery = { search: searchable ? debounced || undefined : undefined, sort: target.defaultSort, offset: 0, limit: shown };
-	const results = useQuery({
-		queryKey: resourceKeys.list(target.name, query),
-		queryFn: () => target.source.list(query),
-		placeholderData: keepPreviousData,
-		enabled: open,
-	});
+	const results = useResourceList(target, query, { enabled: open });
 
 	// Base UI resets the typed text whenever the selected value changes identity, so an option keeps one object per id and label.
 	const optionCache = React.useRef(new Map<string, RelationOption>());
-	const optionFor = React.useCallback((optionId: string, label: string) => {
+	const stableOption = React.useCallback((optionId: string, label: string) => {
 		const cached = optionCache.current.get(optionId);
 		if (cached?.label === label) return cached;
 		const option = { id: optionId, label };
@@ -104,24 +98,23 @@ export function RelationPicker(props: RelationPickerProps) {
 	const found = React.useMemo<RelationOption[]>(
 		() =>
 			(rows ?? [])
-				.map((row, index) => optionFor(recordId(target, row), titles[index]!))
+				.map((row, index) => stableOption(recordId(target, row), titles[index]!))
 				.filter((option) => !localFilter || option.label.toLocaleLowerCase().includes(localFilter)),
 		// The titles are read through `titlesKey`, so a new array with the same labels keeps the same options.
-		[rows, titlesKey, target, optionFor, localFilter],
+		[rows, titlesKey, target, stableOption, localFilter],
 	);
 	const more = (results.data?.totalCount ?? 0) - (rows?.length ?? 0);
 	const selected = React.useMemo<RelationOption[]>(
 		() =>
 			selectedIds.map((selectedId) =>
-				optionFor(selectedId, labels.get(selectedId) ?? found.find((option) => option.id === selectedId)?.label ?? (missing.has(selectedId) ? 'Unavailable' : '…')),
+				stableOption(selectedId, labels.get(selectedId) ?? found.find((option) => option.id === selectedId)?.label ?? (missing.has(selectedId) ? 'Unavailable' : '…')),
 			),
-		[selectedIds, labels, missing, found, optionFor],
+		[selectedIds, labels, missing, found, stableOption],
 	);
 	// Selected records stay in the list even when the current search does not return them.
 	const items = React.useMemo(() => [...found, ...selected.filter((option) => !found.some((candidate) => candidate.id === option.id))], [found, selected]);
 
-	// Shown on the first failure, not after the retries, so a broken search never reads as "no matches".
-	const failure = results.error ?? results.failureReason;
+	const failure = queryFailure(results);
 	const searching = results.isFetching && !failure;
 	const status = failure ? (
 		<span role="alert" className="flex items-start gap-2 font-normal text-destructive [overflow-wrap:anywhere]">

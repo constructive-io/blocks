@@ -1,6 +1,6 @@
 'use client';
 
-import { Fragment, useMemo, useState } from 'react';
+import { Fragment, useCallback, useMemo, useState } from 'react';
 
 import {
   AuthLayout,
@@ -46,10 +46,12 @@ export function AuthPagesPreview() {
   const [visit, setVisit] = useState(0);
   const [message, setMessage] = useState(INTRO);
 
-  const show = (next: Panel) => {
+  // Setters only, so the memoized `PreviewLink` can call it.
+  const show = useCallback((next: Panel) => {
     setPanel(next);
     setVisit((count) => count + 1);
-  };
+    setMessage(INTRO);
+  }, []);
 
   // Footer links switch panels here, as `#/<path>` so the static page never
   // points outside the site's base path; a host passes its router link instead.
@@ -64,9 +66,7 @@ export function AuthPagesPreview() {
               event.preventDefault();
               const target = PANEL_BY_HREF.get(href);
               if (target) {
-                setPanel(target);
-                setVisit((count) => count + 1);
-                setMessage(INTRO);
+                show(target);
               } else {
                 setMessage(`The host would navigate to ${href}.`);
               }
@@ -76,7 +76,7 @@ export function AuthPagesPreview() {
           </a>
         );
       },
-    [],
+    [show],
   );
 
   const respond = async (result: AuthResult, hostAction?: string): Promise<AuthResult> => {
@@ -149,10 +149,7 @@ export function AuthPagesPreview() {
         <Segmented
           className="mx-auto w-max min-w-full sm:min-w-0"
           label="Auth panel"
-          onChange={(next) => {
-            show(next);
-            setMessage(INTRO);
-          }}
+          onChange={show}
           options={PANELS}
           value={panel}
         />

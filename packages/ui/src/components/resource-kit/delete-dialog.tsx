@@ -18,7 +18,7 @@ import { inSentence, recordId } from './fields';
 import { describeSaveFailure, type SaveFailure } from './form-values';
 import { useRowTitles } from './labels';
 import { useDeleteRecord } from './queries';
-import { SaveFailureAlert } from './save-failure';
+import { SaveFailureAlert } from './failures';
 import type { ResourceRef, ResourceRow } from './types';
 
 export type DeleteDialogProps = {

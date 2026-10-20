@@ -86,12 +86,10 @@ async function click(element: HTMLElement) {
 
 function deferred() {
 	let resolve!: (result: AuthResult) => void;
-	let reject!: (reason: unknown) => void;
-	const promise = new Promise<AuthResult>((res, rej) => {
+	const promise = new Promise<AuthResult>((res) => {
 		resolve = res;
-		reject = rej;
 	});
-	return { promise, resolve, reject };
+	return { promise, resolve };
 }
 
 describe('Auth pages', () => {

@@ -5,12 +5,10 @@ import { UserRoundPlusIcon } from 'lucide-react';
 
 import { Field, FieldGroup } from '../field';
 import { AuthCard, AuthFailure, AuthLink, AuthSubmit, footerTextClass, primaryLinkClass } from './auth-card';
-import { CheckEmailCard } from './check-email-panel';
+import { CheckEmailPanel } from './check-email-panel';
 import { EmailInput, PasswordInput } from './password-input';
 import type { SignUpPanelProps } from './types';
-import { emailError, passwordError, passwordMinLength, useAuthForm } from './use-auth-form';
-
-const FIELDS = ['email', 'password'] as const;
+import { emailError, passwordError, passwordRule, useAuthForm } from './use-auth-form';
 
 /**
  * Email and password sign-up. It never expects a session: on `{ ok: true }` it
@@ -19,26 +17,24 @@ const FIELDS = ['email', 'password'] as const;
 export function SignUpPanel({
 	onSubmit,
 	links,
-	passwordMinLength: minLengthProp,
+	passwordMinLength,
 	title = 'Create an account',
 	description = 'Sign up with your email address and a password.',
 	notice,
 	linkComponent,
 	className,
 }: SignUpPanelProps) {
-	const [email, setEmail] = React.useState('');
-	const [password, setPassword] = React.useState('');
 	const [sentTo, setSentTo] = React.useState<string>();
-	const form = useAuthForm(FIELDS);
-	const minLength = passwordMinLength(minLengthProp);
-	const hint = minLength > 1 ? `Use at least ${minLength} characters.` : undefined;
+	const form = useAuthForm({ email: '', password: '' });
+	const { minLength, hint } = passwordRule(passwordMinLength);
 
 	if (sentTo !== undefined) {
-		return <CheckEmailCard className={className} email={sentTo} focusTitle linkComponent={linkComponent} links={{ signIn: links?.signIn }} />;
+		return <CheckEmailPanel className={className} email={sentTo} focusTitle linkComponent={linkComponent} links={links} />;
 	}
 
 	const submit = (event: React.FormEvent<HTMLFormElement>) => {
 		event.preventDefault();
+		const { email, password } = form.values;
 		const trimmed = email.trim();
 		void form.submit({
 			validate: () => ({ email: emailError(trimmed), password: passwordError(password, minLength) }),
@@ -51,27 +47,26 @@ export function SignUpPanel({
 	const footer = links?.signIn ? (
 		<span className={footerTextClass}>
 			Already have an account?{' '}
-			<AuthLink className={primaryLinkClass} href={links.signIn} linkComponent={linkComponent}>
+			<AuthLink className={primaryLinkClass} href={links.signIn}>
 				Sign in
 			</AuthLink>
 		</span>
 	) : null;
 
 	return (
-		<AuthCard className={className} description={description} footer={footer} icon={UserRoundPlusIcon} notice={notice} title={title}>
+		<AuthCard
+			className={className}
+			description={description}
+			footer={footer}
+			icon={UserRoundPlusIcon}
+			linkComponent={linkComponent}
+			notice={notice}
+			title={title}
+		>
 			<form className="flex min-w-0 flex-col gap-4" noValidate onSubmit={submit}>
 				<FieldGroup>
 					<Field label="Email address" required {...form.field('email')}>
-						<EmailInput
-							{...form.input('email')}
-							name="email"
-							onChange={(event) => {
-								setEmail(event.currentTarget.value);
-								form.clearError('email');
-							}}
-							required
-							value={email}
-						/>
+						<EmailInput {...form.input('email')} name="email" required />
 					</Field>
 					<Field label="Password" required {...form.field('password', hint)}>
 						<PasswordInput
@@ -79,12 +74,7 @@ export function SignUpPanel({
 							autoComplete="new-password"
 							minLength={minLength}
 							name="password"
-							onChange={(event) => {
-								setPassword(event.currentTarget.value);
-								form.clearError('password');
-							}}
 							required
-							value={password}
 						/>
 					</Field>
 				</FieldGroup>

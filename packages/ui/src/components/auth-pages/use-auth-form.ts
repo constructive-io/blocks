@@ -27,9 +27,11 @@ export function passwordError(password: string, minLength = 1): string | undefin
 	return undefined;
 }
 
-export function passwordMinLength(value: number | undefined): number {
-	if (value === undefined || !Number.isFinite(value)) return DEFAULT_PASSWORD_MIN_LENGTH;
-	return Math.max(1, Math.floor(value));
+/** The minimum length for a new password (a panel's `passwordMinLength`, default 8) and the field hint that states it. */
+export function passwordRule(value: number | undefined): { minLength: number; hint?: string } {
+	const minLength =
+		value === undefined || !Number.isFinite(value) ? DEFAULT_PASSWORD_MIN_LENGTH : Math.max(1, Math.floor(value));
+	return { minLength, hint: minLength > 1 ? `Use at least ${minLength} characters.` : undefined };
 }
 
 function failureMessage(result: unknown): string | undefined {
@@ -50,12 +52,14 @@ type SubmitOptions<K extends string> = {
 };
 
 /**
- * Submit, validation, and pending state shared by every auth panel: field
- * errors wired to `aria-invalid`/`aria-describedby` with focus on the first
- * invalid field, one call at a time, and a failure message for the alert.
+ * Field values, submit, validation, and pending state shared by every auth
+ * panel: field errors wired to `aria-invalid`/`aria-describedby` with focus on
+ * the first invalid field (in the key order of `initial`), one call at a time,
+ * and a failure message for the alert.
  */
-export function useAuthForm<K extends string>(fields: readonly K[]) {
+export function useAuthForm<K extends string>(initial: Record<K, string>) {
 	const baseId = React.useId();
+	const [values, setValues] = React.useState(initial);
 	const [errors, setErrors] = React.useState<AuthFieldErrors<K>>({});
 	const [pending, setPending] = React.useState(false);
 	const [failure, setFailure] = React.useState<string>();
@@ -85,7 +89,7 @@ export function useAuthForm<K extends string>(fields: readonly K[]) {
 		descriptionId: description ? ids(name).description : undefined,
 	});
 
-	/** Props for the input itself. Pass `described` when its `Field` has a description. */
+	/** Props for the input itself, value included; typing clears the field's error. Pass `described` when its `Field` has a description. */
 	const input = (name: K, described = false) => {
 		const describedBy = [described && ids(name).description, errors[name] && ids(name).error].filter(Boolean).join(' ');
 		return {
@@ -93,19 +97,23 @@ export function useAuthForm<K extends string>(fields: readonly K[]) {
 			ref: (node: HTMLInputElement | null) => {
 				inputs.current[name] = node;
 			},
+			value: values[name],
+			onChange: (event: React.ChangeEvent<HTMLInputElement>) => {
+				const value = event.currentTarget.value;
+				setValues((current) => ({ ...current, [name]: value }));
+				setErrors((current) => (current[name] ? { ...current, [name]: undefined } : current));
+			},
 			'aria-invalid': errors[name] ? true : undefined,
 			'aria-describedby': describedBy || undefined,
 		};
 	};
-
-	const clearError = (name: K) => setErrors((current) => (current[name] ? { ...current, [name]: undefined } : current));
 
 	const submit = async ({ validate, run, onSuccess, focusOnFailure }: SubmitOptions<K>) => {
 		if (running.current) return;
 		const next: AuthFieldErrors<K> = validate?.() ?? {};
 		setErrors(next);
 		setFailure(undefined);
-		const firstInvalid = fields.find((name) => next[name]);
+		const firstInvalid = (Object.keys(values) as K[]).find((name) => next[name]);
 		if (firstInvalid) {
 			inputs.current[firstInvalid]?.focus();
 			return;
@@ -131,10 +139,5 @@ export function useAuthForm<K extends string>(fields: readonly K[]) {
 		if (focusOnFailure) inputs.current[focusOnFailure]?.focus();
 	};
 
-	const reset = () => {
-		setErrors({});
-		setFailure(undefined);
-	};
-
-	return { pending, failure, field, input, clearError, submit, reset };
+	return { values, pending, failure, field, input, submit };
 }

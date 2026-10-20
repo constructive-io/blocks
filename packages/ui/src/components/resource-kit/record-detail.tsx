@@ -1,6 +1,6 @@
 'use client';
 
-import { ChevronRightIcon, CircleAlertIcon, PencilIcon, SearchXIcon, Trash2Icon } from 'lucide-react';
+import { ChevronRightIcon, PencilIcon, SearchXIcon, Trash2Icon } from 'lucide-react';
 import * as React from 'react';
 
 import { cn } from '../../lib/utils';
@@ -8,13 +8,12 @@ import { Button, buttonVariants } from '../button';
 import { ViewFrame } from '../workspace-kit/primitives';
 import { dashedRule, EmptyState, Panel } from '../workspace-kit/surface';
 import { useResourceDefinition, useResourceIcon, useResourceKit } from './context';
+import { LoadFailure } from './failures';
 import { FieldValue, linkClass } from './field-value';
 import { detailFields, hasManyRelations, inSentence } from './fields';
-import { errorMessage } from './form-values';
-import { DeleteDialog } from './delete-dialog';
-import { EntityFormSheet } from './entity-form-sheet';
 import { useRelationLabels, useRowTitles } from './labels';
 import { useResourceRecord } from './queries';
+import { useRecordDialogs } from './record-dialogs';
 import { RelatedList } from './related-list';
 import type { AnyResource, ResourceField, ResourceRef, ResourceRow } from './types';
 
@@ -40,10 +39,9 @@ export function RecordDetail({ resource: resourceRef, id, relatedLimit = 5, read
 	const icon = useResourceIcon(resource);
 	const { router, resources } = useResourceKit();
 	const record = useResourceRecord(resource, id);
-	const [editing, setEditing] = React.useState(false);
-	const [deleting, setDeleting] = React.useState(false);
 	const related = React.useMemo(() => hasManyRelations(resource, resources), [resource, resources]);
 	const row = record.data ?? null;
+	const records = useRecordDialogs(resource, { record: row, onDeleted: () => router.navigate(router.listHref(resource.name)) });
 	const titleOf = useRowTitles(resource, row ? [row] : []);
 	const title = row ? (titleOf(row) ?? '…') : '';
 
@@ -63,34 +61,20 @@ export function RecordDetail({ resource: resourceRef, id, relatedLimit = 5, read
 	if (record.isPending) {
 		body = <DetailSkeleton />;
 	} else if (record.isError) {
-		body = (
-			<div className="rounded-xl bg-card shadow-card">
-				<EmptyState
-					icon={CircleAlertIcon}
-					title={`Couldn’t load this ${inSentence(resource.singular)}`}
-					description={<span className="[overflow-wrap:anywhere]">{errorMessage(record.error)}</span>}
-					action={
-						<Button size="sm" variant="outline" onClick={() => void record.refetch()}>
-							Try again
-						</Button>
-					}
-				/>
-			</div>
-		);
+		body = <LoadFailure what={`this ${inSentence(resource.singular)}`} error={record.error} onRetry={() => void record.refetch()} />;
 	} else if (!row) {
 		body = (
-			<div className="rounded-xl bg-card shadow-card">
-				<EmptyState
-					icon={SearchXIcon}
-					title={`This ${inSentence(resource.singular)} doesn’t exist`}
-					description="It may have been deleted, or you may not have access to it."
-					action={
-						<router.Link href={router.listHref(resource.name)} className={buttonVariants({ size: 'sm', variant: 'outline' })}>
-							All {inSentence(resource.label)}
-						</router.Link>
-					}
-				/>
-			</div>
+			<EmptyState
+				className="rounded-xl bg-card shadow-card"
+				icon={SearchXIcon}
+				title={`This ${inSentence(resource.singular)} doesn’t exist`}
+				description="It may have been deleted, or you may not have access to it."
+				action={
+					<router.Link href={router.listHref(resource.name)} className={buttonVariants({ size: 'sm', variant: 'outline' })}>
+						All {inSentence(resource.label)}
+					</router.Link>
+				}
+			/>
 		);
 	} else {
 		body = (
@@ -119,11 +103,11 @@ export function RecordDetail({ resource: resourceRef, id, relatedLimit = 5, read
 				actions={
 					readOnly || !row ? null : (
 						<>
-							<Button size="sm" variant="outline" className="h-7" onClick={() => setEditing(true)} aria-label={`Edit ${title}`}>
+							<Button size="sm" variant="outline" className="h-7" onClick={() => records.edit(row)} aria-label={`Edit ${title}`}>
 								<PencilIcon aria-hidden="true" />
 								<span className="hidden @md/view:inline">Edit</span>
 							</Button>
-							<Button size="sm" variant="destructive-outline" className="h-7" onClick={() => setDeleting(true)} aria-label={`Delete ${title}`}>
+							<Button size="sm" variant="destructive-outline" className="h-7" onClick={() => records.remove(row)} aria-label={`Delete ${title}`}>
 								<Trash2Icon aria-hidden="true" />
 								<span className="hidden @md/view:inline">Delete</span>
 							</Button>
@@ -134,12 +118,7 @@ export function RecordDetail({ resource: resourceRef, id, relatedLimit = 5, read
 			>
 				{body}
 			</ViewFrame>
-			{row ? (
-				<>
-					<EntityFormSheet resource={resource} record={row} open={editing} onOpenChange={setEditing} />
-					<DeleteDialog resource={resource} record={row} open={deleting} onOpenChange={setDeleting} onDeleted={() => router.navigate(router.listHref(resource.name))} />
-				</>
-			) : null}
+			{row ? records.dialogs : null}
 		</div>
 	);
 }

@@ -13,8 +13,9 @@ import {
 	EntityFormSheet,
 	ResourceKitProvider,
 	type ResourceSource,
+	useMemoryRouter,
 } from '../components/resource-kit';
-import { StoryApp, useMemoryRouter } from './resource-kit/story-app';
+import { StoryApp } from './resource-kit/story-app';
 
 const meta: Meta = {
 	title: 'App Kit/Resource Kit',
@@ -31,14 +32,17 @@ const meta: Meta = {
 export default meta;
 type Story = StoryObj;
 
-/** One CRM per story mount, so edits in one story never leak into another. */
-function useDemo(options?: Parameters<typeof createCrmDemo>[0]) {
-	const [resources] = React.useState(() => createCrmDemo(options));
-	return resources;
-}
+type AppProps = {
+	path: string;
+	width?: number;
+	latency?: number;
+	/** Builds the resources in place of the plain CRM, e.g. with a failing source. */
+	build?: () => AnyResource[];
+};
 
-function App({ path, width, latency }: { path: string; width?: number; latency?: number }) {
-	const resources = useDemo({ latency });
+/** One CRM per story mount, so edits in one story never leak into another. */
+function App({ path, width, latency, build }: AppProps) {
+	const [resources] = React.useState(() => build?.() ?? createCrmDemo({ latency }));
 	return <StoryApp resources={resources} initialPath={path} width={width} />;
 }
 
@@ -74,24 +78,12 @@ function withSource(resources: AnyResource[], name: string, wrap: (source: Resou
 
 export const LoadError: Story = {
 	name: 'List fails to load',
-	render: () => {
-		const Story = () => {
-			const [resources] = React.useState(() => withSource(createCrmDemo(), 'deals', (source) => failing(source, ['list'], 'permission denied for table deals')));
-			return <StoryApp resources={resources} initialPath="/deals" />;
-		};
-		return <Story />;
-	},
+	render: () => <App path="/deals" build={() => withSource(createCrmDemo(), 'deals', (source) => failing(source, ['list'], 'permission denied for table deals'))} />,
 };
 
 export const Empty: Story = {
 	name: 'No records yet',
-	render: () => {
-		const Story = () => {
-			const [resources] = React.useState(() => createCrmDemo({ data: { ...crmDemoData(), deals: [] } }));
-			return <StoryApp resources={resources} initialPath="/deals" />;
-		};
-		return <Story />;
-	},
+	render: () => <App path="/deals" build={() => createCrmDemo({ data: { ...crmDemoData(), deals: [] } })} />,
 };
 
 function FormStory({ mode, rejectSave }: { mode: 'create' | 'edit'; rejectSave?: boolean }) {
@@ -152,13 +144,7 @@ function failingSearch(source: ResourceSource): ResourceSource {
 export const SearchFails: Story = {
 	name: 'Search fails',
 	parameters: { docs: { description: { story: 'Type in the search box: the source rejects every search, and the page says why instead of showing an empty table.' } } },
-	render: () => {
-		const Story = () => {
-			const [resources] = React.useState(() => withSource(createCrmDemo({ latency: 200 }), 'contacts', failingSearch));
-			return <StoryApp resources={resources} initialPath="/contacts" />;
-		};
-		return <Story />;
-	},
+	render: () => <App path="/contacts" build={() => withSource(createCrmDemo({ latency: 200 }), 'contacts', failingSearch)} />,
 };
 
 export const PickerSearchFails: Story = {
@@ -180,6 +166,42 @@ export const PickerSearchFails: Story = {
 
 type Stakeholder = { id: string; dealId: string; contactId: string; role: string };
 
+/** The CRM plus deal stakeholders, a resource titled by a relation. */
+function withStakeholders(): AnyResource[] {
+	const crm = createCrmDemo({ latency: 150 });
+	const stakeholders = defineResource<Stakeholder>({
+		name: 'stakeholders',
+		label: 'Stakeholders',
+		singular: 'Stakeholder',
+		icon: 'users',
+		primaryKey: 'id',
+		titleField: 'dealId',
+		columns: ['dealId', 'contactId', 'role'],
+		formFields: ['dealId', 'contactId', 'role'],
+		fields: {
+			id: { name: 'id', label: 'ID', input: 'uuid', hidden: true },
+			dealId: { name: 'dealId', label: 'Deal', input: 'relation', required: true, relation: { resource: 'deals' } },
+			contactId: { name: 'contactId', label: 'Contact', input: 'relation', required: true, relation: { resource: 'contacts' } },
+			role: {
+				name: 'role',
+				label: 'Role',
+				input: 'select',
+				options: [
+					{ value: 'champion', label: 'Champion', tone: 'success' },
+					{ value: 'approver', label: 'Approver', tone: 'info' },
+					{ value: 'blocker', label: 'Blocker', tone: 'danger' },
+				],
+			},
+		},
+		source: createMemorySource<Stakeholder>([
+			{ id: '01a1529c-7d2e-4f0b-9a63-5be0c4d1e8f2', dealId: 'dl-1', contactId: 'ct-6', role: 'champion' },
+			{ id: '7f3c9e14-2b8a-4c55-8d01-a9e6f2b3c470', dealId: 'dl-2', contactId: 'ct-11', role: 'approver' },
+			{ id: 'c2d4e6f8-1a3b-4c5d-8e9f-0a1b2c3d4e5f', dealId: 'dl-3', contactId: 'ct-16', role: 'blocker' },
+		]),
+	});
+	return [...crm, stakeholders];
+}
+
 export const TitledByRelations: Story = {
 	name: 'Titled by relations',
 	parameters: {
@@ -189,44 +211,5 @@ export const TitledByRelations: Story = {
 			},
 		},
 	},
-	render: () => {
-		const Story = () => {
-			const [resources] = React.useState(() => {
-				const crm = createCrmDemo({ latency: 150 });
-				const stakeholders = defineResource<Stakeholder>({
-					name: 'stakeholders',
-					label: 'Stakeholders',
-					singular: 'Stakeholder',
-					icon: 'users',
-					primaryKey: 'id',
-					titleField: 'dealId',
-					columns: ['dealId', 'contactId', 'role'],
-					formFields: ['dealId', 'contactId', 'role'],
-					fields: {
-						id: { name: 'id', label: 'ID', input: 'uuid', hidden: true },
-						dealId: { name: 'dealId', label: 'Deal', input: 'relation', required: true, relation: { resource: 'deals' } },
-						contactId: { name: 'contactId', label: 'Contact', input: 'relation', required: true, relation: { resource: 'contacts' } },
-						role: {
-							name: 'role',
-							label: 'Role',
-							input: 'select',
-							options: [
-								{ value: 'champion', label: 'Champion', tone: 'success' },
-								{ value: 'approver', label: 'Approver', tone: 'info' },
-								{ value: 'blocker', label: 'Blocker', tone: 'danger' },
-							],
-						},
-					},
-					source: createMemorySource<Stakeholder>([
-						{ id: '01a1529c-7d2e-4f0b-9a63-5be0c4d1e8f2', dealId: 'dl-1', contactId: 'ct-6', role: 'champion' },
-						{ id: '7f3c9e14-2b8a-4c55-8d01-a9e6f2b3c470', dealId: 'dl-2', contactId: 'ct-11', role: 'approver' },
-						{ id: 'c2d4e6f8-1a3b-4c5d-8e9f-0a1b2c3d4e5f', dealId: 'dl-3', contactId: 'ct-16', role: 'blocker' },
-					]),
-				});
-				return [...crm, stakeholders];
-			});
-			return <StoryApp resources={resources} initialPath="/stakeholders" />;
-		};
-		return <Story />;
-	},
+	render: () => <App path="/stakeholders" build={withStakeholders} />,
 };

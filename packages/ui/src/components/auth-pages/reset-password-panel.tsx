@@ -7,9 +7,7 @@ import { Field, FieldGroup } from '../field';
 import { AuthCard, AuthFailure, AuthLinkButton, AuthSubmit, BackToSignIn } from './auth-card';
 import { PasswordInput } from './password-input';
 import type { ResetPasswordPanelProps } from './types';
-import { passwordError, passwordMinLength, useAuthForm } from './use-auth-form';
-
-const FIELDS = ['password', 'confirm'] as const;
+import { passwordError, passwordRule, useAuthForm } from './use-auth-form';
 
 function confirmError(password: string, confirm: string): string | undefined {
 	if (!confirm) return 'Enter the new password again.';
@@ -21,19 +19,16 @@ function confirmError(password: string, confirm: string): string | undefined {
 export function ResetPasswordPanel({
 	onSubmit,
 	links,
-	passwordMinLength: minLengthProp,
+	passwordMinLength,
 	title = 'Choose a new password',
 	description = 'Set a new password to finish recovering your account.',
 	notice,
 	linkComponent,
 	className,
 }: ResetPasswordPanelProps) {
-	const [password, setPassword] = React.useState('');
-	const [confirm, setConfirm] = React.useState('');
 	const [done, setDone] = React.useState(false);
-	const form = useAuthForm(FIELDS);
-	const minLength = passwordMinLength(minLengthProp);
-	const hint = minLength > 1 ? `Use at least ${minLength} characters.` : undefined;
+	const form = useAuthForm({ password: '', confirm: '' });
+	const { minLength, hint } = passwordRule(passwordMinLength);
 
 	if (done) {
 		return (
@@ -42,11 +37,12 @@ export function ResetPasswordPanel({
 				description="Your password has been reset. You can sign in with it now."
 				focusTitle
 				icon={CircleCheckIcon}
+				linkComponent={linkComponent}
 				title="Password updated"
 				tone="success"
 			>
 				{links?.signIn ? (
-					<AuthLinkButton href={links.signIn} linkComponent={linkComponent}>
+					<AuthLinkButton href={links.signIn}>
 						Sign in
 					</AuthLinkButton>
 				) : null}
@@ -56,6 +52,7 @@ export function ResetPasswordPanel({
 
 	const submit = (event: React.FormEvent<HTMLFormElement>) => {
 		event.preventDefault();
+		const { password, confirm } = form.values;
 		void form.submit({
 			validate: () => ({ password: passwordError(password, minLength), confirm: confirmError(password, confirm) }),
 			run: () => onSubmit({ password }),
@@ -68,8 +65,9 @@ export function ResetPasswordPanel({
 		<AuthCard
 			className={className}
 			description={description}
-			footer={links?.signIn ? <BackToSignIn href={links.signIn} linkComponent={linkComponent} /> : null}
+			footer={links?.signIn ? <BackToSignIn href={links.signIn} /> : null}
 			icon={LockKeyholeIcon}
+			linkComponent={linkComponent}
 			notice={notice}
 			title={title}
 		>
@@ -81,12 +79,7 @@ export function ResetPasswordPanel({
 							autoComplete="new-password"
 							minLength={minLength}
 							name="new-password"
-							onChange={(event) => {
-								setPassword(event.currentTarget.value);
-								form.clearError('password');
-							}}
 							required
-							value={password}
 						/>
 					</Field>
 					<Field label="Confirm new password" required {...form.field('confirm')}>
@@ -94,12 +87,7 @@ export function ResetPasswordPanel({
 							{...form.input('confirm')}
 							autoComplete="new-password"
 							name="confirm-password"
-							onChange={(event) => {
-								setConfirm(event.currentTarget.value);
-								form.clearError('confirm');
-							}}
 							required
-							value={confirm}
 						/>
 					</Field>
 				</FieldGroup>

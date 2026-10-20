@@ -1,54 +1,27 @@
 'use client';
 
 import { LayoutDashboard } from 'lucide-react';
-import { type ComponentProps, type ReactNode, useMemo, useState } from 'react';
+import { type ReactNode, useState } from 'react';
 
 import {
   CRM_DEMO_ICONS,
   CRM_DEMO_NOW,
   createCrmDemo,
-  RecordDetail,
+  MemoryRoute,
   ResourceKitProvider,
   ResourceNav,
-  ResourcePage,
-  type ResourceRouter,
+  useMemoryRouter,
 } from '@/components/ui/resource-kit';
 import { NavIcon, NavRow, NavSection, SidebarFrame, WorkspaceShell } from '@/components/ui/workspace-kit';
 
 /**
  * The CRM demo inside the workspace shell, routed by component state the way
  * a host routes it by URL: `/` for home, `/<resource>` for a list, and
- * `/<resource>/<id>` for a record. Links render as `#/<path>` so the static
- * page never points outside the site's base path.
+ * `/<resource>/<id>` for a record.
  */
 export function AppKitPreviewShell({ initialPath, home }: { initialPath: string; home?: ReactNode }) {
-  const [path, setPath] = useState(initialPath);
+  const { path, setPath, router } = useMemoryRouter(initialPath);
   const [resources] = useState(() => createCrmDemo({ latency: 200 }));
-  const router = useMemo<ResourceRouter>(
-    () => ({
-      Link: ({ href, className, children, ...rest }: ComponentProps<'a'> & { href: string }) => (
-        <a
-          {...rest}
-          href={`#${href}`}
-          className={className}
-          onClick={(event) => {
-            rest.onClick?.(event);
-            if (event.defaultPrevented || event.metaKey || event.ctrlKey) return;
-            event.preventDefault();
-            setPath(href);
-          }}
-        >
-          {children}
-        </a>
-      ),
-      navigate: setPath,
-      listHref: (resource) => `/${resource}`,
-      detailHref: (resource, id) => `/${resource}/${encodeURIComponent(id)}`,
-    }),
-    [],
-  );
-  const [, name, id] = path.split('/');
-  const view = !name ? home : id ? <RecordDetail key={path} resource={name} id={decodeURIComponent(id)} /> : <ResourcePage key={name} resource={name} />;
 
   return (
     <div className="flex h-dvh min-h-[640px] w-full flex-col" data-slot="application-block-showcase-canvas">
@@ -87,7 +60,7 @@ export function AppKitPreviewShell({ initialPath, home }: { initialPath: string;
             );
           }}
         >
-          {view}
+          <MemoryRoute path={path} home={home} />
         </WorkspaceShell>
       </ResourceKitProvider>
     </div>

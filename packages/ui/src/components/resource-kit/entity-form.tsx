@@ -24,8 +24,8 @@ import {
 	type SaveFailure,
 	validateFormValues,
 } from './form-values';
-import { PartialSaveError, resourceKeys, useSaveRecord } from './queries';
-import { SaveFailureAlert } from './save-failure';
+import { linkedQuery, PartialSaveError, queryFailure, useSaveRecord } from './queries';
+import { SaveFailureAlert } from './failures';
 import type { AnyResource, ResourceField, ResourceRow } from './types';
 
 export type EntityFormProps = {
@@ -57,11 +57,7 @@ export function EntityForm(props: EntityFormProps) {
 	const manyFields = fields.filter((field) => isManyRelation(field) && !Array.isArray(record?.[field.name]));
 	const canRead = Boolean(resource.source.linked) && mode === 'edit';
 	const reads = useQueries({
-		queries: manyFields.map((field) => ({
-			queryKey: resourceKeys.linked(resource.name, id, field.name),
-			queryFn: () => resource.source.linked!(id, field.name),
-			enabled: canRead,
-		})),
+		queries: manyFields.map((field) => ({ ...linkedQuery(resource, id, field.name), enabled: canRead })),
 	});
 	if (canRead && reads.some((read) => read.isPending && read.fetchStatus !== 'idle' && !read.failureReason)) {
 		return (
@@ -75,7 +71,7 @@ export function EntityForm(props: EntityFormProps) {
 		? Object.fromEntries(
 				manyFields.map((field, index) => {
 					const read = reads[index]!;
-					const error = read.data ? undefined : (read.error ?? read.failureReason ?? undefined);
+					const error = read.data ? undefined : (queryFailure(read) ?? undefined);
 					return [field.name, { ids: read.data, error, retry: () => void read.refetch() }];
 				}),
 			)
@@ -98,23 +94,22 @@ function FormBody({
 }: EntityFormProps & { fields: ResourceField[]; linked: Record<string, LinkRead> }) {
 	const formId = React.useId();
 	const loadedIds = Object.fromEntries(Object.entries(linked).flatMap(([name, read]) => (read.ids ? [[name, read.ids]] : [])));
-	const [initial, setInitial] = React.useState(() => initialFormValues(fields, record, defaultValues, loadedIds));
+	const unavailable = (field: ResourceField) => Boolean(linked[field.name] && !linked[field.name]!.ids);
+	// A field whose link read failed stays out of `initial` until it loads.
+	const [initial, setInitial] = React.useState(() => initialFormValues(fields.filter((field) => !unavailable(field)), record, defaultValues, loadedIds));
 	const [values, setValues] = React.useState<FormValues>(() => ({ ...initial, ...draft }));
-	const [adopted, setAdopted] = React.useState(() => new Set(Object.keys(loadedIds)));
 	const [errors, setErrors] = React.useState<FormErrors>(openingFailure?.fields ?? {});
 	const [failure, setFailure] = React.useState<SaveFailure | null>(openingFailure ?? null);
 	const save = useSaveRecord(resource);
 	const formRef = React.useRef<HTMLFormElement>(null);
 
 	// A link read that failed and then loaded on retry joins the form now, adjusted during render.
-	const newlyLoaded = Object.keys(loadedIds).filter((name) => !adopted.has(name));
+	const newlyLoaded = Object.keys(loadedIds).filter((name) => !(name in initial));
 	if (newlyLoaded.length > 0) {
-		setAdopted(new Set([...adopted, ...newlyLoaded]));
 		const loaded = Object.fromEntries(newlyLoaded.map((name) => [name, loadedIds[name]!]));
 		setInitial((current) => ({ ...current, ...loaded }));
 		setValues((current) => ({ ...current, ...loaded, ...Object.fromEntries(newlyLoaded.flatMap((name) => (draft?.[name] ? [[name, draft[name]!]] : []))) }));
 	}
-	const unavailable = (field: ResourceField) => Boolean(linked[field.name] && !linked[field.name]!.ids);
 	const writable = fields.filter((field) => !unavailable(field));
 
 	const focusField = (name: string) => {

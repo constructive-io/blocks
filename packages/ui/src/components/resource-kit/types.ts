@@ -103,9 +103,13 @@ export function defineResource<Row extends Record<string, unknown>>(definition: 
 	return definition;
 }
 
+/** The anchor props the kit hands the router's link: `href` plus any other `<a>` prop. */
+export type ResourceLinkProps = Omit<React.ComponentProps<'a'>, 'href'> & { href: string };
+
 /** The host's router, injected so the kit never imports one. */
 export type ResourceRouter = {
-	Link: React.ComponentType<{ href: string; className?: string; children: React.ReactNode }>;
+	/** Must forward every prop to its anchor: nav rows set `aria-current` and a click that closes the drawer. */
+	Link: React.ComponentType<ResourceLinkProps>;
 	navigate(href: string): void;
 	/** e.g. "/shifts" */
 	listHref(resource: string): string;
