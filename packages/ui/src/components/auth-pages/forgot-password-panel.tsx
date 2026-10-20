@@ -10,8 +10,6 @@ import { EmailInput } from './password-input';
 import type { ForgotPasswordPanelProps } from './types';
 import { emailError, useAuthForm } from './use-auth-form';
 
-const FIELDS = ['email'] as const;
-
 /**
  * Asks for a password reset link. On `{ ok: true }` it says a link is on its
  * way if an account exists, so the page never reveals which addresses have one.
@@ -25,10 +23,9 @@ export function ForgotPasswordPanel({
 	linkComponent,
 	className,
 }: ForgotPasswordPanelProps) {
-	const [email, setEmail] = React.useState('');
 	const [sentTo, setSentTo] = React.useState<string>();
-	const form = useAuthForm(FIELDS);
-	const footer = links?.signIn ? <BackToSignIn href={links.signIn} linkComponent={linkComponent} /> : null;
+	const form = useAuthForm({ email: '' });
+	const footer = links?.signIn ? <BackToSignIn href={links.signIn} /> : null;
 
 	if (sentTo !== undefined) {
 		return (
@@ -42,6 +39,7 @@ export function ForgotPasswordPanel({
 				focusTitle
 				footer={footer}
 				icon={MailCheckIcon}
+				linkComponent={linkComponent}
 				title="Check your email"
 			>
 				<p className="text-muted-foreground text-pretty text-[13px] [overflow-wrap:anywhere]">
@@ -56,7 +54,7 @@ export function ForgotPasswordPanel({
 
 	const submit = (event: React.FormEvent<HTMLFormElement>) => {
 		event.preventDefault();
-		const trimmed = email.trim();
+		const trimmed = form.values.email.trim();
 		void form.submit({
 			validate: () => ({ email: emailError(trimmed) }),
 			run: () => onSubmit({ email: trimmed }),
@@ -66,20 +64,19 @@ export function ForgotPasswordPanel({
 	};
 
 	return (
-		<AuthCard className={className} description={description} footer={footer} icon={RotateCcwKeyIcon} notice={notice} title={title}>
+		<AuthCard
+			className={className}
+			description={description}
+			footer={footer}
+			icon={RotateCcwKeyIcon}
+			linkComponent={linkComponent}
+			notice={notice}
+			title={title}
+		>
 			<form className="flex min-w-0 flex-col gap-4" noValidate onSubmit={submit}>
 				<FieldGroup>
 					<Field label="Email address" required {...form.field('email')}>
-						<EmailInput
-							{...form.input('email')}
-							name="email"
-							onChange={(event) => {
-								setEmail(event.currentTarget.value);
-								form.clearError('email');
-							}}
-							required
-							value={email}
-						/>
+						<EmailInput {...form.input('email')} name="email" required />
 					</Field>
 				</FieldGroup>
 				<AuthFailure message={form.failure} />

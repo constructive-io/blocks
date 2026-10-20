@@ -4523,6 +4523,10 @@
           "type": "registry:component"
         },
         {
+          "path": "registry/constructive/blocks/resource-kit/failures.tsx",
+          "type": "registry:component"
+        },
+        {
           "path": "registry/constructive/blocks/resource-kit/field-control.tsx",
           "type": "registry:component"
         },
@@ -4555,6 +4559,10 @@
           "type": "registry:component"
         },
         {
+          "path": "registry/constructive/blocks/resource-kit/memory-router.tsx",
+          "type": "registry:component"
+        },
+        {
           "path": "registry/constructive/blocks/resource-kit/memory-source.ts",
           "type": "registry:lib"
         },
@@ -4564,6 +4572,10 @@
         },
         {
           "path": "registry/constructive/blocks/resource-kit/record-detail.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/resource-kit/record-dialogs.tsx",
           "type": "registry:component"
         },
         {
@@ -4580,10 +4592,6 @@
         },
         {
           "path": "registry/constructive/blocks/resource-kit/resource-page.tsx",
-          "type": "registry:component"
-        },
-        {
-          "path": "registry/constructive/blocks/resource-kit/save-failure.tsx",
           "type": "registry:component"
         },
         {

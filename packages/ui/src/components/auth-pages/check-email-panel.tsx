@@ -8,9 +8,7 @@ import { AuthCard, AuthFailure, AuthSubmit, BackToSignIn, EmailAddress } from '.
 import type { CheckEmailPanelProps } from './types';
 import { useAuthForm } from './use-auth-form';
 
-const NO_FIELDS = [] as const;
-
-export function checkEmailDescription(email?: string): React.ReactNode {
+function checkEmailDescription(email?: string): React.ReactNode {
 	if (!email) return 'We sent you a confirmation link. Open it to confirm your address, then sign in with your password.';
 	return (
 		<>
@@ -21,10 +19,11 @@ export function checkEmailDescription(email?: string): React.ReactNode {
 }
 
 /**
- * The check-email state. Sign-up renders it in place after `{ ok: true }` with
- * `focusTitle`, so the new heading is announced where the form was.
+ * Tells a new account to confirm its address, then sign in with its password.
+ * Sign-up renders it in place after `{ ok: true }` with `focusTitle`, so the
+ * new heading is announced where the form was.
  */
-export function CheckEmailCard({
+export function CheckEmailPanel({
 	email,
 	onResend,
 	links,
@@ -35,7 +34,7 @@ export function CheckEmailCard({
 	className,
 	focusTitle = false,
 }: CheckEmailPanelProps & { focusTitle?: boolean }) {
-	const form = useAuthForm(NO_FIELDS);
+	const form = useAuthForm({});
 	const [resent, setResent] = React.useState(false);
 	const trimmed = email?.trim() || undefined;
 
@@ -44,8 +43,9 @@ export function CheckEmailCard({
 			className={className}
 			description={description ?? checkEmailDescription(trimmed)}
 			focusTitle={focusTitle}
-			footer={links?.signIn ? <BackToSignIn href={links.signIn} linkComponent={linkComponent} /> : null}
+			footer={links?.signIn ? <BackToSignIn href={links.signIn} /> : null}
 			icon={MailCheckIcon}
+			linkComponent={linkComponent}
 			notice={notice}
 			title={title}
 		>
@@ -82,9 +82,4 @@ export function CheckEmailCard({
 			) : null}
 		</AuthCard>
 	);
-}
-
-/** Tells a new account to confirm its address, then sign in with its password. */
-export function CheckEmailPanel(props: CheckEmailPanelProps) {
-	return <CheckEmailCard {...props} />;
 }

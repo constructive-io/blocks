@@ -1,8 +1,6 @@
 'use client';
 
-import * as React from 'react';
-
-import { NavIcon, NavRow, type NavRowLinkProps, NavSection } from '../workspace-kit/nav';
+import { NavIcon, NavRow, NavSection } from '../workspace-kit/nav';
 import { useResourceIcon, useResourceKit } from './context';
 import type { AnyResource } from './types';
 
@@ -19,13 +17,9 @@ export type ResourceNavProps = {
 	title?: string;
 };
 
-/** The router's link with every anchor prop a nav row sets (current page, click), for links that forward them. */
-type AnchorLink = React.ComponentType<NavRowLinkProps>;
-
 function ResourceNavRow({ resource, active, collapsed, onNavigate }: { resource: AnyResource; active: boolean; collapsed: boolean; onNavigate?: () => void }) {
 	const { router } = useResourceKit();
 	const icon = useResourceIcon(resource);
-	const Link = router.Link as unknown as AnchorLink;
 	return (
 		<NavRow
 			label={resource.label}
@@ -34,7 +28,7 @@ function ResourceNavRow({ resource, active, collapsed, onNavigate }: { resource:
 			leading={<NavIcon icon={icon} active={active} />}
 			href={router.listHref(resource.name)}
 			onClick={onNavigate}
-			renderLink={(props) => <Link {...props} />}
+			renderLink={(props) => <router.Link {...props} />}
 		/>
 	);
 }

@@ -10,8 +10,6 @@ import { EmailInput, PasswordInput } from './password-input';
 import type { SignInPanelProps } from './types';
 import { emailError, passwordError, useAuthForm } from './use-auth-form';
 
-const FIELDS = ['email', 'password'] as const;
-
 /** Email and password sign-in with a remember-me choice. The host navigates on `{ ok: true }`. */
 export function SignInPanel({
 	onSubmit,
@@ -23,16 +21,15 @@ export function SignInPanel({
 	linkComponent,
 	className,
 }: SignInPanelProps) {
-	const [email, setEmail] = React.useState(defaultEmail);
-	const [password, setPassword] = React.useState('');
 	const [rememberMe, setRememberMe] = React.useState(false);
 	// After `{ ok: true }` the host is navigating away; keep the button down so a second click cannot sign in twice.
 	const [signedIn, setSignedIn] = React.useState(false);
-	const form = useAuthForm(FIELDS);
+	const form = useAuthForm({ email: defaultEmail, password: '' });
 	const rememberId = React.useId();
 
 	const submit = (event: React.FormEvent<HTMLFormElement>) => {
 		event.preventDefault();
+		const { email, password } = form.values;
 		const trimmed = email.trim();
 		void form.submit({
 			validate: () => ({ email: emailError(trimmed), password: passwordError(password) }),
@@ -46,7 +43,7 @@ export function SignInPanel({
 		links?.forgotPassword || links?.signUp ? (
 			<>
 				{links.forgotPassword ? (
-					<AuthLink className={mutedLinkClass} href={links.forgotPassword} linkComponent={linkComponent}>
+					<AuthLink className={mutedLinkClass} href={links.forgotPassword}>
 						Forgot password?
 					</AuthLink>
 				) : (
@@ -55,7 +52,7 @@ export function SignInPanel({
 				{links.signUp ? (
 					<span className={footerTextClass}>
 						New here?{' '}
-						<AuthLink className={primaryLinkClass} href={links.signUp} linkComponent={linkComponent}>
+						<AuthLink className={primaryLinkClass} href={links.signUp}>
 							Create account
 						</AuthLink>
 					</span>
@@ -64,32 +61,26 @@ export function SignInPanel({
 		) : null;
 
 	return (
-		<AuthCard className={className} description={description} footer={footer} icon={KeyRoundIcon} notice={notice} title={title}>
+		<AuthCard
+			className={className}
+			description={description}
+			footer={footer}
+			icon={KeyRoundIcon}
+			linkComponent={linkComponent}
+			notice={notice}
+			title={title}
+		>
 			<form className="flex min-w-0 flex-col gap-4" noValidate onSubmit={submit}>
 				<FieldGroup>
 					<Field label="Email address" required {...form.field('email')}>
-						<EmailInput
-							{...form.input('email')}
-							name="email"
-							onChange={(event) => {
-								setEmail(event.currentTarget.value);
-								form.clearError('email');
-							}}
-							required
-							value={email}
-						/>
+						<EmailInput {...form.input('email')} name="email" required />
 					</Field>
 					<Field label="Password" required {...form.field('password')}>
 						<PasswordInput
 							{...form.input('password')}
 							autoComplete="current-password"
 							name="password"
-							onChange={(event) => {
-								setPassword(event.currentTarget.value);
-								form.clearError('password');
-							}}
 							required
-							value={password}
 						/>
 					</Field>
 					<Field orientation="horizontal">

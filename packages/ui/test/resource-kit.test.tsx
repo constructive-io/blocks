@@ -263,6 +263,21 @@ describe('Resource Kit', () => {
 		expect(text(related())).toMatch(/Tasks\s*2/);
 	});
 
+	it('deletes a record from its detail view and returns to the list', async () => {
+		const { resources, projects } = workspace();
+		const navigate = vi.spyOn(router, 'navigate');
+		await render(<RecordDetail resource="projects" id="p1" />, resources);
+		await settle();
+
+		await click(button('Delete Launch'));
+		expect(text(document.querySelector('[role="alertdialog"]'))).toContain('Launch will be permanently deleted');
+		await click(button('Delete project'));
+
+		expect(projects.remove).toHaveBeenCalledWith('p1');
+		expect(await projects.get('p1')).toBeNull();
+		expect(navigate).toHaveBeenCalledWith('/projects');
+	});
+
 	it('requires a title before anything is written', async () => {
 		const { resources, tasks } = workspace();
 		await render(<EntityFormSheet resource="tasks" open onOpenChange={() => {}} defaultValues={{ projectId: 'p1' }} />, resources);

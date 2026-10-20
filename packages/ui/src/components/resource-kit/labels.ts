@@ -6,7 +6,7 @@ import * as React from 'react';
 import { useResourceKit } from './context';
 import { embeddedRow, fieldFormat, isManyRelation, isSingleRelation, recordTitle } from './fields';
 import { formatFieldText } from './format';
-import { resourceKeys } from './queries';
+import { recordQuery } from './queries';
 import type { AnyResource, ResourceField, ResourceRow } from './types';
 
 type LabelState = { data: ResourceRow | null | undefined; loading: boolean; missing: boolean };
@@ -21,20 +21,18 @@ const toLabelStates = (results: { data?: ResourceRow | null; isPending: boolean;
 
 type Related = { target: AnyResource; id: string };
 
+const requestKey = (target: AnyResource, id: string) => `${target.name}\u0000${id}`;
+
 /** Reads each related record once, deduped by resource and id, through the shared detail cache. */
 function useRelatedRows(requests: readonly Related[]) {
-	return useQueries({
-		queries: requests.map(({ target, id }) => ({
-			queryKey: resourceKeys.detail(target.name, id),
-			queryFn: () => target.source.get(id),
-			staleTime: 60_000,
-		})),
+	const unique = [...new Map(requests.map((request) => [requestKey(request.target, request.id), request] as const)).values()];
+	const states = useQueries({
+		queries: unique.map(({ target, id }) => ({ ...recordQuery(target, id), staleTime: 60_000 })),
 		combine: toLabelStates,
 	});
+	const byKey = new Map(unique.map((request, index) => [requestKey(request.target, request.id), states[index]!]));
+	return (target: AnyResource, id: string): LabelState | undefined => byKey.get(requestKey(target, id));
 }
-
-const dedupe = (requests: Iterable<readonly [string, Related]>) => [...new Map(requests).values()];
-const requestKey = (target: AnyResource, id: string) => `${target.name}\u0000${id}`;
 
 /** A column short enough to tell records apart inside a title: an option badge or a line of text. */
 const isShortValue = (field: ResourceField) => fieldFormat(field) === 'badge' || field.input === 'text' || field.input === 'email';
@@ -63,17 +61,16 @@ type LabelSpec = { resource: AnyResource; row: ResourceRow; labelField?: string 
  */
 function useLabelResolver(specs: readonly LabelSpec[]) {
 	const { byName, locale, currency, now } = useResourceKit();
-	const requests = dedupe(
+	const relatedRow = useRelatedRows(
 		specs.flatMap(({ resource, row, labelField }) =>
 			(titleRelations(resource, labelField ?? resource.titleField) ?? []).filter(isSingleRelation).flatMap((part) => {
 				const value = row[part.name];
 				const target = byName.get(part.relation!.resource);
 				if (value == null || value === '' || !target || embeddedRow(row, part)) return [];
-				return [[requestKey(target, String(value)), { target, id: String(value) }] as const];
+				return [{ target, id: String(value) }];
 			}),
 		),
 	);
-	const states = useRelatedRows(requests);
 	return (resource: AnyResource, row: ResourceRow, labelField = resource.titleField): string | null => {
 		const parts = titleRelations(resource, labelField);
 		if (!parts) return recordTitle(resource, row, labelField);
@@ -87,12 +84,36 @@ function useLabelResolver(specs: readonly LabelSpec[]) {
 			}
 			const target = byName.get(part.relation!.resource);
 			if (value == null || value === '' || !target) continue;
-			const state = states[requests.findIndex((request) => request.target === target && request.id === String(value))];
+			const state = relatedRow(target, String(value));
 			const related = embeddedRow(row, part) ?? state?.data;
 			if (related) labels.push(recordTitle(target, related, part.relation!.labelField ?? target.titleField));
 			else if (state?.loading) return null;
 		}
 		return labels.length > 0 ? labels.join(' · ') : recordTitle(resource, row, labelField);
+	};
+}
+
+type TitleRef = { target: AnyResource; id: string; labelField: string; row?: ResourceRow | null };
+
+/**
+ * Names related records: reads each by id unless its row is already at hand
+ * (embedded by the source), then follows a title field that is itself a
+ * relation. The title is null while loading; `missing` is set only when the
+ * row was not found.
+ */
+function useRelatedTitles(refs: readonly TitleRef[]) {
+	const relatedRow = useRelatedRows(refs.filter((ref) => !ref.row));
+	const resolve = useLabelResolver(
+		refs.flatMap(({ target, id, labelField, row }) => {
+			const related = row ?? relatedRow(target, id)?.data;
+			return related ? [{ resource: target, row: related, labelField }] : [];
+		}),
+	);
+	return (target: AnyResource, id: string, labelField: string, row?: ResourceRow | null): { label: string | null; missing?: boolean } => {
+		const state = row ? undefined : relatedRow(target, id);
+		const related = row ?? state?.data;
+		if (related) return { label: resolve(target, related, labelField) };
+		return { label: null, missing: Boolean(state?.missing) };
 	};
 }
 
@@ -102,34 +123,22 @@ export function useRowTitles(resource: AnyResource, rows: readonly ResourceRow[]
 	return (row: ResourceRow): string | null => resolve(resource, row, labelField);
 }
 
-/** Labels for ids of one resource, each read once through `get` and cached. Known labels skip the request. */
+/** Labels for ids of one resource, each read once through `get` and cached. Known labels skip the request; an id in neither map is loading. */
 export function useRecordLabels(resource: AnyResource | undefined, ids: readonly string[], labelField?: string, known?: ReadonlyMap<string, string>) {
 	const unique = React.useMemo(() => [...new Set(ids.filter(Boolean))], [ids]);
-	const states = useQueries({
-		queries: unique.map((id) => ({
-			queryKey: resourceKeys.detail(resource?.name ?? '', id),
-			queryFn: () => resource!.source.get(id),
-			enabled: Boolean(resource) && !known?.has(id),
-			staleTime: 60_000,
-		})),
-		combine: toLabelStates,
-	});
-	const fetched = resource ? states.flatMap((state) => (state.data ? [{ resource, row: state.data, labelField }] : [])) : [];
-	const resolve = useLabelResolver(fetched);
+	const field = resource ? (labelField ?? resource.titleField) : '';
+	const title = useRelatedTitles(resource ? unique.filter((id) => !known?.has(id)).map((id) => ({ target: resource, id, labelField: field })) : []);
 	const labels = new Map<string, string>(known);
-	const loading = new Set<string>();
 	const missing = new Set<string>();
-	unique.forEach((id, index) => {
-		if (labels.has(id) || !resource) return;
-		const state = states[index];
-		const label = state?.data ? resolve(resource, state.data, labelField ?? resource.titleField) : null;
+	for (const id of unique) {
+		if (labels.has(id) || !resource) continue;
+		const { label, missing: gone } = title(resource, id, field);
 		if (label !== null) labels.set(id, label);
-		else if (state?.missing) missing.add(id);
-		else loading.add(id);
-	});
+		else if (gone) missing.add(id);
+	}
 	// Same labels, same objects: pickers hand these to Base UI, which resets typed text when its value changes identity.
-	const signature = JSON.stringify([[...labels], [...loading], [...missing]]);
-	return React.useMemo(() => ({ labels, loading, missing }), [signature]);
+	const signature = JSON.stringify([[...labels], [...missing]]);
+	return React.useMemo(() => ({ labels, missing }), [signature]);
 }
 
 /** A belongs-to value with its label: null while loading, `missing` when the related row cannot be read. */
@@ -139,39 +148,25 @@ export type RelationLabel = { id: string; label: string | null; missing?: boolea
 export function useRelationLabels(fields: readonly ResourceField[], rows: readonly ResourceRow[]) {
 	const { byName } = useResourceKit();
 	const relationFields = fields.filter((field) => field.input === 'relation' && field.relation && !isManyRelation(field));
+	const labelFieldFor = (field: ResourceField, target: AnyResource) => field.relation?.labelField ?? target.titleField;
 	// One request per related record: rows that share a target (two shifts at one location) read it once.
-	const requests = dedupe(
+	const title = useRelatedTitles(
 		relationFields.flatMap((field) => {
 			const target = byName.get(field.relation!.resource);
 			if (!target) return [];
 			return rows.flatMap((row) => {
 				const id = row[field.name];
-				if (id == null || id === '' || embeddedRow(row, field)) return [];
-				return [[requestKey(target, String(id)), { target, id: String(id) }] as const];
+				if (id == null || id === '') return [];
+				return [{ target, id: String(id), labelField: labelFieldFor(field, target), row: embeddedRow(row, field) }];
 			});
 		}),
 	);
-	const states = useRelatedRows(requests);
-	const labelFieldFor = (field: ResourceField, target: AnyResource) => field.relation?.labelField ?? target.titleField;
-	// Related rows whose own title is a relation need one more read to be named.
-	const fetched = relationFields.flatMap((field) => {
-		const target = byName.get(field.relation!.resource);
-		if (!target) return [];
-		return rows.flatMap((row) => {
-			const related = embeddedRow(row, field) ?? states[requests.findIndex((request) => request.target === target && request.id === String(row[field.name]))]?.data;
-			return related ? [{ resource: target, row: related, labelField: labelFieldFor(field, target) }] : [];
-		});
-	});
-	const resolve = useLabelResolver(fetched);
 	return (field: ResourceField, row: ResourceRow): RelationLabel | null => {
 		const value = row[field.name];
 		if (value == null || value === '') return null;
 		const id = String(value);
 		const target = field.relation ? byName.get(field.relation.resource) : undefined;
 		if (!target) return { id, label: null, missing: true };
-		const state = states[requests.findIndex((request) => request.target === target && request.id === id)];
-		const related = embeddedRow(row, field) ?? state?.data;
-		if (related) return { id, label: resolve(target, related, labelFieldFor(field, target)) };
-		return { id, label: null, missing: Boolean(state?.missing) };
+		return { id, ...title(target, id, labelFieldFor(field, target), embeddedRow(row, field)) };
 	};
 }

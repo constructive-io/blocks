@@ -49,6 +49,8 @@ function createQueryClient() {
 export function ResourceKitProvider({ router, resources, queryClient, locale = 'en-US', currency = 'USD', now, icons, children }: ResourceKitProviderProps) {
 	const outerClient = React.useContext(QueryClientContext);
 	const [ownClient] = React.useState(() => (queryClient || outerClient ? null : createQueryClient()));
+	// A Date prop is a new object each render; its time is what matters.
+	const nowMs = now === undefined ? undefined : new Date(now).getTime();
 	const value = React.useMemo<ResourceKitContextValue>(
 		() => ({
 			router,
@@ -56,11 +58,10 @@ export function ResourceKitProvider({ router, resources, queryClient, locale = '
 			byName: new Map(resources.map((resource) => [resource.name, resource])),
 			locale,
 			currency,
-			now: now === undefined ? undefined : new Date(now).getTime(),
+			now: nowMs,
 			icons: Object.fromEntries(Object.entries(icons ?? {}).map(([name, icon]) => [iconKey(name), icon])),
 		}),
-		// A Date prop is a new object each render; its time is what matters.
-		[router, resources, locale, currency, now === undefined ? undefined : new Date(now).getTime(), icons],
+		[router, resources, locale, currency, nowMs, icons],
 	);
 	const content = <ResourceKitContext.Provider value={value}>{children}</ResourceKitContext.Provider>;
 	const client = queryClient ?? ownClient;

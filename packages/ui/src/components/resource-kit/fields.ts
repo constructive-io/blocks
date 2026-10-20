@@ -24,6 +24,9 @@ export function fieldFormat(field: ResourceField): FieldFormat {
 	}
 }
 
+/** Formats that read as figures: tabular digits, aligned to the end of a column. */
+export const NUMERIC_FORMATS: ReadonlySet<FieldFormat> = new Set<FieldFormat>(['number', 'currency', 'percent']);
+
 /** The named fields that exist and are not hidden, in the given order. */
 export function visibleFields(resource: AnyResource, names: readonly string[]): ResourceField[] {
 	return names.flatMap((name) => {

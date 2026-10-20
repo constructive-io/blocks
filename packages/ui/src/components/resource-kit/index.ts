@@ -9,6 +9,7 @@ export type {
 	ListResult,
 	ResourceDefinition,
 	ResourceField,
+	ResourceLinkProps,
 	ResourceRef,
 	ResourceRouter,
 	ResourceRow,
@@ -37,6 +38,7 @@ export { ListPagination, SortMenu } from './list-controls';
 export { fieldFormat, recordId, recordTitle } from './fields';
 export { formatFieldText } from './format';
 export { resourceKeys, useInvalidateResource, useResourceList, useResourceRecord } from './queries';
+export { MemoryRoute, useMemoryRouter } from './memory-router';
 export { createMemoryJunction, createMemorySource } from './memory-source';
 export type { MemoryLinkSide, MemorySourceOptions } from './memory-source';
 export { CRM_DEMO_ICONS, CRM_DEMO_NOW, createCrmDemo, crmDemoData } from './demo';
