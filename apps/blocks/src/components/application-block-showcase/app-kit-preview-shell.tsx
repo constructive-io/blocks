@@ -18,7 +18,8 @@ import { NavIcon, NavRow, NavSection, SidebarFrame, WorkspaceShell } from '@/com
 /**
  * The CRM demo inside the workspace shell, routed by component state the way
  * a host routes it by URL: `/` for home, `/<resource>` for a list, and
- * `/<resource>/<id>` for a record.
+ * `/<resource>/<id>` for a record. Links render as `#/<path>` so the static
+ * page never points outside the site's base path.
  */
 export function AppKitPreviewShell({ initialPath, home }: { initialPath: string; home?: ReactNode }) {
   const [path, setPath] = useState(initialPath);
@@ -28,7 +29,7 @@ export function AppKitPreviewShell({ initialPath, home }: { initialPath: string;
       Link: ({ href, className, children, ...rest }: ComponentProps<'a'> & { href: string }) => (
         <a
           {...rest}
-          href={href}
+          href={`#${href}`}
           className={className}
           onClick={(event) => {
             rest.onClick?.(event);

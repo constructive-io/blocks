@@ -51,14 +51,15 @@ export function AuthPagesPreview() {
     setVisit((count) => count + 1);
   };
 
-  // Footer links switch panels here; a host passes its router link instead.
+  // Footer links switch panels here, as `#/<path>` so the static page never
+  // points outside the site's base path; a host passes its router link instead.
   const PreviewLink = useMemo<AuthLinkComponent>(
     () =>
       function PreviewLink({ href, className, children }) {
         return (
           <a
             className={className}
-            href={href}
+            href={`#${href}`}
             onClick={(event) => {
               event.preventDefault();
               const target = PANEL_BY_HREF.get(href);
@@ -158,7 +159,7 @@ export function AuthPagesPreview() {
       </div>
       <div className="flex min-h-0 flex-1 flex-col overflow-y-auto">
         <AuthLayout
-          brand={{ name: 'Acme', logo: <BrandLogo />, href: '/' }}
+          brand={{ name: 'Acme', logo: <BrandLogo /> }}
           className="min-h-0 flex-1"
           footer="By continuing you agree to the Terms and the Privacy Policy."
           linkComponent={PreviewLink}
