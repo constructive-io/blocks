@@ -87,6 +87,31 @@ describe('AskCard', () => {
 		expect(card.textContent).toContain('“Email it to me”');
 	});
 
+	it('pages through several questions and submits every answer after the last', async () => {
+		const onSubmit = vi.fn();
+		const questions = [
+			...QUESTIONS,
+			{ id: 'when', question: 'When should it go out?', options: [{ id: 'now', label: 'Now' }, { id: 'monday', label: 'Monday' }], allowOther: false },
+		];
+		await render(<AskCard questions={questions} onSubmit={onSubmit} />);
+
+		expect(button('Continue').disabled).toBe(true);
+		await click(radio('Keep it here'));
+		await click(button('Continue'));
+		expect(onSubmit).not.toHaveBeenCalled();
+		expect(container!.textContent).toContain('When should it go out?');
+		expect(radio('Keep it here')).toBeUndefined();
+
+		// Going back keeps the earlier choice.
+		await click(container!.querySelector<HTMLButtonElement>('[aria-label="Previous question"]')!);
+		expect(radio('Keep it here').getAttribute('aria-checked')).toBe('true');
+		await click(container!.querySelector<HTMLButtonElement>('[aria-label="Next question"]')!);
+
+		await click(radio('Monday'));
+		await click(button('Continue'));
+		expect(onSubmit).toHaveBeenCalledWith({ where: { option: 'here' }, when: { option: 'monday' } });
+	});
+
 	it('marks every question skipped', async () => {
 		await render(<Harness />);
 		await click(button('Skip'));

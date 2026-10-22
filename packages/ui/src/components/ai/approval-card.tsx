@@ -30,6 +30,8 @@ type ApprovalCardProps = {
 	destructive?: boolean;
 	/** Preview node under the title (tables, diffs, etc.). */
 	preview?: React.ReactNode;
+	/** A small line above the title in single-confirm mode, e.g. why the run paused. */
+	eyebrow?: React.ReactNode;
 	onConfirm?: (payload: { answers?: Record<string, string[]> }) => void;
 	onSkip?: () => void;
 	onDismiss?: () => void;
@@ -49,6 +51,7 @@ function ApprovalCard({
 	skipLabel = 'Skip',
 	destructive = false,
 	preview,
+	eyebrow,
 	onConfirm,
 	onSkip,
 	onDismiss,
@@ -135,6 +138,9 @@ function ApprovalCard({
 			>
 				<div className="flex items-start justify-between gap-2 px-3 pt-3">
 					<div className="min-w-0 space-y-1">
+						{eyebrow ? (
+							<div className="mb-1.5 flex min-h-4 items-center gap-1.5 text-xs text-muted-foreground [&_svg]:size-3.5 [&_svg]:shrink-0">{eyebrow}</div>
+						) : null}
 						{title ? (
 							<div className="text-[0.8125rem] font-medium text-pretty text-foreground [overflow-wrap:anywhere]">{title}</div>
 						) : null}
@@ -155,9 +161,9 @@ function ApprovalCard({
 					) : null}
 				</div>
 				{preview ? <div className="min-w-0 overflow-x-auto px-3 pt-2 [overflow-wrap:anywhere]">{preview}</div> : null}
-				<div className="flex flex-wrap items-center justify-end gap-1.5 px-3 py-2.5">
+				<div className="flex flex-wrap items-center justify-end gap-1.5 p-3">
 					{onSkip ? (
-						<Button type="button" variant="ghost" size="sm" wrap onClick={onSkip}>
+						<Button type="button" variant="secondary" size="sm" wrap onClick={onSkip}>
 							{skipLabel}
 						</Button>
 					) : null}
