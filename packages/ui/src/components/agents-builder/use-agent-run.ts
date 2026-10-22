@@ -29,6 +29,10 @@ export type AgentRunState = {
 	sources: boolean;
 	/** The approval card is on screen, waiting on a person. */
 	approval: boolean;
+	/** The question card is on screen, waiting on a person. */
+	question: boolean;
+	/** Index of the tool call that failed and stopped the run. */
+	failedStep: number | null;
 	nodes: { tools: NodeStage; subagents: NodeStage; skills: NodeStage };
 	settled: boolean;
 };
@@ -65,6 +69,8 @@ const INITIAL: AgentRunState = {
 	typingFinding: null,
 	sources: false,
 	approval: false,
+	question: false,
+	failedStep: null,
 	nodes: { tools: 'absent', subagents: 'absent', skills: 'absent' },
 	settled: false,
 };
@@ -74,8 +80,9 @@ type Frame = { delay: number; apply: (state: AgentRunState) => AgentRunState };
 /**
  * The whole run as a flat list of timed patches: reasoning, narration, the
  * tool trace, the query and its rows, each group fanning out, the findings,
- * then the approval request. Canvas nodes move from absent to loading to
- * ready, and each phase ticks one plan item. Each frame waits `delay`.
+ * then the approval request or question. Canvas nodes move from absent to
+ * loading to ready, and each phase ticks one plan item. Each frame waits
+ * `delay`. A `failure` ends the timeline at its tool call.
  */
 export function buildRunTimeline(script: AgentRunScript): Frame[] {
 	const frames: Frame[] = [];
@@ -99,10 +106,16 @@ export function buildRunTimeline(script: AgentRunScript): Frame[] {
 
 	at((state) => ({ ...state, nodes: { ...state.nodes, tools: 'loading' } }), RUN_TIMING.stepIn);
 	at((state) => ({ ...state, shownSteps: script.steps.length }), RUN_TIMING.stepsSpin + RUN_TIMING.stepWork);
-	script.steps.forEach((_, index) => {
+	const failedStep = script.failure ? script.steps.findIndex((step) => step.id === script.failure!.stepId) : -1;
+	for (const [index] of script.steps.entries()) {
+		if (index === failedStep) {
+			at((state) => ({ ...state, failedStep: index, nodes: { ...state.nodes, tools: 'ready' } }), RUN_TIMING.stepMorph);
+			at((state) => ({ ...state, settled: true }));
+			return frames;
+		}
 		const last = index === script.steps.length - 1;
 		at((state) => ({ ...state, doneSteps: index + 1 }), RUN_TIMING.stepMorph + (last ? 0 : RUN_TIMING.stepWork));
-	});
+	}
 	at((state) => tick({ ...state, nodes: { ...state.nodes, tools: 'ready' } }), RUN_TIMING.handover);
 
 	if (script.query) {
@@ -139,6 +152,7 @@ export function buildRunTimeline(script: AgentRunScript): Frame[] {
 	});
 	if (script.findings) at((state) => tick({ ...state, sources: true }), RUN_TIMING.handover);
 	if (script.approval) at((state) => ({ ...state, approval: true }), RUN_TIMING.afterParagraph);
+	else if (script.question) at((state) => ({ ...state, question: true }), RUN_TIMING.afterParagraph);
 
 	at((state) => ({ ...state, settled: true }));
 	return frames;
@@ -150,15 +164,16 @@ function settledState(script: AgentRunScript): AgentRunState {
 
 /**
  * Replays an agent run from its script. `stop` settles everything at once.
+ * `paused` holds the run before its first frame, e.g. while it is queued.
  * Replace with live run events in production by producing the same state.
  */
-export function useAgentRun(script: AgentRunScript, { autoplay = true }: { autoplay?: boolean } = {}) {
+export function useAgentRun(script: AgentRunScript, { autoplay = true, paused = false }: { autoplay?: boolean; paused?: boolean } = {}) {
 	const timeline = React.useMemo(() => buildRunTimeline(script), [script]);
 	const [run, setRun] = React.useState(() =>
 		autoplay ? { state: INITIAL, next: 0 } : { state: settledState(script), next: timeline.length },
 	);
 
-	usePlaybackClock(timeline[run.next], false, () =>
+	usePlaybackClock(timeline[run.next], paused, () =>
 		setRun((current) => {
 			const frame = timeline[current.next];
 			return frame ? { state: frame.apply(current.state), next: current.next + 1 } : current;

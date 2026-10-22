@@ -143,9 +143,9 @@ export function CanvasNode({ id, title, icon, tone = 'plain', meta, badge, stage
 
 /** Scrollable system prompt with edge fades and a hover Edit action. */
 export function Instructions({ open, onToggle }: { open: boolean; onToggle: () => void }) {
-	const { data, emit } = useAgentsBuilder();
+	const { currentAgent, emit } = useAgentsBuilder();
 	const [edges, setEdges] = React.useState({ top: false, bottom: true });
-	const { instructions } = data.agent;
+	const { instructions } = currentAgent.agent;
 	const fade = 'pointer-events-none absolute inset-x-0 h-5 from-card to-transparent transition-opacity duration-(--duration-moderate)';
 
 	return (
@@ -186,7 +186,7 @@ export function Instructions({ open, onToggle }: { open: boolean; onToggle: () =
 					<span aria-hidden="true" className={cn(fade, 'bottom-0 bg-gradient-to-t', edges.bottom ? 'opacity-100' : 'opacity-0')} />
 					<button
 						type="button"
-						onClick={() => emit({ type: 'edit-instructions', agentId: data.agent.id })}
+						onClick={() => emit({ type: 'edit-instructions', agentId: currentAgent.agent.id })}
 						className={cn(
 							'pointer-events-none absolute top-0 end-2 cursor-pointer rounded-md bg-card px-1.5 py-0.5 text-xs text-foreground opacity-0 shadow-card hover:bg-muted',
 							'group-hover:pointer-events-auto group-hover:opacity-100 focus-visible:pointer-events-auto focus-visible:opacity-100 pointer-coarse:pointer-events-auto pointer-coarse:opacity-100',

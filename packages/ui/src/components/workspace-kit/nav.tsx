@@ -10,16 +10,37 @@ import { focusRingClass, TooltipIconButton } from './primitives';
 
 const ROW = cn('relative flex h-8 cursor-pointer items-center rounded-md text-start text-sm pointer-coarse:h-10', focusRingClass);
 
-/** Full-width row with a label, or a centred square matching the rail's icon buttons. */
-const rowShape = (collapsed: boolean) => (collapsed ? 'size-8 shrink-0 justify-center pointer-coarse:size-10' : 'w-full gap-2 px-2');
+/**
+ * Full-width row with a label, or a centred square matching the rail's icon
+ * buttons. A rail badge stretches the square into a capsule: the glyph, then
+ * the word, filling the rail's width so the word never overhangs the fill.
+ */
+const rowShape = (collapsed: boolean, badge = false) =>
+	collapsed
+		? badge
+			? 'h-auto w-full shrink-0 flex-col justify-center gap-0.5 py-1.5'
+			: 'size-8 shrink-0 justify-center pointer-coarse:size-10'
+		: 'w-full gap-2 px-2';
 
-/** Labels a rail control with a tooltip only while the sidebar is collapsed. */
-function RailTip({ label, collapsed, children }: { label: string; collapsed: boolean; children: React.ReactElement }) {
-	if (!collapsed) return children;
+/**
+ * Labels a rail control with a tooltip while the sidebar is collapsed. A `tip`
+ * adds a line under the label there, and is the whole tooltip when expanded.
+ */
+function RailTip({ label, collapsed, tip, children }: { label: string; collapsed: boolean; tip?: React.ReactNode; children: React.ReactElement }) {
+	if (!collapsed && !tip) return children;
 	return (
 		<Tooltip>
 			<TooltipTrigger render={children} />
-			<TooltipContent side="right">{label}</TooltipContent>
+			<TooltipContent side="right">
+				{collapsed ? (
+					<>
+						{label}
+						{tip ? <span className="block text-pretty text-muted-foreground">{tip}</span> : null}
+					</>
+				) : (
+					tip
+				)}
+			</TooltipContent>
 		</Tooltip>
 	);
 }
@@ -34,6 +55,10 @@ type NavRowProps = {
 	labelNode?: React.ReactNode;
 	/** Quiet trailing value such as a count. */
 	trailing?: React.ReactNode;
+	/** Tooltip detail, e.g. what an agent waits on. Shown expanded too; replaces the truncation title. */
+	tip?: React.ReactNode;
+	/** A short word under the collapsed square's glyph, e.g. "Approve". The square stretches into a capsule to hold it. */
+	railBadge?: React.ReactNode;
 	/** Row tone when not active. */
 	muted?: boolean;
 	/** Not choosable right now, e.g. while another row loads or policy forbids it. */
@@ -54,13 +79,15 @@ type NavRowLinkProps = Omit<React.ComponentProps<'a'>, 'href'> & { href: string 
  * One sidebar row. Focus reads through weight and a tinted fill, never a
  * coloured dot; hover is instant because rows are clicked constantly.
  */
-function NavRow({ label, collapsed, active, leading, labelNode, trailing, muted, disabled, busy, onClick, href, renderLink }: NavRowProps) {
+function NavRow({ label, collapsed, active, leading, labelNode, trailing, tip, railBadge, muted, disabled, busy, onClick, href, renderLink }: NavRowProps) {
+	const badge = collapsed ? railBadge : null;
 	const content = (
 		<>
 			{leading}
+			{badge}
 			{collapsed ? null : (
 				<>
-					<span title={label} className="min-w-0 flex-1 truncate">
+					<span title={tip ? undefined : label} className="min-w-0 flex-1 truncate">
 						<bdi>{labelNode ?? label}</bdi>
 					</span>
 					{busy ? <Loader2 aria-hidden="true" className="size-3.5 shrink-0 text-muted-foreground motion-safe:animate-spin" /> : trailing}
@@ -91,7 +118,7 @@ function NavRow({ label, collapsed, active, leading, labelNode, trailing, muted,
 			},
 			className: cn(
 				ROW,
-				rowShape(collapsed),
+				rowShape(collapsed, Boolean(badge)),
 				'no-underline',
 				disabled ? 'cursor-not-allowed opacity-50' : cn('hover:bg-overlay-hover', muted && !active && 'hover:text-foreground'),
 				tone,
@@ -108,7 +135,7 @@ function NavRow({ label, collapsed, active, leading, labelNode, trailing, muted,
 				onClick={onClick}
 				className={cn(
 					ROW,
-					rowShape(collapsed),
+					rowShape(collapsed, Boolean(badge)),
 					'disabled:cursor-not-allowed disabled:opacity-50',
 					active ? tone : cn('enabled:hover:bg-overlay-hover', tone, muted && 'enabled:hover:text-foreground'),
 				)}
@@ -119,7 +146,7 @@ function NavRow({ label, collapsed, active, leading, labelNode, trailing, muted,
 	}
 	return (
 		<li className={collapsed ? 'flex justify-center' : undefined}>
-			<RailTip label={label} collapsed={collapsed}>
+			<RailTip label={label} collapsed={collapsed} tip={tip}>
 				{row}
 			</RailTip>
 		</li>

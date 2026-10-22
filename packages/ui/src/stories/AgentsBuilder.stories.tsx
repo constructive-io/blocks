@@ -5,6 +5,7 @@ import {
 	AGENTS_BUILDER_DEMO,
 	AgentsBuilder,
 	type AgentsBuilderAction,
+	type AgentsBuilderData,
 	type AgentsBuilderProps,
 	type AgentsBuilderView,
 } from '../components/agents-builder';
@@ -17,7 +18,7 @@ const meta: Meta<typeof AgentsBuilder> = {
 		docs: {
 			description: {
 				component:
-					'A complete agent workspace: chat with scripted replies, an integrations directory with a connect flow, a skills library, and an agent detail view with a live run panel and canvas.',
+					'A complete agent workspace: chat with scripted replies, an integrations directory with a connect flow, a skills library, and an agent detail view with a live run panel and canvas. Every agent in the sidebar opens its own run as it stands: running, waiting on your approval or answer, failed with a retry, queued with "Run now", or finished. Runs keep going while you look elsewhere, and a result that lands off screen marks its agent unread.',
 			},
 		},
 	},
@@ -79,9 +80,36 @@ export const Skills: Story = {
 	render: (args) => <Frame {...args} />,
 };
 
+/** The demo opens Revenue Analyst at its pending approval; here it starts mid-run so the whole replay plays. */
+const RUNNING_DEMO: AgentsBuilderData = {
+	...AGENTS_BUILDER_DEMO,
+	agents: AGENTS_BUILDER_DEMO.agents.map((agent) =>
+		agent.id === AGENTS_BUILDER_DEMO.agent.id ? { ...agent, status: 'running', statusNote: undefined } : agent,
+	),
+};
+
 export const AgentRun: Story = {
 	name: 'Agent (live run)',
-	args: { defaultView: 'agent' },
+	args: { defaultView: 'agent', data: RUNNING_DEMO },
+	render: (args) => <Frame {...args} />,
+};
+
+/** Approval, input, and failed agents past the six-row limit take the place of calm rows above them. */
+export const RosterOverflow: Story = {
+	name: 'Roster overflow',
+	args: {
+		defaultView: 'chat',
+		data: {
+			...AGENTS_BUILDER_DEMO,
+			// The flat roster: without projects, agents past the limit that need you take the place of calm rows.
+			projects: undefined,
+			agents: AGENTS_BUILDER_DEMO.agents.map((agent) => {
+				if (agent.id === 'access-auditor') return { ...agent, status: 'approval', statusNote: 'Revoke 4 dormant admin keys in Snowflake?' };
+				if (agent.id === 'anomaly-watch') return { ...agent, status: 'failed', statusNote: 'Lost the Stripe webhook at 08:12.' };
+				return agent;
+			}),
+		},
+	},
 	render: (args) => <Frame {...args} />,
 };
 

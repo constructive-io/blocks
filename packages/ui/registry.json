@@ -3656,6 +3656,10 @@
           "type": "registry:component"
         },
         {
+          "path": "registry/constructive/blocks/agents-builder/agent-status.tsx",
+          "type": "registry:component"
+        },
+        {
           "path": "registry/constructive/blocks/agents-builder/agent-view.tsx",
           "type": "registry:component"
         },
@@ -3709,6 +3713,10 @@
         },
         {
           "path": "registry/constructive/blocks/agents-builder/demo-schedules.ts",
+          "type": "registry:lib"
+        },
+        {
+          "path": "registry/constructive/blocks/agents-builder/demo-agents.ts",
           "type": "registry:lib"
         },
         {

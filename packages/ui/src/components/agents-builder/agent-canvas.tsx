@@ -71,8 +71,8 @@ type AgentCanvasProps = {
  * each new node on screen.
  */
 function AgentCanvas({ state, panelOpen, onTogglePanel }: AgentCanvasProps) {
-	const { data, integration, emit } = useAgentsBuilder();
-	const { agent } = data;
+	const { currentAgent, integration, emit } = useAgentsBuilder();
+	const { agent } = currentAgent;
 	const layerRef = React.useRef<HTMLDivElement>(null);
 	const viewport = useCanvasViewport(CONTENT_WIDTH);
 	const nodes = useCollapsed();

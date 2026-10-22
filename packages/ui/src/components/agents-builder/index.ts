@@ -3,6 +3,7 @@
 
 export type {
 	AgentBlueprint,
+	AgentDetail,
 	AgentSchedule,
 	AgentDraft,
 	AgentRunScript,
@@ -10,6 +11,8 @@ export type {
 	AgentsBuilderData,
 	AgentsBuilderTheme,
 	AgentsBuilderView,
+	AgentProject,
+	AgentStatus,
 	AgentSummary,
 	AskBeatOption,
 	AskBeatQuestion,
@@ -27,6 +30,8 @@ export type {
 	ModelOption,
 	PromptPart,
 	RunApproval,
+	RunFailure,
+	RunQuestion,
 	RunQuery,
 	RunSource,
 	ScheduleRunStatus,
@@ -44,9 +49,9 @@ export { InboxView } from './inbox-view';
 export { SchedulesView } from './schedules-view';
 export { IntegrationsView } from './integrations-view';
 export { SkillsView } from './skills-view';
-export { AgentView } from './agent-view';
+export { AgentView, type AgentViewProps } from './agent-view';
 export { AgentCanvas } from './agent-canvas';
-export { AgentRunPanel } from './agent-run-panel';
+export { AgentRunPanel, type AgentRunPanelProps, type RunPhase } from './agent-run-panel';
 export { ConnectIntegrationDialog, type ConnectIntegrationDialogProps } from './connect-integration-dialog';
 export { IntegrationMark, type IntegrationMarkProps } from './integration-mark';
 export { Mascot } from './mascot';
@@ -70,6 +75,7 @@ export {
 export {
 	AGENTS_BUILDER_DEMO,
 	DEMO_AGENT,
+	DEMO_AGENT_DETAILS,
 	DEMO_AGENTS,
 	DEMO_CLOCK,
 	DEMO_CATEGORIES,
