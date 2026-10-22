@@ -38,11 +38,31 @@ export type IntegrationCategory = {
 	label: string;
 };
 
+/**
+ * The most urgent state across an agent's runs. Queued: about to start.
+ * Approval and input: a run is still open but paused on a person.
+ */
+export type AgentStatus = 'idle' | 'queued' | 'running' | 'approval' | 'input' | 'failed';
+
 export type AgentSummary = {
 	id: string;
 	name: string;
-	/** Running agents shimmer in the sidebar. */
+	/** Merged across the agent's runs by the host. Default `idle`. */
+	status?: AgentStatus;
+	/** A run finished since the agent was last opened. Cleared when the agent opens. */
+	unread?: boolean;
+	/** What the agent waits on or why it failed, shown in the row tooltip, e.g. "Post the summary to #revenue". */
+	statusNote?: string;
+	/** @deprecated Use `status: 'running'`. */
 	running?: boolean;
+	/** The project the agent belongs to. Agents without one list after the projects. */
+	projectId?: string;
+};
+
+/** A group of agents in the sidebar, e.g. a team or a product area. */
+export type AgentProject = {
+	id: string;
+	name: string;
 };
 
 export type SkillType = 'Analysis' | 'Modeling' | 'Governance' | 'Workflow';
@@ -153,6 +173,32 @@ export type RunApproval = {
 	skippedText: string;
 };
 
+export type RunQuestion = {
+	/** One line for the roster tooltip, e.g. "Which schema should own the billing tables?" */
+	title: string;
+	questions: {
+		id: string;
+		question: string;
+		/** `reply` is the agent's sentence for this choice; chosen replies are joined, and `answeredText` stands in when none has one. */
+		options: { id: string; label: string; reply?: string }[];
+	}[];
+	/** Tool calls made once answered. */
+	steps: ToolStep[];
+	answeredText: string;
+	skippedText: string;
+};
+
+export type RunFailure = {
+	/** The tool call that fails. Calls after it never run. */
+	stepId: string;
+	/** One line for the error block and the roster tooltip. */
+	message: string;
+	/** Raw error output, shown as a log excerpt. */
+	log?: string;
+	/** The retry succeeds, as if the cause was fixed. Default "Retry run". */
+	retryLabel?: string;
+};
+
 export type AgentRunScript = {
 	command: { verb: string; skill: string; scope: string };
 	/** Collapsed reasoning shown before the narration. */
@@ -166,6 +212,10 @@ export type AgentRunScript = {
 	findings?: { paragraphs: string[]; sources: RunSource[] };
 	/** Human-in-the-loop step that ends the run. */
 	approval?: RunApproval;
+	/** A question that ends the run instead of an approval. */
+	question?: RunQuestion;
+	/** Stops the run at one of its tool calls with an error. */
+	failure?: RunFailure;
 	thinking: { seconds: number; tokens: number };
 };
 
@@ -182,6 +232,12 @@ export type AgentBlueprint = {
 	tools: ToolStep[];
 	subagents: string[];
 	skills: string[];
+};
+
+/** An agent the template can open on its own: its blueprint and its latest run. */
+export type AgentDetail = {
+	agent: AgentBlueprint;
+	run: AgentRunScript;
 };
 
 export type InboxChannel = 'sms' | 'email' | 'slack';
@@ -267,6 +323,8 @@ export type AgentsBuilderData = {
 	/** Integrations teased in the sidebar "Connect more apps" card. */
 	featuredIntegrationIds: string[];
 	agents: AgentSummary[];
+	/** Groups the sidebar roster by project. Without it the roster is one flat list. */
+	projects?: AgentProject[];
 	/** Agent-handled conversations for the Inbox view. */
 	inbox: InboxThread[];
 	schedules: AgentSchedule[];
@@ -279,8 +337,11 @@ export type AgentsBuilderData = {
 	fallbackReply: ConversationBeat[];
 	/** Reply to any follow-up after the first turn. */
 	followUpReply: ConversationBeat[];
+	/** The featured agent, opened by default. */
 	agent: AgentBlueprint;
 	run: AgentRunScript;
+	/** More agents the template opens itself; any other roster agent is handed to the host via `open-agent`. */
+	agentDetails?: AgentDetail[];
 	heroHighlights: HeroHighlight[];
 	usage: { percent: number };
 };
@@ -301,6 +362,10 @@ export type AgentsBuilderAction =
 	| { type: 'send-follow-up'; surface: 'run'; text: string }
 	| { type: 'stop-run' }
 	| { type: 'approve-run'; agentId: string; approved: boolean }
+	/** `answers` maps question ids to the chosen option ids; `null` when skipped. */
+	| { type: 'answer-run'; agentId: string; answers: Record<string, string[]> | null }
+	| { type: 'retry-run'; agentId: string }
+	| { type: 'start-run'; agentId: string }
 	| { type: 'send-reply'; threadId: string; text: string; drafted: boolean }
 	| { type: 'approve-thread-action'; threadId: string }
 	| { type: 'new-schedule' }

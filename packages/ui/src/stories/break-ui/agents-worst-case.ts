@@ -8,6 +8,7 @@
 import {
 	AGENTS_BUILDER_DEMO,
 	type AgentBlueprint,
+	type AgentProject,
 	type AgentRunScript,
 	type AgentSchedule,
 	type AgentsBuilderData,
@@ -34,20 +35,34 @@ const UNBROKEN_URL = 'https://example.com/workspaces/acme/projects/q3-launch/doc
  * Agents (sidebar roster, schedules, skills)
  * ------------------------------------------------------------------ */
 
-export const worstAgents: AgentSummary[] = [
-	{ id: 'revenue-analyst', name: 'Revenue Analyst', running: true },
-	{ id: 'board-reporting', name: 'Aleksandra Wiśniewska-Kowalczyk, Quarterly Board Reporting and Variance Commentary Agent', running: true },
-	{ id: 'cjk', name: names.cjk },
-	{ id: 'emoji', name: names.emojiFirst },
+/** Long, CJK, RTL, emoji, and one-letter project names; "J" has no agents, and one agent belongs to no project. */
+export const worstProjects: AgentProject[] = [
+	{ id: 'board', name: 'Quarterly Board Reporting and Variance Commentary for Multinational Holding Companies' },
+	{ id: 'cjk', name: '数据平台与治理' },
 	{ id: 'rtl', name: names.rtl },
-	{ id: 'one-letter', name: names.oneLetter },
-	{ id: 'spaces', name: names.extraSpaces },
-	{ id: 'lowercase', name: names.lowercase },
-	{ id: 'snake', name: identifiers.snakeIdentifier },
+	{ id: 'emoji', name: '🧪 Experiments' },
+	{ id: 'empty', name: names.oneLetter },
+];
+
+export const worstAgents: AgentSummary[] = [
+	{ id: 'revenue-analyst', projectId: 'board', name: 'Revenue Analyst', status: 'running' },
+	{
+		id: 'board-reporting', projectId: 'board',
+		name: 'Aleksandra Wiśniewska-Kowalczyk, Quarterly Board Reporting and Variance Commentary Agent',
+		status: 'approval',
+		statusNote: `Send the variance commentary for every legal entity to ${emails.long} and #board-reporting-and-variance-commentary-for-multinational-holding-companies?`,
+	},
+	{ id: 'cjk', projectId: 'cjk', name: names.cjk, status: 'failed', statusNote: UNBROKEN_URL },
+	{ id: 'emoji', projectId: 'emoji', name: names.emojiFirst, status: 'queued' },
+	{ id: 'rtl', projectId: 'rtl', name: names.rtl, status: 'input', statusNote: names.rtl },
+	{ id: 'one-letter', projectId: 'board', name: names.oneLetter },
+	{ id: 'spaces', projectId: 'board', name: names.extraSpaces },
+	{ id: 'lowercase', projectId: 'board', name: names.lowercase },
+	{ id: 'snake', projectId: 'cjk', name: identifiers.snakeIdentifier },
 	{ id: 'email-name', name: emails.long },
-	{ id: 'vietnamese', name: names.vietnamese },
-	{ id: 'zwj', name: names.zwjEmoji },
-	{ id: 'churn-radar', name: 'Churn Radar' },
+	{ id: 'vietnamese', projectId: 'cjk', name: names.vietnamese },
+	{ id: 'zwj', projectId: 'emoji', name: names.zwjEmoji },
+	{ id: 'churn-radar', projectId: 'board', name: 'Churn Radar', status: 'approval', statusNote: 'Close the 3 duplicate churn tickets in Zendesk?' },
 ];
 
 /* ------------------------------------------------------------------ *
@@ -323,6 +338,7 @@ export const worstAgentsBuilder: AgentsBuilderData = {
 	categories: worstCategories,
 	featuredIntegrationIds: ['dynamics', 'dingtalk', 'vk', 'evernote', 'a', 'postgres', 'snowflake', 'stripe', 'dbt', 'hubspot', 'slack', 'notion', 'github'],
 	agents: worstAgents,
+	projects: worstProjects,
 	inbox: worstInbox,
 	schedules: worstSchedules,
 	skills: worstSkills,
@@ -346,6 +362,7 @@ export const emptyAgentsBuilder: AgentsBuilderData = {
 	categories: [],
 	featuredIntegrationIds: [],
 	agents: [],
+	projects: [],
 	inbox: [],
 	schedules: [],
 	skills: [],
@@ -360,6 +377,7 @@ export const emptyAgentsBuilder: AgentsBuilderData = {
 export const oneAgentsBuilder: AgentsBuilderData = {
 	...AGENTS_BUILDER_DEMO,
 	agents: AGENTS_BUILDER_DEMO.agents.slice(0, 1),
+	projects: AGENTS_BUILDER_DEMO.projects?.slice(0, 1),
 	inbox: AGENTS_BUILDER_DEMO.inbox.slice(0, 1),
 	schedules: AGENTS_BUILDER_DEMO.schedules.slice(0, 1),
 	skills: AGENTS_BUILDER_DEMO.skills.slice(0, 1),
@@ -372,7 +390,14 @@ export const oneAgentsBuilder: AgentsBuilderData = {
 
 export const hugeAgentsBuilder: AgentsBuilderData = {
 	...AGENTS_BUILDER_DEMO,
-	agents: manyRows(1_000, (index): AgentSummary => ({ id: `agent-${index}`, name: `Agent ${index + 1}`, running: index % 7 === 0 })),
+	agents: manyRows(1_000, (index): AgentSummary => ({
+		id: `agent-${index}`,
+		name: `Agent ${index + 1}`,
+		status: (['running', 'idle', 'approval', 'idle', 'failed', 'queued', 'input'] as const)[index % 7],
+		unread: index % 5 === 0,
+		// Spread across the demo's three projects, with every tenth agent in none.
+		projectId: index % 10 === 9 ? undefined : AGENTS_BUILDER_DEMO.projects?.[index % 3]?.id,
+	})),
 	skills: manyRows(1_000, (index): Skill => ({
 		id: `skill-${index}`,
 		name: `skill-${index + 1}`,

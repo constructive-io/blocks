@@ -101,6 +101,12 @@ async function untilVisible(predicate: () => boolean) {
 	expect(predicate()).toBe(true);
 }
 
+/** The demo's blueprint agent waits on approval and would open settled; these runs start from the top. */
+const RUNNING_DEMO = {
+	...AGENTS_BUILDER_DEMO,
+	agents: AGENTS_BUILDER_DEMO.agents.map((agent) => (agent.id === AGENTS_BUILDER_DEMO.agent.id ? { ...agent, status: 'running' as const } : agent)),
+};
+
 function artifact(name: string, actions: unknown) {
 	const directory = process.env.BLOCKS_TEST_ARTIFACTS ?? '/tmp/blocks-test-audit/agents-billing-artifacts';
 	mkdirSync(directory, { recursive: true });
@@ -112,7 +118,7 @@ describe('agent run and billing operator workflows', () => {
 	it('runs an agent to approval, exposes its evidence and canvas, and only writes after approval', async () => {
 		vi.useFakeTimers();
 		const onAction = vi.fn<(action: AgentsBuilderAction) => void>();
-		await render(<AgentsBuilder data={AGENTS_BUILDER_DEMO} defaultView="agent" onAction={onAction} />);
+		await render(<AgentsBuilder data={RUNNING_DEMO} defaultView="agent" onAction={onAction} />);
 		const run = () => document.body.querySelector<HTMLElement>('aside[aria-label="Current run"]')!;
 		expect(buttonNamed('Stop run', run())).toBeDefined();
 		expect(document.body.querySelector('section[aria-label="Tools"]')).toBeNull();
@@ -155,12 +161,12 @@ describe('agent run and billing operator workflows', () => {
 		expect(run().querySelector<HTMLTextAreaElement>('textarea')?.value).toBe('');
 		expect(run().textContent).toContain('Explain the cohort change');
 		artifact('agent-approved', onAction.mock.calls);
-	});
+	}, 15_000);
 
 	it('stops the preview without approving writes and preserves the draft when approval is declined', async () => {
 		vi.useFakeTimers();
 		const onAction = vi.fn<(action: AgentsBuilderAction) => void>();
-		await render(<AgentsBuilder data={AGENTS_BUILDER_DEMO} defaultView="agent" onAction={onAction} />);
+		await render(<AgentsBuilder data={RUNNING_DEMO} defaultView="agent" onAction={onAction} />);
 		const run = document.body.querySelector<HTMLElement>('aside[aria-label="Current run"]')!;
 		await click(buttonNamed('Stop run', run));
 		expect(onAction).toHaveBeenCalledExactlyOnceWith({ type: 'stop-run' });

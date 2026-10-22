@@ -1,6 +1,6 @@
 'use client';
 
-import { CircleCheck, CircleHelp } from 'lucide-react';
+import { ChevronDown, ChevronUp, CircleCheck, CircleHelp } from 'lucide-react';
 import * as React from 'react';
 
 import { cn } from '../../lib/utils';
@@ -34,32 +34,40 @@ type AskCardProps = Omit<React.ComponentProps<'div'>, 'onSubmit'> & {
 	skipLabel?: React.ReactNode;
 	/** Name and placeholder of the free-text row. */
 	otherLabel?: string;
+	/** A small line above the question, e.g. who is asking or why the run paused. */
+	eyebrow?: React.ReactNode;
+	/** Glyph beside each question. Defaults to a help circle; `null` leaves the question bare, e.g. under an eyebrow. */
+	icon?: React.ReactNode;
 	disabled?: boolean;
 };
 
-const KEYS = 'ABCDEFGHIJ';
-
-function QuestionHeading({ id, children }: { id?: string; children: React.ReactNode }) {
+function QuestionHeading({ id, icon, children }: { id?: string; icon?: React.ReactNode; children: React.ReactNode }) {
+	const glyph = icon === undefined ? <CircleHelp /> : icon;
 	return (
-		<div className="flex min-h-7 items-start gap-2 px-1 py-1">
-			<CircleHelp aria-hidden="true" className="mt-0.5 size-4 shrink-0 text-muted-foreground" />
-			<p id={id} className="min-w-0 text-pretty text-sm text-foreground [overflow-wrap:anywhere]">
+		<div className="flex items-start gap-2">
+			{glyph ? (
+				<span aria-hidden="true" className="flex h-5 shrink-0 items-center text-muted-foreground [&_svg]:size-4">
+					{glyph}
+				</span>
+			) : null}
+			<p id={id} className="min-w-0 text-pretty text-sm font-medium text-foreground [overflow-wrap:anywhere]">
 				{children}
 			</p>
 		</div>
 	);
 }
 
-function KeyBadge({ children, active }: { children: React.ReactNode; active?: boolean }) {
+/** Radio dot: a ring at rest, a filled disc with a pip once chosen. */
+function RadioMark({ checked }: { checked: boolean }) {
 	return (
 		<span
 			aria-hidden="true"
 			className={cn(
-				'grid size-5 shrink-0 place-items-center rounded-[5px] border text-[0.6875rem] font-medium tabular-nums',
-				active ? 'border-primary bg-primary text-primary-foreground' : 'border-border bg-muted text-muted-foreground',
+				'grid size-4 shrink-0 place-items-center rounded-full border',
+				checked ? 'border-primary bg-primary' : 'border-subtle-foreground/50',
 			)}
 		>
-			{children}
+			{checked ? <span className={cn('size-1.5 rounded-full bg-primary-foreground', iconEnterClass)} /> : null}
 		</span>
 	);
 }
@@ -69,24 +77,29 @@ function AskQuestionField({
 	choice,
 	onChoose,
 	otherLabel,
+	icon,
 	disabled,
 }: {
 	question: AskQuestion;
 	choice: AskChoice | undefined;
 	onChoose: (choice: AskChoice | undefined) => void;
 	otherLabel: string;
+	icon?: React.ReactNode;
 	disabled?: boolean;
 }) {
 	const headingId = React.useId();
 	const otherValue = choice && 'other' in choice ? choice.other : '';
+	// Card p-3 → rows bleed 6px into the padding and round at radius-md, so labels line up with the heading.
 	const rowClass =
-		'flex min-h-9 w-full items-center gap-2.5 rounded-sm border px-2 py-1.5 text-start text-sm outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50';
+		'-mx-1.5 flex min-h-8 items-center gap-2.5 rounded-md px-1.5 py-1 text-start text-sm outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50';
 
 	return (
-		<div className="flex flex-col gap-1.5">
-			<QuestionHeading id={headingId}>{question.question}</QuestionHeading>
-			<div role="radiogroup" aria-labelledby={headingId} className="flex flex-col gap-1.5">
-				{question.options.map((option, index) => {
+		<div className="flex flex-col gap-2">
+			<QuestionHeading id={headingId} icon={icon}>
+				{question.question}
+			</QuestionHeading>
+			<div role="radiogroup" aria-labelledby={headingId} className="flex flex-col gap-0.5">
+				{question.options.map((option) => {
 					const checked = Boolean(choice && 'option' in choice && choice.option === option.id);
 					return (
 						<button
@@ -98,26 +111,18 @@ function AskQuestionField({
 							onClick={() => onChoose({ option: option.id })}
 							className={cn(
 								rowClass,
-								'cursor-pointer disabled:cursor-not-allowed disabled:opacity-64',
-								checked
-									? 'border-primary/40 bg-primary/6 text-foreground'
-									: 'border-border bg-card text-foreground hover:bg-overlay-hover',
+								'cursor-pointer hover:bg-overlay-hover disabled:cursor-not-allowed disabled:opacity-64',
+								checked ? 'bg-overlay-hover text-foreground' : 'text-muted-foreground hover:text-foreground',
 							)}
 						>
-							<KeyBadge active={checked}>{KEYS[index]}</KeyBadge>
+							<RadioMark checked={checked} />
 							<span className="min-w-0 flex-1 [overflow-wrap:anywhere]">{option.label}</span>
 						</button>
 					);
 				})}
 				{question.allowOther !== false ? (
-					<label
-						className={cn(
-							rowClass,
-							'cursor-text focus-within:ring-[3px] focus-within:ring-ring/50',
-							otherValue ? 'border-primary/40 bg-primary/6' : 'border-border bg-card',
-						)}
-					>
-						<KeyBadge active={Boolean(otherValue)}>{KEYS[question.options.length]}</KeyBadge>
+					<label className={cn(rowClass, 'cursor-text focus-within:bg-overlay-hover', otherValue && 'bg-overlay-hover')}>
+						<RadioMark checked={Boolean(otherValue)} />
 						<input
 							type="text"
 							value={otherValue}
@@ -153,9 +158,10 @@ function AnswerChip({ children, muted }: { children: React.ReactNode; muted?: bo
 }
 
 /**
- * Inline clarifying questions from an agent. Each question offers lettered
- * options plus a free-text row; the card settles into a one-line summary per
- * question once answered or skipped.
+ * Inline clarifying questions from an agent, one at a time. Each question
+ * offers its options as radio rows plus a free-text row; Continue moves to the
+ * next question and submits after the last. The card settles into a one-line
+ * summary per question once answered or skipped.
  */
 function AskCard({
 	questions,
@@ -165,15 +171,22 @@ function AskCard({
 	continueLabel = 'Continue',
 	skipLabel = 'Skip',
 	otherLabel = 'Something else',
+	eyebrow,
+	icon,
 	disabled,
 	className,
 	...props
 }: AskCardProps) {
 	const [choices, setChoices] = React.useState<Record<string, AskChoice>>({});
-	const complete = questions.every((question) => {
-		const choice = choices[question.id];
-		return choice && ('option' in choice || choice.other.trim().length > 0);
-	});
+	const [page, setPage] = React.useState(0);
+	const answered = (question: AskQuestion | undefined) => {
+		const choice = question ? choices[question.id] : undefined;
+		return Boolean(choice && ('option' in choice || choice.other.trim().length > 0));
+	};
+	const complete = questions.every(answered);
+	const current = questions[Math.min(page, questions.length - 1)];
+	const last = page >= questions.length - 1;
+	const paged = questions.length > 1;
 
 	if (answer) {
 		return (
@@ -191,10 +204,13 @@ function AskCard({
 							: `“${choice.other}”`
 						: undefined;
 					return (
-						<div key={question.id} className="flex flex-wrap items-center gap-x-2 gap-y-1">
-							<CircleHelp aria-hidden="true" className="size-4 shrink-0 text-muted-foreground" />
-							<p className="min-w-0 text-pretty text-sm text-foreground [overflow-wrap:anywhere]">{question.question}</p>
-							{label ? <AnswerChip>{label}</AnswerChip> : <AnswerChip muted>Skipped</AnswerChip>}
+						// The icon keeps its own column, so a long question wraps beside it instead of below it.
+						<div key={question.id} className="flex items-start gap-2">
+							<CircleHelp aria-hidden="true" className="mt-0.5 size-4 shrink-0 text-muted-foreground" />
+							<div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
+								<p className="min-w-0 text-pretty text-sm text-foreground [overflow-wrap:anywhere]">{question.question}</p>
+								{label ? <AnswerChip>{label}</AnswerChip> : <AnswerChip muted>Skipped</AnswerChip>}
+							</div>
 						</div>
 					);
 				})}
@@ -206,35 +222,61 @@ function AskCard({
 		<div
 			data-slot="ask-card"
 			data-state="open"
-			className={cn('flex animate-[ai-fade-up_var(--duration-slow)_var(--ease-out)_both] flex-col gap-3 rounded-xl bg-card p-2 shadow-card motion-reduce:animate-none', className)}
+			className={cn('flex animate-[ai-fade-up_var(--duration-slow)_var(--ease-out)_both] flex-col gap-3 rounded-xl bg-card p-3 shadow-card motion-reduce:animate-none', className)}
 			{...props}
 		>
-			{questions.map((question) => (
-				<AskQuestionField
-					key={question.id}
-					question={question}
-					choice={choices[question.id]}
-					disabled={disabled}
-					otherLabel={otherLabel}
-					onChoose={(choice) =>
-						setChoices((current) => {
-							const next = { ...current };
-							if (choice) next[question.id] = choice;
-							else delete next[question.id];
-							return next;
-						})
-					}
-				/>
-			))}
+			{eyebrow ? <div className="-mb-1 flex min-h-4 items-center gap-1.5 text-xs text-muted-foreground [&_svg]:size-3.5 [&_svg]:shrink-0">{eyebrow}</div> : null}
+			{current ? (
+				// Keyed by question, so each page enters on its own.
+				<div key={current.id} className="animate-[ai-fade-up_var(--duration-slow)_var(--ease-out)_both] motion-reduce:animate-none">
+					<AskQuestionField
+						question={current}
+						choice={choices[current.id]}
+						disabled={disabled}
+						otherLabel={otherLabel}
+						icon={icon}
+						onChoose={(choice) =>
+							setChoices((value) => {
+								const next = { ...value };
+								if (choice) next[current.id] = choice;
+								else delete next[current.id];
+								return next;
+							})
+						}
+					/>
+				</div>
+			) : null}
 			<div className="flex flex-wrap items-center gap-2">
-				<Button size="xs" disabled={disabled || !complete} onClick={() => onSubmit?.(choices)}>
-					{continueLabel}
-				</Button>
-				{onSkip ? (
-					<Button size="xs" variant="outline" disabled={disabled} onClick={onSkip}>
-						{skipLabel}
-					</Button>
+				{paged ? (
+					<div className="-ms-1 flex items-center text-xs text-muted-foreground tabular-nums">
+						<Button size="icon-xs" variant="ghost" aria-label="Previous question" disabled={page === 0} onClick={() => setPage(page - 1)}>
+							<ChevronUp aria-hidden="true" />
+						</Button>
+						<span aria-hidden="true">
+							{page + 1}/{questions.length}
+						</span>
+						<span className="sr-only">
+							Question {page + 1} of {questions.length}
+						</span>
+						<Button size="icon-xs" variant="ghost" aria-label="Next question" disabled={last || !answered(current)} onClick={() => setPage(page + 1)}>
+							<ChevronDown aria-hidden="true" />
+						</Button>
+					</div>
 				) : null}
+				<div className="ms-auto flex flex-wrap items-center gap-1.5">
+					{onSkip ? (
+						<Button size="sm" variant="secondary" disabled={disabled} onClick={onSkip}>
+							{skipLabel}
+						</Button>
+					) : null}
+					<Button
+						size="sm"
+						disabled={disabled || (last ? !complete : !answered(current))}
+						onClick={() => (last ? onSubmit?.(choices) : setPage(page + 1))}
+					>
+						{continueLabel}
+					</Button>
+				</div>
 			</div>
 		</div>
 	);

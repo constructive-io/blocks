@@ -1,10 +1,11 @@
 'use client';
 
-import { Bot, Check, ChevronRight, Hand, Sparkles, Square, Zap } from 'lucide-react';
+import { Bot, Check, ChevronRight, CircleAlert, Clock3, Hand, MessageCircleQuestion, RotateCcw, Sparkles, Square, Zap } from 'lucide-react';
 import * as React from 'react';
 
 import { cn } from '../../lib/utils';
 import { ApprovalCard } from '../ai/approval-card';
+import { type AskChoice, AskCard } from '../ai/ask-card';
 import { ChatContainer } from '../ai/chat-container';
 import { CodeBlock } from '../ai/code-block';
 import { FeedbackBar } from '../ai/feedback-bar';
@@ -14,18 +15,40 @@ import { Reasoning } from '../ai/reasoning';
 import { Source, Sources } from '../ai/source';
 import { ThinkingStatus } from '../ai/thinking-status';
 import { ToolTrace } from '../ai/tool-trace';
+import { Button } from '../button';
 import { Spinner } from '../spinner';
 import { useAgentsBuilder } from './agents-builder-context';
 import { Composer } from './composer';
 import { IntegrationMark } from './integration-mark';
 import { enterClass, focusRingClass, SurfaceBody, surfaceInsetClass, ToneBadge, TooltipIconButton, useInert } from '../workspace-kit/primitives';
+import { useLatest } from '../workspace-kit/use-latest';
 import { RevealText } from './reveal-text';
 import { usePlaybackClock } from './playback';
-import type { AgentRunScript, RunApproval, RunQuery, ToolStep } from './types';
+import type { AgentRunScript, RunApproval, RunFailure, RunQuery, RunQuestion, ToolStep } from './types';
 import { type AgentRunState, RUN_TIMING, type RunGroupPlay } from './use-agent-run';
 
 const GROUP_ICON = { subagents: <Bot />, skills: <Sparkles /> } as const;
 const GROUP_NOUN = { subagents: ['agent', 'agents'], skills: ['skill', 'skills'] } as const;
+
+// Status lines for the cards a run stops on. Static, so they are built once.
+const APPROVAL_EYEBROW = (
+	<>
+		<Hand aria-hidden="true" className="text-warning-foreground" />
+		Waiting for your approval
+	</>
+);
+const QUESTION_EYEBROW = (
+	<>
+		<MessageCircleQuestion aria-hidden="true" className="text-primary" />
+		Waiting for your answer
+	</>
+);
+const QUEUED_EYEBROW = (
+	<>
+		<Clock3 aria-hidden="true" />
+		Queued
+	</>
+);
 
 type RunGroupProps = {
 	group: AgentRunScript['groups'][number];
@@ -148,22 +171,51 @@ function ResultTable({ query }: { query: RunQuery }) {
 
 type Decision = 'approved' | 'skipped' | null;
 
-/** Plays the approved tool calls one by one, then reports whether they finished. */
-function useApprovedSteps(steps: ToolStep[], decision: Decision) {
-	const [done, setDone] = React.useState(0);
-	const running = decision === 'approved' && done < steps.length;
+/** Chosen option ids by question id, `'skipped'`, or `null` while unanswered. */
+type Answer = Record<string, string[]> | 'skipped' | null;
+
+/**
+ * Plays a gate's tool calls one by one once `active`, then reports whether
+ * they finished. `settled` starts with every call done, for a past run.
+ */
+function useGateSteps(steps: ToolStep[], active: boolean, settled: boolean) {
+	const [done, setDone] = React.useState(settled ? steps.length : 0);
+	const running = active && done < steps.length;
 	usePlaybackClock(running ? { delay: done === 0 ? RUN_TIMING.stepsSpin : RUN_TIMING.stepWork } : undefined, false, () =>
 		setDone((value) => value + 1),
 	);
-	return { done, finished: decision === 'skipped' || (decision === 'approved' && done >= steps.length) };
+	return { done, finished: done >= steps.length };
+}
+
+/** A gate's follow-up tool calls as a live trace, then the agent's reply once they finish. */
+function GateOutcome({ steps, done, reply }: { steps: ToolStep[] | null; done: number; reply: string }) {
+	const { integration } = useAgentsBuilder();
+	return (
+		<>
+			{steps ? (
+				<ToolTrace
+					title="Write tools"
+					steps={steps.map((step, index) => ({
+						id: step.id,
+						label: step.label,
+						icon: <IntegrationMark integration={integration(step.integrationId)} bare />,
+						status: index < done ? 'done' : index === done ? 'running' : 'pending',
+					}))}
+				/>
+			) : null}
+			{!steps || done >= steps.length ? (
+				<RevealText text={reply} revealing duration={reply.length * RUN_TIMING.charMs} className="leading-[22px] text-foreground" />
+			) : null}
+		</>
+	);
 }
 
 function ApprovalBlock({ approval, decision, done, onDecide }: { approval: RunApproval; decision: Decision; done: number; onDecide: (approved: boolean) => void }) {
-	const { integration } = useAgentsBuilder();
 	if (!decision) {
 		return (
 			<ApprovalCard
-				className={cn('max-w-none', enterClass)}
+				className={cn('max-w-none rounded-xl', enterClass)}
+				eyebrow={APPROVAL_EYEBROW}
 				title={approval.title}
 				description={approval.description}
 				preview={<p className="rounded-md bg-muted/60 px-2.5 py-2 text-[0.8125rem] leading-5 text-pretty text-foreground [overflow-wrap:anywhere]">{approval.preview}</p>}
@@ -181,30 +233,152 @@ function ApprovalBlock({ approval, decision, done, onDecide }: { approval: RunAp
 				<Check aria-hidden="true" className={cn('size-3.5 shrink-0', iconEnterClass)} />
 				<span className="min-w-0">{approved ? `You approved: ${approval.confirmLabel}` : `You chose: ${approval.skipLabel}`}</span>
 			</p>
-			{approved ? (
-				<ToolTrace
-					title="Write tools"
-					steps={approval.steps.map((step, index) => ({
-						id: step.id,
-						label: step.label,
-						icon: <IntegrationMark integration={integration(step.integrationId)} bare />,
-						status: index < done ? 'done' : index === done ? 'running' : 'pending',
-					}))}
-				/>
-			) : null}
-			{!approved || done >= approval.steps.length ? (
-				<RevealText
-					text={approved ? approval.approvedText : approval.skippedText}
-					revealing
-					duration={(approved ? approval.approvedText : approval.skippedText).length * RUN_TIMING.charMs}
-					className="leading-[22px] text-foreground"
-				/>
-			) : null}
+			<GateOutcome steps={approved ? approval.steps : null} done={done} reply={approved ? approval.approvedText : approval.skippedText} />
 		</div>
 	);
 }
 
-function CommandBar({ script, status, onStop }: { script: AgentRunScript; status: 'running' | 'awaiting' | 'done'; onStop: () => void }) {
+function answerIds(choice: AskChoice) {
+	return 'option' in choice ? [choice.option] : [choice.other];
+}
+
+/** The question that ends a run: the ask card, then its summary, the follow-up calls, and the agent's reply. */
+function QuestionBlock({
+	question,
+	answer,
+	done,
+	onAnswer,
+}: {
+	question: RunQuestion;
+	answer: Answer;
+	done: number;
+	onAnswer: (answer: Exclude<Answer, null>) => void;
+}) {
+	const questions = question.questions.map((item) => ({
+		id: item.id,
+		question: item.question,
+		options: item.options.map((option) => ({ id: option.id, label: option.label })),
+		allowOther: false,
+	}));
+	if (answer === null) {
+		return (
+			<AskCard
+				className={cn('max-w-none', enterClass)}
+				eyebrow={QUESTION_EYEBROW}
+				icon={null}
+				questions={questions}
+				onSubmit={(choices) => onAnswer(Object.fromEntries(Object.entries(choices).map(([id, choice]) => [id, answerIds(choice)])))}
+				onSkip={() => onAnswer('skipped')}
+			/>
+		);
+	}
+	if (answer === 'skipped') {
+		return (
+			<div className="flex flex-col gap-3">
+				<AskCard className="max-w-none" questions={questions} answer={{ skipped: true }} />
+				<GateOutcome steps={null} done={0} reply={question.skippedText} />
+			</div>
+		);
+	}
+	// Each chosen option adds its own sentence; with none written, the generic reply stands in.
+	const replies = question.questions.flatMap((item) => item.options.filter((option) => answer[item.id]?.includes(option.id) && option.reply).map((option) => option.reply!));
+	const reply = replies.length ? replies.join(' ') : question.answeredText;
+	return (
+		<div className="flex flex-col gap-3">
+			<AskCard
+				className="max-w-none"
+				questions={questions}
+				answer={{ choices: Object.fromEntries(Object.entries(answer).map(([id, [option = '']]) => [id, { option }])) }}
+			/>
+			<GateOutcome steps={question.steps} done={done} reply={reply} />
+		</div>
+	);
+}
+
+/**
+ * The card a run stops on when it cannot go on by itself: a status line, a
+ * title, the body, and its actions on the right, like the approval and
+ * question cards.
+ */
+function StopCard({
+	eyebrow,
+	title,
+	actions,
+	children,
+}: {
+	eyebrow: React.ReactNode;
+	title: React.ReactNode;
+	actions: React.ReactNode;
+	children?: React.ReactNode;
+}) {
+	return (
+		<div className={cn('flex flex-col gap-3 rounded-xl bg-card p-3 shadow-card', enterClass)}>
+			<div className="flex flex-col gap-1.5">
+				<p className="flex min-h-4 min-w-0 items-center gap-1.5 text-xs text-muted-foreground [&_svg]:size-3.5 [&_svg]:shrink-0">{eyebrow}</p>
+				<p className="text-sm font-medium text-pretty text-foreground [overflow-wrap:anywhere]">{title}</p>
+			</div>
+			{children}
+			<div className="flex flex-wrap items-center justify-end gap-1.5">{actions}</div>
+		</div>
+	);
+}
+
+/** Where a failed run stopped: the call that failed, the error, its raw output, and a retry. */
+function FailureBlock({ failure, step, onRetry }: { failure: RunFailure; step?: ToolStep; onRetry?: () => void }) {
+	return (
+		<StopCard
+			eyebrow={
+				<>
+					<CircleAlert aria-hidden="true" className="text-destructive" />
+					<span className="truncate">{step ? `Failed at ${step.label}` : 'Run failed'}</span>
+				</>
+			}
+			title={failure.message}
+			actions={
+				<Button size="sm" onClick={onRetry}>
+					<RotateCcw aria-hidden="true" />
+					{failure.retryLabel ?? 'Retry run'}
+				</Button>
+			}
+		>
+			{failure.log ? <CodeBlock code={failure.log} filename="Output" highlight={false} maxCollapsedLines={false} /> : null}
+		</StopCard>
+	);
+}
+
+/** A run waiting for its slot: when it starts, the plan it will follow, and a way to start it now. */
+function QueuedBlock({ note, plan, onStart }: { note?: string; plan?: string[]; onStart?: () => void }) {
+	return (
+		<StopCard
+			eyebrow={QUEUED_EYEBROW}
+			title={note ?? 'Starts at its next scheduled time.'}
+			actions={
+				<Button size="sm" onClick={onStart}>
+					Run now
+				</Button>
+			}
+		>
+			{plan?.length ? (
+				<div className="flex flex-col gap-1">
+					<p className="text-xs text-muted-foreground">Up next</p>
+					{/* Hung from one rail, like the tool trace, with every step still to come. */}
+					<ol className="ms-2 flex flex-col border-s border-subtle-foreground/25">
+						{plan.map((step, index) => (
+							<li key={step} className="flex min-h-7 items-center gap-2 ps-3 text-[0.8125rem] text-muted-foreground">
+								<span aria-hidden="true" className="w-3 shrink-0 text-xs text-subtle-foreground tabular-nums">
+									{index + 1}
+								</span>
+								<span className="min-w-0 [overflow-wrap:anywhere]">{step}</span>
+							</li>
+						))}
+					</ol>
+				</div>
+			) : null}
+		</StopCard>
+	);
+}
+
+function CommandBar({ script, phase, onStop }: { script: AgentRunScript; phase: RunPhase; onStop: () => void }) {
 	return (
 		<div className="relative z-10 flex h-[50px] shrink-0 items-center gap-3 rounded-xl bg-card px-3 shadow-card">
 			<p title={`${script.command.verb} ${script.command.skill} ${script.command.scope}`} className="flex min-w-0 flex-1 items-center gap-1.5 text-sm whitespace-nowrap text-foreground">
@@ -216,15 +390,20 @@ function CommandBar({ script, status, onStop }: { script: AgentRunScript; status
 				</ToneBadge>
 				<span title={script.command.scope} className="truncate">{script.command.scope}</span>
 			</p>
-			{status === 'done' ? (
+			{phase === 'done' || phase === 'queued' ? (
 				<span className="inline-flex h-6 items-center gap-1 rounded-md bg-muted px-1.5 text-xs text-muted-foreground">
-					<Check aria-hidden="true" className={cn('size-3', iconEnterClass)} />
-					Done
+					{phase === 'done' ? <Check aria-hidden="true" className={cn('size-3', iconEnterClass)} /> : <Clock3 aria-hidden="true" className="size-3" />}
+					{phase === 'done' ? 'Done' : 'Queued'}
 				</span>
-			) : status === 'awaiting' ? (
-				<ToneBadge tone="warning" className="h-6">
-					<Hand aria-hidden="true" />
+			) : phase === 'approval' || phase === 'input' ? (
+				<ToneBadge tone={phase === 'approval' ? 'warning' : 'primary'} className="h-6">
+					{phase === 'approval' ? <Hand aria-hidden="true" /> : <MessageCircleQuestion aria-hidden="true" />}
 					Needs you
+				</ToneBadge>
+			) : phase === 'failed' ? (
+				<ToneBadge tone="danger" className="h-6">
+					<CircleAlert aria-hidden="true" />
+					Failed
 				</ToneBadge>
 			) : (
 				<TooltipIconButton
@@ -240,24 +419,90 @@ function CommandBar({ script, status, onStop }: { script: AgentRunScript; status
 	);
 }
 
+/** Where the run stands, as the sidebar roster shows it. */
+type RunPhase = 'queued' | 'running' | 'approval' | 'input' | 'failed' | 'done';
+
 type AgentRunPanelProps = {
 	script: AgentRunScript;
 	state: AgentRunState;
 	onStop: () => void;
+	/** Called whenever the run starts waiting on a person, resumes, or completes. */
+	onPhaseChange?: (phase: RunPhase) => void;
+	/** Brings the decision or the failure into view and focus once it shows, e.g. when the agent opened to decide. */
+	focusStop?: boolean;
+	/** A past run: its approval or question shows as already settled, with every follow-up call done. */
+	resolved?: boolean;
+	/** Holds the run before it starts; the panel offers "Run now". */
+	queued?: boolean;
+	/** When a queued run starts, e.g. "Starts at 09:00 UTC." */
+	queuedNote?: string;
+	onStart?: () => void;
+	onRetry?: () => void;
 };
 
 /**
  * The current run, narrated: command bar, streamed notes, the tool trace,
  * sub-agent and skill fan-out, live thinking status, and a follow-up composer.
  */
-function AgentRunPanel({ script, state, onStop }: AgentRunPanelProps) {
-	const { integration, emit, data } = useAgentsBuilder();
+function AgentRunPanel({
+	script,
+	state,
+	onStop,
+	onPhaseChange,
+	focusStop = false,
+	resolved = false,
+	queued = false,
+	queuedNote,
+	onStart,
+	onRetry,
+}: AgentRunPanelProps) {
+	const { integration, emit, currentAgent } = useAgentsBuilder();
+	const agentId = currentAgent.agent.id;
 	const [followUps, setFollowUps] = React.useState<string[]>([]);
-	const [decision, setDecision] = React.useState<Decision>(null);
-	const approvedSteps = useApprovedSteps(script.approval?.steps ?? [], decision);
+	// A past run settled its gate long ago: approved, or answered with the first options.
+	const [decision, setDecision] = React.useState<Decision>(resolved && script.approval ? 'approved' : null);
+	const [answer, setAnswer] = React.useState<Answer>(() =>
+		resolved && script.question && !script.approval
+			? Object.fromEntries(script.question.questions.map((item) => [item.id, item.options[0] ? [item.options[0].id] : []]))
+			: null,
+	);
+	const approvedSteps = useGateSteps(script.approval?.steps ?? [], decision === 'approved', resolved);
+	const answeredSteps = useGateSteps(script.question?.steps ?? [], answer !== null && answer !== 'skipped', resolved);
 	const startedGroups = script.groups.filter((group) => state[group.id].state !== 'waiting');
-	const awaiting = Boolean(script.approval) && state.approval && !decision;
-	const complete = state.settled && (!script.approval || approvedSteps.finished);
+	const failed = state.failedStep !== null;
+	const awaitingApproval = Boolean(script.approval) && state.approval && !decision;
+	const awaitingAnswer = Boolean(script.question) && state.question && answer === null;
+	const gateFinished = script.approval
+		? decision === 'skipped' || (decision === 'approved' && approvedSteps.finished)
+		: script.question
+			? answer === 'skipped' || (answer !== null && answeredSteps.finished)
+			: true;
+	const complete = state.settled && !failed && gateFinished;
+	const phase: RunPhase = queued
+		? 'queued'
+		: failed
+			? 'failed'
+			: complete
+				? 'done'
+				: awaitingApproval
+					? 'approval'
+					: awaitingAnswer
+						? 'input'
+						: 'running';
+	const stopped = phase === 'approval' || phase === 'input' || phase === 'failed';
+	const onPhaseChangeRef = useLatest(onPhaseChange);
+	const stopRef = React.useRef<HTMLDivElement>(null);
+	const stopFocused = React.useRef(false);
+
+	React.useEffect(() => onPhaseChangeRef.current?.(phase), [onPhaseChangeRef, phase]);
+
+	React.useEffect(() => {
+		// Only the first time the run stops; afterwards focus stays where the person put it.
+		if (!focusStop || !stopped || stopFocused.current) return;
+		stopFocused.current = true;
+		stopRef.current?.scrollIntoView({ block: 'center' });
+		stopRef.current?.focus({ preventScroll: true });
+	}, [focusStop, stopped]);
 	const plan = script.plan && {
 		steps: script.plan.map((label, index) => {
 			const done = index < state.planDone || (complete && index === script.plan!.length - 1);
@@ -270,7 +515,7 @@ function AgentRunPanel({ script, state, onStop }: AgentRunPanelProps) {
 			<div className="group/run relative flex min-h-0 flex-1 flex-col">
 				<CommandBar
 					script={script}
-					status={complete ? 'done' : awaiting ? 'awaiting' : 'running'}
+					phase={phase}
 					onStop={() => {
 						onStop();
 						emit({ type: 'stop-run' });
@@ -282,7 +527,7 @@ function AgentRunPanel({ script, state, onStop }: AgentRunPanelProps) {
 				/>
 				<ChatContainer className="-mt-2.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
 					<div className="flex flex-col gap-5 pt-6 pb-10">
-						{plan ? <PlanTracker plan={plan} streaming={!complete} flushBottom={false} className="px-3" /> : null}
+						{plan && !queued ? <PlanTracker plan={plan} streaming={!complete} flushBottom={false} className="px-3" /> : null}
 						{script.reasoning && state.reasoning !== 'hidden' ? (
 							<Reasoning
 								className="-my-2 px-1.5"
@@ -303,11 +548,13 @@ function AgentRunPanel({ script, state, onStop }: AgentRunPanelProps) {
 						{state.shownSteps > 0 ? (
 							<ToolTrace
 								className="px-3"
-								steps={script.steps.map((step, index) => ({
+								// Calls after a failure never ran, so they are not listed.
+								steps={script.steps.slice(0, failed ? state.failedStep! + 1 : undefined).map((step, index) => ({
 									id: step.id,
 									label: step.label,
 									icon: <IntegrationMark integration={integration(step.integrationId)} bare />,
-									status: index < state.doneSteps ? 'done' : index === state.doneSteps ? 'running' : 'pending',
+									status:
+										index === state.failedStep ? 'error' : index < state.doneSteps ? 'done' : index === state.doneSteps ? 'running' : 'pending',
 								}))}
 							/>
 						) : null}
@@ -348,16 +595,39 @@ function AgentRunPanel({ script, state, onStop }: AgentRunPanelProps) {
 							</Sources>
 						) : null}
 						{script.approval && state.approval ? (
-							<div className="px-3">
+							<div ref={stopRef} tabIndex={-1} role="group" aria-label={script.approval.title} className="px-3 outline-none">
 								<ApprovalBlock
 									approval={script.approval}
 									decision={decision}
 									done={approvedSteps.done}
 									onDecide={(approved) => {
 										setDecision(approved ? 'approved' : 'skipped');
-										emit({ type: 'approve-run', agentId: data.agent.id, approved });
+										emit({ type: 'approve-run', agentId, approved });
 									}}
 								/>
+							</div>
+						) : null}
+						{script.question && !script.approval && state.question ? (
+							<div ref={stopRef} tabIndex={-1} role="group" aria-label={script.question.title} className="px-3 outline-none">
+								<QuestionBlock
+									question={script.question}
+									answer={answer}
+									done={answeredSteps.done}
+									onAnswer={(next) => {
+										setAnswer(next);
+										emit({ type: 'answer-run', agentId, answers: next === 'skipped' ? null : next });
+									}}
+								/>
+							</div>
+						) : null}
+						{failed && script.failure ? (
+							<div ref={stopRef} tabIndex={-1} role="group" aria-label="Run failed" className="px-3 outline-none">
+								<FailureBlock failure={script.failure} step={script.steps.find((step) => step.id === script.failure?.stepId)} onRetry={onRetry} />
+							</div>
+						) : null}
+						{queued ? (
+							<div className="px-3">
+								<QueuedBlock note={queuedNote} plan={script.plan} onStart={onStart} />
 							</div>
 						) : null}
 						{followUps.map((text, index) => (
@@ -373,12 +643,7 @@ function AgentRunPanel({ script, state, onStop }: AgentRunPanelProps) {
 								</p>
 								<FeedbackBar showRegenerate={false} copyText={script.findings?.paragraphs.join('\n\n')} />
 							</div>
-						) : awaiting ? (
-							<p className="flex h-7 items-center gap-2 px-3 text-[0.8125rem] text-muted-foreground">
-								<Hand aria-hidden="true" className="size-3.5" />
-								Waiting for your approval
-							</p>
-						) : state.settled ? null : (
+						) : state.settled || queued || awaitingApproval || awaitingAnswer ? null : (
 							<ThinkingStatus
 								className="px-3"
 								elapsedSeconds={script.thinking.seconds}
@@ -407,3 +672,4 @@ function AgentRunPanel({ script, state, onStop }: AgentRunPanelProps) {
 }
 
 export { AgentRunPanel };
+export type { AgentRunPanelProps, RunPhase };

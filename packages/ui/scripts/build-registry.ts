@@ -96,6 +96,7 @@ const clientFiles = new Set([
 	'storage-empty-state.tsx',
 	'upload-dropzone.tsx',
 	'agent-canvas.tsx',
+	'agent-status.tsx',
 	'agent-run-panel.tsx',
 	'agent-view.tsx',
 	'agents-builder-context.tsx',

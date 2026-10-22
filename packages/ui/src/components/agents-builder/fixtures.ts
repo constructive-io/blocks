@@ -1,8 +1,10 @@
 import { DEMO_FALLBACK_REPLY, DEMO_FOLLOW_UP_REPLY, DEMO_RECOMMENDATIONS } from './demo-conversations';
 import { DEMO_INBOX } from './demo-inbox';
+import { DEMO_AGENT_DETAILS } from './demo-agents';
 import { DEMO_CLOCK, DEMO_SCHEDULES } from './demo-schedules';
 import { DEMO_INTEGRATIONS } from './demo-integrations';
 import type {
+	AgentProject,
 	AgentBlueprint,
 	AgentRunScript,
 	AgentsBuilderData,
@@ -14,7 +16,7 @@ import type {
 	StarterPack,
 } from './types';
 
-export { DEMO_CLOCK, DEMO_FALLBACK_REPLY, DEMO_FOLLOW_UP_REPLY, DEMO_INBOX, DEMO_INTEGRATIONS, DEMO_RECOMMENDATIONS, DEMO_SCHEDULES };
+export { DEMO_AGENT_DETAILS, DEMO_CLOCK, DEMO_FALLBACK_REPLY, DEMO_FOLLOW_UP_REPLY, DEMO_INBOX, DEMO_INTEGRATIONS, DEMO_RECOMMENDATIONS, DEMO_SCHEDULES };
 
 // Demo workspace for docs, Storybook, and local exploration. Replace every
 // collection with host data; nothing here is fetched or persisted.
@@ -119,20 +121,26 @@ export const DEMO_MODELS: ModelOption[] = [
 	},
 ];
 
+export const DEMO_PROJECTS: AgentProject[] = [
+	{ id: 'revenue', name: 'Revenue' },
+	{ id: 'data-platform', name: 'Data platform' },
+	{ id: 'governance', name: 'Governance' },
+];
+
 export const DEMO_AGENTS: AgentSummary[] = [
-	{ id: 'revenue-analyst', name: 'Revenue Analyst', running: true },
-	{ id: 'churn-radar', name: 'Churn Radar' },
-	{ id: 'data-quality-monitor', name: 'Data Quality Monitor', running: true },
-	{ id: 'schema-steward', name: 'Schema Steward' },
-	{ id: 'metrics-librarian', name: 'Metrics Librarian' },
-	{ id: 'forecast-planner', name: 'Forecast Planner' },
-	{ id: 'board-report-writer', name: 'Board Report Writer' },
-	{ id: 'query-optimizer', name: 'Query Optimizer' },
-	{ id: 'cohort-builder', name: 'Cohort Builder' },
-	{ id: 'access-auditor', name: 'Access Auditor' },
-	{ id: 'pipeline-doctor', name: 'Pipeline Doctor' },
-	{ id: 'dashboard-curator', name: 'Dashboard Curator' },
-	{ id: 'anomaly-watch', name: 'Anomaly Watch' },
+	{ id: 'revenue-analyst', projectId: 'revenue', name: 'Revenue Analyst', status: 'approval', statusNote: 'Post the summary to #revenue?' },
+	{ id: 'churn-radar', projectId: 'revenue', name: 'Churn Radar', status: 'running' },
+	{ id: 'data-quality-monitor', projectId: 'data-platform', name: 'Data Quality Monitor', status: 'failed', statusNote: 'Column orders_daily.loaded_at no longer exists.' },
+	{ id: 'schema-steward', projectId: 'data-platform', name: 'Schema Steward', status: 'input', statusNote: 'Which schema should own the new billing tables?' },
+	{ id: 'metrics-librarian', projectId: 'data-platform', name: 'Metrics Librarian', unread: true, statusNote: 'Renamed 3 metrics to match the finance glossary.' },
+	{ id: 'forecast-planner', projectId: 'revenue', name: 'Forecast Planner', status: 'queued', statusNote: 'The October forecast starts at 09:30 UTC.' },
+	{ id: 'board-report-writer', projectId: 'revenue', name: 'Board Report Writer' },
+	{ id: 'query-optimizer', projectId: 'data-platform', name: 'Query Optimizer' },
+	{ id: 'cohort-builder', projectId: 'revenue', name: 'Cohort Builder' },
+	{ id: 'access-auditor', projectId: 'governance', name: 'Access Auditor' },
+	{ id: 'pipeline-doctor', projectId: 'data-platform', name: 'Pipeline Doctor' },
+	{ id: 'dashboard-curator', projectId: 'governance', name: 'Dashboard Curator' },
+	{ id: 'anomaly-watch', projectId: 'data-platform', name: 'Anomaly Watch' },
 ];
 
 export const DEMO_SKILLS: Skill[] = [
@@ -352,6 +360,7 @@ export const AGENTS_BUILDER_DEMO: AgentsBuilderData = {
 	categories: DEMO_CATEGORIES,
 	featuredIntegrationIds: ['postgres', 'snowflake', 'stripe', 'dbt', 'hubspot', 'slack', 'notion', 'github'],
 	agents: DEMO_AGENTS,
+	projects: DEMO_PROJECTS,
 	inbox: DEMO_INBOX,
 	schedules: DEMO_SCHEDULES,
 	clock: DEMO_CLOCK,
@@ -362,6 +371,7 @@ export const AGENTS_BUILDER_DEMO: AgentsBuilderData = {
 	followUpReply: DEMO_FOLLOW_UP_REPLY,
 	agent: DEMO_AGENT,
 	run: DEMO_RUN,
+	agentDetails: DEMO_AGENT_DETAILS,
 	heroHighlights: DEMO_HERO_HIGHLIGHTS,
 	usage: { percent: 80 },
 };
