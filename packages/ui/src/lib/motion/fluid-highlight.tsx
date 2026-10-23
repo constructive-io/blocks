@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { motion, useReducedMotion } from 'motion/react';
 
 import { cn } from '../utils';
@@ -24,6 +24,24 @@ const TARGET_SELECTOR =
 const OBSERVED_ATTRIBUTES = ['data-highlighted', 'data-selected', 'data-pressed'];
 
 /**
+ * Where `target` sits inside `container`, in the container's own unscaled pixels. Popups scale in from 95%, and a
+ * transform changes no attribute or size to re-measure on, so a rect read on the first frame is shrunken; dividing
+ * by the container's current scale gives the size and offset it settles at. Pass `box` when the caller has already
+ * measured the container.
+ */
+export function unscaledRect(target: Element, container: HTMLElement, box = container.getBoundingClientRect()): Rect {
+	const t = target.getBoundingClientRect();
+	const scaleX = box.width / container.offsetWidth || 1;
+	const scaleY = box.height / container.offsetHeight || 1;
+	return {
+		top: (t.top - box.top) / scaleY,
+		left: (t.left - box.left) / scaleX,
+		width: t.width / scaleX,
+		height: t.height / scaleY,
+	};
+}
+
+/**
  * Track the highlighted descendant of `container` and return its rect in the
  * container's padding-box coordinates. Updates on highlight changes, DOM
  * mutations, and any nested scroll (scroll doesn't bubble, so capture).
@@ -40,14 +58,13 @@ function useFluidHighlight(container: HTMLElement | null): { rect: Rect; visible
 				setState((s) => (s ? { ...s, visible: false } : s));
 				return;
 			}
-			const t = target.getBoundingClientRect();
-			const c = container.getBoundingClientRect();
+			// Unscaled, or a popup still scaling in leaves the highlight at the shrunken size of its first frame.
+			const offset = unscaledRect(target, container);
 			setState({
 				rect: {
-					top: t.top - c.top - container.clientTop + container.scrollTop,
-					left: t.left - c.left - container.clientLeft,
-					width: t.width,
-					height: t.height,
+					...offset,
+					top: offset.top - container.clientTop + container.scrollTop,
+					left: offset.left - container.clientLeft,
 				},
 				visible: true,
 			});
@@ -96,9 +113,10 @@ export function FluidHighlight({ className, inset = 0 }: { className?: string; i
 	const reduce = useReducedMotion();
 	const tier = useSpringTiers().fast;
 
-	const mountRef = (el: HTMLElement | null) => {
+	// Stable, so React doesn't detach and reattach it (and set state again) on every render.
+	const mountRef = useCallback((el: HTMLElement | null) => {
 		setContainer((el?.offsetParent as HTMLElement | null) ?? el?.parentElement ?? null);
-	};
+	}, []);
 
 	const rect = state
 		? {

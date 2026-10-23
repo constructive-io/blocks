@@ -94,7 +94,7 @@ function Reasoning({
 		>
 			<CollapsibleTrigger
 				className={cn(
-					'group flex w-fit max-w-full items-center gap-1.5 rounded-md px-1.5 py-1.5 text-start text-[0.8125rem]',
+					'group -mx-1.5 flex w-fit max-w-full items-center gap-1.5 rounded-md px-1.5 py-1.5 text-start text-[0.8125rem]',
 					'text-muted-foreground transition-[box-shadow] duration-(--duration-moderate) hover:bg-accent hover:text-foreground',
 					'focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50',
 				)}

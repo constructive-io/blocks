@@ -293,6 +293,35 @@ export const constructiveTheme = {
 		'#__next, [data-nextjs-root-layout]': {
 			isolation: 'isolate',
 		},
+		// Thin overlay scrollbars on fine pointers — rests at a 14% foreground
+		// tint, deepens on hover/drag; touch keeps its native momentum bars. In the
+		// base layer, so a utility such as `scrollbar-hide` on one element still wins.
+		'@media (pointer: fine)': {
+			'*': {
+				'scrollbar-width': 'thin',
+				'scrollbar-color':
+					'color-mix(in oklch, var(--foreground) 14%, transparent) transparent',
+			},
+			'::-webkit-scrollbar': {
+				width: '10px',
+				height: '10px',
+			},
+			'::-webkit-scrollbar-track, ::-webkit-scrollbar-corner': {
+				background: 'transparent',
+			},
+			'::-webkit-scrollbar-thumb': {
+				'background-color': 'color-mix(in oklch, var(--foreground) 14%, transparent)',
+				border: '3px solid transparent',
+				'background-clip': 'content-box',
+				'border-radius': '9999px',
+			},
+			'::-webkit-scrollbar-thumb:hover': {
+				'background-color': 'color-mix(in oklch, var(--foreground) 20%, transparent)',
+			},
+			'::-webkit-scrollbar-thumb:active': {
+				'background-color': 'color-mix(in oklch, var(--foreground) 26%, transparent)',
+			},
+		},
 		'@media (prefers-reduced-motion: reduce)': {
 			'*, *::before, *::after': {
 				'scroll-behavior': 'auto !important',
@@ -454,34 +483,6 @@ export const constructiveTheme = {
 	globalCss: {
 		'[data-slot="portal-root"] > *': {
 			'pointer-events': 'auto',
-		},
-		// Thin overlay scrollbars on fine pointers — rests at a 14% foreground
-		// tint, deepens on hover/drag; touch keeps its native momentum bars.
-		'@media (pointer: fine)': {
-			'*': {
-				'scrollbar-width': 'thin',
-				'scrollbar-color':
-					'color-mix(in oklch, var(--foreground) 14%, transparent) transparent',
-			},
-			'::-webkit-scrollbar': {
-				width: '10px',
-				height: '10px',
-			},
-			'::-webkit-scrollbar-track, ::-webkit-scrollbar-corner': {
-				background: 'transparent',
-			},
-			'::-webkit-scrollbar-thumb': {
-				'background-color': 'color-mix(in oklch, var(--foreground) 14%, transparent)',
-				border: '3px solid transparent',
-				'background-clip': 'content-box',
-				'border-radius': '9999px',
-			},
-			'::-webkit-scrollbar-thumb:hover': {
-				'background-color': 'color-mix(in oklch, var(--foreground) 20%, transparent)',
-			},
-			'::-webkit-scrollbar-thumb:active': {
-				'background-color': 'color-mix(in oklch, var(--foreground) 26%, transparent)',
-			},
 		},
 	},
 } as const satisfies ConstructiveThemeDefinition;

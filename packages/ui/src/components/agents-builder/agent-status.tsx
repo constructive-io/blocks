@@ -16,7 +16,7 @@ function isInFlight(status: AgentStatus) {
 }
 
 /** Paused on a person: opening the agent jumps straight to the decision. */
-function isWaitingOnYou(status: AgentStatus) {
+function isWaitingOnYou(status: StatusSignal) {
 	return status === 'approval' || status === 'input';
 }
 
@@ -57,10 +57,17 @@ function hasStatusTag(status: AgentStatus): status is TaggedStatus {
 /** A state an indicator draws: an agent's status, or a finished run whose result waits to be read. */
 type StatusSignal = AgentStatus | 'done';
 
+/**
+ * What an indicator draws for anything that runs, such as an agent or a coding session: its status, or `done` while
+ * the result of a finished run is unread.
+ */
+function statusSignal({ status = 'idle', unread }: { status?: StatusSignal; unread?: boolean }): StatusSignal {
+	return status === 'idle' && unread ? 'done' : status;
+}
+
 /** What the roster draws for an agent: its status, or `done` while a fresh result is unread. */
 function agentSignal(agent: AgentSummary): StatusSignal {
-	const status = agentStatus(agent);
-	return status === 'idle' && agent.unread ? 'done' : status;
+	return statusSignal({ status: agentStatus(agent), unread: agent.unread });
 }
 
 /** Colour belongs to the states that need you; everything else stays grey. */
@@ -341,6 +348,7 @@ export {
 	StatusGlyph,
 	StatusLabel,
 	statusPhrase,
+	statusSignal,
 	TAG_WORD,
 	visibleRoster,
 };

@@ -2,6 +2,7 @@
 
 import * as React from 'react';
 
+import { useMergedRefs } from '../../lib/compose-refs';
 import { cn } from '../../lib/utils';
 
 type ChatContainerContextValue = {
@@ -36,9 +37,12 @@ function ChatContainer({
 	children,
 	bottomThreshold = 48,
 	autoScroll = true,
+	ref,
 	...props
 }: ChatContainerProps) {
 	const scrollRef = React.useRef<HTMLDivElement>(null);
+	// The caller's ref joins the container's own, so passing one can't cut off the stick-to-bottom tracking.
+	const mergedRef = useMergedRefs(scrollRef, ref);
 	const [isAtBottom, setIsAtBottom] = React.useState(true);
 	const isAtBottomRef = React.useRef(true);
 
@@ -87,7 +91,7 @@ function ChatContainer({
 	return (
 		<ChatContainerContext.Provider value={{ scrollRef, isAtBottom, scrollToBottom }}>
 			<div
-				ref={scrollRef}
+				ref={mergedRef}
 				data-slot="chat-container"
 				data-at-bottom={isAtBottom ? 'true' : 'false'}
 				className={cn('relative min-h-0 flex-1 overflow-y-auto overscroll-contain', className)}

@@ -7,7 +7,7 @@ import { prefersReducedMotion } from '../workspace-kit/reduced-motion';
 export { prefersReducedMotion, useReducedMotion } from '../workspace-kit/reduced-motion';
 
 /** Longest wait, in milliseconds, between scripted steps when reduced motion is requested. */
-const REDUCED_MOTION_DELAY = 40;
+export const REDUCED_MOTION_DELAY = 40;
 
 /**
  * Drives a queue of timed steps: waits `head.delay` and then calls `onDue`,

@@ -75,6 +75,8 @@ function MessageContent({
 		return (
 			<Markdown
 				data-slot="message-content"
+				// Each message sets its own direction, so a reply in one script reads right inside a UI in another.
+				dir="auto"
 				streaming={streaming}
 				className={contentClassName}
 				{...props}
@@ -85,7 +87,7 @@ function MessageContent({
 	}
 
 	return (
-		<div data-slot="message-content" className={contentClassName} {...props}>
+		<div data-slot="message-content" dir="auto" className={contentClassName} {...props}>
 			{children}
 		</div>
 	);

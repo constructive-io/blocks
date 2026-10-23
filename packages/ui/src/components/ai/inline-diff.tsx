@@ -104,7 +104,7 @@ function InlineDiff({ source, className, maxLines = 40 }: InlineDiffProps) {
 			</pre>
 			{hidden > 0 ? (
 				<div className="border-t border-border px-2.5 py-1 text-[0.6875rem] text-muted-foreground">
-					+{hidden} more lines
+					{hidden} more {hidden === 1 ? 'line' : 'lines'}
 				</div>
 			) : null}
 		</div>

@@ -85,14 +85,29 @@ function CommandInput({
   );
 }
 
+/**
+ * Small pickers such as a model or worktree list pack their rows tighter than a command palette: 4px of padding,
+ * a thin scrollbar, and group headings in small, quiet text so the rows carry the weight.
+ */
+const COMPACT_LIST_CLASS =
+  "[scrollbar-width:thin] scroll-py-1 p-1 not-empty:scroll-py-1 not-empty:p-1 [&_[cmdk-group-heading]]:px-2 [&_[cmdk-group-heading]]:pt-2 [&_[cmdk-group-heading]]:pb-1 [&_[cmdk-group-heading]]:text-[0.6875rem] [&_[cmdk-group-heading]]:font-normal [&_[cmdk-group-heading]]:text-subtle-foreground";
+
 function CommandList({
   className,
   children,
+  density = "default",
   ...props
-}: React.ComponentProps<typeof CommandPrimitive.List>) {
+}: React.ComponentProps<typeof CommandPrimitive.List> & {
+  /** `compact` is for small pickers in a popover; the default suits a full command palette. */
+  density?: "default" | "compact";
+}) {
   return (
     <CommandPrimitive.List
-      className={cn("relative not-empty:scroll-py-2 not-empty:p-2 max-h-[300px] overflow-y-auto overflow-x-hidden", className)}
+      className={cn(
+        "relative not-empty:scroll-py-2 not-empty:p-2 max-h-[300px] overflow-y-auto overflow-x-hidden",
+        density === "compact" && COMPACT_LIST_CLASS,
+        className,
+      )}
       data-slot="command-list"
       {...props}
     >
