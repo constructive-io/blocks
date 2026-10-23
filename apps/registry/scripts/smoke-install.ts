@@ -364,6 +364,7 @@ export function AiRegistrySmokeConsumer() {
 			'src/design-system/primitives/portal.tsx',
 			'src/design-system/primitives/spinner.tsx',
 			'src/design-system/primitives/tooltip.tsx',
+			'src/shared/compose-refs.ts',
 			'src/shared/motion/fluid-highlight.tsx',
 			'src/shared/motion/tuning.ts',
 			'src/shared/slot.tsx',
