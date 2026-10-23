@@ -849,6 +849,7 @@
     "@storybook/addon-a11y": "^10.1.11",
     "@storybook/react-vite": "^10.1.11",
     "@tailwindcss/postcss": "^4.1.18",
+    "@tanstack/react-query": "^5.90.16",
     "@types/node": "^20.19.27",
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.2.3",

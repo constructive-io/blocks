@@ -1,3 +1,6 @@
+import { AUTH_PAGES_DOC } from './app-kit/auth-pages';
+import { DASHBOARD_TILES_DOC } from './app-kit/dashboard-tiles';
+import { RESOURCE_KIT_DOC } from './app-kit/resource-kit';
 import type { DocSectionId } from './doc-sections';
 
 export type ApplicationBlockApiRow = Readonly<{
@@ -7,7 +10,16 @@ export type ApplicationBlockApiRow = Readonly<{
 }>;
 
 export type ApplicationBlockDoc = Readonly<{
-  name: 'org-chart' | 'storage-browser' | 'agents-builder' | 'data-rooms' | 'billing-account' | 'billing-console';
+  name:
+    | 'org-chart'
+    | 'storage-browser'
+    | 'agents-builder'
+    | 'data-rooms'
+    | 'billing-account'
+    | 'billing-console'
+    | 'resource-kit'
+    | 'auth-pages'
+    | 'dashboard-tiles';
   /** Docs route when it is not `/blocks/<name>`, e.g. inside a section such as Billing. */
   href?: string;
   /** Section hub the block is listed under instead of its own nav item. */
@@ -849,6 +861,12 @@ export function OperatorBilling({ data, api }: OperatorBillingProps) {
       { name: 'StandingTable', type: 'platform', behavior: 'Billing suspensions and admin holds with hold and release.' },
     ],
   },
+  // The app kit: the blocks a generated application is composed from. Resource
+  // Kit turns resource definitions into list, detail, and form screens; Auth
+  // Pages and Dashboard Tiles cover the screens around them.
+  RESOURCE_KIT_DOC,
+  AUTH_PAGES_DOC,
+  DASHBOARD_TILES_DOC,
 ];
 
 const APPLICATION_BLOCK_BY_NAME = new Map(
