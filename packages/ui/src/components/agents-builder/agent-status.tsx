@@ -1,7 +1,9 @@
 'use client';
 
+import * as React from 'react';
+
 import { cn } from '../../lib/utils';
-import type { AgentStatus, AgentSummary } from './types';
+import type { AgentStatus, AgentStatusIndicator, AgentSummary } from './types';
 
 /** Resolves the deprecated `running` flag into a status. */
 function agentStatus(agent: AgentSummary): AgentStatus {
@@ -51,87 +53,226 @@ type TaggedStatus = keyof typeof TAG_WORD;
 function hasStatusTag(status: AgentStatus): status is TaggedStatus {
 	return status in TAG_WORD;
 }
-/** The state's colour, only ever mixed in faintly: the tag stays nearly monochrome. */
-const TAG_TONE = {
-	approval: '[--tag:var(--warning)]',
-	input: '[--tag:var(--primary)]',
-	failed: '[--tag:var(--destructive)]',
-	queued: '[--tag:var(--muted-foreground)]',
+
+/** A state an indicator draws: an agent's status, or a finished run whose result waits to be read. */
+type StatusSignal = AgentStatus | 'done';
+
+/** What the roster draws for an agent: its status, or `done` while a fresh result is unread. */
+function agentSignal(agent: AgentSummary): StatusSignal {
+	const status = agentStatus(agent);
+	return status === 'idle' && agent.unread ? 'done' : status;
+}
+
+/** Colour belongs to the states that need you; everything else stays grey. */
+const SIGNAL_TONE: Partial<Record<StatusSignal, string>> = {
+	approval: 'var(--warning)',
+	input: 'var(--primary)',
+	failed: 'var(--destructive)',
+};
+
+/** Sets `--tone` for a toned state; calm states set nothing. */
+function toneStyle(signal: StatusSignal): React.CSSProperties | undefined {
+	const tone = SIGNAL_TONE[signal];
+	return tone ? ({ '--tone': tone } as React.CSSProperties) : undefined;
+}
+
+/** Text in the state's tone, mixed toward the text colour so it holds contrast in both themes. */
+const toneTextClass = 'text-[color-mix(in_oklab,var(--tone),var(--foreground)_28%)]';
+
+const RAIL_PLACEMENT = {
+	// Centred on a project's rail line: the list's 1px border, then 6px of padding before the row, so
+	// the line's centre is 6.5px before the row and a 2px bar starts 7.5px before it, overhanging the
+	// line by half a pixel each side. It reaches 1px past each end, half the 2px gap between rows, so
+	// neighbouring stretches meet.
+	rail: 'absolute -inset-y-px -start-[7.5px] w-0.5',
+	edge: 'absolute inset-y-1.5 start-0 w-0.5',
+	inline: 'relative h-3.5 w-0.5 shrink-0',
+	// A slim capsule 3px before the box it sits beside, centred on it. Every state draws the same size.
+	pill: 'absolute top-1/2 -start-[5px] h-5 w-0.5 -translate-y-1/2',
 } as const;
 
+type SignalRailProps = {
+	signal: StatusSignal;
+	/**
+	 * `rail` lies on the line a project's rows hang from; `edge` draws at the
+	 * row's own start edge where no line runs; `inline` is a short bar beside
+	 * text, as in a status line; `pill` is a capsule beside a square, as in
+	 * the icon rail.
+	 */
+	placement?: keyof typeof RAIL_PLACEMENT;
+	className?: string;
+};
+
 /**
- * What an agent needs from you, as one word: a tag shaped like a drop, sharp
- * at the corner nearest the name or initials it belongs to, with off-white
- * text and a faint wash of the state's colour. Light theme fills it with a
- * translucent mid grey so the light text holds; dark theme keeps it dark
- * with a tinted edge. An open run's border shimmers like its name; a failed
- * run's border holds still. A queued run gets the same shape as an outline
- * only, quieter than anything that needs you. Nothing for other agents.
+ * A stretch of rail as a status channel. While a run goes a light travels
+ * down it; waiting on you it becomes a bar in the state's tone that breathes;
+ * a failure holds the bar still; a queued run is dashed. An idle agent, or one
+ * whose run has finished, draws nothing and leaves the rail as it is.
  */
-function AgentStatusTag({ status }: { status: AgentStatus }) {
-	if (!hasStatusTag(status)) return null;
-	if (status === 'queued') {
+function SignalRail({ signal, placement = 'rail', className }: SignalRailProps) {
+	if (signal === 'idle' || signal === 'done') return null;
+	if (placement === 'pill') {
 		return (
-			<span
-				aria-hidden="true"
-				className="rounded-[7px] rounded-ss-[2px] border border-subtle-foreground/35 px-1 text-[0.5625rem] leading-[13px] font-medium tracking-tight whitespace-nowrap text-muted-foreground"
-			>
-				{TAG_WORD.queued}
+			<span aria-hidden="true" data-slot="signal-rail" data-signal={signal} style={toneStyle(signal)} className={cn(RAIL_PLACEMENT.pill, className)}>
+				<span
+					className={cn(
+						'absolute inset-0 rounded-full',
+						signal === 'running'
+							? 'bg-muted-foreground animate-[agent-pill-breathe_1.6s_ease-in-out_infinite] motion-reduce:animate-none'
+							: signal === 'queued'
+								? 'bg-[repeating-linear-gradient(to_bottom,var(--subtle-foreground)_0_2px,transparent_2px_4px)]'
+								: cn('bg-(--tone)', signal !== 'failed' && 'animate-pulse motion-reduce:animate-none'),
+					)}
+				/>
 			</span>
 		);
 	}
 	return (
+		<span aria-hidden="true" data-slot="signal-rail" data-signal={signal} style={toneStyle(signal)} className={cn(RAIL_PLACEMENT[placement], className)}>
+			{signal === 'running' ? (
+				// On the rail the project's own line is the track, so only the light is drawn over it.
+				<span
+					className={cn(
+						'absolute inset-y-0 left-1/2 w-px -translate-x-1/2 overflow-hidden',
+						placement !== 'rail' && 'bg-[color-mix(in_oklab,var(--foreground)_14%,transparent)]',
+					)}
+				>
+					<span className="absolute inset-x-0 h-4 bg-[linear-gradient(to_bottom,transparent,var(--foreground),transparent)] animate-[agent-rail-travel_1.6s_cubic-bezier(0.45,0,0.55,1)_infinite] motion-reduce:top-1/2 motion-reduce:h-1 motion-reduce:animate-none" />
+				</span>
+			) : signal === 'queued' ? (
+				// On the rail the gaps take the sidebar's colour so they cut its line; elsewhere they are clear.
+				<span
+					className={cn(
+						'absolute inset-y-0 left-1/2 w-px -translate-x-1/2 bg-[repeating-linear-gradient(to_bottom,var(--subtle-foreground)_0_2px,var(--rail-gap)_2px_5px)]',
+						placement === 'rail' ? '[--rail-gap:var(--sidebar)]' : '[--rail-gap:transparent]',
+					)}
+				/>
+			) : (
+				<span
+					className={cn(
+						// On the rail the bar fills its stretch with square ends, so it joins the line and its neighbours without a seam.
+						'absolute inset-0',
+						placement === 'rail' ? 'rounded-none' : 'rounded-full',
+						'bg-(--tone) shadow-[0_0_6px_color-mix(in_oklab,var(--tone)_45%,transparent)]',
+						signal !== 'failed' && 'animate-pulse motion-reduce:animate-none',
+					)}
+				/>
+			)}
+		</span>
+	);
+}
+
+const RING_SIZE = {
+	sm: { box: 14, r: 5.25, className: 'size-3.5' },
+	lg: { box: 24, r: 11, className: 'size-6' },
+} as const;
+
+type AgentRingProps = {
+	signal: StatusSignal;
+	/** How far the run got, from 0 to 1. Without it a stop closes the ring and a run only spins. */
+	progress?: number;
+	/** `sm`: a 14px glyph before a name. `lg`: a 24px ring round the initials in the icon rail. */
+	size?: keyof typeof RING_SIZE;
+	/** Drawn inside an `lg` ring, e.g. the initials. */
+	children?: React.ReactNode;
+	className?: string;
+};
+
+/**
+ * One drawn circle for every state, and its arc is how far the run got. A
+ * running ring spins a short highlight over the arc; a stop holds the arc in
+ * its tone with a centre dot, breathing while it waits on you; queued is a
+ * dashed ring; a fresh result closes the ring round a check; idle is the
+ * empty track.
+ */
+function AgentRing({ signal, progress, size = 'sm', children, className }: AgentRingProps) {
+	const { box, r, className: sizeClass } = RING_SIZE[size];
+	const length = 2 * Math.PI * r;
+	const stopped = signal === 'approval' || signal === 'input' || signal === 'failed';
+	const arc = signal === 'done' ? 1 : signal === 'running' || stopped ? Math.min(progress ?? (stopped ? 1 : 0), 1) : 0;
+	const circle = { cx: box / 2, cy: box / 2, r, fill: 'none', stroke: 'currentColor', strokeWidth: 1.5 } as const;
+	return (
 		<span
 			aria-hidden="true"
+			data-slot="agent-ring"
+			data-signal={signal}
+			style={toneStyle(signal)}
 			className={cn(
-				'relative flex p-px',
-				TAG_TONE[status],
-				// Light: a mid grey with a little hue, translucent but dark enough that off-white text clears 4.5:1 on the sidebar.
-				'[--tag-fill:color-mix(in_oklab,color-mix(in_oklab,var(--tag)_16%,var(--muted-foreground))_94%,transparent)]',
-				'[--tag-edge:color-mix(in_oklab,color-mix(in_oklab,var(--tag)_20%,var(--muted-foreground))_45%,transparent)]',
-				'[--tag-glint:color-mix(in_oklab,var(--tag)_20%,var(--sidebar))]',
-				// Dark: an opaque dark fill, so in the rail it still covers the row's edge, with a softer tinted edge.
-				'dark:[--tag-fill:color-mix(in_oklab,var(--tag)_7%,var(--sidebar))]',
-				'dark:[--tag-edge:color-mix(in_oklab,var(--tag)_28%,transparent)]',
-				'dark:[--tag-glint:color-mix(in_oklab,var(--tag)_50%,var(--foreground))]',
+				'relative grid shrink-0 place-items-center',
+				sizeClass,
+				SIGNAL_TONE[signal] ? 'text-(--tone)' : signal === 'idle' ? 'text-subtle-foreground' : signal === 'done' ? 'text-foreground' : 'text-muted-foreground',
+				className,
 			)}
 		>
-			{/* The border: a ring masked to its 1px padding, so it sweeps like text shimmer without showing through the fill. */}
-			<span
-				className={cn(
-					'absolute inset-0 rounded-[7px] rounded-ss-[2px] p-px [mask:linear-gradient(#000_0_0)_content-box,linear-gradient(#000_0_0)] [mask-composite:exclude]',
-					isWaitingOnYou(status)
-						? [
-								'bg-[linear-gradient(90deg,var(--tag-edge)_30%,var(--tag-glint)_50%,var(--tag-edge)_70%)]',
-								'bg-size-[200%_100%] animate-[ai-shimmer-text_1.4s_linear_infinite]',
-								'motion-reduce:animate-none motion-reduce:bg-none motion-reduce:bg-(--tag-edge)',
-							]
-						: 'bg-(--tag-edge)',
-				)}
-			/>
-			{/* Inner radius = outer radius - the 1px ring, so the border keeps an even width round the curve. */}
-			<span className="relative rounded-[6px] rounded-ss-[1px] bg-(--tag-fill) px-1 text-[0.5625rem] leading-[13px] font-medium tracking-tight whitespace-nowrap text-[color-mix(in_oklab,var(--tag)_6%,white)]">
-				{TAG_WORD[status]}
-			</span>
+			<svg viewBox={`0 0 ${box} ${box}`} className="absolute inset-0 size-full -rotate-90">
+				<circle {...circle} strokeDasharray={signal === 'queued' ? '1.6 2' : undefined} opacity={signal === 'queued' ? 0.7 : 0.22} />
+				{arc > 0 ? (
+					<circle
+						{...circle}
+						strokeLinecap="round"
+						strokeDasharray={`${length * arc} ${length}`}
+						className="transition-[stroke-dasharray] duration-(--duration-slow) ease-(--ease-out) motion-reduce:transition-none"
+					/>
+				) : null}
+			</svg>
+			{signal === 'running' ? (
+				<svg viewBox={`0 0 ${box} ${box}`} className="absolute inset-0 size-full animate-spin text-foreground [animation-duration:1.2s] motion-reduce:hidden">
+					<circle {...circle} strokeLinecap="round" strokeDasharray={`${length * 0.14} ${length}`} />
+				</svg>
+			) : null}
+			{size === 'lg' ? (
+				children
+			) : stopped ? (
+				<span className={cn('size-1 rounded-full bg-current', signal !== 'failed' && 'animate-pulse motion-reduce:animate-none')} />
+			) : signal === 'done' ? (
+				<svg viewBox="0 0 14 14" className="absolute inset-0 size-full">
+					<path d="M4.6 7.2 6.3 8.9 9.5 5.5" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+				</svg>
+			) : null}
+		</span>
+	);
+}
+
+type StatusLabelProps = Omit<React.ComponentProps<'span'>, 'children'> & {
+	indicator: AgentStatusIndicator;
+	signal: StatusSignal;
+	progress?: number;
+	children: React.ReactNode;
+};
+
+/** A state's glyph in the chosen indicator: a ring, or a short bar of rail. */
+function StatusGlyph({ indicator, signal, progress }: Pick<StatusLabelProps, 'indicator' | 'signal' | 'progress'>) {
+	return indicator === 'rings' ? <AgentRing signal={signal} progress={progress} /> : <SignalRail signal={signal} placement="inline" />;
+}
+
+/** A state's glyph in the chosen indicator, then its words, in the state's tone when it needs you. */
+function StatusLabel({ indicator, signal, progress, children, className, style, ...props }: StatusLabelProps) {
+	return (
+		<span
+			{...props}
+			style={{ ...toneStyle(signal), ...style }}
+			className={cn('inline-flex min-w-0 items-center gap-1.5 font-medium', SIGNAL_TONE[signal] ? toneTextClass : 'text-muted-foreground', className)}
+		>
+			<StatusGlyph indicator={indicator} signal={signal} progress={progress} />
+			<span className="truncate">{children}</span>
 		</span>
 	);
 }
 
 /**
- * The tag's word on its own, for the collapsed rail, where a boxed tag
- * crowds the initials: small type under them, faintly tinted with the state's
- * colour. It shimmers while the run waits on you, like the initials above it,
- * and holds still once the run has failed or while it is queued.
+ * The tag word on its own, under the initials in the icon rail, in the
+ * state's tone. It shimmers while the run waits on you, like the initials
+ * above it, and holds still once the run has failed or while it is queued.
  */
 function AgentStatusWord({ status }: { status: AgentStatus }) {
 	if (!hasStatusTag(status)) return null;
 	return (
 		<span
 			aria-hidden="true"
+			style={toneStyle(status)}
 			className={cn(
-				'block text-[0.5rem] leading-none font-medium tracking-tight whitespace-nowrap',
-				TAG_TONE[status],
-				status === 'queued' ? '[--word:var(--subtle-foreground)]' : '[--word:color-mix(in_oklab,var(--tag)_40%,var(--muted-foreground))]',
+				'block text-[0.5625rem] leading-none font-medium tracking-tight whitespace-nowrap',
+				status === 'queued' ? '[--word:var(--subtle-foreground)]' : '[--word:color-mix(in_oklab,var(--tone),var(--foreground)_28%)]',
 				isWaitingOnYou(status)
 					? [
 							// Same sweep as TextShimmer: toward the page colour in light, toward the text colour in dark.
@@ -185,4 +326,22 @@ function visibleRoster(agents: AgentSummary[], limit: number): AgentSummary[] {
 	return [...kept, ...promoted];
 }
 
-export { AgentStatusTag, AgentStatusWord, agentLabel, agentStatus, hasStatusTag, isInFlight, isWaitingOnYou, mostUrgentTag, needsAttention, statusPhrase, visibleRoster };
+export {
+	AgentRing,
+	agentLabel,
+	agentSignal,
+	agentStatus,
+	AgentStatusWord,
+	hasStatusTag,
+	isInFlight,
+	isWaitingOnYou,
+	mostUrgentTag,
+	needsAttention,
+	SignalRail,
+	StatusGlyph,
+	StatusLabel,
+	statusPhrase,
+	TAG_WORD,
+	visibleRoster,
+};
+export type { AgentRingProps, SignalRailProps, StatusLabelProps, StatusSignal };

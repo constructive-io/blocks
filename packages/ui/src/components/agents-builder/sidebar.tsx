@@ -25,11 +25,28 @@ import { TextShimmer } from '../ai/text-shimmer';
 import { Kbd, KbdGroup } from '../kbd';
 import { NavCount, NavIcon, NavRow } from '../workspace-kit/nav';
 import { focusRingClass, SearchField, TooltipIconButton } from '../workspace-kit/primitives';
-import { AgentStatusTag, AgentStatusWord, agentLabel, agentStatus, hasStatusTag, isInFlight, isWaitingOnYou, mostUrgentTag, needsAttention, statusPhrase, visibleRoster } from './agent-status';
+import {
+	AgentRing,
+	agentLabel,
+	agentSignal,
+	agentStatus,
+	AgentStatusWord,
+	hasStatusTag,
+	isInFlight,
+	isWaitingOnYou,
+	mostUrgentTag,
+	needsAttention,
+	SignalRail,
+	StatusGlyph,
+	StatusLabel,
+	statusPhrase,
+	TAG_WORD,
+	visibleRoster,
+} from './agent-status';
 import { AppPicker } from './app-picker';
 import { useAgentsBuilder } from './agents-builder-context';
 import { IntegrationMark } from './integration-mark';
-import type { AgentProject, AgentSummary } from './types';
+import type { AgentProject, AgentStatusIndicator, AgentSummary } from './types';
 import { WorkspaceMenu } from './workspace-menu';
 
 /** Agents listed before "More agents". */
@@ -37,7 +54,8 @@ const SIDEBAR_AGENT_LIMIT = 6;
 
 /**
  * Agent roster label. Focus and unread results read through weight and colour
- * alone; an agent with an open run shimmers, so activity never needs a dot.
+ * alone; an agent with an open run shimmers while the indicator shows where
+ * it stands.
  */
 function AgentLabel({ agent, open }: { agent: AgentSummary; open: boolean }) {
 	const status = agentStatus(agent);
@@ -56,26 +74,46 @@ function AgentLabel({ agent, open }: { agent: AgentSummary; open: boolean }) {
 	);
 }
 
-/** Collapsed-rail stand-in for an agent: its initials, styled like the label. Its state hangs below as a word. */
-function AgentMonogram({ agent, open }: { agent: AgentSummary; open: boolean }) {
+/**
+ * Collapsed-rail stand-in for an agent: its initials. With `rings` they sit
+ * inside the agent's ring and the tag word hangs below; with `rail` they
+ * stand bare and a capsule beside the square is the only signal.
+ */
+function AgentMonogram({ agent, open, indicator }: { agent: AgentSummary; open: boolean; indicator: AgentStatusIndicator }) {
 	const text = initials(agent.name);
 	const status = agentStatus(agent);
-	const strong = open || isWaitingOnYou(status) || agent.unread;
+	const strong = open || agent.unread || needsAttention(status);
+	// An open run's initials shimmer like its name.
+	const glyph =
+		text === null ? (
+			<Bot className="size-3" />
+		) : isInFlight(status) ? (
+			<TextShimmer className={open || isWaitingOnYou(status) || agent.unread ? 'font-semibold' : 'font-medium'}>{text}</TextShimmer>
+		) : (
+			text
+		);
+	if (indicator === 'rings') {
+		return (
+			<AgentRing signal={agentSignal(agent)} progress={agent.progress} size="lg">
+				{/* A toned ring tints its initials too; otherwise they keep the row's weight and colour. */}
+				<span
+					className={cn(
+						'text-[0.625rem] tracking-tight tabular-nums',
+						strong ? 'font-semibold' : 'font-medium',
+						needsAttention(status) ? null : strong ? 'text-foreground' : 'text-sidebar-foreground',
+					)}
+				>
+					{glyph}
+				</span>
+			</AgentRing>
+		);
+	}
 	return (
 		<span
 			aria-hidden="true"
-			className={cn(
-				'relative grid size-5 shrink-0 place-items-center text-[0.6875rem] tracking-tight tabular-nums',
-				(agent.unread || status === 'failed') && 'font-medium text-foreground',
-			)}
+			className={cn('grid size-5 shrink-0 place-items-center text-[0.6875rem] tracking-tight tabular-nums', strong && 'font-semibold text-foreground')}
 		>
-			{text === null ? (
-				<Bot className="size-3.5" />
-			) : isInFlight(status) ? (
-				<TextShimmer className={strong ? 'font-semibold' : 'font-medium'}>{text}</TextShimmer>
-			) : (
-				text
-			)}
+			{glyph}
 		</span>
 	);
 }
@@ -108,17 +146,19 @@ function isLiveProject(agents: AgentSummary[], openAgentId: string | null) {
 /**
  * One project in the expanded sidebar: a disclosure row, then its agents hung
  * from a rail under the chevron, the way a tool trace hangs its calls. Folded,
- * the row carries its most pressing agent's tag, so nothing waiting on you
- * hides inside it. Past the limit, agents that need you still show and the
- * rest wait behind "Show N more".
+ * the row carries its most pressing agent's state in words, so nothing
+ * waiting on you hides inside it, or the running glyph while one of them runs. Past the limit,
+ * agents that need you still show and the rest wait behind "Show N more".
  */
 function ProjectGroup({
 	project,
 	agents,
 	openAgentId,
+	indicator,
 	renderAgent,
 }: {
 	project: AgentProject;
+	indicator: AgentStatusIndicator;
 	agents: AgentSummary[];
 	/** The agent on screen. Its project starts open, and unfolds whenever it is opened from elsewhere. */
 	openAgentId: string | null;
@@ -136,6 +176,7 @@ function ProjectGroup({
 	const hidden = agents.length - shown.length;
 	const urgent = mostUrgentTag(agents);
 	const waiting = agents.filter((agent) => needsAttention(agentStatus(agent))).length;
+	const running = agents.some((agent) => agentStatus(agent) === 'running');
 	return (
 		<li>
 			<button
@@ -156,7 +197,12 @@ function ProjectGroup({
 ) : null}
 				</span>
 				{open ? null : urgent ? (
-					<AgentStatusTag status={urgent} />
+					// The row's label already says how many need you, so the word is for sighted readers.
+					<StatusLabel aria-hidden="true" indicator={indicator} signal={urgent} className="shrink-0 text-xs">
+						{TAG_WORD[urgent]}
+					</StatusLabel>
+				) : running ? (
+					<StatusGlyph indicator={indicator} signal="running" />
 				) : (
 					<span aria-hidden="true" className="text-xs text-muted-foreground tabular-nums">
 						{formatCount(agents.length)}
@@ -201,7 +247,7 @@ type AgentsBuilderSidebarProps = {
  * expands it and focuses search.
  */
 function AgentsBuilderSidebar({ collapsed: collapsedProp = false, onCollapsedChange, drawer = false, onNavigate, className }: AgentsBuilderSidebarProps) {
-	const { data, agents, currentAgent, view, setView, emit, integration, openAgent } = useAgentsBuilder();
+	const { data, agents, currentAgent, view, setView, emit, integration, openAgent, statusIndicator } = useAgentsBuilder();
 	const asideRef = React.useRef<HTMLElement>(null);
 	const searchRef = React.useRef<HTMLInputElement>(null);
 	const [query, setQuery] = React.useState('');
@@ -246,9 +292,12 @@ function AgentsBuilderSidebar({ collapsed: collapsedProp = false, onCollapsedCha
 		return () => document.removeEventListener('keydown', onKeyDown);
 	}, [focusSearch]);
 
-	const agentRow = (agent: AgentSummary) => {
+	/** One agent. `hung` rows hang from a project's rail, so the rail indicator lights that line instead of the row's edge. */
+	const agentRow = (agent: AgentSummary, hung = false) => {
 		const open = agent.id === openAgentId;
 		const status = agentStatus(agent);
+		const signal = agentSignal(agent);
+		const rail = <SignalRail signal={signal} placement={hung ? 'rail' : 'edge'} />;
 		return (
 			<NavRow
 				key={agent.id}
@@ -256,13 +305,23 @@ function AgentsBuilderSidebar({ collapsed: collapsedProp = false, onCollapsedCha
 				labelNode={<AgentLabel agent={agent} open={open} />}
 				collapsed={collapsed}
 				active={open}
-				muted={!agent.unread && status !== 'failed'}
+				muted={!agent.unread && !needsAttention(status)}
 				tip={(collapsed ? agent.statusNote : statusPhrase(agent)) ? <AgentTip agent={agent} collapsed={collapsed} /> : undefined}
-				// The state reads at the end: a tag on the row, or in the rail its word, which NavRow stretches the square to hold.
-				// Expanded rows have no leading slot, so the name starts at the row's edge.
-				railBadge={hasStatusTag(status) ? <AgentStatusWord status={status} /> : undefined}
-				trailing={hasStatusTag(status) ? <AgentStatusTag status={status} /> : undefined}
-				leading={collapsed ? <AgentMonogram agent={agent} open={open} /> : null}
+				// With rings the tag word hangs under the initials, which NavRow stretches the square to hold; the rail needs no word.
+				railBadge={statusIndicator === 'rings' && hasStatusTag(status) ? <AgentStatusWord status={status} /> : undefined}
+				// Rings lead the name; the rail is drawn out of flow, so with it the name starts at the row's edge.
+				leading={
+					collapsed ? (
+						<>
+							{statusIndicator === 'rail' ? <SignalRail signal={signal} placement="pill" /> : null}
+							<AgentMonogram agent={agent} open={open} indicator={statusIndicator} />
+						</>
+					) : statusIndicator === 'rings' ? (
+						<AgentRing signal={signal} progress={agent.progress} />
+					) : (
+						rail
+					)
+				}
 				onClick={select(() => openAgent(agent.id))}
 			/>
 		);
@@ -396,13 +455,20 @@ function AgentsBuilderSidebar({ collapsed: collapsedProp = false, onCollapsedCha
 									{projects.map((project) => {
 										const members = projectAgents.byProject.get(project.id) ?? [];
 										return (
-											<ProjectGroup key={project.id} project={project} agents={members} openAgentId={openAgentId} renderAgent={agentRow} />
+											<ProjectGroup
+												key={project.id}
+												project={project}
+												agents={members}
+												openAgentId={openAgentId}
+												indicator={statusIndicator}
+												renderAgent={(agent) => agentRow(agent, true)}
+											/>
 										);
 									})}
-									{visibleRoster(projectAgents.loose, SIDEBAR_AGENT_LIMIT).map(agentRow)}
+									{visibleRoster(projectAgents.loose, SIDEBAR_AGENT_LIMIT).map((agent) => agentRow(agent))}
 								</>
 							) : (
-								roster.map(agentRow)
+								roster.map((agent) => agentRow(agent))
 							)}
 							<NavRow
 								label={projects ? 'All agents' : hiddenAgents > 0 ? `More agents, ${formatCount(hiddenAgents)} more` : 'More agents'}

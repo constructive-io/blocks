@@ -425,6 +425,24 @@
   }
 }
 
+@keyframes agent-rail-travel {
+  from {
+    top: -1rem;
+  }
+  to {
+    top: 100%;
+  }
+}
+
+@keyframes agent-pill-breathe {
+  0%, 100% {
+    transform: scaleY(0.55);
+  }
+  50% {
+    transform: scaleY(1);
+  }
+}
+
 @keyframes ai-fade-up {
   from {
     opacity: 0;

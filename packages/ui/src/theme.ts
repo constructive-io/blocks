@@ -415,6 +415,16 @@ export const constructiveTheme = {
 			'0%, 100%': { opacity: '0.15' },
 			'40%, 60%': { opacity: '0.95' },
 		},
+		// A short light running down a rail, from just above its top to past its bottom.
+		'agent-rail-travel': {
+			from: { top: '-1rem' },
+			to: { top: '100%' },
+		},
+		// A running capsule growing to full height and settling back, around its centre.
+		'agent-pill-breathe': {
+			'0%, 100%': { transform: 'scaleY(0.55)' },
+			'50%': { transform: 'scaleY(1)' },
+		},
 		'ai-fade-up': {
 			from: { opacity: '0', transform: 'translateY(6px)' },
 			to: { opacity: '1', transform: 'translateY(0)' },

@@ -1,6 +1,6 @@
 'use client';
 
-import { Bot, Check, ChevronRight, CircleAlert, Clock3, Hand, MessageCircleQuestion, RotateCcw, Sparkles, Square, Zap } from 'lucide-react';
+import { Bot, Check, ChevronRight, RotateCcw, Sparkles, Square, Zap } from 'lucide-react';
 import * as React from 'react';
 
 import { cn } from '../../lib/utils';
@@ -17,6 +17,7 @@ import { ThinkingStatus } from '../ai/thinking-status';
 import { ToolTrace } from '../ai/tool-trace';
 import { Button } from '../button';
 import { Spinner } from '../spinner';
+import { type StatusSignal, StatusGlyph, StatusLabel } from './agent-status';
 import { useAgentsBuilder } from './agents-builder-context';
 import { Composer } from './composer';
 import { IntegrationMark } from './integration-mark';
@@ -25,30 +26,28 @@ import { useLatest } from '../workspace-kit/use-latest';
 import { RevealText } from './reveal-text';
 import { usePlaybackClock } from './playback';
 import type { AgentRunScript, RunApproval, RunFailure, RunQuery, RunQuestion, ToolStep } from './types';
-import { type AgentRunState, RUN_TIMING, type RunGroupPlay } from './use-agent-run';
+import { type AgentRunState, RUN_TIMING, type RunGroupPlay, runProgress } from './use-agent-run';
 
 const GROUP_ICON = { subagents: <Bot />, skills: <Sparkles /> } as const;
 const GROUP_NOUN = { subagents: ['agent', 'agents'], skills: ['skill', 'skills'] } as const;
 
-// Status lines for the cards a run stops on. Static, so they are built once.
-const APPROVAL_EYEBROW = (
-	<>
-		<Hand aria-hidden="true" className="text-warning-foreground" />
-		Waiting for your approval
-	</>
-);
-const QUESTION_EYEBROW = (
-	<>
-		<MessageCircleQuestion aria-hidden="true" className="text-primary" />
-		Waiting for your answer
-	</>
-);
-const QUEUED_EYEBROW = (
-	<>
-		<Clock3 aria-hidden="true" />
-		Queued
-	</>
-);
+/**
+ * The line above a card a run stops on: the state's pixel mark, then the
+ * sentence in the state's tone, the one coloured line on the card.
+ */
+function StatusLine({ signal, children }: { signal: StatusSignal; children: React.ReactNode }) {
+	const { statusIndicator } = useAgentsBuilder();
+	return (
+		<StatusLabel indicator={statusIndicator} signal={signal} className="shrink-0">
+			{children}
+		</StatusLabel>
+	);
+}
+
+// Static, so they are built once.
+const APPROVAL_EYEBROW = <StatusLine signal="approval">Waiting for your approval</StatusLine>;
+const QUESTION_EYEBROW = <StatusLine signal="input">Waiting for your answer</StatusLine>;
+const QUEUED_EYEBROW = <StatusLine signal="queued">Queued</StatusLine>;
 
 type RunGroupProps = {
 	group: AgentRunScript['groups'][number];
@@ -329,8 +328,8 @@ function FailureBlock({ failure, step, onRetry }: { failure: RunFailure; step?: 
 		<StopCard
 			eyebrow={
 				<>
-					<CircleAlert aria-hidden="true" className="text-destructive" />
-					<span className="truncate">{step ? `Failed at ${step.label}` : 'Run failed'}</span>
+					<StatusLine signal="failed">{step ? 'Failed at' : 'Run failed'}</StatusLine>
+					{step ? <span className="min-w-0 truncate">{step.label}</span> : null}
 				</>
 			}
 			title={failure.message}
@@ -361,12 +360,12 @@ function QueuedBlock({ note, plan, onStart }: { note?: string; plan?: string[]; 
 			{plan?.length ? (
 				<div className="flex flex-col gap-1">
 					<p className="text-xs text-muted-foreground">Up next</p>
-					{/* Hung from one rail, like the tool trace, with every step still to come. */}
-					<ol className="ms-2 flex flex-col border-s border-subtle-foreground/25">
+					{/* Hung from a rail like the tool trace's, dashed because none of it has run yet, with each number zero-padded. */}
+					<ol className="ms-2 flex flex-col border-s border-dashed border-subtle-foreground/35">
 						{plan.map((step, index) => (
 							<li key={step} className="flex min-h-7 items-center gap-2 ps-3 text-[0.8125rem] text-muted-foreground">
-								<span aria-hidden="true" className="w-3 shrink-0 text-xs text-subtle-foreground tabular-nums">
-									{index + 1}
+								<span aria-hidden="true" className="shrink-0 font-mono text-[0.6875rem] text-subtle-foreground tabular-nums">
+									{String(index + 1).padStart(2, '0')}
 								</span>
 								<span className="min-w-0 [overflow-wrap:anywhere]">{step}</span>
 							</li>
@@ -378,7 +377,8 @@ function QueuedBlock({ note, plan, onStart }: { note?: string; plan?: string[]; 
 	);
 }
 
-function CommandBar({ script, phase, onStop }: { script: AgentRunScript; phase: RunPhase; onStop: () => void }) {
+function CommandBar({ script, phase, progress, onStop }: { script: AgentRunScript; phase: RunPhase; progress?: number; onStop: () => void }) {
+	const { statusIndicator } = useAgentsBuilder();
 	return (
 		<div className="relative z-10 flex h-[50px] shrink-0 items-center gap-3 rounded-xl bg-card px-3 shadow-card">
 			<p title={`${script.command.verb} ${script.command.skill} ${script.command.scope}`} className="flex min-w-0 flex-1 items-center gap-1.5 text-sm whitespace-nowrap text-foreground">
@@ -390,30 +390,22 @@ function CommandBar({ script, phase, onStop }: { script: AgentRunScript; phase: 
 				</ToneBadge>
 				<span title={script.command.scope} className="truncate">{script.command.scope}</span>
 			</p>
-			{phase === 'done' || phase === 'queued' ? (
-				<span className="inline-flex h-6 items-center gap-1 rounded-md bg-muted px-1.5 text-xs text-muted-foreground">
-					{phase === 'done' ? <Check aria-hidden="true" className={cn('size-3', iconEnterClass)} /> : <Clock3 aria-hidden="true" className="size-3" />}
-					{phase === 'done' ? 'Done' : 'Queued'}
+			{phase === 'running' ? (
+				<span className="flex shrink-0 items-center gap-2.5">
+					<StatusGlyph indicator={statusIndicator} signal="running" progress={progress} />
+					<TooltipIconButton
+						label="Stop run"
+						size="sm"
+						className="bg-foreground text-background hover:bg-foreground/90 hover:text-background"
+						onClick={onStop}
+					>
+						<Square aria-hidden="true" className="size-2.5 fill-current" />
+					</TooltipIconButton>
 				</span>
-			) : phase === 'approval' || phase === 'input' ? (
-				<ToneBadge tone={phase === 'approval' ? 'warning' : 'primary'} className="h-6">
-					{phase === 'approval' ? <Hand aria-hidden="true" /> : <MessageCircleQuestion aria-hidden="true" />}
-					Needs you
-				</ToneBadge>
-			) : phase === 'failed' ? (
-				<ToneBadge tone="danger" className="h-6">
-					<CircleAlert aria-hidden="true" />
-					Failed
-				</ToneBadge>
 			) : (
-				<TooltipIconButton
-					label="Stop run"
-					size="sm"
-					className="bg-foreground text-background hover:bg-foreground/90 hover:text-background"
-					onClick={onStop}
-				>
-					<Square aria-hidden="true" className="size-2.5 fill-current" />
-				</TooltipIconButton>
+				<StatusLabel indicator={statusIndicator} signal={phase} progress={progress} className="shrink-0 text-xs">
+					{RUN_PHASE_WORD[phase]}
+				</StatusLabel>
 			)}
 		</div>
 	);
@@ -421,6 +413,9 @@ function CommandBar({ script, phase, onStop }: { script: AgentRunScript; phase: 
 
 /** Where the run stands, as the sidebar roster shows it. */
 type RunPhase = 'queued' | 'running' | 'approval' | 'input' | 'failed' | 'done';
+
+/** The header tag's word once the run stops. Both waits read the same here; the card below says which. */
+const RUN_PHASE_WORD = { queued: 'Queued', approval: 'Needs you', input: 'Needs you', failed: 'Failed', done: 'Done' } as const;
 
 type AgentRunPanelProps = {
 	script: AgentRunScript;
@@ -456,7 +451,7 @@ function AgentRunPanel({
 	onStart,
 	onRetry,
 }: AgentRunPanelProps) {
-	const { integration, emit, currentAgent } = useAgentsBuilder();
+	const { integration, emit, currentAgent, statusIndicator } = useAgentsBuilder();
 	const agentId = currentAgent.agent.id;
 	const [followUps, setFollowUps] = React.useState<string[]>([]);
 	// A past run settled its gate long ago: approved, or answered with the first options.
@@ -516,6 +511,7 @@ function AgentRunPanel({
 				<CommandBar
 					script={script}
 					phase={phase}
+					progress={runProgress(script, state)}
 					onStop={() => {
 						onStop();
 						emit({ type: 'stop-run' });
@@ -638,7 +634,7 @@ function AgentRunPanel({
 						{complete ? (
 							<div className={cn('flex items-center justify-between gap-2 px-3', enterClass)}>
 								<p className="flex h-7 items-center gap-2 text-[0.8125rem] text-muted-foreground">
-									<Check aria-hidden="true" className="size-3.5" />
+									<StatusGlyph indicator={statusIndicator} signal="done" />
 									Run complete
 								</p>
 								<FeedbackBar showRegenerate={false} copyText={script.findings?.paragraphs.join('\n\n')} />

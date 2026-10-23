@@ -13,6 +13,7 @@ export type {
 	AgentsBuilderView,
 	AgentProject,
 	AgentStatus,
+	AgentStatusIndicator,
 	AgentSummary,
 	AskBeatOption,
 	AskBeatQuestion,

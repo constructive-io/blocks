@@ -38,6 +38,13 @@ export type AgentRunState = {
 };
 
 /** Beat lengths for the scripted run, in milliseconds. */
+/** How far a run got, from 0 to 1: plan steps when there is a plan, tool calls otherwise, `undefined` with neither. */
+export function runProgress(script: AgentRunScript, state: AgentRunState): number | undefined {
+	if (script.plan?.length) return state.planDone / script.plan.length;
+	if (script.steps.length) return state.doneSteps / script.steps.length;
+	return undefined;
+}
+
 export const RUN_TIMING = {
 	reasoning: 1600,
 	afterReasoning: 280,

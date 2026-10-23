@@ -15,6 +15,7 @@ import { AgentsBuilderSidebar } from './sidebar';
 import { SkillsView } from './skills-view';
 import type {
 	AgentDetail,
+	AgentStatusIndicator,
 	AgentSummary,
 	AgentsBuilderAction,
 	AgentsBuilderData,
@@ -46,6 +47,12 @@ type AgentsBuilderProps = {
 	 * agents open as they stand: queued, failed, waiting at the decision, or done.
 	 */
 	autoplayRun?: boolean;
+	/**
+	 * How the sidebar and the run panel show an agent's state: `rail` lights
+	 * each agent's stretch of its project's rail, `rings` draws a progress ring
+	 * before each name. Defaults to `rail`.
+	 */
+	statusIndicator?: AgentStatusIndicator;
 	className?: string;
 };
 
@@ -79,6 +86,7 @@ function AgentsBuilder({
 	defaultSidebarCollapsed = false,
 	framed,
 	autoplayRun = true,
+	statusIndicator = 'rail',
 	className,
 }: AgentsBuilderProps) {
 	const [view, setView] = useControllableState<AgentsBuilderView>({
@@ -163,12 +171,13 @@ function AgentsBuilder({
 				} else emit({ type: 'open-agent', agentId: id });
 			},
 			emit,
+			statusIndicator,
 			theme,
 			setTheme,
 			usageDismissed,
 			dismissUsage: () => setUsageDismissed(true),
 		};
-	}, [agentNames, agents, connected, currentAgent, data, details, integrations, onActionRef, setTheme, setView, theme, usageDismissed, view]);
+	}, [agentNames, agents, connected, currentAgent, data, details, integrations, onActionRef, setTheme, setView, statusIndicator, theme, usageDismissed, view]);
 
 	const connect = async (integration: Integration, toolIds: string[]) => {
 		await onConnectIntegration?.(integration, toolIds);

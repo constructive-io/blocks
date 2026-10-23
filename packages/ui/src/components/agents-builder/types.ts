@@ -57,7 +57,19 @@ export type AgentSummary = {
 	running?: boolean;
 	/** The project the agent belongs to. Agents without one list after the projects. */
 	projectId?: string;
+	/**
+	 * How far the current or last run got, from 0 to 1. The `rings` indicator
+	 * draws it as an arc; without it a running ring just spins.
+	 */
+	progress?: number;
 };
+
+/**
+ * How the roster shows each agent's state. `rail` lights the agent's stretch
+ * of the rail its row hangs from; `rings` draws a ring before the name whose
+ * arc is the run's progress.
+ */
+export type AgentStatusIndicator = 'rail' | 'rings';
 
 /** A group of agents in the sidebar, e.g. a team or a product area. */
 export type AgentProject = {
