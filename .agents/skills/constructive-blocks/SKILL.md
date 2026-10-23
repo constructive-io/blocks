@@ -101,6 +101,7 @@ to endpoints, sessions, adapters, or tenant data.
 | Application shell (sidebar rail, drawer, views) | `workspace-kit` |
 | AI or agent UI | `ai` |
 | Complete agent workspace (chat, integrations, skills, agent canvas) | `agents-builder` |
+| Coding agent workspace (parallel sessions, diff review, file and browser tabs, terminal) | `coding-agent` |
 | Secure document rooms shared inside and outside an organization (roles, folder shares, agreements, Q&A, insights) | `data-rooms` |
 | Global commands and workflows | `command-palette` |
 | Metadata-driven data grid | `sheets` |

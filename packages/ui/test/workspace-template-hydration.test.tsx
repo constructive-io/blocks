@@ -7,7 +7,18 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { AGENTS_BUILDER_DEMO, AgentsBuilder, type AgentsBuilderAction } from '../src/components/agents-builder';
 import { BILLING_ACCOUNT_DEMO, BillingAccount, type PlanChangeRequest } from '../src/components/billing-account';
 import { DEMO_NOW } from '../src/components/billing-kit';
+import { CODING_AGENT_DEMO, CodingAgent, type CodingAgentAction, type CodingAgentData } from '../src/components/coding-agent';
 import { DATA_ROOMS_DEMO, DataRooms, type DataRoomsCommand } from '../src/components/data-rooms';
+
+// The diff and tree renderers draw into shadow roots with constructed stylesheets, which jsdom lacks.
+vi.mock('@pierre/diffs/react', () => ({
+	MultiFileDiff: ({ newFile }: { newFile: { name: string } }) => <div data-testid="diff">{newFile.name}</div>,
+	File: ({ file }: { file: { contents: string } }) => <pre>{file.contents}</pre>,
+}));
+vi.mock('@pierre/trees/react', () => ({
+	useFileTree: () => ({ model: { resetPaths() {}, setGitStatus() {}, getSelectedPaths: () => [], getItem: () => null, scrollToPath() {} } }),
+	FileTree: () => <div data-testid="tree" />,
+}));
 
 globalThis.IS_REACT_ACT_ENVIRONMENT = true;
 globalThis.CSS ??= {} as typeof CSS;
@@ -147,6 +158,32 @@ describe('workspace templates hydrate into usable host integrations', () => {
 			timing: 'period_end', checkout: false, plan: expect.objectContaining({ name: 'pro' }),
 		}));
 		expect(container.textContent).toContain('Moving to Pro on Oct 1, 2026');
+		expectCleanHydration();
+	});
+
+	it('hydrates a settled coding session and sends a follow-up once through the host', async () => {
+		const onAction = vi.fn<(action: CodingAgentAction) => void>();
+		const data: CodingAgentData = {
+			...CODING_AGENT_DEMO,
+			sessions: [{
+				id: 'hydrated-session',
+				title: 'Hydrated session',
+				projectId: CODING_AGENT_DEMO.projects[0]!.id,
+				script: [{ kind: 'user', text: 'Rename the helper.' }, { kind: 'say', text: 'Renamed it.' }],
+				played: 2,
+			}],
+			openSessionIds: ['hydrated-session'],
+		};
+		await hydrate(<CodingAgent data={data} onAction={onAction} />, (server) => {
+			expect(server.textContent).toContain('Renamed it.');
+		});
+		expect(onAction).not.toHaveBeenCalled();
+		await type('Message the agent', 'Add a changelog entry.');
+		await click(button('Send'));
+		expect(onAction.mock.calls).toEqual([[{
+			type: 'send', sessionId: 'hydrated-session', text: 'Add a changelog entry.', attachments: [],
+		}]]);
+		expect(container.textContent).toContain('Add a changelog entry.');
 		expectCleanHydration();
 	});
 
