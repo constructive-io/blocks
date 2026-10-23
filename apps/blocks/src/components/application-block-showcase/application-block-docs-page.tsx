@@ -129,6 +129,14 @@ export function ApplicationBlockDocsPage({
         </CodeBlock>
       </DocSection>
 
+      {block.guides?.map((guide) => (
+        <DocSection description={guide.description} id={guide.id} key={guide.id} title={guide.title}>
+          <CodeBlock label={guide.title} language="tsx">
+            {guide.example}
+          </CodeBlock>
+        </DocSection>
+      ))}
+
       <DocSection
         description={block.state.description}
         id="state"
@@ -148,15 +156,11 @@ export function ApplicationBlockDocsPage({
         <GuidanceList items={block.composition} />
       </DocSection>
 
-      {block.buildingBlocks?.length ? (
-        <DocSection
-          description="Each of these installs with billing-kit and works outside the template: pass data and callbacks, and wrap them in BillingFormatProvider for locale, time zone, and clock."
-          id="building-blocks"
-          title="Building blocks"
-        >
+      {block.buildingBlocks ? (
+        <DocSection description={block.buildingBlocks.description} id="building-blocks" title="Building blocks">
           <PublicContract
             block={block}
-            rows={block.buildingBlocks}
+            rows={block.buildingBlocks.components}
             caption={`Components ${block.title} is built from.`}
             columns={['Component', 'Group', 'What it shows']}
           />
@@ -170,6 +174,12 @@ export function ApplicationBlockDocsPage({
       >
         <GuidanceList
           items={[
+            ...(block.examples?.length
+              ? [
+                  'Choose an example from the menu above the live preview; it reloads the same source opened that way.',
+                  ...block.examples.map((example) => `${example.label}: ${example.description}`),
+                ]
+              : []),
             'Use the breakpoint controls to inspect the same source at desktop, tablet, and mobile widths.',
             'Open the full-screen preview when you need to test menus, sheets, panning, or dense table interactions without documentation chrome.',
           ]}
