@@ -29,14 +29,36 @@ const ICON_BUTTON_SIZE = {
 	lg: 'size-8',
 } as const;
 
-type TooltipIconButtonProps = Omit<React.ComponentProps<'button'>, 'aria-label'> & {
-	label: string;
-	side?: 'top' | 'right' | 'bottom' | 'left';
+type IconButtonOptions = {
 	variant?: keyof typeof ICON_BUTTON_VARIANT;
 	size?: keyof typeof ICON_BUTTON_SIZE;
 	/** Set false when neighbours sit closer than the extended hit area. */
 	extendHitArea?: boolean;
+	/** For a menu trigger: it keeps its hover fill while the menu is open, so the menu reads as coming from it. */
+	menu?: boolean;
 };
+
+/**
+ * The look of `TooltipIconButton`, for icon-only controls that render their own
+ * element, such as a menu trigger. Hover state is instant; press scales to 0.96.
+ */
+export function iconButtonClass({ variant = 'ghost', size = 'md', extendHitArea = true, menu = false }: IconButtonOptions = {}) {
+	return cn(
+		'grid shrink-0 cursor-pointer place-items-center rounded-md disabled:cursor-not-allowed disabled:opacity-40',
+		ICON_BUTTON_VARIANT[variant],
+		ICON_BUTTON_SIZE[size],
+		pressClass,
+		focusRingClass,
+		extendHitArea && hitAreaClass,
+		menu && 'data-popup-open:bg-overlay-hover',
+	);
+}
+
+type TooltipIconButtonProps = Omit<React.ComponentProps<'button'>, 'aria-label'> &
+	Omit<IconButtonOptions, 'menu'> & {
+		label: string;
+		side?: 'top' | 'right' | 'bottom' | 'left';
+	};
 
 /**
  * Icon-only button with a matching tooltip and accessible name. Hover state is
@@ -45,9 +67,9 @@ type TooltipIconButtonProps = Omit<React.ComponentProps<'button'>, 'aria-label'>
 export function TooltipIconButton({
 	label,
 	side = 'top',
-	variant = 'ghost',
-	size = 'md',
-	extendHitArea = true,
+	variant,
+	size,
+	extendHitArea,
 	className,
 	children,
 	...props
@@ -59,15 +81,7 @@ export function TooltipIconButton({
 					<button
 						type="button"
 						aria-label={label}
-						className={cn(
-							'grid shrink-0 cursor-pointer place-items-center rounded-md disabled:cursor-not-allowed disabled:opacity-40',
-							ICON_BUTTON_VARIANT[variant],
-							ICON_BUTTON_SIZE[size],
-							pressClass,
-							focusRingClass,
-							extendHitArea && hitAreaClass,
-							className,
-						)}
+						className={cn(iconButtonClass({ variant, size, extendHitArea }), className)}
 						{...props}
 					>
 						{children}

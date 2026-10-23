@@ -233,6 +233,31 @@
           "#__next, [data-nextjs-root-layout]": {
             "isolation": "isolate"
           },
+          "@media (pointer: fine)": {
+            "*": {
+              "scrollbar-width": "thin",
+              "scrollbar-color": "color-mix(in oklch, var(--foreground) 14%, transparent) transparent"
+            },
+            "::-webkit-scrollbar": {
+              "width": "10px",
+              "height": "10px"
+            },
+            "::-webkit-scrollbar-track, ::-webkit-scrollbar-corner": {
+              "background": "transparent"
+            },
+            "::-webkit-scrollbar-thumb": {
+              "background-color": "color-mix(in oklch, var(--foreground) 14%, transparent)",
+              "border": "3px solid transparent",
+              "background-clip": "content-box",
+              "border-radius": "9999px"
+            },
+            "::-webkit-scrollbar-thumb:hover": {
+              "background-color": "color-mix(in oklch, var(--foreground) 20%, transparent)"
+            },
+            "::-webkit-scrollbar-thumb:active": {
+              "background-color": "color-mix(in oklch, var(--foreground) 26%, transparent)"
+            }
+          },
           "@media (prefers-reduced-motion: reduce)": {
             "*, *::before, *::after": {
               "scroll-behavior": "auto !important",
@@ -414,6 +439,22 @@
             "opacity": "0.95"
           }
         },
+        "@keyframes agent-rail-travel": {
+          "from": {
+            "top": "-1rem"
+          },
+          "to": {
+            "top": "100%"
+          }
+        },
+        "@keyframes agent-pill-breathe": {
+          "0%, 100%": {
+            "transform": "scaleY(0.55)"
+          },
+          "50%": {
+            "transform": "scaleY(1)"
+          }
+        },
         "@keyframes ai-fade-up": {
           "from": {
             "opacity": "0",
@@ -475,31 +516,6 @@
         },
         "[data-slot=\"portal-root\"] > *": {
           "pointer-events": "auto"
-        },
-        "@media (pointer: fine)": {
-          "*": {
-            "scrollbar-width": "thin",
-            "scrollbar-color": "color-mix(in oklch, var(--foreground) 14%, transparent) transparent"
-          },
-          "::-webkit-scrollbar": {
-            "width": "10px",
-            "height": "10px"
-          },
-          "::-webkit-scrollbar-track, ::-webkit-scrollbar-corner": {
-            "background": "transparent"
-          },
-          "::-webkit-scrollbar-thumb": {
-            "background-color": "color-mix(in oklch, var(--foreground) 14%, transparent)",
-            "border": "3px solid transparent",
-            "background-clip": "content-box",
-            "border-radius": "9999px"
-          },
-          "::-webkit-scrollbar-thumb:hover": {
-            "background-color": "color-mix(in oklch, var(--foreground) 20%, transparent)"
-          },
-          "::-webkit-scrollbar-thumb:active": {
-            "background-color": "color-mix(in oklch, var(--foreground) 26%, transparent)"
-          }
         }
       },
       "files": []
@@ -3580,6 +3596,10 @@
           "type": "registry:component"
         },
         {
+          "path": "registry/constructive/blocks/workspace-kit/use-element-size.ts",
+          "type": "registry:lib"
+        },
+        {
           "path": "registry/constructive/blocks/workspace-kit/middle-truncate.tsx",
           "type": "registry:component"
         },
@@ -3782,6 +3802,211 @@
         {
           "path": "registry/constructive/blocks/agents-builder/workspace-menu.tsx",
           "type": "registry:component"
+        }
+      ]
+    },
+    {
+      "name": "coding-agent",
+      "type": "registry:block",
+      "title": "Coding Agent",
+      "description": "A coding agent workspace template: sessions in a tab strip or a project sidebar, each with a chat transcript, a resizable side panel for reviewing diffs, reading files, previewing the app, following the session's other agents and its shared tasks, and a terminal dock. Sub-agents, orchestrator/worker runs and messages between agents show in the transcript, and sessions flag when any of their agents needs an answer.",
+      "categories": [
+        "block",
+        "application",
+        "ai"
+      ],
+      "docs": "Import: `import { CodingAgent, CODING_AGENT_DEMO, createHarnessStore } from '@/components/ui/coding-agent'`. Pass your own `data`, handle side effects through `onAction`, and draw your app in the browser tab with `renderBrowserPage`. Each session plays a `script`, or shows a real harness: pass an `events` log, or a store from `createHarnessStore()` and push events as they happen. Sub-agents, messages between agents, handoffs, phases, shared tasks, worktrees, pull requests and CI checks are all events.",
+      "dependencies": [
+        "lucide-react",
+        "motion",
+        "@pierre/diffs@~1.5.2",
+        "@pierre/trees@1.0.0-beta.6"
+      ],
+      "registryDependencies": [
+        "cn",
+        "use-controllable-state",
+        "initials",
+        "ai",
+        "agents-builder",
+        "alert-dialog",
+        "workspace-kit",
+        "button",
+        "command",
+        "dropdown-menu",
+        "input",
+        "input-group",
+        "label",
+        "resizable",
+        "tabs",
+        "textarea",
+        "intl",
+        "popover",
+        "compose-refs"
+      ],
+      "files": [
+        {
+          "path": "registry/constructive/blocks/coding-agent/browser-panel.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/coding-agent/code-surface-theme.ts",
+          "type": "registry:lib"
+        },
+        {
+          "path": "registry/constructive/blocks/coding-agent/coding-agent-context.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/coding-agent/coding-agent.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/coding-agent/command-menu.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/coding-agent/demo.ts",
+          "type": "registry:lib"
+        },
+        {
+          "path": "registry/constructive/blocks/coding-agent/home-view.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/coding-agent/index.ts",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/coding-agent/new-session.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/coding-agent/review-panel.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/coding-agent/session-composer.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/coding-agent/session-glyph.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/coding-agent/session-sidebar.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/coding-agent/session-tabs.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/coding-agent/session-timeline.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/coding-agent/session-view.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/coding-agent/shortcuts.ts",
+          "type": "registry:lib"
+        },
+        {
+          "path": "registry/constructive/blocks/coding-agent/session-surface.ts",
+          "type": "registry:lib"
+        },
+        {
+          "path": "registry/constructive/blocks/coding-agent/side-panel.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/coding-agent/terminal-panel.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/coding-agent/types.ts",
+          "type": "registry:lib"
+        },
+        {
+          "path": "registry/constructive/blocks/coding-agent/workspace-tree.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/coding-agent/agents-panel.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/coding-agent/worktree-picker.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/coding-agent/turn-rail.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/coding-agent/demo-invitations.ts",
+          "type": "registry:lib"
+        },
+        {
+          "path": "registry/constructive/blocks/coding-agent/demo-security.ts",
+          "type": "registry:lib"
+        },
+        {
+          "path": "registry/constructive/blocks/coding-agent/demo-long.ts",
+          "type": "registry:lib"
+        },
+        {
+          "path": "registry/constructive/blocks/coding-agent/demo-browser.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/coding-agent/demo-shell.ts",
+          "type": "registry:lib"
+        },
+        {
+          "path": "registry/constructive/blocks/coding-agent/file-picker-dialog.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/coding-agent/request-dock.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/coding-agent/run-presentation.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/coding-agent/session-header.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/coding-agent/session-layout.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/coding-agent/tab-strip.ts",
+          "type": "registry:lib"
+        },
+        {
+          "path": "registry/constructive/blocks/coding-agent/use-draft-context.ts",
+          "type": "registry:lib"
+        },
+        {
+          "path": "registry/constructive/blocks/coding-agent/use-panel-tabs.ts",
+          "type": "registry:lib"
+        },
+        {
+          "path": "registry/constructive/blocks/coding-agent/harness-store.ts",
+          "type": "registry:lib"
+        },
+        {
+          "path": "registry/constructive/blocks/coding-agent/harness.ts",
+          "type": "registry:lib"
+        },
+        {
+          "path": "registry/constructive/blocks/coding-agent/use-harness.ts",
+          "type": "registry:lib"
         }
       ]
     },
@@ -4420,7 +4645,9 @@
         "spinner",
         "command",
         "popover",
-        "kbd"
+        "kbd",
+        "fluid-highlight",
+        "compose-refs"
       ],
       "files": [
         {

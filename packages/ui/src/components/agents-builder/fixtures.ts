@@ -128,10 +128,10 @@ export const DEMO_PROJECTS: AgentProject[] = [
 ];
 
 export const DEMO_AGENTS: AgentSummary[] = [
-	{ id: 'revenue-analyst', projectId: 'revenue', name: 'Revenue Analyst', status: 'approval', statusNote: 'Post the summary to #revenue?' },
-	{ id: 'churn-radar', projectId: 'revenue', name: 'Churn Radar', status: 'running' },
-	{ id: 'data-quality-monitor', projectId: 'data-platform', name: 'Data Quality Monitor', status: 'failed', statusNote: 'Column orders_daily.loaded_at no longer exists.' },
-	{ id: 'schema-steward', projectId: 'data-platform', name: 'Schema Steward', status: 'input', statusNote: 'Which schema should own the new billing tables?' },
+	{ id: 'revenue-analyst', projectId: 'revenue', name: 'Revenue Analyst', status: 'approval', progress: 5 / 6, statusNote: 'Post the summary to #revenue?' },
+	{ id: 'churn-radar', projectId: 'revenue', name: 'Churn Radar', status: 'running', progress: 0.4 },
+	{ id: 'data-quality-monitor', projectId: 'data-platform', name: 'Data Quality Monitor', status: 'failed', progress: 0.5, statusNote: 'Column orders_daily.loaded_at no longer exists.' },
+	{ id: 'schema-steward', projectId: 'data-platform', name: 'Schema Steward', status: 'input', progress: 0.75, statusNote: 'Which schema should own the new billing tables?' },
 	{ id: 'metrics-librarian', projectId: 'data-platform', name: 'Metrics Librarian', unread: true, statusNote: 'Renamed 3 metrics to match the finance glossary.' },
 	{ id: 'forecast-planner', projectId: 'revenue', name: 'Forecast Planner', status: 'queued', statusNote: 'The October forecast starts at 09:30 UTC.' },
 	{ id: 'board-report-writer', projectId: 'revenue', name: 'Board Report Writer' },

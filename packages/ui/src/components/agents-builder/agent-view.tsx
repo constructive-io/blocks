@@ -12,7 +12,7 @@ import { AgentsBuilderContext, useAgentsBuilder } from './agents-builder-context
 import { focusRingClass, NavMenuButton, pressClass, TooltipIconButton, useInert } from '../workspace-kit/primitives';
 import { useLatest } from '../workspace-kit/use-latest';
 import type { AgentRunScript, AgentStatus } from './types';
-import { useAgentRun } from './use-agent-run';
+import { runProgress, useAgentRun } from './use-agent-run';
 import { startViewTransition, ViewAnimation } from '../workspace-kit/view-transition';
 
 /** How a run opens. Replay plays it from the start; settled jumps to where it stopped; resolved shows a finished run. */
@@ -58,6 +58,11 @@ function AgentRunSession({ script, start, active, queuedNote, panelOpen, onToggl
 	const [queued, setQueued] = React.useState(start === 'queued');
 	const { state, stop } = useAgentRun(script, { autoplay: start === 'replay' || start === 'queued', paused: queued });
 	const panelRef = useInert<HTMLDivElement>(!panelOpen);
+	const progress = runProgress(script, state);
+	const updateAgentRef = useLatest(updateAgent);
+
+	// The roster's ring follows the run as it goes.
+	React.useEffect(() => updateAgentRef.current(agentId, { progress }), [agentId, progress, updateAgentRef]);
 
 	const onPhaseChange = (phase: RunPhase) => {
 		// A queued agent keeps what the host said about it, e.g. when it starts.

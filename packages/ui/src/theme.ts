@@ -293,6 +293,35 @@ export const constructiveTheme = {
 		'#__next, [data-nextjs-root-layout]': {
 			isolation: 'isolate',
 		},
+		// Thin overlay scrollbars on fine pointers — rests at a 14% foreground
+		// tint, deepens on hover/drag; touch keeps its native momentum bars. In the
+		// base layer, so a utility such as `scrollbar-hide` on one element still wins.
+		'@media (pointer: fine)': {
+			'*': {
+				'scrollbar-width': 'thin',
+				'scrollbar-color':
+					'color-mix(in oklch, var(--foreground) 14%, transparent) transparent',
+			},
+			'::-webkit-scrollbar': {
+				width: '10px',
+				height: '10px',
+			},
+			'::-webkit-scrollbar-track, ::-webkit-scrollbar-corner': {
+				background: 'transparent',
+			},
+			'::-webkit-scrollbar-thumb': {
+				'background-color': 'color-mix(in oklch, var(--foreground) 14%, transparent)',
+				border: '3px solid transparent',
+				'background-clip': 'content-box',
+				'border-radius': '9999px',
+			},
+			'::-webkit-scrollbar-thumb:hover': {
+				'background-color': 'color-mix(in oklch, var(--foreground) 20%, transparent)',
+			},
+			'::-webkit-scrollbar-thumb:active': {
+				'background-color': 'color-mix(in oklch, var(--foreground) 26%, transparent)',
+			},
+		},
 		'@media (prefers-reduced-motion: reduce)': {
 			'*, *::before, *::after': {
 				'scroll-behavior': 'auto !important',
@@ -415,6 +444,16 @@ export const constructiveTheme = {
 			'0%, 100%': { opacity: '0.15' },
 			'40%, 60%': { opacity: '0.95' },
 		},
+		// A short light running down a rail, from just above its top to past its bottom.
+		'agent-rail-travel': {
+			from: { top: '-1rem' },
+			to: { top: '100%' },
+		},
+		// A running capsule growing to full height and settling back, around its centre.
+		'agent-pill-breathe': {
+			'0%, 100%': { transform: 'scaleY(0.55)' },
+			'50%': { transform: 'scaleY(1)' },
+		},
 		'ai-fade-up': {
 			from: { opacity: '0', transform: 'translateY(6px)' },
 			to: { opacity: '1', transform: 'translateY(0)' },
@@ -444,34 +483,6 @@ export const constructiveTheme = {
 	globalCss: {
 		'[data-slot="portal-root"] > *': {
 			'pointer-events': 'auto',
-		},
-		// Thin overlay scrollbars on fine pointers — rests at a 14% foreground
-		// tint, deepens on hover/drag; touch keeps its native momentum bars.
-		'@media (pointer: fine)': {
-			'*': {
-				'scrollbar-width': 'thin',
-				'scrollbar-color':
-					'color-mix(in oklch, var(--foreground) 14%, transparent) transparent',
-			},
-			'::-webkit-scrollbar': {
-				width: '10px',
-				height: '10px',
-			},
-			'::-webkit-scrollbar-track, ::-webkit-scrollbar-corner': {
-				background: 'transparent',
-			},
-			'::-webkit-scrollbar-thumb': {
-				'background-color': 'color-mix(in oklch, var(--foreground) 14%, transparent)',
-				border: '3px solid transparent',
-				'background-clip': 'content-box',
-				'border-radius': '9999px',
-			},
-			'::-webkit-scrollbar-thumb:hover': {
-				'background-color': 'color-mix(in oklch, var(--foreground) 20%, transparent)',
-			},
-			'::-webkit-scrollbar-thumb:active': {
-				'background-color': 'color-mix(in oklch, var(--foreground) 26%, transparent)',
-			},
 		},
 	},
 } as const satisfies ConstructiveThemeDefinition;

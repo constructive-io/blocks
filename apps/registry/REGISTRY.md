@@ -41,6 +41,7 @@ pnpm dlx shadcn@latest add @constructive/workspace-kit
 pnpm dlx shadcn@latest add @constructive/billing-account
 pnpm dlx shadcn@latest add @constructive/account-phone-numbers
 pnpm dlx shadcn@latest add @constructive/agents-builder
+pnpm dlx shadcn@latest add @constructive/coding-agent
 ```
 
 `feature-pack-*` installs are standalone views and write their machine-readable

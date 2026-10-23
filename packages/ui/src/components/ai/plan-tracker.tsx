@@ -63,7 +63,7 @@ function PlanTracker({
 						{complete ? (
 							<span className="min-w-0 flex-1 truncate font-medium tabular-nums">{`${total}/${total} done`}</span>
 						) : focusStep ? (
-							<span className="min-w-0 flex-1 truncate font-medium">
+							<span dir="auto" title={focusStep.label} className="min-w-0 flex-1 truncate font-medium [text-align:match-parent]">
 								<span className="me-1.5 font-mono text-[0.75rem] font-normal tabular-nums text-muted-foreground/60">
 									{focusIndex + 1}/{total}
 								</span>
@@ -92,11 +92,15 @@ function PlanTracker({
 
 function PlanRow({ step }: { step: PlanStep }) {
 	return (
-		<li className="flex items-center gap-2 rounded-md px-1.5 py-1 text-[0.8125rem]">
-			<StepIcon status={step.status} />
+		<li className="flex items-start gap-2 rounded-md px-1.5 py-1 text-[0.8125rem]">
+			<span className="flex h-5 shrink-0 items-center">
+				<StepIcon status={step.status} />
+			</span>
+			{/* Rows wrap: an expanded plan is where a long step gets read in full. */}
 			<span
+				dir="auto"
 				className={cn(
-					'min-w-0 flex-1 truncate',
+					'min-w-0 flex-1 leading-5 text-pretty [overflow-wrap:anywhere] [text-align:match-parent]',
 					step.status === 'done' ? 'text-muted-foreground line-through' : 'text-foreground',
 				)}
 			>

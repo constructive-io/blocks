@@ -55,7 +55,7 @@ Use Node 24 LTS and pnpm 10.28.0, then run `pnpm check`, `pnpm build:pages`, and
   on `motion/react` or CSS, and keep npm package peers usable on React 18.
   jsdom lacks `CSS.escape`, which React's ViewTransition calls; polyfill it in
   tests that render these boundaries.
-- Workspace templates (`agents-builder`, `billing-account`, `billing-console`)
+- Workspace templates (`agents-builder`, `coding-agent`, `billing-account`, `billing-console`)
   share `packages/ui/src/components/workspace-kit` (shell, sidebar rail and
   drawer, view frames, filter pills, surfaces such as `Panel` and
   `TableSurface`, and the pan-and-zoom canvas used by Agents Builder and

@@ -15,7 +15,11 @@ function Tabs({ className, ...props }: React.ComponentProps<typeof TabsPrimitive
 function revealInline(scroller: HTMLElement, target: HTMLElement) {
 	const frame = scroller.getBoundingClientRect();
 	const box = target.getBoundingClientRect();
-	if (box.left < frame.left) scroller.scrollBy({ left: box.left - frame.left - 8 });
+	// A tab wider than the list shows its start, where the label begins, rather than its end.
+	if (box.width >= frame.width) {
+		const rtl = getComputedStyle(scroller).direction === 'rtl';
+		scroller.scrollBy({ left: rtl ? box.right - frame.right : box.left - frame.left });
+	} else if (box.left < frame.left) scroller.scrollBy({ left: box.left - frame.left - 8 });
 	else if (box.right > frame.right) scroller.scrollBy({ left: box.right - frame.right + 8 });
 }
 
@@ -49,7 +53,8 @@ function TabsList({ className, children, style, ...props }: React.ComponentProps
 			className={cn(
 				'bg-muted text-muted-foreground/70 relative inline-flex w-fit max-w-full items-center justify-center rounded-md p-0.5',
 				// Scroll only when needed, so a list that fits keeps its focus rings uncropped.
-				overflowing && 'justify-start overflow-x-auto overscroll-x-contain [scrollbar-width:none] [&::-webkit-scrollbar]:hidden',
+				// Sideways only: a strip never scrolls vertically, and no bar takes height from the tabs.
+				overflowing && 'justify-start overflow-x-auto overflow-y-hidden overscroll-x-contain [scrollbar-width:none] [&::-webkit-scrollbar]:hidden',
 				className,
 			)}
 			style={fade.style ? { ...style, ...fade.style } : style}

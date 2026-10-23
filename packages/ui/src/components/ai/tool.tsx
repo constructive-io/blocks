@@ -1,13 +1,6 @@
 'use client';
 
-import {
-	CheckCircle2,
-	ChevronDown,
-	CircleX,
-	Loader2,
-	Settings2,
-	Wrench,
-} from 'lucide-react';
+import { Ban, CheckCircle2, ChevronDown, CircleDashed, CircleX, Loader2 } from 'lucide-react';
 import * as React from 'react';
 
 import { cn } from '../../lib/utils';
@@ -52,16 +45,17 @@ function formatValue(value: unknown): string {
 
 function StatusIcon({ status }: { status: ReturnType<typeof normalizeToolStatus> }) {
 	switch (status) {
+		// shrink-0 throughout: a long summary beside the icon must never squeeze it.
 		case 'pending':
-			return <Loader2 className="size-3.5 animate-spin text-info motion-reduce:animate-none" />;
+			return <CircleDashed className="size-3.5 shrink-0 text-muted-foreground" />;
 		case 'running':
-			return <Settings2 className="size-3.5 text-warning" />;
+			return <Loader2 className="size-3.5 shrink-0 animate-spin text-muted-foreground motion-reduce:animate-none" />;
 		case 'success':
-			return <CheckCircle2 className="size-3.5 text-success" />;
+			return <CheckCircle2 className="size-3.5 shrink-0 text-success" />;
 		case 'error':
-			return <CircleX className="size-3.5 text-destructive" />;
+			return <CircleX className="size-3.5 shrink-0 text-destructive" />;
 		case 'aborted':
-			return <Wrench className="size-3.5 text-muted-foreground" />;
+			return <Ban className="size-3.5 shrink-0 text-muted-foreground" />;
 	}
 }
 
@@ -121,7 +115,9 @@ function Tool({
 					{name}
 				</span>
 				{summary ? (
-					<span className="min-w-0 truncate font-mono text-muted-foreground">{summary}</span>
+					<span dir="auto" title={typeof summary === 'string' ? summary : undefined} className="min-w-0 truncate font-mono text-muted-foreground">
+						{summary}
+					</span>
 				) : null}
 			</div>
 		);
@@ -142,6 +138,8 @@ function Tool({
 				</span>
 				{summary ? (
 					<span
+						dir="auto"
+						title={typeof summary === 'string' ? summary : undefined}
 						className={cn(
 							'min-w-0 truncate rounded-md bg-muted px-1.5 py-0.5 font-mono text-[0.71875rem] text-muted-foreground',
 						)}
@@ -300,7 +298,7 @@ function ToolGroup({ label, children, defaultOpen = true, className }: ToolGroup
 						'text-muted-foreground hover:bg-accent hover:text-foreground',
 					)}
 				>
-					<ChevronDown data-slot="collapsible-icon" className="size-3" />
+					<ChevronDown data-slot="collapsible-icon" className="size-3.5 shrink-0" />
 					<span className="tabular-nums">{label}</span>
 				</CollapsibleTrigger>
 				<CollapsiblePanel innerClassName="py-1">

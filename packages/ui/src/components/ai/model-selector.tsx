@@ -3,10 +3,11 @@
 import { Check, ChevronDown, CircleDollarSign } from 'lucide-react';
 import * as React from 'react';
 
+import { unscaledRect } from '../../lib/motion/fluid-highlight';
 import { cn } from '../../lib/utils';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '../command';
 import { Kbd } from '../kbd';
-import { Popover, PopoverContent, PopoverTrigger } from '../popover';
+import { Popover, PopoverContent, popoverSurfaceClass, PopoverTrigger } from '../popover';
 import { Tooltip, TooltipContent, TooltipTrigger } from '../tooltip';
 import { formatCompact } from './context-ring';
 import { MarkTile } from './mark-tile';
@@ -68,6 +69,8 @@ type ModelSelectorProps = {
 	align?: 'start' | 'center' | 'end';
 	side?: 'top' | 'bottom';
 	triggerClassName?: string;
+	/** Classes for the reasoning level beside the model name, e.g. to hide it when the trigger is narrow. */
+	levelClassName?: string;
 	contentClassName?: string;
 	/** Accessible label prefix for the trigger. Defaults to "Model". */
 	label?: string;
@@ -121,22 +124,18 @@ function costTier(share: number, free: boolean) {
 }
 
 /**
- * Relative cost as a row of building blocks: one to four filled in the accent
- * color, stepping up in height like a stack being built. Discrete tiers read
- * faster than a continuous bar and keep the list calm while scanning.
+ * Relative cost as a row of building blocks: one to four filled, stepping up in height like a stack being built.
+ * Discrete tiers read faster than a continuous bar, and the muted fill keeps the list calm while scanning.
  */
 function CostBlocks({ tier }: { tier: number }) {
 	return (
-		<span role="img" aria-label={`Cost tier ${tier} of ${COST_TIERS}`} className="flex h-3 shrink-0 items-end gap-[3px]">
+		<span role="img" aria-label={`Cost tier ${tier} of ${COST_TIERS}`} className="flex h-2.5 shrink-0 items-end gap-0.5">
 			{Array.from({ length: COST_TIERS }, (_, index) => (
 				<span
 					key={index}
 					aria-hidden="true"
-					className={cn(
-						'w-1.5 rounded-[1.5px]',
-						index < tier ? 'bg-primary' : 'bg-[color-mix(in_oklab,currentColor_14%,transparent)]',
-					)}
-					style={{ height: `${6 + index * 2}px` }}
+					className={cn('w-[3px] rounded-[1px]', index < tier ? 'bg-muted-foreground' : 'bg-[color-mix(in_oklab,currentColor_14%,transparent)]')}
+					style={{ height: `${4 + index * 2}px` }}
 				/>
 			))}
 		</span>
@@ -145,7 +144,7 @@ function CostBlocks({ tier }: { tier: number }) {
 
 function PriceText({ pricing }: { pricing: AiModelPricing }) {
 	return (
-		<span className="text-xs text-muted-foreground tabular-nums">
+		<span className="text-[0.6875rem] text-muted-foreground tabular-nums">
 			{formatPrice(pricing.input, pricing.currency)}
 			<span className="text-subtle-foreground"> / </span>
 			{formatPrice(pricing.output, pricing.currency)}
@@ -160,8 +159,8 @@ function Tag({ tag }: { tag: AiModelTag }) {
 	return (
 		<span
 			className={cn(
-				'shrink-0 text-xs font-medium',
-				tag === 'deprecated' ? 'text-muted-foreground line-through' : 'text-link',
+				'shrink-0 text-[0.6875rem] font-medium',
+				tag === 'new' ? 'text-link' : tag === 'deprecated' ? 'text-subtle-foreground line-through' : 'text-muted-foreground',
 			)}
 		>
 			{TAG_LABEL[tag]}
@@ -175,7 +174,10 @@ function ModelGlyph({ model }: { model: AiModel }) {
 	);
 }
 
-/** A model's reasoning levels as a stacked menu: one row each, with its description and a check on the current one. */
+/**
+ * A model's reasoning levels as compact radio rows. The description of the level under the pointer (or the chosen
+ * one) shows once below them, in a slot sized to the longest so the card holds still while moving through them.
+ */
 function LevelMenu({
 	model,
 	levelId,
@@ -185,43 +187,64 @@ function LevelMenu({
 	levelId: string | undefined;
 	onPick: (levelId: string) => void;
 }) {
-	if (!model.levels?.length) {
-		return <p className="px-2 py-1.5 text-xs text-muted-foreground">One mode, no reasoning levels</p>;
-	}
+	const [peek, setPeek] = React.useState<string>();
+	const levels = model.levels ?? [];
+	const shown = peek ?? levelId;
+	const described = levels.some((level) => level.description);
 	return (
-		<div role="radiogroup" aria-label={`${model.name} reasoning level`} className="flex flex-col gap-px">
-			{model.levels.map((level) => {
-				const checked = level.id === levelId;
-				return (
-					<button
-						key={level.id}
-						type="button"
-						role="radio"
-						aria-checked={checked}
-						onMouseDown={(event) => event.preventDefault()}
-						onClick={() => onPick(level.id)}
-						className={cn(
-							'flex min-h-8 w-full cursor-pointer items-center gap-2 rounded-sm px-2 py-1.5 text-start outline-none pointer-coarse:min-h-11',
-							'hover:bg-overlay-hover focus-visible:ring-[3px] focus-visible:ring-ring/50',
-							checked && 'bg-overlay-hover',
-						)}
-					>
-						<span className="flex min-w-0 flex-1 flex-col">
-							<span className={cn('text-[0.8125rem]', checked ? 'font-medium text-foreground' : 'text-foreground/85')}>{level.label}</span>
-							{level.description ? <span className="text-xs text-muted-foreground">{level.description}</span> : null}
-						</span>
-						<Check aria-hidden="true" className={cn('size-3.5 shrink-0 text-foreground', checked ? 'opacity-100' : 'opacity-0')} />
-					</button>
-				);
-			})}
+		<div>
+			<p className="flex h-6 items-center justify-between gap-2 px-2 text-[0.6875rem] text-subtle-foreground">
+				Reasoning
+				{levels.length > 1 ? (
+					<span aria-hidden="true" className="hidden items-center gap-0.5 pointer-fine:flex">
+						<Kbd className="h-4 min-w-4 text-[0.625rem]">←</Kbd>
+						<Kbd className="h-4 min-w-4 text-[0.625rem]">→</Kbd>
+					</span>
+				) : null}
+			</p>
+			<div role="radiogroup" aria-label={`${model.name} reasoning level`} onPointerLeave={() => setPeek(undefined)} className="flex flex-col">
+				{levels.map((level) => {
+					const checked = level.id === levelId;
+					return (
+						<button
+							key={level.id}
+							type="button"
+							role="radio"
+							aria-checked={checked}
+							onMouseDown={(event) => event.preventDefault()}
+							onPointerEnter={() => setPeek(level.id)}
+							onFocus={() => setPeek(level.id)}
+							onBlur={() => setPeek(undefined)}
+							onClick={() => onPick(level.id)}
+							className={cn(
+								'flex h-7 w-full cursor-pointer items-center gap-2 rounded-sm px-2 text-start text-[0.8125rem] outline-none pointer-coarse:h-11',
+								'hover:bg-overlay-hover focus-visible:ring-[3px] focus-visible:ring-ring/50',
+								checked ? 'font-medium text-foreground' : 'text-foreground/80',
+							)}
+						>
+							<span className="min-w-0 flex-1 truncate">{level.label}</span>
+							<Check aria-hidden="true" className={cn('size-3.5 shrink-0', checked ? 'opacity-100' : 'opacity-0')} />
+						</button>
+					);
+				})}
+			</div>
+			{described ? (
+				// Every description sits in the same cell; only the shown one is visible, so the slot keeps the height of the longest.
+				<div className="grid px-2 pt-1 pb-1.5 text-[0.6875rem] leading-4 text-pretty text-muted-foreground">
+					{levels.map((level) => (
+						<p key={level.id} aria-hidden={level.id !== shown} className={cn('[grid-area:1/1]', level.id === shown ? 'visible' : 'invisible')}>
+							{level.description}
+						</p>
+					))}
+				</div>
+			) : null}
 		</div>
 	);
 }
 
 /**
- * The side card for the active model: what it is, its reasoning levels as a
- * menu, and its prices. It opens beside the list like a submenu, so the list
- * never changes size while moving through it.
+ * The side card for the active model: what it is, its reasoning levels, and its prices. It opens beside the list like
+ * a submenu, so the list never changes size while moving through it.
  */
 function ModelDetails({
 	model,
@@ -246,35 +269,20 @@ function ModelDetails({
 
 	return (
 		<>
-			<div className="flex items-center gap-2 px-3 pt-3 pb-2">
-				<ModelGlyph model={model} />
-				<div className="min-w-0">
-					<p title={model.name} className="truncate text-[0.8125rem] font-medium text-foreground">{model.name}</p>
-					<p title={model.description ?? model.provider} className="truncate text-xs text-muted-foreground">{model.description ?? model.provider}</p>
-				</div>
+			<div className="px-2 pt-1.5 pb-2">
+				<p dir="auto" title={model.name} className="truncate text-[0.8125rem] font-medium text-foreground">{model.name}</p>
+				<p className="line-clamp-2 text-[0.6875rem] leading-4 text-pretty text-muted-foreground">{model.description ?? model.provider}</p>
 			</div>
-			<div className="px-1 pb-1">
-				<LevelMenu model={model} levelId={level?.id} onPick={onPickLevel} />
-			</div>
-			<dl className="grid grid-cols-2 gap-x-3 gap-y-2 border-t border-border px-3 py-2.5">
+			{model.levels?.length ? <LevelMenu model={model} levelId={level?.id} onPick={onPickLevel} /> : null}
+			<div aria-hidden="true" className="mx-2 h-px bg-border/70" />
+			<dl className="grid grid-cols-2 gap-x-3 gap-y-1.5 px-2 pt-2 pb-1.5">
 				{facts.map((fact) => (
 					<div key={fact.label} className="min-w-0">
-						<dt className="truncate text-[0.6875rem] leading-4 text-muted-foreground">{fact.label}</dt>
+						<dt className="truncate text-[0.6875rem] leading-4 text-subtle-foreground">{fact.label}</dt>
 						<dd className="truncate text-xs leading-4 text-foreground tabular-nums">{fact.value}</dd>
 					</div>
 				))}
 			</dl>
-			<p className="hidden h-8 items-center gap-1 border-t border-border px-3 text-[0.6875rem] text-muted-foreground pointer-fine:flex">
-				{model.levels && model.levels.length > 1 ? (
-					<>
-						<Kbd>←</Kbd>
-						<Kbd>→</Kbd>
-						<span className="me-2">level</span>
-					</>
-				) : null}
-				<Kbd>↵</Kbd>
-				<span>choose</span>
-			</p>
 		</>
 	);
 }
@@ -290,6 +298,9 @@ function inTriangle(point: Point, a: Point, b: Point, c: Point) {
 	return !((d1 < 0 || d2 < 0 || d3 < 0) && (d1 > 0 || d2 > 0 || d3 > 0));
 }
 
+/** One shared empty list, so leaving the section props out doesn't rebuild the sections on every render. */
+const NO_IDS: string[] = [];
+
 /** How long a row crossed on the way to the side card waits before taking it over. */
 const PANEL_INTENT_MS = 240;
 
@@ -304,15 +315,16 @@ function ModelSelector({
 	models,
 	value,
 	onValueChange,
-	pinnedIds = [],
-	recentIds = [],
-	recommendedIds = [],
+	pinnedIds = NO_IDS,
+	recentIds = NO_IDS,
+	recommendedIds = NO_IDS,
 	priceDisplay: priceDisplayProp = 'meter',
 	allowPriceToggle,
 	disabled,
 	align = 'start',
 	side = 'top',
 	triggerClassName,
+	levelClassName,
 	contentClassName,
 	label = 'Model',
 }: ModelSelectorProps) {
@@ -324,7 +336,10 @@ function ModelSelector({
 	/** The row the side card shows. Follows the highlight, except while the pointer heads for the card. */
 	const [active, setActive] = React.useState('');
 	const [panel, setPanel] = React.useState<{ top: number; side: 'left' | 'right' | 'below' }>({ top: 0, side: 'right' });
+	/** The list's height when filtering starts, held so a short result list doesn't move the search field. */
+	const [listHeight, setListHeight] = React.useState<number>();
 	const contentRef = React.useRef<HTMLDivElement>(null);
+	const listRef = React.useRef<HTMLDivElement>(null);
 	const panelRef = React.useRef<HTMLDivElement>(null);
 	const trail = React.useRef<Point[]>([]);
 	const intentTimer = React.useRef<number | undefined>(undefined);
@@ -405,7 +420,8 @@ function ModelSelector({
 		const row =
 			rows.find((element) => element.dataset.modelValue === active) ??
 			rows.find((element) => element.dataset.modelValue?.endsWith(`::${value.modelId}`));
-		const rowTop = row ? row.getBoundingClientRect().top - box.top - 4 : 0;
+		// The popup may still be scaling in, so the row is measured in its own unscaled units.
+		const rowTop = row ? unscaledRect(row, content, box).top - 4 : 0;
 		// Aligned with its row; only the viewport edges push it, not the list's own height.
 		const top = Math.round(Math.min(Math.max(8 - box.top, rowTop), window.innerHeight - box.top - card.offsetHeight - 8));
 		const side = box.right + card.offsetWidth + 8 > window.innerWidth ? 'left' : 'right';
@@ -436,9 +452,9 @@ function ModelSelector({
 
 	/** Right-aligned column with a fixed minimum width, so prices, blocks, and checks line up down the list. */
 	const trailing = (model: AiModel, pricing: AiModelPricing | undefined) => {
-		if (model.disabled && model.disabledReason) return <span title={model.disabledReason} className="truncate text-xs text-muted-foreground">{model.disabledReason}</span>;
+		if (model.disabled && model.disabledReason) return <span title={model.disabledReason} className="truncate text-[0.6875rem] text-muted-foreground">{model.disabledReason}</span>;
 		if (priceDisplay === 'none' || !pricing) return null;
-		if (isFree(pricing)) return <span className="text-xs font-medium text-link">Free</span>;
+		if (isFree(pricing)) return <span className="text-[0.6875rem] font-medium text-muted-foreground">Free</span>;
 		if (priceDisplay === 'price') return <PriceText pricing={pricing} />;
 		const share = maxCost > 0 ? Math.log1p(blendedCost(pricing)) / Math.log1p(maxCost) : 0;
 		return <CostBlocks tier={costTier(share, false)} />;
@@ -448,6 +464,7 @@ function ModelSelector({
 		const level = levelOf(model, levelFor(model));
 		const pricing = pricingOf(model, level);
 		const tags = model.tags?.filter((tag) => !(tag === 'free' && isFree(pricing) && priceDisplay !== 'none'));
+		const current = model.id === value.modelId;
 		return (
 			<CommandItem
 				key={`${section}::${model.id}`}
@@ -456,25 +473,23 @@ function ModelSelector({
 				keywords={[model.name, model.provider, ...(model.levels?.map((entry) => entry.label) ?? []), ...(model.tags ?? [])]}
 				disabled={model.disabled}
 				onSelect={() => choose(model)}
-				className="h-9 gap-2 rounded-sm pointer-coarse:h-11"
+				className="h-7.5 gap-2 rounded-sm px-2 py-0 pointer-coarse:h-11"
 			>
 				<ModelGlyph model={model} />
 				<span className="flex min-w-0 flex-1 items-baseline gap-1.5">
-					<span title={model.name} className="truncate text-foreground">{model.name}</span>
-					{level ? <span title={level.label} className="shrink truncate text-muted-foreground">{level.label}</span> : null}
+					{/* The level gives way well before the name does, so a long name stays readable on a narrow list. */}
+					<span dir="auto" title={model.name} className="min-w-0 truncate text-[0.8125rem] font-medium text-foreground">{model.name}</span>
+					{level ? <span title={level.label} className="min-w-0 shrink-[8] truncate text-[0.6875rem] text-muted-foreground">{level.label}</span> : null}
 					{/* Two tags at most, so a model with many of them cannot squeeze its own name out of the row. */}
 					{tags?.slice(0, MAX_ROW_TAGS).map((tag) => <Tag key={tag} tag={tag} />)}
 					{tags && tags.length > MAX_ROW_TAGS ? (
-						<span title={tags.slice(MAX_ROW_TAGS).map((tag) => TAG_LABEL[tag]).join(', ')} className="shrink-0 text-xs text-muted-foreground tabular-nums">
+						<span title={tags.slice(MAX_ROW_TAGS).map((tag) => TAG_LABEL[tag]).join(', ')} className="shrink-0 text-[0.6875rem] text-muted-foreground tabular-nums">
 							+{tags.length - MAX_ROW_TAGS}
 						</span>
 					) : null}
 				</span>
-				<span className="flex min-w-14 shrink-0 justify-end text-muted-foreground">{trailing(model, pricing)}</span>
-				<Check
-					aria-hidden="true"
-					className={cn('size-3.5 shrink-0 text-foreground', model.id === value.modelId ? 'opacity-100' : 'opacity-0')}
-				/>
+				<span className="flex min-w-10 shrink-0 justify-end text-muted-foreground">{trailing(model, pricing)}</span>
+				<Check aria-hidden="true" className={cn('size-3.5 shrink-0 text-foreground', current ? 'opacity-100' : 'opacity-0')} />
 			</CommandItem>
 		);
 	};
@@ -488,6 +503,7 @@ function ModelSelector({
 				setOpen(next);
 				if (next) {
 					setQuery('');
+					setListHeight(undefined);
 					setPendingLevels({});
 					// Open on the current model, so its card is the first one shown.
 					const home = [...sections.browsing, ...sections.all].find((section) =>
@@ -502,21 +518,29 @@ function ModelSelector({
 				disabled={disabled}
 				onClick={(event) => event.stopPropagation()}
 				className={cn(
-					'flex h-8 max-w-full min-w-0 cursor-pointer items-center gap-1.5 rounded-md px-2 text-[0.8125rem] text-foreground outline-none',
-					'hover:bg-overlay-hover focus-visible:ring-[3px] focus-visible:ring-ring/50 data-popup-open:bg-overlay-hover',
+					'relative flex h-7 max-w-full min-w-0 cursor-pointer items-center gap-1.5 rounded-md px-1.5 text-xs font-medium text-foreground/85 outline-none',
+					'hover:bg-overlay-hover hover:text-foreground focus-visible:ring-[3px] focus-visible:ring-ring/50 data-popup-open:bg-overlay-hover data-popup-open:text-foreground',
+					// A 40px tall hit area without growing the chip; it stays inside the chip's own width so neighbours never overlap.
+					'before:absolute before:inset-x-0 before:-inset-y-1.5',
 					'transition-transform duration-(--duration-fast) motion-safe:active:scale-[0.96] disabled:cursor-not-allowed disabled:opacity-64',
 					triggerClassName,
 				)}
 			>
 				{selected ? <ModelGlyph model={selected} /> : null}
-				<span title={selected?.name ?? 'Choose a model'} className="truncate">{selected?.name ?? 'Choose a model'}</span>
-				{selectedLevel ? <span title={selectedLevel.label} className="truncate text-muted-foreground">{selectedLevel.label}</span> : null}
-				<ChevronDown aria-hidden="true" className="size-3.5 shrink-0 text-muted-foreground" />
+				<span dir="auto" title={selected?.name ?? 'Choose a model'} className="truncate">{selected?.name ?? 'Choose a model'}</span>
+				{selectedLevel ? <span title={selectedLevel.label} className={cn('truncate font-normal text-muted-foreground', levelClassName)}>{selectedLevel.label}</span> : null}
+				<ChevronDown aria-hidden="true" className="size-3 shrink-0 text-muted-foreground" />
 			</PopoverTrigger>
 			<PopoverContent
 				side={side}
 				align={align}
-				className={cn('relative w-[min(22rem,calc(100vw-1.5rem))] p-0', contentClassName)}
+				className={cn(
+					// The list and its side card share this one edge.
+					popoverSurfaceClass,
+					// The side card hangs outside the list, so the popup must not clip; on phones the card stacks below instead and the popup scrolls.
+					'relative w-[min(17rem,calc(100vw-1.5rem))] p-0 max-sm:overflow-y-auto sm:overflow-visible',
+					contentClassName,
+				)}
 			>
 				<div
 					ref={contentRef}
@@ -531,8 +555,18 @@ function ModelSelector({
 						loop
 						className="rounded-[inherit]"
 					>
-						<div className="relative border-b border-border">
-							<CommandInput value={query} onValueChange={setQuery} placeholder="Search models" className="pe-9" />
+						<div className="mx-1 flex items-center gap-1 border-b border-border/70 py-1 *:data-[slot=command-input-wrapper]:min-w-0 *:data-[slot=command-input-wrapper]:flex-1 *:data-[slot=command-input-wrapper]:p-0">
+							<CommandInput
+								value={query}
+								onValueChange={(next) => {
+									// Hold the list at its browsing height once filtering starts; release it when the field clears.
+									if (next && !query && listRef.current) setListHeight(listRef.current.offsetHeight);
+									if (!next) setListHeight(undefined);
+									setQuery(next);
+								}}
+								placeholder="Search models"
+								className="gap-2 px-2 [&_input]:h-7 [&_input]:text-[0.8125rem] [&_svg]:size-3.5"
+							/>
 							{canTogglePrice ? (
 								<Tooltip>
 									<TooltipTrigger
@@ -543,11 +577,11 @@ function ModelSelector({
 												aria-pressed={priceDisplay === 'price'}
 												onClick={() => setPriceDisplay((current) => (current === 'price' ? 'meter' : 'price'))}
 												className={cn(
-													'absolute top-1/2 end-2.5 grid size-7 -translate-y-1/2 cursor-pointer place-items-center rounded-md outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50',
-													priceDisplay === 'price' ? 'bg-muted text-foreground' : 'text-muted-foreground hover:bg-overlay-hover hover:text-foreground',
+													'grid size-6 shrink-0 cursor-pointer place-items-center rounded-sm outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50',
+													priceDisplay === 'price' ? 'bg-overlay-hover text-foreground' : 'text-muted-foreground hover:bg-overlay-hover hover:text-foreground',
 												)}
 											>
-												<CircleDollarSign aria-hidden="true" className="size-4" />
+												<CircleDollarSign aria-hidden="true" className="size-3.5" />
 											</button>
 										}
 									/>
@@ -555,8 +589,14 @@ function ModelSelector({
 								</Tooltip>
 							) : null}
 						</div>
-						<CommandList className="h-[min(20rem,50vh)] max-h-none p-1 not-empty:p-1" onScroll={placePanel}>
-							<CommandEmpty className="py-6 text-center text-sm text-muted-foreground">No models matched</CommandEmpty>
+						<CommandList
+							ref={listRef}
+							density="compact"
+							style={listHeight ? { height: listHeight } : undefined}
+							className="max-h-[min(20rem,50vh)]"
+							onScroll={placePanel}
+						>
+							<CommandEmpty className="py-6 text-center text-[0.8125rem] text-muted-foreground">No models matched</CommandEmpty>
 							{visible.map((section) => (
 								<CommandGroup key={section.id} heading={section.label}>
 									{section.items.map((model) => renderItem(model, section.id))}
@@ -576,12 +616,10 @@ function ModelSelector({
 						}}
 						style={panel.side === 'below' ? undefined : { top: panel.top }}
 						className={cn(
+							'p-1',
 							panel.side === 'below'
-								? 'border-t border-border'
-								: cn(
-										'absolute w-64 rounded-lg border bg-popover text-popover-foreground shadow-lg',
-										panel.side === 'right' ? 'left-full ml-1.5' : 'right-full mr-1.5',
-									),
+								? 'mx-1 border-t border-border/70 px-0'
+								: cn(popoverSurfaceClass, 'absolute w-56', panel.side === 'right' ? 'left-full ml-1.5' : 'right-full mr-1.5'),
 						)}
 					>
 						<ModelDetails

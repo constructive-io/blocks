@@ -4,6 +4,7 @@ import * as React from 'react';
 
 import type {
 	AgentDetail,
+	AgentStatusIndicator,
 	AgentSummary,
 	AgentsBuilderAction,
 	AgentsBuilderData,
@@ -12,7 +13,7 @@ import type {
 	Integration,
 } from './types';
 
-type AgentPatch = Partial<Pick<AgentSummary, 'status' | 'unread' | 'statusNote'>>;
+type AgentPatch = Partial<Pick<AgentSummary, 'status' | 'unread' | 'statusNote' | 'progress'>>;
 
 type ConnectRequest = {
 	integrationId: string;
@@ -39,6 +40,8 @@ type AgentsBuilderContextValue = {
 	/** Opens the agent view for an agent with a detail (the featured one or `agentDetails`); asks the host for any other. */
 	openAgent: (id: string) => void;
 	emit: (action: AgentsBuilderAction) => void;
+	/** How the roster and the run panel show an agent's state. */
+	statusIndicator: AgentStatusIndicator;
 	theme: AgentsBuilderTheme;
 	setTheme: (theme: AgentsBuilderTheme) => void;
 	usageDismissed: boolean;

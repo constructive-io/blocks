@@ -28,6 +28,7 @@ const meta: Meta<typeof AgentsBuilder> = {
 	argTypes: {
 		data: { control: false },
 		defaultView: { control: 'inline-radio', options: ['chat', 'inbox', 'schedules', 'integrations', 'skills', 'agent'] },
+		statusIndicator: { control: 'inline-radio', options: ['rail', 'rings'] },
 	},
 };
 
@@ -94,6 +95,13 @@ export const AgentRun: Story = {
 	render: (args) => <Frame {...args} />,
 };
 
+/** The same run with progress rings: each agent's ring before its name, and the header's ring filling as plan steps finish. */
+export const AgentRunRings: Story = {
+	name: 'Agent (live run, rings)',
+	args: { defaultView: 'agent', data: RUNNING_DEMO, statusIndicator: 'rings' },
+	render: (args) => <Frame {...args} />,
+};
+
 /** Approval, input, and failed agents past the six-row limit take the place of calm rows above them. */
 export const RosterOverflow: Story = {
 	name: 'Roster overflow',
@@ -121,6 +129,12 @@ export const AgentSettled: Story = {
 
 export const CollapsedSidebar: Story = {
 	args: { defaultView: 'chat', defaultSidebarCollapsed: true },
+	render: (args) => <Frame {...args} />,
+};
+
+export const CollapsedSidebarRings: Story = {
+	name: 'Collapsed sidebar (rings)',
+	args: { defaultView: 'chat', defaultSidebarCollapsed: true, statusIndicator: 'rings' },
 	render: (args) => <Frame {...args} />,
 };
 

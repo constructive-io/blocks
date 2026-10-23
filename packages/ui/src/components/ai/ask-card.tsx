@@ -63,7 +63,7 @@ function RadioMark({ checked }: { checked: boolean }) {
 		<span
 			aria-hidden="true"
 			className={cn(
-				'grid size-4 shrink-0 place-items-center rounded-full border',
+				'mt-0.5 grid size-4 shrink-0 place-items-center rounded-full border',
 				checked ? 'border-primary bg-primary' : 'border-subtle-foreground/50',
 			)}
 		>
@@ -91,7 +91,7 @@ function AskQuestionField({
 	const otherValue = choice && 'other' in choice ? choice.other : '';
 	// Card p-3 → rows bleed 6px into the padding and round at radius-md, so labels line up with the heading.
 	const rowClass =
-		'-mx-1.5 flex min-h-8 items-center gap-2.5 rounded-md px-1.5 py-1 text-start text-sm outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50';
+		'-mx-1.5 flex min-h-8 items-start gap-2.5 rounded-md px-1.5 py-1.5 text-start text-sm outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50';
 
 	return (
 		<div className="flex flex-col gap-2">

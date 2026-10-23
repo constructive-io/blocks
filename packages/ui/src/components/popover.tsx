@@ -50,6 +50,14 @@ function PopoverClose({ asChild, children, render, nativeButton, ...props }: Pop
 	);
 }
 
+/**
+ * A lighter edge for compact menus that float over busy content: a hairline ring and a soft drop shadow in place of
+ * the border, on a 10px corner whose 4px inset gives rows a concentric 6px corner. Works on `PopoverContent` and on
+ * any panel that hangs beside one.
+ */
+const popoverSurfaceClass =
+	'rounded-lg border-0 bg-popover text-popover-foreground shadow-[0_0_0_1px_oklch(0_0_0/0.08),0_4px_16px_-4px_oklch(0_0_0/0.14)] dark:shadow-[0_0_0_1px_oklch(1_0_0/0.12),0_4px_16px_-4px_oklch(0_0_0/0.45)]';
+
 type PopoverContentProps = React.ComponentProps<typeof PopoverPrimitive.Popup> & {
 	align?: 'start' | 'center' | 'end';
 	sideOffset?: number;
@@ -150,6 +158,7 @@ export {
 	PopoverClose,
 	PopoverContent,
 	PopoverDescription,
+	popoverSurfaceClass,
 	PopoverTitle,
 	PopoverTrigger,
 };

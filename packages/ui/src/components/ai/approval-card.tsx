@@ -203,8 +203,8 @@ function ApprovalCard({
 				<div className="flex items-start justify-between gap-2">
 					<div className="min-w-0 text-[0.8125rem] font-medium text-pretty text-foreground [overflow-wrap:anywhere]">{question!.prompt}</div>
 					<div className="flex shrink-0 items-center gap-1">
-						{/* Progress pills */}
-						<div className="flex items-center gap-0.5" aria-hidden>
+						{/* Progress pills, only when there is progress to show. */}
+						<div className={cn('flex items-center gap-0.5', progress.length < 2 && 'hidden')} aria-hidden>
 							{progress.map((on, i) => (
 								<span
 									key={i}
@@ -233,7 +233,8 @@ function ApprovalCard({
 								onClick={() => toggleOption(option.id)}
 								className={cn(
 									// card rounded-lg + p-3 → option rows use rounded-md (concentric)
-									'-mx-1.5 flex min-h-10 items-start gap-2 rounded-md px-1.5 py-1.5 text-start text-[0.8125rem]',
+									'-mx-1.5 flex min-h-10 gap-2 rounded-md px-1.5 py-1.5 text-start text-[0.8125rem]',
+									option.description ? 'items-start' : 'items-center',
 									'transition-[box-shadow] duration-(--duration-moderate) hover:bg-accent',
 									'focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50',
 									on && 'bg-accent',
@@ -241,7 +242,8 @@ function ApprovalCard({
 							>
 								<span
 									className={cn(
-										'mt-0.5 flex size-4 shrink-0 items-center justify-center rounded-full border',
+										'flex size-4 shrink-0 items-center justify-center rounded-full border',
+										option.description && 'mt-0.5',
 										on ? 'border-primary bg-primary text-primary-foreground' : 'border-border',
 									)}
 								>

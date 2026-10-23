@@ -45,7 +45,7 @@ function ScrollButton({
 				'shadow-lg backdrop-blur-md',
 				'dark:border-border dark:bg-card/90 dark:shadow-black/40',
 				// Interaction
-				'outline-none transition-[transform,background-color,color,box-shadow,border-color] duration-(--duration-moderate) ease-out',
+				'outline-none transition-[transform,box-shadow] duration-(--duration-moderate) ease-out',
 				'hover:border-border hover:bg-accent hover:text-foreground hover:shadow-lg',
 				'focus-visible:ring-[3px] focus-visible:ring-ring/50',
 				'motion-safe:active:scale-[0.96]',

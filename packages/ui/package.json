@@ -845,6 +845,8 @@
     "@base-ui/react": "^1.0.0",
     "@hookform/resolvers": "^5.2.2",
     "@internationalized/date": "^3.10.1",
+    "@pierre/diffs": "~1.5.2",
+    "@pierre/trees": "1.0.0-beta.6",
     "@remixicon/react": "^4.8.0",
     "@storybook/addon-a11y": "^10.1.11",
     "@storybook/react-vite": "^10.1.11",
