@@ -35,6 +35,15 @@ The documentation site is published at
 <https://constructive-io.github.io/blocks/>. Registry JSON is served from
 `https://constructive-io.github.io/blocks/r/{name}.json`.
 
+That URL always serves the latest build of `main`. For a registry that never
+changes under you, such as the one an app template is composed from, pin a
+commit of the `registry-dist` branch instead:
+`https://raw.githubusercontent.com/constructive-io/blocks/<dist commit>/r/{name}.json`.
+CI commits each `main` build's registry there as `registry from <blocks sha>`,
+so `git log origin/registry-dist --grep <blocks sha>` finds the commit for a
+blocks commit. A build whose registry didn't change adds no commit; the one
+before it serves the same files.
+
 The npm and registry distributions are independent. Console Kit source installs
 expect an existing shadcn project; initialize one if the application does not
 already contain `components.json`:
