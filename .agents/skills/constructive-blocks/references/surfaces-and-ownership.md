@@ -15,6 +15,9 @@ live `shadcn@latest search` and `view`.
 | Secure document rooms | `data-rooms` | Installed source owns the rooms, documents, people, Q&A, insights, settings, and access-map views, the access explanations and previews, optimistic local updates, and scripted assistant answers; the host supplies workspace data and owns storage, delivery, authorization, the activity log, and assistant runs. |
 | Searchable application commands | `command-palette` | The npm package owns the headless engine; installed source owns the dialog and task presentation; the host owns routing and actions. |
 | Arbitrary application-table CRUD | `sheets` | Installed source owns the grid; the data runtime interprets current `_meta`; the host owns endpoint and session discovery. |
+| Generated app screens for known tables | `resource-kit` | Installed source owns the list, detail, form, relation picker, and delete views, query caching, and invalidation after writes; the host supplies resource definitions, each table's source (list, get, create, update, remove, link), and the router. |
+| Public account screens | `auth-pages` | Installed source owns the panels' validation, pending, and result states; the host owns routing, sessions, tokens, and every auth call. |
+| App home screen | `dashboard-tiles` | Installed source owns the tiles and their layout and reads counts and recent rows through `resource-kit` sources; the host chooses what to show. |
 | Database schema editing | `schema-builder` | Installed source owns the workspace; a host adapter performs control-plane operations and confirmation workflows. |
 | Reporting relationships | `org-chart` | The controlled block owns hierarchy presentation; the host loads and persists reporting lines. |
 | Object storage management | `storage-browser` or a storage leaf | Blocks are controlled and transport-neutral; the host filters, authorizes, fetches, uploads, and mutates objects. |
@@ -75,6 +78,7 @@ and dependency closure. The public documentation provides richer examples:
 - Agents Builder: `https://constructive-io.github.io/blocks/blocks/agents-builder/`
 - Coding Agent: `https://constructive-io.github.io/blocks/blocks/coding-agent/`
 - Data Rooms: `https://constructive-io.github.io/blocks/blocks/data-rooms/`
+- Resource Kit, Auth Pages, Dashboard Tiles: `https://constructive-io.github.io/blocks/blocks/resource-kit/`, `/blocks/auth-pages/`, `/blocks/dashboard-tiles/`
 - Billing: `https://constructive-io.github.io/blocks/blocks/billing/` (Billing Account at `/blocks/billing/account/`, Billing Console at `/blocks/billing/console/`)
 - Feature packs: `https://constructive-io.github.io/blocks/blocks/features/`
 - Console Kit: `https://constructive-io.github.io/blocks/blocks/console-kit/`

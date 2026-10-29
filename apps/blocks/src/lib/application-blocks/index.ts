@@ -1,3 +1,6 @@
+import { AUTH_PAGES_DOC } from '../app-kit/auth-pages';
+import { DASHBOARD_TILES_DOC } from '../app-kit/dashboard-tiles';
+import { RESOURCE_KIT_DOC } from '../app-kit/resource-kit';
 import { agentsBuilderBlock } from './agents-builder';
 import { billingAccountBlock } from './billing-account';
 import { billingConsoleBlock } from './billing-console';
@@ -18,6 +21,12 @@ export const APPLICATION_BLOCKS: readonly ApplicationBlockDoc[] = [
   dataRoomsBlock,
   billingAccountBlock,
   billingConsoleBlock,
+  // The app kit: the blocks a generated application is composed from. Resource
+  // Kit turns resource definitions into list, detail, and form screens; Auth
+  // Pages and Dashboard Tiles cover the screens around them.
+  RESOURCE_KIT_DOC,
+  AUTH_PAGES_DOC,
+  DASHBOARD_TILES_DOC,
 ];
 
 const APPLICATION_BLOCK_BY_NAME = new Map(
