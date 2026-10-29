@@ -1,0 +1,28 @@
+{
+  "$schema": "https://ui.shadcn.com/schema/registry-item.json",
+  "name": "flow-zoom-panel",
+  "title": "Flow Zoom Panel",
+  "description": "Zoom in/out and fit-view controls for React Flow canvases.",
+  "dependencies": [
+    "@xyflow/react",
+    "@remixicon/react"
+  ],
+  "registryDependencies": [
+    "@constructive/cn",
+    "@constructive/button",
+    "@constructive/constructive-theme"
+  ],
+  "files": [
+    {
+      "path": "registry/constructive/ui/flow-zoom-panel.tsx",
+      "content": "'use client';\n\nimport { useCallback } from 'react';\nimport { Panel, useReactFlow, type PanelPosition, type FitViewOptions } from '@xyflow/react';\nimport { RiAddLine, RiFocus3Line, RiSubtractLine } from '@remixicon/react';\n\nimport { cn } from '@/lib/utils';\nimport { Button } from '@/components/ui/button';\n\ninterface FlowZoomPanelProps {\n  className?: string;\n  position?: PanelPosition;\n  fitViewIcon?: React.ReactNode;\n  /** Options for the fit-view button. `minZoom` defaults to 0.05 so a wide graph fits instead of stopping at the flow's own minimum. */\n  fitViewOptions?: FitViewOptions;\n  /** Accessible names for the three buttons, for translated UIs. Default: English. */\n  labels?: { zoomIn?: string; zoomOut?: string; fitView?: string };\n}\n\n/** React Flow's own `minZoom` (0.5) would leave a wide graph clipped after \"fit\", so fitting may zoom further out. */\nconst DEFAULT_FIT_VIEW_OPTIONS: FitViewOptions = { minZoom: 0.05 };\n\nconst BUTTON_CLASS =\n  'text-muted-foreground/80 hover:text-muted-foreground bg-card size-10 rounded-none shadow-none first:rounded-s-lg last:rounded-e-lg focus-visible:z-10';\n\nexport function FlowZoomPanel({\n  className,\n  position = 'bottom-right',\n  fitViewIcon = <RiFocus3Line className='size-5' aria-hidden='true' />,\n  fitViewOptions,\n  labels,\n}: FlowZoomPanelProps) {\n  const { zoomIn, zoomOut, fitView } = useReactFlow();\n\n  const onFitView = useCallback(() => {\n    fitView({ ...DEFAULT_FIT_VIEW_OPTIONS, ...fitViewOptions });\n  }, [fitView, fitViewOptions]);\n\n  return (\n    <Panel\n      data-slot='flow-zoom-panel'\n      position={position}\n      className={cn('inline-flex -space-x-px rounded-md shadow-xs rtl:space-x-reverse', className)}\n    >\n      <Button variant='outline' size='icon' className={BUTTON_CLASS} onClick={() => zoomIn()} aria-label={labels?.zoomIn ?? 'Zoom in'}>\n        <RiAddLine className='size-5' aria-hidden='true' />\n      </Button>\n      <Button variant='outline' size='icon' className={BUTTON_CLASS} onClick={() => zoomOut()} aria-label={labels?.zoomOut ?? 'Zoom out'}>\n        <RiSubtractLine className='size-5' aria-hidden='true' />\n      </Button>\n      <Button variant='outline' size='icon' className={BUTTON_CLASS} onClick={onFitView} aria-label={labels?.fitView ?? 'Fit view'}>\n        {fitViewIcon}\n      </Button>\n    </Panel>\n  );\n}\n",
+      "type": "registry:ui",
+      "target": "@ui/flow-zoom-panel.tsx"
+    }
+  ],
+  "docs": "Import: `import { FlowZoomPanel } from '@/components/ui/flow-zoom-panel'`",
+  "categories": [
+    "layout"
+  ],
+  "type": "registry:ui"
+}

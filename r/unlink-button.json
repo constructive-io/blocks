@@ -1,0 +1,27 @@
+{
+  "$schema": "https://ui.shadcn.com/schema/registry-item.json",
+  "name": "unlink-button",
+  "title": "Unlink Button",
+  "description": "A button for unlinking/removing records.",
+  "dependencies": [
+    "@remixicon/react"
+  ],
+  "registryDependencies": [
+    "@constructive/cn",
+    "@constructive/button",
+    "@constructive/constructive-theme"
+  ],
+  "files": [
+    {
+      "path": "registry/constructive/ui/unlink-button.tsx",
+      "content": "import { RiCloseLine, RiLoader4Line } from '@remixicon/react';\n\nimport { cn } from '@/lib/utils';\nimport { Button } from '@/components/ui/button';\n\ninterface UnlinkButtonProps {\n\tonUnlink: () => void;\n\tisUnlinking?: boolean;\n\tdisabled?: boolean;\n\tsize?: 'sm' | 'xs';\n\tvariant?: 'destructive' | 'ghost';\n\tclassName?: string;\n\t/** Name the record being unlinked (\"Unlink Acme Inc\"); it is also the hover tooltip. */\n\t'aria-label'?: string;\n}\n\nexport function UnlinkButton({\n\tonUnlink,\n\tisUnlinking = false,\n\tdisabled = false,\n\tsize = 'xs',\n\tvariant = 'ghost',\n\tclassName,\n\t'aria-label': ariaLabel = 'Unlink record',\n}: UnlinkButtonProps) {\n\treturn (\n\t\t<Button\n\t\t\tvariant={variant}\n\t\t\tsize={size}\n\t\t\tonClick={onUnlink}\n\t\t\tdisabled={disabled || isUnlinking}\n\t\t\tclassName={cn(\n\t\t\t\t'hover:bg-destructive/10 hover:text-destructive size-6 p-0',\n\t\t\t\t'focus-visible:ring-[3px] focus-visible:ring-destructive/30',\n\t\t\t\tisUnlinking && 'cursor-not-allowed opacity-50',\n\t\t\t\tclassName,\n\t\t\t)}\n\t\t\taria-label={ariaLabel}\n\t\t\ttitle={isUnlinking ? 'Unlinking...' : ariaLabel}\n\t\t>\n\t\t\t{isUnlinking ? <RiLoader4Line className='h-3 w-3 animate-spin' /> : <RiCloseLine className='h-3 w-3' />}\n\t\t</Button>\n\t);\n}\n",
+      "type": "registry:ui",
+      "target": "@ui/unlink-button.tsx"
+    }
+  ],
+  "docs": "Import: `import { UnlinkButton } from '@/components/ui/unlink-button'`",
+  "categories": [
+    "action"
+  ],
+  "type": "registry:ui"
+}

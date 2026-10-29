@@ -1,0 +1,23 @@
+{
+  "$schema": "https://ui.shadcn.com/schema/registry-item.json",
+  "name": "responsive-diagram",
+  "title": "Responsive Diagram",
+  "description": "A responsive diagram container with auto-scaling.",
+  "registryDependencies": [
+    "@constructive/cn",
+    "@constructive/constructive-theme"
+  ],
+  "files": [
+    {
+      "path": "registry/constructive/ui/responsive-diagram.tsx",
+      "content": "'use client';\n\nimport { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';\n\nimport { cn } from '@/lib/utils';\n\ninterface ResponsiveDiagramProps {\n\tchildren: React.ReactNode;\n\t/** Share of the container the diagram may fill before it scales down to fit. Default: 0.95. */\n\ttargetRatio?: number;\n\t/**\n\t * Smallest scale. A diagram that would need to shrink below this stops shrinking and scrolls sideways\n\t * instead, because text at a few pixels cannot be read. Default: 0.6 (about 10px for 16px text).\n\t */\n\tminZoom?: number;\n\tclassName?: string;\n}\n\ntype Fit = { zoom: number; width: number; height: number; scrollable: boolean };\n\nexport function ResponsiveDiagram({ children, targetRatio = 0.95, minZoom = 0.6, className }: ResponsiveDiagramProps) {\n\tconst containerRef = useRef<HTMLDivElement>(null);\n\tconst contentRef = useRef<HTMLDivElement>(null);\n\tconst [fit, setFit] = useState<Fit>({ zoom: 1, width: 0, height: 0, scrollable: false });\n\n\tconst calculateZoom = useCallback(() => {\n\t\tconst container = containerRef.current;\n\t\tconst content = contentRef.current;\n\t\tif (!container || !content) return;\n\n\t\t// `offsetWidth` and `offsetHeight` are the diagram's natural size: transforms do not change them.\n\t\tconst { offsetWidth: width, offsetHeight: height } = content;\n\t\tconst style = getComputedStyle(container);\n\t\tconst room = container.clientWidth - (parseFloat(style.paddingLeft) || 0) - (parseFloat(style.paddingRight) || 0);\n\t\tconst natural = width > 0 && width > room * targetRatio ? (room * targetRatio) / width : 1;\n\t\tconst zoom = Math.min(1, Math.max(minZoom, natural));\n\n\t\tsetFit((current) => {\n\t\t\tconst scrollable = Math.ceil(width * zoom) > room;\n\t\t\treturn current.zoom === zoom && current.width === width && current.height === height && current.scrollable === scrollable\n\t\t\t\t? current\n\t\t\t\t: { zoom, width, height, scrollable };\n\t\t});\n\t}, [targetRatio, minZoom]);\n\n\tuseLayoutEffect(() => {\n\t\t// Defer measurement to next frame to avoid blocking animations\n\t\t// This prevents layout thrashing during Stack card enter/exit\n\t\tconst rafId = requestAnimationFrame(() => {\n\t\t\tcalculateZoom();\n\t\t});\n\t\treturn () => cancelAnimationFrame(rafId);\n\t}, [calculateZoom, children]);\n\n\tuseEffect(() => {\n\t\t// ResizeObserver is absent in jsdom and some embedded webviews.\n\t\tif (typeof ResizeObserver === 'undefined') return;\n\t\tconst resizeObserver = new ResizeObserver(() => {\n\t\t\tcalculateZoom();\n\t\t});\n\n\t\tif (containerRef.current) resizeObserver.observe(containerRef.current);\n\t\tif (contentRef.current) resizeObserver.observe(contentRef.current);\n\n\t\treturn () => resizeObserver.disconnect();\n\t}, [calculateZoom]);\n\n\treturn (\n\t\t<div\n\t\t\tref={containerRef}\n\t\t\t// A scroller must be reachable without a pointer.\n\t\t\ttabIndex={fit.scrollable ? 0 : undefined}\n\t\t\tclassName={cn(\n\t\t\t\t`flex overflow-x-auto overflow-y-hidden rounded-lg border bg-neutral-50 px-4 py-6\n\t\t\t\tdark:bg-neutral-900/50`,\n\t\t\t\tclassName,\n\t\t\t)}\n\t\t>\n\t\t\t{/* `transform` leaves the unscaled size behind, so this box takes the scaled size: the container then\n\t\t\t    gets the right height, and scrolls (rather than clips) when the diagram stops at `minZoom`. */}\n\t\t\t<div\n\t\t\t\tclassName=\"m-auto shrink-0\"\n\t\t\t\tstyle={fit.width > 0 ? { width: fit.width * fit.zoom, height: fit.height * fit.zoom } : undefined}\n\t\t\t>\n\t\t\t\t<div\n\t\t\t\t\tref={contentRef}\n\t\t\t\t\tclassName=\"flex w-max items-center justify-center\"\n\t\t\t\t\tstyle={{ transform: `scale(${fit.zoom})`, transformOrigin: 'top left' }}\n\t\t\t\t>\n\t\t\t\t\t{children}\n\t\t\t\t</div>\n\t\t\t</div>\n\t\t</div>\n\t);\n}\n",
+      "type": "registry:ui",
+      "target": "@ui/responsive-diagram.tsx"
+    }
+  ],
+  "docs": "Import: `import { ResponsiveDiagram } from '@/components/ui/responsive-diagram'`",
+  "categories": [
+    "effect"
+  ],
+  "type": "registry:ui"
+}

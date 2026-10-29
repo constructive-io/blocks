@@ -1,0 +1,33 @@
+{
+  "$schema": "https://ui.shadcn.com/schema/registry-item.json",
+  "name": "preset-full",
+  "title": "Full Preset",
+  "description": "Stable Constructive full backend preset mapped to its supported Console Kit modules.",
+  "registryDependencies": [
+    "@constructive/console-kit-core",
+    "@constructive/console-module-data",
+    "@constructive/console-module-auth",
+    "@constructive/console-module-users",
+    "@constructive/console-module-organizations",
+    "@constructive/console-module-storage",
+    "@constructive/console-module-billing",
+    "@constructive/console-module-notifications",
+    "@constructive/constructive-theme"
+  ],
+  "files": [
+    {
+      "path": "registry/constructive/blocks/presets/full-console-kit.tsx",
+      "content": "'use client';\n\nimport { authConsoleModule } from '../feature-packs/auth/auth-console-module';\nimport { billingConsoleModule } from '../feature-packs/billing/billing-console-module';\nimport { dataConsoleModule } from '../feature-packs/data/data-console-module';\nimport { notificationsConsoleModule } from '../feature-packs/notifications/notifications-console-module';\nimport { organizationsConsoleModule } from '../feature-packs/organizations/organizations-console-module';\nimport { storageConsoleModule } from '../feature-packs/storage/storage-console-module';\nimport { usersConsoleModule } from '../feature-packs/users/users-console-module';\nimport {\n  ConstructiveConsoleKitCore,\n  type ConstructiveConsoleKitCoreProps\n} from '../console-kit/constructive/constructive-console-kit';\nimport type { ConsoleKitFeatureModule } from '../console-kit/feature-module';\n\nexport const fullFeatureModules = [\n  dataConsoleModule,\n  authConsoleModule,\n  usersConsoleModule,\n  organizationsConsoleModule,\n  storageConsoleModule,\n  billingConsoleModule,\n  notificationsConsoleModule\n] as const satisfies readonly ConsoleKitFeatureModule[];\n\nexport type FullConsoleKitProps = Omit<\n  ConstructiveConsoleKitCoreProps,\n  'featureModules'\n>;\n\nexport function FullConsoleKit(props: FullConsoleKitProps) {\n  return (\n    <ConstructiveConsoleKitCore\n      {...props}\n      featureModules={fullFeatureModules}\n    />\n  );\n}\n\n/** The one-command Console Kit umbrella installs the complete composition. */\nexport const ConstructiveConsoleKit = FullConsoleKit;\n\nexport type {\n  ConstructiveTenantDatabase,\n  ConstructiveTenantConsoleSession\n} from '../console-kit/constructive/constructive-console-kit';\nexport * from '../console-kit/constructive/constructive-callback';\nexport type {\n  ConsoleKitAdapterEnhancer,\n  ConsoleKitAdapterEnhancers,\n  ConsoleKitAppAccessRoute,\n  ConsoleKitAuthMethodConfig,\n  ConsoleKitAuthRoute,\n  ConsoleKitBillingRoute,\n  ConsoleKitDataRoute,\n  ConsoleKitNotificationsRoute,\n  ConsoleKitOrganizationsRoute,\n  ConsoleKitRoute,\n  ConsoleKitRouteConfig,\n  ConsoleKitStorageRoute\n} from '../console-kit/console-kit';\n",
+      "type": "registry:component",
+      "target": "src/blocks/presets/full-console-kit.tsx"
+    },
+    {
+      "path": "registry/constructive/blocks/presets/full.json",
+      "content": "{\n  \"schemaVersion\": 1,\n  \"id\": \"full\",\n  \"presetSlug\": \"full\",\n  \"title\": \"Full\",\n  \"description\": \"Every first-release Constructive feature pack.\",\n  \"stability\": \"stable\",\n  \"featurePacks\": [\"data\", \"auth\", \"users\", \"organizations\", \"storage\", \"billing\", \"notifications\"]\n}\n",
+      "type": "registry:file",
+      "target": "~/.constructive/feature-packs/full.json"
+    }
+  ],
+  "docs": "`preset-full` installed all seven Console modules and the stable Full preset component. Render `FullConsoleKit` with a secret-free tenant descriptor.\n\nDegraded states: installed backend modules do not imply public routes or user authority; Storage, Billing, or Notifications can remain partial or unavailable while other modules continue.\n\nGuide: https://constructive-io.github.io/blocks/blocks/console-kit/",
+  "type": "registry:block"
+}

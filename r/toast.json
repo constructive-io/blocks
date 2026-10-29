@@ -1,0 +1,59 @@
+{
+  "$schema": "https://ui.shadcn.com/schema/registry-item.json",
+  "name": "toast",
+  "title": "Toast Notifications",
+  "description": "Styled toast notification functions using Sonner.",
+  "dependencies": [
+    "sonner",
+    "lucide-react"
+  ],
+  "registryDependencies": [
+    "@constructive/button",
+    "@constructive/sonner",
+    "@constructive/cn",
+    "@constructive/constructive-theme"
+  ],
+  "files": [
+    {
+      "path": "registry/constructive/blocks/toast/index.ts",
+      "content": "import { showErrorToast } from '@/components/ui/toast/toast-error';\nimport { showInfoToast } from '@/components/ui/toast/toast-info';\nimport { showSuccessToast } from '@/components/ui/toast/toast-success';\nimport { showWarningToast } from '@/components/ui/toast/toast-warning';\n\n// Re-export types for convenience\nexport type { ToastProps } from '@/components/ui/toast/toast-card';\nexport type { ToastErrorProps } from '@/components/ui/toast/toast-error';\nexport type { ToastInfoProps } from '@/components/ui/toast/toast-info';\nexport type { ToastSuccessProps } from '@/components/ui/toast/toast-success';\nexport type { ToastWarningProps } from '@/components/ui/toast/toast-warning';\n\n// Unified toast API\nexport const toast = {\n\terror: showErrorToast,\n\tinfo: showInfoToast,\n\tsuccess: showSuccessToast,\n\twarning: showWarningToast,\n};\n\n// Also export individual functions for backward compatibility\nexport { showErrorToast, showInfoToast, showSuccessToast, showWarningToast };\n",
+      "type": "registry:component",
+      "target": "@ui/toast/index.ts"
+    },
+    {
+      "path": "registry/constructive/blocks/toast/toast-error.tsx",
+      "content": "'use client';\n\nimport { AlertCircleIcon } from 'lucide-react';\nimport { toast } from 'sonner';\n\nimport { ToastCard, type ToastProps, type ToastTone } from '@/components/ui/toast/toast-card';\n\nexport type ToastErrorProps = ToastProps;\n\nconst tone: ToastTone = {\n\tborder: 'border-destructive/20',\n\ticon: 'text-destructive',\n\tmessage: 'text-destructive',\n\taction: 'text-destructive',\n};\n\nexport function showErrorToast(props: ToastErrorProps) {\n\treturn toast.custom(\n\t\t(t) => <ToastCard toastId={t} icon={AlertCircleIcon} closeLabel='Close error notification' tone={tone} {...props} />,\n\t\t{ duration: Infinity },\n\t);\n}\n",
+      "type": "registry:component",
+      "target": "@ui/toast/toast-error.tsx"
+    },
+    {
+      "path": "registry/constructive/blocks/toast/toast-success.tsx",
+      "content": "'use client';\n\nimport { CheckCircleIcon } from 'lucide-react';\nimport { toast } from 'sonner';\n\nimport { ToastCard, type ToastProps, type ToastTone } from '@/components/ui/toast/toast-card';\n\nexport type ToastSuccessProps = ToastProps;\n\nconst tone: ToastTone = {\n\tborder: 'border-green-200/60 dark:border-green-800/50',\n\ticon: 'text-green-600 dark:text-green-500',\n\tmessage: 'text-green-700 dark:text-green-400',\n\taction: 'text-green-700 dark:text-green-400',\n};\n\nexport function showSuccessToast(props: ToastSuccessProps) {\n\treturn toast.custom((t) => (\n\t\t<ToastCard toastId={t} icon={CheckCircleIcon} closeLabel='Close success notification' tone={tone} {...props} />\n\t));\n}\n",
+      "type": "registry:component",
+      "target": "@ui/toast/toast-success.tsx"
+    },
+    {
+      "path": "registry/constructive/blocks/toast/toast-warning.tsx",
+      "content": "'use client';\n\nimport { AlertTriangleIcon } from 'lucide-react';\nimport { toast } from 'sonner';\n\nimport { ToastCard, type ToastProps, type ToastTone } from '@/components/ui/toast/toast-card';\n\nexport type ToastWarningProps = ToastProps;\n\nconst tone: ToastTone = {\n\tborder: 'border-amber-200/60 dark:border-amber-800/50',\n\ticon: 'text-amber-500',\n\tmessage: 'text-amber-700 dark:text-amber-400',\n\taction: 'text-amber-700 dark:text-amber-400',\n};\n\nexport function showWarningToast(props: ToastWarningProps) {\n\treturn toast.custom((t) => (\n\t\t<ToastCard toastId={t} icon={AlertTriangleIcon} closeLabel='Close warning notification' tone={tone} {...props} />\n\t));\n}\n",
+      "type": "registry:component",
+      "target": "@ui/toast/toast-warning.tsx"
+    },
+    {
+      "path": "registry/constructive/blocks/toast/toast-info.tsx",
+      "content": "'use client';\n\nimport { InfoIcon } from 'lucide-react';\nimport { toast } from 'sonner';\n\nimport { ToastCard, type ToastProps, type ToastTone } from '@/components/ui/toast/toast-card';\n\nexport type ToastInfoProps = ToastProps;\n\nconst tone: ToastTone = {\n\tborder: 'border-primary/20',\n\ticon: 'text-primary',\n\tmessage: 'text-link',\n\taction: 'text-link',\n};\n\nexport function showInfoToast(props: ToastInfoProps) {\n\treturn toast.custom((t) => (\n\t\t<ToastCard toastId={t} icon={InfoIcon} closeLabel='Close info notification' tone={tone} {...props} />\n\t));\n}\n",
+      "type": "registry:component",
+      "target": "@ui/toast/toast-info.tsx"
+    },
+    {
+      "path": "registry/constructive/blocks/toast/toast-card.tsx",
+      "content": "'use client';\n\nimport { XIcon } from 'lucide-react';\nimport { toast } from 'sonner';\n\nimport { cn } from '@/lib/utils';\nimport { Button } from '@/components/ui/button';\nimport { openToastDetails } from '@/components/ui/toast/toast-details';\n\nconst LONG_DESCRIPTION_THRESHOLD = 140;\n\nfunction isLongDescription(description?: string) {\n\tif (!description) return false;\n\treturn description.length > LONG_DESCRIPTION_THRESHOLD || description.includes('\\n');\n}\n\nexport interface ToastTone {\n\t/** Border colour classes. */\n\tborder: string;\n\t/** Colour classes for the leading icon. */\n\ticon: string;\n\t/** Colour classes for the message. */\n\tmessage: string;\n\t/** Colour classes for the action button. */\n\taction: string;\n}\n\n/** What every toast variant takes: `toast.error(props)`, `toast.success(props)` and so on. */\nexport interface ToastProps {\n\tmessage: string;\n\tdescription?: string;\n\taction?: {\n\t\tlabel: string;\n\t\tonClick: () => void;\n\t};\n\tonDismiss?: () => void;\n}\n\nexport interface ToastCardProps extends ToastProps {\n\ttoastId: string | number;\n\ticon: React.ComponentType<{ className?: string; size?: number; 'aria-hidden'?: boolean | 'true' | 'false' }>;\n\tcloseLabel: string;\n\ttone: ToastTone;\n}\n\n/**\n * Shared body of every toast variant. The description clamps to three lines; a long or\n * multi-line one (an error trace, a pasted message) gets a \"View details\" dialog with the\n * full text and a copy button, so no toast can grow past the viewport.\n */\nexport function ToastCard({ toastId, message, description, action, onDismiss, icon: Icon, closeLabel, tone }: ToastCardProps) {\n\tconst showDetails = isLongDescription(description);\n\n\treturn (\n\t\t<div\n\t\t\tclassName={cn(\n\t\t\t\t'bg-background text-foreground w-full rounded-lg border px-4 py-3 shadow-lg sm:w-[var(--width)]',\n\t\t\t\ttone.border,\n\t\t\t)}\n\t\t>\n\t\t\t<div className='flex gap-2'>\n\t\t\t\t<div className='flex min-w-0 grow gap-3'>\n\t\t\t\t\t<Icon className={cn('mt-0.5 shrink-0', tone.icon)} size={16} aria-hidden='true' />\n\t\t\t\t\t<div className='flex min-w-0 grow flex-col gap-1'>\n\t\t\t\t\t\t<p className={cn('text-sm font-medium break-words', tone.message)}>{message}</p>\n\t\t\t\t\t\t{description && (\n\t\t\t\t\t\t\t<p className='text-muted-foreground line-clamp-3 text-sm break-words'>{description}</p>\n\t\t\t\t\t\t)}\n\t\t\t\t\t\t{(showDetails || action) && (\n\t\t\t\t\t\t\t<div className='flex flex-wrap gap-x-4 gap-y-1'>\n\t\t\t\t\t\t\t\t{showDetails && description && (\n\t\t\t\t\t\t\t\t\t<button\n\t\t\t\t\t\t\t\t\t\ttype='button'\n\t\t\t\t\t\t\t\t\t\tclassName='text-muted-foreground hover:text-foreground text-xs font-medium underline underline-offset-2 decoration-dotted'\n\t\t\t\t\t\t\t\t\t\tonClick={(event) => openToastDetails({ title: message, description, trigger: event.currentTarget })}\n\t\t\t\t\t\t\t\t\t>\n\t\t\t\t\t\t\t\t\t\tView details\n\t\t\t\t\t\t\t\t\t</button>\n\t\t\t\t\t\t\t\t)}\n\t\t\t\t\t\t\t\t{action && (\n\t\t\t\t\t\t\t\t\t<button\n\t\t\t\t\t\t\t\t\t\ttype='button'\n\t\t\t\t\t\t\t\t\t\tclassName={cn('text-start text-sm font-medium hover:underline', tone.action)}\n\t\t\t\t\t\t\t\t\t\tonClick={action.onClick}\n\t\t\t\t\t\t\t\t\t>\n\t\t\t\t\t\t\t\t\t\t{action.label}\n\t\t\t\t\t\t\t\t\t</button>\n\t\t\t\t\t\t\t\t)}\n\t\t\t\t\t\t\t</div>\n\t\t\t\t\t\t)}\n\t\t\t\t\t</div>\n\t\t\t\t</div>\n\t\t\t\t<Button\n\t\t\t\t\tvariant='ghost'\n\t\t\t\t\tclassName='group -my-1.5 -me-2 size-8 shrink-0 p-0 hover:bg-transparent'\n\t\t\t\t\tonClick={() => {\n\t\t\t\t\t\ttoast.dismiss(toastId);\n\t\t\t\t\t\tonDismiss?.();\n\t\t\t\t\t}}\n\t\t\t\t\taria-label={closeLabel}\n\t\t\t\t>\n\t\t\t\t\t<XIcon size={16} className='opacity-60 transition-opacity group-hover:opacity-100' aria-hidden='true' />\n\t\t\t\t</Button>\n\t\t\t</div>\n\t\t</div>\n\t);\n}\n",
+      "type": "registry:component",
+      "target": "@ui/toast/toast-card.tsx"
+    }
+  ],
+  "docs": "Import: `import { toastSuccess, toastError, toastWarning, toastInfo } from '@/components/ui/toast'`",
+  "categories": [
+    "block"
+  ],
+  "type": "registry:block"
+}

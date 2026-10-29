@@ -1,0 +1,26 @@
+{
+  "$schema": "https://ui.shadcn.com/schema/registry-item.json",
+  "name": "checkbox",
+  "title": "Checkbox",
+  "description": "A checkbox component built on Base UI.",
+  "dependencies": [
+    "@base-ui/react"
+  ],
+  "registryDependencies": [
+    "@constructive/cn",
+    "@constructive/constructive-theme"
+  ],
+  "files": [
+    {
+      "path": "registry/constructive/ui/checkbox.tsx",
+      "content": "'use client';\n\nimport * as React from 'react';\nimport { Checkbox as CheckboxPrimitive } from '@base-ui/react/checkbox';\n\nimport { cn } from '@/lib/utils';\n\ntype CheckboxProps = CheckboxPrimitive.Root.Props;\n\nconst Checkbox = React.forwardRef<HTMLButtonElement, CheckboxProps>(({ className, ...props }, ref) => {\n\treturn (\n\t\t<CheckboxPrimitive.Root\n\t\t\tref={ref}\n\t\t\tclassName={cn(\n\t\t\t\t'relative inline-flex size-4.5 shrink-0 items-center justify-center outline-none transition-transform duration-(--duration-moderate) ease-out before:absolute before:-inset-2 before:content-[\\'\\'] motion-safe:active:not-data-disabled:scale-[0.96] motion-reduce:transition-none sm:size-4 pointer-coarse:before:-inset-3 data-disabled:cursor-not-allowed data-disabled:opacity-64 aria-invalid:[&_[data-slot=checkbox-control]]:border-destructive/36 focus-visible:[&_[data-slot=checkbox-control]]:ring-[3px] focus-visible:[&_[data-slot=checkbox-control]]:ring-ring/50 focus-visible:aria-invalid:[&_[data-slot=checkbox-control]]:border-destructive/64 focus-visible:aria-invalid:[&_[data-slot=checkbox-control]]:ring-destructive/48 dark:aria-invalid:[&_[data-slot=checkbox-control]]:ring-destructive/24',\n\t\t\t\tclassName,\n\t\t\t)}\n\t\t\tdata-slot=\"checkbox\"\n\t\t\t{...props}\n\t\t>\n\t\t\t<span\n\t\t\t\taria-hidden=\"true\"\n\t\t\t\tclassName=\"pointer-events-none absolute size-4.5 rounded-xs border border-input bg-background bg-clip-padding shadow-[0_1px_--theme(--color-black/4%)] sm:size-4 dark:bg-input/32 dark:bg-clip-border dark:shadow-[0_-1px_--theme(--color-white/8%)]\"\n\t\t\t\tdata-slot=\"checkbox-control\"\n\t\t\t/>\n\t\t\t<CheckboxPrimitive.Indicator\n\t\t\t\tkeepMounted\n\t\t\t\tclassName=\"absolute flex size-4.5 items-center justify-center rounded-xs text-primary-foreground transition-[opacity,scale,filter] duration-(--duration-slow) ease-out data-unchecked:scale-[0.25] data-unchecked:opacity-0 data-unchecked:blur-[4px] data-checked:bg-primary data-indeterminate:text-foreground motion-reduce:transition-none sm:size-4\"\n\t\t\t\tdata-slot=\"checkbox-indicator\"\n\t\t\t\trender={(props, state) => (\n\t\t\t\t\t<span {...props}>\n\t\t\t\t\t\t<span\n\t\t\t\t\t\t\tclassName={cn(\n\t\t\t\t\t\t\t\t'absolute inset-0 flex items-center justify-center transition-[opacity,scale,filter] duration-(--duration-slow) ease-out motion-reduce:transition-none',\n\t\t\t\t\t\t\t\tstate.indeterminate\n\t\t\t\t\t\t\t\t\t? 'scale-100 opacity-100 blur-0'\n\t\t\t\t\t\t\t\t\t: 'scale-[0.25] opacity-0 blur-[4px]',\n\t\t\t\t\t\t\t)}\n\t\t\t\t\t\t>\n\t\t\t\t\t\t\t<svg\n\t\t\t\t\t\t\t\tclassName=\"size-3.5 sm:size-3\"\n\t\t\t\t\t\t\t\tfill=\"none\"\n\t\t\t\t\t\t\t\theight=\"24\"\n\t\t\t\t\t\t\t\tstroke=\"currentColor\"\n\t\t\t\t\t\t\t\tstrokeLinecap=\"round\"\n\t\t\t\t\t\t\t\tstrokeLinejoin=\"round\"\n\t\t\t\t\t\t\t\tstrokeWidth=\"3\"\n\t\t\t\t\t\t\t\tviewBox=\"0 0 24 24\"\n\t\t\t\t\t\t\t\twidth=\"24\"\n\t\t\t\t\t\t\t\txmlns=\"http://www.w3.org/2000/svg\"\n\t\t\t\t\t\t\t>\n\t\t\t\t\t\t\t\t<path d=\"M5.252 12h13.496\" />\n\t\t\t\t\t\t\t</svg>\n\t\t\t\t\t\t</span>\n\t\t\t\t\t\t<span\n\t\t\t\t\t\t\tclassName={cn(\n\t\t\t\t\t\t\t\t'absolute inset-0 flex items-center justify-center transition-[opacity,scale,filter] duration-(--duration-slow) ease-out motion-reduce:transition-none',\n\t\t\t\t\t\t\t\tstate.indeterminate\n\t\t\t\t\t\t\t\t\t? 'scale-[0.25] opacity-0 blur-[4px]'\n\t\t\t\t\t\t\t\t\t: 'scale-100 opacity-100 blur-0',\n\t\t\t\t\t\t\t)}\n\t\t\t\t\t\t>\n\t\t\t\t\t\t\t<svg\n\t\t\t\t\t\t\t\tclassName=\"size-3.5 sm:size-3\"\n\t\t\t\t\t\t\t\tfill=\"none\"\n\t\t\t\t\t\t\t\theight=\"24\"\n\t\t\t\t\t\t\t\tstroke=\"currentColor\"\n\t\t\t\t\t\t\t\tstrokeLinecap=\"round\"\n\t\t\t\t\t\t\t\tstrokeLinejoin=\"round\"\n\t\t\t\t\t\t\t\tstrokeWidth=\"3\"\n\t\t\t\t\t\t\t\tviewBox=\"0 0 24 24\"\n\t\t\t\t\t\t\t\twidth=\"24\"\n\t\t\t\t\t\t\t\txmlns=\"http://www.w3.org/2000/svg\"\n\t\t\t\t\t\t\t>\n\t\t\t\t\t\t\t\t<path d=\"M5.252 12.7 10.2 18.63 18.748 5.37\" />\n\t\t\t\t\t\t\t</svg>\n\t\t\t\t\t\t</span>\n\t\t\t\t\t</span>\n\t\t\t\t)}\n\t\t\t/>\n\t\t</CheckboxPrimitive.Root>\n\t);\n});\nCheckbox.displayName = 'Checkbox';\n\nexport { Checkbox };\nexport type { CheckboxProps };\n",
+      "type": "registry:ui",
+      "target": "@ui/checkbox.tsx"
+    }
+  ],
+  "docs": "Import: `import { Checkbox } from '@/components/ui/checkbox'`",
+  "categories": [
+    "form"
+  ],
+  "type": "registry:ui"
+}

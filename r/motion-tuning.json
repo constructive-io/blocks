@@ -1,0 +1,22 @@
+{
+  "$schema": "https://ui.shadcn.com/schema/registry-item.json",
+  "name": "motion-tuning",
+  "title": "Motion Tuning",
+  "description": "Shared live-tunable spring tier store for the motion system.",
+  "dependencies": [
+    "react"
+  ],
+  "files": [
+    {
+      "path": "registry/constructive/lib/motion/tuning.ts",
+      "content": "import { useSyncExternalStore } from 'react';\n\n/**\n * Live-tunable motion tiers.\n *\n * `springTiers` holds the shared enter/exit timing for the library's motion\n * system (duration-based springs + quicker tween exits). The DialKit panel in\n * Storybook mutates this store so every consumer that reads through\n * `useSpringTiers` / `getSpringTiers` updates live while tuning.\n */\nexport interface SpringTier {\n\t/** Enter transition duration in seconds. */\n\tduration: number;\n\t/** Spring bounce (0 = critically damped). */\n\tbounce: number;\n\t/** Exit tween duration in seconds — always quicker than the enter tier. */\n\texitDuration: number;\n}\n\nexport interface SpringTiers {\n\tfast: SpringTier;\n\tmoderate: SpringTier;\n\tslow: SpringTier;\n}\n\nexport const DEFAULT_SPRING_TIERS: SpringTiers = {\n\t/** Hover, focus rings, fades, tooltips, selection indicators. */\n\tfast: { duration: 0.08, bounce: 0, exitDuration: 0.06 },\n\t/** Short travel and panels that must land exactly: dropdowns, tabs, drawers. */\n\tmoderate: { duration: 0.16, bounce: 0, exitDuration: 0.12 },\n\t/** Large surfaces: dialogs, side panels, stepped flows. */\n\tslow: { duration: 0.24, bounce: 0.12, exitDuration: 0.16 },\n};\n\nlet tiers: SpringTiers = { ...DEFAULT_SPRING_TIERS };\nconst listeners = new Set<() => void>();\n\nfunction emit() {\n\tfor (const listener of listeners) listener();\n}\n\nexport function getSpringTiers(): SpringTiers {\n\treturn tiers;\n}\n\nexport function setSpringTiers(next: SpringTiers) {\n\ttiers = { ...next };\n\temit();\n}\n\nexport function resetSpringTiers() {\n\ttiers = { ...DEFAULT_SPRING_TIERS };\n\temit();\n}\n\nexport function subscribeSpringTiers(listener: () => void): () => void {\n\tlisteners.add(listener);\n\treturn () => listeners.delete(listener);\n}\n\n/** Reactive read for components and stories that should re-render on dial changes. */\nexport function useSpringTiers(): SpringTiers {\n\treturn useSyncExternalStore(subscribeSpringTiers, getSpringTiers, getSpringTiers);\n}\n",
+      "type": "registry:lib",
+      "target": "@lib/motion/tuning.ts"
+    }
+  ],
+  "docs": "Import: `import { getSpringTiers, useSpringTiers } from '@/lib/motion/tuning'`",
+  "categories": [
+    "animation"
+  ],
+  "type": "registry:lib"
+}

@@ -1,0 +1,19 @@
+{
+  "$schema": "https://ui.shadcn.com/schema/registry-item.json",
+  "name": "text-runs",
+  "title": "text-runs",
+  "description": "Wraps each run of text children in one truncating span so flex labels end in an ellipsis without splitting interpolated text.",
+  "files": [
+    {
+      "path": "registry/constructive/lib/text-runs.tsx",
+      "content": "import * as React from 'react';\n\n// A run of only collapsible whitespace never becomes a flex item in a browser, so it is dropped rather than wrapped\n// (an empty span would open a gap).\nconst BLANK = /^[ \\t\\n\\f\\r]*$/;\n\n/**\n * Wraps each contiguous run of text (strings and numbers) in ONE truncating span and leaves elements alone, so a\n * flex label longer than its container ends in an ellipsis (`text-overflow` does not apply to the flex container\n * itself, nor to the anonymous item a bare string becomes). A run is wrapped as a whole: `{count}%` or\n * `{used}/{max}` stays a single flex item, as it is without the wrapper, so no `gap` opens inside it.\n *\n * `text` is the whole label when the children are text only, for a full-text `title`; otherwise it is undefined.\n */\nexport function truncateTextRuns(children: React.ReactNode, className = 'min-w-0 truncate') {\n\tconst nodes: React.ReactNode[] = [];\n\tlet run = '';\n\tlet text = '';\n\tlet onlyText = true;\n\n\tconst flush = () => {\n\t\tif (!BLANK.test(run)) {\n\t\t\tnodes.push(\n\t\t\t\t<span key={`text-${nodes.length}`} className={className} dir=\"auto\">\n\t\t\t\t\t{run}\n\t\t\t\t</span>,\n\t\t\t);\n\t\t}\n\t\trun = '';\n\t};\n\n\tfor (const child of React.Children.toArray(children)) {\n\t\tif (typeof child === 'string' || typeof child === 'number') {\n\t\t\trun += child;\n\t\t\ttext += child;\n\t\t} else {\n\t\t\tflush();\n\t\t\tnodes.push(child);\n\t\t\tonlyText = false;\n\t\t}\n\t}\n\tflush();\n\n\treturn { nodes, text: onlyText ? text : undefined };\n}\n",
+      "type": "registry:lib",
+      "target": "@lib/text-runs.tsx"
+    }
+  ],
+  "docs": "Import: `import { truncateTextRuns } from '@/lib/text-runs'`",
+  "categories": [
+    "utility"
+  ],
+  "type": "registry:lib"
+}

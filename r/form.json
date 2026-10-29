@@ -1,0 +1,28 @@
+{
+  "$schema": "https://ui.shadcn.com/schema/registry-item.json",
+  "name": "form",
+  "title": "Form",
+  "description": "Form utilities with react-hook-form integration.",
+  "dependencies": [
+    "react-hook-form"
+  ],
+  "registryDependencies": [
+    "@constructive/cn",
+    "@constructive/label",
+    "@constructive/slot",
+    "@constructive/constructive-theme"
+  ],
+  "files": [
+    {
+      "path": "registry/constructive/ui/form.tsx",
+      "content": "'use client';\n\nimport * as React from 'react';\nimport { Slot } from '@/lib/slot';\nimport {\n\tController,\n\tFormProvider,\n\tuseFormContext,\n\tuseFormState,\n\ttype ControllerProps,\n\ttype FieldPath,\n\ttype FieldValues,\n} from 'react-hook-form';\n\nimport { cn } from '@/lib/utils';\nimport { Label } from '@/components/ui/label';\n\nconst Form = FormProvider;\n\ntype FormFieldContextValue<\n\tTFieldValues extends FieldValues = FieldValues,\n\tTName extends FieldPath<TFieldValues> = FieldPath<TFieldValues>,\n> = {\n\tname: TName;\n};\n\nconst FormFieldContext = React.createContext<FormFieldContextValue>({} as FormFieldContextValue);\n\nconst FormField = <\n\tTFieldValues extends FieldValues = FieldValues,\n\tTName extends FieldPath<TFieldValues> = FieldPath<TFieldValues>,\n>({\n\t...props\n}: ControllerProps<TFieldValues, TName>) => {\n\treturn (\n\t\t<FormFieldContext.Provider value={{ name: props.name }}>\n\t\t\t<Controller {...props} />\n\t\t</FormFieldContext.Provider>\n\t);\n};\n\nconst useFormField = () => {\n\tconst fieldContext = React.useContext(FormFieldContext);\n\tconst itemContext = React.useContext(FormItemContext);\n\tconst { getFieldState } = useFormContext();\n\tconst formState = useFormState({ name: fieldContext.name });\n\tconst fieldState = getFieldState(fieldContext.name, formState);\n\n\tif (!fieldContext) {\n\t\tthrow new Error('useFormField should be used within <FormField>');\n\t}\n\n\tconst { id } = itemContext;\n\n\treturn {\n\t\tid,\n\t\tname: fieldContext.name,\n\t\tformItemId: `${id}-form-item`,\n\t\tformDescriptionId: `${id}-form-item-description`,\n\t\tformMessageId: `${id}-form-item-message`,\n\t\t...fieldState,\n\t};\n};\n\ntype FormItemContextValue = {\n\tid: string;\n};\n\nconst FormItemContext = React.createContext<FormItemContextValue>({} as FormItemContextValue);\n\nfunction FormItem({ className, ...props }: React.ComponentProps<'div'>) {\n\tconst id = React.useId();\n\n\t// `grid-cols-1` is minmax(0, 1fr): an unbreakable message or label wraps instead of widening the whole field.\n\treturn (\n\t\t<FormItemContext.Provider value={{ id }}>\n\t\t\t<div data-slot=\"form-item\" className={cn('grid min-w-0 grid-cols-1 gap-2', className)} {...props} />\n\t\t</FormItemContext.Provider>\n\t);\n}\n\nfunction FormLabel({ className, ...props }: React.ComponentProps<typeof Label>) {\n\tconst { error, formItemId } = useFormField();\n\n\treturn (\n\t\t<Label\n\t\t\tdata-slot=\"form-label\"\n\t\t\tdata-error={!!error}\n\t\t\tclassName={cn('[overflow-wrap:anywhere] data-[error=true]:text-destructive', className)}\n\t\t\thtmlFor={formItemId}\n\t\t\t{...props}\n\t\t/>\n\t);\n}\n\nfunction FormControl({ ...props }: React.ComponentProps<typeof Slot>) {\n\tconst { error, formItemId, formDescriptionId, formMessageId } = useFormField();\n\n\treturn (\n\t\t<Slot\n\t\t\tdata-slot=\"form-control\"\n\t\t\tid={formItemId}\n\t\t\taria-describedby={!error ? `${formDescriptionId}` : `${formDescriptionId} ${formMessageId}`}\n\t\t\taria-invalid={!!error}\n\t\t\t{...props}\n\t\t/>\n\t);\n}\n\nfunction FormDescription({ className, ...props }: React.ComponentProps<'p'>) {\n\tconst { formDescriptionId } = useFormField();\n\n\treturn (\n\t\t<p\n\t\t\tdata-slot=\"form-description\"\n\t\t\tid={formDescriptionId}\n\t\t\tclassName={cn('text-muted-foreground text-sm [overflow-wrap:anywhere]', className)}\n\t\t\t{...props}\n\t\t/>\n\t);\n}\n\nfunction FormMessage({ className, ...props }: React.ComponentProps<'p'>) {\n\tconst { error, formMessageId } = useFormField();\n\t// A field can be invalid without a message (for example `setError(name, { type })`); `children` then act as the\n\t// fallback so the field never turns red without saying why.\n\tconst body = (error ? String(error?.message ?? '') : '') || props.children;\n\n\tif (!body) {\n\t\treturn null;\n\t}\n\n\treturn (\n\t\t<p\n\t\t\tdata-slot=\"form-message\"\n\t\t\tid={formMessageId}\n\t\t\tclassName={cn('text-destructive text-sm [overflow-wrap:anywhere]', className)}\n\t\t\t{...props}\n\t\t>\n\t\t\t{body}\n\t\t</p>\n\t);\n}\n\nexport { useFormField, Form, FormItem, FormLabel, FormControl, FormDescription, FormMessage, FormField };\n",
+      "type": "registry:ui",
+      "target": "@ui/form.tsx"
+    }
+  ],
+  "docs": "Import: `import { Form, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form'`",
+  "categories": [
+    "form"
+  ],
+  "type": "registry:ui"
+}

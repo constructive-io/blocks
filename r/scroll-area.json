@@ -1,0 +1,26 @@
+{
+  "$schema": "https://ui.shadcn.com/schema/registry-item.json",
+  "name": "scroll-area",
+  "title": "Scroll Area",
+  "description": "A custom scrollable area component built on Base UI.",
+  "dependencies": [
+    "@base-ui/react"
+  ],
+  "registryDependencies": [
+    "@constructive/cn",
+    "@constructive/constructive-theme"
+  ],
+  "files": [
+    {
+      "path": "registry/constructive/ui/scroll-area.tsx",
+      "content": "\"use client\";\n\nimport * as React from \"react\";\nimport { ScrollArea as ScrollAreaPrimitive } from \"@base-ui/react/scroll-area\";\n\nimport { cn } from \"@/lib/utils\";\n\ntype ScrollAreaProps = ScrollAreaPrimitive.Root.Props & {\n  scrollFade?: boolean;\n  scrollbarGutter?: boolean;\n};\n\nconst ScrollArea = React.forwardRef<HTMLDivElement, ScrollAreaProps>(\n  (\n    { className, children, scrollFade = false, scrollbarGutter = false, ...props },\n    ref\n  ) => {\n    return (\n      <ScrollAreaPrimitive.Root\n        ref={ref}\n        className={cn(\"size-full min-h-0\", className)}\n        {...props}\n      >\n      <ScrollAreaPrimitive.Viewport\n        className={cn(\n          // `max-h-[inherit]` hands a root `max-height` (class or style) to the viewport; `h-full` alone resolves to auto under an auto-height root, so the list grew instead of scrolling.\n          \"h-full max-h-[inherit] overscroll-contain rounded-[inherit] outline-none transition-shadow focus-visible:ring-[3px] focus-visible:ring-ring/50\",\n          scrollFade &&\n            \"mask-t-from-[calc(100%-min(var(--fade-size),var(--scroll-area-overflow-y-start)))] mask-b-from-[calc(100%-min(var(--fade-size),var(--scroll-area-overflow-y-end)))] mask-l-from-[calc(100%-min(var(--fade-size),var(--scroll-area-overflow-x-start)))] mask-r-from-[calc(100%-min(var(--fade-size),var(--scroll-area-overflow-x-end)))] [--fade-size:1.5rem]\",\n          scrollbarGutter &&\n            \"data-has-overflow-y:pe-2.5 data-has-overflow-x:pb-2.5\",\n        )}\n        data-slot=\"scroll-area-viewport\"\n      >\n        {children}\n      </ScrollAreaPrimitive.Viewport>\n      <ScrollBar orientation=\"vertical\" />\n      <ScrollBar orientation=\"horizontal\" />\n      <ScrollAreaPrimitive.Corner data-slot=\"scroll-area-corner\" />\n    </ScrollAreaPrimitive.Root>\n  );\n  }\n);\nScrollArea.displayName = \"ScrollArea\";\n\nfunction ScrollBar({\n  className,\n  orientation = \"vertical\",\n  ...props\n}: ScrollAreaPrimitive.Scrollbar.Props) {\n  return (\n    <ScrollAreaPrimitive.Scrollbar\n      className={cn(\n        \"m-1 flex opacity-0 transition-opacity delay-300 data-[orientation=horizontal]:h-1.5 data-[orientation=vertical]:w-1.5 data-[orientation=horizontal]:flex-col data-hovering:opacity-100 data-scrolling:opacity-100 data-hovering:delay-0 data-scrolling:delay-0 data-hovering:duration-(--duration-fast) data-scrolling:duration-(--duration-fast)\",\n        className,\n      )}\n      data-slot=\"scroll-area-scrollbar\"\n      orientation={orientation}\n      {...props}\n    >\n      <ScrollAreaPrimitive.Thumb\n        className=\"relative flex-1 rounded-full bg-foreground/20\"\n        data-slot=\"scroll-area-thumb\"\n      />\n    </ScrollAreaPrimitive.Scrollbar>\n  );\n}\n\nexport { ScrollArea, ScrollBar };\n",
+      "type": "registry:ui",
+      "target": "@ui/scroll-area.tsx"
+    }
+  ],
+  "docs": "Import: `import { ScrollArea } from '@/components/ui/scroll-area'`",
+  "categories": [
+    "layout"
+  ],
+  "type": "registry:ui"
+}

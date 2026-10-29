@@ -1,0 +1,26 @@
+{
+  "$schema": "https://ui.shadcn.com/schema/registry-item.json",
+  "name": "separator",
+  "title": "Separator",
+  "description": "A visual separator for dividing content.",
+  "dependencies": [
+    "@base-ui/react"
+  ],
+  "registryDependencies": [
+    "@constructive/cn",
+    "@constructive/constructive-theme"
+  ],
+  "files": [
+    {
+      "path": "registry/constructive/ui/separator.tsx",
+      "content": "'use client';\n\nimport * as React from 'react';\nimport { Separator as SeparatorPrimitive } from '@base-ui/react/separator';\n\nimport { cn } from '@/lib/utils';\n\ntype SeparatorProps = React.ComponentProps<typeof SeparatorPrimitive> & {\n\t/** @deprecated Base UI handles accessibility automatically */\n\tdecorative?: boolean;\n};\n\nfunction Separator({ className, orientation = 'horizontal', decorative: _decorative, ...props }: SeparatorProps) {\n\treturn (\n\t\t<SeparatorPrimitive\n\t\t\tdata-slot=\"separator-root\"\n\t\t\torientation={orientation}\n\t\t\tclassName={cn(\n\t\t\t\t'bg-border shrink-0',\n\t\t\t\t// A vertical rule fills its parent's height; `min-h-4` keeps it visible when the parent has no height of\n\t\t\t\t// its own (otherwise it is 0px tall). It does not set `align-self`: with a height of its own (`h-4`) a\n\t\t\t\t// stretching rule would sit at the top of an `items-center` row instead of being centred by it.\n\t\t\t\torientation === 'horizontal' ? 'h-px w-full' : 'h-full min-h-4 w-px',\n\t\t\t\tclassName,\n\t\t\t)}\n\t\t\t{...props}\n\t\t/>\n\t);\n}\n\nexport { Separator };\nexport type { SeparatorProps };\n",
+      "type": "registry:ui",
+      "target": "@ui/separator.tsx"
+    }
+  ],
+  "docs": "Import: `import { Separator } from '@/components/ui/separator'`",
+  "categories": [
+    "primitive"
+  ],
+  "type": "registry:ui"
+}

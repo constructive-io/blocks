@@ -1,0 +1,27 @@
+{
+  "$schema": "https://ui.shadcn.com/schema/registry-item.json",
+  "name": "form-kit",
+  "title": "Form Kit",
+  "description": "All form-related components: input, textarea, checkbox, radio, select, switch, progress, form controls.",
+  "registryDependencies": [
+    "@constructive/input",
+    "@constructive/textarea",
+    "@constructive/checkbox",
+    "@constructive/checkbox-group",
+    "@constructive/radio-group",
+    "@constructive/switch",
+    "@constructive/select",
+    "@constructive/progress",
+    "@constructive/form",
+    "@constructive/form-control",
+    "@constructive/input-group",
+    "@constructive/field",
+    "@constructive/label",
+    "@constructive/constructive-theme"
+  ],
+  "files": [],
+  "categories": [
+    "bundle"
+  ],
+  "type": "registry:ui"
+}

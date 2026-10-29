@@ -1,0 +1,27 @@
+{
+  "$schema": "https://ui.shadcn.com/schema/registry-item.json",
+  "name": "checkbox-group",
+  "title": "Checkbox Group",
+  "description": "A group wrapper for multiple checkboxes.",
+  "dependencies": [
+    "@base-ui/react"
+  ],
+  "registryDependencies": [
+    "@constructive/checkbox",
+    "@constructive/cn",
+    "@constructive/constructive-theme"
+  ],
+  "files": [
+    {
+      "path": "registry/constructive/ui/checkbox-group.tsx",
+      "content": "'use client';\n\nimport { CheckboxGroup as CheckboxGroupPrimitive } from '@base-ui/react/checkbox-group';\n\nimport { cn } from '@/lib/utils';\n\ntype CheckboxGroupProps = CheckboxGroupPrimitive.Props;\n\nfunction CheckboxGroup({ className, ...props }: CheckboxGroupProps) {\n\treturn <CheckboxGroupPrimitive className={cn('flex flex-col items-start gap-3', className)} data-slot=\"checkbox-group\" {...props} />;\n}\n\nexport { CheckboxGroup };\nexport type { CheckboxGroupProps };\n",
+      "type": "registry:ui",
+      "target": "@ui/checkbox-group.tsx"
+    }
+  ],
+  "docs": "Import: `import { CheckboxGroup } from '@/components/ui/checkbox-group'`",
+  "categories": [
+    "form"
+  ],
+  "type": "registry:ui"
+}

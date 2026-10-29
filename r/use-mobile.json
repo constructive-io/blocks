@@ -1,0 +1,19 @@
+{
+  "$schema": "https://ui.shadcn.com/schema/registry-item.json",
+  "name": "use-mobile",
+  "title": "useIsMobile",
+  "description": "Hook for detecting mobile viewport.",
+  "files": [
+    {
+      "path": "registry/constructive/hooks/use-mobile.ts",
+      "content": "'use client';\n\nimport { useSyncExternalStore } from 'react';\n\nconst MOBILE_BREAKPOINT = 768;\n\nclass MobileBreakpointStore {\n\tprivate static instance: MobileBreakpointStore | undefined;\n\tprivate readonly listeners = new Set<() => void>();\n\tprivate readonly mediaQuery: MediaQueryList | undefined;\n\tprivate isMobile = false;\n\n\tprivate constructor() {\n\t\tif (typeof window === 'undefined') return;\n\n\t\tthis.mediaQuery = window.matchMedia(`(max-width: ${MOBILE_BREAKPOINT - 1}px)`);\n\t\tthis.isMobile = this.mediaQuery.matches;\n\t\tthis.mediaQuery.addEventListener('change', this.handleChange, { passive: true });\n\t}\n\n\tstatic getInstance(): MobileBreakpointStore {\n\t\tif (!MobileBreakpointStore.instance) {\n\t\t\tMobileBreakpointStore.instance = new MobileBreakpointStore();\n\t\t}\n\n\t\treturn MobileBreakpointStore.instance;\n\t}\n\n\tprivate handleChange = (event: MediaQueryListEvent) => {\n\t\tthis.isMobile = event.matches;\n\t\tthis.listeners.forEach((listener) => listener());\n\t};\n\n\tsubscribe = (listener: () => void): (() => void) => {\n\t\tthis.listeners.add(listener);\n\t\treturn () => this.listeners.delete(listener);\n\t};\n\n\tgetSnapshot = (): boolean => this.isMobile;\n\n\tgetServerSnapshot = (): boolean => false;\n}\n\nexport function useIsMobile(): boolean {\n\tconst store = MobileBreakpointStore.getInstance();\n\treturn useSyncExternalStore(store.subscribe, store.getSnapshot, store.getServerSnapshot);\n}\n",
+      "type": "registry:hook",
+      "target": "@hooks/use-mobile.ts"
+    }
+  ],
+  "docs": "Import: `import { useIsMobile } from '@/hooks/use-mobile'`",
+  "categories": [
+    "hook"
+  ],
+  "type": "registry:hook"
+}

@@ -1,0 +1,27 @@
+{
+  "$schema": "https://ui.shadcn.com/schema/registry-item.json",
+  "name": "motion-grid",
+  "title": "Motion Grid",
+  "description": "An animated grid with frame-based transitions.",
+  "dependencies": [
+    "motion"
+  ],
+  "registryDependencies": [
+    "@constructive/cn",
+    "@constructive/motion-config",
+    "@constructive/constructive-theme"
+  ],
+  "files": [
+    {
+      "path": "registry/constructive/ui/motion-grid.tsx",
+      "content": "'use client';\n\nimport * as React from 'react';\nimport { motion, type HTMLMotionProps, type Transition, useReducedMotion } from 'motion/react';\n\nimport { easings } from '@/lib/motion/motion-config';\nimport { cn } from '@/lib/utils';\n\ntype FrameDot = [number, number];\ntype Frame = FrameDot[];\ntype Frames = Frame[];\n\ntype MotionGridProps = {\n\tgridSize: [number, number];\n\t/** Duration in milliseconds for each frame of the animation */\n\tduration?: number;\n\tanimate?: boolean;\n\tcellClassName?: string;\n\tcellProps?: HTMLMotionProps<'div'>;\n\tcellActiveClassName?: string;\n\tcellInactiveClassName?: string;\n} & React.ComponentProps<'div'>;\n\ntype MotionGridCellProps = {\n\tactive: boolean;\n\tclassName?: string;\n\tactiveClassName?: string;\n\tinactiveClassName?: string;\n\tcellProps?: HTMLMotionProps<'div'>;\n\ttransition: Transition;\n};\n\n/** One dot. Memoised so a frame re-renders only the dots that switch, not every dot in the grid. */\nconst MotionGridCell = React.memo(function MotionGridCell({ active, className, activeClassName, inactiveClassName, cellProps, transition }: MotionGridCellProps) {\n\treturn (\n\t\t<motion.div\n\t\t\tclassName={cn(\n\t\t\t\t'aspect-square size-3 rounded-full',\n\t\t\t\tactive ? cn('bg-primary scale-110', activeClassName) : cn('bg-muted scale-100', inactiveClassName),\n\t\t\t\tclassName,\n\t\t\t)}\n\t\t\t{...cellProps}\n\t\t\ttransition={transition}\n\t\t/>\n\t);\n});\n\nconst MotionGrid = ({\n\tgridSize,\n\tduration = 200,\n\tanimate = true,\n\tcellClassName,\n\tcellProps,\n\tcellActiveClassName,\n\tcellInactiveClassName,\n\tclassName,\n\tstyle,\n\t...props\n}: MotionGridProps) => {\n\tconst [cols, rows] = gridSize;\n\tconst frames = useLoadingFrames(cols, rows);\n\tconst [index, setIndex] = React.useState(0);\n\tconst intervalRef = React.useRef<NodeJS.Timeout | null>(null);\n\tconst prefersReducedMotion = useReducedMotion();\n\tconst shouldAnimate = animate && !prefersReducedMotion;\n\n\tReact.useEffect(() => {\n\t\tif (!shouldAnimate || frames.length === 0) {\n\t\t\tsetIndex(0);\n\t\t\treturn;\n\t\t}\n\t\tintervalRef.current = setInterval(() => setIndex((i) => (i + 1) % frames.length), duration);\n\t\treturn () => clearInterval(intervalRef.current!);\n\t}, [frames.length, duration, shouldAnimate]);\n\n\tconst active = new Set<number>(frames[index]?.map(([x, y]) => y * cols + x) ?? []);\n\t// Convert ms to seconds for motion library\n\tconst transition = React.useMemo<Transition>(\n\t\t() => (prefersReducedMotion ? { duration: 0 } : { duration: duration / 1000, ease: easings.easeInOut }),\n\t\t[prefersReducedMotion, duration],\n\t);\n\n\treturn (\n\t\t<div\n\t\t\tclassName={cn('grid w-fit gap-0.5', className)}\n\t\t\tstyle={{\n\t\t\t\t...style,\n\t\t\t\tgridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))`,\n\t\t\t\tgridAutoRows: '1fr',\n\t\t\t}}\n\t\t\t{...props}\n\t\t>\n\t\t\t{Array.from({ length: cols * rows }).map((_, i) => (\n\t\t\t\t<MotionGridCell\n\t\t\t\t\tkey={i}\n\t\t\t\t\tactive={active.has(i)}\n\t\t\t\t\tclassName={cellClassName}\n\t\t\t\t\tactiveClassName={cellActiveClassName}\n\t\t\t\t\tinactiveClassName={cellInactiveClassName}\n\t\t\t\t\tcellProps={cellProps}\n\t\t\t\t\ttransition={transition}\n\t\t\t\t/>\n\t\t\t))}\n\t\t</div>\n\t);\n};\n\nconst useLoadingFrames = (cols: number = 8, rows: number = 4) => {\n\t// Animated loading pattern for the preview area using MotionGrid\n\tconst loadingFrames = React.useMemo<Frames>(() => {\n\t\tconst frames: Frames = [];\n\t\tfor (let s = 0; s < cols + rows; s++) {\n\t\t\tconst dots: [number, number][] = [];\n\t\t\tfor (let y = 0; y < rows; y++) {\n\t\t\t\tconst x = s - y;\n\t\t\t\tif (x >= 0 && x < cols) dots.push([x, y]);\n\t\t\t}\n\t\t\tframes.push(dots);\n\t\t}\n\t\treturn frames;\n\t}, [cols, rows]);\n\n\treturn loadingFrames;\n};\n\nexport { MotionGrid, type MotionGridProps, type FrameDot, type Frame, type Frames };\n",
+      "type": "registry:ui",
+      "target": "@ui/motion-grid.tsx"
+    }
+  ],
+  "docs": "Import: `import { MotionGrid } from '@/components/ui/motion-grid'`",
+  "categories": [
+    "effect"
+  ],
+  "type": "registry:ui"
+}

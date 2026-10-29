@@ -1,0 +1,23 @@
+{
+  "$schema": "https://ui.shadcn.com/schema/registry-item.json",
+  "name": "textarea",
+  "title": "Textarea",
+  "description": "A multiline text input component.",
+  "registryDependencies": [
+    "@constructive/cn",
+    "@constructive/constructive-theme"
+  ],
+  "files": [
+    {
+      "path": "registry/constructive/ui/textarea.tsx",
+      "content": "'use client';\n\nimport type * as React from 'react';\n\nimport { cn } from '@/lib/utils';\n\ntype TextareaProps = React.ComponentProps<'textarea'> & {\n\tsize?: 'sm' | 'default' | 'lg' | number;\n\tunstyled?: boolean;\n};\n\nfunction Textarea({ className, size = 'default', unstyled = false, ...props }: TextareaProps) {\n\tconst isFloating = props.placeholder === ' ';\n\n\treturn (\n\t\t<span\n\t\t\tclassName={\n\t\t\t\tcn(\n\t\t\t\t\t!unstyled && [\n\t\t\t\t\t\t// Base layout\n\t\t\t\t\t\t'relative inline-flex w-full rounded-md border border-input bg-background bg-clip-padding text-base transition-shadow',\n\t\t\t\t\t\t// Inner shadow highlight\n\t\t\t\t\t\t'before:pointer-events-none before:absolute before:inset-0 before:rounded-[calc(var(--radius-md)-1px)]',\n\t\t\t\t\t\t'not-has-disabled:not-has-focus-visible:not-has-aria-invalid:before:shadow-[0_1px_--theme(--color-black/4%)]',\n\t\t\t\t\t\t// Focus state - use primary brand color (matches Input)\n\t\t\t\t\t\t'has-focus-visible:border-ring/60 has-focus-visible:ring-[3px] has-focus-visible:ring-ring/35',\n\t\t\t\t\t\t// Invalid state\n\t\t\t\t\t\t'has-aria-invalid:border-destructive/36',\n\t\t\t\t\t\t'has-focus-visible:has-aria-invalid:border-destructive/64 has-focus-visible:has-aria-invalid:ring-destructive/16',\n\t\t\t\t\t\t// Disabled state\n\t\t\t\t\t\t'has-disabled:opacity-64 has-[:disabled,:focus-visible,[aria-invalid]]:shadow-none',\n\t\t\t\t\t\t// Dark mode\n\t\t\t\t\t\t'sm:text-sm dark:bg-input/32 dark:bg-clip-border',\n\t\t\t\t\t\t'dark:has-aria-invalid:ring-destructive/24',\n\t\t\t\t\t\t'dark:not-has-disabled:not-has-focus-visible:not-has-aria-invalid:before:shadow-[0_-1px_--theme(--color-white/8%)]',\n\t\t\t\t\t],\n\t\t\t\t\tclassName,\n\t\t\t\t) || undefined\n\t\t\t}\n\t\t\tdata-size={size}\n\t\t\tdata-slot=\"textarea-control\"\n\t\t>\n\t\t\t<textarea\n\t\t\t\tclassName={cn(\n\t\t\t\t\t'field-sizing-content max-h-[40vh] min-h-17.5 w-full rounded-[inherit] bg-transparent px-[calc(--spacing(3)-1px)] py-[calc(--spacing(1.5)-1px)] outline-none placeholder:text-subtle-foreground max-sm:min-h-20.5',\n\t\t\t\t\tsize === 'sm' && 'min-h-16.5 px-[calc(--spacing(2.5)-1px)] py-[calc(--spacing(1)-1px)] max-sm:min-h-19.5',\n\t\t\t\t\tsize === 'lg' && 'min-h-18.5 py-[calc(--spacing(2)-1px)] max-sm:min-h-21.5',\n\t\t\t\t\t// A floating label (FormControl) rests on the first line, so leave it a row of headroom.\n\t\t\t\t\tisFloating && 'pt-[calc(--spacing(5)-1px)]',\n\t\t\t\t)}\n\t\t\t\tdata-slot=\"textarea\"\n\t\t\t\t{...props}\n\t\t\t/>\n\t\t</span>\n\t);\n}\n\nexport { Textarea };\nexport type { TextareaProps };\n",
+      "type": "registry:ui",
+      "target": "@ui/textarea.tsx"
+    }
+  ],
+  "docs": "Import: `import { Textarea } from '@/components/ui/textarea'`",
+  "categories": [
+    "form"
+  ],
+  "type": "registry:ui"
+}

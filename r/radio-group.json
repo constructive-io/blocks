@@ -1,0 +1,26 @@
+{
+  "$schema": "https://ui.shadcn.com/schema/registry-item.json",
+  "name": "radio-group",
+  "title": "Radio Group",
+  "description": "A radio group component built on Base UI.",
+  "dependencies": [
+    "@base-ui/react"
+  ],
+  "registryDependencies": [
+    "@constructive/cn",
+    "@constructive/constructive-theme"
+  ],
+  "files": [
+    {
+      "path": "registry/constructive/ui/radio-group.tsx",
+      "content": "'use client';\n\nimport { Radio as RadioPrimitive } from '@base-ui/react/radio';\nimport { RadioGroup as RadioGroupPrimitive } from '@base-ui/react/radio-group';\n\nimport { cn } from '@/lib/utils';\n\ntype RadioGroupProps = RadioGroupPrimitive.Props;\ntype RadioProps = RadioPrimitive.Root.Props;\n\nfunction RadioGroup({ className, ...props }: RadioGroupProps) {\n\treturn (\n\t\t<RadioGroupPrimitive className={cn('flex flex-col gap-3', className)} data-slot=\"radio-group\" {...props} />\n\t);\n}\n\nfunction Radio({ className, ...props }: RadioProps) {\n\treturn (\n\t\t<RadioPrimitive.Root\n\t\t\tclassName={cn(\n\t\t\t\t'relative inline-flex size-4.5 shrink-0 items-center justify-center outline-none transition-transform duration-(--duration-moderate) ease-out before:absolute before:-inset-2 before:content-[\\'\\'] motion-safe:active:not-data-disabled:scale-[0.96] motion-reduce:transition-none sm:size-4 pointer-coarse:before:-inset-3 data-disabled:cursor-not-allowed data-disabled:opacity-64 aria-invalid:[&_[data-slot=radio-control]]:border-destructive/36 focus-visible:[&_[data-slot=radio-control]]:ring-[3px] focus-visible:[&_[data-slot=radio-control]]:ring-ring/50 focus-visible:aria-invalid:[&_[data-slot=radio-control]]:border-destructive/64 focus-visible:aria-invalid:[&_[data-slot=radio-control]]:ring-destructive/48 dark:aria-invalid:[&_[data-slot=radio-control]]:ring-destructive/24',\n\t\t\t\tclassName,\n\t\t\t)}\n\t\t\tdata-slot=\"radio\"\n\t\t\t{...props}\n\t\t>\n\t\t\t<span\n\t\t\t\taria-hidden=\"true\"\n\t\t\t\tclassName=\"pointer-events-none absolute size-4.5 rounded-full border border-input bg-background bg-clip-padding shadow-xs sm:size-4 dark:bg-input/32 dark:bg-clip-border\"\n\t\t\t\tdata-slot=\"radio-control\"\n\t\t\t/>\n\t\t\t<RadioPrimitive.Indicator\n\t\t\t\tkeepMounted\n\t\t\t\tclassName=\"absolute flex size-4.5 items-center justify-center rounded-full transition-[opacity,scale,filter] duration-(--duration-slow) ease-out before:size-2 before:rounded-full before:bg-primary-foreground data-unchecked:scale-[0.25] data-unchecked:opacity-0 data-unchecked:blur-[4px] data-checked:bg-primary motion-reduce:transition-none sm:size-4 sm:before:size-1.5\"\n\t\t\t\tdata-slot=\"radio-indicator\"\n\t\t\t/>\n\t\t</RadioPrimitive.Root>\n\t);\n}\n\nexport { RadioGroup, Radio, Radio as RadioGroupItem };\nexport type { RadioGroupProps, RadioProps };\n",
+      "type": "registry:ui",
+      "target": "@ui/radio-group.tsx"
+    }
+  ],
+  "docs": "Import: `import { RadioGroup } from '@/components/ui/radio-group'`",
+  "categories": [
+    "form"
+  ],
+  "type": "registry:ui"
+}

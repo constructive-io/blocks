@@ -1,0 +1,23 @@
+{
+  "$schema": "https://ui.shadcn.com/schema/registry-item.json",
+  "name": "label",
+  "title": "Label",
+  "description": "A label component for form fields.",
+  "registryDependencies": [
+    "@constructive/cn",
+    "@constructive/constructive-theme"
+  ],
+  "files": [
+    {
+      "path": "registry/constructive/ui/label.tsx",
+      "content": "'use client';\n\nimport * as React from 'react';\n\nimport { cn } from '@/lib/utils';\n\ntype LabelProps = React.ComponentProps<'label'>;\n\n/**\n * Label component for form controls.\n * Uses a standard HTML label element for maximum compatibility.\n */\nfunction Label({ className, ...props }: LabelProps) {\n\treturn (\n\t\t<label\n\t\t\tdata-slot=\"label\"\n\t\t\tclassName={cn(\n\t\t\t\t`text-foreground text-sm leading-4 font-medium select-none [overflow-wrap:anywhere] group-data-[disabled=true]:pointer-events-none\n\t\t\t\tgroup-data-[disabled=true]:opacity-64 peer-disabled:cursor-not-allowed peer-disabled:opacity-64\n\t\t\t\tdata-[disabled]:pointer-events-none data-[disabled]:opacity-64`,\n\t\t\t\tclassName,\n\t\t\t)}\n\t\t\t{...props}\n\t\t/>\n\t);\n}\n\nexport { Label };\nexport type { LabelProps };\n",
+      "type": "registry:ui",
+      "target": "@ui/label.tsx"
+    }
+  ],
+  "docs": "Import: `import { Label } from '@/components/ui/label'`",
+  "categories": [
+    "primitive"
+  ],
+  "type": "registry:ui"
+}

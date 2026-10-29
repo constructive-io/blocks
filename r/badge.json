@@ -1,0 +1,27 @@
+{
+  "$schema": "https://ui.shadcn.com/schema/registry-item.json",
+  "name": "badge",
+  "title": "Badge",
+  "description": "A badge component for status indicators and labels.",
+  "dependencies": [
+    "class-variance-authority"
+  ],
+  "registryDependencies": [
+    "@constructive/cn",
+    "@constructive/text-runs",
+    "@constructive/constructive-theme"
+  ],
+  "files": [
+    {
+      "path": "registry/constructive/ui/badge.tsx",
+      "content": "import * as React from 'react';\nimport { cva, type VariantProps } from 'class-variance-authority';\n\nimport { truncateTextRuns } from '@/lib/text-runs';\nimport { cn } from '@/lib/utils';\n\nconst badgeVariants = cva(\n\t\"relative inline-flex max-w-full shrink-0 items-center justify-center gap-1 whitespace-nowrap rounded-sm border border-transparent font-medium outline-none transition-shadow focus-visible:ring-[3px] focus-visible:ring-ring/50 disabled:pointer-events-none disabled:opacity-64 [&_svg:not([class*='size-'])]:size-3 [&_svg]:pointer-events-none [&_svg]:shrink-0 [button,a&]:cursor-pointer [button,a&]:pointer-coarse:min-h-11 [button,a&]:pointer-coarse:min-w-11\",\n\t{\n\t\tdefaultVariants: {\n\t\t\tsize: 'default',\n\t\t\tvariant: 'default',\n\t\t},\n\t\tvariants: {\n\t\t\t// The min-width (not for empty dot-style badges) keeps a single character from\n\t\t\t// rendering as a thin sliver.\n\t\t\tsize: {\n\t\t\t\tdefault: 'px-[calc(--spacing(1)-1px)] text-xs [&:not(:empty)]:min-w-[1.125rem]',\n\t\t\t\tlg: 'px-[calc(--spacing(1.5)-1px)] text-sm [&:not(:empty)]:min-w-[1.375rem]',\n\t\t\t\tsm: 'rounded-[calc(var(--radius-sm)-2px)] px-[calc(--spacing(1)-1px)] text-[.625rem] [&:not(:empty)]:min-w-4',\n\t\t\t},\n\t\t\tvariant: {\n\t\t\t\tdefault: 'bg-primary text-primary-foreground [button,a&]:hover:bg-primary/90',\n\t\t\t\tdestructive: 'bg-destructive text-white [button,a&]:hover:bg-destructive/90',\n\t\t\t\terror: 'bg-destructive/12 text-destructive dark:bg-destructive/16',\n\t\t\t\tinfo: 'bg-info/14 text-info-foreground dark:bg-info/16',\n\t\t\t\toutline:\n\t\t\t\t\t'border-border bg-transparent dark:bg-input/32 [button,a&]:hover:bg-accent/50 dark:[button,a&]:hover:bg-input/48',\n\t\t\t\tsecondary: 'bg-secondary text-secondary-foreground [button,a&]:hover:bg-secondary/90',\n\t\t\t\tsuccess: 'bg-success/14 text-success-foreground dark:bg-success/16',\n\t\t\t\twarning: 'bg-warning/14 text-warning-foreground dark:bg-warning/16',\n\t\t\t},\n\t\t},\n\t},\n);\n\ntype BadgeProps = React.HTMLAttributes<HTMLSpanElement> & VariantProps<typeof badgeVariants>;\n\nconst LONG_TEXT = 24;\nconst Badge = React.forwardRef<HTMLSpanElement, BadgeProps>(({ className, variant, size, children, ...props }, ref) => {\n\t// The padding and negative margin keep tall glyphs (Thai tone marks, stacked Vietnamese) from being clipped by the\n\t// truncation's overflow.\n\tconst { nodes, text } = truncateTextRuns(children, '-my-0.5 min-w-0 truncate py-0.5');\n\n\treturn (\n\t\t<span\n\t\t\tref={ref}\n\t\t\tdata-slot=\"badge\"\n\t\t\ttitle={text && text.length > LONG_TEXT ? text : undefined}\n\t\t\tclassName={cn(badgeVariants({ variant, size }), className)}\n\t\t\t{...props}\n\t\t>\n\t\t\t{nodes}\n\t\t</span>\n\t);\n});\n\nBadge.displayName = 'Badge';\n\nexport { Badge, badgeVariants };\nexport type { BadgeProps };\n",
+      "type": "registry:ui",
+      "target": "@ui/badge.tsx"
+    }
+  ],
+  "docs": "Import: `import { Badge } from '@/components/ui/badge'`",
+  "categories": [
+    "primitive"
+  ],
+  "type": "registry:ui"
+}

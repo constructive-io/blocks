@@ -1,0 +1,28 @@
+{
+  "$schema": "https://ui.shadcn.com/schema/registry-item.json",
+  "name": "tooltip",
+  "title": "Tooltip",
+  "description": "A tooltip component built on Base UI.",
+  "dependencies": [
+    "@base-ui/react"
+  ],
+  "registryDependencies": [
+    "@constructive/cn",
+    "@constructive/portal",
+    "@constructive/button",
+    "@constructive/constructive-theme"
+  ],
+  "files": [
+    {
+      "path": "registry/constructive/ui/tooltip.tsx",
+      "content": "'use client';\n\nimport * as React from 'react';\nimport { Tooltip as TooltipPrimitive } from '@base-ui/react/tooltip';\n\nimport { useFloatingOverlayPortalProps } from '@/components/ui/portal';\nimport { cn } from '@/lib/utils';\nimport { Button, type ButtonProps } from '@/components/ui/button';\n\ntype TooltipProviderProps = React.ComponentProps<typeof TooltipPrimitive.Provider> & {\n\t/** @deprecated Use delay instead */\n\tdelayDuration?: number;\n};\n\nfunction TooltipProvider({ delay = 600, delayDuration, ...props }: TooltipProviderProps) {\n\treturn <TooltipPrimitive.Provider data-slot=\"tooltip-provider\" delay={delayDuration ?? delay} {...props} />;\n}\n\ntype TooltipProps = React.ComponentProps<typeof TooltipPrimitive.Root> & {\n\t/** @deprecated Use delay on Trigger instead */\n\tdelayDuration?: number;\n};\n\nfunction Tooltip({ delayDuration: _delayDuration, ...props }: TooltipProps) {\n\treturn <TooltipPrimitive.Root data-slot=\"tooltip\" {...props} />;\n}\n\ntype TooltipTriggerProps = React.ComponentProps<typeof TooltipPrimitive.Trigger> & {\n\tdelay?: number;\n\t/** When true, merges props onto the child element instead of rendering a button */\n\tasChild?: boolean;\n};\n\n/**\n * A natively disabled button gets no pointer or focus events, so a tooltip explaining why it is disabled would never\n * open. A `Button` child is kept focusable while disabled instead: the same element in the same place, disabled with\n * `aria-disabled`. Any other element stays natively disabled.\n */\nfunction keepFocusableWhenDisabled(element: React.ReactElement) {\n\tif (element.type !== Button) return element;\n\treturn React.cloneElement(element as React.ReactElement<ButtonProps>, { focusableWhenDisabled: true });\n}\n\nfunction TooltipTrigger({ delay = 600, asChild, children, render, ...props }: TooltipTriggerProps) {\n\t// A trigger with its own `disabled` shows no tooltip, so there is nothing for a focusable button to open.\n\tconst focusable = (element: React.ReactElement) => (props.disabled ? element : keepFocusableWhenDisabled(element));\n\tconst childRender = render === undefined && asChild && React.isValidElement(children) ? focusable(children) : undefined;\n\n\treturn (\n\t\t<TooltipPrimitive.Trigger\n\t\t\tdata-slot=\"tooltip-trigger\"\n\t\t\tdelay={delay}\n\t\t\trender={React.isValidElement(render) ? focusable(render) : (render ?? childRender)}\n\t\t\t{...props}\n\t\t>\n\t\t\t{childRender ? undefined : children}\n\t\t</TooltipPrimitive.Trigger>\n\t);\n}\n\ntype TooltipContentProps = React.ComponentProps<typeof TooltipPrimitive.Popup> & {\n\tsideOffset?: number;\n\tshowArrow?: boolean;\n\tside?: 'top' | 'bottom' | 'left' | 'right';\n\talign?: 'start' | 'center' | 'end';\n};\n\nfunction TooltipContent({\n\tclassName,\n\tsideOffset = 4,\n\tshowArrow = false,\n\tside = 'top',\n\talign = 'center',\n\tchildren,\n\t...props\n}: TooltipContentProps) {\n\tconst { container, zIndexClass } = useFloatingOverlayPortalProps();\n\n\t// Nothing to say: render no bubble rather than an empty 18x10 box.\n\tconst hasContent = React.Children.toArray(children).some((child) =>\n\t\ttypeof child === 'string' ? child.trim() !== '' : true,\n\t);\n\tif (!hasContent) return null;\n\n\treturn (\n\t\t<TooltipPrimitive.Portal container={container}>\n\t\t\t<TooltipPrimitive.Positioner side={side} align={align} sideOffset={sideOffset} className={zIndexClass}>\n\t\t\t\t<TooltipPrimitive.Popup\n\t\t\t\t\tdata-slot=\"tooltip-content\"\n\t\t\t\t\tclassName={cn(\n\t\t\t\t\t\t`bg-popover text-popover-foreground origin-(--transform-origin) relative max-w-70 rounded-md border px-2 py-1 shadow-lg\n\t\t\t\t\t\ttext-xs [overflow-wrap:anywhere] transition-[scale,opacity,translate] duration-(--duration-moderate) ease-out data-starting-style:scale-95\n\t\t\t\t\t\tdata-ending-style:scale-95 data-starting-style:opacity-0 data-ending-style:opacity-0\n\t\t\t\t\t\tdata-[side=bottom]:data-starting-style:-translate-y-2\n\t\t\t\t\t\tdata-[side=left]:data-starting-style:translate-x-2\n\t\t\t\t\t\tdata-[side=right]:data-starting-style:-translate-x-2\n\t\t\t\t\t\tdata-[side=top]:data-starting-style:translate-y-2 motion-reduce:transition-none`,\n\t\t\t\t\t\tclassName,\n\t\t\t\t\t)}\n\t\t\t\t\t{...props}\n\t\t\t\t\trole=\"tooltip\"\n\t\t\t\t>\n\t\t\t\t\t{children}\n\t\t\t\t\t{showArrow && (\n\t\t\t\t\t\t<TooltipPrimitive.Arrow className='fill-popover -my-px drop-shadow-[0_1px_0_hsl(var(--border))]' />\n\t\t\t\t\t)}\n\t\t\t\t</TooltipPrimitive.Popup>\n\t\t\t</TooltipPrimitive.Positioner>\n\t\t</TooltipPrimitive.Portal>\n\t);\n}\n\nexport { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger };\n",
+      "type": "registry:ui",
+      "target": "@ui/tooltip.tsx"
+    }
+  ],
+  "docs": "Import: `import { Tooltip } from '@/components/ui/tooltip'`",
+  "categories": [
+    "overlay"
+  ],
+  "type": "registry:ui"
+}

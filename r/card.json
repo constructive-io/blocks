@@ -1,0 +1,26 @@
+{
+  "$schema": "https://ui.shadcn.com/schema/registry-item.json",
+  "name": "card",
+  "title": "Card",
+  "description": "A card component with header, content, and footer sections.",
+  "dependencies": [
+    "class-variance-authority"
+  ],
+  "registryDependencies": [
+    "@constructive/cn",
+    "@constructive/constructive-theme"
+  ],
+  "files": [
+    {
+      "path": "registry/constructive/ui/card.tsx",
+      "content": "import * as React from 'react';\nimport { cva, type VariantProps } from 'class-variance-authority';\n\nimport { cn } from '@/lib/utils';\n\nconst cardVariants = cva(\n\t// Base styles\n\t\t'bg-card text-card-foreground flex flex-col gap-(--card-pad) rounded-lg py-(--card-pad)',\n\t{\n\t\tvariants: {\n\t\t\tvariant: {\n\t\t\t\tdefault: 'shadow-card',\n\t\t\t\televated: 'shadow-card-lg',\n\t\t\t\tflat: 'border border-border shadow-none',\n\t\t\t\tghost: 'bg-transparent shadow-none',\n\t\t\t\tinteractive: [\n\t\t\t\t\t'shadow-card',\n\t\t\t\t\t'hover:shadow-card-lg motion-safe:hover:-translate-y-0.5',\n\t\t\t\t\t'transition-[box-shadow,translate] duration-(--duration-slow) motion-reduce:transition-shadow',\n\t\t\t\t\t'cursor-pointer',\n\t\t\t\t],\n\t\t\t},\n\t\t\tsize: {\n\t\t\t\tdefault: '[--card-pad:1.5rem]',\n\t\t\t\tsm: '[--card-pad:1rem]',\n\t\t\t},\n\t\t},\n\t\tdefaultVariants: {\n\t\t\tvariant: 'default',\n\t\t\tsize: 'default',\n\t\t},\n\t},\n);\n\ninterface CardProps extends React.ComponentProps<'div'>, VariantProps<typeof cardVariants> {}\n\nfunction Card({ className, variant, size, ...props }: CardProps) {\n\treturn (\n\t\t<div data-slot=\"card\" className={cn(cardVariants({ variant, size }), className)} {...props} />\n\t);\n}\n\nfunction CardHeader({ className, ...props }: React.ComponentProps<'div'>) {\n\treturn (\n\t\t<div\n\t\t\tdata-slot=\"card-header\"\n\t\t\tclassName={cn(\n\t\t\t\t// `minmax(0, 1fr)`: an unbroken title wraps instead of widening the column\n\t\t\t\t// and pushing the action out of the card.\n\t\t\t\t`@container/card-header grid auto-rows-min grid-cols-[minmax(0,1fr)] grid-rows-[auto_auto] items-start gap-1.5 px-(--card-pad)\n\t\t\t\thas-data-[slot=card-action]:grid-cols-[minmax(0,1fr)_auto] [.border-b]:pb-(--card-pad)`,\n\t\t\t\tclassName,\n\t\t\t)}\n\t\t\t{...props}\n\t\t/>\n\t);\n}\n\nfunction CardTitle({ className, ...props }: React.ComponentProps<'div'>) {\n\treturn (\n\t\t<div\n\t\t\tdata-slot=\"card-title\"\n\t\t\t// `leading-tight` keeps wrapped titles legible (stacked diacritics collide at\n\t\t\t// `leading-none`); the negative margin keeps a single line exactly 1em tall.\n\t\t\tclassName={cn(\n\t\t\t\t'-my-0.5 min-w-0 text-balance leading-tight font-semibold tracking-tight [overflow-wrap:anywhere]',\n\t\t\t\tclassName,\n\t\t\t)}\n\t\t\t{...props}\n\t\t/>\n\t);\n}\n\nfunction CardDescription({ className, ...props }: React.ComponentProps<'div'>) {\n\treturn (\n\t\t<div\n\t\t\tdata-slot=\"card-description\"\n\t\t\tclassName={cn('text-muted-foreground min-w-0 text-pretty text-sm [overflow-wrap:anywhere]', className)}\n\t\t\t{...props}\n\t\t/>\n\t);\n}\n\nfunction CardAction({ className, ...props }: React.ComponentProps<'div'>) {\n\treturn (\n\t\t<div\n\t\t\tdata-slot=\"card-action\"\n\t\t\tclassName={cn('col-start-2 row-span-2 row-start-1 min-w-0 max-w-full self-start justify-self-end', className)}\n\t\t\t{...props}\n\t\t/>\n\t);\n}\n\nfunction CardContent({ className, ...props }: React.ComponentProps<'div'>) {\n\treturn <div data-slot=\"card-content\" className={cn('px-(--card-pad)', className)} {...props} />;\n}\n\nfunction CardFooter({ className, ...props }: React.ComponentProps<'div'>) {\n\treturn (\n\t\t<div\n\t\t\tdata-slot=\"card-footer\"\n\t\t\tclassName={cn('flex flex-wrap items-center gap-2 px-(--card-pad) [.border-t]:pt-(--card-pad)', className)}\n\t\t\t{...props}\n\t\t/>\n\t);\n}\n\nexport { Card, CardHeader, CardFooter, CardTitle, CardAction, CardDescription, CardContent, cardVariants };\nexport type { CardProps };\n",
+      "type": "registry:ui",
+      "target": "@ui/card.tsx"
+    }
+  ],
+  "docs": "Import: `import { Card, CardHeader, CardContent, CardFooter } from '@/components/ui/card'`",
+  "categories": [
+    "primitive"
+  ],
+  "type": "registry:ui"
+}

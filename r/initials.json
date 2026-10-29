@@ -1,0 +1,22 @@
+{
+  "$schema": "https://ui.shadcn.com/schema/registry-item.json",
+  "name": "initials",
+  "title": "initials",
+  "description": "Avatar-fallback initials from a name or email: grapheme-safe, non-Latin safe, returns null when empty so callers can show an icon.",
+  "registryDependencies": [
+    "@constructive/intl"
+  ],
+  "files": [
+    {
+      "path": "registry/constructive/lib/initials.ts",
+      "content": "import { graphemeSegmenter } from '@/lib/intl';\n\n/**\n * Initials for an avatar fallback, safe for any script.\n *\n * Takes the first grapheme of the first and last word, so emoji, ZWJ sequences,\n * combining marks and non-Latin names are never split mid-character (the\n * `word[0]` pattern turns `🦊 Fox` into a lone surrogate). A single word gives\n * one initial. Pass an email address and the local part is used.\n *\n * Letters are upper-cased without consulting the runtime's locale, so the server\n * and the browser always draw the same characters (`toLocaleUpperCase()` turns `i`\n * into `İ` under a Turkish default, which would not hydrate). Pass `locale` to opt\n * in to a language's casing rules.\n *\n * Returns `null` when there is nothing to show, so callers can render an icon\n * instead of an empty circle:\n *\n * ```tsx\n * <AvatarFallback>{initials(user.name ?? user.email) ?? <UserIcon />}</AvatarFallback>\n * ```\n */\nexport interface InitialsOptions {\n\t/** Maximum number of initials. Defaults to 2 (first and last word). */\n\tmax?: number;\n\t/**\n\t * BCP 47 language tag whose casing rules upper-case the initials, for example `'tr'`\n\t * so `irem` becomes `İ`. Without it casing is locale-independent.\n\t */\n\tlocale?: string | string[];\n}\n\n\n// Approximation for runtimes without Intl.Segmenter: a flag, or one code point\n// plus its combining marks, variation selector, skin tone and ZWJ continuations.\nconst GRAPHEME_FALLBACK =\n\t/^(?:\\p{Regional_Indicator}{2}|.[\\p{M}️\\u{1F3FB}-\\u{1F3FF}]*(?:‍.[\\p{M}️\\u{1F3FB}-\\u{1F3FF}]*)*)/u;\n\nconst LEADING_NOISE = /^[^\\p{L}\\p{N}\\p{Extended_Pictographic}\\p{Regional_Indicator}]+/u;\nconst TRAILING_NOISE = /[^\\p{L}\\p{N}\\p{Extended_Pictographic}\\p{Regional_Indicator}]+$/u;\nconst GENERATIONAL_SUFFIX = /^(?:jr|sr|ii|iii|iv|phd|md|esq)$/i;\nconst EMAIL = /^[^\\s@]+@[^\\s@]+$/;\n\nfunction firstGrapheme(text: string): string {\n\tif (graphemeSegmenter) {\n\t\tfor (const { segment } of graphemeSegmenter.segment(text)) return segment;\n\t\treturn '';\n\t}\n\treturn GRAPHEME_FALLBACK.exec(text)?.[0] ?? '';\n}\n\nfunction upperCase(grapheme: string, locale: InitialsOptions['locale']): string {\n\tconst upper = locale ? grapheme.toLocaleUpperCase(locale) : grapheme.toUpperCase();\n\t// `ß` becomes `SS`: keep the original when uppercasing would add a character.\n\treturn firstGrapheme(upper) === upper ? upper : grapheme;\n}\n\nfunction wordsOf(value: string): string[] {\n\tconst trimmed = value.trim();\n\tif (EMAIL.test(trimmed)) {\n\t\tconst local = trimmed.slice(0, trimmed.indexOf('@')).split('+')[0];\n\t\treturn local.split(/[._-]+/);\n\t}\n\treturn trimmed.split(/\\s+/u);\n}\n\nexport function initials(\n\tname: string | null | undefined,\n\t{ max = 2, locale }: InitialsOptions = {},\n): string | null {\n\tif (!name) return null;\n\tconst limit = Math.max(1, Math.floor(max));\n\n\tlet words = wordsOf(name)\n\t\t.map((word) => word.replace(LEADING_NOISE, '').replace(TRAILING_NOISE, ''))\n\t\t.filter(Boolean);\n\t// \"Montgomery III\" is Montgomery, not \"MI\".\n\tif (words.length > 1 && GENERATIONAL_SUFFIX.test(words[words.length - 1])) words = words.slice(0, -1);\n\tif (words.length === 0) return null;\n\n\tlet picked = words;\n\tif (words.length > limit) picked = limit === 1 ? [words[0]] : [...words.slice(0, limit - 1), words[words.length - 1]];\n\treturn picked.map((word) => upperCase(firstGrapheme(word), locale)).join('');\n}\n",
+      "type": "registry:lib",
+      "target": "@lib/initials.ts"
+    }
+  ],
+  "docs": "Import: `import { initials } from '@/lib/initials'`",
+  "categories": [
+    "utility"
+  ],
+  "type": "registry:lib"
+}

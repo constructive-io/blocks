@@ -1,0 +1,19 @@
+{
+  "$schema": "https://ui.shadcn.com/schema/registry-item.json",
+  "name": "use-scroll-fade",
+  "title": "use-scroll-fade",
+  "description": "Hook that fades the edges of a sideways scroller that still have content past them, in either text direction.",
+  "files": [
+    {
+      "path": "registry/constructive/lib/use-scroll-fade.ts",
+      "content": "import * as React from 'react';\n\nconst FADE = '1.5rem';\n\n/** Physical sides of a sideways scroller that still have content past them. */\ntype HiddenSides = { left: boolean; right: boolean };\n\nconst NONE: HiddenSides = { left: false, right: false };\n\nexport interface ScrollFade<T extends HTMLElement> {\n\t/** A callback ref, so the fade follows the scroller even when it mounts after the component does. */\n\tref: (node: T | null) => void;\n\t/** The scroller, once mounted. */\n\tnode: T | null;\n\t/** Whether the content is wider than the scroller. */\n\toverflowing: boolean;\n\t/** A mask that fades each edge with content past it; undefined while everything fits. */\n\tstyle: React.CSSProperties | undefined;\n}\n\n/**\n * Tracks a sideways scroller and fades each edge that still has content past it, so a row cut off at the edge reads\n * as scrollable instead of ending in a hard cut. The sides are physical, so the mask is right in both directions.\n */\nexport function useScrollFade<T extends HTMLElement>(): ScrollFade<T> {\n\tconst [node, ref] = React.useState<T | null>(null);\n\tconst [hidden, setHidden] = React.useState<HiddenSides>(NONE);\n\n\tReact.useEffect(() => {\n\t\tif (!node) return;\n\t\tconst measure = () => {\n\t\t\tconst rtl = getComputedStyle(node).direction === 'rtl';\n\t\t\tconst room = node.scrollWidth - node.clientWidth;\n\t\t\tconst offset = Math.abs(node.scrollLeft);\n\t\t\tconst before = room > 1 && offset > 1;\n\t\t\tconst after = room > 1 && room - offset > 1;\n\t\t\tconst next = { left: rtl ? after : before, right: rtl ? before : after };\n\t\t\tsetHidden((current) => (current.left === next.left && current.right === next.right ? current : next));\n\t\t};\n\t\tmeasure();\n\t\tnode.addEventListener('scroll', measure, { passive: true });\n\t\tconst resize = typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(measure);\n\t\tresize?.observe(node);\n\t\tfor (const child of Array.from(node.children)) resize?.observe(child);\n\t\t// A size observer reports only the elements it was given, and a row that grows because a child was added\n\t\t// resizes nothing it watches, so children coming and going are watched too.\n\t\tconst mutation =\n\t\t\ttypeof MutationObserver === 'undefined'\n\t\t\t\t? null\n\t\t\t\t: new MutationObserver((records) => {\n\t\t\t\t\t\tfor (const record of records) {\n\t\t\t\t\t\t\tfor (const removed of Array.from(record.removedNodes)) if (removed instanceof Element) resize?.unobserve(removed);\n\t\t\t\t\t\t\tfor (const added of Array.from(record.addedNodes)) if (added instanceof Element) resize?.observe(added);\n\t\t\t\t\t\t}\n\t\t\t\t\t\tmeasure();\n\t\t\t\t\t});\n\t\tmutation?.observe(node, { childList: true });\n\t\treturn () => {\n\t\t\tnode.removeEventListener('scroll', measure);\n\t\t\tresize?.disconnect();\n\t\t\tmutation?.disconnect();\n\t\t};\n\t}, [node]);\n\n\tconst overflowing = hidden.left || hidden.right;\n\tconst style = React.useMemo(() => {\n\t\tif (!overflowing) return undefined;\n\t\tconst mask = `linear-gradient(to right, transparent, black ${hidden.left ? FADE : '0px'}, black calc(100% - ${hidden.right ? FADE : '0px'}), transparent)`;\n\t\treturn { maskImage: mask, WebkitMaskImage: mask };\n\t}, [overflowing, hidden.left, hidden.right]);\n\n\treturn { ref, node, overflowing, style };\n}\n",
+      "type": "registry:lib",
+      "target": "@lib/use-scroll-fade.ts"
+    }
+  ],
+  "docs": "Import: `import { useScrollFade } from '@/lib/use-scroll-fade'`",
+  "categories": [
+    "utility"
+  ],
+  "type": "registry:lib"
+}

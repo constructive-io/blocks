@@ -1,0 +1,19 @@
+{
+  "$schema": "https://ui.shadcn.com/schema/registry-item.json",
+  "name": "use-controllable-state",
+  "title": "useControllableState",
+  "description": "Hook for components with controlled/uncontrolled state.",
+  "files": [
+    {
+      "path": "registry/constructive/hooks/use-controllable-state.ts",
+      "content": "import { useCallback, useEffect, useRef, useState } from 'react';\n\ntype UseControllableStateParams<T> = {\n\tprop?: T;\n\tdefaultProp?: T;\n\tonChange?: (value: T) => void;\n};\n\n/**\n * Hook for managing controlled/uncontrolled state.\n * Supports both controlled (prop-driven) and uncontrolled (internal state) patterns.\n */\nexport function useControllableState<T>({\n\tprop,\n\tdefaultProp,\n\tonChange,\n}: UseControllableStateParams<T>): [T, (value: T) => void] {\n\tconst [uncontrolledValue, setUncontrolledValue] = useState<T>(defaultProp as T);\n\tconst isControlled = prop !== undefined;\n\tconst value = isControlled ? prop : uncontrolledValue;\n\n\t// Store onChange in ref to keep callback stable\n\tconst onChangeRef = useRef(onChange);\n\tuseEffect(() => {\n\t\tonChangeRef.current = onChange;\n\t}, [onChange]);\n\n\tconst setValue = useCallback(\n\t\t(newValue: T) => {\n\t\t\tif (!isControlled) {\n\t\t\t\tsetUncontrolledValue(newValue);\n\t\t\t}\n\t\t\tonChangeRef.current?.(newValue);\n\t\t},\n\t\t[isControlled],\n\t);\n\n\treturn [value, setValue];\n}\n",
+      "type": "registry:hook",
+      "target": "@hooks/use-controllable-state.ts"
+    }
+  ],
+  "docs": "Import: `import { useControllableState } from '@/hooks/use-controllable-state'`",
+  "categories": [
+    "hook"
+  ],
+  "type": "registry:hook"
+}

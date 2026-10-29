@@ -1,0 +1,23 @@
+{
+  "$schema": "https://ui.shadcn.com/schema/registry-item.json",
+  "name": "empty",
+  "title": "Empty",
+  "description": "A composable empty-state layout with media, title, description, and action content.",
+  "registryDependencies": [
+    "@constructive/cn",
+    "@constructive/constructive-theme"
+  ],
+  "files": [
+    {
+      "path": "registry/constructive/ui/empty.tsx",
+      "content": "import * as React from 'react';\nimport { cva, type VariantProps } from 'class-variance-authority';\n\nimport { cn } from '@/lib/utils';\n\nfunction Empty({ className, ...props }: React.ComponentProps<'div'>) {\n\treturn (\n\t\t<div\n\t\t\tdata-slot='empty'\n\t\t\tclassName={cn(\n\t\t\t\t// `[overflow-wrap:anywhere]` (inherited): an echoed search term or identifier wraps\n\t\t\t\t// instead of overflowing both sides of the centred column.\n\t\t\t\t'flex w-full min-w-0 flex-1 flex-col items-center justify-center gap-4 rounded-lg border-dashed p-6 text-center text-balance [overflow-wrap:anywhere]',\n\t\t\t\tclassName,\n\t\t\t)}\n\t\t\t{...props}\n\t\t/>\n\t);\n}\n\nfunction EmptyHeader({ className, ...props }: React.ComponentProps<'div'>) {\n\treturn (\n\t\t<div\n\t\t\tdata-slot='empty-header'\n\t\t\tclassName={cn('flex max-w-sm min-w-0 flex-col items-center gap-2', className)}\n\t\t\t{...props}\n\t\t/>\n\t);\n}\n\nconst emptyMediaVariants = cva('mb-2 flex shrink-0 items-center justify-center [&_svg]:pointer-events-none [&_svg]:shrink-0', {\n\tvariants: {\n\t\tvariant: {\n\t\t\tdefault: 'bg-transparent',\n\t\t\ticon: 'flex size-8 shrink-0 items-center justify-center rounded-md bg-muted text-foreground [&_svg:not([class*=size-])]:size-4',\n\t\t},\n\t},\n\tdefaultVariants: {\n\t\tvariant: 'default',\n\t},\n});\n\nfunction EmptyMedia({\n\tclassName,\n\tvariant = 'default',\n\t...props\n}: React.ComponentProps<'div'> & VariantProps<typeof emptyMediaVariants>) {\n\treturn (\n\t\t<div\n\t\t\tdata-slot='empty-icon'\n\t\t\tdata-variant={variant}\n\t\t\tclassName={cn(emptyMediaVariants({ variant, className }))}\n\t\t\t{...props}\n\t\t/>\n\t);\n}\n\nfunction EmptyTitle({ className, ...props }: React.ComponentProps<'div'>) {\n\treturn (\n\t\t<div\n\t\t\tdata-slot='empty-title'\n\t\t\tclassName={cn('text-sm font-medium tracking-tight', className)}\n\t\t\t{...props}\n\t\t/>\n\t);\n}\n\nfunction EmptyDescription({ className, ...props }: React.ComponentProps<'p'>) {\n\treturn (\n\t\t<p\n\t\t\tdata-slot='empty-description'\n\t\t\tclassName={cn(\n\t\t\t\t'text-sm/relaxed text-muted-foreground [&>a]:underline [&>a]:underline-offset-4 [&>a:hover]:text-link',\n\t\t\t\tclassName,\n\t\t\t)}\n\t\t\t{...props}\n\t\t/>\n\t);\n}\n\nfunction EmptyContent({ className, ...props }: React.ComponentProps<'div'>) {\n\treturn (\n\t\t<div\n\t\t\tdata-slot='empty-content'\n\t\t\tclassName={cn(\n\t\t\t\t'flex w-full max-w-sm min-w-0 flex-col items-center gap-2.5 text-sm text-balance',\n\t\t\t\tclassName,\n\t\t\t)}\n\t\t\t{...props}\n\t\t/>\n\t);\n}\n\nexport { Empty, EmptyContent, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle };\n",
+      "type": "registry:ui",
+      "target": "@ui/empty.tsx"
+    }
+  ],
+  "docs": "Import: `import { Empty, EmptyHeader, EmptyMedia, EmptyTitle, EmptyDescription, EmptyContent } from '@/components/ui/empty'`",
+  "categories": [
+    "layout"
+  ],
+  "type": "registry:ui"
+}

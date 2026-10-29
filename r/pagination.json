@@ -1,0 +1,27 @@
+{
+  "$schema": "https://ui.shadcn.com/schema/registry-item.json",
+  "name": "pagination",
+  "title": "Pagination",
+  "description": "A pagination component with navigation controls.",
+  "dependencies": [
+    "lucide-react"
+  ],
+  "registryDependencies": [
+    "@constructive/cn",
+    "@constructive/button",
+    "@constructive/constructive-theme"
+  ],
+  "files": [
+    {
+      "path": "registry/constructive/ui/pagination.tsx",
+      "content": "import * as React from 'react';\nimport { ChevronLeftIcon, ChevronRightIcon, MoreHorizontalIcon } from 'lucide-react';\n\nimport { cn } from '@/lib/utils';\nimport { Button, buttonVariants } from '@/components/ui/button';\n\nfunction Pagination({ className, ...props }: React.ComponentProps<'nav'>) {\n\treturn (\n\t\t<nav\n\t\t\trole=\"navigation\"\n\t\t\taria-label=\"pagination\"\n\t\t\tdata-slot=\"pagination\"\n\t\t\tclassName={cn('mx-auto flex w-full justify-center', className)}\n\t\t\t{...props}\n\t\t/>\n\t);\n}\n\nfunction PaginationContent({ className, ...props }: React.ComponentProps<'ul'>) {\n\treturn (\n\t\t<ul\n\t\t\tdata-slot=\"pagination-content\"\n\t\t\tclassName={cn(\n\t\t\t\t// flex-wrap keeps the row usable on narrow viewports instead of overflowing\n\t\t\t\t'flex flex-row flex-wrap items-center justify-center gap-0.5 sm:gap-1',\n\t\t\t\tclassName,\n\t\t\t)}\n\t\t\t{...props}\n\t\t/>\n\t);\n}\n\nfunction PaginationItem({ className, ...props }: React.ComponentProps<'li'>) {\n\treturn (\n\t\t<li\n\t\t\tdata-slot=\"pagination-item\"\n\t\t\t// inline-flex: one control per item; never stack ellipsis + page vertically\n\t\t\tclassName={cn('inline-flex', className)}\n\t\t\t{...props}\n\t\t/>\n\t);\n}\n\ntype PaginationLinkProps = {\n\tisActive?: boolean;\n\tisDisabled?: boolean;\n} & Pick<React.ComponentProps<typeof Button>, 'size'> &\n\tReact.ComponentProps<'a'>;\n\nfunction PaginationLink({\n\tclassName,\n\tisActive,\n\tisDisabled,\n\tsize = 'icon',\n\t...props\n}: PaginationLinkProps) {\n\treturn (\n\t\t<a\n\t\t\taria-current={isActive ? 'page' : undefined}\n\t\t\taria-disabled={isDisabled || undefined}\n\t\t\tdata-slot=\"pagination-link\"\n\t\t\tdata-active={isActive || undefined}\n\t\t\tdata-disabled={isDisabled || undefined}\n\t\t\ttabIndex={isDisabled ? -1 : props.tabIndex}\n\t\t\tclassName={cn(\n\t\t\t\tbuttonVariants({\n\t\t\t\t\tvariant: isActive ? 'outline' : 'ghost',\n\t\t\t\t\tsize: size === 'icon' ? 'default' : size,\n\t\t\t\t}),\n\t\t\t\t'tabular-nums',\n\t\t\t\tisDisabled && 'pointer-events-none opacity-64',\n\t\t\t\t// Page numbers: a square at one or two digits (denser on small screens), growing\n\t\t\t\t// with the label so 1,284 or 64,200 never overflows into its neighbours.\n\t\t\t\tsize === 'icon' && 'h-8 min-w-8 px-1 sm:h-10 sm:min-w-10',\n\t\t\t\tclassName,\n\t\t\t)}\n\t\t\t{...props}\n\t\t/>\n\t);\n}\n\nfunction PaginationPrevious({ className, ...props }: React.ComponentProps<typeof PaginationLink>) {\n\treturn (\n\t\t<PaginationLink\n\t\t\taria-label=\"Go to previous page\"\n\t\t\tsize=\"default\"\n\t\t\tclassName={cn(\n\t\t\t\t'h-8 gap-1 px-2.5 sm:h-10 sm:pe-4',\n\t\t\t\t// Icon-only on the narrowest widths; label from sm up\n\t\t\t\t'min-w-8 sm:min-w-10',\n\t\t\t\tclassName,\n\t\t\t)}\n\t\t\t{...props}\n\t\t>\n\t\t\t<ChevronLeftIcon size={16} className=\"rtl:rotate-180\" />\n\t\t\t<span className=\"hidden sm:inline\">Previous</span>\n\t\t</PaginationLink>\n\t);\n}\n\nfunction PaginationNext({ className, ...props }: React.ComponentProps<typeof PaginationLink>) {\n\treturn (\n\t\t<PaginationLink\n\t\t\taria-label=\"Go to next page\"\n\t\t\tsize=\"default\"\n\t\t\tclassName={cn('h-8 gap-1 px-2.5 sm:h-10 sm:ps-4 min-w-8 sm:min-w-10', className)}\n\t\t\t{...props}\n\t\t>\n\t\t\t<span className=\"hidden sm:inline\">Next</span>\n\t\t\t<ChevronRightIcon size={16} className=\"rtl:rotate-180\" />\n\t\t</PaginationLink>\n\t);\n}\n\nfunction PaginationEllipsis({ className, ...props }: React.ComponentProps<'span'>) {\n\treturn (\n\t\t<span\n\t\t\taria-hidden\n\t\t\tdata-slot=\"pagination-ellipsis\"\n\t\t\tclassName={cn(\n\t\t\t\t'flex size-8 items-center justify-center text-muted-foreground sm:size-10',\n\t\t\t\tclassName,\n\t\t\t)}\n\t\t\t{...props}\n\t\t>\n\t\t\t<MoreHorizontalIcon size={16} />\n\t\t\t<span className=\"sr-only\">More pages</span>\n\t\t</span>\n\t);\n}\n\nexport {\n\tPagination,\n\tPaginationContent,\n\tPaginationEllipsis,\n\tPaginationItem,\n\tPaginationLink,\n\tPaginationNext,\n\tPaginationPrevious,\n};\n",
+      "type": "registry:ui",
+      "target": "@ui/pagination.tsx"
+    }
+  ],
+  "docs": "Import: `import { Pagination } from '@/components/ui/pagination'`",
+  "categories": [
+    "navigation"
+  ],
+  "type": "registry:ui"
+}

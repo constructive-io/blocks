@@ -1,0 +1,23 @@
+{
+  "$schema": "https://ui.shadcn.com/schema/registry-item.json",
+  "name": "kbd",
+  "title": "Kbd",
+  "description": "Keyboard key hint chip for shortcuts.",
+  "registryDependencies": [
+    "@constructive/cn",
+    "@constructive/constructive-theme"
+  ],
+  "files": [
+    {
+      "path": "registry/constructive/ui/kbd.tsx",
+      "content": "import * as React from 'react';\n\nimport { cn } from '@/lib/utils';\n\ntype KbdProps = React.ComponentProps<'kbd'>;\n\n/**\n * Keycap for a single key. Its fill, edge, and bottom lip are mixed from the\n * inherited text color instead of a fixed surface token, so the key always\n * sits one step off whatever it is placed on: a card, a muted row, a tinted\n * tray, a tooltip, or a primary button. Set the parent's text color (or\n * `className=\"text-…\"`) to change its tone.\n */\nfunction Kbd({ className, ...props }: KbdProps) {\n\treturn (\n\t\t<kbd\n\t\t\tdata-slot=\"kbd\"\n\t\t\tclassName={cn(\n\t\t\t\t'pointer-events-none inline-flex h-5 min-w-5 shrink-0 select-none items-center justify-center gap-0.5 rounded-[5px] px-1 align-middle font-sans text-[0.6875rem] font-medium leading-none whitespace-nowrap tabular-nums [&_svg]:size-3',\n\t\t\t\t'bg-[color-mix(in_oklab,currentColor_9%,transparent)]',\n\t\t\t\t'shadow-[inset_0_0_0_1px_color-mix(in_oklab,currentColor_16%,transparent),inset_0_-1px_0_color-mix(in_oklab,currentColor_18%,transparent)]',\n\t\t\t\tclassName,\n\t\t\t)}\n\t\t\t{...props}\n\t\t/>\n\t);\n}\n\ntype KbdGroupProps = React.ComponentProps<'kbd'>;\n\nfunction KbdGroup({ className, ...props }: KbdGroupProps) {\n\treturn (\n\t\t<kbd\n\t\t\tdata-slot=\"kbd-group\"\n\t\t\tclassName={cn('inline-flex items-center gap-1 align-middle', className)}\n\t\t\t{...props}\n\t\t/>\n\t);\n}\n\nexport { Kbd, KbdGroup };\nexport type { KbdProps, KbdGroupProps };\n",
+      "type": "registry:ui",
+      "target": "@ui/kbd.tsx"
+    }
+  ],
+  "docs": "Import: `import { ... } from '@/components/ui/kbd'`",
+  "categories": [
+    "data-display"
+  ],
+  "type": "registry:ui"
+}

@@ -1,0 +1,22 @@
+{
+  "$schema": "https://ui.shadcn.com/schema/registry-item.json",
+  "name": "page-header",
+  "title": "Page Header",
+  "description": "A simple page header component.",
+  "registryDependencies": [
+    "@constructive/constructive-theme"
+  ],
+  "files": [
+    {
+      "path": "registry/constructive/ui/page-header.tsx",
+      "content": "import { ReactNode } from 'react';\n\ninterface PageHeaderProps {\n\t/** Page title */\n\ttitle: string;\n\t/** Optional description */\n\tdescription?: string;\n\t/** Optional actions to display on the right */\n\tactions?: ReactNode;\n}\n\n/**\n * Consistent page header component\n */\nexport function PageHeader({ title, description, actions }: PageHeaderProps) {\n\treturn (\n\t\t<div className='border-b bg-background px-6 py-5'>\n\t\t\t{/* `basis-60` is the title's floor: actions drop to their own right-aligned line\n\t\t\t    before the title is squeezed, and long unbroken titles wrap instead of\n\t\t\t    pushing the actions out. */}\n\t\t\t<div className='flex flex-wrap items-center justify-between gap-x-4 gap-y-3'>\n\t\t\t\t<div className='min-w-0 flex-1 basis-60'>\n\t\t\t\t\t{title ? <h1 className='text-xl font-semibold [overflow-wrap:anywhere]'>{title}</h1> : null}\n\t\t\t\t\t{description && (\n\t\t\t\t\t\t<p className='mt-1 text-sm text-muted-foreground [overflow-wrap:anywhere]'>{description}</p>\n\t\t\t\t\t)}\n\t\t\t\t</div>\n\t\t\t\t{actions && <div className='ms-auto flex max-w-full flex-wrap items-center justify-end gap-2'>{actions}</div>}\n\t\t\t</div>\n\t\t</div>\n\t);\n}\n",
+      "type": "registry:ui",
+      "target": "@ui/page-header.tsx"
+    }
+  ],
+  "docs": "Import: `import { PageHeader } from '@/components/ui/page-header'`",
+  "categories": [
+    "navigation"
+  ],
+  "type": "registry:ui"
+}

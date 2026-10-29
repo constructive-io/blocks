@@ -1,0 +1,28 @@
+{
+  "$schema": "https://ui.shadcn.com/schema/registry-item.json",
+  "name": "toggle",
+  "title": "Toggle",
+  "description": "A pressable toggle button built on Base UI.",
+  "dependencies": [
+    "@base-ui/react",
+    "class-variance-authority"
+  ],
+  "registryDependencies": [
+    "@constructive/cn",
+    "@constructive/text-runs",
+    "@constructive/constructive-theme"
+  ],
+  "files": [
+    {
+      "path": "registry/constructive/ui/toggle.tsx",
+      "content": "'use client';\n\nimport * as React from 'react';\nimport { Toggle as TogglePrimitive } from '@base-ui/react/toggle';\nimport { cva, type VariantProps } from 'class-variance-authority';\n\nimport { truncateTextRuns } from '@/lib/text-runs';\nimport { cn } from '@/lib/utils';\n\nconst toggleVariants = cva(\n\t`group/toggle inline-flex max-w-full shrink-0 cursor-pointer items-center justify-center gap-1.5 whitespace-nowrap\n\t\trounded-md text-sm font-medium outline-none\n\t\ttransition-[box-shadow,scale] duration-(--duration-moderate) ease-out\n\t\thover:bg-muted hover:text-foreground\n\t\tfocus-visible:ring-[3px] focus-visible:ring-ring/50\n\t\tdisabled:pointer-events-none disabled:opacity-64\n\t\tdata-[pressed]:text-accent-foreground\n\t\tmotion-safe:active:scale-[0.96] motion-reduce:transition-none\n\t\t[&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4`,\n\t{\n\t\tvariants: {\n\t\t\tvariant: {\n\t\t\t\tdefault: 'bg-transparent',\n\t\t\t\toutline:\n\t\t\t\t\t'border border-border bg-transparent bg-clip-padding shadow-xs hover:bg-accent/50 dark:bg-input/32 dark:hover:bg-input/64',\n\t\t\t},\n\t\t\tsize: {\n\t\t\t\tdefault: 'h-10 min-w-10 px-3 pointer-coarse:min-h-11 pointer-coarse:min-w-11',\n\t\t\t\tsm: 'h-8 min-w-8 rounded-md px-2 text-[13px] pointer-coarse:min-h-11 pointer-coarse:min-w-11',\n\t\t\t\tlg: 'h-11 min-w-11 px-4',\n\t\t\t},\n\t\t},\n\t\tdefaultVariants: {\n\t\t\tvariant: 'default',\n\t\t\tsize: 'default',\n\t\t},\n\t},\n);\n\ntype ToggleProps = React.ComponentProps<typeof TogglePrimitive> &\n\tVariantProps<typeof toggleVariants>;\n\nfunction Toggle({ className, variant, size, children, ...props }: ToggleProps) {\n\treturn (\n\t\t<TogglePrimitive\n\t\t\tdata-slot=\"toggle\"\n\t\t\tclassName={cn(toggleVariants({ variant, size }), 'data-[pressed]:bg-accent', className)}\n\t\t\t{...props}\n\t\t>\n\t\t\t{truncateTextRuns(children).nodes}\n\t\t</TogglePrimitive>\n\t);\n}\n\nexport { Toggle, toggleVariants };\nexport type { ToggleProps };\n",
+      "type": "registry:ui",
+      "target": "@ui/toggle.tsx"
+    }
+  ],
+  "docs": "Import: `import { ... } from '@/components/ui/toggle'`",
+  "categories": [
+    "form"
+  ],
+  "type": "registry:ui"
+}

@@ -1,0 +1,30 @@
+{
+  "$schema": "https://ui.shadcn.com/schema/registry-item.json",
+  "name": "toggle-group",
+  "title": "Toggle Group",
+  "description": "A group of toggle buttons with a traveling selection pill.",
+  "dependencies": [
+    "@base-ui/react",
+    "class-variance-authority"
+  ],
+  "registryDependencies": [
+    "@constructive/cn",
+    "@constructive/toggle",
+    "@constructive/fluid-highlight",
+    "@constructive/text-runs",
+    "@constructive/constructive-theme"
+  ],
+  "files": [
+    {
+      "path": "registry/constructive/ui/toggle-group.tsx",
+      "content": "'use client';\n\nimport * as React from 'react';\nimport { Toggle as TogglePrimitive } from '@base-ui/react/toggle';\nimport { ToggleGroup as ToggleGroupPrimitive } from '@base-ui/react/toggle-group';\nimport { cva, type VariantProps } from 'class-variance-authority';\n\nimport { truncateTextRuns } from '@/lib/text-runs';\nimport { cn } from '@/lib/utils';\nimport { FluidHighlight } from '@/lib/motion/fluid-highlight';\nimport { toggleVariants } from '@/components/ui/toggle';\n\nconst ToggleGroupContext = React.createContext<{\n\tvariant: VariantProps<typeof toggleVariants>['variant'];\n\tsize: VariantProps<typeof toggleVariants>['size'];\n\tspacing: number;\n\tmultiple: boolean;\n}>({ variant: 'default', size: 'default', spacing: 0, multiple: false });\n\n/**\n * Toggle group. `spacing={0}` (default) renders an attached group — items share\n * borders and only the outer corners keep the radius. `spacing>0` gaps the\n * items so each keeps full rounding. Single-select mode slides a\n * `FluidHighlight` pill under the pressed item; in `multiple` each item paints\n * its own accent fill.\n */\nfunction ToggleGroup({\n\tclassName,\n\tvariant = 'default',\n\tsize = 'default',\n\tspacing = 0,\n\tmultiple = false,\n\tchildren,\n\t...props\n}: React.ComponentProps<typeof ToggleGroupPrimitive> & {\n\tvariant?: VariantProps<typeof toggleVariants>['variant'];\n\tsize?: VariantProps<typeof toggleVariants>['size'];\n\tspacing?: number;\n}) {\n\treturn (\n\t\t<ToggleGroupContext.Provider value={{ variant, size, spacing, multiple }}>\n\t\t\t<ToggleGroupPrimitive\n\t\t\t\tdata-slot=\"toggle-group\"\n\t\t\t\tdata-variant={variant}\n\t\t\t\tdata-size={size}\n\t\t\t\tdata-spacing={spacing}\n\t\t\t\tdata-multiple={multiple || undefined}\n\t\t\t\tmultiple={multiple}\n\t\t\t\tclassName={cn(\n\t\t\t\t\t// `max-w-full flex-wrap`: a long row of labels wraps inside its container instead of widening the page.\n\t\t\t\t\t'group/toggle-group relative inline-flex max-w-full flex-wrap items-center outline-none',\n\t\t\t\t\t'data-[orientation=vertical]:flex-col',\n\t\t\t\t\tspacing > 0 && 'data-[orientation=horizontal]:gap-1 data-[orientation=vertical]:gap-1',\n\t\t\t\t\tclassName,\n\t\t\t\t)}\n\t\t\t\t{...props}\n\t\t\t>\n\t\t\t\t{multiple ? null : spacing === 0 ? (\n\t\t\t\t\t<FluidHighlight inset={2} className=\"rounded-sm\" />\n\t\t\t\t) : (\n\t\t\t\t\t<FluidHighlight className=\"rounded-md\" />\n\t\t\t\t)}\n\t\t\t\t{children}\n\t\t\t</ToggleGroupPrimitive>\n\t\t</ToggleGroupContext.Provider>\n\t);\n}\n\nfunction ToggleGroupItem({\n\tclassName,\n\tvariant,\n\tsize,\n\tchildren,\n\t...props\n}: React.ComponentProps<typeof TogglePrimitive> & {\n\tvariant?: VariantProps<typeof toggleVariants>['variant'];\n\tsize?: VariantProps<typeof toggleVariants>['size'];\n}) {\n\tconst context = React.useContext(ToggleGroupContext);\n\treturn (\n\t\t<TogglePrimitive\n\t\t\tdata-slot=\"toggle-group-item\"\n\t\t\tclassName={cn(\n\t\t\t\ttoggleVariants({\n\t\t\t\t\tvariant: variant ?? context.variant,\n\t\t\t\t\tsize: size ?? context.size,\n\t\t\t\t}),\n\t\t\t\t'relative shrink-0',\n\t\t\t\t// Attached group (spacing 0): collapse shared borders, square the\n\t\t\t\t// inner corners, keep the outer radius on the first/last item.\n\t\t\t\t// The orientation lives on the group root, not on the items, so these read it from the group. The sliding\n\t\t\t\t// highlight is the group's first child, which is why the ends are `*-of-type` (the items), not `first`/`last`.\n\t\t\t\t'group-data-[spacing=0]/toggle-group:rounded-none',\n\t\t\t\t'group-data-[spacing=0]/toggle-group:group-data-[orientation=horizontal]/toggle-group:-ms-px',\n\t\t\t\t'group-data-[spacing=0]/toggle-group:group-data-[orientation=horizontal]/toggle-group:first-of-type:ms-0 group-data-[spacing=0]/toggle-group:group-data-[orientation=horizontal]/toggle-group:first-of-type:rounded-s-md group-data-[spacing=0]/toggle-group:group-data-[orientation=horizontal]/toggle-group:last-of-type:rounded-e-md',\n\t\t\t\t'group-data-[spacing=0]/toggle-group:group-data-[orientation=vertical]/toggle-group:-mt-px',\n\t\t\t\t'group-data-[spacing=0]/toggle-group:group-data-[orientation=vertical]/toggle-group:first-of-type:mt-0 group-data-[spacing=0]/toggle-group:group-data-[orientation=vertical]/toggle-group:first-of-type:rounded-t-md group-data-[spacing=0]/toggle-group:group-data-[orientation=vertical]/toggle-group:last-of-type:rounded-b-md',\n\t\t\t\t'focus-visible:z-10',\n\t\t\t\t// In single-select the FluidHighlight pill supplies the fill; in\n\t\t\t\t// multiple each item paints its own pressed background.\n\t\t\t\t'group-data-[multiple]/toggle-group:data-[pressed]:bg-accent',\n\t\t\t\tclassName,\n\t\t\t)}\n\t\t\t{...props}\n\t\t>\n\t\t\t{truncateTextRuns(children).nodes}\n\t\t</TogglePrimitive>\n\t);\n}\n\nexport { ToggleGroup, ToggleGroupItem };\nexport type ToggleGroupProps = React.ComponentProps<typeof ToggleGroupPrimitive>;\nexport type ToggleGroupItemProps = React.ComponentProps<typeof TogglePrimitive>;\n",
+      "type": "registry:ui",
+      "target": "@ui/toggle-group.tsx"
+    }
+  ],
+  "docs": "Import: `import { ... } from '@/components/ui/toggle-group'`",
+  "categories": [
+    "form"
+  ],
+  "type": "registry:ui"
+}

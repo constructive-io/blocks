@@ -1,0 +1,20 @@
+{
+  "$schema": "https://ui.shadcn.com/schema/registry-item.json",
+  "name": "console-kit-nextjs",
+  "title": "Constructive Console Kit for Next.js",
+  "description": "A full-page Next.js tenant console with semantic routing, auth, dynamic endpoint discovery, first-party adapters, and every feature pack.",
+  "registryDependencies": [
+    "@constructive/preset-full",
+    "@constructive/constructive-theme"
+  ],
+  "files": [
+    {
+      "path": "registry/constructive/blocks/console-kit/constructive/index.ts",
+      "content": "export {\n  ConstructiveConsoleKit,\n  FullConsoleKit,\n  fullFeatureModules,\n  type ConstructiveTenantConsoleSession,\n  type ConstructiveTenantDatabase,\n  type FullConsoleKitProps,\n  createConstructiveCallbackCredentialVault,\n  parseConstructiveConsoleCallback,\n  scrubConstructiveConsoleCallbackLocation,\n  type ConstructiveCallbackCredentialRef,\n  type ConstructiveCallbackCredentialStatus,\n  type ConstructiveCallbackCredentialVault,\n  type ConstructiveConsoleCallback,\n  type ConstructiveConsoleCallbackKind,\n  type ConstructiveConsoleCallbackResult,\n  type ConstructiveConsoleCallbackSource,\n  type ConsoleKitAdapterEnhancer,\n  type ConsoleKitAdapterEnhancers,\n  type ConsoleKitAppAccessRoute,\n  type ConsoleKitAuthMethodConfig,\n  type ConsoleKitAuthRoute,\n  type ConsoleKitBillingRoute,\n  type ConsoleKitDataRoute,\n  type ConsoleKitNotificationsRoute,\n  type ConsoleKitOrganizationsRoute,\n  type ConsoleKitRoute,\n  type ConsoleKitRouteConfig,\n  type ConsoleKitStorageRoute\n} from '../../presets/full-console-kit';\n",
+      "type": "registry:lib",
+      "target": "src/blocks/console-kit/constructive/index.ts"
+    }
+  ],
+  "docs": "`console-kit-nextjs` installed the full Next.js tenant console. Render `ConstructiveConsoleKit` with a secret-free database ID and explicit semantic endpoint map; use presets or selected Console modules for smaller compositions.\n\nDegraded states: every endpoint and module fails closed independently, diagnostics are development-only, credentials never enter Zustand, and PostgreSQL privileges and RLS remain authoritative.\n\nGuide: https://constructive-io.github.io/blocks/blocks/console-kit/",
+  "type": "registry:block"
+}

@@ -1,0 +1,19 @@
+{
+  "$schema": "https://ui.shadcn.com/schema/registry-item.json",
+  "name": "initial-focus",
+  "title": "initial-focus",
+  "description": "Initial focus for overlays that scroll: keeps the first tabbable element when it is on screen, otherwise focuses the overlay so it opens at its top.",
+  "files": [
+    {
+      "path": "registry/constructive/lib/initial-focus.ts",
+      "content": "/**\n * Initial focus for an overlay that can scroll.\n *\n * By default the first tabbable element gets focus. When that element sits below the fold (a footer button under a\n * long list, say) focusing it scrolls the overlay down to it, so the overlay opens showing its end instead of its\n * title. This keeps the default whenever that element is already on screen, and otherwise focuses the overlay\n * itself, which does not scroll: the overlay opens at the top, and the focus moves on with the first Tab. That is\n * the WAI-ARIA dialog pattern for content long enough to scroll.\n *\n * Base UI's own default also focuses the popup, not the first control, when it is opened by touch, so the soft\n * keyboard does not open over it (needed on Android). Replacing `initialFocus` replaces that rule too, so this\n * function carries it.\n *\n * ```tsx\n * <DialogPrimitive.Popup ref={popupRef} initialFocus={initialFocus ?? scrollSafeInitialFocus(() => popupRef.current)} />\n * ```\n */\nconst TABBABLE = [\n\t'a[href]',\n\t'area[href]',\n\t'button',\n\t'input:not([type=\"hidden\"])',\n\t'select',\n\t'textarea',\n\t'summary',\n\t'[contenteditable]:not([contenteditable=\"false\"])',\n\t'[tabindex]',\n].join(',');\n\nconst SCROLLS = /auto|scroll/;\n\nfunction firstTabbableIsInView(overlay: HTMLElement) {\n\tconst first = Array.from(overlay.querySelectorAll<HTMLElement>(TABBABLE)).find(\n\t\t(element) => element.tabIndex >= 0 && !(element as HTMLButtonElement).disabled && element.getClientRects().length > 0 && !element.closest('[inert]'),\n\t);\n\tif (!first) return true;\n\n\t// Visible means inside every scroll container between the element and the overlay, the overlay included.\n\tconst box = first.getBoundingClientRect();\n\tfor (let node = first.parentElement; node; node = node.parentElement) {\n\t\tconst style = getComputedStyle(node);\n\t\tif (SCROLLS.test(style.overflowY) || SCROLLS.test(style.overflowX)) {\n\t\t\tconst room = node.getBoundingClientRect();\n\t\t\tif (box.top < room.top - 1 || box.bottom > room.bottom + 1 || box.left < room.left - 1 || box.right > room.right + 1) return false;\n\t\t}\n\t\tif (node === overlay) break;\n\t}\n\treturn true;\n}\n\n/**\n * Returns an `initialFocus` function for a Base UI popup. `getOverlay` reads the popup element when focus is\n * placed, so it can come from a ref.\n */\nexport function scrollSafeInitialFocus(getOverlay: () => HTMLElement | null) {\n\t// `interactionType` is Base UI's: 'mouse', 'touch', 'pen', 'keyboard' or ''.\n\treturn (interactionType?: string): true | HTMLElement => {\n\t\tconst overlay = getOverlay();\n\t\tif (!overlay) return true;\n\t\tif (interactionType === 'touch') return overlay;\n\t\treturn firstTabbableIsInView(overlay) ? true : overlay;\n\t};\n}\n",
+      "type": "registry:lib",
+      "target": "@lib/initial-focus.ts"
+    }
+  ],
+  "docs": "Import: `import { scrollSafeInitialFocus } from '@/lib/initial-focus'`",
+  "categories": [
+    "utility"
+  ],
+  "type": "registry:lib"
+}

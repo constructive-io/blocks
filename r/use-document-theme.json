@@ -1,0 +1,19 @@
+{
+  "$schema": "https://ui.shadcn.com/schema/registry-item.json",
+  "name": "use-document-theme",
+  "title": "use-document-theme",
+  "description": "Hook that follows the dark class on <html>, sharing one observer across every subscriber.",
+  "files": [
+    {
+      "path": "registry/constructive/lib/use-document-theme.ts",
+      "content": "import { useSyncExternalStore } from 'react';\n\nexport type DocumentTheme = 'light' | 'dark';\n\nconst listeners = new Set<() => void>();\nlet observer: MutationObserver | undefined;\n\n/** One observer on `<html>` serves every subscriber; it connects with the first and disconnects with the last. */\nfunction subscribe(listener: () => void) {\n\tlisteners.add(listener);\n\tif (!observer) {\n\t\tobserver = new MutationObserver(() => listeners.forEach((notify) => notify()));\n\t\tobserver.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });\n\t}\n\treturn () => {\n\t\tlisteners.delete(listener);\n\t\tif (listeners.size === 0) {\n\t\t\tobserver?.disconnect();\n\t\t\tobserver = undefined;\n\t\t}\n\t};\n}\n\nconst subscribeToNothing = () => () => {};\n\nconst getTheme = (): DocumentTheme => (document.documentElement.classList.contains('dark') ? 'dark' : 'light');\n\nconst getServerTheme = (): DocumentTheme => 'light';\n\n/**\n * The theme the page is in, following the `dark` class on `<html>`. Pass `false` when the caller has a theme of its\n * own, so it does not subscribe to changes it would ignore.\n */\nexport function useDocumentTheme(follow = true): DocumentTheme {\n\treturn useSyncExternalStore(follow ? subscribe : subscribeToNothing, getTheme, getServerTheme);\n}\n",
+      "type": "registry:lib",
+      "target": "@lib/use-document-theme.ts"
+    }
+  ],
+  "docs": "Import: `import { useDocumentTheme } from '@/lib/use-document-theme'`",
+  "categories": [
+    "utility"
+  ],
+  "type": "registry:lib"
+}

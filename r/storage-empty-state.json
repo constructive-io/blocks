@@ -1,0 +1,29 @@
+{
+  "$schema": "https://ui.shadcn.com/schema/registry-item.json",
+  "name": "storage-empty-state",
+  "title": "Storage Empty State",
+  "description": "Accessible empty and unavailable states for missing buckets, unprovisioned storage, empty buckets, and denied access.",
+  "dependencies": [
+    "lucide-react"
+  ],
+  "registryDependencies": [
+    "@constructive/cn",
+    "@constructive/button",
+    "@constructive/workspace-kit",
+    "@constructive/constructive-theme"
+  ],
+  "files": [
+    {
+      "path": "registry/constructive/blocks/storage/storage-empty-state.tsx",
+      "content": "'use client';\n\nimport { DatabaseIcon, HardDriveIcon, InboxIcon, PlusIcon, RefreshCwIcon, ShieldAlertIcon, UploadIcon } from 'lucide-react';\nimport type { LucideIcon } from 'lucide-react';\n\nimport { cn } from '@/lib/utils';\nimport { Button } from '@/components/ui/button';\nimport { EmptyState } from '@/components/ui/workspace-kit/surface';\n\nexport type StorageEmptyStateVariant = 'no-buckets' | 'not-provisioned' | 'empty-bucket' | 'no-access';\n\ninterface StorageEmptyStateProps {\n\tvariant: StorageEmptyStateVariant;\n\t/** Primary action handler (e.g. create bucket, upload, provision). */\n\tonAction?: () => void;\n\t/**\n\t * Secondary action handler. Only the `no-access` variant renders a\n\t * secondary action (refresh / learn more); ignored otherwise.\n\t */\n\tonSecondaryAction?: () => void;\n\tclassName?: string;\n}\n\ninterface VariantConfig {\n\ticon: LucideIcon;\n\ttitle: string;\n\tdescription: string;\n\t/** Primary button label and icon, or null for variants with no primary action. */\n\taction: { label: string; icon: LucideIcon } | null;\n\tsecondaryLabel?: string;\n}\n\nconst VARIANTS: Record<StorageEmptyStateVariant, VariantConfig> = {\n\t'no-buckets': {\n\t\ticon: HardDriveIcon,\n\t\ttitle: 'No buckets yet',\n\t\tdescription: 'Buckets organize your uploaded files. Create your first one to start storing objects.',\n\t\taction: { label: 'New bucket', icon: PlusIcon },\n\t},\n\t'not-provisioned': {\n\t\ticon: DatabaseIcon,\n\t\ttitle: 'Storage not provisioned',\n\t\tdescription: 'This database has buckets defined but storage has not been provisioned yet. Provision to enable uploads.',\n\t\taction: { label: 'Provision storage', icon: DatabaseIcon },\n\t},\n\t'empty-bucket': {\n\t\ticon: InboxIcon,\n\t\ttitle: 'This bucket is empty',\n\t\tdescription: 'Upload files, or drop them here, and they will appear in this list.',\n\t\taction: { label: 'Upload files', icon: UploadIcon },\n\t},\n\t'no-access': {\n\t\ticon: ShieldAlertIcon,\n\t\ttitle: 'No access to storage',\n\t\tdescription:\n\t\t\t'You need to be an active member of this organization to view its storage. If you recently joined, an admin may still need to confirm your membership.',\n\t\taction: null,\n\t\tsecondaryLabel: 'Refresh',\n\t},\n};\n\n/**\n * `StorageEmptyState` — a framed icon, a short title, one line of context,\n * and a single next step (`no-access` offers only a refresh).\n */\nexport function StorageEmptyState({ variant, onAction, onSecondaryAction, className }: StorageEmptyStateProps) {\n\tconst config = VARIANTS[variant];\n\tconst ActionIcon = config.action?.icon;\n\treturn (\n\t\t<EmptyState\n\t\t\ticon={config.icon}\n\t\t\ttitle={config.title}\n\t\t\tdescription={config.description}\n\t\t\tclassName={cn('h-full w-full justify-center', className)}\n\t\t\taction={\n\t\t\t\tconfig.action && onAction && ActionIcon ? (\n\t\t\t\t\t<Button onClick={onAction} size=\"sm\">\n\t\t\t\t\t\t<ActionIcon aria-hidden=\"true\" data-icon=\"inline-start\" />\n\t\t\t\t\t\t{config.action.label}\n\t\t\t\t\t</Button>\n\t\t\t\t) : variant === 'no-access' && config.secondaryLabel && onSecondaryAction ? (\n\t\t\t\t\t<Button onClick={onSecondaryAction} size=\"sm\" variant=\"outline\">\n\t\t\t\t\t\t<RefreshCwIcon aria-hidden=\"true\" data-icon=\"inline-start\" />\n\t\t\t\t\t\t{config.secondaryLabel}\n\t\t\t\t\t</Button>\n\t\t\t\t) : null\n\t\t\t}\n\t\t/>\n\t);\n}\n",
+      "type": "registry:component",
+      "target": "@ui/storage/storage-empty-state.tsx"
+    }
+  ],
+  "docs": "Import: `import { StorageEmptyState } from '@/components/ui/storage/storage-empty-state'`",
+  "categories": [
+    "block",
+    "application"
+  ],
+  "type": "registry:block"
+}

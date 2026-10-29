@@ -1,0 +1,26 @@
+{
+  "$schema": "https://ui.shadcn.com/schema/registry-item.json",
+  "name": "collapsible",
+  "title": "Collapsible",
+  "description": "A collapsible/accordion component built on Base UI.",
+  "dependencies": [
+    "@base-ui/react"
+  ],
+  "registryDependencies": [
+    "@constructive/cn",
+    "@constructive/constructive-theme"
+  ],
+  "files": [
+    {
+      "path": "registry/constructive/ui/collapsible.tsx",
+      "content": "\"use client\";\n\nimport * as React from \"react\";\nimport { Collapsible as CollapsiblePrimitive } from \"@base-ui/react/collapsible\";\n\nimport { cn } from \"@/lib/utils\";\n\n/**\n * Collapsible Root\n * Container for collapsible content with open/close state management.\n */\nfunction Collapsible({\n  className,\n  ...props\n}: CollapsiblePrimitive.Root.Props) {\n  return (\n    <CollapsiblePrimitive.Root\n      data-slot=\"collapsible\"\n      className={cn(\"group/collapsible\", className)}\n      {...props}\n    />\n  );\n}\n\n/**\n * CollapsibleTrigger Props\n */\ntype CollapsibleTriggerProps = CollapsiblePrimitive.Trigger.Props & {\n  /** When true, merges props onto the child element instead of rendering a button */\n  asChild?: boolean;\n  /** Whether the child renders a native button. Defaults to true when asChild is used. */\n  nativeButton?: boolean;\n};\n\n/**\n * CollapsibleTrigger\n * Button that toggles the collapsible open/closed state.\n * Supports asChild pattern for custom trigger elements.\n */\nconst CollapsibleTrigger = React.forwardRef<\n  HTMLButtonElement,\n  CollapsibleTriggerProps\n>(({ className, asChild, nativeButton, children, render, ...props }, ref) => {\n  const triggerClassName = cn(\n    \"group/trigger flex w-full cursor-pointer items-center justify-between text-start text-sm font-medium outline-none [overflow-wrap:anywhere] transition-[box-shadow]\",\n    \"focus-visible:ring-[3px] focus-visible:ring-ring/50\",\n    \"disabled:pointer-events-none disabled:opacity-64\",\n    \"[&_[data-slot=collapsible-icon]]:transition-transform [&_[data-slot=collapsible-icon]]:duration-(--duration-slow)\",\n    \"[&[data-panel-open]_[data-slot=collapsible-icon]]:rotate-180\",\n    className\n  );\n\n  const childRender = render === undefined && asChild && React.isValidElement(children) ? children : undefined;\n\n  return (\n    <CollapsiblePrimitive.Trigger\n      ref={ref}\n      data-slot=\"collapsible-trigger\"\n      nativeButton={nativeButton ?? (childRender ? true : undefined)}\n      className={triggerClassName}\n      render={render ?? childRender}\n      {...props}\n    >\n      {childRender ? undefined : children}\n    </CollapsiblePrimitive.Trigger>\n  );\n});\nCollapsibleTrigger.displayName = \"CollapsibleTrigger\";\n\n/**\n * CollapsiblePanel Props\n */\ntype CollapsiblePanelProps = CollapsiblePrimitive.Panel.Props & {\n  /** Additional className for the inner content wrapper */\n  innerClassName?: string;\n};\n\n/**\n * CollapsiblePanel\n * Compositor-animated reveal for collapsible content.\n * Geometry snaps to its measured height while opacity/translation carry the state change.\n */\nconst CollapsiblePanel = React.forwardRef<HTMLDivElement, CollapsiblePanelProps>(\n  ({ className, innerClassName, children, ...props }, ref) => {\n    return (\n      <CollapsiblePrimitive.Panel\n        ref={ref}\n        data-slot=\"collapsible-panel\"\n        className={cn(\n          \"h-[var(--collapsible-panel-height)] overflow-hidden text-sm\",\n          \"origin-top transition-[opacity,transform] duration-(--duration-slow) ease-out motion-reduce:transition-none\",\n          \"data-[ending-style]:translate-y-1 data-[ending-style]:opacity-0 data-[starting-style]:translate-y-1 data-[starting-style]:opacity-0\",\n          className\n        )}\n        {...props}\n      >\n        <div\n          data-slot=\"collapsible-panel-content\"\n          className={cn(\"py-4 [overflow-wrap:anywhere]\", innerClassName)}\n        >\n          {children}\n        </div>\n      </CollapsiblePrimitive.Panel>\n    );\n  }\n);\nCollapsiblePanel.displayName = \"CollapsiblePanel\";\n\n/**\n * CollapsibleIcon\n * Animated chevron icon that rotates when the collapsible opens/closes.\n * Use this within CollapsibleTrigger for automatic rotation animation.\n */\nfunction CollapsibleIcon({\n  className,\n  ...props\n}: React.SVGProps<SVGSVGElement>) {\n  return (\n    <svg\n      data-slot=\"collapsible-icon\"\n      xmlns=\"http://www.w3.org/2000/svg\"\n      width=\"16\"\n      height=\"16\"\n      viewBox=\"0 0 24 24\"\n      fill=\"none\"\n      stroke=\"currentColor\"\n      strokeWidth=\"2\"\n      strokeLinecap=\"round\"\n      strokeLinejoin=\"round\"\n      className={cn(\"h-4 w-4 shrink-0 text-muted-foreground\", className)}\n      {...props}\n    >\n      <path d=\"m6 9 6 6 6-6\" />\n    </svg>\n  );\n}\n\nexport {\n  Collapsible,\n  CollapsibleTrigger,\n  CollapsiblePanel,\n  CollapsiblePanel as CollapsibleContent,\n  CollapsibleIcon,\n  type CollapsibleTriggerProps,\n  type CollapsiblePanelProps,\n};\n",
+      "type": "registry:ui",
+      "target": "@ui/collapsible.tsx"
+    }
+  ],
+  "docs": "Import: `import { Collapsible } from '@/components/ui/collapsible'`",
+  "categories": [
+    "layout"
+  ],
+  "type": "registry:ui"
+}

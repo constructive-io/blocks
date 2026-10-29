@@ -1,0 +1,29 @@
+{
+  "$schema": "https://ui.shadcn.com/schema/registry-item.json",
+  "name": "storage-bucket-rail",
+  "title": "Storage Bucket Rail",
+  "description": "A controlled, scrollable bucket list with visibility, object-count, selection, and create-bucket affordances.",
+  "dependencies": [
+    "lucide-react"
+  ],
+  "registryDependencies": [
+    "@constructive/storage",
+    "@constructive/cn",
+    "@constructive/workspace-kit",
+    "@constructive/constructive-theme"
+  ],
+  "files": [
+    {
+      "path": "registry/constructive/blocks/storage/bucket-rail.tsx",
+      "content": "'use client';\n\nimport { PlusIcon } from 'lucide-react';\n\nimport { cn } from '@/lib/utils';\nimport { NavCount, NavRow, NavSection } from '@/components/ui/workspace-kit/nav';\nimport { TooltipIconButton } from '@/components/ui/workspace-kit/primitives';\nimport { MiddleTruncate } from '@/components/ui/workspace-kit/middle-truncate';\nimport type { BucketVisibility, StorageBucket } from '@/components/ui/storage/types';\nimport { bucketDisplayName, formatCount } from '@/components/ui/storage/utils';\nimport { VISIBILITY } from '@/components/ui/storage/visibility-badge';\n\ninterface BucketRailProps {\n\tbuckets: StorageBucket[];\n\tselectedBucketId?: string | null;\n\tonSelectBucket: (bucketId: string) => void;\n\tonNewBucket?: () => void;\n\t/** Icon-only rail, as in a collapsed workspace sidebar. */\n\tcollapsed?: boolean;\n\t/** Heading above the list. */\n\ttitle?: string;\n\t/** Bucket whose contents are loading; its row shows a spinner. */\n\tbusyBucketId?: string | null;\n\t/** When false, only the selected bucket is enabled, e.g. while policy forbids switching. */\n\tselectable?: boolean;\n\t/** Locale for the counts (for example `de-DE`). Default: `en-US`, so the server and the browser agree. */\n\tlocale?: string;\n\tclassName?: string;\n}\n\n/**\n * `BucketRail` — buckets as workspace nav rows: a visibility glyph, the name,\n * and a quiet object count, with \"New bucket\" beside the heading. Buckets\n * that are not provisioned yet read muted. Selection is controlled.\n */\nexport function BucketRail({\n\tbuckets,\n\tselectedBucketId,\n\tonSelectBucket,\n\tonNewBucket,\n\tcollapsed = false,\n\ttitle = 'Buckets',\n\tbusyBucketId,\n\tselectable = true,\n\tlocale,\n\tclassName,\n}: BucketRailProps) {\n\treturn (\n\t\t<div className={cn('flex min-h-0 flex-col', className)}>\n\t\t\t<NavSection\n\t\t\t\ttitle={title}\n\t\t\t\tcollapsed={collapsed}\n\t\t\t\taction={\n\t\t\t\t\tonNewBucket ? (\n\t\t\t\t\t\t<TooltipIconButton label=\"New bucket\" size=\"sm\" side={collapsed ? 'right' : 'top'} onClick={onNewBucket}>\n\t\t\t\t\t\t\t<PlusIcon aria-hidden=\"true\" className=\"size-3.5\" />\n\t\t\t\t\t\t</TooltipIconButton>\n\t\t\t\t\t) : null\n\t\t\t\t}\n\t\t\t>\n\t\t\t\t{buckets.map((bucket) => {\n\t\t\t\t\tconst active = bucket.id === selectedBucketId;\n\t\t\t\t\tconst { icon: Icon, label: visibility } = VISIBILITY[bucket.visibility] ?? VISIBILITY.private;\n\t\t\t\t\tconst unprovisioned = bucket.provisioned === false;\n\t\t\t\t\tconst name = bucketDisplayName(bucket);\n\t\t\t\t\tconst count = bucket.objectCount;\n\t\t\t\t\tconst details = [\n\t\t\t\t\t\tvisibility,\n\t\t\t\t\t\tunprovisioned ? 'not provisioned' : null,\n\t\t\t\t\t\tcount != null ? `${formatCount(count, locale)} ${count === 1 ? 'file' : 'files'}` : null,\n\t\t\t\t\t]\n\t\t\t\t\t\t.filter(Boolean)\n\t\t\t\t\t\t.join(', ');\n\t\t\t\t\treturn (\n\t\t\t\t\t\t<NavRow\n\t\t\t\t\t\t\tkey={bucket.id}\n\t\t\t\t\t\t\tlabel={`${name}, ${details}`}\n\t\t\t\t\t\t\tlabelNode={\n\t\t\t\t\t\t\t\t<>\n\t\t\t\t\t\t\t\t\t{/* The row's own title carries the details; a title here would hide it. */}\n\t\t\t\t\t\t\t\t\t<MiddleTruncate text={name} title={false} />\n\t\t\t\t\t\t\t\t\t<span className=\"sr-only\">, {details}</span>\n\t\t\t\t\t\t\t\t</>\n\t\t\t\t\t\t\t}\n\t\t\t\t\t\t\tcollapsed={collapsed}\n\t\t\t\t\t\t\tactive={active}\n\t\t\t\t\t\t\tmuted={unprovisioned}\n\t\t\t\t\t\t\tbusy={busyBucketId === bucket.id}\n\t\t\t\t\t\t\tdisabled={!selectable && !active}\n\t\t\t\t\t\t\tleading={<Icon aria-hidden=\"true\" className={cn('size-3.5 shrink-0', active ? 'text-foreground' : 'text-muted-foreground')} />}\n\t\t\t\t\t\t\ttrailing={\n\t\t\t\t\t\t\t\tunprovisioned ? (\n\t\t\t\t\t\t\t\t\t<span aria-hidden=\"true\" className=\"text-[0.6875rem] text-subtle-foreground\">\n\t\t\t\t\t\t\t\t\t\tOff\n\t\t\t\t\t\t\t\t\t</span>\n\t\t\t\t\t\t\t\t) : bucket.objectCount != null ? (\n\t\t\t\t\t\t\t\t\t<NavCount value={formatCount(bucket.objectCount, locale)} />\n\t\t\t\t\t\t\t\t) : null\n\t\t\t\t\t\t\t}\n\t\t\t\t\t\t\tonClick={() => onSelectBucket(bucket.id)}\n\t\t\t\t\t\t/>\n\t\t\t\t\t);\n\t\t\t\t})}\n\t\t\t</NavSection>\n\t\t</div>\n\t);\n}\n\nexport type { BucketVisibility };\n",
+      "type": "registry:component",
+      "target": "@ui/storage/bucket-rail.tsx"
+    }
+  ],
+  "docs": "Import: `import { BucketRail } from '@/components/ui/storage/bucket-rail'`",
+  "categories": [
+    "block",
+    "application"
+  ],
+  "type": "registry:block"
+}

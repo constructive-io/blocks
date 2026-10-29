@@ -1,0 +1,24 @@
+{
+  "$schema": "https://ui.shadcn.com/schema/registry-item.json",
+  "name": "progressive-blur-scroll-container",
+  "title": "Progressive Blur Scroll Container",
+  "description": "A scroll container with blur effects at edges.",
+  "registryDependencies": [
+    "@constructive/cn",
+    "@constructive/progressive-blur",
+    "@constructive/constructive-theme"
+  ],
+  "files": [
+    {
+      "path": "registry/constructive/ui/progressive-blur-scroll-container.tsx",
+      "content": "'use client';\n\nimport { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';\n\nimport { cn } from '@/lib/utils';\n\nimport { ProgressiveBlur, type ProgressiveBlurProps } from '@/components/ui/progressive-blur';\n\nexport interface ProgressiveBlurScrollContainerProps {\n\tchildren: ReactNode;\n\tclassName?: string;\n\t/** Class name for the scrollable inner div */\n\tscrollClassName?: string;\n\t/** Minimum number of items to show blur (prevents blur on sparse content) */\n\tminItemsForBlur?: number;\n\t/** Current item count for the `minItemsForBlur` check. Leave it out and the threshold is ignored. */\n\titemCount?: number;\n\t/** Props to pass to ProgressiveBlur */\n\tblurProps?: Partial<ProgressiveBlurProps>;\n\t/** Whether to show blur (in addition to overflow check) */\n\tshowBlur?: boolean;\n}\n\n/**\n * A scrollable container that shows progressive blur effects at the top and bottom\n * when content overflows. Top blur appears when scrolled, bottom blur when more content below.\n */\nexport function ProgressiveBlurScrollContainer({\n\tchildren,\n\tclassName,\n\tscrollClassName,\n\tminItemsForBlur = 0,\n\titemCount,\n\tblurProps,\n\tshowBlur = true,\n}: ProgressiveBlurScrollContainerProps) {\n\tconst [hasOverflow, setHasOverflow] = useState(false);\n\tconst [isScrolledFromTop, setIsScrolledFromTop] = useState(false);\n\tconst [isScrolledFromBottom, setIsScrolledFromBottom] = useState(true);\n\tconst scrollRef = useRef<HTMLDivElement>(null);\n\n\tconst checkScrollPosition = useCallback(() => {\n\t\tif (scrollRef.current) {\n\t\t\tconst el = scrollRef.current;\n\t\t\tconst scrollTop = el.scrollTop;\n\t\t\tconst scrollHeight = el.scrollHeight;\n\t\t\tconst clientHeight = el.clientHeight;\n\n\t\t\t// Show top blur if scrolled more than 10px from top\n\t\t\tsetIsScrolledFromTop(scrollTop > 10);\n\t\t\t// Show bottom blur if not scrolled to bottom (with 10px threshold)\n\t\t\tsetIsScrolledFromBottom(scrollTop + clientHeight < scrollHeight - 10);\n\t\t}\n\t}, []);\n\n\tuseEffect(() => {\n\t\tconst checkOverflow = () => {\n\t\t\tif (scrollRef.current) {\n\t\t\t\tconst el = scrollRef.current;\n\t\t\t\tsetHasOverflow(el.scrollHeight > el.clientHeight);\n\t\t\t\tcheckScrollPosition();\n\t\t\t}\n\t\t};\n\t\tcheckOverflow();\n\t\twindow.addEventListener('resize', checkOverflow);\n\t\treturn () => window.removeEventListener('resize', checkOverflow);\n\t}, [children, checkScrollPosition]);\n\n\t// Listen to scroll events\n\tuseEffect(() => {\n\t\tconst el = scrollRef.current;\n\t\tif (!el) return;\n\n\t\tel.addEventListener('scroll', checkScrollPosition, { passive: true });\n\t\treturn () => el.removeEventListener('scroll', checkScrollPosition);\n\t}, [checkScrollPosition]);\n\n\tconst canShowBlur = showBlur && hasOverflow && (minItemsForBlur === 0 || itemCount === undefined || itemCount > minItemsForBlur);\n\n\treturn (\n\t\t<div className={cn('relative min-h-0 flex-1', className)}>\n\t\t\t<div\n\t\t\t\tref={scrollRef}\n\t\t\t\tclassName={cn('absolute inset-0 overflow-y-auto', scrollClassName)}\n\t\t\t>\n\t\t\t\t{children}\n\t\t\t</div>\n\t\t\t{canShowBlur && isScrolledFromTop && (\n\t\t\t\t<ProgressiveBlur\n\t\t\t\t\tposition='top'\n\t\t\t\t\theight='48px'\n\t\t\t\t\tsurface='background'\n\t\t\t\t\tintensity={0.2}\n\t\t\t\t\t{...blurProps}\n\t\t\t\t/>\n\t\t\t)}\n\t\t\t{canShowBlur && isScrolledFromBottom && (\n\t\t\t\t<ProgressiveBlur\n\t\t\t\t\tposition='bottom'\n\t\t\t\t\theight='64px'\n\t\t\t\t\tsurface='background'\n\t\t\t\t\tintensity={0.25}\n\t\t\t\t\t{...blurProps}\n\t\t\t\t/>\n\t\t\t)}\n\t\t</div>\n\t);\n}\n",
+      "type": "registry:ui",
+      "target": "@ui/progressive-blur-scroll-container.tsx"
+    }
+  ],
+  "docs": "Import: `import { ProgressiveBlurScrollContainer } from '@/components/ui/progressive-blur-scroll-container'`",
+  "categories": [
+    "effect"
+  ],
+  "type": "registry:ui"
+}

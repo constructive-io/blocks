@@ -1,0 +1,19 @@
+{
+  "$schema": "https://ui.shadcn.com/schema/registry-item.json",
+  "name": "compose-refs",
+  "title": "compose-refs",
+  "description": "Merges refs into one stable callback ref that keeps React 19 ref cleanup functions working, plus a hook that memoizes it.",
+  "files": [
+    {
+      "path": "registry/constructive/lib/compose-refs.ts",
+      "content": "import { useMemo } from 'react';\nimport type { MutableRefObject, Ref, RefCallback } from 'react';\n\ntype PossibleRef<T> = Ref<T> | undefined;\n\n/** Points a ref at `node`, and returns the cleanup a callback ref handed back (React 19), if any. */\nfunction assign<T>(ref: PossibleRef<T>, node: T | null): (() => void) | undefined {\n\tif (typeof ref === 'function') {\n\t\tconst cleanup = ref(node);\n\t\treturn typeof cleanup === 'function' ? cleanup : undefined;\n\t}\n\tif (ref) (ref as MutableRefObject<T | null>).current = node;\n\treturn undefined;\n}\n\n/**\n * Merges refs into one callback ref and keeps React 19's ref contract for each of them:\n *\n * - a callback ref that returns a cleanup function has that cleanup run on detach, and is never called with `null`;\n * - any other callback ref is called with `null` on detach, and a ref object is set back to `null`.\n *\n * The merged ref only returns a cleanup when one of the refs did. React 18 does not run cleanups (and warns in\n * development when a ref returns one), and with plain refs React 19 calls the merged ref again with `null`, which\n * is how every plain ref gets detached.\n */\nexport function mergeRefs<T>(...refs: PossibleRef<T>[]): RefCallback<T> {\n\treturn (node) => {\n\t\tif (node === null) {\n\t\t\tfor (const ref of refs) assign(ref, null);\n\t\t\treturn;\n\t\t}\n\t\tconst cleanups = refs.map((ref) => assign(ref, node));\n\t\tif (!cleanups.some(Boolean)) return;\n\t\treturn () => {\n\t\t\trefs.forEach((ref, index) => (cleanups[index] ? cleanups[index]() : assign(ref, null)));\n\t\t};\n\t};\n}\n\n/**\n * `mergeRefs` for a component that needs its own ref and also forwards the one it was given. The merged ref is\n * memoized on the refs themselves, so React attaches it once and only again when a ref changes: passing a ref that\n * is stable keeps it from being detached and attached on every render.\n */\nexport function useMergedRefs<T>(...refs: PossibleRef<T>[]): RefCallback<T> {\n\t// A component passes the same number of refs on every render, so the list of dependencies never changes length.\n\t// eslint-disable-next-line react-hooks/exhaustive-deps\n\treturn useMemo(() => mergeRefs(...refs), refs);\n}\n",
+      "type": "registry:lib",
+      "target": "@lib/compose-refs.ts"
+    }
+  ],
+  "docs": "Import: `import { mergeRefs, useMergedRefs } from '@/lib/compose-refs'`",
+  "categories": [
+    "utility"
+  ],
+  "type": "registry:lib"
+}

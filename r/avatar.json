@@ -1,0 +1,26 @@
+{
+  "$schema": "https://ui.shadcn.com/schema/registry-item.json",
+  "name": "avatar",
+  "title": "Avatar",
+  "description": "An avatar component with image and fallback support.",
+  "dependencies": [
+    "@base-ui/react"
+  ],
+  "registryDependencies": [
+    "@constructive/cn",
+    "@constructive/constructive-theme"
+  ],
+  "files": [
+    {
+      "path": "registry/constructive/ui/avatar.tsx",
+      "content": "'use client';\n\nimport * as React from 'react';\nimport { Avatar as AvatarPrimitive } from '@base-ui/react/avatar';\n\nimport { cn } from '@/lib/utils';\n\nfunction Avatar({ className, ...props }: React.ComponentProps<typeof AvatarPrimitive.Root>) {\n\treturn (\n\t\t<AvatarPrimitive.Root\n\t\t\tdata-slot=\"avatar\"\n\t\t\tclassName={cn(\n\t\t\t\t// `bg-muted` backs transparent images (logos) so they stay visible on any surface;\n\t\t\t\t// the container lets the fallback text scale with the avatar's size.\n\t\t\t\t'@container/avatar relative flex size-8 shrink-0 overflow-hidden rounded-full bg-muted outline-1 -outline-offset-1 outline-black/10 dark:outline-white/10',\n\t\t\t\tclassName,\n\t\t\t)}\n\t\t\t{...props}\n\t\t/>\n\t);\n}\n\nfunction AvatarImage({ className, ...props }: React.ComponentProps<typeof AvatarPrimitive.Image>) {\n\treturn (\n\t\t<AvatarPrimitive.Image\n\t\t\tdata-slot=\"avatar-image\"\n\t\t\tclassName={cn(\n\t\t\t\t'aspect-square size-full object-cover outline outline-1 -outline-offset-1 outline-black/10 dark:outline-white/10',\n\t\t\t\tclassName,\n\t\t\t)}\n\t\t\t{...props}\n\t\t/>\n\t);\n}\n\ntype AvatarFallbackProps = React.ComponentProps<typeof AvatarPrimitive.Fallback> & {\n\t/** @deprecated Use delay prop instead */\n\tdelayMs?: number;\n};\n\n/**\n * Shown while the image loads or when it fails. Pass one or two characters\n * (see `initials()`), a short count such as `99+`, or an icon; longer text is\n * clipped by the circle. The font scales with the avatar (about 38% of its\n * width, never below 11px).\n */\nfunction AvatarFallback({ className, delayMs, delay, ...props }: AvatarFallbackProps) {\n\treturn (\n\t\t<AvatarPrimitive.Fallback\n\t\t\tdata-slot=\"avatar-fallback\"\n\t\t\tdelay={delay ?? delayMs}\n\t\t\tclassName={cn(\n\t\t\t\t'bg-secondary flex size-full items-center justify-center rounded-[inherit] text-[length:max(0.6875rem,37.5cqw)] whitespace-nowrap',\n\t\t\t\tclassName,\n\t\t\t)}\n\t\t\t{...props}\n\t\t/>\n\t);\n}\n\nexport { Avatar, AvatarFallback, AvatarImage };\n",
+      "type": "registry:ui",
+      "target": "@ui/avatar.tsx"
+    }
+  ],
+  "docs": "Import: `import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar'`",
+  "categories": [
+    "data-display"
+  ],
+  "type": "registry:ui"
+}

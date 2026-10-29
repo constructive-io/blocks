@@ -1,0 +1,26 @@
+{
+  "$schema": "https://ui.shadcn.com/schema/registry-item.json",
+  "name": "spinner",
+  "title": "Spinner",
+  "description": "Inline loading spinner.",
+  "dependencies": [
+    "lucide-react"
+  ],
+  "registryDependencies": [
+    "@constructive/cn",
+    "@constructive/constructive-theme"
+  ],
+  "files": [
+    {
+      "path": "registry/constructive/ui/spinner.tsx",
+      "content": "import * as React from 'react';\nimport { LoaderCircle } from 'lucide-react';\n\nimport { cn } from '@/lib/utils';\n\ntype SpinnerProps = React.ComponentProps<'svg'> & {\n\t/** Accessible name announced for the loading state. Defaults to \"Loading\". */\n\tlabel?: string;\n\t/**\n\t * Hides the spinner from assistive tech. Use it when text next to it already says what\n\t * is loading (a \"Saving…\" button), so a page of spinners is not a page of identical\n\t * \"Loading\" announcements.\n\t */\n\tdecorative?: boolean;\n};\n\nfunction Spinner({ className, label = 'Loading', decorative = false, ...props }: SpinnerProps) {\n\treturn (\n\t\t<LoaderCircle\n\t\t\tdata-slot=\"spinner\"\n\t\t\t{...(decorative ? { 'aria-hidden': true } : { role: 'status', 'aria-label': label })}\n\t\t\tclassName={cn('size-4 animate-spin motion-reduce:animate-pulse', className)}\n\t\t\t{...props}\n\t\t/>\n\t);\n}\n\nexport { Spinner };\nexport type { SpinnerProps };\n",
+      "type": "registry:ui",
+      "target": "@ui/spinner.tsx"
+    }
+  ],
+  "docs": "Import: `import { ... } from '@/components/ui/spinner'`",
+  "categories": [
+    "primitive"
+  ],
+  "type": "registry:ui"
+}

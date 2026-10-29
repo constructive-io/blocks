@@ -1,0 +1,23 @@
+{
+  "$schema": "https://ui.shadcn.com/schema/registry-item.json",
+  "name": "layout-kit",
+  "title": "Layout Kit",
+  "description": "Layout and navigation components: tabs, sidebar, collapsible, resizable panels, scroll area, breadcrumb, pagination.",
+  "registryDependencies": [
+    "@constructive/tabs",
+    "@constructive/sidebar",
+    "@constructive/collapsible",
+    "@constructive/resizable",
+    "@constructive/scroll-area",
+    "@constructive/breadcrumb",
+    "@constructive/pagination",
+    "@constructive/separator",
+    "@constructive/empty",
+    "@constructive/constructive-theme"
+  ],
+  "files": [],
+  "categories": [
+    "bundle"
+  ],
+  "type": "registry:ui"
+}

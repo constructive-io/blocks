@@ -1,0 +1,26 @@
+{
+  "$schema": "https://ui.shadcn.com/schema/registry-item.json",
+  "name": "feature-pack-billing",
+  "title": "Billing Feature Pack",
+  "description": "The feature-pack root for customer billing: the Billing Account template over Constructive plans, meters, credits, invoices, and the ledger.",
+  "registryDependencies": [
+    "@constructive/billing-account",
+    "@constructive/constructive-theme"
+  ],
+  "files": [
+    {
+      "path": "registry/constructive/blocks/feature-packs/billing/billing-feature-pack.tsx",
+      "content": "'use client';\n\nimport {\n  BillingAccount,\n  type BillingAccountProps\n} from '@/components/ui/billing-account/index';\n\nexport type BillingFeaturePackProps = BillingAccountProps & {\n  /** Receives failures from host callbacks; the account view still shows its own inline error. */\n  onError?: (error: unknown) => void;\n};\n\nfunction reporting<Args extends unknown[], Result>(\n  callback: ((...args: Args) => Result) | undefined,\n  onError: ((error: unknown) => void) | undefined\n): ((...args: Args) => Promise<Awaited<Result>>) | undefined {\n  if (!callback) return undefined;\n  return async (...args: Args): Promise<Awaited<Result>> => {\n    try {\n      return await callback(...args);\n    } catch (error) {\n      onError?.(error);\n      throw error;\n    }\n  };\n}\n\n/**\n * The feature-pack root for customer billing: the Billing Account template\n * for one personal or organization account. Console Kit passes the data its\n * adapter could read and the views it can back.\n */\nexport function BillingFeaturePack({\n  onError,\n  onChangePlan,\n  onBuyCredits,\n  onRedeemCode,\n  ...props\n}: BillingFeaturePackProps) {\n  return (\n    <BillingAccount\n      {...props}\n      onChangePlan={reporting(onChangePlan, onError)}\n      onBuyCredits={reporting(onBuyCredits, onError)}\n      onRedeemCode={reporting(onRedeemCode, onError)}\n    />\n  );\n}\n",
+      "type": "registry:component",
+      "target": "src/blocks/feature-packs/billing/billing-feature-pack.tsx"
+    },
+    {
+      "path": "registry/constructive/blocks/feature-packs/billing/feature-pack.json",
+      "content": "{\n  \"schemaVersion\": 1,\n  \"id\": \"billing\",\n  \"title\": \"Billing\",\n  \"description\": \"A customer billing workspace: current plan, plan comparison and changes, usage by pool, credits, invoices, and ledger activity.\",\n  \"dependencies\": [],\n  \"endpoints\": { \"required\": [], \"optional\": [\"billing\", \"admin\", \"data\"] },\n  \"capabilities\": {\n    \"required\": [\"billing.plans\", \"billing.subscriptions\"],\n    \"optional\": [\"billing.meters\"]\n  },\n  \"metadata\": {\n    \"requiredMetaSections\": [],\n    \"optionalMetaSections\": [\"tables\", \"fields\", \"constraints\", \"relations\", \"query\", \"scope\", \"encoding\"],\n    \"requiredIntrospectionSections\": [\"root-operations\", \"types\", \"input-objects\"],\n    \"optionalIntrospectionSections\": [\"enums\", \"directives\"]\n  }\n}\n",
+      "type": "registry:file",
+      "target": "~/.constructive/feature-packs/billing.json"
+    }
+  ],
+  "docs": "`feature-pack-billing` installed the customer billing workspace and `.constructive/feature-packs/billing.json`. Import from `@/blocks/feature-packs/billing/billing-feature-pack`; it renders `BillingAccount` from `@/components/ui/billing-account`. The host passes `BillingAccountData` and the provider callbacks; add `console-module-billing` when Console Kit should own discovery and Constructive integration.\n\nDegraded states: pass `views` to hide the views your data cannot back; missing callbacks leave their actions out.\n\nGuide: https://constructive-io.github.io/blocks/blocks/features/billing/",
+  "type": "registry:block"
+}

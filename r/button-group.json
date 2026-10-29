@@ -1,0 +1,27 @@
+{
+  "$schema": "https://ui.shadcn.com/schema/registry-item.json",
+  "name": "button-group",
+  "title": "Button Group",
+  "description": "A group of attached buttons sharing borders and radii.",
+  "dependencies": [
+    "class-variance-authority"
+  ],
+  "registryDependencies": [
+    "@constructive/cn",
+    "@constructive/separator",
+    "@constructive/constructive-theme"
+  ],
+  "files": [
+    {
+      "path": "registry/constructive/ui/button-group.tsx",
+      "content": "import * as React from 'react';\nimport { cva, type VariantProps } from 'class-variance-authority';\n\nimport { Separator } from '@/components/ui/separator';\nimport { cn } from '@/lib/utils';\n\nconst buttonGroupVariants = cva(\n\t`flex w-fit max-w-full items-stretch\n\t\t[&>*]:focus-visible:relative [&>*]:focus-visible:z-10\n\t\t[&>[data-slot=select-trigger]:not([class*='w-'])]:w-fit [&>input]:flex-1`,\n\t{\n\t\tvariants: {\n\t\t\t// Only the shared edges square off: the first child keeps its leading\n\t\t\t// corners, the last keeps its trailing ones, and each Button's `before:`\n\t\t\t// overlay follows so its highlight never shows a rounded corner inside a\n\t\t\t// squared one. Works for any child count, separators included. Logical\n\t\t\t// (`s`/`e`) sides so the group mirrors in right-to-left layouts.\n\t\t\torientation: {\n\t\t\t\thorizontal: `flex-row\n\t\t\t\t\t[&>[data-slot]:not(:last-child)]:rounded-e-none [&>[data-slot]:not(:last-child)]:before:rounded-e-none\n\t\t\t\t\t[&>[data-slot]:not(:first-child)]:rounded-s-none [&>[data-slot]:not(:first-child)]:before:rounded-s-none\n\t\t\t\t\t[&>[data-slot]:not(:first-child)]:border-s-0`,\n\t\t\t\tvertical: `flex-col\n\t\t\t\t\t[&>[data-slot]:not(:last-child)]:rounded-b-none [&>[data-slot]:not(:last-child)]:before:rounded-b-none\n\t\t\t\t\t[&>[data-slot]:not(:first-child)]:rounded-t-none [&>[data-slot]:not(:first-child)]:before:rounded-t-none\n\t\t\t\t\t[&>[data-slot]:not(:first-child)]:border-t-0`,\n\t\t\t},\n\t\t},\n\t\tdefaultVariants: {\n\t\t\torientation: 'horizontal',\n\t\t},\n\t},\n);\n\ninterface ButtonGroupProps\n\textends React.HTMLAttributes<HTMLDivElement>,\n\t\tVariantProps<typeof buttonGroupVariants> {}\n\nfunction ButtonGroup({ className, orientation, ...props }: ButtonGroupProps) {\n\treturn (\n\t\t<div\n\t\t\trole=\"group\"\n\t\t\tdata-slot=\"button-group\"\n\t\t\tdata-orientation={orientation}\n\t\t\tclassName={cn(buttonGroupVariants({ orientation }), className)}\n\t\t\t{...props}\n\t\t/>\n\t);\n}\n\ntype ButtonGroupTextProps = React.ComponentProps<'div'>;\n\nfunction ButtonGroupText({ className, ...props }: ButtonGroupTextProps) {\n\treturn (\n\t\t<div\n\t\t\tdata-slot=\"button-group-text\"\n\t\t\tclassName={cn(\n\t\t\t\t'flex min-w-0 items-center gap-2 rounded-md border border-border bg-muted/60 px-3 text-[0.8125rem] font-medium text-muted-foreground [overflow-wrap:anywhere] [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*=\"size-\"])]:size-4',\n\t\t\t\tclassName,\n\t\t\t)}\n\t\t\t{...props}\n\t\t/>\n\t);\n}\n\ntype ButtonGroupSeparatorProps = React.ComponentProps<typeof Separator>;\n\nfunction ButtonGroupSeparator({\n\tclassName,\n\torientation = 'vertical',\n\t...props\n}: ButtonGroupSeparatorProps) {\n\treturn (\n\t\t<Separator\n\t\t\tdata-slot=\"button-group-separator\"\n\t\t\torientation={orientation}\n\t\t\tclassName={cn(\n\t\t\t\t// A translucent ink line drawn *over* the preceding button's edge (pulled\n\t\t\t\t// back by 1px, above it) so it tints the fill it divides — darker blue in a\n\t\t\t\t// primary group, a hairline between outline buttons — instead of opening a\n\t\t\t\t// slot that shows the page behind the group.\n\t\t\t\t'relative z-10 self-stretch bg-black/16 dark:bg-white/16 data-[orientation=vertical]:-ml-px data-[orientation=vertical]:h-auto data-[orientation=horizontal]:-mt-px data-[orientation=horizontal]:w-auto',\n\t\t\t\tclassName,\n\t\t\t)}\n\t\t\t{...props}\n\t\t/>\n\t);\n}\n\nexport { ButtonGroup, ButtonGroupSeparator, ButtonGroupText, buttonGroupVariants };\nexport type { ButtonGroupProps, ButtonGroupTextProps, ButtonGroupSeparatorProps };\n",
+      "type": "registry:ui",
+      "target": "@ui/button-group.tsx"
+    }
+  ],
+  "docs": "Import: `import { ... } from '@/components/ui/button-group'`",
+  "categories": [
+    "primitive"
+  ],
+  "type": "registry:ui"
+}

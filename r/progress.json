@@ -1,0 +1,26 @@
+{
+  "$schema": "https://ui.shadcn.com/schema/registry-item.json",
+  "name": "progress",
+  "title": "Progress",
+  "description": "A progress bar component built on Base UI.",
+  "dependencies": [
+    "@base-ui/react"
+  ],
+  "registryDependencies": [
+    "@constructive/cn",
+    "@constructive/constructive-theme"
+  ],
+  "files": [
+    {
+      "path": "registry/constructive/ui/progress.tsx",
+      "content": "'use client';\n\nimport * as React from 'react';\nimport { Progress as ProgressPrimitive } from '@base-ui/react/progress';\n\nimport { cn } from '@/lib/utils';\n\ntype ProgressProps = Omit<React.ComponentProps<typeof ProgressPrimitive.Root>, 'children'> & {\n\tclassName?: string;\n};\n\n/**\n * Keeps the bar honest for values a calculation can really produce: finite\n * values clamp into `[min, max]`; `null`, `undefined`, `NaN`, `Infinity` and\n * unusable bounds are indeterminate. Without this Base UI drops the indicator\n * width for them and the block fills the track, which reads as 100%.\n */\nfunction normalizeProgressValue(value: number | null | undefined, min: number, max: number): number | null {\n\tif (value == null || !Number.isFinite(value)) return null;\n\tif (!Number.isFinite(min) || !Number.isFinite(max) || max <= min) return null;\n\treturn Math.min(Math.max(value, min), max);\n}\n\nfunction Progress({ className, value, min = 0, max = 100, ...props }: ProgressProps) {\n\tconst normalized = normalizeProgressValue(value, min, max);\n\t// Over the maximum the bar stays full; `data-overflow` lets apps colour it.\n\tconst overflow = normalized !== null && typeof value === 'number' && value > max;\n\tconst overflowAttribute = overflow ? { 'data-overflow': '' } : undefined;\n\n\treturn (\n\t\t<ProgressPrimitive.Root data-slot=\"progress\" value={normalized} min={min} max={max} {...overflowAttribute} {...props}>\n\t\t\t<ProgressPrimitive.Track\n\t\t\t\tdata-slot=\"progress-track\"\n\t\t\t\tclassName={cn('bg-primary/20 relative h-2 w-full overflow-hidden rounded-full', className)}\n\t\t\t>\n\t\t\t\t<ProgressPrimitive.Indicator\n\t\t\t\t\tdata-slot=\"progress-indicator\"\n\t\t\t\t\t{...overflowAttribute}\n\t\t\t\t\tclassName={cn(\n\t\t\t\t\t\t'bg-primary h-full transition-[width] duration-(--duration-slow) ease-out motion-reduce:transition-none',\n\t\t\t\t\t\t// Indeterminate: a band sweeps the track instead of a solid bar that reads as complete.\n\t\t\t\t\t\t'data-indeterminate:bg-transparent data-indeterminate:[background-image:linear-gradient(90deg,transparent_0%,var(--primary)_50%,transparent_100%)] data-indeterminate:bg-[length:200%_100%] data-indeterminate:animate-[shimmer_1.6s_linear_infinite]',\n\t\t\t\t\t\t'motion-reduce:data-indeterminate:animate-none motion-reduce:data-indeterminate:[background-position:50%_0]',\n\t\t\t\t\t)}\n\t\t\t\t/>\n\t\t\t</ProgressPrimitive.Track>\n\t\t</ProgressPrimitive.Root>\n\t);\n}\n\nexport { Progress };\nexport type { ProgressProps };\n",
+      "type": "registry:ui",
+      "target": "@ui/progress.tsx"
+    }
+  ],
+  "docs": "Import: `import { Progress } from '@/components/ui/progress'`",
+  "categories": [
+    "form"
+  ],
+  "type": "registry:ui"
+}

@@ -1,0 +1,22 @@
+{
+  "$schema": "https://ui.shadcn.com/schema/registry-item.json",
+  "name": "overlay-kit",
+  "title": "Overlay Kit",
+  "description": "All overlay components: dialog, sheet, drawer, popover, tooltip, dropdown menu, alert dialog.",
+  "registryDependencies": [
+    "@constructive/dialog",
+    "@constructive/sheet",
+    "@constructive/drawer",
+    "@constructive/popover",
+    "@constructive/tooltip",
+    "@constructive/dropdown-menu",
+    "@constructive/alert-dialog",
+    "@constructive/command",
+    "@constructive/constructive-theme"
+  ],
+  "files": [],
+  "categories": [
+    "bundle"
+  ],
+  "type": "registry:ui"
+}

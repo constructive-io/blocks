@@ -1,0 +1,23 @@
+{
+  "$schema": "https://ui.shadcn.com/schema/registry-item.json",
+  "name": "progressive-blur",
+  "title": "Progressive Blur",
+  "description": "A gradient blur overlay effect.",
+  "registryDependencies": [
+    "@constructive/cn",
+    "@constructive/constructive-theme"
+  ],
+  "files": [
+    {
+      "path": "registry/constructive/ui/progressive-blur.tsx",
+      "content": "'use client';\n\nimport React from 'react';\n\nimport { cn } from '@/lib/utils';\n\nexport interface ProgressiveBlurProps {\n\tclassName?: string;\n\theight?: string;\n\tposition?: 'top' | 'bottom' | 'both';\n\t/** Strength of the blur kernel in pixels (simpler, fewer artifacts) */\n\tblurPx?: number;\n\tsurface?: 'background' | 'card' | 'sidebar';\n\tintensity?: number;\n\t/** Optional horizontal inset to avoid edge bleeding (e.g. '0.5rem') */\n\tinsetX?: string;\n}\n\nexport function ProgressiveBlur({\n\tclassName,\n\theight = '24%',\n\tposition = 'bottom',\n\tblurPx = 8,\n\tsurface = 'background',\n\tintensity = 0.3,\n\tinsetX = '0',\n}: ProgressiveBlurProps) {\n\tconst isBottom = position === 'bottom';\n\tconst isTop = position === 'top';\n\tconst clampedIntensity = Math.max(0, Math.min(1, intensity));\n\t// A negative radius is invalid CSS and would silently turn the blur off.\n\tconst radius = Math.max(0, blurPx);\n\tconst surfaceVar = surface === 'card' ? '--card' : surface === 'sidebar' ? '--sidebar' : '--background';\n\n\t// Vertical-only blur layer with a smooth single gradient mask\n\tconst mask = isBottom\n\t\t? 'linear-gradient(to bottom, rgba(0,0,0,0) 0%, rgba(0,0,0,1) 75%, rgba(0,0,0,1) 100%)'\n\t\t: isTop\n\t\t\t? 'linear-gradient(to top, rgba(0,0,0,0) 0%, rgba(0,0,0,1) 75%, rgba(0,0,0,1) 100%)'\n\t\t\t: 'linear-gradient(rgba(0,0,0,0) 0%, rgba(0,0,0,1) 95%, rgba(0,0,0,0) 100%)';\n\n\tconst overlayMask = isBottom\n\t\t? `linear-gradient(to bottom, rgba(0,0,0,0) 0%, rgba(0,0,0,${clampedIntensity}) 55%, rgba(0,0,0,1) 85%, rgba(0,0,0,1) 100%)`\n\t\t: isTop\n\t\t\t? `linear-gradient(to top, rgba(0,0,0,0) 0%, rgba(0,0,0,${clampedIntensity}) 55%, rgba(0,0,0,1) 85%, rgba(0,0,0,1) 100%)`\n\t\t\t: `linear-gradient(to bottom, rgba(0,0,0,0) 0%, rgba(0,0,0,${clampedIntensity}) 25%, rgba(0,0,0,1) 50%, rgba(0,0,0,${clampedIntensity}) 75%, rgba(0,0,0,0) 100%)`;\n\n\treturn (\n\t\t<div\n\t\t\tclassName={cn(\n\t\t\t\t'pointer-events-none absolute inset-x-0 z-10 overflow-hidden',\n\t\t\t\tclassName,\n\t\t\t\tisTop ? 'top-0' : isBottom ? 'bottom-0' : 'inset-y-0',\n\t\t\t)}\n\t\t\tstyle={{\n\t\t\t\theight: position === 'both' ? '100%' : height,\n\t\t\t\tleft: insetX,\n\t\t\t\tright: insetX,\n\t\t\t}}\n\t\t>\n\t\t\t{/* Backdrop blur with vertical mask only (no horizontal bleeding) */}\n\t\t\t<div\n\t\t\t\tclassName='absolute inset-0'\n\t\t\t\tstyle={{\n\t\t\t\t\tbackdropFilter: `blur(${radius}px)`,\n\t\t\t\t\tWebkitBackdropFilter: `blur(${radius}px)`,\n\t\t\t\t\tmaskImage: mask,\n\t\t\t\t\tWebkitMaskImage: mask,\n\t\t\t\t}}\n\t\t\t/>\n\n\t\t\t{/* Color overlay: gradient from transparent to solid background for seamless blending */}\n\t\t\t<div\n\t\t\t\tclassName={cn('absolute inset-0')}\n\t\t\t\tstyle={{\n\t\t\t\t\tbackgroundColor: `var(${surfaceVar})`,\n\t\t\t\t\tmaskImage: overlayMask,\n\t\t\t\t\tWebkitMaskImage: overlayMask,\n\t\t\t\t}}\n\t\t\t/>\n\t\t</div>\n\t);\n}\n",
+      "type": "registry:ui",
+      "target": "@ui/progressive-blur.tsx"
+    }
+  ],
+  "docs": "Import: `import { ProgressiveBlur } from '@/components/ui/progressive-blur'`",
+  "categories": [
+    "effect"
+  ],
+  "type": "registry:ui"
+}

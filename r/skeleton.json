@@ -1,0 +1,23 @@
+{
+  "$schema": "https://ui.shadcn.com/schema/registry-item.json",
+  "name": "skeleton",
+  "title": "Skeleton",
+  "description": "A skeleton loading placeholder component.",
+  "registryDependencies": [
+    "@constructive/cn",
+    "@constructive/constructive-theme"
+  ],
+  "files": [
+    {
+      "path": "registry/constructive/ui/skeleton.tsx",
+      "content": "import * as React from 'react';\n\nimport { cn } from '@/lib/utils';\n\ntype SkeletonProps = React.ComponentProps<'div'>;\n\n/**\n * Loading placeholder with a soft left→right shimmer.\n * Uses the package `shimmer` keyframe (background-position) — not opacity pulse.\n */\nfunction Skeleton({ className, ...props }: SkeletonProps) {\n\treturn (\n\t\t<div\n\t\t\tdata-slot=\"skeleton\"\n\t\t\tclassName={cn(\n\t\t\t\t'rounded-md',\n\t\t\t\t// Quiet base (muted, not primary/10)\n\t\t\t\t'bg-muted',\n\t\t\t\t// Soft, low-contrast band — mostly muted with a faint lift mid-pass\n\t\t\t\t'[background-image:linear-gradient(90deg,var(--muted)_0%,color-mix(in_oklch,var(--muted)_92%,var(--foreground))_50%,var(--muted)_100%)]',\n\t\t\t\t'bg-[length:220%_100%]',\n\t\t\t\t// Slow, relaxed sweep\n\t\t\t\t'animate-[shimmer_4.5s_ease-in-out_infinite]',\n\t\t\t\t'motion-reduce:animate-none',\n\t\t\t\tclassName,\n\t\t\t)}\n\t\t\t{...props}\n\t\t/>\n\t);\n}\n\nexport { Skeleton };\nexport type { SkeletonProps };\n",
+      "type": "registry:ui",
+      "target": "@ui/skeleton.tsx"
+    }
+  ],
+  "docs": "Import: `import { Skeleton } from '@/components/ui/skeleton'`",
+  "categories": [
+    "primitive"
+  ],
+  "type": "registry:ui"
+}
