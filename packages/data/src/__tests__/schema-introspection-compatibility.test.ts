@@ -327,6 +327,67 @@ describe('assessSchemaIntrospectionCompatibility', () => {
 		);
 	});
 
+	it('does not require update or delete types for a table _meta declares without those operations', () => {
+		// An append-only table (INSERT/SELECT grants only): PostGraphile emits no
+		// update/delete mutations, so their payload and patch types do not exist,
+		// while _meta still names them in its advisory inflection.
+		const schema = structuredClone(introspect());
+		const mutationRoot = schema.__schema.types.find(({ name }) => name === 'RootMutation')!;
+		mutationRoot.fields = mutationRoot.fields!.filter(
+			({ name }) => name !== 'updateProject' && name !== 'deleteProject',
+		);
+		const generatedOnlyForUpdateOrDelete = new Set([
+			'UpdateProjectPayload',
+			'UpdateProjectInput',
+			'ProjectPatch',
+			'DeleteProjectPayload',
+			'DeleteProjectInput',
+		]);
+		schema.__schema.types = schema.__schema.types.filter(
+			({ name }) => !generatedOnlyForUpdateOrDelete.has(name),
+		);
+
+		const meta = metaQuery();
+		const table = meta._meta!.tables![0]!;
+		table.query!.update = null;
+		table.query!.delete = null;
+
+		expect(assessSchemaIntrospectionCompatibility(schema, meta)).toEqual({
+			contractVersion: META_CONTRACT_VERSION,
+			status: 'compatible',
+			missingPaths: [],
+		});
+	});
+
+	it('still requires update and delete types when _meta declares those operations', () => {
+		const schema = structuredClone(introspect());
+		schema.__schema.types = schema.__schema.types.filter(
+			({ name }) => name !== 'ProjectPatch' && name !== 'DeleteProjectPayload',
+		);
+
+		const analysis = analyzeSchemaIntrospectionCompatibility(schema, metaQuery());
+		expect(analysis.status).toBe('incompatible');
+		expect(analysis.missingPaths).toEqual(expect.arrayContaining([
+			'__schema.types.ProjectPatch',
+			'__schema.types.DeleteProjectPayload',
+		]));
+	});
+
+	it('keeps a table compatible when an enum column is absent from an input the caller may not write', () => {
+		// A platform-owned column (column-level UPDATE grant excludes it): PostGraphile
+		// leaves it out of the patch input, which is not schema drift.
+		const schema = structuredClone(introspect());
+		const patch = schema.__schema.types.find(({ name }) => name === 'ProjectPatch')!;
+		patch.inputFields = patch.inputFields!.filter(({ name }) => name !== 'status');
+
+		const analysis = analyzeSchemaIntrospectionCompatibility(schema, metaQuery());
+		expect(analysis.status).toBe('compatible');
+		expect(analysis.missingPaths).toEqual([]);
+		expect(analysis.enumMappings).toEqual([
+			expect.objectContaining({ tableName: 'Project', fieldName: 'status', graphQLTypeName: 'ProjectStatus' }),
+		]);
+	});
+
 	it('rejects a missing standard introspection result and malformed _meta data', () => {
 		expect(assessSchemaIntrospectionCompatibility(undefined, metaQuery())).toEqual({
 			contractVersion: META_CONTRACT_VERSION,
