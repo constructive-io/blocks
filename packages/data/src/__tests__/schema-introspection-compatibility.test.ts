@@ -388,6 +388,16 @@ describe('assessSchemaIntrospectionCompatibility', () => {
 		]);
 	});
 
+	it('keeps a table compatible when an enum column is absent from the create input', () => {
+		const schema = structuredClone(introspect());
+		const input = schema.__schema.types.find(({ name }) => name === 'ProjectInput')!;
+		input.inputFields = input.inputFields!.filter(({ name }) => name !== 'status');
+
+		const analysis = analyzeSchemaIntrospectionCompatibility(schema, metaQuery());
+		expect(analysis.status).toBe('compatible');
+		expect(analysis.missingPaths).toEqual([]);
+	});
+
 	it('rejects a missing standard introspection result and malformed _meta data', () => {
 		expect(assessSchemaIntrospectionCompatibility(undefined, metaQuery())).toEqual({
 			contractVersion: META_CONTRACT_VERSION,

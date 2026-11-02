@@ -10,6 +10,7 @@ import type {
 	MetaQuery,
 	MetaschemaTable,
 	MetaschemaTableInflection,
+	MetaschemaTableQuery,
 } from './meta-query.types';
 
 type Schema = IntrospectionQueryResponse['__schema'];
@@ -109,7 +110,7 @@ function fieldPath(rootName: string, fieldName: string): string {
  */
 function relevantTypes(
 	inflection: MetaschemaTableInflection | null | undefined,
-	query: { create?: string | null; update?: string | null; delete?: string | null } | null | undefined,
+	query: MetaschemaTableQuery | null | undefined,
 ): Array<[string, IntrospectionTypeKind]> {
 	if (!inflection) return [];
 	const hasCreate = nonEmptyName(query?.create) !== null;
