@@ -10,6 +10,7 @@ import type {
 	MetaQuery,
 	MetaschemaTable,
 	MetaschemaTableInflection,
+	MetaschemaTableQuery,
 } from './meta-query.types';
 
 type Schema = IntrospectionQueryResponse['__schema'];
@@ -99,19 +100,31 @@ function fieldPath(rootName: string, fieldName: string): string {
 	return `${typePath(rootName)}.fields.${fieldName}`;
 }
 
+/**
+ * The inflection types a table's schema must contain. `_meta` inflection is
+ * advisory: it names the create/update/delete types even for a table whose
+ * grants give the caller no such operation, and PostGraphile does not generate
+ * types for operations that do not exist. Those types are required only when
+ * `_meta.query` declares the operation, as `checkOperation` already does for
+ * the mutations themselves.
+ */
 function relevantTypes(
 	inflection: MetaschemaTableInflection | null | undefined,
+	query: MetaschemaTableQuery | null | undefined,
 ): Array<[string, IntrospectionTypeKind]> {
 	if (!inflection) return [];
+	const hasCreate = nonEmptyName(query?.create) !== null;
+	const hasUpdate = nonEmptyName(query?.update) !== null;
+	const hasDelete = nonEmptyName(query?.delete) !== null;
 	return [
 		[inflection.tableType, 'OBJECT'],
 		[inflection.connection, 'OBJECT'],
 		[inflection.edge, 'OBJECT'],
-		[inflection.createPayloadType, 'OBJECT'],
-		[inflection.updatePayloadType, 'OBJECT'],
-		[inflection.deletePayloadType, 'OBJECT'],
-		[inflection.createInputType, 'INPUT_OBJECT'],
-		[inflection.patchType, 'INPUT_OBJECT'],
+		[hasCreate ? inflection.createPayloadType : null, 'OBJECT'],
+		[hasUpdate ? inflection.updatePayloadType : null, 'OBJECT'],
+		[hasDelete ? inflection.deletePayloadType : null, 'OBJECT'],
+		[hasCreate ? inflection.createInputType : null, 'INPUT_OBJECT'],
+		[hasUpdate ? inflection.patchType : null, 'INPUT_OBJECT'],
 		[inflection.filterType, 'INPUT_OBJECT'],
 		[inflection.orderByType, 'ENUM'],
 	].filter((entry): entry is [string, IntrospectionTypeKind] => nonEmptyName(entry[0]) !== null);
@@ -236,11 +249,12 @@ export function analyzeSchemaIntrospectionCompatibility(
 			return false;
 		}
 
+		// A column the caller may not write (a column-level grant leaves it out, as
+		// for a platform-owned `status`) is absent from the input by design. The
+		// field stays readable and mappable; only an input that carries it with
+		// another type is drift.
 		const inputField = inputType.inputFields?.find((field) => field.name === fieldName);
-		if (!inputField) {
-			missing.add(`${typePath(inputType.name)}.inputFields.${fieldName}`);
-			return false;
-		}
+		if (!inputField) return true;
 
 		if (baseTypeName(inputField.type) !== enumTypeName) {
 			missing.add(`${typePath(inputType.name)}.inputFields.${fieldName}.type.${enumTypeName}`);
@@ -251,7 +265,7 @@ export function analyzeSchemaIntrospectionCompatibility(
 
 	for (const table of tables) {
 		const inflection = table.inflection;
-		for (const [typeName, kind] of relevantTypes(inflection)) requireType(typeName, kind);
+		for (const [typeName, kind] of relevantTypes(inflection, table.query)) requireType(typeName, kind);
 		const cleanedTable = cleanTable(table);
 
 		// The current PostGraphile schema does not guarantee the legacy
@@ -328,7 +342,7 @@ export function analyzeSchemaIntrospectionCompatibility(
 			? requireType(createObjectInputName, 'INPUT_OBJECT')
 			: undefined;
 
-		const patchTypeName = nonEmptyName(inflection?.patchType);
+		const patchTypeName = nonEmptyName(table.query?.update) ? nonEmptyName(inflection?.patchType) : null;
 		const patchInput = patchTypeName
 			? requireType(patchTypeName, 'INPUT_OBJECT')
 			: undefined;
