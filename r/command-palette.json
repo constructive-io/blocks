@@ -4,7 +4,7 @@
   "title": "Command Palette",
   "description": "Framework-neutral command discovery with page-scoped registration, structured shortcuts, multi-step flows, and cancellable background tasks.",
   "dependencies": [
-    "@constructive-io/command-palette@^0.7.1",
+    "@constructive-io/command-palette@^0.7.2",
     "lucide-react",
     "motion"
   ],
