@@ -298,7 +298,11 @@ export async function deleteUploadedFileRow(
 			${cap.deleteFieldName}(input: $input) { __typename }
 		}
 	`.trim();
-	await execute(mutation, { input: { [PK_FIELD_NAME]: fileId } }).catch(() => undefined);
+	try {
+		await execute(mutation, { input: { [PK_FIELD_NAME]: fileId } });
+	} catch {
+		// Best effort: the caller rethrows the PUT error, which is the one to report.
+	}
 }
 
 type DownloadByIdResult = Omit<UploadCapability, 'uploadFieldName' | 'inputTypeName'>;
