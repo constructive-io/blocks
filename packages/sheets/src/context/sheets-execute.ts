@@ -6,6 +6,7 @@ import { ConstructiveError, createError, TypedDocumentString } from '@constructi
 import type { SheetsConfig } from './sheets-context';
 import {
 	callUploadOp,
+	deleteUploadedFileRow,
 	discoverUploadCapability,
 	fetchDownloadUrl,
 	presignedPut,
@@ -235,7 +236,14 @@ export function createSheetsUpload(config: SheetsConfig, getToken: () => string 
 			if (!payload.uploadUrl) {
 				throw createError.badRequest('Upload failed: server returned no uploadUrl for a non-deduplicated file.');
 			}
-			await presignedPut(payload.uploadUrl, buffer, contentType, options?.onProgress);
+			try {
+				await presignedPut(payload.uploadUrl, buffer, contentType, options?.onProgress);
+			} catch (error) {
+				// The upload op already created the row; drop it so the bucket doesn't list
+				// a file whose bytes were never stored.
+				await deleteUploadedFileRow(execute, cap, payload.fileId);
+				throw error;
+			}
 		} else {
 			options?.onProgress?.({ loaded: file.size, total: file.size, percentage: 100 });
 		}

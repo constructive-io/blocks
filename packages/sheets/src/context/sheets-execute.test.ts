@@ -20,6 +20,21 @@ import {
 	ROOT_UPLOAD_SDL,
 } from '../testing/graphql-schema-mock';
 
+/** ROOT_UPLOAD_SDL plus the file table's update and delete mutations (both take `id`). */
+const UPLOAD_WITH_WRITES_SDL = ROOT_UPLOAD_SDL.replace(
+	'type Mutation { uploadAppFile(input: UploadAppFileInput!): UploadAppFilePayload }',
+	`input AppFilePatch { filename: String }
+	input UpdateAppFileInput { clientMutationId: String id: UUID! appFilePatch: AppFilePatch! }
+	type UpdateAppFilePayload { appFile: AppFile }
+	input DeleteAppFileInput { clientMutationId: String id: UUID! }
+	type DeleteAppFilePayload { appFile: AppFile }
+	type Mutation {
+		uploadAppFile(input: UploadAppFileInput!): UploadAppFilePayload
+		updateAppFile(input: UpdateAppFileInput!): UpdateAppFilePayload
+		deleteAppFile(input: DeleteAppFileInput!): DeleteAppFilePayload
+	}`,
+);
+
 function createEmbeddedConfig(onAuthError?: () => void): SheetsConfig {
 	return {
 		endpoint: 'https://example.com/graphql',
@@ -359,7 +374,7 @@ describe('createSheetsUpload — presigned seam', () => {
 		expect(sentHash).toBe('2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824');
 	});
 
-	it('PUT network failure (fetch rejects) ⇒ a network ConstructiveError', async () => {
+	it('PUT network failure (fetch rejects) ⇒ a STORAGE_UPLOAD_BLOCKED error naming CORS', async () => {
 		stubDigest();
 		vi.spyOn(globalThis, 'fetch').mockRejectedValue(new TypeError('Failed to fetch'));
 
@@ -371,7 +386,31 @@ describe('createSheetsUpload — presigned seam', () => {
 		const config: SheetsConfig = { endpoint: 'https://neterr.example.com/graphql', auth: { mode: 'standalone' }, execute };
 		const upload = createSheetsUpload(config, () => null);
 
-		await expect(upload(createTestFile())).rejects.toMatchObject({ code: 'NETWORK_ERROR' });
+		await expect(upload(createTestFile())).rejects.toMatchObject({
+			code: 'STORAGE_UPLOAD_BLOCKED',
+			message: expect.stringContaining('allowed origins (CORS)'),
+		});
+	});
+
+	it('PUT failure ⇒ deletes the row the upload op created, then rejects with the PUT error', async () => {
+		stubDigest();
+		vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response('denied', { status: 403, statusText: 'Forbidden' }));
+
+		const deleted: unknown[] = [];
+		const execute = makeSchemaExecute(UPLOAD_WITH_WRITES_SDL, {
+			uploadAppFile: () => ({ uploadUrl: 'https://s3.local/put', fileId: 'file-orphan', key: 'k', deduplicated: false }),
+			deleteAppFile: (args: { input: { id: string } }) => {
+				deleted.push(args.input.id);
+				return { appFile: { id: args.input.id } };
+			},
+			appFile: (args: { id: string }) => ({ id: args.id, downloadUrl: 'https://cdn.local/public/k' }),
+		});
+
+		const config: SheetsConfig = { endpoint: 'https://cleanup.example.com/graphql', auth: { mode: 'standalone' }, execute };
+		const upload = createSheetsUpload(config, () => null);
+
+		await expect(upload(createTestFile())).rejects.toThrow('Upload failed: 403 Forbidden');
+		expect(deleted).toEqual(['file-orphan']);
 	});
 
 	it('non-deduplicated payload with null uploadUrl ⇒ badRequest, no PUT', async () => {
@@ -578,6 +617,12 @@ describe('resolveUploadCapability', () => {
 			fileByIdArgName: 'id',
 			fileTypeName: 'AppFile',
 		});
+	});
+
+	it('discovers the delete-by-id mutation for the uploaded file type, never the update', () => {
+		const cap = resolveUploadCapability(buildIntrospection(UPLOAD_WITH_WRITES_SDL).__schema);
+		expect(cap).toMatchObject({ deleteFieldName: 'deleteAppFile', deleteInputTypeName: 'DeleteAppFileInput' });
+		expect(resolveUploadCapability(buildIntrospection(ROOT_UPLOAD_SDL).__schema).deleteFieldName).toBeUndefined();
 	});
 
 	it('falls back to Relay node(nodeId:) when no id-arg/connection field exists', () => {

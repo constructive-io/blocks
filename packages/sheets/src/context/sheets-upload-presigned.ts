@@ -57,6 +57,13 @@ export interface UploadCapability {
 	connectionIdOperator?: string;
 	/** connection kind only — the field on the connection object holding the file rows, e.g. 'nodes'. */
 	connectionNodesField?: string;
+	/**
+	 * Delete-by-id mutation for the uploaded file type, e.g. 'deleteAppFile', when the
+	 * schema grants one. Used to remove the row the upload op created when its PUT fails.
+	 */
+	deleteFieldName?: string;
+	/** The delete input object type name, e.g. 'DeleteAppFileInput'. */
+	deleteInputTypeName?: string;
 }
 
 interface UploadPayload {
@@ -248,10 +255,50 @@ export function resolveUploadCapability(schema: IntrospectionSchema): UploadCapa
 	// --- File object type + by-id field for downloadUrl ---
 	const downloadById = resolveDownloadByIdField(schema, typeByName, queryType, upload.uploadFieldName);
 
+	// --- Delete-by-id for the uploaded file type (optional) ---
+	// A Mutation field whose `input` carries only `id` (+ clientMutationId) and whose
+	// payload exposes the file type. The update mutation also takes `id` but carries a
+	// patch field, so it never matches.
+	const uploadedTypeName = upload.uploadFieldName.replace(/^upload/, '');
+	const fileTypeName = typeByName.has(uploadedTypeName) ? uploadedTypeName : downloadById.fileTypeName;
+	let remove: Pick<UploadCapability, 'deleteFieldName' | 'deleteInputTypeName'> = {};
+	for (const field of mutationType?.fields ?? []) {
+		const inputArg = field.args.find((a) => a.name === 'input');
+		const inputTypeName = namedTypeName(inputArg?.type);
+		const inputFields = inputTypeName ? typeByName.get(inputTypeName)?.inputFields : null;
+		if (!inputTypeName || !inputFields?.some((f) => f.name === PK_FIELD_NAME)) continue;
+		if (!inputFields.every((f) => f.name === PK_FIELD_NAME || f.name === 'clientMutationId')) continue;
+		const payload = typeByName.get(namedTypeName(field.type) ?? '');
+		if (payload?.fields?.some((f) => namedTypeName(f.type) === fileTypeName)) {
+			remove = { deleteFieldName: field.name, deleteInputTypeName: inputTypeName };
+			break;
+		}
+	}
+
 	return {
 		...upload,
 		...downloadById,
+		...remove,
 	};
+}
+
+/**
+ * Best-effort removal of the row the upload op created, for a PUT that failed.
+ * Without it, a module that never confirms uploads lists a file whose bytes were
+ * never stored. Failures are swallowed: the caller reports the original PUT error.
+ */
+export async function deleteUploadedFileRow(
+	execute: SheetsExecuteFn,
+	cap: UploadCapability,
+	fileId: string,
+): Promise<void> {
+	if (!cap.deleteFieldName || !cap.deleteInputTypeName) return;
+	const mutation = `
+		mutation SheetsUploadCleanup($input: ${cap.deleteInputTypeName}!) {
+			${cap.deleteFieldName}(input: $input) { __typename }
+		}
+	`.trim();
+	await execute(mutation, { input: { [PK_FIELD_NAME]: fileId } }).catch(() => undefined);
 }
 
 type DownloadByIdResult = Omit<UploadCapability, 'uploadFieldName' | 'inputTypeName'>;
@@ -484,6 +531,18 @@ export async function callUploadOp(
  * When `onProgress` is provided and XHR is available, uses XHR for byte
  * progress; otherwise a plain fetch PUT.
  */
+/**
+ * A PUT the browser could not complete. The GraphQL API answered moments ago, so
+ * the usual cause is the bucket's CORS rule (no allowed origin for this site) rather
+ * than the connection; browsers do not expose which.
+ */
+export const STORAGE_UPLOAD_BLOCKED_MESSAGE =
+	"Upload failed: the storage server didn't accept the upload from this site. Check the bucket's allowed origins (CORS) and your connection.";
+
+function storageUnreachableError() {
+	return createError.graphql(STORAGE_UPLOAD_BLOCKED_MESSAGE, 'STORAGE_UPLOAD_BLOCKED');
+}
+
 export async function presignedPut(
 	url: string,
 	buffer: ArrayBuffer,
@@ -504,8 +563,8 @@ export async function presignedPut(
 			headers: { 'Content-Type': contentType },
 			body: buffer,
 		});
-	} catch (error) {
-		throw createError.network(error instanceof Error ? error : undefined);
+	} catch {
+		throw storageUnreachableError();
 	}
 
 	if (!response.ok) {
@@ -546,7 +605,7 @@ function putWithXHR(
 			}
 		});
 
-		xhr.addEventListener('error', () => reject(createError.network()));
+		xhr.addEventListener('error', () => reject(storageUnreachableError()));
 
 		xhr.send(buffer);
 	});
