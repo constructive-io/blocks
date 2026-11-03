@@ -3,6 +3,18 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.9.2](https://github.com/constructive-io/blocks/compare/@constructive-io/data@0.9.1...@constructive-io/data@0.9.2) (2026-11-03)
+
+
+### Bug Fixes
+
+* **data:** don't treat write-restricted tables as schema drift ([1e82a72](https://github.com/constructive-io/blocks/commit/1e82a7256c6c26502f9c95fc39e3171bca80a334))
+* **data:** use MetaschemaTableQuery, cover create input, document the rule ([95030eb](https://github.com/constructive-io/blocks/commit/95030ebf08f7bbb1bc685e6c5735dd87bb86a404))
+
+
+
+
+
 ## [0.9.1](https://github.com/constructive-io/blocks/compare/@constructive-io/data@0.9.0...@constructive-io/data@0.9.1) (2026-10-19)
 
 **Note:** Version bump only for package @constructive-io/data

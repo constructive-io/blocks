@@ -3,6 +3,23 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.13.0](https://github.com/constructive-io/blocks/compare/@constructive-io/sheets@0.12.0...@constructive-io/sheets@0.13.0) (2026-11-03)
+
+
+### Bug Fixes
+
+* **sheets:** remove the file row when a presigned PUT fails ([282184f](https://github.com/constructive-io/blocks/commit/282184f0f044d4c79c5d42435fecee25a53d69d9))
+* **sheets:** type the upload cleanup for strict registry installs ([28c1b45](https://github.com/constructive-io/blocks/commit/28c1b457992e3c54904a8c048a65a41eedf200c4))
+
+
+### Features
+
+* **registry:** register the app kits and document blocks for wiring from the registry alone ([fe74762](https://github.com/constructive-io/blocks/commit/fe74762efa9a12eb86aeb5e42236701af9b28939))
+
+
+
+
+
 # [0.12.0](https://github.com/constructive-io/blocks/compare/@constructive-io/sheets@0.11.0...@constructive-io/sheets@0.12.0) (2026-10-19)
 
 

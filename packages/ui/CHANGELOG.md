@@ -3,6 +3,29 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.14.0](https://github.com/constructive-io/blocks/compare/@constructive-io/ui@0.13.0...@constructive-io/ui@0.14.0) (2026-11-03)
+
+
+### Bug Fixes
+
+* **ui:** keep tone badge corners clean ([9bbd55c](https://github.com/constructive-io/blocks/commit/9bbd55c38d23884f8d77b94fc873aefd5e304d95))
+* **ui:** let a view frame scroll inside a column layout ([3c3bab0](https://github.com/constructive-io/blocks/commit/3c3bab0672957d00eff7a8a7796e4a5dc18b1c2e))
+
+
+### Features
+
+* **agents-builder:** rail and ring status indicators ([d37eff6](https://github.com/constructive-io/blocks/commit/d37eff6ddd08863cb192413536fffd7d50bbf08c))
+* **agents-builder:** simulate every agent, add status tags and projects ([9e70347](https://github.com/constructive-io/blocks/commit/9e7034735f8026d0d959e2ae180a3773238c1f6f))
+* **ai:** page AskCard questions, add card eyebrows, and rail the tool trace ([408d630](https://github.com/constructive-io/blocks/commit/408d63013b6deff3a179d497992baaa6443fef69))
+* **coding-agent:** add the coding agent workspace template ([8b0d727](https://github.com/constructive-io/blocks/commit/8b0d727446cb69324f3522659520a67f11f67e5b))
+* **registry:** register the app kits and document blocks for wiring from the registry alone ([fe74762](https://github.com/constructive-io/blocks/commit/fe74762efa9a12eb86aeb5e42236701af9b28939))
+* **ui:** add resource-kit, auth-pages and dashboard-tiles ([9bdc20b](https://github.com/constructive-io/blocks/commit/9bdc20b9a5fec6d439c8d17f6f13347862027b82))
+* **ui:** compact model selector and shared kit helpers ([95ef062](https://github.com/constructive-io/blocks/commit/95ef0620381c4ff5b9db3cdc7c2a987aa8fd7ec2))
+
+
+
+
+
 # [0.13.0](https://github.com/constructive-io/blocks/compare/@constructive-io/ui@0.12.0...@constructive-io/ui@0.13.0) (2026-10-19)
 
 
