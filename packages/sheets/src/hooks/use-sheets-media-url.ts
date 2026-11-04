@@ -8,6 +8,9 @@ import { sheetsQueryKeys } from './query-keys';
 
 const MAX_BATCH_SIZE = 100;
 const REFRESH_INTERVAL = 50 * 60 * 1000;
+// A file with no signed URL stays unresolved for a while, so remounts and focus
+// don't send the same lookup again on every scroll pass.
+const UNRESOLVED_STALE_TIME = 60 * 1000;
 
 interface PendingLookup {
 	id: string;
@@ -77,7 +80,7 @@ export function useSheetsMediaUrl(value: unknown, previewImage = true) {
 		queryFn: storage && id && previewImage && !durableUrl
 			? ({ signal }) => getMediaLoader(storage, scopeKey)(id, signal)
 			: skipToken,
-		staleTime: (query) => query.state.data ? REFRESH_INTERVAL : 0,
+		staleTime: (query) => query.state.data ? REFRESH_INTERVAL : UNRESOLVED_STALE_TIME,
 		gcTime: REFRESH_INTERVAL,
 		refetchInterval: (query) => query.state.data && query.state.status === 'success' ? REFRESH_INTERVAL : false,
 		refetchOnWindowFocus: true,

@@ -774,8 +774,8 @@ export async function resolveDownloadUrl(
 	fileId: string,
 ): Promise<string | null> {
 	try {
-		const cap = await discoverUploadCapability(endpoint, execute);
-		return cap.download ? await fetchDownloadUrl(execute, cap.download, fileId) : null;
+		const { download } = await discoverStorageCapabilities(endpoint, execute);
+		return download ? await fetchDownloadUrl(execute, download, fileId) : null;
 	} catch {
 		return null;
 	}

@@ -287,6 +287,7 @@ export const ImageEditor: React.FC<ImageEditorProps> = ({
       return;
     }
 
+    let rowPersisted = committedRecordIdRef.current != null;
     try {
       const createRow = committedRecordIdRef.current == null;
       if (createRow) {
@@ -295,6 +296,7 @@ export const ImageEditor: React.FC<ImageEditorProps> = ({
         toast.info({ message: 'Creating row...' });
         setUploadState('submitting-draft');
         const { createdRow } = await onSubmitDraft();
+        rowPersisted = true;
         committedRecordIdRef.current = createdRow ? uploadMutation.resolveRowIdentifier(createdRow) : null;
       }
 
@@ -307,7 +309,7 @@ export const ImageEditor: React.FC<ImageEditorProps> = ({
       const saved = await uploadMutation.write(committedId, selectedFile);
       finishSave(saved, createRow ? `Row created and ${noun} uploaded` : `${Noun} uploaded successfully`);
     } catch (error) {
-      if (committedRecordIdRef.current != null) onDraftUploadComplete?.();
+      if (rowPersisted) onDraftUploadComplete?.();
       handleWriteError(error instanceof Error ? error : new Error('Upload failed'));
     }
   }, [isBusy, tableName, fieldName, selectedFile, isDraftRow, recordId, uploadMutation, onSubmitDraft,
@@ -381,16 +383,23 @@ export const ImageEditor: React.FC<ImageEditorProps> = ({
       return (
         <div data-state={uploadState} className='text-muted-foreground flex w-full flex-col items-center justify-center p-6'>
           <Loader2 className='mb-2 size-6 animate-spin' />
-          <p className='text-sm'>{isSubmittingDraft ? 'Creating row...' : isClearing ? `Clearing ${noun}...` : `Uploading ${noun}...`}</p>
+          <p role='status' className='text-sm'>{isSubmittingDraft ? 'Creating row...' : isClearing ? `Clearing ${noun}...` : `Uploading ${noun}...`}</p>
           {isUploading && uploadProgress && (
             <div className='mt-3 w-full max-w-xs'>
-              <div className='bg-muted h-1.5 overflow-hidden rounded-full'>
+              <div
+                role='progressbar'
+                aria-label={`Uploading ${noun}`}
+                aria-valuemin={0}
+                aria-valuemax={100}
+                aria-valuenow={Math.round(uploadProgress.percentage)}
+                className='bg-muted h-1.5 overflow-hidden rounded-full'
+              >
                 <div
                   className='bg-primary h-1.5 rounded-full transition-[width] duration-(--duration-slow)'
                   style={{ width: `${uploadProgress.percentage}%` }}
                 />
               </div>
-              <p className='text-muted-foreground mt-1.5 text-center text-xs'>
+              <p aria-hidden='true' className='text-muted-foreground mt-1.5 text-center text-xs tabular-nums'>
                 {Math.round(uploadProgress.percentage)}%
               </p>
             </div>

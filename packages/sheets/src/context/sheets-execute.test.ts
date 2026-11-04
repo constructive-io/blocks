@@ -456,6 +456,15 @@ describe('createSheetsUpload — presigned seam', () => {
 			.resolves.toBe('https://cdn.local/existing');
 	});
 
+	it('resolves an existing file on a read-only storage endpoint with no upload mutation', async () => {
+		const execute = makeSchemaExecute(NO_UPLOADS_SDL, {
+			appFile: () => ({ id: 'existing', downloadUrl: 'https://cdn.local/read-only' }),
+		});
+
+		await expect(resolveDownloadUrl(execute, 'https://read-only.example.com/graphql', 'existing'))
+			.resolves.toBe('https://cdn.local/read-only');
+	});
+
 	it('rejects an empty projection before PUT', async () => {
 		const fetch = vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response('', { status: 200 }));
 		const execute = makeSchemaExecute(ROOT_UPLOAD_SDL, {
