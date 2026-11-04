@@ -8,7 +8,7 @@ import { DatabaseIcon } from 'lucide-react';
 import type { SheetsConfig, SheetsExecuteFn } from '@constructive-io/sheets';
 
 import { DATA_FEATURE_PACK } from '../../../feature-packs';
-import { createConsoleIdentityKey } from '../../console-runtime';
+import { createConsoleIdentityKey, type IdentityScopedConsoleTransport } from '../../console-runtime';
 import { normalizeConsoleKitError } from '../../console-kit/console-kit-runtime';
 import type { ConstructiveCapabilityContribution } from '../../console-kit/constructive/constructive-capabilities';
 import type {
@@ -42,6 +42,22 @@ function documentSource(document: unknown): string {
   return String(document);
 }
 
+function createSheetsExecutor(transport?: IdentityScopedConsoleTransport | null): SheetsExecuteFn | undefined {
+  if (!transport) return undefined;
+  return async <T,>(document: unknown, variables?: Record<string, unknown>) => {
+    const result = await transport.execute<T>({
+      document: documentSource(document),
+      variables
+    });
+    if (result.ok) return result.data;
+    const first = result.errors[0];
+    const error = new Error(first?.message || 'The GraphQL operation failed.') as Error & { code?: string };
+    const code = first?.extensions?.code;
+    if (typeof code === 'string') error.code = code;
+    throw error;
+  };
+}
+
 function DataConsoleFeature({
   adapterProps,
   config,
@@ -49,26 +65,14 @@ function DataConsoleFeature({
   onError
 }: ConsoleKitFeatureComponentProps) {
   const dataEndpoint = runtime.endpoints.data;
+  const storageEndpoint = runtime.endpoints.storage;
   const scopedTransport = runtime.transportFor('data');
-  const execute = React.useMemo<SheetsExecuteFn | undefined>(() => {
-    if (!scopedTransport) return undefined;
-    return async <T,>(document: unknown, variables?: Record<string, unknown>) => {
-      const result = await scopedTransport.execute<T>({
-        document: documentSource(document),
-        variables
-      });
-      if (result.ok) return result.data;
-      const first = result.errors[0];
-      const error = new Error(
-        first?.message || 'The GraphQL operation failed.'
-      ) as Error & { code?: string };
-      const code = first?.extensions?.code;
-      if (typeof code === 'string') error.code = code;
-      throw error;
-    };
-  }, [scopedTransport]);
+  const storageTransport = runtime.transportFor('storage');
+  const execute = React.useMemo(() => createSheetsExecutor(scopedTransport), [scopedTransport]);
+  const executeStorage = React.useMemo(() => createSheetsExecutor(storageTransport), [storageTransport]);
   const sheetsConfig = React.useMemo<SheetsConfig>(() => ({
     endpoint: dataEndpoint?.url ?? '',
+    storage: storageEndpoint?.url && executeStorage ? { endpoint: storageEndpoint.url, execute: executeStorage } : undefined,
     databaseId: config.databaseId,
     auth: {
       mode: 'embedded',
@@ -96,7 +100,9 @@ function DataConsoleFeature({
     config.databaseId,
     config.queryClient,
     dataEndpoint?.url,
+    storageEndpoint?.url,
     execute,
+    executeStorage,
     onError,
     runtime.session
   ]);
