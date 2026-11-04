@@ -171,9 +171,18 @@ The `SheetsConfig` object passed to `<SheetsProvider>`:
 | `databaseId` | `string` | No | Multi-tenant database scope |
 | `fieldTypeOverrides` | `Record<string, string>` | No | Override detected field types |
 | `execute` | `SheetsExecuteFn` | No | Custom GraphQL executor |
-| `executeUpload` | `SheetsUploadFn` | No | Custom file upload handler |
+| `storage` | `{ endpoint: string; execute?: SheetsExecuteFn }` | No | Storage endpoint for presigned uploads and previews |
+| `executeUpload` | `SheetsUploadFn` | No | Host uploader returning `{ file: SheetsFileValue; url?: string }`. Takes precedence over the storage uploader |
+| `upload` | `{ bucketKey?: string }` | No | Optional explicit bucket override. Sheets requests the tenant's public default when omitted |
 | `queryClient` | `QueryClient` | No | Bring-your-own TanStack Query client |
 | `onAuthError` | `() => void` | No | Callback on 401/UNAUTHENTICATED |
+
+Sheets writes media cell values through the data endpoint. Image and upload
+cells store the durable file projection, and attachment cells store its public
+URL as text. The optional top-level upload result URL can expire. Hosts with
+neither storage nor an injected uploader render media cells read-only. See
+[Host integration](docs/HOST_INTEGRATION.md#media-uploads) for the migration
+from the previous upload API.
 
 ## Components
 

@@ -8,6 +8,8 @@
 // TODO(Phase 7): Tab should commit-and-open-next; today Tab is left to default.
 
 import { useCallback, useState } from 'react';
+import type { SheetsScopeKey } from '../../context/sheets-context';
+import type { SheetsCellResolution } from '../use-sheets-content';
 
 export interface OverlayCell {
 	rowIndex: number;
@@ -15,6 +17,14 @@ export interface OverlayCell {
 	anchorRect: DOMRect;
 	/** Type-to-edit seed: when set, value editors initialize the input to this char (overwrite). */
 	initialText?: string;
+	/** Keep the media editor mounted when creating its row removes the draft. */
+	mediaDraft?: {
+		rowId: string;
+		tableName: string;
+		scopeKey: SheetsScopeKey;
+		value: unknown;
+		resolution: SheetsCellResolution;
+	};
 	/**
 	 * Edit surface for this active cell. `'overlay'` (default when omitted) renders the portal
 	 * editor; `'inline'` edits IN PLACE inside the cell (no portal — the cell host renders the

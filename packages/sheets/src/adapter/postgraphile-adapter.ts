@@ -1,3 +1,5 @@
+import { print } from 'graphql';
+
 import {
 	META_CONTRACT_INTROSPECTION_DOCUMENT,
 	META_DOCUMENT,
@@ -10,6 +12,7 @@ import {
 	buildPostGraphileUpdate,
 	buildSelect,
 	createError,
+	getCustomAstForCleanField,
 	normalizeSchemaEnumInputValues,
 	prepareCreateInput,
 	prepareUpdateInput,
@@ -195,11 +198,28 @@ export function createPostGraphileAdapter(): SheetsBackendAdapter {
 			options: MutationOptions = {},
 		): Promise<T | null> {
 			const { table, allTables, tableName } = ctx;
-			const doc = buildPostGraphileUpdate(table, allTables, {
-				...options,
-				fieldSelection: options.fieldSelection || 'display',
-			});
-			const patchFieldName = toPatchFieldName(tableName, table);
+			const mutationName = toUpdateMutationName(tableName, table);
+			const returning = options.returning && table.fields
+				.filter((field) => options.returning?.includes(field.name))
+				.map((field) => print(getCustomAstForCleanField(field)))
+				.join(' ');
+			// The root lookup field can have a ByKey suffix. The update payload
+			// and patch fields use the table's singular field name instead.
+			const payloadTable = returning && table.query
+				? { ...table, query: { ...table.query, one: null } }
+				: table;
+			const singularName = toCamelCaseSingular(tableName, payloadTable);
+			const patchFieldName = toPatchFieldName(tableName, payloadTable);
+			// The current data builder ignores returning fields and derives the
+			// input type from the table name. Key mutations name it after the operation.
+			const doc = returning
+				? `mutation SheetsUpdateFields($input: ${mutationName[0].toUpperCase()}${mutationName.slice(1)}Input!) {
+					${mutationName}(input: $input) { ${singularName} { ${returning} } }
+				}`
+				: buildPostGraphileUpdate(table, allTables, {
+					...options,
+					fieldSelection: options.fieldSelection || 'display',
+				});
 			const sanitizedPatch = prepareUpdateInput(patch);
 			if (Object.keys(sanitizedPatch).length === 0) return null;
 			const normalizedPatch = normalizeMutationEnums(ctx, sanitizedPatch, execute);
@@ -211,8 +231,6 @@ export function createPostGraphileAdapter(): SheetsBackendAdapter {
 				},
 			};
 			const result = (await execute(doc, variables)) as Record<string, unknown>;
-			const mutationName = toUpdateMutationName(tableName, table);
-			const singularName = toCamelCaseSingular(tableName, table);
 			const updatedRow = (result[mutationName] as Record<string, unknown>)?.[singularName] ?? null;
 			return updatedRow as T | null;
 		},

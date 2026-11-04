@@ -13,7 +13,7 @@ import { useSheetsContext } from '../context/sheets-context';
 import { cn } from '../utils/cn';
 import { Button } from '@constructive-io/ui/button';
 import type { DataGridProps, SheetsHandle } from './sheets.types';
-import type { SheetsRow } from './row-model';
+import { getDraftMeta, type SheetsRow } from './row-model';
 
 import { SheetsControls, countConditions } from './sheets.controls';
 import { SheetsContextMenu, type ContextMenuState } from './sheets.context-menu';
@@ -28,6 +28,7 @@ import { SheetsCellHost, type OpenEditor } from '../grid-dom/sheets-cell-host';
 import { useOverlayController } from '../grid-dom/overlay/use-overlay-controller';
 import { OverlayManager } from '../grid-dom/overlay/overlay-manager';
 import { resolveEditIntent } from '../grid-dom/editors/edit-intent';
+import { ImageEditorDom } from '../grid-dom/editors/image-editor';
 import { computeOverlayGeometry } from './editors/overlay-viewport-guard';
 import { RangeSet } from '../selection/range-set';
 import { clear, emptySheetsSelection, extendRangeToCell, selectRange, toggleRow } from '../selection/selection-model';
@@ -160,7 +161,7 @@ function SheetsDomInner<TRow extends SheetsRow = SheetsRow>({
 	const s = useSheets<TRow>(props);
 	const shell = s._shell;
 
-	const { config } = useSheetsContext();
+	const { config, canUpload, scopeKey } = useSheetsContext();
 
 	const viewportRef = useRef<GridViewportHandle>(null);
 
@@ -417,6 +418,13 @@ function SheetsDomInner<TRow extends SheetsRow = SheetsRow>({
 	const overlayOpen = overlay.open;
 	const overlayClose = overlay.close;
 	const overlayReanchor = overlay.reanchor;
+	const mediaDraft = overlay.active?.mediaDraft;
+	const activeMediaDraft = canUpload && mediaDraft?.scopeKey === scopeKey && mediaDraft?.tableName === tableName
+		? mediaDraft
+		: undefined;
+	useEffect(() => {
+		if (mediaDraft && !activeMediaDraft) overlayClose();
+	}, [mediaDraft, activeMediaDraft, overlayClose]);
 
 	// Inject the shell's native content resolver into the cell host (Phase 3): the
 	// host renders the consumer component when registered, else the kind→view map.
@@ -485,9 +493,24 @@ function SheetsDomInner<TRow extends SheetsRow = SheetsRow>({
 				overlayOpen({ rowIndex, colKey, anchorRect, initialText, mode: 'inline' });
 				return;
 			}
-			overlayOpen({ rowIndex, colKey, anchorRect, initialText, mode: 'overlay' });
+			const row = combinedRowsRef.current[rowIndex];
+			const draft = intent.editor === ImageEditorDom ? getDraftMeta(row) : undefined;
+			overlayOpen({
+				rowIndex,
+				colKey,
+				anchorRect,
+				initialText,
+				mode: 'overlay',
+				mediaDraft: draft ? {
+					rowId: draft.draftRowId,
+					tableName,
+					scopeKey,
+					value: row[colKey],
+					resolution,
+				} : undefined,
+			});
 		},
-		[overlayOpen],
+		[overlayOpen, tableName, scopeKey],
 	);
 	// The dblclick entrypoint threaded into the cell host: route through the ONE pipeline as
 	// `editor.open`; the command body calls ctx.openEditorAt → openEditorImpl. STABLE (closes
@@ -724,6 +747,7 @@ function SheetsDomInner<TRow extends SheetsRow = SheetsRow>({
 	const handleOverlayScroll = useCallback(() => {
 		const a = activeRef.current;
 		if (!a) return;
+		if (a.mediaDraft && getDraftMeta(combinedRowsRef.current[a.rowIndex])?.draftRowId !== a.mediaDraft.rowId) return;
 		// The cell DOM id is `sheets-cell-${rowIndex}-${columnIndex}` — map the stored colKey
 		// back to its rendered column index (same ordering the cell host + activedescendant use).
 		const colIndex = columnsRef.current.findIndex((c) => c.key === a.colKey);
@@ -747,8 +771,8 @@ function SheetsDomInner<TRow extends SheetsRow = SheetsRow>({
 	// all derive from overlay.active, so no effect/state mirror is needed.
 	const active = overlay.active;
 	const editorNode = (() => {
-		if (!active) return null;
-		const resolution = getSheetsCellContent(active.rowIndex, active.colKey);
+		if (!active || (mediaDraft && !activeMediaDraft)) return null;
+		const resolution = activeMediaDraft?.resolution ?? getSheetsCellContent(active.rowIndex, active.colKey);
 		// Resolve the editor through the SAME edit-intent resolver the activation branch
 		// used (typeKey-driven, consumer-override aware). Only `overlay` intents ever open
 		// here (openEditor short-circuits inline-toggle/none), but resolving again keeps a
@@ -756,7 +780,8 @@ function SheetsDomInner<TRow extends SheetsRow = SheetsRow>({
 		const intent = resolveEditIntent(resolution.typeKey, { readonly: resolution.cell.readonly }, getEditorComponent);
 		if (intent.mode !== 'overlay') return null;
 		const Editor = intent.editor;
-		const rowValue = (combinedRows[active.rowIndex] as Record<string, unknown> | undefined)?.[active.colKey];
+		const row = combinedRows[active.rowIndex];
+		const rowValue = activeMediaDraft ? activeMediaDraft.value : row?.[active.colKey];
 		const geom = computeOverlayGeometry(
 			typeof window !== 'undefined' ? window.innerHeight : 800,
 			active.anchorRect.top,
@@ -774,7 +799,8 @@ function SheetsDomInner<TRow extends SheetsRow = SheetsRow>({
 					value={rowValue}
 					cell={resolution.cell}
 					colKey={active.colKey}
-					rowId={getRowId(combinedRows[active.rowIndex], active.rowIndex)}
+					rowId={activeMediaDraft?.rowId ?? getRowId(row, active.rowIndex)}
+					rowIdentifier={resolution.rowIdentifier}
 					rowIndex={active.rowIndex}
 					tableName={props.tableName}
 					fieldMeta={resolution.fieldMeta}
@@ -785,7 +811,9 @@ function SheetsDomInner<TRow extends SheetsRow = SheetsRow>({
 						overlayClose();
 					}}
 					onCommitPatch={(patch) => {
-						shell.commitCellPatch(active.rowIndex, patch);
+						if (!activeMediaDraft || getDraftMeta(row)?.draftRowId === activeMediaDraft.rowId) {
+							shell.commitCellPatch(active.rowIndex, patch);
+						}
 						overlayClose();
 					}}
 					onSubmitDraftRow={shell.submitDraftRow}
@@ -885,7 +913,7 @@ function SheetsDomInner<TRow extends SheetsRow = SheetsRow>({
 	// the removed canvas branch). The full-screen error is for INITIAL-load failure only
 	// (no server rows AND no drafts); background-refetch errors keep the populated grid
 	// mounted and surface via the `load:error` onEvent emission instead.
-	if (s.dataError && shell.combinedRows.length === 0) {
+	if (!activeMediaDraft && s.dataError && shell.combinedRows.length === 0) {
 		const retry = () => s.refetch();
 		if (slots?.error) {
 			return <>{slots.error({ error: s.dataError, retry })}</>;
@@ -894,13 +922,13 @@ function SheetsDomInner<TRow extends SheetsRow = SheetsRow>({
 	}
 
 	// Initial load only; same-scope refetches retain their current query data.
-	if (s.isInitialLoading) {
+	if (!activeMediaDraft && s.isInitialLoading) {
 		if (slots?.loading) return <>{slots.loading}</>;
 		return <SheetsLoadingState />;
 	}
 
 	// Loaded successfully but no server rows and nothing drafted yet (and no active filter).
-	if (s.isEmpty) {
+	if (!activeMediaDraft && s.isEmpty) {
 		if (slots?.empty) {
 			return <>{typeof slots.empty === 'function' ? slots.empty({ tableName }) : slots.empty}</>;
 		}

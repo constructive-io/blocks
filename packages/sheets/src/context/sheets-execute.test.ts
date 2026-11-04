@@ -4,10 +4,13 @@ import type { SheetsConfig } from './sheets-context';
 import { createSheetsExecute, createSheetsUpload } from './sheets-execute';
 import {
 	resolveUploadCapability,
+	resolveDownloadUrl,
 	__resetUploadCapabilityCache,
 } from './sheets-upload-presigned';
 import {
 	buildIntrospection,
+	graphqlFetchFromSchema,
+	uploadPayload,
 	makeSchemaExecute,
 	makeSchemaExecuteWithStats,
 	BUCKET_ONLY_SDL,
@@ -153,7 +156,7 @@ describe('createSheetsUpload — presigned seam', () => {
 			{
 				uploadAppFile: (args: { input: Record<string, unknown> }) => {
 					capturedInput = args.input;
-					return { uploadUrl: 'https://s3.local/put?sig=abc', fileId: 'file-1', key: 'abc', deduplicated: false };
+					return uploadPayload({ uploadUrl: 'https://s3.local/put?sig=abc', fileId: 'file-1', key: 'abc', deduplicated: false }, { mime: 'image/png' });
 				},
 				appFile: (args: { id: string }) => {
 					capturedDownloadId = args.id;
@@ -172,7 +175,7 @@ describe('createSheetsUpload — presigned seam', () => {
 
 		// (a) mutation variables — input shape, hash, and NO ownerId
 		expect(capturedInput).toEqual({
-			bucketKey: 'public',
+			isPublic: true,
 			contentHash: expectedHash,
 			contentType: 'image/png',
 			size: file.size,
@@ -196,10 +199,14 @@ describe('createSheetsUpload — presigned seam', () => {
 		expect(downloadVars).toEqual({ id: 'file-1' });
 		expect(result).toMatchObject({
 			url: 'https://cdn.local/public/abc',
-			filename: 'hello.txt',
-			mime: 'image/png',
-			size: file.size,
+			file: {
+				bucket_id: 'bucket-1',
+				filename: 'hello.txt',
+				mime: 'image/png',
+				size: file.size,
+			},
 		});
+		expect(result.file.url).toBeUndefined();
 	});
 
 	it('relay node fallback: downloadUrl via node(nodeId:) with a base64 global id (not the raw pk)', async () => {
@@ -215,7 +222,7 @@ describe('createSheetsUpload — presigned seam', () => {
 		const execute = makeSchemaExecute(
 			NODE_EXEC_SDL,
 			{
-				uploadAppFile: () => ({ uploadUrl: 'https://s3.local/put?sig=n', fileId: 'file-n', key: 'x', deduplicated: false }),
+				uploadAppFile: () => uploadPayload({ uploadUrl: 'https://s3.local/put?sig=n', fileId: 'file-n', key: 'x', deduplicated: false }),
 				node: (args: { nodeId: string }) => {
 					capturedNodeId = args.nodeId;
 					return { downloadUrl: 'https://cdn/node.png' };
@@ -244,7 +251,7 @@ describe('createSheetsUpload — presigned seam', () => {
 		const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response('', { status: 200 }));
 
 		const execute = makeSchemaExecute(ROOT_UPLOAD_SDL, {
-			uploadAppFile: () => ({ uploadUrl: null, fileId: 'file-dup', key: 'abc', deduplicated: true }),
+			uploadAppFile: () => uploadPayload({ uploadUrl: null, fileId: 'file-dup', key: 'abc', deduplicated: true }),
 			appFile: (args: { id: string }) => ({ id: args.id, downloadUrl: 'https://cdn.local/public/abc' }),
 		});
 
@@ -269,7 +276,7 @@ describe('createSheetsUpload — presigned seam', () => {
 		const execute = makeSchemaExecute(ROOT_UPLOAD_SDL, {
 			uploadAppFile: (args: { input: Record<string, unknown> }) => {
 				mutationContentType = args.input.contentType;
-				return { uploadUrl: 'https://s3.local/put', fileId: 'f', key: 'k', deduplicated: false };
+				return uploadPayload({ uploadUrl: 'https://s3.local/put', fileId: 'f', key: 'k', deduplicated: false });
 			},
 			appFile: (args: { id: string }) => ({ id: args.id, downloadUrl: 'https://cdn.local/public/k' }),
 		});
@@ -314,7 +321,7 @@ describe('createSheetsUpload — presigned seam', () => {
 		);
 
 		const execute = makeSchemaExecute(ROOT_UPLOAD_SDL, {
-			uploadAppFile: () => ({ uploadUrl: 'https://s3.local/put', fileId: 'f', key: 'k', deduplicated: false }),
+			uploadAppFile: () => uploadPayload({ uploadUrl: 'https://s3.local/put', fileId: 'f', key: 'k', deduplicated: false }),
 			appFile: (args: { id: string }) => ({ id: args.id, downloadUrl: 'https://cdn.local/public/k' }),
 		});
 
@@ -336,7 +343,7 @@ describe('createSheetsUpload — presigned seam', () => {
 		});
 
 		const execute = makeSchemaExecute(ROOT_UPLOAD_SDL, {
-			uploadAppFile: () => ({ uploadUrl: 'https://s3.local/put', fileId: 'f', key: 'k', deduplicated: false }),
+			uploadAppFile: () => uploadPayload({ uploadUrl: 'https://s3.local/put', fileId: 'f', key: 'k', deduplicated: false }),
 			appFile: (args: { id: string }) => ({ id: args.id, downloadUrl: 'https://cdn.local/public/k' }),
 		});
 
@@ -361,7 +368,7 @@ describe('createSheetsUpload — presigned seam', () => {
 		const execute = makeSchemaExecute(ROOT_UPLOAD_SDL, {
 			uploadAppFile: (args: { input: Record<string, unknown> }) => {
 				sentHash = args.input.contentHash;
-				return { uploadUrl: 'https://s3.local/put', fileId: 'f', key: 'k', deduplicated: false };
+				return uploadPayload({ uploadUrl: 'https://s3.local/put', fileId: 'f', key: 'k', deduplicated: false });
 			},
 			appFile: (args: { id: string }) => ({ id: args.id, downloadUrl: 'https://cdn.local/public/k' }),
 		});
@@ -379,7 +386,7 @@ describe('createSheetsUpload — presigned seam', () => {
 		vi.spyOn(globalThis, 'fetch').mockRejectedValue(new TypeError('Failed to fetch'));
 
 		const execute = makeSchemaExecute(ROOT_UPLOAD_SDL, {
-			uploadAppFile: () => ({ uploadUrl: 'https://s3.local/put', fileId: 'f', key: 'k', deduplicated: false }),
+			uploadAppFile: () => uploadPayload({ uploadUrl: 'https://s3.local/put', fileId: 'f', key: 'k', deduplicated: false }),
 			appFile: (args: { id: string }) => ({ id: args.id, downloadUrl: 'https://cdn.local/public/k' }),
 		});
 
@@ -392,13 +399,13 @@ describe('createSheetsUpload — presigned seam', () => {
 		});
 	});
 
-	it('PUT failure ⇒ deletes the row the upload op created, then rejects with the PUT error', async () => {
+	it('PUT failure ⇒ leaves the row for server expiry and preserves the PUT error', async () => {
 		stubDigest();
 		vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response('denied', { status: 403, statusText: 'Forbidden' }));
 
 		const deleted: unknown[] = [];
 		const execute = makeSchemaExecute(UPLOAD_WITH_WRITES_SDL, {
-			uploadAppFile: () => ({ uploadUrl: 'https://s3.local/put', fileId: 'file-orphan', key: 'k', deduplicated: false }),
+			uploadAppFile: () => uploadPayload({ uploadUrl: 'https://s3.local/put', fileId: 'file-orphan', key: 'k', deduplicated: false }),
 			deleteAppFile: (args: { input: { id: string } }) => {
 				deleted.push(args.input.id);
 				return { appFile: { id: args.input.id } };
@@ -410,7 +417,7 @@ describe('createSheetsUpload — presigned seam', () => {
 		const upload = createSheetsUpload(config, () => null);
 
 		await expect(upload(createTestFile())).rejects.toThrow('Upload failed: 403 Forbidden');
-		expect(deleted).toEqual(['file-orphan']);
+		expect(deleted).toEqual([]);
 	});
 
 	it('non-deduplicated payload with null uploadUrl ⇒ badRequest, no PUT', async () => {
@@ -418,15 +425,102 @@ describe('createSheetsUpload — presigned seam', () => {
 		const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response('', { status: 200 }));
 
 		const execute = makeSchemaExecute(ROOT_UPLOAD_SDL, {
-			uploadAppFile: () => ({ uploadUrl: null, fileId: 'f', key: 'k', deduplicated: false }),
+			uploadAppFile: () => uploadPayload({ uploadUrl: null, fileId: 'f', key: 'k', deduplicated: false }),
 			appFile: (args: { id: string }) => ({ id: args.id, downloadUrl: 'https://cdn.local/public/k' }),
 		});
 
 		const config: SheetsConfig = { endpoint: 'https://badpayload.example.com/graphql', auth: { mode: 'standalone' }, execute };
 		const upload = createSheetsUpload(config, () => null);
 
-		await expect(upload(createTestFile())).rejects.toMatchObject({ code: 'BAD_USER_INPUT' });
+		await expect(upload(createTestFile())).rejects.toThrow('no uploadUrl');
 		expect(fetchSpy).not.toHaveBeenCalled();
+	});
+
+	it('rejects a schema without the file projection before creating a row', async () => {
+		const fetch = vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response('', { status: 200 }));
+		const uploadAppFile = vi.fn();
+		const execute = makeSchemaExecute(ROOT_UPLOAD_SDL.replace('file: JSON', ''), { uploadAppFile });
+		const upload = createSheetsUpload({ ...createEmbeddedConfig(), execute }, () => null);
+
+		await expect(upload(createTestFile())).rejects.toThrow('file projection');
+		expect(uploadAppFile).not.toHaveBeenCalled();
+		expect(fetch).not.toHaveBeenCalled();
+	});
+
+	it('still resolves an existing file on a schema without an upload projection', async () => {
+		const execute = makeSchemaExecute(ROOT_UPLOAD_SDL.replace('file: JSON', ''), {
+			appFile: () => ({ id: 'existing', downloadUrl: 'https://cdn.local/existing' }),
+		});
+
+		await expect(resolveDownloadUrl(execute, 'https://older.example.com/graphql', 'existing'))
+			.resolves.toBe('https://cdn.local/existing');
+	});
+
+	it('rejects an empty projection before PUT', async () => {
+		const fetch = vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response('', { status: 200 }));
+		const execute = makeSchemaExecute(ROOT_UPLOAD_SDL, {
+			uploadAppFile: () => ({ uploadUrl: 'https://s3.local/put', fileId: 'f', key: 'k', deduplicated: false, file: null }),
+		});
+		const upload = createSheetsUpload({ ...createEmbeddedConfig(), execute }, () => null);
+
+		await expect(upload(createTestFile())).rejects.toThrow('file projection');
+		expect(fetch).not.toHaveBeenCalled();
+	});
+
+	it.each([false, true])('returns the projection when lookup fails after upload (dedup=%s)', async (deduplicated) => {
+		const fetch = vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response('', { status: 200 }));
+		const payload = uploadPayload({ uploadUrl: deduplicated ? null : 'https://s3.local/put', fileId: 'f', key: 'k', deduplicated });
+		const appFile = vi.fn(() => {
+			throw new Error('File lookup failed');
+		});
+		const execute = makeSchemaExecute(ROOT_UPLOAD_SDL, { uploadAppFile: () => payload, appFile });
+		const upload = createSheetsUpload({ ...createEmbeddedConfig(), execute }, () => null);
+
+		expect(await upload(createTestFile())).toEqual({ file: payload.file });
+		expect(fetch).toHaveBeenCalledTimes(deduplicated ? 0 : 1);
+		expect(appFile).toHaveBeenCalledTimes(1);
+	});
+
+	it('uploads to the selected bucket on a storage endpoint with no download lookup', async () => {
+		const fetch = vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response('', { status: 200 }));
+		const payload = uploadPayload({ uploadUrl: 'https://s3.local/put', fileId: 'f', key: 'k', deduplicated: false });
+		const uploadAppFile = vi.fn((_args: { input: Record<string, unknown> }) => payload);
+		const sdl = ROOT_UPLOAD_SDL.replace('type Query { appFile(id: UUID!): AppFile }', 'type Query { ready: Boolean }');
+		const onOperation = vi.fn();
+		const execute = makeSchemaExecute(sdl, { uploadAppFile }, onOperation);
+		const dataExecute = vi.fn(async (): Promise<never> => {
+			throw new Error('Upload used the data endpoint');
+		});
+		const upload = createSheetsUpload({
+			...createEmbeddedConfig(),
+			execute: dataExecute,
+			storage: { endpoint: 'https://storage.example.com/graphql', execute },
+			upload: { bucketKey: 'selected-bucket' },
+		}, () => null);
+
+		expect(await upload(createTestFile())).toEqual({ file: payload.file });
+		expect(uploadAppFile.mock.calls[0]?.[0]).toMatchObject({ input: { bucketKey: 'selected-bucket' } });
+		expect(uploadAppFile.mock.calls[0]?.[0]).not.toHaveProperty('input.isPublic');
+		expect(dataExecute).not.toHaveBeenCalled();
+		expect(onOperation).toHaveBeenCalledTimes(2);
+		expect(fetch).toHaveBeenCalledTimes(1);
+	});
+
+	it('uses the storage URL and current host auth when no storage executor is injected', async () => {
+		const endpoint = 'https://storage.example.com/graphql';
+		const payload = uploadPayload({ uploadUrl: null, fileId: 'f', key: 'k', deduplicated: true }, { url: 'https://cdn.local/k' });
+		const fetch = vi.spyOn(globalThis, 'fetch').mockImplementation(graphqlFetchFromSchema(ROOT_UPLOAD_SDL, {
+			uploadAppFile: () => ({ ...payload, file: { ...payload.file, filename: null } }),
+			appFile: () => ({ id: 'f', downloadUrl: 'https://cdn.local/k' }),
+		}));
+		const upload = createSheetsUpload({ ...createEmbeddedConfig(), storage: { endpoint } }, () => 'host-token');
+
+		expect(await upload(createTestFile())).toEqual({ file: payload.file, url: 'https://cdn.local/k' });
+		expect(fetch).toHaveBeenCalled();
+		for (const [url, init] of fetch.mock.calls) {
+			expect(url).toBe(endpoint);
+			expect(new Headers(init?.headers).get('authorization')).toBe('Bearer host-token');
+		}
 	});
 
 	it('capability cache: two uploads to the same endpoint introspect once', async () => {
@@ -434,7 +528,7 @@ describe('createSheetsUpload — presigned seam', () => {
 		vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response('', { status: 200 }));
 
 		const { execute, introspectionCount } = makeSchemaExecuteWithStats(ROOT_UPLOAD_SDL, {
-			uploadAppFile: () => ({ uploadUrl: 'https://s3.local/put', fileId: 'f', key: 'k', deduplicated: false }),
+			uploadAppFile: () => uploadPayload({ uploadUrl: 'https://s3.local/put', fileId: 'f', key: 'k', deduplicated: false }),
 			appFile: (args: { id: string }) => ({ id: args.id, downloadUrl: 'https://cdn.local/public/k' }),
 		});
 
@@ -465,7 +559,7 @@ describe('createSheetsUpload — presigned seam', () => {
 			{
 				uploadAppFile: (args: { input: Record<string, unknown> }) => {
 					capturedInput = args.input;
-					return { uploadUrl: 'https://s3.local/put?sig=z', fileId: 'file-c', key: 'x', deduplicated: false };
+					return uploadPayload({ uploadUrl: 'https://s3.local/put?sig=z', fileId: 'file-c', key: 'x', deduplicated: false }, { mime: 'image/png' });
 				},
 				appFiles: (args: { where?: Record<string, unknown> }) => {
 					capturedWhere = args.where;
@@ -484,7 +578,7 @@ describe('createSheetsUpload — presigned seam', () => {
 
 		// upload input shape (NO ownerId), real hash
 		expect(capturedInput).toEqual({
-			bucketKey: 'public',
+			isPublic: true,
 			contentHash: expectedHash,
 			contentType: 'image/png',
 			size: file.size,
@@ -501,10 +595,14 @@ describe('createSheetsUpload — presigned seam', () => {
 
 		expect(result).toMatchObject({
 			url: 'https://cdn/x.png',
-			filename: 'hello.txt',
-			mime: 'image/png',
-			size: file.size,
+			file: {
+				bucket_id: 'bucket-1',
+				filename: 'hello.txt',
+				mime: 'image/png',
+				size: file.size,
+			},
 		});
+		expect(result.file.url).toBeUndefined();
 	});
 
 	it('connection condition-style (b): downloadUrl via appFiles(condition:{id:$id}), no operator wrapper', async () => {
@@ -522,7 +620,7 @@ describe('createSheetsUpload — presigned seam', () => {
 		const execute = makeSchemaExecute(
 			CONDITION_ONLY_SDL,
 			{
-				uploadAppFile: () => ({ uploadUrl: 'https://s3.local/put?sig=c', fileId: 'file-cond', key: 'x', deduplicated: false }),
+				uploadAppFile: () => uploadPayload({ uploadUrl: 'https://s3.local/put?sig=c', fileId: 'file-cond', key: 'x', deduplicated: false }),
 				appFiles: (args: { condition?: Record<string, unknown> }) => {
 					capturedCondition = args.condition;
 					return { nodes: [{ downloadUrl: 'https://cdn/cond.png' }] };
@@ -555,12 +653,14 @@ describe('createSheetsUpload — presigned seam', () => {
 		// uploadAppFile, so discovery must prefer the appFiles connection (-> AppFile).
 		// This is the live production path; the wrong connection -> 0 nodes -> fail.
 		let appFilesWhere: Record<string, unknown> | undefined;
+		const uploadDataRoomFile = vi.fn();
 		let dataRoomCalled = false;
 		let downloadSource: string | undefined;
 		const execute = makeSchemaExecute(
 			CONNECTION_TWO_FILES_SDL,
 			{
-				uploadAppFile: () => ({ uploadUrl: 'https://s3.local/put?sig=m', fileId: 'file-m', key: 'x', deduplicated: false }),
+				uploadDataRoomFile,
+				uploadAppFile: () => uploadPayload({ uploadUrl: 'https://s3.local/put?sig=m', fileId: 'file-m', key: 'x', deduplicated: false }),
 				appFiles: (args: { where?: Record<string, unknown> }) => {
 					appFilesWhere = args.where;
 					return { nodes: [{ downloadUrl: 'https://cdn/app.png' }] };
@@ -583,6 +683,7 @@ describe('createSheetsUpload — presigned seam', () => {
 		expect(downloadSource).toContain('appFiles(');
 		expect(downloadSource).not.toContain('dataRoomFiles(');
 		expect(dataRoomCalled).toBe(false);
+		expect(uploadDataRoomFile).not.toHaveBeenCalled();
 		expect(appFilesWhere).toEqual({ id: { equalTo: 'file-m' } });
 		expect(result.url).toBe('https://cdn/app.png');
 	});
@@ -613,25 +714,23 @@ describe('resolveUploadCapability', () => {
 		expect(cap).toMatchObject({
 			uploadFieldName: 'uploadAppFile',
 			inputTypeName: 'UploadAppFileInput',
-			fileByIdField: 'appFile',
-			fileByIdArgName: 'id',
-			fileTypeName: 'AppFile',
+			download: {
+				fileByIdField: 'appFile',
+				fileByIdArgName: 'id',
+				fileTypeName: 'AppFile',
+			},
 		});
-	});
-
-	it('discovers the delete-by-id mutation for the uploaded file type, never the update', () => {
-		const cap = resolveUploadCapability(buildIntrospection(UPLOAD_WITH_WRITES_SDL).__schema);
-		expect(cap).toMatchObject({ deleteFieldName: 'deleteAppFile', deleteInputTypeName: 'DeleteAppFileInput' });
-		expect(resolveUploadCapability(buildIntrospection(ROOT_UPLOAD_SDL).__schema).deleteFieldName).toBeUndefined();
 	});
 
 	it('falls back to Relay node(nodeId:) when no id-arg/connection field exists', () => {
 		const cap = resolveUploadCapability(buildIntrospection(RELAY_ONLY_SDL).__schema);
 		expect(cap).toMatchObject({
 			uploadFieldName: 'uploadAppFile',
-			fileByIdField: 'node',
-			fileByIdArgName: 'nodeId',
-			fileTypeName: 'AppFile',
+			download: {
+				fileByIdField: 'node',
+				fileByIdArgName: 'nodeId',
+				fileTypeName: 'AppFile',
+			},
 		});
 	});
 
@@ -639,14 +738,16 @@ describe('resolveUploadCapability', () => {
 		const cap = resolveUploadCapability(buildIntrospection(CONNECTION_ONLY_SDL).__schema);
 		expect(cap).toMatchObject({
 			uploadFieldName: 'uploadAppFile',
-			fileByIdField: 'appFiles',
-			fileByIdArgName: 'connection',
-			fileTypeName: 'AppFile',
-			idScalarName: 'UUID',
-			connectionFilterArgName: 'where',
-			connectionIdField: 'id',
-			connectionIdOperator: 'equalTo',
-			connectionNodesField: 'nodes',
+			download: {
+				fileByIdField: 'appFiles',
+				fileByIdArgName: 'connection',
+				fileTypeName: 'AppFile',
+				idScalarName: 'UUID',
+				connectionFilterArgName: 'where',
+				connectionIdField: 'id',
+				connectionIdOperator: 'equalTo',
+				connectionNodesField: 'nodes',
+			},
 		});
 	});
 
@@ -654,16 +755,18 @@ describe('resolveUploadCapability', () => {
 		const cap = resolveUploadCapability(buildIntrospection(CONDITION_ONLY_SDL).__schema);
 		expect(cap).toMatchObject({
 			uploadFieldName: 'uploadAppFile',
-			fileByIdField: 'appFiles',
-			fileByIdArgName: 'connection',
-			fileTypeName: 'AppFile',
-			idScalarName: 'UUID',
-			connectionFilterArgName: 'condition',
-			connectionIdField: 'id',
-			connectionNodesField: 'nodes',
+			download: {
+				fileByIdField: 'appFiles',
+				fileByIdArgName: 'connection',
+				fileTypeName: 'AppFile',
+				idScalarName: 'UUID',
+				connectionFilterArgName: 'condition',
+				connectionIdField: 'id',
+				connectionNodesField: 'nodes',
+			},
 		});
 		// condition style carries NO equality operator
-		expect(cap.connectionIdOperator).toBeUndefined();
+		expect(cap.download?.connectionIdOperator).toBeUndefined();
 	});
 
 	it('multi-storage-table connection: prefers the upload-op-matched connection (appFiles over dataRoomFiles)', () => {
@@ -671,11 +774,13 @@ describe('resolveUploadCapability', () => {
 		const cap = resolveUploadCapability(buildIntrospection(CONNECTION_TWO_FILES_SDL).__schema);
 		expect(cap).toMatchObject({
 			uploadFieldName: 'uploadAppFile',
-			fileByIdField: 'appFiles',
-			fileByIdArgName: 'connection',
-			fileTypeName: 'AppFile',
-			connectionFilterArgName: 'where',
-			connectionIdOperator: 'equalTo',
+			download: {
+				fileByIdField: 'appFiles',
+				fileByIdArgName: 'connection',
+				fileTypeName: 'AppFile',
+				connectionFilterArgName: 'where',
+				connectionIdOperator: 'equalTo',
+			},
 		});
 	});
 

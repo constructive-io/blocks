@@ -23,6 +23,8 @@ export const sheetsQueryKeys = {
 	root: ['sheets'] as const,
 	scope: (scope: SheetsScopeKey) => ['sheets', scope] as const,
 	meta: (scope: SheetsScopeKey) => [...sheetsQueryKeys.scope(scope), 'meta'] as const,
+	mediaUrl: (scope: SheetsScopeKey, endpoint: string | undefined, id: string | null) =>
+		[...sheetsQueryKeys.scope(scope), 'media-url', endpoint, id] as const,
 	typeFields: (scope: SheetsScopeKey, typeName: string) =>
 		[...sheetsQueryKeys.scope(scope), 'type-fields', typeName] as const,
 	enumValues: (scope: SheetsScopeKey, typeName: string) =>

@@ -65,7 +65,7 @@ export function cellTypeToBackendType(cellType: CellType): string {
 
 		// Media types - use PostgreSQL DOMAINs where available
 		// DOMAINs: image (jsonb), upload (jsonb) - defined in pgpm-types extension
-		// These DOMAINs enforce { url, mime } structure with URL validation
+		// These domains accept a JSON object containing a URL, file ID, or storage key.
 		image: 'image', // PostgreSQL DOMAIN over jsonb
 		file: 'text', // No DOMAIN available, uses base type
 		video: 'text', // No DOMAIN available, uses base type

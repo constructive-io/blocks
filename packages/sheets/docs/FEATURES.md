@@ -67,7 +67,7 @@ The range band is a `pointer-events-none` overlay (`data-part-id="sheets-range-b
 
 ## 4. Editing ✅
 
-Inline editing routes through a single `resolveEditIntent`: inline toggle (boolean), portal overlay editor, or no-op (readonly). 12 editors (text, number, date, image, relation, geometry, interval, json, array, inet, tsvector, url, upload) re-hosted in a React portal `OverlayManager`.
+Inline editing routes through a single `resolveEditIntent`: inline toggle (boolean), portal overlay editor, or no-op (readonly). Editors run in a React portal `OverlayManager`. The media editor handles image, file, audio, video, upload, and attachment cells.
 
 | Aspect | Behavior |
 |--------|----------|
@@ -79,7 +79,9 @@ Inline editing routes through a single `resolveEditIntent`: inline toggle (boole
 | Optimistic | The cell flips instantly; reverts on server reject |
 | Drafts | Client-side draft rows with per-row submit, validation styling, relation/FK normalization |
 
-Consumer editors keeping cancel-on-outside (their internal Save/validation/focus): json, url, inet, array, tsvector, interval, date, geometry, relation, upload. *Commit-on-blur for those is a planned follow-up.*
+Consumer editors keeping cancel-on-outside (their internal Save/validation/focus): json, url, inet, array, tsvector, interval, date, geometry, relation, and media. *Commit-on-blur for those is a planned follow-up.*
+
+Media uploads use the host storage endpoint, and cell updates use the data endpoint. Image and upload cells store the file projection and resolve signed previews as needed. Attachment cells store a public URL. Failed draft uploads can retry against the created row, and clearing a cell preserves its old file row.
 
 **Deferred:** in-editor `Tab`/`Enter` commit-and-advance (Tab across a row while editing).
 

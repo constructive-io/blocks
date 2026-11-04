@@ -11,13 +11,16 @@
 
 import type { FieldMetadata } from '../../cell-types/cell-type-resolver';
 import type { SheetsCell } from '../../cell-model/sheets-cell';
+import type { DraftSubmitResult } from '../../grid/draft-types';
 import type { RelationInfo } from '../../store/relation-info-slice';
+import type { SheetsRowIdentifier } from '../../row-identity';
 
 export interface EditorProps {
 	value: unknown;
 	cell: SheetsCell;
 	colKey: string;
 	rowId: string;
+	rowIdentifier?: SheetsRowIdentifier | null;
 	rowIndex: number;
 	tableName?: string;
 	fieldMeta?: FieldMetadata;
@@ -38,8 +41,8 @@ export interface EditorProps {
 	onCommitPatch?: (patch: Record<string, unknown>) => void;
 	/** Dismiss the overlay with no write. */
 	onCancel: () => void;
-	/** Self-committing editors: submit a client-side draft row, resolving to the server row. */
-	onSubmitDraftRow?: (draftRowId: string) => Promise<unknown>;
+	/** Self-committing editors: submit a client-side draft row and return its creation result. */
+	onSubmitDraftRow?: (draftRowId: string) => Promise<DraftSubmitResult>;
 	/** Self-committing editors: invalidate cached data after an out-of-band mutation. */
 	onInvalidateData?: () => void;
 	/** Geometry pre-computed by the OverlayManager (reused `computeOverlayGeometry`). */

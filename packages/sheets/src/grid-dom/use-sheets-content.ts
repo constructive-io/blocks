@@ -43,6 +43,9 @@ export interface SheetsCellResolution {
 	 * of the `meta.cellType` the cell itself now self-describes.)
 	 */
 	typeKey: string;
+	/** Typed server row locator, separate from the grid's string key. */
+	rowIdentifier?: SheetsRowIdentifier | null;
+	readOnlyReason?: string;
 	/** Field metadata for the column — fed to a native overlay editor's EditorProps.fieldMeta. */
 	fieldMeta?: FieldMetadata;
 	/** Relation info for the column (when relational) — fed to a native overlay editor's EditorProps.relationInfo. */
@@ -64,10 +67,12 @@ export interface UseSheetsContentArgs {
 	serverRowsReadOnly?: boolean;
 	/** Primary-key fields are immutable after insertion because they define row identity. */
 	serverReadOnlyFields?: ReadonlySet<string>;
-	/** Resolve the GraphQL mutation identity; self-committing editors require a legacy scalar id. */
+	/** Resolve the GraphQL mutation identity. */
 	getRowIdentifier?: (row: Readonly<Record<string, unknown>>) => SheetsRowIdentifier | null;
-	/** Relation/upload editors still use scalar record APIs and must fail closed otherwise. */
+	/** Relation editors still use scalar record APIs. */
 	supportsScalarSelfCommit?: boolean;
+	canUpload?: boolean;
+	canCreate?: boolean;
 }
 
 function isDraftId(value: unknown): boolean {
@@ -126,6 +131,8 @@ export function useSheetsContent(args: UseSheetsContentArgs) {
 		serverReadOnlyFields,
 		getRowIdentifier,
 		supportsScalarSelfCommit = true,
+		canUpload = true,
+		canCreate = true,
 	} = args;
 
 	const relationFieldNamesFromMeta = useMemo(() => buildRelationFieldNameSet(meta, tableName), [meta, tableName]);
@@ -149,7 +156,7 @@ export function useSheetsContent(args: UseSheetsContentArgs) {
 	// reference-equal guarantees an identical resolution.
 	const cache = useMemo(
 		() => new Map<string, { value: unknown; resolution: SheetsCellResolution }>(),
-		[data, columnKeys, fieldMetaMap, registry, relationFieldNamesFromMeta, relationInfoByField, options, serverRowsReadOnly, serverReadOnlyFields, getRowIdentifier, supportsScalarSelfCommit],
+		[data, columnKeys, fieldMetaMap, registry, relationFieldNamesFromMeta, relationInfoByField, options, serverRowsReadOnly, serverReadOnlyFields, getRowIdentifier, supportsScalarSelfCommit, canUpload, canCreate],
 	);
 
 	const getSheetsCell = useCallback(
@@ -248,13 +255,15 @@ export function useSheetsContent(args: UseSheetsContentArgs) {
 			};
 			const cellType = registry.resolveTypeKey(matchInput, () => route.cellType);
 			const rowIdentifier = !isDraftRow ? getRowIdentifier?.(rowData) : null;
-			const selfCommittingEditor = isRelation || MEDIA_TYPES.has(cellType);
+			const isMedia = MEDIA_TYPES.has(cellType);
 			const lacksScalarEditorIdentity =
-				selfCommittingEditor &&
+				isRelation &&
 				(!supportsScalarSelfCommit || (
 					rowIdentifier != null && typeof rowIdentifier === 'object'
 				));
-			const forcedReadOnly = tableForcedReadOnly || lacksScalarEditorIdentity;
+			const lacksMediaTarget = isMedia && (isDraftRow ? !canCreate || serverRowsReadOnly : rowIdentifier == null);
+			const readOnlyReason = isMedia && !canUpload ? 'Uploads need a storage endpoint' : undefined;
+			const forcedReadOnly = tableForcedReadOnly || lacksScalarEditorIdentity || lacksMediaTarget || !!readOnlyReason;
 
 			const metadata: CellCreationMetadata = {
 				cellType,
@@ -292,11 +301,13 @@ export function useSheetsContent(args: UseSheetsContentArgs) {
 			// (relation/image, Phase 5) can read EditorProps.fieldMeta / relationInfo without
 			// re-resolving — no extra work, just exposing what this routing already derived.
 			// `typeKey` is the resolved cellType — the single source of truth for edit-intent.
-			const resolution: SheetsCellResolution = { cell: styled, component, colKey, typeKey: cellType, fieldMeta, relationInfo };
+			const resolution: SheetsCellResolution = {
+				cell: styled, component, colKey, typeKey: cellType, fieldMeta, relationInfo, rowIdentifier, readOnlyReason,
+			};
 			cache.set(cacheKey, { value: rawValue, resolution });
 			return resolution;
 		},
-		[data, columnKeys, fieldMetaMap, registry, relationFieldNamesFromMeta, relationInfoByField, options, serverRowsReadOnly, serverReadOnlyFields, getRowIdentifier, supportsScalarSelfCommit],
+		[data, columnKeys, fieldMetaMap, registry, relationFieldNamesFromMeta, relationInfoByField, options, serverRowsReadOnly, serverReadOnlyFields, getRowIdentifier, supportsScalarSelfCommit, canUpload, canCreate],
 	);
 
 	return { getSheetsCell };

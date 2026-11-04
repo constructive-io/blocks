@@ -49,6 +49,7 @@ export type CellType =
 	| 'video'
 	| 'audio'
 	| 'upload' // Custom upload type
+	| 'attachment' // Public file URL stored as text
 	// Special cells
 	| 'uuid'
 	| 'color'

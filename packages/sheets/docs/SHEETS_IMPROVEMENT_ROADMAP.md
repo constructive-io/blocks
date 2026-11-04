@@ -35,7 +35,7 @@ The rest of the roadmap (backend adapter, typed row model, component API, headle
 **Critical weaknesses (release blockers in bold):**
 - **No real extension surface** — the advertised one is dead; the live ones are closed (§4, P0).
 - **No failure UX** — `<DataEditor>` renders unconditionally; the `error` from the data hooks is destructured but **never rendered** (`sheets.tsx:198`), **zero error boundaries** across 113 files, no empty/loading/error states.
-- **Data-loss bug** — image draft-submit→upload removes the draft from the store _before_ the upload (`image-editor.tsx:243-263`); an upload failure orphans a server row and drops the draft.
+- **Draft upload retry** — the media editor retains its staged file and the created row key so a failed upload can retry after draft removal.
 - **Backend shape hardcoded everywhere** — `_meta` doc, `buildPostGraphile*`, Relay `{nodes}` parsing, PG filter dialect, relation inflection; ~17 files import `@constructive-io/data` directly. Sheets is a PostGraphile client, not a generic grid.
 - **951-line god-component** (`sheets.tsx`) fuses two data modes + drafts + optimistic updates + theming + JSX; no headless core.
 - **Soundness holes at the exact extension seams** — `combinedRows as any[]` (~15×), `__isDraft` magic keys (43 sites), `(cell.data as any)`, the `@ts-expect-error` in `extractCellValue` (`sheets.utils.ts:696`).
@@ -64,7 +64,7 @@ Effort: **S**≤1d · **M**≈2-4d · **L**≈1-2wk · **XL**≈3wk+. Impact: �
 | 0.3 | **ESM-scoped code-splitting + lazy heavy editors.** _Verified: `splitting:true` with `format:['esm','cjs']` **fails** esbuild ("splitting only works with esm"). Split `tsup.config.ts` into two configs — ESM with `splitting:true`, CJS non-split. `React.lazy` the 3 heavy editors (geometry→leaflet, json, image) in `editor-registry.ts`; light editors stay eager._ | M | ★★ | ✅ |
 | 0.4 | **Fix the vendor build.** Drop phantom `noExternal: ['pluralize','sonner']` (not deps); add real dep `'inflekt'`; drop `leaflet`/`react-leaflet` from `noExternal` (already optional peers — removes the ~270KB vendor double-bundle); add the missing `build:vendor` script so CI exercises it (`tsup.vendor.config.ts`). | S | ★★ | ✅ |
 | 0.5 | **Render real error / empty / loading states.** Surface `error` through `SheetsInner`'s memo (`use-load-grid.ts` already returns `{isError,error}`; `sheets.tsx:169` only pulls `hasCompletedInitialLoad`) and branch before `<DataEditor>`. Ship default state components; gate loading on initial load only. _BC note: changes default DOM on error/empty — document it._ | M | ★★★ | ⚠️ behavior |
-| 0.6 | **Fix the orphaned-row data-loss path** (`image-editor.tsx:260-263`): on post-submit upload failure, call `onDraftUploadComplete?.()`, flip the editor out of draft mode, capture the created id, and retain the file so a single retry uploads to the now-real row (don't re-enter `onSubmitDraft`). | M | ★★ | ✅ |
+| 0.6 | **Keep draft uploads retryable.** Retain the editor and staged file after row creation so retry writes to the created row. | M | ★★ | ✅ |
 | 0.7 | **Injectable logger + `onError` on `SheetsConfig`** replacing the 11 raw `console.*`. Define **one** config delta (`logger`, `onError`) — consolidate with the error-boundary and architecture proposals to avoid a fractured config. Default `error→console.error`, `debug→no-op`. | S | ★ | ✅ |
 | 0.8 | **Error boundary** around `SheetsInner` and each overlay editor (`wrapEditor`), routed through `config.onError`; editor boundary calls `onFinishedEditing(undefined)` on reset so a bad editor can't wedge the overlay. Export `SheetsErrorBoundary`. | M | ★★ | ⚠️ swallows |
 | 0.9 | **Doc fix:** `EMBEDDING.md:166` `onSelect`→`onTableChange` (verified real prop). | S | ★ | ✅ |
@@ -150,11 +150,10 @@ export interface SheetsBackendAdapter {
   createRow/updateRow/deleteRow(...): Promise<...>;
   buildWhere(field, operator, value): Record<string,unknown> | null;   // default emits PostGraphile dialect
   resolveOrderBy(field, dir, table): unknown;
-  uploadFile?(file, target, execute): Promise<{ url: string }>;
 }
 // SheetsConfig: adapter?: SheetsBackendAdapter
 ```
-*Land incrementally* (`fetchMeta` → `listRows` → mutations) behind the default adapter; add data-hook tests (currently zero) before moving each method. Fold the **redundant-count removal (0.1) into `listRows`** and **route the upload GraphQL patch step through `execute`** (the hand-built `fetch` in `use-sheets-upload.ts` bypasses the canonical error seam) so the adapter boundary doesn't leak.
+*Land incrementally* (`fetchMeta` → `listRows` → mutations) behind the default adapter; add data-hook tests (currently zero) before moving each method. Fold the **redundant-count removal (0.1) into `listRows`** and **route the media cell patch through the adapter**. The storage transport uploads the file and resolves previews, while the data adapter persists the projection.
 
 **2.2 — One resolution authority · M · ★★ · BC**
 Make `mapToFrontendCellType(meta, cfg?)` the single resolver with injectable `aliasOverrides`/`scalarOverrides`/`resolve`. Route `createColumnSchemaFromMeta` and the forms layer through it (they diverge today). *Correction:* the divergence currently has **no visible effect** — `createColumnSchemaFromMeta`'s output (`tableSchema`) has **zero live consumers**; the grid already uses the full cascade. So this is **cleanup + an injection hook**, not a live-bug fix — either route it through the cascade or delete the dead `tableSchema`. Move Constructive-specific scalars (`Relation`/`Interval`/`GeoJSON`) into the PostGraphile adapter's default `scalarOverrides`.

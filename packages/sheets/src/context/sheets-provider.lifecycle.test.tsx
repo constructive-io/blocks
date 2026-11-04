@@ -8,6 +8,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { SheetsConfig } from './sheets-context';
 import { useSheetsContext, type SheetsScopeKey } from './sheets-context';
 import { SheetsProvider } from './sheets-provider';
+import type { SheetsUploadFn } from './sheets-execute';
 import { useSheetsStoreApi } from '../store/sheets-store';
 import { getStoredToken } from '../auth/utils/token-store';
 
@@ -109,6 +110,47 @@ describe('SheetsProvider lifecycle', () => {
 		});
 		container.remove();
 		vi.clearAllMocks();
+	});
+
+	it('uses a host uploader when provided and keeps uploads off the data endpoint otherwise', async () => {
+		let upload!: SheetsUploadFn;
+		function UploadProbe() {
+			upload = useSheetsContext().executeUpload;
+			return null;
+		}
+
+		const config = createEmbeddedConfig();
+		const execute = vi.fn();
+		const executeStorage = vi.fn();
+		const executeUpload = vi.fn<SheetsUploadFn>().mockResolvedValue({
+			file: { id: 'file-1', key: 'avatar', bucket_id: 'bucket-1', filename: 'avatar.png', mime: 'image/png', size: 1 },
+		});
+		await act(async () => {
+			root.render(
+				<SheetsProvider config={{ ...config, execute, executeUpload, storage: {
+					endpoint: 'https://storage.example.com/graphql',
+					execute: executeStorage,
+				} }}>
+					<UploadProbe />
+				</SheetsProvider>,
+			);
+		});
+
+		const file = new File(['x'], 'avatar.png', { type: 'image/png' });
+		await expect(upload(file)).resolves.toMatchObject({ file: { id: 'file-1' } });
+		expect(executeUpload).toHaveBeenCalledWith(file);
+		expect(executeStorage).not.toHaveBeenCalled();
+
+		await act(async () => {
+			root.render(
+				<SheetsProvider config={{ ...config, execute }}>
+					<UploadProbe />
+				</SheetsProvider>,
+			);
+		});
+
+		await expect(upload(file)).rejects.toThrow('Uploads need a storage endpoint');
+		expect(execute).not.toHaveBeenCalled();
 	});
 
 	it('restores standalone auth token for the active database', async () => {

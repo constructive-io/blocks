@@ -3,20 +3,19 @@ import { useEffect, useState } from 'react';
 export type ImageStatus = 'idle' | 'loading' | 'loaded' | 'error';
 
 export function useImageStatus(src?: string): ImageStatus {
-	const [status, setStatus] = useState<ImageStatus>('idle');
+	const [result, setResult] = useState<{ src: string; status: 'loaded' | 'error' }>();
 
 	useEffect(() => {
-		if (!src) return setStatus('idle');
+		if (!src) return;
 
-		setStatus('loading');
 		const img = new Image();
-		img.src = src;
 
-		const onLoad = () => setStatus('loaded');
-		const onError = () => setStatus('error');
+		const onLoad = () => setResult({ src, status: 'loaded' });
+		const onError = () => setResult({ src, status: 'error' });
 
 		img.addEventListener('load', onLoad);
 		img.addEventListener('error', onError);
+		img.src = src;
 
 		return () => {
 			img.removeEventListener('load', onLoad);
@@ -24,5 +23,6 @@ export function useImageStatus(src?: string): ImageStatus {
 		};
 	}, [src]);
 
-	return status;
+	if (!src) return 'idle';
+	return result?.src === src ? result.status : 'loading';
 }

@@ -238,7 +238,7 @@ export function useSheets<TRow extends SheetsRow = SheetsRow>(
 		onEventRef.current?.({ type, tableName, at: Date.now(), meta });
 	}, [tableName]);
 
-	const { config } = useSheetsContext();
+	const { config, canUpload } = useSheetsContext();
 
 	// Per-instance cell-type registry: consumer overrides (provider plugins, then
 	// per-instance cellTypes) layered over the built-in native engine. With no consumer
@@ -606,6 +606,8 @@ export function useSheets<TRow extends SheetsRow = SheetsRow>(
 		serverReadOnlyFields: primaryKeyFields,
 		getRowIdentifier,
 		supportsScalarSelfCommit,
+		canUpload,
+		canCreate,
 	});
 
 	const effectiveColumnOrder = useMemo(() => {
@@ -781,6 +783,7 @@ export function useSheets<TRow extends SheetsRow = SheetsRow>(
 		update,
 		getRowIdentifier,
 		readOnlyFields: primaryKeyFields,
+		isCellReadOnly: canUpload ? undefined : (rowIndex, colKey) => Boolean(getSheetsCellContent(rowIndex, colKey).readOnlyReason),
 		canUpdate,
 		applyOptimisticPatch: applyOptimisticCellPatch,
 		resyncRow,
