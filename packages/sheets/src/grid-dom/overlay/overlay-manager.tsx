@@ -8,7 +8,7 @@
 // It NEVER mutates `.gdg-clip-region` — that DOM coupling stays in the canvas
 // `OverlayViewportGuard` so the glide path is untouched.
 
-import React, { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 
 import { computeOverlayGeometry, OverlayMeasureContext } from '../../grid/editors/overlay-viewport-guard';
@@ -18,6 +18,47 @@ import { cn } from '../../utils/cn';
 
 const MARGIN_PX = 12;
 const MIN_BELOW_PX = 320;
+
+// Open and close follow the transitions.dev menu-dropdown recipe (05): grow from
+// the anchored cell corner from 0.97 to 1 with a 250ms smooth-out, then leave with
+// a shorter 150ms fade to 0.99. Each value reads the host's `--dropdown-*` token
+// (the Dashboard ships them with its other popovers) and falls back to the recipe
+// default. `transform` and `opacity` are the only transitioned properties, so the
+// measured left/top placement always applies instantly.
+const DROPDOWN_MOTION = [
+	'opacity-0 pointer-events-none will-change-[transform,opacity]',
+	'[transform:scale(var(--dropdown-pre-scale,0.97))]',
+	'[transition-property:transform,opacity]',
+	'[transition-duration:var(--dropdown-open-dur,250ms)]',
+	'[transition-timing-function:var(--dropdown-ease,cubic-bezier(0.22,1,0.36,1))]',
+	'data-[state=open]:opacity-100 data-[state=open]:pointer-events-auto data-[state=open]:[transform:scale(1)]',
+	'data-[state=closing]:[transform:scale(var(--dropdown-closing-scale,0.99))]',
+	'data-[state=closing]:[transition-duration:var(--dropdown-close-dur,150ms)]',
+	'motion-reduce:transition-none!',
+].join(' ');
+
+function prefersReducedMotion(): boolean {
+	return typeof window.matchMedia !== 'function' || window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+}
+
+/**
+ * The editor unmounts as soon as it closes, so its exit plays on an inert copy of
+ * the last open frame. The copy holds no React state or handlers, cannot take
+ * focus or pointer input, and is removed once the close transition ends.
+ */
+function playCloseTransition(node: HTMLElement): void {
+	if (node.dataset.state !== 'open' || prefersReducedMotion()) return;
+	const host = node.parentNode ?? document.getElementById('portal-root') ?? document.body;
+	const ghost = node.cloneNode(true) as HTMLElement;
+	for (const el of [ghost, ...ghost.querySelectorAll('[id]')]) el.removeAttribute('id');
+	ghost.setAttribute('aria-hidden', 'true');
+	ghost.inert = true;
+	host.insertBefore(ghost, node.parentNode === host ? node : null);
+	void ghost.offsetWidth; // Start from the copied open frame.
+	ghost.dataset.state = 'closing';
+	const closeMs = parseFloat(getComputedStyle(ghost).transitionDuration) * 1000;
+	window.setTimeout(() => ghost.remove(), (Number.isFinite(closeMs) ? closeMs : 150) + 50);
+}
 
 // Nested floating layers an editor MIGHT portal outside the overlay (Base UI / Radix
 // / Floating UI popover, select, menu, dialog, tooltip). A pointerdown inside one of
@@ -45,12 +86,21 @@ interface OverlayManagerProps {
 
 export function OverlayManager({ anchorRect, open, presetClass, onCancel, dismissMode = 'cancel', children }: OverlayManagerProps): React.ReactNode {
 	const containerRef = useRef<HTMLDivElement | null>(null);
+	// React detaches the ref before it removes the node, so the closing copy still
+	// sees the editor's last open frame in place.
+	const setContainer = useCallback((node: HTMLDivElement | null) => {
+		const previous = containerRef.current;
+		containerRef.current = node;
+		if (!node && previous) playCloseTransition(previous);
+	}, []);
 	// Measured, viewport-clamped position (both axes). Null until the overlay has been
 	// measured once, so first paint stays hidden rather than flashing at an unclamped
 	// spot. Covers the FLIP (no room below -> open above) AND the horizontal shift (an
 	// anchor near the right edge -> slide left so the overlay stays on-screen instead of
 	// overflowing off the viewport, e.g. the last column's editor).
-	const [pos, setPos] = useState<{ left: number; top: number } | null>(null);
+	const [pos, setPos] = useState<{ left: number; top: number; originX: number } | null>(null);
+	// False until the measured position has painted once at the pre-open scale.
+	const [entered, setEntered] = useState(false);
 
 	const targetY = anchorRect?.top;
 	const targetH = anchorRect?.height;
@@ -71,24 +121,48 @@ export function OverlayManager({ anchorRect, open, presetClass, onCancel, dismis
 	useLayoutEffect(() => {
 		if (!open || !anchorRect) {
 			setPos(null);
+			setEntered(false);
 			return;
 		}
 		const el = containerRef.current;
 		if (!el) return;
-		const rect = el.getBoundingClientRect();
-		const vw = window.innerWidth;
-		const vhNow = window.innerHeight;
+		const place = () => {
+			// Layout size, not getBoundingClientRect: the pre-open scale would shrink it.
+			const width = el.offsetWidth;
+			const height = el.offsetHeight;
+			const vw = window.innerWidth;
+			const vhNow = window.innerHeight;
 
-		let left = anchorRect.left;
-		left = Math.max(MARGIN_PX, Math.min(left, vw - MARGIN_PX - rect.width));
-		if (!Number.isFinite(left)) left = MARGIN_PX;
+			let left = anchorRect.left;
+			left = Math.max(MARGIN_PX, Math.min(left, vw - MARGIN_PX - width));
+			if (!Number.isFinite(left)) left = MARGIN_PX;
 
-		let top = shouldFlip ? anchorRect.top - rect.height : anchorRect.bottom;
-		top = Math.max(MARGIN_PX, Math.min(top, vhNow - MARGIN_PX - rect.height));
-		if (!Number.isFinite(top)) top = MARGIN_PX;
+			let top = shouldFlip ? anchorRect.top - height : anchorRect.bottom;
+			top = Math.max(MARGIN_PX, Math.min(top, vhNow - MARGIN_PX - height));
+			if (!Number.isFinite(top)) top = MARGIN_PX;
 
-		setPos({ left, top });
+			// Grow from the anchor cell's corner, even when the overlay is shifted left.
+			const originX = Math.max(0, Math.min(anchorRect.left - left, width));
+			setPos((prev) => (prev && prev.left === left && prev.top === top && prev.originX === originX
+				? prev
+				: { left, top, originX }));
+		};
+		place();
+		// Lazy editors (date) and state changes (image) resize after opening; keep the
+		// overlay clamped on-screen as its content settles.
+		if (typeof ResizeObserver === 'undefined') return;
+		const observer = new ResizeObserver(place);
+		observer.observe(el);
+		return () => observer.disconnect();
 	}, [open, shouldFlip, anchorRect, maxHeight]);
+
+	useEffect(() => {
+		if (!open || pos === null || entered) return;
+		const el = containerRef.current;
+		if (!el) return;
+		void el.offsetWidth; // Commit the pre-open frame so the state change below transitions.
+		setEntered(true);
+	}, [open, pos, entered]);
 
 	// Dismiss on a pointerdown OUTSIDE the overlay — standard popover behaviour. The
 	// overlay was previously only closable via Esc / commit / scroll, so a click in the
@@ -125,16 +199,16 @@ export function OverlayManager({ anchorRect, open, presetClass, onCancel, dismis
 
 	if (!open || !anchorRect || typeof document === 'undefined') return null;
 
-	// Animate only once the measured, viewport-clamped position is applied, so the
-	// entrance transform never fights the layout-effect measure.
+	// Reveal only once the measured, viewport-clamped position is applied, so the
+	// entrance never fights the layout-effect measure.
 	const positioned = pos !== null;
 	const style: React.CSSProperties = {
 		position: 'fixed',
 		// Pre-measure default = the ANCHOR position (below, or above when flipping), NOT a
 		// screen corner. So an overlay that fits (the common case) renders at its FINAL spot
 		// with zero left/top change once measured — no travel. It stays hidden until measured
-		// and `transition-none` keeps the rare off-screen clamp instant, so the overlay is
-		// never seen sliding to the anchor (the correction happens off-screen, pre-reveal).
+		// and left/top are never transitioned, so the rare off-screen clamp is instant and the
+		// overlay is never seen sliding to the anchor (the correction happens pre-reveal).
 		left: pos ? pos.left : anchorRect.left,
 		top: pos ? pos.top : shouldFlip ? anchorRect.top : anchorRect.bottom,
 		maxHeight,
@@ -144,6 +218,7 @@ export function OverlayManager({ anchorRect, open, presetClass, onCancel, dismis
 		// arbitrary z, so the editor and any popover/tooltip it opens (e.g. the relation
 		// "Record Data" popover, which portals into #portal-root) stack coherently.
 		zIndex: 'var(--z-layer-floating)',
+		transformOrigin: `${pos?.originX ?? 0}px ${shouldFlip ? '100%' : '0'}`,
 	};
 
 	// Portal into the app's shared floating-overlay host (#portal-root) so the editor and
@@ -155,19 +230,11 @@ export function OverlayManager({ anchorRect, open, presetClass, onCancel, dismis
 
 	return createPortal(
 		<div
-			ref={containerRef}
+			ref={setContainer}
+			data-slot='sheets-editor-overlay'
+			data-state={entered ? 'open' : 'closed'}
 			style={style}
-			className={cn(
-				// `transition-none`: the entrance is an ANIMATION (scale + fade); left/top must NEVER
-				// transition, or measuring/clamping the position would visibly slide the overlay across
-				// the screen to its anchor. This keeps the position application instant.
-				'pointer-events-auto transition-none',
-				// Origin-aware entrance (DESIGN_SPEC §10 / Emil standards): subtle scale + fade from the
-				// cell corner, reusing the UI popover's tw-animate utilities for a consistent feel. Gated
-				// on `positioned` so the overlay animates only after its measured position is applied.
-				positioned && 'animate-[fade-scale-in_var(--duration-moderate)_ease-out] motion-reduce:animate-none',
-				shouldFlip ? 'origin-bottom-left' : 'origin-top-left'
-			)}
+			className={DROPDOWN_MOTION}
 		>
 			{/* Provide the overlay geometry so editors (relation/image/geometry) can self-bound their
 			    internal scroll lists; without it they read maxHeight:0 and render unbounded (the
