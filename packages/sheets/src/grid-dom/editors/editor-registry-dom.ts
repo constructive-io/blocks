@@ -96,6 +96,7 @@ export const DOM_EDITOR_REGISTRY: Record<string, NativeEditor> = {
 	video: ImageEditorDom,
 	audio: ImageEditorDom,
 	upload: ImageEditorDom,
+	attachment: ImageEditorDom,
 	// Date/time types
 	date: DateEditorDom,
 	datetime: DateEditorDom,

@@ -3,10 +3,9 @@ import { print } from 'graphql';
 
 import { ConstructiveError, createError, TypedDocumentString } from '@constructive-io/data';
 
-import type { SheetsConfig } from './sheets-context';
+import type { SheetsConfig, SheetsStorageTransport } from './sheets-context';
 import {
 	callUploadOp,
-	deleteUploadedFileRow,
 	discoverUploadCapability,
 	fetchDownloadUrl,
 	presignedPut,
@@ -24,13 +23,23 @@ export type SheetsExecuteFn = <T = unknown>(
 	variables?: Record<string, unknown>,
 ) => Promise<T>;
 
-/**
- * Result of an upload through the seam. `url` is the only guaranteed field;
- * the REST upload endpoint also returns `{ filename, mime, size }` (and may
- * return server-internal extras). Keeping it open-ended lets callers read the
- * richer metadata while a bare `{ url }` (e.g. the mock) still satisfies it.
- */
-export type SheetsUploadResult = { url: string } & Record<string, unknown>;
+/** Durable file metadata for image and upload columns. */
+export interface SheetsFileValue {
+	id: string;
+	key: string;
+	bucket_id: string;
+	mime: string;
+	size: number;
+	filename: string;
+	/** Public URL supplied by storage, when available. */
+	url?: string;
+}
+
+export interface SheetsUploadResult {
+	file: SheetsFileValue;
+	/** Optional download URL for immediate use. It can expire. */
+	url?: string;
+}
 
 /**
  * Optional upload metadata carried through the seam (third arg). Lets an
@@ -181,45 +190,46 @@ export function createSheetsExecute(
 	};
 }
 
-/**
- * Presigned-URL cell-upload seam.
- *
- * Replaces the legacy multipart `<endpoint>/upload` POST entirely. The flow:
- *   1. Read + SHA-256 hash the file bytes (Web Crypto)
- *   2. Discover (cached per endpoint) the upload op + downloadUrl-by-id field
- *      via GraphQL introspection — the root `upload<Type>File` mutation, matched
- *      by FIELD/TYPE SHAPE (LOCKED: no hardcoded names)
- *   3. Call the upload op with input `{ bucketKey, contentHash, contentType,
- *      size, filename }` — NO `ownerId` (app-scoped buckets have no owner_id)
- *   4. If `uploadUrl` is non-null, PUT the raw bytes to it with ONLY the signed
- *      `Content-Type` header (NO Authorization). Skipped when `deduplicated`.
- *   5. Resolve the stable public `downloadUrl` for the returned fileId.
- *
- * Returns `{ url, filename, mime, size, key, fileId }` where `url` is the stable
- * download URL — the same cell value shape callers/Step-2 already consume.
- *
- * `path` is ignored (content-addressed buckets key on `contentHash`).
- */
-export function createSheetsUpload(config: SheetsConfig, getToken: () => string | null): SheetsUploadFn {
-	// Reuse the kept GraphQL executor so canonical error normalization + onAuthError
-	// (401/UNAUTHENTICATED) apply to introspection, the upload op, and the
-	// downloadUrl query alike.
-	const execute = config.execute ?? createSheetsExecute(config, getToken);
+export function resolveStorageTransport(
+	config: SheetsConfig,
+	getToken: () => string | null,
+): SheetsStorageTransport | undefined {
+	const endpoint = config.storage?.endpoint;
+	if (!endpoint) return undefined;
 
-	return async (file: File, _path?: string, options?: SheetsUploadOptions): Promise<SheetsUploadResult> => {
-		if (!config.endpoint) {
+	return {
+		endpoint,
+		execute: config.storage?.execute ?? createSheetsExecute({ ...config, endpoint }, getToken),
+	};
+}
+
+/** Creates an uploader for storage. Direct callers may use the supplied endpoint as storage. */
+export function createSheetsUpload(config: SheetsConfig, getToken: () => string | null): SheetsUploadFn {
+	const transport = resolveStorageTransport(config, getToken) ?? {
+		endpoint: config.endpoint,
+		execute: config.execute ?? createSheetsExecute(config, getToken),
+	};
+	return createPresignedSheetsUpload(transport, config.upload?.bucketKey);
+}
+
+export function createPresignedSheetsUpload(
+	{ endpoint, execute }: SheetsStorageTransport,
+	bucketKey?: string,
+): SheetsUploadFn {
+	return async (file, _path, options) => {
+		if (!endpoint) {
 			throw createError.badRequest('No GraphQL endpoint configured.');
 		}
 
-		const bucketKey = config.upload?.bucketKey ?? 'public';
-		const contentType = file.type || 'application/octet-stream';
+		const cap = await discoverUploadCapability(endpoint, execute);
+		if (!cap.hasFileProjection) {
+			throw createError.badRequest('Uploads require a storage mutation that returns a file projection.');
+		}
 
-		// Single read of the bytes — reused for both hashing and the PUT body.
+		const contentType = file.type || 'application/octet-stream';
+		// Read the file once for both hashing and the PUT body.
 		const buffer = await file.arrayBuffer();
 		const contentHash = await sha256HexFromBuffer(buffer);
-
-		const cap = await discoverUploadCapability(config.endpoint, execute);
-
 		const payload = await callUploadOp(execute, cap, {
 			bucketKey,
 			contentHash,
@@ -228,36 +238,27 @@ export function createSheetsUpload(config: SheetsConfig, getToken: () => string 
 			filename: file.name,
 		});
 
-		// Dedup (deduplicated ⇒ uploadUrl === null) means the row + S3 object already
-		// exist; skip the PUT. A non-deduplicated payload MUST carry an uploadUrl — a
-		// null there is a server-contract violation, so fail loudly rather than
-		// resolving a downloadUrl for an object that was never uploaded.
 		if (!payload.deduplicated) {
 			if (!payload.uploadUrl) {
 				throw createError.badRequest('Upload failed: server returned no uploadUrl for a non-deduplicated file.');
 			}
-			try {
-				await presignedPut(payload.uploadUrl, buffer, contentType, options?.onProgress);
-			} catch (error) {
-				// The upload op already created the row; drop it so the bucket doesn't list
-				// a file whose bytes were never stored.
-				await deleteUploadedFileRow(execute, cap, payload.fileId);
-				throw error;
-			}
+			// The server expires rows whose PUT fails.
+			await presignedPut(payload.uploadUrl, buffer, contentType, options?.onProgress);
 		} else {
 			options?.onProgress?.({ loaded: file.size, total: file.size, percentage: 100 });
 		}
 
-		const url = await fetchDownloadUrl(execute, cap, payload.fileId);
-
-		return {
-			url,
-			filename: file.name,
-			mime: file.type,
-			size: file.size,
-			key: payload.key,
-			fileId: payload.fileId,
+		const result: SheetsUploadResult = {
+			file: { ...payload.file, filename: payload.file.filename ?? file.name },
 		};
+		if (!cap.download) return result;
+
+		try {
+			return { ...result, url: await fetchDownloadUrl(execute, cap.download, payload.fileId) };
+		} catch {
+			// The upload succeeded. The download URL can be requested again later.
+			return result;
+		}
 	};
 }
 

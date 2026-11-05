@@ -4,11 +4,11 @@
 // native) SELF-COMMITTING `ImageEditor` verbatim. The UI (dropzone, upload flow,
 // OVERLAY_LG width, own EditorFocusTrap, motion crossfade) is reused as-is; the
 // contract maps directly onto EditorProps:
-//   • value          -> the raw row value, read directly by the source (getImageUrl).
-//   • recordId       -> EditorProps.rowId.
-//   • isDraftRow     -> rowId startsWith 'draft:'.
+//   • value          -> the raw row value, read directly by the editor.
+//   • recordId       -> typed EditorProps.rowIdentifier.
+//   • isDraftRow     -> no server identity and a draft rowId.
 //   • onSaveComplete -> onCommitPatch({ [colKey]: saveData.imageData })  (single field).
-//   • onSubmitDraft  -> onSubmitDraftRow(draftRowId) (mapped to a DraftSubmitResult).
+//   • onSubmitDraft  -> onSubmitDraftRow(draftRowId).
 //   • onDraftUploadComplete -> onInvalidateData.
 //   • onFinishedEditing(next?) -> onCancel() (a CLOSE; the upload self-commits via
 //     onSaveComplete, so the value path is never used for image).
@@ -17,7 +17,6 @@
 import { Suspense } from 'react';
 
 import { ImageEditor, type ImageSaveData } from '../../grid/editors/image-editor';
-import type { DraftSubmitResult } from '../../grid/draft-types';
 import type { EditorProps } from './editor-props';
 
 const DRAFT_PREFIX = 'draft:';
@@ -27,13 +26,14 @@ export function ImageEditorDom({
 	cell,
 	colKey,
 	rowId,
+	rowIdentifier,
 	tableName,
 	onCommitPatch,
 	onCancel,
 	onSubmitDraftRow,
 	onInvalidateData,
 }: EditorProps) {
-	const isDraftRow = rowId.startsWith(DRAFT_PREFIX);
+	const isDraftRow = rowIdentifier == null && rowId.startsWith(DRAFT_PREFIX);
 	// The whole MEDIA family routes here (image/file/video/audio/upload). Only `image`
 	// stays image-only; every other media type accepts ANY file (no image guard/cap),
 	// so e.g. an `upload` column can take a PDF. The upload transport is already
@@ -49,14 +49,8 @@ export function ImageEditorDom({
 		? (saveData: ImageSaveData) => onCommitPatch({ [colKey]: saveData.imageData })
 		: undefined;
 
-	// Draft rows: persist first to obtain a real id. The editor expects a
-	// DraftSubmitResult ({ createdRow }); EditorProps.onSubmitDraftRow resolves to
-	// the raw server row, so wrap it into that shape.
 	const handleSubmitDraft = isDraftRow && onSubmitDraftRow
-		? async (): Promise<DraftSubmitResult> => {
-				const createdRow = (await onSubmitDraftRow(rowId)) as DraftSubmitResult['createdRow'];
-				return { createdRow };
-			}
+		? () => onSubmitDraftRow(rowId)
 		: undefined;
 
 	return (
@@ -68,7 +62,7 @@ export function ImageEditorDom({
 					onFinishedEditing={() => onCancel()}
 					tableName={tableName}
 					fieldName={colKey}
-					recordId={rowId}
+					recordId={rowIdentifier ?? null}
 					onSaveComplete={handleSaveComplete}
 					isDraftRow={isDraftRow}
 					onSubmitDraft={handleSubmitDraft}

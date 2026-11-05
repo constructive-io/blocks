@@ -21,4 +21,5 @@ export interface CellProps {
 	isEditing: boolean;
 	onStartEdit: () => void;
 	disabled: boolean;
+	readOnlyReason?: string;
 }

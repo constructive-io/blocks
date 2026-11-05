@@ -14,7 +14,9 @@ export function TextCellView(props: CellProps) {
 		<div
 			role="gridcell"
 			data-slot="text-cell"
-			title={text}
+			title={[text, props.readOnlyReason].filter(Boolean).join('\n')}
+			aria-readonly={props.readOnlyReason ? true : undefined}
+			aria-description={props.readOnlyReason}
 			className={cn('flex h-full w-full items-center truncate px-3 text-sm')}
 		>
 			<span className="truncate">{text}</span>

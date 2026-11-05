@@ -3,7 +3,13 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { useStore as useZustandStore, type StoreApi } from 'zustand';
 
 import { SheetsContext, type SheetsConfig, type SheetsContextValue, type SheetsScopeKey } from './sheets-context';
-import { createSheetsExecute, createSheetsUpload, type SheetsExecuteFn, type SheetsUploadFn } from './sheets-execute';
+import {
+	createPresignedSheetsUpload,
+	createSheetsExecute,
+	resolveStorageTransport,
+	type SheetsExecuteFn,
+	type SheetsUploadFn,
+} from './sheets-execute';
 import { createSheetsStore, SheetsStoreContext, type SheetsStoreState } from '../store/sheets-store';
 import { getStoredToken } from '../auth/utils/token-store';
 import { setSheetsLogger } from '../utils/sheets-logger';
@@ -14,6 +20,10 @@ interface SheetsProviderProps {
 	config: SheetsConfig;
 	children: React.ReactNode;
 }
+
+const unavailableUpload: SheetsUploadFn = async () => {
+	throw new Error('Uploads need a storage endpoint');
+};
 
 export function SheetsProvider({ config, children }: SheetsProviderProps) {
 	const providerInstanceId = useId();
@@ -94,11 +104,13 @@ export function SheetsProvider({ config, children }: SheetsProviderProps) {
 		return createSheetsExecute(config, getToken);
 	}, [config, getToken]);
 
-	// Create upload function
+	const storage = useMemo(() => resolveStorageTransport(config, getToken), [config, getToken]);
+	const bucketKey = config.upload?.bucketKey;
 	const executeUpload: SheetsUploadFn = useMemo(() => {
 		if (config.executeUpload) return config.executeUpload;
-		return createSheetsUpload(config, getToken);
-	}, [config, getToken]);
+		return storage ? createPresignedSheetsUpload(storage, bucketKey) : unavailableUpload;
+	}, [config.executeUpload, storage, bucketKey]);
+	const canUpload = Boolean(config.executeUpload || storage);
 
 	const configuredIdentityKey =
 		config.auth.mode === 'embedded'
@@ -142,8 +154,8 @@ export function SheetsProvider({ config, children }: SheetsProviderProps) {
 	}, [queryClient, scopeKey]);
 
 	const contextValue: SheetsContextValue = useMemo(
-		() => ({ config, execute, executeUpload, scopeKey }),
-		[config, execute, executeUpload, scopeKey],
+		() => ({ config, execute, executeUpload, storage, canUpload, scopeKey }),
+		[config, execute, executeUpload, storage, canUpload, scopeKey],
 	);
 
 	return (

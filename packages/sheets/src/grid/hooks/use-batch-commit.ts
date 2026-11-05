@@ -50,6 +50,7 @@ interface UseBatchCommitParams {
 	update: (id: SheetsRowIdentifier, data: Record<string, unknown>) => Promise<{ updatedRow?: Record<string, unknown> | null }>;
 	getRowIdentifier?: (row: Readonly<Record<string, unknown>>) => SheetsRowIdentifier | null;
 	readOnlyFields?: ReadonlySet<string>;
+	isCellReadOnly?: (rowIndex: number, colKey: string) => boolean;
 	canUpdate?: boolean;
 	/** Single-write optimistic cache patch (infinite mode) — returns a revert thunk. */
 	applyOptimisticPatch?: (rowIndex: number, patch: Record<string, unknown>) => (() => void) | void;
@@ -83,6 +84,7 @@ export function useBatchCommit({
 	update,
 	getRowIdentifier = legacyRowIdentifier,
 	readOnlyFields,
+	isCellReadOnly,
 	canUpdate = true,
 	applyOptimisticPatch,
 	resyncRow,
@@ -106,6 +108,7 @@ export function useBatchCommit({
 				const rowData = combinedRows[w.rowIndex] as Record<string, unknown> | null | undefined;
 				// Null-guard unfetched proxy rows — skip writes whose row is not loaded.
 				if (!rowData) continue;
+				if (isCellReadOnly?.(w.rowIndex, w.colKey)) continue;
 
 				// Draft rows keep their existing per-cell path; excluded from coalescing + history.
 				if (getDraftMeta(rowData)) {
@@ -191,7 +194,7 @@ export function useBatchCommit({
 
 			return { applied: resolved.length };
 		},
-		[combinedRows, fieldMetaMap, relationInfoByField, update, getRowIdentifier, readOnlyFields, canUpdate, applyOptimisticPatch, resyncRow, editCell, onCellEdit, record],
+		[combinedRows, fieldMetaMap, relationInfoByField, update, getRowIdentifier, readOnlyFields, isCellReadOnly, canUpdate, applyOptimisticPatch, resyncRow, editCell, onCellEdit, record],
 	);
 
 	commitRef.current = commitCells;

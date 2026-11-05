@@ -3,15 +3,13 @@ import { AlertCircleIcon, FileIcon, ImageIcon, ImageOff, Loader2, UploadIcon, XI
 import { AnimatePresence, motion } from 'motion/react';
 import { toast } from '@constructive-io/ui/toast';
 
-import { useSheetsContext } from '../../context/sheets-context';
-import { useSheetsStoreApi } from '../../store/sheets-store';
 import {
 	useSheetsFieldUpload,
-	executeFieldUpload,
 	type UploadProgress,
 	type UploadResponse,
 } from '../../hooks/use-sheets-upload';
-import { formatFileSize, getImageMetadata, getImageUrl } from '../../utils/file.utils';
+import { useSheetsMediaUrl } from '../../hooks/use-sheets-media-url';
+import { formatFileSize, getImageMetadata } from '../../utils/file.utils';
 import { sheetsLogger } from '../../utils/sheets-logger';
 import { useImageStatus } from '../../utils/use-image-status';
 import { Button } from '@constructive-io/ui/button';
@@ -22,29 +20,14 @@ import { EditorFocusTrap } from './editor-focus-trap';
 import { OVERLAY } from './overlay-presets';
 import { OverlayMeasureContext } from './overlay-viewport-guard';
 import type { DraftSubmitResult } from '../draft-types';
+import type { SheetsRowIdentifier } from '../../row-identity';
 
 /** Data passed to onSaveComplete for optimistic updates */
 export interface ImageSaveData {
-  imageData: {
-    url: string;
-    filename?: string;
-    size?: number;
-    mime?: string;
-  } | null;
+  imageData: UploadResponse;
 }
 
-type UploadState = 'idle' | 'submitting-draft' | 'uploading';
-
-interface NormalizedImageData {
-  url: string;
-  filename: string;
-  size: number;
-  mime: string;
-}
-
-function normalizeUploadResponse(data: UploadResponse): NormalizedImageData {
-  return { url: data.url, filename: data.filename, size: data.size, mime: data.mime };
-}
+type UploadState = 'idle' | 'submitting-draft' | 'uploading' | 'clearing';
 
 /** Snappy crossfade for dropzone content transitions */
 const dropzoneTransition = { duration: 0.15, ease: [0.2, 0, 0, 1] as [number, number, number, number] };
@@ -76,6 +59,7 @@ function RemoveButton({ onClick, label }: { onClick: () => void; label: string }
 /** Centered file chip for non-image files (selected or stored) — icon + name + size/mime. */
 function FilePreview({ name, size, mime }: { name?: string; size?: number; mime?: string }) {
   const hasMime = !!mime && mime !== 'unknown';
+  const hasSize = size !== undefined;
   return (
     <div className='flex size-full flex-col items-center justify-center gap-2 p-4 text-center'>
       <div className='bg-muted/60 flex size-12 shrink-0 items-center justify-center rounded-lg' aria-hidden='true'>
@@ -85,10 +69,10 @@ function FilePreview({ name, size, mime }: { name?: string; size?: number; mime?
         <p className='truncate text-sm font-medium' title={name}>
           {name || 'File'}
         </p>
-        {(size || hasMime) && (
+        {(hasSize || hasMime) && (
           <p className='text-muted-foreground mt-0.5 text-xs'>
-            {size ? formatFileSize(size) : null}
-            {size && hasMime ? ' • ' : null}
+            {hasSize ? formatFileSize(size) : null}
+            {hasSize && hasMime ? ' • ' : null}
             {hasMime ? <span className='uppercase'>{mime}</span> : null}
           </p>
         )}
@@ -102,7 +86,7 @@ interface ImageEditorProps {
   onFinishedEditing: (next?: unknown) => void;
   tableName?: string;
   fieldName?: string;
-  recordId?: string | number;
+  recordId?: SheetsRowIdentifier | null;
   onSaveComplete?: (data: ImageSaveData) => void;
   isDraftRow?: boolean;
   onSubmitDraft?: () => Promise<DraftSubmitResult>;
@@ -132,20 +116,13 @@ export const ImageEditor: React.FC<ImageEditorProps> = ({
   const noun = acceptAnyFile ? 'file' : 'image';
   const Noun = acceptAnyFile ? 'File' : 'Image';
   const [uploadState, setUploadState] = useState<UploadState>('idle');
-  const { config } = useSheetsContext();
-  const storeApi = useSheetsStoreApi();
   const { maxHeight: overlayMaxHeight } = useContext(OverlayMeasureContext);
-
-  const getToken = useMemo(() => {
-    if (config.auth.mode === 'embedded') return config.auth.getToken;
-    return () => storeApi.getState().accessToken;
-  }, [config.auth, storeApi]);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const previewUrlRef = useRef<string | null>(null);
   // Set once a draft row has been persisted server-side. If the subsequent
   // upload fails, retries must target this real id directly (the draft is gone).
-  const committedRecordIdRef = useRef<string | number | null>(null);
+  const committedRecordIdRef = useRef<SheetsRowIdentifier | null>(null);
 
   const currentImageData = value ?? null;
   const [imageValue, setImageValue] = useState<unknown>(currentImageData);
@@ -157,19 +134,30 @@ export const ImageEditor: React.FC<ImageEditorProps> = ({
 
   const isSubmittingDraft = uploadState === 'submitting-draft';
   const isUploading = uploadState === 'uploading';
+  const isClearing = uploadState === 'clearing';
   const isBusy = uploadState !== 'idle';
 
-  const imageUrl = useMemo(() => getImageUrl(imageValue), [imageValue]);
   const imageMetadata = useMemo(() => getImageMetadata(imageValue), [imageValue]);
   // In any-file mode a stored value is only shown as a thumbnail when its mime says image/*;
   // anything else renders as a labelled file chip. Image mode stays unconditional (unchanged).
   const storedMime = imageMetadata?.mime;
   const storedIsImage = !acceptAnyFile || (!!storedMime && storedMime.startsWith('image/'));
+  const { url: imageUrl, durableUrl, id: storedFileId, isLoading: isResolvingImage, onImageError, onImageLoad } =
+    useSheetsMediaUrl(imageValue, storedIsImage);
   // Only probe the URL as an <img> when a thumbnail will actually be shown — probing a
   // non-image url (PDF/doc) would flip status to 'error' and hit the unavailable branch.
   const imageStatus = useImageStatus(storedIsImage ? imageUrl || undefined : undefined);
-  const imageLoadFailed = storedIsImage && imageUrl != null && imageStatus === 'error';
-  const hasImage = imageUrl != null && !imageLoadFailed && storedIsImage;
+  useEffect(() => {
+    if (imageStatus === 'error') onImageError();
+    if (imageStatus === 'loaded') onImageLoad();
+  }, [imageStatus, onImageError, onImageLoad]);
+  const imageLoadFailed = storedIsImage && durableUrl != null && imageStatus === 'error';
+  const hasImage = (imageUrl != null || isResolvingImage) && !imageLoadFailed && storedIsImage;
+  const hasStoredMedia = Boolean(storedFileId || durableUrl);
+  const clearPending = value != null && imageValue == null;
+  const needsDraftCreation = isDraftRow && committedRecordIdRef.current == null;
+  // A selected non-image file already shows its details in the dropzone chip.
+  const selectedIsImage = !acceptAnyFile || (selectedFile?.type.startsWith('image/') ?? false);
 
   // --- Helpers -----------------------------------------------------------
 
@@ -190,29 +178,30 @@ export const ImageEditor: React.FC<ImageEditorProps> = ({
 
   // --- Upload handlers ---------------------------------------------------
 
-  const handleUploadSuccess = useCallback((data: UploadResponse) => {
-    const normalized = normalizeUploadResponse(data);
+  const finishSave = useCallback((data: UploadResponse, message: string) => {
     resetFileState();
-    setImageValue(normalized);
-    onSaveComplete?.({ imageData: normalized });
+    setImageValue(data);
+    if (committedRecordIdRef.current == null) {
+      onSaveComplete?.({ imageData: data });
+    } else {
+      onDraftUploadComplete?.();
+    }
     onFinishedEditing();
-    toast.success({ message: `${Noun} uploaded successfully` });
-  }, [resetFileState, onSaveComplete, onFinishedEditing, Noun]);
+    toast.success({ message });
+  }, [resetFileState, onSaveComplete, onDraftUploadComplete, onFinishedEditing]);
 
-  // Existing-row upload failure: keep the editor open with the staged file
-  // retained so the user can retry or cancel, surface the real error message
-  // (canonical error messages pass through), and log at error level. Mirrors the
-  // draft-row catch UX — never closes the editor on failure.
-  const handleUploadError = useCallback((error: Error) => {
+  // Keep the editor and staged file available when a write fails.
+  const handleWriteError = useCallback((error: Error) => {
     setUploadState('idle');
-    sheetsLogger().error('[image-editor] upload failed:', error);
-    toast.error({ message: error.message || 'Upload failed' });
+    setUploadProgress(null);
+    sheetsLogger().error('[image-editor] media update failed:', error);
+    toast.error({ message: error.message || 'Could not save the file' });
   }, []);
 
-  const uploadMutation = useSheetsFieldUpload(tableName || '', fieldName || '', recordId || '', {
+  const uploadMutation = useSheetsFieldUpload(tableName || '', fieldName || '', recordId ?? null, {
     onProgress: setUploadProgress,
-    onSuccess: handleUploadSuccess,
-    onError: handleUploadError,
+    onSuccess: (data) => finishSave(data, data === null ? `${Noun} cleared` : `${Noun} uploaded successfully`),
+    onError: handleWriteError,
     showToast: false,
   });
 
@@ -286,111 +275,77 @@ export const ImageEditor: React.FC<ImageEditorProps> = ({
   // --- Upload confirmation -----------------------------------------------
 
   const handleConfirmUpload = useCallback(async () => {
-    if (!tableName || !fieldName || !selectedFile) return;
+    if (isBusy || !tableName || !fieldName || !selectedFile) return;
 
-    // A draft that was already persisted server-side (its upload failed earlier).
-    // Retry against the real id directly — the draft is gone, so re-submitting
-    // it via onSubmitDraft() would fail. Keep the selected file on failure so
-    // the user can retry again.
-    const committedId = committedRecordIdRef.current ?? recordId;
-    if (committedRecordIdRef.current != null) {
-      try {
-        toast.info({ message: `Uploading ${noun}...` });
-        setUploadState('uploading');
-
-        const uploadResult = await executeFieldUpload(
-          tableName, fieldName, committedRecordIdRef.current, selectedFile,
-          config.endpoint, getToken, undefined, { onAuthError: config.onAuthError },
-        );
-
-        const normalized = normalizeUploadResponse(uploadResult);
-        resetFileState();
-        setImageValue(normalized);
-        onDraftUploadComplete?.();
-        toast.success({ message: `${Noun} uploaded successfully` });
-        onFinishedEditing();
-      } catch (error) {
-        // Real row already exists — surface it to the host and keep the file
-        // selected so the upload can be retried without rebuilding the row.
-        onDraftUploadComplete?.();
-        setUploadState('idle');
-        toast.error({ message: error instanceof Error ? error.message : 'Upload failed' });
-      }
-      return;
-    }
-
-    if (isDraftRow) {
-      if (!onSubmitDraft) {
-        toast.error({ message: 'Cannot upload to draft row - save the row first' });
+    if (!isDraftRow) {
+      if (recordId == null) {
+        toast.error({ message: 'Missing record context for upload' });
         return;
       }
+      setUploadState('uploading');
+      uploadMutation.mutate(selectedFile);
+      return;
+    }
 
-      try {
+    let rowPersisted = committedRecordIdRef.current != null;
+    try {
+      const createRow = committedRecordIdRef.current == null;
+      if (createRow) {
+        if (!onSubmitDraft) throw new Error('Cannot upload to draft row - save the row first');
+
         toast.info({ message: 'Creating row...' });
         setUploadState('submitting-draft');
-
-        const result = await onSubmitDraft();
-		const createdId = result.createdRow?.id;
-		if (typeof createdId !== 'string' && typeof createdId !== 'number') {
-			throw new Error('Image uploads require a scalar id primary key.');
-		}
-
-        // Row is now persisted and the draft has been removed from the store.
-        // From here on, treat it as a real row: any retry must hit this id.
-		committedRecordIdRef.current = createdId;
-
-        toast.info({ message: `Uploading ${noun}...` });
-        setUploadState('uploading');
-
-        const uploadResult = await executeFieldUpload(
-			tableName, fieldName, createdId, selectedFile,
-          config.endpoint, getToken, undefined, { onAuthError: config.onAuthError },
-        );
-
-        const normalized = normalizeUploadResponse(uploadResult);
-        resetFileState();
-        setImageValue(normalized);
-        onDraftUploadComplete?.();
-        toast.success({ message: `Row created and ${noun} uploaded` });
-        onFinishedEditing();
-      } catch (error) {
-        // The row was persisted (draft removed) but the upload failed, leaving
-        // a real row with no image. Notify the host so the now-real row appears,
-        // and keep the selected file so the user can retry immediately.
-        onDraftUploadComplete?.();
-        setUploadState('idle');
-        toast.error({ message: error instanceof Error ? error.message : 'Upload failed' });
+        const { createdRow } = await onSubmitDraft();
+        rowPersisted = true;
+        committedRecordIdRef.current = createdRow ? uploadMutation.resolveRowIdentifier(createdRow) : null;
       }
-      return;
-    }
 
-    if (!committedId) {
-      toast.error({ message: 'Missing record context for upload' });
-      return;
+      // Creating the row removes the draft. Subsequent attempts use the persisted identity.
+      const committedId = committedRecordIdRef.current;
+      if (committedId == null) throw new Error('Uploads require a primary-key identity for the created row.');
+
+      toast.info({ message: `Uploading ${noun}...` });
+      setUploadState('uploading');
+      const saved = await uploadMutation.write(committedId, selectedFile);
+      finishSave(saved, createRow ? `Row created and ${noun} uploaded` : `${Noun} uploaded successfully`);
+    } catch (error) {
+      if (rowPersisted) onDraftUploadComplete?.();
+      handleWriteError(error instanceof Error ? error : new Error('Upload failed'));
     }
-    setUploadState('uploading');
-    uploadMutation.mutate(selectedFile);
-  }, [selectedFile, uploadMutation, tableName, fieldName, recordId, isDraftRow, onSubmitDraft, config.endpoint, config.onAuthError, getToken, resetFileState, onDraftUploadComplete, onFinishedEditing, noun, Noun]);
+  }, [isBusy, tableName, fieldName, selectedFile, isDraftRow, recordId, uploadMutation, onSubmitDraft,
+    noun, Noun, finishSave, onDraftUploadComplete, handleWriteError]);
 
   // --- Save / Cancel -----------------------------------------------------
 
-  const handleSave = useCallback(() => {
-    if (!imageValue) {
-      onFinishedEditing(null);
-      return;
-    }
-
-    const url = getImageUrl(imageValue);
-    const originalUrl = getImageUrl(value);
-
-    // Nothing changed — close without triggering mutation
-    if (url && originalUrl === url) {
+  const handleSave = useCallback(async () => {
+    if (isBusy) return;
+    if (!clearPending) {
       onFinishedEditing();
       return;
     }
 
-    onFinishedEditing(url ?? value);
-  }, [imageValue, value, onFinishedEditing]);
+    const targetId = committedRecordIdRef.current ?? recordId;
+    if (targetId == null) {
+      if (isDraftRow) {
+        finishSave(null, `${Noun} cleared`);
+      } else {
+        handleWriteError(new Error('Missing record context for clear'));
+      }
+      return;
+    }
+
+    setUploadState('clearing');
+    if (committedRecordIdRef.current == null) {
+      uploadMutation.mutate(null);
+      return;
+    }
+    try {
+      const saved = await uploadMutation.write(targetId, null);
+      finishSave(saved, `${Noun} cleared`);
+    } catch (error) {
+      handleWriteError(error instanceof Error ? error : new Error('Clear failed'));
+    }
+  }, [isBusy, clearPending, onFinishedEditing, recordId, isDraftRow, finishSave, Noun, handleWriteError, uploadMutation]);
 
   const handleCancel = useCallback(() => {
     revokePreviewUrl();
@@ -402,14 +357,14 @@ export const ImageEditor: React.FC<ImageEditorProps> = ({
   const handleEditorKeyDown = useCallback((e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
       e.preventDefault();
-      handleSave();
+      if (selectedFile) void handleConfirmUpload();
+      else void handleSave();
     }
-  }, [handleSave]);
+  }, [handleConfirmUpload, handleSave, selectedFile]);
 
   // --- Dropzone content --------------------------------------------------
 
-  // A stored non-image file (any-file mode) renders as a chip, not a thumbnail.
-  const hasStoredFile = acceptAnyFile && !!imageUrl && !storedIsImage;
+  const hasStoredFile = hasStoredMedia && !hasImage && !imageLoadFailed;
   const dropzoneKey = isBusy
     ? 'busy'
     : previewUrl
@@ -428,16 +383,23 @@ export const ImageEditor: React.FC<ImageEditorProps> = ({
       return (
         <div data-state={uploadState} className='text-muted-foreground flex w-full flex-col items-center justify-center p-6'>
           <Loader2 className='mb-2 size-6 animate-spin' />
-          <p className='text-sm'>{isSubmittingDraft ? 'Creating row...' : `Uploading ${noun}...`}</p>
+          <p role='status' className='text-sm'>{isSubmittingDraft ? 'Creating row...' : isClearing ? `Clearing ${noun}...` : `Uploading ${noun}...`}</p>
           {isUploading && uploadProgress && (
             <div className='mt-3 w-full max-w-xs'>
-              <div className='bg-muted h-1.5 overflow-hidden rounded-full'>
+              <div
+                role='progressbar'
+                aria-label={`Uploading ${noun}`}
+                aria-valuemin={0}
+                aria-valuemax={100}
+                aria-valuenow={Math.round(uploadProgress.percentage)}
+                className='bg-muted h-1.5 overflow-hidden rounded-full'
+              >
                 <div
                   className='bg-primary h-1.5 rounded-full transition-[width] duration-(--duration-slow)'
                   style={{ width: `${uploadProgress.percentage}%` }}
                 />
               </div>
-              <p className='text-muted-foreground mt-1.5 text-center text-xs'>
+              <p aria-hidden='true' className='text-muted-foreground mt-1.5 text-center text-xs tabular-nums'>
                 {Math.round(uploadProgress.percentage)}%
               </p>
             </div>
@@ -449,7 +411,6 @@ export const ImageEditor: React.FC<ImageEditorProps> = ({
     // Selected file preview (not yet uploaded) — image files show a thumbnail; any other
     // file (any-file mode) shows a labelled chip.
     if (previewUrl) {
-      const selectedIsImage = !acceptAnyFile || (selectedFile?.type.startsWith('image/') ?? false);
       return (
         <div className='relative w-full' style={{ height: '13rem' }}>
           {selectedIsImage ? (
@@ -482,7 +443,7 @@ export const ImageEditor: React.FC<ImageEditorProps> = ({
     if (hasStoredFile) {
       return (
         <div className='relative w-full' style={{ height: '13rem' }}>
-          <FilePreview name={imageMetadata?.filename} size={imageMetadata?.size} mime={imageMetadata?.mime} />
+          <FilePreview name={imageMetadata?.filename ?? durableUrl ?? undefined} size={imageMetadata?.size} mime={imageMetadata?.mime} />
           <RemoveButton onClick={handleRemoveImage} label='Remove file' />
         </div>
       );
@@ -500,12 +461,12 @@ export const ImageEditor: React.FC<ImageEditorProps> = ({
             <ImageOff className='size-4 text-amber-500/50' />
           </div>
           <p className='text-sm font-medium'>Image unavailable</p>
-          {imageUrl && (
+          {durableUrl && (
             <p
               className='text-muted-foreground mt-1 max-w-full truncate font-mono text-[11px] opacity-50'
-              title={imageUrl}
+              title={durableUrl}
             >
-              {imageUrl}
+              {durableUrl}
             </p>
           )}
           <div className='mt-3 flex items-center gap-2'>
@@ -567,11 +528,13 @@ export const ImageEditor: React.FC<ImageEditorProps> = ({
 
   const saveLabel = isSubmittingDraft
     ? 'Creating...'
-    : isUploading
-      ? 'Uploading...'
-      : imageUrl
-        ? 'Save'
-        : 'Done';
+    : isClearing
+      ? 'Clearing...'
+      : isUploading
+        ? 'Uploading...'
+        : hasStoredMedia || clearPending
+          ? 'Save'
+          : 'Done';
 
   // --- Render ------------------------------------------------------------
 
@@ -589,7 +552,7 @@ export const ImageEditor: React.FC<ImageEditorProps> = ({
           ) : (
             <ImageIcon className='text-muted-foreground size-4' />
           )}
-          <h3 className='text-sm font-medium'>{imageUrl ? `Edit ${Noun}` : `Add ${Noun}`}</h3>
+          <h3 className='text-sm font-medium'>{hasStoredMedia ? `Edit ${Noun}` : `Add ${Noun}`}</h3>
         </div>
 
         {/* Hidden file input — outside dropzone so EditorFocusTrap cannot auto-focus it */}
@@ -646,7 +609,7 @@ export const ImageEditor: React.FC<ImageEditorProps> = ({
             )}
 
             {/* File / image metadata */}
-            {!isBusy && (selectedFile || (imageMetadata && hasImage)) && (
+            {!isBusy && (selectedFile ? selectedIsImage : imageMetadata && hasImage) && (
               <div className='text-muted-foreground mt-2 text-center text-xs'>
                 {selectedFile ? (
                   <>
@@ -685,7 +648,7 @@ export const ImageEditor: React.FC<ImageEditorProps> = ({
           </Button>
           {selectedFile && !isBusy ? (
             <Button type='button' size='sm' onClick={handleConfirmUpload}>
-              {isDraftRow ? 'Create Row & Upload' : 'Upload & Save'}
+              {needsDraftCreation ? 'Create Row & Upload' : 'Upload & Save'}
             </Button>
           ) : (
             <Button type='button' size='sm' onClick={handleSave} disabled={isBusy}>

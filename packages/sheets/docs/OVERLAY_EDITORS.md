@@ -123,7 +123,7 @@ Import from `./overlay-presets`. Don't hardcode width classes — use the preset
 |--------|----------|-------------|
 | `sm`   | Single input (date, inet, interval) | 320-480px |
 | `md`   | Tag chips, lists (array, relation, tsvector) | 400-560px |
-| `lg`   | Rich editors (JSON, image) | 480-720px |
+| `lg`   | Rich editors (JSON, media uploads) | 480-720px |
 | `xl`   | Full-width (geometry/map) | 600px-90vw |
 
 ### Always set `displayName` on wrapper components

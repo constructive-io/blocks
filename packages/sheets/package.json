@@ -68,6 +68,7 @@
   ],
   "scripts": {
     "build": "rm -rf dist && tsup && cp src/styles.css dist/styles.css",
+    "prepack": "pnpm build",
     "build:registry": "tsx scripts/build-registry.ts",
     "check:registry": "tsx scripts/build-registry.ts --check",
     "build:vendor": "tsup --config tsup.vendor.config.ts",

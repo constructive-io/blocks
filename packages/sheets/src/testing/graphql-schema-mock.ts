@@ -64,22 +64,24 @@ import type { SheetsExecuteFn } from '../context/sheets-execute';
 /**
  * Current-plugin shape: a root `uploadAppFile(input:)` mutation + `appFile(id:)`
  * by-id field. Upload input is app-scoped (NO `ownerId`) — the linchpin of the
- * no-ownerId guarantee. The payload declares the full spec set even though the
- * seam only selects `uploadUrl fileId key deduplicated` (a superset is fine).
+ * no-ownerId guarantee. The JSON projection and optional bucket selection match the plugin.
  */
 export const ROOT_UPLOAD_SDL = `
 	scalar UUID
+	scalar JSON
 	type AppFile { id: UUID! key: String downloadUrl: String }
 	type UploadAppFilePayload {
 		uploadUrl: String
 		fileId: String!
 		key: String!
 		deduplicated: Boolean!
+		file: JSON
 		expiresAt: String
 		previousVersionId: String
 	}
 	input UploadAppFileInput {
-		bucketKey: String!
+		bucketKey: String
+		isPublic: Boolean
 		contentHash: String!
 		contentType: String!
 		size: Int!
@@ -97,10 +99,11 @@ export const ROOT_UPLOAD_SDL = `
  */
 export const RELAY_ONLY_SDL = `
 	scalar UUID
+	scalar JSON
 	interface Node { nodeId: ID! }
 	type AppFile implements Node { nodeId: ID! id: UUID! downloadUrl: String }
-	type UploadAppFilePayload { uploadUrl: String fileId: String! key: String! deduplicated: Boolean! }
-	input UploadAppFileInput { bucketKey: String! contentHash: String! contentType: String! size: Int! filename: String }
+	type UploadAppFilePayload { uploadUrl: String fileId: String! key: String! deduplicated: Boolean! file: JSON }
+	input UploadAppFileInput { bucketKey: String isPublic: Boolean contentHash: String! contentType: String! size: Int! filename: String }
 	type Query { node(nodeId: ID!): Node }
 	type Mutation { uploadAppFile(input: UploadAppFileInput!): UploadAppFilePayload }
 `;
@@ -114,9 +117,10 @@ export const RELAY_ONLY_SDL = `
  */
 export const NODE_EXEC_SDL = `
 	scalar UUID
+	scalar JSON
 	type AppFile { id: UUID! downloadUrl: String }
-	type UploadAppFilePayload { uploadUrl: String fileId: String! key: String! deduplicated: Boolean! }
-	input UploadAppFileInput { bucketKey: String! contentHash: String! contentType: String! size: Int! filename: String }
+	type UploadAppFilePayload { uploadUrl: String fileId: String! key: String! deduplicated: Boolean! file: JSON }
+	input UploadAppFileInput { bucketKey: String isPublic: Boolean contentHash: String! contentType: String! size: Int! filename: String }
 	type Query { node(nodeId: ID!): AppFile }
 	type Mutation { uploadAppFile(input: UploadAppFileInput!): UploadAppFilePayload }
 `;
@@ -130,6 +134,7 @@ export const NODE_EXEC_SDL = `
  */
 export const CONNECTION_ONLY_SDL = `
 	scalar UUID
+	scalar JSON
 	type AppFile { id: UUID! downloadUrl: String }
 	type AppFileConnection { nodes: [AppFile] }
 	input UUIDFilter { isNull: Boolean equalTo: UUID notEqualTo: UUID }
@@ -139,9 +144,11 @@ export const CONNECTION_ONLY_SDL = `
 		fileId: String!
 		key: String!
 		deduplicated: Boolean!
+		file: JSON
 	}
 	input UploadAppFileInput {
-		bucketKey: String!
+		bucketKey: String
+		isPublic: Boolean
 		contentHash: String!
 		contentType: String!
 		size: Int!
@@ -162,6 +169,7 @@ export const CONNECTION_ONLY_SDL = `
  */
 export const CONDITION_ONLY_SDL = `
 	scalar UUID
+	scalar JSON
 	type AppFile { id: UUID! downloadUrl: String }
 	type AppFileConnection { nodes: [AppFile] }
 	input AppFileCondition { id: UUID }
@@ -170,9 +178,11 @@ export const CONDITION_ONLY_SDL = `
 		fileId: String!
 		key: String!
 		deduplicated: Boolean!
+		file: JSON
 	}
 	input UploadAppFileInput {
-		bucketKey: String!
+		bucketKey: String
+		isPublic: Boolean
 		contentHash: String!
 		contentType: String!
 		size: Int!
@@ -192,6 +202,7 @@ export const CONDITION_ONLY_SDL = `
  */
 export const CONNECTION_TWO_FILES_SDL = `
 	scalar UUID
+	scalar JSON
 	type AppFile { id: UUID! downloadUrl: String }
 	type DataRoomFile { id: UUID! downloadUrl: String }
 	type AppFileConnection { nodes: [AppFile] }
@@ -199,13 +210,16 @@ export const CONNECTION_TWO_FILES_SDL = `
 	input UUIDFilter { isNull: Boolean equalTo: UUID }
 	input AppFileFilter { id: UUIDFilter }
 	input DataRoomFileFilter { id: UUIDFilter }
-	type UploadAppFilePayload { uploadUrl: String fileId: String! key: String! deduplicated: Boolean! }
-	input UploadAppFileInput { bucketKey: String! contentHash: String! contentType: String! size: Int! filename: String }
+	type UploadAppFilePayload { uploadUrl: String fileId: String! key: String! deduplicated: Boolean! file: JSON }
+	input UploadAppFileInput { bucketKey: String isPublic: Boolean contentHash: String! contentType: String! size: Int! filename: String }
 	type Query {
 		dataRoomFiles(where: DataRoomFileFilter, first: Int): DataRoomFileConnection
 		appFiles(where: AppFileFilter, first: Int): AppFileConnection
 	}
-	type Mutation { uploadAppFile(input: UploadAppFileInput!): UploadAppFilePayload }
+	type Mutation {
+		uploadDataRoomFile(input: UploadAppFileInput!): UploadAppFilePayload
+		uploadAppFile(input: UploadAppFileInput!): UploadAppFilePayload
+	}
 `;
 
 /**
@@ -232,42 +246,23 @@ export const NO_UPLOADS_SDL = `
 	type Mutation { noop: Boolean }
 `;
 
-/**
- * The factory-path flow runs a FOURTH op beyond the three upload ops — the row
- * patch `updateUser(input: UpdateUserInput!)` (use-sheets-upload.ts). Extends
- * the rootUpload SDL with the patch types so `graphqlFetchFromSchema` resolves
- * (and validates the shape of) the patch document too.
- */
-export const FACTORY_FLOW_SDL = `
-	scalar UUID
-	scalar JSON
-	type AppFile { id: UUID! key: String downloadUrl: String }
-	type UploadAppFilePayload {
-		uploadUrl: String
-		fileId: String!
-		key: String!
-		deduplicated: Boolean!
-		expiresAt: String
-		previousVersionId: String
-	}
-	input UploadAppFileInput {
-		bucketKey: String!
-		contentHash: String!
-		contentType: String!
-		size: Int!
-		filename: String
-		key: String
-	}
-	type User { id: UUID! avatar: JSON }
-	input UserPatch { avatar: JSON }
-	input UpdateUserInput { id: UUID! userPatch: UserPatch }
-	type UpdateUserPayload { user: User }
-	type Query { appFile(id: UUID!): AppFile }
-	type Mutation {
-		uploadAppFile(input: UploadAppFileInput!): UploadAppFilePayload
-		updateUser(input: UpdateUserInput!): UpdateUserPayload
-	}
-`;
+export function uploadPayload(
+	payload: { uploadUrl: string | null; fileId: string; key: string; deduplicated: boolean },
+	metadata: { mime?: string; url?: string } = {},
+) {
+	return {
+		...payload,
+		file: {
+			id: payload.fileId,
+			key: payload.key,
+			bucket_id: 'bucket-1',
+			mime: 'text/plain',
+			size: 5,
+			filename: 'hello.txt',
+			...metadata,
+		},
+	};
+}
 
 // ============================================================================
 // Tier 1 — real introspection from SDL

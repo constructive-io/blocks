@@ -46,6 +46,7 @@
   ],
   "scripts": {
     "build": "tsup",
+    "prepack": "pnpm build",
     "dev": "tsup --watch",
     "lint:types": "tsc --noEmit",
     "test": "vitest run",

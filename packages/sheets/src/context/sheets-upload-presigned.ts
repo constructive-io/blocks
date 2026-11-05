@@ -6,14 +6,12 @@
  *   2. Call the presigned upload op (discovered via introspection) to get a
  *      presigned PUT url + fileId
  *   3. PUT the raw bytes to that url (only Content-Type, NO Authorization)
- *   4. Resolve the stable public `downloadUrl` for the fileId
+ *   4. Return the file projection and try to resolve an optional download URL
  *
- * `confirmUpload` is intentionally skipped: the backend plugin creates the file
- * row inside the upload op, so `downloadUrl` resolves immediately.
+ * The server confirms PUTs and expires rows that never received one.
  *
- * The upload op is discovered via runtime introspection, matched by FIELD/TYPE
- * SHAPE (never a hardcoded name): a root mutation `upload<Type>File(input: {...})`
- * whose input + payload carry the upload shape.
+ * Runtime introspection finds root mutations with the presigned upload shape
+ * and prefers `uploadAppFile` when multiple storage planes are exposed.
  *
  * The downloadUrl-by-id field is likewise shape-discovered. Three read shapes,
  * preferred in order: the inflected singular `appFile(id:)`; a filtered
@@ -25,7 +23,8 @@ import { getIntrospectionQuery } from 'graphql';
 
 import { createError } from '@constructive-io/data';
 
-import type { SheetsExecuteFn } from './sheets-execute';
+import type { SheetsStorageTransport } from './sheets-context';
+import type { SheetsExecuteFn, SheetsFileValue } from './sheets-execute';
 
 // ============================================================================
 // Capability discovery types
@@ -36,7 +35,12 @@ export interface UploadCapability {
 	uploadFieldName: string;
 	/** The upload input object type name, e.g. 'UploadAppFileInput'. */
 	inputTypeName: string;
-	/** Query field used to resolve the stable downloadUrl by id, e.g. 'appFile' | 'node' | 'appFiles'. */
+	hasFileProjection: boolean;
+	download: DownloadByIdResult | null;
+}
+
+interface DownloadByIdResult {
+	/** Query field used to resolve downloadUrl by id, e.g. 'appFile' | 'node' | 'appFiles'. */
 	fileByIdField: string;
 	/**
 	 * Which downloadUrl-by-id resolution shape was discovered:
@@ -57,13 +61,13 @@ export interface UploadCapability {
 	connectionIdOperator?: string;
 	/** connection kind only — the field on the connection object holding the file rows, e.g. 'nodes'. */
 	connectionNodesField?: string;
-	/**
-	 * Delete-by-id mutation for the uploaded file type, e.g. 'deleteAppFile', when the
-	 * schema grants one. Used to remove the row the upload op created when its PUT fails.
-	 */
-	deleteFieldName?: string;
-	/** The delete input object type name, e.g. 'DeleteAppFileInput'. */
-	deleteInputTypeName?: string;
+	connectionHasFirst?: boolean;
+}
+
+interface StorageCapabilities {
+	upload: UploadCapability | null;
+	download: DownloadByIdResult | null;
+	batch: DownloadByIdResult | null;
 }
 
 interface UploadPayload {
@@ -71,6 +75,7 @@ interface UploadPayload {
 	fileId: string;
 	key: string;
 	deduplicated: boolean;
+	file: Omit<SheetsFileValue, 'filename'> & { filename?: string | null };
 }
 
 // ============================================================================
@@ -99,19 +104,24 @@ export async function sha256HexFromBuffer(buffer: ArrayBuffer): Promise<string> 
 // Introspection-based capability discovery (cached per endpoint)
 // ============================================================================
 
-const capabilityCache = new Map<string, Promise<UploadCapability>>();
+let capabilityCache = new WeakMap<SheetsExecuteFn, Map<string, Promise<StorageCapabilities>>>();
 
-/** Test-only: clear the per-endpoint capability cache between cases. */
+/** Test-only: clear cached storage capabilities between cases. */
 export function __resetUploadCapabilityCache(): void {
-	capabilityCache.clear();
+	capabilityCache = new WeakMap();
 }
 
 /**
- * Discover the upload op + downloadUrl-by-id field for an endpoint, by shape.
- * Cached per `endpoint`; concurrent uploads share one in-flight introspection.
+ * Share storage introspection across uploads and previews using this executor
+ * and endpoint. A read-only storage endpoint can still resolve previews.
  */
-export function discoverUploadCapability(endpoint: string, execute: SheetsExecuteFn): Promise<UploadCapability> {
-	const cached = capabilityCache.get(endpoint);
+async function discoverStorageCapabilities(endpoint: string, execute: SheetsExecuteFn): Promise<StorageCapabilities> {
+	let endpoints = capabilityCache.get(execute);
+	if (!endpoints) {
+		endpoints = new Map();
+		capabilityCache.set(execute, endpoints);
+	}
+	const cached = endpoints.get(endpoint);
 	if (cached) return cached;
 
 	const promise = (async () => {
@@ -120,13 +130,24 @@ export function discoverUploadCapability(endpoint: string, execute: SheetsExecut
 		if (!schema) {
 			throw createError.badRequest('Uploads are not enabled for this endpoint.');
 		}
-		return resolveUploadCapability(schema);
+		return resolveStorageCapabilities(schema);
 	})();
 
 	// Don't cache a rejected discovery — let the next attempt retry.
-	promise.catch(() => capabilityCache.delete(endpoint));
-	capabilityCache.set(endpoint, promise);
+	promise.catch(() => endpoints.delete(endpoint));
+	endpoints.set(endpoint, promise);
 	return promise;
+}
+
+export async function discoverUploadCapability(endpoint: string, execute: SheetsExecuteFn): Promise<UploadCapability> {
+	const { upload } = await discoverStorageCapabilities(endpoint, execute);
+	if (!upload) capabilityCache.get(execute)?.delete(endpoint);
+	return requireUploadCapability(upload);
+}
+
+function requireUploadCapability(upload: UploadCapability | null): UploadCapability {
+	if (!upload) throw createError.badRequest('Uploads are not enabled for this endpoint.');
+	return upload;
 }
 
 // --- Minimal introspection shapes (only what discovery reads) ---
@@ -198,9 +219,13 @@ const PK_FIELD_NAME = 'id';
 
 /**
  * Pure resolver over an introspection __schema. Exported for direct unit tests
- * (no fetch). Matches by field/type SHAPE, never by a literal name.
+ * (no fetch). Matches by field/type shape, with an AppFile preference.
  */
 export function resolveUploadCapability(schema: IntrospectionSchema): UploadCapability {
+	return requireUploadCapability(resolveStorageCapabilities(schema).upload);
+}
+
+function resolveStorageCapabilities(schema: IntrospectionSchema): StorageCapabilities {
 	const typeByName = new Map<string, IntrospectionType>();
 	for (const t of schema.types) {
 		if (t.name) typeByName.set(t.name, t);
@@ -222,7 +247,7 @@ export function resolveUploadCapability(schema: IntrospectionSchema): UploadCapa
 		return names.every((n) => present.has(n));
 	};
 
-	const PAYLOAD_FIELDS = ['uploadUrl', 'fileId', 'deduplicated'];
+	const PAYLOAD_FIELDS = ['uploadUrl', 'fileId', 'key', 'deduplicated'];
 	const INPUT_FIELDS = ['contentHash', 'bucketKey', 'contentType', 'size'];
 
 	const mutationType = schema.mutationType ? typeByName.get(schema.mutationType.name) : null;
@@ -232,7 +257,7 @@ export function resolveUploadCapability(schema: IntrospectionSchema): UploadCapa
 	// type carries the upload-input shape and whose payload carries the
 	// upload-payload shape. (The legacy bucket-centric `requestUploadUrl` shape was
 	// removed from the backend on 2026-05-08; only the root upload mutation exists.)
-	let upload: Pick<UploadCapability, 'uploadFieldName' | 'inputTypeName'> | null = null;
+	let upload: Omit<UploadCapability, 'download'> | null = null;
 
 	for (const field of mutationType?.fields ?? []) {
 		const inputArg = field.args.find((a) => a.name === 'input');
@@ -240,102 +265,74 @@ export function resolveUploadCapability(schema: IntrospectionSchema): UploadCapa
 		const inputTypeName = namedTypeName(inputArg.type);
 		const payloadTypeName = namedTypeName(field.type);
 		if (
+			inputTypeName &&
 			inputHasFields(inputTypeName, INPUT_FIELDS) &&
 			objectHasFields(payloadTypeName, PAYLOAD_FIELDS)
 		) {
-			upload = { uploadFieldName: field.name, inputTypeName: inputTypeName as string };
-			break;
+			const payloadFields = typeByName.get(payloadTypeName ?? '')?.fields;
+			const candidate = {
+				uploadFieldName: field.name,
+				inputTypeName,
+				hasFileProjection: payloadFields?.some(
+					(f) => f.name === 'file' && !isListTypeRef(f.type) && namedTypeName(f.type) === 'JSON',
+				) ?? false,
+			};
+			if (field.name === 'uploadAppFile') {
+				upload = candidate;
+				break;
+			}
+			upload ??= candidate;
 		}
 	}
 
-	if (!upload) {
-		throw createError.badRequest('Uploads are not enabled for this endpoint.');
-	}
-
-	// --- File object type + by-id field for downloadUrl ---
-	const downloadById = resolveDownloadByIdField(schema, typeByName, queryType, upload.uploadFieldName);
-
-	// --- Delete-by-id for the uploaded file type (optional) ---
-	// A Mutation field whose `input` carries only `id` (+ clientMutationId) and whose
-	// payload exposes the file type. The update mutation also takes `id` but carries a
-	// patch field, so it never matches.
-	const uploadedTypeName = upload.uploadFieldName.replace(/^upload/, '');
-	const fileTypeName = typeByName.has(uploadedTypeName) ? uploadedTypeName : downloadById.fileTypeName;
-	let remove: Pick<UploadCapability, 'deleteFieldName' | 'deleteInputTypeName'> = {};
-	for (const field of mutationType?.fields ?? []) {
-		const inputArg = field.args.find((a) => a.name === 'input');
-		const inputTypeName = namedTypeName(inputArg?.type);
-		const inputFields = inputTypeName ? typeByName.get(inputTypeName)?.inputFields : null;
-		if (!inputTypeName || !inputFields?.some((f) => f.name === PK_FIELD_NAME)) continue;
-		if (!inputFields.every((f) => f.name === PK_FIELD_NAME || f.name === 'clientMutationId')) continue;
-		const payload = typeByName.get(namedTypeName(field.type) ?? '');
-		if (payload?.fields?.some((f) => namedTypeName(f.type) === fileTypeName)) {
-			remove = { deleteFieldName: field.name, deleteInputTypeName: inputTypeName };
-			break;
+	const fileTypes = new Set<string>();
+	for (const t of schema.types) {
+		if (t.kind === 'OBJECT' && t.name && t.fields?.some((f) => f.name === 'downloadUrl')) {
+			fileTypes.add(t.name);
 		}
 	}
+
+	const uploadType = upload?.uploadFieldName.replace(/^upload/, '') ?? 'AppFile';
+	const uploadDownload = resolveDownloadByIdField(typeByName, queryType, fileTypes, uploadType);
+	const preferredPreviewType = fileTypes.has('AppFile') ? 'AppFile' : uploadType;
+	const previewType = fileTypes.has(preferredPreviewType)
+		? preferredPreviewType
+		: uploadDownload?.fileTypeName ?? preferredPreviewType;
+	const download = previewType === uploadType
+		? uploadDownload
+		: resolveDownloadByIdField(typeByName, queryType, fileTypes, previewType);
+	const batch = resolveConnectionDownloadField(typeByName, queryType, fileTypes, previewType, true);
 
 	return {
-		...upload,
-		...downloadById,
-		...remove,
+		upload: upload ? { ...upload, download: uploadDownload } : null,
+		download,
+		batch,
 	};
 }
 
-/**
- * Best-effort removal of the row the upload op created, for a PUT that failed.
- * Without it, a module that never confirms uploads lists a file whose bytes were
- * never stored. Failures are swallowed: the caller reports the original PUT error.
- */
-export async function deleteUploadedFileRow(
-	execute: SheetsExecuteFn,
-	cap: UploadCapability,
-	fileId: string,
-): Promise<void> {
-	if (!cap.deleteFieldName || !cap.deleteInputTypeName) return;
-	const mutation = `
-		mutation SheetsUploadCleanup($input: ${cap.deleteInputTypeName}!) {
-			${cap.deleteFieldName}(input: $input) { __typename }
-		}
-	`.trim();
-	try {
-		await execute(mutation, { input: { [PK_FIELD_NAME]: fileId } });
-	} catch {
-		// Best effort: the caller rethrows the PUT error, which is the one to report.
-	}
-}
-
-type DownloadByIdResult = Omit<UploadCapability, 'uploadFieldName' | 'inputTypeName'>;
-
 function resolveDownloadByIdField(
-	schema: IntrospectionSchema,
 	typeByName: Map<string, IntrospectionType>,
 	queryType: IntrospectionType | null | undefined,
-	uploadFieldName: string,
-): DownloadByIdResult {
-	// The file object type carries a `downloadUrl` field (grounded on
-	// download-url-field.ts which adds `downloadUrl: String` to @storageFiles).
-	const fileTypesWithDownloadUrl = new Set<string>();
-	for (const t of schema.types) {
-		if (t.kind === 'OBJECT' && t.name && t.fields?.some((f) => f.name === 'downloadUrl')) {
-			fileTypesWithDownloadUrl.add(t.name);
-		}
-	}
-
-	// 1. Prefer the inflected by-id form: a Query field whose return type has a
+	fileTypesWithDownloadUrl: Set<string>,
+	preferred: string,
+): DownloadByIdResult | null {
+	// 1. Look for an inflected by-id form: a Query field whose return type has a
 	//    `downloadUrl` field and that takes a single `id` arg. e.g. appFile(id:).
 	//    The `$id` variable type is the actual scalar of that id arg (NOT a
 	//    hardcoded UUID) — derived by shape.
+	let singular: DownloadByIdResult | null = null;
 	for (const field of queryType?.fields ?? []) {
 		const returnTypeName = namedTypeName(field.type);
 		if (!returnTypeName || !fileTypesWithDownloadUrl.has(returnTypeName)) continue;
 		if (field.args.length === 1 && field.args[0].name === PK_FIELD_NAME) {
-			return {
+			const candidate: DownloadByIdResult = {
 				fileByIdField: field.name,
 				fileByIdArgName: 'id',
 				fileTypeName: returnTypeName,
 				idScalarName: namedTypeName(field.args[0].type) ?? undefined,
 			};
+			if (returnTypeName === preferred) return candidate;
+			singular ??= candidate;
 		}
 	}
 
@@ -347,8 +344,9 @@ function resolveDownloadByIdField(
 	//    nodes field, id scalar) are discovered by SHAPE, never hardcoded.
 	//    Preferred over the Relay node path: it consumes the raw fileId directly,
 	//    so it needs no client-side global-id construction.
-	const connection = resolveConnectionDownloadField(typeByName, queryType, fileTypesWithDownloadUrl, uploadFieldName);
-	if (connection) return connection;
+	const connection = resolveConnectionDownloadField(typeByName, queryType, fileTypesWithDownloadUrl, preferred);
+	if (connection?.fileTypeName === preferred) return connection;
+	if (singular || connection) return singular ?? connection;
 
 	// 3. Relay fallback: `node(nodeId: ID!)`. Last resort — only when neither a
 	//    singular `id` accessor nor a filtered connection exists. Caller spreads
@@ -361,19 +359,18 @@ function resolveDownloadByIdField(
 		// after the upload op (uploadAppFile → AppFile); else the first-declared
 		// downloadUrl-bearing type. (Was alphabetical `.sort()[0]`, which could pick
 		// the wrong type when several expose downloadUrl, e.g. DataRoomFile.)
-		const preferred = uploadFieldName.replace(/^upload/, '');
 		const fileTypeName = fileTypesWithDownloadUrl.has(preferred)
 			? preferred
 			: [...fileTypesWithDownloadUrl][0];
 		return { fileByIdField: 'node', fileByIdArgName: 'nodeId', fileTypeName };
 	}
 
-	throw createError.badRequest('Uploads are not enabled for this endpoint.');
+	return null;
 }
 
 /**
- * Discover a filtered-connection downloadUrl-by-id path. Returns null if the
- * schema exposes no such connection. Supports two filter input styles:
+ * Discover a filtered connection for single or batched download lookups.
+ * The single-file path supports two filter input styles:
  *   (a) operator filter  — `where: { id: { equalTo: $id } }` (connection-filter
  *       plugin): the id field's input type carries an equality operator.
  *   (b) condition filter — `condition: { id: $id }`: the id field is the scalar
@@ -383,7 +380,8 @@ function resolveConnectionDownloadField(
 	typeByName: Map<string, IntrospectionType>,
 	queryType: IntrospectionType | null | undefined,
 	fileTypesWithDownloadUrl: Set<string>,
-	uploadFieldName: string,
+	preferred: string,
+	batch = false,
 ): DownloadByIdResult | null {
 	// Equality operator names we recognize on a filter-input field, in priority
 	// order (exact-match equality first).
@@ -411,6 +409,9 @@ function resolveConnectionDownloadField(
 		});
 		if (!nodesField) continue;
 		const fileTypeName = namedTypeName(nodesField.type) as string;
+		if (batch && (fileTypeName !== preferred ||
+			!typeByName.get(fileTypeName)?.fields?.some((field) => field.name === PK_FIELD_NAME))) continue;
+		const connectionHasFirst = field.args.some((arg) => arg.name === 'first');
 
 		// Find a filter arg whose input type has an `id` field.
 		for (const arg of field.args) {
@@ -427,9 +428,11 @@ function resolveConnectionDownloadField(
 			// operator (e.g. UUIDFilter.equalTo). The `$id` scalar is the operator's
 			// type.
 			if (idFieldType?.kind === 'INPUT_OBJECT' && idFieldType.inputFields) {
-				const opField = EQUALITY_OPERATORS.map((op) =>
-					idFieldType.inputFields!.find((f) => f.name === op),
-				).find((f) => f != null);
+				const opField = batch
+					? idFieldType.inputFields.find((f) => f.name === 'in' && isListTypeRef(f.type))
+					: EQUALITY_OPERATORS.map((op) =>
+						idFieldType.inputFields!.find((f) => f.name === op),
+					).find((f) => f != null);
 				if (opField) {
 					candidates.push({
 						fileByIdField: field.name,
@@ -440,16 +443,17 @@ function resolveConnectionDownloadField(
 						connectionIdField: idField.name,
 						connectionIdOperator: opField.name,
 						connectionNodesField: nodesField.name,
+						connectionHasFirst,
 					});
 					break;
 				}
-				// id field is an input object but with no recognized equality op — skip.
+				// This filter lacks the operator needed for this lookup.
 				continue;
 			}
 
 			// Style (b): the id field is a scalar directly (condition style). The
 			// `$id` scalar is that field's type.
-			if (idFieldType?.kind === 'SCALAR' || (!idFieldType && idFieldTypeName)) {
+			if (!batch && (idFieldType?.kind === 'SCALAR' || (!idFieldType && idFieldTypeName))) {
 				candidates.push({
 					fileByIdField: field.name,
 					fileByIdArgName: 'connection',
@@ -458,6 +462,7 @@ function resolveConnectionDownloadField(
 					connectionFilterArgName: arg.name,
 					connectionIdField: idField.name,
 					connectionNodesField: nodesField.name,
+					connectionHasFirst,
 				});
 				break;
 			}
@@ -472,7 +477,6 @@ function resolveConnectionDownloadField(
 	// lookup-disabled tenant API — so resolving the WRONG file connection (e.g.
 	// reading a DataRoomFile id through appFiles) yields 0 nodes and fails every
 	// upload. Mirrors the node-branch determinism, where it matters far more.
-	const preferred = uploadFieldName.replace(/^upload/, '');
 	return candidates.find((c) => c.fileTypeName === preferred) ?? candidates[0];
 }
 
@@ -481,7 +485,7 @@ function resolveConnectionDownloadField(
 // ============================================================================
 
 interface UploadOpInput {
-	bucketKey: string;
+	bucketKey?: string;
 	contentHash: string;
 	contentType: string;
 	size: number;
@@ -504,12 +508,13 @@ export async function callUploadOp(
 				fileId
 				key
 				deduplicated
+				file
 			}
 		}
 	`.trim();
 	const data = await execute<Record<string, UploadPayload | null>>(mutation, {
 		input: {
-			bucketKey: input.bucketKey,
+			...(input.bucketKey === undefined ? { isPublic: true } : { bucketKey: input.bucketKey }),
 			contentHash: input.contentHash,
 			contentType: input.contentType,
 			size: input.size,
@@ -519,6 +524,13 @@ export async function callUploadOp(
 	const payload = data?.[cap.uploadFieldName];
 	if (!payload) {
 		throw createError.badRequest('Upload failed: no payload returned from upload mutation.');
+	}
+	const file = payload.file;
+	if (
+		!file || typeof file.id !== 'string' || typeof file.key !== 'string' ||
+		typeof file.bucket_id !== 'string' || typeof file.mime !== 'string' || typeof file.size !== 'number'
+	) {
+		throw createError.badRequest('Upload failed: server returned an invalid file projection.');
 	}
 	return payload;
 }
@@ -631,13 +643,12 @@ function toGlobalId(typeName: string, id: string): string {
 }
 
 /**
- * Resolve the stable public download URL for a file id via the discovered
- * by-id field. For public files the backend returns a permanent public URL
- * (its exact path shape is the backend's concern) — stored opaquely in the cell.
+ * Resolve a file's download URL for immediate use. It can be a signed URL
+ * with an expiration, so only the storage projection belongs in the cell.
  */
 export async function fetchDownloadUrl(
 	execute: SheetsExecuteFn,
-	cap: UploadCapability,
+	cap: DownloadByIdResult,
 	fileId: string,
 ): Promise<string> {
 	if (cap.fileByIdArgName === 'nodeId') {
@@ -678,7 +689,7 @@ export async function fetchDownloadUrl(
 			: `{ ${idField}: $id }`;
 		const query = `
 			query SheetsDownloadUrl($id: ${idScalar}!) {
-				${cap.fileByIdField}(${filterArg}: ${filterLiteral}, first: 1) {
+				${cap.fileByIdField}(${filterArg}: ${filterLiteral}${cap.connectionHasFirst ? ', first: 1' : ''}) {
 					${nodesField} {
 						downloadUrl
 					}
@@ -715,6 +726,36 @@ export async function fetchDownloadUrl(
 	return url;
 }
 
+/** Resolve URLs for one batch of visible images. Missing or unreadable IDs have no entry. */
+export async function fetchMediaDownloadUrls(
+	{ endpoint, execute }: SheetsStorageTransport,
+	getActiveIds: () => readonly string[],
+): Promise<Map<string, string>> {
+	const { batch, download } = await discoverStorageCapabilities(endpoint, execute);
+	const ids = getActiveIds();
+	const urls = new Map<string, string>();
+	if (ids.length === 0) return urls;
+	if (batch) {
+		const first = batch.connectionHasFirst ? `, first: ${ids.length}` : '';
+		const query = `query SheetsMediaDownloadUrls($ids: [${batch.idScalarName ?? 'ID'}!]!) {
+			${batch.fileByIdField}(${batch.connectionFilterArgName}: {
+				${batch.connectionIdField}: { in: $ids }
+			}${first}) { ${batch.connectionNodesField} { id downloadUrl } }
+		}`;
+		type FileNode = { id: string; downloadUrl: string | null };
+		const data = await execute<Record<string, Record<string, (FileNode | null)[] | null> | null>>(query, { ids });
+		for (const row of data?.[batch.fileByIdField]?.[batch.connectionNodesField!] ?? []) {
+			if (row?.downloadUrl) urls.set(row.id, row.downloadUrl);
+		}
+	} else if (download) {
+		const results = await Promise.allSettled(ids.map((id) => fetchDownloadUrl(execute, download, id)));
+		results.forEach((result, index) => {
+			if (result.status === 'fulfilled') urls.set(ids[index], result.value);
+		});
+	}
+	return urls;
+}
+
 /**
  * Resolve a file's signed `downloadUrl` by id — the public entry point for callers
  * OUTSIDE the upload flow (e.g. a storage browser fetching the preview/copy link for
@@ -722,7 +763,7 @@ export async function fetchDownloadUrl(
  *
  * `downloadUrl` is a Grafast computed field, so it cannot be selected through the
  * runtime query builder (`buildSelect` intersects the select against pg columns and
- * drops computed fields). This discovers the by-id field once per endpoint (cached)
+ * drops computed fields). This discovers the by-id field using cached introspection
  * and reads it through the SAME resolver the upload path uses. Returns null on any
  * failure — a missing url is not exceptional for the caller (it just disables
  * copy/download), so the throwing internals are swallowed here.
@@ -733,8 +774,8 @@ export async function resolveDownloadUrl(
 	fileId: string,
 ): Promise<string | null> {
 	try {
-		const cap = await discoverUploadCapability(endpoint, execute);
-		return await fetchDownloadUrl(execute, cap, fileId);
+		const { download } = await discoverStorageCapabilities(endpoint, execute);
+		return download ? await fetchDownloadUrl(execute, download, fileId) : null;
 	} catch {
 		return null;
 	}

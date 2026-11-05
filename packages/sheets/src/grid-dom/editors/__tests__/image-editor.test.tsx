@@ -17,7 +17,14 @@ import type { EditorProps } from '../editor-props';
 // The mock also records the props the adapter wired (recordId/isDraftRow/etc.).
 const lastProps: { current: Record<string, unknown> | null } = { current: null };
 const SAVE_DATA: ImageSaveData = {
-	imageData: { url: 'https://cdn.example.com/cat.png', filename: 'cat.png', size: 1234, mime: 'image/png' },
+	imageData: {
+		id: 'file-1',
+		key: 'cat',
+		bucket_id: 'bucket-1',
+		filename: 'cat.png',
+		size: 1234,
+		mime: 'image/png',
+	},
 };
 const SERVER_ROW = { id: 'real-42', name: 'created' };
 
@@ -52,12 +59,13 @@ function makeProps(value: unknown, over: Partial<EditorProps> = {}): EditorProps
 		cell,
 		colKey: 'photo',
 		rowId: 'row-1',
+		rowIdentifier: 'row-1',
 		rowIndex: 0,
 		tableName: 'pets',
 		onCommit: vi.fn(),
 		onCommitPatch: vi.fn(),
 		onCancel: vi.fn(),
-		onSubmitDraftRow: vi.fn().mockResolvedValue(SERVER_ROW),
+		onSubmitDraftRow: vi.fn().mockResolvedValue({ createdRow: SERVER_ROW }),
 		onInvalidateData: vi.fn(),
 		overlay: { maxHeight: 400, flipped: false },
 		...over,
@@ -126,10 +134,10 @@ describe('ImageEditorDom (native EditorProps adapter)', () => {
 	});
 
 	it('draft row: wires onSubmitDraft -> onSubmitDraftRow(rowId) resolving { createdRow }', async () => {
-		const onSubmitDraftRow = vi.fn().mockResolvedValue(SERVER_ROW);
+		const onSubmitDraftRow = vi.fn().mockResolvedValue({ createdRow: SERVER_ROW });
 		await act(async () => {
 			root.render(
-				<ImageEditorDom {...makeProps(null, { rowId: 'draft:abc', onSubmitDraftRow })} />,
+				<ImageEditorDom {...makeProps(null, { rowId: 'draft:abc', rowIdentifier: null, onSubmitDraftRow })} />,
 			);
 		});
 
@@ -137,7 +145,7 @@ describe('ImageEditorDom (native EditorProps adapter)', () => {
 		expect(p.isDraftRow).toBe(true);
 		expect(p.onSubmitDraft).toBeTypeOf('function');
 
-		// Invoke the wrapped draft submit and assert it adapts to a DraftSubmitResult.
+		// The shell already returns the DraftSubmitResult.
 		const result = await (p.onSubmitDraft as () => Promise<{ createdRow: unknown }>)();
 		expect(onSubmitDraftRow).toHaveBeenCalledWith('draft:abc');
 		expect(result).toEqual({ createdRow: SERVER_ROW });

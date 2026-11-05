@@ -23,7 +23,7 @@ export function mapToFrontendCellType(metadata: {
 	// This must be checked FIRST, even for arrays, to preserve types like 'array' vs 'text-array'
 	if (pgAlias) {
 		const aliasType = mapAliasToCellType(pgAlias);
-		if (aliasType !== 'unknown') return aliasType;
+		if (aliasType !== 'unknown' && !(isArray && aliasType === 'attachment')) return aliasType;
 	}
 
 	// Handle arrays after pgAlias check
@@ -80,6 +80,7 @@ function mapAliasToCellType(alias: string): CellType {
 		video: 'video',
 		audio: 'audio',
 		upload: 'upload',
+		attachment: 'attachment',
 
 		// Relation types
 		relation: 'relation',
@@ -234,6 +235,7 @@ function mapBackendTypeToCellType(pgType: string): CellType {
 		url: 'url',
 		image: 'image',
 		upload: 'upload',
+		attachment: 'attachment',
 		origin: 'origin',
 
 		// Arrays are handled by isArray flag

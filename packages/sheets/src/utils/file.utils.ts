@@ -22,6 +22,13 @@ export const getImageUrl = (imageValue: unknown): string | null => {
 	return null;
 };
 
+/** ID from a stored media projection, used only for scoped preview lookups. */
+export function getMediaFileId(value: unknown): string | null {
+	if (!value || typeof value !== 'object') return null;
+	const { id } = value as { id?: unknown };
+	return typeof id === 'string' && id ? id : null;
+}
+
 // Get image metadata from image object
 export const getImageMetadata = (imageValue: unknown) => {
 	if (!imageValue || typeof imageValue !== 'object') return null;
@@ -29,9 +36,8 @@ export const getImageMetadata = (imageValue: unknown) => {
 	const obj = imageValue as Record<string, unknown>;
 	return {
 		filename: (obj.filename as string) || (obj.name as string) || 'Unknown',
-		size: (obj.size as number) || (obj.fileSize as number) || 0,
+		size: typeof obj.size === 'number' ? obj.size : typeof obj.fileSize === 'number' ? obj.fileSize : undefined,
 		mime: (obj.mime as string) || (obj.type as string) || (obj.contentType as string) || 'unknown',
-		url: getImageUrl(imageValue) || '',
 	};
 };
 

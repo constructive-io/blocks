@@ -12,7 +12,7 @@ export type {
 	SheetsAuthStandalone,
 	SheetsScopeKey,
 } from './context/sheets-context';
-export type { SheetsExecuteFn, SheetsUploadFn } from './context/sheets-execute';
+export type { SheetsExecuteFn, SheetsFileValue, SheetsUploadFn, SheetsUploadResult } from './context/sheets-execute';
 export { createSheetsExecute, createSheetsUpload, ConstructiveError } from './context/sheets-execute';
 export { resolveDownloadUrl } from './context/sheets-upload-presigned';
 
@@ -81,7 +81,7 @@ export { useSheetsInfiniteTable } from './hooks/use-sheets-infinite-table';
 export type { UseInfiniteTableOptions, UseInfiniteTableResult } from './hooks/use-sheets-infinite-table';
 export { useSheetsTableCursor } from './hooks/use-sheets-table-cursor';
 export type { UseSheetsTableCursorOptions, UseSheetsTableCursorResult } from './hooks/use-sheets-table-cursor';
-export { useSheetsFieldUpload, useSheetsImageUpload, executeFieldUpload } from './hooks/use-sheets-upload';
+export { useSheetsFieldUpload, executeFieldUpload } from './hooks/use-sheets-upload';
 export type { UploadProgress, UploadResponse, UseFieldUploadOptions } from './hooks/use-sheets-upload';
 export { useRelationColumns, useDataGridColumns } from './hooks/use-relation-columns';
 export type { RelationColumnInfo } from './hooks/use-relation-columns';

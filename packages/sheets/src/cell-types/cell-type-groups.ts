@@ -57,7 +57,7 @@ export const STRUCTURED_DATA_TYPES: Set<string> = new Set([
 ]);
 
 // ─── Media ──────────────────────────────────────────────────────────────────
-export const MEDIA_TYPES: Set<string> = new Set(['image', 'file', 'video', 'audio', 'upload']);
+export const MEDIA_TYPES: Set<string> = new Set(['image', 'file', 'video', 'audio', 'upload', 'attachment']);
 
 // ─── Enhanced scalar types ──────────────────────────────────────────────────
 export const ENHANCED_TYPES: Set<string> = new Set([

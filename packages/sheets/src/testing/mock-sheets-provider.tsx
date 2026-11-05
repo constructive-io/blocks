@@ -26,7 +26,7 @@ import {
 import type { MetaQuery } from '@constructive-io/data';
 
 import { SheetsProvider } from '../context/sheets-provider';
-import type { SheetsExecuteFn, SheetsUploadFn, SheetsUploadOptions } from '../context/sheets-execute';
+import type { SheetsExecuteFn, SheetsUploadFn, SheetsUploadOptions, SheetsUploadResult } from '../context/sheets-execute';
 import { createMetaContractFixture } from './meta-contract-fixture';
 
 // ============================================================================
@@ -344,7 +344,7 @@ export function createMockExecute(opts: MockSheetsOptions): MockExecuteHandle {
 		file: File,
 		path?: string,
 		options?: SheetsUploadOptions,
-	): Promise<{ url: string }> => {
+	): Promise<SheetsUploadResult> => {
 		const name = (file as File)?.name ?? 'file';
 		record({
 			op: 'upload',
@@ -357,7 +357,19 @@ export function createMockExecute(opts: MockSheetsOptions): MockExecuteHandle {
 			},
 			at: Date.now(),
 		});
-		return { url: 'mock://uploaded/' + name };
+		const url = 'mock://uploaded/' + name;
+		return {
+			file: {
+				id: 'mock-file-' + mutations.length,
+				key: name,
+				bucket_id: 'mock-bucket',
+				filename: name,
+				mime: file.type || 'application/octet-stream',
+				size: file.size,
+				url,
+			},
+			url,
+		};
 	};
 
 	function reset() {

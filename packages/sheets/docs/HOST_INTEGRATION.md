@@ -34,11 +34,36 @@ interface SheetsAuthEmbedded {
 1. **HTTP 401** — `config.onAuthError?.()` before `throw createError.unauthorized(...)`
 2. **GraphQL UNAUTHENTICATED** — `onAuthError?.()` inside `parseGraphQLResponse` before returning the error
 
-Both paths also apply to upload requests (`createSheetsUpload`).
+Both paths also apply to GraphQL requests made by the default storage executor.
 
 ### Propagation
 
-`SheetsProvider` passes the full `config` object to `createSheetsExecute` and `createSheetsUpload`. No additional wiring is needed in the provider — adding `onAuthError` to your config is sufficient.
+`SheetsProvider` uses the host's token getter and `onAuthError` to build the
+default data and storage executors. If the host injects an executor or
+uploader, it owns auth handling for requests made through that override.
+
+## Media uploads
+
+Configure the data endpoint as `endpoint` and the tenant's storage endpoint as
+`storage: { endpoint, execute? }`. Upload discovery and signed preview lookups
+use storage, and the cell update uses the data endpoint. An injected
+`executeUpload` takes precedence for uploads. Without either an injected uploader
+or storage, the media editor is read-only.
+
+Sheets requests the public default bucket by omitting `bucketKey` and sending
+`isPublic: true`. A host can set `upload.bucketKey` to select a particular
+bucket. Image and upload fields store the file projection
+`{ id, key, bucket_id, mime, size, filename, url? }`. The editor resolves a
+signed preview when the projection lacks a public URL. Attachment fields store
+only `file.url` as text and require a public bucket with a public URL prefix.
+
+When migrating a host uploader, return `{ file: SheetsFileValue, url?: string }`.
+The optional top-level `url` is for immediate download and may expire. Put a
+durable public URL on `file.url` when the storage service provides one.
+`executeFieldUpload(target, file, transport)` now takes the table, field, and
+typed row identifier in `target`, and the data executor, uploader, and adapter
+in `transport`. It returns the saved cell value and accepts `null` to clear.
+Use `useSheetsFieldUpload` in place of `useSheetsImageUpload`.
 
 ## Auth Error Flow
 
@@ -58,7 +83,7 @@ Both paths also apply to upload requests (`createSheetsUpload`).
 ┌──────────────────────────────┐
 │  SheetsProvider              │
 │  → createSheetsExecute(cfg)  │
-│  → createSheetsUpload(cfg)   │
+│  → storage.execute          │
 └──────────┬───────────────────┘
            │ request fails (401 / UNAUTHENTICATED)
            ▼

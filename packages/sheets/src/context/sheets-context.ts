@@ -21,6 +21,11 @@ export interface SheetsAuthStandalone {
 	mode: 'standalone';
 }
 
+export interface SheetsStorageTransport {
+	endpoint: string;
+	execute: SheetsExecuteFn;
+}
+
 export interface SheetsConfig {
 	/** Data endpoint (app-public GraphQL) */
 	endpoint: string;
@@ -38,7 +43,9 @@ export interface SheetsConfig {
 	execute?: SheetsExecuteFn;
 	/** Optional: inject custom upload function */
 	executeUpload?: SheetsUploadFn;
-	/** Optional upload settings. `bucketKey` defaults to "public". */
+	/** Storage endpoint for media uploads and download URL lookups. */
+	storage?: { endpoint: string; execute?: SheetsExecuteFn };
+	/** Explicit bucket override. Omit to use the tenant's public default. */
 	upload?: { bucketKey?: string };
 	/** Optional: inject existing QueryClient */
 	queryClient?: QueryClient;
@@ -61,6 +68,8 @@ export interface SheetsContextValue {
 	config: SheetsConfig;
 	execute: SheetsExecuteFn;
 	executeUpload: SheetsUploadFn;
+	storage?: SheetsStorageTransport;
+	canUpload: boolean;
 	scopeKey: SheetsScopeKey;
 }
 

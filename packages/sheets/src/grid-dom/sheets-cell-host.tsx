@@ -152,6 +152,7 @@ function toCellProps(props: SheetsCellHostInnerProps, onStartEdit: () => void): 
 		isEditing: props.isEditing,
 		onStartEdit,
 		disabled: false,
+		readOnlyReason: props.resolution.readOnlyReason,
 	};
 }
 
@@ -219,6 +220,7 @@ const SheetsCellHostInner = memo(
 				ref={wrapperRef}
 				id={`sheets-cell-${props.rowIndex}-${props.columnIndex}`}
 				aria-selected={props.isActive || undefined}
+				title={props.resolution.readOnlyReason}
 				onClick={activate}
 				onDoubleClick={startEdit}
 				onContextMenu={contextMenu}
@@ -274,6 +276,8 @@ const SheetsCellHostInner = memo(
 		prev.onActivateCell === next.onActivateCell &&
 		prev.onContextMenu === next.onContextMenu &&
 		prev.onSubmitDraftRow === next.onSubmitDraftRow &&
+		prev.resolution.cell.readonly === next.resolution.cell.readonly &&
+		prev.resolution.readOnlyReason === next.resolution.readOnlyReason &&
 		// styleHint.draft/error and the draft-action status can flip while `value` is
 		// unchanged (validation result arrives, save in flight), so gate on them too.
 		prev.resolution.cell.styleHint?.draft === next.resolution.cell.styleHint?.draft &&
