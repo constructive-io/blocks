@@ -3,6 +3,14 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.4.4](https://github.com/constructive-io/blocks/compare/blocks-renderer@0.4.3...blocks-renderer@0.4.4) (2026-11-05)
+
+**Note:** Version bump only for package blocks-renderer
+
+
+
+
+
 ## [0.4.3](https://github.com/constructive-io/blocks/compare/blocks-renderer@0.4.2...blocks-renderer@0.4.3) (2026-11-03)
 
 **Note:** Version bump only for package blocks-renderer
