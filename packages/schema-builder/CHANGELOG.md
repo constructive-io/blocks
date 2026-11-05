@@ -3,6 +3,23 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.10.0](https://github.com/constructive-io/blocks/compare/@constructive-io/schema-builder@0.9.2...@constructive-io/schema-builder@0.10.0) (2026-11-05)
+
+
+* feat(sheets)!: upload cell media through the tenant storage endpoint ([82bfefd](https://github.com/constructive-io/blocks/commit/82bfefd0d36fb1037e107fdf06def4fcf4e4e151))
+
+
+### BREAKING CHANGES
+
+* SheetsUploadResult is now { file: SheetsFileValue; url?: string }
+instead of { url, ...metadata }, so injected executeUpload functions must return
+the file projection. executeFieldUpload takes (target, file, transport).
+useSheetsImageUpload is removed; use useSheetsFieldUpload.
+
+
+
+
+
 ## [0.9.2](https://github.com/constructive-io/blocks/compare/@constructive-io/schema-builder@0.9.1...@constructive-io/schema-builder@0.9.2) (2026-11-03)
 
 **Note:** Version bump only for package @constructive-io/schema-builder

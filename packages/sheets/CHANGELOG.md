@@ -3,6 +3,29 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.14.0](https://github.com/constructive-io/blocks/compare/@constructive-io/sheets@0.13.1...@constructive-io/sheets@0.14.0) (2026-11-05)
+
+
+### Bug Fixes
+
+* **sheets:** address review findings on media lookups and draft uploads ([5b92757](https://github.com/constructive-io/blocks/commit/5b927578307d3edac2fe229488d228a78578365d))
+* **sheets:** open and close cell editors with the dropdown transition ([285b5fd](https://github.com/constructive-io/blocks/commit/285b5fd7f3cd82cf11bf6add613e6421cb3b59db))
+
+
+* feat(sheets)!: upload cell media through the tenant storage endpoint ([82bfefd](https://github.com/constructive-io/blocks/commit/82bfefd0d36fb1037e107fdf06def4fcf4e4e151))
+
+
+### BREAKING CHANGES
+
+* SheetsUploadResult is now { file: SheetsFileValue; url?: string }
+instead of { url, ...metadata }, so injected executeUpload functions must return
+the file projection. executeFieldUpload takes (target, file, transport).
+useSheetsImageUpload is removed; use useSheetsFieldUpload.
+
+
+
+
+
 ## [0.13.1](https://github.com/constructive-io/blocks/compare/@constructive-io/sheets@0.13.0...@constructive-io/sheets@0.13.1) (2026-11-03)
 
 **Note:** Version bump only for package @constructive-io/sheets
