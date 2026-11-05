@@ -4,7 +4,7 @@
   "title": "Data Feature Pack",
   "description": "A current-_meta-only application data explorer with application-table filtering and spreadsheet CRUD.",
   "dependencies": [
-    "@constructive-io/data@^0.9.4",
+    "@constructive-io/data@^0.9.5",
     "lucide-react"
   ],
   "registryDependencies": [
