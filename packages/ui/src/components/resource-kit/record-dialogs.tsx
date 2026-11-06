@@ -14,13 +14,14 @@ const CLOSED: DialogState = { open: false, record: null };
 type RecordDialogsOptions = {
 	/** Starting values for a new record, e.g. the parent of a related list. */
 	defaultValues?: ResourceRow;
+	readOnly?: boolean;
 	onDeleted?: (id: string) => void;
 	/** The record a detail view shows: the dialogs follow its live row instead of the row they opened with. */
 	record?: ResourceRow | null;
 };
 
 /** The create and edit sheet and the delete confirmation of one resource, with the state that opens them. */
-export function useRecordDialogs(resource: AnyResource, { defaultValues, onDeleted, record }: RecordDialogsOptions = {}) {
+export function useRecordDialogs(resource: AnyResource, { defaultValues, onDeleted, readOnly, record }: RecordDialogsOptions = {}) {
 	const [sheet, setSheet] = React.useState<DialogState>(CLOSED);
 	const [deleting, setDeleting] = React.useState<DialogState>(CLOSED);
 	const dialogs = (
@@ -41,10 +42,11 @@ export function useRecordDialogs(resource: AnyResource, { defaultValues, onDelet
 			/>
 		</>
 	);
+	const { operations } = resource;
 	return {
-		create: () => setSheet({ open: true, record: null }),
-		edit: (row: ResourceRow) => setSheet({ open: true, record: row }),
-		remove: (row: ResourceRow) => setDeleting({ open: true, record: row }),
+		create: !readOnly && operations?.create !== false ? () => setSheet({ open: true, record: null }) : undefined,
+		edit: !readOnly && operations?.update !== false ? (row: ResourceRow) => setSheet({ open: true, record: row }) : undefined,
+		remove: !readOnly && operations?.delete !== false ? (row: ResourceRow) => setDeleting({ open: true, record: row }) : undefined,
 		dialogs,
 	};
 }

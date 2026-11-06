@@ -206,15 +206,17 @@ function PromptInputAction({
 	...props
 }: PromptInputActionProps) {
 	const { disabled } = usePromptInput();
+	// Explicit render keeps the action intact when shadcn installs this for Base UI.
+	const trigger = React.isValidElement(children) ? children : undefined;
 	return (
 		<Tooltip {...props}>
 			<TooltipTrigger
-				asChild
-				// Keep focus on the textarea when interacting with actions.
+				render={trigger}
+				// Keep the composer shell from refocusing the textarea.
 				onClick={(event) => event.stopPropagation()}
 				disabled={disabled}
 			>
-				{children}
+				{trigger ? undefined : children}
 			</TooltipTrigger>
 			<TooltipContent side={side} className={className}>
 				{tooltip}

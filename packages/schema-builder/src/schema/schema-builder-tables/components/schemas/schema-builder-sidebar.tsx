@@ -779,7 +779,7 @@ function OverflowAwareTableName({ name }: OverflowAwareTableNameProps) {
 
 	return (
 		<Tooltip>
-			<TooltipTrigger asChild>{triggerLabel}</TooltipTrigger>
+			<TooltipTrigger render={triggerLabel} />
 			<TooltipContent side='right' align='start'>
 				<span className='text-xs font-medium'>{name}</span>
 			</TooltipContent>

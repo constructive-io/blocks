@@ -33,6 +33,8 @@ export type ResourceField = {
 	/** List and detail display; defaults from `input`. */
 	format?: FieldFormat;
 	required?: boolean;
+	/** Prefill a new date or datetime field from the local clock. Explicit form defaults take precedence. */
+	createDefault?: 'now';
 	/** Shown, never written (e.g. createdAt). */
 	readOnly?: boolean;
 	/** Never shown (e.g. ownerId). */
@@ -94,6 +96,8 @@ export type ResourceDefinition<Row extends Record<string, unknown> = Record<stri
 	/** Text fields the toolbar search covers. */
 	searchFields?: string[];
 	defaultSort?: { field: string; direction: 'asc' | 'desc' };
+	/** Writes shown by the built-in screens. Omit to show all three. */
+	operations?: { create: boolean; update: boolean; delete: boolean };
 	fields: Record<string, ResourceField>;
 	source: ResourceSource<Row>;
 };

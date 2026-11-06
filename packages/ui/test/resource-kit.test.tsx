@@ -234,6 +234,84 @@ async function submit() {
 }
 
 describe('Resource Kit', () => {
+	it('shows only supported writes on lists, details, and related lists', async () => {
+		const { resources } = workspace();
+		const limited = resources.map((resource) => {
+			if (resource.name === 'tasks') return { ...resource, operations: { create: true, update: false, delete: false } };
+			if (resource.name === 'projects') return { ...resource, operations: { create: false, update: true, delete: false } };
+			if (resource.name === 'notes') return { ...resource, operations: { create: false, update: false, delete: false } };
+			return resource;
+		});
+		await render(
+			<>
+				<ResourcePage resource="tasks" />
+				<RecordDetail resource="projects" id="p1" />
+				<ResourcePage resource="notes" filters={{ taskId: 'missing' }} />
+			</>,
+			limited,
+		);
+		await settle();
+
+		const hasButton = (name: string) => [...document.querySelectorAll('button')].some((element) => (element.getAttribute('aria-label') ?? text(element)) === name);
+		expect([...document.querySelectorAll('button[aria-label="New task"]')]).toHaveLength(2);
+		expect(hasButton('Edit Launch')).toBe(true);
+		expect(hasButton('Delete Launch')).toBe(false);
+		expect(text(document.body)).toContain('No notes yet');
+		expect(hasButton('New note')).toBe(false);
+
+		const rowActions = [...document.querySelectorAll<HTMLButtonElement>('button[aria-label="Actions for Write the brief"]')];
+		expect(rowActions).toHaveLength(2);
+		for (const actions of rowActions) {
+			await click(actions);
+			expect([...document.querySelectorAll('[role="menuitem"]')].map(text)).toEqual(['Open']);
+			await act(async () => {
+				document.activeElement?.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+			});
+			await settle();
+		}
+	});
+
+	it('prefills local dates only when creating and preserves explicit starting values', async () => {
+		const localNow = new Date(2026, 10, 6, 0, 5);
+		vi.setSystemTime(localNow);
+		try {
+			const { resources, tasks } = workspace();
+			const dated = resources.map((resource) => resource.name === 'tasks' ? {
+				...resource,
+				formFields: [...resource.formFields, 'happenedAt', 'dueOn', 'scheduledFor'],
+				fields: {
+					...resource.fields,
+					happenedAt: { name: 'happenedAt', label: 'Happened at', input: 'datetime' as const, required: true, createDefault: 'now' as const },
+					dueOn: { name: 'dueOn', label: 'Due', input: 'date' as const, required: true, createDefault: 'now' as const },
+					scheduledFor: { name: 'scheduledFor', label: 'Scheduled for', input: 'date' as const, required: true, createDefault: 'now' as const },
+				},
+			} : resource);
+			await render(<EntityFormSheet resource="tasks" open onOpenChange={() => {}} defaultValues={{ projectId: 'p1', scheduledFor: '2026-12-01' }} />, dated);
+			await settle();
+
+			expect(field('Happened at').value).toBe('2026-11-06T00:05');
+			expect(field('Due').value).toBe('2026-11-06');
+			expect(field('Scheduled for').value).toBe('2026-12-01');
+			await type(field('Title'), 'Kickoff');
+			await submit();
+			expect(tasks.create).toHaveBeenCalledWith(expect.objectContaining({
+				happenedAt: localNow.toISOString(),
+				dueOn: '2026-11-06',
+				scheduledFor: '2026-12-01',
+			}));
+
+			await act(async () => root!.unmount());
+			container!.remove();
+			const existing = await tasks.get('t1');
+			await render(<EntityFormSheet resource="tasks" record={existing} open onOpenChange={() => {}} />, dated);
+			await settle();
+			expect(field('Happened at').value).toBe('');
+			expect(field('Due').value).toBe('');
+		} finally {
+			vi.useRealTimers();
+		}
+	});
+
 	it('creates a related record from a detail view with the parent filled in, mapped values, and a refreshed list', async () => {
 		const { resources, tasks } = workspace();
 		await render(<RecordDetail resource="projects" id="p1" />, resources);

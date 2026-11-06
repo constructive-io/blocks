@@ -65,7 +65,7 @@ function Source({ href, title, description, favicon, domain, showTitle = false, 
 
 	return (
 		<Tooltip>
-			<TooltipTrigger asChild>{chip}</TooltipTrigger>
+			<TooltipTrigger render={chip} />
 			<TooltipContent side="top" className="max-w-xs">
 				<div className="space-y-0.5">
 					<div className="font-medium">{title}</div>

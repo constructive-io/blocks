@@ -31,7 +31,7 @@ export function RelatedList({ parent, parentId, relation, limit, readOnly }: Rel
 	const { resource, field } = relation;
 	const { locale } = useResourceKit();
 	const icon = useResourceIcon(resource);
-	const records = useRecordDialogs(resource, { defaultValues: { [field.name]: parentId } });
+	const records = useRecordDialogs(resource, { readOnly, defaultValues: { [field.name]: parentId } });
 	const query: ListQuery = { sort: resource.defaultSort, offset: 0, limit, filters: { [field.name]: parentId } };
 	const list = useResourceList(resource, query);
 	const failure = queryFailure(list);
@@ -55,12 +55,12 @@ export function RelatedList({ parent, parentId, relation, limit, readOnly }: Rel
 				}
 				description={list.data && total > limit ? `Showing the first ${formatCount(limit, locale)}.` : undefined}
 				actions={
-					readOnly ? null : (
+					records.create ? (
 						<Button size="xs" variant="outline" onClick={records.create} aria-label={`New ${inSentence(resource.singular)}`}>
 							<PlusIcon aria-hidden="true" />
 							<span className="hidden @md/view:inline">New {inSentence(resource.singular)}</span>
 						</Button>
-					)
+					) : null
 				}
 			/>
 			{list.data && total === 0 && !list.isError ? (
@@ -73,8 +73,8 @@ export function RelatedList({ parent, parentId, relation, limit, readOnly }: Rel
 					loading={list.isPending && !list.failureReason}
 					error={failure ? `Couldn’t load ${inSentence(resource.label)}: ${errorMessage(failure)}` : undefined}
 					skeletonRows={Math.min(limit, 3)}
-					onEdit={readOnly ? undefined : records.edit}
-					onDelete={readOnly ? undefined : records.remove}
+					onEdit={records.edit}
+					onDelete={records.remove}
 				/>
 			)}
 			{records.dialogs}
