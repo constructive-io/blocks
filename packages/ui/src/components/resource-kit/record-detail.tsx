@@ -41,7 +41,7 @@ export function RecordDetail({ resource: resourceRef, id, relatedLimit = 5, read
 	const record = useResourceRecord(resource, id);
 	const related = React.useMemo(() => hasManyRelations(resource, resources), [resource, resources]);
 	const row = record.data ?? null;
-	const records = useRecordDialogs(resource, { record: row, onDeleted: () => router.navigate(router.listHref(resource.name)) });
+	const { edit, remove, dialogs } = useRecordDialogs(resource, { readOnly, record: row, onDeleted: () => router.navigate(router.listHref(resource.name)) });
 	const titleOf = useRowTitles(resource, row ? [row] : []);
 	const title = row ? (titleOf(row) ?? '…') : '';
 
@@ -101,24 +101,28 @@ export function RecordDetail({ resource: resourceRef, id, relatedLimit = 5, read
 				label={title || resource.singular}
 				title={breadcrumb}
 				actions={
-					readOnly || !row ? null : (
+					row ? (
 						<>
-							<Button size="sm" variant="outline" className="h-7" onClick={() => records.edit(row)} aria-label={`Edit ${title}`}>
-								<PencilIcon aria-hidden="true" />
-								<span className="hidden @md/view:inline">Edit</span>
-							</Button>
-							<Button size="sm" variant="destructive-outline" className="h-7" onClick={() => records.remove(row)} aria-label={`Delete ${title}`}>
-								<Trash2Icon aria-hidden="true" />
-								<span className="hidden @md/view:inline">Delete</span>
-							</Button>
+							{edit ? (
+								<Button size="sm" variant="outline" className="h-7" onClick={() => edit(row)} aria-label={`Edit ${title}`}>
+									<PencilIcon aria-hidden="true" />
+									<span className="hidden @md/view:inline">Edit</span>
+								</Button>
+							) : null}
+							{remove ? (
+								<Button size="sm" variant="destructive-outline" className="h-7" onClick={() => remove(row)} aria-label={`Delete ${title}`}>
+									<Trash2Icon aria-hidden="true" />
+									<span className="hidden @md/view:inline">Delete</span>
+								</Button>
+							) : null}
 						</>
-					)
+					) : null
 				}
 				maxWidth="max-w-4xl"
 			>
 				{body}
 			</ViewFrame>
-			{row ? records.dialogs : null}
+			{row ? dialogs : null}
 		</div>
 	);
 }

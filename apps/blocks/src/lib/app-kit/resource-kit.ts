@@ -134,7 +134,13 @@ export function ContactPage({ id }: { id: string }) {
       name: 'defineResource(definition)',
       type: 'ResourceDefinition<Row>',
       behavior:
-        'Names a table (name, label, singular, icon, primaryKey, titleField), its list columns, form and detail fields, search fields, default sort, field definitions, and source.',
+        'Names a table, its fields, and its source. Set operations to { create, update, delete } to show only supported writes in the built-in list, detail, and related views. Omitting it keeps all three actions available.',
+    },
+    {
+      name: 'ResourceField.createDefault',
+      type: "'now'",
+      behavior:
+        'Prefills a date or datetime control from the reader’s local clock when a create form opens. An explicit form default takes precedence, and edit forms read the stored value.',
     },
     {
       name: 'ResourceSource',

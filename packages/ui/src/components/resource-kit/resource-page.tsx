@@ -44,7 +44,7 @@ export function ResourcePage({ resource: resourceRef, pageSize = 25, filters, re
 	const debounced = useDebounce(search.trim(), 250);
 	const [sort, setSort] = React.useState(resource.defaultSort);
 	const [offset, setOffset] = React.useState(0);
-	const records = useRecordDialogs(resource);
+	const records = useRecordDialogs(resource, { readOnly });
 
 	// A new search or sort starts from the first page, adjusted during render rather than in an effect.
 	const pageKey = `${debounced}\u0000${sort?.field}\u0000${sort?.direction}`;
@@ -80,14 +80,14 @@ export function ResourcePage({ resource: resourceRef, pageSize = 25, filters, re
 				className="rounded-xl bg-card shadow-card"
 				icon={icon}
 				title={`No ${noun} yet`}
-				description={readOnly ? undefined : `Create the first ${singular} to see it here.`}
+				description={records.create ? `Create the first ${singular} to see it here.` : undefined}
 				action={
-					readOnly ? undefined : (
+					records.create ? (
 						<Button size="sm" onClick={records.create}>
 							<PlusIcon aria-hidden="true" />
 							New {singular}
 						</Button>
-					)
+					) : undefined
 				}
 			/>
 		);
@@ -115,8 +115,8 @@ export function ResourcePage({ resource: resourceRef, pageSize = 25, filters, re
 				skeletonRows={Math.min(pageSize, 8)}
 				sort={sort}
 				onSortChange={setSort}
-				onEdit={readOnly ? undefined : records.edit}
-				onDelete={readOnly ? undefined : records.remove}
+				onEdit={records.edit}
+				onDelete={records.remove}
 				className={cn(list.isPlaceholderData && 'opacity-70 transition-opacity')}
 			/>
 		);
@@ -134,12 +134,12 @@ export function ResourcePage({ resource: resourceRef, pageSize = 25, filters, re
 					</span>
 				}
 				actions={
-					readOnly ? null : (
+					records.create ? (
 						<Button size="sm" className="h-7" onClick={records.create} aria-label={`New ${singular}`}>
 							<PlusIcon aria-hidden="true" />
 							<span className="hidden @md/view:inline">New {singular}</span>
 						</Button>
-					)
+					) : null
 				}
 				className="gap-3 @3xl/view:py-5"
 			>

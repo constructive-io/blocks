@@ -20,9 +20,8 @@ export function formFieldsFor(resource: AnyResource, mode: FormMode): ResourceFi
 
 const pad = (value: number) => String(value).padStart(2, '0');
 
-/** An ISO timestamp as a `datetime-local` value in the reader's time zone. */
-function toLocalDateTime(value: string): string {
-	const date = new Date(value);
+/** A date as a `datetime-local` value in the reader's time zone. */
+function toLocalDateTime(date: Date): string {
 	if (Number.isNaN(date.getTime())) return '';
 	return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
 }
@@ -38,7 +37,7 @@ function toFormValue(field: ResourceField, value: unknown): FormValue {
 		case 'date':
 			return /^\d{4}-\d{2}-\d{2}/.exec(String(value))?.[0] ?? '';
 		case 'datetime':
-			return toLocalDateTime(String(value));
+			return toLocalDateTime(new Date(String(value)));
 		case 'time':
 			return String(value).slice(0, 5);
 		case 'json':
@@ -50,7 +49,7 @@ function toFormValue(field: ResourceField, value: unknown): FormValue {
 
 /**
  * The form's starting values: the record's (when editing), then any defaults
- * (e.g. the parent of a related list), then empty controls.
+ * (e.g. the parent of a related list), then create defaults or empty controls.
  */
 export function initialFormValues(
 	fields: readonly ResourceField[],
@@ -59,9 +58,15 @@ export function initialFormValues(
 	linked?: Record<string, string[]>,
 ): FormValues {
 	const values: FormValues = {};
+	let localNow: string | undefined;
 	for (const field of fields) {
 		const source = linked && isManyRelation(field) && field.name in linked ? linked[field.name] : record?.[field.name] ?? defaults?.[field.name];
-		values[field.name] = toFormValue(field, source);
+		if (!record && source === undefined && field.createDefault === 'now' && (field.input === 'date' || field.input === 'datetime')) {
+			localNow ??= toLocalDateTime(new Date());
+			values[field.name] = field.input === 'date' ? localNow.slice(0, 10) : localNow;
+		} else {
+			values[field.name] = toFormValue(field, source);
+		}
 	}
 	return values;
 }
