@@ -119,10 +119,11 @@ function MessageAction({
 	side = 'top',
 	...props
 }: MessageActionProps) {
+	const trigger = React.isValidElement(children) ? children : undefined;
 	return (
 		<TooltipProvider>
 			<Tooltip {...props}>
-				<TooltipTrigger asChild>{children}</TooltipTrigger>
+				<TooltipTrigger render={trigger}>{trigger ? undefined : children}</TooltipTrigger>
 				<TooltipContent side={side} className={className}>
 					{tooltip}
 				</TooltipContent>
