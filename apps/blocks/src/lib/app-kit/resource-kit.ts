@@ -138,9 +138,9 @@ export function ContactPage({ id }: { id: string }) {
     },
     {
       name: 'ResourceField.createDefault',
-      type: "'now'",
+      type: "'now' | { value }",
       behavior:
-        'Prefills a date or datetime control from the reader’s local clock when a create form opens. An explicit form default takes precedence, and edit forms read the stored value.',
+        'Prefills a create form: \'now\' sets a date or datetime control from the reader’s local clock, and { value } sets any control to that value, such as the column’s database default. An explicit form default takes precedence, and edit forms read the stored value.',
     },
     {
       name: 'ResourceSource',
