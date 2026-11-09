@@ -64,6 +64,8 @@ export function initialFormValues(
 		if (!record && source === undefined && field.createDefault === 'now' && (field.input === 'date' || field.input === 'datetime')) {
 			localNow ??= toLocalDateTime(new Date());
 			values[field.name] = field.input === 'date' ? localNow.slice(0, 10) : localNow;
+		} else if (!record && source === undefined && typeof field.createDefault === 'object') {
+			values[field.name] = toFormValue(field, field.createDefault.value);
 		} else {
 			values[field.name] = toFormValue(field, source);
 		}

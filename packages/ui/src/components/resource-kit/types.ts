@@ -33,8 +33,12 @@ export type ResourceField = {
 	/** List and detail display; defaults from `input`. */
 	format?: FieldFormat;
 	required?: boolean;
-	/** Prefill a new date or datetime field from the local clock. Explicit form defaults take precedence. */
-	createDefault?: 'now';
+	/**
+	 * What a create form starts on: `'now'` prefills a date or datetime field from
+	 * the local clock; `{ value }` prefills any field with that value (a column's
+	 * database default, say). Explicit form defaults take precedence.
+	 */
+	createDefault?: 'now' | { value: string | number | boolean };
 	/** Shown, never written (e.g. createdAt). */
 	readOnly?: boolean;
 	/** Never shown (e.g. ownerId). */

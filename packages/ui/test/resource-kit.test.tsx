@@ -312,6 +312,41 @@ describe('Resource Kit', () => {
 		}
 	});
 
+	it('starts a create form on each value default, and leaves edit forms on the stored values', async () => {
+		const { resources, tasks } = workspace();
+		const defaulted = resources.map((resource) => resource.name === 'tasks' ? {
+			...resource,
+			formFields: [...resource.formFields, 'priority'],
+			fields: {
+				...resource.fields,
+				estimate: { ...resource.fields.estimate, createDefault: { value: 3 } },
+				priority: {
+					name: 'priority',
+					label: 'Priority',
+					input: 'select' as const,
+					options: [{ value: 'low', label: 'Low' }, { value: 'medium', label: 'Medium' }],
+					createDefault: { value: 'medium' },
+				},
+			},
+		} : resource);
+		await render(<EntityFormSheet resource="tasks" open onOpenChange={() => {}} defaultValues={{ projectId: 'p1' }} />, defaulted);
+		await settle();
+
+		expect(field('Estimate').value).toBe('3');
+		expect(text(field('Priority'))).toContain('Medium');
+		await type(field('Title'), 'Kickoff');
+		await submit();
+		expect(tasks.create).toHaveBeenCalledWith(expect.objectContaining({ estimate: 3, priority: 'medium' }));
+
+		await act(async () => root!.unmount());
+		container!.remove();
+		const existing = await tasks.get('t1');
+		await render(<EntityFormSheet resource="tasks" record={existing} open onOpenChange={() => {}} />, defaulted);
+		await settle();
+		expect(field('Estimate').value).toBe(String(existing?.estimate ?? ''));
+		expect(text(field('Priority'))).not.toContain('Medium');
+	});
+
 	it('creates a related record from a detail view with the parent filled in, mapped values, and a refreshed list', async () => {
 		const { resources, tasks } = workspace();
 		await render(<RecordDetail resource="projects" id="p1" />, resources);
