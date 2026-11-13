@@ -76,12 +76,14 @@ export async function loadWorkspaces(
   const canCreate = active && (asBoolean(appMembership?.isAdmin) ||
     hasEffectiveCapability(appMembership, appCapabilities, 'create_entity'));
   return {
-    workspaces: [
-      { id: userId, name: 'Personal', personal: true },
-      ...organizations.sort((a, b) => a.name.localeCompare(b.name))
-    ],
+    workspaces: orderedWorkspaces([{ id: userId, name: 'Personal', personal: true }, ...organizations]),
     canCreate
   };
+}
+
+/** The switcher's order: the personal workspace, then organizations by name. */
+export function orderedWorkspaces(workspaces: readonly Workspace[]): Workspace[] {
+  return [...workspaces].sort((a, b) => Number(b.personal) - Number(a.personal) || a.name.localeCompare(b.name));
 }
 
 const CREATE_ORGANIZATION = /* GraphQL */ `

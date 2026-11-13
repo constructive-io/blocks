@@ -1,6 +1,7 @@
 'use client';
 
 import * as React from 'react';
+import { flushSync } from 'react-dom';
 import { BuildingIcon, CheckIcon, ChevronsUpDownIcon, PlusIcon, UserRoundIcon } from 'lucide-react';
 
 import { Button } from '@constructive-io/ui/button';
@@ -24,7 +25,7 @@ import { Input } from '@constructive-io/ui/input';
 import { normalizeFeaturePackError, type FeaturePackError } from '../feature-packs/shared/feature-pack-contracts';
 import { useScopeRuntime } from './scope-access-provider';
 import { scopeNames } from './scope-names';
-import { createOrganization, loadWorkspaces, type Workspace } from './workspace-load';
+import { createOrganization, loadWorkspaces, orderedWorkspaces, type Workspace } from './workspace-load';
 import {
   activeWorkspaceId,
   setActiveWorkspace,
@@ -98,6 +99,13 @@ export function WorkspaceProvider({
     select: (id) => setActiveWorkspace(scope, id),
     create: async (name) => {
       const created = await createOrganization(runtime, names, name);
+      // The store renders apart from React state, so the list must hold the
+      // organization before it becomes active: the fallback above resets a
+      // choice the list doesn't have, and the reload comes later.
+      flushSync(() => setLoaded((current) => current && {
+        ...current,
+        workspaces: orderedWorkspaces([...current.workspaces.filter((w) => w.id !== created.id), created])
+      }));
       setActiveWorkspace(scope, created.id);
       setVersion((current) => current + 1);
       return created;
