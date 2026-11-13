@@ -161,8 +161,8 @@ export function ContactPage({ id }: { id: string }) {
     },
     {
       name: 'RecordDetail',
-      type: '{ resource, id, relatedLimit?, readOnly? }',
-      behavior: 'One record with its fields, a list for every resource that belongs to it, and edit and delete. Deleting navigates back to the list.',
+      type: '{ resource, id, relatedLimit?, readOnly?, children? }',
+      behavior: 'One record with its fields, a list for every resource that belongs to it, and edit and delete; children render under the related lists once the record has loaded. Deleting navigates back to the list.',
     },
     {
       name: 'EntityFormSheet',

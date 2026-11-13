@@ -25,6 +25,8 @@ export type RecordDetailProps = {
 	/** Hides edit, delete, and the related lists' create buttons. */
 	readOnly?: boolean;
 	className?: string;
+	/** Sections under the related lists once the record has loaded, e.g. an entity's members and files. */
+	children?: React.ReactNode;
 };
 
 /** Long values read better stacked under their label than squeezed beside it. */
@@ -34,7 +36,7 @@ const isLong = (field: ResourceField) => field.input === 'textarea' || field.inp
  * One record: its fields, a list for every resource that belongs to it
  * (has-many), and edit and delete. Deleting returns to the list.
  */
-export function RecordDetail({ resource: resourceRef, id, relatedLimit = 5, readOnly = false, className }: RecordDetailProps) {
+export function RecordDetail({ resource: resourceRef, id, relatedLimit = 5, readOnly = false, className, children }: RecordDetailProps) {
 	const resource = useResourceDefinition(resourceRef);
 	const icon = useResourceIcon(resource);
 	const { router, resources } = useResourceKit();
@@ -90,6 +92,7 @@ export function RecordDetail({ resource: resourceRef, id, relatedLimit = 5, read
 						readOnly={readOnly}
 					/>
 				))}
+				{children}
 			</>
 		);
 	}
