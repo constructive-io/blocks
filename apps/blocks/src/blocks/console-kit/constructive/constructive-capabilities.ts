@@ -102,39 +102,10 @@ const CURRENT_INTROSPECTION_SECTIONS = new Set<
   'directives'
 ]);
 
-export type ConstructiveMutationObjectInput = Readonly<{
-  field: string;
-  requiredFields: readonly string[];
-}>;
-
-/**
- * Confirms the generated mutation input accepts every field an adapter sends.
- * A mutation root alone is not enough: different presets can expose the root
- * while omitting optional modules and their nested input fields.
- */
-export function supportsConstructiveMutationInput(
-  schema: ConstructiveSchemaSnapshot | undefined,
-  mutation: string,
-  requiredInputFields: readonly string[],
-  objectInput?: ConstructiveMutationObjectInput
-): boolean {
-  const mutationField = schema?.mutationFields[mutation];
-  const inputArgument = mutationField?.args.find((argument) => argument.name === 'input');
-  const inputTypeName = namedTypeName(inputArgument?.type);
-  const inputType = inputTypeName ? schema?.types[inputTypeName] : undefined;
-  if (!inputType) return false;
-
-  const inputFields = new Map(inputType.inputFields.map((field) => [field.name, field]));
-  if (!requiredInputFields.every((field) => inputFields.has(field))) return false;
-  if (!objectInput) return true;
-
-  const objectField = inputFields.get(objectInput.field);
-  const objectTypeName = namedTypeName(objectField?.type);
-  const objectType = objectTypeName ? schema?.types[objectTypeName] : undefined;
-  if (!objectType) return false;
-  const objectFields = new Set(objectType.inputFields.map((field) => field.name));
-  return objectInput.requiredFields.every((field) => objectFields.has(field));
-}
+export {
+  supportsConstructiveMutationInput,
+  type ConstructiveMutationObjectInput
+} from './constructive-graphql';
 
 function discoveryKey(runtime: ConsoleKitAdapterContext): string {
   const identity = getConsoleSessionIdentity(runtime.session);
