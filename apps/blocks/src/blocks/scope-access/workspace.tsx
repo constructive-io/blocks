@@ -116,6 +116,11 @@ export function useWorkspace(): WorkspaceState {
   return state;
 }
 
+/** The workspace state under a WorkspaceProvider, else null: for parts that work with or without one. */
+export function useWorkspaceOrNull(): WorkspaceState | null {
+  return React.useContext(WorkspaceContext);
+}
+
 /** Picks the active workspace, and starts an organization when the app allows it. */
 export function WorkspaceSwitcher({ onError }: Readonly<{ onError?: (error: FeaturePackError) => void }>) {
   const { workspaces, active, canCreate, select, create, loading } = useWorkspace();
