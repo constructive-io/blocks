@@ -15,6 +15,7 @@ const respond = (data: unknown) => new Response(JSON.stringify({ data }), {
 // and the workspace list reloads only when the test lets it.
 function backend() {
   let created = false;
+  let failing = false;
   let releaseReload: () => void = () => {};
   const reloadReleased = new Promise<void>((resolve) => {
     releaseReload = resolve;
@@ -28,6 +29,7 @@ function backend() {
       case 'ConsoleKitOrgNewOwner':
         return respond({ orgMemberships: { nodes: [{ actorId: 'owner-1', isOwner: true, isActive: true }] } });
       case 'ConsoleKitOrgWorkspaces':
+        if (failing) return new Response('{}', { status: 503 });
         if (!created) return respond({ orgMemberships: { nodes: [] } });
         await reloadReleased;
         return respond({ orgMemberships: { nodes: [{ entityId: 'org-1', isActive: true }] } });
@@ -39,7 +41,13 @@ function backend() {
         return respond({ appCapabilities: { nodes: [] } });
     }
   };
-  return { fetch, releaseReload: () => releaseReload() };
+  return {
+    fetch,
+    releaseReload: () => releaseReload(),
+    fail: () => {
+      failing = true;
+    }
+  };
 }
 
 function renderWorkspaces(fetch: typeof globalThis.fetch) {
@@ -79,5 +87,25 @@ describe('WorkspaceProvider', () => {
     await waitFor(() => expect(workspaces.current!.loading).toBe(false));
     expect(screen.getByTestId('active')).toHaveTextContent('Acme Ventures');
     expect(activeWorkspaceId('org')).toBe('org-1');
+  });
+
+  it('keeps the chosen organization when the list fails to load', async () => {
+    const owner = backend();
+    const workspaces = renderWorkspaces(owner.fetch);
+    await waitFor(() => expect(screen.getByTestId('active')).toHaveTextContent('Personal'));
+    await act(async () => {
+      await workspaces.current!.create('Acme Ventures');
+    });
+    await act(async () => owner.releaseReload());
+    await waitFor(() => expect(workspaces.current!.workspaces).toHaveLength(2));
+
+    // An expired session or a slow backend says nothing about the user's organizations.
+    owner.fail();
+    await act(async () => {
+      workspaces.current!.reload();
+      await new Promise((resolve) => setTimeout(resolve, 50));
+    });
+    expect(activeWorkspaceId('org')).toBe('org-1');
+    expect(screen.getByTestId('active')).toHaveTextContent('Acme Ventures');
   });
 });

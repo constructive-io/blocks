@@ -70,16 +70,26 @@ export function WorkspaceProvider({
 
   React.useEffect(() => {
     const controller = new AbortController();
-    loadWorkspaces(runtime, names, controller.signal)
-      .then((result) => {
-        if (!controller.signal.aborted) setLoaded(result);
-      })
-      .catch(() => {
-        if (!controller.signal.aborted && userId) {
-          setLoaded({ workspaces: [{ id: userId, name: 'Personal', personal: true }], canCreate: false });
-        }
-      });
-    return () => controller.abort();
+    let retry: ReturnType<typeof setTimeout> | undefined;
+    const load = (attempt: number) => {
+      loadWorkspaces(runtime, names, controller.signal)
+        .then((result) => {
+          if (!controller.signal.aborted) setLoaded(result);
+        })
+        .catch(() => {
+          // A failed load (an expired session, a slow backend) says nothing
+          // about the user's organizations: the list and the choice stay as
+          // they are, since the fallback below would reset a choice the list
+          // lacks, and a later load decides.
+          if (controller.signal.aborted) return;
+          retry = setTimeout(() => load(attempt + 1), Math.min(30_000, 2_000 * 2 ** attempt));
+        });
+    };
+    load(0);
+    return () => {
+      controller.abort();
+      clearTimeout(retry);
+    };
   }, [runtime, names, userId, version]);
 
   const workspaces = loaded?.workspaces ?? [];
