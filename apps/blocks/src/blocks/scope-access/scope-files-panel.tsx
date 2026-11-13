@@ -36,7 +36,7 @@ export function ScopeFilesPanel({ scope, entityId, onError, className }: ScopeFi
       setBucketKey(key);
       setVersion((current) => current + 1);
     };
-    loadScopeSchemas(runtime)
+    loadScopeSchemas(runtime, ['data'])
       .then((schemas) => loadScopeFiles(runtime, schemas, { names, entityId }, bucketKey, onChange, controller.signal))
       .then((next) => {
         if (!controller.signal.aborted) setView(next);

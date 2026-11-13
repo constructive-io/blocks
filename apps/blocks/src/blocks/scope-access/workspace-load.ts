@@ -3,7 +3,7 @@ import {
   executeConstructiveGraphQL
 } from '../console-kit/constructive/constructive-graphql';
 import { asBoolean, asRecord, asString, hasEffectiveCapability } from '../console-kit/constructive/constructive-values';
-import type { ScopeRuntime, ScopeSchemas } from './scope-access-load';
+import type { ScopeRuntime } from './scope-access-load';
 import { scopeField, type ScopeNames } from './scope-names';
 
 /**
@@ -22,11 +22,11 @@ export type LoadedWorkspaces = Readonly<{
 /**
  * The workspaces of the signed-in user in a users-table scope (`org`): the
  * personal one, then each organization where their membership is active, by
- * the names the auth API shows.
+ * the names the auth API shows. It reads only rows, never a schema, since
+ * every page of an app with a switcher loads it.
  */
 export async function loadWorkspaces(
   runtime: ScopeRuntime,
-  schemas: ScopeSchemas,
   names: ScopeNames,
   signal: AbortSignal
 ): Promise<LoadedWorkspaces> {
@@ -39,26 +39,23 @@ export async function loadWorkspaces(
       nodeSelection: 'entityId isActive',
       equalTo: { actorId: userId }
     }, signal),
-    schemas.auth?.queryFields.users
-      ? executeConstructiveConnectionQuery(runtime, 'auth', {
-          operationName: 'ConsoleKitWorkspaceNames',
-          fieldName: 'users',
-          nodeSelection: 'id displayName username type'
-        }, signal).catch((): Record<string, unknown>[] => [])
-      : Promise.resolve([]),
+    // Names are a nicety: without them, an organization shows by its id.
+    executeConstructiveConnectionQuery(runtime, 'auth', {
+      operationName: 'ConsoleKitWorkspaceNames',
+      fieldName: 'users',
+      nodeSelection: 'id displayName username'
+    }, signal).catch((): Record<string, unknown>[] => []),
     executeConstructiveConnectionQuery(runtime, 'admin', {
       operationName: 'ConsoleKitWorkspaceAppMembership',
       fieldName: 'appMemberships',
       nodeSelection: 'actorId isActive isAdmin capabilities',
       equalTo: { actorId: userId }
     }, signal).catch((): Record<string, unknown>[] => []),
-    schemas.admin?.queryFields.appCapabilities
-      ? executeConstructiveConnectionQuery(runtime, 'admin', {
-          operationName: 'ConsoleKitWorkspaceAppCapabilities',
-          fieldName: 'appCapabilities',
-          nodeSelection: 'name bitstr'
-        }, signal).catch((): Record<string, unknown>[] => [])
-      : Promise.resolve([])
+    executeConstructiveConnectionQuery(runtime, 'admin', {
+      operationName: 'ConsoleKitWorkspaceAppCapabilities',
+      fieldName: 'appCapabilities',
+      nodeSelection: 'name bitstr'
+    }, signal).catch((): Record<string, unknown>[] => [])
   ]);
   const userById = new Map(users.flatMap((user) => {
     const id = asString(user.id);

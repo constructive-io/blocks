@@ -199,14 +199,17 @@ describe('pending invitations', () => {
       fields: [{ name: 'nodes', args: [], type: { kind: 'LIST', ofType: { kind: 'OBJECT', name: `${name}Record` } } }],
       inputFields: []
     });
-    const admin = snapshot('admin', ['membershipTypes', 'myPendingAppInvites', 'myPendingDataRoomInvites'], {}, [
+    const base = snapshot('admin', ['membershipTypes'], {}, [
       connection('MyPendingAppInvites'),
       connection('MyPendingDataRoomInvites'),
       objectType('MyPendingAppInvitesRecord', ['id', 'senderId', 'expiresAt']),
       objectType('MyPendingDataRoomInvitesRecord', ['id', 'entityId', 'senderId', 'expiresAt'])
     ]);
-    admin.queryFields.myPendingAppInvites = { name: 'myPendingAppInvites', args: [], type: { kind: 'OBJECT', name: 'MyPendingAppInvitesConnection' } };
-    admin.queryFields.myPendingDataRoomInvites = { name: 'myPendingDataRoomInvites', args: [], type: { kind: 'OBJECT', name: 'MyPendingDataRoomInvitesConnection' } };
+    const root = (name: string) => ({ name, args: [], type: { kind: 'OBJECT', name: `${name[0]!.toUpperCase()}${name.slice(1)}Connection` } });
+    const admin = {
+      ...base,
+      queryFields: { ...base.queryFields, myPendingAppInvites: root('myPendingAppInvites'), myPendingDataRoomInvites: root('myPendingDataRoomInvites') }
+    };
     const calls: Call[] = [];
     const run = runtime((call) => {
       if (call.document.includes('membershipTypes')) {

@@ -48,30 +48,41 @@ export function createScopeRuntime(host: ScopeHost): ScopeRuntime {
   };
 }
 
-const schemaCache = new WeakMap<ScopeRuntime, Promise<ScopeSchemas>>();
+type SchemaKind = 'admin' | 'auth' | 'data';
+
+// One introspection per endpoint and signed-in user for the life of the page:
+// panels mount and unmount as the user moves around, and a schema is large.
+const schemaCache = new Map<string, Promise<ScopeSchemas[SchemaKind]>>();
+
+function inspectOnce(runtime: ScopeRuntime, kind: SchemaKind): Promise<ScopeSchemas[SchemaKind]> {
+  const endpoint = runtime.endpoints[kind];
+  if (!endpoint) return Promise.resolve(undefined);
+  const subject = runtime.session.status === 'authenticated' ? runtime.session.identity.subjectId : '';
+  const key = `${kind}\n${endpoint.url}\n${subject}`;
+  const cached = schemaCache.get(key);
+  if (cached) return cached;
+  const loading = inspectConstructiveSchema(runtime, kind);
+  // A failed introspection is tried again on the next load, not kept.
+  loading.catch(() => schemaCache.delete(key));
+  schemaCache.set(key, loading);
+  return loading;
+}
 
 /**
- * The admin, auth and app (`data`) schemas the scope blocks check their reads
- * and writes against, introspected once per runtime. Without an auth schema
- * the members show without names or emails; without the app's, no files.
+ * The schemas a scope block checks its reads and writes against: only the
+ * endpoints it names. The admin schema is required when asked for; without
+ * the auth schema members show without names or emails, and without the
+ * app's (`data`) there are no files.
  */
-export function loadScopeSchemas(runtime: ScopeRuntime): Promise<ScopeSchemas> {
-  const cached = schemaCache.get(runtime);
-  if (cached) return cached;
-  const optional = (kind: 'auth' | 'data') => runtime.endpoints[kind]
-    ? inspectConstructiveSchema(runtime, kind).catch(() => undefined)
-    : Promise.resolve(undefined);
-  const loading = Promise.all([
-    inspectConstructiveSchema(runtime, 'admin'),
-    optional('auth'),
-    optional('data')
-  ]).then(([admin, auth, data]): ScopeSchemas => ({
-    admin,
-    ...(auth ? { auth } : {}),
-    ...(data ? { data } : {})
+export async function loadScopeSchemas(
+  runtime: ScopeRuntime,
+  kinds: readonly SchemaKind[]
+): Promise<ScopeSchemas> {
+  const loaded = await Promise.all(kinds.map(async (kind) => {
+    const schema = kind === 'admin'
+      ? await inspectOnce(runtime, kind)
+      : await inspectOnce(runtime, kind).catch(() => undefined);
+    return [kind, schema] as const;
   }));
-  // A failed introspection is tried again on the next load, not cached.
-  loading.catch(() => schemaCache.delete(runtime));
-  schemaCache.set(runtime, loading);
-  return loading;
+  return Object.fromEntries(loaded.filter(([, schema]) => schema)) as ScopeSchemas;
 }

@@ -58,7 +58,7 @@ export function ScopeAccessPanel({
     const controller = new AbortController();
     const target = { names, entityId };
     const reload = () => setVersion((current) => current + 1);
-    loadScopeSchemas(runtime)
+    loadScopeSchemas(runtime, ['admin', 'auth'])
       .then(async (schemas): Promise<ScopeAccessView> => {
         const directory = await loadScopeAccess(runtime, schemas, target, controller.signal);
         return scopeAccessView(runtime, schemas, target, directory, reload);

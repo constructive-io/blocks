@@ -24,7 +24,6 @@ import { Input } from '@constructive-io/ui/input';
 import { normalizeFeaturePackError, type FeaturePackError } from '../feature-packs/shared/feature-pack-contracts';
 import { useScopeRuntime } from './scope-access-provider';
 import { scopeNames } from './scope-names';
-import { loadScopeSchemas } from './scope-runtime';
 import { createOrganization, loadWorkspaces, type Workspace } from './workspace-load';
 import {
   activeWorkspaceId,
@@ -70,8 +69,7 @@ export function WorkspaceProvider({
 
   React.useEffect(() => {
     const controller = new AbortController();
-    loadScopeSchemas(runtime)
-      .then((schemas) => loadWorkspaces(runtime, schemas, names, controller.signal))
+    loadWorkspaces(runtime, names, controller.signal)
       .then((result) => {
         if (!controller.signal.aborted) setLoaded(result);
       })

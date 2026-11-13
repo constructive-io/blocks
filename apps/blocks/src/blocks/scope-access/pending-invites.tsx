@@ -45,7 +45,7 @@ export function PendingInvites({ entityLabel, onAccepted, onError, empty = null 
 
   React.useEffect(() => {
     const controller = new AbortController();
-    loadScopeSchemas(runtime)
+    loadScopeSchemas(runtime, ['admin', 'auth'])
       .then((schemas) => loadPendingInvites(runtime, schemas, controller.signal))
       .then((rows) => {
         if (!controller.signal.aborted) setInvites(rows);
