@@ -78,7 +78,8 @@ const ROOM_ADMIN = snapshot(
   {
     updateDataRoomMembership: 'UpdateDataRoomMembershipInput',
     createDataRoomInvite: 'CreateDataRoomInviteInput',
-    createDataRoomOwnerGrant: 'CreateDataRoomOwnerGrantInput'
+    createDataRoomOwnerGrant: 'CreateDataRoomOwnerGrantInput',
+    createDataRoomProfile: 'CreateDataRoomProfileInput'
   },
   [
     objectType('DataRoomMembership', [
@@ -93,7 +94,9 @@ const ROOM_ADMIN = snapshot(
     inputType('CreateDataRoomInviteInput', ['dataRoomInvite']),
     inputType('CreateDataRoomInviteInputField', ['email', 'channel', 'entityId']),
     inputType('CreateDataRoomOwnerGrantInput', ['dataRoomOwnerGrant']),
-    inputType('CreateDataRoomOwnerGrantInputField', ['actorId', 'isGrant', 'entityId'])
+    inputType('CreateDataRoomOwnerGrantInputField', ['actorId', 'isGrant', 'entityId']),
+    inputType('CreateDataRoomProfileInput', ['dataRoomProfile']),
+    inputType('CreateDataRoomProfileInputField', ['name', 'slug', 'capabilities', 'entityId'])
   ]
 );
 
@@ -171,6 +174,13 @@ describe('scope access on an entity scope', () => {
     ]);
     await expect(view.actions.setApproved?.({ membershipId: 'elsewhere', approved: true }))
       .rejects.toThrow('not in the current authorized resource');
+
+    // A preset's capabilities become one mask on the new profile.
+    calls.length = 0;
+    await view.actions.createProfile?.({ name: 'Admin', slug: 'admin', capabilityIds: ['cap-read', 'cap-admin'] });
+    expect(calls[0]?.variables).toEqual({
+      input: { dataRoomProfile: { name: 'Admin', slug: 'admin', capabilities: '11', entityId: ROOM.entityId } }
+    });
   });
 
   it('refuses an entity scope without its entity', async () => {

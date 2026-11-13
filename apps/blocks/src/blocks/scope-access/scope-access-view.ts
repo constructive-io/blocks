@@ -90,6 +90,11 @@ function assertMutableMember(
 
 const capitalized = (text: string) => text[0]!.toUpperCase() + text.slice(1);
 
+/** The bits set in any of the masks; the masks of one scope share a length. */
+function unionMask(masks: readonly string[]): string {
+  return [...masks[0]!].map((_, index) => (masks.some((mask) => mask[index] === '1') ? '1' : '0')).join('');
+}
+
 /**
  * The users view of one scope: its rows with each row's allowed actions, the
  * scope-wide policy, and the actions themselves. Every write names the
@@ -143,6 +148,7 @@ export function scopeAccessView(
   const canCreateProfile = directory.canManageCapabilities &&
     supportsObject('create', 'Profile', ['name', 'slug']);
   const createProfileSupportsDescription = supportsObject('create', 'Profile', ['description']);
+  const createProfileSupportsCapabilities = supportsObject('create', 'Profile', ['capabilities']);
   const canUpdateProfile = directory.canManageCapabilities && directory.mutableProfileIds.size > 0 &&
     supportsPatch(admin, names, 'Profile', ['name', 'slug']);
   const updateProfileSupportsDescription = supportsPatch(admin, names, 'Profile', ['description']);
@@ -186,7 +192,7 @@ export function scopeAccessView(
   const hasVisibleRows = data.members.length > 0 || Boolean(data.invitations?.length) ||
     Boolean(data.acceptedInvites?.length) || Boolean(data.profiles?.length) ||
     Boolean(data.capabilities?.length);
-  const capabilityIds = new Set(directory.capabilityMasks.keys());
+  const knownCapabilityIds = new Set(directory.capabilityMasks.keys());
 
   const setLifecycle = (field: LifecycleField, verb: string) =>
     async (membershipId: string, value: boolean) => {
@@ -278,7 +284,7 @@ export function scopeAccessView(
       setDirectCapability: canSetDirectCapability
         ? async ({ userId, capabilityId, granted }) => {
             assertAuthorizedTarget(directory.actorIds, userId, `${label} member`);
-            assertAuthorizedTarget(capabilityIds, capabilityId, `${label} capability`);
+            assertAuthorizedTarget(knownCapabilityIds, capabilityId, `${label} capability`);
             await write('create', 'Grant', object('Grant', {
               actorId: userId,
               capabilities: directory.capabilityMasks.get(capabilityId),
@@ -298,11 +304,19 @@ export function scopeAccessView(
           }
         : undefined,
       createProfile: canCreateProfile
-        ? async ({ name, slug, description }) => {
+        ? async ({ name, slug, description, capabilityIds }) => {
+            const masks = (capabilityIds ?? []).map((capabilityId) => {
+              assertAuthorizedTarget(knownCapabilityIds, capabilityId, `${label} capability`);
+              return directory.capabilityMasks.get(capabilityId)!;
+            });
+            if (masks.length > 0 && !createProfileSupportsCapabilities) {
+              throw new Error('This profile cannot be created with capabilities.');
+            }
             await write('create', 'Profile', object('Profile', {
               name,
               slug,
-              ...(createProfileSupportsDescription && description ? { description } : {})
+              ...(createProfileSupportsDescription && description ? { description } : {}),
+              ...(masks.length > 0 ? { capabilities: unionMask(masks) } : {})
             }));
           }
         : undefined,
@@ -331,7 +345,7 @@ export function scopeAccessView(
       setProfileCapability: canComposeProfiles
         ? async ({ profileId, capabilityId, granted }) => {
             assertAuthorizedTarget(directory.mutableProfileIds, profileId, `mutable ${label} access profile`);
-            assertAuthorizedTarget(capabilityIds, capabilityId, `${label} capability`);
+            assertAuthorizedTarget(knownCapabilityIds, capabilityId, `${label} capability`);
             // A definition grant names the profile, which already belongs to the entity.
             await executeConstructiveGraphQL(
               runtime,
@@ -344,7 +358,7 @@ export function scopeAccessView(
         : undefined,
       setDefaultCapability: canSetDefaultCapability
         ? async ({ capabilityId, granted }) => {
-            assertAuthorizedTarget(capabilityIds, capabilityId, `${label} capability`);
+            assertAuthorizedTarget(knownCapabilityIds, capabilityId, `${label} capability`);
             await write('create', 'CapabilityDefaultGrant', object('CapabilityDefaultGrant', {
               capabilityId,
               isGrant: granted
