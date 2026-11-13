@@ -8,6 +8,7 @@ import type {
   ConstructiveSchemaSnapshot,
   ConstructiveSchemaType
 } from '../console-kit/constructive/constructive-graphql';
+import { loadPendingInvites } from './pending-invites-load';
 import { loadScopeAccess, type ScopeRuntime } from './scope-access-load';
 import { scopeAccessView } from './scope-access-view';
 import { scopeMutationDocument, scopeNames } from './scope-names';
@@ -187,5 +188,44 @@ describe('scope access on an entity scope', () => {
     const run = runtime(rows, []);
     await expect(loadScopeAccess(run, { admin: ROOM_ADMIN }, { names: scopeNames('data_room') }, new AbortController().signal))
       .rejects.toThrow('needs the id of one data room');
+  });
+});
+
+describe('pending invitations', () => {
+  it("asks each scope's record only for the fields it has: an app invitation names no entity", async () => {
+    const connection = (name: string): ConstructiveSchemaType => ({
+      kind: 'OBJECT',
+      name: `${name}Connection`,
+      fields: [{ name: 'nodes', args: [], type: { kind: 'LIST', ofType: { kind: 'OBJECT', name: `${name}Record` } } }],
+      inputFields: []
+    });
+    const admin = snapshot('admin', ['membershipTypes', 'myPendingAppInvites', 'myPendingDataRoomInvites'], {}, [
+      connection('MyPendingAppInvites'),
+      connection('MyPendingDataRoomInvites'),
+      objectType('MyPendingAppInvitesRecord', ['id', 'senderId', 'expiresAt']),
+      objectType('MyPendingDataRoomInvitesRecord', ['id', 'entityId', 'senderId', 'expiresAt'])
+    ]);
+    admin.queryFields.myPendingAppInvites = { name: 'myPendingAppInvites', args: [], type: { kind: 'OBJECT', name: 'MyPendingAppInvitesConnection' } };
+    admin.queryFields.myPendingDataRoomInvites = { name: 'myPendingDataRoomInvites', args: [], type: { kind: 'OBJECT', name: 'MyPendingDataRoomInvitesConnection' } };
+    const calls: Call[] = [];
+    const run = runtime((call) => {
+      if (call.document.includes('membershipTypes')) {
+        return { membershipTypes: { nodes: [{ scope: 'app' }, { scope: 'org' }, { scope: 'data_room' }] } };
+      }
+      if (call.document.includes('myPendingDataRoomInvites(')) {
+        return { myPendingDataRoomInvites: { nodes: [{ id: 'inv-room', entityId: 'room-1', senderId: 'owner-1' }] } };
+      }
+      if (call.document.includes('myPendingAppInvites(')) {
+        return { myPendingAppInvites: { nodes: [{ id: 'inv-app', senderId: 'owner-1' }] } };
+      }
+      return {};
+    }, calls);
+    const invites = await loadPendingInvites(run, { admin }, new AbortController().signal);
+    expect(invites.map((invite) => [invite.scope.scope, invite.id, invite.entityId])).toEqual([
+      ['app', 'inv-app', undefined],
+      ['data_room', 'inv-room', 'room-1']
+    ]);
+    const appQuery = calls.find((call) => call.document.includes('myPendingAppInvites('));
+    expect(appQuery?.document).not.toContain('entityId');
   });
 });

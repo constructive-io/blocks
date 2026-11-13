@@ -1,6 +1,9 @@
 import {
   executeConstructiveConnectionQuery,
-  executeConstructiveGraphQL
+  executeConstructiveGraphQL,
+  fieldsForType,
+  namedTypeName,
+  selectExistingFields
 } from '../console-kit/constructive/constructive-graphql';
 import { asString, connectionNodes } from '../console-kit/constructive/constructive-values';
 import type { ScopeRuntime, ScopeSchemas } from './scope-access-load';
@@ -47,13 +50,20 @@ export async function loadPendingInvites(
   signal: AbortSignal
 ): Promise<PendingInvite[]> {
   if (runtime.session.status !== 'authenticated') return [];
+  const admin = schemas.admin;
   const scopes = (await loadMembershipScopes(runtime))
-    .filter((names) => Boolean(schemas.admin?.queryFields[`myPending${names.pascal}Invites`]));
+    .filter((names) => Boolean(admin?.queryFields[`myPending${names.pascal}Invites`]));
   const lists = await Promise.all(scopes.map(async (names) => {
+    const fieldName = `myPending${names.pascal}Invites`;
+    // Each scope's record has its own fields: an app invitation names no entity.
+    const nodeFields = admin ? selectExistingFields(admin, pendingRecordType(admin, fieldName), [
+      'id', 'entityId', 'senderId', 'expiresAt'
+    ]) : [];
+    if (!nodeFields.includes('id')) return [];
     const rows = await executeConstructiveConnectionQuery(runtime, 'admin', {
       operationName: `ConsoleKitMyPending${names.pascal}Invites`,
-      fieldName: `myPending${names.pascal}Invites`,
-      nodeSelection: 'id entityId senderId expiresAt'
+      fieldName,
+      nodeSelection: nodeFields.join(' ')
     }, signal);
     return rows.flatMap((row): PendingInvite[] => {
       const id = asString(row.id);
@@ -74,6 +84,12 @@ export async function loadPendingInvites(
     const senderName = invite.senderId ? names.get(invite.senderId) : undefined;
     return senderName ? { ...invite, senderName } : invite;
   });
+}
+
+// The node type of a `myPending<Scope>Invites` connection, as the schema names it.
+function pendingRecordType(schema: NonNullable<ScopeSchemas['admin']>, fieldName: string): string {
+  const connection = namedTypeName(schema.queryFields[fieldName]?.type);
+  return (connection && namedTypeName(fieldsForType(schema, connection).nodes?.type)) ?? '';
 }
 
 // The senders' display names, when the auth API shows them to this user.
