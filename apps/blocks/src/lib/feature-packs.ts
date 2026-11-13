@@ -309,6 +309,7 @@ export const FEATURE_PACK_DOCS = [
       'focusedProfileId',
       'title',
       'description',
+      'noun',
       'onError',
     ]),
     api: [
