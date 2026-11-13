@@ -243,7 +243,7 @@ describe('useBatchCommit — undo/redo', () => {
 		expect(h.history.canUndo).toBe(false);
 	});
 
-	it('reverts ALL optimistic patches when a server update rejects', async () => {
+	it('reverts every row when the first update is refused, and records nothing', async () => {
 		const revertA = vi.fn();
 		const revertB = vi.fn();
 		const applyOptimisticPatch = vi.fn().mockReturnValueOnce(revertA).mockReturnValueOnce(revertB);
@@ -272,5 +272,55 @@ describe('useBatchCommit — undo/redo', () => {
 		expect(revertA).toHaveBeenCalledTimes(1);
 		expect(revertB).toHaveBeenCalledTimes(1);
 		expect(h.history.canUndo).toBe(false);
+	});
+
+	it('keeps the rows the server saved when a later row is refused, and undo restores them', async () => {
+		const reverts = [vi.fn(), vi.fn(), vi.fn()];
+		const applyOptimisticPatch = vi.fn((rowIndex: number) => reverts[rowIndex]);
+		const refused = new Error('violates check constraint');
+		const update = vi.fn().mockResolvedValueOnce({ updatedRow: null }).mockRejectedValueOnce(refused);
+		const onServerError = vi.fn();
+		const onComplete = vi.fn();
+		const rows: SheetsRow[] = [
+			{ id: 'r0', name: 'A' },
+			{ id: 'r1', name: 'B' },
+			{ id: 'r2', name: 'C' },
+		];
+		const h = mount({
+			combinedRows: rows,
+			fieldMetaMap: META,
+			relationInfoByField: new Map(),
+			update,
+			applyOptimisticPatch,
+			onServerError,
+			feedback: { onStart: () => 'save-1', onComplete },
+			editCell: vi.fn(),
+		});
+
+		let result!: Awaited<ReturnType<CommitCells>>;
+		await act(async () => {
+			result = await h.commit([
+				{ rowIndex: 0, colKey: 'name', value: 'A2' },
+				{ rowIndex: 1, colKey: 'name', value: 'B2' },
+				{ rowIndex: 2, colKey: 'name', value: 'C2' },
+			]);
+		});
+
+		// Row 0 was saved and keeps its value; row 1 was refused; row 2 was never sent.
+		expect(update).toHaveBeenCalledTimes(2);
+		expect(reverts[0]).not.toHaveBeenCalled();
+		expect(reverts[1]).toHaveBeenCalledTimes(1);
+		expect(reverts[2]).toHaveBeenCalledTimes(1);
+		expect(result.applied).toBe(1);
+		expect(onServerError).toHaveBeenCalledWith(refused, 2, { rowIndex: 1, fields: ['name'] });
+		expect(onComplete).toHaveBeenCalledWith('save-1', 'partial', '1 change saved, 2 not saved');
+
+		// The saved row is undoable on its own.
+		expect(h.history.canUndo).toBe(true);
+		update.mockReset().mockResolvedValue({ updatedRow: null });
+		await act(async () => {
+			await h.history.undo();
+		});
+		expect(update.mock.calls).toEqual([['r0', { name: 'A' }]]);
 	});
 });

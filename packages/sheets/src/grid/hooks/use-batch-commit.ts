@@ -12,9 +12,12 @@
  *     undo restores the EXACT pre-edit value.
  *   • ONE optimistic cache patch is applied per affected ROW (merged col patches),
  *     not per cell — N rows -> N patches, never N×cols.
- *   • ONE server `update(rowId, {merged})` is issued per row.
+ *   • ONE server `update(rowId, {merged})` is issued per row, and the commit stops at
+ *     the first row the server refuses. Rows saved before it keep their values; the
+ *     refused row and the rows not sent yet go back to their prior values.
  *   • when recording, the HistoryEntry's `undo`/`redo` re-enter `commitCells` with
- *     `{ record: false }` so replays never double-record.
+ *     `{ record: false }` so replays never double-record. A commit that stops part
+ *     way records the rows it saved.
  *
  * Draft-row writes are NOT batched here — they route to the existing per-cell draft
  * path (`editCell`) and are excluded from history (draft undo is out of P3 scope).
@@ -70,9 +73,9 @@ interface UseBatchCommitParams {
 	/** Report the writes that were refused. Defaults to a notification. */
 	onRejected?: (rejected: readonly RejectedWrite[], total: number) => void;
 	/**
-	 * Report a save the server refused (the optimistic values are already reverted). When
-	 * given, `commitCells` resolves instead of throwing, so fire-and-forget callers (paste,
-	 * fill, clear) still surface the failure.
+	 * Report a save the server refused, with the number of changes not saved (those cells
+	 * already show their prior values again). When given, `commitCells` resolves instead of
+	 * throwing, so fire-and-forget callers (paste, fill, clear) still surface the failure.
 	 */
 	onServerError?: (error: unknown, cellCount: number, failed: ServerWriteFailure) => void;
 	canUpdate?: boolean;
@@ -89,12 +92,18 @@ interface UseBatchCommitParams {
 	/** The grid's save status: the server writes of one commit report as one save. */
 	feedback?: {
 		onStart?: (type: 'update', total: number) => string;
-		onComplete?: (id: string, status: 'success' | 'error', message: string) => void;
+		onComplete?: (id: string, status: 'success' | 'partial' | 'error', message: string) => void;
 	};
 }
 
 function changes(count: number): string {
 	return `${count.toLocaleString()} ${count === 1 ? 'change' : 'changes'}`;
+}
+
+/** The status of a commit the server stopped: what it saved before, and what it did not. */
+function notSavedMessage(saved: number, unsaved: number): string {
+	if (saved === 0) return unsaved === 1 ? 'Not saved' : `${changes(unsaved)} not saved`;
+	return `${changes(saved)} saved, ${unsaved.toLocaleString()} not saved`;
 }
 
 /** The row whose save the server refused, and the fields that save patched. */
@@ -237,18 +246,43 @@ export function useBatchCommit({
 				else byRow.set(r.rowIndex, [r]);
 			}
 
-			// Apply ONE optimistic patch per row (merged) and collect revert thunks.
-			const reverts: Array<() => void> = [];
+			// Apply ONE optimistic patch per row (merged), keeping each row's revert thunk.
+			const reverts = new Map<number, () => void>();
 			for (const [rowIndex, group] of byRow) {
 				const patch: Record<string, unknown> = {};
 				for (const r of group) patch[r.field] = r.value;
 				const revert = applyOptimisticPatch?.(rowIndex, patch);
-				if (revert) reverts.push(revert);
+				if (revert) reverts.set(rowIndex, revert);
 			}
 
-			// Issue ONE server mutation per row; revert ALL optimistic patches on first failure.
+			// Record the inverse (prior values) of the saved writes, so undo restores the exact pre-edit state.
+			const recordSaved = (writes: readonly ResolvedWrite[]): void => {
+				if (opts?.record === false || writes.length === 0) return;
+				const priorWrites: CellWrite[] = writes.map((r) => ({
+					rowIndex: r.rowIndex,
+					colKey: r.field,
+					value: r.prior,
+					fromText: false,
+				}));
+				const redoWrites: CellWrite[] = writes.map((r) => ({
+					rowIndex: r.rowIndex,
+					colKey: r.field,
+					value: r.value,
+					fromText: false,
+				}));
+				// Capture the live commit fn via the closure below (commitRef).
+				record({
+					label: writes.length > 1 ? `Edit ${writes.length} cells` : 'Edit cell',
+					undo: () => void commitRef.current?.(priorWrites, { record: false }),
+					redo: () => void commitRef.current?.(redoWrites, { record: false }),
+				});
+			};
+
+			// Issue ONE server mutation per row, and stop at the first row the server refuses.
+			// A saved row keeps its values; the refused row and the rows not sent yet are reverted.
 			// The whole commit is one save in the status, whatever the number of rows.
 			const statusId = feedback?.onStart?.('update', resolved.length);
+			const saved: ResolvedWrite[] = [];
 			let failing: ServerWriteFailure | null = null;
 			try {
 				for (const [rowIndex, group] of byRow) {
@@ -257,41 +291,23 @@ export function useBatchCommit({
 					for (const r of group) patch[r.field] = r.value;
 					// eslint-disable-next-line no-await-in-loop
 					const result = await update(group[0].rowId, patch);
+					reverts.delete(rowIndex);
+					saved.push(...group);
 					if (result?.updatedRow) resyncRow?.(rowIndex, result.updatedRow);
 					for (const r of group) onCellEdit?.(r.rowId, r.field, r.value);
 				}
 			} catch (error) {
-				for (const revert of reverts) revert();
-				if (statusId) feedback?.onComplete?.(statusId, 'error', resolved.length === 1 ? 'Not saved' : `${changes(resolved.length)} not saved`);
+				for (const revert of reverts.values()) revert();
+				const unsaved = resolved.length - saved.length;
+				if (statusId) feedback?.onComplete?.(statusId, saved.length > 0 ? 'partial' : 'error', notSavedMessage(saved.length, unsaved));
+				recordSaved(saved);
 				if (!onServerError) throw error;
-				onServerError(error, resolved.length, failing ?? { rowIndex: resolved[0].rowIndex, fields: [resolved[0].field] });
-				return withRejected(0);
+				onServerError(error, unsaved, failing ?? { rowIndex: resolved[0].rowIndex, fields: [resolved[0].field] });
+				return withRejected(saved.length);
 			}
 
 			if (statusId) feedback?.onComplete?.(statusId, 'success', resolved.length === 1 ? 'Saved' : `${changes(resolved.length)} saved`);
-
-			// Record the inverse (prior values) so undo restores the exact pre-edit state.
-			if (opts?.record !== false) {
-				const priorWrites: CellWrite[] = resolved.map((r) => ({
-					rowIndex: r.rowIndex,
-					colKey: r.field,
-					value: r.prior,
-					fromText: false,
-				}));
-				const redoWrites: CellWrite[] = resolved.map((r) => ({
-					rowIndex: r.rowIndex,
-					colKey: r.field,
-					value: r.value,
-					fromText: false,
-				}));
-				// Capture the live commit fn via the closure below (commitRef).
-				record({
-					label: resolved.length > 1 ? `Edit ${resolved.length} cells` : 'Edit cell',
-					undo: () => void commitRef.current?.(priorWrites, { record: false }),
-					redo: () => void commitRef.current?.(redoWrites, { record: false }),
-				});
-			}
-
+			recordSaved(resolved);
 			return withRejected(resolved.length);
 		},
 		[combinedRows, fieldMetaMap, relationInfoByField, update, getRowIdentifier, readOnlyFields, isCellReadOnly, resolveCell, columnByName, relationFields, onRejected, onServerError, canUpdate, applyOptimisticPatch, resyncRow, editCell, onCellEdit, record, feedback],
