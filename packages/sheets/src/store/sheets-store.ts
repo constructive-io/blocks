@@ -2,7 +2,6 @@ import { createContext, useContext } from 'react';
 import { createStore, useStore as useZustandStore, type StoreApi } from 'zustand';
 
 import { createDraftRowsSlice, type DraftRowsSlice } from './draft-rows-slice';
-import { createRelationInfoSlice, type RelationInfoSlice } from './relation-info-slice';
 
 export interface SheetsAuthState {
   isAuthenticated: boolean;
@@ -13,15 +12,12 @@ export interface SheetsAuthState {
   setUnauthenticated: () => void;
 }
 
-export type SheetsStoreState = DraftRowsSlice & RelationInfoSlice & SheetsAuthState;
+export type SheetsStoreState = DraftRowsSlice & SheetsAuthState;
 
 export function createSheetsStore(): StoreApi<SheetsStoreState> {
-  return createStore<SheetsStoreState>((set, get) => ({
+  return createStore<SheetsStoreState>((set) => ({
     // Draft rows
     ...createDraftRowsSlice(set),
-
-    // Relation info cache
-    ...createRelationInfoSlice(set, get),
 
     // Auth state (standalone mode)
     isAuthenticated: false,

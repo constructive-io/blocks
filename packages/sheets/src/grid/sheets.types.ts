@@ -7,6 +7,8 @@ import type { CellSlots } from '../cell-model/cell-slots';
 import type { SheetsThemeInput } from './sheets.theme';
 import type { GridCommand, Binding, Interceptor, DispatchEvent, CommandResult } from '../commands';
 import type { SheetsRowIdentifier } from '../row-identity';
+import type { SheetsOpenTableHandler } from '../relations/relation-navigation';
+import type { SheetsViewProps } from './view-state/use-sheets-view';
 
 export interface DataGridRow {
 	id: string;
@@ -31,6 +33,7 @@ export interface SheetsEvent {
 		| 'row:delete'
 		| 'filter:apply'
 		| 'sort:change'
+		| 'search:change'
 		| 'page:change';
 	/** The table the event originated from. */
 	tableName: string;
@@ -82,8 +85,17 @@ export interface SheetsHandle {
 	refetch(): void;
 	/** Return the currently selected rows (empty array when nothing selected). */
 	getSelectedRows(): Record<string, unknown>[];
-	/** Download the selected rows (or all rows when none selected) as CSV. */
-	exportCsv(opts?: { columns?: string[]; filename?: string }): void;
+	/**
+	 * Download the selected rows (or all rows when none selected) as CSV.
+	 * `protectFormulas` overrides the grid's `csvExport.protectFormulas` for this download.
+	 */
+	exportCsv(opts?: { columns?: string[]; filename?: string; protectFormulas?: boolean }): void;
+	/** Open a record of this table in the record panel. False when the identifier does not name a record. */
+	openRecord(recordId: SheetsRowIdentifier): boolean;
+	/** Open the record panel on a new record. False when the table does not allow new records. */
+	openNewRecord(): boolean;
+	/** Close the record panel. */
+	closeRecord(): void;
 }
 
 export interface DataGridColumnMeta {
@@ -95,8 +107,21 @@ export interface DataGridColumnMeta {
 	};
 }
 
-export interface DataGridProps<TRow extends SheetsRow = SheetsRow> {
+/**
+ * `filters` / `sort` / `search` (each with its change callback) let a host own
+ * the view state, for example to persist it as a saved view. Each one omitted is
+ * owned by the grid. The grid checks every given state against the table model
+ * and leaves out what the model no longer supports (see `validateSheetsViewState`).
+ */
+export interface DataGridProps<TRow extends SheetsRow = SheetsRow> extends SheetsViewProps {
 	tableName: string;
+	/**
+	 * Make the grid read-only for this host: `true`, or the reason to show. Every cell,
+	 * paste and fill, Add row, New record, Import, Delete, every link and the record panel's
+	 * fields refuse writes and show the reason; viewing, sorting, filtering, search and
+	 * export stay. `true` shows "This table is read-only here."
+	 */
+	readOnly?: boolean | string;
 	className?: string;
 	pageSize?: number;
 	showSelection?: boolean;
@@ -126,6 +151,27 @@ export interface DataGridProps<TRow extends SheetsRow = SheetsRow> {
 	 */
 	onEvent?: (e: SheetsEvent) => void;
 	/**
+	 * Called when the user asks to see another table, for example the table that
+	 * stores links needing more fields than the link editor can fill. The grid
+	 * does not navigate; omit it and the editor offers no such action.
+	 */
+	onOpenTable?: SheetsOpenTableHandler;
+	/**
+	 * CSV export settings. `protectFormulas`: text that starts with =, +, -, @, a tab or
+	 * a carriage return is written with a leading apostrophe, so a spreadsheet app does not
+	 * run it as a formula (numbers are not changed). Off by default. It applies to
+	 * "Export selected" and `SheetsHandle.exportCsv`, and is the starting choice of the
+	 * checkbox in the "Export view" dialog.
+	 */
+	csvExport?: { protectFormulas?: boolean };
+	/**
+	 * The record open in the record panel, for deep links: an identifier of a record of
+	 * this table, or null for closed. Omit it to let the grid own the panel state.
+	 */
+	recordId?: SheetsRowIdentifier | null;
+	/** Called whenever the user opens, moves to or closes a record of this table in the record panel. */
+	onRecordOpenChange?: (recordId: SheetsRowIdentifier | null) => void;
+	/**
 	 * Optional render-slot overrides for the toolbar / empty / error / loading
 	 * regions. Any omitted slot falls back to the built-in default.
 	 */
@@ -136,8 +182,9 @@ export interface DataGridProps<TRow extends SheetsRow = SheetsRow> {
 	 */
 	commands?: GridCommand[];
 	/**
-	 * Extra / override key bindings, scanned BEFORE the defaults (first-match-wins),
-	 * so a rebind of a built-in chord wins. Omitting it = the default keymap.
+	 * Extra / override key bindings, scanned BEFORE the defaults, so a rebind of a
+	 * built-in chord wins. When several bindings match a key, they are tried in order
+	 * and the first whose command can run wins. Omitting it = the default keymap.
 	 */
 	keymap?: Binding[];
 	/**

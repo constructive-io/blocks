@@ -10,7 +10,6 @@ import { cn } from '../../utils/cn';
 export function LoadingCellView(_props: CellProps) {
 	return (
 		<div
-			role="gridcell"
 			data-slot="loading-cell"
 			aria-busy="true"
 			className={cn('flex h-full w-full items-center px-3')}

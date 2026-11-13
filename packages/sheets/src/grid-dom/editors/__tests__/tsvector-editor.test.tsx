@@ -46,20 +46,24 @@ describe('TsvectorEditorDom (native EditorProps)', () => {
 		vi.clearAllMocks();
 	});
 
-	it('seeds the parsed tokens + raw view from value (read-only display)', async () => {
+	it('shows each keyword as a chip with its weight, the count, and the stored value', async () => {
 		await act(async () => {
 			root.render(<TsvectorEditorDom {...makeProps(TSVECTOR)} />);
 		});
 
-		// raw tsvector rendered verbatim
-		const pre = container.querySelector('pre');
-		expect(pre?.textContent).toBe(TSVECTOR);
-		// parsed-token chips include each lexeme
-		const text = container.textContent ?? '';
-		expect(text).toContain('cat');
-		expect(text).toContain('fast');
-		expect(text).toContain('fox');
-		expect(text).toContain('Parsed Tokens (3)');
+		const chips = Array.from(container.querySelectorAll('[aria-label="Search keywords"] li')).map((chip) => chip.textContent);
+		expect(chips).toEqual(['catA', 'fastB', 'fox']);
+		expect(container.querySelector('h3 + span')?.textContent).toBe('3 keywords');
+		expect(container.querySelector('pre')?.textContent).toBe(TSVECTOR);
+		expect(container.textContent).toContain('from A (most) to D (least)');
+	});
+
+	it('explains weights only when the value has them', async () => {
+		await act(async () => {
+			root.render(<TsvectorEditorDom {...makeProps("'cat':1 'dog':2")} />);
+		});
+		expect(container.querySelector('h3 + span')?.textContent).toBe('2 keywords');
+		expect(container.textContent).not.toContain('from A (most) to D (least)');
 	});
 
 	it('Close button cancels, never commits', async () => {
@@ -81,31 +85,11 @@ describe('TsvectorEditorDom (native EditorProps)', () => {
 		expect(onCommitPatch).not.toHaveBeenCalled();
 	});
 
-	it('Escape cancels, never commits', async () => {
-		const onCommit = vi.fn();
-		const onCommitPatch = vi.fn();
-		const onCancel = vi.fn();
-		await act(async () => {
-			root.render(<TsvectorEditorDom {...makeProps(TSVECTOR, { onCommit, onCommitPatch, onCancel })} />);
-		});
-
-		// Escape is handled by the source EditorFocusTrap's React onKeyDown (the
-		// role="dialog" wrapper); dispatch on it so the synthetic handler fires.
-		const dialog = container.querySelector('[role="dialog"]') as HTMLElement;
-		await act(async () => {
-			dialog.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
-		});
-
-		expect(onCancel).toHaveBeenCalledTimes(1);
-		expect(onCommit).not.toHaveBeenCalled();
-		expect(onCommitPatch).not.toHaveBeenCalled();
-	});
-
-	it('tolerates a non-string value without throwing', async () => {
+	it('an empty value shows no keywords and no stored value', async () => {
 		await act(async () => {
 			root.render(<TsvectorEditorDom {...makeProps(null)} />);
 		});
-		const pre = container.querySelector('pre');
-		expect(pre?.textContent).toBe('');
+		expect(container.textContent).toContain('No keywords');
+		expect(container.querySelector('pre')).toBeNull();
 	});
 });

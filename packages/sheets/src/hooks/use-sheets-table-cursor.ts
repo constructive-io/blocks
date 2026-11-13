@@ -8,27 +8,15 @@
  * For non-sequential virtual grid scrolling, see `useSheetsInfiniteTable`.
  */
 import { useMemo } from 'react';
-import { useInfiniteQuery, useQueryClient } from '@tanstack/react-query';
+import { useInfiniteQuery } from '@tanstack/react-query';
 
-import { useSheetsMeta } from './use-sheets-meta';
 import { useSheetsContext } from '../context/sheets-context';
 
-import {
-	cleanTable,
-	type CleanTable,
-	type Filter,
-	type MetaTable,
-	type PageInfo,
-	type QueryOptions,
-} from '@constructive-io/data';
-import { createError } from '@constructive-io/data';
-import type { FieldSelection } from '@constructive-io/data';
-import { toOrderByEnumValue } from '@constructive-io/data';
+import type { FieldSelection, PageInfo } from '@constructive-io/data';
 import { useSheetsAdapter } from '../adapter/use-sheets-adapter';
 import { sheetsQueryKeys } from './query-keys';
-import { resolveRelationFieldMap } from './relation-field-resolution';
-import { validateOrderByVariables } from './orderby-enum-resolution';
-import { transformToPostGraphileVariables } from './use-sheets-table';
+import { relationsFromSelection, sortSpecs, whereFilter } from './list-query';
+import { useTableModel } from './use-table-model';
 
 type RowRecord = Record<string, unknown>;
 
@@ -36,7 +24,10 @@ export interface UseSheetsTableCursorOptions {
 	enabled?: boolean;
 	select?: FieldSelection;
 	pageSize?: number;
-	where?: Filter;
+	/** A filter in the server's filter input shape. */
+	where?: Readonly<Record<string, unknown>>;
+	/** Columns to fetch (the primary key and relation keys are always added). Omitted: every readable column. */
+	columns?: readonly string[];
 	orderBy?: Array<{ field: string; direction: 'asc' | 'desc' }>;
 }
 
@@ -60,40 +51,17 @@ export function useSheetsTableCursor<TData extends RowRecord = RowRecord>(
 	tableName: string,
 	options: UseSheetsTableCursorOptions = {},
 ): UseSheetsTableCursorResult<TData> {
-	const queryClient = useQueryClient();
+	const { enabled = true, select: fieldSelection, pageSize = 20, where, orderBy, columns } = options;
 	const { execute, scopeKey } = useSheetsContext();
-	const { data: meta } = useSheetsMeta();
 	const adapter = useSheetsAdapter();
-
-	const tables = useMemo<CleanTable[]>(() => {
-		if (!meta?._meta?.tables) return [];
-		return meta._meta.tables
-			.filter((candidate): candidate is MetaTable => candidate != null)
-			.map((metaTable) => cleanTable(metaTable));
-	}, [meta]);
-
-	const table = useMemo<CleanTable | null>(
-		() => tables.find((candidate) => candidate.name === tableName) ?? null,
-		[tables, tableName],
-	);
-
-	const { enabled = true, select: fieldSelection, pageSize = 20, where, orderBy } = options;
+	const { model: table, tableKey, error: modelError } = useTableModel(tableName, { enabled });
+	// Cache entries are keyed by `TableModel.key`; the bare name is only a fallback before `_meta` loads.
+	const cacheRef = tableKey ?? tableName;
 
 	// Stable options key for query cache (excludes enabled/pageSize which don't affect data identity)
 	const stableOptions = useMemo(
-		() => ({ fieldSelection, where, orderBy }),
-		[fieldSelection, where, orderBy],
-	);
-
-	const queryOptions: QueryOptions = useMemo(
-		() => ({
-			fieldSelection,
-			where,
-			orderBy,
-			limit: pageSize,
-			includePageInfo: true,
-		}),
-		[fieldSelection, where, orderBy, pageSize],
+		() => ({ fieldSelection, where, orderBy, columns }),
+		[fieldSelection, where, orderBy, columns],
 	);
 
 	const {
@@ -104,54 +72,20 @@ export function useSheetsTableCursor<TData extends RowRecord = RowRecord>(
 		fetchNextPage,
 		error,
 	} = useInfiniteQuery<CursorPage<TData>, Error>({
-		queryKey: sheetsQueryKeys.cursorTable(scopeKey, tableName, stableOptions),
-		queryFn: async ({ pageParam }) => {
-			if (!table) {
-				throw createError.notFound(`Table '${tableName}' not found`);
-			}
-
+		queryKey: sheetsQueryKeys.cursorTable(scopeKey, cacheRef, stableOptions),
+		queryFn: async ({ pageParam, signal }) => {
+			if (!table) throw modelError ?? new Error(`Table '${tableName}' not found`);
 			const cursor = pageParam as string | undefined;
-
-			const variableOptions: QueryOptions = {
-				limit: pageSize,
-				where,
-				orderBy,
-				...(cursor ? { after: cursor } : {}),
-			};
-			// Cache-bound resolution stays in the hook. The orderBy validation mutates
-			// `variables.orderBy` (PostGraphile enum strings) in place; we fold that
-			// result back into the `{ field, direction }[]` orderBy we hand the adapter,
-			// so the adapter rebuilds an identical (validated) variables payload.
-			const variables = transformToPostGraphileVariables(table, variableOptions);
-
-			const [relationFieldMap] = await Promise.all([
-				resolveRelationFieldMap({
-					table,
-					fieldSelection,
-					scopeKey,
-					queryClient,
-					execute,
-				}),
-				validateOrderByVariables(variables, table, scopeKey, queryClient, execute),
-			]);
-
-			const validatedOrderByEnum = new Set((variables.orderBy as string[] | undefined) ?? []);
-			const availableOrderByFields = new Set(table.fields.map((field) => field.name));
-			const validatedOrderBy = orderBy?.filter(
-				({ field, direction }) =>
-					availableOrderByFields.has(field) && validatedOrderByEnum.has(toOrderByEnumValue(field, direction)),
-			);
-
 			const res = await adapter.listRows<TData>(
-				{ table, allTables: tables, tableName },
+				{ model: table, tableName },
 				{
-					...queryOptions,
-					orderBy: validatedOrderBy,
-					// resolveRelationFieldMap yields `string | null` (null = omit field). The
-					// contract narrows to `string`, but the null values are passed through to
-					// buildSelect unchanged at runtime — behavior is identical to before.
-					relationFieldMap: relationFieldMap as Record<string, string>,
-					...(cursor ? { after: cursor } : {}),
+					limit: pageSize,
+					after: cursor,
+					where: whereFilter(where),
+					orderBy: sortSpecs(orderBy),
+					relations: relationsFromSelection(fieldSelection),
+					columns,
+					signal,
 				},
 				execute,
 			);
@@ -197,6 +131,6 @@ export function useSheetsTableCursor<TData extends RowRecord = RowRecord>(
 		isFetchingNextPage,
 		hasNextPage: hasNextPage ?? false,
 		fetchNextPage,
-		error,
+		error: error ?? (enabled ? modelError : null),
 	};
 }

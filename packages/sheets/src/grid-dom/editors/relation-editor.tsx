@@ -1,73 +1,83 @@
 'use client';
 
-// Native relation editor — a thin EditorProps adapter that RE-HOSTS the (now value-
-// native) SELF-COMMITTING `RelationEditor` verbatim. The UI (current-relations list,
-// search + "Add from" picker, OVERLAY_MD width, own EditorFocusTrap, Ctrl+Enter save)
-// is reused as-is; the contract maps directly onto EditorProps:
-//   • value         -> resolved `currentValue`, replicating the original factory's
-//                      bare-string -> { id } wrap (draft FK values are left untouched).
-//   • tableName     -> EditorProps.tableName.
-//   • recordId      -> EditorProps.rowId (may be a "draft:" id; the editor handles it).
-//   • fieldName     -> EditorProps.colKey.
-//   • onSaveComplete(RelationSaveData) -> onCommitPatch(patch) — a MULTI-field patch:
-//     belongsTo sets [foreignKeyField] = foreignKeyValue, and [relationField || colKey]
-//     = relationData (the display field).
-//   • onFinishedEditing() -> onCancel() (a CLOSE; the mutation self-commits via
-//     onSaveComplete, so the value path is never used for relation).
-// The reused RelationEditor ignores its `value` prop (it reads `currentValue`), so it
-// is not passed. No Suspense: the editor renders eagerly.
+// Native relation editor: maps EditorProps onto the model-driven RelationEditor.
+//   • relation / table -> EditorProps.relation / .table (the table model of the grid);
+//                         resolved from the grid's model when a host renders the editor
+//                         without them.
+//   • row              -> EditorProps.row: the editor reads this row's own key values
+//                         (they need not be the primary key).
+//   • rowIdentifier    -> the server row's primary key; a draft row has none.
+//   • onCommitPatch    -> belongsTo only: the local key fields plus the chosen record under
+//                         the relation field (a draft keeps them locally; a server row gets
+//                         the saved link). Other kinds write the related tables and refetch.
+//   • onCancel         -> close without writing.
 
-import { RelationEditor, type RelationSaveData } from '../../grid/editors/relation-editor';
+import type { RelationModel, TableModel } from '@constructive-io/data';
+
+import { EditorFocusTrap } from '../../grid/editors/editor-focus-trap';
+import { OVERLAY } from '../../grid/editors/overlay-presets';
+import { RelationEditor } from '../../grid/editors/relation-editor';
+import { useTableModel } from '../../hooks/use-table-model';
+import type { RecordValues } from '../../relations/relation-keys';
 import type { EditorProps } from './editor-props';
 
 const DRAFT_PREFIX = 'draft:';
 
-/**
- * Resolve the raw relation value into the shape the reused editor matches against,
- * replicating the original factory: a bare (non-draft) FK string is wrapped into
- * `{ id }`; everything else (object / array / null) is passed through and the editor's
- * `coerceToArray` normalises it.
- */
-function resolveCurrentValue(value: unknown): unknown {
-	if (typeof value === 'string' && value && !value.startsWith(DRAFT_PREFIX)) {
-		return { id: value };
-	}
-	return value;
+/** The relation behind a column: the relation field itself, or a belongsTo through one of its key fields. */
+function relationForColumn(table: TableModel, colKey: string): RelationModel | null {
+	return (
+		table.relations.find((relation) => relation.fieldName === colKey) ??
+		table.relations.find((relation) => relation.kind === 'belongsTo' && relation.keys.some((pair) => pair.local === colKey)) ??
+		null
+	);
 }
 
 export function RelationEditorDom({
 	value,
 	colKey,
 	rowId,
+	rowIdentifier,
+	row,
 	tableName,
-	relationInfo,
+	relation: relationProp,
+	table: tableProp,
 	onCommitPatch,
+	onInvalidateData,
 	onCancel,
 }: EditorProps) {
-	// Self-commit: the editor mutates server-side (or, for draft belongsTo, resolves
-	// the FK locally), then hands back the saved data — route it as a MULTI-field
-	// optimistic patch.
-	const handleSaveComplete = onCommitPatch
-		? (saveData: RelationSaveData) => {
-				const patch: Record<string, unknown> = {};
-				if (relationInfo?.kind === 'belongsTo' && relationInfo.foreignKeyField) {
-					patch[relationInfo.foreignKeyField] = saveData.foreignKeyValue;
-				}
-				const displayField = relationInfo?.relationField || colKey;
-				patch[displayField] = saveData.relationData;
-				onCommitPatch(patch);
-			}
-		: undefined;
+	const fallback = useTableModel(tableProp ? null : (tableName ?? null));
+	const table = tableProp ?? fallback.model;
+	const relation = relationProp ?? (table ? relationForColumn(table, colKey) : null);
+	const isDraft = rowIdentifier == null && rowId.startsWith(DRAFT_PREFIX);
+	const record = (row ?? null) as RecordValues | null;
+
+	if (!table || !relation) {
+		const message = fallback.error ? fallback.error.message : fallback.isLoading ? 'Loading…' : 'This field is not a link.';
+		return (
+			<div data-slot='relation-editor'>
+				<EditorFocusTrap onEscape={onCancel} className={`bg-popover ${OVERLAY.md} rounded-lg border p-4 text-sm shadow-lg`}>
+					<p role='status' className='text-muted-foreground'>
+						{message}
+					</p>
+				</EditorFocusTrap>
+			</div>
+		);
+	}
+
+	const relationValue = record && relation.fieldName in record ? record[relation.fieldName] : colKey === relation.fieldName ? value : null;
 
 	return (
 		<div data-slot='relation-editor'>
 			<RelationEditor
-				onFinishedEditing={() => onCancel()}
-				tableName={tableName ?? ''}
-				recordId={rowId}
-				fieldName={colKey}
-				currentValue={resolveCurrentValue(value)}
-				onSaveComplete={handleSaveComplete}
+				relation={relation}
+				table={table}
+				row={record}
+				rowIdentifier={rowIdentifier ?? null}
+				isDraft={isDraft}
+				value={relationValue}
+				onCommitPatch={onCommitPatch}
+				onInvalidateData={onInvalidateData}
+				onClose={onCancel}
 			/>
 		</div>
 	);

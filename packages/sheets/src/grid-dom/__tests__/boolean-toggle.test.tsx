@@ -342,6 +342,54 @@ describe('boolean inline-toggle (host activation -> commit !current, NO overlay)
 		expect(document.querySelector('[data-slot="number-editor"]')).toBeNull();
 	});
 
+	it('one click on the checkbox commits the flipped value; a click elsewhere in the cell only selects', async () => {
+		const commitSpy = vi.fn();
+		const registry = createCellTypeRegistry([], BUILTINS);
+		await renderHarness(root, <Harness registry={registry} commitSpy={commitSpy} />);
+
+		const wrapper = booleanCellWrapper(true);
+		const view = wrapper.querySelector<HTMLElement>('[data-slot="boolean-cell"]')!;
+		await act(async () => {
+			view.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+		});
+		expect(commitSpy).not.toHaveBeenCalled();
+
+		const toggle = wrapper.querySelector<HTMLElement>('[data-slot="boolean-toggle"]')!;
+		await act(async () => {
+			toggle.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+		});
+		expect(commitSpy).toHaveBeenCalledTimes(1);
+		expect(commitSpy).toHaveBeenCalledWith(0, 'active', false);
+		// The click is not swallowed: the cell is also the active cell (it has the focus ring).
+		expect(document.getElementById(wrapper.id)?.className).toContain('ring-primary');
+	});
+
+	it('a Shift-click on the checkbox belongs to the selection and commits nothing', async () => {
+		const commitSpy = vi.fn();
+		const registry = createCellTypeRegistry([], BUILTINS);
+		await renderHarness(root, <Harness registry={registry} commitSpy={commitSpy} />);
+
+		const toggle = booleanCellWrapper(false).querySelector<HTMLElement>('[data-slot="boolean-toggle"]')!;
+		await act(async () => {
+			toggle.dispatchEvent(new MouseEvent('click', { bubbles: true, shiftKey: true }));
+		});
+		expect(commitSpy).not.toHaveBeenCalled();
+	});
+
+	it('a double-click on the checkbox is two flips, not three', async () => {
+		const commitSpy = vi.fn();
+		const registry = createCellTypeRegistry([], BUILTINS);
+		await renderHarness(root, <Harness registry={registry} commitSpy={commitSpy} />);
+
+		const toggle = booleanCellWrapper(true).querySelector<HTMLElement>('[data-slot="boolean-toggle"]')!;
+		await act(async () => {
+			toggle.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+			toggle.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+			toggle.dispatchEvent(new MouseEvent('dblclick', { bubbles: true }));
+		});
+		expect(commitSpy).toHaveBeenCalledTimes(2);
+	});
+
 	it('Enter (grid root) on a FALSE boolean commits true and opens NO overlay', async () => {
 		const commitSpy = vi.fn();
 		const registry = createCellTypeRegistry([], BUILTINS);

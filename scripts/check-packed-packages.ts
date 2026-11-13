@@ -785,7 +785,8 @@ assert.ok(stylesheet.includes('@source "./**/*.{js,cjs}";'));
 const from = new URL('./styles.css', import.meta.url);
 const source = await readFile(from, 'utf8');
 const result = await postcss([tailwindcss()]).process(source, { from: from.pathname });
-assert.ok(result.css.includes('.w-\\\\[52px\\\\]'));
+// A class the package uses: the small editor width preset (overlay-presets.ts).
+assert.ok(result.css.includes('.min-w-\\\\[320px\\\\]'));
 console.log('Sheets runtime dependencies and Tailwind source contract passed independently.');
 `
   );

@@ -1,13 +1,20 @@
 import { useMemo } from 'react';
 import type { ReactNode } from 'react';
 
-import { assessTableWriteCapability, getRowIdentityDefinition } from '@constructive-io/data';
-import type { FieldSelection, MetaField, MetaQuery, QueryOptions, TableWriteCapability } from '@constructive-io/data';
+import { assessTableWriteCapability, findMetaTable, getRowIdentityDefinition, metaTablesOf } from '@constructive-io/data';
+import type {
+	FieldSelection,
+	MetaField,
+	MetaQuery,
+	TableModel,
+	TableWriteCapability,
+} from '@constructive-io/data';
 
-import { useSheetsContext } from '../../context/sheets-context';
 import { useSheetsMeta } from '../../hooks/use-sheets-meta';
 import { useSheetsTable, type UseTableResult } from '../../hooks/use-sheets-table';
-import { getAllRelationFields } from '../../utils/relation-utils';
+import { useTableModel } from '../../hooks/use-table-model';
+import { gridRelationSelection } from '../../hooks/list-query';
+import { gridRelationFieldNames } from '../../relations/relation-columns';
 import { createColumnSchemaFromMeta } from '../../cell-types/type-mapping';
 import type { TableSchema, ColumnSchema } from '../../cell-types/types';
 import { resolveSheetsRowIdentity } from '../../row-identity';
@@ -24,6 +31,8 @@ export interface DataLoadingContextValue {
 	totalCount: number;
 	// Loading states
 	isLoading: boolean;
+	/** True while a rows request for the current options is in flight, also while the previous rows are still shown. */
+	isFetching: boolean;
 	isError: boolean;
 	error: Error | null;
 	// CRUD operations
@@ -35,6 +44,8 @@ export interface DataLoadingContextValue {
 	// Meta information
 	meta: MetaQuery | undefined;
 	tableMeta: MetaTable | null;
+	/** The table model: kinds, options, write flags, relations, sort and filter names. Null while it loads. */
+	tableModel: TableModel | null;
 	writeCapability: TableWriteCapability | null;
 	tableSchema: TableSchema | null;
 	fieldMetaMap: Map<string, MetaField>;
@@ -49,48 +60,25 @@ export interface UseDataLoadingConfig {
 		limit?: number;
 		offset?: number;
 		orderBy?: Array<{ field: string; direction: 'asc' | 'desc' }>;
-		where?: QueryOptions['where'];
+		/** A filter in the server's filter input shape (any operator the model reports, relation and search fields included). */
+		where?: Readonly<Record<string, unknown>>;
+		/** Columns to fetch (the primary key and relation keys are always added). Omitted: every readable column. */
+		columns?: readonly string[];
+		/** Relation fields to fetch, for example the ones the view shows. Omitted: every relation the grid shows. */
+		relations?: readonly string[];
 	};
 }
 
 /**
- * Apply field type overrides from SheetsConfig to field metadata.
- *
- * In the admin app, this was handled by `buildEnhancedFieldMetaMap` which
- * merged smartTags.pgAlias from schema-builder. In sheets, the consumer
- * passes `config.fieldTypeOverrides` as a Record<string, string> where
- * key is "tableName.fieldName" and value is the cell type override (pgAlias).
+ * `_meta` fields by name. Cell routing reads the column model; this map stays for
+ * consumer cell-type `match()` (`pgType`, `subtype`), legacy relation routing and
+ * draft column order.
  */
-function buildFieldMetaMap(
-	fields: MetaField[],
-	tableName: string,
-	fieldTypeOverrides?: Record<string, string>,
-): Map<string, MetaField> {
+export function buildFieldMetaMap(fields: readonly (MetaField | null)[] | null | undefined): Map<string, MetaField> {
 	const map = new Map<string, MetaField>();
-
-	if (!fields || fields.length === 0) return map;
-
-	for (const field of fields) {
-		if (!field?.name) continue;
-
-		// Check for field type override
-		const overrideKey = `${tableName}.${field.name}`;
-		const overridePgAlias = fieldTypeOverrides?.[overrideKey];
-
-		if (overridePgAlias && field.type?.pgAlias !== overridePgAlias) {
-			// Apply override
-			map.set(field.name, {
-				...field,
-				type: {
-					...field.type,
-					pgAlias: overridePgAlias,
-				},
-			} as MetaField);
-		} else {
-			map.set(field.name, field);
-		}
+	for (const field of fields ?? []) {
+		if (field?.name) map.set(field.name, field);
 	}
-
 	return map;
 }
 
@@ -102,12 +90,8 @@ export function useDataLoading({
 }: UseDataLoadingConfig) {
 	// Meta data for table information
 	const { data: meta, isLoading: isMetaLoading, error: metaError } = useSheetsMeta({ enabled });
-	const { config } = useSheetsContext();
 
-	const tableMeta = useMemo<MetaTable | null>(() => {
-		const candidate = meta?._meta?.tables?.find((t) => t?.name === tableName) as MetaTable | undefined;
-		return candidate ?? null;
-	}, [meta, tableName]);
+	const tableMeta = useMemo<MetaTable | null>(() => findTableMeta(meta, tableName), [meta, tableName]);
 
 	// Table schema for form integration
 	const tableSchema = useMemo<TableSchema | null>(() => buildTableSchema(tableMeta), [tableMeta]);
@@ -116,28 +100,25 @@ export function useDataLoading({
 		[tableMeta],
 	);
 
-	// Field metadata map for quick lookup, enhanced with field type overrides
+	// `_meta` fields by name, for quick lookup
 	const fieldMetaMap = useMemo(() => {
-		const candidate = meta?._meta?.tables?.find((t) => t?.name === tableName) as MetaTable | undefined;
-		const fields = (candidate?.fields as MetaField[]) || [];
-		return buildFieldMetaMap(fields, tableName, config.fieldTypeOverrides);
-	}, [meta, tableName, config.fieldTypeOverrides]);
+		const fields = (tableMeta?.fields as MetaField[]) || [];
+		return buildFieldMetaMap(fields);
+	}, [tableMeta]);
 
-	const metaTables = meta?._meta?.tables;
-	const allRelationFields = useMemo(
-		() => {
-			const rawTables = metaTables?.filter((t): t is NonNullable<typeof t> => t != null);
-			return getAllRelationFields(tableMeta?.relations, rawTables);
-		},
-		[tableMeta, metaTables],
+	// The relations the grid shows, from the table model (the same cache entry the rows query uses).
+	const { model: relationModel } = useTableModel(tableName);
+	const allRelationFields = useMemo(() => gridRelationFieldNames(relationModel), [relationModel]);
+
+	// Query keys compare options by content, so a new `relations` array with the same fields reuses the cache.
+	const { relations: requestedRelations, ...listOptions } = queryOptions;
+	const relationSelection = useMemo<FieldSelection>(
+		() => gridRelationSelection(allRelationFields, requestedRelations),
+		[allRelationFields, requestedRelations],
 	);
 
-	const relationSelection = useMemo<FieldSelection>(() => {
-		return allRelationFields.length > 0 ? { includeRelations: allRelationFields } : 'all';
-	}, [allRelationFields]);
-
 	const tableData = useSheetsTable<RowRecord>(tableName, {
-		...queryOptions,
+		...listOptions,
 		// Leverage field selection to include relation fields when requested
 		select: relationSelection,
 		enabled,
@@ -149,8 +130,10 @@ export function useDataLoading({
 		create: createRow,
 		delete: deleteRow,
 		isLoading: isTableLoading,
+		isFetching,
 		error: tableError,
 		refetch,
+		model: tableModel,
 	} = tableData;
 
 	const create: DataLoadingContextValue['create'] = async (payload) => {
@@ -177,6 +160,7 @@ export function useDataLoading({
 			data,
 			totalCount,
 			isLoading,
+			isFetching,
 			isError,
 			error,
 			update: updateRow,
@@ -185,6 +169,7 @@ export function useDataLoading({
 			refetch,
 			meta,
 			tableMeta,
+			tableModel,
 			writeCapability,
 			tableSchema,
 			fieldMetaMap,
@@ -194,6 +179,7 @@ export function useDataLoading({
 			data,
 			totalCount,
 			isLoading,
+			isFetching,
 			isError,
 			error,
 			updateRow,
@@ -202,6 +188,7 @@ export function useDataLoading({
 			refetch,
 			meta,
 			tableMeta,
+			tableModel,
 			writeCapability,
 			tableSchema,
 			fieldMetaMap,
@@ -213,6 +200,16 @@ export function useDataLoading({
 		contextValue,
 		Provider: ({ children }: { children: ReactNode }) => children,
 	};
+}
+
+/** The `_meta` entry for a host table reference (name or `TableModel.key`), or null when unknown or ambiguous. */
+export function findTableMeta(meta: MetaQuery | undefined, tableRef: string): MetaTable | null {
+	if (!meta) return null;
+	try {
+		return findMetaTable(metaTablesOf(meta), tableRef);
+	} catch {
+		return null;
+	}
 }
 
 function buildTableSchema(metaTable: MetaTable | null): TableSchema | null {

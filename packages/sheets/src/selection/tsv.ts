@@ -19,7 +19,61 @@ export function parseTSV(text: string): string[][] {
 	const normalized = text.replace(/\r\n?/g, '\n');
 	// Drop a single trailing newline so a spreadsheet copy's terminal `\n` is not an extra row.
 	const body = normalized.endsWith('\n') ? normalized.slice(0, -1) : normalized;
-	return body.split('\n').map((line) => line.split('\t'));
+	if (!body.includes('"')) return body.split('\n').map((line) => line.split('\t'));
+	return parseQuotedTSV(body);
+}
+
+/**
+ * Parse TSV whose cells may be quoted, as spreadsheets write a cell holding a tab, a
+ * line break or a quote: `"two\nlines"` is one cell, `""` inside quotes is one quote.
+ * A quote that does not open a cell is an ordinary character.
+ */
+function parseQuotedTSV(body: string): string[][] {
+	const rows: string[][] = [];
+	let row: string[] = [];
+	let cell = '';
+	let index = 0;
+	let cellStart = true;
+	while (index < body.length) {
+		const char = body[index];
+		if (cellStart && char === '"') {
+			// Quoted cell: read to the closing quote, unescaping doubled quotes.
+			index += 1;
+			while (index < body.length) {
+				if (body[index] === '"') {
+					if (body[index + 1] === '"') {
+						cell += '"';
+						index += 2;
+						continue;
+					}
+					index += 1;
+					break;
+				}
+				cell += body[index];
+				index += 1;
+			}
+			cellStart = false;
+			continue;
+		}
+		cellStart = false;
+		if (char === '\t') {
+			row.push(cell);
+			cell = '';
+			cellStart = true;
+		} else if (char === '\n') {
+			row.push(cell);
+			rows.push(row);
+			row = [];
+			cell = '';
+			cellStart = true;
+		} else {
+			cell += char;
+		}
+		index += 1;
+	}
+	row.push(cell);
+	rows.push(row);
+	return rows;
 }
 
 /**

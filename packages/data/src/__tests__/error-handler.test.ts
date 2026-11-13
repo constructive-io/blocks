@@ -81,19 +81,54 @@ describe('error-handler', () => {
 	});
 
 	describe('isAuthenticationError', () => {
-		it('detects auth codes', () => {
-			expect(isAuthenticationError({ extensions: { code: 'UNAUTHENTICATED' } })).toBe(true);
-			expect(isAuthenticationError(new Error('UNAUTHENTICATED'))).toBe(true);
+		// Only an HTTP 401 or the GraphQL code UNAUTHENTICATED means the session ended.
+		// A permission error whose text mentions "unauthorized" must not sign the user out.
+		it('is true for the UNAUTHENTICATED code in GraphQL extensions', () => {
+			expect(isAuthenticationError({ message: 'x', extensions: { code: 'UNAUTHENTICATED' } })).toBe(true);
+			// Any error of a response, as a `{ errors }` body or a client error's `response`.
+			expect(
+				isAuthenticationError({
+					errors: [
+						{ message: 'Forbidden', extensions: { code: 'FORBIDDEN' } },
+						{ message: 'x', extensions: { code: 'UNAUTHENTICATED' } },
+					],
+				}),
+			).toBe(true);
+			expect(
+				isAuthenticationError({ response: { status: 200, errors: [{ message: 'x', extensions: { code: 'UNAUTHENTICATED' } }] } }),
+			).toBe(true);
+			// The typed error a transport creates for that code or for a 401.
+			expect(isAuthenticationError(createError.unauthorized())).toBe(true);
 		});
 
-		it('detects auth wording for un-coded errors', () => {
-			expect(isAuthenticationError(new Error('authentication required'))).toBe(true);
-			expect(isAuthenticationError(new Error('Your session expired'))).toBe(true);
+		it('is true for BAD_TOKEN_DEFINITION as a code, the server rejecting the token', () => {
+			expect(isAuthenticationError({ message: 'x', extensions: { code: 'BAD_TOKEN_DEFINITION' } })).toBe(true);
+			expect(isAuthenticationError({ response: { errors: [{ message: 'x', extensions: { code: 'BAD_TOKEN_DEFINITION' } }] } })).toBe(true);
+			expect(isAuthenticationError(createError.graphql('Token rejected', 'BAD_TOKEN_DEFINITION'))).toBe(true);
 		});
 
-		it('returns false for unrelated errors', () => {
+		it('is true for an HTTP 401', () => {
+			expect(isAuthenticationError({ status: 401 })).toBe(true);
+			expect(isAuthenticationError({ statusCode: 401 })).toBe(true);
+			expect(isAuthenticationError({ response: { status: 401 } })).toBe(true);
+		});
+
+		it('never reads the message text', () => {
+			expect(isAuthenticationError(new Error('UNAUTHENTICATED'))).toBe(false);
+			expect(isAuthenticationError('UNAUTHENTICATED')).toBe(false);
+			expect(isAuthenticationError(new Error('authentication required'))).toBe(false);
+			expect(isAuthenticationError(new Error('Your session expired'))).toBe(false);
+			expect(isAuthenticationError({ message: 'permission denied: unauthorized role', extensions: { code: 'FORBIDDEN' } })).toBe(false);
+			expect(isAuthenticationError(new Error('BAD_TOKEN_DEFINITION'))).toBe(false);
+			expect(isAuthenticationError({ message: 'BAD_TOKEN_DEFINITION', extensions: { code: 'FORBIDDEN' } })).toBe(false);
+		});
+
+		it('is false for other codes and statuses', () => {
 			expect(isAuthenticationError(new Error('disk full'))).toBe(false);
 			expect(isAuthenticationError({ extensions: { code: 'FORBIDDEN' } })).toBe(false);
+			expect(isAuthenticationError({ status: 403 })).toBe(false);
+			expect(isAuthenticationError(createError.forbidden())).toBe(false);
+			expect(isAuthenticationError(null)).toBe(false);
 		});
 	});
 

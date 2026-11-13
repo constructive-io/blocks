@@ -1,11 +1,10 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
-import { Button } from '@constructive-io/ui/button';
 
 import { EditorFocusTrap } from './editor-focus-trap';
+import { EditorFooter, EditorHeader, editorClear, modifierKeyLabel } from './editor-frame';
 import { OVERLAY } from './overlay-presets';
 
-const MAC_UA_RE = /Mac|iPod|iPhone|iPad/;
 
 const JSON_HIGHLIGHT_STYLES = `
 .json-highlight .jh-key { color: var(--color-foreground); }
@@ -44,15 +43,21 @@ type Props = {
 	value: unknown;
 	onChange: (next: unknown) => void;
 	onFinished: (next?: unknown) => void;
+	/** The field's readable name, shown as the title. */
+	title?: string;
+	/** The column takes no value, so Clear is offered. */
+	nullable?: boolean;
 };
 
-export function JsonEditor({ value, onChange, onFinished }: Props) {
+export function JsonEditor({ value, onChange, onFinished, title = 'JSON value', nullable = false }: Props) {
 	const [text, setText] = useState(() => (typeof value === 'string' ? value : JSON.stringify(value, null, 2)));
 	const textareaRef = useRef<HTMLTextAreaElement>(null);
 	const preRef = useRef<HTMLPreElement>(null);
 	const keyContainerRef = useRef<HTMLDivElement>(null);
 
 	const { parsed, valid } = useMemo(() => {
+		// An empty text is a valid "no value".
+		if (text.trim() === '') return { parsed: null, valid: true };
 		try {
 			return { parsed: JSON.parse(text), valid: true };
 		} catch {
@@ -135,12 +140,11 @@ export function JsonEditor({ value, onChange, onFinished }: Props) {
 	// Memoize highlighted HTML
 	const highlighted = useMemo(() => highlightJson(text), [text]);
 
-	const isMac = typeof navigator !== 'undefined' && MAC_UA_RE.test(navigator.userAgent);
-	const modKey = isMac ? '⌘' : 'Ctrl';
 
 	return (
 		<EditorFocusTrap onEscape={handleCancel} className={`bg-popover ${OVERLAY.lg} rounded-lg border p-2.5 shadow-lg`}>
-			<div ref={keyContainerRef}>
+			<div ref={keyContainerRef} className='flex flex-col gap-2'>
+				<EditorHeader title={title} className='px-1' />
 				{/* Editor area — grid overlay technique for matched sizing */}
 				<div
 					className='bg-muted/40 grid cursor-text overflow-hidden rounded-md border border-border/40'
@@ -166,29 +170,14 @@ export function JsonEditor({ value, onChange, onFinished }: Props) {
 					/>
 				</div>
 
-				{/* Footer — validation + hints + save */}
-				<div className='mt-3 flex items-center justify-between gap-4 border-t px-1 pt-2.5'>
-					<div className='text-muted-foreground flex items-center gap-3 text-xs'>
-						{valid ? (
-							<span className='text-muted-foreground/60 shrink-0 text-xs'>Valid</span>
-						) : (
-							<span className='text-destructive shrink-0 text-xs'>Invalid</span>
-						)}
-						<span className='text-border'>|</span>
-						<span className='inline-flex shrink-0 items-center gap-1'>
-							<kbd className='bg-muted/60 border-border/40 inline-flex min-h-5 min-w-5 items-center justify-center rounded border font-sans text-[11px] leading-tight'>{modKey}</kbd>
-							<kbd className='bg-muted/60 border-border/40 inline-flex min-h-5 min-w-5 items-center justify-center rounded border font-sans text-[11px] leading-tight'>↵</kbd>
-							<span>save</span>
-						</span>
-						<span className='inline-flex shrink-0 items-center gap-1'>
-							<kbd className='bg-muted/60 border-border/40 inline-flex min-h-5 items-center justify-center rounded border px-1.5 font-sans text-[11px] leading-tight'>Esc</kbd>
-							<span>cancel</span>
-						</span>
-					</div>
-					<Button onClick={handleSave} size='xs' variant='default' className='shrink-0' disabled={!valid}>
-						Save
-					</Button>
-				</div>
+				<EditorFooter
+					className='px-1'
+					onSave={handleSave}
+					saveShortcut={`${modifierKeyLabel()} Enter`}
+					saveBlockedReason={valid ? null : 'Enter valid JSON.'}
+					status={valid ? null : <span className='text-destructive'>Not valid JSON</span>}
+					clear={editorClear(nullable, () => onFinished(null))}
+				/>
 
 				{/* Syntax highlighting styles — uses CSS variables for theme compatibility */}
 				<style>{JSON_HIGHLIGHT_STYLES}</style>

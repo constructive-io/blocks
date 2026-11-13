@@ -1,146 +1,104 @@
-import { afterEach, describe, expect, it, vi } from 'vitest';
+// `executeFieldUpload`, the public one-call upload for a single-file column,
+// against the model backend over the captured torture schema (`DomainKind`).
+// The file goes out through the injected `send`; the cell write goes through
+// the adapter on the data executor.
+import { buildClientSchema } from 'graphql';
+import { describe, expect, it, vi } from 'vitest';
 
-import type { MetaTable } from '@constructive-io/data';
+import { createTableModelResolver, type TableModel } from '@constructive-io/data';
+
+import { tortureIntrospection, tortureMeta, tortureRows } from '../adapter/__tests__/torture-backend';
 import { createPostGraphileAdapter } from '../adapter/postgraphile-adapter';
-import { createSheetsUpload, type SheetsUploadFn } from '../context/sheets-execute';
-import { __resetUploadCapabilityCache } from '../context/sheets-upload-presigned';
-import { makeSchemaExecute, ROOT_UPLOAD_SDL, uploadPayload } from '../testing/graphql-schema-mock';
+import type { FileProjection } from '../context/sheets-upload-presigned';
+import { createModelBackend } from '../testing/model-backend';
+import type { SendFile } from '../uploads/column-storage';
 import { executeFieldUpload } from './use-sheets-upload';
 
-const ASSET_SCHEMA = /* GraphQL */ `
-	scalar JSON
-	type Query { photoEntryByAssetKey(assetKey: String!): PhotoEntry }
-	type Mutation { updatePhotoEntryByAssetKeyAndRevision(input: UpdatePhotoEntryByAssetKeyAndRevisionInput!): UpdatePhotoEntryPayload }
-	type PhotoEntry { assetKey: String!, revision: Int!, photo: JSON, link: String }
-	input PhotoEntryPatch { photo: JSON, link: String }
-	input UpdatePhotoEntryByAssetKeyAndRevisionInput {
-		assetKey: String!
-		revision: Int!
-		photoEntryPatch: PhotoEntryPatch!
-	}
-	type UpdatePhotoEntryPayload { photoEntry: PhotoEntry }
-`;
-
-const table: MetaTable = {
-	name: 'PhotoEntry',
-	query: { all: 'photoEntries', one: 'photoEntryByAssetKey', update: 'updatePhotoEntryByAssetKeyAndRevision' },
-	fields: [
-		{ name: 'assetKey', isPrimaryKey: true, type: { gqlType: 'String', pgType: 'text', isArray: false } },
-		{ name: 'revision', isPrimaryKey: true, type: { gqlType: 'Int', pgType: 'int4', isArray: false } },
-		{ name: 'photo', type: { gqlType: 'JSON', pgType: 'image', isArray: false } },
-		{ name: 'link', type: { gqlType: 'String', pgType: 'attachment', isArray: false } },
-	],
-};
-const recordId = { assetKey: 'asset-1', revision: 0 };
-const target = { table, recordId, fieldName: 'photo' };
-const projection = {
-	id: 'file-1',
-	key: 'object-1',
-	bucket_id: 'bucket-1',
+const D2 = '00000000-0000-4000-8000-0000000000d2';
+const projection: FileProjection = {
+	id: '00000000-0000-4000-8000-0000000000f1',
+	key: 'avatars/a.png',
+	bucket_id: '00000000-0000-4000-8000-0000000000b1',
 	mime: 'image/png',
 	size: 5,
 	filename: 'asset.png',
 };
-const signedUrl = 'https://s3.local/file?X-Amz-Signature=example';
-const publicUrl = 'https://cdn.local/file';
+const publicUrl = 'https://cdn.local/avatars/a.png';
 const file = new File(['hello'], 'asset.png', { type: 'image/png' });
 
-function makeDataTransport() {
-	const update = vi.fn((args: { input: typeof recordId & { photoEntryPatch: Record<string, unknown> } }) => {
-		const { assetKey, revision, photoEntryPatch } = args.input;
-		return { photoEntry: { assetKey, revision, ...photoEntryPatch } };
-	});
-	const execute = makeSchemaExecute(ASSET_SCHEMA, { updatePhotoEntryByAssetKeyAndRevision: update });
-	return { execute, update };
+async function setup() {
+	const meta = tortureMeta('v2');
+	const backend = createModelBackend({ schema: buildClientSchema(tortureIntrospection('v2')), meta, rows: tortureRows(meta) });
+	const table: TableModel = await createTableModelResolver(meta).resolve(backend.execute, 'DomainKind');
+	const updates = () => backend.mutations.filter((mutation) => mutation.op === 'update');
+	return { backend, table, updates, adapter: createPostGraphileAdapter() };
 }
 
-afterEach(() => {
-	vi.restoreAllMocks();
-	__resetUploadCapabilityCache();
-});
-
 describe('executeFieldUpload', () => {
-	it('uploads through storage and patches the composite key on the data executor with the full projection', async () => {
-		const { execute, update } = makeDataTransport();
-		const put = vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(null, { status: 200 }));
-		const storage = makeSchemaExecute(ROOT_UPLOAD_SDL, {
-			uploadAppFile: () => ({
-				...uploadPayload({ uploadUrl: 'https://s3.local/put', fileId: 'file-1', key: 'object-1', deduplicated: false }),
-				file: projection,
-			}),
-			appFile: () => ({ id: 'file-1', downloadUrl: signedUrl }),
-		});
-		const executeUpload = createSheetsUpload({
-			endpoint: 'https://data.example.com/graphql',
-			execute,
-			auth: { mode: 'standalone' },
-			storage: { endpoint: 'https://storage.example.com/graphql', execute: storage },
-		}, () => null);
+	it('sends the file and writes the returned projection into the row', async () => {
+		const { backend, table, updates, adapter } = await setup();
+		const send = vi.fn<SendFile>().mockResolvedValue(projection);
 
-		await expect(executeFieldUpload(target, file, { execute, executeUpload, adapter: createPostGraphileAdapter() }))
+		await expect(executeFieldUpload({ table, column: 'avatar', rowKey: D2 }, file, { execute: backend.execute, adapter, send }))
 			.resolves.toEqual(projection);
-		expect(put).toHaveBeenCalledWith('https://s3.local/put', expect.objectContaining({ method: 'PUT' }));
-		expect(update).toHaveBeenCalledTimes(1);
-		expect(update.mock.calls[0][0].input).toEqual({ ...recordId, photoEntryPatch: { photo: projection } });
+		expect(send).toHaveBeenCalledWith(file, expect.objectContaining({}));
+		expect(updates().map(({ variables }) => variables)).toEqual([{ input: { id: D2, domainKindPatch: { avatar: projection } } }]);
 	});
 
-	it('stores an attachment as its public projection URL', async () => {
-		const { execute, update } = makeDataTransport();
-		const executeUpload = vi.fn<SheetsUploadFn>().mockResolvedValue({
-			file: { ...projection, url: publicUrl },
-			url: signedUrl,
-		});
-		await expect(executeFieldUpload({ ...target, fieldName: 'link' }, file, {
-			execute, executeUpload, adapter: createPostGraphileAdapter(),
-		})).resolves.toBe(publicUrl);
-		expect(update.mock.calls[0][0].input.photoEntryPatch).toEqual({ link: publicUrl });
+	it('stores a link column as the projection public URL', async () => {
+		const { backend, table, updates, adapter } = await setup();
+		const send = vi.fn<SendFile>().mockResolvedValue({ ...projection, url: publicUrl });
+
+		await expect(executeFieldUpload({ table, column: 'attachmentLink', rowKey: D2 }, file, { execute: backend.execute, adapter, send }))
+			.resolves.toBe(publicUrl);
+		expect(updates()[0]!.variables).toEqual({ input: { id: D2, domainKindPatch: { attachmentLink: publicUrl } } });
 	});
 
-	it('leaves an attachment unchanged when storage provides only a signed URL', async () => {
-		const { execute, update } = makeDataTransport();
-		const executeUpload = vi.fn<SheetsUploadFn>().mockResolvedValue({ file: projection, url: signedUrl });
-		await expect(executeFieldUpload({ ...target, fieldName: 'link' }, file, {
-			execute, executeUpload, adapter: createPostGraphileAdapter(),
-		})).rejects.toThrow('attachment columns need a public bucket with a public URL prefix');
-		expect(update).not.toHaveBeenCalled();
+	it('writes nothing into a link column when the file has no public address', async () => {
+		const { backend, table, updates, adapter } = await setup();
+		const send = vi.fn<SendFile>().mockResolvedValue(projection);
+
+		await expect(executeFieldUpload({ table, column: 'attachmentLink', rowKey: D2 }, file, { execute: backend.execute, adapter, send }))
+			.rejects.toThrow('needs a public bucket');
+		expect(updates()).toEqual([]);
 	});
 
-	it('clears just the target cell by writing null through the adapter', async () => {
-		const { execute, update } = makeDataTransport();
-		const executeUpload = vi.fn<SheetsUploadFn>();
-		await expect(executeFieldUpload(target, null, { execute, executeUpload, adapter: createPostGraphileAdapter() }))
+	it('clears the cell by writing null without sending anything', async () => {
+		const { backend, table, updates, adapter } = await setup();
+		const send = vi.fn<SendFile>();
+
+		await expect(executeFieldUpload({ table, column: 'avatar', rowKey: D2 }, null, { execute: backend.execute, adapter, send }))
 			.resolves.toBeNull();
-		expect(update.mock.calls[0][0].input).toEqual({ ...recordId, photoEntryPatch: { photo: null } });
-		expect(executeUpload).not.toHaveBeenCalled();
+		expect(updates()[0]!.variables).toEqual({ input: { id: D2, domainKindPatch: { avatar: null } } });
+		expect(send).not.toHaveBeenCalled();
 	});
 
-	it('validates the row identity before requesting storage', async () => {
-		const { execute, update } = makeDataTransport();
-		const executeUpload = vi.fn<SheetsUploadFn>();
-		await expect(executeFieldUpload({ ...target, recordId: { assetKey: 'asset-1' } }, file, {
-			execute, executeUpload, adapter: createPostGraphileAdapter(),
-		})).rejects.toThrow('primary-key identity');
-		expect(executeUpload).not.toHaveBeenCalled();
-		expect(update).not.toHaveBeenCalled();
+	it('refuses a row key without its key field before sending the file', async () => {
+		const { backend, table, updates, adapter } = await setup();
+		const send = vi.fn<SendFile>();
+
+		await expect(executeFieldUpload({ table, column: 'avatar', rowKey: { notTheKey: 'x' } }, file, { execute: backend.execute, adapter, send }))
+			.rejects.toThrow('no value for id');
+		expect(send).not.toHaveBeenCalled();
+		expect(updates()).toEqual([]);
 	});
 
-	it('reports when the update returns no target field', async () => {
-		const { execute } = makeDataTransport();
-		const executeUpload = vi.fn<SheetsUploadFn>().mockResolvedValue({ file: projection });
-		const adapter = createPostGraphileAdapter();
-		vi.spyOn(adapter, 'updateRow').mockResolvedValue(recordId);
-
-		await expect(executeFieldUpload(target, file, { execute, executeUpload, adapter }))
-			.rejects.toThrow("did not return 'photo'");
-	});
-
-	it('preserves the storage error and skips the update on upload failure', async () => {
-		const { execute, update } = makeDataTransport();
+	it('keeps the storage error and writes nothing when sending fails', async () => {
+		const { backend, table, updates, adapter } = await setup();
 		const error = new Error('Storage unavailable');
-		const executeUpload = vi.fn<SheetsUploadFn>().mockRejectedValue(error);
+		const send = vi.fn<SendFile>().mockRejectedValue(error);
 
-		await expect(executeFieldUpload(target, file, { execute, executeUpload, adapter: createPostGraphileAdapter() }))
+		await expect(executeFieldUpload({ table, column: 'avatar', rowKey: D2 }, file, { execute: backend.execute, adapter, send }))
 			.rejects.toBe(error);
-		expect(update).not.toHaveBeenCalled();
+		expect(updates()).toEqual([]);
+	});
+
+	it('refuses a list column, which takes its whole list', async () => {
+		const { backend, table, adapter } = await setup();
+		const send = vi.fn<SendFile>();
+
+		await expect(executeFieldUpload({ table, column: 'gallery', rowKey: D2 }, file, { execute: backend.execute, adapter, send }))
+			.rejects.toThrow('write the whole list');
+		expect(send).not.toHaveBeenCalled();
 	});
 });

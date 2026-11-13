@@ -1,81 +1,167 @@
 /**
- * Presigned-URL upload helpers for the sheets cell-upload seam.
+ * The presigned upload protocol, shared by every upload path.
  *
- * Replaces the legacy multipart `<endpoint>/upload` POST. The flow is:
- *   1. SHA-256 hash the file bytes (Web Crypto, zero new deps)
- *   2. Call the presigned upload op (discovered via introspection) to get a
- *      presigned PUT url + fileId
- *   3. PUT the raw bytes to that url (only Content-Type, NO Authorization)
- *   4. Return the file projection and try to resolve an optional download URL
+ *   1. Hash the file (SHA-256, Web Crypto). The server needs the hash before it
+ *      issues the URL: it names the object and is signed into the PUT.
+ *   2. Ask the upload mutation for a presigned PUT URL. A `deduplicated` answer
+ *      means the bytes are already stored: no PUT.
+ *   3. PUT the bytes with the payload's `uploadHeaders`, unchanged (the URL is
+ *      signed over them: Content-Type, the checksum, the file row id). No
+ *      Authorization header; the signature is in the URL.
+ *   4. An expired URL is requested again once.
  *
- * The server confirms PUTs and expires rows that never received one.
+ * The server confirms the PUT later (a background job) and expires rows that
+ * never received one, so a cancelled or failed PUT leaves nothing behind.
  *
- * Runtime introspection finds root mutations with the presigned upload shape
- * and prefers `uploadAppFile` when multiple storage planes are exposed.
- *
- * The downloadUrl-by-id field is likewise shape-discovered. Three read shapes,
- * preferred in order: the inflected singular `appFile(id:)`; a filtered
- * connection `appFiles(where:{id:{equalTo:$id}}){ nodes { downloadUrl } }`
- * (Relay-disabled backends); and the Relay `node(nodeId:)` fallback.
+ * The model-driven path (`uploads/`) names the upload mutation from the storage
+ * service's `_meta`. The shape discovery in `sheets-upload-discovery.ts` is the
+ * FALLBACK for a storage service whose `_meta` names no upload mutation.
  */
-
-import { getIntrospectionQuery } from 'graphql';
 
 import { createError } from '@constructive-io/data';
 
-import type { SheetsStorageTransport } from './sheets-context';
-import type { SheetsExecuteFn, SheetsFileValue } from './sheets-execute';
-
 // ============================================================================
-// Capability discovery types
+// Upload payload
 // ============================================================================
 
-export interface UploadCapability {
-	/** Upload mutation field name, discovered by shape, e.g. 'uploadAppFile'. */
-	uploadFieldName: string;
-	/** The upload input object type name, e.g. 'UploadAppFileInput'. */
-	inputTypeName: string;
-	hasFileProjection: boolean;
-	download: DownloadByIdResult | null;
+/**
+ * The file projection the upload mutation returns: what an image or upload
+ * column stores. The server may add keys (image `versions`); they are kept as returned.
+ */
+export interface FileProjection {
+	id: string;
+	key: string;
+	bucket_id?: string;
+	mime?: string;
+	size?: number;
+	filename?: string;
+	/** Durable public URL; set only for a public bucket. */
+	url?: string;
 }
 
-interface DownloadByIdResult {
-	/** Query field used to resolve downloadUrl by id, e.g. 'appFile' | 'node' | 'appFiles'. */
-	fileByIdField: string;
-	/**
-	 * Which downloadUrl-by-id resolution shape was discovered:
-	 *   - 'id'         inflected singular `appFile(id:)`
-	 *   - 'connection' filtered connection `appFiles(where:{id:{equalTo:$id}}){ nodes { downloadUrl } }`
-	 *   - 'nodeId'     Relay `node(nodeId:)` (last-resort fallback)
-	 */
-	fileByIdArgName: 'id' | 'nodeId' | 'connection';
-	/** The file object type name (used to spread `... on <Type>` on the Relay node path). */
-	fileTypeName: string;
-	/** The GraphQL scalar type name for the `$id` variable (e.g. 'UUID'), discovered by shape. */
-	idScalarName?: string;
-	/** connection kind only — the filter arg name on the connection field, e.g. 'where' | 'filter' | 'condition'. */
-	connectionFilterArgName?: string;
-	/** connection kind only — the id field name inside the filter input, e.g. 'id'. */
-	connectionIdField?: string;
-	/** connection kind only — the equality operator field for style (a), e.g. 'equalTo'. Absent for condition style (b). */
-	connectionIdOperator?: string;
-	/** connection kind only — the field on the connection object holding the file rows, e.g. 'nodes'. */
-	connectionNodesField?: string;
-	connectionHasFirst?: boolean;
-}
-
-interface StorageCapabilities {
-	upload: UploadCapability | null;
-	download: DownloadByIdResult | null;
-	batch: DownloadByIdResult | null;
-}
-
-interface UploadPayload {
+/** The upload mutation's answer, normalized. */
+export interface UploadPayload {
 	uploadUrl: string | null;
+	/** Headers the PUT must send unchanged, or null on a server that does not return them. */
+	uploadHeaders: Record<string, string> | null;
 	fileId: string;
 	key: string;
 	deduplicated: boolean;
-	file: Omit<SheetsFileValue, 'filename'> & { filename?: string | null };
+	/** When the upload URL expires (ISO time), or null. */
+	expiresAt: string | null;
+	file: FileProjection;
+}
+
+/** Payload fields the client selects when the payload type has them. */
+export const UPLOAD_PAYLOAD_FIELDS = ['uploadUrl', 'uploadHeaders', 'fileId', 'key', 'deduplicated', 'expiresAt', 'file'] as const;
+
+function headersOf(value: unknown): Record<string, string> | null {
+	let parsed = value;
+	if (typeof parsed === 'string') {
+		try {
+			parsed = JSON.parse(parsed) as unknown;
+		} catch {
+			return null;
+		}
+	}
+	if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) return null;
+	const entries = Object.entries(parsed as Record<string, unknown>);
+	if (!entries.every(([, header]) => typeof header === 'string')) return null;
+	return Object.fromEntries(entries) as Record<string, string>;
+}
+
+function projectionOf(value: unknown): FileProjection | null {
+	let parsed = value;
+	if (typeof parsed === 'string') {
+		try {
+			parsed = JSON.parse(parsed) as unknown;
+		} catch {
+			return null;
+		}
+	}
+	if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) return null;
+	const projection = parsed as Record<string, unknown>;
+	return isFileProjection(projection) ? projection : null;
+}
+
+/** A projection names its file by `id` and `key`; the server may add more keys, which are kept. */
+function isFileProjection(value: Record<string, unknown>): value is Record<string, unknown> & FileProjection {
+	return typeof value.id === 'string' && typeof value.key === 'string';
+}
+
+// ============================================================================
+// Unfinished uploads: the file row an upload left behind
+// ============================================================================
+
+/**
+ * The file row the storage service created for an upload that did not finish
+ * (a refused or blocked PUT, a cancel, an answer without an upload URL). Sheets
+ * never deletes it: the storage service expires a row that never received its
+ * bytes. A host with its own cleanup rule reads it from the error.
+ */
+export interface UnfinishedUpload {
+	/** Id of the files table row. */
+	fileId: string;
+	/** GraphQL type name of the files table, or null when the upload path does not know it. */
+	filesType: string | null;
+	/** `TableModel.key` of the files table, or null when the upload path does not know it. */
+	filesTableKey: string | null;
+}
+
+const UNFINISHED_UPLOAD = 'unfinishedUpload';
+
+/** The file row an upload error left on the storage service, or null when the server issued none. */
+export function unfinishedUploadOf(error: unknown): UnfinishedUpload | null {
+	const value = error && typeof error === 'object' ? (error as Record<string, unknown>)[UNFINISHED_UPLOAD] : null;
+	return value && typeof value === 'object' ? (value as UnfinishedUpload) : null;
+}
+
+/**
+ * Record on `error` the file row its upload left. An id already recorded is kept
+ * (it is the newest one); a files table is filled in when the error has none. An
+ * error without a file id is returned unchanged.
+ */
+export function withUnfinishedUpload(error: unknown, upload: Partial<UnfinishedUpload>): unknown {
+	if (!error || typeof error !== 'object') return error;
+	const recorded = unfinishedUploadOf(error);
+	const fileId = recorded?.fileId ?? upload.fileId;
+	if (!fileId) return error;
+	const value: UnfinishedUpload = {
+		fileId,
+		filesType: recorded?.filesType ?? upload.filesType ?? null,
+		filesTableKey: recorded?.filesTableKey ?? upload.filesTableKey ?? null,
+	};
+	Object.defineProperty(error, UNFINISHED_UPLOAD, { value, enumerable: false, configurable: true, writable: true });
+	return error;
+}
+
+/** Normalize a raw upload payload. Throws when it cannot be used. */
+export function readUploadPayload(raw: unknown): UploadPayload {
+	if (!raw || typeof raw !== 'object') {
+		throw createError.badRequest('Upload failed: the storage service returned no answer.');
+	}
+	const payload = raw as Record<string, unknown>;
+	const file = projectionOf(payload.file);
+	if (!file) {
+		throw createError.badRequest('Upload failed: the server returned an invalid file projection.');
+	}
+	const deduplicated = payload.deduplicated === true;
+	const uploadUrl = typeof payload.uploadUrl === 'string' && payload.uploadUrl ? payload.uploadUrl : null;
+	if (!deduplicated && !uploadUrl) {
+		// The server created the row; it is left to expire, and the error names it.
+		throw withUnfinishedUpload(createError.badRequest('Upload failed: the server returned no uploadUrl for a new file.'), {
+			fileId: typeof payload.fileId === 'string' ? payload.fileId : file.id,
+		});
+	}
+	return {
+		uploadUrl,
+		uploadHeaders: headersOf(payload.uploadHeaders),
+		fileId: typeof payload.fileId === 'string' ? payload.fileId : file.id,
+		key: typeof payload.key === 'string' ? payload.key : file.key,
+		deduplicated,
+		expiresAt: typeof payload.expiresAt === 'string' ? payload.expiresAt : null,
+		file,
+	};
 }
 
 // ============================================================================
@@ -83,700 +169,302 @@ interface UploadPayload {
 // ============================================================================
 
 /**
- * SHA-256 hex digest of an already-read ArrayBuffer. Lowercase, 64 chars —
- * matches the server regex `^[a-f0-9]{64}$`. We reuse the same buffer for the
- * PUT body to avoid a second `file.arrayBuffer()` read.
+ * Largest file the browser hashes. Web Crypto has no streaming digest, so the
+ * whole file is read into memory once to hash it (the digest may copy it once
+ * more). The PUT then sends the `File` itself, which the browser streams from
+ * disk, so no second copy is kept for the upload. A streaming digest would need
+ * a JavaScript SHA-256 implementation; until one is worth a dependency, files
+ * above this size are refused with a clear message.
  */
-export async function sha256HexFromBuffer(buffer: ArrayBuffer): Promise<string> {
-	if (!globalThis.crypto?.subtle) {
-		throw createError.badRequest('Web Crypto (crypto.subtle) is unavailable; cannot hash file for upload.');
-	}
-	const digest = await crypto.subtle.digest('SHA-256', buffer);
+export const MAX_HASHED_FILE_BYTES = 512 * 1024 * 1024;
+
+function hex(digest: ArrayBuffer): string {
 	const bytes = new Uint8Array(digest);
-	let hex = '';
-	for (let i = 0; i < bytes.length; i++) {
-		hex += bytes[i].toString(16).padStart(2, '0');
+	let out = '';
+	for (let i = 0; i < bytes.length; i++) out += bytes[i]!.toString(16).padStart(2, '0');
+	return out;
+}
+
+function requireSubtle(): SubtleCrypto {
+	if (!globalThis.crypto?.subtle) {
+		throw createError.badRequest('This browser cannot hash files (Web Crypto is unavailable), so it cannot upload them.');
 	}
-	return hex;
+	return globalThis.crypto.subtle;
 }
 
-// ============================================================================
-// Introspection-based capability discovery (cached per endpoint)
-// ============================================================================
-
-let capabilityCache = new WeakMap<SheetsExecuteFn, Map<string, Promise<StorageCapabilities>>>();
-
-/** Test-only: clear cached storage capabilities between cases. */
-export function __resetUploadCapabilityCache(): void {
-	capabilityCache = new WeakMap();
+/** Lowercase hex SHA-256 of an already-read buffer (64 chars, as the server expects). */
+export async function sha256HexFromBuffer(buffer: ArrayBuffer): Promise<string> {
+	return hex(await requireSubtle().digest('SHA-256', buffer));
 }
 
-/**
- * Share storage introspection across uploads and previews using this executor
- * and endpoint. A read-only storage endpoint can still resolve previews.
- */
-async function discoverStorageCapabilities(endpoint: string, execute: SheetsExecuteFn): Promise<StorageCapabilities> {
-	let endpoints = capabilityCache.get(execute);
-	if (!endpoints) {
-		endpoints = new Map();
-		capabilityCache.set(execute, endpoints);
-	}
-	const cached = endpoints.get(endpoint);
-	if (cached) return cached;
-
-	const promise = (async () => {
-		const data = await execute<{ __schema: IntrospectionSchema }>(getIntrospectionQuery());
-		const schema = data?.__schema;
-		if (!schema) {
-			throw createError.badRequest('Uploads are not enabled for this endpoint.');
-		}
-		return resolveStorageCapabilities(schema);
-	})();
-
-	// Don't cache a rejected discovery — let the next attempt retry.
-	promise.catch(() => endpoints.delete(endpoint));
-	endpoints.set(endpoint, promise);
-	return promise;
-}
-
-export async function discoverUploadCapability(endpoint: string, execute: SheetsExecuteFn): Promise<UploadCapability> {
-	const { upload } = await discoverStorageCapabilities(endpoint, execute);
-	if (!upload) capabilityCache.get(execute)?.delete(endpoint);
-	return requireUploadCapability(upload);
-}
-
-function requireUploadCapability(upload: UploadCapability | null): UploadCapability {
-	if (!upload) throw createError.badRequest('Uploads are not enabled for this endpoint.');
-	return upload;
-}
-
-// --- Minimal introspection shapes (only what discovery reads) ---
-
-// Loose, structural shapes for the slice of introspection that discovery
-// reads. `ofType` recurses with `any` so hand-built fixtures and the real
-// `IntrospectionQuery['__schema']` (from `graphql`) both satisfy these without
-// exact-match friction — discovery validates by runtime shape regardless.
-interface IntrospectionTypeRef {
-	kind: string;
-	name?: string | null;
-	ofType?: any;
-}
-
-interface IntrospectionInputValue {
-	name: string;
-	type: IntrospectionTypeRef;
-}
-
-interface IntrospectionField {
-	name: string;
-	args: ReadonlyArray<IntrospectionInputValue>;
-	type: IntrospectionTypeRef;
-}
-
-interface IntrospectionType {
-	kind: string;
-	name?: string | null;
-	fields?: ReadonlyArray<IntrospectionField> | null;
-	inputFields?: ReadonlyArray<IntrospectionInputValue> | null;
-}
-
-/** Loose structural shape of an introspection `__schema` (accepts fixtures + real). */
-export interface IntrospectionSchema {
-	queryType?: { name: string } | null;
-	mutationType?: { name: string } | null;
-	types: ReadonlyArray<IntrospectionType>;
-}
-
-/** Unwrap NON_NULL / LIST wrappers down to the named type. */
-function namedTypeName(ref: IntrospectionTypeRef | null | undefined): string | null {
-	let cur = ref;
-	while (cur && (cur.kind === 'NON_NULL' || cur.kind === 'LIST')) {
-		cur = cur.ofType ?? null;
-	}
-	return cur?.name ?? null;
-}
-
-/**
- * True if `ref` is a LIST (optionally NON_NULL-wrapped) at the outer level, i.e.
- * the field is plural. Unwraps only leading NON_NULL wrappers (e.g. `[AppFile]!`)
- * before checking for the LIST — distinguishes `nodes: [AppFile]` from a singular
- * `appFile: AppFile`.
- */
-function isListTypeRef(ref: IntrospectionTypeRef | null | undefined): boolean {
-	let cur = ref;
-	while (cur && cur.kind === 'NON_NULL') {
-		cur = cur.ofType ?? null;
-	}
-	return cur?.kind === 'LIST';
-}
-
-/**
- * PostGraphile names the primary-key column `id` on every row type, so the
- * filter input field that selects a single file by primary key is `id`. This is
- * the same convention the singular by-id branch (`appFile(id:)`) relies on.
- */
-const PK_FIELD_NAME = 'id';
-
-/**
- * Pure resolver over an introspection __schema. Exported for direct unit tests
- * (no fetch). Matches by field/type shape, with an AppFile preference.
- */
-export function resolveUploadCapability(schema: IntrospectionSchema): UploadCapability {
-	return requireUploadCapability(resolveStorageCapabilities(schema).upload);
-}
-
-function resolveStorageCapabilities(schema: IntrospectionSchema): StorageCapabilities {
-	const typeByName = new Map<string, IntrospectionType>();
-	for (const t of schema.types) {
-		if (t.name) typeByName.set(t.name, t);
-	}
-
-	const objectHasFields = (typeName: string | null, names: string[]): boolean => {
-		if (!typeName) return false;
-		const t = typeByName.get(typeName);
-		if (!t?.fields) return false;
-		const present = new Set(t.fields.map((f) => f.name));
-		return names.every((n) => present.has(n));
-	};
-
-	const inputHasFields = (typeName: string | null, names: string[]): boolean => {
-		if (!typeName) return false;
-		const t = typeByName.get(typeName);
-		if (!t?.inputFields) return false;
-		const present = new Set(t.inputFields.map((f) => f.name));
-		return names.every((n) => present.has(n));
-	};
-
-	const PAYLOAD_FIELDS = ['uploadUrl', 'fileId', 'key', 'deduplicated'];
-	const INPUT_FIELDS = ['contentHash', 'bucketKey', 'contentType', 'size'];
-
-	const mutationType = schema.mutationType ? typeByName.get(schema.mutationType.name) : null;
-	const queryType = schema.queryType ? typeByName.get(schema.queryType.name) : null;
-
-	// rootUpload discovery: a Mutation field with a single `input` arg whose input
-	// type carries the upload-input shape and whose payload carries the
-	// upload-payload shape. (The legacy bucket-centric `requestUploadUrl` shape was
-	// removed from the backend on 2026-05-08; only the root upload mutation exists.)
-	let upload: Omit<UploadCapability, 'download'> | null = null;
-
-	for (const field of mutationType?.fields ?? []) {
-		const inputArg = field.args.find((a) => a.name === 'input');
-		if (!inputArg) continue;
-		const inputTypeName = namedTypeName(inputArg.type);
-		const payloadTypeName = namedTypeName(field.type);
-		if (
-			inputTypeName &&
-			inputHasFields(inputTypeName, INPUT_FIELDS) &&
-			objectHasFields(payloadTypeName, PAYLOAD_FIELDS)
-		) {
-			const payloadFields = typeByName.get(payloadTypeName ?? '')?.fields;
-			const candidate = {
-				uploadFieldName: field.name,
-				inputTypeName,
-				hasFileProjection: payloadFields?.some(
-					(f) => f.name === 'file' && !isListTypeRef(f.type) && namedTypeName(f.type) === 'JSON',
-				) ?? false,
-			};
-			if (field.name === 'uploadAppFile') {
-				upload = candidate;
-				break;
-			}
-			upload ??= candidate;
-		}
-	}
-
-	const fileTypes = new Set<string>();
-	for (const t of schema.types) {
-		if (t.kind === 'OBJECT' && t.name && t.fields?.some((f) => f.name === 'downloadUrl')) {
-			fileTypes.add(t.name);
-		}
-	}
-
-	const uploadType = upload?.uploadFieldName.replace(/^upload/, '') ?? 'AppFile';
-	const uploadDownload = resolveDownloadByIdField(typeByName, queryType, fileTypes, uploadType);
-	const preferredPreviewType = fileTypes.has('AppFile') ? 'AppFile' : uploadType;
-	const previewType = fileTypes.has(preferredPreviewType)
-		? preferredPreviewType
-		: uploadDownload?.fileTypeName ?? preferredPreviewType;
-	const download = previewType === uploadType
-		? uploadDownload
-		: resolveDownloadByIdField(typeByName, queryType, fileTypes, previewType);
-	const batch = resolveConnectionDownloadField(typeByName, queryType, fileTypes, previewType, true);
-
-	return {
-		upload: upload ? { ...upload, download: uploadDownload } : null,
-		download,
-		batch,
-	};
-}
-
-function resolveDownloadByIdField(
-	typeByName: Map<string, IntrospectionType>,
-	queryType: IntrospectionType | null | undefined,
-	fileTypesWithDownloadUrl: Set<string>,
-	preferred: string,
-): DownloadByIdResult | null {
-	// 1. Look for an inflected by-id form: a Query field whose return type has a
-	//    `downloadUrl` field and that takes a single `id` arg. e.g. appFile(id:).
-	//    The `$id` variable type is the actual scalar of that id arg (NOT a
-	//    hardcoded UUID) — derived by shape.
-	let singular: DownloadByIdResult | null = null;
-	for (const field of queryType?.fields ?? []) {
-		const returnTypeName = namedTypeName(field.type);
-		if (!returnTypeName || !fileTypesWithDownloadUrl.has(returnTypeName)) continue;
-		if (field.args.length === 1 && field.args[0].name === PK_FIELD_NAME) {
-			const candidate: DownloadByIdResult = {
-				fileByIdField: field.name,
-				fileByIdArgName: 'id',
-				fileTypeName: returnTypeName,
-				idScalarName: namedTypeName(field.args[0].type) ?? undefined,
-			};
-			if (returnTypeName === preferred) return candidate;
-			singular ??= candidate;
-		}
-	}
-
-	// 2. Connection fallback (Relay-disabled backends, incl. the live tenant API):
-	//    a Query field returning a connection whose `nodes` element is a
-	//    downloadUrl-bearing file type, filtered by id. e.g.
-	//      appFiles(where: { id: { equalTo: $id } }, first: 1) { nodes { downloadUrl } }
-	//    All names (connection field, filter arg, id field, equality operator,
-	//    nodes field, id scalar) are discovered by SHAPE, never hardcoded.
-	//    Preferred over the Relay node path: it consumes the raw fileId directly,
-	//    so it needs no client-side global-id construction.
-	const connection = resolveConnectionDownloadField(typeByName, queryType, fileTypesWithDownloadUrl, preferred);
-	if (connection?.fileTypeName === preferred) return connection;
-	if (singular || connection) return singular ?? connection;
-
-	// 3. Relay fallback: `node(nodeId: ID!)`. Last resort — only when neither a
-	//    singular `id` accessor nor a filtered connection exists. Caller spreads
-	//    `... on <FileType> { downloadUrl }` and encodes the global id.
-	const nodeField = queryType?.fields?.find(
-		(f) => f.name === 'node' && f.args.some((a) => a.name === 'nodeId'),
-	);
-	if (nodeField && fileTypesWithDownloadUrl.size > 0) {
-		// Deterministic file type for the inline fragment: prefer the type named
-		// after the upload op (uploadAppFile → AppFile); else the first-declared
-		// downloadUrl-bearing type. (Was alphabetical `.sort()[0]`, which could pick
-		// the wrong type when several expose downloadUrl, e.g. DataRoomFile.)
-		const fileTypeName = fileTypesWithDownloadUrl.has(preferred)
-			? preferred
-			: [...fileTypesWithDownloadUrl][0];
-		return { fileByIdField: 'node', fileByIdArgName: 'nodeId', fileTypeName };
-	}
-
-	return null;
-}
-
-/**
- * Discover a filtered connection for single or batched download lookups.
- * The single-file path supports two filter input styles:
- *   (a) operator filter  — `where: { id: { equalTo: $id } }` (connection-filter
- *       plugin): the id field's input type carries an equality operator.
- *   (b) condition filter — `condition: { id: $id }`: the id field is the scalar
- *       directly.
- */
-function resolveConnectionDownloadField(
-	typeByName: Map<string, IntrospectionType>,
-	queryType: IntrospectionType | null | undefined,
-	fileTypesWithDownloadUrl: Set<string>,
-	preferred: string,
-	batch = false,
-): DownloadByIdResult | null {
-	// Equality operator names we recognize on a filter-input field, in priority
-	// order (exact-match equality first).
-	const EQUALITY_OPERATORS = ['equalTo', 'eq'];
-
-	// Collect every matching connection, then pick deterministically — a tenant
-	// with multiple @storageFiles tables exposes several file connections
-	// (appFiles, dataRoomFiles, …), all carrying downloadUrl-bearing nodes.
-	const candidates: DownloadByIdResult[] = [];
-
-	for (const field of queryType?.fields ?? []) {
-		const connTypeName = namedTypeName(field.type);
-		if (!connTypeName) continue;
-		const connType = typeByName.get(connTypeName);
-		if (connType?.kind !== 'OBJECT' || !connType.fields) continue;
-
-		// Find the `nodes` field whose element type is a downloadUrl-bearing file.
-		// Require it to be a LIST (plural) so a singular `appFile: AppFile` field on
-		// some object does NOT false-match as a connection (fetchDownloadUrl indexes
-		// [nodesField][0], which only makes sense on an array).
-		const nodesField = connType.fields.find((f) => {
-			if (!isListTypeRef(f.type)) return false;
-			const elem = namedTypeName(f.type);
-			return elem != null && fileTypesWithDownloadUrl.has(elem);
-		});
-		if (!nodesField) continue;
-		const fileTypeName = namedTypeName(nodesField.type) as string;
-		if (batch && (fileTypeName !== preferred ||
-			!typeByName.get(fileTypeName)?.fields?.some((field) => field.name === PK_FIELD_NAME))) continue;
-		const connectionHasFirst = field.args.some((arg) => arg.name === 'first');
-
-		// Find a filter arg whose input type has an `id` field.
-		for (const arg of field.args) {
-			const filterTypeName = namedTypeName(arg.type);
-			const filterType = filterTypeName ? typeByName.get(filterTypeName) : null;
-			if (filterType?.kind !== 'INPUT_OBJECT' || !filterType.inputFields) continue;
-			const idField = filterType.inputFields.find((f) => f.name === PK_FIELD_NAME);
-			if (!idField) continue;
-
-			const idFieldTypeName = namedTypeName(idField.type);
-			const idFieldType = idFieldTypeName ? typeByName.get(idFieldTypeName) : null;
-
-			// Style (a): the id field is itself an input type carrying an equality
-			// operator (e.g. UUIDFilter.equalTo). The `$id` scalar is the operator's
-			// type.
-			if (idFieldType?.kind === 'INPUT_OBJECT' && idFieldType.inputFields) {
-				const opField = batch
-					? idFieldType.inputFields.find((f) => f.name === 'in' && isListTypeRef(f.type))
-					: EQUALITY_OPERATORS.map((op) =>
-						idFieldType.inputFields!.find((f) => f.name === op),
-					).find((f) => f != null);
-				if (opField) {
-					candidates.push({
-						fileByIdField: field.name,
-						fileByIdArgName: 'connection',
-						fileTypeName,
-						idScalarName: namedTypeName(opField.type) ?? undefined,
-						connectionFilterArgName: arg.name,
-						connectionIdField: idField.name,
-						connectionIdOperator: opField.name,
-						connectionNodesField: nodesField.name,
-						connectionHasFirst,
-					});
-					break;
-				}
-				// This filter lacks the operator needed for this lookup.
-				continue;
-			}
-
-			// Style (b): the id field is a scalar directly (condition style). The
-			// `$id` scalar is that field's type.
-			if (!batch && (idFieldType?.kind === 'SCALAR' || (!idFieldType && idFieldTypeName))) {
-				candidates.push({
-					fileByIdField: field.name,
-					fileByIdArgName: 'connection',
-					fileTypeName,
-					idScalarName: idFieldTypeName ?? undefined,
-					connectionFilterArgName: arg.name,
-					connectionIdField: idField.name,
-					connectionNodesField: nodesField.name,
-					connectionHasFirst,
-				});
-				break;
-			}
-		}
-	}
-
-	if (candidates.length === 0) return null;
-
-	// Deterministic pick: prefer the connection whose file type matches the upload
-	// op (uploadAppFile → AppFile), else the first-declared. This is the LIVE
-	// production path — the only downloadUrl shape on a Relay-disabled, unique-
-	// lookup-disabled tenant API — so resolving the WRONG file connection (e.g.
-	// reading a DataRoomFile id through appFiles) yields 0 nodes and fails every
-	// upload. Mirrors the node-branch determinism, where it matters far more.
-	return candidates.find((c) => c.fileTypeName === preferred) ?? candidates[0];
-}
-
-// ============================================================================
-// Upload op call
-// ============================================================================
-
-interface UploadOpInput {
-	bucketKey?: string;
-	contentHash: string;
-	contentType: string;
-	size: number;
-	filename: string;
-}
-
-/**
- * Invoke the discovered upload op and normalize its payload.
- * App-scoped buckets have NO owner_id column, so `ownerId` is NEVER sent.
- */
-export async function callUploadOp(
-	execute: SheetsExecuteFn,
-	cap: UploadCapability,
-	input: UploadOpInput,
-): Promise<UploadPayload> {
-	const mutation = `
-		mutation SheetsUpload($input: ${cap.inputTypeName}!) {
-			${cap.uploadFieldName}(input: $input) {
-				uploadUrl
-				fileId
-				key
-				deduplicated
-				file
-			}
-		}
-	`.trim();
-	const data = await execute<Record<string, UploadPayload | null>>(mutation, {
-		input: {
-			...(input.bucketKey === undefined ? { isPublic: true } : { bucketKey: input.bucketKey }),
-			contentHash: input.contentHash,
-			contentType: input.contentType,
-			size: input.size,
-			filename: input.filename,
-		},
+/** The bytes of a blob. `Blob.arrayBuffer` where the browser has it, else a FileReader. */
+function readBytes(file: Blob): Promise<ArrayBuffer> {
+	if (typeof file.arrayBuffer === 'function') return file.arrayBuffer();
+	return new Promise((resolve, reject) => {
+		const reader = new FileReader();
+		reader.onload = () => resolve(reader.result as ArrayBuffer);
+		reader.onerror = () => reject(reader.error ?? new Error('The file could not be read.'));
+		reader.readAsArrayBuffer(file);
 	});
-	const payload = data?.[cap.uploadFieldName];
-	if (!payload) {
-		throw createError.badRequest('Upload failed: no payload returned from upload mutation.');
+}
+
+/** Lowercase hex SHA-256 of a file. Refuses files above {@link MAX_HASHED_FILE_BYTES}. */
+export async function sha256HexOfFile(file: Blob): Promise<string> {
+	if (file.size > MAX_HASHED_FILE_BYTES) {
+		throw createError.badRequest(
+			`This file is too large to upload from the browser (the limit is ${MAX_HASHED_FILE_BYTES / (1024 * 1024)} MB).`,
+		);
 	}
-	const file = payload.file;
-	if (
-		!file || typeof file.id !== 'string' || typeof file.key !== 'string' ||
-		typeof file.bucket_id !== 'string' || typeof file.mime !== 'string' || typeof file.size !== 'number'
-	) {
-		throw createError.badRequest('Upload failed: server returned an invalid file projection.');
-	}
-	return payload;
+	const subtle = requireSubtle();
+	return hex(await subtle.digest('SHA-256', await readBytes(file)));
 }
 
 // ============================================================================
 // Presigned PUT
 // ============================================================================
 
+/** Header a checksum-bound presigned PUT carries (base64 of the raw digest). */
+export const CHECKSUM_SHA256_HEADER = 'x-amz-checksum-sha256';
+/** Header a row-bound presigned PUT carries (the file row id). */
+export const UPLOAD_ID_HEADER = 'x-amz-meta-upload-id';
+
+/** Hex SHA-256 to base64 of the raw digest, the encoding `x-amz-checksum-sha256` carries. */
+export function sha256HexToBase64(contentHash: string): string {
+	const pairs = contentHash.match(/.{2}/g) ?? [];
+	let binary = '';
+	for (const pair of pairs) binary += String.fromCharCode(parseInt(pair, 16));
+	return btoa(binary);
+}
+
 /**
- * PUT the raw bytes to the presigned url. Sends ONLY the signed `Content-Type`
- * header — NO Authorization (the signature lives in the url query string), no
- * cookies, no Accept override. The browser supplies Content-Length from the body.
- *
- * When `onProgress` is provided and XHR is available, uses XHR for byte
- * progress; otherwise a plain fetch PUT.
+ * Headers for a server that signs the checksum and the row id but does not
+ * return `uploadHeaders` yet. A current server returns them, and they are sent
+ * as returned.
  */
+export function fallbackPutHeaders(contentType: string, contentHash?: string, uploadId?: string): Record<string, string> {
+	return {
+		'Content-Type': contentType,
+		...(contentHash ? { [CHECKSUM_SHA256_HEADER]: sha256HexToBase64(contentHash) } : {}),
+		...(uploadId ? { [UPLOAD_ID_HEADER]: uploadId } : {}),
+	};
+}
+
 /**
- * A PUT the browser could not complete. The GraphQL API answered moments ago, so
- * the usual cause is the bucket's CORS rule (no allowed origin for this site) rather
- * than the connection; browsers do not expose which.
+ * A PUT the browser could not complete. The API answered moments ago, so the
+ * usual cause is the bucket's CORS rule (no allowed origin for this site);
+ * browsers do not say which. The words are for the person uploading; the code
+ * `STORAGE_UPLOAD_BLOCKED` is for hosts and logs.
  */
 export const STORAGE_UPLOAD_BLOCKED_MESSAGE =
-	"Upload failed: the storage server didn't accept the upload from this site. Check the bucket's allowed origins (CORS) and your connection.";
+	"Upload failed: file storage didn't accept uploads from this site, or the connection dropped. If it keeps failing, ask an admin to allow this site in the storage settings.";
 
-function storageUnreachableError() {
+const PUT_RESPONSE = 'putResponse';
+
+/** The storage server answered the PUT with an error status. The response is kept on the error. */
+function putRejected(status: number, statusText: string, body: string) {
+	const error = createError.badRequest(`Upload failed: ${status} ${statusText}${body ? ` — ${body}` : ''}`);
+	Object.defineProperty(error, PUT_RESPONSE, { value: { status, body }, enumerable: false });
+	return error;
+}
+
+/** The status and body of a rejected PUT, or null for any other error. */
+export function putResponseOf(error: unknown): { status: number; body: string } | null {
+	const response = error && typeof error === 'object' ? (error as Record<string, unknown>)[PUT_RESPONSE] : null;
+	return response && typeof response === 'object' ? (response as { status: number; body: string }) : null;
+}
+
+export interface UploadProgressEvent {
+	loaded: number;
+	total: number;
+	percentage: number;
+}
+
+export interface PutFileOptions {
+	headers: Record<string, string>;
+	onProgress?: (progress: UploadProgressEvent) => void;
+	signal?: AbortSignal;
+}
+
+function abortError(): Error {
+	return typeof DOMException === 'function'
+		? new DOMException('The upload was cancelled.', 'AbortError')
+		: Object.assign(new Error('The upload was cancelled.'), { name: 'AbortError' });
+}
+
+/** True for the error a cancelled upload rejects with. */
+export function isAbortError(error: unknown): boolean {
+	return Boolean(error && typeof error === 'object' && (error as { name?: unknown }).name === 'AbortError');
+}
+
+function blockedError() {
 	return createError.graphql(STORAGE_UPLOAD_BLOCKED_MESSAGE, 'STORAGE_UPLOAD_BLOCKED');
 }
 
-export async function presignedPut(
-	url: string,
-	buffer: ArrayBuffer,
-	contentType: string,
-	onProgress?: (progress: { loaded: number; total: number; percentage: number }) => void,
-): Promise<void> {
-	const total = buffer.byteLength;
+function putWithXhr(url: string, body: Blob | ArrayBuffer, options: PutFileOptions, total: number): Promise<void> {
+	return new Promise((resolve, reject) => {
+		const xhr = new XMLHttpRequest();
+		const onAbort = () => xhr.abort();
+		const done = () => options.signal?.removeEventListener('abort', onAbort);
+		xhr.open('PUT', url);
+		for (const [name, value] of Object.entries(options.headers)) xhr.setRequestHeader(name, value);
+		xhr.upload.addEventListener('progress', (event) => {
+			if (!event.lengthComputable || event.total === 0) return;
+			options.onProgress?.({ loaded: event.loaded, total: event.total, percentage: Math.round((event.loaded / event.total) * 100) });
+		});
+		xhr.addEventListener('load', () => {
+			done();
+			if (xhr.status >= 200 && xhr.status < 300) {
+				options.onProgress?.({ loaded: total, total, percentage: 100 });
+				resolve();
+			} else {
+				reject(putRejected(xhr.status, xhr.statusText, xhr.responseText ?? ''));
+			}
+		});
+		xhr.addEventListener('error', () => {
+			done();
+			reject(blockedError());
+		});
+		xhr.addEventListener('abort', () => {
+			done();
+			reject(abortError());
+		});
+		options.signal?.addEventListener('abort', onAbort, { once: true });
+		xhr.send(body);
+	});
+}
 
-	if (onProgress && typeof XMLHttpRequest !== 'undefined') {
-		await putWithXHR(url, buffer, contentType, total, onProgress);
+/** PUT bytes to a presigned URL with exactly the given headers. Uses XHR when progress is wanted and XHR exists. */
+export async function putFile(url: string, body: Blob | ArrayBuffer, options: PutFileOptions): Promise<void> {
+	if (options.signal?.aborted) throw abortError();
+	const total = body instanceof ArrayBuffer ? body.byteLength : body.size;
+	if (options.onProgress && typeof XMLHttpRequest !== 'undefined') {
+		await putWithXhr(url, body, options, total);
 		return;
 	}
-
 	let response: Response;
 	try {
 		response = await fetch(url, {
 			method: 'PUT',
-			headers: { 'Content-Type': contentType },
-			body: buffer,
+			headers: options.headers,
+			body,
+			...(options.signal ? { signal: options.signal } : {}),
 		});
-	} catch {
-		throw storageUnreachableError();
+	} catch (error) {
+		if (isAbortError(error)) throw abortError();
+		throw blockedError();
 	}
-
 	if (!response.ok) {
-		const body = await response.text().catch(() => '');
-		throw createError.badRequest(`Upload failed: ${response.status} ${response.statusText}${body ? ` — ${body}` : ''}`);
+		throw putRejected(response.status, response.statusText, await response.text().catch(() => ''));
 	}
-	onProgress?.({ loaded: total, total, percentage: 100 });
+	options.onProgress?.({ loaded: total, total, percentage: 100 });
 }
 
-function putWithXHR(
+/**
+ * PUT an already-read buffer. Kept for callers of the earlier API; new code
+ * uses {@link putFile} with the payload's `uploadHeaders`.
+ */
+export async function presignedPut(
 	url: string,
 	buffer: ArrayBuffer,
 	contentType: string,
-	total: number,
-	onProgress: (progress: { loaded: number; total: number; percentage: number }) => void,
+	onProgress?: (progress: UploadProgressEvent) => void,
+	contentHash?: string,
+	uploadId?: string,
 ): Promise<void> {
-	return new Promise((resolve, reject) => {
-		const xhr = new XMLHttpRequest();
-		xhr.open('PUT', url);
-		xhr.setRequestHeader('Content-Type', contentType);
+	await putFile(url, buffer, { headers: fallbackPutHeaders(contentType, contentHash, uploadId), onProgress });
+}
 
-		xhr.upload.addEventListener('progress', (event) => {
-			if (event.lengthComputable) {
-				onProgress({
-					loaded: event.loaded,
-					total: event.total,
-					percentage: Math.round((event.loaded / event.total) * 100),
+// ============================================================================
+// Transfer: hash, request, PUT, one renewal of an expired URL
+// ============================================================================
+
+export interface UploadRequestInput {
+	contentHash: string;
+	contentType: string;
+	size: number;
+	filename: string;
+}
+
+/** Sends the upload mutation for one file. The signal aborts the request when the user cancels. */
+export type UploadRequester = (input: UploadRequestInput, signal?: AbortSignal) => Promise<UploadPayload>;
+
+function isExpired(payload: UploadPayload, now = Date.now()): boolean {
+	if (!payload.expiresAt) return false;
+	const expiry = Date.parse(payload.expiresAt);
+	return Number.isFinite(expiry) && expiry <= now;
+}
+
+/** S3 answers an expired presigned URL with 403 ("Request has expired"). */
+function looksExpired(error: unknown, payload: UploadPayload): boolean {
+	const response = putResponseOf(error);
+	if (response?.status !== 403) return false;
+	return isExpired(payload) || /expired/i.test(response.body);
+}
+
+export interface TransferOptions {
+	onProgress?: (progress: UploadProgressEvent) => void;
+	signal?: AbortSignal;
+}
+
+/**
+ * Upload one file through a requester: hash, request, PUT with the returned
+ * headers. A URL that expired before or during the PUT is requested again once.
+ * Any error after the server issued a file id carries it (`unfinishedUploadOf`);
+ * the row itself is left for the storage service to expire.
+ */
+export async function transferFile(file: File, request: UploadRequester, options: TransferOptions = {}): Promise<UploadPayload> {
+	const contentType = file.type || 'application/octet-stream';
+	const contentHash = await sha256HexOfFile(file);
+	if (options.signal?.aborted) throw abortError();
+	const input: UploadRequestInput = { contentHash, contentType, size: file.size, filename: file.name };
+
+	let payload = await request(input, options.signal);
+	// From here on the server has issued a file id: the newest `payload` names it.
+	const putOrRenew = async (): Promise<UploadPayload> => {
+		for (let renewals = 0; ; renewals += 1) {
+			if (payload.deduplicated) {
+				options.onProgress?.({ loaded: file.size, total: file.size, percentage: 100 });
+				return payload;
+			}
+			if (options.signal?.aborted) throw abortError();
+			if (isExpired(payload) && renewals === 0) {
+				payload = await request(input, options.signal);
+				continue;
+			}
+			try {
+				await putFile(payload.uploadUrl!, file, {
+					headers: payload.uploadHeaders ?? fallbackPutHeaders(contentType, contentHash, payload.fileId),
+					onProgress: options.onProgress,
+					signal: options.signal,
 				});
-			}
-		});
-
-		xhr.addEventListener('load', () => {
-			if (xhr.status >= 200 && xhr.status < 300) {
-				onProgress({ loaded: total, total, percentage: 100 });
-				resolve();
-			} else {
-				reject(createError.badRequest(`Upload failed: ${xhr.status} ${xhr.statusText}${xhr.responseText ? ` — ${xhr.responseText}` : ''}`));
-			}
-		});
-
-		xhr.addEventListener('error', () => reject(storageUnreachableError()));
-
-		xhr.send(buffer);
-	});
-}
-
-// ============================================================================
-// downloadUrl resolution
-// ============================================================================
-
-/**
- * Encode a PostGraphile global id (Relay `node` id) from a row's primary key,
- * using the default base64JSON codec: `base64(JSON.stringify([typeName, pk]))`.
- */
-function toGlobalId(typeName: string, id: string): string {
-	if (typeof btoa !== 'function') {
-		throw createError.badRequest('Cannot encode the file node id: btoa is unavailable in this environment.');
-	}
-	return btoa(JSON.stringify([typeName, id]));
-}
-
-/**
- * Resolve a file's download URL for immediate use. It can be a signed URL
- * with an expiration, so only the storage projection belongs in the cell.
- */
-export async function fetchDownloadUrl(
-	execute: SheetsExecuteFn,
-	cap: DownloadByIdResult,
-	fileId: string,
-): Promise<string> {
-	if (cap.fileByIdArgName === 'nodeId') {
-		// The upload payload returns the RAW primary key as `fileId`, but
-		// `node(nodeId:)` expects the opaque PostGraphile global id. Encode it with
-		// the default base64JSON codec (`base64([typeName, pk])`). NOTE: the live
-		// tenant API is Relay-disabled and resolves via the connection branch; this
-		// path is mock-covered only and assumes the default node-id codec.
-		const nodeId = toGlobalId(cap.fileTypeName, fileId);
-		const query = `
-			query SheetsDownloadUrl($nodeId: ID!) {
-				${cap.fileByIdField}(nodeId: $nodeId) {
-					... on ${cap.fileTypeName} {
-						downloadUrl
-					}
-				}
-			}
-		`.trim();
-		const data = await execute<Record<string, { downloadUrl?: string | null } | null>>(query, { nodeId });
-		const node = data?.[cap.fileByIdField];
-		const url = node?.downloadUrl;
-		if (!url) {
-			throw createError.badRequest('Upload succeeded but no downloadUrl was returned for the file.');
-		}
-		return url;
-	}
-
-	// Connection fallback (Relay-disabled): filter the connection by id and read
-	// the first node's downloadUrl. The filter literal is built per the discovered
-	// style — operator (`{ id: { equalTo: $id } }`) or condition (`{ id: $id }`).
-	if (cap.fileByIdArgName === 'connection') {
-		const idScalar = cap.idScalarName ?? 'ID';
-		const filterArg = cap.connectionFilterArgName as string;
-		const idField = cap.connectionIdField as string;
-		const nodesField = cap.connectionNodesField as string;
-		const filterLiteral = cap.connectionIdOperator
-			? `{ ${idField}: { ${cap.connectionIdOperator}: $id } }`
-			: `{ ${idField}: $id }`;
-		const query = `
-			query SheetsDownloadUrl($id: ${idScalar}!) {
-				${cap.fileByIdField}(${filterArg}: ${filterLiteral}${cap.connectionHasFirst ? ', first: 1' : ''}) {
-					${nodesField} {
-						downloadUrl
-					}
-				}
-			}
-		`.trim();
-		const data = await execute<Record<string, Record<string, Array<{ downloadUrl?: string | null }> | null> | null>>(
-			query,
-			{ id: fileId },
-		);
-		const conn = data?.[cap.fileByIdField];
-		const url = conn?.[nodesField]?.[0]?.downloadUrl;
-		if (!url) {
-			throw createError.badRequest('Upload succeeded but no downloadUrl was returned for the file.');
-		}
-		return url;
-	}
-
-	const idScalar = cap.idScalarName ?? 'ID';
-	const query = `
-		query SheetsDownloadUrl($id: ${idScalar}!) {
-			${cap.fileByIdField}(id: $id) {
-				id
-				downloadUrl
+				return payload;
+			} catch (error) {
+				if (renewals > 0 || !looksExpired(error, payload)) throw error;
+				payload = await request(input, options.signal);
 			}
 		}
-	`.trim();
-	const data = await execute<Record<string, { downloadUrl?: string | null } | null>>(query, { id: fileId });
-	const file = data?.[cap.fileByIdField];
-	const url = file?.downloadUrl;
-	if (!url) {
-		throw createError.badRequest('Upload succeeded but no downloadUrl was returned for the file.');
-	}
-	return url;
-}
-
-/** Resolve URLs for one batch of visible images. Missing or unreadable IDs have no entry. */
-export async function fetchMediaDownloadUrls(
-	{ endpoint, execute }: SheetsStorageTransport,
-	getActiveIds: () => readonly string[],
-): Promise<Map<string, string>> {
-	const { batch, download } = await discoverStorageCapabilities(endpoint, execute);
-	const ids = getActiveIds();
-	const urls = new Map<string, string>();
-	if (ids.length === 0) return urls;
-	if (batch) {
-		const first = batch.connectionHasFirst ? `, first: ${ids.length}` : '';
-		const query = `query SheetsMediaDownloadUrls($ids: [${batch.idScalarName ?? 'ID'}!]!) {
-			${batch.fileByIdField}(${batch.connectionFilterArgName}: {
-				${batch.connectionIdField}: { in: $ids }
-			}${first}) { ${batch.connectionNodesField} { id downloadUrl } }
-		}`;
-		type FileNode = { id: string; downloadUrl: string | null };
-		const data = await execute<Record<string, Record<string, (FileNode | null)[] | null> | null>>(query, { ids });
-		for (const row of data?.[batch.fileByIdField]?.[batch.connectionNodesField!] ?? []) {
-			if (row?.downloadUrl) urls.set(row.id, row.downloadUrl);
-		}
-	} else if (download) {
-		const results = await Promise.allSettled(ids.map((id) => fetchDownloadUrl(execute, download, id)));
-		results.forEach((result, index) => {
-			if (result.status === 'fulfilled') urls.set(ids[index], result.value);
-		});
-	}
-	return urls;
-}
-
-/**
- * Resolve a file's signed `downloadUrl` by id — the public entry point for callers
- * OUTSIDE the upload flow (e.g. a storage browser fetching the preview/copy link for
- * an already-uploaded file).
- *
- * `downloadUrl` is a Grafast computed field, so it cannot be selected through the
- * runtime query builder (`buildSelect` intersects the select against pg columns and
- * drops computed fields). This discovers the by-id field using cached introspection
- * and reads it through the SAME resolver the upload path uses. Returns null on any
- * failure — a missing url is not exceptional for the caller (it just disables
- * copy/download), so the throwing internals are swallowed here.
- */
-export async function resolveDownloadUrl(
-	execute: SheetsExecuteFn,
-	endpoint: string,
-	fileId: string,
-): Promise<string | null> {
+	};
 	try {
-		const { download } = await discoverStorageCapabilities(endpoint, execute);
-		return download ? await fetchDownloadUrl(execute, download, fileId) : null;
-	} catch {
-		return null;
+		return await putOrRenew();
+	} catch (error) {
+		throw withUnfinishedUpload(error, { fileId: payload.fileId });
 	}
 }
+
+// ============================================================================
+// The fallback discovery, re-exported for callers of the earlier API
+// ============================================================================
+
+export {
+	__resetUploadCapabilityCache,
+	callUploadOp,
+	createPresignedSheetsUpload,
+	discoverSoleUploadCapability,
+	discoverUploadCapability,
+	fetchDownloadUrl,
+	fetchMediaDownloadUrls,
+	requestDiscoveredUpload,
+	resolveDownloadUrl,
+	resolveUploadCapability,
+} from './sheets-upload-discovery';
+export type { IntrospectionSchema, LegacyUploadPayload, UploadCapability } from './sheets-upload-discovery';

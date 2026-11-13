@@ -51,19 +51,47 @@ export function getErrorCode(error: unknown): string | null {
 }
 
 /**
- * Whether an error represents a failed/expired authentication session.
- *
- * Trusts an explicit code first (`UNAUTHENTICATED` / `BAD_TOKEN_DEFINITION`),
- * then falls back to message wording for plain errors that carry no code.
+ * Server codes that mean the session or its token was rejected. The one list every
+ * transport and `isAuthenticationError` use, so they cannot disagree.
  */
-const AUTH_ERROR_CODES = new Set(['UNAUTHENTICATED', 'BAD_TOKEN_DEFINITION']);
-const AUTH_MESSAGE_PATTERN =
-	/unauthenticated|unauthorized|not authorized|authentication|session expired|token expired/;
+export const AUTHENTICATION_ERROR_CODES: readonly string[] = ['UNAUTHENTICATED', 'BAD_TOKEN_DEFINITION'];
 
+/** Whether a machine code (never a message) means the session or its token was rejected. */
+export function isAuthenticationCode(code: unknown): boolean {
+	return typeof code === 'string' && AUTHENTICATION_ERROR_CODES.includes(code);
+}
+
+const AUTH_STATUS = 401;
+
+type Shape = Record<string, unknown>;
+
+function asShape(value: unknown): Shape | null {
+	return value && typeof value === 'object' ? (value as Shape) : null;
+}
+
+function hasAuthCode(node: unknown): boolean {
+	return isAuthenticationCode(asShape(asShape(node)?.extensions)?.code);
+}
+
+function hasAuthCodeIn(errors: unknown): boolean {
+	return Array.isArray(errors) && errors.some(hasAuthCode);
+}
+
+/**
+ * Whether an error means the session ended: an HTTP 401, or a GraphQL error whose
+ * `extensions.code` is one of {@link AUTHENTICATION_ERROR_CODES} (on the error
+ * itself, or on any error of its response, as `errors` or `response.errors`). The
+ * message text is never read, so a permission error whose text mentions
+ * "unauthorized" does not sign anyone out. A `ConstructiveError` counts by its code:
+ * the transports create `UNAUTHENTICATED` only for a 401 or one of those codes.
+ */
 export function isAuthenticationError(error: unknown): boolean {
-	const parsed = parse(error);
-	if (parsed.code && AUTH_ERROR_CODES.has(parsed.code)) return true;
-	return AUTH_MESSAGE_PATTERN.test((parsed.rawMessage ?? '').toLowerCase());
+	if (error instanceof ConstructiveError) return isAuthenticationCode(error.code);
+	const shape = asShape(error);
+	if (!shape) return false;
+	const response = asShape(shape.response);
+	if (shape.status === AUTH_STATUS || shape.statusCode === AUTH_STATUS || response?.status === AUTH_STATUS) return true;
+	return hasAuthCode(shape) || hasAuthCodeIn(shape.errors) || hasAuthCodeIn(response?.errors);
 }
 
 // ============================================================================

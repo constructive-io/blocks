@@ -12,7 +12,6 @@ export function DateTimeCellView(props: CellProps) {
 
 	return (
 		<div
-			role="gridcell"
 			data-slot="datetime-cell"
 			title={text}
 			className={cn('flex h-full w-full items-center truncate px-3 text-sm tabular-nums')}

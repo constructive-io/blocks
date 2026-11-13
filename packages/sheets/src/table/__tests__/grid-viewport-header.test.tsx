@@ -13,7 +13,7 @@ import { createRoot, type Root } from 'react-dom/client';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { useSheetsTableInstance, type SheetsColumnDescriptor } from '../use-sheets-table-instance';
-import { GridViewport, type GridViewportSorting, type RenderCell } from '../grid-viewport';
+import { GridViewport, type GridViewportSortKey, type RenderCell } from '../grid-viewport';
 import type { SheetsRow } from '../../grid/row-model';
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
@@ -36,12 +36,12 @@ const EMPTY = {} as never;
 const renderCell: RenderCell = (_cell, ctx) => <div role='gridcell' data-col={ctx.columnIndex} />;
 
 interface HarnessProps {
-	sorting?: GridViewportSorting;
-	onHeaderClick?: (colKey: string) => void;
+	sort?: readonly GridViewportSortKey[];
+	onHeaderClick?: (colKey: string, additive: boolean) => void;
 	onResize?: (colKey: string, width: number) => void;
 }
 
-function Harness({ sorting, onHeaderClick, onResize }: HarnessProps) {
+function Harness({ sort, onHeaderClick, onResize }: HarnessProps) {
 	const table = useSheetsTableInstance({
 		columns: COLUMNS,
 		data: ROWS,
@@ -52,7 +52,7 @@ function Harness({ sorting, onHeaderClick, onResize }: HarnessProps) {
 		onColumnPinningChange: noop,
 		onRowSelectionChange: noop
 	});
-	return <GridViewport table={table} renderCell={renderCell} sorting={sorting} onHeaderClick={onHeaderClick} onResize={onResize} />;
+	return <GridViewport table={table} renderCell={renderCell} sort={sort} onHeaderClick={onHeaderClick} onResize={onResize} />;
 }
 
 describe('GridViewport header row (sort caret + resize handle + sticky pin)', () => {
@@ -100,7 +100,7 @@ describe('GridViewport header row (sort caret + resize handle + sticky pin)', ()
 		expect(clicks).toEqual(['name']);
 	});
 
-	it('reflects the sorting prop on the caret (neutral -> asc -> desc)', async () => {
+	it('reflects the sort prop on the caret (neutral -> asc -> desc)', async () => {
 		function caretFor(colKey: string): SVGElement | null {
 			const header = headerCells().find((h) => h.getAttribute('data-col-key') === colKey);
 			return header?.querySelector<SVGElement>('[data-part-id="sheets-sort-caret"]') ?? null;
@@ -108,13 +108,13 @@ describe('GridViewport header row (sort caret + resize handle + sticky pin)', ()
 
 		// Unsorted: caret is neutral.
 		await act(async () => {
-			root.render(<Harness sorting={{ id: null, desc: false }} />);
+			root.render(<Harness sort={[]} />);
 		});
 		expect(caretFor('name')?.getAttribute('data-direction')).toBe('none');
 
 		// Ascending on `name`.
 		await act(async () => {
-			root.render(<Harness sorting={{ id: 'name', desc: false }} />);
+			root.render(<Harness sort={[{ column: 'name', direction: 'asc' }]} />);
 		});
 		expect(caretFor('name')?.getAttribute('data-direction')).toBe('asc');
 		// Other columns stay neutral.
@@ -122,7 +122,7 @@ describe('GridViewport header row (sort caret + resize handle + sticky pin)', ()
 
 		// Descending on `name`.
 		await act(async () => {
-			root.render(<Harness sorting={{ id: 'name', desc: true }} />);
+			root.render(<Harness sort={[{ column: 'name', direction: 'desc' }]} />);
 		});
 		expect(caretFor('name')?.getAttribute('data-direction')).toBe('desc');
 	});

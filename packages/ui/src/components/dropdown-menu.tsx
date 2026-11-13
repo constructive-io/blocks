@@ -8,6 +8,10 @@ import { useFloatingOverlayPortalProps } from '@constructive-io/ui/portal';
 import { FluidHighlight } from '../lib/motion/fluid-highlight';
 import { cn } from '../lib/utils';
 
+// The popup is 10px round with a 1px border and 4px of padding, so its items and their
+// highlight sit 5px in and are 10px - 5px round: the corners stay parallel.
+const MENU_ITEM_RADIUS = 'rounded-[calc(var(--radius-lg)-5px)]';
+
 const DropdownMenuGroupContext = React.createContext(false);
 
 function DropdownMenu({ ...props }: React.ComponentProps<typeof MenuPrimitive.Root>) {
@@ -85,7 +89,7 @@ function DropdownMenuContent({
 					)}
 					{...props}
 				>
-					<FluidHighlight />
+					<FluidHighlight className={MENU_ITEM_RADIUS} />
 					{children}
 				</MenuPrimitive.Popup>
 			</MenuPrimitive.Positioner>
@@ -123,7 +127,7 @@ function DropdownMenuItem({
 		data-[variant=destructive]:data-[highlighted]:bg-destructive/10 dark:data-[variant=destructive]:data-[highlighted]:bg-destructive/40
 		data-[variant=destructive]:data-[highlighted]:text-destructive
 		data-[variant=destructive]:*:[svg]:!text-destructive relative flex cursor-default items-center gap-2 pointer-coarse:min-h-11
-		rounded-sm px-2 py-1.5 text-sm outline-hidden select-none data-[disabled]:pointer-events-none
+		rounded-[calc(var(--radius-lg)-5px)] px-2 py-1.5 text-sm outline-hidden select-none data-[disabled]:pointer-events-none
 		data-[disabled]:opacity-64 data-[inset]:ps-8 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4`,
 		className,
 	);
@@ -152,7 +156,7 @@ function DropdownMenuCheckboxItem({
 		<MenuPrimitive.CheckboxItem
 			data-slot="dropdown-menu-checkbox-item"
 			className={cn(
-				`data-[highlighted]:text-accent-foreground relative flex cursor-default items-center gap-2 rounded-sm py-1.5
+				`data-[highlighted]:text-accent-foreground relative flex cursor-default items-center gap-2 rounded-[calc(var(--radius-lg)-5px)] py-1.5
 				pe-2 ps-8 text-sm outline-hidden select-none pointer-coarse:min-h-11 data-[disabled]:pointer-events-none data-[disabled]:opacity-64
 				[&_svg]:pointer-events-none [&_svg]:shrink-0`,
 				className,
@@ -186,7 +190,7 @@ function DropdownMenuRadioItem({
 		<MenuPrimitive.RadioItem
 			data-slot="dropdown-menu-radio-item"
 			className={cn(
-				`data-[highlighted]:text-accent-foreground relative flex cursor-default items-center gap-2 rounded-sm py-1.5
+				`data-[highlighted]:text-accent-foreground relative flex cursor-default items-center gap-2 rounded-[calc(var(--radius-lg)-5px)] py-1.5
 				pe-2 ps-8 text-sm outline-hidden select-none pointer-coarse:min-h-11 data-[disabled]:pointer-events-none data-[disabled]:opacity-64
 				[&_svg]:pointer-events-none [&_svg]:shrink-0`,
 				className,
@@ -279,7 +283,7 @@ function DropdownMenuSubTrigger({
 			data-inset={inset}
 			className={cn(
 				`data-[highlighted]:text-accent-foreground data-[popup-open]:bg-accent
-				data-[popup-open]:text-accent-foreground relative flex cursor-default items-center rounded-sm px-2 py-1.5 text-sm pointer-coarse:min-h-11
+				data-[popup-open]:text-accent-foreground relative flex cursor-default items-center rounded-[calc(var(--radius-lg)-5px)] px-2 py-1.5 text-sm pointer-coarse:min-h-11
 				outline-hidden select-none data-[inset]:ps-8`,
 				className,
 			)}
@@ -312,7 +316,7 @@ function DropdownMenuSubContent({ className, children, ...props }: React.Compone
 					)}
 					{...props}
 				>
-					<FluidHighlight />
+					<FluidHighlight className={MENU_ITEM_RADIUS} />
 					{children}
 				</MenuPrimitive.Popup>
 			</MenuPrimitive.Positioner>

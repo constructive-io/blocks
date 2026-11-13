@@ -35,6 +35,7 @@ import { NumberCellView } from '../cell-model/views/number-view';
 import { RelationCellView } from '../cell-model/views/relation-view';
 import { TextCellView } from '../cell-model/views/text-view';
 import { UriCellView } from '../cell-model/views/uri-view';
+import { reportRejectedWrites } from '../grid/write-feedback';
 import { InlineCellEditor } from './inline-cell-editor';
 import type { SheetsCellResolution } from './use-sheets-content';
 
@@ -115,8 +116,10 @@ interface SheetsCellHostInnerProps {
 	columnIndex: number;
 	value: unknown;
 	isEditing: boolean;
-	/** True when this is the active (keyboard cursor) cell — drives the focus ring + aria-selected + id. */
+	/** True when this is the active (keyboard cursor) cell — drives the focus ring. */
 	isActive: boolean;
+	/** True for the active cell and every cell of the active range — drives aria-selected. */
+	isSelected: boolean;
 	/** Open the overlay editor for this cell; undefined on render paths without editing (e.g. tests). */
 	openEditor?: OpenEditor;
 	/** Type-to-edit seed for the inline editor (only meaningful when `isEditing`). */
@@ -153,6 +156,7 @@ function toCellProps(props: SheetsCellHostInnerProps, onStartEdit: () => void): 
 		onStartEdit,
 		disabled: false,
 		readOnlyReason: props.resolution.readOnlyReason,
+		isActive: props.isActive,
 	};
 }
 
@@ -166,14 +170,14 @@ const SheetsCellHostInner = memo(
 
 		// Start editing anchored to THIS cell's DOM node — the host is the only place
 		// that knows the cell's rect (read off getBoundingClientRect, viewport coords,
-		// matching the OverlayManager's window.innerHeight assumption). No-op when the
-		// cell is readonly or no openEditor was threaded in.
+		// matching the OverlayManager's window.innerHeight assumption). A read-only cell
+		// still goes through the edit route: a value viewer opens, or the reason is shown.
 		const startEdit = useCallback(() => {
 			const open = props.openEditor;
 			const el = wrapperRef.current;
-			if (!open || !el || props.resolution.cell.readonly) return;
+			if (!open || !el) return;
 			open(props.rowIndex, props.colKey, el.getBoundingClientRect());
-		}, [props.openEditor, props.rowIndex, props.colKey, props.resolution.cell.readonly]);
+		}, [props.openEditor, props.rowIndex, props.colKey]);
 
 		// Click parks the active cell here (the grid root owns keys via aria-activedescendant).
 		// A shift-click EXTENDS the cell range from the latched anchor instead of resetting it.
@@ -207,20 +211,27 @@ const SheetsCellHostInner = memo(
 		const draftClasses = cn(
 			styleHint?.draft && 'bg-muted/40 text-muted-foreground',
 			styleHint?.error && 'bg-destructive/10 text-destructive',
+			// A value the server could not send shows a muted notice, never an empty cell.
+			styleHint?.unreadable && 'text-muted-foreground italic',
 		);
 		// The draft-action column renders the REAL <Button> (DraftActionCellView), which
 		// takes its own prop shape — bypass the kind→view map and the value/editor wiring.
 		const isDraftActionCell = props.colKey === DRAFT_ACTION_COLUMN_KEY || props.resolution.cell.kind === 'draft-action';
 		// Border wrapper carries the mouse activation handlers (click parks the active cell,
 		// double-click opens the editor). Keys are owned by the grid root (aria-activedescendant
-		// pattern), so the wrapper is NOT individually focusable. The gridcell role lives on the
-		// built-in view (or the consumer component) inside, so the host adds no second role="gridcell".
+		// pattern), so the wrapper is NOT individually focusable. It is the gridcell: the grid's
+		// aria-activedescendant points at its id, so its role, selection, column index and
+		// read-only state are what a screen reader announces. The views inside are plain content.
 		return (
 			<div
 				ref={wrapperRef}
+				role='gridcell'
 				id={`sheets-cell-${props.rowIndex}-${props.columnIndex}`}
-				aria-selected={props.isActive || undefined}
-				title={props.resolution.readOnlyReason}
+				aria-colindex={props.columnIndex + 1}
+				aria-selected={props.isSelected || undefined}
+				aria-readonly={props.resolution.readOnlyReason ? true : undefined}
+				aria-description={props.resolution.readOnlyReason ?? undefined}
+				title={props.resolution.readOnlyReason ?? props.resolution.errorMessage}
 				onClick={activate}
 				onDoubleClick={startEdit}
 				onContextMenu={contextMenu}
@@ -246,12 +257,14 @@ const SheetsCellHostInner = memo(
 					// shell short-circuits inline-toggle/overlay/none before here), so the cell kind is
 					// always text or number → derive the numeric variant from it.
 					<InlineCellEditor
-						ariaLabel={`Edit ${props.resolution.fieldMeta?.name ?? props.colKey}`}
+						ariaLabel={`Edit ${props.resolution.column?.name ?? props.resolution.fieldMeta?.name ?? props.colKey}`}
 						value={props.value}
 						initialText={props.inlineInitialText}
 						numeric={props.resolution.cell.kind === 'number'}
+						column={props.resolution.column ?? null}
 						onCommit={(next) => props.onInlineCommit?.(props.rowIndex, props.colKey, next)}
 						onCancel={() => props.onInlineCancel?.()}
+						onReject={(reason) => reportRejectedWrites([{ rowIndex: props.rowIndex, colKey: props.colKey, reason }], 1)}
 					/>
 				) : Component ? (
 					<Component {...cellProps} />
@@ -264,6 +277,9 @@ const SheetsCellHostInner = memo(
 	(prev, next) =>
 		prev.rowId === next.rowId &&
 		prev.colKey === next.colKey &&
+		// The id (the aria-activedescendant target) and aria-colindex come from the indexes.
+		prev.rowIndex === next.rowIndex &&
+		prev.columnIndex === next.columnIndex &&
 		prev.value === next.value &&
 		prev.isEditing === next.isEditing &&
 		// initialText seeds the inline editor on open; it only differs for the editing cell.
@@ -272,12 +288,15 @@ const SheetsCellHostInner = memo(
 		prev.onInlineCancel === next.onInlineCancel &&
 		// isActive must gate the memo or the focus ring will not move between cells.
 		prev.isActive === next.isActive &&
+		prev.isSelected === next.isSelected &&
 		prev.openEditor === next.openEditor &&
 		prev.onActivateCell === next.onActivateCell &&
 		prev.onContextMenu === next.onContextMenu &&
 		prev.onSubmitDraftRow === next.onSubmitDraftRow &&
 		prev.resolution.cell.readonly === next.resolution.cell.readonly &&
 		prev.resolution.readOnlyReason === next.resolution.readOnlyReason &&
+		prev.resolution.errorMessage === next.resolution.errorMessage &&
+		prev.resolution.cell.styleHint?.unreadable === next.resolution.cell.styleHint?.unreadable &&
 		// styleHint.draft/error and the draft-action status can flip while `value` is
 		// unchanged (validation result arrives, save in flight), so gate on them too.
 		prev.resolution.cell.styleHint?.draft === next.resolution.cell.styleHint?.draft &&
@@ -342,6 +361,7 @@ export function SheetsCellHost({ cell, ctx, getSheetsCellContent, openEditor, is
 			onInlineCommit={onInlineCommit}
 			onInlineCancel={onInlineCancel}
 			isActive={ctx.isActive}
+			isSelected={ctx.isSelected}
 			openEditor={openEditor}
 			onActivateCell={onActivateCell}
 			onContextMenu={onContextMenu}

@@ -1,26 +1,49 @@
 'use client';
 
-// Native array editor — a thin EditorProps adapter that RE-HOSTS the existing
-// value-native `ArrayEditor` ({ value, onChange, onFinished }) verbatim. The UI
-// (tag chips, native keydown boundary, footer, own EditorFocusTrap + OVERLAY.sm
-// width) is reused as-is; only the commit/cancel contract is mapped:
-// `onFinished(next)` -> `onCommit(next)`, `onFinished(undefined)` -> `onCancel()`.
-// `onChange` is a no-op because the native value-commit path reads only the
-// committed value (parity with the glide `createArrayEditorFactory`, which also
-// passes `onChange: () => {}`). The initial value comes from `EditorProps.value`
-// (the raw row value); the host serialises + builds the cell on commit.
+// Native array editor — a thin EditorProps adapter that RE-HOSTS the value-native
+// `ArrayEditor` ({ value, onChange, onFinished }). Each item is checked by the
+// column's element rules (`parseColumnInput`): a whole-number list takes whole
+// numbers, a date list takes dates, a choice list takes its choices. The committed
+// value is the parsed list (numbers stay numbers, exact decimals stay strings).
+// `onFinished(undefined)` (cancel / Escape) -> `onCancel()`.
 
+import { useCallback } from 'react';
+
+import { parseColumnInput } from '../../cell-types/column-value';
+import { fieldLabel } from '../../cell-types/field-label';
 import { ArrayEditor } from '../../grid/editors/array-editor';
 import type { EditorProps } from './editor-props';
 
-export function ArrayEditorDom({ value, onCommit, onCancel }: EditorProps) {
+export function ArrayEditorDom({ value, column, colKey, onCommit, onCancel }: EditorProps) {
 	const initial = Array.isArray(value) ? value : [];
+	const validate = useCallback(
+		(next: unknown[]) => {
+			if (!column) return null;
+			const parsed = parseColumnInput(column, next);
+			return parsed.ok === false ? parsed.reason : null;
+		},
+		[column],
+	);
 	return (
 		<div data-slot='array-editor'>
 			<ArrayEditor
 				value={initial}
 				onChange={() => {}}
-				onFinished={(next) => (next === undefined ? onCancel() : onCommit(next))}
+				validate={validate}
+				title={fieldLabel(column?.name ?? colKey)}
+				nullable={Boolean(column?.nullable)}
+				onFinished={(next) => {
+					if (next === undefined) {
+						onCancel();
+						return;
+					}
+					if (next === null) {
+						onCommit(null);
+						return;
+					}
+					const parsed = column ? parseColumnInput(column, next) : null;
+					onCommit(parsed?.ok ? parsed.value : next);
+				}}
 			/>
 		</div>
 	);

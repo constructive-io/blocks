@@ -8,6 +8,8 @@
 // left undefined falls back to the built-in behavior, so a def may override just
 // the editor, just the display, or add a brand-new type end-to-end.
 
+import type { ColumnModel, ColumnSemantic, ColumnValueKind } from '@constructive-io/data';
+
 import type { CellCategory } from './types';
 // Type-only imports (erased at runtime) — avoids a cell-types -> grid cycle.
 import type { CellCreationMetadata } from '../grid/grid-cell-types';
@@ -19,10 +21,17 @@ import type { EditorProps } from '../grid-dom/editors/editor-props';
 export interface CellTypeMatchInput {
 	gqlType: string;
 	isArray: boolean;
+	/** @deprecated The server no longer sends it; match on `kind`, `semantic` or `column` instead. */
 	pgAlias?: string | null;
 	pgType?: string | null;
 	subtype?: string | null;
 	fieldName?: string;
+	/** Value kind from the table model, or null when the cell is not a table-model column. */
+	kind?: ColumnValueKind | null;
+	/** Presentation hint from the table model (email, url, image, ...), or null. */
+	semantic?: ColumnSemantic | null;
+	/** The full table-model column, or null when the cell is not a table-model column. */
+	column?: ColumnModel | null;
 }
 
 /** Context handed to `toSheetsCell` so a definition can build the neutral cell.

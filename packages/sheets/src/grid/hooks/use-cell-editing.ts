@@ -84,10 +84,11 @@ export type ServerPatchResolution =
 
 /**
  * Derive the single-field server PATCH for a server-row cell write — the ONE place
- * that owns server-row coercion + readonly guards (UUID id / relation-not-inline /
- * undefined). Shared by `useCellEditing` (single cell) and the batched `commitCells`
- * (paste/fill/bulk) so neither forks the rules. PURE; never touches the cache or
- * network. `rowData` is the target row (skip callers must null-guard before calling).
+ * that owns the relation normalization and the key guard (fields in `readOnlyFields`,
+ * the primary key from the table model, are never patched). Value parsing happens
+ * before this, in `commitCells`, by the column's rules. Shared by `useCellEditing`
+ * (single cell) and the batched `commitCells` (paste/fill/bulk) so neither forks the
+ * rules. PURE; never touches the cache or network.
  */
 export function resolveServerPatch(
 	colKey: string,
@@ -98,10 +99,6 @@ export function resolveServerPatch(
 ): ServerPatchResolution {
 	if (!colKey || colKey === DRAFT_ACTION_COLUMN_KEY) return { kind: 'noop' };
 	if (readOnlyFields?.has(colKey)) return { kind: 'noop' };
-
-	// Block edits to the UUID primary key id.
-	const metaField = fieldMetaMap.get(colKey);
-	if (colKey === 'id' && metaField?.type?.gqlType === 'UUID') return { kind: 'noop' };
 
 	const relationInfo = relationInfoByField.get(colKey);
 	let value: unknown = rawValue;
@@ -145,9 +142,6 @@ export function useCellEditing({
 			}
 
 			const draftMeta = getDraftMeta(rowData);
-			if (draftMeta?.isDraft && colKey === 'id') {
-				return { type: 'noop' };
-			}
 
 			if (draftMeta?.isDraft) {
 				const draftRowId: string | undefined = draftMeta.draftRowId;

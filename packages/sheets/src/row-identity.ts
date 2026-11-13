@@ -1,10 +1,13 @@
 import {
+	TableModelError,
 	assessTableWriteCapability,
 	resolveRowIdentity,
 	rowIdentityToPrimaryKey,
 	serializeRowIdentity,
 	type MetaTable,
 	type RowIdentityValue,
+	type RowKey,
+	type TableModel,
 	type TableWriteCapability,
 } from '@constructive-io/data';
 
@@ -89,6 +92,25 @@ export function sheetsIdentifierToWhere(
 	return Object.fromEntries(
 		Object.entries(resolution.primaryKey).map(([field, value]) => [field, { equalTo: value }]),
 	);
+}
+
+/**
+ * The primary-key values a model document needs. A scalar identifier is the
+ * value of a one-field key, whatever that field is called; an object must
+ * carry every key field.
+ */
+export function sheetsIdentifierToRowKey(model: TableModel, identifier: SheetsRowIdentifier): RowKey {
+	if (typeof identifier === 'object' && identifier !== null) return identifier;
+	if (model.primaryKey.length !== 1) {
+		throw new TableModelError(
+			'KEY_INCOMPLETE',
+			model.primaryKey.length === 0
+				? 'This table has no primary key, so its records cannot be changed.'
+				: 'This table has a multi-field key; pass every key field.',
+			{ tableKey: model.key },
+		);
+	}
+	return { [model.primaryKey[0]!]: identifier };
 }
 
 /** Use scalar IDs as cache keys for compatibility; use serialized identities otherwise. */

@@ -12,18 +12,25 @@
  *     undo restores the EXACT pre-edit value.
  *   • ONE optimistic cache patch is applied per affected ROW (merged col patches),
  *     not per cell — N rows -> N patches, never N×cols.
- *   • ONE server `update(rowId, {merged})` is issued per row.
+ *   • ONE server `update(rowId, {merged})` is issued per row, and the commit stops at
+ *     the first row the server refuses. Rows saved before it keep their values; the
+ *     refused row and the rows not sent yet go back to their prior values.
  *   • when recording, the HistoryEntry's `undo`/`redo` re-enter `commitCells` with
- *     `{ record: false }` so replays never double-record.
+ *     `{ record: false }` so replays never double-record. A commit that stops part
+ *     way records the rows it saved.
  *
  * Draft-row writes are NOT batched here — they route to the existing per-cell draft
  * path (`editCell`) and are excluded from history (draft undo is out of P3 scope).
  */
-import { useCallback, useRef } from 'react';
+import { useCallback, useMemo, useRef } from 'react';
 
+import type { ColumnModel, TableModel } from '@constructive-io/data';
+
+import { parseColumnInput } from '../../cell-types/column-value';
 import { resolveServerPatch } from './use-cell-editing';
 import type { CellEditingResult } from './use-cell-editing';
 import { getDraftMeta, type SheetsRow } from '../row-model';
+import { reportRejectedWrites, type RejectedWrite } from '../write-feedback';
 import type { SheetsRowIdentifier } from '../../row-identity';
 
 /** A single cell write request. */
@@ -31,6 +38,12 @@ export interface CellWrite {
 	rowIndex: number;
 	colKey: string;
 	value: unknown;
+	/**
+	 * The value is text the user typed or pasted (JSON and lists are read from it).
+	 * Defaults to true for a string value, false otherwise; an editor or a fill that
+	 * hands over a stored value sets it to false.
+	 */
+	fromText?: boolean;
 }
 
 export interface CommitCellsOptions {
@@ -41,6 +54,8 @@ export interface CommitCellsOptions {
 export interface CommitCellsResult {
 	/** Number of server cells actually written (post readonly/null/no-op filtering). */
 	applied: number;
+	/** Writes refused before sending (the value did not fit, or the cell is read-only), when there are any. */
+	rejected?: readonly RejectedWrite[];
 }
 
 interface UseBatchCommitParams {
@@ -51,6 +66,18 @@ interface UseBatchCommitParams {
 	getRowIdentifier?: (row: Readonly<Record<string, unknown>>) => SheetsRowIdentifier | null;
 	readOnlyFields?: ReadonlySet<string>;
 	isCellReadOnly?: (rowIndex: number, colKey: string) => boolean;
+	/** The grid's cell resolver: a write to a cell with a `readOnlyReason` is refused and reported. */
+	resolveCell?: (rowIndex: number, colKey: string) => { readOnlyReason?: string | null };
+	/** The table model: every write to one of its columns is parsed by the column's rules first. */
+	tableModel?: TableModel | null;
+	/** Report the writes that were refused. Defaults to a notification. */
+	onRejected?: (rejected: readonly RejectedWrite[], total: number) => void;
+	/**
+	 * Report a save the server refused, with the number of changes not saved (those cells
+	 * already show their prior values again). When given, `commitCells` resolves instead of
+	 * throwing, so fire-and-forget callers (paste, fill, clear) still surface the failure.
+	 */
+	onServerError?: (error: unknown, cellCount: number, failed: ServerWriteFailure) => void;
 	canUpdate?: boolean;
 	/** Single-write optimistic cache patch (infinite mode) — returns a revert thunk. */
 	applyOptimisticPatch?: (rowIndex: number, patch: Record<string, unknown>) => (() => void) | void;
@@ -62,7 +89,31 @@ interface UseBatchCommitParams {
 	onCellEdit?: (id: SheetsRowIdentifier, field: string, value: unknown) => void;
 	/** Push a reversible step to the history. */
 	record: (entry: { label: string; undo: () => Promise<void> | void; redo: () => Promise<void> | void }) => void;
+	/** The grid's save status: the server writes of one commit report as one save. */
+	feedback?: {
+		onStart?: (type: 'update', total: number) => string;
+		onComplete?: (id: string, status: 'success' | 'partial' | 'error', message: string) => void;
+	};
 }
+
+function changes(count: number): string {
+	return `${count.toLocaleString()} ${count === 1 ? 'change' : 'changes'}`;
+}
+
+/** The status of a commit the server stopped: what it saved before, and what it did not. */
+function notSavedMessage(saved: number, unsaved: number): string {
+	if (saved === 0) return unsaved === 1 ? 'Not saved' : `${changes(unsaved)} not saved`;
+	return `${changes(saved)} saved, ${unsaved.toLocaleString()} not saved`;
+}
+
+/** The row whose save the server refused, and the fields that save patched. */
+export interface ServerWriteFailure {
+	rowIndex: number;
+	fields: readonly string[];
+}
+
+/** Why a paste, fill or clear does not change a linked-records cell. */
+export const RELATION_WRITE_REASON = 'Use the link editor to change linked records.';
 
 /** A resolved server write: its row, the patch field, the next + prior values. */
 interface ResolvedWrite {
@@ -72,6 +123,8 @@ interface ResolvedWrite {
 	value: unknown;
 	prior: unknown;
 }
+
+const NO_RELATIONS: Map<string, unknown> = new Map();
 
 function legacyRowIdentifier(row: Readonly<Record<string, unknown>>): SheetsRowIdentifier | null {
 	return typeof row.id === 'string' || typeof row.id === 'number' ? row.id : null;
@@ -85,13 +138,27 @@ export function useBatchCommit({
 	getRowIdentifier = legacyRowIdentifier,
 	readOnlyFields,
 	isCellReadOnly,
+	resolveCell,
+	tableModel,
+	onRejected = reportRejectedWrites,
+	onServerError,
 	canUpdate = true,
 	applyOptimisticPatch,
 	resyncRow,
 	editCell,
 	onCellEdit,
 	record,
+	feedback,
 }: UseBatchCommitParams) {
+	const columnByName = useMemo(
+		() => new Map<string, ColumnModel>((tableModel?.columns ?? []).map((column) => [column.name, column])),
+		[tableModel],
+	);
+	const relationFields = useMemo(
+		() => new Set((tableModel?.relations ?? []).map((relation) => relation.fieldName)),
+		[tableModel],
+	);
+
 	// Holds the latest commitCells so a recorded HistoryEntry (captured at record-time)
 	// always re-enters the CURRENT closure — avoids a stale-row snapshot. Per-hook
 	// instance, so multiple grids never share a commit fn.
@@ -103,12 +170,38 @@ export function useBatchCommit({
 
 			const resolved: ResolvedWrite[] = [];
 			const draftWrites: CellWrite[] = [];
+			const rejected: RejectedWrite[] = [];
 
-			for (const w of writes) {
-				const rowData = combinedRows[w.rowIndex] as Record<string, unknown> | null | undefined;
+			for (const original of writes) {
+				const rowData = combinedRows[original.rowIndex] as Record<string, unknown> | null | undefined;
 				// Null-guard unfetched proxy rows — skip writes whose row is not loaded.
 				if (!rowData) continue;
-				if (isCellReadOnly?.(w.rowIndex, w.colKey)) continue;
+				if (isCellReadOnly?.(original.rowIndex, original.colKey)) continue;
+				const readOnlyReason = resolveCell?.(original.rowIndex, original.colKey).readOnlyReason ?? null;
+				if (readOnlyReason) {
+					rejected.push({ rowIndex: original.rowIndex, colKey: original.colKey, reason: readOnlyReason });
+					continue;
+				}
+
+				// A table-model column takes only a value that fits it; anything else is refused, never coerced.
+				const column = columnByName.get(original.colKey);
+				// Linked records change only through the link editor: a pasted or filled value cannot
+				// name a related record safely (its key may be composite or not called id).
+				if (!column && (relationFields.has(original.colKey) || relationInfoByField.has(original.colKey))) {
+					rejected.push({ rowIndex: original.rowIndex, colKey: original.colKey, reason: RELATION_WRITE_REASON });
+					continue;
+				}
+				let w = original;
+				if (column) {
+					const parsed = parseColumnInput(column, original.value, {
+						fromText: original.fromText ?? typeof original.value === 'string',
+					});
+					if (parsed.ok === false) {
+						rejected.push({ rowIndex: original.rowIndex, colKey: original.colKey, reason: parsed.reason });
+						continue;
+					}
+					w = { ...original, value: parsed.value, fromText: false };
+				}
 
 				// Draft rows keep their existing per-cell path; excluded from coalescing + history.
 				if (getDraftMeta(rowData)) {
@@ -117,7 +210,8 @@ export function useBatchCommit({
 				}
 
 				if (!canUpdate) continue;
-				const resolution = resolveServerPatch(w.colKey, w.value, fieldMetaMap, relationInfoByField, readOnlyFields);
+				// A model column writes its own parsed value; only keys outside the model keep the legacy relation route.
+				const resolution = resolveServerPatch(w.colKey, w.value, fieldMetaMap, column ? NO_RELATIONS : relationInfoByField, readOnlyFields);
 				if (resolution.kind === 'noop') continue;
 				const rowIdentifier = getRowIdentifier(rowData);
 				if (rowIdentifier === null) continue;
@@ -132,13 +226,17 @@ export function useBatchCommit({
 				});
 			}
 
+			if (rejected.length) onRejected(rejected, writes.length);
+			const withRejected = (applied: number): CommitCellsResult =>
+				rejected.length ? { applied, rejected } : { applied };
+
 			// Fire draft writes through the existing path (not batched, not recorded).
 			for (const dw of draftWrites) {
 				// eslint-disable-next-line no-await-in-loop
 				await editCell(dw.rowIndex, dw.colKey, dw.value);
 			}
 
-			if (!resolved.length) return { applied: 0 };
+			if (!resolved.length) return withRejected(0);
 
 			// Group by row: one merged optimistic patch + one merged server PATCH per row.
 			const byRow = new Map<number, ResolvedWrite[]>();
@@ -148,53 +246,71 @@ export function useBatchCommit({
 				else byRow.set(r.rowIndex, [r]);
 			}
 
-			// Apply ONE optimistic patch per row (merged) and collect revert thunks.
-			const reverts: Array<() => void> = [];
+			// Apply ONE optimistic patch per row (merged), keeping each row's revert thunk.
+			const reverts = new Map<number, () => void>();
 			for (const [rowIndex, group] of byRow) {
 				const patch: Record<string, unknown> = {};
 				for (const r of group) patch[r.field] = r.value;
 				const revert = applyOptimisticPatch?.(rowIndex, patch);
-				if (revert) reverts.push(revert);
+				if (revert) reverts.set(rowIndex, revert);
 			}
 
-			// Issue ONE server mutation per row; revert ALL optimistic patches on first failure.
+			// Record the inverse (prior values) of the saved writes, so undo restores the exact pre-edit state.
+			const recordSaved = (writes: readonly ResolvedWrite[]): void => {
+				if (opts?.record === false || writes.length === 0) return;
+				const priorWrites: CellWrite[] = writes.map((r) => ({
+					rowIndex: r.rowIndex,
+					colKey: r.field,
+					value: r.prior,
+					fromText: false,
+				}));
+				const redoWrites: CellWrite[] = writes.map((r) => ({
+					rowIndex: r.rowIndex,
+					colKey: r.field,
+					value: r.value,
+					fromText: false,
+				}));
+				// Capture the live commit fn via the closure below (commitRef).
+				record({
+					label: writes.length > 1 ? `Edit ${writes.length} cells` : 'Edit cell',
+					undo: () => void commitRef.current?.(priorWrites, { record: false }),
+					redo: () => void commitRef.current?.(redoWrites, { record: false }),
+				});
+			};
+
+			// Issue ONE server mutation per row, and stop at the first row the server refuses.
+			// A saved row keeps its values; the refused row and the rows not sent yet are reverted.
+			// The whole commit is one save in the status, whatever the number of rows.
+			const statusId = feedback?.onStart?.('update', resolved.length);
+			const saved: ResolvedWrite[] = [];
+			let failing: ServerWriteFailure | null = null;
 			try {
 				for (const [rowIndex, group] of byRow) {
+					failing = { rowIndex, fields: group.map((r) => r.field) };
 					const patch: Record<string, unknown> = {};
 					for (const r of group) patch[r.field] = r.value;
 					// eslint-disable-next-line no-await-in-loop
 					const result = await update(group[0].rowId, patch);
+					reverts.delete(rowIndex);
+					saved.push(...group);
 					if (result?.updatedRow) resyncRow?.(rowIndex, result.updatedRow);
 					for (const r of group) onCellEdit?.(r.rowId, r.field, r.value);
 				}
 			} catch (error) {
-				for (const revert of reverts) revert();
-				throw error;
+				for (const revert of reverts.values()) revert();
+				const unsaved = resolved.length - saved.length;
+				if (statusId) feedback?.onComplete?.(statusId, saved.length > 0 ? 'partial' : 'error', notSavedMessage(saved.length, unsaved));
+				recordSaved(saved);
+				if (!onServerError) throw error;
+				onServerError(error, unsaved, failing ?? { rowIndex: resolved[0].rowIndex, fields: [resolved[0].field] });
+				return withRejected(saved.length);
 			}
 
-			// Record the inverse (prior values) so undo restores the exact pre-edit state.
-			if (opts?.record !== false) {
-				const priorWrites: CellWrite[] = resolved.map((r) => ({
-					rowIndex: r.rowIndex,
-					colKey: r.field,
-					value: r.prior,
-				}));
-				const redoWrites: CellWrite[] = resolved.map((r) => ({
-					rowIndex: r.rowIndex,
-					colKey: r.field,
-					value: r.value,
-				}));
-				// Capture the live commit fn via the closure below (commitRef).
-				record({
-					label: resolved.length > 1 ? `Edit ${resolved.length} cells` : 'Edit cell',
-					undo: () => void commitRef.current?.(priorWrites, { record: false }),
-					redo: () => void commitRef.current?.(redoWrites, { record: false }),
-				});
-			}
-
-			return { applied: resolved.length };
+			if (statusId) feedback?.onComplete?.(statusId, 'success', resolved.length === 1 ? 'Saved' : `${changes(resolved.length)} saved`);
+			recordSaved(resolved);
+			return withRejected(resolved.length);
 		},
-		[combinedRows, fieldMetaMap, relationInfoByField, update, getRowIdentifier, readOnlyFields, isCellReadOnly, canUpdate, applyOptimisticPatch, resyncRow, editCell, onCellEdit, record],
+		[combinedRows, fieldMetaMap, relationInfoByField, update, getRowIdentifier, readOnlyFields, isCellReadOnly, resolveCell, columnByName, relationFields, onRejected, onServerError, canUpdate, applyOptimisticPatch, resyncRow, editCell, onCellEdit, record, feedback],
 	);
 
 	commitRef.current = commitCells;

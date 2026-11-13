@@ -60,13 +60,22 @@ export function getCellsInRange(
 	return { values, rows: rowIndices, cols };
 }
 
+/** A cell holding a tab, a line break or a leading quote is quoted, as spreadsheets do. */
+const NEEDS_QUOTES_RE = /[\t\n\r]|^"/;
+
+function tsvCell(cell: unknown): string {
+	if (cell == null) return '';
+	const text = typeof cell === 'object' ? JSON.stringify(cell) : String(cell);
+	return NEEDS_QUOTES_RE.test(text) ? `"${text.replace(/"/g, '""')}"` : text;
+}
+
 /**
  * Serialize a value matrix to TSV (tab-joined cols, newline-joined rows). Each value
- * is stringified; `null`/`undefined` become an empty cell. Spreadsheet-paste shape —
+ * is stringified (an object as JSON); `null`/`undefined` become an empty cell. A cell
+ * with a tab, a line break or a leading quote is quoted (`"two\nlines"`, inner quotes
+ * doubled), so multi-line text survives a copy and paste. Spreadsheet-paste shape —
  * reused by P4 copy.
  */
 export function toTSV(values: readonly (readonly unknown[])[]): string {
-	return values
-		.map((row) => row.map((cell) => (cell == null ? '' : String(cell))).join('\t'))
-		.join('\n');
+	return values.map((row) => row.map(tsvCell).join('\t')).join('\n');
 }

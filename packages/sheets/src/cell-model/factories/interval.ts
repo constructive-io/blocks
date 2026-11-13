@@ -66,12 +66,8 @@ function formatIntervalForDisplay(value: unknown): string {
 		parts.push(`${interval.minutes}m`);
 	}
 	if (interval.seconds && interval.seconds !== 0) {
-		const secs = interval.seconds;
-		if (Number.isInteger(secs)) {
-			parts.push(`${secs}s`);
-		} else {
-			parts.push(`${secs.toFixed(1)}s`);
-		}
+		// Seconds show as stored (6.789s); a rounded display would hide part of the value.
+		parts.push(`${interval.seconds}s`);
 	}
 
 	if (parts.length === 0) {

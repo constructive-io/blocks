@@ -1,10 +1,18 @@
 /**
- * Build data grid columns that understand relation metadata
+ * Grid columns from the table model: which columns and relation fields show,
+ * in what order, with what header. See `relations/relation-columns.ts` for
+ * the rule. Columns never come from the keys of a loaded row, so values that
+ * ride beside a row (relation totals, cell errors) can never become columns.
+ * Headers are readable labels (`fieldLabel`); `id` stays the raw field name for
+ * saved views, commands and `data-col-key`. The value type belongs to the
+ * header's icon or tooltip, not to the label.
  */
 import { useCallback, useMemo } from 'react';
 
-import { isImageField, resolveCellType, type FieldMetadata } from '../cell-types/cell-type-resolver';
+import { isImageField, type FieldMetadata } from '../cell-types/cell-type-resolver';
+import { fieldLabel, relationFieldLabel } from '../cell-types/field-label';
 import { getColumnWidthByMeta } from '../grid/sheets.utils';
+import { gridColumnKeys } from '../relations/relation-columns';
 
 import { useRelationMetadataCache, type RelationMetadata } from './use-relation-metadata-cache';
 
@@ -37,11 +45,18 @@ export interface RelationColumnInfo {
 	relationTypeByField: Map<string, RelationKind>;
 }
 
+const SINGLE_RELATION_WIDTH = 160;
+const LIST_RELATION_WIDTH = 220;
+const DEFAULT_WIDTH = 150;
+
 /**
- * Create data grid columns with relation metadata baked in
+ * Create data grid columns with relation metadata baked in.
+ *
+ * @param tableName - table name or `TableModel.key`.
+ * @param _rows - ignored; columns come from the table model, not from loaded rows.
  */
-export function useRelationColumns(tableName?: string, rows?: unknown[]): RelationColumnInfo {
-	const { relationMetadata, tableRelations, cacheState, getRelationKind, isRelationField, invalidateRelationCache } =
+export function useRelationColumns(tableName?: string, _rows?: unknown[]): RelationColumnInfo {
+	const { model, relationMetadata, tableRelations, cacheState, getRelationKind, isRelationField, invalidateRelationCache } =
 		useRelationMetadataCache(tableName);
 
 	const metaFields = useMemo<FieldMetadata[] | undefined>(() => {
@@ -59,144 +74,49 @@ export function useRelationColumns(tableName?: string, rows?: unknown[]): Relati
 		return map;
 	}, [metaFields]);
 
-	const baseFieldNames = useMemo(() => {
-		if (rows && rows.length > 0) {
-			const sample = rows[0] ?? {};
-			return Object.keys(sample);
-		}
+	const columnKeys = useMemo<string[]>(() => (model ? gridColumnKeys(model) : []), [model]);
 
-		if (metaFields?.length) {
-			const scalarNames = metaFields.map((field) => field?.name).filter((name): name is string => Boolean(name));
-			const relationNames: string[] = [];
-			relationMetadata.forEach((rel) => {
-				if (rel.sourceField === 'relation') relationNames.push(rel.fieldName);
-			});
-			return Array.from(new Set([...scalarNames, ...relationNames]));
-		}
-
-		return [] as string[];
-	}, [rows, metaFields, relationMetadata]);
-
-	// Extract column keys from data
-	const columnKeys: string[] = useMemo(() => {
-		if (baseFieldNames.length === 0) return [];
-		const keys = [...baseFieldNames];
-
-		const belongsToForeignKeysToHide = new Set<string>();
-		const foreignKeysByRelationField = new Map<string, string[]>();
-
-		relationMetadata.forEach((rel) => {
-			if (rel.sourceField === 'foreignKey' && rel.relationFieldName) {
-				const existing = foreignKeysByRelationField.get(rel.relationFieldName);
-				if (existing) {
-					existing.push(rel.fieldName);
-				} else {
-					foreignKeysByRelationField.set(rel.relationFieldName, [rel.fieldName]);
-				}
-			}
-		});
-
-		relationMetadata.forEach((rel) => {
-			if (rel.sourceField !== 'relation' || rel.relationKind !== 'belongsTo' || !rel.relationFieldName) {
-				return;
-			}
-
-			const foreignKeyEntries = foreignKeysByRelationField.get(rel.relationFieldName);
-			if (foreignKeyEntries?.length) {
-				foreignKeyEntries.forEach((fieldName) => {
-					belongsToForeignKeysToHide.add(fieldName);
-				});
-			}
-		});
-
-		const filteredKeys = keys.filter((key) => !belongsToForeignKeysToHide.has(key));
-
-		// Ensure id comes first if present
-		const idIdx = filteredKeys.indexOf('id');
-		if (idIdx > -1) {
-			filteredKeys.splice(idIdx, 1);
-			filteredKeys.unshift('id');
-		}
-		return filteredKeys;
-	}, [baseFieldNames, relationMetadata]);
-
-	// Create relation metadata map for quick lookup
 	const relationMetadataMap = useMemo(() => {
 		const map: Record<string, RelationMetadata> = {};
-
 		relationMetadata.forEach((rel) => {
 			map[rel.fieldName] = rel;
 		});
-
 		return map;
 	}, [relationMetadata]);
 
-	// Table fields metadata
-	// Generate columns with improved error handling
 	const columns: RelationGridColumn[] = useMemo(() => {
+		const relationByField = new Map((model?.relations ?? []).map((relation) => [relation.fieldName, relation]));
 		return columnKeys.map((fieldName) => {
+			const relation = relationByField.get(fieldName);
 			const metaField = metaFieldByName.get(fieldName);
-			const relationInfo = relationMetadataMap[fieldName];
-			const relationDisplayField = relationInfo?.relationFieldName || undefined;
-			const isForeignKeyRelationField = relationInfo?.sourceField === 'foreignKey';
-
-			// Use centralized cell type resolution
-			const resolution = resolveCellType(fieldName, metaField);
-			const cellType = resolution.cellType;
-
-			// For relation fields, use relation kind as type label
-			const typeLabel = relationInfo?.relationKind
-				? relationInfo.relationKind
+			const width = relation
+				? relation.kind === 'hasMany' || relation.kind === 'manyToMany'
+					? LIST_RELATION_WIDTH
+					: SINGLE_RELATION_WIDTH
 				: metaField
-					? metaField.type?.pgAlias || metaField.type?.pgType || metaField.type?.gqlType
-					: cellType;
-
-			let headerName = fieldName;
-			if (relationInfo?.displayName) {
-				headerName = relationInfo.displayName;
-			} else if (relationDisplayField) {
-				headerName = relationDisplayField;
-			} else if (isForeignKeyRelationField) {
-				const stripped = fieldName.replace(/Id$/i, '');
-				headerName = stripped.length > 0 ? stripped : fieldName;
-			}
-
-			const titleRaw = typeLabel ? `${headerName} (${typeLabel})` : headerName;
-
-			return {
-				id: fieldName,
-				title: titleRaw,
-				width: metaField ? getColumnWidthByMeta(metaField) : 150,
-			} satisfies RelationGridColumn;
+					? getColumnWidthByMeta(metaField)
+					: DEFAULT_WIDTH;
+			return { id: fieldName, title: relation ? relationFieldLabel(relation) : fieldLabel(fieldName), width } satisfies RelationGridColumn;
 		});
-	}, [columnKeys, metaFieldByName, relationMetadataMap]);
+	}, [columnKeys, metaFieldByName, model]);
 
 	// Helper function using centralized image field detection
 	const checkIsImageField = useCallback((fieldMeta: FieldMetadata | undefined, fieldName?: string): boolean => {
 		return isImageField(fieldMeta, fieldName);
 	}, []);
 
-	// Helper function to find the correct column key for image cells
+	// The column key of an image cell: the current column when it holds images, else the first image column.
 	const findImageColumnKey = useCallback(
-		(columnKeys: string[], fieldMetaMap: Map<string, unknown>, currentColKey?: string): string => {
-			// If we already have a reliable column key, use it
-			if (currentColKey && currentColKey !== 'id' && fieldMetaMap.has(currentColKey)) {
+		(keys: string[], fieldMetaMap: Map<string, unknown>, currentColKey?: string): string => {
+			if (currentColKey && fieldMetaMap.has(currentColKey)) {
 				const fieldMeta = fieldMetaMap.get(currentColKey) as FieldMetadata | undefined;
-				if (checkIsImageField(fieldMeta, currentColKey)) {
-					return currentColKey;
-				}
+				if (checkIsImageField(fieldMeta, currentColKey)) return currentColKey;
 			}
-
-			// Look through all columns to find image-type fields
-			for (const key of columnKeys) {
+			for (const key of keys) {
 				const fieldMeta = fieldMetaMap.get(key) as FieldMetadata | undefined;
-				if (fieldMeta && checkIsImageField(fieldMeta, key)) {
-					return key;
-				}
+				if (fieldMeta && checkIsImageField(fieldMeta, key)) return key;
 			}
-
-			// Fallback to the current column key or first non-id column
-			return currentColKey || columnKeys.find((k) => k !== 'id') || columnKeys[0] || '';
+			return currentColKey || keys[0] || '';
 		},
 		[checkIsImageField],
 	);

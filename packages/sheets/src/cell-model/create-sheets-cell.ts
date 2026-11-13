@@ -16,12 +16,14 @@ import type { CellType } from '../cell-types/types';
 import type { CellCreationMetadata } from '../grid/grid-cell-types';
 import { badgesSheetsCellFactory } from './factories/badges';
 import { booleanSheetsCellFactory } from './factories/boolean';
+import { choiceSheetsCellFactory } from './factories/choice';
 import { dateTimeSheetsCellFactory } from './factories/datetime';
 import { geometrySheetsCellFactory } from './factories/geometry';
 import { imageSheetsCellFactory } from './factories/image';
 import { intervalSheetsCellFactory } from './factories/interval';
 import { numberSheetsCellFactory } from './factories/number';
 import { relationSheetsCellFactory } from './factories/relation';
+import { structuredSheetsCellFactory } from './factories/structured';
 import { textSheetsCellFactory } from './factories/text';
 import type { SheetsCellFactory } from './factories/types';
 import { uriSheetsCellFactory } from './factories/uri';
@@ -32,9 +34,11 @@ import type { SheetsCell } from './sheets-cell';
 const SHEETS_CELL_FACTORIES: SheetsCellFactory[] = [
 	imageSheetsCellFactory,
 	uriSheetsCellFactory,
+	choiceSheetsCellFactory,
 	badgesSheetsCellFactory,
 	dateTimeSheetsCellFactory,
 	intervalSheetsCellFactory,
+	structuredSheetsCellFactory,
 	geometrySheetsCellFactory,
 	relationSheetsCellFactory,
 	numberSheetsCellFactory,
