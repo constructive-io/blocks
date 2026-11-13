@@ -20,7 +20,7 @@ export function ArrayEditorDom({ value, column, colKey, onCommit, onCancel }: Ed
 		(next: unknown[]) => {
 			if (!column) return null;
 			const parsed = parseColumnInput(column, next);
-			return parsed.ok ? null : parsed.reason;
+			return parsed.ok === false ? parsed.reason : null;
 		},
 		[column],
 	);

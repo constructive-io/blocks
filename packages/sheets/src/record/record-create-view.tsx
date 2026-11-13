@@ -70,7 +70,7 @@ export function RecordCreateView({ entry, registry, typeOverrides, mediaReason, 
 
 	function setField(column: ColumnModel, value: unknown, fromText: boolean): boolean {
 		const parsed = parseColumnInput(column, value, { fromText });
-		if (!parsed.ok) {
+		if (parsed.ok === false) {
 			setErrors((current) => ({ ...current, [column.name]: parsed.reason }));
 			return false;
 		}

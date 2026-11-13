@@ -108,11 +108,11 @@ export function NumberEditorDom({ value, initialText, colKey, fieldMeta, column,
 			<Button onClick={commit} disabled={!canSave} size='xs' variant='default' className='shrink-0'>
 				Save
 			</Button>
-			{parsed.ok || text.trim() === '' ? null : (
+			{parsed.ok === false && text.trim() !== '' ? (
 				<p role='alert' className='text-destructive basis-full text-xs'>
 					{parsed.reason}
 				</p>
-			)}
+			) : null}
 		</div>
 	);
 }

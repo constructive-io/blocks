@@ -325,7 +325,7 @@ function parseFields(
 		}
 		const rules = fieldRules(field.value);
 		const parsed = rules ? parseRules(rules, raw, fromText) : ok(raw);
-		if (!parsed.ok) return fail(`${name}: ${parsed.reason}`);
+		if (parsed.ok === false) return fail(`${name}: ${parsed.reason}`);
 		out[name] = parsed.value;
 	}
 	for (const field of fields) {
@@ -414,7 +414,7 @@ function parseBound(bound: unknown, rules: ValueRules | null, fromText: boolean)
 	if (!isPlainObject(bound)) return fail('Each end of a range needs a value and whether it is included.');
 	if (bound.value === null || bound.value === undefined) return ok(null);
 	const parsed = rules ? parseRules(rules, bound.value, fromText) : ok(bound.value);
-	if (!parsed.ok) return parsed;
+	if (parsed.ok === false) return parsed;
 	return ok({ value: parsed.value, inclusive: bound.inclusive !== false });
 }
 
@@ -423,9 +423,9 @@ function parseRange(rules: ValueRules, input: unknown, fromText: boolean): Colum
 	if (!object) return fail('Enter a range with a start and an end.');
 	const valueRules = boundRules(rules);
 	const start = parseBound(object.start, valueRules, fromText);
-	if (!start.ok) return fail(`Start: ${start.reason}`);
+	if (start.ok === false) return fail(`Start: ${start.reason}`);
 	const end = parseBound(object.end, valueRules, fromText);
-	if (!end.ok) return fail(`End: ${end.reason}`);
+	if (end.ok === false) return fail(`End: ${end.reason}`);
 	return ok({ start: start.value, end: end.value });
 }
 
@@ -517,7 +517,7 @@ function parseList(column: ColumnModel, input: unknown, fromText: boolean): Colu
 			continue;
 		}
 		const parsed = parseRules(rules, element, fromText || typeof element === 'string');
-		if (!parsed.ok) return fail(`Item ${index + 1}: ${parsed.reason}`);
+		if (parsed.ok === false) return fail(`Item ${index + 1}: ${parsed.reason}`);
 		out.push(parsed.value);
 	}
 	return ok(out);

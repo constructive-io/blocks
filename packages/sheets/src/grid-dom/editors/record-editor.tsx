@@ -77,7 +77,7 @@ export function RecordForm({ column, value, title, onCommit, fieldOrder }: Recor
 			draft[field.name] = text.trim() === '' ? null : field.value.typeName === 'Boolean' ? text === 'true' : text;
 		}
 		const parsed = parseColumnInput(column, draft);
-		if (!parsed.ok) {
+		if (parsed.ok === false) {
 			setError(parsed.reason);
 			return;
 		}

@@ -135,7 +135,7 @@ function fieldSchema(field: ModelFormField, mode: ModelFormMode): z.ZodType<unkn
 			}
 			// Clearing follows the column rules: null, '' for text that cannot be empty, or a refusal.
 			const parsed = parseColumnInput(field.column, value, { fromText: typeof value === 'string' });
-			if (!parsed.ok) {
+			if (parsed.ok === false) {
 				ctx.addIssue({ code: 'custom', message: parsed.reason });
 				return z.NEVER;
 			}

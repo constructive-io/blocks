@@ -98,7 +98,7 @@ function rowsFor(
 	const planeKey = details.plane.filesTableKey;
 	const cached = byPlane.get(planeKey);
 	if (cached) return cached;
-	const request = readBucketRows(storage, adapter, details.buckets).catch(() => {
+	const request = readBucketRows(storage, adapter, details.buckets).catch((): null => {
 		// Unreadable limits skip the pre-check; the next upload tries again.
 		byPlane.delete(planeKey);
 		return null;

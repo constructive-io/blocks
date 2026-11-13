@@ -103,7 +103,7 @@ export function RelationCreateForm({ targetName, plan, onSubmit, onCancel }: Rel
 		event.preventDefault();
 		event.stopPropagation();
 		const read = readRelatedCreate(plan, raw);
-		if (!read.ok) {
+		if (read.ok === false) {
 			setErrors(read.errors);
 			// A message on a hidden field must be visible.
 			if (Object.keys(read.errors).some((name) => plan.secondary.some((field) => field.name === name))) setShowAll(true);

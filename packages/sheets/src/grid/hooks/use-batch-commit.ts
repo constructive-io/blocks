@@ -187,7 +187,7 @@ export function useBatchCommit({
 					const parsed = parseColumnInput(column, original.value, {
 						fromText: original.fromText ?? typeof original.value === 'string',
 					});
-					if (!parsed.ok) {
+					if (parsed.ok === false) {
 						rejected.push({ rowIndex: original.rowIndex, colKey: original.colKey, reason: parsed.reason });
 						continue;
 					}

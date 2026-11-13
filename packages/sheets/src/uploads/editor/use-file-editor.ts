@@ -81,7 +81,7 @@ let nextKey = 1;
 const entryKey = () => `entry-${nextKey++}`;
 
 function storedEntries(value: unknown, column: ColumnModel | null): FileEntry[] {
-	return storedFilesOf(value, column?.value.file).map((stored) => ({
+	return storedFilesOf(value, column?.value.file).map((stored): FileEntry => ({
 		key: entryKey(),
 		stored,
 		file: null,

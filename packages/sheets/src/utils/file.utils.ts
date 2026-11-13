@@ -68,7 +68,7 @@ function fromElement(value: unknown): StoredFile | null {
  * model is not known: the value's shape is then read as is.
  */
 export function storedFilesOf(value: unknown, file?: ColumnFileModel | null): StoredFile[] {
-	if (Array.isArray(value)) return value.flatMap((element) => fromElement(element) ?? []);
+	if (Array.isArray(value)) return value.flatMap((element): StoredFile[] => { const file = fromElement(element); return file ? [file] : []; });
 	if (file?.multiple && value == null) return [];
 	const single = fromElement(value);
 	return single ? [single] : [];

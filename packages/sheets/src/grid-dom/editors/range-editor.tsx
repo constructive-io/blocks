@@ -118,7 +118,7 @@ export function RangeEditorDom({ value, column, colKey, onCommit }: EditorProps)
 		if (!column) return;
 		const bound = (draft: BoundDraft) => (draft.open ? null : { value: draft.text, inclusive: draft.inclusive });
 		const parsed = parseColumnInput(column, { start: bound(range.start), end: bound(range.end) });
-		if (!parsed.ok) {
+		if (parsed.ok === false) {
 			setError(parsed.reason);
 			return;
 		}

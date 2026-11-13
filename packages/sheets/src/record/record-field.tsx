@@ -191,7 +191,7 @@ function TextValue({ id, column, value, numeric, describedBy, onSave }: {
 		id,
 		value: text,
 		'aria-describedby': describedBy,
-		onBlur: () => void save(),
+		onBlur: (): void => void save(),
 		onKeyDown: handleKeyDown,
 		spellCheck: false,
 		className: cn(

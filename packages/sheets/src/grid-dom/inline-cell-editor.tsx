@@ -117,7 +117,7 @@ export function InlineCellEditor({ ariaLabel, value, initialText, numeric, colum
 			return;
 		}
 		const parsed = parse(text);
-		if (!parsed.ok) {
+		if (parsed.ok === false) {
 			onCancel(); // does not fit on commit-by-blur → discard rather than clobber
 			onReject?.(parsed.reason);
 			return;
@@ -142,7 +142,7 @@ export function InlineCellEditor({ ariaLabel, value, initialText, numeric, colum
 			e.preventDefault();
 			// A value that does not fit on Enter → stay editing and say why.
 			const parsed = parse(text);
-			if (!parsed.ok) {
+			if (parsed.ok === false) {
 				setError(parsed.reason);
 				return;
 			}

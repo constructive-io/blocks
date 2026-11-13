@@ -33,7 +33,7 @@ function parseKeywords(stored: string): Keyword[] {
 	return stored
 		.split(/\s+/)
 		.filter(Boolean)
-		.map((word) => ({ word, weights: [] }));
+		.map((word): Keyword => ({ word, weights: [] }));
 }
 
 interface TsvectorViewerProps {

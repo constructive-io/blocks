@@ -84,8 +84,8 @@ export function draftImportRows(
 				continue;
 			}
 			const parsed = parseColumnInput(target.column, text, { fromText: true });
-			if (parsed.ok) values[target.column.name] = parsed.value;
-			else issue(index, column, parsed.reason);
+			if (parsed.ok === false) issue(index, column, parsed.reason);
+			else values[target.column.name] = parsed.value;
 		}
 		return { row: record.row, values, links, issues };
 	});
@@ -128,7 +128,7 @@ export function finishImportRows(
 				row: draft.row,
 				column: fileColumnName(header, link.columnIndex),
 				columnIndex: link.columnIndex,
-				reason: result?.reason ?? 'The linked record was not looked up.',
+				reason: result && result.ok === false ? result.reason : 'The linked record was not looked up.',
 			});
 		}
 		if (rowIssues.length === 0) rows.push({ row: draft.row, values });

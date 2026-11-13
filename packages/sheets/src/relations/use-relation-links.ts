@@ -102,7 +102,7 @@ export function useRelationLinks(options: {
 	const links = useMemo<LinkedRecord[]>(() => {
 		if (waiting) return [];
 		if (!queried) {
-			return asRecords(rowValue).flatMap((record) => {
+			return asRecords(rowValue).flatMap((record): LinkedRecord[] => {
 				const key = linkKey(relation, record);
 				return key ? [{ key, record, junctionRow: null }] : [];
 			});

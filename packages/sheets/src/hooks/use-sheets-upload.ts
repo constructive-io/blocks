@@ -146,7 +146,7 @@ export function useColumnMediaResolver(
 	column: ColumnModel | null | undefined,
 ): ColumnMediaResolver {
 	const { storage, isLoading } = useColumnStorage(table, column);
-	return useMemo(() => {
+	return useMemo((): ColumnMediaResolver => {
 		if (!table || !column?.value.file) return { resolver: undefined, isLoading: false };
 		if (!storage) return { resolver: null, isLoading };
 		const resolve = storage.resolveUrls;
@@ -242,7 +242,7 @@ export function useFileCellWriter(): (job: FileCellWriteJob) => Promise<unknown>
 				setPendingFileWrite(scopeKey, key, {
 					status: 'failed',
 					message: fileWriteMessage(error),
-					retry: () => void run().catch(() => undefined),
+					retry: () => void run().catch((): undefined => undefined),
 					dismiss: () => setPendingFileWrite(scopeKey, key, null),
 				});
 				throw error;

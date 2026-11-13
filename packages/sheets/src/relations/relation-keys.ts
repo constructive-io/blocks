@@ -89,7 +89,7 @@ export function belongsToLinkPatch(relation: RelationModel, record: RecordValues
 
 /** belongsTo: the values that clear the link on this row. */
 export function belongsToClearPatch(relation: RelationModel): FieldValues {
-	return Object.fromEntries(relation.keys.map((pair) => [pair.local, null]));
+	return Object.fromEntries(relation.keys.map((pair): [string, null] => [pair.local, null]));
 }
 
 /**
@@ -109,7 +109,7 @@ export function hasLinkPatch(relation: RelationModel, row: RecordValues): FieldV
 
 /** hasOne/hasMany: the values that detach a related record from this row. */
 export function hasUnlinkPatch(relation: RelationModel): FieldValues {
-	return Object.fromEntries(relation.keys.map((pair) => [pair.remote, null]));
+	return Object.fromEntries(relation.keys.map((pair): [string, null] => [pair.remote, null]));
 }
 
 /**

@@ -303,7 +303,7 @@ export function useRelationEditor(options: RelationEditorOptions): RelationEdito
 		}
 
 		const plan = planSave(choice);
-		if (!plan.ok) {
+		if (plan.ok === false) {
 			setErrors([plan.reason]);
 			return { status: 'failed' };
 		}
@@ -341,7 +341,7 @@ export function useRelationEditor(options: RelationEditorOptions): RelationEdito
 			? 'Save this record first, then link records to it.'
 			: relation.kind === 'hasOne' && current.length > 0
 				? 'Remove the current link first.'
-				: plan && !plan.ok
+				: plan && plan.ok === false
 					? plan.reason
 					: null;
 

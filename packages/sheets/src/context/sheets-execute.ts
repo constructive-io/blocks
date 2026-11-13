@@ -208,7 +208,7 @@ export function createSheetsExecute(
 				throw createError.unauthorized('Authentication required. Please log in again.');
 			}
 			if (status === 403) {
-				const body = (await response.json().catch(() => null)) as GraphQLResponse | null;
+				const body = (await response.json().catch((): null => null)) as GraphQLResponse | null;
 				const refusal = body?.errors?.[0];
 				const forbidden = refusal?.extensions?.code === 'ACCESS_SUSPENDED'
 					? parseGraphQLError(refusal)

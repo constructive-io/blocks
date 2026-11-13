@@ -71,7 +71,7 @@ function isDeterministicModelError(error: Error): boolean {
 	return error instanceof TableModelError && code !== 'SCHEMA_UNAVAILABLE';
 }
 
-function locate(meta: MetaQuery | undefined, tableRef: string | null | undefined) {
+function locate(meta: MetaQuery | undefined, tableRef: string | null | undefined): { metaTable: ReturnType<typeof findMetaTable> | null; error: Error | null } {
 	if (!meta || !tableRef) return { metaTable: null, error: null };
 	try {
 		return { metaTable: findMetaTable(metaTablesOf(meta), tableRef), error: null };

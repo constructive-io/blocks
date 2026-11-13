@@ -54,7 +54,8 @@ function drop(ctx: Context, entry: SheetsViewStateDrop): null {
 }
 
 function parseValue(value: unknown): SheetsFilterValue | undefined {
-	if (value === null || typeof value === 'string' || typeof value === 'boolean') return value;
+	if (value === null) return null;
+	if (typeof value === 'string' || typeof value === 'boolean') return value;
 	if (Array.isArray(value)) return value.every((item) => typeof item === 'string') ? (value as string[]) : undefined;
 	if (isRecord(value)) {
 		return Object.values(value).every((item) => typeof item === 'string') ? (value as Record<string, string>) : undefined;

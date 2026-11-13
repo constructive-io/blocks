@@ -113,7 +113,7 @@ export function useRecord(tableName: string, key: RowKey | null, options: { enab
 		async (column: ColumnModel, value: unknown, saveOptions: { fromText?: boolean } = {}): Promise<boolean> => {
 			if (!key) return false;
 			const parsed = parseColumnInput(column, value, { fromText: saveOptions.fromText ?? false });
-			if (!parsed.ok) {
+			if (parsed.ok === false) {
 				setFieldError(column.name, parsed.reason);
 				return false;
 			}

@@ -40,7 +40,7 @@ export function useDataFiltering({ model, initialFilters, relatedModel }: UseDat
 	const [raw, setRaw] = useState<SheetsFilterGroup>(() => initialFilters ?? createFilterGroup());
 	const clearFilters = useCallback(() => setRaw(createFilterGroup()), []);
 
-	return useMemo(() => {
+	return useMemo((): DataFilteringContextValue => {
 		if (!model) {
 			return { filters: raw, setFilters: setRaw, clearFilters, where: undefined, appliedCount: 0, conditions: new Map(), dropped: [] };
 		}
