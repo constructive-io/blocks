@@ -12,6 +12,15 @@ import type { SheetsColumnCondition, SheetsFilterNode, SheetsViewState } from '.
 
 type Where = Record<string, unknown>;
 
+/** A part of the filter and the conditions in it, so a part left out takes its conditions with it. */
+interface Part {
+	where: Where;
+	ids: readonly string[];
+}
+
+const NOT_COMBINED = 'This table cannot combine this condition with the others, so it is not applied.';
+const NOT_COMBINED_WITH_SEARCH = 'This table cannot combine this condition with the search, so it is not applied.';
+
 /** Whether a condition is part of the filter, and why not. */
 export type ConditionStatus =
 	| { status: 'applied' }
@@ -52,32 +61,40 @@ function record(ctx: BuildContext, id: string, result: FilterValueResult): void 
 	ctx.conditions.set(id, result.status === 'ready' ? { status: 'applied' } : result);
 }
 
-/** Combine filter parts with a logical operator the filter input has. */
-function combine(model: TableModel, logic: 'and' | 'or', parts: Where[]): Where | null {
+/** Mark the conditions of parts the filter leaves out, so none of them counts as applied. */
+function leaveOut(ctx: BuildContext, parts: readonly Part[], message: string): void {
+	for (const part of parts) for (const id of part.ids) ctx.conditions.set(id, { status: 'invalid', message });
+}
+
+/** Combine filter parts with a logical operator the filter input has, or null when they cannot be combined. */
+function combine(model: TableModel, logic: 'and' | 'or', parts: readonly Part[]): Part | null {
 	if (parts.length === 0) return null;
 	if (parts.length === 1) return parts[0]!;
-	if (model.operations.list?.logicalOperators.includes(logic)) return { [logic]: parts };
+	const ids = parts.flatMap((part) => part.ids);
+	if (model.operations.list?.logicalOperators.includes(logic)) return { where: { [logic]: parts.map((part) => part.where) }, ids };
 	// Without an `and` field the parts still combine as one object when their fields differ.
 	if (logic === 'and') {
 		const merged: Where = {};
 		for (const part of parts) {
-			for (const key of Object.keys(part)) if (key in merged) return null;
-			Object.assign(merged, part);
+			for (const key of Object.keys(part.where)) if (key in merged) return null;
+			Object.assign(merged, part.where);
 		}
-		return merged;
+		return { where: merged, ids };
 	}
 	return null;
 }
 
-function nodeWhere(ctx: BuildContext, node: SheetsFilterNode): Where | null {
+function nodePart(ctx: BuildContext, node: SheetsFilterNode): Part | null {
 	if (node.kind === 'group') {
-		const parts = node.children.map((child) => nodeWhere(ctx, child)).filter((part): part is Where => part !== null);
-		return combine(ctx.model, node.logic, parts);
+		const parts = node.children.map((child) => nodePart(ctx, child)).filter((part): part is Part => part !== null);
+		const combined = combine(ctx.model, node.logic, parts);
+		if (!combined) leaveOut(ctx, parts, NOT_COMBINED);
+		return combined;
 	}
 	if (node.kind === 'column') {
 		const { result, field } = columnConditionResult(ctx.model, node);
 		record(ctx, node.id, result);
-		return result.status === 'ready' && field ? { [field]: { [node.operator]: result.value } } : null;
+		return result.status === 'ready' && field ? { where: { [field]: { [node.operator]: result.value } }, ids: [node.id] } : null;
 	}
 	const relation = ctx.model.relations.find((candidate) => candidate.fieldName === node.relation);
 	if (!relation) {
@@ -88,20 +105,28 @@ function nodeWhere(ctx: BuildContext, node: SheetsFilterNode): Where | null {
 	const { result, waitingFor } = relationConditionWhere(relation, node, related);
 	if (waitingFor) ctx.waitingFor.add(waitingFor);
 	record(ctx, node.id, result);
-	return result.status === 'ready' ? (result.value as Where) : null;
+	return result.status === 'ready' ? { where: result.value as Where, ids: [node.id] } : null;
 }
 
 /**
  * The list variables for a state the model supports (see
- * `validateSheetsViewState`). Conditions that are incomplete or invalid are
- * left out of the filter and reported in `conditions`.
+ * `validateSheetsViewState`). Conditions that are incomplete or invalid, or
+ * that the filter input cannot combine, are left out of the filter and
+ * reported in `conditions`, so `appliedCount` counts only what filters.
  */
 export function buildViewQuery(state: SheetsViewState, model: TableModel, related: RelatedModelLookup = () => null): ViewQuery {
 	const ctx: BuildContext = { model, related, conditions: new Map(), waitingFor: new Set() };
-	const filterWhere = nodeWhere(ctx, state.filters);
+	const filter = nodePart(ctx, state.filters);
 	const plan = searchPlanOf(model);
-	const search = plan ? searchWhere(plan, state.search) : null;
-	const where = combine(model, 'and', [filterWhere, search].filter((part): part is Where => part !== null)) ?? undefined;
+	const searchText = plan ? searchWhere(plan, state.search) : null;
+	const search: Part | null = searchText ? { where: searchText, ids: [] } : null;
+	let combined = combine(model, 'and', [filter, search].filter((part): part is Part => part !== null));
+	if (!combined && filter && search) {
+		// The search the user typed stays; the conditions it cannot be combined with say so.
+		leaveOut(ctx, [filter], NOT_COMBINED_WITH_SEARCH);
+		combined = search;
+	}
+	const where = combined?.where;
 	const orderBy = state.sort.length > 0 ? state.sort.map((key) => ({ field: key.column, direction: key.direction })) : undefined;
 	let appliedCount = 0;
 	for (const status of ctx.conditions.values()) if (status.status === 'applied') appliedCount += 1;
