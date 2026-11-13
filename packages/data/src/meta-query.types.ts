@@ -39,6 +39,12 @@ export interface MetaschemaTable {
 	i18n?: MetaschemaI18n | null;
 	realtime?: MetaschemaRealtime | null;
 	scope?: MetaschemaScope | null;
+	/** Optional capability: `table` or `view`. */
+	kind?: string | null;
+	/** Optional capability: table comment. */
+	description?: string | null;
+	/** Optional capability: whether the table only links rows of two other tables. */
+	isJunction?: boolean | null;
 
 	/** @deprecated Legacy pre-July contract field. */
 	checkConstraints?: Array<MetaschemaCheckConstraint | null> | null;
@@ -68,10 +74,29 @@ export interface MetaschemaField {
 	isForeignKey?: boolean | null;
 	description?: string | null;
 	enumValues?: MetaschemaEnum | null;
+	/** Optional capability: values the field accepts when the set is fixed. */
+	allowedValues?: string[] | null;
+	/** Optional capability: whether a create must provide this field. */
+	isRequiredOnCreate?: boolean | null;
+	/** Optional capability: whether a create may set this field. */
+	isWritableOnCreate?: boolean | null;
+	/** Optional capability: whether an update may change this field. */
+	isWritableOnUpdate?: boolean | null;
+	/** Optional capability: whether the database computes the value, so no write may set it. */
+	isComputed?: boolean | null;
+	/** Optional capability: file column details. */
+	file?: MetaschemaFileField | null;
 }
 
 /** Preferred current-contract name. */
 export type MetaField = MetaschemaField;
+
+export interface MetaschemaFileField {
+	__typename?: 'MetaFileField';
+	kind: string;
+	isMultiple?: boolean | null;
+	filesType?: string | null;
+}
 
 export interface MetaschemaEnum {
 	__typename?: 'MetaEnum';
@@ -113,6 +138,12 @@ export interface MetaschemaType {
 	hasDefault?: boolean | null;
 	subtype?: string | null;
 	encoding?: MetaschemaScalarEncoding | null;
+	/** Optional capability: declared maximum length. */
+	maxLength?: number | null;
+	/** Optional capability: declared numeric precision. */
+	precision?: number | null;
+	/** Optional capability: declared numeric scale. */
+	scale?: number | null;
 
 	/** @deprecated Legacy pre-July contract field. */
 	modifier?: number | null;
@@ -232,6 +263,8 @@ export interface MetaschemaTableBelongsToRelation {
 	type?: string | null;
 	keys?: Array<MetaschemaField | null> | null;
 	references: MetaschemaTableReference;
+	/** Optional capability: referenced fields on the other table, in `keys` order. */
+	refKeys?: Array<MetaschemaField | null> | null;
 }
 
 export interface MetaschemaTableHasRelation {
@@ -241,6 +274,8 @@ export interface MetaschemaTableHasRelation {
 	type?: string | null;
 	keys?: Array<MetaschemaField | null> | null;
 	referencedBy: MetaschemaTableReference;
+	/** Optional capability: fields on the related table that point at this table, in `keys` order. */
+	remoteKeys?: Array<MetaschemaField | null> | null;
 	/** @deprecated Legacy pre-July contract field. */
 	foreignKeys?: Array<MetaschemaField | null> | null;
 }
@@ -263,6 +298,23 @@ export interface MetaschemaStorage {
 	__typename?: 'MetaStorage';
 	isFilesTable: boolean;
 	isBucketsTable: boolean;
+	/** Optional capability: GraphQL type name of the paired files table. */
+	filesType?: string | null;
+	/** Optional capability: GraphQL type name of the paired buckets table. */
+	bucketsType?: string | null;
+	/** Optional capability: download-URL field on the files type. */
+	downloadUrlField?: string | null;
+	/** Optional capability: upload mutation names. */
+	upload?: MetaschemaStorageUpload | null;
+}
+
+export interface MetaschemaStorageUpload {
+	__typename?: 'MetaStorageUpload';
+	mutation?: string | null;
+	inputType?: string | null;
+	payloadType?: string | null;
+	bulkMutation?: string | null;
+	requiresOwnerId?: boolean | null;
 }
 
 export interface MetaschemaSearchColumn {

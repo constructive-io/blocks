@@ -1,0 +1,223 @@
+sheets_torture.Country pk=[isoCode] list=countries create=createCountry update=updateCountry delete=deleteCountry display=[name] (name)
+  column isoCode: text read create! update sort=yes filter=37 input=scalar:String
+  column name: text read create! update sort=yes filter=37 input=scalar:String
+  relation hasMany projectsByCountryCode -> sheets_torture.Project (connection) keys=isoCode->countryCode target=[id|name] filter=many:ProjectFilter[some,every,none]+projectsByCountryCodeExist read edit unlink
+
+sheets_torture.TaskLabel pk=[taskId, labelId] list=taskLabels create=createTaskLabel update=updateTaskLabel delete=deleteTaskLabel display=[taskId, labelId] (key)
+  column taskId: bigint read create! update sort=yes filter=11 input=scalar:BigInt
+  column labelId: integer read create! update sort=yes filter=11 input=scalar:Int
+  relation belongsTo label -> sheets_torture.Label (object) keys=labelId->id target=[id|name] filter=record:LabelFilter read edit - "This link is required, so it cannot be removed."
+  relation belongsTo task -> sheets_torture.Task (object) keys=taskId->id target=[id|title] filter=record:TaskFilter read edit - "This link is required, so it cannot be removed."
+
+sheets_torture.AuditEvent pk=[] list=auditEvents create=createAuditEvent update=- delete=- display=[actor] (text)
+  column happenedAt: datetime read create - sort=yes filter=11 input=scalar:Datetime
+  column actor: text read create - sort=yes filter=37 input=scalar:String
+  column message: text read create! - sort=yes filter=37 input=scalar:String
+  issue table:- NO_PRIMARY_KEY "This table has no primary key, so its records are read-only."
+  issue operation:update UPDATE_UNAVAILABLE "Records in this table cannot be changed because the table has no primary key."
+  issue operation:delete DELETE_UNAVAILABLE "Records in this table cannot be deleted because the table has no primary key."
+
+sheets_torture.Label pk=[id] list=labels create=createLabel update=updateLabel delete=deleteLabel display=[name] (name)
+  column id: integer read create update sort=yes filter=11 input=scalar:Int
+  column name: text read create! update sort=yes filter=37 input=scalar:String
+  column color: text read create update sort=yes filter=37 input=scalar:String
+  relation hasMany taskLabels -> sheets_torture.TaskLabel (connection) keys=id->labelId target=[taskId,labelId|taskId,labelId] filter=many:TaskLabelFilter[some,every,none]+taskLabelsExist read edit - "Each linked record must keep this link, so it cannot be removed."
+  relation manyToMany tasks -> sheets_torture.Task (connection) junction TaskLabel left=labelId->id right=taskId->id pure=true target=[id|title] filter=- read edit unlink
+
+sheets_torture.WarehouseItem pk=[warehouseCode, sku] list=warehouseItems create=createWarehouseItem update=updateWarehouseItem delete=deleteWarehouseItem display=[warehouseCode, sku] (key)
+  column warehouseCode: text read create! update sort=yes filter=37 input=scalar:String
+  column sku: text read create! update sort=yes filter=37 input=scalar:String
+  column quantity: integer read create update sort=yes filter=11 input=scalar:Int
+  relation hasMany tasksByWarehouseCodeAndSku -> sheets_torture.Task (connection) keys=warehouseCode->warehouseCode,sku->sku target=[id|title] filter=many:TaskFilter[some,every,none]+tasksByWarehouseCodeAndSkuExist read edit unlink
+
+sheets_torture.Project pk=[id] list=projects create=createProject update=updateProject delete=deleteProject display=[name] (name)
+  column id: integer read create update sort=yes filter=11 input=scalar:Int
+  column name: text read create! update sort=yes filter=37 input=scalar:String
+  column ownerId: uuid read create! update sort=yes filter=11 input=scalar:UUID
+  column reviewerId: uuid read create update sort=yes filter=11 input=scalar:UUID
+  column countryCode: text read create update sort=yes filter=37 input=scalar:String
+  relation belongsTo country -> sheets_torture.Country (object) keys=countryCode->isoCode target=[isoCode|name] filter=record:CountryFilter+countryExists read edit unlink
+  relation belongsTo owner -> sheets_torture.Person (object) keys=ownerId->id target=[id|fullName,email] filter=record:PersonFilter read edit - "This link is required, so it cannot be removed."
+  relation belongsTo reviewer -> sheets_torture.Person (object) keys=reviewerId->id target=[id|fullName,email] filter=record:PersonFilter+reviewerExists read edit unlink
+  relation hasMany tasks -> sheets_torture.Task (connection) keys=id->projectId target=[id|title] filter=many:TaskFilter[some,every,none]+tasksExist read edit - "Each linked record must keep this link, so it cannot be removed."
+  relation hasMany projectMembers -> sheets_torture.ProjectMember (connection) keys=id->projectId target=[projectId,personId|role] filter=many:ProjectMemberFilter[some,every,none]+projectMembersExist read edit - "Each linked record must keep this link, so it cannot be removed."
+  relation manyToMany peopleByProjectMemberProjectIdAndPersonId -> sheets_torture.Person (connection) junction ProjectMember left=projectId->id right=personId->id pure=false target=[id|fullName,email] filter=- read - - "Adding a link needs more information (role, joinedOn), so this field is read-only."
+  issue relation:peopleByProjectMemberProjectIdAndPersonId RELATION_INCOMPLETE "Adding a link needs more information (role, joinedOn), so this field is read-only."
+
+sheets_torture.ProjectMember pk=[projectId, personId] list=projectMembers create=createProjectMember update=updateProjectMember delete=deleteProjectMember display=[role] (text)
+  column projectId: integer read create! update sort=yes filter=11 input=scalar:Int
+  column personId: uuid read create! update sort=yes filter=11 input=scalar:UUID
+  column role: text read create! update sort=yes filter=37 input=scalar:String
+  column joinedOn: date read create! update sort=yes filter=11 input=scalar:Date
+  relation belongsTo person -> sheets_torture.Person (object) keys=personId->id target=[id|fullName,email] filter=record:PersonFilter read edit - "This link is required, so it cannot be removed."
+  relation belongsTo project -> sheets_torture.Project (object) keys=projectId->id target=[id|name] filter=record:ProjectFilter read edit - "This link is required, so it cannot be removed."
+
+sheets_torture.Person pk=[id] list=people create=createPerson update=updatePerson delete=deletePerson display=[fullName, email] (name)
+  column id: uuid read create update sort=yes filter=11 input=scalar:UUID
+  column email: text read create! update sort=yes filter=37 input=scalar:String
+  column fullName: text read create! update sort=yes filter=37 input=scalar:String
+  column managerId: uuid read create update sort=yes filter=11 input=scalar:UUID
+  relation belongsTo manager -> sheets_torture.Person (object) keys=managerId->id target=[id|fullName,email] filter=record:PersonFilter+managerExists read edit unlink
+  relation hasOne personProfile -> sheets_torture.PersonProfile (object) keys=id->personId target=[personId|bio] filter=record:PersonProfileFilter+personProfileExists read edit - "Each linked record must keep this link, so it cannot be removed."
+  relation hasMany peopleByManagerId -> sheets_torture.Person (connection) keys=id->managerId target=[id|fullName,email] filter=many:PersonFilter[some,every,none]+peopleByManagerIdExist read edit unlink
+  relation hasMany ownedProjects -> sheets_torture.Project (connection) keys=id->ownerId target=[id|name] filter=many:ProjectFilter[some,every,none]+ownedProjectsExist read edit - "Each linked record must keep this link, so it cannot be removed."
+  relation hasMany reviewedProjects -> sheets_torture.Project (connection) keys=id->reviewerId target=[id|name] filter=many:ProjectFilter[some,every,none]+reviewedProjectsExist read edit unlink
+  relation hasMany projectMembers -> sheets_torture.ProjectMember (connection) keys=id->personId target=[projectId,personId|role] filter=many:ProjectMemberFilter[some,every,none]+projectMembersExist read edit - "Each linked record must keep this link, so it cannot be removed."
+  relation manyToMany projectsByProjectMemberPersonIdAndProjectId -> sheets_torture.Project (connection) junction ProjectMember left=personId->id right=projectId->id pure=false target=[id|name] filter=- read - - "Adding a link needs more information (role, joinedOn), so this field is read-only."
+  issue relation:projectsByProjectMemberPersonIdAndProjectId RELATION_INCOMPLETE "Adding a link needs more information (role, joinedOn), so this field is read-only."
+
+sheets_torture.OpenTask pk=[] list=openTasks create=createOpenTask update=- delete=- display=[title] (name)
+  column id: bigint read create - sort=yes filter=11 input=scalar:BigInt
+  column projectId: integer read create - sort=yes filter=11 input=scalar:Int
+  column title: text read create - sort=yes filter=37 input=scalar:String
+  column status: enum read create - sort=yes filter=11 input=enum:TaskStatus options=TODO=todo|IN_PROGRESS=in_progress|DONE_ISH=done_ish|_1ST_REVIEW=1st_review|BLOCKED=Blocked|DONE=done|ON_HOLD=on hold|NEEDS_REVIEW=needs-review
+  column dueOn: date read create - sort=yes filter=11 input=scalar:Date
+  issue table:- NO_PRIMARY_KEY "This table has no primary key, so its records are read-only."
+  issue operation:update UPDATE_UNAVAILABLE "Records in this table cannot be changed because the table has no primary key."
+  issue operation:delete DELETE_UNAVAILABLE "Records in this table cannot be deleted because the table has no primary key."
+
+sheets_torture.PersonProfile pk=[personId] list=personProfiles create=createPersonProfile update=updatePersonProfile delete=deletePersonProfile display=[bio] (text)
+  column personId: uuid read create! update sort=yes filter=11 input=scalar:UUID
+  column bio: text read create update sort=yes filter=37 input=scalar:String
+  column photo: file (image) read create update sort=yes filter=16 input=scalar:ConstructiveInternalTypeImage
+  relation belongsTo person -> sheets_torture.Person (object) keys=personId->id target=[id|fullName,email] filter=record:PersonFilter read edit - "This link is required, so it cannot be removed."
+
+sheets_torture.GeneratedValue pk=[id] list=generatedValues create=createGeneratedValue update=updateGeneratedValue delete=deleteGeneratedValue display=[lockedNote] (text)
+  column id: integer read - - sort=yes filter=11
+  column serialNo: integer read create update sort=yes filter=11 input=scalar:Int
+  column quantity: integer read create update sort=yes filter=11 input=scalar:Int
+  column unitPrice: decimal read create! update sort=yes filter=11 input=scalar:BigFloat
+  column total: decimal read - - sort=yes filter=11 input=scalar:BigFloat
+  column createdAt: datetime read create update sort=yes filter=11 input=scalar:Datetime
+  column lockedNote: text read - update sort=yes filter=37 input=scalar:String
+  column frozenCode: text read create - sort=yes filter=37 input=scalar:String
+
+sheets_torture.SpecialValue pk=[id] list=specialValues create=createSpecialValue update=updateSpecialValue delete=deleteSpecialValue display=[label] (name)
+  column id: integer read create update sort=yes filter=11 input=scalar:Int
+  column label: text read create! update sort=yes filter=37 input=scalar:String
+  column realValue: float read create update sort=yes filter=11 input=scalar:Float
+  column doubleValue: float read create update sort=yes filter=11 input=scalar:Float
+  column numericValue: decimal read create update sort=yes filter=11 input=scalar:BigFloat
+  column timestamptzValue: datetime read create update sort=yes filter=11 input=scalar:Datetime
+  column dateValue: date read create update sort=yes filter=11 input=scalar:Date
+
+sheets_torture.AppFile pk=[id] list=appFiles create=createAppFile update=updateAppFile delete=deleteAppFile display=[filename] (name)
+  column id: uuid read create update sort=yes filter=11 input=scalar:UUID
+  column bucketId: uuid read create! update sort=yes filter=11 input=scalar:UUID
+  column key: text read create! update sort=yes filter=37 input=scalar:String
+  column contentHash: text read create! update sort=yes filter=37 input=scalar:String
+  column mimeType: text read create! update sort=yes filter=37 input=scalar:String
+  column size: bigint read create update sort=yes filter=11 input=scalar:BigInt
+  column filename: text read create update sort=yes filter=37 input=scalar:String
+  column ownerId: uuid read create update sort=yes filter=11 input=scalar:UUID
+  column isPublic: boolean read create update sort=yes filter=11 input=scalar:Boolean
+  column status: text read create update sort=yes filter=37 input=scalar:String
+  column previousVersionId: uuid read create update sort=yes filter=11 input=scalar:UUID
+  column createdAt: datetime read create update sort=yes filter=11 input=scalar:Datetime
+  column updatedAt: datetime read create update sort=yes filter=11 input=scalar:Datetime
+  relation belongsTo bucket -> sheets_torture.AppBucket (object) keys=bucketId->id target=[id|physicalName] filter=record:AppBucketFilter read edit - "This link is required, so it cannot be removed."
+  relation belongsTo previousVersion -> sheets_torture.AppFile (object) keys=previousVersionId->id target=[id|filename] filter=record:AppFileFilter+previousVersionExists read edit unlink
+
+sheets_torture.Task pk=[id] list=tasks create=createTask update=updateTask delete=deleteTask display=[title] (name)
+  column id: bigint read create update sort=yes filter=11 input=scalar:BigInt
+  column projectId: integer read create! update sort=yes filter=11 input=scalar:Int
+  column title: text read create! update sort=yes filter=37 input=scalar:String
+  column status: enum read create update sort=yes filter=11 input=enum:TaskStatus options=TODO=todo|IN_PROGRESS=in_progress|DONE_ISH=done_ish|_1ST_REVIEW=1st_review|BLOCKED=Blocked|DONE=done|ON_HOLD=on hold|NEEDS_REVIEW=needs-review
+  column reviewStatus: enum read create update sort=yes filter=11 input=enum:TaskStatus options=TODO=todo|IN_PROGRESS=in_progress|DONE_ISH=done_ish|_1ST_REVIEW=1st_review|BLOCKED=Blocked|DONE=done|ON_HOLD=on hold|NEEDS_REVIEW=needs-review
+  column priority: text read create update sort=yes filter=37 input=scalar:String options=low=low|medium=medium|high=high
+  column assigneeEmail: text read create update sort=yes filter=37 input=scalar:String
+  column warehouseCode: text read create update sort=yes filter=37 input=scalar:String
+  column sku: text read create update sort=yes filter=37 input=scalar:String
+  column dueOn: date read create update sort=yes filter=11 input=scalar:Date
+  relation belongsTo personByAssigneeEmail -> sheets_torture.Person (object) keys=assigneeEmail->email target=[id|fullName,email] filter=record:PersonFilter+personByAssigneeEmailExists read edit unlink
+  relation belongsTo project -> sheets_torture.Project (object) keys=projectId->id target=[id|name] filter=record:ProjectFilter read edit - "This link is required, so it cannot be removed."
+  relation belongsTo warehouseItem -> sheets_torture.WarehouseItem (object) keys=warehouseCode->warehouseCode,sku->sku target=[warehouseCode,sku|warehouseCode,sku] filter=record:WarehouseItemFilter+warehouseItemExists read edit unlink
+  relation hasMany taskLabels -> sheets_torture.TaskLabel (connection) keys=id->taskId target=[taskId,labelId|taskId,labelId] filter=many:TaskLabelFilter[some,every,none]+taskLabelsExist read edit - "Each linked record must keep this link, so it cannot be removed."
+  relation manyToMany labels -> sheets_torture.Label (connection) junction TaskLabel left=taskId->id right=labelId->id pure=true target=[id|name] filter=- read edit unlink
+
+sheets_torture.AppBucket pk=[id] list=appBuckets create=createAppBucket update=updateAppBucket delete=deleteAppBucket display=[physicalName] (name)
+  column id: uuid read create update sort=yes filter=11 input=scalar:UUID
+  column key: text read create! update sort=yes filter=37 input=scalar:String
+  column type: text read create update sort=yes filter=37 input=scalar:String
+  column isPublic: boolean read create update sort=yes filter=11 input=scalar:Boolean
+  column allowedMimeTypes: text[] read create update sort=yes filter=18 input=scalar:String
+  column maxFileSize: bigint read create update sort=yes filter=11 input=scalar:BigInt
+  column allowCustomKeys: boolean read create update sort=yes filter=11 input=scalar:Boolean
+  column allowedOrigins: text[] read create update sort=yes filter=18 input=scalar:String
+  column physicalName: text read create update sort=yes filter=37 input=scalar:String
+  column provisionRequestedAt: datetime read create update sort=yes filter=11 input=scalar:Datetime
+  column createdAt: datetime read create update sort=yes filter=11 input=scalar:Datetime
+  column updatedAt: datetime read create update sort=yes filter=11 input=scalar:Datetime
+  relation hasMany appFilesByBucketId -> sheets_torture.AppFile (connection) keys=id->bucketId target=[id|filename] filter=many:AppFileFilter[some,every,none]+appFilesByBucketIdExist read edit - "Each linked record must keep this link, so it cannot be removed."
+
+sheets_torture.ArrayKind pk=[id] list=arrayKinds create=createArrayKind update=updateArrayKind delete=deleteArrayKind display=[id] (key)
+  column id: integer read create update sort=yes filter=11 input=scalar:Int
+  column textList: text[] read create update sort=yes filter=18 input=scalar:String
+  column intList: integer[] read create update sort=yes filter=18 input=scalar:Int
+  column uuidList: uuid[] read create update sort=yes filter=18 input=scalar:UUID
+  column dateList: date[] read create update sort=yes filter=18 input=scalar:Date
+  column numericList: decimal[] read create update sort=yes filter=18 input=scalar:BigFloat
+  column shortCodeList: text[] read create update sort=yes filter=18 input=scalar:String
+  column statusList: enum[] read create update sort=yes filter=18 input=enum:TaskStatus options=TODO=todo|IN_PROGRESS=in_progress|DONE_ISH=done_ish|_1ST_REVIEW=1st_review|BLOCKED=Blocked|DONE=done|ON_HOLD=on hold|NEEDS_REVIEW=needs-review
+  column pathList: path[] read create update sort=yes filter=18 input=scalar:LTree
+
+sheets_torture.DomainKind pk=[id] list=domainKinds create=createDomainKind update=updateDomainKind delete=deleteDomainKind display=[contactEmail] (text)
+  column id: uuid read create update sort=yes filter=11 input=scalar:UUID
+  column contactEmail: text (email) read create update sort=yes filter=37 input=scalar:ConstructiveInternalTypeEmail
+  column homepage: text (url) read create update sort=yes filter=37 input=scalar:ConstructiveInternalTypeUrl
+  column host: text (hostname) read create update sort=yes filter=37 input=scalar:ConstructiveInternalTypeHostname
+  column allowedOrigin: text (origin) read create update sort=yes filter=37 input=scalar:ConstructiveInternalTypeOrigin
+  column avatar: file (image) read create update sort=yes filter=16 input=scalar:ConstructiveInternalTypeImage
+  column document: file (upload) read create update sort=yes filter=16 input=scalar:ConstructiveInternalTypeUpload
+  column gallery: file[] (upload) read create update sort=yes filter=18 input=scalar:ConstructiveInternalTypeUpload
+  column attachmentLink: file (attachment) read create update sort=yes filter=37 input=scalar:ConstructiveInternalTypeAttachment
+
+sheets_torture.StructuredKind pk=[id] list=structuredKinds create=createStructuredKind update=updateStructuredKind delete=deleteStructuredKind display=[id] (key)
+  column id: bigint read create update sort=yes filter=11 input=scalar:BigInt
+  column address: composite read create update sort=yes filter=- input=object:PostalAddressInput select={ street city postalCode country }
+  column intRange: range read create update sort=yes filter=20 input=object:IntRangeInput select={ start { value inclusive } end { value inclusive } }
+  column timestampRange: range read create update sort=yes filter=20 input=object:DatetimeRangeInput select={ start { value inclusive } end { value inclusive } }
+  column dateRange: range read create update sort=yes filter=20 input=object:DateRangeInput select={ start { value inclusive } end { value inclusive } }
+  column nativePoint: point read create update sort=yes filter=7 input=object:PointInput select={ x y }
+  column anyShape: geometry read create update sort=yes filter=33 input=scalar:GeoJSON select={ __typename geojson srid }
+  column pin: geometry read create update sort=yes filter=33 input=scalar:GeoJSON select={ __typename geojson srid }
+  column outline: geometry read create update sort=yes filter=33 input=scalar:GeoJSON select={ __typename geojson srid }
+  column geoPin: geometry read create update sort=yes filter=12 input=scalar:GeoJSON select={ __typename geojson srid }
+  column anyGeo: geometry read create update sort=yes filter=12 input=scalar:GeoJSON select={ __typename geojson srid }
+  column embedding: vector read create update sort=yes filter=7 input=scalar:Vector
+  column anyEmbedding: vector read create update sort=yes filter=7 input=scalar:Vector
+
+sheets_torture.ScalarKind pk=[id] list=scalarKinds create=createScalarKind update=updateScalarKind delete=deleteScalarKind display=[label] (name)
+  column id: uuid read create update sort=yes filter=11 input=scalar:UUID
+  column label: text read create! update sort=yes filter=39 input=scalar:String
+  column textValue: text read create update sort=yes filter=39 input=scalar:String
+  column citextValue: text read create update sort=yes filter=39 input=scalar:String
+  column varcharValue: text read create update sort=yes filter=39 input=scalar:String
+  column charValue: text read create update sort=yes filter=39 input=scalar:String
+  column boolNullable: boolean read create update sort=yes filter=11 input=scalar:Boolean
+  column boolRequired: boolean read create update sort=yes filter=11 input=scalar:Boolean
+  column smallintValue: integer read create update sort=yes filter=11 input=scalar:Int
+  column integerValue: integer read create update sort=yes filter=11 input=scalar:Int
+  column bigintValue: bigint read create update sort=yes filter=11 input=scalar:BigInt
+  column numericBounded: decimal read create update sort=yes filter=11 input=scalar:BigFloat
+  column numericUnbounded: decimal read create update sort=yes filter=11 input=scalar:BigFloat
+  column realValue: float read create update sort=yes filter=11 input=scalar:Float
+  column doubleValue: float read create update sort=yes filter=11 input=scalar:Float
+  column moneyValue: float read create update sort=yes filter=11 input=scalar:Float
+  column uuidValue: uuid read create update sort=yes filter=11 input=scalar:UUID
+  column dateValue: date read create update sort=yes filter=11 input=scalar:Date
+  column timeValue: time read create update sort=yes filter=11 input=scalar:Time
+  column timetzValue: time read create update sort=yes filter=11 input=scalar:Time
+  column timestampValue: datetime read create update sort=yes filter=11 input=scalar:Datetime
+  column timestamptzValue: datetime read create update sort=yes filter=11 input=scalar:Datetime
+  column intervalValue: interval read create update sort=yes filter=11 input=object:IntervalInput select={ seconds minutes hours days months years }
+  column jsonValue: json read create update sort=yes filter=- input=scalar:JSON
+  column jsonbValue: json read create update sort=yes filter=16 input=scalar:JSON
+  column byteaValue: binary read create update sort=yes filter=7 input=scalar:Base64EncodedBinary
+  column inetValue: network read create update sort=yes filter=16 input=scalar:InternetAddress
+  column cidrValue: network read create update sort=yes filter=16 input=scalar:CidrAddress
+  column macaddrValue: network read create update sort=yes filter=16 input=scalar:MacAddress
+  column bitValue: bitstring read create update sort=yes filter=11 input=scalar:BitString
+  column varbitValue: bitstring read create update sort=yes filter=11 input=scalar:BitString
+  column tsvectorValue: fulltext read - - sort=yes filter=8
+  column ltreeValue: path read create update sort=yes filter=10 input=scalar:LTree
