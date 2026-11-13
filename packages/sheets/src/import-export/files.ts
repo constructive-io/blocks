@@ -2,6 +2,7 @@
 // download, and the import error report.
 
 import { csvFileText } from './delimited-text';
+import { protectFormulaText } from './formula-protection';
 import type { ImportIssue } from './import-plan';
 
 /** Shown when a file read as UTF-8 holds characters that could not be decoded. */
@@ -42,11 +43,19 @@ export function safeFileName(base: string, suffix: string): string {
 
 export const NOT_SENT_REASON = 'Not imported: the import stopped before this row was sent.';
 
-/** The error report of an import as CSV: one line per problem, by row. */
+/**
+ * The error report of an import as CSV: one line per problem, by row. Column names
+ * come from the imported file and reasons can quote its values, so text that a
+ * spreadsheet app would run as a formula is always protected. The report is read,
+ * never imported back, so the apostrophe changes no data.
+ */
 export function importErrorReportText(issues: readonly ImportIssue[], notSent: readonly number[] = []): string {
 	const all = [
 		...issues,
 		...notSent.map((row): ImportIssue => ({ row, column: '', columnIndex: null, reason: NOT_SENT_REASON })),
 	].sort((left, right) => left.row - right.row || (left.columnIndex ?? -1) - (right.columnIndex ?? -1));
-	return csvFileText([['Row', 'Column', 'Reason'], ...all.map((issue) => [String(issue.row), issue.column, issue.reason])]);
+	return csvFileText([
+		['Row', 'Column', 'Reason'],
+		...all.map((issue) => [String(issue.row), protectFormulaText(issue.column), protectFormulaText(issue.reason)]),
+	]);
 }
