@@ -33,6 +33,8 @@ export type ScopeRuntime = ConstructiveGraphQLRuntime & Readonly<{
 export type ScopeSchemas = Readonly<{
   admin?: ConstructiveSchemaSnapshot;
   auth?: ConstructiveSchemaSnapshot;
+  /** The app API, where each scope's files and uploads are. */
+  data?: ConstructiveSchemaSnapshot;
 }>;
 
 /** One scope's members: the app's, or one entity's (an organization, a data room). */
