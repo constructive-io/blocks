@@ -22,4 +22,6 @@ export interface CellProps {
 	onStartEdit: () => void;
 	disabled: boolean;
 	readOnlyReason?: string;
+	/** True when this is the grid's active (keyboard cursor) cell; a view may then offer actions (for example open a linked record). */
+	isActive?: boolean;
 }

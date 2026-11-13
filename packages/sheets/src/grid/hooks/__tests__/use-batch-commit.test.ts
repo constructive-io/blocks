@@ -112,7 +112,7 @@ describe('useBatchCommit — coalescing', () => {
 		expect(update.mock.calls[1]).toEqual(['r1', { name: 'B2', active: true }]);
 	});
 
-	it('skips the readonly UUID id and null (unfetched) proxy rows', async () => {
+	it('skips the primary-key id and null (unfetched) proxy rows', async () => {
 		const update = vi.fn().mockResolvedValue({ updatedRow: null });
 		const rows = [{ id: 'r0', name: 'A' }, null] as unknown as SheetsRow[];
 		const { commit } = mount({
@@ -120,13 +120,14 @@ describe('useBatchCommit — coalescing', () => {
 			fieldMetaMap: META,
 			relationInfoByField: new Map(),
 			update,
+			readOnlyFields: new Set(['id']),
 			editCell: vi.fn(),
 		});
 
 		let res!: Awaited<ReturnType<CommitCells>>;
 		await act(async () => {
 			res = await commit([
-				{ rowIndex: 0, colKey: 'id', value: 'hacked' }, // UUID id -> skipped
+				{ rowIndex: 0, colKey: 'id', value: 'hacked' }, // primary key -> skipped
 				{ rowIndex: 0, colKey: 'name', value: 'A2' }, // ok
 				{ rowIndex: 1, colKey: 'name', value: 'ghost' }, // null row -> skipped
 			]);

@@ -4,11 +4,11 @@ import { mergeArrayEditorValues } from '../array-editor';
 
 describe('array-editor', () => {
 
-	it('splits comma and newline separated values', () => {
-		expect(mergeArrayEditorValues(['existing'], 'a, b\nc')).toEqual(['existing', 'a', 'b', 'c']);
+	it('adds one item per line and keeps a comma inside an item', () => {
+		expect(mergeArrayEditorValues(['existing'], 'Smith, Jane\nc')).toEqual(['existing', 'Smith, Jane', 'c']);
 	});
 
-	it('ignores blank tokens', () => {
-		expect(mergeArrayEditorValues([], ' , \n  ')).toEqual([]);
+	it('ignores blank lines', () => {
+		expect(mergeArrayEditorValues([], ' \n  ')).toEqual([]);
 	});
 });

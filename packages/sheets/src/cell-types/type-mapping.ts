@@ -2,9 +2,12 @@ import { ENHANCED_TYPES, MEDIA_TYPES, STRUCTURED_DATA_TYPES } from './cell-type-
 import type { CellType, ColumnSchema } from './types';
 
 /**
- * Maps GraphQL field metadata to frontend cell types
- * Uses priority: pgAlias > pgType > gqlType for type determination
- * This is completely backend-agnostic and focuses only on frontend rendering needs
+ * Maps raw `_meta` field metadata to a frontend cell type (priority: encoding >
+ * pgType > gqlType).
+ *
+ * @deprecated The grid routes every column from its table model
+ * (`cellTypeForColumn` over a `ColumnModel`). This mapping reads raw `_meta` only and
+ * is kept for hosts that call it directly.
  */
 export function mapToFrontendCellType(metadata: {
 	gqlType: string;
@@ -14,19 +17,12 @@ export function mapToFrontendCellType(metadata: {
 	subtype?: string | null;
 	encoding?: { kind: string; geometrySubtype?: string | null } | null;
 }): CellType {
-	const { gqlType, isArray, pgAlias, pgType } = metadata;
+	const { gqlType, isArray, pgType } = metadata;
 
-	const encodedType = mapEncodingToCellType(metadata.encoding);
+	const encodedType = mapEncodingToCellType(metadata.encoding, gqlType);
 	if (encodedType) return encodedType;
 
-	// Priority 1: Use pgAlias if available (most specific)
-	// This must be checked FIRST, even for arrays, to preserve types like 'array' vs 'text-array'
-	if (pgAlias) {
-		const aliasType = mapAliasToCellType(pgAlias);
-		if (aliasType !== 'unknown' && !(isArray && aliasType === 'attachment')) return aliasType;
-	}
-
-	// Handle arrays after pgAlias check
+	// Handle arrays first (the element type picks the list cell type)
 	if (isArray) {
 		const result = mapGraphQLTypeToCellType(gqlType, isArray, metadata.subtype, null);
 		return result;
@@ -44,12 +40,14 @@ export function mapToFrontendCellType(metadata: {
 }
 
 function mapEncodingToCellType(
-	encoding?: { kind: string; geometrySubtype?: string | null } | null,
+	encoding: { kind: string; geometrySubtype?: string | null } | null | undefined,
+	gqlType: string,
 ): CellType | null {
 	if (!encoding) return null;
 
 	switch (encoding.kind) {
-		case 'bigint': return 'integer';
+		// Both whole numbers beyond 2^53 and exact decimals are decimal strings; the GraphQL type tells them apart.
+		case 'bigint': return gqlType.replace(/[!\[\]]/g, '') === 'BigFloat' ? 'decimal' : 'bigint';
 		case 'datetime': return 'datetime';
 		case 'date': return 'date';
 		case 'time': return 'time';
@@ -67,90 +65,6 @@ function mapEncodingToCellType(
 		default:
 			return null;
 	}
-}
-
-/**
- * Maps PostgreSQL aliases to frontend cell types
- */
-function mapAliasToCellType(alias: string): CellType {
-	const aliasMap: Record<string, CellType> = {
-		// Media types
-		image: 'image',
-		file: 'file',
-		video: 'video',
-		audio: 'audio',
-		upload: 'upload',
-		attachment: 'attachment',
-
-		// Relation types
-		relation: 'relation',
-
-		// Special text types
-		email: 'email',
-		url: 'url',
-		phone: 'phone',
-		citext: 'citext',
-		textarea: 'textarea',
-
-		// Enhanced numeric types
-		number: 'number',
-		currency: 'currency',
-		percentage: 'percentage',
-		numeric: 'decimal',
-		decimal: 'decimal',
-		int: 'integer',
-		integer: 'integer',
-		smallint: 'smallint',
-
-		// Boolean types
-		boolean: 'boolean',
-		toggle: 'toggle',
-
-		// Date/time types
-		date: 'date',
-		datetime: 'datetime',
-		time: 'time',
-		timestamptz: 'timestamptz',
-		interval: 'interval',
-
-		// JSON types
-		json: 'json',
-		jsonb: 'jsonb',
-
-		// Network types
-		inet: 'inet',
-
-		// Geometric types
-		geometry: 'geometry',
-		'geometry-point': 'geometry-point',
-		'geometry-collection': 'geometry-collection',
-
-		// Special types
-		color: 'color',
-		rating: 'rating',
-		tags: 'tags',
-		uuid: 'uuid',
-		tsvector: 'tsvector',
-		origin: 'origin',
-
-		// Character types
-		char: 'bpchar',
-		bpchar: 'bpchar',
-		text: 'text',
-
-		// Binary types
-		bit: 'bit',
-
-		// Array types (for when pgAlias is used with arrays)
-		array: 'array',
-		'text-array': 'text-array',
-		'integer-array': 'integer-array',
-		'number-array': 'number-array',
-		'uuid-array': 'uuid-array',
-		'date-array': 'date-array',
-	};
-
-	return aliasMap[alias.toLowerCase()] || 'unknown';
 }
 
 /**
@@ -172,8 +86,8 @@ function mapBackendTypeToCellType(pgType: string): CellType {
 		int4: 'integer',
 		smallint: 'smallint',
 		int2: 'smallint',
-		bigint: 'integer',
-		int8: 'integer',
+		bigint: 'bigint',
+		int8: 'bigint',
 		numeric: 'decimal',
 		decimal: 'decimal',
 		real: 'number',
@@ -186,10 +100,10 @@ function mapBackendTypeToCellType(pgType: string): CellType {
 		boolean: 'boolean',
 		bool: 'boolean',
 
-		// Binary/Bit types
-		bit: 'bit',
-		'bit varying': 'bit',
-		varbit: 'bit',
+		// Bit strings are text of 0 and 1, never a checkbox
+		bit: 'bitstring',
+		'bit varying': 'bitstring',
+		varbit: 'bitstring',
 
 		// Date/time types
 		date: 'date',
@@ -326,8 +240,8 @@ function mapGraphQLTypeToCellType(
 		EmailAddress: 'email',
 		PhoneNumber: 'phone',
 		UUID: 'uuid',
-		BigFloat: 'number',
-		BigInt: 'integer',
+		BigFloat: 'decimal',
+		BigInt: 'bigint',
 	};
 
 	return typeMap[baseType] || 'text'; // Default to text for unknown GraphQL types

@@ -1,19 +1,16 @@
-// DOM view for geometry cells — the native analogue of the canvas geometry
-// painter (grid/custom-cells/geometry-cell.tsx). Instead of a plain monospace
-// preview it paints a geo ICON tinted by geometry category (point/line/polygon/
-// collection), plus an ABBREVIATED type label, mirroring the canvas `draw`.
-//
-// The geometry TYPE is derived without a leaflet/geojson dependency: prefer an
-// explicit hint (`cell.meta.geometryType`, or a `{ geometryType }` object set by a
-// `deriveGeometry` builder — v1 `createGeometryCell`), else sniff the GeoJSON
-// `"type":"…"` token out of the compact preview string the factory put in
-// `cell.data` / `cell.displayData`. Dependency-light: plain JSX + inline SVG +
-// Tailwind v4 + local `cn`, with no shared primitive dependency.
+// DOM view for geometry cells: a geo ICON tinted by the shape's category
+// (point/line/polygon/collection) and the shape in plain words ("Point", "Line",
+// "3 polygons", "Empty shape"). The factory summarizes the stored value
+// (`meta.shapeLabel` / `shapeCategory` / `shapeProblem`, from `summarizeShape`); a
+// cell built by a host `deriveGeometry` builder carries a `geometryType` hint
+// instead, named the same way. "Not a shape" appears only for a value that cannot
+// be read as one, with the reason in the title. No value is an empty cell.
 
+import { shapeKindName, type ShapeCategory } from '../../cell-types/shape-kind';
 import type { CellProps } from '../cell-props';
 import { cn } from '../../utils/cn';
 
-type GeometryCategory = 'point' | 'line' | 'polygon' | 'collection' | 'invalid';
+type GeometryCategory = ShapeCategory;
 
 // Canvical-cell category buckets keyed by GeoJSON type — mirrors geometry-cell.tsx
 // ICON_COLORS grouping (point/line/polygon families share a colour).
@@ -27,28 +24,16 @@ const TYPE_CATEGORY: Record<string, GeometryCategory> = {
 	GeometryCollection: 'collection',
 };
 
-// Tints mirror geometry-cell.tsx ICON_COLORS (blue/purple/green/amber, red for invalid).
+// Tints mirror geometry-cell.tsx ICON_COLORS (blue/purple/green/amber, grey when
+// empty, red for a value that is not a shape).
 const CATEGORY_COLOR: Record<GeometryCategory, string> = {
 	point: '#3b82f6',
 	line: '#8b5cf6',
 	polygon: '#10b981',
 	collection: '#f59e0b',
+	empty: '#a1a1aa',
 	invalid: '#ef4444',
 };
-
-// Abbreviated labels — the narrowest candidate from geometry-cell.tsx TYPE_LABELS
-// (the DOM cell has no canvas measure loop, so pick the compact form up front).
-const TYPE_LABEL: Record<string, string> = {
-	Point: 'Point',
-	MultiPoint: 'MPt',
-	LineString: 'Line',
-	MultiLineString: 'MLine',
-	Polygon: 'Poly',
-	MultiPolygon: 'MPoly',
-	GeometryCollection: 'GColl',
-};
-
-const GEOJSON_TYPE_RE = /"type"\s*:\s*"([A-Za-z]+)"/;
 
 /** Read an explicit geometry type from the cell hint (meta or a derived data object). */
 function readHintedType(cell: CellProps['cell']): string | undefined {
@@ -62,13 +47,6 @@ function readHintedType(cell: CellProps['cell']): string | undefined {
 	return undefined;
 }
 
-/** Sniff the GeoJSON `type` token out of the compact preview string. */
-function sniffTypeFromText(cell: CellProps['cell']): string | undefined {
-	const source =
-		typeof cell.data === 'string' ? cell.data : typeof cell.displayData === 'string' ? cell.displayData : '';
-	return GEOJSON_TYPE_RE.exec(source)?.[1];
-}
-
 /** The single-line preview text the factory emitted (copy/display parity). */
 function readDisplayText(cell: CellProps['cell']): string {
 	if (typeof cell.displayData === 'string' && cell.displayData) return cell.displayData;
@@ -76,14 +54,28 @@ function readDisplayText(cell: CellProps['cell']): string {
 	return '';
 }
 
-function categorize(geometryType: string | undefined): GeometryCategory {
-	if (!geometryType) return 'invalid';
-	return TYPE_CATEGORY[geometryType] ?? 'invalid';
+interface ShapeShown {
+	category: GeometryCategory;
+	label: string;
+	problem: string | null;
 }
 
-function labelFor(geometryType: string | undefined, category: GeometryCategory): string {
-	if (!geometryType) return 'Invalid';
-	return TYPE_LABEL[geometryType] ?? (category === 'invalid' ? 'Invalid' : geometryType);
+/** What to show: the factory's summary, or a host builder's type hint named in plain words. */
+function shapeShown(cell: CellProps['cell']): ShapeShown | null {
+	const meta = cell.meta ?? {};
+	if (typeof meta.shapeLabel === 'string' && typeof meta.shapeCategory === 'string') {
+		return {
+			category: meta.shapeCategory as GeometryCategory,
+			label: meta.shapeLabel,
+			problem: typeof meta.shapeProblem === 'string' ? meta.shapeProblem : null,
+		};
+	}
+	const hinted = readHintedType(cell);
+	if (!hinted) return null;
+	const category = TYPE_CATEGORY[hinted];
+	return category
+		? { category, label: shapeKindName(hinted), problem: null }
+		: { category: 'invalid', label: 'Not a shape', problem: `"${hinted}" is not a GeoJSON shape type.` };
 }
 
 // Inline SVG geo icons — one per category, tinted via `color`. A point is a map
@@ -130,29 +122,28 @@ function GeometryIcon({ category, color }: { category: GeometryCategory; color: 
 
 export function GeometryCellView(props: CellProps) {
 	const { cell } = props;
-	const text = readDisplayText(cell);
+	const shape = shapeShown(cell);
 
-	// Empty cell — nothing to paint, matching the canvas `isEmpty` early-return.
-	if (!text && !readHintedType(cell)) {
-		return <div data-slot="geometry-cell" role="gridcell" className="h-full w-full" />;
+	// No value — an empty cell, like every other kind.
+	if (!shape) {
+		return <div data-slot="geometry-cell" className="h-full w-full" />;
 	}
-
-	const geometryType = readHintedType(cell) ?? sniffTypeFromText(cell);
-	const category = categorize(geometryType);
-	const color = CATEGORY_COLOR[category];
-	const label = labelFor(geometryType, category);
 
 	return (
 		<div
 			data-slot="geometry-cell"
-			data-geometry-category={category}
-			role="gridcell"
-			title={text}
+			data-geometry-category={shape.category}
+			title={shape.problem ?? (readDisplayText(cell) || undefined)}
 			className={cn('flex h-full w-full items-center gap-1.5 overflow-hidden px-3')}
 		>
-			<GeometryIcon category={category} color={color} />
-			<span className={cn('truncate text-xs font-medium', category === 'invalid' && 'text-foreground/60')}>
-				{label}
+			<GeometryIcon category={shape.category} color={CATEGORY_COLOR[shape.category]} />
+			<span
+				className={cn(
+					'truncate text-xs font-medium tabular-nums',
+					(shape.category === 'invalid' || shape.category === 'empty') && 'text-muted-foreground',
+				)}
+			>
+				{shape.label}
 			</span>
 		</div>
 	);

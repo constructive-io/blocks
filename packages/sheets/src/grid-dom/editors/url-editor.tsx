@@ -12,14 +12,17 @@
 // built-in text overlay, so this is a ported, consumer-overridable editor (not
 // registry-wired by default).
 
+import { fieldLabel } from '../../cell-types/field-label';
 import { UrlEditor } from '../../grid/editors/url-editor';
 import type { EditorProps } from './editor-props';
 
-export function UrlEditorDom({ value, onCommit, onCancel }: EditorProps) {
+export function UrlEditorDom({ value, column, colKey, onCommit, onCancel }: EditorProps) {
 	return (
 		<div data-slot='url-editor'>
 			<UrlEditor
 				value={value}
+				title={fieldLabel(column?.name ?? colKey)}
+				nullable={Boolean(column?.nullable)}
 				onFinishedEditing={(next) => (next === undefined ? onCancel() : onCommit(next))}
 			/>
 		</div>

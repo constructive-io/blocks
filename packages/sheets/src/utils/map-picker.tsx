@@ -5,6 +5,8 @@ import type { LeafletMouseEvent } from 'leaflet';
 import { MapPinIcon, SearchIcon, XIcon, Loader2 } from 'lucide-react';
 
 import { cn } from './cn';
+import { moduleExports } from './module-interop';
+import { DEFAULT_MAP_TILES, DEFAULT_PLACE_SEARCH, type MapSettings, type SheetsMapPlaceSearch } from './map-settings';
 import { sheetsLogger } from './sheets-logger';
 import { Button } from '@constructive-io/ui/button';
 import { Card, CardContent } from '@constructive-io/ui/card';
@@ -23,6 +25,8 @@ interface MapPickerValue {
 	y: number;
 }
 
+type MapTiles = NonNullable<MapSettings['tiles']>;
+
 interface MapPickerProps {
 	value?: MapPickerValue | GeoJSONPoint | any;
 	onChange?: (value: MapPickerValue | undefined) => void;
@@ -31,6 +35,10 @@ interface MapPickerProps {
 	disabled?: boolean;
 	height?: number;
 	markerColor?: string;
+	/** Where the map tiles come from (`SheetsConfig.map.tiles`). Default: OpenStreetMap. */
+	tiles?: MapTiles;
+	/** The place search endpoint, or null for no search box (`SheetsConfig.map.placeSearch`). */
+	placeSearch?: SheetsMapPlaceSearch | null;
 }
 
 interface SearchResult {
@@ -72,13 +80,17 @@ const extractPosition = (value: any): [number, number] | null => {
 	return [lat, lng];
 };
 
-const searchLocation = async (query: string): Promise<SearchResult[]> => {
+/** Ask the place search endpoint (Nominatim's `/search` form) for up to five places. */
+const searchLocation = async (endpoint: string, query: string): Promise<SearchResult[]> => {
 	if (!query.trim()) return [];
 
 	try {
-		const response = await fetch(
-			`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=5&addressdetails=1`,
-		);
+		const url = new URL(endpoint);
+		url.searchParams.set('format', 'json');
+		url.searchParams.set('q', query);
+		url.searchParams.set('limit', '5');
+		url.searchParams.set('addressdetails', '1');
+		const response = await fetch(url.toString());
 		const results = await response.json();
 		return results || [];
 	} catch (error) {
@@ -92,7 +104,10 @@ const searchLocation = async (query: string): Promise<SearchResult[]> => {
  * Lazy-loaded to avoid bundling ~270KB Leaflet in main chunk.
  */
 const LeafletMapInner = lazy(() =>
-	Promise.all([import('react-leaflet'), import('leaflet')]).then(([reactLeaflet, L]) => {
+	Promise.all([import('react-leaflet'), import('leaflet')]).then(([reactLeafletModule, leafletModule]) => {
+		// Leaflet is UMD-only, so a bundler may hand back `{ default: L }`; read both through the same boundary.
+		const reactLeaflet = moduleExports(reactLeafletModule);
+		const L = moduleExports(leafletModule);
 		const { MapContainer, TileLayer, Marker, useMapEvents, useMap } = reactLeaflet;
 
 		const createCustomIcon = (color: string = '#3b82f6') => {
@@ -152,7 +167,9 @@ const LeafletMapInner = lazy(() =>
 			disabled,
 			height,
 			markerColor,
+			tiles,
 		}: {
+			tiles: MapTiles;
 			position: [number, number] | null;
 			onMapClick: (lat: number, lng: number) => void;
 			disabled: boolean;
@@ -170,8 +187,9 @@ const LeafletMapInner = lazy(() =>
 						className={cn('z-0', disabled && 'pointer-events-none opacity-64')}
 					>
 						<TileLayer
-							attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-							url='https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png'
+							attribution={tiles.attribution}
+							url={tiles.url}
+							{...(tiles.subdomains ? { subdomains: tiles.subdomains } : {})}
 						/>
 
 						{position && <Marker position={position} icon={createCustomIcon(markerColor)} />}
@@ -204,6 +222,8 @@ export function MapPicker({
 	disabled = false,
 	height = 300,
 	markerColor = '#3b82f6',
+	tiles = DEFAULT_MAP_TILES,
+	placeSearch = DEFAULT_PLACE_SEARCH,
 }: MapPickerProps) {
 	const [searchQuery, setSearchQuery] = useState('');
 	const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
@@ -233,10 +253,11 @@ export function MapPicker({
 		}
 
 		searchTimeoutRef.current = setTimeout(async () => {
+			if (!placeSearch) return;
 			if (query.trim()) {
 				setIsSearching(true);
 				setShowResults(true);
-				const results = await searchLocation(query);
+				const results = await searchLocation(placeSearch.url, query);
 				setSearchResults(results);
 				setIsSearching(false);
 			} else {
@@ -244,7 +265,7 @@ export function MapPicker({
 				setSearchResults([]);
 			}
 		}, 300);
-	}, []);
+	}, [placeSearch]);
 
 	const handleResultSelect = useCallback(
 		(result: SearchResult) => {
@@ -281,77 +302,80 @@ export function MapPicker({
 
 	return (
 		<div className={cn('relative w-full', className)}>
-			{/* Search Input */}
-			<div className='relative mb-2'>
-				<InputGroup>
-					<InputGroupAddon>
-						<SearchIcon />
-					</InputGroupAddon>
-					<InputGroupInput
-						type='text'
-						placeholder={placeholder}
-						value={searchQuery}
-						onChange={handleSearchChange}
-						disabled={disabled}
-					/>
-					<InputGroupAddon align='inline-end'>
-						{searchQuery && (
-							<Button
-								type='button'
-								variant='ghost'
-								size='sm'
-								onClick={clearSearch}
-								disabled={disabled}
-								className='h-7 w-7 p-0'
-							>
-								<XIcon className='h-3 w-3' />
-							</Button>
-						)}
-						{position && (
-							<Button
-								type='button'
-								variant='ghost'
-								size='sm'
-								onClick={clearLocation}
-								disabled={disabled}
-								className='h-7 w-7 p-0'
-							>
-								<MapPinIcon className='h-3 w-3' />
-							</Button>
-						)}
-					</InputGroupAddon>
-				</InputGroup>
-
-				{/* Search Results */}
-				{showResults && (
-					<Card className='absolute top-full right-0 left-0 z-50 mt-1 max-h-60 overflow-y-auto'>
-						<CardContent className='p-0'>
-							{isSearching && <div className='text-muted-foreground px-3 py-2 text-sm'>Searching...</div>}
-							{!isSearching && searchResults.length === 0 && searchQuery && (
-								<div className='text-muted-foreground px-3 py-2 text-sm'>No results found</div>
+			{/* Search Input (only with a place search; SheetsConfig.map.placeSearch can turn it off) */}
+			{placeSearch ? (
+				<div className='relative mb-2'>
+					<InputGroup>
+						<InputGroupAddon>
+							<SearchIcon />
+						</InputGroupAddon>
+						<InputGroupInput
+							type='text'
+							placeholder={placeholder}
+							value={searchQuery}
+							onChange={handleSearchChange}
+							disabled={disabled}
+						/>
+						<InputGroupAddon align='inline-end'>
+							{searchQuery && (
+								<Button
+									type='button'
+									variant='ghost'
+									size='sm'
+									onClick={clearSearch}
+									disabled={disabled}
+									className='h-7 w-7 p-0'
+								>
+									<XIcon className='h-3 w-3' />
+								</Button>
 							)}
-							{!isSearching &&
-								searchResults.map((result) => (
-									<button
-										key={result.place_id}
-										onClick={() => handleResultSelect(result)}
-										disabled={disabled}
-										className='hover:bg-accent hover:text-accent-foreground w-full px-3 py-2 text-left text-sm
-											disabled:cursor-not-allowed disabled:opacity-64'
-									>
-										{result.display_name}
-									</button>
-								))}
-						</CardContent>
-					</Card>
-				)}
-			</div>
+							{position && (
+								<Button
+									type='button'
+									variant='ghost'
+									size='sm'
+									onClick={clearLocation}
+									disabled={disabled}
+									className='h-7 w-7 p-0'
+								>
+									<MapPinIcon className='h-3 w-3' />
+								</Button>
+							)}
+						</InputGroupAddon>
+					</InputGroup>
 
-			{/* Map Container */}
-			<Card className='overflow-hidden'>
+					{/* Search Results */}
+					{showResults && (
+						<Card className='absolute top-full right-0 left-0 z-50 mt-1 max-h-60 overflow-y-auto'>
+							<CardContent className='p-0'>
+								{isSearching && <div className='text-muted-foreground px-3 py-2 text-sm'>Searching...</div>}
+								{!isSearching && searchResults.length === 0 && searchQuery && (
+									<div className='text-muted-foreground px-3 py-2 text-sm'>No results found</div>
+								)}
+								{!isSearching &&
+									searchResults.map((result) => (
+										<button
+											key={result.place_id}
+											onClick={() => handleResultSelect(result)}
+											disabled={disabled}
+											className='hover:bg-accent hover:text-accent-foreground w-full px-3 py-2 text-left text-sm
+												disabled:cursor-not-allowed disabled:opacity-64'
+										>
+											{result.display_name}
+										</button>
+									))}
+							</CardContent>
+						</Card>
+					)}
+				</div>
+			) : null}
+
+			{/* Map Container: the map fills the frame (no card padding bands above and below it). */}
+			<Card className='overflow-hidden py-0'>
 				<CardContent className='p-0'>
 					<Suspense fallback={<MapLoading height={height} />}>
 						<LeafletMapInner
+							tiles={tiles}
 							position={position}
 							onMapClick={handleMapClick}
 							disabled={disabled}

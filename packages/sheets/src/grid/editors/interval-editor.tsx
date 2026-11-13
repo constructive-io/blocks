@@ -1,11 +1,10 @@
 import React, { useCallback, useState } from 'react';
-import { Check, Clock, X } from 'lucide-react';
 
-import { Button } from '@constructive-io/ui/button';
 import { Input } from '@constructive-io/ui/input';
 import { Label } from '@constructive-io/ui/label';
 
 import { EditorFocusTrap } from './editor-focus-trap';
+import { EditorFooter, EditorHeader, editorClear, modifierKeyLabel } from './editor-frame';
 import { OVERLAY } from './overlay-presets';
 
 interface IntervalValue {
@@ -18,6 +17,10 @@ interface IntervalValue {
 interface IntervalEditorProps {
 	value: unknown;
 	onFinishedEditing: (next?: unknown) => void;
+	/** The field's readable name, shown as the title. */
+	title?: string;
+	/** The column takes no value, so Clear is offered. */
+	nullable?: boolean;
 }
 
 const INTERVAL_PATTERNS: { regex: RegExp; key: keyof IntervalValue }[] = [
@@ -68,7 +71,7 @@ function formatIntervalValue(interval: IntervalValue): string {
 	return parts.join(' ') || '0s';
 }
 
-export const IntervalEditor: React.FC<IntervalEditorProps> = ({ value, onFinishedEditing }) => {
+export const IntervalEditor: React.FC<IntervalEditorProps> = ({ value, onFinishedEditing, title = 'Duration', nullable = false }) => {
 	// Extract current interval data from the raw value
 	const currentIntervalData = typeof value === 'string' ? value : '';
 
@@ -104,13 +107,9 @@ export const IntervalEditor: React.FC<IntervalEditorProps> = ({ value, onFinishe
 	const previewText = formatIntervalValue(editingValue);
 
 	return (
-		<EditorFocusTrap onEscape={handleCancel} className={`bg-popover flex ${OVERLAY.sm} flex-col gap-4 rounded-lg border p-4 shadow-lg`}>
-			<div onKeyDown={handleEditorKeyDown}>
-			{/* Header */}
-			<div className='flex items-center gap-2'>
-				<Clock className='text-muted-foreground h-4 w-4' />
-				<h3 className='text-sm font-medium'>Edit Time Interval</h3>
-			</div>
+		<EditorFocusTrap onEscape={handleCancel} className={`bg-popover flex ${OVERLAY.sm} flex-col gap-3 rounded-lg border p-3 shadow-lg`}>
+			<div onKeyDown={handleEditorKeyDown} className='flex flex-col gap-3'>
+			<EditorHeader title={title} />
 
 			{/* Input Fields */}
 			<div className='grid grid-cols-2 gap-3'>
@@ -181,17 +180,11 @@ export const IntervalEditor: React.FC<IntervalEditorProps> = ({ value, onFinishe
 				<div className='bg-muted rounded px-3 py-2 font-mono text-sm'>{previewText}</div>
 			</div>
 
-			{/* Action Buttons */}
-			<div className='flex justify-end gap-2'>
-				<Button variant='outline' size='sm' onClick={handleCancel}>
-					<X className='mr-1 h-3 w-3' />
-					Cancel
-				</Button>
-				<Button size='sm' onClick={handleSave}>
-					<Check className='mr-1 h-3 w-3' />
-					Save
-				</Button>
-			</div>
+			<EditorFooter
+				onSave={handleSave}
+				saveShortcut={`${modifierKeyLabel()} Enter`}
+				clear={editorClear(nullable, () => onFinishedEditing(null))}
+			/>
 			</div>
 		</EditorFocusTrap>
 	);

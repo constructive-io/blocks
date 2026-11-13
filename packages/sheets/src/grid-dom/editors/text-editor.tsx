@@ -65,7 +65,7 @@ export function TextEditor({ value, initialText, colKey, fieldMeta, onCommit, on
 				onKeyDown={handleKeyDown}
 				onBlur={handleBlur}
 				spellCheck={false}
-				className='bg-muted/40 border-border/40 min-w-0 flex-1 rounded-md border px-2.5 py-1.5 font-sans text-sm outline-none'
+				className='bg-muted/40 border-border/40 min-w-0 flex-1 rounded-md border px-2.5 py-1.5 font-sans text-sm outline-none focus-visible:border-ring/60 focus-visible:ring-[3px] focus-visible:ring-ring/35'
 				autoFocus
 			/>
 			<Button onClick={() => onCommit(text)} size='xs' variant='default' className='shrink-0'>

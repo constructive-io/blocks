@@ -16,7 +16,10 @@ const BLUR_HEIGHT_MIN_PX = 64;
 const BLUR_HEIGHT_MAX_PX = 140;
 
 export type TableWithCategory = {
+	/** The value `onTableChange` receives and `activeTable` matches, for example a `TableModel.key`. */
 	name: string;
+	/** What the list shows. Default: `name`. The search matches both. */
+	label?: string;
 	category?: string;
 };
 
@@ -90,20 +93,16 @@ export const SheetsTableSelector = memo(function SheetsTableSelector({
 
 	// Transform tables to internal format
 	const tableData = useMemo(() => {
-		return tables.map((table) => {
-			const isObject = typeof table === 'object';
-			const name = isObject ? table.name : table;
-			return {
-				value: name,
-				label: name,
-			};
-		});
+		return tables.map((table) =>
+			typeof table === 'object' ? { value: table.name, label: table.label ?? table.name } : { value: table, label: table },
+		);
 	}, [tables]);
 
 	// Apply search filter
 	const filteredTables = useMemo(() => {
 		if (!searchQuery) return tableData;
-		return tableData.filter((table) => table.label.toLowerCase().includes(searchQuery.toLowerCase()));
+		const query = searchQuery.toLowerCase();
+		return tableData.filter((table) => table.label.toLowerCase().includes(query) || table.value.toLowerCase().includes(query));
 	}, [tableData, searchQuery]);
 
 	// Measure container height on mount and resize

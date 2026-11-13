@@ -1,351 +1,117 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { parseDate as parseAriaDate } from '@internationalized/date';
 import type { DateValue as DateValueType } from 'react-aria-components';
 
-import { Button } from '@constructive-io/ui/button';
 import { Calendar } from '@constructive-io/ui/calendar-rac';
 
 import { DATE_TIME_TYPES } from '../../cell-types/cell-type-groups';
-import { sheetsLocale } from '../../utils/sheets-i18n';
+import { dateTimeTitle, formatDateTimeText, type DateTimeKind } from '../../cell-types/date-time-format';
 
+import {
+	emptyDateValueParts,
+	normalizeTimeInput,
+	readDateValueParts,
+	writeDateValueParts,
+	type DateEditorType,
+	type DateValueParts,
+} from './date-value-parts';
 import { EditorFocusTrap } from './editor-focus-trap';
+import { EditorFooter, EditorHeader, editorClear, modifierKeyLabel } from './editor-frame';
 import { OVERLAY } from './overlay-presets';
 
-const TIME_RE = /(\d{1,2}):(\d{2})(?::(\d{2}))?(?:\.\d+)?/;
-const MAC_UA_RE = /Mac|iPod|iPhone|iPad/;
+export type { DateEditorType } from './date-value-parts';
 
-export type DateEditorType = 'date' | 'datetime' | 'timestamptz' | 'time';
-
-const DATE_ONLY_RE = /^\d{4}-\d{2}-\d{2}/;
-
-function pad2(value: number): string {
-	return String(value).padStart(2, '0');
-}
-
-// Format a Date as a calendar date string using LOCAL getters (never UTC).
-// This is the correct serialization for date-only values: the wall-clock day
-// the user picked is preserved regardless of timezone.
-export function toLocalDateString(d: Date): string {
-	return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
-}
-
-// If the value is a string whose literal calendar date is already known
-// (starts with YYYY-MM-DD), return that 10-char slice verbatim. Otherwise null.
-// Date-only strings must never round-trip through a Date object.
-export function extractDateOnly(v: unknown): string | null {
-	if (typeof v === 'string' && DATE_ONLY_RE.test(v)) {
-		return v.slice(0, 10);
-	}
-	return null;
-}
-
-function normalizeTimeValue(value: unknown): string {
-	if (value == null) return '';
-
-	if (value instanceof Date) {
-		if (isNaN(value.getTime())) return '';
-		return `${pad2(value.getHours())}:${pad2(value.getMinutes())}:${pad2(value.getSeconds())}`;
-	}
-
-	const asString = String(value).trim();
-	if (!asString) return '';
-
-	// Match both time-only values and datetime-like values with a time component.
-	const match = asString.match(TIME_RE);
-	if (!match) return '';
-
-	const hours = Number(match[1] ?? 0);
-	const minutes = Number(match[2] ?? 0);
-	const seconds = Number(match[3] ?? 0);
-	if (
-		!Number.isFinite(hours) ||
-		!Number.isFinite(minutes) ||
-		!Number.isFinite(seconds) ||
-		hours < 0 ||
-		hours > 23 ||
-		minutes < 0 ||
-		minutes > 59 ||
-		seconds < 0 ||
-		seconds > 59
-	) {
-		return '';
-	}
-
-	return `${pad2(hours)}:${pad2(minutes)}:${pad2(seconds)}`;
-}
-
-// Determine date type from cell data or explicit context
-export const getDateType = (value: any): DateEditorType => {
-	// Try to infer from the value format
-	if (typeof value === 'string') {
-		if (value.includes('T') || value.includes(' ')) {
-			return value.includes('+') || value.includes('Z') ? 'timestamptz' : 'datetime';
-		}
-		if (value.includes(':') && !value.includes('-')) {
-			return 'time';
-		}
-	}
-	return 'date'; // Default fallback
-};
-
+/** The editor's type from the cell type, else guessed from the stored text. */
 export function resolveDateType(value: unknown, explicitType?: string): DateEditorType {
-	if (explicitType && DATE_TIME_TYPES.has(explicitType)) {
-		return explicitType as DateEditorType;
+	if (explicitType && DATE_TIME_TYPES.has(explicitType)) return explicitType as DateEditorType;
+	if (typeof value === 'string') {
+		if (value.includes('T') || value.includes(' ')) return /[+-]\d{2}(:?\d{2})?$|Z$/.test(value) ? 'timestamptz' : 'datetime';
+		if (value.includes(':') && !value.includes('-')) return 'time';
 	}
-	return getDateType(value);
+	return 'date';
 }
 
-// Format date for display based on type
-export const formatDate = (val: unknown, dateType: DateEditorType): string => {
-	if (!val) return '';
+function displayKind(type: DateEditorType): DateTimeKind {
+	return type === 'date' ? 'date' : type === 'time' ? 'time' : 'datetime';
+}
 
-	if (dateType === 'time') {
-		if (typeof val === 'string') {
-			return val.trim();
-		}
-		const normalized = normalizeTimeValue(val);
-		return normalized || String(val);
-	}
+const TIME_INPUT =
+	'bg-muted/40 border-border/40 text-foreground w-full rounded-md border px-2.5 py-1.5 text-sm tabular-nums outline-none focus-visible:border-ring/60 focus-visible:ring-[3px] focus-visible:ring-ring/35';
 
-	try {
-		// Date-only display must use the literal calendar date, never a UTC
-		// conversion (which shifts the day in any UTC+ zone). Prefer the literal
-		// slice and never round-trip a Date.
-		if (dateType === 'date') {
-			const literal = extractDateOnly(val);
-			if (literal) return literal;
-			if (val instanceof Date) {
-				return isNaN(val.getTime()) ? String(val) : toLocalDateString(val);
-			}
-			return String(val);
-		}
-
-		let date: Date;
-		if (val instanceof Date) {
-			date = val;
-		} else if (typeof val === 'string') {
-			date = new Date(val);
-		} else {
-			return String(val);
-		}
-
-		if (isNaN(date.getTime())) return String(val);
-
-		switch (dateType) {
-			case 'datetime':
-			case 'timestamptz':
-				return date.toLocaleDateString(sheetsLocale(), {
-					year: 'numeric',
-					month: 'short',
-					day: 'numeric',
-					hour: '2-digit',
-					minute: '2-digit',
-					hour12: false,
-				});
-			default: {
-				// Default branch is treated as date-only semantics.
-				const literal = extractDateOnly(val);
-				if (literal) return literal;
-				return toLocalDateString(date);
-			}
-		}
-	} catch {
-		return String(val);
-	}
-};
-
-// Format date for input based on type
-export const formatForInput = (val: unknown, inputType: string): string => {
-	if (!val) return '';
-
-	if (inputType === 'time') {
-		return normalizeTimeValue(val);
-	}
-
-	// Date-only input must reflect the literal calendar date, never a UTC shift.
-	if (inputType === 'date') {
-		const literal = extractDateOnly(val);
-		if (literal) return literal;
-		if (val instanceof Date) {
-			return isNaN(val.getTime()) ? '' : toLocalDateString(val);
-		}
-		return '';
-	}
-
-	try {
-		let date: Date;
-		if (val instanceof Date) {
-			date = val;
-		} else if (typeof val === 'string') {
-			date = new Date(val);
-		} else {
-			return '';
-		}
-
-		if (isNaN(date.getTime())) return '';
-
-		switch (inputType) {
-			case 'datetime-local':
-				return date.toISOString().slice(0, 16);
-			default:
-				return '';
-		}
-	} catch {
-		return '';
-	}
-};
-
-// Convert a date input to a DateValue for the calendar.
-// Date-only strings are parsed by their literal calendar date (no Date round-trip),
-// so the calendar seeds on exactly the stored day in any timezone.
-const dateToDateValue = (date: Date | string | null): DateValueType | null => {
-	if (!date) return null;
-
-	try {
-		const literal = extractDateOnly(date);
-		if (literal) {
-			return parseAriaDate(literal);
-		}
-
-		const jsDate = date instanceof Date ? date : new Date(date);
-		if (isNaN(jsDate.getTime())) return null;
-
-		return parseAriaDate(toLocalDateString(jsDate));
-	} catch {
-		return null;
-	}
-};
-
-// Convert DateValue to JavaScript Date
-const dateValueToDate = (dateValue: DateValueType | null): Date | null => {
-	if (!dateValue) return null;
-
-	try {
-		return new Date(dateValue.year, dateValue.month - 1, dateValue.day);
-	} catch {
-		return null;
-	}
-};
+// The calendar fills the editor's content box: seven equal day columns and a header whose
+// arrows sit at its two ends. The arrows' focus ring is drawn inside them, so it is no
+// larger than the button.
+const CALENDAR_FILL = [
+	'w-full',
+	'[&_table]:w-full [&_table]:table-fixed',
+	'[&_td>[role=button]]:mx-auto [&_th]:w-auto',
+	'[&_header_button:focus-visible]:ring-2 [&_header_button:focus-visible]:ring-inset',
+].join(' ');
 
 interface DateEditorProps {
 	value: unknown;
 	onFinishedEditing: (next?: unknown) => void;
 	dateType?: DateEditorType;
+	/** Offer a Clear action that commits null (the column accepts no value). */
+	canClear?: boolean;
+	/** The field's readable name, shown as the title. */
+	title?: string;
 }
 
-export const DateEditor: React.FC<DateEditorProps> = ({ value, onFinishedEditing, dateType: forcedDateType }) => {
-	// Extract current date data from the raw value
-	const currentDateValue = typeof value === 'string' ? value : '';
-	const dateType = resolveDateType(currentDateValue, forcedDateType);
-
-	const [dateValue, setDateValue] = useState<string | Date | null>(currentDateValue);
-	const [selectedDate, setSelectedDate] = useState<DateValueType | null>(
-		dateToDateValue(currentDateValue || new Date()),
-	);
-
-	const keyContainerRef = useRef<HTMLDivElement>(null);
-
+export const DateEditor: React.FC<DateEditorProps> = ({ value, onFinishedEditing, dateType: forcedDateType, canClear = false, title = 'Date' }) => {
+	const stored = typeof value === 'string' ? value : '';
+	const dateType = resolveDateType(stored, forcedDateType);
 	const isTimeOnly = dateType === 'time';
 	const isDateTimeType = dateType === 'datetime' || dateType === 'timestamptz';
 
-	const handleDateSelect = useCallback(
-		(dateValue: DateValueType | readonly DateValueType[] | null) => {
-			// The shared Calendar also supports multi-select, so its public
-			// callback includes arrays. This editor is intentionally single-date.
-			if (Array.isArray(dateValue)) return;
-			const selectedValue = dateValue as DateValueType | null;
-			setSelectedDate(selectedValue);
-			const jsDate = dateValueToDate(selectedValue);
+	// The parts of the stored text; nothing changes until the user picks a day or a time.
+	const [parts, setParts] = useState<DateValueParts | null>(() => readDateValueParts(stored, dateType));
+	const [dirty, setDirty] = useState(false);
+	const keyContainerRef = useRef<HTMLDivElement>(null);
 
-			if (jsDate) {
-				// For datetime types, preserve existing time if available
-				if (isDateTimeType && currentDateValue) {
-					const currentDate = new Date(currentDateValue);
-					if (!isNaN(currentDate.getTime())) {
-						jsDate.setHours(currentDate.getHours(), currentDate.getMinutes(), currentDate.getSeconds());
-					}
-				}
-				setDateValue(jsDate);
-			}
+	const selectedDate = useMemo<DateValueType | null>(() => {
+		if (!parts?.date) return null;
+		try {
+			return parseAriaDate(parts.date);
+		} catch {
+			return null;
+		}
+	}, [parts?.date]);
+
+	const handleDateSelect = useCallback(
+		(picked: DateValueType | readonly DateValueType[] | null) => {
+			// The shared Calendar also supports multi-select; this editor picks one day.
+			if (!picked || Array.isArray(picked)) return;
+			const day = picked as DateValueType;
+			const date = `${String(day.year).padStart(4, '0')}-${String(day.month).padStart(2, '0')}-${String(day.day).padStart(2, '0')}`;
+			// Only the day changes: the time, its fraction and its zone stay as they are.
+			setParts((current) => ({ ...(current ?? emptyDateValueParts(dateType)), date }));
+			setDirty(true);
 		},
-		[isDateTimeType, currentDateValue],
+		[dateType],
 	);
 
 	const handleTimeChange = useCallback(
-		(timeValue: string) => {
-			if (!timeValue) return;
-
-			if (isTimeOnly) {
-				const normalizedTime = normalizeTimeValue(timeValue);
-				setDateValue(normalizedTime);
-				return;
-			}
-
-			const [hours, minutes, seconds = 0] = timeValue.split(':').map(Number);
-			const targetDate: Date = selectedDate
-				? dateValueToDate(selectedDate) || new Date()
-				: currentDateValue
-					? new Date(currentDateValue)
-					: new Date();
-
-			targetDate.setHours(hours || 0, minutes || 0, seconds || 0, 0);
-			setDateValue(targetDate);
+		(input: string) => {
+			const time = normalizeTimeInput(input);
+			if (!time) return;
+			// The field edits whole seconds; the stored fraction of a second is kept.
+			setParts((current) => ({ ...(current ?? emptyDateValueParts(dateType)), time }));
+			setDirty(true);
 		},
-		[isTimeOnly, selectedDate, currentDateValue],
+		[dateType],
 	);
 
+	const written = parts && dirty && (isTimeOnly || parts.date) ? writeDateValueParts(parts, dateType) : null;
+
 	const handleSave = useCallback(() => {
-		let finalValue: string;
-
-		if (!dateValue) {
-			finalValue = '';
-		} else {
-			if (dateType === 'time') {
-				finalValue = normalizeTimeValue(dateValue);
-				if (!finalValue) {
-					finalValue = String(dateValue).trim();
-				}
-				return onFinishedEditing(finalValue);
-			}
-
-			// Date-only path: serialize the literal calendar date with LOCAL getters.
-			// A UTC conversion (toISOString) shifts the day backwards in any UTC+
-			// zone — that is the write corruption this guards against.
-			if (dateType === 'date') {
-				const literal = extractDateOnly(dateValue);
-				if (literal) {
-					finalValue = literal;
-				} else if (dateValue instanceof Date) {
-					finalValue = isNaN(dateValue.getTime()) ? '' : toLocalDateString(dateValue);
-				} else {
-					finalValue = '';
-				}
-			} else {
-				const date = dateValue instanceof Date ? dateValue : new Date(dateValue);
-
-				if (isNaN(date.getTime())) {
-					finalValue = '';
-				} else {
-					switch (dateType) {
-						case 'datetime':
-							finalValue = date.toISOString().slice(0, 19); // Remove Z
-							break;
-						case 'timestamptz':
-							finalValue = date.toISOString();
-							break;
-						default: {
-							// Default branch is treated as date-only semantics.
-							const literal = extractDateOnly(dateValue);
-							finalValue = literal ?? toLocalDateString(date);
-						}
-					}
-				}
-			}
+		// Nothing changed: close without writing, so the stored text stays exactly as it is.
+		if (!written) {
+			onFinishedEditing();
+			return;
 		}
-
-		// Emit the raw formatted date string
-		onFinishedEditing(finalValue);
-	}, [dateValue, dateType, onFinishedEditing]);
+		onFinishedEditing(written);
+	}, [written, onFinishedEditing]);
 
 	const handleCancel = useCallback(() => {
 		onFinishedEditing();
@@ -383,76 +149,57 @@ export const DateEditor: React.FC<DateEditorProps> = ({ value, onFinishedEditing
 		return () => el.removeEventListener('keydown', handler);
 	}, []);
 
-	const displayValue = formatDate(dateValue, dateType);
-
-	const isMac = typeof navigator !== 'undefined' && MAC_UA_RE.test(navigator.userAgent);
-	const modKey = isMac ? '⌘' : 'Ctrl';
+	// The value as the cells show it, in the same zone; the title has the exact text.
+	const shownText = written ?? stored;
+	const shown = shownText ? formatDateTimeText(shownText, displayKind(dateType)) : null;
 
 	return (
 		<EditorFocusTrap
 			onEscape={handleCancel}
-			className={`bg-popover ${OVERLAY.sm} rounded-lg border p-2.5 shadow-lg`}
+			// A calendar is as wide as its seven 36px days; the editor takes that width so the
+			// month sits with equal space on both sides. A time alone keeps the small editor width.
+			className={`bg-popover rounded-lg border p-2.5 shadow-lg ${isTimeOnly ? OVERLAY.sm : 'w-[min(20rem,calc(100vw-1.5rem))]'}`}
 		>
-			<div ref={keyContainerRef}>
+			<div ref={keyContainerRef} className='flex flex-col gap-2'>
+				<EditorHeader title={title} />
+				{/* The value so far, as the cell shows it, on the calendar's left edge. */}
+				<p
+					data-slot='date-editor-value'
+					className='text-muted-foreground -mt-1 text-xs tabular-nums'
+					title={shown && shownText ? dateTimeTitle(shownText, shown.zone) : undefined}
+				>
+					{shown?.text || 'No value'}
+				</p>
 				{isTimeOnly ? (
-					// Time-only: compact input
-					<div className='space-y-2'>
-						<input
-							type='time'
-							step='1'
-							value={formatForInput(dateValue, 'time')}
-							onChange={(e) => handleTimeChange(e.target.value)}
-							className='bg-muted/40 border-border/40 text-foreground w-full rounded-md border px-3 py-2 text-sm outline-none focus-visible:border-ring/60 focus-visible:ring-[3px] focus-visible:ring-ring/35'
-							autoFocus
-						/>
-					</div>
+					<input
+						type='time'
+						step='1'
+						aria-label={`${title} time`}
+						value={parts?.time ?? ''}
+						onChange={(e) => handleTimeChange(e.target.value)}
+						className={TIME_INPUT}
+						autoFocus
+					/>
 				) : (
-					// Date / DateTime: calendar + optional time
-					<div>
-						{/* Selected date display */}
-						<div className='text-muted-foreground mb-1 px-1 text-xs font-medium tabular-nums'>
-							{displayValue || 'No date selected'}
-						</div>
-
-						{/* Calendar */}
-						<Calendar
-							value={selectedDate}
-							onChange={handleDateSelect}
-							aria-label='Select date'
-						/>
-
-						{/* Time input for datetime types */}
-						{isDateTimeType && (
-							<div className='mt-2 px-1'>
-								<input
-									type='time'
-									step='1'
-									value={dateValue ? new Date(dateValue).toTimeString().split(' ')[0].slice(0, 8) : ''}
-									onChange={(e) => handleTimeChange(e.target.value)}
-									className='bg-muted/40 border-border/40 text-foreground w-full rounded-md border px-2.5 py-1.5 text-sm outline-none focus-visible:border-ring/60 focus-visible:ring-[3px] focus-visible:ring-ring/35'
-								/>
-							</div>
-						)}
-					</div>
+					<>
+						<Calendar value={selectedDate} onChange={handleDateSelect} aria-label='Select date' className={CALENDAR_FILL} />
+						{isDateTimeType ? (
+							<input
+								type='time'
+								step='1'
+								aria-label={`${title} time`}
+								value={parts?.time ?? ''}
+								onChange={(e) => handleTimeChange(e.target.value)}
+								className={TIME_INPUT}
+							/>
+						) : null}
+					</>
 				)}
-
-				{/* Footer — hints + save */}
-				<div className='mt-3 flex items-center justify-between gap-4 border-t px-1 pt-2.5'>
-					<div className='text-muted-foreground flex items-center gap-3 text-xs'>
-						<span className='inline-flex shrink-0 items-center gap-1'>
-							<kbd className='bg-muted/60 border-border/40 inline-flex min-h-5 min-w-5 items-center justify-center rounded border font-sans text-[11px] leading-tight'>{modKey}</kbd>
-							<kbd className='bg-muted/60 border-border/40 inline-flex min-h-5 min-w-5 items-center justify-center rounded border font-sans text-[11px] leading-tight'>↵</kbd>
-							<span>save</span>
-						</span>
-						<span className='inline-flex shrink-0 items-center gap-1'>
-							<kbd className='bg-muted/60 border-border/40 inline-flex min-h-5 items-center justify-center rounded border px-1.5 font-sans text-[11px] leading-tight'>Esc</kbd>
-							<span>cancel</span>
-						</span>
-					</div>
-					<Button onClick={handleSave} size='xs' variant='default' className='shrink-0'>
-						Save
-					</Button>
-				</div>
+				<EditorFooter
+					onSave={handleSave}
+					saveShortcut={`${modifierKeyLabel()} Enter`}
+					clear={editorClear(canClear, () => onFinishedEditing(null))}
+				/>
 			</div>
 		</EditorFocusTrap>
 	);

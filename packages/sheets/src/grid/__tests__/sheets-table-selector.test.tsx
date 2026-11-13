@@ -69,4 +69,41 @@ describe('SheetsTableSelector table navigation', () => {
 		expect(onTableChange).toHaveBeenCalledOnce();
 		expect(onTableChange).toHaveBeenCalledWith('releases');
 	});
+
+	it('shows each table by its label, selects it by its key, and searches both', async () => {
+		const onTableChange = vi.fn();
+		await act(async () => {
+			root.render(
+				<SheetsTableSelector
+					activeTable='app_public.project_member'
+					onTableChange={onTableChange}
+					tables={[
+						{ name: 'app_public.project_member', label: 'Project members' },
+						{ name: 'app_public.release', label: 'Releases' },
+						{ name: 'app_public.note' },
+					]}
+				/>,
+			);
+		});
+		const items = () => Array.from(container.querySelectorAll<HTMLButtonElement>('button[data-testid="table-item"]'));
+		expect(items().map((item) => item.textContent)).toEqual(['Project members', 'Releases', 'app_public.note']);
+		expect(items()[0]!.getAttribute('aria-pressed')).toBe('true');
+
+		await act(async () => items()[1]!.click());
+		expect(onTableChange).toHaveBeenCalledWith('app_public.release');
+
+		const search = container.querySelector<HTMLInputElement>('input[placeholder="Search tables..."]')!;
+		const setValue = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!;
+		const searchFor = async (text: string) =>
+			act(async () => {
+				setValue.call(search, text);
+				search.dispatchEvent(new Event('input', { bubbles: true }));
+			});
+		await searchFor('members');
+		expect(items().map((item) => item.textContent)).toEqual(['Project members']);
+		await searchFor('release');
+		expect(items().map((item) => item.textContent)).toEqual(['Releases']);
+		await searchFor('app_public.project');
+		expect(items().map((item) => item.textContent)).toEqual(['Project members']);
+	});
 });

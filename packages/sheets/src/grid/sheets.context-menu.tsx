@@ -13,7 +13,18 @@
  * its `run` requests the SAME AlertDialog confirm the toolbar Delete uses.
  */
 import { useState, type ReactNode } from 'react';
-import { RiAddLine, RiClipboardLine, RiDeleteBin6Line, RiEraserLine, RiScissorsLine, RiFileCopyLine } from '@remixicon/react';
+import {
+	RiAddLine,
+	RiClipboardLine,
+	RiExpandDiagonalLine,
+	RiDeleteBin6Line,
+	RiEraserLine,
+	RiExternalLinkLine,
+	RiFileCopyLine,
+	RiScissorsLine,
+	RiSortAsc,
+	RiSortDesc,
+} from '@remixicon/react';
 
 import {
 	AlertDialog,
@@ -34,6 +45,8 @@ import {
 	DropdownMenuTrigger,
 } from '@constructive-io/ui/dropdown-menu';
 
+import { INSTANT_POPUP } from './popup-classes';
+
 /** Where the menu is anchored + the cell it acts on. `null` = closed. */
 export interface ContextMenuState {
 	clientX: number;
@@ -49,6 +62,8 @@ export interface ContextMenuItem {
 	shortcut?: string;
 	destructive?: boolean;
 	disabled?: boolean;
+	/** Why the item is disabled, shown on hover. */
+	reason?: string;
 	run?: () => void;
 }
 
@@ -57,6 +72,8 @@ export interface BuildContextMenuItemsArgs {
 	onAction: (commandId: string) => void;
 	/** True when the command's `canRun` passes against the latched context. */
 	isEnabled: (commandId: string) => boolean;
+	/** Why a command cannot run here, or null; shown on its disabled item. */
+	reasonFor?: (commandId: string) => string | null;
 	/** Append a draft row (the toolbar Add-row path). */
 	onAddRow: () => void;
 	/** Open the destructive delete confirm (the AlertDialog). */
@@ -65,6 +82,8 @@ export interface BuildContextMenuItemsArgs {
 	selectedRowCount: number;
 	canAddRows?: boolean;
 	canDeleteRows?: boolean;
+	/** Offer "Open record" (the grid has a record panel). */
+	canOpenRecords?: boolean;
 }
 
 /**
@@ -75,25 +94,33 @@ export interface BuildContextMenuItemsArgs {
 export function buildContextMenuItems({
 	onAction,
 	isEnabled,
+	reasonFor,
 	onAddRow,
 	requestDelete,
 	selectedRowCount,
 	canAddRows = true,
 	canDeleteRows = true,
+	canOpenRecords = false,
 }: BuildContextMenuItemsArgs): ContextMenuItem[] {
-	const cmd = (key: string, commandId: string, label: string, icon: ReactNode, shortcut?: string): ContextMenuItem => ({
-		key,
-		label,
-		icon,
-		shortcut,
-		disabled: !isEnabled(commandId),
-		run: () => onAction(commandId),
-	});
+	const cmd = (key: string, commandId: string, label: string, icon: ReactNode, shortcut?: string): ContextMenuItem => {
+		const disabled = !isEnabled(commandId);
+		const reason = disabled ? reasonFor?.(commandId) ?? undefined : undefined;
+		return { key, label, icon, shortcut, disabled, ...(reason ? { reason } : {}), run: () => onAction(commandId) };
+	};
+	// "Open link" shows only for a cell that holds an email or a web address.
+	const open: ContextMenuItem[] = [
+		...(isEnabled('cell.openLink') ? [cmd('open-link', 'cell.openLink', 'Open link', <RiExternalLinkLine className='size-4' aria-hidden='true' />)] : []),
+		...(canOpenRecords ? [cmd('open-record', 'record.open', 'Open record', <RiExpandDiagonalLine className='size-4' aria-hidden='true' />)] : []),
+	];
 	return [
+		...(open.length > 0 ? [...open, { key: 'sep-open', separator: true }] : []),
 		cmd('copy', 'clipboard.copy', 'Copy', <RiFileCopyLine className='size-4' aria-hidden='true' />, '⌘C'),
 		cmd('cut', 'clipboard.cut', 'Cut', <RiScissorsLine className='size-4' aria-hidden='true' />, '⌘X'),
 		cmd('paste', 'clipboard.paste', 'Paste', <RiClipboardLine className='size-4' aria-hidden='true' />, '⌘V'),
 		cmd('clear', 'cell.clear', 'Clear', <RiEraserLine className='size-4' aria-hidden='true' />),
+		{ key: 'sep-view', separator: true },
+		cmd('sort-asc', 'view.sortAscending', 'Sort ascending', <RiSortAsc className='size-4' aria-hidden='true' />),
+		cmd('sort-desc', 'view.sortDescending', 'Sort descending', <RiSortDesc className='size-4' aria-hidden='true' />),
 		{ key: 'sep', separator: true },
 		{
 			key: 'add-row',
@@ -122,6 +149,8 @@ export interface SheetsContextMenuProps {
 	onAction: (commandId: string) => void;
 	/** True when the command's `canRun` passes against the latched context. */
 	isEnabled: (commandId: string) => boolean;
+	/** Why a command cannot run here, or null; shown on its disabled item. */
+	reasonFor?: (commandId: string) => string | null;
 	/** Append a draft row (the toolbar Add-row path). */
 	onAddRow: () => void;
 	/** Delete the selected row(s) (the toolbar deleteSelected path) — guarded by the AlertDialog. */
@@ -130,6 +159,8 @@ export interface SheetsContextMenuProps {
 	selectedRowCount: number;
 	canAddRows?: boolean;
 	canDeleteRows?: boolean;
+	/** Offer "Open record" (the grid has a record panel). */
+	canOpenRecords?: boolean;
 }
 
 export function SheetsContextMenu({
@@ -137,11 +168,13 @@ export function SheetsContextMenu({
 	onClose,
 	onAction,
 	isEnabled,
+	reasonFor,
 	onAddRow,
 	onDeleteRows,
 	selectedRowCount,
 	canAddRows = true,
 	canDeleteRows = true,
+	canOpenRecords = false,
 }: SheetsContextMenuProps) {
 	const [confirmDelete, setConfirmDelete] = useState(false);
 	const open = state !== null;
@@ -149,11 +182,13 @@ export function SheetsContextMenu({
 	const items = buildContextMenuItems({
 		onAction,
 		isEnabled,
+		reasonFor,
 		onAddRow,
 		requestDelete: () => setConfirmDelete(true),
 		selectedRowCount,
 		canAddRows,
 		canDeleteRows,
+		canOpenRecords,
 	});
 
 	return (
@@ -171,7 +206,7 @@ export function SheetsContextMenu({
 						height: 0,
 					}}
 				/>
-				<DropdownMenuContent align='start'>
+				<DropdownMenuContent align='start' className={INSTANT_POPUP}>
 					{items.map((item) =>
 						item.separator ? (
 							<DropdownMenuSeparator key={item.key} />
@@ -180,6 +215,7 @@ export function SheetsContextMenu({
 								key={item.key}
 								variant={item.destructive ? 'destructive' : 'default'}
 								disabled={item.disabled}
+								title={item.reason}
 								onClick={() => {
 									// Run then close — a menu pick is a one-shot (the popup dismisses).
 									item.run?.();

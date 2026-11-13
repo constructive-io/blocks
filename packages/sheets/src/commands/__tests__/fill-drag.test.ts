@@ -17,6 +17,7 @@ import { extendedFillRect, fillDragWrites } from '../../selection/fill';
 import type { SheetsSelection, SelectionRect } from '../../selection/selection-model';
 import { RangeSet } from '../../selection/range-set';
 import type { CellWrite, CommitCellsResult } from '../../grid/hooks/use-batch-commit';
+import { createMockViewTarget } from './mock-context';
 
 const registry = createGridCommandRegistry();
 function cmd(id: string): GridCommand {
@@ -80,7 +81,8 @@ function makeCtx(range?: SelectionRect, rows: unknown[] = ROWS) {
 			return { cols: r.cols, rows: r.rows, values: r.values };
 		},
 		toTSV: (values: (readonly unknown[])[]) => toTSV(values),
-		emit: vi.fn()
+		emit: vi.fn(),
+		view: createMockViewTarget(),
 	} satisfies GridCommandContext;
 	return { ctx, commitCells, setSelection };
 }

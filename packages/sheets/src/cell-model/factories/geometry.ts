@@ -12,6 +12,7 @@
 
 import type { CellCreationMetadata } from '../../grid/grid-cell-types';
 import { GEOMETRY_TYPES } from '../../cell-types/cell-type-groups';
+import { summarizeShape } from '../../cell-types/shape-kind';
 import { compactJsonPreview } from '../../grid/sheets.formatters';
 import type { SheetsCell } from '../sheets-cell';
 import type { SheetsCellFactory } from './types';
@@ -29,12 +30,19 @@ function create(
 		return deriveGeometry(value ?? null);
 	}
 
+	// No value: an empty cell, like every other kind (not the text "null").
+	const summary = summarizeShape(value);
+	if (!summary) return { kind: 'geometry', data: '', displayData: '', readonly: false };
+
+	// The view shows the summary (kind and part count); the compact JSON stays the text
+	// for the title. A value that cannot be read as a shape carries the reason.
 	const display = compactJsonPreview(value, 80);
 	return {
 		kind: 'geometry',
 		data: display,
 		displayData: display,
 		readonly: false,
+		meta: { shapeLabel: summary.label, shapeCategory: summary.category, shapeProblem: summary.problem },
 	};
 }
 

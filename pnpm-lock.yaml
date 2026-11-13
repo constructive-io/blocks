@@ -530,9 +530,6 @@ importers:
       graphql:
         specifier: ^16
         version: 16.13.0
-      inflekt:
-        specifier: ^0.5.1
-        version: 0.5.1
       leaflet:
         specifier: ^1
         version: 1.9.4

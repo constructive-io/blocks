@@ -1,92 +1,62 @@
 import { useCallback, useMemo, useState } from 'react';
-import type { ReactNode } from 'react';
 
-import { isValuelessOperator } from '../filter-operators';
-import {
-	createEmptyGroup,
-	type FilterGroup,
-	type FilterNode,
-} from '../sheets.controls';
-import { buildWhereFromFilters } from '../sheets.utils';
+import type { TableKey, TableModel } from '@constructive-io/data';
 
-// Data filtering context type
+import { buildViewQuery, type ConditionStatus } from '../view-state/build-view-query';
+import { validateSheetsViewState } from '../view-state/validate-view-state';
+import { createFilterGroup } from '../view-state/view-state';
+import { SHEETS_VIEW_STATE_VERSION, type SheetsFilterGroup, type SheetsViewStateDrop } from '../view-state/view-state.types';
+
+/** Filter bindings for a headless shell. */
 export interface DataFilteringContextValue {
-	filterTree: FilterGroup;
-	filtersOpen: boolean;
-	effectiveWhere: any;
-	hasActiveFilters: boolean;
-	setFilterTree: (tree: FilterGroup) => void;
-	setFiltersOpen: (open: boolean) => void;
-	clearAllFilters: () => void;
-	applyFilters: () => void;
+	/** The filters in use, valid for the model. */
+	filters: SheetsFilterGroup;
+	setFilters: (filters: SheetsFilterGroup) => void;
+	clearFilters: () => void;
+	/** The list filter for the conditions that are complete and valid, or undefined. */
+	where: Record<string, unknown> | undefined;
+	/** Conditions in `where`. */
+	appliedCount: number;
+	/** Status of every condition, by condition id. */
+	conditions: ReadonlyMap<string, ConditionStatus>;
+	/** Conditions of `initialFilters` the model does not support. */
+	dropped: readonly SheetsViewStateDrop[];
 }
 
-// Data filtering hook configuration
 export interface UseDataFilteringConfig {
-	columnKeys: string[];
-	tableMeta?: {
-		fields?: Array<{
-			name?: string | null;
-			type?: {
-				gqlType?: string | null;
-			} | null;
-		} | null> | null;
-	} | null;
-	initialFilterTree?: FilterGroup;
+	/** The table model, or null while it loads. */
+	model: TableModel | null;
+	/** Filters to start with, for example from a saved view. */
+	initialFilters?: SheetsFilterGroup;
+	/** Models of related tables, for "linked record contains" conditions. */
+	relatedModel?: (key: TableKey) => TableModel | null;
 }
 
-function hasActiveNode(node: FilterNode): boolean {
-	if (node.type === 'condition') {
-		return isValuelessOperator(node.operator) ||
-			(node.value !== '' && node.value !== null && node.value !== undefined);
-	}
-	return node.children.some(hasActiveNode);
-}
+/**
+ * Headless filter state over the table model, for a custom shell. The built-in
+ * grid uses the same pieces through `useSheetsView`.
+ */
+export function useDataFiltering({ model, initialFilters, relatedModel }: UseDataFilteringConfig): DataFilteringContextValue {
+	const [raw, setRaw] = useState<SheetsFilterGroup>(() => initialFilters ?? createFilterGroup());
+	const clearFilters = useCallback(() => setRaw(createFilterGroup()), []);
 
-// Main data filtering hook — uses local state instead of global Zustand store
-export function useDataFiltering({
-	columnKeys,
-	tableMeta,
-	initialFilterTree,
-}: UseDataFilteringConfig) {
-	const [filterTree, setFilterTree] = useState<FilterGroup>(initialFilterTree ?? createEmptyGroup());
-	const [filtersOpen, setFiltersOpen] = useState(false);
-
-	const clearAllFilters = useCallback(() => {
-		setFilterTree(createEmptyGroup());
-	}, []);
-
-	// applyFilters is a no-op since state is already reactive
-	const applyFilters = useCallback(() => {}, []);
-
-	// Compute effective where clause from current filters
-	const effectiveWhere = useMemo(
-		() => buildWhereFromFilters(filterTree, tableMeta),
-		[filterTree, tableMeta],
-	);
-
-	// Check if there are active filters
-	const hasActiveFilters = useMemo(
-		() => hasActiveNode(filterTree),
-		[filterTree],
-	);
-
-	const contextValue: DataFilteringContextValue = useMemo(
-		() => ({
-			filterTree,
-			filtersOpen,
-			effectiveWhere,
-			hasActiveFilters,
-			setFilterTree,
-			setFiltersOpen,
-			clearAllFilters,
-			applyFilters,
-		}),
-		[filterTree, filtersOpen, effectiveWhere, hasActiveFilters, clearAllFilters, applyFilters],
-	);
-
-	return {
-		contextValue,
-		Provider: ({ children }: { children: ReactNode }) => children,
-	};
+	return useMemo(() => {
+		if (!model) {
+			return { filters: raw, setFilters: setRaw, clearFilters, where: undefined, appliedCount: 0, conditions: new Map(), dropped: [] };
+		}
+		const { state, dropped } = validateSheetsViewState(
+			{ version: SHEETS_VIEW_STATE_VERSION, filters: raw, sort: [], search: '' },
+			model,
+		);
+		const query = buildViewQuery(state, model, relatedModel);
+		return {
+			filters: state.filters,
+			setFilters: setRaw,
+			clearFilters,
+			where: query.where,
+			appliedCount: query.appliedCount,
+			conditions: query.conditions,
+			dropped,
+		};
+	}, [model, raw, relatedModel, clearFilters]);
 }

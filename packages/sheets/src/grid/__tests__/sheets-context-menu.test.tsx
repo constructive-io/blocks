@@ -96,4 +96,23 @@ describe('buildContextMenuItems', () => {
 		expect(requestDelete).toHaveBeenCalledTimes(1);
 	});
 
+	it('routes the sort items to the view commands and says why a column cannot be sorted', () => {
+		const onAction = vi.fn();
+		const items = buildContextMenuItems({
+			onAction,
+			isEnabled: (id) => !id.startsWith('view.sort'),
+			reasonFor: (id) => (id.startsWith('view.sort') ? 'Linked records cannot be sorted.' : null),
+			onAddRow: vi.fn(),
+			requestDelete: vi.fn(),
+			selectedRowCount: 0,
+		});
+		const ascending = byKey(items, 'sort-asc');
+		expect(ascending.disabled).toBe(true);
+		expect(ascending.reason).toBe('Linked records cannot be sorted.');
+		ascending.run?.();
+		byKey(items, 'sort-desc').run?.();
+		expect(onAction.mock.calls).toEqual([['view.sortAscending'], ['view.sortDescending']]);
+		expect(byKey(items, 'copy').reason).toBeUndefined();
+	});
+
 });

@@ -1,111 +1,46 @@
-import { forwardRef, useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState } from 'react';
+import { forwardRef, useCallback, useEffect, useImperativeHandle, useMemo, useRef } from 'react';
 import type React from 'react';
-import {
-	functionalUpdate,
-	type ColumnPinningState,
-	type ColumnSizingState,
-	type OnChangeFn,
-	type RowSelectionState
-} from '@tanstack/react-table';
-import { RiFilterOffLine, RiSearchEyeLine } from '@remixicon/react';
 
 import { useSheetsContext } from '../context/sheets-context';
 import { cn } from '../utils/cn';
-import { Button } from '@constructive-io/ui/button';
 import type { DataGridProps, SheetsHandle } from './sheets.types';
-import { getDraftMeta, type SheetsRow } from './row-model';
+import type { SheetsRow } from './row-model';
 
-import { SheetsControls, countConditions } from './sheets.controls';
-import { SheetsContextMenu, type ContextMenuState } from './sheets.context-menu';
-import { FeedbackProvider, FloatingStatus } from './feedback';
+import { SheetsControls } from './sheets.controls';
+import { SheetsContextMenu } from './sheets.context-menu';
+import { FeedbackProvider, ModelIssuesNotice, SaveStatus, WriteErrorStack } from './feedback';
+import { SheetsReadOnlyProvider } from '../context/sheets-read-only';
+import { createViewCommandTarget, viewCommandReason } from './view-state/view-command-target';
+import { ColumnHeaderMenu } from './columns/column-header-menu';
+import { ExportViewControl, ImportRecordsControl } from '../import-export';
 import { SheetsErrorBoundary } from './feedback/sheets-error-boundary';
 import { SheetsEmptyState, SheetsErrorState, SheetsLoadingState } from './feedback/sheets-error-state';
 import { SheetsPagination } from './sheets.pagination';
+import { SheetsStatusBar } from './sheets.status-bar';
 import { useSheets } from './use-sheets';
-import { useSheetsTableInstance, type SheetsColumnDescriptor } from '../table/use-sheets-table-instance';
-import { GridViewport, type GridViewportHandle, type RenderCell, type RowMarker, type VisibleRange } from '../table/grid-viewport';
-import { SheetsCellHost, type OpenEditor } from '../grid-dom/sheets-cell-host';
-import { useOverlayController } from '../grid-dom/overlay/use-overlay-controller';
+import { usePressOutside } from './hooks/use-press-outside';
+import { useViewRowCount } from './use-view-row-count';
+import { openUriCellLink, uriCellHref } from '../cell-model/uri-link';
+import { GridViewport, type GridViewportHandle, type RenderCell, type VisibleRange } from '../table/grid-viewport';
+import { SheetsCellHost } from '../grid-dom/sheets-cell-host';
 import { OverlayManager } from '../grid-dom/overlay/overlay-manager';
-import { resolveEditIntent } from '../grid-dom/editors/edit-intent';
-import { ImageEditorDom } from '../grid-dom/editors/image-editor';
-import { computeOverlayGeometry } from './editors/overlay-viewport-guard';
-import { RangeSet } from '../selection/range-set';
-import { clear, emptySheetsSelection, extendRangeToCell, selectRange, toggleRow } from '../selection/selection-model';
+import { copyText } from '../cell-types/column-value';
+import { SheetsOpenRecordContext, SheetsOpenTableContext } from '../relations/relation-navigation';
+import { RecordPanel, useGridRecordPanel } from '../record';
+import { RelationSection } from '../relations/relation-section';
+import { emptySheetsSelection, extendRangeToCell } from '../selection/selection-model';
 import type { SelectionRect } from '../selection/selection-model';
 import { getCellsInRange as extractCellsInRange, toTSV as serializeTSV } from '../selection/cell-extract';
-import { bulkEditWrites } from '../selection/fill';
-import { createGridCommandRegistry, type NavAbsolutePayload } from '../commands/registry';
-import type { GridCommandRegistry } from '../commands/types';
 import type { GridCommandContext, CellMatrix } from '../commands/context';
-import { makeDispatch, tailObserver, type Dispatch, type Interceptor } from '../commands/dispatch';
-import { resolveKeyCommand, DEFAULT_KEYMAP, type Binding } from '../commands/keymap';
-
-// Rows moved per PageUp/PageDown when the scroll element's clientHeight can't be read
-// (jsdom / detached). A sensible spreadsheet page span.
-const FALLBACK_PAGE_ROWS = 10;
-/** Estimated body row height — MUST match grid-viewport's ESTIMATED_ROW_HEIGHT (page-span math). */
-const ESTIMATED_ROW_HEIGHT = 34;
-
-/** Escape a single CSV field: wrap in quotes when it contains comma/quote/newline. */
-function escapeCsvField(value: unknown): string {
-	const str = value == null ? '' : String(value);
-	if (/[",\n\r]/.test(str)) {
-		return `"${str.replace(/"/g, '""')}"`;
-	}
-	return str;
-}
-
-/**
- * Build a CSV string from rows + columns and trigger a browser download.
- * Dependency-free: values are stringified via String() (objects become
- * "[object Object]" — callers wanting rich serialization should pre-flatten).
- */
-function downloadCsv(rows: Record<string, unknown>[], columns: string[], filename?: string): void {
-	if (typeof document === 'undefined') return;
-	const header = columns.map(escapeCsvField).join(',');
-	const body = rows.map((row) => columns.map((col) => escapeCsvField(row?.[col])).join(',')).join('\n');
-	const csv = body ? `${header}\n${body}` : header;
-
-	const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-	const url = URL.createObjectURL(blob);
-	const link = document.createElement('a');
-	link.href = url;
-	link.download = filename ?? 'export.csv';
-	document.body.appendChild(link);
-	link.click();
-	document.body.removeChild(link);
-	URL.revokeObjectURL(url);
-}
-
-/**
- * Coerce a cell's raw row value to a boolean for the inline-toggle commit — MUST
- * match the boolean SheetsCell factory (cell-model/factories/boolean.ts) so the
- * toggle flips against the SAME boolean the cell renders: null/undefined -> false,
- * a boolean passes through, anything else via Boolean(). The host commits the
- * negation, so an unset boolean toggles on first.
- */
-function coerceCellBoolean(value: unknown): boolean {
-	if (value === null || value === undefined) return false;
-	return typeof value === 'boolean' ? value : Boolean(value);
-}
-
-/** The absolute-nav keys whose command (`cell.navAbsolute`) needs the payload below. */
-const ABSOLUTE_NAV_KEYS = new Set(['Tab', 'Home', 'End', 'PageUp', 'PageDown']);
-
-/**
- * Build the dispatch payload for a key event. Only `cell.navAbsolute` (Tab/Home/End/Page*)
- * needs one — the funnel's old inline branch derived the page span from the scroll element's
- * clientHeight (e.currentTarget IS the scroll root), falling back to a constant under jsdom.
- * Arrows / extends / undo / redo / select-all / open read everything from the command context,
- * so they get `undefined`.
- */
-function buildKeyPayload(e: React.KeyboardEvent): NavAbsolutePayload | undefined {
-	if (!ABSOLUTE_NAV_KEYS.has(e.key)) return undefined;
-	const clientHeight = (e.currentTarget as HTMLElement).clientHeight;
-	const pageRows = clientHeight > 0 ? Math.max(1, Math.floor(clientHeight / ESTIMATED_ROW_HEIGHT)) : FALLBACK_PAGE_ROWS;
-	return { key: e.key, ctrlOrMeta: e.ctrlKey || e.metaKey, shift: e.shiftKey, pageRows };
-}
+import { activeEditorElement } from './render/active-editor';
+import { SheetsFilteredEmpty } from './render/sheets-filtered-empty';
+import { useGridCommandPipeline } from './render/use-grid-command-pipeline';
+import { useGridContextMenu } from './render/use-grid-context-menu';
+import { useGridCsvExport } from './render/use-grid-csv-export';
+import { useGridEditing } from './render/use-grid-editing';
+import { useGridKeyboard } from './render/use-grid-keyboard';
+import { useGridTableState } from './render/use-grid-table-state';
+import { useRowMarker } from './render/use-row-marker';
 
 function SheetsInnerComponent<TRow extends SheetsRow = SheetsRow>(
 	props: DataGridProps<TRow>,
@@ -113,10 +48,13 @@ function SheetsInnerComponent<TRow extends SheetsRow = SheetsRow>(
 ) {
 	// The native TanStack DOM grid is the only render path (the canvas <DataEditor>
 	// branch was removed at the glide cutover).
+	// A host read-only grid applies to every table model read inside it (see `SheetsReadOnlyProvider`).
 	return (
-		<FeedbackProvider>
-			<SheetsDomInner {...props} forwardedRef={ref} />
-		</FeedbackProvider>
+		<SheetsReadOnlyProvider readOnly={props.readOnly}>
+			<FeedbackProvider>
+				<SheetsDomInner {...props} forwardedRef={ref} />
+			</FeedbackProvider>
+		</SheetsReadOnlyProvider>
 	);
 }
 
@@ -133,17 +71,6 @@ export const Sheets = forwardRef(SheetsInnerComponent) as <TRow extends SheetsRo
 // cells via SheetsCellHost. Surfaces the same load states (error / loading /
 // empty + consumer slots) the removed canvas branch owned.
 // ============================================================================
-
-// Row selection (Phase 6), column sizing + pinning (Stage 2) are all wired to the shell now.
-// Pinning is shell-DERIVED (frozenCount), never edited from the grid, so its onChange is a no-op.
-// Stable empty row-selection map returned when nothing is selected.
-const EMPTY_ROW_SELECTION: RowSelectionState = {};
-const noop = () => {};
-
-// Overlay flip-geometry knobs — MUST match the OverlayManager's private constants so
-// the geometry we hand the editor via EditorProps.overlay matches where it's placed.
-const OVERLAY_MARGIN_PX = 12;
-const OVERLAY_MIN_BELOW_PX = 320;
 
 function SheetsDomInner<TRow extends SheetsRow = SheetsRow>({
 	forwardedRef,
@@ -167,203 +94,56 @@ function SheetsDomInner<TRow extends SheetsRow = SheetsRow>({
 
 	// ============== EVENT->COMMAND DISPATCH (P4 Phase 1) ==============
 	// ONE interceptable pipeline: every grid event resolves to a named command and runs
-	// through `dispatch`. The registry + keymap are latched (so a Phase 2 consumer override
-	// is a ref swap, not a new dispatch identity); `ctxRef.current` is the assembled
-	// GridCommandContext, repointed each render below (mirrors the openEditor ref-latch).
-	// `dispatch` is useCallback([]) reading the refs, so it stays referentially STABLE — the
-	// per-cell memo gates on the pointer callbacks that close over it, so it must never churn.
-	// PUBLIC CUSTOMIZATION SEAM (P4 Phase 2): registry / keymap / interceptors derive from the
-	// consumer props but rebuild ONLY when the prop IDENTITY changes (useMemo), so omitting them
-	// is identical to the defaults. Each is latched into a ref so the keydown handler + dispatch
-	// read the latest without re-creating. The PUBLIC `dispatch` callback stays referentially
-	// STABLE (reads dispatchRef.current), so the per-cell memo never churns; dispatchRef itself is
-	// rebuilt when the registry or interceptor list identity changes (additive, no identity leak).
-	const { commands, keymap, interceptors, onCommand } = props;
-	const registry = useMemo<GridCommandRegistry>(() => createGridCommandRegistry(commands), [commands]);
-	// Consumer bindings scan FIRST (resolveKeyCommand is first-match-wins) so a rebind of a
-	// built-in chord wins over the default; the defaults follow as the fallback set.
-	const fullKeymap = useMemo<Binding[]>(() => [...(keymap ?? []), ...DEFAULT_KEYMAP], [keymap]);
-	const keymapRef = useRef<Binding[]>(fullKeymap);
-	keymapRef.current = fullKeymap;
-	// Consumer interceptors are OUTERMOST (first-listed); the onCommand tail observer is appended
-	// LAST so it sits innermost (after every consumer interceptor) and observes the real result.
-	const chain = useMemo<Interceptor[]>(
-		() => [...(interceptors ?? []), ...(onCommand ? [tailObserver(onCommand)] : [])],
-		[interceptors, onCommand],
-	);
-	const ctxRef = useRef<GridCommandContext>(undefined as unknown as GridCommandContext);
-	const dispatchRef = useRef<Dispatch>(undefined as unknown as Dispatch);
-	dispatchRef.current = useMemo<Dispatch>(() => makeDispatch(registry, () => ctxRef.current, chain), [registry, chain]);
-	const dispatch = useCallback<Dispatch>((command, native, payload) => dispatchRef.current(command, native, payload), []);
+	// through the stable `dispatch` (see render/use-grid-command-pipeline). `ctxRef.current`
+	// is the assembled GridCommandContext, repointed each render below.
+	const { keymapRef, ctxRef, dispatch, isCommandEnabled } = useGridCommandPipeline(props);
 
-	const columns = useMemo<SheetsColumnDescriptor[]>(
-		() => s.columns.map((col) => ({ key: col.id, name: col.title, size: col.width })),
-		[s.columns],
-	);
-
-	// ============== COLUMN SIZING + PINNING STATE MIRROR (Stage 2) ==============
-	// Sizing: project the shell's columnWidths Map → v9 ColumnSizingState; a width committed
-	// by the header drag-resize handle goes STRAIGHT to resizeColumn (the same setter the canvas
-	// onColumnResize uses), so the Map stays the single source of truth and the table just mirrors.
-	// Pinning: pin col0 ('id') exactly when the canvas freezes it (frozenCount), else nothing —
-	// GridViewport's findStickyColumnIndex falls back to col0 anyway, so the sticky column is identical.
-	const columnWidths = shell.columnWidths;
-	const resizeColumn = shell.resizeColumn;
-	const frozenCount = shell.frozenCount;
-	const firstColumnKey = shell.columnKeys[0];
-
-	const columnSizing = useMemo<Record<string, number>>(() => {
-		const sizing: Record<string, number> = {};
-		columnWidths.forEach((width, key) => {
-			sizing[key] = width;
-		});
-		return sizing;
-	}, [columnWidths]);
-
-	const columnPinning = useMemo<ColumnPinningState>(
-		() => ({ start: frozenCount > 0 && firstColumnKey ? [firstColumnKey] : [], end: [] }),
-		[frozenCount, firstColumnKey],
-	);
-
-	const onColumnSizingChange = useCallback<OnChangeFn<ColumnSizingState>>(
-		(updater) => {
-			const next = functionalUpdate(updater, columnSizing);
-			for (const key of Object.keys(next)) {
-				if (next[key] !== columnSizing[key]) resizeColumn(key, next[key]);
-			}
-		},
-		[columnSizing, resizeColumn],
-	);
-
-	// ============== ROW-SELECTION STATE MIRROR (Phase 6, both directions) ==============
-	// The native SheetsSelection (RangeSet of ROW indices) stays canonical; the v9
-	// table only needs a derived `Record<rowId, true>` view. Both directions use the
-	// same metadata-defined row key, so renamed/composite PK selections round-trip.
-	const combinedRows = shell.combinedRows;
-	const getRowId = shell.getRowId;
-	const selection = s.selection.gridSelection;
-	const setSelection = s.selection.setGridSelection;
-	// Active (keyboard cursor) cell `[col, row]`, threaded to the viewport for the focus ring +
-	// aria-activedescendant. Derived in render (a plain read, no setState) per the no-setState-in-render rule.
-	const activeCell = selection?.current?.cell;
-
-	const rowSelection = useMemo<RowSelectionState>(() => {
-		if (!selection) return EMPTY_ROW_SELECTION;
-		const map: RowSelectionState = {};
-		for (const index of selection.rows.toArray()) {
-			map[getRowId(combinedRows[index], index)] = true;
-		}
-		return map;
-	}, [selection, combinedRows, getRowId]);
-
-	const onRowSelectionChange = useCallback<OnChangeFn<RowSelectionState>>(
-		(updater) => {
-			const next = functionalUpdate(updater, rowSelection);
-			// Map the selected row IDS back to row INDICES via combinedRows, then fold
-			// into a fresh RangeSet. Active cell follows the lowest selected index (or
-			// clears to the empty selection when nothing is selected).
-			const indexById = new Map<string, number>();
-			for (let i = 0; i < combinedRows.length; i++) indexById.set(getRowId(combinedRows[i], i), i);
-
-			let rows = RangeSet.empty();
-			let lowest: number | undefined;
-			for (const id of Object.keys(next)) {
-				if (!next[id]) continue;
-				const index = indexById.get(id);
-				if (index === undefined) continue;
-				rows = rows.add(index);
-				if (lowest === undefined || index < lowest) lowest = index;
-			}
-
-			if (lowest === undefined) {
-				setSelection(emptySheetsSelection);
-				return;
-			}
-			setSelection({ current: { cell: [0, lowest] }, rows, columns: RangeSet.empty() });
-		},
-		[rowSelection, combinedRows, getRowId, setSelection],
-	);
-
-	const table = useSheetsTableInstance({
+	// ============== TABLE INSTANCE + STATE MIRRORS (Stage 2, Phase 6) ==============
+	// Column descriptors, sizing and pinning, and the row selection in both directions
+	// (see render/use-grid-table-state); the native SheetsSelection stays canonical.
+	const {
 		columns,
-		data: combinedRows,
-		columnSizing,
-		columnPinning,
-		rowSelection,
-		onColumnSizingChange,
-		// Pinning is shell-derived (frozenCount), never edited from the grid → no writer needed.
-		onColumnPinningChange: noop,
-		onRowSelectionChange,
+		table,
+		resizeColumn,
+		fixedWidthColumns,
+		narrowColumns,
+		combinedRows,
 		getRowId,
-	});
+		selection,
+		setSelection,
+		activeCell,
+		lastActiveCellRef,
+	} = useGridTableState(s);
 
 	// ============== LEADING CHECKBOX / SELECT-ALL COLUMN (drives the canonical RangeSet) ==============
-	// The DOM grid has no canvas rowMarkers, so the GridViewport paints a sticky checkbox column whose
-	// toggles write the canonical SheetsSelection directly (the rowSelection mirror above derives FROM
-	// it). selectRange/toggleRow/clear are the same pure helpers the canvas projection round-trips, so
-	// shift-range and ctrl-toggle behave identically. `shiftAnchorRef` records the last-toggled index so
-	// a subsequent shift-click selects the contiguous block — caller-owned, matching selectRange's contract.
-	const rowCount = combinedRows.length;
-	const shiftAnchorRef = useRef<number | null>(null);
-	// Latch selection + rowCount so the STABLE toggle impls (ctx methods) read the latest values
-	// without re-creating, while rowMarker's handlers dispatch the named commands through `dispatch`.
-	const rowMarkerSelectionRef = useRef(selection);
-	rowMarkerSelectionRef.current = selection;
-	const rowCountRef = useRef(rowCount);
-	rowCountRef.current = rowCount;
-	// Verbatim toggle bodies, lifted from the previous inline rowMarker handlers — the rowMarker
-	// dispatches `rowmarker.toggleRow` / `rowmarker.toggleAll`, whose commands call these.
-	const toggleRowImpl = useCallback((index: number, shiftKey: boolean) => {
-		const sel = rowMarkerSelectionRef.current ?? emptySheetsSelection;
-		const anchor = shiftAnchorRef.current;
-		const next = shiftKey && anchor !== null ? selectRange(sel, anchor, index) : toggleRow(sel, index);
-		shiftAnchorRef.current = index;
-		setSelection(next);
-	}, [setSelection]);
-	const toggleAllImpl = useCallback(() => {
-		const sel = rowMarkerSelectionRef.current ?? emptySheetsSelection;
-		const rc = rowCountRef.current;
-		const allSelected = rc > 0 && sel.rows.length === rc;
-		shiftAnchorRef.current = null;
-		setSelection(
-			allSelected || rc === 0
-				? clear(sel)
-				: { current: { cell: [0, 0] }, rows: RangeSet.fromSingleSelection([0, rc]), columns: RangeSet.empty() },
-		);
-	}, [setSelection]);
-	const rowMarker = useMemo<RowMarker>(() => {
-		const sel = selection ?? emptySheetsSelection;
-		const selectedCount = sel.rows.length;
-		const allSelected = rowCount > 0 && selectedCount === rowCount;
-		return {
-			isSelected: (index) => sel.rows.hasIndex(index),
-			// Toggle handlers route through the ONE dispatch pipeline (rowmarker.toggleRow /
-			// rowmarker.toggleAll); the command bodies call toggleRowImpl / toggleAllImpl (the
-			// verbatim selectRange/toggleRow/clear logic lifted above).
-			onToggleRow: (index, shiftKey) => dispatch('rowmarker.toggleRow', undefined, { rowIndex: index, shift: shiftKey }),
-			allSelected,
-			someSelected: selectedCount > 0 && !allSelected,
-			onToggleAll: () => dispatch('rowmarker.toggleAll'),
-		};
-	}, [selection, rowCount, dispatch]);
+	const { rowMarker, toggleRowImpl, toggleAllImpl, canOpenRecords } = useRowMarker({
+		combinedRows,
+		selection,
+		setSelection,
+		tableModel: shell.tableModel,
+		dispatch,
+	});
 
-	// Imperative getSelectedRows reads the SAME canonical RangeSet the canvas handle uses.
-	const getSelectedRows = useCallback(
-		(): Record<string, unknown>[] =>
-			(selection?.rows.toArray() ?? []).map((i) => combinedRows[i]).filter(Boolean) as Record<string, unknown>[],
-		[selection, combinedRows],
-	);
+	// Selected rows, and the grid's own CSV export (toolbar "Export selected" + SheetsHandle.exportCsv()).
+	const { getSelectedRows, runCsvExport, handleExport, defaultProtectFormulas } = useGridCsvExport({
+		tableName,
+		csvExport: props.csvExport,
+		selection,
+		combinedRows,
+		shell,
+	});
 
-	// Shared CSV export body — selected rows if any, else the loaded/filtered set. Reused by
-	// the imperative SheetsHandle.exportCsv() and the toolbar Export button (handleExport).
-	const runCsvExport = useCallback(
-		(opts?: { columns?: string[]; filename?: string }) => {
-			const selected = getSelectedRows();
-			const rows = selected.length ? selected : (shell.combinedRows as Record<string, unknown>[]);
-			downloadCsv(rows, opts?.columns ?? shell.columnKeys, opts?.filename);
-		},
-		[getSelectedRows, shell.combinedRows, shell.columnKeys],
-	);
+	// ============== RECORD PANEL ==============
+	// One record in a side panel (record/): opened from a row, the keyboard, the context menu,
+	// the host (`recordId`) or a linked-record chip; it hands focus back to the grid on close.
+	const recordPanel = useGridRecordPanel({
+		tableModel: shell.tableModel,
+		rows: shell.combinedRows,
+		serverRowCount: shell.serverRowCount,
+		recordId: props.recordId,
+		onRecordOpenChange: props.onRecordOpenChange,
+	});
+	const sheetsContainerRef = useRef<HTMLDivElement | null>(null);
 
 	useImperativeHandle(
 		forwardedRef,
@@ -373,8 +153,11 @@ function SheetsDomInner<TRow extends SheetsRow = SheetsRow>({
 			refetch: () => s.refetch(),
 			getSelectedRows,
 			exportCsv: (opts) => runCsvExport(opts),
+			openRecord: (recordId) => recordPanel.openRecordById(recordId),
+			openNewRecord: () => recordPanel.openNewRecord(),
+			closeRecord: () => recordPanel.controller.close(),
 		}),
-		[s.draft.submitDrafts, s.refetch, getSelectedRows, runCsvExport],
+		[s.draft.submitDrafts, s.refetch, getSelectedRows, runCsvExport, recordPanel],
 	);
 
 	// ============== ADD ROW (toolbar) ==============
@@ -388,19 +171,13 @@ function SheetsDomInner<TRow extends SheetsRow = SheetsRow>({
 		});
 	}, [appendRow]);
 
-	// Toolbar Export button — same path as the imperative SheetsHandle.exportCsv().
-	const handleExport = useCallback(() => runCsvExport({ filename: `${tableName}.csv` }), [runCsvExport, tableName]);
-
 	// ============== SCROLL + SELECTION RESET ON SORT/FILTER CHANGE ==============
 	// When sort or filter changes the infinite query re-keys and the row set is a different,
 	// index-based window — so any held selection/active-cell now points at the wrong rows.
 	// Per the locked decision we CLEAR selection + active cell and scroll back to the top.
 	// Keyed precisely on the same sort+filter inputs the query derives its where/orderBy from,
 	// so it fires only on a real sort/filter transition (not on data refetch or draft edits).
-	const optionsKey = useMemo(
-		() => JSON.stringify({ id: shell.sorting.id, desc: shell.sorting.desc, filter: shell.filterTree }),
-		[shell.sorting.id, shell.sorting.desc, shell.filterTree],
-	);
+	const optionsKey = shell.viewSignature;
 	const didMountResetRef = useRef(false);
 	useEffect(() => {
 		if (!didMountResetRef.current) {
@@ -411,147 +188,36 @@ function SheetsDomInner<TRow extends SheetsRow = SheetsRow>({
 		viewportRef.current?.scrollToIndex(0);
 	}, [optionsKey, setSelection]);
 
-	// ============== NATIVE OVERLAY EDITING (Phase 4, additive) ==============
-	// Open/close state for the native React-portal overlay editor. The host measures
-	// the activated cell's rect (only it knows the cell DOM node) and calls openEditor.
-	const overlay = useOverlayController();
-	const overlayOpen = overlay.open;
-	const overlayClose = overlay.close;
-	const overlayReanchor = overlay.reanchor;
-	const mediaDraft = overlay.active?.mediaDraft;
-	const activeMediaDraft = canUpload && mediaDraft?.scopeKey === scopeKey && mediaDraft?.tableName === tableName
-		? mediaDraft
-		: undefined;
-	useEffect(() => {
-		if (mediaDraft && !activeMediaDraft) overlayClose();
-	}, [mediaDraft, activeMediaDraft, overlayClose]);
+	// ============== NATIVE OVERLAY + INLINE EDITING (Phase 4, Stage B) ==============
+	// The overlay and inline editors, activation through the edit-intent resolver, the
+	// range-aware commit and following the edited cell on scroll (see render/use-grid-editing).
+	// The refs it returns are the latches the command context reads.
+	const {
+		overlay,
+		overlayClose,
+		mediaDraft,
+		activeMediaDraft,
+		getSheetsCellContent,
+		getEditorComponent,
+		submitDraftRow,
+		undo,
+		redo,
+		commitCells,
+		emit,
+		getSheetsCellContentRef,
+		combinedRowsRef,
+		selectionRef,
+		columnsRef,
+		openEditorImpl,
+		openEditor,
+		commitBulkOrSingle,
+		inlineKey,
+		inlineInitialText,
+		onInlineCommit,
+		openEditorAtActiveCell,
+		handleOverlayScroll,
+	} = useGridEditing({ tableName, shell, config, canUpload, scopeKey, combinedRows, selection, columns, dispatch });
 
-	// Inject the shell's native content resolver into the cell host (Phase 3): the
-	// host renders the consumer component when registered, else the kind→view map.
-	// openEditor is threaded so the cell wrapper can activate the overlay editor;
-	// submitDraftRow is threaded so the draft-action cell's Button can submit (Stage 4).
-	const getSheetsCellContent = shell.getSheetsCellContent;
-	const submitDraftRow = shell.submitDraftRow;
-	const commitCellValue = shell.commitCellValue;
-	const getEditorComponent = shell.cellRegistry.getEditorComponent;
-	// Undo/redo handlers (stable from useUndoRedo) — wired into the edit.undo / edit.redo commands.
-	const undo = shell.undo;
-	const redo = shell.redo;
-	// Batched commit + observational emit — threaded into the command context (commitCells/emit).
-	const commitCells = shell.commitCells;
-	const emit = shell.emit;
-
-	// REF-LATCH (perf): `openEditor` is a dep of `renderCell`, which the cell host
-	// memo-gates on (prev.openEditor === next.openEditor). Closing over `combinedRows` /
-	// `commitCellValue` / the resolver directly would give `openEditor` a NEW identity on
-	// every data/draft change, busting the per-cell memo for the ENTIRE visible window.
-	// Instead we latch each churning value into a ref kept current every render and read
-	// `*Ref.current` inside the callback, so `openEditor` stays referentially STABLE while
-	// still seeing the latest values. (`overlayOpen` is already stable — useCallback([]) —
-	// so it stays a direct, guaranteed-stable dep.)
-	const getSheetsCellContentRef = useRef(getSheetsCellContent);
-	getSheetsCellContentRef.current = getSheetsCellContent;
-	const getEditorComponentRef = useRef(getEditorComponent);
-	getEditorComponentRef.current = getEditorComponent;
-	const combinedRowsRef = useRef(combinedRows);
-	combinedRowsRef.current = combinedRows;
-	const commitCellValueRef = useRef(commitCellValue);
-	commitCellValueRef.current = commitCellValue;
-	const commitCellsRef = useRef(commitCells);
-	commitCellsRef.current = commitCells;
-	// Read the LATEST selection inside the keydown handler so a queued move can't resurrect a
-	// stale active cell right after a sort/filter clear (the optionsKey effect resets selection).
-	const selectionRef = useRef(selection);
-	selectionRef.current = selection;
-
-	// EDIT-INTENT BRANCH (Stage 2): activation routes through the SINGLE edit-intent
-	// resolver off the resolved `typeKey` — NOT the broken `cell.meta?.cellType ?? 'text'`
-	// lookup that mis-routed every non-text cell to TextEditor. The cell-host fires this
-	// on double-click / Enter / F2 (it already no-ops readonly cells); here we branch
-	// BEFORE opening any overlay:
-	//   • inline-toggle (booleans): commit `!currentBool` in place, no overlay.
-	//   • overlay: open the portal (the editorNode block resolves intent.editor).
-	//   • none (readonly / non-editable): do nothing.
-	const openEditorImpl = useCallback<OpenEditor>(
-		(rowIndex, colKey, anchorRect, initialText) => {
-			const resolution = getSheetsCellContentRef.current(rowIndex, colKey);
-			const intent = resolveEditIntent(
-				resolution.typeKey,
-				{ readonly: resolution.cell.readonly },
-				getEditorComponentRef.current,
-			);
-			if (intent.mode === 'none') return;
-			if (intent.mode === 'inline-toggle') {
-				const current = (combinedRowsRef.current[rowIndex] as Record<string, unknown> | undefined)?.[colKey];
-				commitCellValueRef.current(rowIndex, colKey, !coerceCellBoolean(current));
-				return;
-			}
-			// inline-edit (simple text/number): edit IN PLACE — same active-cell controller (so nav/
-			// clipboard suppression + scroll commit-on-unmount are shared) but the cell host renders
-			// the input and the portal is skipped (editorNode is null for a non-overlay intent).
-			if (intent.mode === 'inline-edit') {
-				overlayOpen({ rowIndex, colKey, anchorRect, initialText, mode: 'inline' });
-				return;
-			}
-			const row = combinedRowsRef.current[rowIndex];
-			const draft = intent.editor === ImageEditorDom ? getDraftMeta(row) : undefined;
-			overlayOpen({
-				rowIndex,
-				colKey,
-				anchorRect,
-				initialText,
-				mode: 'overlay',
-				mediaDraft: draft ? {
-					rowId: draft.draftRowId,
-					tableName,
-					scopeKey,
-					value: row[colKey],
-					resolution,
-				} : undefined,
-			});
-		},
-		[overlayOpen, tableName, scopeKey],
-	);
-	// The dblclick entrypoint threaded into the cell host: route through the ONE pipeline as
-	// `editor.open`; the command body calls ctx.openEditorAt → openEditorImpl. STABLE (closes
-	// over the stable `dispatch`), so it never busts the per-cell memo.
-	const openEditor = useCallback<OpenEditor>(
-		(rowIndex, colKey, anchorRect, initialText) =>
-			dispatch('editor.open', undefined, { rowIndex, colKey, anchorRect, initialText }),
-		[dispatch],
-	);
-	// ============== RANGE-AWARE BULK EDIT (Stage B) ==============
-	// The editor's onCommit routes through here. When a MULTI-CELL range is selected AND the
-	// active (edited) cell sits inside it, the committed value FANS OUT across the whole range
-	// as ONE undo-aware batch (single optimistic patch + coalesced per-row mutations + one undo
-	// entry — commitCells skips readonly/UUID internally and resolveServerPatch coerces the
-	// string value PER target column). A single-cell selection (or none, or an active cell
-	// outside the range) keeps the existing single-cell commit byte-for-byte. The LATEST range
-	// is read off `selectionRef` so a queued sort/filter clear wins (same latch the keymap uses).
-	const columnKeysRef = useRef(shell.columnKeys);
-	columnKeysRef.current = shell.columnKeys;
-	const commitBulkOrSingle = useCallback(
-		(rowIndex: number, colKey: string, value: unknown) => {
-			const range = selectionRef.current?.current?.range;
-			const keys = columnKeysRef.current;
-			const activeCol = keys.indexOf(colKey);
-			const multiCell = !!range && range.width * range.height > 1;
-			const inside =
-				!!range &&
-				activeCol >= 0 &&
-				activeCol >= range.x &&
-				activeCol < range.x + range.width &&
-				rowIndex >= range.y &&
-				rowIndex < range.y + range.height;
-			if (multiCell && inside && range) {
-				const writes = bulkEditWrites(range, value, keys);
-				if (writes.length) void commitCellsRef.current(writes);
-				return;
-			}
-			commitCellValueRef.current(rowIndex, colKey, value);
-		},
-		[],
-	);
 	// ============== CELL-RANGE SELECTION (Stage B) ==============
 	// `anchorRef` holds the FIXED corner a contiguous range extends FROM. A plain activate
 	// (click / non-shift Arrow) resets it to the new active cell; a shift extend keeps it put.
@@ -580,52 +246,8 @@ function SheetsDomInner<TRow extends SheetsRow = SheetsRow>({
 	);
 
 	// ============== RIGHT-CLICK CONTEXT MENU (Stage B) ==============
-	// A menu is just another EVENT SOURCE → dispatch. State is the pointer anchor (null = closed),
-	// rendered ONCE at the grid level. `handleContextMenu` is STABLE (reads selectionRef + the stable
-	// dispatch), so it never busts the per-cell memo. When the right-clicked cell sits OUTSIDE the
-	// current active cell / selection range, we activate it first so the menu acts on the clicked cell.
-	const [contextMenu, setContextMenu] = useState<ContextMenuState | null>(null);
-	const handleContextMenu = useCallback(
-		(col: number, row: number, clientX: number, clientY: number) => {
-			const sel = selectionRef.current;
-			const active = sel?.current?.cell;
-			const range = sel?.current?.range;
-			const inRange =
-				!!range && col >= range.x && col < range.x + range.width && row >= range.y && row < range.y + range.height;
-			const isActive = !!active && active[0] === col && active[1] === row;
-			if (!isActive && !inRange) dispatch('cell.activate', undefined, { col, row });
-			setContextMenu({ clientX, clientY });
-		},
-		[dispatch],
-	);
-	const closeContextMenu = useCallback(() => setContextMenu(null), []);
-	// Enabled-state probe for the menu items: run the resolved command's `canRun` against the latched
-	// context (same gate the dispatch core applies). A missing canRun means "always runnable".
-	const isCommandEnabled = useCallback(
-		(commandId: string) => {
-			const cmd = registry.get(commandId);
-			return cmd ? (cmd.canRun ? cmd.canRun(ctxRef.current, undefined) : true) : false;
-		},
-		[registry],
-	);
-
-	// ============== INLINE (IN-CELL) EDIT WIRING ==============
-	// Simple text/number types edit in place via the cell host's <input> instead of the portal.
-	// They ride the SAME active-editor controller (`overlay`) tagged `mode: 'inline'`, so the only
-	// extra wiring here is (a) telling the editing cell to render the input and (b) commit/cancel
-	// routed through the existing value-commit pipeline. The inline KEY is the editing cell identity,
-	// NULL during overlay editing — so `renderCell` stays referentially stable across overlay
-	// scroll-reanchors (which mutate `overlay.active.anchorRect` but never this key).
-	const inlineActive = overlay.active?.mode === 'inline' ? overlay.active : null;
-	const inlineKey = inlineActive ? `${inlineActive.rowIndex}:${inlineActive.colKey}` : null;
-	const inlineInitialText = inlineActive?.initialText;
-	const onInlineCommit = useCallback(
-		(rowIndex: number, colKey: string, value: unknown) => {
-			commitBulkOrSingle(rowIndex, colKey, value);
-			overlayClose();
-		},
-		[commitBulkOrSingle, overlayClose],
-	);
+	// A menu is just another EVENT SOURCE → dispatch, rendered ONCE at the grid level.
+	const { contextMenu, setContextMenu, handleContextMenu, closeContextMenu } = useGridContextMenu({ selectionRef, dispatch });
 
 	const renderCell = useCallback<RenderCell>(
 		(c, ctx) => {
@@ -657,173 +279,48 @@ function SheetsDomInner<TRow extends SheetsRow = SheetsRow>({
 	const moveActiveCell = s.selection.moveActive;
 	const isOverlayOpen = overlay.isOpen;
 
-	// Shared open-at-active-cell path (Enter / F2 / type-to-edit): resolve the active cell's
-	// DOM node by its stable id, null-guarding the row (infinite-mode proxy rows can be null at
-	// unloaded indices) + the colKey, then open the overlay. `initialText` seeds type-to-edit
-	// (OVERWRITE). Returns true when an overlay was opened.
-	const openEditorAtActiveCell = useCallback(
-		(initialText?: string): boolean => {
-			const cell = selectionRef.current?.current?.cell;
-			if (!cell) return false;
-			const [col, row] = cell;
-			const rowData = combinedRowsRef.current[row];
-			if (!rowData) return false;
-			const colKey = columns[col]?.key;
-			if (!colKey) return false;
-			const node = document.getElementById(`sheets-cell-${row}-${col}`);
-			if (!node) return false;
-			// Open directly via the impl (NOT the dispatching `openEditor`) — this fn is itself the
-			// body of the editor.openActive / editor.typeToEdit commands' canRun, so going through
-			// dispatch again would double-route. Matches the original (which called openEditor directly).
-			openEditorImpl(row, colKey, node.getBoundingClientRect(), initialText);
-			return true;
-		},
-		[columns, openEditorImpl],
+	// Every grid key and the native copy / cut / paste events resolve to NAMED commands
+	// through the ONE dispatch pipeline (see render/use-grid-keyboard).
+	const { handleGridKeyDown, handleCopy, handleCut, handlePaste } = useGridKeyboard({
+		isOverlayOpen,
+		dispatch,
+		keymapRef,
+		rowHeightPx: shell.rowHeightPx,
+	});
+
+	// Dismissing the cursor: a press outside the grid (and outside its own toolbar, editors,
+	// popovers, menus, dialogs and record panel) clears the active cell and range. Keyboard focus
+	// on a grid with no active cell brings the cursor back.
+	// A press on the grid's own empty space (below the rows, past the last column) clears it too.
+	const clearCursor = useCallback(() => dispatch('selection.clear', undefined, { whole: true }), [dispatch]);
+	const pressOutside = usePressOutside(activeCell != null, clearCursor);
+	const handleGridFocus = useCallback(() => dispatch('cell.resume'), [dispatch]);
+
+	// The status bar's count waits for the current view's first count (filter and search decide it).
+	const viewRowCount = useViewRowCount(
+		shell.totalCount,
+		`${tableName}|${JSON.stringify(shell.viewQuery.where ?? null)}`,
+		s.hasCompletedInitialLoad && !shell.isFetchingRows,
 	);
 
-	// Every grid key now resolves to a NAMED command through the ONE dispatch pipeline. The
-	// keymap (first-match-wins) covers undo/redo/select-all/arrows/extend/abs-nav/open; an
-	// UNRESOLVED key that is a single printable char (no ctrl/meta/alt) falls to the
-	// `editor.typeToEdit` sentinel (also through dispatch, so it is interceptable). Any other
-	// unresolved key is left untouched — NO dispatch, NO preventDefault — so it reaches the
-	// browser. preventDefault lives in the dispatch CORE, gated on a resolved+runnable command.
-	const handleGridKeyDown = useCallback(
-		(e: React.KeyboardEvent) => {
-			// Don't intercept while editing — the overlay editor owns its own keys.
-			if (isOverlayOpen) return;
-			const cmd = resolveKeyCommand(e.nativeEvent, keymapRef.current);
-			if (cmd) {
-				dispatch(cmd, e.nativeEvent, buildKeyPayload(e));
-				return;
-			}
-			// Unresolved: only the printable-key sentinel routes through dispatch; everything
-			// else falls through to the browser with no preventDefault.
-			if (e.key.length === 1 && !e.ctrlKey && !e.metaKey && !e.altKey) {
-				dispatch('editor.typeToEdit', e.nativeEvent, { char: e.key });
-			}
-		},
-		[isOverlayOpen, dispatch],
-	);
-
-	// ============== NATIVE CLIPBOARD (Stage B) ==============
-	// The grid root (role=grid, tabIndex=0) receives the browser's native copy/cut/paste events
-	// when focused. We do NOT bind Ctrl/Cmd+C/X/V in the keymap — pressing them fires these native
-	// events directly, so binding the keys too would double-handle. Each handler is SKIPPED while an
-	// overlay editor is open (the editor owns its own clipboard) and routes through the ONE dispatch
-	// pipeline as `clipboard.copy`/`cut`/`paste`, threading the native ClipboardData as the payload.
-	// preventDefault happens in the dispatch core (so the browser does not also copy/paste).
-	const handleCopy = useCallback(
-		(e: React.ClipboardEvent) => {
-			if (isOverlayOpen) return;
-			dispatch('clipboard.copy', e.nativeEvent, { clipboard: (e.nativeEvent as ClipboardEvent).clipboardData });
-		},
-		[isOverlayOpen, dispatch],
-	);
-	const handleCut = useCallback(
-		(e: React.ClipboardEvent) => {
-			if (isOverlayOpen) return;
-			dispatch('clipboard.cut', e.nativeEvent, { clipboard: (e.nativeEvent as ClipboardEvent).clipboardData });
-		},
-		[isOverlayOpen, dispatch],
-	);
-	const handlePaste = useCallback(
-		(e: React.ClipboardEvent) => {
-			if (isOverlayOpen) return;
-			dispatch('clipboard.paste', e.nativeEvent, { clipboard: (e.nativeEvent as ClipboardEvent).clipboardData });
-		},
-		[isOverlayOpen, dispatch],
-	);
-
-	// FOLLOW-CELL-ON-SCROLL (Stage B): on viewport scroll, re-measure the active cell's DOM
-	// node and re-anchor the overlay to it (cheap, passive — DOM read + a position state set)
-	// instead of closing. If the node is GONE (the cell scrolled out of the virtual window and
-	// unmounted), we COMMIT-AND-CLOSE rather than silently discard: blur the focused editor
-	// element so a commit-on-blur editor (text/number) commits its in-progress value, then
-	// close. (Backgrounded-tab rAF throttling is irrelevant — this runs straight off scroll.)
-	const activeRef = useRef(overlay.active);
-	activeRef.current = overlay.active;
-	const columnsRef = useRef(columns);
-	columnsRef.current = columns;
-	const handleOverlayScroll = useCallback(() => {
-		const a = activeRef.current;
-		if (!a) return;
-		if (a.mediaDraft && getDraftMeta(combinedRowsRef.current[a.rowIndex])?.draftRowId !== a.mediaDraft.rowId) return;
-		// The cell DOM id is `sheets-cell-${rowIndex}-${columnIndex}` — map the stored colKey
-		// back to its rendered column index (same ordering the cell host + activedescendant use).
-		const colIndex = columnsRef.current.findIndex((c) => c.key === a.colKey);
-		const node = colIndex >= 0 ? document.getElementById(`sheets-cell-${a.rowIndex}-${colIndex}`) : null;
-		if (node) {
-			// Inline edits live INSIDE the cell, so they ride the virtualized row natively — no
-			// reposition needed (and reanchoring would churn state every scroll frame). Only the
-			// portal overlay re-anchors to the cell on scroll.
-			if (a.mode !== 'inline') overlayReanchor(node.getBoundingClientRect());
-			return;
-		}
-		// Cell unmounted (scrolled out of the virtual window) — commit any in-progress value
-		// (commit-on-blur editors, incl. the inline input) then close.
-		const focused = document.activeElement;
-		if (focused instanceof HTMLElement) focused.blur();
-		overlayClose();
-	}, [overlayReanchor, overlayClose]);
-
-	// Resolve the active editor + its EditorProps. Computed in render (cheap, only when
-	// an overlay is open) — the cell resolution, value, native editor and flip geometry
-	// all derive from overlay.active, so no effect/state mirror is needed.
+	// The active overlay editor and its placement, computed in render (see render/active-editor).
 	const active = overlay.active;
-	const editorNode = (() => {
-		if (!active || (mediaDraft && !activeMediaDraft)) return null;
-		const resolution = activeMediaDraft?.resolution ?? getSheetsCellContent(active.rowIndex, active.colKey);
-		// Resolve the editor through the SAME edit-intent resolver the activation branch
-		// used (typeKey-driven, consumer-override aware). Only `overlay` intents ever open
-		// here (openEditor short-circuits inline-toggle/none), but resolving again keeps a
-		// single source of truth — and guards against a non-overlay intent slipping through.
-		const intent = resolveEditIntent(resolution.typeKey, { readonly: resolution.cell.readonly }, getEditorComponent);
-		if (intent.mode !== 'overlay') return null;
-		const Editor = intent.editor;
-		const row = combinedRows[active.rowIndex];
-		const rowValue = activeMediaDraft ? activeMediaDraft.value : row?.[active.colKey];
-		const geom = computeOverlayGeometry(
-			typeof window !== 'undefined' ? window.innerHeight : 800,
-			active.anchorRect.top,
-			active.anchorRect.height,
-			OVERLAY_MARGIN_PX,
-			OVERLAY_MIN_BELOW_PX,
-		);
-		return {
-			presetClass: Editor.overlayPresetClass,
-			// Commit-on-click-away (Stage B): editors that own an onBlur→onCommit advertise it
-			// so the OverlayManager dismisses by blurring (commit) instead of cancelling.
-			dismissMode: Editor.commitsOnBlur ? ('commit' as const) : ('cancel' as const),
-			element: (
-				<Editor
-					value={rowValue}
-					cell={resolution.cell}
-					colKey={active.colKey}
-					rowId={activeMediaDraft?.rowId ?? getRowId(row, active.rowIndex)}
-					rowIdentifier={resolution.rowIdentifier}
-					rowIndex={active.rowIndex}
-					tableName={props.tableName}
-					fieldMeta={resolution.fieldMeta}
-					relationInfo={resolution.relationInfo}
-					initialText={active.initialText}
-					onCommit={(next) => {
-						commitBulkOrSingle(active.rowIndex, active.colKey, next);
-						overlayClose();
-					}}
-					onCommitPatch={(patch) => {
-						if (!activeMediaDraft || getDraftMeta(row)?.draftRowId === activeMediaDraft.rowId) {
-							shell.commitCellPatch(active.rowIndex, patch);
-						}
-						overlayClose();
-					}}
-					onSubmitDraftRow={shell.submitDraftRow}
-					onInvalidateData={shell.invalidateData}
-					onCancel={overlayClose}
-					overlay={{ maxHeight: geom.maxHeight, flipped: geom.shouldFlip }}
-				/>
-			),
-		};
-	})();
+	const editorNode = activeEditorElement({
+		active,
+		mediaDraft,
+		activeMediaDraft,
+		getSheetsCellContent,
+		getEditorComponent,
+		combinedRows,
+		getRowId,
+		tableName: props.tableName,
+		tableModel: shell.tableModel,
+		commitBulkOrSingle,
+		overlayClose,
+		commitCellPatch: shell.commitCellPatch,
+		submitDraftRow: shell.submitDraftRow,
+		invalidateData: shell.invalidateData,
+	});
 
 	// INFINITE SCROLL: the virtualizer COUNT is left to its default (`rows.length`) — in
 	// infinite mode `combinedRows` IS the full-length proxy (`serverRowCount + drafts`, null-backing
@@ -840,15 +337,44 @@ function SheetsDomInner<TRow extends SheetsRow = SheetsRow>({
 		[onVisibleRegionChanged],
 	);
 
-	// Sort caret state mirror (the shell owns it via useGridState). The shell's onHeaderClicked is
-	// the sort toggle keyed by colIndex (the draft-action column is excluded as non-sortable); the
-	// DOM header speaks colKey, so map back to the colIndex it expects via columnKeys.
-	const sorting = shell.sorting;
-	const onHeaderClicked = shell.onHeaderClicked;
-	const columnKeys = shell.columnKeys;
-	// Header click routes through the ONE pipeline as `header.sortToggle`; the command body calls
-	// ctx.sortToggle(colKey), which maps the colKey back to the colIndex onHeaderClicked expects.
-	const onHeaderClick = useCallback((colKey: string) => dispatch('header.sortToggle', undefined, { colKey }), [dispatch]);
+	// Filter, sort and search bindings (useSheetsView). Latched so the command context and the
+	// view command target read the latest without re-creating.
+	const viewRef = useRef(shell.view);
+	viewRef.current = shell.view;
+	const hasToolbarRef = useRef(!slots?.toolbar);
+	hasToolbarRef.current = !slots?.toolbar;
+	const savedViewsRef = useRef(shell.savedViews);
+	savedViewsRef.current = shell.savedViews;
+	const viewCommandTarget = useMemo(
+		() => createViewCommandTarget(() => viewRef.current, () => hasToolbarRef.current, () => savedViewsRef.current),
+		[],
+	);
+	// Each header's menu runs column commands through the ONE pipeline, with the column as payload.
+	const renderHeaderMenu = useCallback(
+		(colKey: string) => (
+			<ColumnHeaderMenu
+				colKey={colKey}
+				view={shell.view}
+				run={(commandId, payload) => dispatch(commandId, undefined, payload)}
+				canRun={isCommandEnabled}
+			/>
+		),
+		[shell.view, dispatch, isCommandEnabled],
+	);
+	// Why a context-menu view item (sort by this column) is disabled, read off the active cell.
+	const openRecordReasonRef = useRef(recordPanel.openRecordReason);
+	openRecordReasonRef.current = recordPanel.openRecordReason;
+	const commandReason = useCallback((commandId: string) => {
+		const cell = selectionRef.current?.current?.cell;
+		if (commandId === 'record.open') return cell ? openRecordReasonRef.current(cell[1]) : null;
+		return viewCommandReason(viewRef.current, commandId, cell ? columnsRef.current[cell[0]]?.key ?? null : null);
+	}, []);
+	// Header click routes through the ONE pipeline as `header.sortToggle` (Shift+click adds the
+	// column to the sort); the command body calls ctx.sortToggle(colKey, additive).
+	const onHeaderClick = useCallback(
+		(colKey: string, additive: boolean) => dispatch('header.sortToggle', undefined, { colKey, additive }),
+		[dispatch],
+	);
 
 	// Fill-handle drag release routes through the ONE pipeline as `fill.drag`; the command extends
 	// the source band toward `target`, replicates the source values, and widens the selection.
@@ -874,6 +400,10 @@ function SheetsDomInner<TRow extends SheetsRow = SheetsRow>({
 		get activeCell() {
 			return selectionRef.current?.current?.cell;
 		},
+		get resumeCell() {
+			const last = lastActiveCellRef.current;
+			return last && last[0] < columnsRef.current.length && last[1] < combinedRowsRef.current.length ? last : undefined;
+		},
 		get selection() {
 			return selectionRef.current;
 		},
@@ -897,16 +427,66 @@ function SheetsDomInner<TRow extends SheetsRow = SheetsRow>({
 		undo,
 		redo,
 		scrollToCell: (col, row) => viewportRef.current?.scrollToCell(col, row),
-		sortToggle: (colKey) => onHeaderClicked(columnKeys.indexOf(colKey)),
+		sortToggle: (colKey, additive) => viewRef.current.toggleSort(colKey, additive === true),
 		toggleRow: toggleRowImpl,
 		toggleAll: toggleAllImpl,
 		getCellsInRange: (rect: SelectionRect): CellMatrix => {
-			const r = extractCellsInRange(rect, combinedRowsRef.current, columnsRef.current.map((c) => c.key));
+			const r = extractCellsInRange(rect, combinedRowsRef.current, columnsRef.current.map((c) => c.key), (value, _row, colKey) =>
+				copyText(shell.tableModel?.columns, colKey, value),
+			);
 			return { cols: r.cols, rows: r.rows, values: r.values };
 		},
 		toTSV: (values) => serializeTSV(values),
 		emit,
+		view: viewCommandTarget,
+		record: canOpenRecords
+			? {
+				canOpen: (rowIndex) => recordPanel.openRecordReason(rowIndex) === null,
+				open: (rowIndex) => {
+					recordPanel.openRecordAt(rowIndex);
+				},
+				isOpen: () => recordPanel.controller.current !== null,
+				close: () => recordPanel.controller.close(),
+			}
+			: undefined,
+		newRecord: {
+			canCreate: () => Boolean(shell.tableModel?.operations.create),
+			open: () => {
+				recordPanel.openNewRecord();
+			},
+		},
+		// The address an email or web-address cell opens, by the same rule as the link in the cell.
+		link: {
+			hrefAt: (col, row) => {
+				const colKey = columnsRef.current[col]?.key;
+				return colKey && combinedRowsRef.current[row] ? uriCellHref(getSheetsCellContentRef.current(row, colKey).cell) : null;
+			},
+			open: openUriCellLink,
+		},
+		// From the keyboard (Shift+F10, the menu key): the menu opens under the cell.
+		contextMenu: {
+			open: (col, row) => {
+				const rect = document.getElementById(`sheets-cell-${row}-${col}`)?.getBoundingClientRect();
+				if (rect) setContextMenu({ clientX: rect.left, clientY: rect.bottom });
+			},
+		},
 	} satisfies GridCommandContext;
+
+	// The record panel renders beside the grid and also over the empty state, so a new record
+	// can be filled in on an empty table.
+	const recordPanelElement = (
+		<RecordPanel
+			controller={recordPanel.controller}
+			registry={shell.cellRegistry}
+			typeOverrides={config.fieldTypeOverrides}
+			mediaReason={canUpload ? null : 'Uploads need a storage endpoint'}
+			navigationFor={recordPanel.navigationFor}
+			onGridInvalidate={shell.invalidateData}
+			onOpenTable={props.onOpenTable ?? null}
+			returnFocus={() => sheetsContainerRef.current?.querySelector<HTMLElement>('[role="grid"]') ?? null}
+			RelationSection={RelationSection}
+		/>
+	);
 
 	// ============== LOAD STATES ==============
 	// Surface real error/empty/loading states instead of a blank grid (moved here from
@@ -918,7 +498,7 @@ function SheetsDomInner<TRow extends SheetsRow = SheetsRow>({
 		if (slots?.error) {
 			return <>{slots.error({ error: s.dataError, retry })}</>;
 		}
-		return <SheetsErrorState error={s.dataError} onRetry={retry} />;
+		return <SheetsErrorState error={s.dataError} onRetry={retry} tableName={tableName} />;
 	}
 
 	// Initial load only; same-scope refetches retain their current query data.
@@ -933,13 +513,16 @@ function SheetsDomInner<TRow extends SheetsRow = SheetsRow>({
 			return <>{typeof slots.empty === 'function' ? slots.empty({ tableName }) : slots.empty}</>;
 		}
 		return (
-			<SheetsEmptyState
-				tableName={tableName}
-				readOnlyReason={shell.readOnlyReason}
-				onAddRow={shell.canCreate ? () => {
-					void s.draft.appendRow();
-				} : undefined}
-			/>
+			<>
+				<SheetsEmptyState
+					tableName={tableName}
+					readOnlyReason={shell.readOnlyReason}
+					onAddRow={shell.canCreate ? () => {
+						void s.draft.appendRow();
+					} : undefined}
+				/>
+				{recordPanelElement}
+			</>
 		);
 	}
 
@@ -947,25 +530,26 @@ function SheetsDomInner<TRow extends SheetsRow = SheetsRow>({
 	// false — it requires no filter). Without this the body renders blank under the header and looks
 	// broken; instead we keep the toolbar/filter bar mounted and overlay a "No matching rows" panel
 	// with a one-click clear back to the unfiltered set.
-	const activeFilterCount = shell.filterTree ? countConditions(shell.filterTree) : 0;
-	const isFilteredEmpty = shell.serverRowCount === 0 && shell.draftRowCount === 0 && activeFilterCount > 0;
+	const activeFilterCount = shell.filterConditionCount;
+	const searching = shell.view.state.search.trim() !== '';
+	const isFilteredEmpty = shell.serverRowCount === 0 && shell.draftRowCount === 0 && (activeFilterCount > 0 || searching);
+	const clearFiltersAndSearch = () => {
+		shell.view.clearFilters();
+		shell.view.setSearch('');
+	};
 
 	return (
 		<SheetsErrorBoundary onError={config.onError}>
+			{/* Layout-neutral root: a press under it (portals included) is a press inside the grid. */}
+			<div data-part-id='sheets-root' style={{ display: 'contents' }} onPointerDownCapture={pressOutside.onPointerDownCapture}>
 			{/* Controls — consumer toolbar slot replaces the default <SheetsControls> block. */}
 			<div data-part-id='sheets-controls-container'>
 				{slots?.toolbar ? (
 					<>{typeof slots.toolbar === 'function' ? slots.toolbar({ tableName }) : slots.toolbar}</>
 				) : (
 					<SheetsControls
-						filterTree={shell.filterTree}
-						setFilterTree={shell.setFilterTree}
-						filtersOpen={shell.filtersOpen}
-						setFiltersOpen={shell.setFiltersOpen}
-						clearAllFilters={shell.clearAllFilters}
-						applyFilters={shell.applyFilters}
+						view={shell.view}
 						columnKeys={shell.columnKeys}
-						fieldTypeMap={shell.fieldTypeMap}
 						showSelection={showSelection}
 						gridSelection={s.selection.gridSelection ?? null}
 						setGridSelection={shell.setGridSelectionForControls}
@@ -974,57 +558,93 @@ function SheetsDomInner<TRow extends SheetsRow = SheetsRow>({
 						canDelete={shell.canDelete}
 						readOnlyReason={shell.readOnlyReason}
 						onExport={handleExport}
+						savedViews={shell.savedViews}
+						newRecord={
+							ctxRef.current.newRecord
+								? { open: () => dispatch('record.new'), disabledReason: viewCommandReason(shell.view, 'record.new', null) }
+								: undefined
+						}
+						tools={
+							<>
+								<ImportRecordsControl model={shell.tableModel} tableLabel={tableName} />
+								<ExportViewControl
+									model={shell.tableModel}
+									where={shell.viewQuery.where}
+									orderBy={shell.viewQuery.orderBy}
+									columns={shell.view.layout.visibleKeys}
+									filename={`${tableName}.csv`}
+									protectFormulas={defaultProtectFormulas}
+								/>
+							</>
+						}
 					/>
 				)}
+				<ModelIssuesNotice
+					model={shell.tableModel}
+					dropped={[...shell.view.dropped, ...shell.savedViews.activeDropped]}
+					columnLabel={shell.view.columnLabel}
+				/>
 			</div>
 
 			<div
+				ref={sheetsContainerRef}
 				data-part-id='sheets-container'
 				role='region'
 				aria-label={`${tableName} table`}
-				className={cn('bg-background relative isolate h-full min-h-0 flex-1 overflow-hidden rounded-lg border', className)}
+				className={cn('bg-background relative isolate flex h-full min-h-0 flex-1 flex-col overflow-hidden rounded-lg border', className)}
 			>
-				<GridViewport
-					table={table}
-					renderCell={renderCell}
-					handleRef={viewportRef}
-					onScroll={handleOverlayScroll}
-					sorting={sorting}
-					onHeaderClick={onHeaderClick}
-					onResize={resizeColumn}
-					onVisibleRangeChange={infiniteScroll ? onVisibleRangeChange : undefined}
-					rowMarker={showSelection ? rowMarker : undefined}
-					activeCell={activeCell}
-					activeRange={s.selection.gridSelection?.current?.range}
-					onGridKeyDown={handleGridKeyDown}
-					onCopy={handleCopy}
-					onCut={handleCut}
-					onPaste={handlePaste}
-					onFillDrag={handleFillDrag}
-					activeDescendantId={activeCell ? `sheets-cell-${activeCell[1]}-${activeCell[0]}` : undefined}
-				/>
+				{/* The scroll area and what floats over it; the status bar below stays outside the scroll. */}
+				<div className='relative min-h-0 flex-1'>
+					{/* Relation chips in the active cell open their record in the panel. */}
+					<SheetsOpenRecordContext.Provider value={recordPanel.openLinkedRecord}>
+					<GridViewport
+						table={table}
+						renderCell={renderCell}
+						handleRef={viewportRef}
+						onScroll={handleOverlayScroll}
+						sort={shell.view.state.sort}
+						onHeaderClick={onHeaderClick}
+						getUnsortableReason={shell.view.unsortableReason}
+						onResize={resizeColumn}
+						frozenCount={shell.frozenCount}
+						rowHeight={shell.rowHeightPx}
+						onColumnMove={shell.view.layout.moveBeside}
+						renderHeaderMenu={renderHeaderMenu}
+						onVisibleRangeChange={infiniteScroll ? onVisibleRangeChange : undefined}
+						rowMarker={showSelection ? rowMarker : undefined}
+						activeCell={activeCell}
+						activeRange={s.selection.gridSelection?.current?.range}
+						onGridKeyDown={handleGridKeyDown}
+						onGridFocus={handleGridFocus}
+						onCopy={handleCopy}
+						onCut={handleCut}
+						onPaste={handlePaste}
+						onFillDrag={handleFillDrag}
+						fixedWidthColumns={fixedWidthColumns}
+						narrowColumns={narrowColumns}
+						onPressEmpty={clearCursor}
+						activeDescendantId={activeCell ? `sheets-cell-${activeCell[1]}-${activeCell[0]}` : undefined}
+					/>
+					</SheetsOpenRecordContext.Provider>
 
-				{/* Filtered-empty panel — overlays the empty body while the filter bar stays visible above. */}
-				{isFilteredEmpty && (
-					<div className='bg-background/80 absolute inset-0 flex flex-col items-center justify-center gap-3 p-6 text-center'>
-						<RiSearchEyeLine className='text-muted-foreground h-8 w-8' />
-						<div className='space-y-1'>
-							<p className='text-foreground text-sm font-medium'>No matching rows</p>
-							<p className='text-muted-foreground max-w-md text-sm'>
-								No rows match the active {activeFilterCount === 1 ? 'filter' : 'filters'}.
-							</p>
-						</div>
-						<Button variant='outline' size='sm' onClick={shell.clearAllFilters}>
-							<RiFilterOffLine className='h-4 w-4' />
-							<span className='ms-1'>Clear filters</span>
-						</Button>
+					{/* Filtered-empty panel — overlays the empty body while the filter bar stays visible above. */}
+					{isFilteredEmpty && (
+						<SheetsFilteredEmpty activeFilterCount={activeFilterCount} searching={searching} onClear={clearFiltersAndSearch} />
+					)}
+
+					{/* Failed writes keep their full messages here until dismissed; the save status is in the bar. */}
+					<div className='pointer-events-none absolute bottom-4 left-1/2 z-10 flex -translate-x-1/2 flex-col items-center gap-2'>
+						<WriteErrorStack />
 					</div>
-				)}
-
-				{/* Floating status indicator — surfaces save/delete/submit feedback from the FeedbackProvider. */}
-				<div className='pointer-events-none absolute bottom-4 left-1/2 z-10 -translate-x-1/2'>
-					<FloatingStatus />
 				</div>
+
+				<SheetsStatusBar
+					total={viewRowCount}
+					filtered={shell.view.appliedCount > 0 || searching}
+					updating={shell.isFetchingRows}
+				>
+					<SaveStatus />
+				</SheetsStatusBar>
 			</div>
 
 			{/* Pagination — hidden in infinite scroll mode (canvas parity). */}
@@ -1045,7 +665,9 @@ function SheetsDomInner<TRow extends SheetsRow = SheetsRow>({
 				dismissMode={editorNode?.dismissMode}
 				onCancel={overlayClose}
 			>
-				{editorNode?.element}
+				<SheetsOpenTableContext.Provider value={props.onOpenTable ?? null}>
+					<SheetsOpenRecordContext.Provider value={recordPanel.openLinkedRecord}>{editorNode?.element}</SheetsOpenRecordContext.Provider>
+				</SheetsOpenTableContext.Provider>
 			</OverlayManager>
 
 			{/* Right-click context menu — items dispatch through the SAME pipeline as keys/clicks
@@ -1055,12 +677,17 @@ function SheetsDomInner<TRow extends SheetsRow = SheetsRow>({
 				onClose={closeContextMenu}
 				onAction={(commandId) => dispatch(commandId)}
 				isEnabled={isCommandEnabled}
+				reasonFor={commandReason}
 				onAddRow={handleAddRow}
 				onDeleteRows={s.draft.deleteSelected}
 				selectedRowCount={selection?.rows.length ?? 0}
 				canAddRows={shell.canCreate}
 				canDeleteRows={shell.canDelete}
+				canOpenRecords={Boolean(ctxRef.current.record)}
 			/>
+
+			{recordPanelElement}
+			</div>
 		</SheetsErrorBoundary>
 	);
 }

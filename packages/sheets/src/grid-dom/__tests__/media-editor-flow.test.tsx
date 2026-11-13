@@ -162,26 +162,32 @@ describe('Sheets media editor flows', () => {
 		const fileCell = await waitUntil(() => container.querySelector<HTMLElement>('[data-slot="file-cell"]'));
 		expect(fileCell.querySelector('[title]')?.getAttribute('title')).toContain('Uploads need a storage endpoint');
 		await click(fileCell);
-		await click(fileCell, 'dblclick');
 		const grid = await waitUntil(() => container.querySelector<HTMLElement>('[role="grid"]'));
 		await act(async () => grid.dispatchEvent(new KeyboardEvent('keydown', { key: 'Delete', bubbles: true })));
-		expect(document.querySelector('[data-slot="image-editor"]')).toBeNull();
+		// A file cell always opens its editor, view-only here: the reason, the file, and Close.
+		await click(fileCell, 'dblclick');
+		const editor = await waitUntil(() => document.querySelector<HTMLElement>('[data-slot="image-editor"] [data-upload-state="unavailable"]'));
+		expect(editor.querySelector('[role="note"]')?.textContent).toBe('Uploads need a storage endpoint');
+		expect(editor.querySelector('[data-slot="file-dropzone"]')).toBeNull();
+		expect(editor.querySelector('button[aria-label^="Remove"]')).toBeNull();
+		expect(button('Save', editor)).toBeUndefined();
+		expect(button('Close', editor)).toBeDefined();
 		expect(backend.mutations).toEqual([]);
 	});
 
-	it('opens a stored attachment as URL text and keeps the cell unchanged when a new file has no public URL', async () => {
+	it('opens a stored attachment link from its file chip and keeps the cell unchanged when a new file has no public URL', async () => {
 		const backend = mockBackend([{ id: 'row-1', link: attachmentUrl }]);
 		const executeUpload = vi.fn<SheetsUploadFn>().mockResolvedValue({ file: projection });
 		await render(backend.execute, executeUpload);
-		const attachmentCell = await waitUntil(() => Array.from(container.querySelectorAll<HTMLElement>('[data-slot="text-cell"]'))
-			.find((cell) => cell.textContent === attachmentUrl));
+		// A link cell is a file chip: the link's file name, with the whole link in its title.
+		const attachmentCell = await waitUntil(() => Array.from(container.querySelectorAll<HTMLElement>('[data-slot="file-cell"]'))
+			.find((cell) => cell.querySelector('[title]')?.getAttribute('title')?.includes(attachmentUrl)));
 		await click(attachmentCell, 'dblclick');
 		await pickFile(new File(['hello'], 'attachment.pdf', { type: 'application/pdf' }));
 		await click(await waitUntil(() => button('Upload & Save')));
 
-		await waitUntil(() => toast.error.mock.calls.some(([message]) =>
-			message.message.includes('attachment columns need a public bucket with a public URL prefix')));
+		await waitUntil(() => toast.error.mock.calls.some(([message]) => message.message.includes('needs a public bucket')));
 		expect(backend.mutations).toEqual([]);
-		expect(attachmentCell.textContent).toBe(attachmentUrl);
+		expect(attachmentCell.textContent).toBe('attachment.pdf');
 	});
 });

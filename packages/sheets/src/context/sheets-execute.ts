@@ -1,16 +1,13 @@
 import type { DocumentNode } from 'graphql';
 import { print } from 'graphql';
 
-import { ConstructiveError, createError, TypedDocumentString } from '@constructive-io/data';
+import { ConstructiveError, createError, isAuthenticationCode, parseGraphQLError, TypedDocumentString } from '@constructive-io/data';
 
 import type { SheetsConfig, SheetsStorageTransport } from './sheets-context';
-import {
-	callUploadOp,
-	discoverUploadCapability,
-	fetchDownloadUrl,
-	presignedPut,
-	sha256HexFromBuffer,
-} from './sheets-upload-presigned';
+import { createPresignedSheetsUpload } from './sheets-upload-presigned';
+
+// The presigned uploader lives with the upload protocol; it stays importable from here.
+export { createPresignedSheetsUpload };
 
 // ============================================================================
 // Types
@@ -18,9 +15,16 @@ import {
 
 type ExecutableDocument = TypedDocumentString<any, any> | DocumentNode | string | unknown;
 
+/** Per-request options. An executor that does not support one ignores it. */
+export interface SheetsExecuteOptions {
+	/** Aborts the request, for example when the filter or sort it was for has changed. */
+	signal?: AbortSignal;
+}
+
 export type SheetsExecuteFn = <T = unknown>(
 	document: ExecutableDocument,
 	variables?: Record<string, unknown>,
+	options?: SheetsExecuteOptions,
 ) => Promise<T>;
 
 /** Durable file metadata for image and upload columns. */
@@ -79,36 +83,74 @@ function documentToString(document: ExecutableDocument): string {
 // GraphQL Response Parsing
 // ============================================================================
 
-interface GraphQLResponseError {
+/** One error of a GraphQL response. */
+export interface SheetsResponseError {
 	message: string;
-	extensions?: { code?: string };
+	path?: ReadonlyArray<string | number>;
+	extensions?: { code?: string; context?: Record<string, unknown> };
 }
 
 interface GraphQLResponse {
 	data?: unknown;
-	errors?: GraphQLResponseError[];
+	errors?: SheetsResponseError[];
 }
 
-function hasAuthMessage(message: string | undefined): boolean {
-	const normalized = String(message ?? '').toLowerCase();
-	return (
-		normalized.includes('unauthenticated') ||
-		normalized.includes('unauthorized') ||
-		normalized.includes('authentication')
-	);
+/** The data a response carried beside its errors. */
+export interface SheetsPartialResult {
+	data: unknown;
+	errors: readonly SheetsResponseError[];
+}
+
+const PARTIAL_RESULT = 'partialResult';
+const RESPONSE_ERRORS = 'responseErrors';
+
+/**
+ * Keep a response's errors, and its data when it has some, on the error thrown
+ * for it. Every error of the response stays readable (`responseErrorsOf`), and
+ * a read whose rows came back with field errors (a float NaN cell) can keep
+ * the rows (`partialResultOf`). Callers that only look at the thrown error see
+ * it as before.
+ */
+export function withResponseErrors<E extends Error>(error: E, data: unknown, errors: readonly SheetsResponseError[]): E {
+	Object.defineProperty(error, RESPONSE_ERRORS, { value: errors, enumerable: false, configurable: true });
+	if (data != null) {
+		Object.defineProperty(error, PARTIAL_RESULT, {
+			value: { data, errors } satisfies SheetsPartialResult,
+			enumerable: false,
+			configurable: true,
+		});
+	}
+	return error;
+}
+
+/** Every error of the response an error was thrown for, or null when it did not come from a GraphQL response. */
+export function responseErrorsOf(error: unknown): readonly SheetsResponseError[] | null {
+	const errors = error && typeof error === 'object' ? (error as Record<string, unknown>)[RESPONSE_ERRORS] : null;
+	return Array.isArray(errors) ? (errors as SheetsResponseError[]) : null;
+}
+
+/** The data an error's response carried, or null. */
+export function partialResultOf(error: unknown): SheetsPartialResult | null {
+	const partial = error && typeof error === 'object' ? (error as Record<string, unknown>)[PARTIAL_RESULT] : null;
+	return partial && typeof partial === 'object' ? (partial as SheetsPartialResult) : null;
 }
 
 function parseGraphQLResponse(response: GraphQLResponse, onAuthError?: () => void): ConstructiveError | null {
 	if (!response.errors?.length) return null;
 
+	// Only an explicit code (the shared list in @constructive-io/data) means the session is
+	// gone. A permission error that mentions "unauthorized" in its text must not log the user out.
+	if (response.errors.some((candidate) => isAuthenticationCode(candidate.extensions?.code))) {
+		onAuthError?.();
+		return createError.unauthorized('Authentication required. Please log in again.');
+	}
+
 	const error = response.errors[0];
 	const code = error.extensions?.code;
 	const message = error.message || 'GraphQL query failed';
 
-	if (code === 'UNAUTHENTICATED' || hasAuthMessage(message)) {
-		onAuthError?.();
-		return createError.unauthorized('Authentication required. Please log in again.');
-	}
+	// A suspended database keeps its `context.reason` (billing or admin) for the paused screen.
+	if (code === 'ACCESS_SUSPENDED') return parseGraphQLError(error);
 
 	if (code === 'FORBIDDEN') {
 		return createError.forbidden('You do not have permission to perform this action.');
@@ -128,6 +170,7 @@ export function createSheetsExecute(
 	return async <T = unknown>(
 		document: ExecutableDocument,
 		variables?: Record<string, unknown>,
+		options?: SheetsExecuteOptions,
 	): Promise<T> => {
 		const url = config.endpoint;
 		if (!url) {
@@ -152,6 +195,7 @@ export function createSheetsExecute(
 					query: documentToString(document),
 					...(variables !== undefined && { variables }),
 				}),
+				...(options?.signal ? { signal: options.signal } : {}),
 			});
 		} catch (error) {
 			throw createError.network(error instanceof Error ? error : undefined);
@@ -164,15 +208,24 @@ export function createSheetsExecute(
 				throw createError.unauthorized('Authentication required. Please log in again.');
 			}
 			if (status === 403) {
-				throw createError.forbidden('You do not have permission to perform this action.');
+				const body = (await response.json().catch(() => null)) as GraphQLResponse | null;
+				const refusal = body?.errors?.[0];
+				const forbidden = refusal?.extensions?.code === 'ACCESS_SUSPENDED'
+					? parseGraphQLError(refusal)
+					: createError.forbidden('You do not have permission to perform this action.');
+				throw body?.errors?.length ? withResponseErrors(forbidden, null, body.errors) : forbidden;
 			}
 			if (status === 404) {
 				throw createError.notFound('The requested endpoint does not exist.');
 			}
 			try {
-				const body = await response.json();
+				const body = (await response.json()) as GraphQLResponse;
 				if (body.errors?.length) {
-					throw createError.graphql(body.errors[0].message || `Request failed: ${status}`, body.errors[0].extensions?.code);
+					throw withResponseErrors(
+						createError.graphql(body.errors[0]!.message || `Request failed: ${status}`, body.errors[0]!.extensions?.code),
+						null,
+						body.errors,
+					);
 				}
 			} catch (e) {
 				if (e instanceof ConstructiveError) throw e;
@@ -183,7 +236,9 @@ export function createSheetsExecute(
 		const result: GraphQLResponse = await response.json();
 		const graphqlError = parseGraphQLResponse(result, config.onAuthError);
 		if (graphqlError) {
-			throw graphqlError;
+			// A lost session or a suspended database never hands back partial rows.
+			const keepsData = !['UNAUTHENTICATED', 'ACCESS_SUSPENDED'].includes(graphqlError.code);
+			throw withResponseErrors(graphqlError, keepsData ? result.data : null, result.errors ?? []);
 		}
 
 		return result.data as T;
@@ -210,56 +265,6 @@ export function createSheetsUpload(config: SheetsConfig, getToken: () => string 
 		execute: config.execute ?? createSheetsExecute(config, getToken),
 	};
 	return createPresignedSheetsUpload(transport, config.upload?.bucketKey);
-}
-
-export function createPresignedSheetsUpload(
-	{ endpoint, execute }: SheetsStorageTransport,
-	bucketKey?: string,
-): SheetsUploadFn {
-	return async (file, _path, options) => {
-		if (!endpoint) {
-			throw createError.badRequest('No GraphQL endpoint configured.');
-		}
-
-		const cap = await discoverUploadCapability(endpoint, execute);
-		if (!cap.hasFileProjection) {
-			throw createError.badRequest('Uploads require a storage mutation that returns a file projection.');
-		}
-
-		const contentType = file.type || 'application/octet-stream';
-		// Read the file once for both hashing and the PUT body.
-		const buffer = await file.arrayBuffer();
-		const contentHash = await sha256HexFromBuffer(buffer);
-		const payload = await callUploadOp(execute, cap, {
-			bucketKey,
-			contentHash,
-			contentType,
-			size: file.size,
-			filename: file.name,
-		});
-
-		if (!payload.deduplicated) {
-			if (!payload.uploadUrl) {
-				throw createError.badRequest('Upload failed: server returned no uploadUrl for a non-deduplicated file.');
-			}
-			// The server expires rows whose PUT fails.
-			await presignedPut(payload.uploadUrl, buffer, contentType, options?.onProgress);
-		} else {
-			options?.onProgress?.({ loaded: file.size, total: file.size, percentage: 100 });
-		}
-
-		const result: SheetsUploadResult = {
-			file: { ...payload.file, filename: payload.file.filename ?? file.name },
-		};
-		if (!cap.download) return result;
-
-		try {
-			return { ...result, url: await fetchDownloadUrl(execute, cap.download, payload.fileId) };
-		} catch {
-			// The upload succeeded. The download URL can be requested again later.
-			return result;
-		}
-	};
 }
 
 export { ConstructiveError } from '@constructive-io/data';

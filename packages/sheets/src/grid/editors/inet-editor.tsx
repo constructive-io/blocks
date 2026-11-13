@@ -1,19 +1,22 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 
-import { Button } from '@constructive-io/ui/button';
 
 import { EditorFocusTrap } from './editor-focus-trap';
+import { EditorFooter, EditorHeader, editorClear } from './editor-frame';
 import { OVERLAY } from './overlay-presets';
 
 const IPV4_RE = /^(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$/;
 const IPV6_FULL_RE = /^(?:[0-9a-fA-F]{1,4}:){7}[0-9a-fA-F]{1,4}$|^::1$|^::$/;
 const IPV6_COMPRESSED_RE =
 	/^([0-9a-fA-F]{1,4}:)*::([0-9a-fA-F]{1,4}:)*[0-9a-fA-F]{1,4}$|^([0-9a-fA-F]{1,4}:)*::[0-9a-fA-F]{1,4}$|^([0-9a-fA-F]{1,4}:)*::$/;
-const MAC_UA_RE = /Mac|iPod|iPhone|iPad/;
 
 interface InetEditorProps {
 	value: unknown;
 	onFinishedEditing: (next?: unknown) => void;
+	/** The field's readable name, shown as the title. */
+	title?: string;
+	/** The column takes no value, so Clear is offered. */
+	nullable?: boolean;
 }
 
 function isValidIPv4(ip: string): boolean {
@@ -69,7 +72,7 @@ function getInetType(value: string): string {
 	return 'Invalid';
 }
 
-export const InetEditor: React.FC<InetEditorProps> = ({ value, onFinishedEditing }) => {
+export const InetEditor: React.FC<InetEditorProps> = ({ value, onFinishedEditing, title = 'Network address', nullable = false }) => {
 	const currentInetData = typeof value === 'string' ? value : '';
 	const [editingValue, setEditingValue] = useState<string>(currentInetData);
 	const [validationError, setValidationError] = useState<string>('');
@@ -135,15 +138,13 @@ export const InetEditor: React.FC<InetEditorProps> = ({ value, onFinishedEditing
 	const isValid = !trimmed || isValidInet(trimmed);
 	const inetType = trimmed ? getInetType(trimmed) : '';
 
-	const isMac = typeof navigator !== 'undefined' && MAC_UA_RE.test(navigator.userAgent);
-	const modKey = isMac ? '⌘' : 'Ctrl';
-
 	return (
 		<EditorFocusTrap
 			onEscape={handleCancel}
 			className={`bg-popover ${OVERLAY.sm} rounded-lg border p-2.5 shadow-lg`}
 		>
-			<div ref={keyContainerRef}>
+			<div ref={keyContainerRef} className='flex flex-col gap-2'>
+				<EditorHeader title={title} className='px-1' />
 				{/* Input + inline type badge */}
 				<div className='space-y-1.5'>
 					<div className='relative'>
@@ -169,22 +170,13 @@ export const InetEditor: React.FC<InetEditorProps> = ({ value, onFinishedEditing
 					</div>
 				</div>
 
-				{/* Footer — hints + save */}
-				<div className='mt-3 flex items-center justify-between gap-4 border-t px-1 pt-2.5'>
-					<div className='text-muted-foreground flex items-center gap-3 text-xs'>
-						<span className='inline-flex shrink-0 items-center gap-1'>
-							<kbd className='bg-muted/60 border-border/40 inline-flex min-h-5 items-center justify-center rounded border px-1.5 font-sans text-[11px] leading-tight'>Enter</kbd>
-							<span>save</span>
-						</span>
-						<span className='inline-flex shrink-0 items-center gap-1'>
-							<kbd className='bg-muted/60 border-border/40 inline-flex min-h-5 items-center justify-center rounded border px-1.5 font-sans text-[11px] leading-tight'>Esc</kbd>
-							<span>cancel</span>
-						</span>
-					</div>
-					<Button onClick={handleSave} size='xs' variant='default' className='shrink-0' disabled={!!validationError}>
-						Save
-					</Button>
-				</div>
+				<EditorFooter
+					className='px-1'
+					onSave={handleSave}
+					saveShortcut='Enter'
+					saveBlockedReason={validationError || null}
+					clear={editorClear(nullable, () => onFinishedEditing(null))}
+				/>
 			</div>
 		</EditorFocusTrap>
 	);

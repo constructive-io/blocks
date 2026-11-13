@@ -1,0 +1,6 @@
+﻿Row,Column,Reason
+5,Owner,"No record has ""Nobody"" as its id or full name or email."
+6,Owner,This field needs a value.
+7,Owner,"2 records match ""Grace Hopper"". Use a value that only one record has."
+8,id,Enter a whole number.
+9,,"This row has 6 values, but the header has 5 columns."

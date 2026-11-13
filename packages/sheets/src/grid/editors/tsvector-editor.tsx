@@ -1,115 +1,94 @@
-import React, { useCallback, useMemo } from 'react';
-import { Info, Search, X } from 'lucide-react';
+// Read-only viewer for a full-text search value: the keywords it holds as chips, the
+// stored value as text, and why it cannot be changed here. The host (the grid overlay
+// or the record panel) owns focus, Escape and a press outside; Close is the only
+// control, so it takes focus first.
+
+import { useMemo } from 'react';
+
+import { Button } from '@constructive-io/ui/button';
 
 import { cn } from '../../utils/cn';
-import { Button } from '@constructive-io/ui/button';
-import { Label } from '@constructive-io/ui/label';
-
-import { EditorFocusTrap } from './editor-focus-trap';
 import { OVERLAY } from './overlay-presets';
 
-interface TsvectorEditorProps {
-	value: unknown;
-	onFinishedEditing: (next?: unknown) => void;
-}
 type Weight = 'A' | 'B' | 'C' | 'D';
-type ParsedToken = { lexeme: string; weights: Weight[] };
+interface Keyword {
+	word: string;
+	weights: Weight[];
+}
 
-function parseTsvector(tsvectorString: string): ParsedToken[] {
-	if (!tsvectorString || typeof tsvectorString !== 'string') return [];
-	try {
-		const out: ParsedToken[] = [];
-		const regex = /'([^']+)':([0-9A-D,]+)/g;
-		let match: RegExpExecArray | null;
-		while ((match = regex.exec(tsvectorString)) !== null) {
-			const lexeme = match[1];
-			const posStr = match[2];
-			const weights = Array.from(
-				new Set(
-					posStr
-						.split(',')
-						.map((p) => p.match(/[A-D]$/)?.[0] as Weight | undefined)
-						.filter((w): w is Weight => !!w),
-				),
-			).sort();
-			out.push({ lexeme, weights });
+/** The keywords of a stored search value (`'cat':1A 'fast':2B`), or its words when it is plain text. */
+function parseKeywords(stored: string): Keyword[] {
+	const keywords: Keyword[] = [];
+	const pattern = /'([^']+)':([0-9A-D,]+)/g;
+	let match: RegExpExecArray | null;
+	while ((match = pattern.exec(stored)) !== null) {
+		const weights = new Set<Weight>();
+		for (const position of match[2]!.split(',')) {
+			const weight = /[A-D]$/.exec(position)?.[0] as Weight | undefined;
+			if (weight) weights.add(weight);
 		}
-		if (out.length) return out;
-	} catch {
-		// ignore
+		keywords.push({ word: match[1]!, weights: [...weights].sort() });
 	}
-	return tsvectorString
+	if (keywords.length > 0) return keywords;
+	return stored
 		.split(/\s+/)
 		.filter(Boolean)
-		.map((w): ParsedToken => ({ lexeme: w, weights: [] }));
+		.map((word) => ({ word, weights: [] }));
 }
 
-export const TsvectorEditor: React.FC<TsvectorEditorProps> = ({ value, onFinishedEditing }) => {
-	const rawValue = typeof value === 'string' ? value : String(value ?? '');
-	const parsedTokens = useMemo(() => parseTsvector(rawValue), [rawValue]);
+interface TsvectorViewerProps {
+	value: unknown;
+	/** The field's readable name. */
+	title: string;
+	/** Why the value cannot be changed here. */
+	note: string;
+	onClose: () => void;
+}
 
-	const handleClose = useCallback(() => onFinishedEditing(), [onFinishedEditing]);
+export function TsvectorViewer({ value, title, note, onClose }: TsvectorViewerProps) {
+	const stored = typeof value === 'string' ? value : '';
+	const keywords = useMemo(() => parseKeywords(stored), [stored]);
+	const weighted = keywords.some((keyword) => keyword.weights.length > 0);
 
 	return (
-		<EditorFocusTrap onEscape={handleClose} className={`bg-popover flex ${OVERLAY.md} flex-col gap-4 rounded-lg border p-4 shadow-lg`}>
-			{/* Header */}
-			<div className='flex items-center gap-2'>
-				<Search className='text-muted-foreground h-4 w-4' />
-				<h3 className='text-sm font-medium'>View Text Search Vector</h3>
+		<div data-slot='tsvector-viewer' className={cn('bg-popover flex flex-col gap-2 rounded-lg border p-3 shadow-lg', OVERLAY.md)}>
+			<div className='flex items-baseline justify-between gap-2'>
+				<h3 className='text-sm font-medium'>{title}</h3>
+				<span className='text-muted-foreground text-xs tabular-nums'>
+					{keywords.length} {keywords.length === 1 ? 'keyword' : 'keywords'}
+				</span>
 			</div>
-
-			{/* Parsed Tokens Preview */}
-			{parsedTokens.length > 0 && (
-				<div className='space-y-2'>
-					<Label className='text-muted-foreground text-xs'>Parsed Tokens ({parsedTokens.length})</Label>
-					<div className='bg-muted flex max-h-[120px] flex-wrap gap-1 overflow-y-auto rounded p-2 text-sm'>
-						{parsedTokens.map((t, index) => {
-							const weight = t.weights[0];
-							const color =
-								weight === 'A'
-									? 'bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-200'
-									: weight === 'B'
-										? 'bg-orange-100 text-orange-800 dark:bg-orange-900/40 dark:text-orange-200'
-										: weight === 'C'
-											? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/40 dark:text-yellow-200'
-											: weight === 'D'
-												? 'bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-200'
-												: 'bg-primary/10 text-link';
-							return (
-								<span key={index} className={cn('inline-flex items-center rounded px-2 py-1 text-xs', color)}>
-									{t.lexeme}
-									{t.weights.length > 0 && <span className='ml-1 font-mono opacity-80'>{t.weights.join(',')}</span>}
-								</span>
-							);
-						})}
-					</div>
-				</div>
+			{keywords.length > 0 ? (
+				// Chips sit 4px inside the 8px box, so their corners are 8px - 4px.
+				<ul aria-label='Search keywords' className='bg-muted/40 flex max-h-32 flex-wrap gap-1 overflow-y-auto rounded-md p-1'>
+					{keywords.map((keyword, index) => (
+						<li
+							key={`${index}-${keyword.word}`}
+							className='bg-muted text-muted-foreground rounded-[calc(var(--radius-md)-4px)] px-2 py-0.5 text-xs font-medium'
+						>
+							{keyword.word}
+							{keyword.weights.length > 0 ? <span className='text-muted-foreground/70 ms-1'>{keyword.weights.join(' ')}</span> : null}
+						</li>
+					))}
+				</ul>
+			) : (
+				<p className='text-muted-foreground text-sm'>No keywords</p>
 			)}
-
-			{/* Raw tsvector */}
-			<div className='space-y-2'>
-				<Label className='text-muted-foreground text-xs'>Raw TSVector</Label>
-				<div className='bg-muted/30 max-h-40 overflow-auto rounded-md p-2'>
-					<pre className='m-0 font-mono text-xs break-all whitespace-pre-wrap'>{rawValue}</pre>
+			{stored ? (
+				<div className='flex flex-col gap-1'>
+					<span className='text-muted-foreground text-xs font-medium'>Stored value</span>
+					<pre className='bg-muted/40 m-0 max-h-24 overflow-auto rounded-md p-2 font-mono text-xs break-all whitespace-pre-wrap'>{stored}</pre>
 				</div>
-			</div>
-
-			{/* Help Text */}
-			<div className='text-muted-foreground flex items-start gap-2 text-xs'>
-				<Info className='mt-0.5 h-3 w-3 flex-shrink-0' />
-				<div>
-					<p>Values are generated server-side from your full-text configuration.</p>
-					<p className='mt-1'>Weights: A (highest), B, C, D (lowest).</p>
-				</div>
-			</div>
-
-			{/* Action Buttons */}
-			<div className='flex justify-end gap-2'>
-				<Button variant='outline' size='sm' onClick={handleClose}>
-					<X className='mr-1 h-3 w-3' />
+			) : null}
+			<p className='text-muted-foreground text-xs'>
+				{weighted ? 'A letter after a keyword shows how much it counts in a search, from A (most) to D (least). ' : null}
+				{note}
+			</p>
+			<div className='flex justify-end border-t pt-2'>
+				<Button size='xs' variant='outline' onClick={onClose} autoFocus>
 					Close
 				</Button>
 			</div>
-		</EditorFocusTrap>
+		</div>
 	);
-};
+}

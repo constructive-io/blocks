@@ -12,7 +12,9 @@
 //     page 0 has neither after nor offset; page 1 carries `after` = page 0's endCursor;
 //     page 2+ may carry `offset`. The cursor is the absolute end index as a string, so
 //     `after` parses straight back to a start index.
-import type { MetaQuery, MutationOptions } from '@constructive-io/data';
+import { buildSchema, graphql } from 'graphql';
+
+import { createTableModelResolver, type GraphQLExecutor, type MetaQuery, type MutationOptions } from '@constructive-io/data';
 
 import type {
 	AdapterListQuery,
@@ -22,6 +24,7 @@ import type {
 } from '../../adapter/sheets-adapter';
 import type { SheetsRow } from '../../grid/row-model';
 import type { MetaTable } from '../../forms/types';
+import { buildMetaSchemaSdl } from '../../testing/meta-schema';
 
 export interface CreateMockAdapterOptions {
 	/** The single-table _meta fixture. `table.name` MUST equal the <Sheets tableName=…> prop. */
@@ -80,11 +83,20 @@ export function createMockAdapter(opts: CreateMockAdapterOptions): SheetsBackend
 	const { table, delayMs = 0 } = opts;
 	// Own a mutable reference so create/delete (which reassign) stay visible to later reads.
 	let rows = opts.rows;
+	// A single-table _meta, and the table model resolved against a schema synthesized from it.
+	const meta = { _meta: { tables: [table] } } as unknown as MetaQuery;
+	const schema = buildSchema(buildMetaSchemaSdl([table]));
+	const introspect: GraphQLExecutor = async <T>(source: string, variables?: Record<string, unknown>) =>
+		(await graphql({ schema, source, variableValues: variables })).data as T;
+	const resolver = createTableModelResolver(meta);
 
 	return {
 		async fetchMeta(): Promise<MetaQuery> {
-			// Full MetaQuery shape — a single-table _meta the hooks pass through cleanTable().
-			return { _meta: { tables: [table] } } as unknown as MetaQuery;
+			return meta;
+		},
+
+		async fetchTableModel(_execute: unknown, _meta: MetaQuery, tableRef: string) {
+			return resolver.resolve(introspect, tableRef);
 		},
 
 		async listRows<T = Record<string, unknown>>(

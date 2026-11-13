@@ -13,10 +13,12 @@
 // Transport is mocked at the `execute` seam (same approach as
 // src/context/sheets-execute.test.ts): a fake execute serves `_meta` and returns
 // two distinct connection pages keyed on whether the `after` cursor is present.
+// Schema introspection, which the table model needs for every name, is answered
+// by the model backend over a schema synthesized from the same `_meta`.
 import { act } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { QueryClient } from '@tanstack/react-query';
-import { print } from 'graphql';
+import { buildSchema, print } from 'graphql';
 import type { DocumentNode } from 'graphql';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
@@ -26,11 +28,14 @@ import {
 	toCreateMutationName,
 	toUpdateMutationName,
 	toDeleteMutationName,
+	type MetaschemaTable,
 } from '@constructive-io/data';
 
 import { SheetsProvider } from '../context/sheets-provider';
 import type { SheetsConfig } from '../context/sheets-context';
 import { createMetaContractFixture } from '../testing/meta-contract-fixture';
+import { buildMetaSchemaSdl } from '../testing/meta-schema';
+import { createModelBackend } from '../testing/model-backend';
 import { useSheetsTableCursor } from './use-sheets-table-cursor';
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
@@ -87,6 +92,12 @@ interface Harness {
 
 function createHarness(): Harness {
 	const afterArgs: Array<string | undefined> = [];
+	const meta = buildMetaResponse();
+	const introspection = createModelBackend({
+		schema: buildSchema(buildMetaSchemaSdl(meta._meta.tables as unknown as MetaschemaTable[])),
+		meta,
+		rows: {},
+	});
 
 	const execute = async (document: unknown, variables?: Record<string, unknown>) => {
 		const query = documentToString(document);
@@ -96,7 +107,11 @@ function createHarness(): Harness {
 		}
 
 		if (query.includes('_meta')) {
-			return buildMetaResponse();
+			return meta;
+		}
+
+		if (/\b__(schema|type)\b/.test(query)) {
+			return introspection.execute(document, variables);
 		}
 
 		if (query.includes(CONNECTION_FIELD)) {

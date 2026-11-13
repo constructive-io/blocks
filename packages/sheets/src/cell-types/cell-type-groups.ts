@@ -17,6 +17,7 @@ export const GEOMETRY_TYPES: Set<string> = new Set(['geometry', 'geometry-point'
 export const NUMBER_TYPES: Set<string> = new Set([
 	'number',
 	'integer',
+	'bigint',
 	'decimal',
 	'currency',
 	'smallint',
@@ -25,7 +26,35 @@ export const NUMBER_TYPES: Set<string> = new Set([
 ]);
 
 // ─── Boolean ────────────────────────────────────────────────────────────────
-export const BOOLEAN_TYPES: Set<string> = new Set(['boolean', 'bit', 'toggle']);
+// A bit string (`bit`, `bitstring`) is text of 0 and 1, never a checkbox.
+export const BOOLEAN_TYPES: Set<string> = new Set(['boolean', 'toggle']);
+
+// ─── Exact decimal strings ──────────────────────────────────────────────────
+/** Numbers carried as exact decimal strings end to end; never parsed into a JS number. */
+export const DECIMAL_STRING_TYPES: Set<string> = new Set(['bigint', 'decimal']);
+
+// ─── Tabular figures ────────────────────────────────────────────────────────
+/**
+ * Text cell types whose values are mostly digits read down a column (dates, times,
+ * durations, ranges, points, vectors, bit strings): they use tabular figures so the
+ * digits line up. Number cells always do.
+ */
+export const TABULAR_TEXT_TYPES: Set<string> = new Set([
+	'date',
+	'datetime',
+	'timestamptz',
+	'time',
+	'interval',
+	'range',
+	'point',
+	'vector',
+	'bitstring',
+	'binary',
+]);
+
+// ─── Choices ────────────────────────────────────────────────────────────────
+/** A fixed list of values: an enum, or text with an allowed-values list. */
+export const CHOICE_TYPES: Set<string> = new Set(['select', 'multi-select']);
 
 // ─── Array / Collection ─────────────────────────────────────────────────────
 export const TYPED_ARRAY_TYPES: Set<string> = new Set([
@@ -54,6 +83,9 @@ export const STRUCTURED_DATA_TYPES: Set<string> = new Set([
 	'integer-array',
 	'date-array',
 	'interval',
+	'range',
+	'composite',
+	'point',
 ]);
 
 // ─── Media ──────────────────────────────────────────────────────────────────
@@ -77,7 +109,7 @@ export const ENHANCED_TYPES: Set<string> = new Set([
 export const BUILTIN_EDITOR_TYPES: Set<string> = new Set(['text', 'varchar']);
 
 /** Cell types that are never editable (always read-only). */
-export const NON_EDITABLE_TYPES: Set<string> = new Set(['tsvector']);
+export const NON_EDITABLE_TYPES: Set<string> = new Set(['tsvector', 'binary', 'vector', 'unknown']);
 
-/** Cell types that can be activated for viewing but not editing. */
-export const VIEWER_ONLY_TYPES: Set<string> = new Set(['tsvector']);
+/** Cell types that open a read-only viewer (show and copy the value) instead of an editor. */
+export const VIEWER_ONLY_TYPES: Set<string> = new Set(['tsvector', 'binary', 'vector', 'unknown']);

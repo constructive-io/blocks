@@ -39,6 +39,13 @@ const SCALAR_CELL_TYPE_TO_KIND: Partial<Record<string, ScalarFieldKind>> = {
 
 const HUMAN_CASE_REGEX = /([a-z0-9])([A-Z])/g;
 
+/**
+ * Build a form spec from a raw `_meta` table.
+ *
+ * @deprecated Use `buildModelFormSpec(tableModel, mode)` and `buildModelFormSchema(spec)`:
+ * they follow the table model's write flags, limits and choices, and check values with
+ * the same rules as the grid.
+ */
 export function buildScalarFormSpec(metaTable: MetaTable, options: BuildFormSpecOptions = {}): DynamicFormSpec | null {
 	const fields: ScalarFieldSpec[] = [];
 	const uniqueFieldSet = collectSingleFieldUniqueNames(metaTable);

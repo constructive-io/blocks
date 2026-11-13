@@ -1,133 +1,106 @@
-import { print } from 'graphql';
-
 import {
-	META_CONTRACT_INTROSPECTION_DOCUMENT,
-	META_DOCUMENT,
-	SCHEMA_INTROSPECTION_QUERY,
-	analyzeSchemaIntrospectionCompatibility,
-	assertMetaContract,
+	TableModelError,
+	META_CAPABILITY_INTROSPECTION_DOCUMENT,
+	MetaContractError,
+	assessMetaCapabilities,
 	assertMetaQuery,
-	buildPostGraphileCreate,
-	buildPostGraphileDelete,
-	buildPostGraphileUpdate,
-	buildSelect,
-	createError,
-	getCustomAstForCleanField,
-	normalizeSchemaEnumInputValues,
-	prepareCreateInput,
-	prepareUpdateInput,
-	toCamelCasePlural,
-	toCamelCaseSingular,
-	toCreateMutationName,
-	toPatchFieldName,
-	toUpdateMutationName,
+	buildCreateDocument,
+	buildDeleteDocument,
+	buildListDocument,
+	buildMetaDocument,
+	buildUpdateDocument,
+	createTableModelResolver,
 } from '@constructive-io/data';
 import type {
-	IntrospectionQueryResponse,
-	MetaContractIntrospectionQuery,
+	ListResult,
+	MetaCapabilities,
+	MetaCapabilityIntrospectionQuery,
 	MetaQuery,
 	MutationOptions,
-	QueryOptions,
-	SchemaEnumFieldMapping,
+	TableModel,
+	TableModelResolver,
 } from '@constructive-io/data';
 
-import type { SheetsExecuteFn } from '../context/sheets-execute';
-import { transformRelationData, transformToPostGraphileVariables } from '../hooks/use-sheets-table';
+import { partialResultOf, type SheetsExecuteFn } from '../context/sheets-execute';
+import { sheetsIdentifierToRowKey, type SheetsRowIdentifier } from '../row-identity';
 import type {
 	AdapterListQuery,
 	AdapterListResult,
 	AdapterTableContext,
+	AdapterTableModelOptions,
 	SheetsBackendAdapter,
 } from './sheets-adapter';
 
-const compatibilityChecks = new WeakMap<SheetsExecuteFn, Promise<void>>();
-const enumMappings = new WeakMap<SheetsExecuteFn, readonly SchemaEnumFieldMapping[]>();
+/** Capability preflight, once per executor. */
+const capabilityChecks = new WeakMap<SheetsExecuteFn, Promise<MetaCapabilities>>();
+/** One model resolver per `_meta` result, so each schema version keeps its own type cache. */
+const resolvers = new WeakMap<MetaQuery, TableModelResolver>();
 
-async function ensureCurrentMetaContract(execute: SheetsExecuteFn): Promise<void> {
-	const cached = compatibilityChecks.get(execute);
+async function ensureMetaCapabilities(execute: SheetsExecuteFn): Promise<MetaCapabilities> {
+	const cached = capabilityChecks.get(execute);
 	if (cached) return cached;
 
-	const check = execute<MetaContractIntrospectionQuery>(META_CONTRACT_INTROSPECTION_DOCUMENT).then(
-		(result) => {
-			assertMetaContract(result);
-		},
-	);
-	compatibilityChecks.set(execute, check);
+	const check = execute<MetaCapabilityIntrospectionQuery>(META_CAPABILITY_INTROSPECTION_DOCUMENT).then((result) => {
+		const { compatibility, capabilities } = assessMetaCapabilities(result);
+		if (compatibility.status !== 'compatible') throw new MetaContractError(compatibility);
+		return capabilities;
+	});
+	capabilityChecks.set(execute, check);
 
 	try {
-		await check;
+		return await check;
 	} catch (error) {
 		// Contract mismatches remain deterministic, while transport failures can
 		// recover on a later call instead of poisoning this executor forever.
-		if (compatibilityChecks.get(execute) === check) compatibilityChecks.delete(execute);
+		if (capabilityChecks.get(execute) === check) capabilityChecks.delete(execute);
 		throw error;
 	}
 }
 
-function hasDeclaredEnums(meta: MetaQuery): boolean {
-	return Boolean(meta._meta?.tables?.some((table) =>
-		table?.fields?.some((field) => Boolean(field?.enumValues?.name)),
-	));
-}
-
-function schemaCompatibilityError(missingPaths: readonly string[]): Error {
-	const detail = missingPaths.length > 0 ? ` Missing: ${missingPaths.join(', ')}.` : '';
-	return createError.graphql(
-		`The GraphQL schema does not match the enum values declared by Constructive _meta.${detail}`,
-		'SCHEMA_INTROSPECTION_INCOMPATIBLE',
-	);
-}
-
-function normalizeMutationEnums(
-	ctx: AdapterTableContext,
-	input: Record<string, unknown>,
-	execute: SheetsExecuteFn,
-): Record<string, unknown> {
-	const hasEnumInput = ctx.table.fields.some(
-		(field) =>
-			Boolean(field.enumValues?.length) &&
-			Object.prototype.hasOwnProperty.call(input, field.name),
-	);
-	if (!hasEnumInput) return input;
-
-	const mappings = enumMappings.get(execute);
-	if (!mappings) {
-		throw createError.graphql(
-			'Enum schema mappings are unavailable. Load table metadata before mutating enum fields.',
-			'ENUM_MAPPING_UNAVAILABLE',
-		);
+function resolverFor(meta: MetaQuery): TableModelResolver {
+	let resolver = resolvers.get(meta);
+	if (!resolver) {
+		resolver = createTableModelResolver(meta);
+		resolvers.set(meta, resolver);
 	}
-	return normalizeSchemaEnumInputValues(input, ctx.table, mappings);
+	return resolver;
 }
+
 
 /**
  * Create the default PostGraphile-backed adapter. The metadata preflight makes
- * an outdated endpoint distinguishable from an ordinary transport failure,
- * while the WeakMap deduplicates that introspection for each executor/session.
+ * an outdated endpoint distinguishable from an ordinary transport failure and
+ * tells which optional `_meta` fields the server has. Table models resolve
+ * lazily, one table at a time, from targeted introspection.
  */
+/**
+ * An update or delete the server answered without changing a row: no row matched, because a
+ * row rule hides it from this user or it is gone. The server reports that without an error,
+ * so without this check a refused write would read as saved.
+ */
+function writeNotApplied(model: TableModel, action: 'update' | 'delete'): TableModelError {
+	const message = action === 'update'
+		? 'This record was not changed. You may not be allowed to change it, or it no longer exists.'
+		: 'This record was not deleted. You may not be allowed to delete it, or it no longer exists.';
+	return new TableModelError('WRITE_NOT_APPLIED', message, { tableKey: model.key });
+}
+
 export function createPostGraphileAdapter(): SheetsBackendAdapter {
 	return {
 		async fetchMeta(execute: SheetsExecuteFn): Promise<MetaQuery> {
-			await ensureCurrentMetaContract(execute);
-			const meta = await execute<MetaQuery>(META_DOCUMENT);
+			const capabilities = await ensureMetaCapabilities(execute);
+			const meta = await execute<MetaQuery>(buildMetaDocument(capabilities));
 			assertMetaQuery(meta);
-			if (!hasDeclaredEnums(meta)) {
-				enumMappings.set(execute, []);
-				return meta;
-			}
-
-			try {
-				const introspection = await execute<IntrospectionQueryResponse>(SCHEMA_INTROSPECTION_QUERY);
-				const analysis = analyzeSchemaIntrospectionCompatibility(introspection, meta);
-				if (analysis.status !== 'compatible') {
-					throw schemaCompatibilityError(analysis.missingPaths);
-				}
-				enumMappings.set(execute, analysis.enumMappings);
-			} catch (error) {
-				enumMappings.delete(execute);
-				throw error;
-			}
 			return meta;
+		},
+
+		async fetchTableModel(
+			execute: SheetsExecuteFn,
+			meta: MetaQuery,
+			tableRef: string,
+			options: AdapterTableModelOptions = {},
+		): Promise<TableModel> {
+			return resolverFor(meta).resolve(execute, tableRef, { displayOverrides: options.displayOverrides });
 		},
 
 		async listRows<T = Record<string, unknown>>(
@@ -135,30 +108,36 @@ export function createPostGraphileAdapter(): SheetsBackendAdapter {
 			query: AdapterListQuery,
 			execute: SheetsExecuteFn,
 		): Promise<AdapterListResult<T>> {
-			const { table, allTables, tableName } = ctx;
-			const { relationFieldMap, ...queryOptions } = query;
-			const variables = transformToPostGraphileVariables(table, queryOptions as QueryOptions);
-			const doc = buildSelect(table, allTables, {
-				...(queryOptions as QueryOptions),
-				relationFieldMap,
+			const { model } = ctx;
+			const document = buildListDocument(model, {
+				first: query.limit,
+				offset: query.offset ? query.offset : undefined,
+				after: query.after,
+				where: query.where,
+				orderBy: query.orderBy,
+				relations: query.relations,
+				relationPageSize: query.relationPageSize,
+				columns: query.columns,
+				totalCount: query.includeTotalCount !== false,
 			});
-			const result = (await execute(doc, variables)) as Record<string, unknown>;
-			const queryTableName = toCamelCasePlural(tableName, table);
-			const connection = result[queryTableName];
-
-			if (connection && typeof connection === 'object' && 'nodes' in connection) {
-				const nodes = (connection as { nodes: unknown[] }).nodes || [];
-				return {
-					rows: transformRelationData<T & Record<string, unknown>>(nodes, table),
-					totalCount: ((connection as { totalCount?: unknown }).totalCount as number) ?? 0,
-					pageInfo: (connection as { pageInfo?: AdapterListResult<T>['pageInfo'] }).pageInfo,
-				};
+			let result: ListResult;
+			try {
+				result = document.read(await execute(document.document, document.variables, { signal: query.signal }));
+			} catch (error) {
+				// Rows with cells the API could not serve (a float NaN) still load; each such
+				// cell carries its error. Any other failure fails the read as before.
+				const partial = partialResultOf(error);
+				if (!partial) throw error;
+				try {
+					result = document.read(partial.data, partial.errors);
+				} catch {
+					throw error;
+				}
 			}
-
-			const directData = (connection as unknown[]) || [];
 			return {
-				rows: transformRelationData<T & Record<string, unknown>>(directData, table),
-				totalCount: directData.length,
+				rows: result.rows as T[],
+				totalCount: result.totalCount ?? result.rows.length,
+				pageInfo: result.pageInfo ?? undefined,
 			};
 		},
 
@@ -168,85 +147,36 @@ export function createPostGraphileAdapter(): SheetsBackendAdapter {
 			execute: SheetsExecuteFn,
 			options: MutationOptions = {},
 		): Promise<T | null> {
-			const { table, allTables, tableName } = ctx;
-			const doc = buildPostGraphileCreate(table, allTables, {
-				...options,
-				fieldSelection: options.fieldSelection || 'display',
-			});
-			const singularName = toCamelCaseSingular(tableName, table);
-			const sanitizedData = normalizeMutationEnums(
-				ctx,
-				prepareCreateInput(data),
-				execute,
-			);
-			const variables = {
-				input: {
-					[singularName]: sanitizedData,
-				},
-			};
-			const result = (await execute(doc, variables)) as Record<string, unknown>;
-			const mutationName = toCreateMutationName(tableName, table);
-			const createdRow = (result[mutationName] as Record<string, unknown>)?.[singularName] ?? null;
-			return createdRow as T | null;
+			// The caller decides which fields a new row gets: an empty string or a null is sent
+			// as given, and a field that is left out is simply absent (the codec skips undefined).
+			const { model } = ctx;
+			const document = buildCreateDocument(model, data, { returning: options.returning });
+			return document.read(await execute(document.document, document.variables)) as T | null;
 		},
 
 		async updateRow<T = Record<string, unknown>>(
 			ctx: AdapterTableContext,
-			id: string | number | Record<string, unknown>,
+			id: SheetsRowIdentifier,
 			patch: Record<string, unknown>,
 			execute: SheetsExecuteFn,
 			options: MutationOptions = {},
 		): Promise<T | null> {
-			const { table, allTables, tableName } = ctx;
-			const mutationName = toUpdateMutationName(tableName, table);
-			const returning = options.returning && table.fields
-				.filter((field) => options.returning?.includes(field.name))
-				.map((field) => print(getCustomAstForCleanField(field)))
-				.join(' ');
-			// The root lookup field can have a ByKey suffix. The update payload
-			// and patch fields use the table's singular field name instead.
-			const payloadTable = returning && table.query
-				? { ...table, query: { ...table.query, one: null } }
-				: table;
-			const singularName = toCamelCaseSingular(tableName, payloadTable);
-			const patchFieldName = toPatchFieldName(tableName, payloadTable);
-			// The current data builder ignores returning fields and derives the
-			// input type from the table name. Key mutations name it after the operation.
-			const doc = returning
-				? `mutation SheetsUpdateFields($input: ${mutationName[0].toUpperCase()}${mutationName.slice(1)}Input!) {
-					${mutationName}(input: $input) { ${singularName} { ${returning} } }
-				}`
-				: buildPostGraphileUpdate(table, allTables, {
-					...options,
-					fieldSelection: options.fieldSelection || 'display',
-				});
-			const sanitizedPatch = prepareUpdateInput(patch);
-			if (Object.keys(sanitizedPatch).length === 0) return null;
-			const normalizedPatch = normalizeMutationEnums(ctx, sanitizedPatch, execute);
-
-			const variables = {
-				input: {
-					...(typeof id === 'object' ? id : { id }),
-					[patchFieldName]: normalizedPatch,
-				},
-			};
-			const result = (await execute(doc, variables)) as Record<string, unknown>;
-			const updatedRow = (result[mutationName] as Record<string, unknown>)?.[singularName] ?? null;
-			return updatedRow as T | null;
+			// Clearing a field to null or '' is a real change and reaches the server.
+			if (!Object.values(patch).some((value) => value !== undefined)) return null;
+			const { model } = ctx;
+			const document = buildUpdateDocument(model, sheetsIdentifierToRowKey(model, id), patch, {
+				returning: options.returning,
+			});
+			const data = await execute(document.document, document.variables);
+			if (document.applied?.(data) === false) throw writeNotApplied(model, 'update');
+			return document.read(data) as T | null;
 		},
 
-		async deleteRow(
-			ctx: AdapterTableContext,
-			id: string | number | Record<string, unknown>,
-			execute: SheetsExecuteFn,
-			options: MutationOptions = {},
-		): Promise<void> {
-			const { table, allTables } = ctx;
-			const doc = buildPostGraphileDelete(table, allTables, options);
-			const variables = {
-				input: typeof id === 'object' ? id : { id },
-			};
-			await execute(doc, variables);
+		async deleteRow(ctx: AdapterTableContext, id: SheetsRowIdentifier, execute: SheetsExecuteFn): Promise<void> {
+			const { model } = ctx;
+			const document = buildDeleteDocument(model, sheetsIdentifierToRowKey(model, id));
+			const data = await execute(document.document, document.variables);
+			if (document.applied?.(data) === false) throw writeNotApplied(model, 'delete');
 		},
 	};
 }

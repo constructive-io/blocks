@@ -12,15 +12,39 @@ export type {
 	SheetsAuthStandalone,
 	SheetsScopeKey,
 } from './context/sheets-context';
-export type { SheetsExecuteFn, SheetsFileValue, SheetsUploadFn, SheetsUploadResult } from './context/sheets-execute';
-export { createSheetsExecute, createSheetsUpload, ConstructiveError } from './context/sheets-execute';
+export type {
+	SheetsExecuteFn,
+	SheetsExecuteOptions,
+	SheetsFileValue,
+	SheetsPartialResult,
+	SheetsResponseError,
+	SheetsUploadFn,
+	SheetsUploadResult,
+} from './context/sheets-execute';
+export {
+	createSheetsExecute,
+	createSheetsUpload,
+	ConstructiveError,
+	partialResultOf,
+	responseErrorsOf,
+} from './context/sheets-execute';
 export { resolveDownloadUrl } from './context/sheets-upload-presigned';
 
 // -- Store --------------------------------------------------------------------
 export { useSheetsStore, useSheetsStoreApi } from './store/sheets-store';
 export type { SheetsStoreState, SheetsAuthState } from './store/sheets-store';
 export type { RelationInfo, RelationKind } from './store/relation-info-slice';
-export { buildRelationInfoFromMeta } from './store/relation-info-slice';
+export { relationInfoFromModel } from './store/relation-info-slice';
+export type {
+	SheetsOpenRecordHandler,
+	SheetsOpenRecordRequest,
+	SheetsOpenTableHandler,
+	SheetsOpenTableRequest,
+} from './relations/relation-navigation';
+export { SheetsOpenRecordContext, SheetsOpenTableContext, useOpenRecordHandler } from './relations/relation-navigation';
+export { RelationSection } from './relations/relation-section';
+export type { RelationSectionProps } from './relations/relation-section';
+export { gridRelations } from './relations/relation-columns';
 export type { DraftRow } from './store/draft-rows-slice';
 export { computeDraftMetaSignature } from './store/draft-rows-slice';
 
@@ -32,8 +56,11 @@ export type { SheetsEvent, SheetsSlots, SheetsHandle } from './grid/sheets.types
 // -- Headless Hook ------------------------------------------------------------
 // Drive your own grid shell from the same data/state bindings the built-in
 // <Sheets> component renders with the native DOM grid. Input type is SheetsProps
-// (= DataGridProps).
+// (= DataGridProps). For a read-only grid, wrap it in `SheetsReadOnlyProvider`
+// (what `<Sheets readOnly>` does).
 export { useSheets } from './grid/use-sheets';
+export { SheetsReadOnlyProvider, DEFAULT_READ_ONLY_REASON } from './context/sheets-read-only';
+export type { SheetsReadOnlyProviderProps } from './context/sheets-read-only';
 export type {
 	UseSheetsResult,
 	SheetsDraftBindings,
@@ -54,23 +81,138 @@ export {
 	sheetsIdentifierToWhere,
 	sheetsIdentifierCacheKey,
 	sheetsRowKey,
+	sheetsIdentifierToRowKey,
 	getSheetsWriteCapability,
 	canRunSheetsMutation,
 } from './row-identity';
 export type { SheetsRowIdentifier, SheetsRowIdentityResolution } from './row-identity';
-export { SheetsControls, createEmptyGroup, countConditions, MAX_FILTER_DEPTH } from './grid/sheets.controls';
-export type {
-	FilterCondition,
-	FilterGroup,
-	FilterNode,
-	FilterValue,
-	FieldTypeMap,
-	SheetsControlsProps,
-} from './grid/sheets.controls';
+export { SheetsControls } from './grid/sheets.controls';
+export type { SheetsControlsProps } from './grid/sheets.controls';
+
+// -- Import and export ----------------------------------------------------------
+// Toolbar controls: import CSV or TSV rows as new records (mapping, a checked preview,
+// progress, cancel, an error report), and export every row of a view as CSV.
+export { ImportRecordsControl, ExportViewControl } from './import-export';
+export type { ImportRecordsControlProps, ExportViewControlProps } from './import-export';
+
+// -- View state (filters, sort, search, column layout) ----------------------------
+// One serializable value that names columns by field name, for saved views. Load a
+// stored value through `validateSheetsViewState` (it also upgrades version 1); pass
+// the parts to <Sheets> as the controlled `filters` / `sort` / `search` / `columns` props.
+export {
+	SHEETS_VIEW_STATE_VERSION,
+	type SheetsColumnCondition,
+	type SheetsColumnLayout,
+	type SheetsRowHeight,
+	type SheetsFilterCondition,
+	type SheetsFilterGroup,
+	type SheetsFilterLogic,
+	type SheetsFilterNode,
+	type SheetsFilterValue,
+	type SheetsRelationCondition,
+	type SheetsRelationTest,
+	type SheetsSortDirection,
+	type SheetsSortKey,
+	type SheetsViewState,
+	type SheetsViewStateDrop,
+	type SheetsViewStateDropReason,
+	type SheetsViewStateValidation,
+} from './grid/view-state/view-state.types';
+export { validateSheetsViewState, type ValidateSheetsViewStateOptions } from './grid/view-state/validate-view-state';
+export {
+	MAX_FILTER_DEPTH,
+	createFilterGroup,
+	createSheetsViewState,
+	cycleSort,
+	filterConditionsOf,
+} from './grid/view-state/view-state';
+export { buildViewQuery, type ConditionStatus, type ViewQuery } from './grid/view-state/build-view-query';
+export {
+	ROW_HEIGHT_PX,
+	createColumnLayout,
+	orderedColumnKeys,
+	visibleColumnKeys,
+} from './grid/columns/column-layout';
+
+// -- Saved views ------------------------------------------------------------------
+// Named views per table. `SheetsConfig.views` takes a host storage; the default keeps
+// views in this browser's local storage, keyed by endpoint, database, identity and table.
+export {
+	createKeyValueViewStorage,
+	createMemoryViewStorage,
+	type KeyValueStore,
+	type SheetsStoredView,
+	type SheetsViewStorage,
+	type SheetsViewStorageScope,
+} from './grid/views/view-storage';
+export type { SheetsViewProps } from './grid/view-state/use-sheets-view';
+export {
+	defaultOperatorOption,
+	filterOperatorLabel,
+	filterOperatorOptions,
+	type FilterOperatorGroup,
+	type FilterOperatorOption,
+	type FilterValueControl,
+	type ScalarValueControl,
+} from './grid/filter-operators';
 export { SheetsPagination } from './grid/sheets.pagination';
+export { SheetsStatusBar } from './grid/sheets.status-bar';
+export type { SheetsStatusBarProps } from './grid/sheets.status-bar';
 export type { SheetsPaginationProps } from './grid/sheets.pagination';
 export { SheetsTableSelector } from './grid/sheets.table-selector';
 export type { TableSelectorProps, TableWithCategory } from './grid/sheets.table-selector';
+
+// -- Table Model --------------------------------------------------------------
+// One normalized model per table (keys, column kinds and options, write flags,
+// relations, labels, sort and filter names), built by @constructive-io/data
+// from `_meta` and targeted introspection.
+export { useTableModel, useTableModels } from './hooks/use-table-model';
+export type { UseTableModelOptions, UseTableModelResult, UseTableModelsResult } from './hooks/use-table-model';
+export {
+	CELL_ERRORS_KEY,
+	RELATION_TOTAL_COUNTS_KEY,
+	TableModelError,
+	readCellError,
+	readRelationTotalCount,
+	resolveDisplayFields,
+} from '@constructive-io/data';
+export type {
+	ArgumentModel,
+	ColumnFileModel,
+	ColumnFilterModel,
+	ColumnModel,
+	ColumnOption,
+	ColumnSemantic,
+	ColumnSortModel,
+	ColumnValueKind,
+	ColumnValueModel,
+	ColumnWriteModel,
+	CreateOperationModel,
+	DeleteOperationModel,
+	DisplayFieldOverrides,
+	DisplayFieldsModel,
+	FilterOperatorModel,
+	InputFieldModel,
+	InputValueModel,
+	ListOperationModel,
+	ModelIssue,
+	ModelIssueCode,
+	RelationJunctionModel,
+	RelationKeyPair,
+	RelationModel,
+	RelationModelKind,
+	RelationTargetModel,
+	SortDirection,
+	SortSpec,
+	TableKey,
+	TableModel,
+	TableModelErrorCode,
+	TableOperations,
+	TableSearchModel,
+	TableStorageModel,
+	TableStorageUploadModel,
+	UpdateOperationModel,
+} from '@constructive-io/data';
 
 // -- Data Hooks ---------------------------------------------------------------
 export { useSheetsMeta } from './hooks/use-sheets-meta';
@@ -81,11 +223,37 @@ export { useSheetsInfiniteTable } from './hooks/use-sheets-infinite-table';
 export type { UseInfiniteTableOptions, UseInfiniteTableResult } from './hooks/use-sheets-infinite-table';
 export { useSheetsTableCursor } from './hooks/use-sheets-table-cursor';
 export type { UseSheetsTableCursorOptions, UseSheetsTableCursorResult } from './hooks/use-sheets-table-cursor';
-export { useSheetsFieldUpload, executeFieldUpload } from './hooks/use-sheets-upload';
-export type { UploadProgress, UploadResponse, UseFieldUploadOptions } from './hooks/use-sheets-upload';
+export {
+	executeFieldUpload,
+	useColumnStorage,
+	useFileCellWriter,
+	useFileUploadState,
+	useSheetsFieldUpload,
+} from './hooks/use-sheets-upload';
+export type {
+	FieldUploadTarget,
+	FieldUploadTransport,
+	FileCellWriteJob,
+	FileUploadState,
+	UploadProgress,
+	UploadResponse,
+	UseColumnStorageResult,
+	UseFieldUploadOptions,
+} from './hooks/use-sheets-upload';
+export type { ColumnStorage, SendFile, SendFileOptions } from './uploads/column-storage';
+export { uploadToFilesTable } from './uploads/upload-to-files-table';
+export type { UploadedFile, UploadToFilesTableOptions } from './uploads/upload-to-files-table';
+export { unfinishedUploadOf } from './context/sheets-upload-presigned';
+export type { FileProjection, UnfinishedUpload, UploadProgressEvent } from './context/sheets-upload-presigned';
+export type {
+	SheetsUploadColumnConfig,
+	SheetsUploadConfig,
+	SheetsUploadProcessingConfig,
+} from './uploads/upload-config';
+export type { SheetsMapConfig, SheetsMapPlaceSearch, SheetsMapTiles } from './utils/map-settings';
 export { useRelationColumns, useDataGridColumns } from './hooks/use-relation-columns';
 export type { RelationColumnInfo } from './hooks/use-relation-columns';
-export { sheetsQueryKeys, isSheetsScopeKey } from './hooks/query-keys';
+export { sheetsQueryKeys, sheetsMutationKeys, isSheetsScopeKey } from './hooks/query-keys';
 
 // -- Backend Adapter ----------------------------------------------------------
 export type {
@@ -94,6 +262,7 @@ export type {
 	AdapterListQuery,
 	AdapterListResult,
 	AdapterPageInfo,
+	AdapterTableModelOptions,
 } from './adapter/sheets-adapter';
 export { createPostGraphileAdapter } from './adapter/postgraphile-adapter';
 export { useSheetsAdapter } from './adapter/use-sheets-adapter';
@@ -173,6 +342,11 @@ export { buildZodSchema } from './forms/zod-schema';
 export { useDynamicCreate, useDynamicUpdate } from './forms/mutations';
 export { createMetadataHash } from './forms/metadata-hash';
 export type { DynamicFormSpec, ScalarFieldSpec, MetaTable, MetaField } from './forms/types';
+export { buildModelFormSpec, buildModelFormSchema } from './forms/model-form';
+export type { ModelFormField, ModelFormMode, ModelFormSpec } from './forms/model-form';
+export { cellTypeForColumn } from './cell-types/column-routing';
+export { parseColumnInput, formatColumnValue } from './cell-types/column-value';
+export type { ColumnInputResult, ColumnInputOptions } from './cell-types/column-value';
 
 // -- Auth (Standalone Mode) ---------------------------------------------------
 /**
@@ -188,7 +362,9 @@ export { useSheetsForgotPassword } from './auth/hooks/use-forgot-password';
 export { useSheetsResetPassword } from './auth/hooks/use-reset-password';
 
 // -- Feedback System ----------------------------------------------------------
-export { FeedbackProvider, useFeedback, useOperationFeedback } from './grid/feedback';
+export { FeedbackProvider, useFeedback, useOptionalFeedback, useOperationFeedback, ModelIssuesNotice, SaveStatus, WriteErrorStack, writeErrorMessages } from './grid/feedback';
+export type { OperationType, WriteMessages } from './grid/feedback';
+export type { WriteAction, WriteErrorReport } from './grid/feedback';
 export { FloatingStatus } from './grid/feedback/floating-status';
 export { DockStatusBar, DockStatusBarCompact } from './grid/feedback/dock-status-bar';
 export type { OperationFeedback } from './grid/feedback/feedback-reducer';

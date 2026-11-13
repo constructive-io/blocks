@@ -7,7 +7,7 @@
 
 import { vi } from 'vitest';
 
-import type { GridCommandContext, CellMatrix } from '../context';
+import type { GridCommandContext, GridViewCommandTarget, CellMatrix } from '../context';
 import type { SheetsSelection, SelectionRect } from '../../selection/selection-model';
 
 export interface MockCtxState {
@@ -80,6 +80,43 @@ export function createMockCtx(overrides?: Partial<MockCtxState>): MockCtx {
 		getCellsInRange: vi.fn((_rect: SelectionRect): CellMatrix => ({ cols: [], rows: [], values: [] })),
 		toTSV: vi.fn(() => ''),
 		emit: vi.fn(),
+		view: createMockViewTarget(),
 	};
 	return ctx;
+}
+
+/** A {@link GridViewCommandTarget} whose actions are mocks: every toolbar and column action is available. */
+export function createMockViewTarget(): GridViewCommandTarget {
+	return {
+		canSearch: true,
+		hasSearch: false,
+		canFilter: true,
+		hasFilters: false,
+		canSortAny: true,
+		hasSort: false,
+		canSort: vi.fn(() => true),
+		focusSearch: vi.fn(() => true),
+		clearSearch: vi.fn(),
+		openFilters: vi.fn(),
+		clearFilters: vi.fn(),
+		openSort: vi.fn(),
+		clearSort: vi.fn(),
+		sortBy: vi.fn(),
+		canFilterBy: vi.fn(() => true),
+		filterBy: vi.fn(),
+		canHide: vi.fn(() => true),
+		hide: vi.fn(),
+		canMove: vi.fn(() => true),
+		move: vi.fn(),
+		frozenCount: 1,
+		freezeUpTo: vi.fn(),
+		unfreeze: vi.fn(),
+		openColumnMenu: vi.fn(),
+		canOpenFields: true,
+		openFields: vi.fn(),
+		canOpenViews: true,
+		openViews: vi.fn(),
+		canSaveView: false,
+		saveView: vi.fn(),
+	};
 }

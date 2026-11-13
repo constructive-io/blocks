@@ -10,7 +10,6 @@ export function IntervalCellView(props: CellProps) {
 	const { cell } = props;
 	return (
 		<div
-			role="gridcell"
 			data-slot="interval-cell"
 			className={cn('flex h-full w-full items-center truncate px-3 text-sm tabular-nums')}
 		>

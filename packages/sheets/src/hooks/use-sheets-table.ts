@@ -2,34 +2,26 @@
  * Unified hooks system for table operations
  * Consolidates all table operations into a single, powerful hook
  *
- * Ported from apps/admin use-table.ts with context injection.
+ * Ported from apps/admin use-table.ts with context injection. Every document
+ * is built from the table model (see `useTableModel`).
  */
-import { useMemo } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
-import { useSheetsMeta } from './use-sheets-meta';
 import { useSheetsAdapter } from '../adapter/use-sheets-adapter';
 import { useSheetsContext } from '../context/sheets-context';
+import { partialResultOf } from '../context/sheets-execute';
 import type { SheetsScopeKey } from '../context/sheets-context';
 
-import { cleanTable, type CleanTable, type MetaTable, type MutationOptions, type QueryOptions } from '@constructive-io/data';
-import { createError } from '@constructive-io/data';
-import type { FieldSelection } from '@constructive-io/data';
+import { buildFindOneDocument, createError, type TableModel } from '@constructive-io/data';
+import type { FieldSelection, MutationOptions, QueryOptions } from '@constructive-io/data';
+import { reuseSheetsPlaceholderData, sheetsMutationKeys, sheetsQueryKeys } from './query-keys';
+import { relationsFromSelection, sortSpecs, whereFilter } from './list-query';
+import { useTableModel } from './use-table-model';
 import {
-	buildSelect,
-	toCamelCasePlural,
-	toCamelCaseSingular,
-	toOrderByEnumValue,
-} from '@constructive-io/data';
-import { reuseSheetsPlaceholderData, sheetsQueryKeys } from './query-keys';
-import { resolveRelationFieldMap } from './relation-field-resolution';
-import { validateOrderByVariables } from './orderby-enum-resolution';
-import {
-	assertSheetsMutationAllowed,
 	resolveSheetsIdentifier,
 	resolveSheetsRowIdentity,
 	sheetsIdentifierCacheKey,
-	sheetsIdentifierToWhere,
+	sheetsIdentifierToRowKey,
 	type SheetsRowIdentifier,
 } from '../row-identity';
 
@@ -37,45 +29,16 @@ type RowRecord = Record<string, unknown>;
 type DeleteIdentifier = SheetsRowIdentifier;
 
 /**
- * Transform relation data by extracting nodes from hasMany/manyToMany connections
- */
-export function transformRelationData<TData extends RowRecord>(data: unknown, table: CleanTable): TData[] {
-	if (!data) return [] as TData[];
-	if (!Array.isArray(data)) return data as TData[];
-
-	const transformed = data.map((row) => {
-		if (!row || typeof row !== 'object') return row as TData;
-
-		const transformedRow: RowRecord = { ...(row as RowRecord) };
-
-		const hasManyRelations = table.relations.hasMany || [];
-		const manyToManyRelations = table.relations.manyToMany || [];
-		const connectionRelations = [...hasManyRelations, ...manyToManyRelations];
-
-		connectionRelations.forEach((relation) => {
-			const fieldName = relation.fieldName;
-			if (!fieldName || !(fieldName in transformedRow)) return;
-
-			const relationValue = transformedRow[fieldName];
-			if (relationValue && typeof relationValue === 'object' && 'nodes' in (relationValue as RowRecord)) {
-				const connectionData = relationValue as { nodes?: unknown[] };
-				transformedRow[fieldName] = connectionData.nodes || [];
-			}
-		});
-
-		return transformedRow as TData;
-	});
-
-	return transformed as TData[];
-}
-
-/**
  * Unified table hook options
  */
-export interface UseTableOptions extends QueryOptions {
+export interface UseTableOptions extends Omit<QueryOptions, 'where'> {
+	/** A filter in the server's filter input shape (any operator the model reports, relation and search fields included). */
+	where?: Readonly<Record<string, unknown>>;
+	/** Columns to fetch (the primary key and relation keys are always added). Omitted: every readable column. */
+	columns?: readonly string[];
 	/** Enable/disable automatic data fetching */
 	enabled?: boolean;
-	/** Field selection for queries */
+	/** Field selection for queries: `includeRelations` (or the `full` preset) chooses the relations to select. */
 	select?: FieldSelection;
 	/** Mutation options */
 	mutationOptions?: MutationOptions;
@@ -89,7 +52,12 @@ export interface UseTableResult<TData extends RowRecord = RowRecord> {
 	data: TData[];
 	totalCount: number;
 	isLoading: boolean;
+	/** True while a request for the current options is in flight, also while the previous rows are still shown. */
+	isFetching: boolean;
 	error: Error | null;
+
+	/** The table model, or null while it loads or when it failed. */
+	model: TableModel | null;
 
 	// Single row operations
 	findOne: (id: SheetsRowIdentifier) => Promise<TData | null>;
@@ -115,72 +83,19 @@ export interface UseTableResult<TData extends RowRecord = RowRecord> {
 }
 
 /**
- * Generate query keys for consistent cache management
+ * Generate query keys for consistent cache management. `tableRef` is a
+ * `TableModel.key` or a table name.
  */
 export const sheetsTableQueryKeys = {
 	scope: (scope: SheetsScopeKey) => sheetsQueryKeys.scope(scope),
-	table: (scope: SheetsScopeKey, tableName: string) => sheetsQueryKeys.table(scope, tableName),
-	tableRows: (scope: SheetsScopeKey, tableName: string, options?: QueryOptions) =>
-		sheetsQueryKeys.tableRows(scope, tableName, options),
-	tableRow: (scope: SheetsScopeKey, tableName: string, id: unknown) =>
-		sheetsQueryKeys.tableRow(scope, tableName, id),
-	tableCount: (scope: SheetsScopeKey, tableName: string, where?: Record<string, unknown>) =>
-		sheetsQueryKeys.tableCount(scope, tableName, where),
+	table: (scope: SheetsScopeKey, tableRef: string) => sheetsQueryKeys.table(scope, tableRef),
+	tableRows: (scope: SheetsScopeKey, tableRef: string, options?: unknown) =>
+		sheetsQueryKeys.tableRows(scope, tableRef, options),
+	tableRow: (scope: SheetsScopeKey, tableRef: string, id: unknown) =>
+		sheetsQueryKeys.tableRow(scope, tableRef, id),
+	tableCount: (scope: SheetsScopeKey, tableRef: string, where?: Readonly<Record<string, unknown>>) =>
+		sheetsQueryKeys.tableCount(scope, tableRef, where),
 };
-
-const sheetsTableMutationKeys = {
-	create: (scope: SheetsScopeKey, tableName: string) =>
-		[...sheetsTableQueryKeys.table(scope, tableName), 'mutation', 'create'] as const,
-	update: (scope: SheetsScopeKey, tableName: string) =>
-		[...sheetsTableQueryKeys.table(scope, tableName), 'mutation', 'update'] as const,
-	delete: (scope: SheetsScopeKey, tableName: string) =>
-		[...sheetsTableQueryKeys.table(scope, tableName), 'mutation', 'delete'] as const,
-};
-
-/**
- * Transform QueryOptions to PostGraphile pagination variables
- */
-export function transformToPostGraphileVariables(table: CleanTable, options: QueryOptions = {}): Record<string, unknown> {
-	const variables: Record<string, unknown> = {};
-
-	// Transform limit to first (PostGraphile uses first for forward pagination)
-	const limitValue = options.limit ?? options.first;
-	if (limitValue !== undefined) {
-		variables.first = limitValue;
-	}
-
-	// Keep offset as is (PostGraphile supports offset-based pagination)
-	if (options.offset !== undefined) {
-		variables.offset = options.offset;
-	}
-
-	// Add cursor-based pagination variables (for infinite scroll)
-	if (options.after !== undefined) {
-		variables.after = options.after;
-	}
-	if (options.before !== undefined) {
-		variables.before = options.before;
-	}
-
-	// Transform orderBy to PostGraphile format
-	// PostGraphile expects format like: ["ID_ASC", "NAME_DESC"]
-	if (options.orderBy && options.orderBy.length > 0) {
-		const availableFields = new Set(table.fields.map((field) => field.name));
-		variables.orderBy = options.orderBy
-			.filter(({ field }) => availableFields.has(field))
-			.map(({ field, direction }) => toOrderByEnumValue(field, direction));
-	}
-
-	// Add where/filter conditions if present
-	if (options.where) {
-		// constructive APIs expose the connection filter as `where` (buildSelect emits `$where`).
-		// Naming this variable `filter` left `$where` unbound → server-side filtering was
-		// silently dropped (every `where` returned all rows). Must match buildSelect's `$where`.
-		variables.where = options.where;
-	}
-
-	return variables;
-}
 
 /**
  * Main unified table hook
@@ -192,25 +107,22 @@ export function useSheetsTable<TData extends RowRecord = RowRecord>(
 ): UseTableResult<TData> {
 	const queryClient = useQueryClient();
 	const { execute, scopeKey } = useSheetsContext();
-	const { data: meta } = useSheetsMeta();
 	const adapter = useSheetsAdapter();
+	const {
+		model,
+		tableKey,
+		metaTable: tableMeta,
+		isLoading: isModelLoading,
+		error: modelError,
+		refetch: refetchModel,
+	} = useTableModel(tableName);
+	// Cache entries are keyed by `TableModel.key`; the bare name is only a fallback before `_meta` loads.
+	const cacheRef = tableKey ?? tableName;
 
-	const metaTables = useMemo<MetaTable[]>(() => {
-		if (!meta?._meta?.tables) return [];
-
-		return meta._meta.tables.filter((candidate): candidate is MetaTable => candidate != null);
-	}, [meta]);
-
-	const tables = useMemo<CleanTable[]>(() => metaTables.map(cleanTable), [metaTables]);
-
-	const table = useMemo<CleanTable | null>(
-		() => tables.find((candidate) => candidate.name === tableName) ?? null,
-		[tables, tableName],
-	);
-	const tableMeta = useMemo<MetaTable | null>(
-		() => metaTables.find((candidate) => candidate.name === tableName) ?? null,
-		[metaTables, tableName],
-	);
+	const requireModel = (): TableModel => {
+		if (model) return model;
+		throw modelError ?? createError.notFound(`Table '${tableName}' not found`);
+	};
 
 	const resolveIdentifier = (identifier: SheetsRowIdentifier): SheetsRowIdentifier => {
 		if (!tableMeta) throw createError.notFound(`Table '${tableName}' not found`);
@@ -232,7 +144,7 @@ export function useSheetsTable<TData extends RowRecord = RowRecord>(
 	const { enabled = true, select: fieldSelection, mutationOptions = {}, ...queryOptions } = options;
 
 	// Update query options with field selection
-	const finalQueryOptions: QueryOptions = {
+	const finalQueryOptions = {
 		...queryOptions,
 		fieldSelection,
 	};
@@ -240,55 +152,39 @@ export function useSheetsTable<TData extends RowRecord = RowRecord>(
 	// Data fetching with error handling
 	const {
 		data,
-		isLoading,
-		error,
+		isLoading: isRowsLoading,
+		isFetching,
+		error: rowsError,
 		refetch,
-		} = useQuery<{ rows: TData[]; totalCount: number }>({
-			queryKey: sheetsTableQueryKeys.tableRows(scopeKey, tableName, finalQueryOptions),
-			queryFn: async () => {
-				if (!table) {
-					throw createError.notFound(`Table '${tableName}' not found`);
-				}
-
-				// Cache-bound resolution stays in the hook. The orderBy validation mutates
-				// `variables.orderBy` (PostGraphile enum strings) in place; we fold that
-				// result back into the `{ field, direction }[]` orderBy we hand the adapter,
-				// so the adapter rebuilds an identical (validated) variables payload.
-				const variables = transformToPostGraphileVariables(table, finalQueryOptions);
-
-				const [relationFieldMap] = await Promise.all([
-					resolveRelationFieldMap({
-						table,
-						fieldSelection: finalQueryOptions.fieldSelection,
-						scopeKey,
-						queryClient,
-						execute,
-					}),
-					validateOrderByVariables(variables, table, scopeKey, queryClient, execute),
-				]);
-
-				const validatedOrderByEnum = new Set((variables.orderBy as string[] | undefined) ?? []);
-				const availableOrderByFields = new Set(table.fields.map((field) => field.name));
-				const validatedOrderBy = finalQueryOptions.orderBy?.filter(
-					({ field, direction }) =>
-						availableOrderByFields.has(field) && validatedOrderByEnum.has(toOrderByEnumValue(field, direction)),
-				);
-
-				const { rows, totalCount } = await adapter.listRows<TData>(
-					{ table, allTables: tables, tableName },
-					{
-						...finalQueryOptions,
-						orderBy: validatedOrderBy,
-						// resolveRelationFieldMap yields `string | null` (null = omit field). The
-						// contract narrows to `string`, but the null values are passed through to
-						// buildSelect unchanged at runtime — behavior is identical to before.
-						relationFieldMap: relationFieldMap as Record<string, string>,
-					},
-					execute,
-				);
-				return { rows, totalCount };
+	} = useQuery<{ rows: TData[]; totalCount: number }>({
+		queryKey: sheetsTableQueryKeys.tableRows(scopeKey, cacheRef, finalQueryOptions),
+		queryFn: async ({ signal }) => {
+			const where = whereFilter(finalQueryOptions.where);
+			// The total depends on the filter only, so turning a page or re-sorting reuses it.
+			// Creates, updates and deletes invalidate it with the rest of the table.
+			const countKey = sheetsTableQueryKeys.tableCount(scopeKey, cacheRef, where);
+			const known = queryClient.getQueryState<number>(countKey);
+			const knownCount = known?.status === 'success' && !known.isInvalidated ? known.data : undefined;
+			const { rows, totalCount } = await adapter.listRows<TData>(
+				{ model: requireModel(), tableName },
+				{
+					where,
+					orderBy: sortSpecs(finalQueryOptions.orderBy),
+					limit: finalQueryOptions.limit ?? finalQueryOptions.first,
+					offset: finalQueryOptions.offset,
+					after: finalQueryOptions.after,
+					relations: relationsFromSelection(fieldSelection),
+					columns: finalQueryOptions.columns,
+					includeTotalCount: knownCount === undefined,
+					signal,
+				},
+				execute,
+			);
+			if (knownCount !== undefined) return { rows, totalCount: knownCount };
+			queryClient.setQueryData(countKey, totalCount);
+			return { rows, totalCount };
 		},
-		enabled: enabled && !!table,
+		enabled: enabled && !!model,
 		placeholderData: (previousData, previousQuery) =>
 			reuseSheetsPlaceholderData(previousData, previousQuery?.queryKey, scopeKey),
 		staleTime: 5 * 60 * 1000, // 5 minutes
@@ -303,36 +199,22 @@ export function useSheetsTable<TData extends RowRecord = RowRecord>(
 		Error,
 		RowRecord
 	>({
-		mutationKey: sheetsTableMutationKeys.create(scopeKey, tableName),
+		mutationKey: sheetsMutationKeys.table(scopeKey, cacheRef, 'create'),
 		mutationFn: async (data: RowRecord) => {
-			if (!table || !tableMeta) {
-				throw createError.notFound(`Table '${tableName}' not found`);
-			}
-			assertSheetsMutationAllowed(tableMeta, 'create');
-
-			// Get all tables for AST generation
-			const allTables = meta?._meta?.tables
-				? meta._meta.tables.filter((t): t is NonNullable<typeof t> => t != null).map(cleanTable)
-				: [];
-
-			const createdRow = await adapter.createRow<TData>({ table, allTables, tableName }, data, execute, {
-				...mutationOptions,
-				fieldSelection: mutationOptions.fieldSelection || fieldSelection || 'display',
-			});
-
+			const createdRow = await adapter.createRow<TData>({ model: requireModel(), tableName }, data, execute, mutationOptions);
 			return { createdRow, __rawResult: {} };
 		},
 		onSuccess: ({ createdRow }: { createdRow: TData | null; __rawResult: Record<string, unknown> }) => {
 			// Invalidate all related queries for paginated mode
-			queryClient.invalidateQueries({ queryKey: sheetsTableQueryKeys.table(scopeKey, tableName) });
+			queryClient.invalidateQueries({ queryKey: sheetsTableQueryKeys.table(scopeKey, cacheRef) });
 
 			// Cross-invalidate infinite scroll queries to ensure both modes stay in sync
-			queryClient.invalidateQueries({ queryKey: sheetsQueryKeys.infiniteTable(scopeKey, tableName) });
+			queryClient.invalidateQueries({ queryKey: sheetsQueryKeys.infiniteTable(scopeKey, cacheRef) });
 
 			// Update individual row cache
 			const createdRowKey = rowCacheKey(createdRow as RowRecord | null);
 			if (createdRowKey !== null) {
-				queryClient.setQueryData(sheetsTableQueryKeys.tableRow(scopeKey, tableName, createdRowKey), createdRow);
+				queryClient.setQueryData(sheetsTableQueryKeys.tableRow(scopeKey, cacheRef, createdRowKey), createdRow);
 			}
 		},
 	});
@@ -344,24 +226,15 @@ export function useSheetsTable<TData extends RowRecord = RowRecord>(
 		{ id: SheetsRowIdentifier; patch: RowRecord },
 		{ previousRows: Array<[readonly unknown[], { rows: TData[]; totalCount: number } | undefined]> }
 	>({
-		mutationKey: sheetsTableMutationKeys.update(scopeKey, tableName),
+		mutationKey: sheetsMutationKeys.table(scopeKey, cacheRef, 'update'),
 		mutationFn: async ({ id, patch }) => {
-			if (!table || !tableMeta) {
-				throw createError.notFound(`Table '${tableName}' not found`);
-			}
-			assertSheetsMutationAllowed(tableMeta, 'update');
-			const mutationIdentifier = resolveIdentifier(id);
-
-			// Get all tables for AST generation
-			const allTables = meta?._meta?.tables
-				? meta._meta.tables.filter((t): t is NonNullable<typeof t> => t != null).map(cleanTable)
-				: [];
-
-			const updatedRow = await adapter.updateRow<TData>({ table, allTables, tableName }, mutationIdentifier, patch, execute, {
-				...mutationOptions,
-				fieldSelection: mutationOptions.fieldSelection || fieldSelection || 'display',
-			});
-
+			const updatedRow = await adapter.updateRow<TData>(
+				{ model: requireModel(), tableName },
+				resolveIdentifier(id),
+				patch,
+				execute,
+				mutationOptions,
+			);
 			return { updatedRow, __rawResult: {} };
 		},
 		// Optimistic patch: an inline cell edit must show the new value instantly,
@@ -369,9 +242,9 @@ export function useSheetsTable<TData extends RowRecord = RowRecord>(
 		// active rows cache is `{ rows, totalCount }` keyed by `tableRows(...options)`;
 		// patch every cached `tableRows` variant that holds the row (the active query
 		// key embeds `finalQueryOptions`, but other option permutations may be cached
-		// too), matching the row by its scalar `id`.
+		// too), matching the row by its primary-key identity.
 		onMutate: async ({ id, patch }) => {
-			const tablePrefix = sheetsTableQueryKeys.table(scopeKey, tableName);
+			const tablePrefix = sheetsTableQueryKeys.table(scopeKey, cacheRef);
 			await queryClient.cancelQueries({ queryKey: tablePrefix });
 			const targetKey = tableMeta ? sheetsIdentifierCacheKey(tableMeta, id) : null;
 
@@ -405,7 +278,7 @@ export function useSheetsTable<TData extends RowRecord = RowRecord>(
 		},
 		onSuccess: ({ updatedRow }: { updatedRow: TData | null; __rawResult: Record<string, unknown> }) => {
 			// Invalidate all related queries for paginated mode
-			queryClient.invalidateQueries({ queryKey: sheetsTableQueryKeys.table(scopeKey, tableName) });
+			queryClient.invalidateQueries({ queryKey: sheetsTableQueryKeys.table(scopeKey, cacheRef) });
 
 			// NOTE: deliberately NOT invalidating the infinite-scroll cache here.
 			// An inline field update never changes row membership/ordering/count, so:
@@ -421,7 +294,7 @@ export function useSheetsTable<TData extends RowRecord = RowRecord>(
 			// Update individual row cache
 			const updatedRowKey = rowCacheKey(updatedRow as RowRecord | null);
 			if (updatedRowKey !== null) {
-				queryClient.setQueryData(sheetsTableQueryKeys.tableRow(scopeKey, tableName, updatedRowKey), updatedRow);
+				queryClient.setQueryData(sheetsTableQueryKeys.tableRow(scopeKey, cacheRef, updatedRowKey), updatedRow);
 			}
 		},
 	});
@@ -432,93 +305,60 @@ export function useSheetsTable<TData extends RowRecord = RowRecord>(
 		Error,
 		DeleteIdentifier
 	>({
-		mutationKey: sheetsTableMutationKeys.delete(scopeKey, tableName),
+		mutationKey: sheetsMutationKeys.table(scopeKey, cacheRef, 'delete'),
 		mutationFn: async (idOrPk) => {
-			if (!table || !tableMeta) {
-				throw createError.notFound(`Table '${tableName}' not found`);
-			}
-			assertSheetsMutationAllowed(tableMeta, 'delete');
-			const mutationIdentifier = resolveIdentifier(idOrPk);
-
-			// Get all tables for AST generation
-			const allTables = meta?._meta?.tables
-				? meta._meta.tables.filter((t): t is NonNullable<typeof t> => t != null).map(cleanTable)
-				: [];
-
-			await adapter.deleteRow({ table, allTables, tableName }, mutationIdentifier, execute, mutationOptions);
-
+			await adapter.deleteRow({ model: requireModel(), tableName }, resolveIdentifier(idOrPk), execute, mutationOptions);
 			return { deletedId: idOrPk, __rawResult: {} };
 		},
 		onSuccess: ({ deletedId }: { deletedId: DeleteIdentifier; __rawResult: Record<string, unknown> }) => {
 			// Invalidate all related queries for paginated mode
-			queryClient.invalidateQueries({ queryKey: sheetsTableQueryKeys.table(scopeKey, tableName) });
+			queryClient.invalidateQueries({ queryKey: sheetsTableQueryKeys.table(scopeKey, cacheRef) });
 
 			// Cross-invalidate infinite scroll queries to ensure both modes stay in sync
-			queryClient.invalidateQueries({ queryKey: sheetsQueryKeys.infiniteTable(scopeKey, tableName) });
+			queryClient.invalidateQueries({ queryKey: sheetsQueryKeys.infiniteTable(scopeKey, cacheRef) });
 
 			const deletedRowKey = tableMeta ? sheetsIdentifierCacheKey(tableMeta, deletedId) : null;
 			if (deletedRowKey !== null) {
 				queryClient.removeQueries({
-					queryKey: sheetsTableQueryKeys.tableRow(scopeKey, tableName, deletedRowKey),
+					queryKey: sheetsTableQueryKeys.tableRow(scopeKey, cacheRef, deletedRowKey),
 				});
 			}
 		},
 	});
 
-	// Find one function with error handling
-	const findOne = async (id: SheetsRowIdentifier) => {
-		if (!table || !tableMeta) {
-			throw createError.notFound(`Table '${tableName}' not found`);
-		}
-		const where = sheetsIdentifierToWhere(tableMeta, id);
-		if (!where) {
-			throw createError.badRequest(`Cannot resolve a primary-key identity for table '${tableName}'.`);
-		}
-
-		const doc = buildSelect(table, tables, {
-			where,
-			limit: 1,
+	// Read one row through the list field filtered by its primary key.
+	const findOne = async (id: SheetsRowIdentifier): Promise<TData | null> => {
+		const tableModel = requireModel();
+		const document = buildFindOneDocument(tableModel, sheetsIdentifierToRowKey(tableModel, resolveIdentifier(id)), {
+			relations: relationsFromSelection(fieldSelection),
 		});
-		const variables = transformToPostGraphileVariables(table, {
-			where,
-			limit: 1,
-		});
-		const result = (await execute(doc, variables)) as Record<string, unknown>;
-
-		// Some schemas expose a singular root field; keep this as a compatibility fallback.
-		const singularName = toCamelCaseSingular(tableName, table);
-		const singularData = result[singularName];
-		if (singularData && typeof singularData === 'object') {
-			return singularData as TData;
+		try {
+			return document.read(await execute(document.document, document.variables)) as TData | null;
+		} catch (error) {
+			// Like a list read: a record with a cell the API could not serve still loads, with that cell's error on it.
+			const partial = partialResultOf(error);
+			if (!partial) throw error;
+			try {
+				return document.read(partial.data, partial.errors) as TData | null;
+			} catch {
+				throw error;
+			}
 		}
-
-		// Handle Relay-style response structure (connection fallback)
-		const queryTableName = toCamelCasePlural(tableName, table);
-		const data = result[queryTableName];
-
-		if (data && typeof data === 'object' && 'nodes' in data) {
-			const nodes = (data as { nodes: unknown[] }).nodes || [];
-			const transformedNodes = transformRelationData<TData>(nodes, table);
-			return transformedNodes[0] || null;
-		}
-
-		// Fallback for direct array response
-		const rows = (result[tableName] as unknown[]) || [];
-		const transformedRows = transformRelationData<TData>(rows, table);
-		return transformedRows[0] || null;
 	};
 
 	// Invalidate function
 	const invalidate = () => {
-		queryClient.invalidateQueries({ queryKey: sheetsTableQueryKeys.table(scopeKey, tableName) });
+		queryClient.invalidateQueries({ queryKey: sheetsTableQueryKeys.table(scopeKey, cacheRef) });
 	};
 
 	return {
 		// Data
 		data: rowsData,
 		totalCount,
-		isLoading,
-		error,
+		isLoading: (enabled && isModelLoading) || isRowsLoading,
+		isFetching,
+		error: rowsError ?? (enabled ? modelError : null),
+		model,
 
 		// Single row operations
 		findOne,
@@ -539,7 +379,8 @@ export function useSheetsTable<TData extends RowRecord = RowRecord>(
 		deleteError: deleteMutation.error,
 
 		// Utilities
-		refetch,
+		// A table whose model failed has no rows query to run: load the model again; the rows follow.
+		refetch: () => (model ? refetch() : refetchModel()),
 		invalidate,
 	};
 }
