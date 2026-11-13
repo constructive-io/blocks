@@ -253,6 +253,19 @@ export type UsersFeatureActions = Readonly<{
   extendInvite?: (input: { inviteId: string }) => FeatureActionResult;
 }>;
 
+/**
+ * What the members belong to, in words: the application by default, or an
+ * entity such as an organization or a data room. `short` names a role
+ * ("app admin"); `long` names the thing ("application members").
+ */
+export type UsersScopeNoun = Readonly<{ short: string; long: string }>;
+
+const APP_NOUN: UsersScopeNoun = { short: 'app', long: 'application' };
+const NounContext = React.createContext<UsersScopeNoun>(APP_NOUN);
+const useNoun = () => React.useContext(NounContext);
+const capitalized = (text: string) => text[0]!.toUpperCase() + text.slice(1);
+const articled = (word: string) => `${/^[aeiou]/iu.test(word) ? 'an' : 'a'} ${word}`;
+
 export type UsersFeaturePackProps = Readonly<{
   resource: FeaturePackResource<UsersFeatureData>;
   policy?: FeatureActionPolicy<UsersFeatureAction>;
@@ -268,6 +281,8 @@ export type UsersFeaturePackProps = Readonly<{
   focusedProfileId?: string;
   title?: string;
   description?: string;
+  /** What the members belong to; the application unless set. */
+  noun?: UsersScopeNoun;
   onError?: (error: FeaturePackError) => void;
 }>;
 
@@ -303,6 +318,7 @@ function InviteMemberDialog({
   onInvite: NonNullable<UsersFeatureActions['invite']>;
   onError?: UsersFeaturePackProps['onError'];
 }>) {
+  const noun = useNoun();
   const [open, setOpen] = React.useState(false);
   const [recipient, setRecipient] = React.useState('');
   const [profileId, setProfileId] = React.useState('');
@@ -352,7 +368,7 @@ function InviteMemberDialog({
       <DialogContent>
         <form onSubmit={(event) => void submit(event)}>
           <DialogHeader>
-            <DialogTitle>Invite an application member</DialogTitle>
+            <DialogTitle>{`Invite an ${noun.long} member`}</DialogTitle>
             <DialogDescription>
               This grants application access. The recipient keeps ownership of their account credentials.
             </DialogDescription>
@@ -449,6 +465,7 @@ function MemberActions({
   actions?: UsersFeatureActions;
   onError?: UsersFeaturePackProps['onError'];
 }>) {
+  const noun = useNoun();
   const [intent, setIntent] = React.useState<MemberActionIntent>();
   const [pending, setPending] = React.useState(false);
   const [error, setError] = React.useState<string>();
@@ -504,8 +521,8 @@ function MemberActions({
                     ? `Revoke approval for ${member.name}?`
                     : `Approve ${member.name}?`,
                   description: member.lifecycle.approved
-                    ? 'The member will lose application access until approved again.'
-                    : 'Approval is one part of active application membership.',
+                    ? `The member will lose ${noun.long} access until approved again.`
+                    : `Approval is one part of active ${noun.long} membership.`,
                   confirmLabel: member.lifecycle.approved ? 'Revoke approval' : 'Approve member',
                   destructive: member.lifecycle.approved,
                   run: () => actions.setApproved!({
@@ -523,8 +540,8 @@ function MemberActions({
                     ? `Revoke verification for ${member.name}?`
                     : `Mark ${member.name} as verified?`,
                   description: member.lifecycle.verified
-                    ? 'The member will lose application access until verified again.'
-                    : 'Use this only after completing your application verification process.',
+                    ? `The member will lose ${noun.long} access until verified again.`
+                    : `Use this only after completing your ${noun.long} verification process.`,
                   confirmLabel: member.lifecycle.verified ? 'Revoke verification' : 'Mark verified',
                   destructive: member.lifecycle.verified,
                   run: () => actions.setVerified!({
@@ -592,8 +609,8 @@ function MemberActions({
                     : `Grant app admin to ${member.name}?`,
                   description: member.governance.admin
                     ? 'The member will keep only profile and direct capabilities.'
-                    : 'App admins receive every application capability.',
-                  confirmLabel: member.governance.admin ? 'Revoke app admin' : 'Grant app admin',
+                    : `${capitalized(noun.short)} admins receive every ${noun.long} capability.`,
+                  confirmLabel: member.governance.admin ? `Revoke ${noun.short} admin` : `Grant ${noun.short} admin`,
                   destructive: member.governance.admin,
                   run: () => actions.setAdmin!({
                     userId: member.userId,
@@ -601,7 +618,7 @@ function MemberActions({
                   })
                 })}>
                   <ShieldCheckIcon />
-                  {member.governance.admin ? 'Revoke app admin' : 'Grant app admin'}
+                  {member.governance.admin ? `Revoke ${noun.short} admin` : `Grant ${noun.short} admin`}
                 </DropdownMenuItem>
               ) : null}
               {available('setOwner') && actions?.setOwner ? (
@@ -610,7 +627,7 @@ function MemberActions({
                     ? `Revoke app ownership from ${member.name}?`
                     : `Grant app ownership to ${member.name}?`,
                   description: member.governance.owner
-                    ? 'The member will remain an app admin until that grant is separately revoked.'
+                    ? `The member will remain ${articled(noun.short)} admin until that grant is separately revoked.`
                     : 'Owners can grant and revoke ownership. Keep at least one owner at all times.',
                   confirmLabel: member.governance.owner ? 'Revoke ownership' : 'Grant ownership',
                   destructive: member.governance.owner,
@@ -620,7 +637,7 @@ function MemberActions({
                   })
                 })}>
                   <KeyRoundIcon />
-                  {member.governance.owner ? 'Revoke app ownership' : 'Grant app ownership'}
+                  {member.governance.owner ? `Revoke ${noun.short} ownership` : `Grant ${noun.short} ownership`}
                 </DropdownMenuItem>
               ) : finalOwner ? (
                 <DropdownMenuItem disabled>
@@ -863,6 +880,7 @@ function MembersDirectory({
   actions?: UsersFeatureActions;
   onError?: UsersFeaturePackProps['onError'];
 }>) {
+  const noun = useNoun();
   const focusedMemberRef = useFocusedRecord<HTMLTableRowElement>(
     Boolean(focusedMemberId && members.some((member) => member.id === focusedMemberId)),
     focusedMemberId
@@ -875,7 +893,7 @@ function MembersDirectory({
         description='Try a different name, email, profile, or governance role.'
         onClear={onClearSearch}
         query={query}
-        title='No application members match'
+        title={`No ${noun.long} members match`}
       />
     );
   }
@@ -883,9 +901,9 @@ function MembersDirectory({
   if (members.length === 0) {
     return (
       <FeaturePackEmpty
-        description='People with access to this application will appear here.'
+        description={`People with access to this ${noun.long} will appear here.`}
         icon={UsersRoundIcon}
-        title='No application members to show'
+        title={`No ${noun.long} members to show`}
       />
     );
   }
@@ -894,7 +912,7 @@ function MembersDirectory({
 
   return (
     <TableSurface className='@container/table' minWidth='0'>
-      <caption className='sr-only'>Application members</caption>
+      <caption className='sr-only'>{`${capitalized(noun.long)} members`}</caption>
       <thead className={tableHeadClass}>
         <tr>
           <th scope='col'>Member</th>
@@ -1015,6 +1033,7 @@ function InvitationsDirectory({
   actions?: UsersFeatureActions;
   onError?: UsersFeaturePackProps['onError'];
 }>) {
+  const noun = useNoun();
   const [error, setError] = React.useState<string>();
   const [pendingInviteId, setPendingInviteId] = React.useState<string>();
   const focusedInvitationRef = useFocusedRecord<HTMLTableRowElement>(
@@ -1025,7 +1044,7 @@ function InvitationsDirectory({
   if (invitations.length === 0) {
     return (
       <FeaturePackEmpty
-        description='Invite a collaborator when they are ready to join this application.'
+        description={`Invite a collaborator when they are ready to join this ${noun.long}.`}
         icon={MailPlusIcon}
         title='No pending invitations'
       />
@@ -1036,7 +1055,7 @@ function InvitationsDirectory({
     <div className='flex flex-col gap-3'>
       {error ? <p className='text-destructive text-pretty text-sm' role='alert'>{error}</p> : null}
       <TableSurface className='@container/table' minWidth='0'>
-        <caption className='sr-only'>Application invitations</caption>
+        <caption className='sr-only'>{`${capitalized(noun.long)} invitations`}</caption>
         <thead className={tableHeadClass}>
           <tr>
             <th scope='col'>Recipient</th>
@@ -1113,10 +1132,11 @@ function InvitationsDirectory({
 function AcceptedInvitesDirectory({
   invitations
 }: Readonly<{ invitations: readonly AppClaimedInvite[] }>) {
+  const noun = useNoun();
   if (invitations.length === 0) {
     return (
       <FeaturePackEmpty
-        description='Accepted application invitations will appear here as an audit history.'
+        description={`Accepted ${noun.long} invitations will appear here as an audit history.`}
         icon={HistoryIcon}
         title='No accepted invitations'
       />
@@ -1461,6 +1481,7 @@ function ProfilesDirectory({
   actions?: UsersFeatureActions;
   onError?: UsersFeaturePackProps['onError'];
 }>) {
+  const noun = useNoun();
   const canCreate = canPerform(policy, 'createProfile') && Boolean(actions?.createProfile);
   const create = canCreate && actions?.createProfile
     ? <ProfileFormDialog action={actions.createProfile} onError={onError} />
@@ -1470,7 +1491,7 @@ function ProfilesDirectory({
     <div className='@container/profiles flex flex-col gap-3'>
       <SectionHeading
         actions={profiles.length > 0 ? create : null}
-        description='Named capability bundles for application members. Owner and admin grants remain separate.'
+        description={`Named capability bundles for ${noun.long} members. Owner and admin grants remain separate.`}
         title='Access profiles'
       />
       {profiles.length > 0 ? (
@@ -1490,7 +1511,7 @@ function ProfilesDirectory({
       ) : (
         <FeaturePackEmpty
           action={create}
-          description='Create a reusable capability bundle for application members.'
+          description={`Create a reusable capability bundle for ${noun.long} members.`}
           icon={ShieldIcon}
           title='No access profiles'
         />
@@ -1500,12 +1521,13 @@ function ProfilesDirectory({
 }
 
 function CapabilitiesCatalog({ capabilities }: Readonly<{ capabilities: readonly AppCapability[] }>) {
+  const noun = useNoun();
   if (capabilities.length === 0) {
     return (
       <FeaturePackEmpty
         description='This tenant does not expose a capability catalog.'
         icon={KeyRoundIcon}
-        title='No application capabilities'
+        title={`No ${noun.long} capabilities`}
       />
     );
   }
@@ -1517,7 +1539,7 @@ function CapabilitiesCatalog({ capabilities }: Readonly<{ capabilities: readonly
         title='Capability definitions are read-only'
       />
       <TableSurface className='@container/table' minWidth='0'>
-        <caption className='sr-only'>Application capabilities</caption>
+        <caption className='sr-only'>{`${capitalized(noun.long)} capabilities`}</caption>
         <thead className={tableHeadClass}>
           <tr>
             <th scope='col'>Capability</th>
@@ -1555,6 +1577,7 @@ function CapabilityDefaults({
   actions?: UsersFeatureActions;
   onError?: UsersFeaturePackProps['onError'];
 }>) {
+  const noun = useNoun();
   const [pendingId, setPendingId] = React.useState<string>();
   const [error, setError] = React.useState<string>();
   const canUpdate = canPerform(policy, 'setDefaultCapability') &&
@@ -1578,7 +1601,7 @@ function CapabilityDefaults({
   return (
     <div className='flex max-w-3xl flex-col gap-3'>
       <SectionHeading
-        description='These capabilities apply to new application memberships. Existing members keep their current grants.'
+        description={`These capabilities apply to new ${noun.long} memberships. Existing members keep their current grants.`}
         title='New-member capability defaults'
       />
       {capabilities.length > 0 ? (
@@ -1633,6 +1656,7 @@ export function UsersFeaturePack({
   focusedProfileId,
   title = 'App access',
   description,
+  noun = APP_NOUN,
   onError
 }: UsersFeaturePackProps) {
   const [query, setQuery] = React.useState('');
@@ -1648,6 +1672,7 @@ export function UsersFeaturePack({
   }
 
   return (
+    <NounContext.Provider value={noun}>
     <FeaturePackBoundary
       emptyAction={canInvite && actions?.invite ? (
         <InviteMemberDialog
@@ -1658,8 +1683,8 @@ export function UsersFeaturePack({
           profiles={[]}
         />
       ) : null}
-      emptyDescription='Invite the first application member when the app is ready for collaborators.'
-      emptyTitle='No application members yet'
+      emptyDescription={`Invite the first ${noun.long} member when the ${noun.short} is ready for collaborators.`}
+      emptyTitle={`No ${noun.long} members yet`}
       resource={resource}
     >
       {(data) => {
@@ -1719,7 +1744,7 @@ export function UsersFeaturePack({
             <FeaturePackPageHeader
               actions={inviteAction}
               description={description ?? (
-                `${data.members.length} ${data.members.length === 1 ? 'application member' : 'application members'}` +
+                `${data.members.length} ${noun.long} ${data.members.length === 1 ? 'member' : 'members'}` +
                 (activeCount !== data.members.length ? ` · ${activeCount} active` : '')
               )}
               title={title}
@@ -1729,12 +1754,12 @@ export function UsersFeaturePack({
 
             <Tabs className='gap-4' onValueChange={changeSection} value={activeSection}>
               <div className='flex flex-col gap-3 md:flex-row md:items-center md:justify-between'>
-                <FeaturePackTabList label='App access sections' sections={sections} />
+                <FeaturePackTabList label={`${title} sections`} sections={sections} />
                 {activeSection === 'members' ? (
                   <SearchField
                     autoComplete='off'
                     className='w-full md:w-64'
-                    label='Search application members'
+                    label={`Search ${noun.long} members`}
                     name='member-search'
                     onChange={(event) => setQuery(event.currentTarget.value)}
                     placeholder='Search members'
@@ -1805,5 +1830,6 @@ export function UsersFeaturePack({
         );
       }}
     </FeaturePackBoundary>
+    </NounContext.Provider>
   );
 }
