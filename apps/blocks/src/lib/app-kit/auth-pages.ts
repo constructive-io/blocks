@@ -34,7 +34,7 @@ type AuthCalls = Readonly<{
     password: string;
     rememberMe: boolean;
   }) => Promise<AuthResult>;
-  verifyEmail: (token: string) => Promise<AuthResult>;
+  verifyEmail: (input: { token: string; password: string }) => Promise<AuthResult>;
 }>;
 
 const RouterLink: AuthLinkComponent = ({ href, className, children }) => (
@@ -70,7 +70,7 @@ export function VerifyEmailPage({
     <AuthLayout brand={brand} linkComponent={RouterLink}>
       <VerifyEmailPanel
         links={{ continue: '/app', signIn: '/sign-in' }}
-        onVerify={() => auth.verifyEmail(token)}
+        onVerify={({ password }) => auth.verifyEmail({ token, password })}
       />
     </AuthLayout>
   );
@@ -79,7 +79,7 @@ export function VerifyEmailPage({
   state: {
     title: 'Validation, pending, and results',
     description:
-      'Every form checks its fields before calling the handler: a required email with a basic shape check (trimmed before it is sent), a required password, the minimum length on sign-up and reset, and a matching confirmation on reset. While a handler runs, the submit button is disabled and only one call runs at a time. { ok: false, message } shows the message in an alert; a handler that throws shows “Something went wrong. Try again.” and never the raw error. On { ok: true }, sign-up shows the check-email state for the address, forgot-password says a link is on its way if the account exists, reset-password offers sign-in, and sign-in leaves navigation to the host.',
+      'Every form checks its fields before calling the handler: a required email with a basic shape check (trimmed before it is sent), a required password (on verify, the one chosen at sign-up), the minimum length on sign-up and reset, and a matching confirmation on reset. While a handler runs, the submit button is disabled and only one call runs at a time. { ok: false, message } shows the message in an alert; a handler that throws shows “Something went wrong. Try again.” and never the raw error. On { ok: true }, sign-up shows the check-email state for the address, forgot-password says a link is on its way if the account exists, reset-password offers sign-in, and sign-in leaves navigation to the host.',
   },
   composition: [
     'Built from the same card, field, input group, checkbox, alert, and button primitives as the Auth feature pack, so the public pages match the console’s entry panel.',
@@ -112,9 +112,9 @@ export function VerifyEmailPage({
     },
     {
       name: 'VerifyEmailPanel',
-      type: 'onVerify(), links?: { signIn, continue }',
+      type: 'onVerify({ password }), links?: { signIn, continue }',
       behavior:
-        'Calls onVerify exactly once on mount, even under StrictMode, then shows the verified state with a link onward or the failure with “Try again”.',
+        'Asks for the password chosen at sign-up and calls onVerify only on submit, never on mount, so opening the link spends nothing. A refusal keeps the form for another try; { ok: true } shows the verified state with a link onward.',
     },
     {
       name: 'ForgotPasswordPanel',

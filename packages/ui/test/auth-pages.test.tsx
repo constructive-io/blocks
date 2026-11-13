@@ -192,10 +192,10 @@ describe('Auth pages', () => {
 		expect(link('Sign in').getAttribute('href')).toBe('/sign-in');
 	});
 
-	it('verifies once under StrictMode, and "Try again" calls the handler again', async () => {
+	it('confirms an address only with the sign-up password, and keeps the form after a refusal', async () => {
 		const onVerify = vi
-			.fn<() => Promise<AuthResult>>()
-			.mockResolvedValueOnce({ ok: false, message: 'This link has expired. Request a new one.' })
+			.fn<(values: { password: string }) => Promise<AuthResult>>()
+			.mockResolvedValueOnce({ ok: false, message: 'This link is invalid or has expired.' })
 			.mockResolvedValueOnce({ ok: true });
 		await render(
 			<React.StrictMode>
@@ -203,11 +203,23 @@ describe('Auth pages', () => {
 			</React.StrictMode>,
 		);
 
-		expect(onVerify).toHaveBeenCalledTimes(1);
-		expect(alerts()).toEqual(['This link has expired. Request a new one.']);
+		// Opening the link spends nothing: the backend activates a sign-up's
+		// password only for a caller who types it.
+		expect(onVerify).not.toHaveBeenCalled();
 
-		await click(button('Try again'));
-		expect(onVerify).toHaveBeenCalledTimes(2);
+		await click(button('Confirm email'));
+		expect(onVerify).not.toHaveBeenCalled();
+		expect(field('Password').getAttribute('aria-invalid')).toBe('true');
+
+		await type(field('Password'), 'wrong phrase');
+		await click(button('Confirm email'));
+		expect(onVerify).toHaveBeenLastCalledWith({ password: 'wrong phrase' });
+		expect(alerts()).toEqual(['This link is invalid or has expired.']);
+		expect(document.activeElement).toBe(field('Password'));
+
+		await type(field('Password'), 'long enough phrase');
+		await click(button('Confirm email'));
+		expect(onVerify).toHaveBeenLastCalledWith({ password: 'long enough phrase' });
 		expect(heading()).toBe('Email verified');
 		expect(link('Continue').getAttribute('href')).toBe('/app');
 	});
