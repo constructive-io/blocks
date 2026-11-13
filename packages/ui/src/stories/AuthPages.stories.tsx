@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from '@storybook/react-vite';
-import { useMemo, useRef, useState } from 'react';
+import { useMemo, useState } from 'react';
 import type * as React from 'react';
 
 import {
@@ -142,23 +142,19 @@ export const VerifyEmail: Story = {
 };
 
 export const VerifyEmailFailed: Story = {
-	name: 'Verify email: expired link',
-	parameters: { docs: { description: { story: 'The first call fails; "Try again" calls `onVerify` again, and this time it succeeds.' } } },
-	render: function VerifyEmailFailedStory() {
-		const calls = useRef(0);
-		return (
-			<Frame>
-				<VerifyEmailPanel
-					links={{ continue: '/app', signIn: '/sign-in' }}
-					onVerify={async () => {
-						await wait(900);
-						calls.current += 1;
-						return calls.current === 1 ? { ok: false, message: 'This link has expired. Request a new one from the sign-in page.' } : { ok: true };
-					}}
-				/>
-			</Frame>
-		);
-	},
+	name: 'Verify email: wrong password',
+	parameters: { docs: { description: { story: 'The password `wrong-password` is refused; the form stays, so another password is one more try.' } } },
+	render: () => (
+		<Frame>
+			<VerifyEmailPanel
+				links={{ continue: '/app', signIn: '/sign-in' }}
+				onVerify={async ({ password }) => {
+					await wait(900);
+					return password === 'wrong-password' ? { ok: false, message: 'This link is invalid or has expired.' } : { ok: true };
+				}}
+			/>
+		</Frame>
+	),
 };
 
 export const ForgotPassword: Story = {

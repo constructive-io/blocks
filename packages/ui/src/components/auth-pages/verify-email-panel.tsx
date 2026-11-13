@@ -1,53 +1,41 @@
 'use client';
 
 import * as React from 'react';
-import { CircleCheckIcon, MailWarningIcon, RotateCcwIcon } from 'lucide-react';
+import { CircleCheckIcon, MailCheckIcon } from 'lucide-react';
 
+import { Field, FieldGroup } from '../field';
 import { AuthCard, AuthFailure, AuthLinkButton, AuthSubmit, BackToSignIn } from './auth-card';
+import { PasswordInput } from './password-input';
 import type { VerifyEmailPanelProps } from './types';
-import { useAuthForm } from './use-auth-form';
+import { passwordError, useAuthForm } from './use-auth-form';
 
 /**
- * Confirms an email address from a verification link. It calls `onVerify` once
- * on mount (StrictMode's second effect run does not call it again), then shows
- * the result: a link onward, or the failure with "Try again".
+ * Confirms an email address from a verification link. Opening the link spends
+ * nothing: the person types the password they chose at sign-up, and only that
+ * submit calls `onVerify`. The link proves the inbox and the password proves
+ * the person who signed up, so a mail nobody asked for cannot switch on a
+ * stranger's password. A refusal keeps the form for another try.
  */
 export function VerifyEmailPanel({
 	onVerify,
 	links,
-	title = 'Verifying your email',
-	description = 'This takes a moment. Keep this page open.',
+	title = 'Confirm your email',
+	description = 'Enter the password you chose when you signed up, and your address is confirmed.',
 	notice,
 	linkComponent,
 	className,
 }: VerifyEmailPanelProps) {
-	const form = useAuthForm({});
 	const [verified, setVerified] = React.useState(false);
-	const started = React.useRef(false);
+	const form = useAuthForm({ password: '' });
 
-	const verify = () => {
-		void form.submit({ run: onVerify, onSuccess: () => setVerified(true) });
-	};
-
-	// Mount only: the first render's `verify` is enough, and "Try again" uses the current one.
-	React.useEffect(() => {
-		if (started.current) return;
-		started.current = true;
-		verify();
-	}, []);
-
-	const footer = links?.signIn ? <BackToSignIn href={links.signIn} /> : null;
-	const onward = links?.continue ?? links?.signIn;
-
-	// Each state is its own card (`key`), so the result heading takes focus and is announced when it replaces the spinner.
 	if (verified) {
+		const onward = links?.continue ?? links?.signIn;
 		return (
 			<AuthCard
 				className={className}
 				description={links?.continue ? 'Your email address is confirmed.' : 'Your email address is confirmed. You can sign in now.'}
 				focusTitle
 				icon={CircleCheckIcon}
-				key="verified"
 				linkComponent={linkComponent}
 				notice={notice}
 				title="Email verified"
@@ -62,47 +50,36 @@ export function VerifyEmailPanel({
 		);
 	}
 
-	if (form.failure) {
-		return (
-			<AuthCard
-				className={className}
-				description="The link may have expired or already been used."
-				focusTitle
-				footer={footer}
-				icon={MailWarningIcon}
-				key="failed"
-				linkComponent={linkComponent}
-				notice={notice}
-				title="We could not verify your email"
-				tone="destructive"
-			>
-				<AuthFailure message={form.failure} />
-				<AuthSubmit
-					label={
-						<>
-							<RotateCcwIcon aria-hidden="true" />
-							Try again
-						</>
-					}
-					onClick={verify}
-					pending={form.pending}
-					pendingLabel="Verifying…"
-					type="button"
-				/>
-			</AuthCard>
-		);
-	}
+	const submit = (event: React.FormEvent<HTMLFormElement>) => {
+		event.preventDefault();
+		const { password } = form.values;
+		void form.submit({
+			validate: () => ({ password: passwordError(password) }),
+			run: () => onVerify({ password }),
+			onSuccess: () => setVerified(true),
+			focusOnFailure: 'password',
+		});
+	};
 
 	return (
 		<AuthCard
 			className={className}
 			description={description}
-			footer={footer}
-			icon="spinner"
-			key="verifying"
+			footer={links?.signIn ? <BackToSignIn href={links.signIn} /> : null}
+			icon={MailCheckIcon}
 			linkComponent={linkComponent}
 			notice={notice}
 			title={title}
-		/>
+		>
+			<form className="flex min-w-0 flex-col gap-4" noValidate onSubmit={submit}>
+				<FieldGroup>
+					<Field label="Password" required {...form.field('password')}>
+						<PasswordInput {...form.input('password')} autoComplete="current-password" name="password" required />
+					</Field>
+				</FieldGroup>
+				<AuthFailure message={form.failure} />
+				<AuthSubmit label="Confirm email" pending={form.pending} pendingLabel="Confirming email…" />
+			</form>
+		</AuthCard>
 	);
 }

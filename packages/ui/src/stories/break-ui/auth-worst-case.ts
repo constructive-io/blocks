@@ -70,8 +70,8 @@ export const authWorst: AuthFixture = {
 			description: 'Legen Sie ein neues Passwort fest, um die Passwortwiederherstellungsanforderung abzuschließen.',
 		},
 		verify: {
-			title: 'E-Mail-Adressbestätigung wird überprüft',
-			description: 'Dies dauert einen Moment. Lassen Sie diese Seite geöffnet, bis die Überprüfung abgeschlossen ist.',
+			title: 'Bestätigen Sie Ihre E-Mail-Adresse für das Kundenkonto',
+			description: 'Geben Sie das Passwort ein, das Sie bei der Registrierung gewählt haben, damit Ihre Adresse bestätigt wird und Sie sich anmelden können.',
 		},
 	},
 };

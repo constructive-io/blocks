@@ -22,6 +22,7 @@ export type {
 	SignUpPanelProps,
 	SignUpValues,
 	VerifyEmailPanelProps,
+	VerifyEmailValues,
 } from './types';
 
 export { AuthLayout } from './auth-layout';

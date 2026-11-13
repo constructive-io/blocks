@@ -55,9 +55,12 @@ export type CheckEmailPanelProps = AuthPanelBase & {
 	links?: { signIn?: string };
 };
 
+/** The password the person chose at sign-up; the backend activates it only when the link and this password match. */
+export type VerifyEmailValues = { password: string };
+
 export type VerifyEmailPanelProps = AuthPanelBase & {
-	/** Called once when the panel mounts, and again from "Try again" after a failure. */
-	onVerify(): AuthHandlerResult;
+	/** Called on submit with the typed password, never on mount. On `{ ok: true }` the panel shows the verified state. */
+	onVerify(values: VerifyEmailValues): AuthHandlerResult;
 	links?: { signIn?: string; continue?: string };
 };
 

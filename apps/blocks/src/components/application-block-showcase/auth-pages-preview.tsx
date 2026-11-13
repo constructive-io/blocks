@@ -123,7 +123,12 @@ export function AuthPagesPreview() {
         return (
           <VerifyEmailPanel
             links={{ continue: '/app', signIn: '/sign-in' }}
-            onVerify={() => respond({ ok: true }, 'The host would confirm the token from the link and mark the address verified.')}
+            onVerify={({ password }) =>
+              respond(
+                password === 'wrong-password' ? { ok: false, message: 'This link is invalid or has expired.' } : { ok: true },
+                'The host would confirm the token from the link with this password and mark the address verified.',
+              )
+            }
           />
         );
       case 'forgot-password':
