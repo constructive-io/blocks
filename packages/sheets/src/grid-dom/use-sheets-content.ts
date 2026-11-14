@@ -10,7 +10,7 @@
 // Phase 7 — here we only blank the leaked draft-id text and tag `styleHint.draft`
 // so Phase 7 can style from a neutral flag (no glide theme imports).
 
-import { useCallback, useMemo } from 'react';
+import { useCallback, useMemo, useRef } from 'react';
 
 import type { CellTypeRegistry } from '../cell-types/cell-type-registry';
 import type { CellType } from '../cell-types/types';
@@ -176,26 +176,25 @@ export function useSheetsContent(args: UseSheetsContentArgs) {
 
 	const relationFieldNamesFromMeta = useMemo(() => buildRelationFieldNameSet(meta, tableName), [meta, tableName]);
 
-	// PER-RESOLVER RESULT CACHE. The cell host calls `getSheetsCell` for every visible
-	// cell on every re-render, almost always re-deriving an identical resolution. This
-	// Map memoizes the last resolution per `rowIndex|colKey`, keyed on the cell's raw
-	// VALUE: a repeat call whose value is reference-equal to the cached one returns the
-	// cached resolution and skips the full pipeline (route → relation unwrap →
-	// resolveTypeKey → toSheetsCell, which allocates ≥3 objects).
+	// The rows are read at call time, so the resolver keeps its identity when the row array
+	// changes (a page loads, a cell saves). The grid rows memoized on it then render again only
+	// when their own row object changes, not the whole window on every data change.
+	const dataRef = useRef(data);
+	dataRef.current = data;
+
+	// RESULT CACHE, per row object and column. The cell host calls `getSheetsCell` for every
+	// visible cell it renders, almost always re-deriving an identical resolution, and the full
+	// pipeline (route → relation unwrap → resolveTypeKey → toSheetsCell) allocates ≥3 objects.
 	//
-	// SAFETY: the deps below are IDENTICAL to the `getSheetsCell` useCallback's deps, so
-	// the cache is thrown away exactly when the resolver would change identity. Every
-	// input that can change a cell's resolution flows through one of these deps — most
-	// notably `data`: draft status/errors rebuild `combinedRows` (new array + new row
-	// objects, see useDraftRows), and any server-data / optimistic change recreates the
-	// rows array too. So `styleHint.draft/error` (derived from the row's DraftMeta) and
-	// the relation-unwrap fields (read off the same row object) cannot change without a
-	// new `data` reference resetting this cache — making the per-value compare sound:
-	// within one resolver identity the row objects are immutable, so a value that is
-	// reference-equal guarantees an identical resolution.
+	// SAFETY: a resolution reads only its row object's fields (draft meta, cell errors, the
+	// relation fields) and the deps below, never the row's index. Row objects are never
+	// changed in place: a server row is a new object after a refetch or an optimistic update
+	// (see useInfiniteGridData), and a draft row after any draft change (see useDraftRows).
+	// So a row object's cached resolution stays valid until one of these deps changes, which
+	// throws the whole cache away.
 	const cache = useMemo(
-		() => new Map<string, { value: unknown; resolution: SheetsCellResolution }>(),
-		[data, columnKeys, fieldMetaMap, registry, relationFieldNamesFromMeta, relationInfoByField, options, serverRowsReadOnly, serverReadOnlyFields, getRowIdentifier, canUpload, canCreate, tableModel, columnByName, relationByField, fieldTypeOverrides, tableName],
+		() => new WeakMap<object, Map<string, SheetsCellResolution>>(),
+		[columnKeys, fieldMetaMap, registry, relationFieldNamesFromMeta, relationInfoByField, options, serverRowsReadOnly, serverReadOnlyFields, getRowIdentifier, canUpload, canCreate, tableModel, columnByName, relationByField, fieldTypeOverrides, tableName],
 	);
 
 	const getSheetsCell = useCallback(
@@ -206,23 +205,15 @@ export function useSheetsContent(args: UseSheetsContentArgs) {
 			// `kind: 'loading'` cell with NO component, so the host's kind→view map paints
 			// LoadingCellView (the canvas analogue is glide's loadingCell). Without this the row
 			// coerces to `{}` below and every cell renders as blank text instead of a skeleton.
-			const rawRow = (data as any[])[rowIndex];
-			const cacheKey = rowIndex + '|' + colKey;
+			const rawRow = (dataRef.current as any[])[rowIndex];
 			if (colKey && rawRow == null) {
-				// Cache the loading slot keyed on its (null) value: when the page loads, the row
-				// flips null → object, the value identity changes, and this naturally MISSES and
-				// recomputes (a new `data` proxy also resets the whole cache, so this is belt-and-braces).
-				const hit = cache.get(cacheKey);
-				if (hit && hit.value === rawRow) return hit.resolution;
-				const resolution: SheetsCellResolution = {
+				return {
 					cell: { kind: 'loading', data: null, displayData: '', readonly: true },
 					colKey,
 					typeKey: 'text',
 					column: null,
 					relation: null,
 				};
-				cache.set(cacheKey, { value: rawRow, resolution });
-				return resolution;
 			}
 			const rowData = rawRow ?? {};
 			if (!colKey) {
@@ -231,11 +222,10 @@ export function useSheetsContent(args: UseSheetsContentArgs) {
 
 			const rawValue = rowData?.[colKey];
 
-			// RESULT-CACHE FAST PATH: the resolution is fully determined by the row object's
-			// fields (see the cache declaration), and the row object is immutable within this
-			// resolver identity, so a reference-equal `rawValue` means an identical resolution.
-			const hit = cache.get(cacheKey);
-			if (hit && hit.value === rawValue) return hit.resolution;
+			// RESULT-CACHE FAST PATH: the row object fully determines its resolution (see the cache).
+			let rowCache = cache.get(rowData);
+			const hit = rowCache?.get(colKey);
+			if (hit) return hit;
 			const draftMeta = getDraftMeta(rowData);
 			const isDraftRow = Boolean(draftMeta?.isDraft);
 
@@ -379,10 +369,14 @@ export function useSheetsContent(args: UseSheetsContentArgs) {
 			const resolution: SheetsCellResolution = {
 				cell: styled, component, colKey, typeKey: cellType, fieldMeta, relationInfo, column, relation, rowIdentifier, readOnlyReason, errorMessage,
 			};
-			cache.set(cacheKey, { value: rawValue, resolution });
+			if (!rowCache) {
+				rowCache = new Map();
+				cache.set(rowData, rowCache);
+			}
+			rowCache.set(colKey, resolution);
 			return resolution;
 		},
-		[data, columnKeys, fieldMetaMap, registry, relationFieldNamesFromMeta, relationInfoByField, options, serverRowsReadOnly, serverReadOnlyFields, getRowIdentifier, canUpload, canCreate, tableModel, columnByName, relationByField, fieldTypeOverrides, tableName],
+		[cache, columnKeys, fieldMetaMap, registry, relationFieldNamesFromMeta, relationInfoByField, options, serverRowsReadOnly, serverReadOnlyFields, getRowIdentifier, canUpload, canCreate, tableModel, columnByName, relationByField, fieldTypeOverrides, tableName],
 	);
 
 	return { getSheetsCell };

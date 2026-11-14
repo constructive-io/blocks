@@ -76,6 +76,9 @@ export function useSheetsRows({
 
 	// ============== INFINITE SCROLL: Virtual rows array ==============
 	// Create a proxy array for infinite scroll mode that uses getRowAtIndex and appends draft rows.
+	// It is rebuilt only when a row read can change (a page's data, the count or the drafts), so a
+	// render that changes no data keeps the array and everything memoized on it.
+	const getRowAtIndex = infiniteGridData.getRowAtIndex;
 	const infiniteRowsProxy = useMemo<SheetsRow[]>(() => {
 		if (!infiniteScroll) return [];
 
@@ -91,7 +94,7 @@ export function useSheetsRows({
 						const len = serverRowCount + draftDataRows.length;
 						for (let i = 0; i < len; i++) {
 							if (i < serverRowCount) {
-								yield infiniteGridData.getRowAtIndex(i);
+								yield getRowAtIndex(i);
 							} else {
 								yield draftDataRows[i - serverRowCount];
 							}
@@ -102,7 +105,7 @@ export function useSheetsRows({
 				if (typeof prop === 'string' && !isNaN(Number(prop))) {
 					const index = Number(prop);
 					if (index < serverRowCount) {
-						return infiniteGridData.getRowAtIndex(index);
+						return getRowAtIndex(index);
 					}
 					return draftDataRows[index - serverRowCount];
 				}
@@ -115,7 +118,7 @@ export function useSheetsRows({
 		// surface server rows (via getRowAtIndex) and appended draft rows as SheetsRow,
 		// so downstream `combinedRows[i]` reads are SheetsRow with no per-use cast.
 		return new Proxy([], handler) as unknown as SheetsRow[];
-	}, [infiniteScroll, infiniteGridData, serverRowCount, draftDataRows]);
+	}, [infiniteScroll, getRowAtIndex, serverRowCount, draftDataRows]);
 
 	// Choose the appropriate rows array based on mode
 	const combinedRows: SheetsRow[] = infiniteScroll ? infiniteRowsProxy : paginatedCombinedRows;

@@ -39,13 +39,14 @@ export function filesTablePreviewColumn(table: TableModel | null | undefined): {
 /** Resolve the preview column's cells; every other cell goes to `resolve`. */
 export function withFilePreviewCells(
 	resolve: (rowIndex: number, colKey: string) => SheetsCellResolution,
-	rows: readonly unknown[],
+	/** The row at an index, read when a cell resolves (the latest rows). */
+	rowAt: (rowIndex: number) => unknown,
 	table: TableModel | null | undefined,
 ): (rowIndex: number, colKey: string) => SheetsCellResolution {
 	if (!filesTablePreviewColumn(table)) return resolve;
 	return (rowIndex, colKey) => {
 		if (colKey !== FILE_PREVIEW_COLUMN_KEY) return resolve(rowIndex, colKey);
-		const row = rows[rowIndex];
+		const row = rowAt(rowIndex);
 		return {
 			cell: { kind: row ? 'custom' : 'loading', data: row ?? null, displayData: '', readonly: true, meta: { table } },
 			component: row ? FileRowPreviewCellView : undefined,

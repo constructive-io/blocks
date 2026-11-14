@@ -112,66 +112,55 @@ export function useInfiniteGridData({
 		enabled,
 	});
 
-	// Get row at index with normalization
-	// Note: We don't cache normalized rows because optimistic updates change the underlying
-	// data without changing the row id. Caching by id causes stale data to be returned.
-	// Normalization is cheap enough to do on every access.
+	// One normalized row per server row object. A server row is never changed in place (an
+	// optimistic update writes a new row object), so a row read twice is the same object: the
+	// cells keep their memoized output and the normalization runs once per row, not per read.
+	const normalizedRows = useMemo(() => new WeakMap<RowRecord, RowRecord>(), [relationFieldNames]);
+	const readRow = infiniteTable.getRowAtIndex;
 	const getRowAtIndex = useCallback(
 		(rowIndex: number): RowRecord | null => {
-			const rawRow = infiniteTable.getRowAtIndex(rowIndex);
+			const rawRow = readRow(rowIndex);
 			if (rawRow === null) return null;
-
-			// Always normalize - caching caused stale data issues with optimistic updates
-			// because the cache key (id) doesn't change when other fields are updated
-			return normalizeServerRow(rawRow, relationFieldNames);
+			let row = normalizedRows.get(rawRow);
+			if (!row) {
+				row = normalizeServerRow(rawRow, relationFieldNames);
+				normalizedRows.set(rawRow, row);
+			}
+			return row;
 		},
-		[infiniteTable, relationFieldNames],
+		[readRow, normalizedRows, relationFieldNames],
 	);
 
 	// Prefetch rows for an inclusive visible window (native range).
+	const ensureRowsLoaded = infiniteTable.ensureRowsLoaded;
 	const onVisibleRegionChanged = useCallback(
 		(range: VisibleRowRange) => {
-			const startRow = range.startIndex;
-			const endRow = range.endIndex;
-
 			// Add buffer for smoother scrolling
 			const buffer = Math.ceil(pageSize / 2);
-			infiniteTable.ensureRowsLoaded(Math.max(0, startRow - buffer), endRow + buffer);
+			ensureRowsLoaded(Math.max(0, range.startIndex - buffer), range.endIndex + buffer);
 		},
-		[infiniteTable, pageSize],
+		[ensureRowsLoaded, pageSize],
 	);
 
-	// Invalidate and refetch
-	const invalidate = useCallback(() => {
-		infiniteTable.invalidate();
-	}, [infiniteTable]);
-
-	// Optimistically update a single row without refetching
-	const updateRowAtIndex = useCallback(
-		(rowIndex: number, patch: Partial<RowRecord>): boolean => {
-			// Update the underlying React Query page cache
-			// getRowAtIndex will return the updated data on next access.
-			// Propagate the inner boolean so callers can self-heal (refetch) on a cache miss.
-			return infiniteTable.updateRowAtIndex(rowIndex, patch);
-		},
-		[infiniteTable],
+	return useMemo(
+		() => ({
+			getRowAtIndex,
+			totalCount: infiniteTable.totalCount,
+			isRowLoaded: infiniteTable.isRowLoaded,
+			onVisibleRegionChanged,
+			isLoading: infiniteTable.isLoading,
+			isFetching: infiniteTable.isFetching,
+			hasInitialData: infiniteTable.hasInitialData,
+			error: metaError ?? infiniteTable.error,
+			invalidate: infiniteTable.invalidate,
+			// Optimistically update a single row without refetching; false on a cache miss so callers refetch.
+			updateRowAtIndex: infiniteTable.updateRowAtIndex,
+			tableMeta,
+			tableModel: infiniteTable.model,
+			fieldMetaMap,
+			allRelationFields,
+			pageSize,
+		}),
+		[getRowAtIndex, infiniteTable, onVisibleRegionChanged, metaError, tableMeta, fieldMetaMap, allRelationFields, pageSize],
 	);
-
-	return {
-		getRowAtIndex,
-		totalCount: infiniteTable.totalCount,
-		isRowLoaded: infiniteTable.isRowLoaded,
-		onVisibleRegionChanged,
-		isLoading: infiniteTable.isLoading,
-		isFetching: infiniteTable.isFetching,
-		hasInitialData: infiniteTable.hasInitialData,
-		error: metaError ?? infiniteTable.error,
-		invalidate,
-		updateRowAtIndex,
-		tableMeta,
-		tableModel: infiniteTable.model,
-		fieldMetaMap,
-		allRelationFields,
-		pageSize,
-	};
 }

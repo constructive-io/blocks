@@ -34,16 +34,13 @@ const EMPTY = {} as never;
 function Harness() {
 	const table = useSheetsTableInstance({
 		columns: COLUMNS,
-		data: ROWS,
 		columnSizing: EMPTY,
 		columnPinning: EMPTY,
-		rowSelection: EMPTY,
 		onColumnSizingChange: noop,
 		onColumnPinningChange: noop,
-		onRowSelectionChange: noop
 	});
 
-	const renderCell: RenderCell = (_cell, ctx) => (
+	const renderCell: RenderCell = (ctx) => (
 			<div
 				role='gridcell'
 				id={`sheets-cell-${ctx.rowIndex}-${ctx.columnIndex}`}
@@ -54,6 +51,7 @@ function Harness() {
 	return (
 		<GridViewport
 			table={table}
+			rows={ROWS}
 			renderCell={renderCell}
 			activeCell={[0, 0]}
 			activeDescendantId='sheets-cell-0-0'

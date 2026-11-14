@@ -2,7 +2,7 @@
 // by the single edit-intent resolver, the range-aware commit, and following the edited
 // cell while the grid scrolls. Churning values are latched into refs so the callbacks the
 // cell host memo-gates on stay referentially stable.
-import { useCallback, useEffect, useRef } from 'react';
+import { useCallback, useEffect, useMemo, useRef } from 'react';
 
 import type { SheetsConfig, SheetsScopeKey } from '../../context/sheets-context';
 import type { Dispatch } from '../../commands/dispatch';
@@ -14,6 +14,7 @@ import { useOverlayController } from '../../grid-dom/overlay/use-overlay-control
 import type { OpenEditor } from '../../grid-dom/sheets-cell-host';
 import { bulkEditWrites } from '../../selection/fill';
 import type { SheetsSelection } from '../../selection/selection-model';
+import type { GridEditingCell } from '../../table/grid-viewport';
 import type { SheetsColumnDescriptor } from '../../table/use-sheets-table-instance';
 import { getDraftMeta, type SheetsRow } from '../row-model';
 import type { SheetsShellBindings } from '../use-sheets';
@@ -189,12 +190,20 @@ export function useGridEditing({ tableName, shell, config, canUpload, scopeKey, 
 	// Simple text/number types edit in place via the cell host's <input> instead of the portal.
 	// They ride the SAME active-editor controller (`overlay`) tagged `mode: 'inline'`, so the only
 	// extra wiring here is (a) telling the editing cell to render the input and (b) commit/cancel
-	// routed through the existing value-commit pipeline. The inline KEY is the editing cell identity,
-	// NULL during overlay editing — so `renderCell` stays referentially stable across overlay
-	// scroll-reanchors (which mutate `overlay.active.anchorRect` but never this key).
+	// routed through the existing value-commit pipeline. `editingCell` is the editing cell, undefined
+	// during overlay editing; the viewport hands it to that cell's row only, so opening an editor
+	// renders one row and overlay scroll-reanchors (they move `anchorRect` only) render none.
 	const inlineActive = overlay.active?.mode === 'inline' ? overlay.active : null;
-	const inlineKey = inlineActive ? `${inlineActive.rowIndex}:${inlineActive.colKey}` : null;
-	const inlineInitialText = inlineActive?.initialText;
+	const inlineRow = inlineActive?.rowIndex;
+	const inlineColumn = inlineActive?.colKey;
+	const inlineText = inlineActive?.initialText;
+	const editingCell = useMemo<GridEditingCell | undefined>(
+		() =>
+			inlineRow !== undefined && inlineColumn !== undefined
+				? { rowIndex: inlineRow, columnId: inlineColumn, initialText: inlineText }
+				: undefined,
+		[inlineRow, inlineColumn, inlineText],
+	);
 	const onInlineCommit = useCallback(
 		(rowIndex: number, colKey: string, value: unknown) => {
 			commitBulkOrSingle(rowIndex, colKey, value);
@@ -278,8 +287,7 @@ export function useGridEditing({ tableName, shell, config, canUpload, scopeKey, 
 		openEditorImpl,
 		openEditor,
 		commitBulkOrSingle,
-		inlineKey,
-		inlineInitialText,
+		editingCell,
 		onInlineCommit,
 		openEditorAtActiveCell,
 		handleOverlayScroll,

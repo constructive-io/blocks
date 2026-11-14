@@ -168,36 +168,32 @@ function Harness({
 	);
 
 	const renderCell = useCallback<RenderCell>(
-		(c, ctx) => {
-			const editing = !!inlineCell && inlineCell.rowIndex === c.row.index && inlineCell.colKey === c.column.id;
-			return (
-				<SheetsCellHost
-					cell={c}
-					ctx={ctx}
-					getSheetsCellContent={getSheetsCellContent}
-					openEditor={openEditor}
-					isEditing={editing}
-					onInlineCommit={(rowIndex, colKey, value) => {
-						commitSpy(rowIndex, colKey, value);
-						setInlineCell(null);
-					}}
-					onInlineCancel={() => setInlineCell(null)}
-					onActivateCell={onActivateCell}
-				/>
-			);
-		},
-		[getSheetsCellContent, openEditor, onActivateCell, inlineCell, commitSpy],
+		(ctx) => (
+			<SheetsCellHost
+				ctx={ctx}
+				getSheetsCellContent={getSheetsCellContent}
+				openEditor={openEditor}
+				onInlineCommit={(rowIndex, colKey, value) => {
+					commitSpy(rowIndex, colKey, value);
+					setInlineCell(null);
+				}}
+				onInlineCancel={() => setInlineCell(null)}
+				onActivateCell={onActivateCell}
+			/>
+		),
+		[getSheetsCellContent, openEditor, onActivateCell, commitSpy],
+	);
+	const editingCell = useMemo(
+		() => (inlineCell ? { rowIndex: inlineCell.rowIndex, columnId: inlineCell.colKey } : undefined),
+		[inlineCell],
 	);
 
 	const table = useSheetsTableInstance({
 		columns: COLUMNS,
-		data: ROWS,
 		columnSizing: EMPTY,
 		columnPinning: EMPTY,
-		rowSelection: EMPTY,
 		onColumnSizingChange: noop,
 		onColumnPinningChange: noop,
-		onRowSelectionChange: noop,
 	});
 
 	const active = overlay.active;
@@ -243,7 +239,9 @@ function Harness({
 		<>
 			<GridViewport
 				table={table}
+				rows={ROWS}
 				renderCell={renderCell}
+				editingCell={editingCell}
 				onScroll={overlayClose}
 				activeCell={activeCell}
 				onGridKeyDown={onGridKeyDown}

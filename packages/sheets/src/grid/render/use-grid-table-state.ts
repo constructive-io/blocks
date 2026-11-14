@@ -1,26 +1,17 @@
 // The v9 table instance the DOM grid renders, mirrored from the shell: column
-// descriptors, sizing and pinning, and the row selection in both directions.
+// descriptors, sizing and pinning. Rows are not in it: the viewport draws them by
+// index from `combinedRows`, and the selection stays the shell's SheetsSelection.
 import { useCallback, useMemo, useRef } from 'react';
-import {
-	functionalUpdate,
-	type ColumnPinningState,
-	type ColumnSizingState,
-	type OnChangeFn,
-	type RowSelectionState,
-} from '@tanstack/react-table';
+import { functionalUpdate, type ColumnPinningState, type ColumnSizingState, type OnChangeFn } from '@tanstack/react-table';
 
-import { RangeSet } from '../../selection/range-set';
-import { emptySheetsSelection } from '../../selection/selection-model';
 import { useSheetsTableInstance, type SheetsColumnDescriptor } from '../../table/use-sheets-table-instance';
 import { narrowColumnNames } from '../columns/column-layout';
 import type { SheetsRow } from '../row-model';
 import { DRAFT_ACTION_COLUMN_KEY } from '../sheets.constants';
 import type { UseSheetsInternalResult } from '../use-sheets';
 
-// Row selection (Phase 6), column sizing + pinning (Stage 2) are all wired to the shell now.
-// Pinning is shell-DERIVED (frozenCount), never edited from the grid, so its onChange is a no-op.
-// Stable empty row-selection map returned when nothing is selected.
-const EMPTY_ROW_SELECTION: RowSelectionState = {};
+// Column sizing + pinning (Stage 2) are wired to the shell. Pinning is shell-DERIVED
+// (frozenCount), never edited from the grid, so its onChange is a no-op.
 const noop = () => {};
 
 export function useGridTableState<TRow extends SheetsRow = SheetsRow>(s: UseSheetsInternalResult<TRow>) {
@@ -75,10 +66,7 @@ export function useGridTableState<TRow extends SheetsRow = SheetsRow>(s: UseShee
 		[columnSizing, resizeColumn],
 	);
 
-	// ============== ROW-SELECTION STATE MIRROR (Phase 6, both directions) ==============
-	// The native SheetsSelection (RangeSet of ROW indices) stays canonical; the v9
-	// table only needs a derived `Record<rowId, true>` view. Both directions use the
-	// same metadata-defined row key, so renamed/composite PK selections round-trip.
+	// The rows the viewport draws by index, and their metadata-defined key (renamed/composite PKs).
 	const combinedRows = shell.combinedRows;
 	const getRowId = shell.getRowId;
 	const selection = s.selection.gridSelection;
@@ -90,54 +78,13 @@ export function useGridTableState<TRow extends SheetsRow = SheetsRow>(s: UseShee
 	const lastActiveCellRef = useRef<[number, number] | undefined>(undefined);
 	if (activeCell) lastActiveCellRef.current = activeCell;
 
-	const rowSelection = useMemo<RowSelectionState>(() => {
-		if (!selection) return EMPTY_ROW_SELECTION;
-		const map: RowSelectionState = {};
-		for (const index of selection.rows.toArray()) {
-			map[getRowId(combinedRows[index], index)] = true;
-		}
-		return map;
-	}, [selection, combinedRows, getRowId]);
-
-	const onRowSelectionChange = useCallback<OnChangeFn<RowSelectionState>>(
-		(updater) => {
-			const next = functionalUpdate(updater, rowSelection);
-			// Map the selected row IDS back to row INDICES via combinedRows, then fold
-			// into a fresh RangeSet. Active cell follows the lowest selected index (or
-			// clears to the empty selection when nothing is selected).
-			const indexById = new Map<string, number>();
-			for (let i = 0; i < combinedRows.length; i++) indexById.set(getRowId(combinedRows[i], i), i);
-
-			let rows = RangeSet.empty();
-			let lowest: number | undefined;
-			for (const id of Object.keys(next)) {
-				if (!next[id]) continue;
-				const index = indexById.get(id);
-				if (index === undefined) continue;
-				rows = rows.add(index);
-				if (lowest === undefined || index < lowest) lowest = index;
-			}
-
-			if (lowest === undefined) {
-				setSelection(emptySheetsSelection);
-				return;
-			}
-			setSelection({ current: { cell: [0, lowest] }, rows, columns: RangeSet.empty() });
-		},
-		[rowSelection, combinedRows, getRowId, setSelection],
-	);
-
 	const table = useSheetsTableInstance({
 		columns,
-		data: combinedRows,
 		columnSizing,
 		columnPinning,
-		rowSelection,
 		onColumnSizingChange,
 		// Pinning is shell-derived (frozenCount), never edited from the grid → no writer needed.
 		onColumnPinningChange: noop,
-		onRowSelectionChange,
-		getRowId,
 	});
 
 	return {

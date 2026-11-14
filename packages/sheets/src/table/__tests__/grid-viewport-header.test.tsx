@@ -33,7 +33,7 @@ const noop = () => {};
 const EMPTY = {} as never;
 
 // Minimal cell renderer — this test is about the HEADER, not cell content.
-const renderCell: RenderCell = (_cell, ctx) => <div role='gridcell' data-col={ctx.columnIndex} />;
+const renderCell: RenderCell = (ctx) => <div role='gridcell' data-col={ctx.columnIndex} />;
 
 interface HarnessProps {
 	sort?: readonly GridViewportSortKey[];
@@ -44,15 +44,12 @@ interface HarnessProps {
 function Harness({ sort, onHeaderClick, onResize }: HarnessProps) {
 	const table = useSheetsTableInstance({
 		columns: COLUMNS,
-		data: ROWS,
 		columnSizing: EMPTY,
 		columnPinning: EMPTY,
-		rowSelection: EMPTY,
 		onColumnSizingChange: noop,
 		onColumnPinningChange: noop,
-		onRowSelectionChange: noop
 	});
-	return <GridViewport table={table} renderCell={renderCell} sort={sort} onHeaderClick={onHeaderClick} onResize={onResize} />;
+	return <GridViewport table={table} rows={ROWS} renderCell={renderCell} sort={sort} onHeaderClick={onHeaderClick} onResize={onResize} />;
 }
 
 describe('GridViewport header row (sort caret + resize handle + sticky pin)', () => {

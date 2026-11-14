@@ -1,5 +1,6 @@
-// The DOM cell host — the `getCellContent` → React port. Given a v9 cell it asks
-// the injected resolver for the {@link SheetsCellResolution} ({ cell, component? })
+// The DOM cell host — the `getCellContent` → React port. Given a cell's render context
+// (its row, column and state) it asks the injected resolver for the
+// {@link SheetsCellResolution} ({ cell, component? })
 // and renders the consumer component when present, else dispatches on the neutral
 // `kind` to the matching built-in view (cell-model/views/*).
 //
@@ -17,12 +18,10 @@
 // Dependency-light: local `cn` only, with no shared primitive dependency.
 import { memo, useCallback, useRef } from 'react';
 import type React from 'react';
-import type { Cell } from '@tanstack/react-table';
 
 import { cn } from '../utils/cn';
 import { getDraftMeta, type SheetsRow } from '../grid/row-model';
 import { DRAFT_ACTION_COLUMN_KEY } from '../grid/sheets.constants';
-import type { SheetsTableFeatures } from '../table/features';
 import type { RenderCellContext } from '../table/grid-viewport';
 import type { CellProps } from '../cell-model/cell-props';
 import { BadgesCellView } from '../cell-model/views/badges-view';
@@ -38,8 +37,6 @@ import { UriCellView } from '../cell-model/views/uri-view';
 import { reportRejectedWrites } from '../grid/write-feedback';
 import { InlineCellEditor } from './inline-cell-editor';
 import type { SheetsCellResolution } from './use-sheets-content';
-
-type SheetsTableCell = Cell<SheetsTableFeatures, SheetsRow, unknown>;
 
 /** Native DOM content resolver injected by the shell — mirrors `getCellContent`. */
 export type GetSheetsCellContent = (rowIndex: number, colKey: string) => SheetsCellResolution;
@@ -101,7 +98,7 @@ interface DraftActionInfo {
  * the canvas: an error status surfaces the red dot but keeps the button live (the canvas
  * painter never disabled on error); `saving` disables (DraftActionCellView also self-locks).
  */
-function deriveDraftActionInfo(row: SheetsRow | undefined): DraftActionInfo | null {
+function deriveDraftActionInfo(row: SheetsRow | null | undefined): DraftActionInfo | null {
 	const meta = getDraftMeta(row);
 	if (!meta) return null;
 	const status: DraftActionStatus = meta.status;
@@ -312,15 +309,11 @@ function sameDraftAction(a: DraftActionInfo | null | undefined, b: DraftActionIn
 }
 
 export interface SheetsCellHostProps {
-	cell: SheetsTableCell;
+	/** The cell's row, column and state, from the viewport (`isEditing` renders the bare <input>). */
 	ctx: RenderCellContext;
 	getSheetsCellContent: GetSheetsCellContent;
 	/** Open the overlay editor for the activated cell (double-click; grid root owns Enter / F2). */
 	openEditor?: OpenEditor;
-	/** True when this cell is being edited IN PLACE (inline-edit intent); renders the bare <input>. */
-	isEditing?: boolean;
-	/** Type-to-edit seed for the inline editor (only meaningful when `isEditing`). */
-	inlineInitialText?: string;
 	/** Commit an inline (in-cell) edit — reuses the host value-commit pipeline. */
 	onInlineCommit?: (rowIndex: number, colKey: string, value: unknown) => void;
 	/** Cancel an inline (in-cell) edit. */
@@ -335,29 +328,28 @@ export interface SheetsCellHostProps {
 }
 
 /**
- * Render a v9 cell as DOM. Wire via the {@link GridViewport} `renderCell` closure,
- * which injects the shell's resolver: `(c, ctx) => <SheetsCellHost cell={c} ctx={ctx}
+ * Render one cell as DOM. Wire via the {@link GridViewport} `renderCell` closure,
+ * which injects the shell's resolver: `(ctx) => <SheetsCellHost ctx={ctx}
  * getSheetsCellContent={getSheetsCellContent} openEditor={openEditor} />`.
  */
-export function SheetsCellHost({ cell, ctx, getSheetsCellContent, openEditor, isEditing, inlineInitialText, onInlineCommit, onInlineCancel, onActivateCell, onContextMenu, onSubmitDraftRow, className }: SheetsCellHostProps) {
-	const rowIndex = cell.row.index;
-	const colKey = cell.column.id;
-	const value = cell.getValue();
+export function SheetsCellHost({ ctx, getSheetsCellContent, openEditor, onInlineCommit, onInlineCancel, onActivateCell, onContextMenu, onSubmitDraftRow, className }: SheetsCellHostProps) {
+	const { rowIndex, columnId: colKey, row } = ctx;
+	const value = row?.[colKey];
 	const resolution = getSheetsCellContent(rowIndex, colKey);
 	// Only the draft-action column needs the row's draft status; for every other column
-	// this is null and the inner skips the Button branch. `cell.row.original` carries the
-	// Symbol-keyed DraftMeta (it's the live row ref, never spread away by the table).
-	const draftAction = colKey === DRAFT_ACTION_COLUMN_KEY ? deriveDraftActionInfo(cell.row.original) : null;
+	// this is null and the inner skips the Button branch. The row carries the
+	// Symbol-keyed DraftMeta (it's the live row ref, never spread away).
+	const draftAction = colKey === DRAFT_ACTION_COLUMN_KEY ? deriveDraftActionInfo(row) : null;
 	return (
 		<SheetsCellHostInner
 			resolution={resolution}
-			rowId={cell.row.id}
+			rowId={ctx.rowId}
 			colKey={colKey}
 			rowIndex={rowIndex}
 			columnIndex={ctx.columnIndex}
 			value={value}
-			isEditing={!!isEditing}
-			inlineInitialText={inlineInitialText}
+			isEditing={ctx.isEditing}
+			inlineInitialText={ctx.inlineInitialText}
 			onInlineCommit={onInlineCommit}
 			onInlineCancel={onInlineCancel}
 			isActive={ctx.isActive}

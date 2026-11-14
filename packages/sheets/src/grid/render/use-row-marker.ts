@@ -55,12 +55,14 @@ export function useRowMarker({ combinedRows, selection, setSelection, tableModel
 	}, [setSelection]);
 	// Records open one by one only on a table with a primary key (the record panel needs it).
 	const canOpenRecords = (tableModel?.primaryKey.length ?? 0) > 0;
+	// Built from the selected ROWS only: a cursor move keeps them (the selection model copies the
+	// same RangeSet), so the marker, and every grid row it is handed to, stays as it was.
+	const selectedRows = (selection ?? emptySheetsSelection).rows;
 	const rowMarker = useMemo<RowMarker>(() => {
-		const sel = selection ?? emptySheetsSelection;
-		const selectedCount = sel.rows.length;
+		const selectedCount = selectedRows.length;
 		const allSelected = rowCount > 0 && selectedCount === rowCount;
 		return {
-			isSelected: (index) => sel.rows.hasIndex(index),
+			isSelected: (index) => selectedRows.hasIndex(index),
 			// The row's open button runs `record.open` through the same pipeline as the key and the menu.
 			onExpandRow: canOpenRecords ? (index) => dispatch('record.open', undefined, { rowIndex: index }) : undefined,
 			// Toggle handlers route through the ONE dispatch pipeline (rowmarker.toggleRow /
@@ -71,7 +73,7 @@ export function useRowMarker({ combinedRows, selection, setSelection, tableModel
 			someSelected: selectedCount > 0 && !allSelected,
 			onToggleAll: () => dispatch('rowmarker.toggleAll'),
 		};
-	}, [selection, rowCount, dispatch, canOpenRecords]);
+	}, [selectedRows, rowCount, dispatch, canOpenRecords]);
 
 	return { rowMarker, toggleRowImpl, toggleAllImpl, canOpenRecords };
 }

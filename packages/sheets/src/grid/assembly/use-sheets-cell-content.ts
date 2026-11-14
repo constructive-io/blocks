@@ -1,6 +1,6 @@
 // What each cell shows and whether it can be written: the model's relation entries and
 // the native content resolver, with the files-table preview cells on top.
-import { useMemo } from 'react';
+import { useMemo, useRef } from 'react';
 
 import type { MetaField, MetaQuery, TableModel } from '@constructive-io/data';
 
@@ -55,6 +55,13 @@ export function useSheetsCellContent({
 
 	const relationInfoObject = useMemo(() => mapFromRelationInfoMap(relationInfoByField), [relationInfoByField]);
 
+	// The resolver, its cache and every grid row memoized on it keep their identity while these
+	// do; a new object here each render made every visible cell resolve again on every render.
+	const contentOptions = useMemo(
+		() => ({ relationChipLimit, relationLabelMaxLength }),
+		[relationChipLimit, relationLabelMaxLength],
+	);
+
 	// Native DOM content resolver (mirrors the canvas getCellContent routing → SheetsCell).
 	const { getSheetsCell: getColumnCellContent } = useSheetsContent({
 		data: combinedRows,
@@ -62,7 +69,7 @@ export function useSheetsCellContent({
 		fieldMetaMap,
 		registry: cellRegistry,
 		tableName,
-		options: { relationChipLimit, relationLabelMaxLength },
+		options: contentOptions,
 		relationInfoByField,
 		meta: filterMeta,
 		serverRowsReadOnly: !canUpdate,
@@ -73,9 +80,13 @@ export function useSheetsCellContent({
 		tableModel,
 		fieldTypeOverrides: config.fieldTypeOverrides,
 	});
+	// Rows are read when a cell resolves, so this keeps its identity across data changes
+	// (like the resolver it wraps) and the grid rows memoized on it stay put.
+	const rowsRef = useRef(combinedRows);
+	rowsRef.current = combinedRows;
 	const getSheetsCellContent = useMemo(
-		() => withFilePreviewCells(getColumnCellContent, combinedRows, tableModel),
-		[getColumnCellContent, combinedRows, tableModel],
+		() => withFilePreviewCells(getColumnCellContent, (rowIndex) => rowsRef.current[rowIndex], tableModel),
+		[getColumnCellContent, tableModel],
 	);
 
 	return { relationInfoByField, relationInfoObject, getSheetsCellContent };

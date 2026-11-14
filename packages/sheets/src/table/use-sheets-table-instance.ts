@@ -1,18 +1,14 @@
-// The TanStack Table v9 instance for the DOM port.
+// The TanStack Table v9 instance for the DOM port: the COLUMNS (sizes, pins,
+// resizing, headers). It is a state-mirror, not a layout layer (TanStack Virtual
+// lays out in GridViewport) and not a data layer (useSheets loads the rows).
 //
-// This is a STATE-MIRROR over already-server-processed rows — NOT a layout
-// layer (TanStack Virtual does layout in S4) and NOT a data layer (useSheets
-// does data). The hook takes EXPLICIT params (it never calls useSheets) so it
-// is unit-testable with hand-fed data.
+// It holds no rows. v9 builds its row model eagerly over every row of `data` and
+// rebuilds it whenever the array changes, which on a 100k-row table cost seconds per
+// interaction. The viewport draws rows by index straight from the row array instead.
 //
 // Controlled state (S1): v8-style `state` partial + per-feature `on*Change`
 // callbacks. The CALLER owns the slices (useGridState / the store) — the table
 // is never a second writer, so there is no echo loop.
-//
-// manualSorting / manualFiltering / manualPagination / rowCount are OMITTED:
-// they live only on the sorting/filtering/pagination feature option types,
-// which we do not register, so those keys are not in our TableOptions and
-// passing them is a TS error (S1 verdict).
 import { useMemo } from 'react';
 import { createColumnHelper, useTable } from '@tanstack/react-table';
 import type {
@@ -20,8 +16,7 @@ import type {
 	ColumnPinningState,
 	ColumnResizeMode,
 	ColumnSizingState,
-	OnChangeFn,
-	RowSelectionState
+	OnChangeFn
 } from '@tanstack/react-table';
 
 import type { SheetsRow } from '../grid/row-model';
@@ -39,55 +34,27 @@ export type SheetsColumnDef = ColumnDef<SheetsTableFeatures, SheetsRow>;
 export interface UseSheetsTableInstanceParams {
 	/** Render-column descriptors (header label + key), in display order. */
 	columns: SheetsColumnDescriptor[];
-	/** Rows fed AS-IS — already server sorted/filtered/paginated by useSheets. */
-	data: SheetsRow[];
 	/** Committed column widths (caller-owned). */
 	columnSizing: ColumnSizingState;
 	/** Logical start/end column pins (caller-owned). */
 	columnPinning: ColumnPinningState;
-	/** Row selection map (caller-owned). */
-	rowSelection: RowSelectionState;
 	onColumnSizingChange: OnChangeFn<ColumnSizingState>;
 	onColumnPinningChange: OnChangeFn<ColumnPinningState>;
-	onRowSelectionChange: OnChangeFn<RowSelectionState>;
-	/** Stable row id from the server primary key / draft meta. Defaults to `row.id`. */
-	getRowId?: (row: SheetsRow, index: number) => string;
 }
 
-function defaultGetRowId(row: SheetsRow, index: number): string {
-	// In infinite-scroll mode `data` is the null-backed proxy from useSheets: indices not yet
-	// fetched read back as `null`. TanStack Table v9 builds its row model over EVERY index
-	// (getRowId is called per row, eagerly), so guard the null placeholder and key it on the
-	// index — the stable id an unloaded slot should carry until its page resolves.
-	return row?.id != null ? String(row.id) : String(index);
-}
+const NO_ROWS: SheetsRow[] = [];
 
 /**
  * Build a v9 table instance wired with {@link sheetsTableFeatures} and the
- * caller-owned controlled state. The column defs carry only a minimal value
- * accessor (`row[key]`); the actual cell RENDER is the S5 host's job, so no
- * `cell` renderer is duplicated here.
+ * caller-owned controlled column state. The column defs carry only a minimal value
+ * accessor (`row[key]`); the cell RENDER is the cell host's job.
  */
 export function useSheetsTableInstance(params: UseSheetsTableInstanceParams) {
-	const {
-		columns,
-		data,
-		columnSizing,
-		columnPinning,
-		rowSelection,
-		onColumnSizingChange,
-		onColumnPinningChange,
-		onRowSelectionChange,
-		getRowId = defaultGetRowId
-	} = params;
+	const { columns, columnSizing, columnPinning, onColumnSizingChange, onColumnPinningChange } = params;
 
 	const columnDefs = useMemo<SheetsColumnDef[]>(() => {
 		const helper = createColumnHelper<SheetsTableFeatures, SheetsRow>();
-		// accessor-FUNCTION branch (value by key) → requires an explicit `id`. Null-guard the row:
-		// v9 evaluates accessors eagerly while building the row model, and in infinite-scroll mode
-		// `data` is the null-backed proxy (unloaded indices read as `null`). The DOM cell host paints
-		// those slots from `getSheetsCellContent` (→ loading skeleton), so this accessor value is only
-		// a placeholder; returning `undefined` for a null row keeps the eager build from throwing.
+		// accessor-FUNCTION branch (value by key) → requires an explicit `id`.
 		return columns.map((col) => helper.accessor((row) => row?.[col.key], { id: col.key, header: col.name, size: col.size }));
 	}, [columns]);
 
@@ -99,27 +66,31 @@ export function useSheetsTableInstance(params: UseSheetsTableInstanceParams) {
 		[columnPinning]
 	);
 
-	return useTable({
-		features: sheetsTableFeatures,
-		columns: columnDefs,
-		data,
-		getRowId,
-		enableColumnPinning: true,
-		enableColumnResizing: true,
-		enableRowSelection: true,
-		columnResizeMode: 'onChange' as ColumnResizeMode,
-		// Controlled: our reducer/store is the source of truth for these slices.
-		state: { columnSizing, columnPinning: normalizedPinning, rowSelection },
-		onColumnSizingChange,
-		onColumnPinningChange,
-		onRowSelectionChange
-		// Subscribe to NOTHING (`() => null`). v9 `useTable` runs `table.setOptions(...)` DURING render
-		// to sync the controlled `state` above into its @tanstack/store atoms; a broad selector would make
-		// THIS component a store subscriber, so that render-phase write notifies it synchronously →
-		// `forceStoreRerender` → React's "Cannot update a component while rendering" warning. The slices
-		// are caller-owned (the shell is the single source of truth) and the DOM grid reads layout via direct
-		// table methods (getRowModel/getSize/getIsPinned), not `table.state`, so no subscription is needed —
-		// the grid already re-renders from the shell's own state. (TanStack production-readiness: prefer
-		// `() => null` + `table.Subscribe` over a broad `() => state` selector.)
-	}, (): null => null);
+	// `useTable` returns a new object whenever this options object is new: memoized, the table
+	// (and the header and row components memoized on what it gives) keeps its identity.
+	const options = useMemo(
+		() => ({
+			features: sheetsTableFeatures,
+			columns: columnDefs,
+			data: NO_ROWS,
+			enableColumnPinning: true,
+			enableColumnResizing: true,
+			columnResizeMode: 'onChange' as ColumnResizeMode,
+			// Controlled: our reducer/store is the source of truth for these slices.
+			state: { columnSizing, columnPinning: normalizedPinning },
+			onColumnSizingChange,
+			onColumnPinningChange
+		}),
+		[columnDefs, columnSizing, normalizedPinning, onColumnSizingChange, onColumnPinningChange]
+	);
+
+	// Subscribe to NOTHING (`() => null`). v9 `useTable` runs `table.setOptions(...)` DURING render
+	// to sync the controlled `state` above into its @tanstack/store atoms; a broad selector would make
+	// THIS component a store subscriber, so that render-phase write notifies it synchronously →
+	// `forceStoreRerender` → React's "Cannot update a component while rendering" warning. The slices
+	// are caller-owned (the shell is the single source of truth) and the DOM grid reads layout via direct
+	// table methods (getSize/getIsPinned), not `table.state`, so no subscription is needed —
+	// the grid already re-renders from the shell's own state. (TanStack production-readiness: prefer
+	// `() => null` + `table.Subscribe` over a broad `() => state` selector.)
+	return useTable(options, (): null => null);
 }

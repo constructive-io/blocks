@@ -151,21 +151,18 @@ function Harness({
 	}, [activeForScroll, overlayReanchor, overlayClose]);
 
 	const renderCell = useCallback<RenderCell>(
-		(c, ctx) => (
-			<SheetsCellHost cell={c} ctx={ctx} getSheetsCellContent={getSheetsCellContent} openEditor={openEditor} />
+		(ctx) => (
+			<SheetsCellHost ctx={ctx} getSheetsCellContent={getSheetsCellContent} openEditor={openEditor} />
 		),
 		[getSheetsCellContent, openEditor],
 	);
 
 	const table = useSheetsTableInstance({
 		columns: COLUMNS,
-		data: ROWS,
 		columnSizing: EMPTY,
 		columnPinning: EMPTY,
-		rowSelection: EMPTY,
 		onColumnSizingChange: noop,
 		onColumnPinningChange: noop,
-		onRowSelectionChange: noop,
 	});
 
 	const active = overlay.active;
@@ -206,7 +203,7 @@ function Harness({
 
 	return (
 		<>
-			<GridViewport table={table} renderCell={renderCell} onScroll={onGridScroll} />
+			<GridViewport table={table} rows={ROWS} renderCell={renderCell} onScroll={onGridScroll} />
 			<OverlayManager
 				open={overlay.isOpen}
 				anchorRect={active?.anchorRect ?? null}

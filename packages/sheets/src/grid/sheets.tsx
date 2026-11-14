@@ -211,8 +211,7 @@ function SheetsDomInner<TRow extends SheetsRow = SheetsRow>({
 		openEditorImpl,
 		openEditor,
 		commitBulkOrSingle,
-		inlineKey,
-		inlineInitialText,
+		editingCell,
 		onInlineCommit,
 		openEditorAtActiveCell,
 		handleOverlayScroll,
@@ -249,26 +248,22 @@ function SheetsDomInner<TRow extends SheetsRow = SheetsRow>({
 	// A menu is just another EVENT SOURCE → dispatch, rendered ONCE at the grid level.
 	const { contextMenu, setContextMenu, handleContextMenu, closeContextMenu } = useGridContextMenu({ selectionRef, dispatch });
 
+	// Stable across cursor moves and editor opens: the viewport hands each row its own active,
+	// selected and editing state, so only the rows those touch render again.
 	const renderCell = useCallback<RenderCell>(
-		(c, ctx) => {
-			const editingThisCell = inlineKey != null && inlineKey === `${c.row.index}:${c.column.id}`;
-			return (
-				<SheetsCellHost
-					cell={c}
-					ctx={ctx}
-					getSheetsCellContent={getSheetsCellContent}
-					openEditor={openEditor}
-					isEditing={editingThisCell}
-					inlineInitialText={editingThisCell ? inlineInitialText : undefined}
-					onInlineCommit={onInlineCommit}
-					onInlineCancel={overlayClose}
-					onActivateCell={handleActivateCell}
-					onContextMenu={handleContextMenu}
-					onSubmitDraftRow={submitDraftRow}
-				/>
-			);
-		},
-		[inlineKey, inlineInitialText, onInlineCommit, overlayClose, getSheetsCellContent, openEditor, handleActivateCell, handleContextMenu, submitDraftRow],
+		(ctx) => (
+			<SheetsCellHost
+				ctx={ctx}
+				getSheetsCellContent={getSheetsCellContent}
+				openEditor={openEditor}
+				onInlineCommit={onInlineCommit}
+				onInlineCancel={overlayClose}
+				onActivateCell={handleActivateCell}
+				onContextMenu={handleContextMenu}
+				onSubmitDraftRow={submitDraftRow}
+			/>
+		),
+		[onInlineCommit, overlayClose, getSheetsCellContent, openEditor, handleActivateCell, handleContextMenu, submitDraftRow],
 	);
 
 	// ============== SPREADSHEET KEYBOARD NAV (grid root owns keys) ==============
@@ -488,6 +483,28 @@ function SheetsDomInner<TRow extends SheetsRow = SheetsRow>({
 		/>
 	);
 
+	// The toolbar's data tools, rebuilt only when what they read changes, so the toolbar's
+	// memoized action group skips the renders a cursor move or an edit causes.
+	const exportWhere = shell.viewQuery.where;
+	const exportOrderBy = shell.viewQuery.orderBy;
+	const exportColumns = shell.view.layout.visibleKeys;
+	const toolbarTools = useMemo(
+		() => (
+			<>
+				<ImportRecordsControl model={shell.tableModel} tableLabel={tableName} />
+				<ExportViewControl
+					model={shell.tableModel}
+					where={exportWhere}
+					orderBy={exportOrderBy}
+					columns={exportColumns}
+					filename={`${tableName}.csv`}
+					protectFormulas={defaultProtectFormulas}
+				/>
+			</>
+		),
+		[shell.tableModel, tableName, exportWhere, exportOrderBy, exportColumns, defaultProtectFormulas],
+	);
+
 	// ============== LOAD STATES ==============
 	// Surface real error/empty/loading states instead of a blank grid (moved here from
 	// the removed canvas branch). The full-screen error is for INITIAL-load failure only
@@ -564,19 +581,7 @@ function SheetsDomInner<TRow extends SheetsRow = SheetsRow>({
 								? { open: () => dispatch('record.new'), disabledReason: viewCommandReason(shell.view, 'record.new', null) }
 								: undefined
 						}
-						tools={
-							<>
-								<ImportRecordsControl model={shell.tableModel} tableLabel={tableName} />
-								<ExportViewControl
-									model={shell.tableModel}
-									where={shell.viewQuery.where}
-									orderBy={shell.viewQuery.orderBy}
-									columns={shell.view.layout.visibleKeys}
-									filename={`${tableName}.csv`}
-									protectFormulas={defaultProtectFormulas}
-								/>
-							</>
-						}
+						tools={toolbarTools}
 					/>
 				)}
 				<ModelIssuesNotice
@@ -599,7 +604,10 @@ function SheetsDomInner<TRow extends SheetsRow = SheetsRow>({
 					<SheetsOpenRecordContext.Provider value={recordPanel.openLinkedRecord}>
 					<GridViewport
 						table={table}
+						rows={combinedRows}
+						getRowId={getRowId}
 						renderCell={renderCell}
+						editingCell={editingCell}
 						handleRef={viewportRef}
 						onScroll={handleOverlayScroll}
 						sort={shell.view.state.sort}
