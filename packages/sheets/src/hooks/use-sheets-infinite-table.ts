@@ -136,7 +136,13 @@ export function useSheetsInfiniteTable<T extends RowRecord = RowRecord>(
 
 	const queryClient = useQueryClient();
 	const { execute, scopeKey } = useSheetsContext();
-	const { model: table, tableKey, error: modelError, refetch: refetchModel } = useTableModel(tableName, { enabled });
+	const {
+		model: table,
+		tableKey,
+		error: modelError,
+		refetch: refetchModel,
+		isLoading: isModelLoading,
+	} = useTableModel(tableName, { enabled });
 	// Cache entries are keyed by `TableModel.key`; the bare name is only a fallback before `_meta` loads.
 	const cacheRef = tableKey ?? tableName;
 	const adapter = useSheetsAdapter();
@@ -364,8 +370,9 @@ export function useSheetsInfiniteTable<T extends RowRecord = RowRecord>(
 		}
 	}, [enabled, table, getPageDataFromCache]);
 
-	// Compute loading states
-	const isLoading = queryResults.some((result) => result.isLoading);
+	// Compute loading states. Until the table model resolves no page query exists, so loading
+	// covers the model too; otherwise the grid paints empty before its loading placeholder.
+	const isLoading = isModelLoading || queryResults.some((result) => result.isLoading);
 	const isFetching = queryResults.some((result) => result.isFetching);
 
 	// Check if we have initial data - either from current query or from cache
