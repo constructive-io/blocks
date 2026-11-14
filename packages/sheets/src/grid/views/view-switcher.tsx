@@ -4,7 +4,7 @@
  * rename, duplicate and delete. Switching away from unsaved changes asks first.
  */
 import { useState } from 'react';
-import { RiDeleteBinLine, RiFileCopyLine, RiPencilLine, RiTableLine } from '@remixicon/react';
+import { RiArrowDownSLine, RiDeleteBinLine, RiFileCopyLine, RiPencilLine, RiTableLine } from '@remixicon/react';
 
 import { Button } from '@constructive-io/ui/button';
 import { Input } from '@constructive-io/ui/input';
@@ -116,17 +116,24 @@ export function ViewSwitcher({ views }: ViewSwitcherProps) {
 			}}
 		>
 			<PopoverTrigger asChild>
-				<Button variant='outline' size='sm' aria-label={`View: ${name}${views.dirty ? ' (unsaved changes)' : ''}`} data-part-id='sheets-view-switcher'>
-					<RiTableLine className='text-muted-foreground/60 -ms-1.5 size-5' aria-hidden='true' />
+				<Button
+					variant='ghost'
+					size='sm'
+					aria-label={`View: ${name}${views.dirty ? ' (unsaved changes)' : ''}`}
+					data-part-id='sheets-view-switcher'
+					className='font-medium'
+				>
+					<RiTableLine className='text-muted-foreground size-4' aria-hidden='true' />
 					<span className='max-w-[12rem] truncate' title={name}>
 						{name}
 					</span>
 					{views.dirty && (
-						<span className='text-muted-foreground inline-flex items-center gap-1 text-xs' data-part-id='sheets-view-dirty'>
+						<span className='text-muted-foreground inline-flex items-center gap-1 text-xs font-normal' data-part-id='sheets-view-dirty'>
 							<span className='bg-primary size-1.5 rounded-full' aria-hidden='true' />
 							Edited
 						</span>
 					)}
+					<RiArrowDownSLine className='text-muted-foreground -me-1 size-4' aria-hidden='true' />
 				</Button>
 			</PopoverTrigger>
 			<PopoverContent className={cn('w-[22rem]', TOOLBAR_POPOVER)} align='start'>

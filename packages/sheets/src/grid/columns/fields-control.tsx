@@ -14,6 +14,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 
 import { cn } from '../../utils/cn';
 import { TOOLBAR_POPOVER } from '../popup-classes';
+import { ViewToggleButton } from '../toolbar/toolbar-button';
 import { ROW_HEIGHTS, ROW_HEIGHT_LABELS } from './column-layout';
 import type { ColumnLayoutBindings } from './use-column-layout';
 import type { SheetsRowHeight } from '../view-state/view-state.types';
@@ -138,19 +139,17 @@ export function FieldsControl({ layout, columnLabel, ready }: FieldsControlProps
 	return (
 		<Popover open={layout.fieldsOpen} onOpenChange={layout.setFieldsOpen}>
 			<PopoverTrigger asChild>
-				<Button
-					variant='outline'
-					size='sm'
+				<ViewToggleButton
+					icon={RiLayoutColumnLine}
+					label='Fields'
+					count={hiddenCount}
+					countLabel='hidden'
 					disabled={!ready}
 					title={ready ? undefined : 'Fields are available once the table has loaded.'}
 					aria-label={hiddenCount > 0 ? `Fields (${hiddenCount} hidden)` : 'Fields'}
-				>
-					<RiLayoutColumnLine className='text-muted-foreground/60 -ms-1.5 size-5' aria-hidden='true' />
-					Fields
-					{hiddenCount > 0 && <span className='text-muted-foreground text-xs tabular-nums'>{hiddenCount} hidden</span>}
-				</Button>
+				/>
 			</PopoverTrigger>
-			<PopoverContent className={cn('w-[22rem]', TOOLBAR_POPOVER)} align='end'>
+			<PopoverContent className={cn('w-[22rem]', TOOLBAR_POPOVER)} align='start'>
 				<div className='grid gap-3' data-part-id='sheets-fields-control'>
 					<h4 className='leading-none font-medium'>Fields</h4>
 					<FieldList layout={layout} columnLabel={columnLabel} />

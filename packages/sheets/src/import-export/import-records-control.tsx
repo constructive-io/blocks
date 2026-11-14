@@ -16,6 +16,7 @@ import {
 	DialogTitle,
 } from '@constructive-io/ui/dialog';
 
+import { ToolButton } from '../grid/toolbar/toolbar-button';
 import { downloadTextFile, importErrorReportText, safeFileName } from './files';
 import { DoneStep, MappingStep, ReviewStep, RunningStep, SourceStep } from './import-steps';
 import { useImportRecords } from './use-import-records';
@@ -72,16 +73,14 @@ export function ImportRecordsControl({ model, tableLabel }: ImportRecordsControl
 	return (
 		<>
 			<span title={flow.unavailableReason ?? undefined} className='inline-flex'>
-				<Button
-					variant='outline'
-					size='sm'
+				<ToolButton
+					icon={RiUploadLine}
+					label='Import'
+					title={flow.unavailableReason ? undefined : 'Import records from a CSV file'}
 					disabled={Boolean(flow.unavailableReason)}
 					aria-describedby={flow.unavailableReason ? reasonId : undefined}
 					onClick={() => setOpen(true)}
-				>
-					<RiUploadLine className='text-muted-foreground/60 -ms-1.5 size-5' aria-hidden='true' />
-					Import
-				</Button>
+				/>
 				{flow.unavailableReason && (
 					<span id={reasonId} className='sr-only'>
 						{flow.unavailableReason}

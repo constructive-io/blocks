@@ -92,7 +92,7 @@ describe('dismissing the active cell', () => {
 		expect(await escape()).toBe(false);
 		expect(cursor()).toEqual(NO_CURSOR);
 		// The row checkbox selection is a separate channel.
-		expect(byLabel<HTMLElement>('Export selected rows')?.textContent).toContain('Export selected (1)');
+		expect(harnessContainer().querySelector('[data-part-id="sheets-selection-actions"]')?.textContent).toContain('1 selected');
 
 		// With no active cell, typing opens no editor and the key reaches the browser.
 		const typed = new KeyboardEvent('keydown', { key: 'x', bubbles: true, cancelable: true });

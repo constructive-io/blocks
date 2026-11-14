@@ -539,7 +539,7 @@ describe('grid toolbar', () => {
 			() => container.querySelector<HTMLButtonElement>('[aria-label="Export selected rows"]'),
 			'the Export selected button',
 		);
-		expect(exportSelected.textContent).toContain('Export selected (1)');
+		expect(container.querySelector('[data-part-id="sheets-selection-actions"]')?.textContent).toContain('1 selected');
 		await click(exportSelected);
 
 		expect(downloads.at(-1)!.name).toBe('StructuredKind.csv');

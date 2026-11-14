@@ -107,8 +107,10 @@ describe("SheetsControls Export selected rows", () => {
       root.render(<SheetsControls {...baseProps({ onExport, gridSelection: twoRowsSelected })} />);
     });
 
-    const btn = container.querySelector<HTMLButtonElement>('button[aria-label="Export selected rows"]');
-    expect(btn?.textContent).toContain("Export selected (2)");
+    const group = container.querySelector('[data-part-id="sheets-selection-actions"]');
+    expect(group?.textContent).toContain("2 selected");
+    const btn = group?.querySelector<HTMLButtonElement>('button[aria-label="Export selected rows"]');
+    expect(btn?.title).toBe("Export selected rows as CSV");
 
     await act(async () => {
       btn!.click();

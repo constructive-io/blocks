@@ -47,7 +47,7 @@ export function SearchBox({ plan, value, onChange, columnLabel, inputRef, ready 
 				type='search'
 				aria-label='Search rows'
 				aria-describedby={scopeId}
-				className='w-[14rem] ps-6 pe-6'
+				className='w-52 ps-6 pe-6 @max-[52rem]/sheets-toolbar:w-40'
 				placeholder={placeholder}
 				disabled={Boolean(disabledReason)}
 				value={text}

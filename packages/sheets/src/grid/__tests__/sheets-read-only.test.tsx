@@ -7,7 +7,7 @@
 import { act } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { QueryClient } from '@tanstack/react-query';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { createTortureBackend, type TortureBackend } from '../../adapter/__tests__/torture-backend';
 import { SheetsProvider } from '../../context/sheets-provider';
@@ -24,6 +24,16 @@ const REASON = 'Archived projects cannot be changed.';
 let root: Root;
 let container: HTMLDivElement;
 let queryClient: QueryClient;
+
+// The row checkbox (Base UI) creates a PointerEvent, which jsdom lacks; MouseEvent has every field it reads.
+const originalPointerEvent = window.PointerEvent;
+beforeAll(() => {
+	Object.defineProperty(window, 'PointerEvent', { configurable: true, writable: true, value: originalPointerEvent ?? MouseEvent });
+});
+afterAll(() => {
+	if (originalPointerEvent) Object.defineProperty(window, 'PointerEvent', { configurable: true, writable: true, value: originalPointerEvent });
+	else delete (window as unknown as Record<string, unknown>).PointerEvent;
+});
 
 beforeEach(() => {
 	vi.spyOn(HTMLElement.prototype, 'offsetWidth', 'get').mockReturnValue(20000);
@@ -102,7 +112,7 @@ describe('Sheets readOnly', () => {
 	it('refuses every write in the grid with the host reason, and keeps viewing, search and export', async () => {
 		const backend = await mount(REASON);
 
-		// The toolbar: no Add row; New record, Import and Delete say why they are off.
+		// The toolbar: no Add row; New record, Import and (for selected rows) Delete say why they are off.
 		expect(buttonByText('Add row')).toBeUndefined();
 		const newRecord = await waitUntil(() => buttonByText('New record'), 'the New record button');
 		expect(newRecord.disabled).toBe(true);
@@ -112,8 +122,14 @@ describe('Sheets readOnly', () => {
 			return describedText(found) === REASON ? found : null;
 		}, 'the reason Import is off');
 		expect(importButton.disabled).toBe(true);
-		expect(buttonByText('Delete')?.disabled).toBe(true);
-		expect(buttonByText('Delete')?.getAttribute('title')).toBe(REASON);
+		// Delete is offered only for selected rows, and still refuses with the reason.
+		expect(buttonByText('Delete')).toBeUndefined();
+		await fire(byLabel('Select row 0')!, 'click');
+		const deleteRows = await waitUntil(() => buttonByText('Delete'), 'Delete for the selected row');
+		expect(deleteRows.disabled).toBe(true);
+		expect(deleteRows.getAttribute('title')).toBe(REASON);
+		await fire(byLabel('Clear selection')!, 'click');
+		await waitUntil(() => (buttonByText('Delete') === undefined ? true : null), 'the cleared selection');
 
 		// A cell says why, refuses an edit and refuses a paste, all with the host reason.
 		expect(cell(0, 'name').getAttribute('title')).toBe(REASON);

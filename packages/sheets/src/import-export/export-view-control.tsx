@@ -20,6 +20,7 @@ import { Progress } from '@constructive-io/ui/progress';
 
 import { useSheetsAdapter } from '../adapter/use-sheets-adapter';
 import { useSheetsContext } from '../context/sheets-context';
+import { ToolButton } from '../grid/toolbar/toolbar-button';
 import { gridColumnKeys } from '../relations/relation-columns';
 import { exportColumns, exportViewCsv, RELATION_PAGE_SIZE, type ExportViewResult } from './export-view';
 import { downloadTextFile, safeFileName } from './files';
@@ -117,17 +118,15 @@ export function ExportViewControl({ model, where, orderBy, columns, filename, pr
 	return (
 		<>
 			<span title={unavailableReason ?? undefined} className='inline-flex'>
-				<Button
-					variant='outline'
-					size='sm'
+				<ToolButton
+					icon={RiDownloadLine}
+					label='Export view'
 					aria-label='Export all rows of this view as CSV'
+					title={unavailableReason ? undefined : 'Export all rows of this view as CSV'}
 					disabled={Boolean(unavailableReason)}
 					aria-describedby={unavailableReason ? reasonId : undefined}
 					onClick={() => void run()}
-				>
-					<RiDownloadLine className='text-muted-foreground/60 -ms-1.5 size-5' aria-hidden='true' />
-					Export view
-				</Button>
+				/>
 				{unavailableReason && (
 					<span id={reasonId} className='sr-only'>
 						{unavailableReason}

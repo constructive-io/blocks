@@ -224,7 +224,7 @@ describe('column layout', () => {
 		await waitUntil(() => document.querySelector('[data-slot="record-create"]'), 'the new-record form');
 	});
 
-	it('the toolbar offers Import, Export view, and Export selected rows while rows are selected', async () => {
+	it('the toolbar offers Import and Export view, and the selected rows their own actions while rows are selected', async () => {
 		await renderTable('Task');
 		await taskHeaders();
 		expect(byText<HTMLElement>('button', 'Import')).toBeTruthy();
@@ -233,7 +233,14 @@ describe('column layout', () => {
 
 		await click(await waitUntil(() => byLabel<HTMLElement>('Select row 0'), 'the first row checkbox'));
 		await click(byLabel<HTMLElement>('Select row 1')!);
-		await waitUntil(() => byLabel<HTMLElement>('Export selected rows')?.textContent?.includes('Export selected (2)'), 'the selected-rows export');
+		const selection = () => document.querySelector<HTMLElement>('[data-part-id="sheets-selection-actions"]');
+		await waitUntil(() => selection()?.textContent?.includes('2 selected'), 'the selected rows actions');
+		expect(selection()!.querySelector('[aria-label="Export selected rows"]')).toBeTruthy();
+
+		// Clearing the selection puts the tools back.
+		await click(byLabel<HTMLElement>('Clear selection')!);
+		await waitUntil(() => byLabel('Export all rows of this view as CSV'), 'the tools again');
+		await waitUntil(() => (selection() === null ? true : null), 'no selected rows actions');
 	});
 
 	it('row height, widths, order, hidden columns and frozen columns follow a controlled layout', async () => {
