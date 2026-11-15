@@ -79,6 +79,15 @@ Use Node 24 LTS and pnpm 10.28.0, then run `pnpm check`, `pnpm build:pages`, and
   verifiable and repeatable artifact.
 - If you must test a system in isolation, first write down all the ways it
   could fail, then write the code.
+- Before you add a test, name the behavior it protects, a credible mistake it
+  would catch, and an expected result you can justify without the code under
+  test. Keep it small, fast, and reliable, so a failure names the broken
+  behavior.
+- Do not repeat the implementation's logic in assertions or mocks. A mock that
+  does the work, or an expected value computed the way the code computes it,
+  proves nothing.
+- A test that only helped you sketch an API or build a feature is scaffolding.
+  Delete it when the work is done, unless it protects a contract.
 - A test that breaks under a behavior-preserving refactor is asserting
   implementation, not behavior. Do not add it.
 - Never delete or weaken a failing test to make the suite pass. Fix the code,
