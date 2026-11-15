@@ -111,7 +111,7 @@ export function useSheets<TRow extends SheetsRow = SheetsRow>(
 	// Centralized state management
 	const { state: gridState, actions: gridActions } = useGridState();
 
-	const { data: filterMeta } = useSheetsMeta();
+	const { data: filterMeta, refetch: refetchMeta } = useSheetsMeta();
 
 	// ============== FILTERS / SORT / SEARCH → LIST VARIABLES ==============
 	const {
@@ -236,7 +236,7 @@ export function useSheets<TRow extends SheetsRow = SheetsRow>(
 	});
 
 	// ============== WRITES ==============
-	const { operationFeedback, deleteSelected, commitCells, commitCellValue, commitCellPatch, invalidateData, history } = useSheetsWrites({
+	const { operationFeedback, deleteRows, deleteSelected, commitCells, commitCellValue, commitCellPatch, invalidateData, history } = useSheetsWrites({
 		tableName,
 		tableKey,
 		config,
@@ -333,6 +333,13 @@ export function useSheets<TRow extends SheetsRow = SheetsRow>(
 		}
 	}, [infiniteScroll, infiniteGridData, dataLoadingResult.contextValue]);
 
+	// Read the table's shape (`_meta`: a new meta version builds a new model, so new columns
+	// appear) and its rows again, as when the user comes back to a page left open.
+	const refreshFromServer = useCallback(() => {
+		void refetchMeta();
+		refetch();
+	}, [refetchMeta, refetch]);
+
 	// Pagination setter that mirrors the default chrome behavior (emit page:change).
 	const setPageIndex = useCallback(
 		(updater: number | ((prev: number) => number)) => {
@@ -360,6 +367,7 @@ export function useSheets<TRow extends SheetsRow = SheetsRow>(
 			appendRow: handleRowAppended,
 			submitDrafts: handleSubmitDraftRows,
 			deleteSelected,
+			deleteRows,
 		},
 		selection: {
 			gridSelection: gridState.gridSelection,
@@ -377,6 +385,7 @@ export function useSheets<TRow extends SheetsRow = SheetsRow>(
 		hasCompletedInitialLoad,
 		isEmpty,
 		refetch,
+		refreshFromServer,
 
 		// -- Internal chrome bindings (not a stable API) --
 		_shell: {
@@ -419,6 +428,7 @@ export function useSheets<TRow extends SheetsRow = SheetsRow>(
 			redo: history.redo,
 			canUndo: history.canUndo,
 			canRedo: history.canRedo,
+			recordHistory: history.record,
 			emit,
 		},
 	};

@@ -133,8 +133,9 @@ function fieldSchema(field: ModelFormField, mode: ModelFormMode): z.ZodType<unkn
 				ctx.addIssue({ code: 'custom', message: `${field.label} is required` });
 				return z.NEVER;
 			}
-			// Clearing follows the column rules: null, '' for text that cannot be empty, or a refusal.
-			const parsed = parseColumnInput(field.column, value, { fromText: typeof value === 'string' });
+			// Clearing follows the column rules: null, '' for text that cannot be empty but has a default
+			// (or on create), or a refusal.
+			const parsed = parseColumnInput(field.column, value, { fromText: typeof value === 'string', creating: mode === 'create' });
 			if (parsed.ok === false) {
 				ctx.addIssue({ code: 'custom', message: parsed.reason });
 				return z.NEVER;

@@ -8,6 +8,7 @@ import type { SheetsSelection } from '../../selection/selection-model';
 import type { DraftSubmitResult } from '../draft-types';
 import type { CellWrite, CommitCellsOptions, CommitCellsResult } from '../hooks/use-batch-commit';
 import type { useGridState } from '../hooks/use-grid-state';
+import type { HistoryEntry } from '../hooks/use-undo-redo';
 import type { VisibleRowRange } from '../hooks/use-infinite-grid-data';
 import type { SheetsRow } from '../row-model';
 import type { SheetsEvent } from '../sheets.types';
@@ -24,6 +25,8 @@ export interface SheetsDraftBindings {
 	submitDrafts: () => Promise<void>;
 	/** Delete the currently selected rows (draft + server). */
 	deleteSelected: () => Promise<void>;
+	/** Delete these rows by index: a saved row is deleted, a new row is discarded. */
+	deleteRows: (rows: readonly number[]) => Promise<void>;
 }
 
 /**
@@ -78,6 +81,8 @@ export interface UseSheetsResult {
 	isEmpty: boolean;
 	/** Refetch the underlying data (mode-aware: infinite vs paginated). */
 	refetch: () => void;
+	/** Read the table's shape (`_meta`) and its rows again. */
+	refreshFromServer: () => void;
 }
 
 /**
@@ -149,6 +154,8 @@ export interface SheetsShellBindings {
 	canUndo: boolean;
 	/** @internal Whether a redo is available. NOT a stable API. */
 	canRedo: boolean;
+	/** @internal Add a step to the undo history (a link editor's saved change). NOT a stable API. */
+	recordHistory: (entry: HistoryEntry) => void;
 	/** @internal Observational event emitter (analytics/telemetry) — threaded into the command context. NOT a stable API. */
 	emit: (type: SheetsEvent['type'], meta?: Record<string, unknown>) => void;
 }

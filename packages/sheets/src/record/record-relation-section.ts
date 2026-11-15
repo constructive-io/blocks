@@ -19,6 +19,8 @@ export interface RecordRelationSectionProps {
 	rowIdentifier: SheetsRowIdentifier | null;
 	/** True for a new record that is not created yet. */
 	isDraft: boolean;
+	/** A new record cannot be created without this link; the heading is marked required. */
+	required?: boolean;
 	/** The relation-level reason the links cannot change here, or null. */
 	readOnlyReason: string | null;
 	/** belongsTo: the local key fields (and the chosen record under the relation field) to keep or that were written. */

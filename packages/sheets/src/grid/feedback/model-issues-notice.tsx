@@ -2,7 +2,7 @@
 
 /**
  * A non-blocking notice for the parts of a table the model could not prove
- * (read-only table, unavailable columns, read-only relations) and for parts of
+ * (refused table actions, unavailable columns, read-only relations) and for parts of
  * a filter, sort or search that no longer apply. The user can dismiss it; it
  * comes back when the list of issues changes.
  */
@@ -26,12 +26,29 @@ function issueGroupOf(issue: ModelIssue): IssueGroup['key'] {
 	return 'table';
 }
 
-const GROUP_TITLES: Record<IssueGroup['key'], string> = {
-	table: 'Read-only table',
+const GROUP_TITLES: Record<Exclude<IssueGroup['key'], 'table'>, string> = {
 	columns: 'Unavailable columns',
 	relations: 'Read-only relations',
 	view: 'Parts of the view that no longer apply',
 };
+
+/**
+ * The table group's title, by what its rows still allow: a table that takes new rows but
+ * not changes is "Add-only", so the notice does not contradict the Add row button.
+ */
+function tableGroupTitle(model: TableModel | null): string {
+	if (model?.operations.update) return 'Table actions';
+	return model?.operations.create ? 'Add-only table' : 'Read-only table';
+}
+
+/** A table without a primary key refuses changes and deletes for that reason, and says so once. */
+function impliedByMissingKey(issue: ModelIssue, model: TableModel | null): boolean {
+	return (
+		issue.scope === 'operation' &&
+		(issue.target === 'update' || issue.target === 'delete') &&
+		Boolean(model?.issues.some((entry) => entry.code === 'NO_PRIMARY_KEY'))
+	);
+}
 
 /** The grouped lines of a notice, in display order. */
 export function modelIssueGroups(
@@ -46,13 +63,15 @@ export function modelIssueGroups(
 		groups.set(key, lines);
 	};
 	for (const issue of model?.issues ?? []) {
+		if (impliedByMissingKey(issue, model)) continue;
 		const group = issueGroupOf(issue);
 		add(group, group === 'table' || !issue.target ? issue.message : `${label(issue.target)}: ${issue.message}`);
 	}
 	for (const entry of dropped) add('view', entry.message);
 	return (['table', 'columns', 'relations', 'view'] as const).flatMap((key) => {
 		const lines = groups.get(key);
-		return lines ? [{ key, title: GROUP_TITLES[key], items: [...lines] }] : [];
+		const title = key === 'table' ? tableGroupTitle(model) : GROUP_TITLES[key];
+		return lines ? [{ key, title, items: [...lines] }] : [];
 	});
 }
 

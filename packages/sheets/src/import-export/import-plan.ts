@@ -83,7 +83,7 @@ export function draftImportRows(
 				if (target.column.write.requiredOnCreate) issue(index, column, REQUIRED_REASON);
 				continue;
 			}
-			const parsed = parseColumnInput(target.column, text, { fromText: true });
+			const parsed = parseColumnInput(target.column, text, { fromText: true, creating: true });
 			if (parsed.ok === false) issue(index, column, parsed.reason);
 			else values[target.column.name] = parsed.value;
 		}

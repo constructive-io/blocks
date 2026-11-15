@@ -4,12 +4,15 @@
 // Values use the grid's copy format (`formatColumnValue`), so an exported file
 // imports back exactly: choices as their labels, structured values and lists as
 // JSON. A linked record is written as its label; a list of linked records as a
-// JSON list of labels. Only the requested columns are read from the server.
+// JSON list of labels. The header names each column as the grid does; the import
+// matches a header by that label or by the field name. Only the requested columns
+// are read from the server.
 
 import { readCellError, readRelationTotalCount } from '@constructive-io/data';
 import type { ColumnModel, RelationModel, SortSpec, TableModel } from '@constructive-io/data';
 
 import { copyText, formatColumnValue } from '../cell-types/column-value';
+import { fieldLabel, relationLabelIn } from '../cell-types/field-label';
 import { relationRecordLabel } from '../relations/relation-label';
 import { csvFileText } from './delimited-text';
 import { isNumberColumn, protectFormulaText, type CsvExportOptions } from './formula-protection';
@@ -17,9 +20,10 @@ import { readAllRows, type RowSource } from './read-all-rows';
 
 type RowRecord = Record<string, unknown>;
 
+/** One column of a file: its key, the header it is written under, and what it holds. */
 export type ExportColumn =
-	| { kind: 'column'; key: string; column: ColumnModel }
-	| { kind: 'relation'; key: string; relation: RelationModel };
+	| { kind: 'column'; key: string; label: string; column: ColumnModel }
+	| { kind: 'relation'; key: string; label: string; relation: RelationModel };
 
 export interface ExportViewQuery {
 	/** The view's filter, search included. */
@@ -48,11 +52,11 @@ export function exportColumns(model: TableModel, keys: readonly string[]): Expor
 	for (const key of new Set(keys)) {
 		const column = model.columns.find((candidate) => candidate.name === key);
 		if (column) {
-			if (column.readable) out.push({ kind: 'column', key, column });
+			if (column.readable) out.push({ kind: 'column', key, label: fieldLabel(column.name), column });
 			continue;
 		}
 		const relation = model.relations.find((candidate) => candidate.fieldName === key);
-		if (relation?.readable) out.push({ kind: 'relation', key, relation });
+		if (relation?.readable) out.push({ kind: 'relation', key, label: relationLabelIn(model, relation), relation });
 	}
 	return out;
 }
@@ -63,7 +67,7 @@ function relationText(relation: RelationModel, value: unknown): string {
 }
 
 /**
- * Rows as a CSV file body, with `columns` as the header, and the cells that could not
+ * Rows as a CSV file body, with the columns' labels as the header, and the cells that could not
  * be written in full. With `protectFormulas`, text cells that start like a formula get
  * a leading apostrophe; number columns and the header are never changed.
  */
@@ -91,7 +95,7 @@ export function rowsCsvText(
 			return protect(relationText(entry.relation, value));
 		}),
 	);
-	return { text: csvFileText([columns.map((entry) => entry.key), ...records]), unreadableCells, truncatedLists };
+	return { text: csvFileText([columns.map((entry) => entry.label), ...records]), unreadableCells, truncatedLists };
 }
 
 /**

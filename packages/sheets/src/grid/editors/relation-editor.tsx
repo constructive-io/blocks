@@ -7,11 +7,11 @@
  * choice locally through `onCommitPatch`; a failure keeps the overlay open
  * with the server's message.
  */
-import { useCallback, type KeyboardEvent } from 'react';
+import { useCallback, useContext, type KeyboardEvent } from 'react';
 
 import type { RelationModel, TableModel } from '@constructive-io/data';
 
-import { relationFieldLabel } from '../../cell-types/field-label';
+import { relationLabelIn } from '../../cell-types/field-label';
 import type { SheetsRowIdentifier } from '../../row-identity';
 import type { RecordValues } from '../../relations/relation-keys';
 import { RelationEditorBody } from '../../relations/relation-editor-body';
@@ -20,6 +20,7 @@ import { useOptionalFeedback } from '../feedback/feedback-context';
 import { EditorFooter, EditorHeader, modifierKeyLabel, type EditorClear } from './editor-frame';
 import { EditorFocusTrap } from './editor-focus-trap';
 import { OVERLAY } from './overlay-presets';
+import { OverlayMeasureContext } from './overlay-viewport-guard';
 
 export interface RelationEditorProps {
 	relation: RelationModel;
@@ -52,6 +53,7 @@ export function RelationEditor({
 	onClose,
 }: RelationEditorProps) {
 	const editor = useRelationEditor({ relation, table, row, rowIdentifier, isDraft, value, onInvalidateData });
+	const { maxHeight: overlayMaxHeight } = useContext(OverlayMeasureContext);
 	const { editable, saving, save } = editor;
 	// A saved link reports to the grid's save status; a failure stays in the editor, where it is read.
 	const noteWrite = useOptionalFeedback()?.noteWrite;
@@ -107,16 +109,19 @@ export function RelationEditor({
 			// A fixed width: the overlay sizes to its content, and labels that load later must not widen it.
 			// No padding of its own: header, body and footer carry the shared editor insets and dividers.
 			className={`bg-popover flex ${OVERLAY.md} w-[400px] flex-col gap-0 overflow-hidden rounded-lg border p-0 shadow-lg`}
+			// Never taller than the room the overlay has on its side of the cell: the body scrolls,
+			// the header and the footer (Clear, Save) stay in view.
+			style={overlayMaxHeight > 0 ? { maxHeight: overlayMaxHeight } : undefined}
 		>
 			{/* The shared header (48px with its insets): readable title, the raw field name as its tooltip. */}
 			<EditorHeader
-				title={relationFieldLabel(relation)}
+				title={relationLabelIn(table, relation)}
 				titleHint={relation.fieldName}
 				chip={isList ? `Linked ${relation.targetName} records` : `One linked ${relation.targetName} record`}
 				className='shrink-0 px-3 pt-3 pb-2'
 			/>
 
-			<div className='flex flex-col gap-3 border-t p-3'>
+			<div className='flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto overscroll-contain border-t p-3'>
 				<RelationEditorBody editor={editor} />
 			</div>
 
@@ -128,7 +133,7 @@ export function RelationEditor({
 					saveShortcut={`${modifierKeyLabel()} Enter`}
 					saveBlockedReason={saveBlockedReason}
 					clear={clear}
-					className='px-3 pb-2'
+					className='shrink-0 px-3 pb-2'
 				/>
 			) : null}
 		</EditorFocusTrap>

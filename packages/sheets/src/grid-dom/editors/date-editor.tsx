@@ -44,7 +44,7 @@ export function loadDateEditor(): Promise<DateEditorModule> {
 
 const LazyDateEditor = lazy(() => loadDateEditor().then((module) => ({ default: module.DateEditor })));
 
-export function DateEditorDom({ value, cell, column, colKey, onCommit, onCancel }: EditorProps) {
+export function DateEditorDom({ value, initialText, cell, column, colKey, onCommit, onCancel }: EditorProps) {
 	const cellType = cell.meta?.cellType;
 	const dateType: DateEditorType | undefined =
 		cellType && DATE_TIME_TYPES.has(cellType) ? (cellType as DateEditorType) : undefined;
@@ -56,6 +56,7 @@ export function DateEditorDom({ value, cell, column, colKey, onCommit, onCancel 
 		dateType,
 		canClear: Boolean(column?.nullable),
 		title: fieldLabel(column?.name ?? colKey),
+		initialText,
 		onFinishedEditing: (next?: unknown) => (next === undefined ? onCancel() : onCommit(next)),
 	};
 

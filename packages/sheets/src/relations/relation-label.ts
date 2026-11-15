@@ -53,3 +53,37 @@ export function targetRecordLabel(
 export function relationRecordLabel(relation: RelationModel, record: RecordValues | null | undefined): string {
 	return targetRecordLabel(record, relation.target, linkFields(relation));
 }
+
+/**
+ * What tells a related record apart from others with the same label: its other label fields
+ * (an email beside a name), else its key. '' when nothing adds to the label.
+ */
+export function relationRecordDistinction(relation: RelationModel, record: RecordValues | null | undefined): string {
+	if (!record || typeof record !== 'object') return '';
+	const label = relationRecordLabel(relation, record);
+	const others = relation.target.labelFields.map((field) => text(record[field])).filter((value) => value && value !== label);
+	const distinction = others.length > 0 ? others.join(KEY_SEPARATOR) : joined(record, relation.target.primaryKey);
+	return distinction === label ? '' : distinction;
+}
+
+/** The labels more than one record in a list shares. */
+export function sharedLabels(labels: readonly string[]): ReadonlySet<string> {
+	const seen = new Set<string>();
+	const shared = new Set<string>();
+	for (const label of labels) {
+		if (seen.has(label)) shared.add(label);
+		else seen.add(label);
+	}
+	return shared;
+}
+
+/** A link cell as text to read elsewhere: the linked record's label, or a list's labels, comma separated. */
+export function relationCopyText(relation: RelationModel, value: unknown): string {
+	if (Array.isArray(value)) {
+		return value
+			.map((record) => relationRecordLabel(relation, record as RecordValues))
+			.filter(Boolean)
+			.join(', ');
+	}
+	return value && typeof value === 'object' ? relationRecordLabel(relation, value as RecordValues) : '';
+}

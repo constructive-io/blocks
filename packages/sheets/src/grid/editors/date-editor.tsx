@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { parseDate as parseAriaDate } from '@internationalized/date';
+import { getLocalTimeZone, parseDate as parseAriaDate, today } from '@internationalized/date';
 import type { DateValue as DateValueType } from 'react-aria-components';
 
 import { Calendar } from '@constructive-io/ui/calendar-rac';
@@ -15,6 +15,7 @@ import {
 	type DateEditorType,
 	type DateValueParts,
 } from './date-value-parts';
+import { parseTypedDate, typedDateExample } from './date-text';
 import { EditorFocusTrap } from './editor-focus-trap';
 import { EditorFooter, EditorHeader, editorClear, modifierKeyLabel } from './editor-frame';
 import { OVERLAY } from './overlay-presets';
@@ -56,9 +57,28 @@ interface DateEditorProps {
 	canClear?: boolean;
 	/** The field's readable name, shown as the title. */
 	title?: string;
+	/** Text typed on the cell to open the editor; it starts the date field. */
+	initialText?: string;
 }
 
-export const DateEditor: React.FC<DateEditorProps> = ({ value, onFinishedEditing, dateType: forcedDateType, canClear = false, title = 'Date' }) => {
+/** A date for the calendar, or null when the text is not one. */
+function calendarDate(iso: string | null | undefined): DateValueType | null {
+	if (!iso) return null;
+	try {
+		return parseAriaDate(iso);
+	} catch {
+		return null;
+	}
+}
+
+export const DateEditor: React.FC<DateEditorProps> = ({
+	value,
+	onFinishedEditing,
+	dateType: forcedDateType,
+	canClear = false,
+	title = 'Date',
+	initialText,
+}) => {
 	const stored = typeof value === 'string' ? value : '';
 	const dateType = resolveDateType(stored, forcedDateType);
 	const isTimeOnly = dateType === 'time';
@@ -69,14 +89,52 @@ export const DateEditor: React.FC<DateEditorProps> = ({ value, onFinishedEditing
 	const [dirty, setDirty] = useState(false);
 	const keyContainerRef = useRef<HTMLDivElement>(null);
 
-	const selectedDate = useMemo<DateValueType | null>(() => {
-		if (!parts?.date) return null;
-		try {
-			return parseAriaDate(parts.date);
-		} catch {
-			return null;
-		}
-	}, [parts?.date]);
+	const selectedDate = useMemo(() => calendarDate(parts?.date), [parts?.date]);
+
+	// The date can also be typed. The field starts with what was typed on the cell, else the
+	// stored day; a whole date moves the calendar there, and Save refuses text that is not one.
+	const [dateText, setDateText] = useState(() => initialText ?? parts?.date ?? '');
+	const [dateError, setDateError] = useState<string | null>(null);
+	const [focusedDate, setFocusedDate] = useState<DateValueType>(() => selectedDate ?? today(getLocalTimeZone()));
+	const dateInputRef = useRef<HTMLInputElement>(null);
+	useEffect(() => {
+		const input = dateInputRef.current;
+		if (!input) return;
+		// Typing replaces the stored day; text typed on the cell goes on where it ended.
+		if (initialText == null) input.select();
+		else input.setSelectionRange(input.value.length, input.value.length);
+		// Only on open.
+		// eslint-disable-next-line react-hooks/exhaustive-deps
+	}, []);
+
+	const setDay = useCallback(
+		(date: string) => {
+			// Only the day changes: the time, its fraction and its zone stay as they are.
+			setParts((current) => ({ ...(current ?? emptyDateValueParts(dateType)), date }));
+			setDirty(true);
+		},
+		[dateType],
+	);
+
+	const handleDateText = useCallback(
+		(text: string) => {
+			setDateText(text);
+			setDateError(null);
+			const date = parseTypedDate(text);
+			if (!date) return;
+			setDay(date);
+			const shown = calendarDate(date);
+			if (shown) setFocusedDate(shown);
+		},
+		[setDay],
+	);
+
+	useEffect(() => {
+		// Text typed on the cell that is already a whole date counts at once.
+		if (initialText != null) handleDateText(initialText);
+		// Only on open.
+		// eslint-disable-next-line react-hooks/exhaustive-deps
+	}, []);
 
 	const handleDateSelect = useCallback(
 		(picked: DateValueType | readonly DateValueType[] | null) => {
@@ -84,11 +142,11 @@ export const DateEditor: React.FC<DateEditorProps> = ({ value, onFinishedEditing
 			if (!picked || Array.isArray(picked)) return;
 			const day = picked as DateValueType;
 			const date = `${String(day.year).padStart(4, '0')}-${String(day.month).padStart(2, '0')}-${String(day.day).padStart(2, '0')}`;
-			// Only the day changes: the time, its fraction and its zone stay as they are.
-			setParts((current) => ({ ...(current ?? emptyDateValueParts(dateType)), date }));
-			setDirty(true);
+			setDay(date);
+			setDateText(date);
+			setDateError(null);
 		},
-		[dateType],
+		[setDay],
 	);
 
 	const handleTimeChange = useCallback(
@@ -105,13 +163,27 @@ export const DateEditor: React.FC<DateEditorProps> = ({ value, onFinishedEditing
 	const written = parts && dirty && (isTimeOnly || parts.date) ? writeDateValueParts(parts, dateType) : null;
 
 	const handleSave = useCallback(() => {
+		if (!isTimeOnly) {
+			const text = dateText.trim();
+			// An emptied date field clears the value where the column allows no value.
+			if (text === '' && stored) {
+				if (canClear) onFinishedEditing(null);
+				else setDateError('This field needs a value.');
+				return;
+			}
+			if (text !== '' && !parseTypedDate(text)) {
+				setDateError(`Enter a date like ${typedDateExample()}.`);
+				dateInputRef.current?.focus();
+				return;
+			}
+		}
 		// Nothing changed: close without writing, so the stored text stays exactly as it is.
 		if (!written) {
 			onFinishedEditing();
 			return;
 		}
 		onFinishedEditing(written);
-	}, [written, onFinishedEditing]);
+	}, [isTimeOnly, dateText, stored, canClear, written, onFinishedEditing]);
 
 	const handleCancel = useCallback(() => {
 		onFinishedEditing();
@@ -182,7 +254,40 @@ export const DateEditor: React.FC<DateEditorProps> = ({ value, onFinishedEditing
 					/>
 				) : (
 					<>
-						<Calendar value={selectedDate} onChange={handleDateSelect} aria-label='Select date' className={CALENDAR_FILL} />
+						<input
+							ref={dateInputRef}
+							type='text'
+							autoComplete='off'
+							spellCheck={false}
+							aria-label={`${title} date`}
+							aria-invalid={dateError ? true : undefined}
+							aria-describedby={dateError ? 'sheets-date-editor-error' : undefined}
+							placeholder={typedDateExample()}
+							value={dateText}
+							onChange={(e) => handleDateText(e.target.value)}
+							onKeyDown={(e) => {
+								// Enter saves what was typed, as in a cell.
+								if (e.key !== 'Enter' || e.metaKey || e.ctrlKey || e.altKey || e.shiftKey) return;
+								e.preventDefault();
+								e.stopPropagation();
+								handleSave();
+							}}
+							className={TIME_INPUT}
+							autoFocus
+						/>
+						{dateError ? (
+							<p id='sheets-date-editor-error' role='alert' className='text-destructive -mt-1 text-xs'>
+								{dateError}
+							</p>
+						) : null}
+						<Calendar
+							value={selectedDate}
+							onChange={handleDateSelect}
+							focusedValue={focusedDate}
+							onFocusChange={setFocusedDate}
+							aria-label='Select date'
+							className={CALENDAR_FILL}
+						/>
 						{isDateTimeType ? (
 							<input
 								type='time'

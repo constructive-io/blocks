@@ -15,6 +15,8 @@ import type { RelationModel, TableModel } from '@constructive-io/data';
 import { useSheetsAdapter } from '../adapter/use-sheets-adapter';
 import { useSheetsContext } from '../context/sheets-context';
 import { equalityFilterGroup } from '../grid/filters/equality-filter';
+import { useOptionalFeedback } from '../grid/feedback/feedback-context';
+import { useRecordHistory } from '../grid/hooks/history-context';
 import { sheetsQueryKeys } from '../hooks/query-keys';
 import { useTableModel } from '../hooks/use-table-model';
 import type { SheetsRowIdentifier } from '../row-identity';
@@ -30,6 +32,7 @@ import {
 	type RelationPlan,
 } from './relation-changes';
 import { planRelatedCreate, type RelatedCreatePlan } from './relation-create';
+import { relationHistoryEntry } from './relation-undo';
 import {
 	belongsToClearPatch,
 	belongsToCurrentKey,
@@ -253,11 +256,14 @@ export function useRelationEditor(options: RelationEditorOptions): RelationEdito
 	}, [junction, onInvalidateData, queryClient, scopeKey, table, target]);
 
 	const run = useMemo(() => adapterChangeRunner(adapter, execute), [adapter, execute]);
+	// A saved change takes a step in the grid's undo history; undoing it reports like any save.
+	const recordHistory = useRecordHistory();
+	const feedback = useOptionalFeedback();
 
 	const planSave = useCallback((choice: RecordValues | null): RelationPlan => {
 		if (relation.kind === 'belongsTo') {
 			if (rowIdentifier == null) return { ok: false, reason: 'This record cannot be identified, so its links cannot be changed.' };
-			return planBelongsTo(relation, table, rowIdentifier, choice);
+			return planBelongsTo(relation, table, rowIdentifier, choice, row);
 		}
 		if (!row) return { ok: false, reason: 'This record has no value to link by yet.' };
 		if (relation.kind === 'manyToMany') {
@@ -313,6 +319,15 @@ export function useRelationEditor(options: RelationEditorOptions): RelationEdito
 		});
 		if (outcome.applied.length > 0) await refresh();
 		setSaving(false);
+		const step =
+			recordHistory &&
+			relationHistoryEntry(outcome, {
+				run,
+				refresh,
+				onDone: (message) => feedback?.noteWrite('update', 'success', message),
+				onFailed: (title, messages) => feedback?.reportWriteError(title, messages),
+			});
+		if (step) recordHistory(step);
 
 		if (outcome.failed.length === 0) {
 			selection.settle(new Set(outcome.applied.map((change) => change.linkKey)));
@@ -325,7 +340,7 @@ export function useRelationEditor(options: RelationEditorOptions): RelationEdito
 		}
 		setErrors(lines);
 		return { status: 'failed' };
-	}, [belongsToPatch, current.length, isDraft, planSave, refresh, relation.kind, run, saving, selection]);
+	}, [belongsToPatch, current.length, feedback, isDraft, planSave, recordHistory, refresh, relation.kind, run, saving, selection]);
 
 	const discard = useCallback(() => {
 		selection.reset();

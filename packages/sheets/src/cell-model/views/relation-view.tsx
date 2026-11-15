@@ -7,10 +7,13 @@
 //   - both            -> cell.meta.relationTarget / relationLinks name the shown records.
 // Truncated labels carry their full text as a title. In the ACTIVE cell, when the
 // host handles opening linked records (SheetsOpenRecordContext), each identifiable
-// chip is a button that opens its record on a single click; a double-click keeps
-// its grid meaning (open the link editor); elsewhere a click selects the cell.
+// chip gets an open icon (as in the record panel) that opens its record, and a
+// Mod+click on the chip does the same. A plain click or a double-click on the chip
+// keeps its grid meaning (select the cell, open the link editor), so one gesture
+// never opens two surfaces.
 
 import React from 'react';
+import { ExternalLink } from 'lucide-react';
 
 import { useOpenRecordHandler, type SheetsOpenRecordHandler } from '../../relations/relation-navigation';
 import { cn } from '../../utils/cn';
@@ -35,42 +38,66 @@ function targetOf(value: unknown): { tableKey: string; tableName: string } | nul
 		: null;
 }
 
-/** A chip label that opens its record, or plain text when it cannot. */
+/** A chip label, with an icon that opens its record when it can. */
 function ChipContent({
 	text,
 	title,
 	link,
 	open,
 	className,
+	inChip = false,
 }: {
 	text: string;
 	title: string;
 	link: RelationCellLink | undefined;
 	open: ((link: RelationCellLink) => void) | null;
 	className?: string;
+	/**
+	 * In a list chip the icon shows only while the chip is hovered; a single link pins it to
+	 * the cell's right edge. Either way a press on the middle of the cell selects or edits it.
+	 */
+	inChip?: boolean;
 }) {
-	if (!open || !link?.key) {
-		return (
-			<span className={cn('truncate', className)} title={title || undefined}>
+	const openLink = open && link?.key ? () => open(link) : null;
+	return (
+		<>
+			<span
+				className={cn('truncate', !inChip && 'min-w-0 flex-1', className)}
+				title={title || undefined}
+				onClick={
+					openLink
+						? (event) => {
+								// Mod+click opens the record; a plain click belongs to the cell.
+								if (!(event.metaKey || event.ctrlKey)) return;
+								event.stopPropagation();
+								openLink();
+							}
+						: undefined
+				}
+			>
 				{text}
 			</span>
-		);
-	}
-	return (
-		<button
-			type='button'
-			className={cn('truncate underline-offset-2 hover:underline focus-visible:underline', className)}
-			title={`Open ${title}`}
-			aria-label={`Open ${title}`}
-			onClick={(event) => {
-				// The second click of a double-click belongs to the cell: it opens the link editor.
-				if (event.detail >= 2) return;
-				event.stopPropagation();
-				open(link);
-			}}
-		>
-			{text}
-		</button>
+			{openLink ? (
+				<button
+					type='button'
+					data-slot='relation-open'
+					className={cn(
+						'text-muted-foreground hover:text-foreground focus-visible:text-foreground inline-flex size-4 shrink-0 items-center justify-center rounded-sm outline-none',
+						inChip && 'invisible group-hover/chip:visible',
+					)}
+					title={`Open ${title}`}
+					aria-label={`Open ${title}`}
+					onClick={(event) => {
+						event.stopPropagation();
+						openLink();
+					}}
+					// A fast second click on the icon is still opening, never the cell's editor.
+					onDoubleClick={(event) => event.stopPropagation()}
+				>
+					<ExternalLink className='size-3' aria-hidden='true' />
+				</button>
+			) : null}
+		</>
 	);
 }
 
@@ -129,11 +156,11 @@ export function RelationCellView(props: CellProps): React.JSX.Element {
 				<span
 					key={index}
 					className={cn(
-						'inline-flex min-w-0 max-w-[12rem] shrink items-center rounded-md bg-muted px-1.5 py-0.5',
+						'group/chip inline-flex min-w-0 max-w-[12rem] shrink items-center gap-0.5 rounded-md bg-muted px-1.5 py-0.5',
 						'text-xs font-medium text-muted-foreground',
 					)}
 				>
-					<ChipContent text={String(chip)} title={titles[index] ?? String(chip)} link={links[index]} open={open} />
+					<ChipContent text={String(chip)} title={titles[index] ?? String(chip)} link={links[index]} open={open} inChip />
 				</span>
 			))}
 			{overflow > 0 ? (

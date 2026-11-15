@@ -237,8 +237,11 @@ describe('relation columns', () => {
 		expect(keys).not.toContain('taskLabels');
 		const headerText = Array.from(container.querySelectorAll('[role="columnheader"][data-col-key]')).map((header) => header.textContent ?? '');
 		expect(headerText.every((text) => !text.includes('('))).toBe(true);
-		// Headers read as labels; the column key stays the field name.
-		expect(headerText.some((text) => text.includes('Person by assignee email'))).toBe(true);
+		// Headers read as labels; the column key stays the field name. A generated link name reads
+		// as its key field without the field it points at (personByAssigneeEmail -> Assignee).
+		const assignee = container.querySelector('[role="columnheader"][data-col-key="personByAssigneeEmail"]');
+		expect(assignee?.textContent).toContain('Assignee');
+		expect(headerText.some((text) => text.includes('Person by'))).toBe(false);
 	});
 
 	it('labels links from the display rule, with key values for a composite key', async () => {
@@ -252,39 +255,37 @@ describe('relation columns', () => {
 });
 
 describe('opening linked records from the grid', () => {
-	it('opens a chip of the active cell in the record panel, and leaves other cells alone', async () => {
+	it('opens a linked record from the open icon of the active cell, and a double-click on the chip only edits', async () => {
 		await render('Task');
 		const projectCell = await cell('project', 'title', 'Design the mill');
 		const labelsCell = await cell('labels', 'title', 'Design the mill');
-		// Not active yet: chips are plain text, a click only selects the cell.
+		const openIcon = () =>
+			findCell('project', 'title', 'Design the mill')?.querySelector<HTMLButtonElement>('button[aria-label="Open Analytical Engine"]');
+		// Not active yet: no open icon, a click only selects the cell.
 		expect(projectCell.querySelector('button')).toBeNull();
 
-		// A double-click keeps its grid meaning: the first click selects the cell (the chip
-		// becomes a button), the second click and the double-click open the link editor.
+		// A double-click on the chip keeps its grid meaning, even once the cell is active: the
+		// link editor opens and the record panel does not.
+		const chipText = () => findCell('project', 'title', 'Design the mill')!.querySelector<HTMLElement>('[data-slot="relation-cell"] span')!;
 		await act(async () => {
-			projectCell.querySelector('span')!.dispatchEvent(new MouseEvent('click', { bubbles: true, detail: 1 }));
+			chipText().dispatchEvent(new MouseEvent('click', { bubbles: true, detail: 1 }));
 		});
-		const armed = await waitUntil(
-			() => findCell('project', 'title', 'Design the mill')?.querySelector<HTMLButtonElement>('button[aria-label="Open Analytical Engine"]'),
-			'the chip button',
-		);
+		await waitUntil(openIcon, 'the open icon of the active cell');
 		await act(async () => {
-			armed.dispatchEvent(new MouseEvent('click', { bubbles: true, detail: 2 }));
-			armed.dispatchEvent(new MouseEvent('dblclick', { bubbles: true, detail: 2 }));
+			chipText().dispatchEvent(new MouseEvent('click', { bubbles: true, detail: 1 }));
+			chipText().dispatchEvent(new MouseEvent('click', { bubbles: true, detail: 2 }));
+			chipText().dispatchEvent(new MouseEvent('dblclick', { bubbles: true, detail: 2 }));
 		});
 		const editor = await waitUntil(() => document.querySelector<HTMLElement>('[data-slot="relation-editor"]'), 'the relation editor');
 		expect(document.querySelector('[data-slot="record-panel"]')).toBeNull();
 		await key(editor.querySelector<HTMLInputElement>('input[role="combobox"]') ?? editor, 'Escape');
 		await editorClosed();
 
-		// A single click on the chip of the active cell opens its record.
+		// The open icon opens the record; only the active cell has one.
 		await click(projectCell);
-		const chip = await waitUntil(
-			() => findCell('project', 'title', 'Design the mill')?.querySelector<HTMLButtonElement>('button[aria-label="Open Analytical Engine"]'),
-			'the open chip',
-		);
+		const icon = await waitUntil(openIcon, 'the open icon');
 		expect(labelsCell.querySelector('button')).toBeNull();
-		await click(chip);
+		await click(icon);
 		const panel = await waitUntil(() => document.querySelector<HTMLElement>('[data-slot="record-panel"]'), 'the record panel');
 		await waitUntil(() => panel.textContent?.includes('Analytical Engine'), 'the linked record in the panel');
 		expect(document.querySelector('[data-slot="relation-editor"]')).toBeNull();
@@ -668,6 +669,52 @@ describe('manyToMany editing', () => {
 		const listed = backend.requests.find((request) => request.source.includes('projectMembers(') && request.variables?.where);
 		expect(listed?.variables?.where).toEqual({ projectId: { equalTo: 1 } });
 		expect(backend.mutations).toEqual([]);
+	});
+});
+
+describe('undo', () => {
+	const grid = () => container.querySelector<HTMLElement>('[data-part-id="sheets-viewport"]')!;
+	const press = (name: string, shift = false) =>
+		act(async () => {
+			grid().dispatchEvent(new KeyboardEvent('keydown', { key: name, ctrlKey: true, shiftKey: shift, bubbles: true }));
+		});
+
+	it('puts a changed link back with Mod+Z and sets it again with Mod+Shift+Z (Project.country)', async () => {
+		const backend = await render('Project');
+		const before = (await cell('country', 'name', 'Compiler')).textContent ?? '';
+		const editor = await openEditor('country', 'name', 'Compiler');
+		await click(await option(editor, 'Japan'));
+		await save(editor);
+		await editorClosed();
+		await waitUntil(() => findCell('country', 'name', 'Compiler')?.textContent?.includes('Japan'), 'the new label');
+
+		await press('z');
+		await waitUntil(() => backend.mutations.length === 2, 'the undo write');
+		const [, undo] = mutationsOf(backend);
+		expect(undo.op).toBe('update');
+		expect((undo.variables as { input: { projectPatch: { countryCode: unknown } } }).input.projectPatch.countryCode).not.toBe('JP');
+		await waitUntil(() => findCell('country', 'name', 'Compiler')?.textContent === before, 'the old label');
+
+		await press('z', true);
+		await waitUntil(() => backend.mutations.length === 3, 'the redo write');
+		expect(mutationsOf(backend)[2]).toEqual(mutationsOf(backend)[0]);
+	});
+
+	it('adds a removed link row back and removes the one it added (Label.tasks)', async () => {
+		const backend = await render('Label');
+		const editor = await openEditor('tasks', 'name', 'backend');
+		await waitUntil(() => linked(editor).length === 2, 'two linked tasks');
+		await click(await enabled(editor, 'button[aria-label="Remove Write the linker"]'));
+		await click(await option(editor, 'Merge the patches'));
+		await save(editor);
+		await editorClosed();
+
+		await press('z');
+		await waitUntil(() => backend.mutations.length === 4, 'the undo writes');
+		expect(mutationsOf(backend).slice(2)).toEqual([
+			{ op: 'delete', tableName: 'TaskLabel', variables: { input: { taskId: '4', labelId: 2 } } },
+			{ op: 'create', tableName: 'TaskLabel', variables: { input: { taskLabel: { taskId: '3', labelId: 2 } } } },
+		]);
 	});
 });
 

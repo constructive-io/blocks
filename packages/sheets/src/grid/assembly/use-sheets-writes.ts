@@ -137,7 +137,7 @@ export function useSheetsWrites({
 		[removeDraftRow, tableKey, getRowIdentifier, canDelete, operationFeedback, reportWriteError, config, tableName],
 	);
 
-	const { deleteSelected: baseDeleteSelected } = useGridOperations(
+	const { deleteRows: baseDeleteRows } = useGridOperations(
 		combinedRows,
 		deleteRow,
 		gridState.gridSelection,
@@ -149,12 +149,18 @@ export function useSheetsWrites({
 	);
 
 	// Wrap the delete handler to emit an observational row:delete event with the
-	// selected-row count, then delegate to the real deletion logic.
-	const deleteSelected = useCallback(async () => {
-		const count = gridState.gridSelection?.rows.length ?? 0;
-		emit('row:delete', { count });
-		await baseDeleteSelected();
-	}, [baseDeleteSelected, emit, gridState.gridSelection]);
+	// row count, then delegate to the real deletion logic.
+	const deleteRows = useCallback(
+		async (rows: readonly number[]) => {
+			emit('row:delete', { count: rows.length });
+			await baseDeleteRows(rows);
+		},
+		[baseDeleteRows, emit],
+	);
+	const deleteSelected = useCallback(
+		() => deleteRows(gridState.gridSelection?.rows.toArray() ?? []),
+		[deleteRows, gridState.gridSelection],
+	);
 
 	// Infinite-mode optimistic cache patch, handed to `useCellEditing` so a server-row
 	// edit flips the cell BEFORE the `update` round-trip. Snapshots the prior values for
@@ -307,5 +313,5 @@ export function useSheetsWrites({
 		if (infiniteScroll) infiniteGridData.invalidate();
 	}, [infiniteScroll, infiniteGridData]);
 
-	return { operationFeedback, deleteSelected, commitCells, commitCellValue, commitCellPatch, invalidateData, history };
+	return { operationFeedback, deleteRows, deleteSelected, commitCells, commitCellValue, commitCellPatch, invalidateData, history };
 }

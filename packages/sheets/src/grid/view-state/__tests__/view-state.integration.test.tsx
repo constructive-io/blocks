@@ -431,13 +431,39 @@ describe('feedback', () => {
 		);
 		await harness.mount([{ name: 'Label' }, { name: 'Country' }]);
 		const labelGrid = gridOf('Label');
-		await waitUntil(() => labelGrid.textContent?.includes('The labels could not be read right now.'), 'the Label error');
-		expect(labelGrid.textContent).toContain('The table “Label” could not be loaded.');
+		const panel = await waitUntil(() => labelGrid.querySelector<HTMLElement>('[data-part-id="sheets-rows-error"]'), 'the Label error');
+		expect(panel.textContent).toContain('The rows of this table could not be loaded.');
+		expect(panel.querySelector('details')?.textContent).toContain('The labels could not be read right now.');
 		await rowsShown('name', ['France', 'Japan', 'United States'], 'Country');
 
 		failure.heal();
-		await click(byText<HTMLElement>('button', 'Retry', labelGrid)!);
+		await click(byText<HTMLElement>('button', 'Try again', labelGrid)!);
 		await rowsShown('name', ['urgent', 'backend', 'docs'], 'Label');
+	});
+
+	it('a search the server refuses keeps the toolbar, so the search can be cleared', async () => {
+		const harness = createHarness();
+		await harness.mount([{ name: 'ScalarKind' }]);
+		const everyLabel = await waitUntil(() => {
+			const labels = columnTexts('label');
+			return labels.length > 1 ? labels : null;
+		}, 'the rows');
+		harness.failWhen(
+			(source) => source.includes('ModelList_ScalarKind') && source.includes('$where'),
+			() => createError.graphql('fetch failed'),
+		);
+		const box = await waitUntil(() => byLabel<HTMLInputElement>('Search rows'), 'the search box');
+		await waitUntil(() => !box.disabled, 'the search box to enable');
+		await typeText(box, 'typical');
+		await settle();
+
+		const panel = await waitUntil(() => harnessContainer().querySelector<HTMLElement>('[data-part-id="sheets-rows-error"]'), 'the error panel');
+		expect(panel.textContent).toContain('The search could not be applied.');
+		expect(byLabel<HTMLInputElement>('Search rows')).toBe(box);
+		await click(byText<HTMLElement>('button', 'Clear search', panel)!);
+		expect(box.value).toBe('');
+		await rowsShown('label', everyLabel);
+		expect(harnessContainer().querySelector('[data-part-id="sheets-rows-error"]')).toBeNull();
 	});
 
 	it('a failed write shows every message the server returned, and a refusal reads as a permission problem', async () => {
@@ -494,11 +520,19 @@ describe('feedback', () => {
 	it('a table with model issues shows a dismissible grouped notice and keeps the grid usable', async () => {
 		await renderTable('AuditEvent');
 		const notice = await waitUntil(() => harnessContainer().querySelector<HTMLElement>('[data-part-id="sheets-model-issues"]'), 'the notice');
-		expect(notice.textContent).toContain('Read-only table (3)');
+		// The table takes new rows but no changes: "Add only", next to Add row, and the missing
+		// key is said once (it is also why changes and deletes are refused).
+		expect(notice.textContent).toContain('Add-only table (1)');
 		await click(byText<HTMLElement>('button', 'Show details', notice)!);
-		expect(byLabel<HTMLElement>('Read-only table', notice)?.textContent).toContain(
-			'This table has no primary key, so its records are read-only.',
+		expect(byLabel<HTMLElement>('Add-only table', notice)?.querySelector('ul')?.textContent).toBe(
+			'This table has no primary key, so its records cannot be changed or deleted.',
 		);
+		const badge = harnessContainer().querySelector<HTMLElement>('[data-part-id="sheets-controls"] [role="status"]');
+		expect(badge?.textContent).toBe('Add only');
+		expect(badge?.title).toBe(
+			'Records in this table cannot be changed because the table has no primary key. New rows can still be added.',
+		);
+		expect(byText<HTMLButtonElement>('button', 'Add row')).toBeTruthy();
 		await waitUntil(() => columnTexts('actor').length > 0, 'the audit rows');
 	});
 });

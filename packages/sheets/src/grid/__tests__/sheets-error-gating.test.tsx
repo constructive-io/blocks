@@ -71,6 +71,7 @@ function makeResult(overrides: Partial<UseSheetsInternalResult<SheetsRow>> = {})
 			appendRow: vi.fn(),
 			submitDrafts: vi.fn(),
 			deleteSelected: vi.fn(),
+			deleteRows: vi.fn(),
 		},
 		selection: { gridSelection: undefined, setGridSelection: vi.fn() },
 		pagination: { pageIndex: 0, pageCount: 1, setPageIndex: vi.fn() },
@@ -269,6 +270,24 @@ describe('Sheets full-screen error gating', () => {
 
 		expect(errorState()).toBe(false);
 		expect(hasGrid()).toBe(true);
+	});
+
+	it('keeps the grid and toolbar when only the rows fail after the model loaded', () => {
+		mockResult = makeResult({ dataError: new Error('fetch failed') });
+		mockResult._shell.combinedRows = [];
+		(mockResult._shell as { tableModel: unknown }).tableModel = { operations: {}, primaryKey: ['id'], issues: [], columns: [], relations: [] };
+
+		render(<Sheets tableName='users' slots={{ toolbar: <div data-testid='toolbar' /> }} />);
+
+		expect(container.querySelector('[data-testid="toolbar"]')).not.toBeNull();
+		expect(hasGrid()).toBe(true);
+		const panel = container.querySelector('[data-part-id="sheets-rows-error"]');
+		expect(panel?.textContent).toContain('Rows could not be loaded');
+		expect(panel?.querySelector('details')?.textContent).toContain('fetch failed');
+		act(() => {
+			Array.from(panel!.querySelectorAll('button')).find((b) => b.textContent === 'Try again')?.click();
+		});
+		expect(refetchSpy).toHaveBeenCalledTimes(1);
 	});
 
 	it('wires retry to refetch from the error state', () => {

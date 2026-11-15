@@ -29,7 +29,8 @@ describe('date editor keeps stored values exactly', () => {
 
 	async function open(value: string, dateType: DateEditorType) {
 		const onFinishedEditing = vi.fn();
-		await act(async () => root.render(<DateEditor value={value} dateType={dateType} onFinishedEditing={onFinishedEditing} />));
+		// Each open is a new editor, as in the grid.
+		await act(async () => root.render(<DateEditor key={`${dateType}:${value}`} value={value} dateType={dateType} onFinishedEditing={onFinishedEditing} />));
 		return onFinishedEditing;
 	}
 
@@ -57,6 +58,42 @@ describe('date editor keeps stored values exactly', () => {
 			cell.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, button: 0, detail: 1 }));
 		});
 	}
+
+	async function typeDate(text: string, title = 'Date') {
+		const input = container.querySelector<HTMLInputElement>(`input[aria-label="${title} date"]`)!;
+		await act(async () => {
+			Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')?.set?.call(input, text);
+			input.dispatchEvent(new Event('input', { bubbles: true }));
+		});
+		return input;
+	}
+
+	async function pressEnter(element: Element) {
+		await act(async () => {
+			element.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true }));
+		});
+	}
+
+	it('saves a typed date with Enter and keeps the time', async () => {
+		const wall = await open('2024-02-29T13:45:30.123456', 'datetime');
+		const input = await typeDate('2024-03-05');
+		await pressEnter(input);
+		expect(wall).toHaveBeenCalledWith('2024-03-05T13:45:30.123456');
+	});
+
+	it('starts from what was typed on the cell, and refuses text that is not a date', async () => {
+		const finished = vi.fn();
+		await act(async () => root.render(<DateEditor key='typed' value='2024-02-29' dateType='date' initialText='2' onFinishedEditing={finished} />));
+		const input = container.querySelector<HTMLInputElement>('input[aria-label="Date date"]')!;
+		expect(input.value).toBe('2');
+		await pressEnter(input);
+		expect(finished).not.toHaveBeenCalled();
+		expect(container.querySelector('[role="alert"]')?.textContent).toMatch(/^Enter a date like 2024-01-31 or /);
+		await typeDate('2025-12-01');
+		expect(container.querySelector('[role="alert"]')).toBeNull();
+		await pressEnter(input);
+		expect(finished).toHaveBeenCalledWith('2025-12-01');
+	});
 
 	it('opening and saving without a change writes nothing', async () => {
 		for (const [value, type] of [

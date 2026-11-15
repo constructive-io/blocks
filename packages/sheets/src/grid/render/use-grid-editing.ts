@@ -6,6 +6,8 @@ import { useCallback, useEffect, useMemo, useRef } from 'react';
 
 import type { SheetsConfig, SheetsScopeKey } from '../../context/sheets-context';
 import type { Dispatch } from '../../commands/dispatch';
+import type { NavAbsolutePayload } from '../../commands/registry';
+import type { InlineEditMove } from '../../grid-dom/inline-cell-editor';
 import { nextToggleValue } from '../../cell-types/column-value';
 import { resolveEditIntent } from '../../grid-dom/editors/edit-intent';
 import { ImageEditorDom } from '../../grid-dom/editors/image-editor';
@@ -204,12 +206,16 @@ export function useGridEditing({ tableName, shell, config, canUpload, scopeKey, 
 				: undefined,
 		[inlineRow, inlineColumn, inlineText],
 	);
+	// After Enter or Tab the cursor moves on, as in a spreadsheet: down, up, or along the row.
 	const onInlineCommit = useCallback(
-		(rowIndex: number, colKey: string, value: unknown) => {
+		(rowIndex: number, colKey: string, value: unknown, move?: InlineEditMove) => {
 			commitBulkOrSingle(rowIndex, colKey, value);
 			overlayClose();
+			if (move === 'down') dispatch('cell.moveDown');
+			else if (move === 'up') dispatch('cell.moveUp');
+			else if (move) dispatch('cell.navAbsolute', undefined, { key: 'Tab', ctrlOrMeta: false, shift: move === 'left', pageRows: 0 } satisfies NavAbsolutePayload);
 		},
-		[commitBulkOrSingle, overlayClose],
+		[commitBulkOrSingle, overlayClose, dispatch],
 	);
 
 	// Shared open-at-active-cell path (Enter / F2 / type-to-edit): resolve the active cell's

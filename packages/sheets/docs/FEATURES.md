@@ -99,7 +99,7 @@ Each column's cell type comes from its model (`cellTypeForColumn` in
 | Column kind | Cell | Editor |
 |---|---|---|
 | text | text; email and URL as links | inline (length limit, multi-line); URLs use the URL editor |
-| integer, float | number | inline |
+| integer, float | number; money (Postgres `money`, the `currency` domain) as an amount | inline; a money field also reads the text it is shown as ("$1,234.56", "-$5", "($3.00)", commas grouping thousands only) |
 | bigint, decimal | number, exact text (never parsed into a JS number) | inline, exact text; precision and scale checked |
 | enum, text with a fixed list | label badges | option picker (several for lists) |
 | boolean | checkbox, empty when null | one click on the box, Enter or double-click flips checked and unchecked; an empty cell becomes checked; Delete empties a cell that accepts no value |
@@ -118,8 +118,9 @@ Each column's cell type comes from its model (`cellTypeForColumn` in
 Values on the wire are kept exact: big whole numbers and decimals are strings,
 `NaN` and `Infinity` decimals stay text, a time keeps its offset. Copy writes the
 same text the cell shows (`formatColumnValue`), quoted TSV for line breaks and
-tabs, JSON for objects; paste reads it back through the column's parser
-(`parseColumnInput`).
+tabs, JSON for objects; a link cell copies its records' labels (comma separated for
+a list), so it reads as text in another app. Paste reads values back through the
+column's parser (`parseColumnInput`); link cells change only in the link editor.
 
 Dates and times read the same way in cells, range cells, the record panel and the
 date editor's value line (`cell-types/date-time-format.ts`):
@@ -157,7 +158,9 @@ Enter edits the cell and the context menu's "Open link" (`cell.openLink`) opens 
 A cell is read-only, with a reason shown as a tooltip and as a notice when the user
 tries to edit it, when:
 
-- the table has no update operation (saved rows) or no create operation (draft rows);
+- the table has no update operation (saved rows) or no create operation (draft rows).
+  The toolbar shows "Read-only", or "Add only" when Add row is still offered, with
+  the reason as its title;
 - the column cannot be set by an update or a create (this includes computed
   columns on a server that reports `isComputed`);
 - it is a primary-key field of a saved row ("This field identifies the record, so it
@@ -180,17 +183,21 @@ tries to edit it, when:
 |---|---|
 | Open | double-click, Enter or F2, or type to edit |
 | Commit | Enter (inline), the editor's Save, or a click elsewhere for commit-on-blur editors (inline text and numbers) |
+| Commit and move | In an inline editor, Enter saves and moves down (Shift+Enter up, in a number; in text it adds a line), Tab saves and moves right, Shift+Tab left, wrapping like Tab in the grid. A value that does not fit stays in the editor with its reason |
 | Cancel | Escape restores the previous value |
 | Parse | Every committed value goes through the column parser; a value that does not fit is refused with its reason |
 | Optimistic | The cell shows the new value at once and reverts when the server refuses it; the refusal is listed with every server message |
 | Follow scroll | Scrolling moves an open editor with its cell; it closes when the cell leaves the rendered window |
-| Drafts | "Add row" adds a draft row. Required fields come from the model; the row's Save creates it with only the creatable columns the user set, and a key without a default is sent when the user typed it |
+| Drafts | "Add row" adds a draft row (or returns to the unsaved one), scrolls it into view and puts the cursor on its first cell that still needs a value, with the grid focused so typing fills it. Required fields come from the model; a required key field is asked for through its link column. The row's Save creates it with only the creatable columns the user set, and a key without a default is sent when the user typed it. A Save that still lacks fields sends nothing: "Fill in Project and Title to save this row." appears, the missing cells are marked ("Title needs a value."), the cursor goes to the first one, and the Save button's mark carries the reason as its tooltip |
 
 The other overlay editors (JSON, URL, network, list, full text, interval, date,
 map, links, files) keep their own Save and discard on a click outside. Every editor
 opens and closes at once, with no animation, and takes keyboard focus when it opens.
 
-Not available: Tab or Enter to commit and move to the next cell while editing.
+The date editor also takes a typed date: year first (2024-01-31) or ending with the
+year in the order the browser's language writes dates (31/01/2024 or 01/31/2024).
+A whole date moves the calendar to it, Enter saves, and text that is not a date is
+refused with an example. Emptying the field clears a value the column can leave empty.
 
 ---
 
@@ -222,7 +229,7 @@ type Interceptor = (event: DispatchEvent, next: () => CommandResult) => CommandR
 | `cell.extendUp/Down/Left/Right` | Shift+Arrow | always |
 | `cell.navAbsolute` | Tab, Shift+Tab, Home, End, Mod+Home, Mod+End, PageUp, PageDown | always |
 | `selection.all` | Mod+A | always |
-| `edit.undo` / `edit.redo` | Mod+Z / Mod+Shift+Z, Mod+Y | there is something to undo or redo |
+| `edit.undo` / `edit.redo` | Mod+Z / Mod+Shift+Z, Mod+Y | there is something to undo or redo. A saved link change (from a cell's link editor or the record panel) is one step: undo writes back the key values it replaced, adds a removed link row again and removes an added one; a step the server refuses stays to try again, with the reason |
 | `editor.openActive` | Enter, F2 | a cell is active |
 | `editor.typeToEdit` | a printable key | a cell is active |
 | `cell.activate` / `cell.extendToClicked` | click / Shift+click | always |
@@ -231,7 +238,7 @@ type Interceptor = (event: DispatchEvent, next: () => CommandResult) => CommandR
 | `rowmarker.toggleRow` / `rowmarker.toggleAll` | row checkboxes | always |
 | `clipboard.copy` / `cut` / `paste` | native copy, cut, paste | no editor is open |
 | `fill.down` / `fill.right` / `fill.drag` | Mod+D / Mod+R (claimed) / the fill handle | a range is selected |
-| `cell.clear` | Delete, Backspace | a writable cell is selected |
+| `cell.clear` | Delete, Backspace | a writable cell is selected. Clearing writes null, or an empty list; a required field (no null, no default) of a saved row is refused with "This field needs a value.", while a new row keeps the empty value until its Save checks it |
 | `view.focusSearch` | Mod+F | the search box is shown and the table can be searched (otherwise the browser's find) |
 | `view.openFilters` | Mod+Shift+F | the toolbar is shown and a field can be filtered |
 | `view.openSort` | Mod+Shift+S | the toolbar is shown and a column can be sorted |
@@ -382,8 +389,9 @@ contains" (label fields of the related table; for to-many relations through `som
 **Search.** A table with a combined search field searches through it; otherwise the
 box matches every readable text column that has a case-insensitive "contains", with
 `or`. The search combines with the filters by `and`, commits 250 ms after typing,
-and Escape clears it. The box lists what it searches and is disabled, with the
-reason, when the table cannot be searched.
+and Escape clears it. The box lists what it searches (never a full-text or vector
+column, which is how the search works) and is disabled, with the reason, when the
+table cannot be searched.
 
 **Sort.** A header click cycles the column (ascending, descending, none) and
 replaces the sort; Shift+click adds, flips or removes it as another key. The header
@@ -425,7 +433,9 @@ height are part of the view state (`SheetsColumnLayout`):
   not lists) keep their base width while text, date, list and link columns take the
   space; they share it only when no other column can grow. A resized column keeps its
   width, and so do frozen columns (unless every column is frozen) and the draft-row
-  action column.
+  action column. On a narrow grid a frozen column the user has not resized takes at
+  most 40% of the width (at least 96 px), so a long key such as a UUID does not cover
+  a phone screen.
   When no column may grow, row lines, hover and selection run to the edge over an
   empty filler that is not a cell and takes no focus. Wider columns scroll as before.
   The fill follows the grid's width and is recomputed when a column is hidden, shown,
@@ -476,8 +486,8 @@ slide; menus and dialogs inside it keep their own motion.
   value the server could not send shows "This value cannot be shown".
 - **Saving**: a field's value is checked by its column first (refused with the
   reason, nothing sent), shown at once, and sent as an update. A refused save shows
-  the stored value again and keeps the server's message on the field. Edits in the
-  panel are not on the grid's undo stack.
+  the stored value again and keeps the server's message on the field. Field edits in
+  the panel are not on the grid's undo stack; link changes are.
 - **Linked records**: one section per relation, with the same links, picker, "Create
   new" and reasons as the link editor. Opening a linked record stacks it in the
   panel; Back returns. The host is told only about the record of the grid's table.
@@ -532,7 +542,8 @@ records from delimited text:
 6. Records are created one per request, at most 4 at a time, in file order, with a
    progress bar. Cancel stops new creates (creates already sent finish); an ended
    session stops the run.
-7. The result counts created and failed rows. A report (CSV with the columns `Row`,
+7. The result counts created and failed rows and lists why rows were refused: the
+   five most common reasons with their row counts, the rest summed. A report (CSV with the columns `Row`,
    `Column`, `Reason`; rows numbered as in a spreadsheet, the header being row 1) is
    available from the review step and from the result; it includes the server's
    refusals and the rows never sent ("Not imported: the import stopped before this row
@@ -547,7 +558,8 @@ with progress and cancel; a cancelled export saves nothing. Values use the grid'
 format (choice labels; JSON for structured values and lists); a linked record is
 written as its label, a list of linked records as a JSON list of up to 100 labels.
 Cells the server could not send are left empty and counted. The file has a byte-order
-mark and CRLF line ends, and its header is the field names, so it imports back.
+mark and CRLF line ends, and its header names each column as the grid does; the
+import matches a header by that label or by the field name, so the file imports back.
 
 **Export selected (N)** shows only while rows are selected and saves just those rows,
 in the same format. `SheetsHandle.exportCsv()` writes the selected rows, or the loaded
@@ -568,8 +580,17 @@ apostrophe becomes part of the value.
 ## 13. Feedback
 
 - **Model issues**: a table with issues shows a dismissible notice above the grid,
-  one line per group (Read-only table, Unavailable columns, Read-only relations, Parts
-  of the view that no longer apply), with "Show details".
+  one line per group (Read-only table, or Add-only table when rows can still be
+  added, or Table actions when only some actions are refused; Unavailable columns,
+  Read-only relations, Parts of the view that no longer apply), with "Show details".
+  A table without a primary key says so once; its refused changes and deletes are not
+  listed again.
+- **Rows that fail to load**: once the table's model has loaded, a failed rows request
+  keeps the toolbar, the headers and the status bar, and shows "Rows could not be loaded"
+  over the body: "The search could not be applied." (or the filters, or the rows) with
+  "Clear search" / "Clear filters" when one is active and "Try again"; the server's own text
+  is under "Show details". The full-screen error is only for a table whose model failed.
+  A host's `slots.error` fills the same place.
 - **Failed writes**: every refused write is listed, with every server message, until
   dismissed. The title names the cell or row. A permission refusal reads "You do not
   have permission to change this record." (or to add or delete), never as a
@@ -583,6 +604,11 @@ apostrophe becomes part of the value.
 
 ## 14. Viewport, loading and performance
 
+- **Coming back**: when the page is shown again (visible, focused or back online) after at
+  least 30 seconds away, the grid reads the table's shape (`_meta`, so new columns appear)
+  and its loaded rows again. The cursor, the scroll position and unsaved new rows stay; an
+  open editor or a save in flight makes it wait until they finish. Edits are last-write-wins:
+  a row someone changed meanwhile is not detected.
 - Rows and columns are virtualized; the header is sticky and the frozen columns (the
   first one by default) stay in place. Row keys are stable, so infinite loading does
   not remount rows.
@@ -612,7 +638,10 @@ apostrophe becomes part of the value.
 - The context menu (right-click, Shift+F10 or the menu key) offers Open link (email
   and web-address cells), Open record, Copy, Cut, Paste, Clear, Sort ascending, Sort
   descending, Add row and Delete row through the command pipeline; a disabled item
-  shows its reason. Delete row asks for confirmation.
+  shows its reason. Delete row acts on the selected rows, else the rows under the
+  cursor, and asks for confirmation. A new row that was never saved is discarded
+  ("Discard new row?", also where saved rows cannot be deleted); a saved row is
+  deleted for good, and the toolbar's Delete uses the same words.
 - Not available: live announcements of selection and edits.
 
 ---

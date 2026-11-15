@@ -38,11 +38,60 @@ export function relationFieldLabel(relation: Pick<RelationModel, 'kind' | 'field
 	return `${fieldLabel(records)} by ${keys.join(' and ')}`;
 }
 
+type LabelModel = Pick<TableModel, 'key' | 'columns' | 'relations'>;
+type LabelRelation = Pick<RelationModel, 'kind' | 'fieldName' | 'junction' | 'keys' | 'targetKey'>;
+
+/**
+ * The short name of a generated relation name in its table, or null when its full label is
+ * the name: a link names what the row's key field says, without the field it points at
+ * (`personByAssigneeEmail` -> `Assignee`), else the linked table (`Warehouse item`); a list
+ * names the related records (`Tasks`). A list of the table's own records keeps what links
+ * them (`People by manager`), or it would read as every record.
+ */
+function shortRelationLabel(model: LabelModel, relation: LabelRelation): string | null {
+	const match = GENERATED_RELATION_NAME.exec(relation.fieldName);
+	if (!match) return null;
+	const records = fieldLabel(match[1]!);
+	if (relation.kind === 'belongsTo') {
+		const pair = relation.keys.length === 1 ? relation.keys[0]! : null;
+		const pointsAt = pair ? pair.remote.charAt(0).toUpperCase() + pair.remote.slice(1) : '';
+		if (pair && pair.local.length > pointsAt.length && pair.local.endsWith(pointsAt)) return fieldLabel(pair.local.slice(0, -pointsAt.length));
+		return records;
+	}
+	return relation.targetKey === model.key ? null : records;
+}
+
+const labelsByModel = new WeakMap<LabelModel, ReadonlyMap<string, string>>();
+
+/** The label of each relation of a table: short where no other field of the table reads the same. */
+function relationLabels(model: LabelModel): ReadonlyMap<string, string> {
+	const cached = labelsByModel.get(model);
+	if (cached) return cached;
+	const short = new Map(model.relations.map((relation) => [relation.fieldName, shortRelationLabel(model, relation) ?? relationFieldLabel(relation)]));
+	const uses = new Map<string, number>();
+	for (const label of [...model.columns.map((column) => fieldLabel(column.name)), ...short.values()]) {
+		const key = label.toLowerCase();
+		uses.set(key, (uses.get(key) ?? 0) + 1);
+	}
+	const labels = new Map<string, string>();
+	for (const relation of model.relations) {
+		const label = short.get(relation.fieldName)!;
+		labels.set(relation.fieldName, (uses.get(label.toLowerCase()) ?? 0) > 1 ? relationFieldLabel(relation) : label);
+	}
+	labelsByModel.set(model, labels);
+	return labels;
+}
+
+/** The label of a relation of `model`: its short name unless another field of the table reads the same. */
+export function relationLabelIn(model: LabelModel | null | undefined, relation: LabelRelation): string {
+	return (model && relationLabels(model).get(relation.fieldName)) ?? relationFieldLabel(relation);
+}
+
 /** The label of any field of a table: a relation reads as a relation, a column as a field. */
-export function modelFieldLabel(model: Pick<TableModel, 'relations'> | null | undefined): (name: string) => string {
+export function modelFieldLabel(model: LabelModel | null | undefined): (name: string) => string {
 	const relations = new Map((model?.relations ?? []).map((relation) => [relation.fieldName, relation]));
 	return (name) => {
 		const relation = relations.get(name);
-		return relation ? relationFieldLabel(relation) : fieldLabel(name);
+		return relation ? relationLabelIn(model, relation) : fieldLabel(name);
 	};
 }

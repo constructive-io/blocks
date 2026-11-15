@@ -28,3 +28,34 @@ describe('writeErrorMessages', () => {
 		expect(writeErrorMessages(updated, 'update')).toEqual(['This record was not changed. You may not be allowed to change it, or it no longer exists.']);
 	});
 });
+
+describe('writeErrorMessages for the database rules', () => {
+	const rule = (code: string, message: string, context: Record<string, unknown>) =>
+		withResponseErrors(new Error(message), null, [{ message, extensions: { code, context } }]);
+
+	it('names each refusal the server classifies in plain words, never its constraint text', () => {
+		expect(writeErrorMessages(rule('UNIQUE_VIOLATION', 'duplicate key value violates unique constraint "tags_label_key"', { constraint: 'tags_label_key' }), 'update')).toEqual([
+			'Another record already has this value.',
+		]);
+		expect(writeErrorMessages(rule('NOT_NULL_VIOLATION', 'null value in column "due_on" violates not-null constraint', { column: 'due_on' }), 'update')).toEqual([
+			'Due on needs a value.',
+		]);
+		expect(writeErrorMessages(rule('CHECK_VIOLATION', 'new row violates check constraint "tasks_priority_chk"', { constraint: 'tasks_priority_chk' }), 'create')).toEqual([
+			'This value is not allowed by a rule of this table.',
+		]);
+		const missingLink = rule('FOREIGN_KEY_VIOLATION', 'violates foreign key constraint "tasks_project_id_fkey"', { constraint: 'tasks_project_id_fkey' });
+		expect(writeErrorMessages(missingLink, 'update')).toEqual(['The linked record does not exist.']);
+		expect(writeErrorMessages(missingLink, 'delete')).toEqual(['Other records still link to this record.']);
+	});
+
+	it('prefers the message registered for the constraint', () => {
+		expect(writeErrorMessages(rule('UNIQUE_VIOLATION', 'duplicate key value violates unique constraint "people_email_key"', { constraint: 'people_email_key' }), 'update')).toEqual([
+			'This email address is already registered.',
+		]);
+	});
+
+	it('names the table whose records still link to a record the database will not delete', () => {
+		const restrict = new Error('update or delete on table "people" violates RESTRICT setting of foreign key constraint "projects_owner_id_fkey" on table "projects"');
+		expect(writeErrorMessages(restrict, 'delete')).toEqual(['Other records in Projects still link to this record. Change or remove them first.']);
+	});
+});

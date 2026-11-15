@@ -46,6 +46,8 @@ export interface RecordFieldProps {
 	readOnlyReason: string | null;
 	/** A value must be given (shown with a marker). */
 	required: boolean;
+	/** What an empty value reads as, when not "Empty" (a field a new record gets filled in). */
+	emptyText?: string | null;
 	/** The stored (or entered) value. */
 	value: unknown;
 	/** The neutral cell for the value (from the grid's cell factories). */
@@ -76,7 +78,22 @@ function seedText(value: unknown): string {
 }
 
 /** The shown value, laid out for a panel (no grid roles). */
-function FieldValue({ cell, value, name, recordId, readOnlyReason }: { cell: SheetsCell; value: unknown; name: string; recordId: string; readOnlyReason: string | null }) {
+function FieldValue({
+	cell,
+	value,
+	name,
+	recordId,
+	readOnlyReason,
+	emptyText,
+}: {
+	cell: SheetsCell;
+	value: unknown;
+	name: string;
+	recordId: string;
+	readOnlyReason: string | null;
+	/** What an empty value reads as. */
+	emptyText: string;
+}) {
 	const props: CellProps = {
 		cell,
 		value,
@@ -97,7 +114,7 @@ function FieldValue({ cell, value, name, recordId, readOnlyReason }: { cell: She
 			return <div className='h-9'><GeometryCellView {...props} /></div>;
 		case 'badges': {
 			const items = Array.isArray(cell.data) ? (cell.data as string[]) : [];
-			if (items.length === 0) return <p className='text-muted-foreground text-sm'>Empty</p>;
+			if (items.length === 0) return <p className='text-muted-foreground text-sm'>{emptyText}</p>;
 			return (
 				<ul className='flex flex-wrap gap-1'>
 					{items.map((item, index) => (
@@ -109,7 +126,7 @@ function FieldValue({ cell, value, name, recordId, readOnlyReason }: { cell: She
 			);
 		}
 		case 'uri': {
-			if (!cell.displayData) return <p className='text-muted-foreground text-sm'>Empty</p>;
+			if (!cell.displayData) return <p className='text-muted-foreground text-sm'>{emptyText}</p>;
 			// Only an address that may open is a link (the grid's rule); other text stays text.
 			const href = uriCellHref(cell);
 			return href ? (
@@ -138,18 +155,19 @@ function FieldValue({ cell, value, name, recordId, readOnlyReason }: { cell: She
 					{cell.displayData}
 				</p>
 			) : (
-				<p className='text-muted-foreground text-sm'>Empty</p>
+				<p className='text-muted-foreground text-sm'>{emptyText}</p>
 			);
 	}
 }
 
 /** Text and numbers edit in place: saved on blur or Enter (Ctrl/Cmd+Enter in multi-line text), Escape restores. */
-function TextValue({ id, column, value, numeric, describedBy, onSave }: {
+function TextValue({ id, column, value, numeric, describedBy, placeholder, onSave }: {
 	id: string;
 	column: ColumnModel;
 	value: unknown;
 	numeric: boolean;
 	describedBy: string | undefined;
+	placeholder: string | undefined;
 	onSave: (value: unknown, fromText: boolean) => Promise<boolean> | boolean;
 }) {
 	const seed = seedText(value);
@@ -191,11 +209,12 @@ function TextValue({ id, column, value, numeric, describedBy, onSave }: {
 		id,
 		value: text,
 		'aria-describedby': describedBy,
+		placeholder,
 		onBlur: (): void => void save(),
 		onKeyDown: handleKeyDown,
 		spellCheck: false,
 		className: cn(
-			'bg-muted/40 border-border/60 focus-visible:border-ring/60 focus-visible:ring-ring/35 w-full rounded-md border px-2.5 py-1.5 text-sm outline-none focus-visible:ring-[3px]',
+			'placeholder:text-muted-foreground bg-muted/40 border-border/60 focus-visible:border-ring/60 focus-visible:ring-ring/35 w-full rounded-md border px-2.5 py-1.5 text-sm outline-none focus-visible:ring-[3px]',
 			numeric && 'tabular-nums',
 		),
 	};
@@ -254,6 +273,7 @@ function BooleanValue({ name, column, value, describedBy, onSave }: {
 
 export function RecordField(props: RecordFieldProps) {
 	const { name, label, description, column, cellType, readOnlyReason, required, value, cell, saving, error, registry } = props;
+	const emptyText = props.emptyText ?? 'Empty';
 	const inputId = useId();
 	const noteId = useId();
 	const [editing, setEditing] = useState(false);
@@ -288,7 +308,15 @@ export function RecordField(props: RecordFieldProps) {
 	let control: React.ReactNode;
 	if (intent.mode === 'inline-edit') {
 		control = (
-			<TextValue id={inputId} column={column} value={value} numeric={cell.kind === 'number'} describedBy={notes} onSave={props.onSave} />
+			<TextValue
+				id={inputId}
+				column={column}
+				value={value}
+				numeric={cell.kind === 'number'}
+				describedBy={notes}
+				placeholder={props.emptyText ?? undefined}
+				onSave={props.onSave}
+			/>
 		);
 	} else if (intent.mode === 'inline-toggle') {
 		control = <BooleanValue name={label} column={column} value={value} describedBy={notes} onSave={props.onSave} />;
@@ -329,7 +357,7 @@ export function RecordField(props: RecordFieldProps) {
 			<div className='flex items-start justify-between gap-2'>
 				{/* A one-line value shares the Edit button's center line; a taller value keeps the button at its top. */}
 				<div className='flex min-h-7 min-w-0 flex-1 flex-col justify-center'>
-					<FieldValue cell={cell} value={value} name={name} recordId={props.recordId} readOnlyReason={readOnlyReason} />
+					<FieldValue cell={cell} value={value} name={name} recordId={props.recordId} readOnlyReason={readOnlyReason} emptyText={emptyText} />
 				</div>
 				<Button
 					ref={editButtonRef}
@@ -344,7 +372,7 @@ export function RecordField(props: RecordFieldProps) {
 			</div>
 		);
 	} else {
-		control = <FieldValue cell={cell} value={value} name={name} recordId={props.recordId} readOnlyReason={readOnlyReason} />;
+		control = <FieldValue cell={cell} value={value} name={name} recordId={props.recordId} readOnlyReason={readOnlyReason} emptyText={emptyText} />;
 	}
 
 	return (

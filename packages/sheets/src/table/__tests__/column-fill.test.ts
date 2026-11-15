@@ -14,6 +14,7 @@
  *    a link) could take the width.
  * 10. Only narrow columns can grow: they must share the spare width, not leave a filler.
  * 11. A narrow column that is user-sized or frozen grows in the fallback.
+ * 12. A long frozen key (a UUID) covers most of a phone-width grid.
  */
 import { describe, expect, it } from 'vitest';
 
@@ -67,6 +68,16 @@ describe('fillColumnWidths', () => {
 		expect(fill({ widths: [100, 100], fixed: [false, true], frozen: [true, false], available: 400 })).toEqual({ widths: [100, 100], filler: 200 });
 	});
 
+	it('keeps a frozen column the user did not resize within 40% of a narrow grid', () => {
+		// A 260 px UUID key on a 350 px grid: 140 px, and the rest scrolls under it.
+		expect(fill({ widths: [260, 150, 150], frozen: [true, false, false], available: 350 }).widths).toEqual([140, 150, 150]);
+		// Never below 96 px, and a width the user chose is kept.
+		expect(fill({ widths: [260, 150], frozen: [true, false], available: 200 }).widths).toEqual([96, 150]);
+		expect(fill({ widths: [260, 150], fixed: [true, false], frozen: [true, false], available: 350 }).widths).toEqual([260, 150]);
+		// On a wide grid nothing changes.
+		expect(fill({ widths: [260, 150], frozen: [true, false], available: 1000 }).widths).toEqual([260, 740]);
+	});
+
 	it('fills with the shown columns only (a hidden column is not passed in)', () => {
 		// Three columns of 100 with the middle one hidden: the two shown ones take all the width.
 		expect(fill({ widths: [100, 100], fixed: none(2), frozen: none(2), available: 600 }).widths).toEqual([300, 300]);
@@ -93,8 +104,10 @@ describe('fillColumnWidths', () => {
 	it('handles no flexible column, no column at all, zero-width columns and a grid narrower than its frozen columns', () => {
 		expect(fill({ widths: [], fixed: [], frozen: [], available: 400 })).toEqual({ widths: [], filler: 400 });
 		expect(fill({ widths: [0, 0], fixed: none(2), frozen: none(2), available: 101 }).widths).toEqual([50, 51]);
+		// Frozen columns wider than the grid: each comes down to 40% of it, and the grid still scrolls.
+		expect(fill({ widths: [300, 300, 100], fixed: none(3), frozen: [true, true, false], available: 450 })).toEqual({ widths: [180, 180, 100], filler: 0 });
 		const frozenWide = [300, 300, 100];
-		expect(fill({ widths: frozenWide, fixed: none(3), frozen: [true, true, false], available: 450 })).toEqual({ widths: frozenWide, filler: 0 });
+		expect(fill({ widths: frozenWide, fixed: [true, true, false], frozen: [true, true, false], available: 450 })).toEqual({ widths: frozenWide, filler: 0 });
 		expect(fill({ widths: [100], fixed: none(1), frozen: none(1), available: 0 }).widths).toEqual([100]);
 	});
 });

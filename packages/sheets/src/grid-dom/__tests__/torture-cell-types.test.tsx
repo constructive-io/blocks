@@ -355,6 +355,33 @@ describe('Sheets over the torture schema: cell types', () => {
 		await waitUntil(() => cell(0, 'status').textContent === 'Blocked', 'the new label');
 	});
 
+	it('Enter saves and moves down, Tab saves and moves right, Shift+Tab left, as in a spreadsheet', async () => {
+		const backend = createTortureBackend({ server: 'v2' });
+		await mount('ScalarKind', backend);
+		const grid = () => container.querySelector<HTMLElement>('[data-part-id="sheets-viewport"]')!;
+		const cursor = () => grid().getAttribute('aria-activedescendant');
+		const textAt = columnKeys().indexOf('textValue');
+		// A double-click as a person makes it: the first click puts the cursor on the cell.
+		const edit = async (rowIndex: number, text: string, key: string, shiftKey = false) => {
+			await fire(cell(rowIndex, 'textValue'), 'click');
+			await fire(cell(rowIndex, 'textValue'), 'dblclick');
+			const input = await waitUntil(() => container.querySelector<HTMLInputElement>('[data-slot="inline-cell-editor"]'), 'the inline editor');
+			await typeText(input, text);
+			await act(async () => {
+				input.dispatchEvent(new KeyboardEvent('keydown', { key, shiftKey, bubbles: true, cancelable: true }));
+			});
+		};
+
+		await edit(0, 'first', 'Enter');
+		await waitUntil(() => cursor() === `sheets-cell-1-${textAt}`, 'the cursor one row down');
+		await edit(1, 'second', 'Tab');
+		await waitUntil(() => cursor() === `sheets-cell-1-${textAt + 1}`, 'the cursor one column right');
+		await edit(1, 'third', 'Tab', true);
+		await waitUntil(() => cursor() === `sheets-cell-1-${textAt - 1}`, 'the cursor one column left');
+		await waitUntil(() => backend.mutations.length === 3, 'the three saves');
+		expect(backend.mutations.map(writtenValues)).toEqual([{ textValue: 'first' }, { textValue: 'second' }, { textValue: 'third' }]);
+	});
+
 	it('a decimal edit and a paste round-trip exactly', async () => {
 		const backend = createTortureBackend({ server: 'v2' });
 		await mount('ScalarKind', backend);
@@ -503,7 +530,7 @@ describe('Sheets over the torture schema: cell types', () => {
 		await editInline(draft, 'name', 'Germany');
 		const save = await waitUntil(() => container.querySelector<HTMLButtonElement>('[data-slot="draft-action-cell"]'), 'the draft Save');
 		await fire(save, 'click');
-		await waitUntil(() => cell(draft, 'isoCode').getAttribute('title') === 'Iso code is required', 'the required notice');
+		await waitUntil(() => cell(draft, 'isoCode').getAttribute('title') === 'Iso code needs a value.', 'the required notice');
 		expect(backend.mutations).toHaveLength(0);
 
 		await editInline(draft, 'isoCode', 'DE');
@@ -620,7 +647,7 @@ describe('Sheets over the torture schema: cell types', () => {
 		expect(writtenValues(lists.mutations[0])).toEqual({ intList: [1, 2, 3, 4] });
 	});
 
-	it('clearing respects required columns: text becomes empty, other kinds are refused', async () => {
+	it('clearing respects required columns: a required field of a saved row is refused, an optional one becomes empty', async () => {
 		const backend = createTortureBackend({ server: 'v2' });
 		await mount('ScalarKind', backend);
 		const grid = container.querySelector('[role="grid"]')!;
@@ -631,15 +658,17 @@ describe('Sheets over the torture schema: cell types', () => {
 		expect(toast.error).toHaveBeenCalledWith({ message: 'Bool required was not changed', description: 'This field needs a value.' });
 		expect(backend.mutations).toHaveLength(0);
 
+		// Required text without a default: emptying it would store a blank where the schema asks for a value.
 		await fire(cell(0, 'label'), 'click');
 		await pressKey(grid, 'Delete');
-		await waitUntil(() => backend.mutations.length === 1, 'the cleared label');
-		expect(writtenValues(backend.mutations[0])).toEqual({ label: '' });
+		await waitUntil(() => toast.error.mock.calls.length > 1, 'the label refusal');
+		expect(toast.error).toHaveBeenLastCalledWith({ message: 'Label was not changed', description: 'This field needs a value.' });
+		expect(backend.mutations).toHaveLength(0);
 
 		await fire(cell(0, 'textValue'), 'click');
 		await pressKey(grid, 'Delete');
-		await waitUntil(() => backend.mutations.length === 2, 'the cleared text');
-		expect(writtenValues(backend.mutations[1])).toEqual({ textValue: null });
+		await waitUntil(() => backend.mutations.length === 1, 'the cleared text');
+		expect(writtenValues(backend.mutations[0])).toEqual({ textValue: null });
 	});
 
 	it('the search keywords viewer takes the keyboard on open; Escape or a press outside closes it', async () => {
@@ -682,6 +711,9 @@ describe('Sheets over the torture schema: cell types', () => {
 		expect(active.getAttribute('role')).toBe('gridcell');
 		expect(active.getAttribute('aria-selected')).toBe('true');
 		expect(active.getAttribute('aria-colindex')).toBe(String(columnKeys().indexOf('host') + 1));
+		// Its header has the same position, so a screen reader can pair them with columns virtualized.
+		const header = container.querySelector('[role="columnheader"][data-col-key="host"]');
+		expect(header?.getAttribute('aria-colindex')).toBe(active.getAttribute('aria-colindex'));
 		expect(active.querySelector('[role="gridcell"]')).toBeNull();
 		// The other cells are not selected.
 		expect(cell(0, 'contactEmail').getAttribute('aria-selected')).toBeNull();

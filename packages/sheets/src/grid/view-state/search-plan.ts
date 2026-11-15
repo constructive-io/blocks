@@ -8,6 +8,7 @@
 import type { ColumnModel, TableModel } from '@constructive-io/data';
 
 const CONTAINS = 'includesInsensitive';
+const SEARCH_INDEX_KINDS: ReadonlySet<string> = new Set(['fulltext', 'vector']);
 
 export type SearchPlan =
 	| {
@@ -33,7 +34,14 @@ function containsField(column: ColumnModel): string | null {
 export function searchPlanOf(model: TableModel | null): SearchPlan | null {
 	if (!model?.operations.list?.filter) return null;
 	if (model.search?.unifiedSearchField) {
-		return { mode: 'unified', field: model.search.unifiedSearchField, columns: model.search.columns.map((column) => column.name) };
+		// A search index column (full-text or vector) is how the search works, not text a person reads.
+		const named = model.search.columns
+			.map((column) => column.name)
+			.filter((name) => {
+				const column = model.columns.find((candidate) => candidate.name === name);
+				return Boolean(column) && !SEARCH_INDEX_KINDS.has(column!.value.kind);
+			});
+		return { mode: 'unified', field: model.search.unifiedSearchField, columns: named };
 	}
 	const columns = model.columns.flatMap((column) => {
 		const field = containsField(column);

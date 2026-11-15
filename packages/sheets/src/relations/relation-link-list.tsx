@@ -4,6 +4,7 @@
  * The links a row has, as they will be after Save: current links, links the
  * user removed (struck through, with Undo) and records the user added.
  */
+import { useMemo } from 'react';
 import { ExternalLink, Loader2, RotateCcw, X } from 'lucide-react';
 
 import type { RelationModel } from '@constructive-io/data';
@@ -11,7 +12,7 @@ import { Badge } from '@constructive-io/ui/badge';
 import { Button } from '@constructive-io/ui/button';
 
 import { cn } from '../utils/cn';
-import { relationRecordLabel } from './relation-label';
+import { relationRecordDistinction, relationRecordLabel, sharedLabels } from './relation-label';
 import type { RecordValues } from './relation-keys';
 import type { PendingLink } from './use-relation-selection';
 
@@ -67,6 +68,8 @@ export function RelationLinkList({
 	placeholderCount = 0,
 }: RelationLinkListProps) {
 	const linkedCount = total ?? pending.filter((link) => link.state === 'linked').length;
+	const labels = useMemo(() => pending.map((link) => relationRecordLabel(relation, link.record) || 'Unnamed record'), [pending, relation]);
+	const shared = useMemo(() => sharedLabels(labels), [labels]);
 
 	return (
 		<section aria-label='Linked records' className='space-y-1.5'>
@@ -99,11 +102,13 @@ export function RelationLinkList({
 				) : (
 					// Rows nest in the bordered list: radius = list radius - (border 1px + padding 4px).
 					<ul className='space-y-1 p-1'>
-						{pending.map((link) => {
-							const label = relationRecordLabel(relation, link.record) || 'Unnamed record';
+						{pending.map((link, index) => {
+							const label = labels[index]!;
 							const removing = link.state === 'removed';
 							const adding = link.state === 'added';
-							const hint = adding ? moveHint?.(link.record) ?? null : null;
+							// Links that share a label say what tells them apart.
+							const distinction = shared.has(label) ? relationRecordDistinction(relation, link.record) : '';
+							const hint = [distinction, adding ? moveHint?.(link.record) ?? null : null].filter(Boolean).join(' · ') || null;
 							// A link that cannot be removed gets no remove control (the reason shows below the list).
 							const showToggle = !readOnly && (adding || removing || !removeReason);
 							return (

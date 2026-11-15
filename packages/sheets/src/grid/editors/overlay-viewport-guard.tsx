@@ -33,9 +33,12 @@ export function computeOverlayGeometry(
 	const hasTarget = targetY != null && targetH != null;
 	const targetBottom = hasTarget ? targetY + targetH : 0;
 	const spaceBelow = viewportHeight - targetBottom - marginPx;
-	const shouldFlip = hasTarget && spaceBelow < minBelowPx;
-	const maxHeight = shouldFlip ? maxHeightPx : Math.max(0, spaceBelow);
-	return { shouldFlip, maxHeight, targetBottom, spaceBelow, maxHeightPx };
+	const spaceAbove = hasTarget ? targetY - marginPx : 0;
+	// Open above only when the room below is short AND there is more room above; the
+	// overlay then gets the side's own room as its budget, so it never covers its cell.
+	const shouldFlip = hasTarget && spaceBelow < minBelowPx && spaceAbove > spaceBelow;
+	const maxHeight = Math.max(0, shouldFlip ? spaceAbove : spaceBelow);
+	return { shouldFlip, maxHeight, targetBottom, spaceBelow, spaceAbove, maxHeightPx };
 }
 
 export function OverlayViewportGuard({ children, debugName, marginPx = 12, minBelowPx = 320, target }: Props) {

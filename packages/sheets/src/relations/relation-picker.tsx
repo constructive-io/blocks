@@ -6,7 +6,7 @@
  * picks or unpicks it, and focus stays in the search box. Records load page
  * by page from the related table.
  */
-import { useEffect, useId, useRef, useState, type KeyboardEvent, type UIEvent } from 'react';
+import { useEffect, useId, useMemo, useRef, useState, type KeyboardEvent, type UIEvent } from 'react';
 import { Check, Loader2, Search } from 'lucide-react';
 
 import type { RelationModel } from '@constructive-io/data';
@@ -16,7 +16,7 @@ import { InputGroup, InputGroupAddon, InputGroupInput } from '@constructive-io/u
 
 import { cn } from '../utils/cn';
 import { linkKey, type RecordValues } from './relation-keys';
-import { relationRecordLabel } from './relation-label';
+import { relationRecordDistinction, relationRecordLabel, sharedLabels } from './relation-label';
 
 export interface RelationPickerProps {
 	relation: RelationModel;
@@ -71,6 +71,8 @@ export function RelationPicker({
 	const [active, setActive] = useState(0);
 	const inputRef = useRef<HTMLInputElement>(null);
 	const count = candidates.length;
+	const labels = useMemo(() => candidates.map((record) => relationRecordLabel(relation, record) || 'Unnamed record'), [candidates, relation]);
+	const shared = useMemo(() => sharedLabels(labels), [labels]);
 
 	// The picker mounts once the related table is known; start typing right away.
 	useEffect(() => {
@@ -184,9 +186,11 @@ export function RelationPicker({
 						<div className='text-muted-foreground py-5 text-center text-sm'>{search.trim() ? 'No matching records' : 'No records yet'}</div>
 					) : (
 						candidates.map((record, index) => {
-							const label = relationRecordLabel(relation, record) || 'Unnamed record';
+							const label = labels[index]!;
 							const selected = isSelected(record);
-							const hint = selected ? null : moveHint?.(record) ?? null;
+							// Records that share a label say what tells them apart.
+							const distinction = shared.has(label) ? relationRecordDistinction(relation, record) : '';
+							const hint = [distinction, selected ? null : moveHint?.(record) ?? null].filter(Boolean).join(' · ') || null;
 							return (
 								<div
 									key={linkKey(relation, record) ?? `row-${index}`}

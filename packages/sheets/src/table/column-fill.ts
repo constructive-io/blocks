@@ -11,6 +11,10 @@
  * keep their widths and `filler` says how much empty width is left for an inert
  * filler. Columns wider than the grid are returned unchanged (the grid scrolls).
  *
+ * A frozen column the user has not resized takes at most 40% of a narrow grid (and no
+ * less than 96 px), so a long key such as a UUID does not cover a phone screen while
+ * the other columns scroll under it.
+ *
  * The result is for display only: it is never stored, so a saved view keeps the
  * widths the user chose, not the widths one window size produced.
  */
@@ -50,7 +54,19 @@ function flexibleColumns({ fixed, frozen, narrow }: Pick<ColumnFillInput, 'fixed
 	return allFrozen ? indexes.filter((index) => !fixed[index]) : [];
 }
 
-export function fillColumnWidths({ widths, fixed, frozen, narrow, available }: ColumnFillInput): ColumnFill {
+/** The most a frozen column takes of the grid's width, unless the user resized it. */
+const FROZEN_SHARE = 0.4;
+const FROZEN_MIN_WIDTH = 96;
+
+function capFrozen({ widths, fixed, frozen, available }: Pick<ColumnFillInput, 'widths' | 'fixed' | 'frozen' | 'available'>): readonly number[] {
+	if (!(available > 0) || frozen.every(Boolean)) return widths;
+	const cap = Math.max(FROZEN_MIN_WIDTH, Math.floor(available * FROZEN_SHARE));
+	if (!widths.some((width, index) => frozen[index] && !fixed[index] && width > cap)) return widths;
+	return widths.map((width, index) => (frozen[index] && !fixed[index] ? Math.min(width, cap) : width));
+}
+
+export function fillColumnWidths({ widths: base, fixed, frozen, narrow, available }: ColumnFillInput): ColumnFill {
+	const widths = capFrozen({ widths: base, fixed, frozen, available });
 	const total = widths.reduce((sum, width) => sum + width, 0);
 	const spare = available - total;
 	if (!(spare > 0)) return { widths, filler: 0 };
@@ -58,12 +74,12 @@ export function fillColumnWidths({ widths, fixed, frozen, narrow, available }: C
 	const flexible = flexibleColumns({ fixed, frozen, narrow }, widths.length);
 	if (flexible.length === 0) return { widths, filler: spare };
 
-	const base = flexible.reduce((sum, index) => sum + widths[index]!, 0);
+	const flexibleWidth = flexible.reduce((sum, index) => sum + widths[index]!, 0);
 	const next = [...widths];
 	let given = 0;
 	flexible.forEach((index, position) => {
 		const last = position === flexible.length - 1;
-		const proportional = base > 0 ? (spare * widths[index]!) / base : spare / flexible.length;
+		const proportional = flexibleWidth > 0 ? (spare * widths[index]!) / flexibleWidth : spare / flexible.length;
 		const share = last ? spare - given : Math.floor(proportional);
 		next[index] = widths[index]! + share;
 		given += share;

@@ -38,7 +38,8 @@ export function reportRejectedWrites(rejected: readonly RejectedWrite[], total: 
 	);
 	const skipped = rejected.length;
 	toast.warning({
-		message: `${skipped} of ${total} ${total === 1 ? 'cell was' : 'cells were'} not changed`,
+		// The verb agrees with the cells left alone: "1 of 3 cells was not changed".
+		message: `${skipped} of ${total} ${total === 1 ? 'cell' : 'cells'} ${skipped === 1 ? 'was' : 'were'} not changed`,
 		description: lines.join('\n'),
 	});
 }
@@ -46,4 +47,9 @@ export function reportRejectedWrites(rejected: readonly RejectedWrite[], total: 
 /** Tell the user why a cell they tried to edit cannot be changed. */
 export function reportReadOnlyCell(colKey: string, reason: string): void {
 	toast.info({ message: `${fieldLabel(colKey)} cannot be changed`, description: reason });
+}
+
+/** Tell the user why a new row was not saved: the fields it still needs. */
+export function reportIncompleteDraft(message: string): void {
+	toast.warning({ message });
 }

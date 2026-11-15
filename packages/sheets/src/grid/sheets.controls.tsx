@@ -53,6 +53,7 @@ import { filterConditionsOf } from './view-state/view-state';
 import type { SheetsViewBindings } from './view-state/use-sheets-view';
 import type { SavedViewsBindings } from './views/use-saved-views';
 import { ViewSwitcher } from './views/view-switcher';
+import { rowRemovalConfirm, type RowRemoval } from './row-removal';
 
 export interface SheetsControlsProps {
 	/** Filter, sort and search bindings. */
@@ -67,6 +68,8 @@ export interface SheetsControlsProps {
 	/** Download the selected rows as CSV; offered only while rows are selected. */
 	onExport?: () => void;
 	canDelete?: boolean;
+	/** What deleting the selected rows does (saved rows deleted, new rows discarded); refines `canDelete`. */
+	selectionRemoval?: RowRemoval;
 	readOnlyReason?: string | null;
 	/** Saved views of the table. Omit to hide the view switcher. */
 	savedViews?: SavedViewsBindings;
@@ -89,6 +92,7 @@ export function SheetsControls(props: SheetsControlsProps) {
 		onAddRow,
 		onExport,
 		canDelete = true,
+		selectionRemoval,
 		readOnlyReason = null,
 		savedViews,
 		tools,
@@ -121,11 +125,12 @@ export function SheetsControls(props: SheetsControlsProps) {
 			data-part-id='sheets-controls'
 			className='@container/sheets-toolbar flex shrink-0 flex-wrap items-center justify-between gap-x-4 gap-y-2 py-4'
 		>
-			<ViewGroup view={view} columnKeys={columnKeys} savedViews={savedViews} readOnlyReason={readOnlyReason} />
+			<ViewGroup view={view} columnKeys={columnKeys} savedViews={savedViews} readOnlyReason={readOnlyReason} canAdd={hasAddRow} />
 			<ActionGroup
 				selectedRowCount={selectedRowCount}
 				showDelete={showSelection}
 				canDelete={canDelete}
+				removal={selectionRemoval ?? null}
 				readOnlyReason={readOnlyReason}
 				newRecordDisabledReason={newRecord?.disabledReason ?? null}
 				tools={tools}
@@ -140,10 +145,12 @@ interface ViewGroupProps {
 	columnKeys: readonly string[];
 	savedViews: SavedViewsBindings | undefined;
 	readOnlyReason: string | null;
+	/** Add row is offered, so the badge says what still works. */
+	canAdd: boolean;
 }
 
 /** What the grid shows: the saved view, Fields, Filters, Sort and search. */
-const ViewGroup = memo(function ViewGroup({ view, columnKeys, savedViews, readOnlyReason }: ViewGroupProps) {
+const ViewGroup = memo(function ViewGroup({ view, columnKeys, savedViews, readOnlyReason, canAdd }: ViewGroupProps) {
 	const conditionCount = useMemo(() => filterConditionsOf(view.state.filters).length, [view.state.filters]);
 	const waiting = conditionCount - view.appliedCount;
 	const sortCount = view.state.sort.length;
@@ -151,16 +158,7 @@ const ViewGroup = memo(function ViewGroup({ view, columnKeys, savedViews, readOn
 	return (
 		<div role='group' aria-label='View' className='flex min-w-0 flex-wrap items-center gap-1'>
 			{savedViews && <ViewSwitcher views={savedViews} />}
-			{readOnlyReason && (
-				<span
-					className='border-border bg-muted text-muted-foreground ms-1 inline-flex h-6 items-center gap-1 rounded-md border px-2 text-xs'
-					role='status'
-					title={readOnlyReason}
-				>
-					<RiLockLine className='size-3.5' aria-hidden='true' />
-					Read-only
-				</span>
-			)}
+			{readOnlyReason && <AccessBadge reason={readOnlyReason} canAdd={canAdd} />}
 			{savedViews && <Separator orientation='vertical' className={DIVIDER} />}
 
 			<FieldsControl layout={view.layout} columnLabel={view.columnLabel} ready={view.model !== null} />
@@ -236,11 +234,29 @@ const ViewGroup = memo(function ViewGroup({ view, columnKeys, savedViews, readOn
 	);
 });
 
+/**
+ * Why rows cannot be changed. A table that still takes new rows reads "Add only", so the
+ * badge does not contradict Add row; the full reason is its title.
+ */
+function AccessBadge({ reason, canAdd }: { reason: string; canAdd: boolean }) {
+	return (
+		<span
+			className='border-border bg-muted text-muted-foreground ms-1 inline-flex h-6 items-center gap-1 rounded-md border px-2 text-xs'
+			role='status'
+			title={canAdd ? `${reason} New rows can still be added.` : reason}
+		>
+			<RiLockLine className='size-3.5' aria-hidden='true' />
+			{canAdd ? 'Add only' : 'Read-only'}
+		</span>
+	);
+}
+
 interface ActionGroupProps {
 	selectedRowCount: number;
 	/** Delete is offered with the row checkboxes (`showSelection`). */
 	showDelete: boolean;
 	canDelete: boolean;
+	removal: RowRemoval | null;
 	readOnlyReason: string | null;
 	newRecordDisabledReason: string | null;
 	tools: React.ReactNode;
@@ -256,6 +272,7 @@ const ActionGroup = memo(function ActionGroup({
 	selectedRowCount,
 	showDelete,
 	canDelete,
+	removal,
 	readOnlyReason,
 	newRecordDisabledReason,
 	tools,
@@ -276,6 +293,7 @@ const ActionGroup = memo(function ActionGroup({
 			<SelectionActions
 				count={selectedRowCount}
 				canDelete={canDelete}
+				removal={removal}
 				readOnlyReason={readOnlyReason}
 				onClear={clearSelection}
 				onDelete={showDelete ? deleteSelected : undefined}
@@ -335,6 +353,7 @@ const ActionGroup = memo(function ActionGroup({
 interface SelectionActionsProps {
 	count: number;
 	canDelete: boolean;
+	removal: RowRemoval | null;
 	readOnlyReason: string | null;
 	onClear: () => void;
 	/** Omitted: no Delete (the grid shows no row checkboxes). */
@@ -343,8 +362,13 @@ interface SelectionActionsProps {
 }
 
 /** The selected rows' own actions, shown only while rows are selected. */
-function SelectionActions({ count, canDelete, readOnlyReason, onClear, onDelete, onExport }: SelectionActionsProps) {
+function SelectionActions({ count, canDelete, removal, readOnlyReason, onClear, onDelete, onExport }: SelectionActionsProps) {
 	const rows = `${count.toLocaleString()} ${count === 1 ? 'row' : 'rows'}`;
+	// With the plan, a new row is discarded even where saved rows cannot be deleted.
+	const blockedReason = removal ? removal.blockedReason : canDelete ? null : readOnlyReason ?? 'Delete is unavailable for this table.';
+	const confirm = removal
+		? rowRemovalConfirm(removal)
+		: { title: `Delete ${rows}?`, description: `This will permanently delete ${rows}. This cannot be undone.`, action: 'Delete' };
 	return (
 		<div
 			role='group'
@@ -363,28 +387,31 @@ function SelectionActions({ count, canDelete, readOnlyReason, onClear, onDelete,
 			)}
 			{onDelete && (
 				<AlertDialog>
-					<AlertDialogTrigger asChild>
-						<Button
-							variant='ghost'
-							size='xs'
-							aria-label='Delete selected rows'
-							disabled={!canDelete}
-							title={!canDelete ? readOnlyReason ?? 'Delete is unavailable for this table.' : undefined}
-							className='text-destructive hover:bg-destructive/10 hover:text-destructive px-2 text-sm'
-						>
-							<RiDeleteBin6Line className='size-4' aria-hidden='true' />
-							<ToolbarLabel fold='view'>Delete</ToolbarLabel>
-						</Button>
-					</AlertDialogTrigger>
+					{/* The wrapper carries the reason: a disabled button takes no pointer events. */}
+					<span className='inline-flex' title={blockedReason ?? undefined}>
+						<AlertDialogTrigger asChild>
+							<Button
+								variant='ghost'
+								size='xs'
+								aria-label='Delete selected rows'
+								aria-description={blockedReason ?? undefined}
+								disabled={blockedReason !== null}
+								className='text-destructive hover:bg-destructive/10 hover:text-destructive px-2 text-sm'
+							>
+								<RiDeleteBin6Line className='size-4' aria-hidden='true' />
+								<ToolbarLabel fold='view'>Delete</ToolbarLabel>
+							</Button>
+						</AlertDialogTrigger>
+					</span>
 					<AlertDialogContent>
 						<AlertDialogHeader>
-							<AlertDialogTitle>Delete {rows}?</AlertDialogTitle>
-							<AlertDialogDescription>This will permanently delete {rows}. This action cannot be undone.</AlertDialogDescription>
+							<AlertDialogTitle>{confirm.title}</AlertDialogTitle>
+							<AlertDialogDescription>{confirm.description}</AlertDialogDescription>
 						</AlertDialogHeader>
 						<AlertDialogFooter>
 							<AlertDialogCancel>Cancel</AlertDialogCancel>
 							<AlertDialogAction className='bg-destructive hover:bg-destructive/90 text-white' onClick={onDelete}>
-								Delete
+								{confirm.action}
 							</AlertDialogAction>
 						</AlertDialogFooter>
 					</AlertDialogContent>

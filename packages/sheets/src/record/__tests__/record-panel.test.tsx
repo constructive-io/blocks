@@ -319,6 +319,22 @@ describe('record panel', () => {
 		await waitUntil(() => title() === 'Germany', 'the created record');
 	});
 
+	it('a new record marks a link it needs and says which fields fill in themselves', async () => {
+		const backend = createTortureBackend({ server: 'v2' });
+		const handle = createRef<SheetsHandle>();
+		await mount('Task', backend, { handle });
+		await act(async () => {
+			expect(handle.current?.openNewRecord()).toBe(true);
+		});
+		await waitUntil(() => title() === 'New record', 'the new-record form');
+		const project = await waitUntil(() => panel()!.querySelector('[data-slot="relation-section"][data-relation="project"]'), 'the Project link');
+		// Task.projectId is required on create: its link is marked like a required field.
+		expect(project.querySelector('h3')?.textContent).toBe('Project *');
+		// Task.status has a default: empty, it reads as filled in on create, not as "Empty".
+		expect(field('status').textContent).toContain('Set automatically when created');
+		expect(field('status').textContent).not.toContain('Empty');
+	});
+
 	it('a new record can be filled in on an empty table', async () => {
 		const backend = createTortureBackend({ server: 'v2' });
 		backend.rows.Country.length = 0;

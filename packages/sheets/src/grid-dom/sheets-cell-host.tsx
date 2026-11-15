@@ -22,6 +22,7 @@ import type React from 'react';
 import { cn } from '../utils/cn';
 import { getDraftMeta, type SheetsRow } from '../grid/row-model';
 import { DRAFT_ACTION_COLUMN_KEY } from '../grid/sheets.constants';
+import { DRAFT_ROW_ERROR_KEY } from '../grid/draft-guidance';
 import type { RenderCellContext } from '../table/grid-viewport';
 import type { CellProps } from '../cell-model/cell-props';
 import { BadgesCellView } from '../cell-model/views/badges-view';
@@ -35,7 +36,7 @@ import { RelationCellView } from '../cell-model/views/relation-view';
 import { TextCellView } from '../cell-model/views/text-view';
 import { UriCellView } from '../cell-model/views/uri-view';
 import { reportRejectedWrites } from '../grid/write-feedback';
-import { InlineCellEditor } from './inline-cell-editor';
+import { InlineCellEditor, type InlineEditMove } from './inline-cell-editor';
 import type { SheetsCellResolution } from './use-sheets-content';
 
 /** Native DOM content resolver injected by the shell — mirrors `getCellContent`. */
@@ -90,6 +91,8 @@ interface DraftActionInfo {
 	status: DraftActionStatus;
 	errored: boolean;
 	disabled: boolean;
+	/** Why the row was not saved: what it still needs, or the server's reason. */
+	errorMessage: string | null;
 }
 
 /**
@@ -102,11 +105,15 @@ function deriveDraftActionInfo(row: SheetsRow | null | undefined): DraftActionIn
 	const meta = getDraftMeta(row);
 	if (!meta) return null;
 	const status: DraftActionStatus = meta.status;
-	return { draftRowId: meta.draftRowId, status, errored: status === 'error', disabled: status === 'saving' };
+	const errored = status === 'error';
+	const errorMessage = errored ? (meta.errors?.[DRAFT_ROW_ERROR_KEY] ?? null) : null;
+	return { draftRowId: meta.draftRowId, status, errored, disabled: status === 'saving', errorMessage };
 }
 
 interface SheetsCellHostInnerProps {
 	resolution: SheetsCellResolution;
+	/** The row is a new (draft) row: its values are checked as a whole when it is saved. */
+	isDraftRow: boolean;
 	rowId: string;
 	colKey: string;
 	rowIndex: number;
@@ -123,7 +130,7 @@ interface SheetsCellHostInnerProps {
 	inlineInitialText?: string;
 	/** Commit an inline (in-cell) edit. Set on the inline-edit render path; reuses the host's
 	 * value-commit pipeline (bulk-or-single). */
-	onInlineCommit?: (rowIndex: number, colKey: string, value: unknown) => void;
+	onInlineCommit?: (rowIndex: number, colKey: string, value: unknown, move?: InlineEditMove) => void;
 	/** Cancel an inline (in-cell) edit — discards and closes. */
 	onInlineCancel?: () => void;
 	/** Park the active cell on this cell (click-to-activate). `shiftKey` extends the range from the
@@ -244,6 +251,7 @@ const SheetsCellHostInner = memo(
 						<DraftActionCellView
 							status={draftAction.status}
 							errored={draftAction.errored}
+							errorMessage={draftAction.errorMessage}
 							disabled={draftAction.disabled}
 							onSubmit={submitDraft}
 						/>
@@ -259,7 +267,8 @@ const SheetsCellHostInner = memo(
 						initialText={props.inlineInitialText}
 						numeric={props.resolution.cell.kind === 'number'}
 						column={props.resolution.column ?? null}
-						onCommit={(next) => props.onInlineCommit?.(props.rowIndex, props.colKey, next)}
+						creating={props.isDraftRow}
+						onCommit={(next, move) => props.onInlineCommit?.(props.rowIndex, props.colKey, next, move)}
 						onCancel={() => props.onInlineCancel?.()}
 						onReject={(reason) => reportRejectedWrites([{ rowIndex: props.rowIndex, colKey: props.colKey, reason }], 1)}
 					/>
@@ -285,6 +294,7 @@ const SheetsCellHostInner = memo(
 		prev.onInlineCancel === next.onInlineCancel &&
 		// isActive must gate the memo or the focus ring will not move between cells.
 		prev.isActive === next.isActive &&
+		prev.isDraftRow === next.isDraftRow &&
 		prev.isSelected === next.isSelected &&
 		prev.openEditor === next.openEditor &&
 		prev.onActivateCell === next.onActivateCell &&
@@ -301,11 +311,17 @@ const SheetsCellHostInner = memo(
 		sameDraftAction(prev.draftAction, next.draftAction)
 );
 
-/** Draft-action equality for the memo gate — status/errored/disabled drive the Button. */
+/** Draft-action equality for the memo gate — status/errored/disabled/reason drive the Button. */
 function sameDraftAction(a: DraftActionInfo | null | undefined, b: DraftActionInfo | null | undefined): boolean {
 	if (a === b) return true;
 	if (!a || !b) return false;
-	return a.draftRowId === b.draftRowId && a.status === b.status && a.errored === b.errored && a.disabled === b.disabled;
+	return (
+		a.draftRowId === b.draftRowId &&
+		a.status === b.status &&
+		a.errored === b.errored &&
+		a.disabled === b.disabled &&
+		a.errorMessage === b.errorMessage
+	);
 }
 
 export interface SheetsCellHostProps {
@@ -315,7 +331,7 @@ export interface SheetsCellHostProps {
 	/** Open the overlay editor for the activated cell (double-click; grid root owns Enter / F2). */
 	openEditor?: OpenEditor;
 	/** Commit an inline (in-cell) edit — reuses the host value-commit pipeline. */
-	onInlineCommit?: (rowIndex: number, colKey: string, value: unknown) => void;
+	onInlineCommit?: (rowIndex: number, colKey: string, value: unknown, move?: InlineEditMove) => void;
 	/** Cancel an inline (in-cell) edit. */
 	onInlineCancel?: () => void;
 	/** Park the active cell on click; `shiftKey` extends the cell range from the anchor. */
@@ -343,6 +359,7 @@ export function SheetsCellHost({ ctx, getSheetsCellContent, openEditor, onInline
 	return (
 		<SheetsCellHostInner
 			resolution={resolution}
+			isDraftRow={Boolean(getDraftMeta(row))}
 			rowId={ctx.rowId}
 			colKey={colKey}
 			rowIndex={rowIndex}

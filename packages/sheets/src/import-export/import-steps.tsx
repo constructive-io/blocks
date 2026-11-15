@@ -283,6 +283,23 @@ export function RunningStep({ progress }: { progress: ImportProgress }) {
 	);
 }
 
+/** Reasons shown for refused rows; the report has every row. */
+const TOP_REASONS = 5;
+
+/**
+ * Why the server refused rows, most common first, each with how many rows it refused:
+ * "Another record already has this value. (1,150 rows)". The rest are counted in one line.
+ */
+export function refusalReasons(failures: readonly ImportIssue[], limit = TOP_REASONS): string[] {
+	const counts = new Map<string, number>();
+	for (const failure of failures) counts.set(failure.reason, (counts.get(failure.reason) ?? 0) + 1);
+	const ranked = [...counts].sort((a, b) => b[1] - a[1]);
+	const lines = ranked.slice(0, limit).map(([reason, count]) => `${reason} (${plural(count, 'row')})`);
+	const rest = ranked.slice(limit).reduce((sum, [, count]) => sum + count, 0);
+	if (rest > 0) lines.push(`${plural(rest, 'more row was', 'more rows were')} refused for other reasons; the report lists each one.`);
+	return lines;
+}
+
 export function DoneStep({ result, issues, cancelled }: { result: ImportRunResult; issues: readonly ImportIssue[]; cancelled: boolean }) {
 	const skipped = new Set(issues.map((issue) => issue.row)).size;
 	const lines = [
@@ -299,6 +316,7 @@ export function DoneStep({ result, issues, cancelled }: { result: ImportRunResul
 			<p role='status' className='text-sm'>
 				{lines.join(' ')}
 			</p>
+			<Problems items={refusalReasons(result.failures)} label='Why rows were refused' />
 			{result.stopReason && <Problems items={[result.stopReason]} label='The import stopped' />}
 		</div>
 	);

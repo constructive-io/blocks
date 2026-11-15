@@ -69,7 +69,7 @@ export function RecordCreateView({ entry, registry, typeOverrides, mediaReason, 
 		: null;
 
 	function setField(column: ColumnModel, value: unknown, fromText: boolean): boolean {
-		const parsed = parseColumnInput(column, value, { fromText });
+		const parsed = parseColumnInput(column, value, { fromText, creating: true });
 		if (parsed.ok === false) {
 			setErrors((current) => ({ ...current, [column.name]: parsed.reason }));
 			return false;
@@ -151,6 +151,7 @@ export function RecordCreateView({ entry, registry, typeOverrides, mediaReason, 
 								cellType={item.cellType}
 								readOnlyReason={item.readOnlyReason}
 								required={item.field.required}
+								emptyText={item.emptyText}
 								value={values[item.field.name]}
 								cell={recordFieldCell(registry, model, item, values[item.field.name], false)}
 								saving={false}
@@ -172,6 +173,7 @@ export function RecordCreateView({ entry, registry, typeOverrides, mediaReason, 
 								row={values}
 								rowIdentifier={null}
 								isDraft
+								required={item.required}
 								readOnlyReason={item.readOnlyReason}
 								onCommitPatch={(patch) => setValues((current) => ({ ...current, ...patch }))}
 								onInvalidateData={onInvalidate}

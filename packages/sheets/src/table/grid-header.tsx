@@ -58,10 +58,12 @@ export interface HeaderCellProps {
 	drag?: HeaderDrag;
 	/** The column's menu (trigger and popup), rendered after the caret. */
 	menu?: React.ReactNode;
+	/** The column's index among the grid's columns, as its cells have it (`aria-colindex` is one more). */
+	colIndex?: number;
 }
 
 /** A single header cell: title + sort caret and priority (click toggles) + menu + right-edge resize handle. */
-export function HeaderCell({ column, header, sort, onHeaderClick, getUnsortableReason, onResize, width, drag, menu }: HeaderCellProps) {
+export function HeaderCell({ column, header, sort, onHeaderClick, getUnsortableReason, onResize, width, drag, menu, colIndex }: HeaderCellProps) {
 	const position = sort.findIndex((key) => key.column === column.id);
 	const direction: 'asc' | 'desc' | 'none' = position === -1 ? 'none' : sort[position]!.direction;
 	const priority = position !== -1 && sort.length > 1 ? position + 1 : null;
@@ -102,6 +104,8 @@ export function HeaderCell({ column, header, sort, onHeaderClick, getUnsortableR
 			role='columnheader'
 			data-part-id='sheets-header-cell'
 			data-col-key={column.id}
+			// With columns virtualized, a screen reader reads the position from here, as on the cells.
+			aria-colindex={colIndex === undefined ? undefined : colIndex + 1}
 			data-sortable={onHeaderClick ? String(sortable) : undefined}
 			data-dragging={drag?.dragging === column.id || undefined}
 			aria-sort={direction === 'asc' ? 'ascending' : direction === 'desc' ? 'descending' : 'none'}

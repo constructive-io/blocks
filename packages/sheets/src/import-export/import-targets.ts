@@ -8,7 +8,7 @@
 
 import type { ColumnModel, RelationModel, TableModel } from '@constructive-io/data';
 
-import { fieldLabel, relationFieldLabel } from '../cell-types/field-label';
+import { fieldLabel, relationLabelIn } from '../cell-types/field-label';
 
 export type ImportTarget =
 	| { kind: 'column'; key: string; label: string; column: ColumnModel }
@@ -39,7 +39,7 @@ export function importTargets(model: TableModel): ImportTarget[] {
 				relation.keys.length > 0 &&
 				relation.keys.every((pair) => writable.has(pair.local)),
 		)
-		.map((relation) => ({ kind: 'relation', key: `relation:${relation.fieldName}`, label: relationFieldLabel(relation), relation }));
+		.map((relation) => ({ kind: 'relation', key: `relation:${relation.fieldName}`, label: relationLabelIn(model, relation), relation }));
 	return [...columns, ...relations];
 }
 

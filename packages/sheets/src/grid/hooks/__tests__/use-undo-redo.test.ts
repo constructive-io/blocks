@@ -96,3 +96,28 @@ describe('useUndoRedo', () => {
 		expect(log).toEqual([]);
 	});
 });
+
+describe('a step that changes nothing', () => {
+	it('stays where it was, so it can be tried again, and the older steps stay behind it', async () => {
+		const log: string[] = [];
+		let refuse = true;
+		act(() => {
+			api.record(entry(log, 'cell'));
+			api.record({
+				label: 'link',
+				undo: () => {
+					if (refuse) throw new Error('refused');
+					log.push('undo:link');
+				},
+				redo: () => void log.push('redo:link'),
+			});
+		});
+		await act(() => api.undo());
+		expect(log).toEqual([]);
+		expect(api.canRedo).toBe(false);
+		refuse = false;
+		await act(() => api.undo());
+		await act(() => api.undo());
+		expect(log).toEqual(['undo:link', 'undo:cell']);
+	});
+});

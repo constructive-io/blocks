@@ -10,7 +10,7 @@
 import { useCallback, useMemo } from 'react';
 
 import { isImageField, type FieldMetadata } from '../cell-types/cell-type-resolver';
-import { fieldLabel, relationFieldLabel } from '../cell-types/field-label';
+import { fieldLabel, relationLabelIn } from '../cell-types/field-label';
 import { getColumnWidthByMeta } from '../grid/sheets.utils';
 import { gridColumnKeys } from '../relations/relation-columns';
 
@@ -96,7 +96,7 @@ export function useRelationColumns(tableName?: string, _rows?: unknown[]): Relat
 				: metaField
 					? getColumnWidthByMeta(metaField)
 					: DEFAULT_WIDTH;
-			return { id: fieldName, title: relation ? relationFieldLabel(relation) : fieldLabel(fieldName), width } satisfies RelationGridColumn;
+			return { id: fieldName, title: relation ? relationLabelIn(model, relation) : fieldLabel(fieldName), width } satisfies RelationGridColumn;
 		});
 	}, [columnKeys, metaFieldByName, model]);
 

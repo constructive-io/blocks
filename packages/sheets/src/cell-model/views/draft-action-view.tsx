@@ -20,6 +20,8 @@ export interface DraftActionCellViewProps {
 	status?: DraftActionStatus;
 	disabled?: boolean;
 	errored?: boolean;
+	/** Why the row was not saved; the button's tooltip and its description while `errored`. */
+	errorMessage?: string | null;
 	onSubmit?: () => void;
 }
 
@@ -32,6 +34,7 @@ export function DraftActionCellView(props: DraftActionCellViewProps) {
 	// Saving locks the button so a real DOM click can't double-submit mid-flight;
 	// the canvas relied on the shell to guard, the DOM disables outright.
 	const isDisabled = Boolean(props.disabled) || isSaving;
+	const reason = props.errored ? props.errorMessage || null : null;
 
 	return (
 		<div className="flex h-full w-full items-center justify-center px-2">
@@ -43,6 +46,8 @@ export function DraftActionCellView(props: DraftActionCellViewProps) {
 				onClick={props.onSubmit}
 				data-slot="draft-action-cell"
 				className="relative"
+				title={reason ?? undefined}
+				aria-description={reason ?? undefined}
 			>
 				{isSaving && <LoaderIcon className="animate-spin" aria-hidden="true" />}
 				{isSaving ? SAVING_LABEL : SAVE_LABEL}

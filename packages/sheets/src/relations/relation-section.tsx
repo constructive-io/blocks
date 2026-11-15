@@ -16,7 +16,7 @@ import type { RelationModel, TableModel } from '@constructive-io/data';
 import { Badge } from '@constructive-io/ui/badge';
 import { Button } from '@constructive-io/ui/button';
 
-import { relationFieldLabel } from '../cell-types/field-label';
+import { relationLabelIn } from '../cell-types/field-label';
 import type { SheetsRowIdentifier } from '../row-identity';
 import { RelationEditorBody } from './relation-editor-body';
 import type { RecordValues } from './relation-keys';
@@ -34,6 +34,8 @@ export interface RelationSectionProps {
 	rowIdentifier: SheetsRowIdentifier | null;
 	/** True for a record that is not created yet. */
 	isDraft: boolean;
+	/** A new record needs this link: the heading is marked like a required field. */
+	required?: boolean;
 	/** A reason the host already holds for keeping the relation read-only; it wins over the model's rules. */
 	readOnlyReason?: string | null;
 	/**
@@ -56,6 +58,7 @@ export function RelationSection({
 	row,
 	rowIdentifier,
 	isDraft,
+	required = false,
 	readOnlyReason,
 	onCommitPatch,
 	onInvalidateData,
@@ -127,7 +130,8 @@ export function RelationSection({
 		>
 			<div className='flex items-center gap-2'>
 				<Heading id={headingId} className='truncate text-sm font-medium' title={relation.fieldName}>
-					{relationFieldLabel(relation)}
+					{relationLabelIn(table, relation)}
+					{required ? <span aria-hidden> *</span> : null}
 				</Heading>
 				<Badge variant='outline' size='sm' className='tabular-nums' data-testid='relation-linked-count'>
 					{count}

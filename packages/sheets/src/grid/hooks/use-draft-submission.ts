@@ -6,7 +6,8 @@ import type { RelationInfo } from '../../store/relation-info-slice';
 import type { DraftRow } from '../../store/draft-rows-slice';
 import { SHEETS_CONCURRENCY } from '../../config/sheets-concurrency';
 
-import { prepareDraftSubmissionPayload, validateDraftRowRequiredFields } from '../sheets.utils';
+import { prepareDraftSubmissionPayload } from '../sheets.utils';
+import { DRAFT_ROW_ERROR_KEY, incompleteDraftErrors, missingDraftFields } from '../draft-guidance';
 import type { DraftSubmitResult } from '../draft-types';
 import type { DraftRowEntry } from './use-grid-selection';
 import { sheetsLogger } from '../../utils/sheets-logger';
@@ -101,14 +102,14 @@ export function useDraftSubmission({
 						// Without a table model nothing proves which columns a create accepts.
 						if (!tableModel) {
 							submissionResults.failed += 1;
-							setDraftRowStatus({ tableKey, draftRowId, status: 'error', errors: { submit: 'The table is still loading.' } });
+							setDraftRowStatus({ tableKey, draftRowId, status: 'error', errors: { [DRAFT_ROW_ERROR_KEY]: 'The table is still loading.' } });
 							continue;
 						}
 						// Pre-validate required fields before sending to server
-						const validationErrors = validateDraftRowRequiredFields(draftRow.values, tableModel);
-						if (Object.keys(validationErrors).length > 0) {
+						const gaps = missingDraftFields(draftRow.values, tableModel);
+						if (gaps.length > 0) {
 							submissionResults.failed += 1;
-							setDraftRowStatus({ tableKey, draftRowId, status: 'error', errors: validationErrors });
+							setDraftRowStatus({ tableKey, draftRowId, status: 'error', errors: incompleteDraftErrors(gaps) });
 							if (operationId) {
 								feedback?.onProgress?.(operationId, submissionResults.success, submissionResults.failed);
 							}
@@ -126,7 +127,7 @@ export function useDraftSubmission({
 							submissionResults.failed += 1;
 							const message = error instanceof Error ? error.message : 'Failed to submit draft row';
 							sheetsLogger().error('submitDraftRow failed', error);
-							setDraftRowStatus({ tableKey, draftRowId, status: 'error', errors: { submit: message } });
+							setDraftRowStatus({ tableKey, draftRowId, status: 'error', errors: { [DRAFT_ROW_ERROR_KEY]: message } });
 						}
 
 						if (operationId) {
@@ -231,11 +232,12 @@ export function useDraftSubmission({
 				return { createdRow: null };
 			}
 
-			// Required fields are checked here too, so the row's own Save never sends an incomplete record.
-			const validationErrors = validateDraftRowRequiredFields(draftRow.values, tableModel);
-			if (Object.keys(validationErrors).length > 0) {
-				setDraftRowStatus({ tableKey, draftRowId, status: 'error', errors: validationErrors });
-				return { createdRow: null };
+			// Required fields are checked here too, so the row's own Save never sends an incomplete record;
+			// the caller gets what is missing, to say so and to move the cursor there.
+			const gaps = missingDraftFields(draftRow.values, tableModel);
+			if (gaps.length > 0) {
+				setDraftRowStatus({ tableKey, draftRowId, status: 'error', errors: incompleteDraftErrors(gaps) });
+				return { createdRow: null, missing: gaps };
 			}
 
 			const operationId = feedback?.onStart?.('submit', 1);
@@ -257,7 +259,7 @@ export function useDraftSubmission({
 				return { createdRow };
 			} catch (error) {
 				const message = error instanceof Error ? error.message : 'Failed to create row';
-				setDraftRowStatus({ tableKey, draftRowId, status: 'error', errors: { submit: message } });
+				setDraftRowStatus({ tableKey, draftRowId, status: 'error', errors: { [DRAFT_ROW_ERROR_KEY]: message } });
 				if (operationId) feedback?.onComplete?.(operationId, 'error', 'Row not created');
 				throw error;
 			}

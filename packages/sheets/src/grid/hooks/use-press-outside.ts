@@ -7,33 +7,29 @@ import { useCallback, useEffect, useRef } from 'react';
  * the component that rendered them, so a press in a portalled surface the part owns (an
  * editor, popover, menu, dialog or panel) counts as inside. Spread the returned handler
  * on the part's root element. `onPressOutside` runs only while `active` is true.
+ *
+ * The part's capture handler marks the press itself, and the document's bubble listener
+ * reads that mark. That holds wherever React listens: under a host that hydrates the whole
+ * document (Next.js), React's own document listeners run before any added later, so a
+ * flag reset by a document capture listener would mark every press as outside.
  */
-export function usePressOutside(active: boolean, onPressOutside: () => void): { onPointerDownCapture: () => void } {
-	const insideRef = useRef(false);
+export function usePressOutside(active: boolean, onPressOutside: () => void): { onPointerDownCapture: (event: { nativeEvent: Event }) => void } {
+	const insidePresses = useRef(new WeakSet<Event>());
 	const onPressOutsideRef = useRef(onPressOutside);
 	onPressOutsideRef.current = onPressOutside;
 
 	useEffect(() => {
 		if (!active) return;
-		// The document's capture listener runs before React sees the press, its bubble
-		// listener after, so the flag in between says whether React passed through the part.
-		const start = () => {
-			insideRef.current = false;
+		// Bubble phase: every capture handler, React's included, has run for this press.
+		const finish = (event: PointerEvent) => {
+			if (!insidePresses.current.has(event)) onPressOutsideRef.current();
 		};
-		const finish = () => {
-			if (!insideRef.current) onPressOutsideRef.current();
-			insideRef.current = false;
-		};
-		document.addEventListener('pointerdown', start, true);
 		document.addEventListener('pointerdown', finish);
-		return () => {
-			document.removeEventListener('pointerdown', start, true);
-			document.removeEventListener('pointerdown', finish);
-		};
+		return () => document.removeEventListener('pointerdown', finish);
 	}, [active]);
 
-	const onPointerDownCapture = useCallback(() => {
-		insideRef.current = true;
+	const onPointerDownCapture = useCallback((event: { nativeEvent: Event }) => {
+		insidePresses.current.add(event.nativeEvent);
 	}, []);
 	return { onPointerDownCapture };
 }

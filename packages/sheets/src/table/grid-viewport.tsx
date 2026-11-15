@@ -95,6 +95,8 @@ export interface GridViewportHandle {
 	scrollToIndex: (rowIndex: number) => void;
 	/** Scroll the given cell into view (row + column virtualizers). Used by keyboard nav. */
 	scrollToCell: (columnIndex: number, rowIndex: number) => void;
+	/** Give the grid root keyboard focus, so typing reaches the active cell. */
+	focus: () => void;
 }
 
 /** Visible row window (overscan-inclusive) reported to the shell for infinite-scroll prefetch. */
@@ -385,6 +387,7 @@ const GridHeaderBand = memo(function GridHeaderBand({
 			<HeaderCell
 				column={column}
 				header={header}
+				colIndex={index}
 				sort={sort}
 				onHeaderClick={onHeaderClick}
 				getUnsortableReason={getUnsortableReason}
@@ -672,7 +675,8 @@ export function GridViewport({
 			scrollToCell: (columnIndex: number, rowIndex: number) => {
 				rowVirtualizer.scrollToIndex(rowIndex);
 				columnVirtualizer.scrollToIndex(columnIndex);
-			}
+			},
+			focus: () => scrollRef.current?.focus({ preventScroll: true })
 		}),
 		[rowVirtualizer, columnVirtualizer]
 	);

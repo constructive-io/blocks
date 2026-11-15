@@ -112,7 +112,14 @@ describe('Sheets readOnly', () => {
 	it('refuses every write in the grid with the host reason, and keeps viewing, search and export', async () => {
 		const backend = await mount(REASON);
 
-		// The toolbar: no Add row; New record, Import and (for selected rows) Delete say why they are off.
+		// The toolbar: "Read-only" with the reason, no Add row; New record, Import and (for selected
+		// rows) Delete say why they are off.
+		const badge = await waitUntil(
+			() => document.querySelector<HTMLElement>('[data-part-id="sheets-controls"] [role="status"]'),
+			'the read-only badge',
+		);
+		expect(badge.textContent).toBe('Read-only');
+		expect(badge.title).toBe(REASON);
 		expect(buttonByText('Add row')).toBeUndefined();
 		const newRecord = await waitUntil(() => buttonByText('New record'), 'the New record button');
 		expect(newRecord.disabled).toBe(true);
@@ -127,7 +134,10 @@ describe('Sheets readOnly', () => {
 		await fire(byLabel('Select row 0')!, 'click');
 		const deleteRows = await waitUntil(() => buttonByText('Delete'), 'Delete for the selected row');
 		expect(deleteRows.disabled).toBe(true);
-		expect(deleteRows.getAttribute('title')).toBe(REASON);
+		// The reason is on the button for assistive tech and on its wrapper for the pointer
+		// (a disabled button takes no hover).
+		expect(deleteRows.getAttribute('aria-description')).toBe(REASON);
+		expect(deleteRows.parentElement?.getAttribute('title')).toBe(REASON);
 		await fire(byLabel('Clear selection')!, 'click');
 		await waitUntil(() => (buttonByText('Delete') === undefined ? true : null), 'the cleared selection');
 

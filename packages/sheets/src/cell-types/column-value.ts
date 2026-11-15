@@ -22,6 +22,11 @@ export interface ColumnInputOptions {
 	 * the text. False (the default) for a value an editor, a fill or an undo produced.
 	 */
 	fromText?: boolean;
+	/**
+	 * The value is for a record not created yet (a new row, the new-record form): clearing a
+	 * required text field keeps '' there, since the create checks the required fields as a whole.
+	 */
+	creating?: boolean;
 }
 
 /** Why a value of a view-only kind cannot be written. */
@@ -63,6 +68,10 @@ interface ValueRules {
 	maxLength: number | null;
 	precision: number | null;
 	scale: number | null;
+	/** The whole numbers an integer column holds; null means the GraphQL `Int` range. */
+	integerBounds: { min: number; max: number } | null;
+	/** An amount of money: the text it is shown as ("$1,234.56") is read too. */
+	currency: boolean;
 	input: InputValueModel | null;
 }
 
@@ -74,6 +83,8 @@ function rulesOf(column: ColumnModel): ValueRules {
 		maxLength: value.maxLength,
 		precision: value.precision,
 		scale: value.scale,
+		integerBounds: value.integerBounds ?? null,
+		currency: value.semantic === 'currency',
 		input: value.input,
 	};
 }
@@ -124,11 +135,16 @@ function parseChoice(rules: ValueRules, input: unknown): ColumnInputResult {
 
 // ─── Numbers ────────────────────────────────────────────────────────────────
 
-function parseInteger(input: unknown): ColumnInputResult {
+const TOO_LARGE = 'This number is too large for this field.';
+const TOO_SMALL = 'This number is too small for this field.';
+
+function parseInteger(rules: ValueRules, input: unknown): ColumnInputResult {
 	const text = primitiveText(input)?.trim();
 	if (text === undefined || !WHOLE_RE.test(text)) return fail('Enter a whole number.');
 	const value = Number(text);
-	if (value < INT32_MIN || value > INT32_MAX) return fail('This number is too large for this field.');
+	const { min, max } = rules.integerBounds ?? { min: INT32_MIN, max: INT32_MAX };
+	if (value > max) return fail(TOO_LARGE);
+	if (value < min) return fail(TOO_SMALL);
 	return ok(value);
 }
 
@@ -137,7 +153,8 @@ function parseBigInteger(input: unknown): ColumnInputResult {
 	const text = primitiveText(input)?.trim();
 	if (text === undefined || !WHOLE_RE.test(text)) return fail('Enter a whole number.');
 	const exact = BigInt(text);
-	if (exact < INT64_MIN || exact > INT64_MAX) return fail('This number is too large for this field.');
+	if (exact > INT64_MAX) return fail(TOO_LARGE);
+	if (exact < INT64_MIN) return fail(TOO_SMALL);
 	return ok(text.startsWith('+') ? text.slice(1) : text);
 }
 
@@ -167,6 +184,27 @@ function parseDecimal(rules: ValueRules, input: unknown): ColumnInputResult {
 		}
 	}
 	return ok(text.startsWith('+') ? text.slice(1) : text);
+}
+
+// A currency symbol or code before or after the amount: $, US$, €, USD.
+const MONEY_TEXT = /^([+-]?)\s*(?:[A-Z]{0,3}\p{Sc}|[A-Z]{3}\s)?\s*([+-]?)\s*([\d,]*(?:\.\d+)?)\s*(?:\p{Sc}|\s[A-Z]{3})?$/u;
+const GROUPED_DIGITS = /^(?:\d{1,3}(?:,\d{3})+|\d+)(?:\.\d+)?$|^\.\d+$/;
+
+/**
+ * The plain number in money text as Postgres and the grid print it ("$1,234.56", "-$5",
+ * "($3.00)"), or the text unchanged when it is not one. Commas only group thousands.
+ */
+function moneyInput(rules: ValueRules, input: unknown): unknown {
+	if (!rules.currency || typeof input !== 'string') return input;
+	let text = input.trim();
+	const bracketed = /^\((.*)\)$/.exec(text);
+	if (bracketed) text = bracketed[1]!.trim();
+	const match = MONEY_TEXT.exec(text);
+	if (!match) return input;
+	const [, before = '', after = '', amount = ''] = match;
+	if ((before && after) || !GROUPED_DIGITS.test(amount)) return input;
+	const negative = (before || after) === '-' || Boolean(bracketed);
+	return `${negative ? '-' : ''}${amount.replace(/,/g, '')}`;
 }
 
 function parseFloatValue(input: unknown): ColumnInputResult {
@@ -269,6 +307,8 @@ function fieldRules(value: InputValueModel): ValueRules | null {
 		maxLength: null,
 		precision: null,
 		scale: null,
+		integerBounds: null,
+		currency: false,
 		input: value,
 	};
 }
@@ -444,13 +484,13 @@ function parseRules(rules: ValueRules, input: unknown, fromText: boolean): Colum
 		case 'text':
 			return parseText(rules, input);
 		case 'integer':
-			return parseInteger(input);
+			return parseInteger(rules, input);
 		case 'bigint':
 			return parseBigInteger(input);
 		case 'decimal':
-			return parseDecimal(rules, input);
+			return parseDecimal(rules, moneyInput(rules, input));
 		case 'float':
-			return parseFloatValue(input);
+			return parseFloatValue(moneyInput(rules, input));
 		case 'boolean':
 			return parseBoolean(input);
 		case 'uuid':
@@ -488,11 +528,15 @@ function parseRules(rules: ValueRules, input: unknown, fromText: boolean): Colum
 	}
 }
 
-/** What clearing the column writes: null, '' for a text column that cannot be empty, or a refusal. */
-function clearedValue(column: ColumnModel): ColumnInputResult {
+/**
+ * What clearing the column writes: null, an empty list, '' or a refusal. A text column that
+ * cannot be null clears to '' only when its schema gives it a default (DEFAULT '' says empty
+ * is fine) or the record is not created yet; a required field of a saved record is refused.
+ */
+function clearedValue(column: ColumnModel, creating: boolean): ColumnInputResult {
 	if (column.value.isArray) return column.nullable ? ok(null) : ok([]);
 	if (column.nullable) return ok(null);
-	if (column.value.kind === 'text' && !column.value.options) return ok('');
+	if (column.value.kind === 'text' && !column.value.options && (column.hasDefault || creating)) return ok('');
 	return fail('This field needs a value.');
 }
 
@@ -532,7 +576,7 @@ export function parseColumnInput(column: ColumnModel, input: unknown, options: C
 	const fromText = options.fromText ?? false;
 	if (VIEW_ONLY_KINDS.has(column.value.kind)) return fail(VIEW_ONLY_REASON);
 	const keepsBlankText = TEXT_LIKE_KINDS.has(column.value.kind) && typeof input === 'string' && input !== '';
-	if (input === undefined || input === null || (!keepsBlankText && isBlank(input))) return clearedValue(column);
+	if (input === undefined || input === null || (!keepsBlankText && isBlank(input))) return clearedValue(column, options.creating ?? false);
 	if (column.value.isArray) return parseList(column, input, fromText);
 	return parseRules(rulesOf(column), input, fromText);
 }

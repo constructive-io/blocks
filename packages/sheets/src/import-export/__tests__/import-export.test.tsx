@@ -343,6 +343,9 @@ describe('import', () => {
 		expect(maxInFlight).toBe(4);
 		expect(sent).toBeLessThan(20);
 		expect(done.textContent).toContain(`${created} records were added. 1 row was refused. ${20 - sent} rows were not sent, because the import was cancelled.`);
+		// The dialog says why, not only how many.
+		const why = document.querySelector('[role="dialog"] [role="alert"][aria-label="Why rows were refused"]');
+		expect(why?.textContent).toBe('A country with this code already exists. (1 row)');
 		expect(backend.rows.Country!.filter((row) => String(row.isoCode).endsWith('X'))).toHaveLength(created);
 
 		await click(await button('Download error report'));
@@ -411,7 +414,8 @@ describe('export', () => {
 		expect(downloads).toHaveLength(1);
 		expect(downloads[0]!.name).toBe('Project.csv');
 		const lines = (await fileText(downloads[0]!.blob)).split('\r\n');
-		expect(lines[0]).toBe('﻿name,owner,countryCode');
+		// Each column under its grid label; the import maps a label back to its field.
+		expect(lines[0]).toBe('﻿Name,Owner,Country code');
 		expect(lines.slice(1, 3)).toEqual(['Project 450,Ada Lovelace,FR', 'Project 448,Ada Lovelace,FR']);
 		expect(lines.at(-2)).toBe('Kernel,Linus Torvalds,FR');
 		expect(lines).toHaveLength(1 + 226 + 1);
@@ -545,9 +549,9 @@ describe('grid toolbar', () => {
 		expect(downloads.at(-1)!.name).toBe('StructuredKind.csv');
 		const lines = (await fileText(downloads.at(-1)!.blob)).split('\r\n');
 		expect(lines).toHaveLength(3); // header, the selected row, the final line end
-		expect(lines[0]!.startsWith('\uFEFFid,')).toBe(true);
+		expect(lines[0]!.startsWith('\uFEFFId,')).toBe(true);
 		const header = lines[0]!.slice(1).split(',');
-		expect(header).toContain('address');
+		expect(header).toContain('Address');
 		// The composite value and the range are JSON (quoted for CSV), so the file imports back exactly.
 		expect(lines[1]).toContain('"{""street"":""1 Main St"",""city"":""Springfield"",""postalCode"":""12345"",""country"":""US""}"');
 		expect(lines[1]).toContain('""inclusive"":true');

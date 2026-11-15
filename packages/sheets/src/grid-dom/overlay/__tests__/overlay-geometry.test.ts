@@ -20,16 +20,26 @@ describe('computeOverlayGeometry', () => {
 		expect(r.maxHeight).toBe(expectedSpaceBelow);
 	});
 
-	it('(b) target near viewport bottom (spaceBelow < minBelowPx) -> flip, maxHeight === maxHeightPx', () => {
+	it('(b) target near viewport bottom (spaceBelow < minBelowPx) -> flip, maxHeight === the room above', () => {
 		const vh = 1000;
 		const targetY = 900;
 		const targetH = 30;
 		const r = computeOverlayGeometry(vh, targetY, targetH, MARGIN, MIN_BELOW);
-		const expectedMaxHeightPx = Math.max(0, vh - MARGIN * 2); // 976
 		expect(r.spaceBelow).toBeLessThan(MIN_BELOW);
 		expect(r.shouldFlip).toBe(true);
-		expect(r.maxHeightPx).toBe(expectedMaxHeightPx);
-		expect(r.maxHeight).toBe(expectedMaxHeightPx);
+		// The budget is the room above the cell, so an overlay never covers the cell it edits.
+		expect(r.maxHeight).toBe(targetY - MARGIN);
+	});
+
+	it('(b2) short room below but even less above -> stays below with the room below', () => {
+		const vh = 500;
+		const targetY = 200;
+		const targetH = 30;
+		const r = computeOverlayGeometry(vh, targetY, targetH, MARGIN, MIN_BELOW);
+		expect(r.spaceBelow).toBeLessThan(MIN_BELOW);
+		expect(r.spaceAbove).toBeLessThan(r.spaceBelow);
+		expect(r.shouldFlip).toBe(false);
+		expect(r.maxHeight).toBe(r.spaceBelow);
 	});
 
 	it('(c) no target (undefined) -> no flip', () => {
@@ -45,7 +55,7 @@ describe('computeOverlayGeometry', () => {
 	//  - TOP edge: a cell at the very top has ample room below -> placed BELOW (no flip).
 	//  - FITS: enough room below (spaceBelow >= minBelow) -> placed BELOW, maxHeight === spaceBelow.
 	//  - BOTTOM edge: a cell at the very bottom has no room below -> FLIPS up (placed ABOVE).
-	//  - FLIPS: when flipped, maxHeight is clamped to the full-viewport budget (vh - 2*margin).
+	//  - FLIPS: when flipped, maxHeight is the room above the cell.
 
 	it('(f) FITS exactly at the flip boundary (spaceBelow === minBelow) -> no flip', () => {
 		// Choose targetBottom so spaceBelow === MIN_BELOW exactly; shouldFlip is `<`, so equal does NOT flip.

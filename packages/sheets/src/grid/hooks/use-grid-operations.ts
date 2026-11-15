@@ -66,10 +66,7 @@ export function useGridOperations(
 		onDeleteErrors?: (errors: readonly unknown[]) => void;
 	},
 ) {
-	const deleteSelected = useCallback(async () => {
-		if (!gridSelection) return;
-
-		const rows = gridSelection.rows.toArray();
+	const deleteRows = useCallback(async (rows: readonly number[]) => {
 		if (rows.length === 0) return;
 
 			// Start operation feedback
@@ -149,9 +146,12 @@ export function useGridOperations(
 
 		// Always clear selection so indices don't point to new rows after deletion
 		clearSelection();
-	}, [gridSelection, data, deleteRow, clearSelection, options]);
+	}, [data, deleteRow, clearSelection, options]);
+
+	const deleteSelected = useCallback(() => deleteRows(gridSelection?.rows.toArray() ?? []), [deleteRows, gridSelection]);
 
 	return {
+		deleteRows,
 		deleteSelected,
 	};
 }

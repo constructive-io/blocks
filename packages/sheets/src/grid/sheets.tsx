@@ -1,14 +1,18 @@
-import { forwardRef, useCallback, useEffect, useImperativeHandle, useMemo, useRef } from 'react';
+import { forwardRef, useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState } from 'react';
 import type React from 'react';
 
 import { useSheetsContext } from '../context/sheets-context';
 import { cn } from '../utils/cn';
 import type { DataGridProps, SheetsHandle } from './sheets.types';
-import type { SheetsRow } from './row-model';
+import { getDraftMeta, type SheetsRow } from './row-model';
+import { DRAFT_ACTION_COLUMN_KEY } from './sheets.constants';
+import { draftColumnToFill, incompleteDraftMessage, missingDraftFields, type DraftFieldGap } from './draft-guidance';
+import { reportIncompleteDraft } from './write-feedback';
 
 import { SheetsControls } from './sheets.controls';
 import { SheetsContextMenu } from './sheets.context-menu';
-import { FeedbackProvider, ModelIssuesNotice, SaveStatus, WriteErrorStack } from './feedback';
+import { FeedbackProvider, ModelIssuesNotice, SaveStatus, useOperationFeedback, WriteErrorStack } from './feedback';
+import { useRefreshOnReturn } from './hooks/use-refresh-on-return';
 import { SheetsReadOnlyProvider } from '../context/sheets-read-only';
 import { createViewCommandTarget, viewCommandReason } from './view-state/view-command-target';
 import { ColumnHeaderMenu } from './columns/column-header-menu';
@@ -19,12 +23,12 @@ import { SheetsPagination } from './sheets.pagination';
 import { SheetsStatusBar } from './sheets.status-bar';
 import { useSheets } from './use-sheets';
 import { usePressOutside } from './hooks/use-press-outside';
+import { SheetsHistoryContext } from './hooks/history-context';
 import { useViewRowCount } from './use-view-row-count';
 import { openUriCellLink, uriCellHref } from '../cell-model/uri-link';
 import { GridViewport, type GridViewportHandle, type RenderCell, type VisibleRange } from '../table/grid-viewport';
 import { SheetsCellHost } from '../grid-dom/sheets-cell-host';
 import { OverlayManager } from '../grid-dom/overlay/overlay-manager';
-import { copyText } from '../cell-types/column-value';
 import { SheetsOpenRecordContext, SheetsOpenTableContext } from '../relations/relation-navigation';
 import { RecordPanel, useGridRecordPanel } from '../record';
 import { RelationSection } from '../relations/relation-section';
@@ -34,13 +38,18 @@ import { getCellsInRange as extractCellsInRange, toTSV as serializeTSV } from '.
 import type { GridCommandContext, CellMatrix } from '../commands/context';
 import { activeEditorElement } from './render/active-editor';
 import { SheetsFilteredEmpty } from './render/sheets-filtered-empty';
+import { SheetsRowsError } from './render/sheets-rows-error';
 import { useGridCommandPipeline } from './render/use-grid-command-pipeline';
 import { useGridContextMenu } from './render/use-grid-context-menu';
 import { useGridCsvExport } from './render/use-grid-csv-export';
 import { useGridEditing } from './render/use-grid-editing';
 import { useGridKeyboard } from './render/use-grid-keyboard';
 import { useGridTableState } from './render/use-grid-table-state';
+import { cellCopyText } from './cell-copy-text';
+import { planRowRemoval, rowsUnderSelection, type RowRemoval } from './row-removal';
 import { useRowMarker } from './render/use-row-marker';
+
+const NO_ROWS_TO_REMOVE: RowRemoval = { rows: [], saved: 0, unsaved: 0, blockedReason: 'Select the rows to delete.' };
 
 function SheetsInnerComponent<TRow extends SheetsRow = SheetsRow>(
 	props: DataGridProps<TRow>,
@@ -160,17 +169,6 @@ function SheetsDomInner<TRow extends SheetsRow = SheetsRow>({
 		[s.draft.submitDrafts, s.refetch, getSelectedRows, runCsvExport, recordPanel],
 	);
 
-	// ============== ADD ROW (toolbar) ==============
-	// Append a draft via the shell API, then scroll it into view. appendRow resolves to the
-	// new draft's index (or undefined when metadata isn't ready yet — then there's nothing to
-	// scroll to). Threaded into <SheetsControls onAddRow=…> so the toolbar renders an Add-row button.
-	const appendRow = s.draft.appendRow;
-	const handleAddRow = useCallback(() => {
-		void appendRow().then((index) => {
-			if (index !== undefined) viewportRef.current?.scrollToIndex(index);
-		});
-	}, [appendRow]);
-
 	// ============== SCROLL + SELECTION RESET ON SORT/FILTER CHANGE ==============
 	// When sort or filter changes the infinite query re-keys and the row set is a different,
 	// index-based window — so any held selection/active-cell now points at the wrong rows.
@@ -217,6 +215,69 @@ function SheetsDomInner<TRow extends SheetsRow = SheetsRow>({
 		handleOverlayScroll,
 	} = useGridEditing({ tableName, shell, config, canUpload, scopeKey, combinedRows, selection, columns, dispatch });
 
+	// ============== FRESH DATA ON RETURN ==============
+	// Coming back to the page after a while reads the table's shape (`_meta`, so new columns
+	// appear) and the loaded rows again; the cursor, the scroll and unsaved new rows stay.
+	const refreshOnReturn = s.refreshFromServer;
+
+	// ============== DRAFT ROWS: ADD ROW, CURSOR AND SAVE GUIDANCE ==============
+	// After Add row, and after a Save that still lacks required fields, the cursor lands on the
+	// draft's first cell to fill (see draft-guidance), in view, with the grid focused so typing
+	// fills it. Save on an incomplete draft also says what is missing.
+	const placeDraftCursor = useCallback(
+		(rowIndex: number, gaps: readonly DraftFieldGap[]) => {
+			const keys = columnsRef.current.map((column) => column.key);
+			const canFill = (key: string) =>
+				key !== DRAFT_ACTION_COLUMN_KEY && !getSheetsCellContentRef.current(rowIndex, key).cell.readonly;
+			const key = draftColumnToFill(keys, gaps, canFill);
+			const col = key ? keys.indexOf(key) : 0;
+			// Focus first: focusing the grid resumes its last cursor, which this then replaces.
+			viewportRef.current?.focus();
+			viewportRef.current?.scrollToCell(col, rowIndex);
+			dispatch('cell.activate', undefined, { col, row: rowIndex });
+		},
+		[columnsRef, getSheetsCellContentRef, dispatch],
+	);
+
+	// appendRow resolves to the draft's index (an existing unsaved draft's, or undefined when the
+	// model isn't ready). The draft reaches the rows a render later, so the cursor waits for it.
+	// Threaded into <SheetsControls onAddRow=…> so the toolbar renders an Add-row button.
+	const appendRow = s.draft.appendRow;
+	const [pendingDraftRow, setPendingDraftRow] = useState<number | null>(null);
+	const handleAddRow = useCallback(() => {
+		void appendRow().then((index) => {
+			if (index === undefined) return;
+			viewportRef.current?.scrollToIndex(index);
+			setPendingDraftRow(index);
+		});
+	}, [appendRow]);
+	useEffect(() => {
+		if (pendingDraftRow === null) return;
+		const row = shell.combinedRows[pendingDraftRow];
+		if (!getDraftMeta(row)) return;
+		setPendingDraftRow(null);
+		placeDraftCursor(pendingDraftRow, shell.tableModel ? missingDraftFields(row as Record<string, unknown>, shell.tableModel) : []);
+	}, [pendingDraftRow, shell.combinedRows, shell.tableModel, placeDraftCursor]);
+
+	// The row's Save: an incomplete draft says what it needs and takes the cursor there. Stable,
+	// so the grid rows memoized on the render callback keep their identity.
+	const draftSaveRef = useRef({ submitDraftRow, placeDraftCursor });
+	draftSaveRef.current = { submitDraftRow, placeDraftCursor };
+	const submitDraftRowGuided = useCallback(
+		async (draftRowId: string) => {
+			const result = await draftSaveRef.current.submitDraftRow(draftRowId);
+			if (result.missing?.length) {
+				reportIncompleteDraft(incompleteDraftMessage(result.missing));
+				const rows = combinedRowsRef.current;
+				let rowIndex = rows.length - 1;
+				while (rowIndex >= 0 && getDraftMeta(rows[rowIndex] as SheetsRow | null)?.draftRowId !== draftRowId) rowIndex -= 1;
+				if (rowIndex >= 0) draftSaveRef.current.placeDraftCursor(rowIndex, result.missing);
+			}
+			return result;
+		},
+		[combinedRowsRef],
+	);
+
 	// ============== CELL-RANGE SELECTION (Stage B) ==============
 	// `anchorRef` holds the FIXED corner a contiguous range extends FROM. A plain activate
 	// (click / non-shift Arrow) resets it to the new active cell; a shift extend keeps it put.
@@ -248,6 +309,21 @@ function SheetsDomInner<TRow extends SheetsRow = SheetsRow>({
 	// A menu is just another EVENT SOURCE → dispatch, rendered ONCE at the grid level.
 	const { contextMenu, setContextMenu, handleContextMenu, closeContextMenu } = useGridContextMenu({ selectionRef, dispatch });
 
+	// What Delete does to the selected rows (toolbar) and to the rows under the menu (the selected
+	// rows, else the cursor's). The menu's plan is read only while it is open.
+	const removalAccess = useMemo(
+		() => ({ canDeleteSaved: shell.canDelete, readOnlyReason: shell.readOnlyReason }),
+		[shell.canDelete, shell.readOnlyReason],
+	);
+	const selectionRemoval = useMemo(
+		() => planRowRemoval(selection?.rows.toArray() ?? [], combinedRows, removalAccess),
+		[selection?.rows, combinedRows, removalAccess],
+	);
+	const menuRemoval: RowRemoval = useMemo(
+		() => (contextMenu ? planRowRemoval(rowsUnderSelection(selection, combinedRows.length), combinedRows, removalAccess) : NO_ROWS_TO_REMOVE),
+		[contextMenu, selection, combinedRows, removalAccess],
+	);
+
 	// Stable across cursor moves and editor opens: the viewport hands each row its own active,
 	// selected and editing state, so only the rows those touch render again.
 	const renderCell = useCallback<RenderCell>(
@@ -260,10 +336,10 @@ function SheetsDomInner<TRow extends SheetsRow = SheetsRow>({
 				onInlineCancel={overlayClose}
 				onActivateCell={handleActivateCell}
 				onContextMenu={handleContextMenu}
-				onSubmitDraftRow={submitDraftRow}
+				onSubmitDraftRow={submitDraftRowGuided}
 			/>
 		),
-		[onInlineCommit, overlayClose, getSheetsCellContent, openEditor, handleActivateCell, handleContextMenu, submitDraftRow],
+		[onInlineCommit, overlayClose, getSheetsCellContent, openEditor, handleActivateCell, handleContextMenu, submitDraftRowGuided],
 	);
 
 	// ============== SPREADSHEET KEYBOARD NAV (grid root owns keys) ==============
@@ -427,7 +503,7 @@ function SheetsDomInner<TRow extends SheetsRow = SheetsRow>({
 		toggleAll: toggleAllImpl,
 		getCellsInRange: (rect: SelectionRect): CellMatrix => {
 			const r = extractCellsInRange(rect, combinedRowsRef.current, columnsRef.current.map((c) => c.key), (value, _row, colKey) =>
-				copyText(shell.tableModel?.columns, colKey, value),
+				cellCopyText(shell.tableModel, colKey, value),
 			);
 			return { cols: r.cols, rows: r.rows, values: r.values };
 		},
@@ -507,25 +583,28 @@ function SheetsDomInner<TRow extends SheetsRow = SheetsRow>({
 
 	// ============== LOAD STATES ==============
 	// Surface real error/empty/loading states instead of a blank grid (moved here from
-	// the removed canvas branch). The full-screen error is for INITIAL-load failure only
-	// (no server rows AND no drafts); background-refetch errors keep the populated grid
-	// mounted and surface via the `load:error` onEvent emission instead.
-	if (!activeMediaDraft && s.dataError && shell.combinedRows.length === 0) {
-		const retry = () => s.refetch();
+	// the removed canvas branch). A failure with no rows to show (no server rows AND no
+	// drafts) is full-screen only while the table's model is missing: once the model loaded,
+	// the toolbar stays and the failure overlays the body, so a search or filter the server
+	// refuses can be cleared. Background-refetch errors keep the populated grid mounted and
+	// surface via the `load:error` onEvent emission instead.
+	const retryRows = () => s.refetch();
+	const rowsError = !activeMediaDraft && s.dataError && shell.combinedRows.length === 0 ? s.dataError : null;
+	if (rowsError && !shell.tableModel) {
 		if (slots?.error) {
-			return <>{slots.error({ error: s.dataError, retry })}</>;
+			return <>{slots.error({ error: rowsError, retry: retryRows })}</>;
 		}
-		return <SheetsErrorState error={s.dataError} onRetry={retry} tableName={tableName} />;
+		return <SheetsErrorState error={rowsError} onRetry={retryRows} tableName={tableName} />;
 	}
 
 	// Initial load only; same-scope refetches retain their current query data.
-	if (!activeMediaDraft && s.isInitialLoading) {
+	if (!activeMediaDraft && !rowsError && s.isInitialLoading) {
 		if (slots?.loading) return <>{slots.loading}</>;
 		return <SheetsLoadingState />;
 	}
 
 	// Loaded successfully but no server rows and nothing drafted yet (and no active filter).
-	if (!activeMediaDraft && s.isEmpty) {
+	if (!activeMediaDraft && !rowsError && s.isEmpty) {
 		if (slots?.empty) {
 			return <>{typeof slots.empty === 'function' ? slots.empty({ tableName }) : slots.empty}</>;
 		}
@@ -549,7 +628,7 @@ function SheetsDomInner<TRow extends SheetsRow = SheetsRow>({
 	// with a one-click clear back to the unfiltered set.
 	const activeFilterCount = shell.filterConditionCount;
 	const searching = shell.view.state.search.trim() !== '';
-	const isFilteredEmpty = shell.serverRowCount === 0 && shell.draftRowCount === 0 && (activeFilterCount > 0 || searching);
+	const isFilteredEmpty = !rowsError && shell.serverRowCount === 0 && shell.draftRowCount === 0 && (activeFilterCount > 0 || searching);
 	const clearFiltersAndSearch = () => {
 		shell.view.clearFilters();
 		shell.view.setSearch('');
@@ -557,6 +636,7 @@ function SheetsDomInner<TRow extends SheetsRow = SheetsRow>({
 
 	return (
 		<SheetsErrorBoundary onError={config.onError}>
+			<SheetsHistoryContext.Provider value={shell.recordHistory}>
 			{/* Layout-neutral root: a press under it (portals included) is a press inside the grid. */}
 			<div data-part-id='sheets-root' style={{ display: 'contents' }} onPointerDownCapture={pressOutside.onPointerDownCapture}>
 			{/* Controls — consumer toolbar slot replaces the default <SheetsControls> block. */}
@@ -573,6 +653,7 @@ function SheetsDomInner<TRow extends SheetsRow = SheetsRow>({
 						deleteSelected={s.draft.deleteSelected}
 						onAddRow={shell.canCreate ? handleAddRow : undefined}
 						canDelete={shell.canDelete}
+						selectionRemoval={selectionRemoval}
 						readOnlyReason={shell.readOnlyReason}
 						onExport={handleExport}
 						savedViews={shell.savedViews}
@@ -640,6 +721,19 @@ function SheetsDomInner<TRow extends SheetsRow = SheetsRow>({
 						<SheetsFilteredEmpty activeFilterCount={activeFilterCount} searching={searching} onClear={clearFiltersAndSearch} />
 					)}
 
+					{/* Rows failed to load: the toolbar stays usable above this panel. */}
+					{rowsError && (
+						<SheetsRowsError
+							error={rowsError}
+							activeFilterCount={activeFilterCount}
+							searching={searching}
+							onClear={clearFiltersAndSearch}
+							onRetry={retryRows}
+						>
+							{slots?.error?.({ error: rowsError, retry: retryRows })}
+						</SheetsRowsError>
+					)}
+
 					{/* Failed writes keep their full messages here until dismissed; the save status is in the bar. */}
 					<div className='pointer-events-none absolute bottom-4 left-1/2 z-10 flex -translate-x-1/2 flex-col items-center gap-2'>
 						<WriteErrorStack />
@@ -652,6 +746,7 @@ function SheetsDomInner<TRow extends SheetsRow = SheetsRow>({
 					updating={shell.isFetchingRows}
 				>
 					<SaveStatus />
+					<RefreshOnReturn refresh={refreshOnReturn} editorOpen={overlay.isOpen || editingCell != null} />
 				</SheetsStatusBar>
 			</div>
 
@@ -687,15 +782,15 @@ function SheetsDomInner<TRow extends SheetsRow = SheetsRow>({
 				isEnabled={isCommandEnabled}
 				reasonFor={commandReason}
 				onAddRow={handleAddRow}
-				onDeleteRows={s.draft.deleteSelected}
-				selectedRowCount={selection?.rows.length ?? 0}
+				onDeleteRows={s.draft.deleteRows}
+				removal={menuRemoval}
 				canAddRows={shell.canCreate}
-				canDeleteRows={shell.canDelete}
 				canOpenRecords={Boolean(ctxRef.current.record)}
 			/>
 
 			{recordPanelElement}
 			</div>
+			</SheetsHistoryContext.Provider>
 		</SheetsErrorBoundary>
 	);
 }
@@ -703,3 +798,13 @@ function SheetsDomInner<TRow extends SheetsRow = SheetsRow>({
 // Public props alias — generic over the consumer's row type (default SheetsRow keeps
 // existing untyped callers compiling). Carries DataGridProps' TRow through.
 export type SheetsProps<TRow extends SheetsRow = SheetsRow> = DataGridProps<TRow>;
+
+/**
+ * Refreshes the grid when the page comes back after a while, once no editor is open and no
+ * save is in flight. A leaf of its own, so following the save status never renders the grid.
+ */
+function RefreshOnReturn({ refresh, editorOpen }: { refresh: () => void; editorOpen: boolean }) {
+	const saving = useOperationFeedback()?.status === 'pending';
+	useRefreshOnReturn({ refresh, busy: saving || editorOpen });
+	return null;
+}

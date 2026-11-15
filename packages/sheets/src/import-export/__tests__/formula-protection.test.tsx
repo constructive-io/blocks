@@ -19,6 +19,8 @@ import { createRoot, type Root } from 'react-dom/client';
 import { QueryClient } from '@tanstack/react-query';
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { fieldLabel } from '../../cell-types/field-label';
+
 import { createTortureBackend, type TortureBackend } from '../../adapter/__tests__/torture-backend';
 import { SheetsProvider } from '../../context/sheets-provider';
 import { Sheets } from '../../grid/sheets';
@@ -213,8 +215,8 @@ describe('CSV formula protection', () => {
 		// A multi-line cell stays one quoted cell; text that only contains a dash later is unchanged.
 		expect(records[3]).toEqual(['safe', "'=multi\nline", 'plain', 'a-b', '0', '-1', '0', '-0.25']);
 		expect(raw).toContain('"\'=multi\nline"');
-		// The header is never changed.
-		expect(records[0]).toEqual(COLUMNS);
+		// The header is never changed: each column under its grid label.
+		expect(records[0]).toEqual(COLUMNS.map(fieldLabel));
 	});
 
 	it('protects a linked record label too', async () => {
@@ -231,9 +233,9 @@ describe('CSV formula protection', () => {
 		const { records } = await savedRecords();
 		const header = records[0]!;
 		const row = records[1]!;
-		expect(row[header.indexOf('label')]).toBe("'=1+1");
-		expect(row[header.indexOf('integerValue')]).toBe('-5');
-		expect(row[header.indexOf('bigintValue')]).toBe('-9007199254740993');
+		expect(row[header.indexOf(fieldLabel('label'))]).toBe("'=1+1");
+		expect(row[header.indexOf(fieldLabel('integerValue'))]).toBe('-5');
+		expect(row[header.indexOf(fieldLabel('bigintValue'))]).toBe('-9007199254740993');
 	});
 
 	it('Export view follows the host option: on', async () => {
@@ -242,11 +244,11 @@ describe('CSV formula protection', () => {
 		await waitUntil(() => downloads.length === 1, 'the download');
 		const { records } = await savedRecords();
 		const header = records[0]!;
-		const row = records.find((record) => record[header.indexOf('label')]?.endsWith('=1+1'))!;
-		expect(row[header.indexOf('label')]).toBe("'=1+1");
-		expect(row[header.indexOf('textValue')]).toBe("'+cmd");
-		expect(row[header.indexOf('integerValue')]).toBe('-5');
-		expect(row[header.indexOf('bigintValue')]).toBe('-9007199254740993');
+		const row = records.find((record) => record[header.indexOf(fieldLabel('label'))]?.endsWith('=1+1'))!;
+		expect(row[header.indexOf(fieldLabel('label'))]).toBe("'=1+1");
+		expect(row[header.indexOf(fieldLabel('textValue'))]).toBe("'+cmd");
+		expect(row[header.indexOf(fieldLabel('integerValue'))]).toBe('-5');
+		expect(row[header.indexOf(fieldLabel('bigintValue'))]).toBe('-9007199254740993');
 		// No extra step: the export starts on the click and the dialog shows the result.
 		expect(document.querySelector('[role="dialog"] [role="checkbox"]')).toBeNull();
 	});
@@ -257,9 +259,9 @@ describe('CSV formula protection', () => {
 		await waitUntil(() => downloads.length === 1, 'the download');
 		const { records } = await savedRecords();
 		const header = records[0]!;
-		const row = records.find((record) => record[header.indexOf('label')]?.endsWith('=1+1'))!;
-		expect(row[header.indexOf('label')]).toBe('=1+1');
-		expect(row[header.indexOf('textValue')]).toBe('+cmd');
-		expect(row[header.indexOf('integerValue')]).toBe('-5');
+		const row = records.find((record) => record[header.indexOf(fieldLabel('label'))]?.endsWith('=1+1'))!;
+		expect(row[header.indexOf(fieldLabel('label'))]).toBe('=1+1');
+		expect(row[header.indexOf(fieldLabel('textValue'))]).toBe('+cmd');
+		expect(row[header.indexOf(fieldLabel('integerValue'))]).toBe('-5');
 	});
 });

@@ -58,7 +58,10 @@ export interface SheetsSlots {
 	toolbar?: React.ReactNode | ((ctx: SheetsToolbarSlotContext) => React.ReactNode);
 	/** Replaces the default full-screen empty state. */
 	empty?: React.ReactNode | ((ctx: { tableName: string }) => React.ReactNode);
-	/** Replaces the default full-screen error state. */
+	/**
+	 * Replaces the default error panel: full-screen while the table's model is missing, and over
+	 * the grid body (toolbar kept) when only the rows failed to load.
+	 */
 	error?: (ctx: { error: unknown; retry: () => void }) => React.ReactNode;
 	/** Replaces the default full-screen loading state. */
 	loading?: React.ReactNode;

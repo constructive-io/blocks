@@ -46,8 +46,10 @@ interface InlineCellEditorProps {
 	numeric?: boolean;
 	/** The table-model column: its rules parse and check the text. */
 	column?: ColumnModel | null;
-	/** Commit the next value. */
-	onCommit: (next: unknown) => void;
+	/** The cell is in a record not created yet: emptying a required text field is allowed there. */
+	creating?: boolean;
+	/** Commit the next value; `move` is where the cursor goes next (Enter, Tab, Shift+Tab). */
+	onCommit: (next: unknown, move?: InlineEditMove) => void;
 	/** Discard — Escape, or a value that does not fit on blur. */
 	onCancel: () => void;
 	/** A value that did not fit was discarded on blur; `reason` says why. */
@@ -70,7 +72,10 @@ function parseLegacy(text: string, numeric: boolean): ColumnInputResult {
 	return Number.isFinite(n) ? { ok: true, value: n } : { ok: false, reason: 'Enter a number.' };
 }
 
-export function InlineCellEditor({ ariaLabel, value, initialText, numeric, column, onCommit, onCancel, onReject }: InlineCellEditorProps) {
+/** Where the cursor goes after a commit, as in a spreadsheet. */
+export type InlineEditMove = 'down' | 'up' | 'right' | 'left';
+
+export function InlineCellEditor({ ariaLabel, value, initialText, numeric, column, creating = false, onCommit, onCancel, onReject }: InlineCellEditorProps) {
 	const [text, setText] = useState(() => (initialText != null ? initialText : seedText(value)));
 	const [multiline, setMultiline] = useState(() => /[\r\n]/.test(initialText ?? seedText(value)));
 	const [error, setError] = useState<string | null>(null);
@@ -105,9 +110,9 @@ export function InlineCellEditor({ ariaLabel, value, initialText, numeric, colum
 	}, [initialText, multiline, fieldMounted]);
 
 	const parse = (next: string): ColumnInputResult =>
-		column ? parseColumnInput(column, next, { fromText: true }) : parseLegacy(next, Boolean(numeric));
+		column ? parseColumnInput(column, next, { fromText: true, creating }) : parseLegacy(next, Boolean(numeric));
 
-	function finish(commit: boolean) {
+	function finish(commit: boolean, move?: InlineEditMove) {
 		if (doneRef.current) return;
 		doneRef.current = true;
 		// Return focus to the grid BEFORE the input unmounts; doneRef makes the blur a no-op.
@@ -122,7 +127,17 @@ export function InlineCellEditor({ ariaLabel, value, initialText, numeric, colum
 			onReject?.(parsed.reason);
 			return;
 		}
-		onCommit(parsed.value);
+		onCommit(parsed.value, move);
+	}
+
+	/** Commit and move, or stay editing and say why the value does not fit. */
+	function commitAndMove(move: InlineEditMove) {
+		const parsed = parse(text);
+		if (parsed.ok === false) {
+			setError(parsed.reason);
+			return;
+		}
+		finish(true, move);
 	}
 
 	function handleKeyDown(e: React.KeyboardEvent<HTMLInputElement | HTMLTextAreaElement>) {
@@ -138,15 +153,15 @@ export function InlineCellEditor({ ariaLabel, value, initialText, numeric, colum
 			}
 			return; // a textarea inserts the line break itself
 		}
+		// Enter saves and moves down (Shift+Enter up, in a number), Tab right and Shift+Tab left.
 		if (e.key === 'Enter') {
 			e.preventDefault();
-			// A value that does not fit on Enter → stay editing and say why.
-			const parsed = parse(text);
-			if (parsed.ok === false) {
-				setError(parsed.reason);
-				return;
-			}
-			finish(true);
+			commitAndMove(e.shiftKey ? 'up' : 'down');
+			return;
+		}
+		if (e.key === 'Tab') {
+			e.preventDefault();
+			commitAndMove(e.shiftKey ? 'left' : 'right');
 			return;
 		}
 		if (e.key === 'Escape') {
