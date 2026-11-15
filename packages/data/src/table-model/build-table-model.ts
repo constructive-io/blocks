@@ -114,7 +114,11 @@ export function buildTableModel(input: BuildTableModelInput): TableModelBuild {
 			scope: 'table',
 			target: null,
 			code: 'NO_PRIMARY_KEY',
-			message: 'This table has no primary key, so its records are read-only.',
+			// A view shows rows of other tables; that, not a missing key, is what a person needs to hear.
+			message:
+				tableKind(table) === 'view'
+					? 'This is a view of other tables, so its records cannot be changed or deleted here.'
+					: 'This table has no primary key, so its records cannot be changed or deleted.',
 		});
 	}
 

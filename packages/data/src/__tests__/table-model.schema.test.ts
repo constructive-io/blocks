@@ -304,6 +304,9 @@ describe('table model over the captured torture schema', () => {
 		const column = (table: string, field: string) => model(table).columns.find((candidate) => candidate.name === field)!;
 
 		expect(model('WarehouseItem').operations.update?.keyArgs).toEqual(['warehouseCode', 'sku']);
+		// GraphQL types a smallint `Int` like an int4; the column keeps the range its Postgres type holds.
+		expect(column('ScalarKind', 'smallintValue').value.integerBounds).toEqual({ min: -32768, max: 32767 });
+		expect(column('ScalarKind', 'integerValue').value.integerBounds).toEqual({ min: -2147483648, max: 2147483647 });
 		expect(relation('Task', 'warehouseItem').keys).toEqual([
 			{ local: 'warehouseCode', remote: 'warehouseCode' },
 			{ local: 'sku', remote: 'sku' },

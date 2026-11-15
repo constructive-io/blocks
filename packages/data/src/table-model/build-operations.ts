@@ -213,6 +213,13 @@ function buildCreate(ctx: OperationContext): { create: CreateOperationModel | nu
 	};
 }
 
+/** Why records of a table without a primary key cannot be changed or deleted; a view is named as one. */
+function noKeyReason(table: OperationContext['table'], action: 'changed' | 'deleted'): string {
+	return table.kind === 'view'
+		? `This is a view of other tables, so its records cannot be ${action} here.`
+		: `Records in this table cannot be ${action} because the table has no primary key.`;
+}
+
 function buildUpdate(ctx: OperationContext): { update: UpdateOperationModel | null; patchType: IntrospectedType | null } {
 	const { table, roots, lookup, issues, primaryKey } = ctx;
 	if (!table.query?.update || primaryKey.length === 0) {
@@ -220,9 +227,7 @@ function buildUpdate(ctx: OperationContext): { update: UpdateOperationModel | nu
 			issues,
 			'update',
 			'UPDATE_UNAVAILABLE',
-			primaryKey.length === 0
-				? 'Records in this table cannot be changed because the table has no primary key.'
-				: 'Records in this table cannot be changed.',
+			primaryKey.length === 0 ? noKeyReason(table, 'changed') : 'Records in this table cannot be changed.',
 		);
 		return { update: null, patchType: null };
 	}
@@ -257,9 +262,7 @@ function buildDelete(ctx: OperationContext): DeleteOperationModel | null {
 			issues,
 			'delete',
 			'DELETE_UNAVAILABLE',
-			primaryKey.length === 0
-				? 'Records in this table cannot be deleted because the table has no primary key.'
-				: 'Records in this table cannot be deleted.',
+			primaryKey.length === 0 ? noKeyReason(table, 'deleted') : 'Records in this table cannot be deleted.',
 		);
 		return null;
 	}

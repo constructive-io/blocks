@@ -130,6 +130,12 @@ export interface ColumnValueModel {
 	precision: number | null;
 	/** Declared numeric scale, or null. */
 	scale: number | null;
+	/**
+	 * The whole numbers an `integer` column holds, from its Postgres type: a smallint holds
+	 * -32768..32767 though GraphQL types it `Int` like an int4. Null for other kinds or an
+	 * unknown type (then the `Int` range applies).
+	 */
+	integerBounds: { min: number; max: number } | null;
 	/** Declared vector length, or null. */
 	dimensions: number | null;
 	/** Declared geometry subtype (Point, Polygon, ...), or null. */

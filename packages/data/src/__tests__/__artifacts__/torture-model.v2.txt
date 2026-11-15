@@ -13,7 +13,7 @@ sheets_torture.AuditEvent pk=[] list=auditEvents create=createAuditEvent update=
   column happenedAt: datetime read create - sort=yes filter=11 input=scalar:Datetime
   column actor: text read create - sort=yes filter=37 input=scalar:String
   column message: text read create! - sort=yes filter=37 input=scalar:String
-  issue table:- NO_PRIMARY_KEY "This table has no primary key, so its records are read-only."
+  issue table:- NO_PRIMARY_KEY "This table has no primary key, so its records cannot be changed or deleted."
   issue operation:update UPDATE_UNAVAILABLE "Records in this table cannot be changed because the table has no primary key."
   issue operation:delete DELETE_UNAVAILABLE "Records in this table cannot be deleted because the table has no primary key."
 
@@ -72,9 +72,9 @@ sheets_torture.OpenTask pk=[] list=openTasks create=createOpenTask update=- dele
   column title: text read create - sort=yes filter=37 input=scalar:String
   column status: enum read create - sort=yes filter=11 input=enum:TaskStatus options=TODO=todo|IN_PROGRESS=in_progress|DONE_ISH=done_ish|_1ST_REVIEW=1st_review|BLOCKED=Blocked|DONE=done|ON_HOLD=on hold|NEEDS_REVIEW=needs-review
   column dueOn: date read create - sort=yes filter=11 input=scalar:Date
-  issue table:- NO_PRIMARY_KEY "This table has no primary key, so its records are read-only."
-  issue operation:update UPDATE_UNAVAILABLE "Records in this table cannot be changed because the table has no primary key."
-  issue operation:delete DELETE_UNAVAILABLE "Records in this table cannot be deleted because the table has no primary key."
+  issue table:- NO_PRIMARY_KEY "This is a view of other tables, so its records cannot be changed or deleted here."
+  issue operation:update UPDATE_UNAVAILABLE "This is a view of other tables, so its records cannot be changed here."
+  issue operation:delete DELETE_UNAVAILABLE "This is a view of other tables, so its records cannot be deleted here."
 
 sheets_torture.PersonProfile pk=[personId] list=personProfiles create=createPersonProfile update=updatePersonProfile delete=deletePersonProfile display=[bio] (text)
   column personId: uuid read create! update sort=yes filter=11 input=scalar:UUID
@@ -203,7 +203,7 @@ sheets_torture.ScalarKind pk=[id] list=scalarKinds create=createScalarKind updat
   column numericUnbounded: decimal read create update sort=yes filter=11 input=scalar:BigFloat
   column realValue: float read create update sort=yes filter=11 input=scalar:Float
   column doubleValue: float read create update sort=yes filter=11 input=scalar:Float
-  column moneyValue: float read create update sort=yes filter=11 input=scalar:Float
+  column moneyValue: float (currency) read create update sort=yes filter=11 input=scalar:Float
   column uuidValue: uuid read create update sort=yes filter=11 input=scalar:UUID
   column dateValue: date read create update sort=yes filter=11 input=scalar:Date
   column timeValue: time read create update sort=yes filter=11 input=scalar:Time

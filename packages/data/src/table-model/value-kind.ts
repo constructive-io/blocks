@@ -77,6 +77,17 @@ function elementCodecName(field: MetaschemaField): string {
 	return field.type.isArray && pgType.endsWith('Array') ? pgType.slice(0, -'Array'.length) : pgType;
 }
 
+/** The whole-number range of each Postgres integer type GraphQL presents as `Int`. */
+const INTEGER_BOUNDS: Readonly<Record<string, { min: number; max: number }>> = {
+	int2: { min: -32768, max: 32767 },
+	int4: { min: -2147483648, max: 2147483647 },
+};
+
+/** The range an integer column (or each element of an integer list) holds, or null when its type is unknown. */
+export function integerBoundsOf(field: MetaschemaField): { min: number; max: number } | null {
+	return INTEGER_BOUNDS[elementCodecName(field)] ?? null;
+}
+
 /** True for an object type shaped like a range: `start` and `end` bounds with `value` and `inclusive`. */
 export function isRangeType(type: IntrospectedType | null, lookup: TypeLookup): boolean {
 	if (!type || type.kind !== 'OBJECT') return false;
@@ -106,8 +117,10 @@ export function columnFile(field: MetaschemaField): ColumnFileModel | null {
 
 export function columnSemantic(field: MetaschemaField, file: ColumnFileModel | null): ColumnSemantic | null {
 	if (file) return file.kind;
-	const codec = elementCodecName(field) as ColumnSemantic;
-	return SEMANTIC_DOMAINS.has(codec) ? codec : null;
+	const codec = elementCodecName(field);
+	// Postgres `money` holds an amount of currency, like the `currency` domain.
+	if (codec === 'money') return 'currency';
+	return SEMANTIC_DOMAINS.has(codec as ColumnSemantic) ? (codec as ColumnSemantic) : null;
 }
 
 /**

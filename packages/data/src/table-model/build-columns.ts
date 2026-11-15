@@ -18,7 +18,7 @@ import type {
 	ModelIssue,
 	TableOperations,
 } from './types';
-import { columnFile, columnSemantic, columnValueKind } from './value-kind';
+import { columnFile, columnSemantic, columnValueKind, integerBoundsOf } from './value-kind';
 
 export interface ColumnsContext {
 	fields: readonly MetaschemaField[];
@@ -203,6 +203,7 @@ function buildColumn(field: MetaschemaField, ctx: ColumnsContext, sorts: ReturnT
 			maxLength: field.type.maxLength ?? null,
 			precision: field.type.precision ?? null,
 			scale: field.type.scale ?? null,
+			integerBounds: kind === 'integer' ? integerBoundsOf(field) : null,
 			dimensions: encoding?.dimensions ?? null,
 			geometrySubtype: encoding?.geometrySubtype ?? field.type.subtype ?? null,
 			srid: encoding?.srid ?? null,
