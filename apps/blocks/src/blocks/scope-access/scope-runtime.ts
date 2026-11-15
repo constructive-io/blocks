@@ -110,7 +110,7 @@ export async function loadScopeSchemas(
   const loaded = await Promise.all(kinds.map(async (kind) => {
     const schema = kind === 'admin'
       ? await inspectOnce(runtime, kind)
-      : await inspectOnce(runtime, kind).catch(() => undefined);
+      : await inspectOnce(runtime, kind).catch((): undefined => undefined);
     return [kind, schema] as const;
   }));
   return Object.fromEntries(loaded.filter(([, schema]) => schema)) as ScopeSchemas;

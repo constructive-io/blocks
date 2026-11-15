@@ -21,7 +21,7 @@ import {
   hasEffectiveCapability,
   imageUrl
 } from '../console-kit/constructive/constructive-values';
-import { entityUserTypes, loadMembershipTypes } from './membership-types';
+import { entityUserTypes, loadMembershipTypes, type MembershipType } from './membership-types';
 import { scopeField, scopeType, type ScopeNames } from './scope-names';
 import { scopeEntityId, type ScopeRuntime, type ScopeSchemas, type ScopeTarget } from './scope-runtime';
 
@@ -255,7 +255,7 @@ async function readAccessRows(
     connection('auth', operation('EmailsPage'), 'emails', selections.emails)
       .catch((): Record<string, unknown>[] => []),
     selections.users.includes('type')
-      ? loadMembershipTypes(runtime, schemas.admin, signal).catch(() => [])
+      ? loadMembershipTypes(runtime, schemas.admin, signal).catch((): MembershipType[] => [])
       : Promise.resolve([])
   ]);
   return {

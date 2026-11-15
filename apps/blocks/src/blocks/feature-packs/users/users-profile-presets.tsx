@@ -62,7 +62,10 @@ export function ProfilePresets({
                 name: preset.name,
                 slug: preset.slug,
                 description: preset.description,
-                capabilityIds: preset.capabilities.flatMap((name) => idByName.get(name) ?? [])
+                capabilityIds: preset.capabilities.flatMap((name): string[] => {
+                  const id = idByName.get(name);
+                  return id ? [id] : [];
+                })
               });
             } catch (error) {
               onError?.(normalizeFeaturePackError(error, `${preset.name} could not be added.`));
