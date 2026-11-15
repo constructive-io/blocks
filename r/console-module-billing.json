@@ -9,6 +9,7 @@
     "@constructive/billing-account",
     "@constructive/billing-kit",
     "@constructive/console-feature-catalog",
+    "@constructive/constructive-graphql",
     "@constructive/constructive-theme"
   ],
   "files": [

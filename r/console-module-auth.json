@@ -8,6 +8,7 @@
     "@constructive/feature-pack-auth",
     "@constructive/console-feature-catalog",
     "@constructive/console-runtime",
+    "@constructive/constructive-graphql",
     "@constructive/constructive-theme"
   ],
   "files": [

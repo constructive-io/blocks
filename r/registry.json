@@ -7826,6 +7826,7 @@
       "registryDependencies": [
         "@constructive/console-runtime",
         "@constructive/console-feature-catalog",
+        "@constructive/constructive-graphql",
         "@constructive/alert",
         "@constructive/avatar",
         "@constructive/badge",
@@ -7903,11 +7904,6 @@
           "path": "registry/constructive/blocks/console-kit/constructive/constructive-console-kit.tsx",
           "target": "src/blocks/console-kit/constructive/constructive-console-kit.tsx",
           "type": "registry:component"
-        },
-        {
-          "path": "registry/constructive/blocks/console-kit/constructive/constructive-graphql.ts",
-          "target": "src/blocks/console-kit/constructive/constructive-graphql.ts",
-          "type": "registry:lib"
         },
         {
           "path": "registry/constructive/blocks/console-kit/constructive/constructive-meta-utils.ts",
@@ -8084,6 +8080,7 @@
         "@constructive/feature-pack-auth",
         "@constructive/console-feature-catalog",
         "@constructive/console-runtime",
+        "@constructive/constructive-graphql",
         "@constructive/constructive-theme"
       ],
       "files": [
@@ -8132,6 +8129,16 @@
           "type": "registry:component"
         },
         {
+          "path": "registry/constructive/blocks/feature-packs/users/users-scope-noun.ts",
+          "target": "src/blocks/feature-packs/users/users-scope-noun.ts",
+          "type": "registry:lib"
+        },
+        {
+          "path": "registry/constructive/blocks/feature-packs/users/users-profile-presets.tsx",
+          "target": "src/blocks/feature-packs/users/users-profile-presets.tsx",
+          "type": "registry:component"
+        },
+        {
           "path": "registry/constructive/blocks/feature-packs/users/feature-pack.json",
           "target": "~/.constructive/feature-packs/users.json",
           "type": "registry:file"
@@ -8147,6 +8154,7 @@
       "registryDependencies": [
         "@constructive/console-kit-core",
         "@constructive/feature-pack-users",
+        "@constructive/scope-access",
         "@constructive/console-feature-catalog",
         "@constructive/constructive-theme"
       ],
@@ -8160,6 +8168,160 @@
           "path": "registry/constructive/blocks/console-kit/constructive/users-adapter.ts",
           "target": "src/blocks/console-kit/constructive/users-adapter.ts",
           "type": "registry:lib"
+        }
+      ]
+    },
+    {
+      "name": "constructive-graphql",
+      "type": "registry:lib",
+      "title": "Constructive GraphQL",
+      "description": "Schema introspection snapshots, request and connection helpers, and pure row and capability-mask helpers shared by Console Kit adapters and scope blocks.",
+      "registryDependencies": [
+        "@constructive/console-runtime"
+      ],
+      "files": [
+        {
+          "path": "registry/constructive/blocks/console-kit/constructive/constructive-graphql.ts",
+          "target": "src/blocks/console-kit/constructive/constructive-graphql.ts",
+          "type": "registry:lib"
+        },
+        {
+          "path": "registry/constructive/blocks/console-kit/constructive/constructive-values.ts",
+          "target": "src/blocks/console-kit/constructive/constructive-values.ts",
+          "type": "registry:lib"
+        }
+      ]
+    },
+    {
+      "name": "scope-access",
+      "type": "registry:lib",
+      "title": "Scope Access",
+      "description": "One access core for every membership scope (app, org, or an entity type such as data_room): members, invitations, profiles, capabilities, pending invitations, workspaces and files, named from the scope by the backend's conventions.",
+      "docs": "`scope-access` installed the framework-free core under `src/blocks/scope-access`. Hosts with Console Kit get it through `console-module-users`; hosts without Console Kit add `scope-panels` and wrap the app in `ScopeAccessProvider` with their endpoints, signed-in user id and token getter. Read the active workspace outside React with `activeWorkspaceId('org')` from `@/blocks/scope-access/workspace-store`.",
+      "registryDependencies": [
+        "@constructive/constructive-graphql",
+        "@constructive/console-runtime",
+        "@constructive/feature-pack-users"
+      ],
+      "files": [
+        {
+          "path": "registry/constructive/blocks/scope-access/scope-names.ts",
+          "target": "src/blocks/scope-access/scope-names.ts",
+          "type": "registry:lib"
+        },
+        {
+          "path": "registry/constructive/blocks/scope-access/scope-access-load.ts",
+          "target": "src/blocks/scope-access/scope-access-load.ts",
+          "type": "registry:lib"
+        },
+        {
+          "path": "registry/constructive/blocks/scope-access/scope-access-view.ts",
+          "target": "src/blocks/scope-access/scope-access-view.ts",
+          "type": "registry:lib"
+        },
+        {
+          "path": "registry/constructive/blocks/scope-access/scope-runtime.ts",
+          "target": "src/blocks/scope-access/scope-runtime.ts",
+          "type": "registry:lib"
+        },
+        {
+          "path": "registry/constructive/blocks/scope-access/membership-types.ts",
+          "target": "src/blocks/scope-access/membership-types.ts",
+          "type": "registry:lib"
+        },
+        {
+          "path": "registry/constructive/blocks/scope-access/pending-invites-load.ts",
+          "target": "src/blocks/scope-access/pending-invites-load.ts",
+          "type": "registry:lib"
+        },
+        {
+          "path": "registry/constructive/blocks/scope-access/workspace-load.ts",
+          "target": "src/blocks/scope-access/workspace-load.ts",
+          "type": "registry:lib"
+        },
+        {
+          "path": "registry/constructive/blocks/scope-access/workspace-store.ts",
+          "target": "src/blocks/scope-access/workspace-store.ts",
+          "type": "registry:lib"
+        }
+      ]
+    },
+    {
+      "name": "scope-panels",
+      "type": "registry:block",
+      "title": "Scope Panels",
+      "description": "Connected members, files and pending-invitation panels for any membership scope, for apps without Console Kit.",
+      "docs": "`scope-panels` installed `ScopeAccessProvider`, `ScopeAccessPanel {scope, entityId?}`, `ScopeFilesPanel {scope, entityId?}` and `PendingInvites` under `src/blocks/scope-access`. Put `ScopeAccessProvider host={{ endpoints: { admin, auth, data }, userId, getAccessToken }}` around the signed-in app. `scope` is a `membershipTypes.scope` name (`app`, `org`, `data_room`); every scope but `app` needs the entity's id. RLS and capabilities decide what each user sees and may change.",
+      "dependencies": [
+        "lucide-react"
+      ],
+      "registryDependencies": [
+        "@constructive/scope-access",
+        "@constructive/feature-pack-users",
+        "@constructive/feature-pack-storage",
+        "@constructive/pack-foundation",
+        "@constructive/button",
+        "@constructive/constructive-graphql",
+        "@constructive/workspace-kit",
+        "@constructive/constructive-theme"
+      ],
+      "files": [
+        {
+          "path": "registry/constructive/blocks/scope-access/scope-files.ts",
+          "target": "src/blocks/scope-access/scope-files.ts",
+          "type": "registry:lib"
+        },
+        {
+          "path": "registry/constructive/blocks/scope-access/use-scope-view.ts",
+          "target": "src/blocks/scope-access/use-scope-view.ts",
+          "type": "registry:lib"
+        },
+        {
+          "path": "registry/constructive/blocks/scope-access/scope-access-provider.tsx",
+          "target": "src/blocks/scope-access/scope-access-provider.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/scope-access/scope-access-panel.tsx",
+          "target": "src/blocks/scope-access/scope-access-panel.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/scope-access/pending-invites.tsx",
+          "target": "src/blocks/scope-access/pending-invites.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/scope-access/scope-files-panel.tsx",
+          "target": "src/blocks/scope-access/scope-files-panel.tsx",
+          "type": "registry:component"
+        }
+      ]
+    },
+    {
+      "name": "workspace-switcher",
+      "type": "registry:block",
+      "title": "Workspace Switcher",
+      "description": "Picks the active workspace (personal or one of the user's organizations) and starts organizations; the choice is readable outside React for records that belong to the active organization.",
+      "docs": "`workspace-switcher` installed `WorkspaceProvider`, `useWorkspace` and `WorkspaceSwitcher` under `src/blocks/scope-access/workspace.tsx`. Place `WorkspaceProvider` inside `ScopeAccessProvider`, and the switcher in the sidebar. `New organization` shows only when the app grants the user `create_entity`.",
+      "dependencies": [
+        "lucide-react"
+      ],
+      "registryDependencies": [
+        "@constructive/scope-access",
+        "@constructive/scope-panels",
+        "@constructive/pack-foundation",
+        "@constructive/button",
+        "@constructive/dialog",
+        "@constructive/dropdown-menu",
+        "@constructive/input",
+        "@constructive/constructive-theme"
+      ],
+      "files": [
+        {
+          "path": "registry/constructive/blocks/scope-access/workspace.tsx",
+          "target": "src/blocks/scope-access/workspace.tsx",
+          "type": "registry:component"
         }
       ]
     },
@@ -8231,6 +8393,7 @@
         "@constructive/feature-pack-organizations",
         "@constructive/console-feature-catalog",
         "@constructive/console-runtime",
+        "@constructive/constructive-graphql",
         "@constructive/pack-foundation",
         "@constructive/constructive-theme"
       ],
@@ -8299,6 +8462,7 @@
         "@constructive/feature-pack-storage",
         "@constructive/console-feature-catalog",
         "@constructive/console-runtime",
+        "@constructive/constructive-graphql",
         "@constructive/constructive-theme"
       ],
       "files": [
@@ -8359,6 +8523,7 @@
         "@constructive/billing-account",
         "@constructive/billing-kit",
         "@constructive/console-feature-catalog",
+        "@constructive/constructive-graphql",
         "@constructive/constructive-theme"
       ],
       "files": [
@@ -8415,6 +8580,7 @@
         "@constructive/console-kit-core",
         "@constructive/feature-pack-notifications",
         "@constructive/console-feature-catalog",
+        "@constructive/constructive-graphql",
         "@constructive/constructive-theme"
       ],
       "files": [

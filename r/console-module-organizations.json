@@ -8,6 +8,7 @@
     "@constructive/feature-pack-organizations",
     "@constructive/console-feature-catalog",
     "@constructive/console-runtime",
+    "@constructive/constructive-graphql",
     "@constructive/pack-foundation",
     "@constructive/constructive-theme"
   ],

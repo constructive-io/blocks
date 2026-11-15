@@ -7,6 +7,7 @@
     "@constructive/console-kit-core",
     "@constructive/feature-pack-notifications",
     "@constructive/console-feature-catalog",
+    "@constructive/constructive-graphql",
     "@constructive/constructive-theme"
   ],
   "files": [
