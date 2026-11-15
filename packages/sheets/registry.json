@@ -686,6 +686,11 @@
           "type": "registry:lib"
         },
         {
+          "path": "registry/constructive/blocks/sheets/grid/cell-copy-text.ts",
+          "target": "@ui/sheets/grid/cell-copy-text.ts",
+          "type": "registry:lib"
+        },
+        {
           "path": "registry/constructive/blocks/sheets/grid/cell-routing.ts",
           "target": "@ui/sheets/grid/cell-routing.ts",
           "type": "registry:lib"
@@ -716,6 +721,11 @@
           "type": "registry:lib"
         },
         {
+          "path": "registry/constructive/blocks/sheets/grid/draft-guidance.ts",
+          "target": "@ui/sheets/grid/draft-guidance.ts",
+          "type": "registry:lib"
+        },
+        {
           "path": "registry/constructive/blocks/sheets/grid/draft-types.ts",
           "target": "@ui/sheets/grid/draft-types.ts",
           "type": "registry:lib"
@@ -729,6 +739,11 @@
           "path": "registry/constructive/blocks/sheets/grid/editors/date-editor.tsx",
           "target": "@ui/sheets/grid/editors/date-editor.tsx",
           "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/sheets/grid/editors/date-text.ts",
+          "target": "@ui/sheets/grid/editors/date-text.ts",
+          "type": "registry:lib"
         },
         {
           "path": "registry/constructive/blocks/sheets/grid/editors/date-value-parts.ts",
@@ -906,6 +921,11 @@
           "type": "registry:lib"
         },
         {
+          "path": "registry/constructive/blocks/sheets/grid/hooks/history-context.ts",
+          "target": "@ui/sheets/grid/hooks/history-context.ts",
+          "type": "registry:lib"
+        },
+        {
           "path": "registry/constructive/blocks/sheets/grid/hooks/use-batch-commit.ts",
           "target": "@ui/sheets/grid/hooks/use-batch-commit.ts",
           "type": "registry:lib"
@@ -966,6 +986,11 @@
           "type": "registry:lib"
         },
         {
+          "path": "registry/constructive/blocks/sheets/grid/hooks/use-refresh-on-return.ts",
+          "target": "@ui/sheets/grid/hooks/use-refresh-on-return.ts",
+          "type": "registry:lib"
+        },
+        {
           "path": "registry/constructive/blocks/sheets/grid/hooks/use-undo-redo.ts",
           "target": "@ui/sheets/grid/hooks/use-undo-redo.ts",
           "type": "registry:lib"
@@ -983,6 +1008,11 @@
         {
           "path": "registry/constructive/blocks/sheets/grid/render/sheets-filtered-empty.tsx",
           "target": "@ui/sheets/grid/render/sheets-filtered-empty.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/sheets/grid/render/sheets-rows-error.tsx",
+          "target": "@ui/sheets/grid/render/sheets-rows-error.tsx",
           "type": "registry:component"
         },
         {
@@ -1023,6 +1053,11 @@
         {
           "path": "registry/constructive/blocks/sheets/grid/row-model.ts",
           "target": "@ui/sheets/grid/row-model.ts",
+          "type": "registry:lib"
+        },
+        {
+          "path": "registry/constructive/blocks/sheets/grid/row-removal.ts",
+          "target": "@ui/sheets/grid/row-removal.ts",
           "type": "registry:lib"
         },
         {
@@ -1088,6 +1123,11 @@
         {
           "path": "registry/constructive/blocks/sheets/grid/sort/sort-control.tsx",
           "target": "@ui/sheets/grid/sort/sort-control.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/sheets/grid/toolbar/toolbar-button.tsx",
+          "target": "@ui/sheets/grid/toolbar/toolbar-button.tsx",
           "type": "registry:component"
         },
         {
@@ -1404,6 +1444,11 @@
           "path": "registry/constructive/blocks/sheets/relations/relation-section.tsx",
           "target": "@ui/sheets/relations/relation-section.tsx",
           "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/sheets/relations/relation-undo.ts",
+          "target": "@ui/sheets/relations/relation-undo.ts",
+          "type": "registry:lib"
         },
         {
           "path": "registry/constructive/blocks/sheets/relations/use-model-pages.ts",
