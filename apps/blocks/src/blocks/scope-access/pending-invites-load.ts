@@ -83,12 +83,13 @@ async function senderNames(
   const rows = await executeConstructiveConnectionQuery(runtime, 'auth', {
     operationName: 'ConsoleKitInviteSenders',
     fieldName: 'users',
-    nodeSelection: 'id displayName username'
+    nodeSelection: 'id displayName username',
+    in: { id: ids }
   }, signal).catch((): Record<string, unknown>[] => []);
   for (const row of rows) {
     const id = asString(row.id);
     const name = asString(row.displayName) ?? asString(row.username);
-    if (id && name && ids.includes(id)) names.set(id, name);
+    if (id && name) names.set(id, name);
   }
   return names;
 }

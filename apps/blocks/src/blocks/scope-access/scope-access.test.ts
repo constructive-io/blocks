@@ -286,14 +286,21 @@ describe('pending invitations', () => {
       if (call.document.includes('myPendingAppInvites(')) {
         return { myPendingAppInvites: { nodes: [{ id: 'inv-app', senderId: 'owner-1' }] } };
       }
+      if (call.document.includes('users(')) {
+        return { users: { nodes: [{ id: 'owner-1', displayName: 'Ada' }] } };
+      }
       return {};
     }, calls);
-    const invites = await loadPendingInvites(run, { admin }, new AbortController().signal);
-    expect(invites.map((invite) => [invite.scope.scope, invite.id, invite.entityId])).toEqual([
-      ['app', 'inv-app', undefined],
-      ['data_room', 'inv-room', 'room-1']
+    const auth = snapshot('auth', ['users'], {}, [objectType('User', ['id', 'displayName', 'username'])]);
+    const invites = await loadPendingInvites(run, { admin, auth }, new AbortController().signal);
+    expect(invites.map((invite) => [invite.scope.scope, invite.id, invite.entityId, invite.senderName])).toEqual([
+      ['app', 'inv-app', undefined, 'Ada'],
+      ['data_room', 'inv-room', 'room-1', 'Ada']
     ]);
     const appQuery = calls.find((call) => call.document.includes('myPendingAppInvites('));
     expect(appQuery?.document).not.toContain('entityId');
+    // The senders' names come from their own rows, not the whole users table.
+    const senders = calls.find((call) => call.document.includes('users('));
+    expect(senders?.document).toContain('where: { id: { in: ["owner-1"] } }');
   });
 });

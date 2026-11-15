@@ -43,7 +43,7 @@ export function scopeEntityId(target: ScopeTarget): string | undefined {
  * is read right before each request and never kept.
  */
 export type ScopeHost = Readonly<{
-  /** Endpoint URLs by kind: `admin` and `auth` for members and users, `storage` for files. */
+  /** Endpoint URLs by kind: `admin` and `auth` for members and users, `data` (the app API) for files. */
   endpoints: Readonly<Partial<Record<ConsoleEndpointKind, string>>>;
   /** The signed-in user's id; null when no one is signed in. */
   userId: string | null;

@@ -53,6 +53,8 @@ export type ConstructiveConnectionQuery = Readonly<{
   pageSize?: number;
   /** Rows whose fields equal these values, e.g. one entity's memberships. */
   equalTo?: Readonly<Record<string, string>>;
+  /** Rows whose field is one of these values, e.g. a few users by id. */
+  in?: Readonly<Record<string, readonly string[]>>;
 }>;
 
 type IntrospectionField = {
@@ -265,14 +267,15 @@ const GRAPHQL_NAME = /^[_A-Za-z][_0-9A-Za-z]*$/u;
 // The `where` argument of a connection, written into the document: field names
 // must be GraphQL names, and each value is a JSON string literal, which is a
 // valid GraphQL string literal.
-function connectionWhere(equalTo: Readonly<Record<string, string>> | undefined): string {
-  const entries = Object.entries(equalTo ?? {});
-  if (entries.length === 0) return '';
-  const conditions = entries.map(([field, value]) => {
+function connectionWhere(query: ConstructiveConnectionQuery): string {
+  const conditions = [
+    ...Object.entries(query.equalTo ?? {}).map(([field, value]) => [field, 'equalTo', value] as const),
+    ...Object.entries(query.in ?? {}).map(([field, values]) => [field, 'in', values] as const)
+  ].map(([field, operator, value]) => {
     if (!GRAPHQL_NAME.test(field)) throw new Error(`"${field}" is not a GraphQL field name.`);
-    return `${field}: { equalTo: ${JSON.stringify(value)} }`;
+    return `${field}: { ${operator}: ${JSON.stringify(value)} }`;
   });
-  return `, where: { ${conditions.join(', ')} }`;
+  return conditions.length > 0 ? `, where: { ${conditions.join(', ')} }` : '';
 }
 
 /**
@@ -285,7 +288,7 @@ export async function executeConstructiveConnectionQuery(
   query: ConstructiveConnectionQuery,
   signal?: AbortSignal
 ): Promise<Record<string, unknown>[]> {
-  const where = connectionWhere(query.equalTo);
+  const where = connectionWhere(query);
   const document = `
     query ${query.operationName}($first: Int!, $after: Cursor) {
       ${query.fieldName}(first: $first, after: $after${where}) {

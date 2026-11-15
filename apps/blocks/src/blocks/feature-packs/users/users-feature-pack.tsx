@@ -367,9 +367,9 @@ function InviteMemberDialog({
       <DialogContent>
         <form onSubmit={(event) => void submit(event)}>
           <DialogHeader>
-            <DialogTitle>{`Invite an ${noun.long} member`}</DialogTitle>
+            <DialogTitle>{`Invite ${articled(noun.long)} member`}</DialogTitle>
             <DialogDescription>
-              This grants application access. The recipient keeps ownership of their account credentials.
+              {`This grants ${noun.long} access. The recipient keeps ownership of their account credentials.`}
             </DialogDescription>
           </DialogHeader>
           <DialogPanel>
