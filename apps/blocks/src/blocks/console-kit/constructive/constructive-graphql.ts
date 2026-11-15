@@ -1,5 +1,18 @@
-import type { ConsoleEndpointKind } from '../../console-runtime';
-import type { ConsoleKitAdapterContext } from '../console-kit-contracts';
+import type {
+  ConsoleEndpoint,
+  ConsoleEndpointKind,
+  IdentityScopedConsoleTransport
+} from '../../console-runtime';
+
+/**
+ * What the GraphQL helpers need of a host: its endpoints and an
+ * identity-scoped transport for each. Console Kit's adapter context is one;
+ * a host without Console Kit (scope-access) builds its own.
+ */
+export type ConstructiveGraphQLRuntime = Readonly<{
+  endpoints: Readonly<Partial<Record<ConsoleEndpointKind, ConsoleEndpoint>>>;
+  transportFor: (kind: ConsoleEndpointKind) => IdentityScopedConsoleTransport | null;
+}>;
 
 export type ConstructiveTypeRef = Readonly<{
   kind: string;
@@ -38,6 +51,10 @@ export type ConstructiveConnectionQuery = Readonly<{
   fieldName: string;
   nodeSelection: string;
   pageSize?: number;
+  /** Rows whose fields equal these values, e.g. one entity's memberships. */
+  equalTo?: Readonly<Record<string, string>>;
+  /** Rows whose field is one of these values, e.g. a few users by id. */
+  in?: Readonly<Record<string, readonly string[]>>;
 }>;
 
 type IntrospectionField = {
@@ -218,7 +235,7 @@ export function fieldsForType(
 }
 
 export async function executeConstructiveGraphQL<T>(
-  runtime: ConsoleKitAdapterContext,
+  runtime: ConstructiveGraphQLRuntime,
   endpointKind: ConsoleEndpointKind,
   document: string,
   variables: Record<string, unknown> | undefined,
@@ -245,19 +262,36 @@ export async function executeConstructiveGraphQL<T>(
   throw error;
 }
 
+const GRAPHQL_NAME = /^[_A-Za-z][_0-9A-Za-z]*$/u;
+
+// The `where` argument of a connection, written into the document: field names
+// must be GraphQL names, and each value is a JSON string literal, which is a
+// valid GraphQL string literal.
+function connectionWhere(query: ConstructiveConnectionQuery): string {
+  const conditions = [
+    ...Object.entries(query.equalTo ?? {}).map(([field, value]) => [field, 'equalTo', value] as const),
+    ...Object.entries(query.in ?? {}).map(([field, values]) => [field, 'in', values] as const)
+  ].map(([field, operator, value]) => {
+    if (!GRAPHQL_NAME.test(field)) throw new Error(`"${field}" is not a GraphQL field name.`);
+    return `${field}: { ${operator}: ${JSON.stringify(value)} }`;
+  });
+  return conditions.length > 0 ? `, where: { ${conditions.join(', ')} }` : '';
+}
+
 /**
  * Reads a PostGraphile Relay connection to exhaustion. Every connection owns
  * its cursor because unrelated tables can advance at different rates.
  */
 export async function executeConstructiveConnectionQuery(
-  runtime: ConsoleKitAdapterContext,
+  runtime: ConstructiveGraphQLRuntime,
   endpointKind: ConsoleEndpointKind,
   query: ConstructiveConnectionQuery,
   signal?: AbortSignal
 ): Promise<Record<string, unknown>[]> {
+  const where = connectionWhere(query);
   const document = `
     query ${query.operationName}($first: Int!, $after: Cursor) {
-      ${query.fieldName}(first: $first, after: $after) {
+      ${query.fieldName}(first: $first, after: $after${where}) {
         nodes { ${query.nodeSelection} }
         pageInfo { hasNextPage endCursor }
       }
@@ -298,7 +332,7 @@ export async function executeConstructiveConnectionQuery(
 }
 
 export async function inspectConstructiveSchema(
-  runtime: ConsoleKitAdapterContext,
+  runtime: ConstructiveGraphQLRuntime,
   endpointKind: ConsoleEndpointKind,
   signal?: AbortSignal
 ): Promise<ConstructiveSchemaSnapshot> {
@@ -327,4 +361,38 @@ export function selectExistingFields(
 ): string[] {
   const fields = fieldsForType(schema, typeName);
   return desired.filter((field) => Boolean(fields[field]));
+}
+
+export type ConstructiveMutationObjectInput = Readonly<{
+  field: string;
+  requiredFields: readonly string[];
+}>;
+
+/**
+ * Confirms the generated mutation input accepts every field an adapter sends.
+ * A mutation root alone is not enough: different presets can expose the root
+ * while omitting optional modules and their nested input fields.
+ */
+export function supportsConstructiveMutationInput(
+  schema: ConstructiveSchemaSnapshot | undefined,
+  mutation: string,
+  requiredInputFields: readonly string[],
+  objectInput?: ConstructiveMutationObjectInput
+): boolean {
+  const mutationField = schema?.mutationFields[mutation];
+  const inputArgument = mutationField?.args.find((argument) => argument.name === 'input');
+  const inputTypeName = namedTypeName(inputArgument?.type);
+  const inputType = inputTypeName ? schema?.types[inputTypeName] : undefined;
+  if (!inputType) return false;
+
+  const inputFields = new Map(inputType.inputFields.map((field) => [field.name, field]));
+  if (!requiredInputFields.every((field) => inputFields.has(field))) return false;
+  if (!objectInput) return true;
+
+  const objectField = inputFields.get(objectInput.field);
+  const objectTypeName = namedTypeName(objectField?.type);
+  const objectType = objectTypeName ? schema?.types[objectTypeName] : undefined;
+  if (!objectType) return false;
+  const objectFields = new Set(objectType.inputFields.map((field) => field.name));
+  return objectInput.requiredFields.every((field) => objectFields.has(field));
 }

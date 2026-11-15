@@ -180,7 +180,12 @@ export function StorageBrowser({
 	const hasFolders = objects.some((object) => object.kind === 'folder');
 	const noun = (count: number) => (hasFolders ? (count === 1 ? 'item' : 'items') : count === 1 ? 'file' : 'files');
 	const paneTakeover = emptyState === 'no-buckets' || emptyState === 'no-access' || emptyState === 'not-provisioned';
-	const totalFiles = buckets.reduce((sum, bucket) => sum + (bucket.objectCount ?? 0), 0);
+	// A host may know only some buckets' counts; then the footer names the
+	// buckets alone rather than a total that leaves files out.
+	const totalFiles = buckets.every((bucket) => bucket.objectCount != null)
+		? buckets.reduce((sum, bucket) => sum + (bucket.objectCount ?? 0), 0)
+		: null;
+	const bucketNoun = buckets.length === 1 ? 'bucket' : 'buckets';
 
 	const sidebar = ({ mode, collapsed, onCollapsedChange, onNavigate: closeDrawer }: WorkspaceSidebarRenderProps) => {
 		const railCollapsed = mode === 'rail' && collapsed;
@@ -195,7 +200,9 @@ export function StorageBrowser({
 				footer={
 					railCollapsed || buckets.length === 0 ? null : (
 						<p className="border-t border-sidebar-border px-3.5 py-2.5 text-xs text-muted-foreground tabular-nums">
-							{formatCount(totalFiles, locale)} {totalFiles === 1 ? 'file' : 'files'} in {formatCount(buckets.length, locale)} {buckets.length === 1 ? 'bucket' : 'buckets'}
+							{totalFiles == null
+								? `${formatCount(buckets.length, locale)} ${bucketNoun}`
+								: `${formatCount(totalFiles, locale)} ${totalFiles === 1 ? 'file' : 'files'} in ${formatCount(buckets.length, locale)} ${bucketNoun}`}
 						</p>
 					)
 				}
