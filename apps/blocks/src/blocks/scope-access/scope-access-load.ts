@@ -1,4 +1,3 @@
-import type { ConsoleSessionSnapshot } from '../console-runtime';
 import type {
   AppAccessProfile,
   AppCapability,
@@ -12,7 +11,6 @@ import {
   fieldsForType,
   namedTypeName,
   selectExistingFields,
-  type ConstructiveGraphQLRuntime,
   type ConstructiveSchemaSnapshot
 } from '../console-kit/constructive/constructive-graphql';
 import {
@@ -23,22 +21,9 @@ import {
   hasEffectiveCapability,
   imageUrl
 } from '../console-kit/constructive/constructive-values';
+import { entityUserTypes, loadMembershipTypes } from './membership-types';
 import { scopeField, scopeType, type ScopeNames } from './scope-names';
-
-/** A host's endpoints, transports and session: Console Kit's adapter context, or scope-runtime.ts. */
-export type ScopeRuntime = ConstructiveGraphQLRuntime & Readonly<{
-  session: ConsoleSessionSnapshot;
-}>;
-
-export type ScopeSchemas = Readonly<{
-  admin?: ConstructiveSchemaSnapshot;
-  auth?: ConstructiveSchemaSnapshot;
-  /** The app API, where each scope's files and uploads are. */
-  data?: ConstructiveSchemaSnapshot;
-}>;
-
-/** One scope's members: the app's, or one entity's (an organization, a data room). */
-export type ScopeTarget = Readonly<{ names: ScopeNames; entityId?: string }>;
+import { scopeEntityId, type ScopeRuntime, type ScopeSchemas, type ScopeTarget } from './scope-runtime';
 
 export type LoadedScopeAccess = Readonly<{
   data: UsersFeatureData;
@@ -59,15 +44,6 @@ export type LoadedScopeAccess = Readonly<{
   actorIsOwner: boolean;
   ownerCount: number;
 }>;
-
-/** The entity an entity scope's reads and writes are limited to; none for `app`. */
-export function scopeEntityId(target: ScopeTarget): string | undefined {
-  if (!target.names.entity) return undefined;
-  if (!target.entityId) {
-    throw new Error(`The ${target.names.noun.long} scope needs the id of one ${target.names.noun.long}.`);
-  }
-  return target.entityId;
-}
 
 function relationSelection(
   schema: ConstructiveSchemaSnapshot,
@@ -159,7 +135,7 @@ function accessSelections(schemas: ScopeSchemas, names: ScopeNames): ScopeAccess
 
   const auth = schemas.auth;
   const userFields = auth
-    ? selectExistingFields(auth, 'User', ['id', 'displayName', 'username', 'profilePicture'])
+    ? selectExistingFields(auth, 'User', ['id', 'displayName', 'username', 'profilePicture', 'type'])
     : [];
   const users = hasQuery(auth, 'users') && userFields.includes('id') ? userFields : [];
   const emailFields = auth ? selectExistingFields(auth, 'Email', ['ownerId', 'email', 'isPrimary']) : [];
@@ -196,41 +172,50 @@ function relatedProfile(
   return undefined;
 }
 
-/**
- * Reads one scope's members, invitations, profiles, capabilities and defaults
- * as the signed-in actor, and what that actor may change. An entity scope's
- * rows are limited to its entity; RLS decides the rest.
- */
-export async function loadScopeAccess(
+const NO_ACCESS: LoadedScopeAccess = {
+  data: { members: [] },
+  membershipRows: [],
+  memberIds: new Set(),
+  actorIds: new Set(),
+  memberByActorId: new Map(),
+  profileIds: new Set(),
+  mutableProfileIds: new Set(),
+  capabilityMasks: new Map(),
+  ownedInviteIds: new Set(),
+  canManageMembers: false,
+  canManageCapabilities: false,
+  canCreateInvites: false,
+  canAssignInviteProfiles: false,
+  actorIsAdmin: false,
+  actorIsOwner: false,
+  ownerCount: 0
+};
+
+type Rows = readonly Record<string, unknown>[];
+
+/** One scope's rows as the signed-in actor reads them, before they become the users view. */
+type AccessRows = Readonly<{
+  membershipRows: Rows;
+  invitationRows: Rows;
+  acceptedInviteRows: Rows;
+  profileRows: Rows;
+  capabilityRows: Rows;
+  defaultRows: Rows;
+  userRows: Rows;
+  emailRows: Rows;
+  /** The users-table types that mark an entity, not a person. */
+  entityTypes: ReadonlySet<number>;
+}>;
+
+async function readAccessRows(
   runtime: ScopeRuntime,
   schemas: ScopeSchemas,
   target: ScopeTarget,
+  selections: ScopeAccessSelections,
   signal: AbortSignal
-): Promise<LoadedScopeAccess> {
-  const empty: LoadedScopeAccess = {
-    data: { members: [] },
-    membershipRows: [],
-    memberIds: new Set(),
-    actorIds: new Set(),
-    memberByActorId: new Map(),
-    profileIds: new Set(),
-    mutableProfileIds: new Set(),
-    capabilityMasks: new Map(),
-    ownedInviteIds: new Set(),
-    canManageMembers: false,
-    canManageCapabilities: false,
-    canCreateInvites: false,
-    canAssignInviteProfiles: false,
-    actorIsAdmin: false,
-    actorIsOwner: false,
-    ownerCount: 0
-  };
-  if (runtime.session.status !== 'authenticated') return empty;
-
+): Promise<AccessRows> {
   const { names } = target;
   const entityId = scopeEntityId(target);
-  const actorId = runtime.session.identity.subjectId;
-  const selections = accessSelections(schemas, names);
   const operation = (suffix: string) => `ConsoleKit${names.pascal}Access${suffix}`;
   const ofEntity = entityId ? { entityId } : undefined;
   const connection = (
@@ -248,11 +233,6 @@ export async function loadScopeAccess(
       }, signal)
     : Promise.resolve([]);
 
-  // Membership directory access does not imply access to private emails.
-  const emailRowsPromise = connection(
-    'auth', operation('EmailsPage'), 'emails', selections.emails
-  ).catch((): Record<string, unknown>[] => []);
-
   const [
     membershipRows,
     invitationRows,
@@ -261,7 +241,8 @@ export async function loadScopeAccess(
     capabilityRows,
     defaultRows,
     userRows,
-    emailRows
+    emailRows,
+    membershipTypes
   ] = await Promise.all([
     connection('admin', operation('MembershipsPage'), scopeField(names, 'Memberships'), selections.memberships, ofEntity),
     connection('admin', operation('InvitationsPage'), scopeField(names, 'Invites'), selections.invitations, ofEntity),
@@ -270,9 +251,41 @@ export async function loadScopeAccess(
     connection('admin', operation('CapabilitiesPage'), scopeField(names, 'Capabilities'), selections.capabilities),
     connection('admin', operation('CapabilityDefaultsPage'), scopeField(names, 'CapabilityDefaults'), selections.defaults, ofEntity),
     connection('auth', operation('UsersPage'), 'users', selections.users),
-    emailRowsPromise
+    // Membership directory access does not imply access to private emails.
+    connection('auth', operation('EmailsPage'), 'emails', selections.emails)
+      .catch((): Record<string, unknown>[] => []),
+    selections.users.includes('type')
+      ? loadMembershipTypes(runtime, schemas.admin, signal).catch(() => [])
+      : Promise.resolve([])
   ]);
+  return {
+    membershipRows,
+    invitationRows,
+    acceptedInviteRows,
+    profileRows,
+    capabilityRows,
+    defaultRows,
+    userRows,
+    emailRows,
+    // An organization is a row in the users table too, so it can hold a
+    // membership; it is an entity, not a person, and stays off the members list.
+    entityTypes: entityUserTypes(membershipTypes)
+  };
+}
 
+// The users view of the rows, and what the actor may change in it.
+function scopeAccessOf(rows: AccessRows, selections: ScopeAccessSelections, actorId: string): LoadedScopeAccess {
+  const {
+    membershipRows,
+    invitationRows,
+    acceptedInviteRows,
+    profileRows,
+    capabilityRows,
+    defaultRows,
+    userRows,
+    emailRows,
+    entityTypes
+  } = rows;
   const users = new Map(userRows.flatMap((user) => {
     const id = asString(user.id);
     return id ? [[id, user] as const] : [];
@@ -327,6 +340,7 @@ export async function loadScopeAccess(
     const userId = asString(membership.actorId);
     if (!id || !userId) return [];
     const user = users.get(userId);
+    if (typeof user?.type === 'number' && entityTypes.has(user.type)) return [];
     const username = asString(user?.username);
     const email = emails.get(userId) ?? (username?.includes('@') ? username : 'Private email');
     const profileId = asString(membership.profileId) ?? asString(asRecord(membership.profile)?.id);
@@ -338,7 +352,8 @@ export async function loadScopeAccess(
       avatarUrl: imageUrl(user?.profilePicture),
       lifecycle: {
         approved: asBoolean(membership.isApproved),
-        verified: asBoolean(membership.isVerified),
+        // An organization's or an entity's memberships have no verified flag.
+        ...(selections.memberships.includes('isVerified') ? { verified: asBoolean(membership.isVerified) } : {}),
         banned: asBoolean(membership.isBanned),
         disabled: asBoolean(membership.isDisabled),
         active: asBoolean(membership.isActive)
@@ -441,4 +456,21 @@ export async function loadScopeAccess(
     actorIsOwner,
     ownerCount: members.filter((member) => member.governance.owner).length
   };
+}
+
+/**
+ * Reads one scope's members, invitations, profiles, capabilities and defaults
+ * as the signed-in actor, and what that actor may change. An entity scope's
+ * rows are limited to its entity; RLS decides the rest.
+ */
+export async function loadScopeAccess(
+  runtime: ScopeRuntime,
+  schemas: ScopeSchemas,
+  target: ScopeTarget,
+  signal: AbortSignal
+): Promise<LoadedScopeAccess> {
+  if (runtime.session.status !== 'authenticated') return NO_ACCESS;
+  const selections = accessSelections(schemas, target.names);
+  const rows = await readAccessRows(runtime, schemas, target, selections, signal);
+  return scopeAccessOf(rows, selections, runtime.session.identity.subjectId);
 }

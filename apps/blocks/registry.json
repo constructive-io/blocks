@@ -486,6 +486,16 @@
           "type": "registry:component"
         },
         {
+          "path": "registry/constructive/blocks/feature-packs/users/users-scope-noun.ts",
+          "target": "src/blocks/feature-packs/users/users-scope-noun.ts",
+          "type": "registry:lib"
+        },
+        {
+          "path": "registry/constructive/blocks/feature-packs/users/users-profile-presets.tsx",
+          "target": "src/blocks/feature-packs/users/users-profile-presets.tsx",
+          "type": "registry:component"
+        },
+        {
           "path": "registry/constructive/blocks/feature-packs/users/feature-pack.json",
           "target": "~/.constructive/feature-packs/users.json",
           "type": "registry:file"
@@ -573,6 +583,11 @@
           "type": "registry:lib"
         },
         {
+          "path": "registry/constructive/blocks/scope-access/membership-types.ts",
+          "target": "src/blocks/scope-access/membership-types.ts",
+          "type": "registry:lib"
+        },
+        {
           "path": "registry/constructive/blocks/scope-access/pending-invites-load.ts",
           "target": "src/blocks/scope-access/pending-invites-load.ts",
           "type": "registry:lib"
@@ -608,6 +623,11 @@
         {
           "path": "registry/constructive/blocks/scope-access/scope-files.ts",
           "target": "src/blocks/scope-access/scope-files.ts",
+          "type": "registry:lib"
+        },
+        {
+          "path": "registry/constructive/blocks/scope-access/use-scope-view.ts",
+          "target": "src/blocks/scope-access/use-scope-view.ts",
           "type": "registry:lib"
         },
         {

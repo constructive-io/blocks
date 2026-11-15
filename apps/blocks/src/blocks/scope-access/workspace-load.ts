@@ -3,7 +3,7 @@ import {
   executeConstructiveGraphQL
 } from '../console-kit/constructive/constructive-graphql';
 import { asBoolean, asRecord, asString, hasEffectiveCapability } from '../console-kit/constructive/constructive-values';
-import type { ScopeRuntime } from './scope-access-load';
+import type { ScopeRuntime } from './scope-runtime';
 import { scopeField, type ScopeNames } from './scope-names';
 
 /**
@@ -92,11 +92,26 @@ const CREATE_ORGANIZATION = /* GraphQL */ `
   }
 `;
 
+// An entity of a users-table scope is a users row whose `type` is the
+// scope's membership type id, as the database's scope tree records it.
+async function usersRowType(runtime: ScopeRuntime, names: ScopeNames, signal?: AbortSignal): Promise<number> {
+  const [row] = await executeConstructiveConnectionQuery(runtime, 'admin', {
+    operationName: `ConsoleKit${names.pascal}UsersRowType`,
+    fieldName: 'membershipTypes',
+    nodeSelection: 'id hasUsersTableEntry',
+    equalTo: { scope: names.scope }
+  }, signal);
+  if (typeof row?.id !== 'number' || !asBoolean(row.hasUsersTableEntry)) {
+    throw new Error(`This app can't start ${names.noun.long}s: they aren't users rows.`);
+  }
+  return row.id;
+}
+
 /**
  * Starts an organization owned by the signed-in user: the backend makes the
- * organization a users row (type 2) and the creator its owner. Fails when the
- * owner membership doesn't follow, so a half-made organization is never
- * selected.
+ * organization a users row of its scope's type and the creator its owner.
+ * Fails when the owner membership doesn't follow, so a half-made organization
+ * is never selected.
  */
 export async function createOrganization(
   runtime: ScopeRuntime,
@@ -106,13 +121,14 @@ export async function createOrganization(
 ): Promise<Workspace> {
   if (runtime.session.status !== 'authenticated') throw new Error('Sign in to start an organization.');
   const userId = runtime.session.identity.subjectId;
+  const type = await usersRowType(runtime, names, signal);
   const created = await executeConstructiveGraphQL<Record<string, unknown>>(
     runtime,
     'auth',
     CREATE_ORGANIZATION,
     {
       input: {
-        user: { username: `org-${globalThis.crypto.randomUUID()}`, displayName: name, type: 2 }
+        user: { username: `org-${globalThis.crypto.randomUUID()}`, displayName: name, type }
       }
     },
     signal

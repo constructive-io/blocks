@@ -9,7 +9,8 @@ import type {
   ConstructiveSchemaType
 } from '../console-kit/constructive/constructive-graphql';
 import { loadPendingInvites } from './pending-invites-load';
-import { loadScopeAccess, type ScopeRuntime } from './scope-access-load';
+import { loadScopeAccess } from './scope-access-load';
+import type { ScopeRuntime } from './scope-runtime';
 import { scopeAccessView } from './scope-access-view';
 import { scopeMutationDocument, scopeNames } from './scope-names';
 
@@ -157,6 +158,8 @@ describe('scope access on an entity scope', () => {
     expect(calls.find((call) => call.document.includes('dataRoomCapabilities('))?.document).not.toContain('where:');
     expect(directory.actorIsOwner).toBe(true);
     expect(directory.data.members.map((member) => member.lifecycle.approved)).toEqual([true, false]);
+    // A data room membership has no verified flag, so no member reads as unverified.
+    expect(directory.data.members.map((member) => member.lifecycle.verified)).toEqual([undefined, undefined]);
 
     const view = scopeAccessView(run, schemas, ROOM, directory, () => undefined);
     expect(view.policy.invite).toBe(true);
@@ -188,6 +191,68 @@ describe('scope access on an entity scope', () => {
     const run = runtime(rows, []);
     await expect(loadScopeAccess(run, { admin: ROOM_ADMIN }, { names: scopeNames('data_room') }, new AbortController().signal))
       .rejects.toThrow('needs the id of one data room');
+  });
+});
+
+describe('scope access members', () => {
+  it("leaves an entity's own users-table membership off the members list", async () => {
+    const membershipTypeConnection: ConstructiveSchemaType = {
+      kind: 'OBJECT',
+      name: 'MembershipTypeConnection',
+      fields: [{ name: 'nodes', args: [], type: { kind: 'LIST', ofType: { kind: 'OBJECT', name: 'MembershipType' } } }],
+      inputFields: []
+    };
+    const base = snapshot('admin', ['appMemberships'], {}, [
+      objectType('AppMembership', ['id', 'actorId', 'isActive', 'isApproved']),
+      membershipTypeConnection,
+      objectType('MembershipType', ['id', 'scope', 'hasUsersTableEntry'])
+    ]);
+    const admin = {
+      ...base,
+      queryFields: {
+        ...base.queryFields,
+        membershipTypes: { name: 'membershipTypes', args: [], type: { kind: 'OBJECT', name: 'MembershipTypeConnection' } }
+      }
+    } as ConstructiveSchemaSnapshot;
+    const auth = snapshot('auth', ['users'], {}, [objectType('User', ['id', 'displayName', 'type'])]);
+    // The entity scope's id is the database's, not a number the client knows.
+    const run = runtime((call) => {
+      if (call.document.includes('appMemberships(')) {
+        return {
+          appMemberships: {
+            nodes: [
+              { id: 'm-owner', actorId: 'owner-1', isActive: true, isApproved: true },
+              { id: 'm-agency', actorId: 'agency-1', isActive: false, isApproved: false }
+            ]
+          }
+        };
+      }
+      if (call.document.includes('membershipTypes')) {
+        return {
+          membershipTypes: {
+            nodes: [
+              { id: 1, scope: 'app', hasUsersTableEntry: false },
+              { id: 7, scope: 'agency', hasUsersTableEntry: true }
+            ]
+          }
+        };
+      }
+      if (call.document.includes('users(')) {
+        return {
+          users: {
+            nodes: [
+              { id: 'owner-1', displayName: 'Ada', type: 1 },
+              { id: 'agency-1', displayName: 'Northwind Capital', type: 7 }
+            ]
+          }
+        };
+      }
+      return rows(call);
+    }, []);
+    const directory = await loadScopeAccess(run, { admin, auth }, { names: scopeNames('app') }, new AbortController().signal);
+
+    expect(directory.data.members.map((member) => member.name)).toEqual(['Ada']);
+    expect(directory.memberIds.has('m-agency')).toBe(false);
   });
 });
 

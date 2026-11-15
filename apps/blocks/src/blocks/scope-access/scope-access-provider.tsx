@@ -2,8 +2,7 @@
 
 import * as React from 'react';
 
-import type { ScopeRuntime } from './scope-access-load';
-import { createScopeRuntime, type ScopeHost } from './scope-runtime';
+import { createScopeRuntime, type ScopeHost, type ScopeRuntime } from './scope-runtime';
 
 const ScopeRuntimeContext = React.createContext<ScopeRuntime | null>(null);
 
@@ -17,7 +16,10 @@ export function ScopeAccessProvider({
   children
 }: Readonly<{ host: ScopeHost; children: React.ReactNode }>) {
   const tokenRef = React.useRef(host.getAccessToken);
-  tokenRef.current = host.getAccessToken;
+  // The latest getter, kept after each commit rather than written during render.
+  React.useLayoutEffect(() => {
+    tokenRef.current = host.getAccessToken;
+  });
   const { admin, auth, data, storage } = host.endpoints;
   const runtime = React.useMemo(
     () => createScopeRuntime({

@@ -46,6 +46,9 @@ type WorkspaceState = Readonly<{
 
 const WorkspaceContext = React.createContext<WorkspaceState | null>(null);
 
+// One empty list while loading, so the context value doesn't change each render.
+const NO_WORKSPACES: readonly Workspace[] = [];
+
 /**
  * Loads the signed-in user's workspaces in a users-table scope (`org` by
  * default) and keeps the active one valid: a choice that is no longer one of
@@ -92,7 +95,7 @@ export function WorkspaceProvider({
     };
   }, [runtime, names, userId, version]);
 
-  const workspaces = loaded?.workspaces ?? [];
+  const workspaces = loaded?.workspaces ?? NO_WORKSPACES;
   const active = workspaces.find((workspace) => workspace.id === activeId) ??
     workspaces.find((workspace) => workspace.personal) ?? null;
 
@@ -137,25 +140,22 @@ export function useWorkspaceOrNull(): WorkspaceState | null {
   return React.useContext(WorkspaceContext);
 }
 
+const workspaceIcon = (workspace: Workspace) => (workspace.personal
+  ? <UserRoundIcon aria-hidden className='size-4' />
+  : <BuildingIcon aria-hidden className='size-4' />);
+
 /** Picks the active workspace, and starts an organization when the app allows it. */
 export function WorkspaceSwitcher({ onError }: Readonly<{ onError?: (error: FeaturePackError) => void }>) {
-  const { workspaces, active, canCreate, select, create, loading } = useWorkspace();
+  const { workspaces, active, canCreate, select, loading } = useWorkspace();
   const [creating, setCreating] = React.useState(false);
-  const [name, setName] = React.useState('');
-  const [pending, setPending] = React.useState(false);
-  const [error, setError] = React.useState<string | undefined>();
 
   if (loading || !active) return null;
-  const icon = (workspace: Workspace) => (workspace.personal
-    ? <UserRoundIcon aria-hidden className='size-4' />
-    : <BuildingIcon aria-hidden className='size-4' />);
-
   return (
     <>
       <DropdownMenu>
         <DropdownMenuTrigger render={<Button className='w-full justify-between' size='sm' variant='outline' />}>
           <span className='flex min-w-0 items-center gap-2'>
-            {icon(active)}
+            {workspaceIcon(active)}
             <span className='truncate'>{active.name}</span>
           </span>
           <ChevronsUpDownIcon aria-hidden className='size-4 opacity-60' />
@@ -163,7 +163,7 @@ export function WorkspaceSwitcher({ onError }: Readonly<{ onError?: (error: Feat
         <DropdownMenuContent align='start'>
           {workspaces.map((workspace) => (
             <DropdownMenuItem key={workspace.id} onClick={() => select(workspace.id)}>
-              {icon(workspace)}
+              {workspaceIcon(workspace)}
               <span className='flex-1 truncate'>{workspace.name}</span>
               {workspace.id === active.id ? <CheckIcon aria-hidden className='size-4' /> : null}
             </DropdownMenuItem>
@@ -179,39 +179,59 @@ export function WorkspaceSwitcher({ onError }: Readonly<{ onError?: (error: Feat
           ) : null}
         </DropdownMenuContent>
       </DropdownMenu>
-      <Dialog onOpenChange={(open) => { setCreating(open); if (!open) setError(undefined); }} open={creating}>
-        <DialogContent>
-          <form
-            className='flex flex-col gap-4'
-            onSubmit={async (event) => {
-              event.preventDefault();
-              setPending(true);
-              setError(undefined);
-              try {
-                await create(name.trim());
-                setName('');
-                setCreating(false);
-              } catch (cause) {
-                const normalized = normalizeFeaturePackError(cause, 'The organization could not be created.');
-                setError(normalized.message);
-                onError?.(normalized);
-              } finally {
-                setPending(false);
-              }
-            }}
-          >
-            <DialogHeader>
-              <DialogTitle>New organization</DialogTitle>
-              <DialogDescription>Records you add while it is selected belong to it, and its members see them.</DialogDescription>
-            </DialogHeader>
-            <Input aria-label='Organization name' autoFocus onChange={(event) => setName(event.target.value)} placeholder='Acme Fund' value={name} />
-            {error ? <p className='text-sm text-destructive' role='alert'>{error}</p> : null}
-            <DialogFooter>
-              <Button disabled={pending || !name.trim()} type='submit'>Create organization</Button>
-            </DialogFooter>
-          </form>
-        </DialogContent>
-      </Dialog>
+      <CreateOrganizationDialog onError={onError} onOpenChange={setCreating} open={creating} />
     </>
+  );
+}
+
+// The name typed into it changes only the dialog, not the switcher's menu.
+function CreateOrganizationDialog({
+  open,
+  onOpenChange,
+  onError
+}: Readonly<{
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  onError?: (error: FeaturePackError) => void;
+}>) {
+  const { create } = useWorkspace();
+  const [name, setName] = React.useState('');
+  const [pending, setPending] = React.useState(false);
+  const [error, setError] = React.useState<string | undefined>();
+
+  return (
+    <Dialog onOpenChange={(next) => { onOpenChange(next); if (!next) setError(undefined); }} open={open}>
+      <DialogContent>
+        <form
+          className='flex flex-col gap-4'
+          onSubmit={async (event) => {
+            event.preventDefault();
+            setPending(true);
+            setError(undefined);
+            try {
+              await create(name.trim());
+              setName('');
+              onOpenChange(false);
+            } catch (cause) {
+              const normalized = normalizeFeaturePackError(cause, 'The organization could not be created.');
+              setError(normalized.message);
+              onError?.(normalized);
+            } finally {
+              setPending(false);
+            }
+          }}
+        >
+          <DialogHeader>
+            <DialogTitle>New organization</DialogTitle>
+            <DialogDescription>Records you add while it is selected belong to it, and its members see them.</DialogDescription>
+          </DialogHeader>
+          <Input aria-label='Organization name' autoFocus onChange={(event) => setName(event.target.value)} placeholder='Acme Fund' value={name} />
+          {error ? <p className='text-sm text-destructive' role='alert'>{error}</p> : null}
+          <DialogFooter>
+            <Button disabled={pending || !name.trim()} type='submit'>Create organization</Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
   );
 }

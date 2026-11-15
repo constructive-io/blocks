@@ -2,18 +2,15 @@
 
 import * as React from 'react';
 
-import { normalizeFeaturePackError, type FeaturePackError } from '../feature-packs/shared/feature-pack-contracts';
-import {
-  UsersFeaturePack,
-  type UsersFeaturePackProps,
-  type UsersScopeNoun,
-  type UsersSection
-} from '../feature-packs/users/users-feature-pack';
+import type { FeaturePackError } from '../feature-packs/shared/feature-pack-contracts';
+import { UsersFeaturePack, type UsersSection } from '../feature-packs/users/users-feature-pack';
+import { capitalized, type UsersScopeNoun } from '../feature-packs/users/users-scope-noun';
 import { loadScopeAccess } from './scope-access-load';
 import { useScopeRuntime } from './scope-access-provider';
-import { scopeAccessView, type ScopeAccessView } from './scope-access-view';
+import { scopeAccessView } from './scope-access-view';
 import { scopeNames } from './scope-names';
 import { loadScopeSchemas } from './scope-runtime';
+import { useScopeView } from './use-scope-view';
 
 export type ScopeAccessPanelProps = Readonly<{
   /** The membership scope, as `membershipTypes.scope` names it: `app`, `org`, `data_room`. */
@@ -28,10 +25,6 @@ export type ScopeAccessPanelProps = Readonly<{
   onSectionChange?: (section: UsersSection) => void;
   onError?: (error: FeaturePackError) => void;
 }>;
-
-type PanelState = Pick<UsersFeaturePackProps, 'resource' | 'policy' | 'actions'>;
-
-const capitalized = (text: string) => text[0]!.toUpperCase() + text.slice(1);
 
 /**
  * One scope's members, invitations, profiles and capabilities, read and
@@ -51,33 +44,13 @@ export function ScopeAccessPanel({
 }: ScopeAccessPanelProps) {
   const runtime = useScopeRuntime();
   const names = React.useMemo(() => scopeNames(scope), [scope]);
-  const [version, setVersion] = React.useState(0);
-  const [state, setState] = React.useState<PanelState>({ resource: { status: 'loading' } });
-
-  React.useEffect(() => {
-    const controller = new AbortController();
+  const load = React.useCallback(async (signal: AbortSignal, reload: () => void) => {
     const target = { names, entityId };
-    const reload = () => setVersion((current) => current + 1);
-    loadScopeSchemas(runtime, ['admin', 'auth'])
-      .then(async (schemas): Promise<ScopeAccessView> => {
-        const directory = await loadScopeAccess(runtime, schemas, target, controller.signal);
-        return scopeAccessView(runtime, schemas, target, directory, reload);
-      })
-      .then((view) => {
-        if (!controller.signal.aborted) setState(view);
-      })
-      .catch((error: unknown) => {
-        if (controller.signal.aborted) return;
-        setState({
-          resource: {
-            status: 'error',
-            error: normalizeFeaturePackError(error, `The ${names.noun.long} members could not be loaded.`),
-            retry: reload
-          }
-        });
-      });
-    return () => controller.abort();
-  }, [runtime, names, entityId, version]);
+    const schemas = await loadScopeSchemas(runtime, ['admin', 'auth']);
+    const directory = await loadScopeAccess(runtime, schemas, target, signal);
+    return scopeAccessView(runtime, schemas, target, directory, reload);
+  }, [runtime, names, entityId]);
+  const state = useScopeView(load, `The ${names.noun.long} members could not be loaded.`);
 
   return (
     <UsersFeaturePack

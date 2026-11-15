@@ -2,12 +2,13 @@
 
 import * as React from 'react';
 
-import { normalizeFeaturePackError, type FeaturePackError } from '../feature-packs/shared/feature-pack-contracts';
+import type { FeaturePackError } from '../feature-packs/shared/feature-pack-contracts';
 import { StorageFeaturePack } from '../feature-packs/storage/storage-feature-pack';
 import { useScopeRuntime } from './scope-access-provider';
-import { loadScopeFiles, type ScopeFilesView } from './scope-files';
+import { loadScopeFiles } from './scope-files';
 import { scopeNames } from './scope-names';
 import { loadScopeSchemas } from './scope-runtime';
+import { useScopeView } from './use-scope-view';
 
 export type ScopeFilesPanelProps = Readonly<{
   /** The membership scope that owns the files: `org`, `data_room`, … */
@@ -27,32 +28,16 @@ export function ScopeFilesPanel({ scope, entityId, onError, className }: ScopeFi
   const runtime = useScopeRuntime();
   const names = React.useMemo(() => scopeNames(scope), [scope]);
   const [bucketKey, setBucketKey] = React.useState<string | undefined>();
-  const [version, setVersion] = React.useState(0);
-  const [view, setView] = React.useState<ScopeFilesView>({ resource: { status: 'loading' } });
-
-  React.useEffect(() => {
-    const controller = new AbortController();
+  const load = React.useCallback(async (signal: AbortSignal, reload: () => void) => {
+    // A write opens the bucket it touched and reads it again.
     const onChange = (key?: string) => {
       setBucketKey(key);
-      setVersion((current) => current + 1);
+      reload();
     };
-    loadScopeSchemas(runtime, ['data'])
-      .then((schemas) => loadScopeFiles(runtime, schemas, { names, entityId }, bucketKey, onChange, controller.signal))
-      .then((next) => {
-        if (!controller.signal.aborted) setView(next);
-      })
-      .catch((error: unknown) => {
-        if (controller.signal.aborted) return;
-        setView({
-          resource: {
-            status: 'error',
-            error: normalizeFeaturePackError(error, `The ${names.noun.long} files could not be loaded.`),
-            retry: () => setVersion((current) => current + 1)
-          }
-        });
-      });
-    return () => controller.abort();
-  }, [runtime, names, entityId, bucketKey, version]);
+    const schemas = await loadScopeSchemas(runtime, ['data']);
+    return loadScopeFiles(runtime, schemas, { names, entityId }, bucketKey, onChange, signal);
+  }, [runtime, names, entityId, bucketKey]);
+  const view = useScopeView(load, `The ${names.noun.long} files could not be loaded.`);
 
   return (
     <StorageFeaturePack

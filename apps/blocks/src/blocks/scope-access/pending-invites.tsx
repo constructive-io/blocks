@@ -7,6 +7,7 @@ import { Button } from '@constructive-io/ui/button';
 import { SectionHeading } from '@/components/ui/workspace-kit/surface';
 
 import { normalizeFeaturePackError, type FeaturePackError } from '../feature-packs/shared/feature-pack-contracts';
+import { articled } from '../feature-packs/users/users-scope-noun';
 import {
   acceptPendingInvite,
   loadPendingInvites,
@@ -25,8 +26,6 @@ export type PendingInvitesProps = Readonly<{
   empty?: React.ReactNode;
 }>;
 
-const articled = (word: string) => `${/^[aeiou]/iu.test(word) ? 'an' : 'a'} ${word}`;
-
 function inviteText(invite: PendingInvite, label: string | undefined): string {
   const what = label ?? (invite.scope.entity ? articled(invite.scope.noun.long) : 'this application');
   return invite.senderName ? `${invite.senderName} invited you to ${what}.` : `You're invited to ${what}.`;
@@ -42,6 +41,10 @@ export function PendingInvites({ entityLabel, onAccepted, onError, empty = null 
   const [invites, setInvites] = React.useState<readonly PendingInvite[] | null>(null);
   const [pending, setPending] = React.useState<string | null>(null);
   const [version, setVersion] = React.useState(0);
+  // The host's handler may be a new function each render; it doesn't start a new load.
+  const reportLoadError = React.useEffectEvent((error: unknown) => {
+    onError?.(normalizeFeaturePackError(error, 'Your invitations could not be loaded.'));
+  });
 
   React.useEffect(() => {
     const controller = new AbortController();
@@ -53,10 +56,10 @@ export function PendingInvites({ entityLabel, onAccepted, onError, empty = null 
       .catch((error: unknown) => {
         if (controller.signal.aborted) return;
         setInvites([]);
-        onError?.(normalizeFeaturePackError(error, 'Your invitations could not be loaded.'));
+        reportLoadError(error);
       });
     return () => controller.abort();
-  }, [runtime, version, onError]);
+  }, [runtime, version]);
 
   if (!invites) return null;
   if (invites.length === 0) return <>{empty}</>;

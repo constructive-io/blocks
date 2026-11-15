@@ -5,9 +5,10 @@ import {
   namedTypeName,
   selectExistingFields
 } from '../console-kit/constructive/constructive-graphql';
-import { asString, connectionNodes } from '../console-kit/constructive/constructive-values';
-import type { ScopeRuntime, ScopeSchemas } from './scope-access-load';
-import { scopeMutation, scopeNames, type ScopeNames } from './scope-names';
+import { asString } from '../console-kit/constructive/constructive-values';
+import { loadMembershipTypes } from './membership-types';
+import type { ScopeRuntime, ScopeSchemas } from './scope-runtime';
+import { scopeMutation, type ScopeNames } from './scope-names';
 
 /** An invitation the signed-in user can accept, in any membership scope. */
 export type PendingInvite = Readonly<{
@@ -20,29 +21,6 @@ export type PendingInvite = Readonly<{
   expiresAt?: string;
 }>;
 
-const MEMBERSHIP_TYPES = /* GraphQL */ `
-  query ConsoleKitMembershipScopes { membershipTypes { nodes { scope } } }
-`;
-
-/**
- * The database's membership scopes, from `membershipTypes`: `app`, `org`, and
- * every entity type a blueprint added. A scope name the client can't use is
- * left out.
- */
-export async function loadMembershipScopes(runtime: ScopeRuntime): Promise<ScopeNames[]> {
-  const data = await executeConstructiveGraphQL<Record<string, unknown>>(runtime, 'admin', MEMBERSHIP_TYPES, undefined);
-  const record = data.membershipTypes;
-  return connectionNodes(record).flatMap((node) => {
-    const scope = asString(node.scope);
-    if (!scope) return [];
-    try {
-      return [scopeNames(scope)];
-    } catch {
-      return [];
-    }
-  });
-}
-
 /** Every pending invitation to the signed-in user, in each scope that lists them. */
 export async function loadPendingInvites(
   runtime: ScopeRuntime,
@@ -51,7 +29,8 @@ export async function loadPendingInvites(
 ): Promise<PendingInvite[]> {
   if (runtime.session.status !== 'authenticated') return [];
   const admin = schemas.admin;
-  const scopes = (await loadMembershipScopes(runtime))
+  const scopes = (await loadMembershipTypes(runtime, admin, signal))
+    .map((type) => type.scope)
     .filter((names) => Boolean(admin?.queryFields[`myPending${names.pascal}Invites`]));
   const lists = await Promise.all(scopes.map(async (names) => {
     const fieldName = `myPending${names.pascal}Invites`;

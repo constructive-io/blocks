@@ -4,20 +4,22 @@ import type {
   UsersFeatureData,
   UsersFeaturePackProps
 } from '../feature-packs/users/users-feature-pack';
+import { capitalized } from '../feature-packs/users/users-scope-noun';
 import {
   executeConstructiveGraphQL,
-  supportsConstructiveMutationInput,
-  type ConstructiveSchemaSnapshot
+  supportsConstructiveMutationInput
 } from '../console-kit/constructive/constructive-graphql';
 import { assertAuthorizedTarget, expiresIn } from '../console-kit/constructive/constructive-values';
+import type { LoadedScopeAccess } from './scope-access-load';
 import {
-  scopeEntityId,
-  type LoadedScopeAccess,
-  type ScopeRuntime,
-  type ScopeSchemas,
-  type ScopeTarget
-} from './scope-access-load';
-import { scopeField, scopeMutation, scopeMutationDocument, type ScopeNames } from './scope-names';
+  scopeField,
+  scopeMutation,
+  scopeMutationDocument,
+  supportsScopeObject,
+  supportsScopePatch,
+  type ScopeNames
+} from './scope-names';
+import { scopeEntityId, type ScopeRuntime, type ScopeSchemas, type ScopeTarget } from './scope-runtime';
 
 /** What the users view takes besides its data: the resource, the policy and the actions. */
 export type ScopeAccessView = Readonly<{
@@ -27,51 +29,6 @@ export type ScopeAccessView = Readonly<{
 }>;
 
 type LifecycleField = 'isApproved' | 'isVerified' | 'isBanned' | 'isDisabled';
-
-function supportsMembershipPatch(
-  schema: ConstructiveSchemaSnapshot | undefined,
-  names: ScopeNames,
-  field: LifecycleField
-): boolean {
-  const patch = scopeField(names, 'MembershipPatch');
-  return supportsConstructiveMutationInput(
-    schema,
-    scopeMutation(names, 'update', 'Membership'),
-    ['id', patch],
-    { field: patch, requiredFields: [field] }
-  );
-}
-
-function supportsObjectMutation(
-  schema: ConstructiveSchemaSnapshot | undefined,
-  names: ScopeNames,
-  verb: string,
-  suffix: string,
-  objectFields: readonly string[]
-): boolean {
-  const object = scopeField(names, suffix);
-  return supportsConstructiveMutationInput(
-    schema,
-    scopeMutation(names, verb, suffix),
-    [object],
-    { field: object, requiredFields: objectFields }
-  );
-}
-
-function supportsPatch(
-  schema: ConstructiveSchemaSnapshot | undefined,
-  names: ScopeNames,
-  suffix: string,
-  patchFields: readonly string[]
-): boolean {
-  const patch = scopeField(names, `${suffix}Patch`);
-  return supportsConstructiveMutationInput(
-    schema,
-    scopeMutation(names, 'update', suffix),
-    ['id', patch],
-    { field: patch, requiredFields: patchFields }
-  );
-}
 
 function assertMutableMember(
   directory: LoadedScopeAccess,
@@ -87,8 +44,6 @@ function assertMutableMember(
   }
   return member;
 }
-
-const capitalized = (text: string) => text[0]!.toUpperCase() + text.slice(1);
 
 /** The bits set in any of the masks; the masks of one scope share a length. */
 function unionMask(masks: readonly string[]): string {
@@ -112,7 +67,7 @@ export function scopeAccessView(
   const ofEntity = entityId ? { entityId } : {};
   const admin = schemas.admin;
   const supportsObject = (verb: string, suffix: string, fields: readonly string[]) =>
-    supportsObjectMutation(admin, names, verb, suffix, fields);
+    supportsScopeObject(admin, names, verb, suffix, fields);
   const write = async (verb: string, suffix: string, input: Record<string, unknown>) => {
     await executeConstructiveGraphQL(runtime, 'admin', scopeMutationDocument(names, verb, suffix), { input });
     reload();
@@ -126,10 +81,10 @@ export function scopeAccessView(
   });
   const label = names.noun.short;
 
-  const canSetApproved = directory.canManageMembers && supportsMembershipPatch(admin, names, 'isApproved');
-  const canSetVerified = directory.canManageMembers && supportsMembershipPatch(admin, names, 'isVerified');
-  const canSetBanned = directory.canManageMembers && supportsMembershipPatch(admin, names, 'isBanned');
-  const canSetDisabled = directory.canManageMembers && supportsMembershipPatch(admin, names, 'isDisabled');
+  const canSetApproved = directory.canManageMembers && supportsScopePatch(admin, names, 'Membership', ['isApproved']);
+  const canSetVerified = directory.canManageMembers && supportsScopePatch(admin, names, 'Membership', ['isVerified']);
+  const canSetBanned = directory.canManageMembers && supportsScopePatch(admin, names, 'Membership', ['isBanned']);
+  const canSetDisabled = directory.canManageMembers && supportsScopePatch(admin, names, 'Membership', ['isDisabled']);
   const canSetOwner = directory.actorIsOwner &&
     supportsObject('create', 'OwnerGrant', ['actorId', 'isGrant']);
   const canSetAdmin = directory.actorIsAdmin &&
@@ -150,10 +105,10 @@ export function scopeAccessView(
   const createProfileSupportsDescription = supportsObject('create', 'Profile', ['description']);
   const createProfileSupportsCapabilities = supportsObject('create', 'Profile', ['capabilities']);
   const canUpdateProfile = directory.canManageCapabilities && directory.mutableProfileIds.size > 0 &&
-    supportsPatch(admin, names, 'Profile', ['name', 'slug']);
-  const updateProfileSupportsDescription = supportsPatch(admin, names, 'Profile', ['description']);
+    supportsScopePatch(admin, names, 'Profile', ['name', 'slug']);
+  const updateProfileSupportsDescription = supportsScopePatch(admin, names, 'Profile', ['description']);
   const canSetDefaultProfile = directory.canManageCapabilities && directory.mutableProfileIds.size > 0 &&
-    supportsPatch(admin, names, 'Profile', ['isDefault']);
+    supportsScopePatch(admin, names, 'Profile', ['isDefault']);
   const canDeleteProfile = directory.canManageCapabilities && directory.mutableProfileIds.size > 0 &&
     supportsConstructiveMutationInput(admin, scopeMutation(names, 'delete', 'Profile'), ['id']);
 
@@ -162,7 +117,7 @@ export function scopeAccessView(
   const inviteSupportsChannel = supportsObject('create', 'Invite', ['channel']);
   const inviteSupportsProfile = supportsObject('create', 'Invite', ['profileId']);
   const canUpdateInvite = directory.ownedInviteIds.size > 0 &&
-    supportsPatch(admin, names, 'Invite', ['expiresAt']);
+    supportsScopePatch(admin, names, 'Invite', ['expiresAt']);
   const canDeleteInvite = directory.ownedInviteIds.size > 0 &&
     supportsConstructiveMutationInput(admin, scopeMutation(names, 'delete', 'Invite'), ['id']);
 

@@ -92,6 +92,15 @@ import {
   FeatureStatusBadge,
   focusedRecordClass
 } from '../shared/feature-pack-ui';
+import { ProfilePresets } from './users-profile-presets';
+import {
+  APP_NOUN,
+  articled,
+  capitalized,
+  useUsersNoun,
+  UsersNounContext,
+  type UsersScopeNoun
+} from './users-scope-noun';
 
 export type UsersSection =
   | 'members'
@@ -105,7 +114,8 @@ const NO_PROFILE_VALUE = '__no_profile__';
 
 export type AppMemberLifecycle = Readonly<{
   approved: boolean;
-  verified: boolean;
+  /** Absent when the scope has no verification step; such a member is never shown as unverified. */
+  verified?: boolean;
   banned: boolean;
   disabled: boolean;
   active: boolean;
@@ -255,19 +265,6 @@ export type UsersFeatureActions = Readonly<{
   extendInvite?: (input: { inviteId: string }) => FeatureActionResult;
 }>;
 
-/**
- * What the members belong to, in words: the application by default, or an
- * entity such as an organization or a data room. `short` names a role
- * ("app admin"); `long` names the thing ("application members").
- */
-export type UsersScopeNoun = Readonly<{ short: string; long: string }>;
-
-const APP_NOUN: UsersScopeNoun = { short: 'app', long: 'application' };
-const NounContext = React.createContext<UsersScopeNoun>(APP_NOUN);
-const useNoun = () => React.useContext(NounContext);
-const capitalized = (text: string) => text[0]!.toUpperCase() + text.slice(1);
-const articled = (word: string) => `${/^[aeiou]/iu.test(word) ? 'an' : 'a'} ${word}`;
-
 export type UsersFeaturePackProps = Readonly<{
   resource: FeaturePackResource<UsersFeatureData>;
   policy?: FeatureActionPolicy<UsersFeatureAction>;
@@ -292,7 +289,7 @@ function memberStatus(member: AppMember): string {
   if (member.lifecycle.banned) return 'banned';
   if (member.lifecycle.disabled) return 'disabled';
   if (!member.lifecycle.approved) return 'pending approval';
-  if (!member.lifecycle.verified) return 'unverified';
+  if (member.lifecycle.verified === false) return 'unverified';
   return member.lifecycle.active ? 'active' : 'inactive';
 }
 
@@ -320,7 +317,7 @@ function InviteMemberDialog({
   onInvite: NonNullable<UsersFeatureActions['invite']>;
   onError?: UsersFeaturePackProps['onError'];
 }>) {
-  const noun = useNoun();
+  const noun = useUsersNoun();
   const [open, setOpen] = React.useState(false);
   const [recipient, setRecipient] = React.useState('');
   const [profileId, setProfileId] = React.useState('');
@@ -467,7 +464,7 @@ function MemberActions({
   actions?: UsersFeatureActions;
   onError?: UsersFeaturePackProps['onError'];
 }>) {
-  const noun = useNoun();
+  const noun = useUsersNoun();
   const [intent, setIntent] = React.useState<MemberActionIntent>();
   const [pending, setPending] = React.useState(false);
   const [error, setError] = React.useState<string>();
@@ -545,7 +542,7 @@ function MemberActions({
                     ? `The member will lose ${noun.long} access until verified again.`
                     : `Use this only after completing your ${noun.long} verification process.`,
                   confirmLabel: member.lifecycle.verified ? 'Revoke verification' : 'Mark verified',
-                  destructive: member.lifecycle.verified,
+                  destructive: member.lifecycle.verified === true,
                   run: () => actions.setVerified!({
                     membershipId: member.id,
                     verified: !member.lifecycle.verified
@@ -882,7 +879,7 @@ function MembersDirectory({
   actions?: UsersFeatureActions;
   onError?: UsersFeaturePackProps['onError'];
 }>) {
-  const noun = useNoun();
+  const noun = useUsersNoun();
   const focusedMemberRef = useFocusedRecord<HTMLTableRowElement>(
     Boolean(focusedMemberId && members.some((member) => member.id === focusedMemberId)),
     focusedMemberId
@@ -1035,7 +1032,7 @@ function InvitationsDirectory({
   actions?: UsersFeatureActions;
   onError?: UsersFeaturePackProps['onError'];
 }>) {
-  const noun = useNoun();
+  const noun = useUsersNoun();
   const [error, setError] = React.useState<string>();
   const [pendingInviteId, setPendingInviteId] = React.useState<string>();
   const focusedInvitationRef = useFocusedRecord<HTMLTableRowElement>(
@@ -1134,7 +1131,7 @@ function InvitationsDirectory({
 function AcceptedInvitesDirectory({
   invitations
 }: Readonly<{ invitations: readonly AppClaimedInvite[] }>) {
-  const noun = useNoun();
+  const noun = useUsersNoun();
   if (invitations.length === 0) {
     return (
       <FeaturePackEmpty
@@ -1468,73 +1465,6 @@ function ProfileCard({
   );
 }
 
-type ProfilePreset = Readonly<{ name: string; slug: string; description: string; capabilities: readonly string[] }>;
-
-// Starting points for a scope with storage: each takes the storage and member
-// capabilities the scope has by these platform names, and is offered only
-// while no profile has its slug.
-const PROFILE_PRESETS: readonly ProfilePreset[] = [
-  { name: 'Viewer', slug: 'viewer', description: 'Reads every file.', capabilities: ['read_files'] },
-  { name: 'Editor', slug: 'editor', description: 'Reads and changes files.', capabilities: ['read_files', 'write_files'] },
-  {
-    name: 'Admin',
-    slug: 'admin',
-    description: 'Manages files, sharing, members and invitations.',
-    capabilities: [
-      'read_files', 'write_files', 'delete_files', 'share_files',
-      'admin_members', 'create_invites', 'admin_invites', 'assign_profiles'
-    ]
-  }
-];
-
-function ProfilePresets({
-  profiles,
-  capabilities,
-  createProfile,
-  onError
-}: Readonly<{
-  profiles: readonly AppAccessProfile[];
-  capabilities: readonly AppCapability[];
-  createProfile: NonNullable<UsersFeatureActions['createProfile']>;
-  onError?: UsersFeaturePackProps['onError'];
-}>) {
-  const [pending, setPending] = React.useState<string | null>(null);
-  const idByName = new Map(capabilities.map((capability) => [capability.name, capability.id] as const));
-  if (!idByName.has('read_files')) return null;
-  const taken = new Set(profiles.map((profile) => profile.slug));
-  const offered = PROFILE_PRESETS.filter((preset) => !taken.has(preset.slug));
-  if (offered.length === 0) return null;
-  return (
-    <>
-      {offered.map((preset) => (
-        <Button
-          disabled={pending !== null}
-          key={preset.slug}
-          onClick={async () => {
-            setPending(preset.slug);
-            try {
-              await createProfile({
-                name: preset.name,
-                slug: preset.slug,
-                description: preset.description,
-                capabilityIds: preset.capabilities.flatMap((name) => idByName.get(name) ?? [])
-              });
-            } catch (error) {
-              onError?.(normalizeFeaturePackError(error, `${preset.name} could not be added.`));
-            } finally {
-              setPending(null);
-            }
-          }}
-          size='sm'
-          variant='outline'
-        >
-          {`Add ${preset.name}`}
-        </Button>
-      ))}
-    </>
-  );
-}
-
 function ProfilesDirectory({
   profiles,
   capabilities,
@@ -1550,7 +1480,7 @@ function ProfilesDirectory({
   actions?: UsersFeatureActions;
   onError?: UsersFeaturePackProps['onError'];
 }>) {
-  const noun = useNoun();
+  const noun = useUsersNoun();
   const canCreate = canPerform(policy, 'createProfile') && Boolean(actions?.createProfile);
   const create = canCreate && actions?.createProfile
     ? (
@@ -1600,7 +1530,7 @@ function ProfilesDirectory({
 }
 
 function CapabilitiesCatalog({ capabilities }: Readonly<{ capabilities: readonly AppCapability[] }>) {
-  const noun = useNoun();
+  const noun = useUsersNoun();
   if (capabilities.length === 0) {
     return (
       <FeaturePackEmpty
@@ -1656,7 +1586,7 @@ function CapabilityDefaults({
   actions?: UsersFeatureActions;
   onError?: UsersFeaturePackProps['onError'];
 }>) {
-  const noun = useNoun();
+  const noun = useUsersNoun();
   const [pendingId, setPendingId] = React.useState<string>();
   const [error, setError] = React.useState<string>();
   const canUpdate = canPerform(policy, 'setDefaultCapability') &&
@@ -1751,7 +1681,7 @@ export function UsersFeaturePack({
   }
 
   return (
-    <NounContext.Provider value={noun}>
+    <UsersNounContext.Provider value={noun}>
     <FeaturePackBoundary
       emptyAction={canInvite && actions?.invite ? (
         <InviteMemberDialog
@@ -1909,6 +1839,6 @@ export function UsersFeaturePack({
         );
       }}
     </FeaturePackBoundary>
-    </NounContext.Provider>
+    </UsersNounContext.Provider>
   );
 }

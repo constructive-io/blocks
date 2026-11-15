@@ -1,3 +1,8 @@
+import {
+  supportsConstructiveMutationInput,
+  type ConstructiveSchemaSnapshot
+} from '../console-kit/constructive/constructive-graphql';
+
 /**
  * The names a Constructive backend gives one membership scope's API. The
  * scope `app` has `appMemberships`, `AppInvite` and `createAppOwnerGrant`; an
@@ -51,15 +56,54 @@ export const scopeMutation = (names: ScopeNames, verb: string, suffix: string) =
   `${verb}${names.pascal}${suffix}`;
 
 /**
- * The document of a mutation that returns its row's id, the shape every
- * scope mutation here has: `createDataRoomInvite(input: $input) { dataRoomInvite { id } }`.
+ * The document of one scope mutation. By default it returns its row's id,
+ * `createDataRoomInvite(input: $input) { dataRoomInvite { id } }`; a mutation
+ * whose payload is something else names what it reads.
  */
-export function scopeMutationDocument(names: ScopeNames, verb: string, suffix: string): string {
+export function scopeMutationDocument(
+  names: ScopeNames,
+  verb: string,
+  suffix: string,
+  selection = `${scopeField(names, suffix)} { id }`
+): string {
   const mutation = scopeMutation(names, verb, suffix);
   const operation = mutation[0]!.toUpperCase() + mutation.slice(1);
   return `
   mutation ConsoleKit${operation}($input: ${operation}Input!) {
-    ${mutation}(input: $input) { ${scopeField(names, suffix)} { id } }
+    ${mutation}(input: $input) { ${selection} }
   }
 `;
+}
+
+/** Whether `<verb><Scope><Suffix>` takes its row with these fields: `createDataRoomInvite` with `email`. */
+export function supportsScopeObject(
+  schema: ConstructiveSchemaSnapshot | undefined,
+  names: ScopeNames,
+  verb: string,
+  suffix: string,
+  fields: readonly string[]
+): boolean {
+  const object = scopeField(names, suffix);
+  return supportsConstructiveMutationInput(
+    schema,
+    scopeMutation(names, verb, suffix),
+    [object],
+    { field: object, requiredFields: fields }
+  );
+}
+
+/** Whether `update<Scope><Suffix>` takes a patch with these fields: `updateDataRoomMembership` with `isApproved`. */
+export function supportsScopePatch(
+  schema: ConstructiveSchemaSnapshot | undefined,
+  names: ScopeNames,
+  suffix: string,
+  fields: readonly string[]
+): boolean {
+  const patch = scopeField(names, `${suffix}Patch`);
+  return supportsConstructiveMutationInput(
+    schema,
+    scopeMutation(names, 'update', suffix),
+    ['id', patch],
+    { field: patch, requiredFields: fields }
+  );
 }

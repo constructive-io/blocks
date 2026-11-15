@@ -3,10 +3,39 @@ import {
   createIdentityScopedTransport,
   type ConsoleEndpoint,
   type ConsoleEndpointKind,
-  type ConsoleIdentity
+  type ConsoleIdentity,
+  type ConsoleSessionSnapshot
 } from '../console-runtime';
-import { inspectConstructiveSchema } from '../console-kit/constructive/constructive-graphql';
-import type { ScopeRuntime, ScopeSchemas } from './scope-access-load';
+import {
+  inspectConstructiveSchema,
+  type ConstructiveGraphQLRuntime,
+  type ConstructiveSchemaSnapshot
+} from '../console-kit/constructive/constructive-graphql';
+import type { ScopeNames } from './scope-names';
+
+/** A host's endpoints, transports and session: Console Kit's adapter context, or createScopeRuntime's. */
+export type ScopeRuntime = ConstructiveGraphQLRuntime & Readonly<{
+  session: ConsoleSessionSnapshot;
+}>;
+
+export type ScopeSchemas = Readonly<{
+  admin?: ConstructiveSchemaSnapshot;
+  auth?: ConstructiveSchemaSnapshot;
+  /** The app API, where each scope's files and uploads are. */
+  data?: ConstructiveSchemaSnapshot;
+}>;
+
+/** One scope's members or files: the app's, or one entity's (an organization, a data room). */
+export type ScopeTarget = Readonly<{ names: ScopeNames; entityId?: string }>;
+
+/** The entity an entity scope's reads and writes are limited to; none for `app`. */
+export function scopeEntityId(target: ScopeTarget): string | undefined {
+  if (!target.names.entity) return undefined;
+  if (!target.entityId) {
+    throw new Error(`The ${target.names.noun.long} scope needs the id of one ${target.names.noun.long}.`);
+  }
+  return target.entityId;
+}
 
 /**
  * What an app without Console Kit hands the scope blocks: its GraphQL

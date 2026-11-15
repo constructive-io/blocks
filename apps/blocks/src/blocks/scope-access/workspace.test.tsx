@@ -15,17 +15,26 @@ const respond = (data: unknown) => new Response(JSON.stringify({ data }), {
 // and the workspace list reloads only when the test lets it.
 function backend() {
   let created = false;
+  let createdType: unknown;
   let failing = false;
   let releaseReload: () => void = () => {};
   const reloadReleased = new Promise<void>((resolve) => {
     releaseReload = resolve;
   });
   const fetch: typeof globalThis.fetch = async (_input, init) => {
-    const { query, operationName } = JSON.parse(String(init?.body)) as { query: string; operationName?: string };
+    const { query, operationName, variables } = JSON.parse(String(init?.body)) as {
+      query: string;
+      operationName?: string;
+      variables?: { input?: { user?: { type?: unknown } } };
+    };
     switch (operationName ?? /^\s*(?:query|mutation)\s+(\w+)/u.exec(query)?.[1]) {
       case 'ConsoleKitCreateWorkspaceOrganization':
         created = true;
+        createdType = variables?.input?.user?.type;
         return respond({ createUser: { user: { id: 'org-1' } } });
+      case 'ConsoleKitOrgUsersRowType':
+        // The scope tree's id, whatever it is, becomes the new users row's type.
+        return respond({ membershipTypes: { nodes: [{ id: 7, hasUsersTableEntry: true }] } });
       case 'ConsoleKitOrgNewOwner':
         return respond({ orgMemberships: { nodes: [{ actorId: 'owner-1', isOwner: true, isActive: true }] } });
       case 'ConsoleKitOrgWorkspaces':
@@ -43,6 +52,7 @@ function backend() {
   };
   return {
     fetch,
+    createdType: () => createdType,
     releaseReload: () => releaseReload(),
     fail: () => {
       failing = true;
@@ -82,6 +92,7 @@ describe('WorkspaceProvider', () => {
 
     expect(screen.getByTestId('active')).toHaveTextContent('Acme Ventures');
     expect(activeWorkspaceId('org')).toBe('org-1');
+    expect(owner.createdType()).toBe(7);
 
     await act(async () => owner.releaseReload());
     await waitFor(() => expect(workspaces.current!.loading).toBe(false));
