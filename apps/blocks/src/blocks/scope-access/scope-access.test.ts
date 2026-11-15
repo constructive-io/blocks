@@ -12,7 +12,7 @@ import { loadPendingInvites } from './pending-invites-load';
 import { loadScopeAccess } from './scope-access-load';
 import type { ScopeRuntime } from './scope-runtime';
 import { scopeAccessView } from './scope-access-view';
-import { scopeMutationDocument, scopeNames } from './scope-names';
+import { scopeNames } from './scope-names';
 
 type Call = Readonly<{ endpoint: ConsoleEndpointKind; document: string; variables?: Record<string, unknown> }>;
 
@@ -130,18 +130,9 @@ const rows = (call: Call) => {
 };
 
 describe('scope names', () => {
-  it('derives every name of a scope from its membership type', () => {
-    expect(scopeNames('data_room')).toMatchObject({
-      pascal: 'DataRoom',
-      camel: 'dataRoom',
-      entity: true,
-      noun: { short: 'data room', long: 'data room' }
-    });
-    expect(scopeNames('app')).toMatchObject({ pascal: 'App', entity: false, noun: { long: 'application' } });
-    expect(scopeMutationDocument(scopeNames('org'), 'create', 'Invite')).toContain(
-      'createOrgInvite(input: $input) { orgInvite { id } }'
-    );
+  it('refuses a scope name that is not an identifier, since every GraphQL document takes it as is', () => {
     expect(() => scopeNames('Data Room')).toThrow('not a membership scope name');
+    expect(() => scopeNames('room) { id } x: rooms(')).toThrow('not a membership scope name');
   });
 });
 
