@@ -803,7 +803,7 @@ export type SheetsProps<TRow extends SheetsRow = SheetsRow> = DataGridProps<TRow
  * Refreshes the grid when the page comes back after a while, once no editor is open and no
  * save is in flight. A leaf of its own, so following the save status never renders the grid.
  */
-function RefreshOnReturn({ refresh, editorOpen }: { refresh: () => void; editorOpen: boolean }) {
+function RefreshOnReturn({ refresh, editorOpen }: { refresh: () => void; editorOpen: boolean }): null {
 	const saving = useOperationFeedback()?.status === 'pending';
 	useRefreshOnReturn({ refresh, busy: saving || editorOpen });
 	return null;
