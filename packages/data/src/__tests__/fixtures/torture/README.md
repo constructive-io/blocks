@@ -9,7 +9,7 @@ Real `_meta`, introspection and row output from one API schema (`sheets_torture`
 | `torture-introspection.json` | `{ data }`: the full `getIntrospectionQuery()` result with the additions (v2 server). Table, input and enum types are identical to the baseline; only the Meta types gained fields and `MetaFileField`. |
 | `torture-introspection.baseline.json` | The same introspection from the baseline server, for testing the older-server path. |
 | `torture-rows.json` | Per table: `{ table, query, data, errors }`. `query` is the list query with every column and a hand-written sub-selection for each object type; `data` is the first 5 rows as served. The `_meta` additions don't change it (only `now()` timestamps differ between captures). |
-| `torture-schema.sql` | A copy of the seed (`graphile/graphile-settings/sql/sheets-torture-seed.sql`). |
+| `torture-schema.sql` | A copy of the seed the capture suite loads. |
 
 ## The additions, with real values from `torture-meta.v2.json`
 
@@ -28,7 +28,7 @@ A client should treat each addition as optional: detect it by the field list of 
 
 ## How to regenerate
 
-In the constructive worktree (`feat/meta-sheets-fields`), with a PostgreSQL that has postgis, vector, ltree and citext, and the test roles bootstrapped (`pgpm admin-users bootstrap --client` and `pgpm admin-users add --test`, as CI does):
+The capture suite is not part of constructive's `main`: it was removed from constructive-io/constructive#1996 before merge. Check out constructive commit `2d85cc857`, the last one with `graphile/graphile-settings/__tests__/meta-sheets-torture.integration.test.ts` and its seed `graphile/graphile-settings/sql/sheets-torture-seed.sql`. Then, with a PostgreSQL that has postgis, vector, ltree and citext, and the test roles bootstrapped (`pgpm admin-users bootstrap --client` and `pgpm admin-users add --test`, as CI does):
 
 ```bash
 cd graphile/graphile-settings
@@ -65,7 +65,7 @@ pnpm exec jest __tests__/meta-sheets-torture.integration.test.ts
 
 Schema-level
 
-1. **Fixed in the final round: an enum label with a space or a dash used to break the whole API.** The schema build threw (`Enum type 'TaskStatus' attempted to define a value with invalid name "IN PROGRESS"`). Now each run of characters outside `[A-Za-z0-9_]` becomes `_`: `on hold` is `ON_HOLD`, `needs-review` is `NEEDS_REVIEW`. Every name that was valid before is unchanged (`IN_PROGRESS`, `DONE_ISH`, `_1ST_REVIEW`, `BLOCKED`). See `../backend-meta-final.md` for the full naming rule.
+1. **Fixed in the final round: an enum label with a space or a dash used to break the whole API.** The schema build threw (`Enum type 'TaskStatus' attempted to define a value with invalid name "IN PROGRESS"`). Now each run of characters outside `[A-Za-z0-9_]` becomes `_`: `on hold` is `ON_HOLD`, `needs-review` is `NEEDS_REVIEW`. Every name that was valid before is unchanged (`IN_PROGRESS`, `DONE_ISH`, `_1ST_REVIEW`, `BLOCKED`). The full naming rule is in constructive's `graphile/graphile-settings/src/plugins/enum-value-names.ts`.
 2. **Backward relations need an index.** A hasOne/hasMany is only served when the foreign key columns on the related table are in some index. `tasks.assignee_email` has none, so `Person` has no relation back to `Task`. The forward `Task.personByAssigneeEmail` is still there. `_meta` agrees with the schema (it reports only served relations).
 3. **A stored generated column is in the create and patch inputs.** `GeneratedValue.total` has `isWritableOnCreate: true` and `isWritableOnUpdate: true` because PostGraphile puts it in both inputs, but the database rejects any value but DEFAULT (`cannot insert a non-DEFAULT value into column "total"`). Only identity ALWAYS columns are left out of the inputs. The update is rejected too (`column "total" can only be updated to DEFAULT`). The baseline has nothing that marks such a column besides `hasDefault: true`; v2 adds `isComputed: true`, and a grid must not offer an editor when it is set.
 4. **A simple view has a create mutation** (`createOpenTask`) but no update or delete (no key). Its fields are all nullable and all `isWritableOnCreate: true`.
