@@ -95,7 +95,25 @@ export function InlineCellEditor({ ariaLabel, value, initialText, numeric, colum
 
 	useLayoutEffect(() => {
 		gridRef.current = (anchorRef.current?.closest('[role="grid"]') as HTMLElement | null) ?? null;
-		if (needsAnchor) setAnchorRect(anchorRef.current?.getBoundingClientRect() ?? null);
+		if (!needsAnchor) return;
+		// The portalled field and notice sit at a fixed place on screen, so they measure the cell
+		// again whenever anything scrolls (the grid, the page) or the window resizes.
+		const measure = () => {
+			const next = anchorRef.current?.getBoundingClientRect() ?? null;
+			// Keep the same rect while the cell has not moved, so a scroll elsewhere renders nothing.
+			setAnchorRect((prev) =>
+				prev && next && prev.left === next.left && prev.top === next.top && prev.width === next.width && prev.height === next.height
+					? prev
+					: next,
+			);
+		};
+		measure();
+		window.addEventListener('scroll', measure, true);
+		window.addEventListener('resize', measure);
+		return () => {
+			window.removeEventListener('scroll', measure, true);
+			window.removeEventListener('resize', measure);
+		};
 	}, [needsAnchor]);
 
 	const fieldMounted = !multiline || anchorRect !== null;

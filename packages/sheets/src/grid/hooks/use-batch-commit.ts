@@ -17,7 +17,8 @@
  *     refused row and the rows not sent yet go back to their prior values.
  *   • when recording, the HistoryEntry's `undo`/`redo` re-enter `commitCells` with
  *     `{ record: false }` so replays never double-record. A commit that stops part
- *     way records the rows it saved.
+ *     way records the rows it saved. A replay that the server refuses in any row
+ *     throws, so the history keeps the step for another try.
  *
  * Draft-row writes are NOT batched here — they route to the existing per-cell draft
  * path (`editCell`) and are excluded from history (draft undo is out of P3 scope).
@@ -54,6 +55,8 @@ export interface CommitCellsOptions {
 export interface CommitCellsResult {
 	/** Number of server cells actually written (post readonly/null/no-op filtering). */
 	applied: number;
+	/** Cells the server refused, or did not get after it refused a row, when there are any. */
+	unsaved?: number;
 	/** Writes refused before sending (the value did not fit, or the cell is read-only), when there are any. */
 	rejected?: readonly RejectedWrite[];
 }
@@ -272,10 +275,16 @@ export function useBatchCommit({
 					fromText: false,
 				}));
 				// Capture the live commit fn via the closure below (commitRef).
+				// A replay the server refuses in any row throws, so the history keeps the step for
+				// another try. Its writes are values, so trying again also suits the rows that saved.
+				const replay = async (cells: CellWrite[]) => {
+					const result = await commitRef.current?.(cells, { record: false });
+					if (result?.unsaved) throw new Error(`${changes(result.unsaved)} not saved`);
+				};
 				record({
 					label: writes.length > 1 ? `Edit ${writes.length} cells` : 'Edit cell',
-					undo: () => void commitRef.current?.(priorWrites, { record: false }),
-					redo: () => void commitRef.current?.(redoWrites, { record: false }),
+					undo: () => replay(priorWrites),
+					redo: () => replay(redoWrites),
 				});
 			};
 
@@ -304,7 +313,7 @@ export function useBatchCommit({
 				recordSaved(saved);
 				if (!onServerError) throw error;
 				onServerError(error, unsaved, failing ?? { rowIndex: resolved[0].rowIndex, fields: [resolved[0].field] });
-				return withRejected(saved.length);
+				return { ...withRejected(saved.length), unsaved };
 			}
 
 			if (statusId) feedback?.onComplete?.(statusId, 'success', resolved.length === 1 ? 'Saved' : `${changes(resolved.length)} saved`);

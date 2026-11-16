@@ -117,4 +117,34 @@ describe('ImageEditor draft-row upload', () => {
 		expect(onSubmitDraft).toHaveBeenCalledOnce();
 		expect(onDraftUploadComplete).not.toHaveBeenCalled();
 	});
+
+	it('names the missing fields, and reports no row, when the new row lacks required values', async () => {
+		const onSubmitDraft = vi.fn().mockResolvedValue({
+			createdRow: null,
+			missing: [{ field: 'title', columnKey: 'title', label: 'Title' }],
+		});
+		const onDraftUploadComplete = vi.fn();
+
+		await act(async () => {
+			root.render(
+				<ImageEditor
+					value={null}
+					onFinishedEditing={() => {}}
+					tableName='posts'
+					fieldName='cover'
+					isDraftRow
+					onSubmitDraft={onSubmitDraft}
+					onDraftUploadComplete={onDraftUploadComplete}
+				/>,
+			);
+		});
+		await selectFileAndConfirm();
+
+		expect(onSubmitDraft).toHaveBeenCalledOnce();
+		expect(upload.send).not.toHaveBeenCalled();
+		// No row was created, so the host has nothing to refetch.
+		expect(onDraftUploadComplete).not.toHaveBeenCalled();
+		expect(document.body.textContent).toContain('Fill in Title to save this row.');
+		expect(document.body.textContent).not.toContain('The row was created');
+	});
 });
