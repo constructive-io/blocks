@@ -209,7 +209,9 @@ function SpreadsheetContent() {
     <div className="flex h-screen">
       <aside className="w-64 border-r">
         <SheetsTableSelector tables={tables} activeTable={activeTable} onTableChange={setActiveTable} isLoading={isLoading} />
-        {/* Items may also be { name, label?, category? }: the list shows `label`, onTableChange gets `name`. */}
+        {/* Items may also be { name, label?, system? }: the list shows `label`, onTableChange gets `name`,
+            and `system: true` tables (isSystemTable from @constructive-io/data) stay hidden until
+            the list's "Show system tables" switch is on. */}
       </aside>
       <main className="min-h-0 flex-1">
         {activeTable ? <Sheets tableName={activeTable} /> : <p className="p-8 text-muted-foreground">Select a table</p>}

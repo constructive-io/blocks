@@ -18,7 +18,7 @@ import { createViewCommandTarget, viewCommandReason } from './view-state/view-co
 import { ColumnHeaderMenu } from './columns/column-header-menu';
 import { ExportViewControl, ImportRecordsControl } from '../import-export';
 import { SheetsErrorBoundary } from './feedback/sheets-error-boundary';
-import { SheetsEmptyState, SheetsErrorState, SheetsLoadingState } from './feedback/sheets-error-state';
+import { SheetsErrorState, SheetsLoadingState } from './feedback/sheets-error-state';
 import { SheetsPagination } from './sheets.pagination';
 import { SheetsStatusBar } from './sheets.status-bar';
 import { useSheets } from './use-sheets';
@@ -37,6 +37,7 @@ import type { SelectionRect } from '../selection/selection-model';
 import { getCellsInRange as extractCellsInRange, toTSV as serializeTSV } from '../selection/cell-extract';
 import type { GridCommandContext, CellMatrix } from '../commands/context';
 import { activeEditorElement } from './render/active-editor';
+import { SheetsEmptyOverlay } from './render/sheets-empty-overlay';
 import { SheetsFilteredEmpty } from './render/sheets-filtered-empty';
 import { SheetsRowsError } from './render/sheets-rows-error';
 import { useGridCommandPipeline } from './render/use-grid-command-pipeline';
@@ -603,23 +604,12 @@ function SheetsDomInner<TRow extends SheetsRow = SheetsRow>({
 		return <SheetsLoadingState />;
 	}
 
-	// Loaded successfully but no server rows and nothing drafted yet (and no active filter).
-	if (!activeMediaDraft && !rowsError && s.isEmpty) {
-		if (slots?.empty) {
-			return <>{typeof slots.empty === 'function' ? slots.empty({ tableName }) : slots.empty}</>;
-		}
-		return (
-			<>
-				<SheetsEmptyState
-					tableName={tableName}
-					readOnlyReason={shell.readOnlyReason}
-					onAddRow={shell.canCreate ? () => {
-						void s.draft.appendRow();
-					} : undefined}
-				/>
-				{recordPanelElement}
-			</>
-		);
+	// Loaded successfully but no server rows and nothing drafted yet (and no active filter). A host's
+	// empty slot replaces the grid; the default keeps the toolbar and overlays the body (below), so
+	// Import and New record stay where an empty table needs them most.
+	const isEmptyTable = !activeMediaDraft && !rowsError && s.isEmpty;
+	if (isEmptyTable && slots?.empty) {
+		return <>{typeof slots.empty === 'function' ? slots.empty({ tableName }) : slots.empty}</>;
 	}
 
 	// Filtered-empty: the server returned 0 rows while a filter is active (so `isEmpty` above is
@@ -715,6 +705,16 @@ function SheetsDomInner<TRow extends SheetsRow = SheetsRow>({
 						activeDescendantId={activeCell ? `sheets-cell-${activeCell[1]}-${activeCell[0]}` : undefined}
 					/>
 					</SheetsOpenRecordContext.Provider>
+
+					{/* An empty table: the toolbar stays above, with Add row and Import here too. */}
+					{isEmptyTable && (
+						<SheetsEmptyOverlay
+							tableName={tableName}
+							readOnlyReason={shell.readOnlyReason}
+							onAddRow={shell.canCreate ? () => void s.draft.appendRow() : undefined}
+							importModel={shell.canCreate ? shell.tableModel : null}
+						/>
+					)}
 
 					{/* Filtered-empty panel — overlays the empty body while the filter bar stays visible above. */}
 					{isFilteredEmpty && (

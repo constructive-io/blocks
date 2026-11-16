@@ -173,7 +173,7 @@ Details: [Host integration](./docs/HOST_INTEGRATION.md). `<Sheets>` props:
 |---|---|
 | `SheetsProvider` | Context, executors, cache scope; wrap the grids once |
 | `Sheets` | The grid for one table |
-| `SheetsTableSelector` | A table list (`tables` as names or `{ name, label?, category? }`, `activeTable`, `onTableChange(name)`); the search matches the name and the label |
+| `SheetsTableSelector` | A table list (`tables` as names or `{ name, label?, category?, system? }`, `activeTable`, `onTableChange(name)`); the search matches the name and the label. System tables (`system: true`) show in their own section only while "Show system tables" is on (off by default, remembered per browser; `useShowSystemTables()` shares the setting with a picker of your own) |
 | `SheetsControls`, `SheetsPagination` | The toolbar and the pager (`Sheets` renders both) |
 | `ImportRecordsControl`, `ExportViewControl` | The Import and Export view buttons, for a custom toolbar |
 | `SheetsAuthGate` | Sign-in for standalone mode (`@constructive-io/sheets/auth`) |
@@ -239,6 +239,7 @@ replacements:
 | `mapToFrontendCellType`, `resolveCellType`, `isImageField`, `buildScalarFormSpec` | Deprecated; use `cellTypeForColumn(column)` (or `column.value.file`) and `buildModelFormSpec(model, mode)` with `buildModelFormSchema(spec)`. |
 | `SheetsAuthGate` and the auth hooks from the root entry | Deprecated there; import them from `@constructive-io/sheets/auth`. |
 | `TableWithCategory` (`SheetsTableSelector` items) | Adds an optional `label`, which the list shows; `name` stays the value `onTableChange` receives. The search matches both. |
+| `TableWithCategory.system` | Marks a table a platform module made. Mark them with `isSystemTable(metaTable, tableRolesFromCatalog(platformTables))` from `@constructive-io/data`: the platform API's table `category` decides for the tables it lists (`APP` is the owner's); for the rest, and without it, storage and database-scope tables count. The list hides them until "Show system tables" is on. |
 | `keymap` bindings | Several bindings may match one key: the grid tries them in order and runs the first whose command can run; before, only the first match was tried. |
 
 **Behavior**

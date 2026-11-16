@@ -106,4 +106,44 @@ describe('SheetsTableSelector table navigation', () => {
 		await searchFor('app_public.project');
 		expect(items().map((item) => item.textContent)).toEqual(['Project members']);
 	});
+
+	describe('system tables', () => {
+		const tables = [
+			{ name: 'Task' },
+			{ name: 'Project' },
+			{ name: 'AppMembership', system: true },
+			{ name: 'AppFile', system: true },
+		];
+		const items = () => Array.from(container.querySelectorAll<HTMLButtonElement>('button[data-testid="table-item"]')).map((item) => item.textContent);
+		const toggle = () => container.querySelector('[data-part-id="sheets-system-tables-toggle"]');
+		const render = (activeTable: string) =>
+			act(async () => root.render(<SheetsTableSelector activeTable={activeTable} onTableChange={vi.fn()} tables={tables} />));
+
+		beforeEach(() => {
+			window.localStorage.clear();
+			// jsdom has no PointerEvent; the switch builds one on click.
+			vi.stubGlobal('PointerEvent', window.PointerEvent ?? MouseEvent);
+		});
+
+		it('hides system tables until they are shown, remembers the choice, and keeps an open one listed', async () => {
+			await render('Task');
+			expect(items()).toEqual(['Task', 'Project']);
+			expect(toggle()?.textContent).toBe('Show system tables (2)');
+
+			await act(async () => toggle()!.querySelector<HTMLElement>('[role="switch"]')!.click());
+			expect(items()).toEqual(['Task', 'Project', 'AppMembership', 'AppFile']);
+			expect(container.querySelector('[data-testid="collapsible-content-System tables"]')).not.toBeNull();
+			expect(window.localStorage.getItem('constructive:sheets:show-system-tables')).toBe('true');
+
+			await act(async () => toggle()!.querySelector<HTMLElement>('[role="switch"]')!.click());
+			// A system table opened by a link stays in the list while the others are hidden.
+			await render('AppFile');
+			expect(items()).toEqual(['Task', 'Project', 'AppFile']);
+		});
+
+		it('offers no switch for a database without system tables', async () => {
+			await act(async () => root.render(<SheetsTableSelector activeTable='Task' onTableChange={vi.fn()} tables={['Task', 'Project']} />));
+			expect(toggle()).toBeNull();
+		});
+	});
 });

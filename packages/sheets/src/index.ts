@@ -161,6 +161,7 @@ export type { SheetsStatusBarProps } from './grid/sheets.status-bar';
 export type { SheetsPaginationProps } from './grid/sheets.pagination';
 export { SheetsTableSelector } from './grid/sheets.table-selector';
 export type { TableSelectorProps, TableWithCategory } from './grid/sheets.table-selector';
+export { useShowSystemTables, visibleTables } from './grid/system-tables';
 
 // -- Table Model --------------------------------------------------------------
 // One normalized model per table (keys, column kinds and options, write flags,

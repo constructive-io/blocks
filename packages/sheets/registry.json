@@ -1006,6 +1006,11 @@
           "type": "registry:component"
         },
         {
+          "path": "registry/constructive/blocks/sheets/grid/render/sheets-empty-overlay.tsx",
+          "target": "@ui/sheets/grid/render/sheets-empty-overlay.tsx",
+          "type": "registry:component"
+        },
+        {
           "path": "registry/constructive/blocks/sheets/grid/render/sheets-filtered-empty.tsx",
           "target": "@ui/sheets/grid/render/sheets-filtered-empty.tsx",
           "type": "registry:component"
@@ -1124,6 +1129,11 @@
           "path": "registry/constructive/blocks/sheets/grid/sort/sort-control.tsx",
           "target": "@ui/sheets/grid/sort/sort-control.tsx",
           "type": "registry:component"
+        },
+        {
+          "path": "registry/constructive/blocks/sheets/grid/system-tables.ts",
+          "target": "@ui/sheets/grid/system-tables.ts",
+          "type": "registry:lib"
         },
         {
           "path": "registry/constructive/blocks/sheets/grid/toolbar/toolbar-button.tsx",

@@ -7,9 +7,12 @@ import { cn } from '../utils/cn';
 import { Button } from '@constructive-io/ui/button';
 import { Collapsible, CollapsibleTrigger } from '@constructive-io/ui/collapsible';
 import { Input } from '@constructive-io/ui/input';
+import { Switch } from '@constructive-io/ui/switch';
 import { ProgressiveBlur } from '@constructive-io/ui/progressive-blur';
 import { ScrollArea } from '@constructive-io/ui/scroll-area';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@constructive-io/ui/tooltip';
+
+import { useShowSystemTables, visibleTables } from './system-tables';
 
 const BLUR_HEIGHT_PERCENT = 0.28;
 const BLUR_HEIGHT_MIN_PX = 64;
@@ -21,6 +24,11 @@ export type TableWithCategory = {
 	/** What the list shows. Default: `name`. The search matches both. */
 	label?: string;
 	category?: string;
+	/**
+	 * A table a platform module made (see `isSystemTable` in `@constructive-io/data`). System tables
+	 * show in their own section, and only while "Show system tables" is on (off by default).
+	 */
+	system?: boolean;
 };
 
 interface TableItemProps {
@@ -90,20 +98,28 @@ export const SheetsTableSelector = memo(function SheetsTableSelector({
 
 	// Local expand/collapse state (not persisted -- standalone component)
 	const [isExpanded, setIsExpanded] = useState(true);
+	const [isSystemExpanded, setIsSystemExpanded] = useState(true);
+	const [showSystem, setShowSystem] = useShowSystemTables();
 
 	// Transform tables to internal format
 	const tableData = useMemo(() => {
 		return tables.map((table) =>
-			typeof table === 'object' ? { value: table.name, label: table.label ?? table.name } : { value: table, label: table },
+			typeof table === 'object'
+				? { value: table.name, label: table.label ?? table.name, system: Boolean(table.system) }
+				: { value: table, label: table, system: false },
 		);
 	}, [tables]);
+	const systemCount = useMemo(() => tableData.filter((table) => table.system).length, [tableData]);
 
-	// Apply search filter
+	// System tables only while shown (the open one always), then the search
 	const filteredTables = useMemo(() => {
-		if (!searchQuery) return tableData;
+		const shown = visibleTables(tableData, showSystem, (table) => table.value === activeTable);
+		if (!searchQuery) return shown;
 		const query = searchQuery.toLowerCase();
-		return tableData.filter((table) => table.label.toLowerCase().includes(query) || table.value.toLowerCase().includes(query));
-	}, [tableData, searchQuery]);
+		return shown.filter((table) => table.label.toLowerCase().includes(query) || table.value.toLowerCase().includes(query));
+	}, [tableData, showSystem, activeTable, searchQuery]);
+	const ownTables = useMemo(() => filteredTables.filter((table) => !table.system), [filteredTables]);
+	const systemTables = useMemo(() => filteredTables.filter((table) => table.system), [filteredTables]);
 
 	// Measure container height on mount and resize
 	useEffect(() => {
@@ -175,7 +191,7 @@ export const SheetsTableSelector = memo(function SheetsTableSelector({
 				className='bg-background flex h-full max-h-[calc(100vh-4rem)] flex-col'
 			>
 				{/* Header */}
-				<div className='flex-shrink-0 py-4'>
+				<div className='flex-shrink-0 pt-4 pb-2'>
 					<div className='flex flex-col gap-2 pr-2 pb-2'>
 						{/* New table button */}
 						<Button onClick={handleNewTable} className='h-8 w-full justify-start gap-2' variant='outline'>
@@ -198,13 +214,28 @@ export const SheetsTableSelector = memo(function SheetsTableSelector({
 							className='pl-10'
 						/>
 					</div>
+
+					{/* Only for a database that has system tables; one setting for every table list */}
+					{systemCount > 0 && (
+						<label
+							data-part-id='sheets-system-tables-toggle'
+							className='text-muted-foreground mt-2 flex h-8 items-center justify-between gap-2 pr-2 text-xs'
+						>
+							<span>
+								Show system tables <span className='text-muted-foreground/70 tabular-nums'>({systemCount})</span>
+							</span>
+							<Switch checked={showSystem} onCheckedChange={(checked) => setShowSystem(checked)} />
+						</label>
+					)}
 				</div>
 
 				{/* Table list */}
 				<div
 					ref={containerRef}
 					data-part-id='table-selector-table-list'
-					className='mt-4 flex min-h-0 flex-1 flex-col gap-2 overflow-hidden pr-2'
+					// The sections keep their full height and the list scrolls, so a long list or a second
+					// section (system tables) is never cut off below the fold.
+					className='mt-2 flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto overscroll-contain pr-2'
 				>
 					{filteredTables.length === 0 ? (
 						<div className='flex flex-col items-center justify-center py-12 text-center'>
@@ -213,21 +244,41 @@ export const SheetsTableSelector = memo(function SheetsTableSelector({
 							</div>
 							<p className='text-muted-foreground mb-1 text-sm font-medium'>No tables found</p>
 							<p className='text-muted-foreground/80 text-xs'>
-								{searchQuery ? 'Try adjusting your search terms' : 'No tables available in this schema'}
+								{searchQuery
+									? 'Try adjusting your search terms'
+									: systemCount > 0 && !showSystem
+										? 'This database has only system tables. Turn on "Show system tables" to see them.'
+										: 'No tables available in this schema'}
 							</p>
 						</div>
 					) : (
-						<SheetsTableListByCategory
-							title='Tables'
-							tables={filteredTables}
-							activeTable={activeTable}
-							isExpanded={isExpanded}
-							onToggleExpand={() => setIsExpanded((prev) => !prev)}
-							onTableSelect={handleTableSelect}
-							emptyMessage='No tables yet'
-							hasSearchTerm={searchQuery.length > 0}
-							shouldScrollToActive={shouldScrollToActive}
-						/>
+						<>
+							{(ownTables.length > 0 || systemTables.length === 0) && (
+								<SheetsTableListByCategory
+									title='Tables'
+									tables={ownTables}
+									activeTable={activeTable}
+									isExpanded={isExpanded}
+									onToggleExpand={() => setIsExpanded((prev) => !prev)}
+									onTableSelect={handleTableSelect}
+									emptyMessage='No tables yet'
+									hasSearchTerm={searchQuery.length > 0}
+									shouldScrollToActive={shouldScrollToActive}
+								/>
+							)}
+							{systemTables.length > 0 && (
+								<SheetsTableListByCategory
+									title='System tables'
+									tables={systemTables}
+									activeTable={activeTable}
+									isExpanded={isSystemExpanded}
+									onToggleExpand={() => setIsSystemExpanded((prev) => !prev)}
+									onTableSelect={handleTableSelect}
+									hasSearchTerm={searchQuery.length > 0}
+									shouldScrollToActive={shouldScrollToActive}
+								/>
+							)}
+						</>
 					)}
 				</div>
 			</div>

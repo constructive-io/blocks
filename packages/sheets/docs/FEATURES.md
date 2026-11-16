@@ -598,7 +598,9 @@ apostrophe becomes part of the value.
 - **Failed table**: the error state names the table and offers Retry, which reloads a
   failed model too; other grids keep working.
 - **States**: initial load, empty, filtered empty (with a way to clear filters and
-  search), load error with retry, loading skeletons per page.
+  search), load error with retry, loading skeletons per page. An empty table keeps the
+  toolbar, the headers and the status bar; "No rows yet" covers the body with Add row
+  and Import (where rows can be added). A host's `slots.empty` replaces the grid instead.
 
 ---
 
@@ -665,6 +667,12 @@ apostrophe becomes part of the value.
   the record panel built in), `ImportRecordsControl`, `ExportViewControl`,
   `SheetsControls`, `SheetsPagination`, `SheetsTableSelector`, `SheetsAuthGate`
   (from `/auth`), `ModelIssuesNotice`, `WriteErrorStack`.
+- **System tables**: `SheetsTableSelector` items may set `system: true` (a table a
+  platform module made; `isSystemTable` and `tableRolesFromCatalog` in
+  `@constructive-io/data` decide from the platform's table `category`). The list hides them, with a "Show
+  system tables (N)" switch that is off by default; while on, they show in their own
+  "System tables" section. The open table always stays listed. The browser remembers
+  the switch, and `useShowSystemTables()` shares it with any other picker on the page.
 - **Headless**: `useSheets(props)` returns the bindings `<Sheets>` renders with.
 - **Model**: `useTableModel`, `useTableModels`, the model types, `TableModelError`,
   `readCellError`, `readRelationTotalCount`, `resolveDisplayFields`.
