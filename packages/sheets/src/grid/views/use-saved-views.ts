@@ -11,6 +11,7 @@ import type { TableModel } from '@constructive-io/data';
 import { validateSheetsViewState } from '../view-state/validate-view-state';
 import { createSheetsViewState, viewStateSignature } from '../view-state/view-state';
 import type { SheetsViewState, SheetsViewStateDrop } from '../view-state/view-state.types';
+import { copyViewName, MAX_VIEW_NAME_LENGTH } from './view-names';
 import { viewScopeKey, type SheetsStoredView, type SheetsViewStorage, type SheetsViewStorageScope } from './view-storage';
 
 /** A saved view, checked against the current model. */
@@ -70,8 +71,6 @@ export interface UseSavedViewsOptions {
 	/** Column titles for drop messages. */
 	label: (name: string) => string;
 }
-
-const MAX_NAME_LENGTH = 80;
 
 function newViewId(): string {
 	const random = typeof crypto !== 'undefined' && 'randomUUID' in crypto ? crypto.randomUUID() : Math.random().toString(36).slice(2);
@@ -175,7 +174,7 @@ export function useSavedViews({ storage, scope, model, current, apply, label }: 
 	const nameProblem = useCallback((name: string, exceptViewId?: string) => {
 		const trimmed = name.trim();
 		if (trimmed === '') return 'Enter a name.';
-		if (trimmed.length > MAX_NAME_LENGTH) return `Use at most ${MAX_NAME_LENGTH} characters.`;
+		if (trimmed.length > MAX_VIEW_NAME_LENGTH) return `Use at most ${MAX_VIEW_NAME_LENGTH} characters.`;
 		const taken = latest.current.views.some((view) => view.id !== exceptViewId && view.name.toLowerCase() === trimmed.toLowerCase());
 		return taken ? 'A view with this name already exists.' : null;
 	}, []);
@@ -240,8 +239,7 @@ export function useSavedViews({ storage, scope, model, current, apply, label }: 
 			change(async () => {
 				const target = latest.current.views.find((view) => view.id === viewId);
 				if (!target) throw new Error('That view no longer exists.');
-				let name = `${target.name} copy`;
-				for (let n = 2; nameProblem(name) !== null; n += 1) name = `${target.name} copy ${n}`;
+				const name = copyViewName(target.name, (candidate) => nameProblem(candidate) !== null);
 				// The active view copies the grid as it is now (unsaved changes included).
 				const state = latest.current.activeView?.id === viewId ? latest.current.current : target.state;
 				const copy: SheetsStoredView = { id: newViewId(), name, state, updatedAt: new Date().toISOString() };
