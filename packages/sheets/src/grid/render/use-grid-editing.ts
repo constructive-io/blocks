@@ -261,9 +261,9 @@ export function useGridEditing({ tableName, shell, config, canUpload, scopeKey, 
 		const colIndex = columnsRef.current.findIndex((c) => c.key === a.colKey);
 		const node = colIndex >= 0 ? document.getElementById(`sheets-cell-${a.rowIndex}-${colIndex}`) : null;
 		if (node) {
-			// Inline edits live INSIDE the cell, so they ride the virtualized row natively — no
-			// reposition needed (and reanchoring would churn state every scroll frame). Only the
-			// portal overlay re-anchors to the cell on scroll.
+			// Inline edits live INSIDE the cell, so they ride the virtualized row natively (their
+			// portalled multiline field and notice measure the cell on scroll themselves). Only
+			// the portal overlay re-anchors to the cell here.
 			if (a.mode !== 'inline') overlayReanchor(node.getBoundingClientRect());
 			return;
 		}
