@@ -3,6 +3,36 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.15.0](https://github.com/constructive-io/blocks/compare/@constructive-io/sheets@0.14.1...@constructive-io/sheets@0.15.0) (2026-11-16)
+
+
+### Bug Fixes
+
+* **sheets:** close the gaps found in the relation and stress pass ([bbc75cb](https://github.com/constructive-io/blocks/commit/bbc75cbf4d6d1024e428646a4305cb2516336944))
+* **sheets:** compile in apps that turn strictNullChecks off ([5704588](https://github.com/constructive-io/blocks/commit/5704588d731c89ce12259ed1cb9e81498b16d7b9))
+* **sheets:** count only the filter conditions the list query carries ([1ad7406](https://github.com/constructive-io/blocks/commit/1ad7406b5fe07743ebd9988f717160da7169e2b1))
+* **sheets:** count the table model step as initial loading ([a6c1932](https://github.com/constructive-io/blocks/commit/a6c1932646cd4249cd4e93d6f51b9ad66c08cf4d))
+* **sheets:** give RefreshOnReturn an explicit return type for non-strict consumers ([f179f02](https://github.com/constructive-io/blocks/commit/f179f02faa8902771816975d3bac1c509ce2ece3))
+* **sheets:** keep big whole number and bit string fields in the old form builder ([33c2b76](https://github.com/constructive-io/blocks/commit/33c2b769f0594d899bcc02a2107a73cfc8dd722c))
+* **sheets:** keep the rows a paste saved when a later row is refused ([1c395fe](https://github.com/constructive-io/blocks/commit/1c395fe2cb52e5a3a5a5fcf4e59d71f6ba2be62b))
+* **sheets:** protect formulas in the import error report ([3f9a675](https://github.com/constructive-io/blocks/commit/3f9a6756c22d49818e78748ff48078f2cccb8d85))
+
+
+### Features
+
+* **sheets:** a production grid for any schema the backend creates ([6f435d1](https://github.com/constructive-io/blocks/commit/6f435d1c4e8ce28aa0d98796d6a05d926c29d9d4))
+* **sheets:** a toolbar with a clear view group and action group ([d01dff7](https://github.com/constructive-io/blocks/commit/d01dff79a8da886ce5a11065b24c008f8229f75f))
+* **sheets:** system tables behind a switch, and Import on an empty table ([1263a23](https://github.com/constructive-io/blocks/commit/1263a23a8f028704976646d71344ce0f27ea1248))
+
+
+### Performance Improvements
+
+* **sheets:** keep large tables fast to navigate and edit ([8c31638](https://github.com/constructive-io/blocks/commit/8c316389ddd40b0fc06094b56154cde3a3114c82))
+
+
+
+
+
 ## [0.14.1](https://github.com/constructive-io/blocks/compare/@constructive-io/sheets@0.14.0...@constructive-io/sheets@0.14.1) (2026-11-05)
 
 **Note:** Version bump only for package @constructive-io/sheets

@@ -3,6 +3,28 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.15.0](https://github.com/constructive-io/blocks/compare/@constructive-io/ui@0.14.2...@constructive-io/ui@0.15.0) (2026-11-16)
+
+
+### Bug Fixes
+
+* **auth-pages:** confirm an email with the sign-up password ([253aedd](https://github.com/constructive-io/blocks/commit/253aedd5557bf0d34b2195b62db30b31246426bb))
+* **input-group:** keep an addon's icon inside its clip ([70377ba](https://github.com/constructive-io/blocks/commit/70377baac7c2747e7b71931eeb681faef17f06f8))
+* **registry:** preserve tooltip trigger elements in Base UI installs ([59094b6](https://github.com/constructive-io/blocks/commit/59094b625de856527aa071f1f840d7415c35dc6b))
+* **storage-browser:** leave the file total out when a bucket's count is unknown ([bca2e7a](https://github.com/constructive-io/blocks/commit/bca2e7af415b7dc432732f8ad85d94d977c2ae3b))
+
+
+### Features
+
+* **resource-kit:** honor write capabilities and create date defaults ([5e49160](https://github.com/constructive-io/blocks/commit/5e49160fc0b171387e0040151788480b41a5d64e))
+* **resource-kit:** let a record page carry sections below its related lists ([be117f5](https://github.com/constructive-io/blocks/commit/be117f515e1f1cdfd399c6b01b980868e4e256fb))
+* **resource-kit:** start a create form on a field's value default ([3ce30b3](https://github.com/constructive-io/blocks/commit/3ce30b35810e4116866d4398dd4f5bbfd0a29e5f))
+* **ui:** instant list highlights, 5px menu items and a scale-only button press ([0982ff4](https://github.com/constructive-io/blocks/commit/0982ff4552dc17ff8df317b676466ebd1379a292))
+
+
+
+
+
 ## [0.14.2](https://github.com/constructive-io/blocks/compare/@constructive-io/ui@0.14.1...@constructive-io/ui@0.14.2) (2026-11-05)
 
 **Note:** Version bump only for package @constructive-io/ui

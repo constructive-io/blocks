@@ -3,6 +3,19 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.10.0](https://github.com/constructive-io/blocks/compare/@constructive-io/data@0.9.5...@constructive-io/data@0.10.0) (2026-11-16)
+
+
+### Features
+
+* **data:** build grid documents from one table model per table ([d7c92a7](https://github.com/constructive-io/blocks/commit/d7c92a7ba9b1ff377f1f33f23ea722728b59b1cf))
+* **data:** model what Sheets needs to check values and explain read-only tables ([0c39c6e](https://github.com/constructive-io/blocks/commit/0c39c6e953962cca4e10c369b98539aad08d107e))
+* **data:** tell system tables apart with the platform catalog ([6a702dc](https://github.com/constructive-io/blocks/commit/6a702dc58d171dba6972fab3b3fc4220d660d43f))
+
+
+
+
+
 ## [0.9.5](https://github.com/constructive-io/blocks/compare/@constructive-io/data@0.9.4...@constructive-io/data@0.9.5) (2026-11-05)
 
 **Note:** Version bump only for package @constructive-io/data

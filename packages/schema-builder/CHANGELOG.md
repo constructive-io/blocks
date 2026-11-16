@@ -3,6 +3,17 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.10.2](https://github.com/constructive-io/blocks/compare/@constructive-io/schema-builder@0.10.1...@constructive-io/schema-builder@0.10.2) (2026-11-16)
+
+
+### Bug Fixes
+
+* **registry:** preserve tooltip trigger elements in Base UI installs ([59094b6](https://github.com/constructive-io/blocks/commit/59094b625de856527aa071f1f840d7415c35dc6b))
+
+
+
+
+
 ## [0.10.1](https://github.com/constructive-io/blocks/compare/@constructive-io/schema-builder@0.10.0...@constructive-io/schema-builder@0.10.1) (2026-11-05)
 
 **Note:** Version bump only for package @constructive-io/schema-builder
