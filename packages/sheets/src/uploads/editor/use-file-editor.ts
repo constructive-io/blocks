@@ -17,6 +17,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { ColumnModel, TableModel } from '@constructive-io/data';
 
 import { isAbortError } from '../../context/sheets-upload-presigned';
+import { incompleteDraftMessage } from '../../grid/draft-guidance';
 import type { DraftSubmitResult } from '../../grid/draft-types';
 import { cellElementFor, type FileCellWriteJob, type FileUploadState } from '../../hooks/use-sheets-upload';
 import type { SheetsRowIdentifier } from '../../row-identity';
@@ -225,7 +226,9 @@ export function useFileEditor(args: UseFileEditorArgs) {
 			if (!saveTarget) {
 				if (!submitDraft) throw new Error('Save the row before adding a file.');
 				setPhase({ name: 'creating-row' });
-				const { createdRow: row } = await submitDraft();
+				const { createdRow: row, missing } = await submitDraft();
+				// Save was refused before sending: the draft is still there, with the fields to fill.
+				if (missing?.length) throw new Error(incompleteDraftMessage(missing));
 				// The draft is gone from here on: the host refetches whatever happens next.
 				onRowCreated?.();
 				saveTarget = row ? targetOfCreatedRow(row) : null;
