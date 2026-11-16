@@ -56,9 +56,9 @@ function ToggleGroup({
 				{...props}
 			>
 				{multiple ? null : spacing === 0 ? (
-					<FluidHighlight inset={2} className="rounded-sm" />
+					<FluidHighlight travel inset={2} className="rounded-sm" />
 				) : (
-					<FluidHighlight className="rounded-md" />
+					<FluidHighlight travel className="rounded-md" />
 				)}
 				{children}
 			</ToggleGroupPrimitive>

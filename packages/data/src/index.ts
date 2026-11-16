@@ -25,6 +25,8 @@ export type {
 	MetaschemaTableHasRelation,
 	MetaschemaTableManyToManyRelation,
 	MetaschemaStorage,
+	MetaschemaStorageUpload,
+	MetaschemaFileField,
 	MetaschemaSearchColumn,
 	MetaschemaSearchConfig,
 	MetaschemaSearch,
@@ -52,6 +54,9 @@ export {
 	assertMetaQuery,
 	parseMetaSearchWeights,
 } from './meta-query';
+
+// Table model: one normalized model per table from `_meta` and targeted introspection
+export * from './table-model';
 
 // Data types (Dashboard-specific adapter + meta types)
 export {
@@ -83,6 +88,9 @@ export {
 	selectConsoleDataTables,
 } from './console-data-tables';
 export type { SelectConsoleDataTablesOptions } from './console-data-tables';
+
+export { isSystemTable, tableRolesFromCatalog } from './system-tables';
+export type { PlatformTableCategory, TableRole, TableRoles } from './system-tables';
 
 export {
 	assessTableWriteCapability,
@@ -187,6 +195,8 @@ export {
 	parseError,
 	parseGraphQLError,
 	getErrorCode,
+	AUTHENTICATION_ERROR_CODES,
+	isAuthenticationCode,
 	isAuthenticationError,
 	isRetryable,
 	withRetry,

@@ -72,20 +72,17 @@ const EMPTY = {} as never;
 
 function Harness({ registry }: { registry: ReturnType<typeof createCellTypeRegistry> }) {
 	const getSheetsCellContent = makeResolver(registry);
-	const renderCell: RenderCell = (c, ctx) => (
-		<SheetsCellHost cell={c} ctx={ctx} getSheetsCellContent={getSheetsCellContent} />
+	const renderCell: RenderCell = (ctx) => (
+		<SheetsCellHost ctx={ctx} getSheetsCellContent={getSheetsCellContent} />
 	);
 	const table = useSheetsTableInstance({
 		columns: COLUMNS,
-		data: ROWS,
 		columnSizing: EMPTY,
 		columnPinning: EMPTY,
-		rowSelection: EMPTY,
 		onColumnSizingChange: noop,
 		onColumnPinningChange: noop,
-		onRowSelectionChange: noop,
 	});
-	return <GridViewport table={table} renderCell={renderCell} />;
+	return <GridViewport table={table} rows={ROWS} renderCell={renderCell} />;
 }
 
 describe('cell slots override (registry -> SheetsCellHost, hand-fed)', () => {

@@ -9,8 +9,11 @@ function field(type: FieldMetadata['type']): FieldMetadata {
 describe('resolveCellType', () => {
 	it('applies schema metadata precedence before the GraphQL fallback', () => {
 		const cases: Array<[FieldMetadata, string]> = [
-			[field({ gqlType: 'String', isArray: true, pgType: 'uuid', pgAlias: 'image' }), 'image'],
+			// The server no longer sends an alias, so a stale one never outranks the real type.
+			[field({ gqlType: 'String', isArray: true, pgType: 'uuid', pgAlias: 'image' }), 'text-array'],
 			[field({ gqlType: 'String', isArray: true, pgType: 'uuid' }), 'text-array'],
+			[field({ gqlType: 'BigInt', pgType: 'int8' }), 'bigint'],
+			[field({ gqlType: 'BitString', pgType: 'bit' }), 'bitstring'],
 			[field({ gqlType: 'String', pgType: 'uuid' }), 'uuid'],
 			[field({ gqlType: 'GeoJSON', subtype: 'GeometryPoint' }), 'geometry-point'],
 			[field({ gqlType: 'Mystery' }), 'text'],
@@ -21,19 +24,13 @@ describe('resolveCellType', () => {
 		}
 	});
 
-	it('makes only schema-owned identifiers and timestamps readonly', () => {
+	it('never makes a field read-only by its name (write rules come from the table model)', () => {
 		expect(resolveCellType('id', field({ gqlType: 'UUID' }))).toMatchObject({
 			cellType: 'uuid',
-			canEdit: false,
-			canActivate: false,
-			isReadonly: true,
-		});
-		expect(resolveCellType('id', field({ gqlType: 'Int' }))).toMatchObject({
-			cellType: 'integer',
 			canEdit: true,
 			isReadonly: false,
 		});
-		expect(resolveCellType('createdAt')).toMatchObject({ canEdit: false, isReadonly: true });
+		expect(resolveCellType('createdAt', field({ gqlType: 'Datetime' }))).toMatchObject({ canEdit: true, isReadonly: false });
 	});
 
 	it('keeps viewer-only search vectors activatable without making them editable', () => {

@@ -2,7 +2,7 @@
  * CONTEXT MENU action→dispatch mapping (Stage B). The menu is "just another event source →
  * dispatch": each clipboard/clear item runs the matching COMMAND ID through `onAction` (the grid's
  * dispatch), and is DISABLED when its command's `canRun` is false (`isEnabled`). Add row / Delete
- * go through their dedicated callbacks; Delete is gated on a selection + routes to the confirm.
+ * go through their dedicated callbacks; Delete follows the removal plan + routes to the confirm.
  *
  * We test the PURE item model (`buildContextMenuItems`) directly — the Base-UI menu popup needs a
  * real layout environment to mount (jsdom does not render it), so the full open→click interaction
@@ -12,6 +12,14 @@
 import { describe, expect, it, vi } from 'vitest';
 
 import { buildContextMenuItems, type ContextMenuItem } from '../sheets.context-menu';
+import type { RowRemoval } from '../row-removal';
+
+const removal = (saved: number, unsaved = 0, blockedReason: string | null = null): RowRemoval => ({
+	rows: Array.from({ length: saved + unsaved }, (_, index) => index),
+	saved,
+	unsaved,
+	blockedReason,
+});
 
 function byKey(items: ContextMenuItem[], key: string): ContextMenuItem {
 	const it = items.find((i) => i.key === key);
@@ -27,7 +35,7 @@ describe('buildContextMenuItems', () => {
 			isEnabled: () => true,
 			onAddRow: vi.fn(),
 			requestDelete: vi.fn(),
-			selectedRowCount: 0,
+			removal: removal(1),
 		});
 		for (const [key, id] of [
 			['copy', 'clipboard.copy'],
@@ -46,7 +54,7 @@ describe('buildContextMenuItems', () => {
 			isEnabled: (id) => id !== 'clipboard.paste',
 			onAddRow: vi.fn(),
 			requestDelete: vi.fn(),
-			selectedRowCount: 1,
+			removal: removal(1),
 		});
 		expect(byKey(items, 'paste').disabled).toBe(true);
 		expect(byKey(items, 'copy').disabled).toBe(false);
@@ -60,40 +68,53 @@ describe('buildContextMenuItems', () => {
 			isEnabled: () => true,
 			onAddRow,
 			requestDelete: vi.fn(),
-			selectedRowCount: 0,
+			removal: removal(1),
 		});
 		byKey(items, 'add-row').run?.();
 		expect(onAddRow).toHaveBeenCalledTimes(1);
 		expect(onAction).not.toHaveBeenCalled();
 	});
 
-	it('disables Delete with no selection and requests the confirm (never deletes directly)', () => {
+	it('names Delete by what it does, says why it is off, and only requests the confirm', () => {
 		const requestDelete = vi.fn();
-		const noSel = buildContextMenuItems({
-			onAction: vi.fn(),
-			isEnabled: () => true,
-			onAddRow: vi.fn(),
-			requestDelete,
-			selectedRowCount: 0,
-		});
-		const del = byKey(noSel, 'delete-rows');
-		expect(del.destructive).toBe(true);
-		expect(del.disabled).toBe(true);
-		expect(del.label).toBe('Delete row');
+		const build = (plan: RowRemoval) =>
+			byKey(buildContextMenuItems({ onAction: vi.fn(), isEnabled: () => true, onAddRow: vi.fn(), requestDelete, removal: plan }), 'delete-rows');
 
-		const withSel = buildContextMenuItems({
-			onAction: vi.fn(),
-			isEnabled: () => true,
-			onAddRow: vi.fn(),
-			requestDelete,
-			selectedRowCount: 3,
-		});
-		const del2 = byKey(withSel, 'delete-rows');
-		expect(del2.disabled).toBe(false);
-		expect(del2.label).toBe('Delete 3 rows');
+		const blocked = build(removal(1, 0, 'This table has no primary key.'));
+		expect(blocked.destructive).toBe(true);
+		expect(blocked.disabled).toBe(true);
+		expect(blocked.reason).toBe('This table has no primary key.');
+
+		// A new row is discarded, also on a table whose saved rows cannot be deleted.
+		const discard = build(removal(0, 1));
+		expect(discard.disabled).toBe(false);
+		expect(discard.label).toBe('Discard new row');
+
+		const several = build(removal(3));
+		expect(several.label).toBe('Delete 3 rows');
+		expect(several.reason).toBeUndefined();
 		// Running it requests the confirm dialog — it must NOT delete directly (confirm gates that).
-		del2.run?.();
+		several.run?.();
 		expect(requestDelete).toHaveBeenCalledTimes(1);
+	});
+
+	it('routes the sort items to the view commands and says why a column cannot be sorted', () => {
+		const onAction = vi.fn();
+		const items = buildContextMenuItems({
+			onAction,
+			isEnabled: (id) => !id.startsWith('view.sort'),
+			reasonFor: (id) => (id.startsWith('view.sort') ? 'Linked records cannot be sorted.' : null),
+			onAddRow: vi.fn(),
+			requestDelete: vi.fn(),
+			removal: removal(1),
+		});
+		const ascending = byKey(items, 'sort-asc');
+		expect(ascending.disabled).toBe(true);
+		expect(ascending.reason).toBe('Linked records cannot be sorted.');
+		ascending.run?.();
+		byKey(items, 'sort-desc').run?.();
+		expect(onAction.mock.calls).toEqual([['view.sortAscending'], ['view.sortDescending']]);
+		expect(byKey(items, 'copy').reason).toBeUndefined();
 	});
 
 });

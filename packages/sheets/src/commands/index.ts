@@ -5,21 +5,36 @@
  */
 
 export type { GridCommand, GridCommandRegistry } from './types';
-export type { GridCommandContext, CellMatrix } from './context';
+export type {
+	GridCommandContext,
+	GridViewCommandTarget,
+	GridRecordCommandTarget,
+	GridNewRecordCommandTarget,
+	GridLinkCommandTarget,
+	GridContextMenuCommandTarget,
+	CellMatrix,
+} from './context';
 export {
 	DEFAULT_COMMANDS,
+	VIEW_COMMANDS,
+	COLUMN_COMMANDS,
+	CELL_COMMANDS,
 	createGridCommandRegistry,
 	type CellPointerPayload,
 	type EditorOpenPayload,
 	type TypeToEditPayload,
 	type NavAbsolutePayload,
 	type SortTogglePayload,
+	type SortColumnPayload,
+	type ColumnCommandPayload,
+	type RecordOpenPayload,
 	type ToggleRowPayload,
 	type ClipboardLike,
 	type ClipboardPayload,
 	type FillDragPayload,
+	type SelectionClearPayload,
 } from './registry';
-export { DEFAULT_KEYMAP, resolveKeyCommand, type Binding, type Trigger, type PointerGesture } from './keymap';
+export { DEFAULT_KEYMAP, resolveKeyBinding, resolveKeyBindings, resolveKeyCommand, type Binding, type Trigger, type PointerGesture } from './keymap';
 export {
 	makeDispatch,
 	tailObserver,

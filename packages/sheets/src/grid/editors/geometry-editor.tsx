@@ -1,27 +1,20 @@
-import React, { lazy, Suspense, useCallback, useContext, useLayoutEffect, useMemo, useRef, useState } from 'react';
-import { AlertCircle, FileText, Loader2, Map, MapPin, Shuffle } from 'lucide-react';
+import React, { useCallback, useContext, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { AlertCircle, FileText, Map } from 'lucide-react';
 
 import { cn } from '../../utils/cn';
-import { Button } from '@constructive-io/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@constructive-io/ui/tabs';
 import { Textarea } from '@constructive-io/ui/textarea';
 
+import { shapeKindName } from '../../cell-types/shape-kind';
+import { MapPicker } from '../../utils/map-picker';
+import { useMapSettings } from '../../utils/map-settings';
+import { sheetsLogger } from '../../utils/sheets-logger';
 import { EditorFocusTrap } from './editor-focus-trap';
+import { EditorFooter, EditorHeader, editorClear, modifierKeyLabel } from './editor-frame';
+import { MapLoadBoundary } from './map-load-boundary';
 import { OVERLAY } from './overlay-presets';
 import { OverlayMeasureContext } from './overlay-viewport-guard';
 
-// Lazy load MapPicker to avoid bundling ~270KB Leaflet in main chunk
-const MapPicker = lazy(() =>
-	import('../../utils/map-picker').then((m) => ({ default: m.MapPicker }))
-);
-
-function MapPickerLoading() {
-	return (
-		<div className="flex h-[280px] w-full items-center justify-center rounded-lg border bg-muted/30">
-			<Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-		</div>
-	);
-}
 
 // GeoJSON validation according to RFC 7946
 const VALID_GEOJSON_TYPES = [
@@ -183,7 +176,7 @@ function formatGeometry(val: any): string {
 	if (val == null) return '';
 	try {
 		const obj = typeof val === 'string' ? JSON.parse(val) : val;
-		return JSON.stringify(obj, null, 2);
+		return prettyGeoJson(obj);
 	} catch {
 		return String(val);
 	}
@@ -217,101 +210,48 @@ function parseGeometryValue(value: any): GeometryType | null {
 	}
 }
 
+/**
+ * GeoJSON text for editing: indented like JSON.stringify(…, null, 2), but each position
+ * (an array of numbers) stays on one line, so a polygon reads as one corner per line.
+ */
+function prettyGeoJson(value: unknown): string {
+	return JSON.stringify(value, null, 2).replace(/\[\s*(-?[\d.eE+-]+(?:,\s*-?[\d.eE+-]+)*)\s*\]/g, (_match, numbers: string) =>
+		`[${numbers.split(/,\s*/).join(', ')}]`,
+	);
+}
+
 // Geometry placeholder examples by type
 const GEOMETRY_PLACEHOLDERS: Record<string, string> = {
-	Point: JSON.stringify({ type: 'Point', coordinates: [0, 0] }, null, 2),
-	Polygon: JSON.stringify({ type: 'Polygon', coordinates: [[[0, 0], [1, 0], [1, 1], [0, 1], [0, 0]]] }, null, 2),
-	LineString: JSON.stringify({ type: 'LineString', coordinates: [[0, 0], [1, 1], [2, 0]] }, null, 2),
-	MultiPoint: JSON.stringify({ type: 'MultiPoint', coordinates: [[0, 0], [1, 1]] }, null, 2),
-	MultiPolygon: JSON.stringify({ type: 'MultiPolygon', coordinates: [[[[0, 0], [1, 0], [1, 1], [0, 1], [0, 0]]]] }, null, 2),
-	MultiLineString: JSON.stringify({ type: 'MultiLineString', coordinates: [[[0, 0], [1, 1]], [[2, 2], [3, 3]]] }, null, 2),
+	Point: prettyGeoJson({ type: 'Point', coordinates: [0, 0] }),
+	Polygon: prettyGeoJson({ type: 'Polygon', coordinates: [[[0, 0], [1, 0], [1, 1], [0, 1], [0, 0]]] }),
+	LineString: prettyGeoJson({ type: 'LineString', coordinates: [[0, 0], [1, 1], [2, 0]] }),
+	MultiPoint: prettyGeoJson({ type: 'MultiPoint', coordinates: [[0, 0], [1, 1]] }),
+	MultiPolygon: prettyGeoJson({ type: 'MultiPolygon', coordinates: [[[[0, 0], [1, 0], [1, 1], [0, 1], [0, 0]]]] }),
+	MultiLineString: prettyGeoJson({ type: 'MultiLineString', coordinates: [[[0, 0], [1, 1]], [[2, 2], [3, 3]]] }),
 };
 const DEFAULT_GEOMETRY_PLACEHOLDER = GEOMETRY_PLACEHOLDERS.Point;
-
-const IS_MAC = typeof navigator !== 'undefined' && /Mac|iPod|iPhone|iPad/.test(navigator.userAgent);
-const MOD_KEY = IS_MAC ? '⌘' : 'Ctrl';
-
-const RANDOMIZABLE_TYPES = ['Point', 'LineString', 'Polygon'];
-
-// Module-level random geometry generator — no component state deps
-function generateRandomGeometry(constrainedType?: string): GeometryType {
-	const sampleLocations = [
-		{ name: 'Times Square, NYC', lng: -73.985, lat: 40.758 },
-		{ name: 'Eiffel Tower, Paris', lng: 2.294, lat: 48.858 },
-		{ name: 'Big Ben, London', lng: -0.124, lat: 51.499 },
-		{ name: 'Golden Gate Bridge, SF', lng: -122.478, lat: 37.819 },
-		{ name: 'Sydney Opera House', lng: 151.215, lat: -33.857 },
-	];
-
-	const randomType = constrainedType && RANDOMIZABLE_TYPES.includes(constrainedType)
-		? constrainedType
-		: RANDOMIZABLE_TYPES[Math.floor(Math.random() * RANDOMIZABLE_TYPES.length)];
-	const baseLocation = sampleLocations[Math.floor(Math.random() * sampleLocations.length)];
-	const baseLng = baseLocation.lng;
-	const baseLat = baseLocation.lat;
-
-	let geojson: any;
-
-	switch (randomType) {
-		case 'Point':
-			geojson = {
-				type: 'Point',
-				coordinates: [baseLng, baseLat],
-			};
-			break;
-
-		case 'LineString': {
-			const pathPoints = [];
-			for (let i = 0; i < 4; i++) {
-				pathPoints.push([
-					baseLng + (Math.random() - 0.5) * 0.01,
-					baseLat + (Math.random() - 0.5) * 0.01,
-				]);
-			}
-			geojson = {
-				type: 'LineString',
-				coordinates: pathPoints,
-			};
-			break;
-		}
-
-		case 'Polygon': {
-			const offset = 0.005;
-			geojson = {
-				type: 'Polygon',
-				coordinates: [
-					[
-						[baseLng - offset, baseLat - offset],
-						[baseLng + offset, baseLat - offset],
-						[baseLng + offset, baseLat + offset],
-						[baseLng - offset, baseLat + offset],
-						[baseLng - offset, baseLat - offset],
-					],
-				],
-			};
-			break;
-		}
-
-	}
-
-	let x = baseLng,
-		y = baseLat;
-	if (geojson.type === 'Point') {
-		x = geojson.coordinates[0];
-		y = geojson.coordinates[1];
-	}
-
-	return { geojson, srid: 4326, x, y };
-}
 
 interface GeometryEditorProps {
 	value: unknown;
 	onFinishedEditing: (next?: unknown) => void;
 	/** Expected geometry type from column definition (e.g., "Point", "Polygon", "LineString") */
 	expectedType?: string;
+	/** The field's readable name, shown as the title. */
+	title?: string;
+	/** The column takes no value, so Clear is offered. */
+	nullable?: boolean;
 }
 
-export const GeometryEditor: React.FC<GeometryEditorProps> = ({ value, onFinishedEditing, expectedType }) => {
+// The Map / GeoJSON switch, sized for this 28px header. The shared tab sizes are for page
+// tabs (a 40px minimum height for touch), so here every tab is 24px inside a 28px track:
+// a 2px inset on all sides, and the tab corners are the track's 8px minus that inset (the
+// shared tab already uses radius-md - 2px). The focus ring is drawn inside the tab so it
+// stays within the track. Icons are 12px with a little less padding on their side.
+const SWITCH_TRACK = 'h-7 p-0.5';
+const SWITCH_TAB =
+	'h-6 min-h-0 min-w-0 gap-1.5 ps-2 pe-2.5 text-xs pointer-coarse:min-h-0 focus-visible:ring-2 focus-visible:ring-inset [&_svg]:size-3';
+
+export const GeometryEditor: React.FC<GeometryEditorProps> = ({ value, onFinishedEditing, expectedType, title = 'Shape', nullable = false }) => {
 	const currentGeometryData = value;
 	const geometryValue = useMemo(() => parseGeometryValue(currentGeometryData), [currentGeometryData]);
 
@@ -319,30 +259,39 @@ export const GeometryEditor: React.FC<GeometryEditorProps> = ({ value, onFinishe
 		if (!currentGeometryData) return '';
 		// Normalize to raw GeoJSON — the backend GeoJSON scalar only accepts { type, coordinates }
 		const geo = parseGeometryValue(currentGeometryData);
-		if (geo?.geojson) return JSON.stringify(geo.geojson, null, 2);
+		if (geo?.geojson) return prettyGeoJson(geo.geojson);
 		return formatGeometry(currentGeometryData);
 	});
 
 	// Only show map when we KNOW it's a Point: either expectedType says so, or existing value is a Point.
 	// For empty cells without expectedType, default to JSON tab (prevents Point-on-Polygon errors).
-	const canShowMap = expectedType === 'Point' || (!expectedType && geometryValue != null && isPointGeometry(geometryValue));
+	// A host that turns the map tiles off (SheetsConfig.map.tiles: 'off') gets the GeoJSON text editor.
+	const mapSettings = useMapSettings();
+	const canShowMap =
+		mapSettings.tiles !== null &&
+		(expectedType === 'Point' || (!expectedType && geometryValue != null && isPointGeometry(geometryValue)));
+	// The map is optional (leaflet peers): when it cannot load, the shape is edited as GeoJSON text.
+	const [mapUnavailable, setMapUnavailable] = useState(false);
+	const showMap = canShowMap && !mapUnavailable;
 
 	const validationResult = useMemo(() => validateGeometry(editingValue, expectedType), [editingValue, expectedType]);
 	const isValid = validationResult === true;
 	const validationError = typeof validationResult === 'string' ? validationResult : undefined;
 	const [activeTab, setActiveTab] = useState<'map' | 'json'>(() => (canShowMap ? 'map' : 'json'));
 
+	const handleMapUnavailable = useCallback((error: unknown) => {
+		sheetsLogger().warn('The map editor could not load; editing the shape as GeoJSON.', error);
+		setMapUnavailable(true);
+		setActiveTab('json');
+	}, []);
+
 	const handleMapChange = useCallback((mapValue: MapPickerValue | undefined) => {
 		if (mapValue?.geojson?.type) {
-			setEditingValue(JSON.stringify(mapValue.geojson, null, 2));
+			setEditingValue(prettyGeoJson(mapValue.geojson));
 		} else {
 			setEditingValue('');
 		}
 	}, []);
-
-	const handleRandomize = useCallback(() => {
-		setEditingValue(JSON.stringify(generateRandomGeometry(expectedType).geojson, null, 2));
-	}, [expectedType]);
 
 	const handleSave = useCallback(() => {
 		if (!isValid) return;
@@ -407,41 +356,41 @@ export const GeometryEditor: React.FC<GeometryEditorProps> = ({ value, onFinishe
 		setScrollBudget(Math.max(0, overlayMaxHeight - fixedUI));
 	}, [overlayMaxHeight]);
 
-	// Shared header
+	const shapeKind = expectedType ? shapeKindName(expectedType) : null;
+	// Shared header: the field's name and the kind of shape, like the other editors' titles,
+	// with the Map / GeoJSON switch when the map can be used.
 	const header = (
-		<div className='flex items-center justify-between px-3 py-2'>
-			<div className='flex items-center gap-2'>
-				<MapPin className='text-muted-foreground h-3.5 w-3.5' />
-				<span className='text-sm font-medium'>Geometry</span>
-				{expectedType && (
-					<span className='bg-muted text-muted-foreground rounded px-1.5 py-0.5 text-xs'>{expectedType}</span>
-				)}
-			</div>
-			{canShowMap && (
-				<TabsList className='h-7'>
-					<TabsTrigger value='map' className='flex items-center gap-1.5 px-2.5 text-xs'>
-						<Map className='h-3 w-3' />
+		<EditorHeader title={title} chip={shapeKind} className='px-3 pt-3 pb-2'>
+			{showMap && (
+				<TabsList className={SWITCH_TRACK}>
+					<TabsTrigger value='map' className={SWITCH_TAB}>
+						<Map aria-hidden />
 						Map
 					</TabsTrigger>
-					<TabsTrigger value='json' className='flex items-center gap-1.5 px-2.5 text-xs'>
-						<FileText className='h-3 w-3' />
-						JSON
+					<TabsTrigger value='json' className={SWITCH_TAB}>
+						<FileText aria-hidden />
+						GeoJSON
 					</TabsTrigger>
 				</TabsList>
 			)}
-		</div>
+		</EditorHeader>
 	);
 
 	// Shared JSON content
 	const jsonContent = (
 		<div className='space-y-3 p-3'>
+			{mapUnavailable ? (
+				<p role='status' className='text-muted-foreground text-xs'>
+					The map is not available here. Edit the shape as GeoJSON.
+				</p>
+			) : null}
 			<Textarea
 				id='geometry-json'
 				value={editingValue}
 				onChange={(e) => setEditingValue(e.target.value)}
 				className={cn('min-h-[200px] resize-none font-mono text-sm', !isValid && 'border-destructive')}
 				placeholder={GEOMETRY_PLACEHOLDERS[expectedType ?? ''] ?? DEFAULT_GEOMETRY_PLACEHOLDER}
-				autoFocus={!canShowMap || activeTab === 'json'}
+				autoFocus={!showMap || activeTab === 'json'}
 			/>
 
 			{validationError && (
@@ -451,39 +400,18 @@ export const GeometryEditor: React.FC<GeometryEditorProps> = ({ value, onFinishe
 				</div>
 			)}
 
-			{(!expectedType || RANDOMIZABLE_TYPES.includes(expectedType)) && (
-				<Button variant='ghost' size='xs' onClick={handleRandomize} title='Generate random geometry'>
-					<Shuffle className='mr-1 h-3 w-3' />
-					Randomize
-				</Button>
-			)}
 		</div>
 	);
 
-	// Shared footer
+	// Shared footer: Clear (when the column takes no value) and Save, like every value editor.
 	const footer = (
-		<div className='flex items-center justify-between border-t px-3 py-2'>
-			<div className='text-muted-foreground flex items-center gap-3 text-xs'>
-				{isValid ? (
-					<span className='text-muted-foreground/60 shrink-0'>Valid</span>
-				) : (
-					<span className='text-destructive shrink-0'>Invalid</span>
-				)}
-				<span className='text-border'>|</span>
-				<span className='inline-flex shrink-0 items-center gap-1'>
-					<kbd className='bg-muted/60 border-border/40 inline-flex min-h-5 min-w-5 items-center justify-center rounded border font-sans text-[11px] leading-tight'>{MOD_KEY}</kbd>
-					<kbd className='bg-muted/60 border-border/40 inline-flex min-h-5 min-w-5 items-center justify-center rounded border font-sans text-[11px] leading-tight'>↵</kbd>
-					<span>save</span>
-				</span>
-				<span className='inline-flex shrink-0 items-center gap-1'>
-					<kbd className='bg-muted/60 border-border/40 inline-flex min-h-5 items-center justify-center rounded border px-1.5 font-sans text-[11px] leading-tight'>Esc</kbd>
-					<span>cancel</span>
-				</span>
-			</div>
-			<Button onClick={handleSave} size='xs' variant='default' className='shrink-0' disabled={!isValid}>
-				Save
-			</Button>
-		</div>
+		<EditorFooter
+			className='px-3 py-2'
+			onSave={handleSave}
+			saveShortcut={`${modifierKeyLabel()} Enter`}
+			saveBlockedReason={isValid ? null : (validationError ?? 'Enter a valid GeoJSON shape.')}
+			clear={editorClear(nullable, () => onFinishedEditing(null))}
+		/>
 	);
 
 	return (
@@ -492,19 +420,24 @@ export const GeometryEditor: React.FC<GeometryEditorProps> = ({ value, onFinishe
 			className={`bg-popover flex w-full ${OVERLAY.xl} flex-col overflow-hidden rounded-lg border shadow-lg`}
 		>
 			<div ref={editorRef} onKeyDown={handleEditorKeyDown} className='flex min-h-0 flex-1 flex-col'>
-				{canShowMap ? (
+				{showMap ? (
 					<Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as 'map' | 'json')} className='flex min-h-0 flex-1 flex-col'>
 						{header}
 						<div ref={contentRef} className='min-h-0 flex-1 overflow-y-auto border-t' style={{ maxHeight: scrollBudget }}>
 							<TabsContent value='map' className='mt-0 p-3'>
-								<Suspense fallback={<MapPickerLoading />}>
+								<MapLoadBoundary onUnavailable={handleMapUnavailable}>
+									{/* The picker's search row, frame and location line render at once; only the map
+									    itself (Leaflet, loaded on first use) waits, in a placeholder of the map's own
+									    height, so the editor opens at its final size. */}
 									<MapPicker
 										value={mapPickerValue}
 										onChange={handleMapChange}
 										height={280}
 										placeholder='Search for a location or click on the map...'
+										tiles={mapSettings.tiles ?? undefined}
+										placeSearch={mapSettings.placeSearch}
 									/>
-								</Suspense>
+								</MapLoadBoundary>
 							</TabsContent>
 							<TabsContent value='json' className='mt-0'>
 								{jsonContent}

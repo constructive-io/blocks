@@ -62,7 +62,7 @@ describe('EditorErrorGuard / EditorErrorBoundary', () => {
 		});
 
 		// Fallback rendered
-		expect(container.textContent).toContain('Editor failed to load/render');
+		expect(container.textContent).toContain('This editor could not open.');
 
 		// onError routed from context with the editor source
 		expect(onError).toHaveBeenCalledTimes(1);
@@ -99,7 +99,7 @@ describe('EditorErrorGuard / EditorErrorBoundary', () => {
 
 		expect(container.querySelector('[data-testid="healthy"]')).not.toBeNull();
 		expect(container.textContent).toContain('ok');
-		expect(container.textContent).not.toContain('Editor failed to load/render');
+		expect(container.textContent).not.toContain('This editor could not open.');
 		expect(onError).not.toHaveBeenCalled();
 	});
 });

@@ -47,7 +47,7 @@ export function FloatingStatus({ className }: FloatingStatusProps) {
 					{operation.status !== 'pending' && (
 						<button
 							type='button'
-							className='text-muted-foreground hover:text-foreground -mr-1 rounded-full p-1 transition-colors'
+							className='text-muted-foreground hover:text-foreground -mr-1 rounded-full p-1'
 							onClick={handleDismiss}
 							aria-label='Dismiss'
 						>

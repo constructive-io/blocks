@@ -24,10 +24,15 @@ describe('resolveEditIntent', () => {
 		}
 	});
 
-	it('lets readonly state override every editing route', () => {
-		for (const cellType of ['boolean', 'text', 'relation'] as CellType[]) {
+	it('lets readonly state override every editing route except the read-only viewers', () => {
+		for (const cellType of ['boolean', 'text', 'select', 'range'] as CellType[]) {
 			expect(resolveEditIntent(cellType, { readonly: true })).toEqual({ mode: 'none' });
 		}
+		// The relation and file editors show the links or the file and why they cannot change;
+		// viewers show and copy the value.
+		expect(resolveEditIntent('relation', { readonly: true })).toEqual({ mode: 'overlay', editor: DOM_EDITOR_REGISTRY.relation });
+		expect(resolveEditIntent('image', { readonly: true })).toEqual({ mode: 'overlay', editor: DOM_EDITOR_REGISTRY.image });
+		expect(resolveEditIntent('binary', { readonly: true })).toEqual({ mode: 'overlay', editor: DOM_EDITOR_REGISTRY.binary });
 	});
 
 	it('uses consumer editors only for editable inline cells', () => {

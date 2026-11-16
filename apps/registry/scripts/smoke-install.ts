@@ -1293,7 +1293,7 @@ async function compileTailwind(root: string, testCase: SmokeCase): Promise<void>
 		'@keyframes shimmer',
 		'@media (prefers-reduced-motion: reduce)',
 		...(hasSheetsSource
-			? ['.w-\\[52px\\]']
+			? ['.min-w-\\[320px\\]'] // the small editor width preset (sheets overlay-presets.ts)
 			: []),
 		...(testCase.expectedCss ?? []),
 	];

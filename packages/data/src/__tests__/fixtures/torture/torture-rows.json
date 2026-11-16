@@ -1,0 +1,1081 @@
+[
+  {
+    "table": "Country",
+    "query": "query CountryRows { countries(first: 5) { nodes { isoCode name } } }",
+    "data": {
+      "countries": {
+        "nodes": [
+          {
+            "isoCode": "FR",
+            "name": "France"
+          },
+          {
+            "isoCode": "JP",
+            "name": "Japan"
+          },
+          {
+            "isoCode": "US",
+            "name": "United States"
+          }
+        ]
+      }
+    },
+    "errors": []
+  },
+  {
+    "table": "TaskLabel",
+    "query": "query TaskLabelRows { taskLabels(first: 5) { nodes { taskId labelId } } }",
+    "data": {
+      "taskLabels": {
+        "nodes": [
+          {
+            "taskId": "1",
+            "labelId": 1
+          },
+          {
+            "taskId": "1",
+            "labelId": 2
+          },
+          {
+            "taskId": "3",
+            "labelId": 2
+          }
+        ]
+      }
+    },
+    "errors": []
+  },
+  {
+    "table": "AuditEvent",
+    "query": "query AuditEventRows { auditEvents(first: 5) { nodes { happenedAt actor message } } }",
+    "data": {
+      "auditEvents": {
+        "nodes": [
+          {
+            "happenedAt": "2024-01-01T00:00:00.000000+00:00",
+            "actor": "system",
+            "message": "seeded"
+          },
+          {
+            "happenedAt": "2024-01-01T00:00:00.000000+00:00",
+            "actor": "system",
+            "message": "seeded"
+          },
+          {
+            "happenedAt": "2024-01-02T00:00:00.000000+00:00",
+            "actor": null,
+            "message": "anonymous change"
+          }
+        ]
+      }
+    },
+    "errors": []
+  },
+  {
+    "table": "Label",
+    "query": "query LabelRows { labels(first: 5) { nodes { id name color } } }",
+    "data": {
+      "labels": {
+        "nodes": [
+          {
+            "id": 1,
+            "name": "urgent",
+            "color": "#ff0000"
+          },
+          {
+            "id": 2,
+            "name": "backend",
+            "color": null
+          },
+          {
+            "id": 3,
+            "name": "docs",
+            "color": "#00ff00"
+          }
+        ]
+      }
+    },
+    "errors": []
+  },
+  {
+    "table": "WarehouseItem",
+    "query": "query WarehouseItemRows { warehouseItems(first: 5) { nodes { warehouseCode sku quantity } } }",
+    "data": {
+      "warehouseItems": {
+        "nodes": [
+          {
+            "warehouseCode": "east",
+            "sku": "SKU-1",
+            "quantity": 10
+          },
+          {
+            "warehouseCode": "east",
+            "sku": "SKU-2",
+            "quantity": 0
+          },
+          {
+            "warehouseCode": "west",
+            "sku": "SKU-1",
+            "quantity": 5
+          }
+        ]
+      }
+    },
+    "errors": []
+  },
+  {
+    "table": "Project",
+    "query": "query ProjectRows { projects(first: 5) { nodes { id name ownerId reviewerId countryCode } } }",
+    "data": {
+      "projects": {
+        "nodes": [
+          {
+            "id": 1,
+            "name": "Analytical Engine",
+            "ownerId": "00000000-0000-4000-8000-0000000000a1",
+            "reviewerId": "00000000-0000-4000-8000-0000000000a2",
+            "countryCode": "US"
+          },
+          {
+            "id": 2,
+            "name": "Compiler",
+            "ownerId": "00000000-0000-4000-8000-0000000000a2",
+            "reviewerId": null,
+            "countryCode": null
+          },
+          {
+            "id": 3,
+            "name": "Kernel",
+            "ownerId": "00000000-0000-4000-8000-0000000000a3",
+            "reviewerId": "00000000-0000-4000-8000-0000000000a3",
+            "countryCode": "FR"
+          }
+        ]
+      }
+    },
+    "errors": []
+  },
+  {
+    "table": "ProjectMember",
+    "query": "query ProjectMemberRows { projectMembers(first: 5) { nodes { projectId personId role joinedOn } } }",
+    "data": {
+      "projectMembers": {
+        "nodes": [
+          {
+            "projectId": 1,
+            "personId": "00000000-0000-4000-8000-0000000000a1",
+            "role": "owner",
+            "joinedOn": "1842-01-01"
+          },
+          {
+            "projectId": 1,
+            "personId": "00000000-0000-4000-8000-0000000000a2",
+            "role": "reviewer",
+            "joinedOn": "1952-01-01"
+          },
+          {
+            "projectId": 3,
+            "personId": "00000000-0000-4000-8000-0000000000a3",
+            "role": "owner",
+            "joinedOn": "1991-08-25"
+          }
+        ]
+      }
+    },
+    "errors": []
+  },
+  {
+    "table": "Person",
+    "query": "query PersonRows { people(first: 5) { nodes { id email fullName managerId } } }",
+    "data": {
+      "people": {
+        "nodes": [
+          {
+            "id": "00000000-0000-4000-8000-0000000000a1",
+            "email": "ada@example.com",
+            "fullName": "Ada Lovelace",
+            "managerId": null
+          },
+          {
+            "id": "00000000-0000-4000-8000-0000000000a2",
+            "email": "grace@example.com",
+            "fullName": "Grace Hopper",
+            "managerId": "00000000-0000-4000-8000-0000000000a1"
+          },
+          {
+            "id": "00000000-0000-4000-8000-0000000000a3",
+            "email": "linus@example.com",
+            "fullName": "Linus Torvalds",
+            "managerId": "00000000-0000-4000-8000-0000000000a1"
+          }
+        ]
+      }
+    },
+    "errors": []
+  },
+  {
+    "table": "OpenTask",
+    "query": "query OpenTaskRows { openTasks(first: 5) { nodes { id projectId title status dueOn } } }",
+    "data": {
+      "openTasks": {
+        "nodes": [
+          {
+            "id": "1",
+            "projectId": 1,
+            "title": "Design the mill",
+            "status": "IN_PROGRESS",
+            "dueOn": "2024-03-01"
+          },
+          {
+            "id": "2",
+            "projectId": 1,
+            "title": "Punch the cards",
+            "status": "_1ST_REVIEW",
+            "dueOn": null
+          },
+          {
+            "id": "3",
+            "projectId": 2,
+            "title": "Write the linker",
+            "status": "DONE_ISH",
+            "dueOn": null
+          },
+          {
+            "id": "5",
+            "projectId": 3,
+            "title": "Wait for the merge window",
+            "status": "ON_HOLD",
+            "dueOn": null
+          }
+        ]
+      }
+    },
+    "errors": []
+  },
+  {
+    "table": "PersonProfile",
+    "query": "query PersonProfileRows { personProfiles(first: 5) { nodes { personId bio photo } } }",
+    "data": {
+      "personProfiles": {
+        "nodes": [
+          {
+            "personId": "00000000-0000-4000-8000-0000000000a1",
+            "bio": "First programmer",
+            "photo": {
+              "url": "https://cdn.example.com/ada.png"
+            }
+          },
+          {
+            "personId": "00000000-0000-4000-8000-0000000000a2",
+            "bio": null,
+            "photo": null
+          }
+        ]
+      }
+    },
+    "errors": []
+  },
+  {
+    "table": "GeneratedValue",
+    "query": "query GeneratedValueRows { generatedValues(first: 5) { nodes { id serialNo quantity unitPrice total createdAt lockedNote frozenCode } } }",
+    "data": {
+      "generatedValues": {
+        "nodes": [
+          {
+            "id": 1,
+            "serialNo": 1,
+            "quantity": 3,
+            "unitPrice": "19.99",
+            "total": "59.97",
+            "createdAt": "2026-11-13T09:10:18.229616+00:00",
+            "lockedNote": null,
+            "frozenCode": "A-1"
+          },
+          {
+            "id": 2,
+            "serialNo": 100,
+            "quantity": 1,
+            "unitPrice": "0.01",
+            "total": "0.01",
+            "createdAt": "2026-11-13T09:10:18.229616+00:00",
+            "lockedNote": "note",
+            "frozenCode": null
+          }
+        ]
+      }
+    },
+    "errors": []
+  },
+  {
+    "table": "SpecialValue",
+    "query": "query SpecialValueRows { specialValues(first: 5) { nodes { id label realValue doubleValue numericValue timestamptzValue dateValue } } }",
+    "data": {
+      "specialValues": {
+        "nodes": [
+          {
+            "id": 1,
+            "label": "not a number",
+            "realValue": null,
+            "doubleValue": null,
+            "numericValue": "NaN",
+            "timestamptzValue": null,
+            "dateValue": null
+          },
+          {
+            "id": 2,
+            "label": "infinite",
+            "realValue": null,
+            "doubleValue": null,
+            "numericValue": "Infinity",
+            "timestamptzValue": null,
+            "dateValue": null
+          },
+          {
+            "id": 3,
+            "label": "finite",
+            "realValue": 1.5,
+            "doubleValue": -2.5,
+            "numericValue": "3.5",
+            "timestamptzValue": "2024-01-01T00:00:00.000000+00:00",
+            "dateValue": "2024-01-01"
+          }
+        ]
+      }
+    },
+    "errors": [
+      {
+        "message": "Float cannot represent non numeric value: NaN",
+        "path": [
+          "specialValues",
+          "nodes",
+          0,
+          "realValue"
+        ]
+      },
+      {
+        "message": "Float cannot represent non numeric value: NaN",
+        "path": [
+          "specialValues",
+          "nodes",
+          0,
+          "doubleValue"
+        ]
+      },
+      {
+        "message": "Float cannot represent non numeric value: Infinity",
+        "path": [
+          "specialValues",
+          "nodes",
+          1,
+          "realValue"
+        ]
+      },
+      {
+        "message": "Float cannot represent non numeric value: -Infinity",
+        "path": [
+          "specialValues",
+          "nodes",
+          1,
+          "doubleValue"
+        ]
+      }
+    ]
+  },
+  {
+    "table": "AppFile",
+    "query": "query AppFileRows { appFiles(first: 5) { nodes { id bucketId key contentHash mimeType size filename ownerId isPublic status previousVersionId createdAt updatedAt } } }",
+    "data": {
+      "appFiles": {
+        "nodes": [
+          {
+            "id": "00000000-0000-4000-8000-0000000000f1",
+            "bucketId": "00000000-0000-4000-8000-0000000000b1",
+            "key": "avatars/a.png",
+            "contentHash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "mimeType": "image/png",
+            "size": "2048",
+            "filename": "a.png",
+            "ownerId": null,
+            "isPublic": false,
+            "status": "uploaded",
+            "previousVersionId": null,
+            "createdAt": "2026-11-13T09:10:18.250289+00:00",
+            "updatedAt": "2026-11-13T09:10:18.250289+00:00"
+          },
+          {
+            "id": "00000000-0000-4000-8000-0000000000f2",
+            "bucketId": "00000000-0000-4000-8000-0000000000b2",
+            "key": "gallery/1.jpg",
+            "contentHash": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+            "mimeType": "image/jpeg",
+            "size": "4096",
+            "filename": null,
+            "ownerId": null,
+            "isPublic": false,
+            "status": "requested",
+            "previousVersionId": null,
+            "createdAt": "2026-11-13T09:10:18.250289+00:00",
+            "updatedAt": "2026-11-13T09:10:18.250289+00:00"
+          }
+        ]
+      }
+    },
+    "errors": []
+  },
+  {
+    "table": "Task",
+    "query": "query TaskRows { tasks(first: 5) { nodes { id projectId title status reviewStatus priority assigneeEmail warehouseCode sku dueOn } } }",
+    "data": {
+      "tasks": {
+        "nodes": [
+          {
+            "id": "1",
+            "projectId": 1,
+            "title": "Design the mill",
+            "status": "IN_PROGRESS",
+            "reviewStatus": "TODO",
+            "priority": "high",
+            "assigneeEmail": "ADA@example.com",
+            "warehouseCode": "east",
+            "sku": "SKU-1",
+            "dueOn": "2024-03-01"
+          },
+          {
+            "id": "2",
+            "projectId": 1,
+            "title": "Punch the cards",
+            "status": "_1ST_REVIEW",
+            "reviewStatus": null,
+            "priority": null,
+            "assigneeEmail": null,
+            "warehouseCode": null,
+            "sku": null,
+            "dueOn": null
+          },
+          {
+            "id": "3",
+            "projectId": 2,
+            "title": "Write the linker",
+            "status": "DONE_ISH",
+            "reviewStatus": "BLOCKED",
+            "priority": "low",
+            "assigneeEmail": "grace@example.com",
+            "warehouseCode": "west",
+            "sku": "SKU-1",
+            "dueOn": null
+          },
+          {
+            "id": "4",
+            "projectId": 3,
+            "title": "Merge the patches",
+            "status": "DONE",
+            "reviewStatus": "DONE",
+            "priority": "medium",
+            "assigneeEmail": "linus@example.com",
+            "warehouseCode": null,
+            "sku": null,
+            "dueOn": "1991-08-25"
+          },
+          {
+            "id": "5",
+            "projectId": 3,
+            "title": "Wait for the merge window",
+            "status": "ON_HOLD",
+            "reviewStatus": "NEEDS_REVIEW",
+            "priority": null,
+            "assigneeEmail": null,
+            "warehouseCode": null,
+            "sku": null,
+            "dueOn": null
+          }
+        ]
+      }
+    },
+    "errors": []
+  },
+  {
+    "table": "AppBucket",
+    "query": "query AppBucketRows { appBuckets(first: 5) { nodes { id key type isPublic allowedMimeTypes maxFileSize allowCustomKeys allowedOrigins physicalName provisionRequestedAt createdAt updatedAt } } }",
+    "data": {
+      "appBuckets": {
+        "nodes": [
+          {
+            "id": "00000000-0000-4000-8000-0000000000b1",
+            "key": "public",
+            "type": "private",
+            "isPublic": true,
+            "allowedMimeTypes": [
+              "image/png",
+              "image/jpeg"
+            ],
+            "maxFileSize": "10485760",
+            "allowCustomKeys": false,
+            "allowedOrigins": null,
+            "physicalName": null,
+            "provisionRequestedAt": null,
+            "createdAt": "2026-11-13T09:10:18.249284+00:00",
+            "updatedAt": "2026-11-13T09:10:18.249284+00:00"
+          },
+          {
+            "id": "00000000-0000-4000-8000-0000000000b2",
+            "key": "private",
+            "type": "private",
+            "isPublic": false,
+            "allowedMimeTypes": null,
+            "maxFileSize": null,
+            "allowCustomKeys": false,
+            "allowedOrigins": null,
+            "physicalName": null,
+            "provisionRequestedAt": null,
+            "createdAt": "2026-11-13T09:10:18.249284+00:00",
+            "updatedAt": "2026-11-13T09:10:18.249284+00:00"
+          }
+        ]
+      }
+    },
+    "errors": []
+  },
+  {
+    "table": "ArrayKind",
+    "query": "query ArrayKindRows { arrayKinds(first: 5) { nodes { id textList intList uuidList dateList numericList shortCodeList statusList pathList } } }",
+    "data": {
+      "arrayKinds": {
+        "nodes": [
+          {
+            "id": 1,
+            "textList": [
+              "one",
+              "two, with comma",
+              "three \"quoted\""
+            ],
+            "intList": [
+              1,
+              2,
+              3
+            ],
+            "uuidList": [
+              "a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11"
+            ],
+            "dateList": [
+              "2024-01-01",
+              "2024-12-31"
+            ],
+            "numericList": [
+              "1.50",
+              "99999999.99"
+            ],
+            "shortCodeList": [
+              "ab",
+              "abcde"
+            ],
+            "statusList": [
+              "TODO",
+              "IN_PROGRESS",
+              "_1ST_REVIEW",
+              "NEEDS_REVIEW"
+            ],
+            "pathList": [
+              "top.science",
+              "a"
+            ]
+          },
+          {
+            "id": 2,
+            "textList": [],
+            "intList": [],
+            "uuidList": [],
+            "dateList": [],
+            "numericList": [],
+            "shortCodeList": [],
+            "statusList": [],
+            "pathList": []
+          },
+          {
+            "id": 3,
+            "textList": [
+              null,
+              "after null"
+            ],
+            "intList": [
+              null,
+              7
+            ],
+            "uuidList": null,
+            "dateList": null,
+            "numericList": null,
+            "shortCodeList": null,
+            "statusList": null,
+            "pathList": null
+          },
+          {
+            "id": 4,
+            "textList": null,
+            "intList": null,
+            "uuidList": null,
+            "dateList": null,
+            "numericList": null,
+            "shortCodeList": null,
+            "statusList": null,
+            "pathList": null
+          }
+        ]
+      }
+    },
+    "errors": []
+  },
+  {
+    "table": "DomainKind",
+    "query": "query DomainKindRows { domainKinds(first: 5) { nodes { id contactEmail homepage host allowedOrigin avatar document gallery attachmentLink } } }",
+    "data": {
+      "domainKinds": {
+        "nodes": [
+          {
+            "id": "00000000-0000-4000-8000-0000000000d1",
+            "contactEmail": "Someone@Example.com",
+            "homepage": "https://example.com/a?b=c",
+            "host": "api.example.com",
+            "allowedOrigin": "https://app.example.com",
+            "avatar": {
+              "id": "00000000-0000-4000-8000-0000000000f1",
+              "key": "avatars/a.png",
+              "mime": "image/png",
+              "size": 2048,
+              "filename": "a.png",
+              "bucket_id": "00000000-0000-4000-8000-0000000000b1"
+            },
+            "document": {
+              "url": "https://cdn.example.com/doc.pdf",
+              "mime": "application/pdf"
+            },
+            "gallery": [
+              {
+                "id": "00000000-0000-4000-8000-0000000000f2",
+                "key": "gallery/1.jpg"
+              },
+              {
+                "id": "00000000-0000-4000-8000-0000000000f3",
+                "key": "gallery/2.jpg"
+              }
+            ],
+            "attachmentLink": "https://example.com/files/report.pdf"
+          },
+          {
+            "id": "00000000-0000-4000-8000-0000000000d2",
+            "contactEmail": null,
+            "homepage": null,
+            "host": null,
+            "allowedOrigin": "constructive://app",
+            "avatar": null,
+            "document": null,
+            "gallery": [],
+            "attachmentLink": null
+          }
+        ]
+      }
+    },
+    "errors": []
+  },
+  {
+    "table": "StructuredKind",
+    "query": "query StructuredKindRows { structuredKinds(first: 5) { nodes { id address { street city postalCode country } intRange { start { value inclusive } end { value inclusive } } timestampRange { start { value inclusive } end { value inclusive } } dateRange { start { value inclusive } end { value inclusive } } nativePoint { x y } anyShape { __typename geojson srid } pin { __typename geojson srid } outline { __typename geojson srid } geoPin { __typename geojson srid } anyGeo { __typename geojson srid } embedding anyEmbedding } } }",
+    "data": {
+      "structuredKinds": {
+        "nodes": [
+          {
+            "id": "1",
+            "address": {
+              "street": "1 Main St",
+              "city": "Springfield",
+              "postalCode": "12345",
+              "country": "US"
+            },
+            "intRange": {
+              "start": {
+                "value": 1,
+                "inclusive": true
+              },
+              "end": {
+                "value": 10,
+                "inclusive": false
+              }
+            },
+            "timestampRange": {
+              "start": {
+                "value": "2024-01-01T00:00:00.000000+00:00",
+                "inclusive": true
+              },
+              "end": {
+                "value": "2024-02-01T00:00:00.000000+00:00",
+                "inclusive": false
+              }
+            },
+            "dateRange": {
+              "start": {
+                "value": "2024-01-01",
+                "inclusive": true
+              },
+              "end": {
+                "value": "2024-02-01",
+                "inclusive": false
+              }
+            },
+            "nativePoint": {
+              "x": 1.5,
+              "y": -2.25
+            },
+            "anyShape": {
+              "__typename": "GeometryLineString",
+              "geojson": {
+                "type": "LineString",
+                "coordinates": [
+                  [
+                    0,
+                    0
+                  ],
+                  [
+                    1,
+                    1
+                  ],
+                  [
+                    2,
+                    1
+                  ]
+                ]
+              },
+              "srid": 0
+            },
+            "pin": {
+              "__typename": "GeometryPoint",
+              "geojson": {
+                "type": "Point",
+                "coordinates": [
+                  -122.4194,
+                  37.7749
+                ]
+              },
+              "srid": 4326
+            },
+            "outline": {
+              "__typename": "GeometryPolygon",
+              "geojson": {
+                "type": "Polygon",
+                "coordinates": [
+                  [
+                    [
+                      0,
+                      0
+                    ],
+                    [
+                      0,
+                      1
+                    ],
+                    [
+                      1,
+                      1
+                    ],
+                    [
+                      1,
+                      0
+                    ],
+                    [
+                      0,
+                      0
+                    ]
+                  ]
+                ]
+              },
+              "srid": 0
+            },
+            "geoPin": {
+              "__typename": "GeographyPoint",
+              "geojson": {
+                "type": "Point",
+                "coordinates": [
+                  2.3522,
+                  48.8566
+                ]
+              },
+              "srid": 4326
+            },
+            "anyGeo": {
+              "__typename": "GeographyLineString",
+              "geojson": {
+                "type": "LineString",
+                "coordinates": [
+                  [
+                    0,
+                    0
+                  ],
+                  [
+                    1,
+                    1
+                  ]
+                ]
+              },
+              "srid": 4326
+            },
+            "embedding": [
+              0.1,
+              0.2,
+              0.3
+            ],
+            "anyEmbedding": [
+              1,
+              2,
+              3,
+              4,
+              5
+            ]
+          },
+          {
+            "id": "2",
+            "address": {
+              "street": null,
+              "city": "Nowhere",
+              "postalCode": null,
+              "country": null
+            },
+            "intRange": {
+              "start": null,
+              "end": {
+                "value": 6,
+                "inclusive": false
+              }
+            },
+            "timestampRange": {
+              "start": {
+                "value": "2024-01-01T00:00:00.000000+00:00",
+                "inclusive": true
+              },
+              "end": null
+            },
+            "dateRange": {
+              "start": null,
+              "end": null
+            },
+            "nativePoint": {
+              "x": 0,
+              "y": 0
+            },
+            "anyShape": {
+              "__typename": "GeometryGeometryCollection",
+              "geojson": {
+                "type": "GeometryCollection",
+                "geometries": [
+                  {
+                    "type": "Point",
+                    "coordinates": [
+                      1,
+                      1
+                    ]
+                  },
+                  {
+                    "type": "LineString",
+                    "coordinates": [
+                      [
+                        0,
+                        0
+                      ],
+                      [
+                        1,
+                        1
+                      ]
+                    ]
+                  }
+                ]
+              },
+              "srid": 0
+            },
+            "pin": {
+              "__typename": "GeometryPoint",
+              "geojson": {
+                "type": "Point",
+                "coordinates": [
+                  0,
+                  0
+                ]
+              },
+              "srid": 4326
+            },
+            "outline": null,
+            "geoPin": null,
+            "anyGeo": null,
+            "embedding": [
+              0,
+              0,
+              0
+            ],
+            "anyEmbedding": null
+          },
+          {
+            "id": "3",
+            "address": null,
+            "intRange": null,
+            "timestampRange": {
+              "start": null,
+              "end": null
+            },
+            "dateRange": {
+              "start": null,
+              "end": null
+            },
+            "nativePoint": null,
+            "anyShape": null,
+            "pin": null,
+            "outline": null,
+            "geoPin": null,
+            "anyGeo": null,
+            "embedding": null,
+            "anyEmbedding": null
+          }
+        ]
+      }
+    },
+    "errors": []
+  },
+  {
+    "table": "ScalarKind",
+    "query": "query ScalarKindRows { scalarKinds(first: 5) { nodes { id label textValue citextValue varcharValue charValue boolNullable boolRequired smallintValue integerValue bigintValue numericBounded numericUnbounded realValue doubleValue moneyValue uuidValue dateValue timeValue timetzValue timestampValue timestamptzValue intervalValue { years months days hours minutes seconds } jsonValue jsonbValue byteaValue inetValue cidrValue macaddrValue bitValue varbitValue tsvectorValue ltreeValue } } }",
+    "data": {
+      "scalarKinds": {
+        "nodes": [
+          {
+            "id": "00000000-0000-4000-8000-000000000001",
+            "label": "typical",
+            "textValue": "Hello, world",
+            "citextValue": "MiXeD Case",
+            "varcharValue": "forty chars at most",
+            "charValue": "ab ",
+            "boolNullable": true,
+            "boolRequired": true,
+            "smallintValue": 12,
+            "integerValue": 42,
+            "bigintValue": "9007199254740993",
+            "numericBounded": "12345678.1234",
+            "numericUnbounded": "123456789012345678901234567890.123456789012345678901234567890",
+            "realValue": 3.25,
+            "doubleValue": 2.718281828459045,
+            "moneyValue": 1234.56,
+            "uuidValue": "a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11",
+            "dateValue": "2024-02-29",
+            "timeValue": "13:45:30.123456",
+            "timetzValue": "06:45:30.000000+00:00",
+            "timestampValue": "2024-02-29T13:45:30.123456",
+            "timestamptzValue": "2024-02-29T13:45:30.123456+00:00",
+            "intervalValue": {
+              "years": 1,
+              "months": 2,
+              "days": 3,
+              "hours": 4,
+              "minutes": 5,
+              "seconds": 6.789
+            },
+            "jsonValue": {
+              "a": [
+                1,
+                2,
+                {
+                  "b": null
+                }
+              ]
+            },
+            "jsonbValue": {
+              "nested": {
+                "deep": [
+                  true,
+                  false
+                ]
+              }
+            },
+            "byteaValue": "3q2+7w==",
+            "inetValue": "192.168.0.1/24",
+            "cidrValue": "10.0.0.0/8",
+            "macaddrValue": "08:00:2b:01:02:03",
+            "bitValue": "10101010",
+            "varbitValue": "1101",
+            "tsvectorValue": "'brown':3 'fox':4 'jump':5 'quick':2",
+            "ltreeValue": "/top/science/astronomy"
+          },
+          {
+            "id": "00000000-0000-4000-8000-000000000002",
+            "label": "extremes",
+            "textValue": "",
+            "citextValue": "ß ü ✓ 漢字",
+            "varcharValue": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+            "charValue": "xyz",
+            "boolNullable": false,
+            "boolRequired": false,
+            "smallintValue": 32767,
+            "integerValue": -2147483648,
+            "bigintValue": "9223372036854775807",
+            "numericBounded": "-99999999.9999",
+            "numericUnbounded": "0.000000000000000000000000000001",
+            "realValue": -3.4e+38,
+            "doubleValue": 1.7976931348623157e+308,
+            "moneyValue": -92233720368547760,
+            "uuidValue": "ffffffff-ffff-4fff-bfff-ffffffffffff",
+            "dateValue": "0001-01-01",
+            "timeValue": "00:00:00.000000",
+            "timetzValue": "11:59:59.999999+00:00",
+            "timestampValue": "1970-01-01T00:00:00.000000",
+            "timestamptzValue": "9999-12-31T23:59:59.999999+00:00",
+            "intervalValue": {
+              "years": -178000000,
+              "months": 0,
+              "days": 0,
+              "hours": 0,
+              "minutes": 0,
+              "seconds": 0
+            },
+            "jsonValue": [],
+            "jsonbValue": "just a string",
+            "byteaValue": "",
+            "inetValue": "::1",
+            "cidrValue": "2001:db8::/32",
+            "macaddrValue": "ff:ff:ff:ff:ff:ff",
+            "bitValue": "00000000",
+            "varbitValue": "",
+            "tsvectorValue": "",
+            "ltreeValue": "/a"
+          },
+          {
+            "id": "00000000-0000-4000-8000-000000000003",
+            "label": "nulls",
+            "textValue": null,
+            "citextValue": null,
+            "varcharValue": null,
+            "charValue": null,
+            "boolNullable": null,
+            "boolRequired": false,
+            "smallintValue": null,
+            "integerValue": null,
+            "bigintValue": null,
+            "numericBounded": null,
+            "numericUnbounded": null,
+            "realValue": null,
+            "doubleValue": null,
+            "moneyValue": null,
+            "uuidValue": null,
+            "dateValue": null,
+            "timeValue": null,
+            "timetzValue": null,
+            "timestampValue": null,
+            "timestamptzValue": null,
+            "intervalValue": null,
+            "jsonValue": null,
+            "jsonbValue": null,
+            "byteaValue": null,
+            "inetValue": null,
+            "cidrValue": null,
+            "macaddrValue": null,
+            "bitValue": null,
+            "varbitValue": null,
+            "tsvectorValue": null,
+            "ltreeValue": null
+          }
+        ]
+      }
+    },
+    "errors": []
+  }
+]

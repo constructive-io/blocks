@@ -14,9 +14,13 @@ export type CellType =
 	| 'number'
 	| 'integer'
 	| 'smallint' // Small integer
-	| 'decimal'
+	| 'bigint' // Whole number beyond 2^53, carried as an exact decimal string
+	| 'decimal' // Exact decimal, carried as a decimal string
 	| 'currency'
 	| 'percentage'
+	// Choice cells (enums and text with a fixed list of values)
+	| 'select'
+	| 'multi-select'
 	// Date/time cells
 	| 'date'
 	| 'datetime'
@@ -26,11 +30,15 @@ export type CellType =
 	// Boolean cells
 	| 'boolean'
 	| 'toggle'
-	| 'bit' // Binary digit
+	| 'bit' // Legacy alias of `bitstring`; a bit string is text, never a checkbox
+	| 'bitstring' // A string of 0 and 1
 	// Structured data cells
 	| 'json'
 	| 'jsonb' // Binary JSON
 	| 'array'
+	| 'range' // Start and end bounds, each inclusive or exclusive
+	| 'composite' // A record of named fields
+	| 'point' // A plain x/y point
 	// Array cells (specific types)
 	| 'text-array'
 	| 'uuid-array'
@@ -57,6 +65,9 @@ export type CellType =
 	| 'tags'
 	| 'tsvector'
 	| 'origin' // Custom origin type
+	| 'path' // A hierarchical label path
+	| 'binary' // Raw bytes (view and copy only)
+	| 'vector' // A list of numbers for similarity search (view and copy only)
 	// Relation cells
 	| 'relation' // Related table records
 	// Fallback

@@ -580,10 +580,11 @@ function SheetContent({
 							{children}
 						</ModalPortalScope>
 						{showClose && (
+							// Hover brightens the close button at once, with no fade (hover is the most frequent interaction).
 							<SheetPrimitive.Close
 								data-slot="sheet-close"
 								className='data-[open]:bg-secondary absolute top-4 end-4
-									rounded-sm opacity-70 transition-opacity hover:opacity-100 focus-visible:ring-[3px] focus-visible:ring-ring/50
+									rounded-sm opacity-70 hover:opacity-100 focus-visible:ring-[3px] focus-visible:ring-ring/50
 								 disabled:pointer-events-none'
 							>
 								<X className='h-4 w-4' />

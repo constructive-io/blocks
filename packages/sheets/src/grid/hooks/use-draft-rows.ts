@@ -4,7 +4,7 @@ import { useSheetsStore } from '../../store/sheets-store';
 import type { DraftRow, DraftRowsSlice } from '../../store/draft-rows-slice';
 import { attachDraftMeta, isDraftRow } from '../row-model';
 
-interface DraftRowsTableState {
+export interface DraftRowsTableState {
 	order: string[];
 	map: Record<string, DraftRow>;
 	template: Record<string, unknown>;

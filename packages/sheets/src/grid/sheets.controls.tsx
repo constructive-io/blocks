@@ -1,618 +1,426 @@
-import { memo, useCallback, useEffect, useMemo, useState } from "react";
+/**
+ * The grid toolbar, in two groups:
+ *   - the view, on the left: the saved view, Fields, Filters and Sort (quiet until they
+ *     change the view, then tinted with how much they change), and search;
+ *   - the actions, on the right: the data tools (import, export of the view) and New
+ *     record, or, while rows are selected, what acts on them; then Add row, the one
+ *     filled button, which never moves.
+ * Labels fold into their icons on a narrow toolbar, so both groups keep one line; every
+ * action stays one click away.
+ * Everything about filters, sort and search comes from the view bindings (see
+ * `useSheetsView`), which only offer what the table model has.
+ *
+ * Each group is memoized on what it shows: a cursor move (a new selection object, new
+ * shell handlers) renders neither.
+ */
+import { memo, useLayoutEffect, useMemo, useRef } from 'react';
 import {
-  RiAddLine,
-  RiCloseCircleLine,
-  RiDeleteBin6Line,
-  RiDownloadLine,
-  RiFilter3Line,
-  RiSearch2Line,
-} from "@remixicon/react";
-
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from "@constructive-io/ui/alert-dialog";
-import { Button } from "@constructive-io/ui/button";
-import { Input } from "@constructive-io/ui/input";
-import { Popover, PopoverContent, PopoverTrigger } from "@constructive-io/ui/popover";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@constructive-io/ui/select";
+	RiAddLine,
+	RiArrowUpDownLine,
+	RiCloseLine,
+	RiDeleteBin6Line,
+	RiDownloadLine,
+	RiFileAddLine,
+	RiFilter3Line,
+	RiLockLine,
+} from '@remixicon/react';
+import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
 
 import {
-  getDefaultOperator,
-  getOperatorsForGqlType,
-  isFilterableType,
-  type FilterOperator,
-  type OperatorValueType,
-} from "./filter-operators";
-import type { SheetsSelection } from "../selection/selection-model";
+	AlertDialog,
+	AlertDialogAction,
+	AlertDialogCancel,
+	AlertDialogContent,
+	AlertDialogDescription,
+	AlertDialogFooter,
+	AlertDialogHeader,
+	AlertDialogTitle,
+	AlertDialogTrigger,
+} from '@constructive-io/ui/alert-dialog';
+import { Button } from '@constructive-io/ui/button';
+import { Popover, PopoverContent, PopoverTrigger } from '@constructive-io/ui/popover';
+import { Separator } from '@constructive-io/ui/separator';
 
-// Filter value can be string, number, boolean, null, or undefined
-// This matches the usage in buildWhereFromFilters and GraphQL filter operations
-export type FilterValue = string | number | boolean | null | undefined;
-
-// ── Filter tree types ──
-
-export type FilterNode = FilterCondition | FilterGroup;
-
-export interface FilterCondition {
-  type: "condition";
-  id: string;
-  field: string;
-  operator: string;
-  value: FilterValue;
-}
-
-export interface FilterGroup {
-  type: "group";
-  id: string;
-  conjunction: "and" | "or";
-  children: FilterNode[];
-}
-
-export const MAX_FILTER_DEPTH = 3;
-
-export type FieldTypeMap = Record<string, { gqlType: string; isArray: boolean }>;
-
-// ── Tree helpers ──
-
-function uid(): string {
-  return Math.random().toString(36).slice(2, 9);
-}
-
-export function createEmptyGroup(conjunction: "and" | "or" = "and"): FilterGroup {
-  return { type: "group", id: uid(), conjunction, children: [] };
-}
-
-function createCondition(field: string, operator: string): FilterCondition {
-  return { type: "condition", id: uid(), field, operator, value: "" };
-}
-
-export function countConditions(node: FilterNode): number {
-  if (node.type === "condition") return 1;
-  return node.children.reduce((sum, child) => sum + countConditions(child), 0);
-}
+import type { SheetsSelection } from '../selection/selection-model';
+import { cn } from '../utils/cn';
+import { FieldsControl } from './columns/fields-control';
+import { FilterBuilder } from './filters/filter-builder';
+import { TOOLBAR_POPOVER } from './popup-classes';
+import { SearchBox } from './search/search-box';
+import { SortControl } from './sort/sort-control';
+import { ToolbarLabel, ViewToggleButton } from './toolbar/toolbar-button';
+import { filterConditionsOf } from './view-state/view-state';
+import type { SheetsViewBindings } from './view-state/use-sheets-view';
+import type { SavedViewsBindings } from './views/use-saved-views';
+import { ViewSwitcher } from './views/view-switcher';
+import { rowRemovalConfirm, type RowRemoval } from './row-removal';
 
 export interface SheetsControlsProps {
-  openSearch?: () => void;
-  filterTree: FilterGroup;
-  setFilterTree: (tree: FilterGroup) => void;
-  filtersOpen: boolean;
-  setFiltersOpen: (open: boolean) => void;
-  clearAllFilters: () => void;
-  applyFilters: () => void;
-  columnKeys: string[];
-  fieldTypeMap: FieldTypeMap;
-  showSelection: boolean;
-  gridSelection: SheetsSelection | null;
-  setGridSelection: (selection: SheetsSelection | null) => void;
-  deleteSelected: () => void;
-  onAddRow?: () => void;
-  onExport?: () => void;
-  canDelete?: boolean;
-  readOnlyReason?: string | null;
+	/** Filter, sort and search bindings. */
+	view: SheetsViewBindings;
+	/** Grid columns, in display order. */
+	columnKeys: readonly string[];
+	showSelection: boolean;
+	gridSelection: SheetsSelection | null;
+	setGridSelection: (selection: SheetsSelection | null) => void;
+	deleteSelected: () => void;
+	onAddRow?: () => void;
+	/** Download the selected rows as CSV; offered only while rows are selected. */
+	onExport?: () => void;
+	canDelete?: boolean;
+	/** What deleting the selected rows does (saved rows deleted, new rows discarded); refines `canDelete`. */
+	selectionRemoval?: RowRemoval;
+	readOnlyReason?: string | null;
+	/** Saved views of the table. Omit to hide the view switcher. */
+	savedViews?: SavedViewsBindings;
+	/** More toolbar actions (import, export of the whole view), placed before New record. */
+	tools?: React.ReactNode;
+	/** Open the record panel's new-record form; `disabledReason` says why it cannot open. Omit to hide. */
+	newRecord?: { open: () => void; disabledReason: string | null };
 }
 
-function getInputType(valueType: OperatorValueType): string {
-  switch (valueType) {
-    case "number":
-      return "number";
-    case "date":
-      return "date";
-    case "datetime":
-      return "datetime-local";
-    default:
-      return "text";
-  }
-}
-
-function getPlaceholder(valueType: OperatorValueType): string {
-  if (valueType === "key") return "key name";
-  return "Value...";
-}
-
-/** Parse a JSON-encoded IntervalInput string into individual fields. */
-function parseIntervalValue(raw: FilterValue): {
-  days: string;
-  hours: string;
-  minutes: string;
-  seconds: string;
-} {
-  const empty = { days: "", hours: "", minutes: "", seconds: "" };
-  if (!raw || typeof raw !== "string") return empty;
-  try {
-    const obj = JSON.parse(raw);
-    return {
-      days: obj.days ? String(obj.days) : "",
-      hours: obj.hours ? String(obj.hours) : "",
-      minutes: obj.minutes ? String(obj.minutes) : "",
-      seconds: obj.seconds ? String(obj.seconds) : "",
-    };
-  } catch {
-    return empty;
-  }
-}
-
-/** Compose individual interval fields into a JSON-encoded IntervalInput string. */
-function composeIntervalValue(fields: {
-  days: string;
-  hours: string;
-  minutes: string;
-  seconds: string;
-}): string {
-  const obj: Record<string, number> = {};
-  const d = parseInt(fields.days, 10);
-  const h = parseInt(fields.hours, 10);
-  const m = parseInt(fields.minutes, 10);
-  const s = parseInt(fields.seconds, 10);
-  if (!isNaN(d) && d !== 0) obj.days = d;
-  if (!isNaN(h) && h !== 0) obj.hours = h;
-  if (!isNaN(m) && m !== 0) obj.minutes = m;
-  if (!isNaN(s) && s !== 0) obj.seconds = s;
-  return Object.keys(obj).length > 0 ? JSON.stringify(obj) : "";
-}
-
-/** Structured interval input — renders d/h/m/s number fields that map to IntervalInput. */
-function IntervalFilterInput({
-  value,
-  onChange,
-}: {
-  value: FilterValue;
-  onChange: (v: string) => void;
-}) {
-  const fields = useMemo(() => parseIntervalValue(value), [value]);
-
-  const handleChange = useCallback(
-    (unit: "days" | "hours" | "minutes" | "seconds", v: string) => {
-      onChange(composeIntervalValue({ ...fields, [unit]: v }));
-    },
-    [fields, onChange],
-  );
-
-  return (
-    <div className="flex items-center gap-1">
-      <Input
-        className="w-[52px] px-1.5 text-center"
-        type="number"
-        placeholder="d"
-        min={0}
-        value={fields.days}
-        onChange={(e) => handleChange("days", e.target.value)}
-      />
-      <Input
-        className="w-[52px] px-1.5 text-center"
-        type="number"
-        placeholder="h"
-        min={0}
-        max={23}
-        value={fields.hours}
-        onChange={(e) => handleChange("hours", e.target.value)}
-      />
-      <Input
-        className="w-[52px] px-1.5 text-center"
-        type="number"
-        placeholder="m"
-        min={0}
-        max={59}
-        value={fields.minutes}
-        onChange={(e) => handleChange("minutes", e.target.value)}
-      />
-      <Input
-        className="w-[52px] px-1.5 text-center"
-        type="number"
-        placeholder="s"
-        min={0}
-        max={59}
-        value={fields.seconds}
-        onChange={(e) => handleChange("seconds", e.target.value)}
-      />
-    </div>
-  );
-}
-
-const FilterConditionRow = memo(function FilterConditionRow({
-  condition,
-  columns,
-  fieldTypeMap,
-  onChange,
-  onRemove,
-}: {
-  condition: FilterCondition;
-  columns: readonly string[];
-  fieldTypeMap: FieldTypeMap;
-  onChange: (updates: Partial<FilterCondition>) => void;
-  onRemove: () => void;
-}) {
-  const typeInfo = fieldTypeMap[condition.field];
-  const operators = useMemo<FilterOperator[]>(
-    () => getOperatorsForGqlType(typeInfo?.gqlType, typeInfo?.isArray ?? false),
-    [typeInfo?.gqlType, typeInfo?.isArray],
-  );
-  const currentOp = operators.find((o) => o.operator === condition.operator) ?? operators[0];
-
-  const handleColumnChange = useCallback(
-    (newField: string) => {
-      const info = fieldTypeMap[newField];
-      const defaultOp = getDefaultOperator(info?.gqlType, info?.isArray ?? false) ?? "equalTo";
-      onChange({ field: newField, operator: defaultOp, value: "" });
-    },
-    [fieldTypeMap, onChange],
-  );
-
-  const handleOperatorChange = useCallback(
-    (newOp: string) => {
-      const opEntry = operators.find((o) => o.operator === newOp);
-      if (opEntry?.valueType === "none") {
-        onChange({ operator: newOp, value: "" });
-      } else {
-        onChange({ operator: newOp });
-      }
-    },
-    [operators, onChange],
-  );
-
-  return (
-    <div className="flex items-center gap-2">
-      <Select value={condition.field} onValueChange={handleColumnChange}>
-        <SelectTrigger className="w-[140px]">
-          <SelectValue placeholder="Column" />
-        </SelectTrigger>
-        <SelectContent>
-          {columns.map((k) => (
-            <SelectItem key={k} value={k}>
-              {k}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
-
-      {operators.length > 0 && (
-        <Select value={currentOp?.operator ?? ""} onValueChange={handleOperatorChange}>
-          <SelectTrigger className="w-[130px]">
-            <SelectValue placeholder="Operator" />
-          </SelectTrigger>
-          <SelectContent>
-            {operators.map((op) => (
-              <SelectItem key={op.operator} value={op.operator}>
-                {op.label}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      )}
-
-      {currentOp && currentOp.valueType === "interval" && (
-        <IntervalFilterInput value={condition.value} onChange={(v) => onChange({ value: v })} />
-      )}
-
-      {currentOp && currentOp.valueType !== "none" && currentOp.valueType !== "interval" && (
-        <Input
-          className="w-[150px]"
-          type={getInputType(currentOp.valueType)}
-          placeholder={getPlaceholder(currentOp.valueType)}
-          value={
-            typeof condition.value === "string" || typeof condition.value === "number"
-              ? String(condition.value)
-              : ""
-          }
-          onChange={(e) => onChange({ value: e.target.value })}
-        />
-      )}
-
-      <Button variant="ghost" size="icon" onClick={onRemove} aria-label="Remove filter">
-        <RiCloseCircleLine className="h-4 w-4" />
-      </Button>
-    </div>
-  );
-});
-
-/** Recursive filter group UI — renders AND/OR toggle + conditions + nested groups. */
-const FilterGroupUI = memo(function FilterGroupUI({
-  group,
-  depth,
-  fieldTypeMap,
-  filterableColumns,
-  onChange,
-  onRemove,
-}: {
-  group: FilterGroup;
-  depth: number;
-  fieldTypeMap: FieldTypeMap;
-  filterableColumns: readonly string[];
-  onChange: (updated: FilterGroup) => void;
-  onRemove?: () => void;
-}) {
-  const toggleConjunction = useCallback(() => {
-    onChange({ ...group, conjunction: group.conjunction === "and" ? "or" : "and" });
-  }, [group, onChange]);
-
-  const addCondition = useCallback(() => {
-    const firstCol = filterableColumns[0];
-    if (!firstCol) return;
-    const info = fieldTypeMap[firstCol];
-    const defaultOp = getDefaultOperator(info?.gqlType, info?.isArray ?? false) ?? "equalTo";
-    onChange({ ...group, children: [...group.children, createCondition(firstCol, defaultOp)] });
-  }, [group, filterableColumns, fieldTypeMap, onChange]);
-
-  const addGroup = useCallback(() => {
-    const childConj = group.conjunction === "and" ? "or" : "and";
-    onChange({ ...group, children: [...group.children, createEmptyGroup(childConj)] });
-  }, [group, onChange]);
-
-  const updateChild = useCallback(
-    (childId: string, updated: FilterNode) => {
-      onChange({ ...group, children: group.children.map((c) => (c.id === childId ? updated : c)) });
-    },
-    [group, onChange],
-  );
-
-  const removeChild = useCallback(
-    (childId: string) => {
-      onChange({ ...group, children: group.children.filter((c) => c.id !== childId) });
-    },
-    [group, onChange],
-  );
-
-  return (
-    <div className={depth > 0 ? "border-muted-foreground/20 ml-1 border-l-2 pl-3" : undefined}>
-      <div className="mb-2 flex items-center gap-1.5">
-        <span className="text-muted-foreground text-xs">Match</span>
-        <Button
-          variant="outline"
-          size="sm"
-          className="h-6 px-2 text-xs font-medium"
-          onClick={toggleConjunction}
-        >
-          {group.conjunction === "and" ? "all" : "any"}
-        </Button>
-        <span className="text-muted-foreground text-xs">of:</span>
-        {onRemove && (
-          <Button
-            variant="ghost"
-            size="icon"
-            className="ml-auto h-6 w-6"
-            onClick={onRemove}
-            aria-label="Remove group"
-          >
-            <RiCloseCircleLine className="h-3.5 w-3.5" />
-          </Button>
-        )}
-      </div>
-
-      <div className="grid gap-2">
-        {group.children.map((child) => {
-          if (child.type === "condition") {
-            return (
-              <FilterConditionRow
-                key={child.id}
-                condition={child}
-                columns={filterableColumns}
-                fieldTypeMap={fieldTypeMap}
-                onChange={(updates) => updateChild(child.id, { ...child, ...updates })}
-                onRemove={() => removeChild(child.id)}
-              />
-            );
-          }
-          return (
-            <FilterGroupUI
-              key={child.id}
-              group={child}
-              depth={depth + 1}
-              fieldTypeMap={fieldTypeMap}
-              filterableColumns={filterableColumns}
-              onChange={(updated) => updateChild(child.id, updated)}
-              onRemove={() => removeChild(child.id)}
-            />
-          );
-        })}
-      </div>
-
-      <div className="mt-2 flex items-center gap-2">
-        <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={addCondition}>
-          <RiAddLine className="mr-1 h-3.5 w-3.5" /> Condition
-        </Button>
-        {depth < MAX_FILTER_DEPTH - 1 && (
-          <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={addGroup}>
-            <RiAddLine className="mr-1 h-3.5 w-3.5" /> Group
-          </Button>
-        )}
-      </div>
-    </div>
-  );
-});
+const DIVIDER = 'mx-1.5 data-[orientation=vertical]:h-4';
 
 export function SheetsControls(props: SheetsControlsProps) {
-  const {
-    openSearch,
-    filterTree,
-    setFilterTree,
-    filtersOpen,
-    setFiltersOpen,
-    clearAllFilters,
-    applyFilters,
-    columnKeys,
-    fieldTypeMap,
-    showSelection,
-    gridSelection,
-    deleteSelected,
-    onAddRow,
-    onExport,
-    canDelete = true,
-    readOnlyReason,
-  } = props;
+	const {
+		view,
+		columnKeys,
+		showSelection,
+		gridSelection,
+		setGridSelection,
+		deleteSelected,
+		onAddRow,
+		onExport,
+		canDelete = true,
+		selectionRemoval,
+		readOnlyReason = null,
+		savedViews,
+		tools,
+		newRecord,
+	} = props;
+	const selectedRowCount = gridSelection?.rows.length ?? 0;
 
-  const filterableColumns = useMemo(() => {
-    if (Object.keys(fieldTypeMap).length === 0) return columnKeys;
-    return columnKeys.filter((k) => {
-      const info = fieldTypeMap[k];
-      if (!info) return false;
-      return isFilterableType(info.gqlType, info.isArray);
-    });
-  }, [columnKeys, fieldTypeMap]);
+	// The shell rebuilds these handlers on every selection change, a cursor move included. Read
+	// through a latch, the memoized action group keeps its props until what it shows changes.
+	const latest = useRef({ setGridSelection, deleteSelected, onAddRow, onExport, openNewRecord: newRecord?.open });
+	useLayoutEffect(() => {
+		latest.current = { setGridSelection, deleteSelected, onAddRow, onExport, openNewRecord: newRecord?.open };
+	});
+	const hasAddRow = Boolean(onAddRow);
+	const hasExport = Boolean(onExport);
+	const hasNewRecord = Boolean(newRecord);
+	const handlers = useMemo(
+		() => ({
+			clearSelection: () => latest.current.setGridSelection(null),
+			deleteSelected: () => latest.current.deleteSelected(),
+			addRow: hasAddRow ? () => latest.current.onAddRow?.() : undefined,
+			exportSelected: hasExport ? () => latest.current.onExport?.() : undefined,
+			openNewRecord: hasNewRecord ? () => latest.current.openNewRecord?.() : undefined,
+		}),
+		[hasAddRow, hasExport, hasNewRecord],
+	);
 
-  // ── Local filter tree (only committed on Apply) ──
-  const [localTree, setLocalTree] = useState<FilterGroup>(filterTree);
-
-  // Sync local state when popover opens
-  useEffect(() => {
-    if (filtersOpen) {
-      setLocalTree(filterTree);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- only trigger on popover open/close
-  }, [filtersOpen]);
-
-  const handleApplyFilters = useCallback(() => {
-    setFilterTree(localTree);
-    applyFilters();
-  }, [localTree, setFilterTree, applyFilters]);
-
-  const handleClearAllFilters = useCallback(() => {
-    setLocalTree(createEmptyGroup());
-    clearAllFilters();
-  }, [clearAllFilters]);
-
-  const conditionCount = useMemo(() => countConditions(localTree), [localTree]);
-
-  const selectedRowCount = useMemo(() => {
-    if (!gridSelection) return 0;
-    return gridSelection.rows.length;
-  }, [gridSelection]);
-
-  return (
-    <>
-      <div
-        data-part-id="sheets-controls"
-        className="flex shrink-0 flex-wrap items-center justify-between gap-4 py-4"
-      >
-        <div className="flex min-w-0 flex-wrap items-center gap-2">
-		  {readOnlyReason && (
-			<span
-				className="border-border bg-muted text-muted-foreground inline-flex h-8 items-center rounded-md border px-2.5 text-xs"
-				role="status"
-				title={readOnlyReason}
-			>
-				Read-only
-			</span>
-		  )}
-          <Button variant="outline" size="sm" onClick={() => openSearch?.()}>
-            <RiSearch2Line className="text-muted-foreground/60 -ms-1.5 size-5" aria-hidden="true" />
-            Search
-          </Button>
-          {onAddRow && (
-            <Button variant="outline" size="sm" aria-label="Add row" onClick={() => onAddRow()}>
-              <RiAddLine className="text-muted-foreground/60 -ms-1.5 size-5" aria-hidden="true" />
-              Add row
-            </Button>
-          )}
-          {onExport && (
-            <Button variant="outline" size="sm" aria-label="Export CSV" onClick={() => onExport()}>
-              <RiDownloadLine
-                className="text-muted-foreground/60 -ms-1.5 size-5"
-                aria-hidden="true"
-              />
-              Export
-            </Button>
-          )}
-        </div>
-
-        <div className="flex items-center gap-2">
-          {showSelection && (
-            <AlertDialog>
-              <AlertDialogTrigger asChild>
-                <Button
-				  variant="destructive-outline"
-				  size="sm"
-				  disabled={!canDelete || selectedRowCount === 0}
-				  title={!canDelete ? readOnlyReason ?? 'Delete is unavailable for this table.' : undefined}
-				>
-                  <RiDeleteBin6Line className="-ms-1.5 size-5" aria-hidden="true" />
-                  Delete
-                  {selectedRowCount > 0 ? ` (${selectedRowCount})` : ""}
-                </Button>
-              </AlertDialogTrigger>
-              <AlertDialogContent>
-                <AlertDialogHeader>
-                  <AlertDialogTitle>Delete rows?</AlertDialogTitle>
-                  <AlertDialogDescription>
-                    This will permanently delete {selectedRowCount}{" "}
-                    {selectedRowCount === 1 ? "row" : "rows"}. This action cannot be undone.
-                  </AlertDialogDescription>
-                </AlertDialogHeader>
-                <AlertDialogFooter>
-                  <AlertDialogCancel>Cancel</AlertDialogCancel>
-                  <AlertDialogAction
-                    className="bg-destructive text-white hover:bg-destructive/90"
-                    onClick={() => deleteSelected()}
-                  >
-                    Delete
-                  </AlertDialogAction>
-                </AlertDialogFooter>
-              </AlertDialogContent>
-            </AlertDialog>
-          )}
-          <Popover open={filtersOpen} onOpenChange={setFiltersOpen}>
-            <PopoverTrigger asChild>
-              <Button variant="outline" size="sm" className="relative">
-                <RiFilter3Line
-                  className="text-muted-foreground/60 -ms-1.5 size-5"
-                  aria-hidden="true"
-                />
-                Filters
-                {countConditions(filterTree) > 0 && (
-                  <span
-                    className="border-border/60 bg-background text-muted-foreground/70 ms-2 -me-1 inline-flex h-5
-											max-h-full items-center rounded border px-1 font-[inherit] text-[0.625rem] font-medium"
-                  >
-                    {countConditions(filterTree)}
-                  </span>
-                )}
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent
-              className="w-auto min-w-[28rem] max-h-[32rem] overflow-auto p-4"
-              align="end"
-            >
-              <div className="grid gap-4">
-                <div className="space-y-2">
-                  <h4 className="leading-none font-medium">Filters</h4>
-                </div>
-                <FilterGroupUI
-                  group={localTree}
-                  depth={0}
-                  fieldTypeMap={fieldTypeMap}
-                  filterableColumns={filterableColumns}
-                  onChange={setLocalTree}
-                />
-                <div className="flex items-center justify-end gap-2 border-t pt-2">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={handleClearAllFilters}
-                    disabled={conditionCount === 0}
-                  >
-                    Clear all
-                  </Button>
-                  <Button size="sm" onClick={handleApplyFilters}>
-                    Apply
-                  </Button>
-                </div>
-              </div>
-            </PopoverContent>
-          </Popover>
-        </div>
-      </div>
-    </>
-  );
+	return (
+		<div
+			data-part-id='sheets-controls'
+			className='@container/sheets-toolbar flex shrink-0 flex-wrap items-center justify-between gap-x-4 gap-y-2 py-4'
+		>
+			<ViewGroup view={view} columnKeys={columnKeys} savedViews={savedViews} readOnlyReason={readOnlyReason} canAdd={hasAddRow} />
+			<ActionGroup
+				selectedRowCount={selectedRowCount}
+				showDelete={showSelection}
+				canDelete={canDelete}
+				removal={selectionRemoval ?? null}
+				readOnlyReason={readOnlyReason}
+				newRecordDisabledReason={newRecord?.disabledReason ?? null}
+				tools={tools}
+				{...handlers}
+			/>
+		</div>
+	);
 }
+
+interface ViewGroupProps {
+	view: SheetsViewBindings;
+	columnKeys: readonly string[];
+	savedViews: SavedViewsBindings | undefined;
+	readOnlyReason: string | null;
+	/** Add row is offered, so the badge says what still works. */
+	canAdd: boolean;
+}
+
+/** What the grid shows: the saved view, Fields, Filters, Sort and search. */
+const ViewGroup = memo(function ViewGroup({ view, columnKeys, savedViews, readOnlyReason, canAdd }: ViewGroupProps) {
+	const conditionCount = useMemo(() => filterConditionsOf(view.state.filters).length, [view.state.filters]);
+	const waiting = conditionCount - view.appliedCount;
+	const sortCount = view.state.sort.length;
+
+	return (
+		<div role='group' aria-label='View' className='flex min-w-0 flex-wrap items-center gap-1'>
+			{savedViews && <ViewSwitcher views={savedViews} />}
+			{readOnlyReason && <AccessBadge reason={readOnlyReason} canAdd={canAdd} />}
+			{savedViews && <Separator orientation='vertical' className={DIVIDER} />}
+
+			<FieldsControl layout={view.layout} columnLabel={view.columnLabel} ready={view.model !== null} />
+
+			<Popover open={view.filtersOpen} onOpenChange={view.setFiltersOpen}>
+				<PopoverTrigger asChild>
+					<ViewToggleButton
+						icon={RiFilter3Line}
+						label='Filters'
+						count={view.appliedCount}
+						aria-label={view.appliedCount > 0 ? `Filters (${view.appliedCount} applied)` : 'Filters'}
+					/>
+				</PopoverTrigger>
+				<PopoverContent className={cn('max-h-[32rem] w-auto min-w-[28rem] overflow-auto', TOOLBAR_POPOVER)} align='start'>
+					<div className='grid gap-4'>
+						<h4 className='leading-none font-medium'>Filters</h4>
+						<FilterBuilder
+							model={view.model}
+							filters={view.state.filters}
+							onChange={view.setFilters}
+							conditions={view.conditions}
+							columnLabel={view.columnLabel}
+							relatedModel={view.relatedModel}
+						/>
+						<div className='flex items-center justify-between gap-2 border-t pt-2'>
+							<p className='text-muted-foreground text-xs' aria-live='polite'>
+								{waiting > 0
+									? `${waiting} ${waiting === 1 ? 'condition is' : 'conditions are'} not applied until complete.`
+									: ''}
+							</p>
+							<Button variant='ghost' size='sm' onClick={view.clearFilters} disabled={conditionCount === 0}>
+								Clear all
+							</Button>
+						</div>
+					</div>
+				</PopoverContent>
+			</Popover>
+
+			<Popover open={view.sortOpen} onOpenChange={view.setSortOpen}>
+				<PopoverTrigger asChild>
+					<ViewToggleButton
+						icon={RiArrowUpDownLine}
+						label='Sort'
+						count={sortCount}
+						aria-label={sortCount > 0 ? `Sort (${sortCount} keys)` : 'Sort'}
+					/>
+				</PopoverTrigger>
+				<PopoverContent className={cn('w-auto min-w-[24rem]', TOOLBAR_POPOVER)} align='start'>
+					<div className='grid gap-3'>
+						<h4 className='leading-none font-medium'>Sort</h4>
+						<SortControl
+							model={view.model}
+							sort={view.state.sort}
+							onChange={view.setSort}
+							columnKeys={columnKeys}
+							columnLabel={view.columnLabel}
+						/>
+					</div>
+				</PopoverContent>
+			</Popover>
+
+			<div className='ms-2'>
+				<SearchBox
+					plan={view.searchPlan}
+					value={view.state.search}
+					onChange={view.setSearch}
+					columnLabel={view.columnLabel}
+					inputRef={view.searchInputRef}
+					ready={view.model !== null}
+				/>
+			</div>
+		</div>
+	);
+});
+
+/**
+ * Why rows cannot be changed. A table that still takes new rows reads "Add only", so the
+ * badge does not contradict Add row; the full reason is its title.
+ */
+function AccessBadge({ reason, canAdd }: { reason: string; canAdd: boolean }) {
+	return (
+		<span
+			className='border-border bg-muted text-muted-foreground ms-1 inline-flex h-6 items-center gap-1 rounded-md border px-2 text-xs'
+			role='status'
+			title={canAdd ? `${reason} New rows can still be added.` : reason}
+		>
+			<RiLockLine className='size-3.5' aria-hidden='true' />
+			{canAdd ? 'Add only' : 'Read-only'}
+		</span>
+	);
+}
+
+interface ActionGroupProps {
+	selectedRowCount: number;
+	/** Delete is offered with the row checkboxes (`showSelection`). */
+	showDelete: boolean;
+	canDelete: boolean;
+	removal: RowRemoval | null;
+	readOnlyReason: string | null;
+	newRecordDisabledReason: string | null;
+	tools: React.ReactNode;
+	clearSelection: () => void;
+	deleteSelected: () => void;
+	addRow: (() => void) | undefined;
+	exportSelected: (() => void) | undefined;
+	openNewRecord: (() => void) | undefined;
+}
+
+/** What acts on rows: the data tools and New record, or the selected rows' own actions; then Add row. */
+const ActionGroup = memo(function ActionGroup({
+	selectedRowCount,
+	showDelete,
+	canDelete,
+	removal,
+	readOnlyReason,
+	newRecordDisabledReason,
+	tools,
+	clearSelection,
+	deleteSelected,
+	addRow,
+	exportSelected,
+	openNewRecord,
+}: ActionGroupProps) {
+	const selecting = selectedRowCount > 0;
+	const reduceMotion = useReducedMotion();
+	const hidden = reduceMotion ? { opacity: 0 } : { opacity: 0, scale: 0.96, filter: 'blur(4px)' };
+	const transition = reduceMotion ? { duration: 0 } : ({ type: 'spring', duration: 0.3, bounce: 0 } as const);
+	// What sits before Add row: the selection's actions while rows are selected, else the tools
+	// and New record (the two create actions sit together, after the divider).
+	const context = selecting ? (
+		<>
+			<SelectionActions
+				count={selectedRowCount}
+				canDelete={canDelete}
+				removal={removal}
+				readOnlyReason={readOnlyReason}
+				onClear={clearSelection}
+				onDelete={showDelete ? deleteSelected : undefined}
+				onExport={exportSelected}
+			/>
+			{addRow && <Separator orientation='vertical' className={DIVIDER} />}
+		</>
+	) : tools || openNewRecord ? (
+		<>
+			{tools}
+			{tools && (openNewRecord || addRow) && <Separator orientation='vertical' className={DIVIDER} />}
+			{openNewRecord && (
+				// The wrapper carries the reason: a disabled button takes no pointer events.
+				<span className='inline-flex' title={newRecordDisabledReason ?? 'Fill in a new record in a form.'}>
+					<Button
+						variant='outline'
+						size='sm'
+						aria-label='New record'
+						aria-description={newRecordDisabledReason ?? undefined}
+						disabled={newRecordDisabledReason !== null}
+						onClick={openNewRecord}
+					>
+						<RiFileAddLine className='size-4' aria-hidden='true' />
+						<ToolbarLabel fold='create'>New record</ToolbarLabel>
+					</Button>
+				</span>
+			)}
+		</>
+	) : null;
+	return (
+		// `ms-auto` keeps the group, and Add row, at the right edge when a narrow toolbar wraps it.
+		<div role='group' aria-label='Actions' className='ms-auto flex items-center gap-1'>
+			<AnimatePresence initial={false} mode='popLayout'>
+				{context && (
+					<motion.div
+						key={selecting ? 'selection' : 'tools'}
+						className='flex items-center gap-1'
+						initial={hidden}
+						animate={{ opacity: 1, scale: 1, filter: 'blur(0px)' }}
+						exit={hidden}
+						transition={transition}
+					>
+						{context}
+					</motion.div>
+				)}
+			</AnimatePresence>
+			{addRow && (
+				<Button size='sm' aria-label='Add row' onClick={addRow}>
+					<RiAddLine className='size-4' aria-hidden='true' />
+					<ToolbarLabel fold='primary'>Add row</ToolbarLabel>
+				</Button>
+			)}
+		</div>
+	);
+});
+
+interface SelectionActionsProps {
+	count: number;
+	canDelete: boolean;
+	removal: RowRemoval | null;
+	readOnlyReason: string | null;
+	onClear: () => void;
+	/** Omitted: no Delete (the grid shows no row checkboxes). */
+	onDelete: (() => void) | undefined;
+	onExport: (() => void) | undefined;
+}
+
+/** The selected rows' own actions, shown only while rows are selected. */
+function SelectionActions({ count, canDelete, removal, readOnlyReason, onClear, onDelete, onExport }: SelectionActionsProps) {
+	const rows = `${count.toLocaleString()} ${count === 1 ? 'row' : 'rows'}`;
+	// With the plan, a new row is discarded even where saved rows cannot be deleted.
+	const blockedReason = removal ? removal.blockedReason : canDelete ? null : readOnlyReason ?? 'Delete is unavailable for this table.';
+	const confirm = removal
+		? rowRemovalConfirm(removal)
+		: { title: `Delete ${rows}?`, description: `This will permanently delete ${rows}. This cannot be undone.`, action: 'Delete' };
+	return (
+		<div
+			role='group'
+			aria-label='Selected rows'
+			data-part-id='sheets-selection-actions'
+			// The toolbar's 32px line: 28px buttons in 2px padding. Concentric: 8px corners in a 10px group.
+			className='bg-primary/10 flex h-8 items-center gap-0.5 rounded-lg p-0.5 ps-2.5'
+		>
+			<span className='text-foreground me-1 text-sm font-medium tabular-nums' aria-live='polite'>
+				{count.toLocaleString()} selected
+			</span>
+			{onExport && (
+				<Button variant='ghost' size='icon-xs' aria-label='Export selected rows' title='Export selected rows as CSV' onClick={onExport}>
+					<RiDownloadLine className='size-4' aria-hidden='true' />
+				</Button>
+			)}
+			{onDelete && (
+				<AlertDialog>
+					{/* The wrapper carries the reason: a disabled button takes no pointer events. */}
+					<span className='inline-flex' title={blockedReason ?? undefined}>
+						<AlertDialogTrigger asChild>
+							<Button
+								variant='ghost'
+								size='xs'
+								aria-label='Delete selected rows'
+								aria-description={blockedReason ?? undefined}
+								disabled={blockedReason !== null}
+								className='text-destructive hover:bg-destructive/10 hover:text-destructive px-2 text-sm'
+							>
+								<RiDeleteBin6Line className='size-4' aria-hidden='true' />
+								<ToolbarLabel fold='view'>Delete</ToolbarLabel>
+							</Button>
+						</AlertDialogTrigger>
+					</span>
+					<AlertDialogContent>
+						<AlertDialogHeader>
+							<AlertDialogTitle>{confirm.title}</AlertDialogTitle>
+							<AlertDialogDescription>{confirm.description}</AlertDialogDescription>
+						</AlertDialogHeader>
+						<AlertDialogFooter>
+							<AlertDialogCancel>Cancel</AlertDialogCancel>
+							<AlertDialogAction className='bg-destructive hover:bg-destructive/90 text-white' onClick={onDelete}>
+								{confirm.action}
+							</AlertDialogAction>
+						</AlertDialogFooter>
+					</AlertDialogContent>
+				</AlertDialog>
+			)}
+			<Button variant='ghost' size='icon-xs' aria-label='Clear selection' title='Clear selection' onClick={onClear}>
+				<RiCloseLine className='size-4' aria-hidden='true' />
+			</Button>
+		</div>
+	);
+}
+

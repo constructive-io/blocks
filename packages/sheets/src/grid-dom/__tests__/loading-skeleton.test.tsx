@@ -21,6 +21,7 @@ import type { CellTypeRegistry } from '../../cell-types/cell-type-registry';
 import type { FieldMetadata } from '../../cell-types/cell-type-resolver';
 import type { RelationInfo } from '../../store/relation-info-slice';
 import type { SheetsRow } from '../../grid/row-model';
+import type { RenderCellContext } from '../../table/grid-viewport';
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
@@ -38,13 +39,18 @@ const RELATION_INFO = new Map<string, RelationInfo>();
 // Index 0 is a loaded row; index 1 is an UNLOADED slot (null — the proxy's lazy backing).
 const DATA = [{ id: 'r1', name: 'Alpha' }, null] as unknown as SheetsRow[];
 
-// Minimal v9-Cell stub carrying ONLY the fields SheetsCellHost reads
-// (row.index/id/original, column.id, getValue) — points at the UNLOADED slot (index 1).
-const UNLOADED_CELL = {
-	row: { index: 1, id: '1', original: null },
-	column: { id: 'name' },
-	getValue: () => undefined,
-} as never;
+// The render context of the UNLOADED slot (index 1): its row reads back null.
+const UNLOADED_CELL: RenderCellContext = {
+	rowIndex: 1,
+	columnIndex: 0,
+	columnId: 'name',
+	row: null,
+	rowId: '1',
+	isStickyColumn: false,
+	isActive: false,
+	isSelected: false,
+	isEditing: false,
+};
 
 function HostHarness() {
 	const { getSheetsCell } = useSheetsContent({
@@ -57,8 +63,8 @@ function HostHarness() {
 		meta: undefined,
 	});
 	// Render the UNLOADED slot (index 1) through the host's kind→view map: the host derives
-	// the resolution via getSheetsCellContent(cell.row.index, cell.column.id) → kind 'loading'.
-	return <SheetsCellHost cell={UNLOADED_CELL} ctx={UNLOADED_CELL} getSheetsCellContent={getSheetsCell} />;
+	// the resolution via getSheetsCellContent(ctx.rowIndex, ctx.columnId) → kind 'loading'.
+	return <SheetsCellHost ctx={UNLOADED_CELL} getSheetsCellContent={getSheetsCell} />;
 }
 
 describe('DOM loading-skeleton resolution (unloaded infinite row → kind "loading" → LoadingCellView)', () => {

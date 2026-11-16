@@ -1,10 +1,11 @@
 import { describe, expect, it, vi, afterEach } from 'vitest';
 
 import type { SheetsConfig } from './sheets-context';
-import { createSheetsExecute, createSheetsUpload } from './sheets-execute';
+import { createSheetsExecute, createSheetsUpload, partialResultOf, responseErrorsOf } from './sheets-execute';
 import {
 	resolveUploadCapability,
 	resolveDownloadUrl,
+	unfinishedUploadOf,
 	__resetUploadCapabilityCache,
 } from './sheets-upload-presigned';
 import {
@@ -93,18 +94,93 @@ describe('createSheetsExecute auth callbacks', () => {
 		expect(onAuthError).toHaveBeenCalledTimes(1);
 	});
 
-	it('calls onAuthError for GraphQL unauthorized message without code', async () => {
+	it('treats a rejected token (BAD_TOKEN_DEFINITION) as an ended session, by its code only', async () => {
 		const onAuthError = vi.fn();
 		vi.spyOn(globalThis, 'fetch').mockResolvedValue(
-			createJsonResponse({
-				errors: [{ message: 'Unauthorized access' }],
-			}),
+			createJsonResponse({ errors: [{ message: 'Invalid token', extensions: { code: 'BAD_TOKEN_DEFINITION' } }] }),
 		);
 
 		const execute = createSheetsExecute(createEmbeddedConfig(onAuthError), () => 'token-123');
 
 		await expect(execute('{ viewer { id } }')).rejects.toMatchObject({ code: 'UNAUTHENTICATED' });
 		expect(onAuthError).toHaveBeenCalledTimes(1);
+		// The same word in the message text is not a code.
+		vi.mocked(globalThis.fetch).mockResolvedValue(createJsonResponse({ errors: [{ message: 'BAD_TOKEN_DEFINITION', extensions: { code: 'FORBIDDEN' } }] }));
+		await expect(execute('{ viewer { id } }')).rejects.toMatchObject({ code: 'FORBIDDEN' });
+		expect(onAuthError).toHaveBeenCalledTimes(1);
+	});
+
+	it('keeps the session when an error only mentions authorization in its text', async () => {
+		const onAuthError = vi.fn();
+		vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+			createJsonResponse({
+				errors: [{ message: 'Unauthorized access to the project table', extensions: { code: 'FORBIDDEN' } }],
+			}),
+		);
+
+		const execute = createSheetsExecute(createEmbeddedConfig(onAuthError), () => 'token-123');
+
+		await expect(execute('{ viewer { id } }')).rejects.toMatchObject({ code: 'FORBIDDEN' });
+		vi.mocked(globalThis.fetch).mockResolvedValue(createJsonResponse({ errors: [{ message: 'Authentication of the webhook failed' }] }));
+		await expect(execute('{ viewer { id } }')).rejects.not.toMatchObject({ code: 'UNAUTHENTICATED' });
+		expect(onAuthError).not.toHaveBeenCalled();
+	});
+
+	it('keeps the data of a response with field errors, but never for a lost session', async () => {
+		const onAuthError = vi.fn();
+		const data = { specialValues: { nodes: [{ id: 1, realValue: null }] } };
+		const cellError = { message: 'Float cannot represent non numeric value: NaN', path: ['specialValues', 'nodes', 0, 'realValue'] };
+		vi.spyOn(globalThis, 'fetch')
+			.mockResolvedValueOnce(createJsonResponse({ data, errors: [cellError] }))
+			.mockResolvedValueOnce(createJsonResponse({
+				data,
+				errors: [cellError, { message: 'Session expired', extensions: { code: 'UNAUTHENTICATED' } }],
+			}));
+
+		const execute = createSheetsExecute(createEmbeddedConfig(onAuthError), () => 'token-123');
+
+		const partial = await execute('{ specialValues { nodes { id realValue } } }').catch((error: unknown) => error);
+		expect(partialResultOf(partial)).toEqual({ data, errors: [cellError] });
+		const expired = await execute('{ specialValues { nodes { id realValue } } }').catch((error: unknown) => error);
+		expect(expired).toMatchObject({ code: 'UNAUTHENTICATED' });
+		expect(partialResultOf(expired)).toBeNull();
+		expect(responseErrorsOf(expired)).toHaveLength(2);
+		expect(onAuthError).toHaveBeenCalledTimes(1);
+	});
+
+	it('keeps every error of a failed write, not only the first', async () => {
+		const errors = [
+			{ message: 'title is required', path: ['createTask'], extensions: { code: 'NOT_NULL_VIOLATION' } },
+			{ message: 'status is not a choice', path: ['createTask'] },
+		];
+		vi.spyOn(globalThis, 'fetch').mockResolvedValue(createJsonResponse({ data: null, errors }));
+
+		const execute = createSheetsExecute(createEmbeddedConfig(), () => 'token-123');
+		const failure = await execute('mutation { createTask(input: {}) { clientMutationId } }').catch((error: unknown) => error);
+
+		expect(failure).toMatchObject({ code: 'NOT_NULL_VIOLATION' });
+		expect(responseErrorsOf(failure)).toEqual(errors);
+		expect(partialResultOf(failure)).toBeNull();
+	});
+
+	it('keeps the suspension reason, from an error result and from a 403 refusal', async () => {
+		const onAuthError = vi.fn();
+		const suspended = {
+			errors: [{ message: 'This database is paused', extensions: { code: 'ACCESS_SUSPENDED', context: { reason: 'billing' } } }],
+		};
+		vi.spyOn(globalThis, 'fetch')
+			.mockResolvedValueOnce(createJsonResponse(suspended))
+			.mockResolvedValueOnce(new Response(JSON.stringify(suspended), { status: 403, statusText: 'Forbidden' }));
+
+		const execute = createSheetsExecute(createEmbeddedConfig(onAuthError), () => 'token-123');
+
+		for (let attempt = 0; attempt < 2; attempt += 1) {
+			await expect(execute('{ viewer { id } }')).rejects.toMatchObject({
+				code: 'ACCESS_SUSPENDED',
+				context: expect.objectContaining({ reason: 'billing' }),
+			});
+		}
+		expect(onAuthError).not.toHaveBeenCalled();
 	});
 });
 
@@ -354,9 +430,10 @@ describe('createSheetsUpload — presigned seam', () => {
 
 		// Regression guard: a presignedPut that dropped `body: buffer` would still
 		// pass the url/header/method assertions — so assert the bytes themselves.
-		expect(putBody).toBeInstanceOf(ArrayBuffer);
-		expect((putBody as ArrayBuffer).byteLength).toBe(file.size);
-		expect(new TextDecoder().decode(putBody as ArrayBuffer)).toBe('hello world');
+		// The PUT sends the File itself, so the browser streams it and no second copy is kept.
+		expect(putBody).toBeInstanceOf(Blob);
+		expect((putBody as Blob).size).toBe(file.size);
+		expect(await (putBody as Blob).text()).toBe('hello world');
 	});
 
 	it('hashes the real file bytes (un-stubbed): contentHash = canonical SHA-256', async () => {
@@ -381,7 +458,7 @@ describe('createSheetsUpload — presigned seam', () => {
 		expect(sentHash).toBe('2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824');
 	});
 
-	it('PUT network failure (fetch rejects) ⇒ a STORAGE_UPLOAD_BLOCKED error naming CORS', async () => {
+	it('PUT network failure (fetch rejects) ⇒ a STORAGE_UPLOAD_BLOCKED error that says how to fix it', async () => {
 		stubDigest();
 		vi.spyOn(globalThis, 'fetch').mockRejectedValue(new TypeError('Failed to fetch'));
 
@@ -395,7 +472,7 @@ describe('createSheetsUpload — presigned seam', () => {
 
 		await expect(upload(createTestFile())).rejects.toMatchObject({
 			code: 'STORAGE_UPLOAD_BLOCKED',
-			message: expect.stringContaining('allowed origins (CORS)'),
+			message: expect.stringContaining('allow this site in the storage settings'),
 		});
 	});
 
@@ -416,7 +493,10 @@ describe('createSheetsUpload — presigned seam', () => {
 		const config: SheetsConfig = { endpoint: 'https://cleanup.example.com/graphql', auth: { mode: 'standalone' }, execute };
 		const upload = createSheetsUpload(config, () => null);
 
-		await expect(upload(createTestFile())).rejects.toThrow('Upload failed: 403 Forbidden');
+		const error = await upload(createTestFile()).catch((reason: unknown) => reason);
+		expect(error).toMatchObject({ message: expect.stringContaining('Upload failed: 403 Forbidden') });
+		// The row is left for the server to expire; the error names it for a host with its own cleanup.
+		expect(unfinishedUploadOf(error)).toEqual({ fileId: 'file-orphan', filesType: 'AppFile', filesTableKey: null });
 		expect(deleted).toEqual([]);
 	});
 
@@ -432,7 +512,9 @@ describe('createSheetsUpload — presigned seam', () => {
 		const config: SheetsConfig = { endpoint: 'https://badpayload.example.com/graphql', auth: { mode: 'standalone' }, execute };
 		const upload = createSheetsUpload(config, () => null);
 
-		await expect(upload(createTestFile())).rejects.toThrow('no uploadUrl');
+		const error = await upload(createTestFile()).catch((reason: unknown) => reason);
+		expect(error).toMatchObject({ message: expect.stringContaining('no uploadUrl') });
+		expect(unfinishedUploadOf(error)).toMatchObject({ fileId: 'f' });
 		expect(fetchSpy).not.toHaveBeenCalled();
 	});
 

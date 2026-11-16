@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
+import type { RelationModel } from '@constructive-io/data';
+
 import type { CellCreationMetadata } from '../../grid/grid-cell-types';
 import { createSheetsCell } from '../create-sheets-cell';
 
@@ -36,10 +38,28 @@ describe('createSheetsCell', () => {
 	});
 
 	it('does not expose a draft placeholder as a relation label', () => {
+		// The related record is identified by the related table's primary key from the table model.
+		const relation: RelationModel = {
+			kind: 'belongsTo',
+			fieldName: 'author',
+			targetKey: 'app.User',
+			targetName: 'User',
+			shape: 'object',
+			readable: true,
+			keys: [{ local: 'authorId', remote: 'id' }],
+			junction: null,
+			target: { primaryKey: ['id'], labelFields: ['displayName'] },
+			pageArg: null,
+			hasTotalCount: false,
+			filter: null,
+			editable: true,
+			unlinkable: true,
+			reason: null,
+		};
 		expect(
 			createSheetsCell(
 				{ id: 'draft:pending', displayName: 'Unsaved record' },
-				metadata('relation', { relationInfo: { kind: 'belongsTo', displayCandidates: ['displayName'] } }),
+				metadata('relation', { relation, relationInfo: { kind: 'belongsTo', displayCandidates: ['displayName'] } }),
 			),
 		).toMatchObject({ kind: 'relation', data: '', displayData: '' });
 	});

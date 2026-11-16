@@ -1,82 +1,123 @@
-// Showcase/All Cell Types — the flagship "covers all use cases" story.
+// Showcase/All Cell Types — every column kind of a real tenant schema.
 //
-// Renders the PUBLIC <Sheets tableName="demo" __impl="dom"> (the ported TanStack DOM grid)
-// through the withSheets decorator, which wires a sized <SheetsProvider> onto an in-memory
-// mock adapter. NO network: createMockAdapter (built inside withSheets) replaces the
-// GraphQL/fetch layer; useSheets runs unchanged on it.
+// The grid runs on the captured torture schema (packages/data/src/__tests__/fixtures/torture):
+// its real `_meta`, its real introspection and its real rows, served by `createModelBackend`
+// (graphql-js against the captured schema, writes applied in memory). Every cell is routed
+// from the table model (`ColumnModel`), exactly as against a live server: exact whole numbers
+// and decimals, enum labels, three-state booleans, ranges, records, geometry, files, read-only
+// columns with their reasons, and values the server cannot send. No network.
 //
-// The fixture (buildAllCellTypesTable) emits ONE column per forceable CellType, so every
-// column paints a different cell view — text, numeric, date/time, boolean, structured JSON,
-// typed arrays, geometry, network, media, color/rating/tags, relation, … (~46 views). Cell
-// type is resolved from SCHEMA META (field.type.pgAlias), never the value.
-//
-// Paginated mode (infiniteScroll omitted) over makeRows(40) — deterministic via the seeded
-// PRNG, so the showcase is visually stable. Dark mode is covered by the global toolbar theme
-// decorator; an explicit `DarkMode` variant pins globals.theme='dark' for a one-click view.
+// Pick another table or the older server (`baseline`, before the `_meta` additions) from the
+// controls. Edits, pastes and drafts write to the in-memory rows of the story.
+import { useMemo } from 'react';
 import type { Meta, StoryObj } from '@storybook/react-vite';
+import { QueryClient } from '@tanstack/react-query';
 
-import { buildAllCellTypesTable, makeRows } from './_support/fixtures';
-import { createMockAdapter } from './_support/mock-adapter';
-import { withSheets } from './_support/decorators';
+import { createTortureBackend, type TortureBackend, type TortureServer } from '../adapter/__tests__/torture-backend';
+import type { SheetsConfig } from '../context/sheets-context';
+import { SheetsProvider } from '../context/sheets-provider';
 import { Sheets } from '../grid/sheets';
 
-// Build the table + dataset ONCE so every variant shares the same deterministic fixture and the
-// decorator's adapter resolves the `tableName="demo"` prop (table.name === 'demo').
-const table = buildAllCellTypesTable();
-const rows = makeRows(table, 40);
-const adapter = createMockAdapter({ table, rows });
+const TABLES = [
+	'ScalarKind',
+	'ArrayKind',
+	'StructuredKind',
+	'DomainKind',
+	'GeneratedValue',
+	'SpecialValue',
+	'Task',
+	'Country',
+	'Project',
+	'WarehouseItem',
+	'AuditEvent',
+	'OpenTask',
+] as const;
 
-const meta: Meta<typeof Sheets> = {
+type TortureTable = (typeof TABLES)[number];
+
+interface TortureGridProps {
+	table: TortureTable;
+	server: TortureServer;
+	/** Change the in-memory rows before the grid loads (for example, a value the server cannot send). */
+	prepare?: (backend: TortureBackend) => void;
+}
+
+function TortureGrid({ table, server, prepare }: TortureGridProps) {
+	const config = useMemo<SheetsConfig>(() => {
+		const backend = createTortureBackend({ server });
+		prepare?.(backend);
+		return {
+			endpoint: 'mock://torture',
+			auth: { mode: 'embedded', getToken: () => 'story' },
+			execute: backend.execute,
+			queryClient: new QueryClient({
+				defaultOptions: { queries: { retry: false, gcTime: 0, staleTime: 0 }, mutations: { retry: false } },
+			}),
+		};
+	}, [server, table, prepare]);
+
+	return (
+		<div style={{ height: 640, width: '100%', display: 'flex', flexDirection: 'column', minHeight: 0 }}>
+			{/* Remount per table and server so each starts from the captured rows. */}
+			<SheetsProvider key={`${server}:${table}`} config={config}>
+				<Sheets tableName={table} __impl='dom' showSelection showPagination pageSize={25} />
+			</SheetsProvider>
+		</div>
+	);
+}
+
+const meta: Meta<typeof TortureGrid> = {
 	title: 'Showcase/All Cell Types',
-	component: Sheets,
+	component: TortureGrid,
 	parameters: { layout: 'fullscreen' },
-	decorators: [withSheets(adapter, undefined, 640)]
+	args: { table: 'ScalarKind', server: 'v2' },
+	argTypes: {
+		table: { control: 'select', options: TABLES },
+		server: { control: 'inline-radio', options: ['v2', 'baseline'] },
+		prepare: { table: { disable: true } },
+	},
 };
 
 export default meta;
 
-type Story = StoryObj<typeof Sheets>;
+type Story = StoryObj<typeof TortureGrid>;
 
-/**
- * Default showcase: 40 rows, every column a distinct cell view, paginated (no infiniteScroll).
- * Selection + pagination chrome on so the full default toolbar is visible.
- */
-export const AllCellTypes: Story = {
-	render: () => <Sheets tableName='demo' __impl='dom' showSelection showPagination pageSize={25} />
+/** One column per plain type: text, exact numbers, booleans, dates and times, durations, JSON, bytes, addresses, bits, paths. */
+export const AllCellTypes: Story = {};
+
+/** Lists of every element kind: commas and quotes inside items, empty lists, empty items, enum lists. */
+export const Lists: Story = { args: { table: 'ArrayKind' } };
+
+/** Records, ranges (closed, open-ended, any value), points, geometry and vectors. */
+export const StructuredValues: Story = { args: { table: 'StructuredKind' } };
+
+/** Email, URL, host and origin text, and image, upload and attachment file columns. */
+export const DomainValues: Story = { args: { table: 'DomainKind' } };
+
+/** Computed, insert-only and update-only columns: each read-only cell says why. */
+export const WriteRules: Story = { args: { table: 'GeneratedValue' } };
+
+/** Choices (enum and allowed values) and links to other tables. */
+export const ChoicesAndLinks: Story = { args: { table: 'Task' } };
+
+/** A key with no default: a new row asks for the key and sends it. */
+export const KeyWithoutDefault: Story = { args: { table: 'Country' } };
+
+/** Decimal NaN and Infinity show as they are; a float the server cannot send shows a notice. */
+export const ValuesTheServerCannotSend: Story = {
+	args: {
+		table: 'SpecialValue',
+		prepare: (backend) => {
+			const row = backend.rows.SpecialValue?.[2];
+			if (row) row.realValue = Number.NaN;
+		},
+	},
 };
 
-/**
- * Same fixture rendered in dark mode (pins the global theme so no toolbar toggle is needed).
- * Verifies design-token dark variant flows through the grid + every cell view.
- */
+/** The same columns on an older server, before the `_meta` additions. */
+export const OlderServer: Story = { args: { server: 'baseline' } };
+
+/** Dark mode across every cell view. */
 export const DarkMode: Story = {
 	globals: { theme: 'dark' },
-	parameters: { backgrounds: { value: 'dark' } },
-	render: () => <Sheets tableName='demo' __impl='dom' showSelection showPagination pageSize={25} />
-};
-
-/**
- * Selection-focused variant: row selection enabled, an onRowSelect log wired so the selection
- * seam is exercised. Pagination chrome hidden to keep the grid the focus.
- */
-export const WithRowSelection: Story = {
-	render: () => (
-		<Sheets
-			tableName='demo'
-			__impl='dom'
-			showSelection
-			showPagination={false}
-			pageSize={40}
-			// eslint-disable-next-line no-console
-			onRowSelect={(selected) => console.log('selected rows:', selected.length)}
-		/>
-	)
-};
-
-/**
- * Compact page: small pageSize so the pagination controls page across the 40-row dataset,
- * proving the paginated (limit/offset) path of the mock adapter end-to-end.
- */
-export const Paginated: Story = {
-	render: () => <Sheets tableName='demo' __impl='dom' showSelection showPagination pageSize={10} />
 };

@@ -1,24 +1,31 @@
-// Native SheetsCell factory for the `relation` family — the port of v1's glide
-// `RelationCellFactory` (grid/cell-content-factory.ts). Owns BOTH single relations
-// (belongsTo/hasOne — glide emitted a Text cell) and list relations
-// (hasMany/manyToMany — glide emitted a Bubble cell); both collapse to the single
-// neutral kind `relation`. All label-derivation + chip-overflow domain logic is
-// copied verbatim from v1 (no import from cell-content-factory.ts — that module
-// stays glide-only and is deleted at cutover).
+// Native SheetsCell factory for the `relation` family. Single relations
+// (belongsTo/hasOne) render one label; list relations (hasMany/manyToMany)
+// render chips and a "+N more" overflow counted from the connection total
+// when the model says the relation reports one.
 //
-// Single relations use their label for data and display. List relations keep
-// their final chips in data while the relation view owns their visual display.
+// Labels come from the related table's display rule
+// (`RelationModel.target.labelFields`, host override included); a record
+// whose label fields are empty shows its key value. No field-name lists.
+//
+// Cell payload:
+//   - single: data = displayData = the (truncated) label; meta.relationTitle = full label.
+//   - list:   data = string[] chips (truncated), plus a trailing "+N" when more exist;
+//             meta.relationTitles = full chip labels, meta.relationCount = every linked record.
+//   - both:   meta.relationTarget = { tableKey, tableName } of the related table (or null) and
+//             meta.relationLinks = one { key, label } per shown record, `key` being its
+//             primary-key values (null when it cannot be identified), so the view can open it.
+
+import type { RelationModel, RelationTargetModel } from '@constructive-io/data';
 
 import type { CellCreationMetadata } from '../../grid/grid-cell-types';
-import { compactJsonPreview } from '../../grid/sheets.formatters';
+import { fieldValues, linkFields } from '../../relations/relation-keys';
+import { targetRecordLabel } from '../../relations/relation-label';
 import type { SheetsCell } from '../sheets-cell';
 import type { SheetsCellFactory } from './types';
 
-// ─── Domain constants (copied verbatim from v1 RelationCellFactory) ──────────
 const DEFAULT_MAX_RELATION_CHIPS = 3;
 const DEFAULT_RELATION_LABEL_MAX_LEN = 24;
-
-const RELATION_ID_KEYS = new Set(['id', 'uuid', 'rowId', 'nodeId']);
+const DRAFT_PREFIX = 'draft:';
 
 function truncateLabel(s: string, max: number): string {
 	if (s.length <= max) return s;
@@ -26,91 +33,52 @@ function truncateLabel(s: string, max: number): string {
 	return s.slice(0, Math.max(0, max - 1)) + '…';
 }
 
-// Copied verbatim from v1 `RelationCellFactory.deriveRelationLabel`, lifted from a
-// private method to a pure function (metadata threaded as an explicit argument).
-function deriveRelationLabel(relationValue: any, metadata: CellCreationMetadata, maxLength: number): string {
-	if (relationValue == null) return '';
+function isDraftKey(value: unknown): boolean {
+	return typeof value === 'string' && value.startsWith(DRAFT_PREFIX);
+}
 
-	// Suppress draft placeholder IDs from being displayed as relation labels
-	if (typeof relationValue === 'string' && relationValue.startsWith('draft:')) return '';
-	if (
-		typeof relationValue === 'object' &&
-		!Array.isArray(relationValue) &&
-		typeof (relationValue as Record<string, unknown>).id === 'string' &&
-		((relationValue as Record<string, unknown>).id as string).startsWith('draft:')
-	)
-		return '';
+interface LabelRule {
+	target: RelationTargetModel;
+	fallbackFields: readonly string[];
+}
 
-	const ensureString = (val: unknown): string => {
-		if (val == null) return '';
-		const str = String(val).trim();
-		if (!str || str.toLowerCase() === 'null') return '';
-		return str;
-	};
+/** A shown linked record the view can open: its primary-key values and full label. */
+export interface RelationCellLink {
+	key: Readonly<Record<string, unknown>> | null;
+	label: string;
+}
 
-	if (typeof relationValue === 'string' || typeof relationValue === 'number') {
-		return truncateLabel(ensureString(relationValue), maxLength);
+function linkOf(entry: unknown, label: string, rule: LabelRule): RelationCellLink {
+	const record = entry && typeof entry === 'object' && !Array.isArray(entry) ? (entry as Record<string, unknown>) : null;
+	return { key: fieldValues(record, rule.target.primaryKey), label };
+}
+
+function targetOf(metadata: CellCreationMetadata): { tableKey: string; tableName: string } | null {
+	const relation = metadata.relation ?? metadata.relationInfo?.relation ?? null;
+	return relation?.targetKey ? { tableKey: relation.targetKey, tableName: relation.targetName } : null;
+}
+
+function labelRuleOf(metadata: CellCreationMetadata): LabelRule {
+	const relation: RelationModel | null = metadata.relation ?? metadata.relationInfo?.relation ?? null;
+	if (relation) return { target: relation.target, fallbackFields: linkFields(relation) };
+	return { target: { primaryKey: [], labelFields: metadata.relationInfo?.displayCandidates ?? [] }, fallbackFields: [] };
+}
+
+/** The full label of one related record; '' for nothing or for a draft placeholder. */
+function recordLabel(entry: unknown, rule: LabelRule): string {
+	if (entry === null || entry === undefined) return '';
+	if (typeof entry === 'string' || typeof entry === 'number') {
+		return isDraftKey(entry) ? '' : String(entry).trim();
 	}
+	if (typeof entry !== 'object' || Array.isArray(entry)) return '';
+	const record = entry as Record<string, unknown>;
+	if (rule.target.primaryKey.some((field) => isDraftKey(record[field]))) return '';
+	return targetRecordLabel(record, rule.target, rule.fallbackFields);
+}
 
-	if (Array.isArray(relationValue)) {
-		const labels = relationValue
-			.map((item) => deriveRelationLabel(item, metadata, maxLength))
-			.filter((label) => label.length > 0);
-		return labels.join(', ');
-	}
-
-	if (typeof relationValue !== 'object') {
-		return truncateLabel(ensureString(relationValue), maxLength);
-	}
-
-	const relInfo = metadata.relationInfo;
-	const candidatesFromMeta: string[] = relInfo?.displayCandidates ?? [];
-	const objectValue = relationValue as Record<string, unknown>;
-	const keys = Object.keys(objectValue);
-
-	// Try name-like display candidates first (exclude id/uuid — those are last resort)
-	const meaningfulCandidates = candidatesFromMeta.filter((k) => !RELATION_ID_KEYS.has(k));
-
-	const heuristicKeys = Array.from(
-		new Set([
-			...meaningfulCandidates,
-			...keys.filter((key) => /(name|label|title|display|email)/i.test(key)),
-			'displayName',
-			'fullName',
-			'name',
-			'title',
-			'label',
-			'description',
-			'username',
-			'email',
-			'code',
-		]),
-	);
-
-	for (const candidate of heuristicKeys) {
-		if (!candidate) continue;
-		const candidateValue = ensureString(objectValue[candidate]);
-		if (candidateValue) {
-			return truncateLabel(candidateValue, maxLength);
-		}
-	}
-
-	// Last resort: id/uuid
-	for (const idKey of ['id', 'uuid']) {
-		const idVal = ensureString(objectValue[idKey]);
-		if (idVal) {
-			return truncateLabel(idVal, maxLength);
-		}
-	}
-
-	const firstPrimitive = keys
-		.map((key) => objectValue[key])
-		.find((val) => val != null && ['string', 'number', 'boolean'].includes(typeof val));
-	if (firstPrimitive !== undefined) {
-		return truncateLabel(ensureString(firstPrimitive), maxLength);
-	}
-
-	return truncateLabel(compactJsonPreview(objectValue, 80), maxLength);
+function isListRelation(metadata: CellCreationMetadata): boolean {
+	const kind = metadata.relation?.kind ?? metadata.relationInfo?.kind;
+	return kind === 'hasMany' || kind === 'manyToMany';
 }
 
 function canHandle(cellType: string, _value: unknown): boolean {
@@ -118,37 +86,44 @@ function canHandle(cellType: string, _value: unknown): boolean {
 }
 
 function create(value: unknown, metadata: CellCreationMetadata, _deriveGeometry?: (value: unknown) => SheetsCell): SheetsCell {
-	const relInfo = metadata.relationInfo;
 	const relOptions = metadata.relationOptions;
 	const chipLimit = relOptions?.relationChipLimit ?? DEFAULT_MAX_RELATION_CHIPS;
 	const labelMax = relOptions?.relationLabelMaxLength ?? DEFAULT_RELATION_LABEL_MAX_LEN;
+	const rule = labelRuleOf(metadata);
 
-	const isListRelation = relInfo?.kind === 'hasMany' || relInfo?.kind === 'manyToMany';
+	const relationTarget = targetOf(metadata);
 
-	if (isListRelation) {
-		const arr = Array.isArray(value) ? value : [];
-		const labelsAll = arr
-			.map((entry) => deriveRelationLabel(entry, metadata, labelMax))
-			.filter((label) => label.length > 0);
-		const labels = labelsAll.slice(0, chipLimit);
-		const remaining = labelsAll.length - labels.length;
-		const finalData = remaining > 0 ? [...labels, `+${remaining}`] : labels;
-		// glide emitted a Bubble cell (no displayData) -> displayData projects to ''.
+	if (isListRelation(metadata)) {
+		const entries = Array.isArray(value) ? value : [];
+		const labelled = entries
+			.map((entry) => ({ entry, label: recordLabel(entry, rule) }))
+			.filter((item) => item.label.length > 0);
+		const labels = labelled.map((item) => item.label);
+		const shown = labels.slice(0, chipLimit);
+		const relationLinks = labelled.slice(0, chipLimit).map((item) => linkOf(item.entry, item.label, rule));
+		const reported = metadata.relationTotalCount;
+		const count = typeof reported === 'number' && reported >= labels.length ? reported : labels.length;
+		const remaining = count - shown.length;
+		const chips = shown.map((label) => truncateLabel(label, labelMax));
 		return {
 			kind: 'relation',
-			data: finalData,
+			data: remaining > 0 ? [...chips, `+${remaining}`] : chips,
 			displayData: '',
 			readonly: false,
+			meta: { relationTitles: shown, relationCount: count, relationTarget, relationLinks },
 		};
 	}
 
-	const label = deriveRelationLabel(value, metadata, labelMax);
-	// glide emitted a Text cell -> data = displayData = label.
+	const single = Array.isArray(value) ? value[0] : value;
+	const full = recordLabel(single, rule);
+	const label = truncateLabel(full, labelMax);
+	const relationLinks = full ? [linkOf(single, full, rule)] : [];
 	return {
 		kind: 'relation',
 		data: label,
 		displayData: label,
 		readonly: false,
+		meta: { relationTitle: full, relationTarget, relationLinks },
 	};
 }
 

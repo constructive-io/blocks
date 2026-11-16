@@ -62,7 +62,7 @@ const noop = () => {};
 const EMPTY = {} as never;
 
 // Minimal cell renderer — this test is about the MARKER column, not cell content.
-const renderCell: RenderCell = (_cell, ctx) => <div role='gridcell' data-col={ctx.columnIndex} />;
+const renderCell: RenderCell = (ctx) => <div role='gridcell' data-col={ctx.columnIndex} />;
 
 // Build a RowMarker over a given SheetsSelection, recording every toggle/range/all
 // call so assertions can read the index/shiftKey the marker forwarded. `setSelection`
@@ -104,15 +104,12 @@ interface HarnessProps {
 function Harness({ rowMarker }: HarnessProps) {
 	const table = useSheetsTableInstance({
 		columns: COLUMNS,
-		data: ROWS,
 		columnSizing: EMPTY,
 		columnPinning: EMPTY,
-		rowSelection: EMPTY,
 		onColumnSizingChange: noop,
 		onColumnPinningChange: noop,
-		onRowSelectionChange: noop
 	});
-	return <GridViewport table={table} renderCell={renderCell} rowMarker={rowMarker} />;
+	return <GridViewport table={table} rows={ROWS} renderCell={renderCell} rowMarker={rowMarker} />;
 }
 
 describe('GridViewport row-marker column (leading checkbox + select-all → RangeSet)', () => {

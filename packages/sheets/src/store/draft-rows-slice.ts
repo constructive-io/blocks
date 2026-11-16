@@ -91,7 +91,7 @@ export function createDraftRowsSlice(set: DraftRowsSetState): DraftRowsSlice {
       const effectiveColumnOrder = ensureColumnOrder(columnOrder, fieldMetaByKey, relationInfoByKey);
       const template = buildTemplate(effectiveColumnOrder, relationInfoByKey);
       const draftRowId = `draft:${generateDraftSuffix()}`;
-      const values = initializeValuesFromTemplate(template, draftRowId);
+      const values = initializeValuesFromTemplate(template);
 
       set((state: DraftRowsSlice) => {
         const existing = state.draftRowsByTable[tableKey];
@@ -265,7 +265,7 @@ export function createDraftRowsSlice(set: DraftRowsSetState): DraftRowsSlice {
           const row = tableState.map[draftId];
           if (!row) continue;
 
-          const mergedValues: Record<string, unknown> = initializeValuesFromTemplate(template, draftId);
+          const mergedValues: Record<string, unknown> = initializeValuesFromTemplate(template);
           for (const key of Object.keys(row.values)) {
             if (Object.prototype.hasOwnProperty.call(template, key)) {
               mergedValues[key] = deepClone(row.values[key]);
@@ -353,7 +353,10 @@ function buildTemplate(
     if (relationInfo && (relationInfo.kind === 'hasMany' || relationInfo.kind === 'manyToMany')) {
       template[column] = [];
     } else {
-      template[column] = null;
+      // Untouched: the key exists (so a meta sync keeps the cell) but holds no value, so
+      // the create leaves it out and the database default applies. A value the user set,
+      // null and '' included, is sent as given.
+      template[column] = undefined;
     }
   }
 
@@ -370,12 +373,14 @@ function generateDraftSuffix(): string {
   return Math.random().toString(36).slice(2, 10);
 }
 
-function initializeValuesFromTemplate(template: Record<string, unknown>, draftRowId: string): Record<string, unknown> {
+// A draft row is identified by its DraftMeta (`draftRowId`), never by a value: every
+// column starts empty, so a key column the user must type (a key with no default)
+// is an ordinary editable cell and is sent on create.
+function initializeValuesFromTemplate(template: Record<string, unknown>): Record<string, unknown> {
   const result: Record<string, unknown> = {};
   for (const [key, value] of Object.entries(template)) {
     result[key] = deepClone(value);
   }
-  if (!result.id) result.id = draftRowId;
   return result;
 }
 

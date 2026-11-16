@@ -7,12 +7,34 @@ import { createRoot, type Root } from 'react-dom/client';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const upload = vi.hoisted(() => ({
-	resolveRowIdentifier: vi.fn(),
+	send: vi.fn(),
 	write: vi.fn(),
-	mutate: vi.fn(),
 }));
 
-vi.mock('../../../hooks/use-sheets-upload', () => ({ useSheetsFieldUpload: () => upload }));
+// The editor's storage and write hooks, ready to upload; the table model has an `id` key and the file column.
+vi.mock('../../../hooks/use-sheets-upload', () => ({
+	fileWriteReason: () => null,
+	useFileUploadState: () => ({ status: 'ready', send: upload.send }),
+	useColumnMediaResolver: () => ({ resolver: null, isLoading: false }),
+	useFileCellWriter: () => upload.write,
+	cellElementFor: (_column: unknown, projection: unknown) => projection,
+	// The created rows below carry no key, so no row key can be read from them.
+	rowKeyOfRow: () => null,
+}));
+vi.mock('../../../hooks/use-table-model', () => ({
+	useTableModel: () => ({
+		model: {
+			key: '.posts',
+			name: 'posts',
+			primaryKey: ['id'],
+			columns: [{ name: 'cover', value: { file: { kind: 'image', multiple: false, filesType: null } } }],
+		},
+		tableKey: '.posts',
+		metaTable: null,
+		isLoading: false,
+		error: null,
+	}),
+}));
 vi.mock('../../../hooks/use-sheets-media-url', () => ({
 	useSheetsMediaUrl: () => ({ url: null, durableUrl: null, id: null, isLoading: false, onImageError() {}, onImageLoad() {} }),
 }));
@@ -51,7 +73,6 @@ describe('ImageEditor draft-row upload', () => {
 	it('notifies the host when the created row has no resolvable identity', async () => {
 		const onSubmitDraft = vi.fn().mockResolvedValue({ createdRow: { name: 'no id' } });
 		const onDraftUploadComplete = vi.fn();
-		upload.resolveRowIdentifier.mockReturnValue(null);
 
 		await act(async () => {
 			root.render(
@@ -69,6 +90,7 @@ describe('ImageEditor draft-row upload', () => {
 		await selectFileAndConfirm();
 
 		expect(onSubmitDraft).toHaveBeenCalledOnce();
+		expect(upload.send).not.toHaveBeenCalled();
 		expect(upload.write).not.toHaveBeenCalled();
 		expect(onDraftUploadComplete).toHaveBeenCalledOnce();
 	});

@@ -11,6 +11,7 @@ function getErrorMessage(error: unknown): string {
 	return 'Something went wrong while loading this table.';
 }
 
+
 interface SheetsStateShellProps {
 	className?: string;
 	children: React.ReactNode;
@@ -33,15 +34,18 @@ function SheetsStateShell({ className, children }: SheetsStateShellProps) {
 interface SheetsErrorStateProps {
 	error: unknown;
 	onRetry?: () => void;
+	/** The table that failed. Only this table's grid shows the error; other tables keep working. */
+	tableName?: string;
 }
 
-/** Shown when the table data (or its metadata) fails to load. */
-export function SheetsErrorState({ error, onRetry }: SheetsErrorStateProps) {
+/** Shown when one table's rows (or its model) fail to load. */
+export function SheetsErrorState({ error, onRetry, tableName }: SheetsErrorStateProps) {
 	return (
 		<SheetsStateShell>
-			<RiErrorWarningLine className='text-destructive h-8 w-8' />
-			<div className='space-y-1'>
+			<RiErrorWarningLine className='text-destructive h-8 w-8' aria-hidden='true' />
+			<div className='space-y-1' role='alert'>
 				<p className='text-foreground text-sm font-medium'>Failed to load data</p>
+				{tableName && <p className='text-muted-foreground text-sm'>The table “{tableName}” could not be loaded.</p>}
 				<p className='text-muted-foreground max-w-md text-sm'>{getErrorMessage(error)}</p>
 			</div>
 			{onRetry && (
@@ -67,13 +71,13 @@ export function SheetsEmptyState({ tableName, onAddRow, readOnlyReason }: Sheets
 			<div className='space-y-1'>
 				<p className='text-foreground text-sm font-medium'>No rows yet</p>
 				<p className='text-muted-foreground max-w-md text-sm'>
-					{readOnlyReason ?? (tableName ? `The "${tableName}" table is empty.` : 'This table is empty.')}
+					{readOnlyReason ?? (tableName ? `The “${tableName}” table is empty.` : 'This table is empty.')}
 				</p>
 			</div>
 			{onAddRow && (
 				<Button variant='outline' size='sm' onClick={onAddRow}>
 					<RiAddLine className='h-4 w-4' />
-					<span className='ms-1'>Add row</span>
+					<span>Add row</span>
 				</Button>
 			)}
 		</SheetsStateShell>

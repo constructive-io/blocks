@@ -1,38 +1,54 @@
 // Backend adapter contract.
 //
 // Sheets talks to its backend through ONE injectable seam: a SheetsBackendAdapter
-// owns schema introspection, row reads, and CRUD mutations. The default
-// implementation (createPostGraphileAdapter) wraps the existing PostGraphile /
-// @constructive-io/data logic, so nothing changes for current consumers; a host
-// targeting a different backend implements this interface and passes it as
-// `SheetsConfig.adapter`.
-//
-// Scope note (Phase 2): the table-metadata shape is still PostGraphile-flavored
-// (CleanTable / MetaQuery from @constructive-io/data) and the filter dialect /
-// orderBy enum resolution remain in the hooks. The decoupled surface here is the
-// query-building + execution + response-parsing — the densest backend coupling.
-import type { CleanTable, FieldSelection, MetaQuery, MutationOptions } from '@constructive-io/data';
+// owns schema metadata, per-table models, row reads, and CRUD mutations. The
+// default implementation (createPostGraphileAdapter) builds every document from
+// the table model in @constructive-io/data; a host targeting a different backend
+// implements this interface and passes it as `SheetsConfig.adapter`.
+import type {
+	DisplayFieldOverrides,
+	MetaQuery,
+	MutationOptions,
+	SortSpec,
+	TableModel,
+} from '@constructive-io/data';
 
 import type { SheetsExecuteFn } from '../context/sheets-execute';
+import type { SheetsRowIdentifier } from '../row-identity';
 
-/** The table being operated on, plus all tables (needed for relation-aware AST building). */
+/** The table being operated on. */
 export interface AdapterTableContext {
-	table: CleanTable;
-	allTables: CleanTable[];
+	/** Model of the table (`useTableModel`, `fetchTableModel`). Every document the built-in adapter sends is built from it. */
+	model: TableModel;
+	/** The table name or `TableModel.key` the caller used. */
 	tableName: string;
 }
 
-/** A normalized list query. `relationFieldMap` is resolved by the hook (it is cache-bound). */
+/** A normalized list query. */
 export interface AdapterListQuery {
-	where?: unknown;
-	orderBy?: Array<{ field: string; direction: 'asc' | 'desc' }>;
+	/** A filter in the server's filter input shape. */
+	where?: Readonly<Record<string, unknown>>;
+	/** Sort, first entry first. Each field must be a sortable column of the model. */
+	orderBy?: readonly SortSpec[];
+	/** Page size. */
 	limit?: number;
+	/** Rows to skip. */
 	offset?: number;
 	/** Relay cursor for forward pagination (infinite/cursor mode). */
 	after?: string;
-	fieldSelection?: FieldSelection;
-	/** Resolved relation field name map, threaded from the hook's cached resolution. */
-	relationFieldMap?: Record<string, string>;
+	/** Relation fields to select: every readable relation, none (the default), or these field names. */
+	relations?: 'all' | 'none' | readonly string[];
+	/**
+	 * Columns to select, for example the ones a view shows. The primary key and the
+	 * local key fields of the selected relations are always added. Omitted: every readable column.
+	 */
+	columns?: readonly string[];
+	/** Page size of list relations. */
+	relationPageSize?: number;
+	/** Count all matching rows. Default true. When false, `totalCount` is the number of rows returned. */
+	includeTotalCount?: boolean;
+	/** Aborts the request, for example when the filter or sort it was for has changed. */
+	signal?: AbortSignal;
 }
 
 export interface AdapterPageInfo {
@@ -48,9 +64,25 @@ export interface AdapterListResult<T = Record<string, unknown>> {
 	pageInfo?: AdapterPageInfo;
 }
 
+export interface AdapterTableModelOptions {
+	/** Host override for the fields that label a record. */
+	displayOverrides?: DisplayFieldOverrides;
+}
+
 export interface SheetsBackendAdapter {
-	/** Introspect the schema. Default adapter validates and runs the July 2026 `_meta` contract. */
+	/** Read the schema metadata. The default adapter checks and runs the July 2026 `_meta` contract. */
 	fetchMeta(execute: SheetsExecuteFn): Promise<MetaQuery>;
+
+	/**
+	 * Model one table of a `_meta` result, by `TableModel.key` or bare name. A
+	 * failure concerns that table only; other tables keep loading.
+	 */
+	fetchTableModel(
+		execute: SheetsExecuteFn,
+		meta: MetaQuery,
+		tableRef: string,
+		options?: AdapterTableModelOptions,
+	): Promise<TableModel>;
 
 	/** Read a page of rows, flattening relation connections into arrays. */
 	listRows<T = Record<string, unknown>>(
@@ -67,19 +99,19 @@ export interface SheetsBackendAdapter {
 		options?: MutationOptions,
 	): Promise<T | null>;
 
-	/** Update a row by id (or composite PK object); resolves to the updated row (or null). */
+	/** Update a row by its primary key (a scalar for a one-field key, or the key object); resolves to the updated row (or null). */
 	updateRow<T = Record<string, unknown>>(
 		ctx: AdapterTableContext,
-		id: string | number | Record<string, unknown>,
+		id: SheetsRowIdentifier,
 		patch: Record<string, unknown>,
 		execute: SheetsExecuteFn,
 		options?: MutationOptions,
 	): Promise<T | null>;
 
-	/** Delete a row by id (or composite PK object). */
+	/** Delete a row by its primary key (a scalar for a one-field key, or the key object). */
 	deleteRow(
 		ctx: AdapterTableContext,
-		id: string | number | Record<string, unknown>,
+		id: SheetsRowIdentifier,
 		execute: SheetsExecuteFn,
 		options?: MutationOptions,
 	): Promise<void>;

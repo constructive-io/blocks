@@ -28,6 +28,7 @@ import type { ComponentType } from 'react';
 
 import {
 	BOOLEAN_TYPES,
+	CHOICE_TYPES,
 	DATE_TIME_TYPES,
 	GEOMETRY_TYPES,
 	MEDIA_TYPES,
@@ -80,17 +81,24 @@ export function resolveEditIntent(
 	opts: { readonly?: boolean },
 	consumer?: EditorConsumer,
 ): EditIntent {
-	// 1) Readonly cell — never editable, regardless of type (matches the host already
-	//    skipping `cell.readonly`). Also covers NON_EDITABLE types that are not viewers.
-	if (opts.readonly) return { mode: 'none' };
+	// 1) View-only kinds (full-text, raw bytes, vectors, unknown values) open a read-only
+	//    viewer whether or not the cell can be written: viewing and copying is the point.
+	if (VIEWER_ONLY_TYPES.has(typeKey)) return overlay(typeKey, consumer);
 
-	// 2) Non-editable types that are NOT viewer-only → no edit. (tsvector is in
-	//    NON_EDITABLE_TYPES but is viewer-only, so it falls through to its viewer
-	//    overlay below; this guard catches any future non-viewer non-editable type.)
-	if (NON_EDITABLE_TYPES.has(typeKey) && !VIEWER_ONLY_TYPES.has(typeKey)) return { mode: 'none' };
+	// 1b) Relations and files always open their editor: it shows the links or the file (view,
+	//     download), decides what may change, and says why when nothing may (the cell's reason
+	//     is passed along as `readOnlyReason`).
+	if (typeKey === 'relation' || MEDIA_TYPES.has(typeKey)) return overlay(typeKey, consumer);
+
+	// 2) Readonly cell — never editable, regardless of type (the host reports the reason).
+	if (opts.readonly) return { mode: 'none' };
+	if (NON_EDITABLE_TYPES.has(typeKey)) return { mode: 'none' };
 
 	// 3) Booleans → inline toggle (no overlay; the host commits `!currentBool`).
 	if (BOOLEAN_TYPES.has(typeKey)) return { mode: 'inline-toggle' };
+
+	// 3b) Choices (enums, allowed-values text) → the option picker overlay.
+	if (CHOICE_TYPES.has(typeKey)) return overlay(typeKey, consumer);
 
 	// 4) Number-like → inline edit (simple text-representable). Overlay families below stay
 	//    overlay, driven off the canonical groups so they stay exhaustive.
@@ -98,19 +106,16 @@ export function resolveEditIntent(
 	if (DATE_TIME_TYPES.has(typeKey)) return overlay(typeKey, consumer);
 	if (isArrayCellType(typeKey)) return overlay(typeKey, consumer);
 	if (GEOMETRY_TYPES.has(typeKey)) return overlay(typeKey, consumer);
-	if (MEDIA_TYPES.has(typeKey)) return overlay(typeKey, consumer);
 
 	// 5) Singleton overlay types (each has a DOM_EDITOR_REGISTRY entry).
 	if (typeKey === 'interval') return overlay(typeKey, consumer);
+	if (typeKey === 'range' || typeKey === 'composite' || typeKey === 'point') return overlay(typeKey, consumer);
 	if (typeKey === 'json' || typeKey === 'jsonb') return overlay(typeKey, consumer);
 	if (typeKey === 'inet') return overlay(typeKey, consumer);
-	if (typeKey === 'relation') return overlay(typeKey, consumer);
 	if (typeKey === 'url') return overlay(typeKey, consumer);
-	// tsvector — VIEWER_ONLY, but still opens a read-only viewer overlay.
-	if (VIEWER_ONLY_TYPES.has(typeKey)) return overlay(typeKey, consumer);
 
 	// 6) Text-like default (text/textarea/email/phone/citext/bpchar/uuid/color/
-	//    origin/unknown + anything unrecognised) → inline edit. `color` is NOT a real
+	//    origin/bitstring/path + anything unrecognised) → inline edit. `color` is NOT a real
 	//    backend data type — just a hex/text string — so it edits inline too (no dedicated
 	//    color editor). A consumer override on a text-like typeKey still wins as an overlay
 	//    editor via `inlineOrOverride`; otherwise the cell edits in place.

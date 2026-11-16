@@ -75,9 +75,8 @@ const noop = () => {};
 const EMPTY = {} as never;
 
 function Harness({ submitDraftRow }: { submitDraftRow: (id: string) => Promise<unknown> }) {
-	const renderCell: RenderCell = (c, ctx) => (
+	const renderCell: RenderCell = (ctx) => (
 		<SheetsCellHost
-			cell={c}
 			ctx={ctx}
 			getSheetsCellContent={getSheetsCellContent}
 			onSubmitDraftRow={submitDraftRow}
@@ -85,15 +84,12 @@ function Harness({ submitDraftRow }: { submitDraftRow: (id: string) => Promise<u
 	);
 	const table = useSheetsTableInstance({
 		columns: COLUMNS,
-		data: ROWS,
 		columnSizing: EMPTY,
 		columnPinning: EMPTY,
-		rowSelection: EMPTY,
 		onColumnSizingChange: noop,
 		onColumnPinningChange: noop,
-		onRowSelectionChange: noop,
 	});
-	return <GridViewport table={table} renderCell={renderCell} />;
+	return <GridViewport table={table} rows={ROWS} renderCell={renderCell} />;
 }
 
 describe('Stage-4 host wiring (loading / draft-action)', () => {

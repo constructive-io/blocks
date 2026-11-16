@@ -1,17 +1,16 @@
 'use client';
 
-// Native image editor — a thin EditorProps adapter that RE-HOSTS the (now value-
-// native) SELF-COMMITTING `ImageEditor` verbatim. The UI (dropzone, upload flow,
-// OVERLAY_LG width, own EditorFocusTrap, motion crossfade) is reused as-is; the
-// contract maps directly onto EditorProps:
+// Native file editor: a thin EditorProps adapter over the self-committing
+// `ImageEditor` (image, upload, upload lists, attachment links). The contract
+// maps onto EditorProps:
 //   • value          -> the raw row value, read directly by the editor.
-//   • recordId       -> typed EditorProps.rowIdentifier.
+//   • column / table -> the table model (kind, list or single, write rules).
+//   • recordId       -> typed EditorProps.rowIdentifier; rowId keys the cell's pending state.
 //   • isDraftRow     -> no server identity and a draft rowId.
 //   • onSaveComplete -> onCommitPatch({ [colKey]: saveData.imageData })  (single field).
 //   • onSubmitDraft  -> onSubmitDraftRow(draftRowId).
 //   • onDraftUploadComplete -> onInvalidateData.
-//   • onFinishedEditing(next?) -> onCancel() (a CLOSE; the upload self-commits via
-//     onSaveComplete, so the value path is never used for image).
+//   • onFinishedEditing(next?) -> onCancel() (a CLOSE; the editor self-commits).
 // Suspense is preserved (the source editor is lazy-loaded under <Suspense fallback={null}>).
 
 import { Suspense } from 'react';
@@ -28,23 +27,22 @@ export function ImageEditorDom({
 	rowId,
 	rowIdentifier,
 	tableName,
+	column,
+	table,
+	readOnlyReason,
 	onCommitPatch,
 	onCancel,
 	onSubmitDraftRow,
 	onInvalidateData,
 }: EditorProps) {
 	const isDraftRow = rowIdentifier == null && rowId.startsWith(DRAFT_PREFIX);
-	// The whole MEDIA family routes here (image/file/video/audio/upload). Only `image`
-	// stays image-only; every other media type accepts ANY file (no image guard/cap),
-	// so e.g. an `upload` column can take a PDF. The upload transport is already
-	// content-agnostic — this only relaxes the editor's UI guards + preview.
-	// A missing cellType (only reachable via a custom consumer cell whose toSheetsCell
-	// drops `meta`) defaults to image-only — the safe direction, never regressing `image`.
+	// Without a column model, only the `image` cell type is image-only; every other
+	// media type accepts any file. A missing cellType defaults to image-only.
 	const cellType = cell.meta?.cellType;
 	const acceptAnyFile = cellType != null && cellType !== 'image';
 
-	// Self-commit: the editor uploads server-side, then hands back the saved image
-	// data — route it as a single-field optimistic patch.
+	// Self-commit: the editor uploads and writes the cell, then hands back the saved
+	// value as a single-field optimistic patch.
 	const handleSaveComplete = onCommitPatch
 		? (saveData: ImageSaveData) => onCommitPatch({ [colKey]: saveData.imageData })
 		: undefined;
@@ -54,7 +52,7 @@ export function ImageEditorDom({
 		: undefined;
 
 	return (
-		<div data-slot='image-editor'>
+		<div data-slot="image-editor">
 			<Suspense fallback={<div className='h-64 w-full min-w-[480px] animate-pulse rounded-lg bg-muted' />}>
 				<ImageEditor
 					value={value}
@@ -63,6 +61,10 @@ export function ImageEditorDom({
 					tableName={tableName}
 					fieldName={colKey}
 					recordId={rowIdentifier ?? null}
+					rowId={rowId}
+					column={column ?? null}
+					table={table ?? null}
+					readOnlyReason={readOnlyReason ?? null}
 					onSaveComplete={handleSaveComplete}
 					isDraftRow={isDraftRow}
 					onSubmitDraft={handleSubmitDraft}

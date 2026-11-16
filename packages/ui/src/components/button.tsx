@@ -6,7 +6,7 @@ import { Slot } from '../lib/slot';
 import { cn } from '../lib/utils';
 
 const buttonVariants = cva(
-	"[&_svg]:-mx-0.5 relative inline-flex shrink-0 cursor-pointer items-center justify-center gap-2 whitespace-nowrap rounded-md border font-medium text-sm outline-none transition-[box-shadow,scale] duration-(--duration-moderate) ease-out before:pointer-events-none before:absolute before:inset-0 before:rounded-[calc(var(--radius-md)-1px)] focus-visible:ring-[3px] focus-visible:ring-ring/50 disabled:pointer-events-none disabled:opacity-64 data-disabled:cursor-not-allowed data-disabled:opacity-64 motion-reduce:transition-shadow [&_svg:not([class*='opacity-'])]:opacity-80 [&_svg:not([class*='size-'])]:size-4 [&_svg]:pointer-events-none [&_svg]:shrink-0",
+	"[&_svg]:-mx-0.5 relative inline-flex shrink-0 cursor-pointer items-center justify-center gap-2 whitespace-nowrap rounded-md border font-medium text-sm outline-none transition-[scale] duration-150 ease-[cubic-bezier(0.22,1,0.36,1)] before:pointer-events-none before:absolute before:inset-0 before:rounded-[calc(var(--radius-md)-1px)] focus-visible:ring-[3px] focus-visible:ring-ring/50 disabled:pointer-events-none disabled:opacity-64 data-disabled:cursor-not-allowed data-disabled:opacity-64 motion-reduce:transition-none [&_svg:not([class*='opacity-'])]:opacity-80 [&_svg:not([class*='size-'])]:size-4 [&_svg]:pointer-events-none [&_svg]:shrink-0",
 	{
 		defaultVariants: {
 			size: 'default',
@@ -16,7 +16,9 @@ const buttonVariants = cva(
 		},
 		variants: {
 			static: {
-				false: 'motion-safe:active:not-disabled:not-data-disabled:scale-[0.96]',
+				// A short press-in to 0.97 and back (150ms, smooth-out). Only the scale moves: the focus ring
+				// and the pressed shadow change at once, and reduced motion keeps the button still.
+				false: 'motion-safe:active:not-disabled:not-data-disabled:scale-[0.97]',
 				true: null,
 			},
 			size: {

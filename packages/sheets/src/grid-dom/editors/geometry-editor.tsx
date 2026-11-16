@@ -5,29 +5,29 @@
 // width, own EditorFocusTrap, internally-lazy MapPicker) is reused as-is; the contract
 // maps directly to value-native EditorProps:
 //   • value (raw geojson string or object) -> read directly by the source.
-//   • expectedType <- EditorProps.fieldMeta?.type?.subtype (column geometry subtype).
+//   • expectedType <- EditorProps.column.value.geometrySubtype (the declared shape).
 //   • onFinishedEditing(next) -> onCommit(next) (raw geojson string; host builds the
 //     cell), onFinishedEditing(undefined) -> onCancel().
-// The Suspense wrapper preserves the source's lazy-loaded Leaflet MapPicker. Escape is
-// handled by the reused editor's EditorFocusTrap -> handleCancel ->
-// onFinishedEditing(undefined).
+// Leaflet loads on first use inside the map picker, behind a placeholder of the map's own
+// height, so the editor needs no loading state of its own. Escape is handled by the
+// reused editor's EditorFocusTrap -> handleCancel -> onFinishedEditing(undefined).
 
-import { Suspense } from 'react';
-
+import { fieldLabel } from '../../cell-types/field-label';
 import { GeometryEditor } from '../../grid/editors/geometry-editor';
 import type { EditorProps } from './editor-props';
 
-export function GeometryEditorDom({ value, fieldMeta, onCommit, onCancel }: EditorProps) {
-	const expectedType = fieldMeta?.type?.subtype || undefined;
+export function GeometryEditorDom({ value, column, colKey, fieldMeta, onCommit, onCancel }: EditorProps) {
+	// The declared shape (Point, Polygon, ...) from the table model; raw metadata only without a model.
+	const expectedType = column?.value.geometrySubtype || fieldMeta?.type?.subtype || undefined;
 	return (
 		<div data-slot='geometry-editor'>
-			<Suspense fallback={<div className='h-80 w-full min-w-[600px] animate-pulse rounded-lg bg-muted' />}>
-				<GeometryEditor
-					value={value}
-					expectedType={expectedType}
-					onFinishedEditing={(next) => (next === undefined ? onCancel() : onCommit(next))}
-				/>
-			</Suspense>
+			<GeometryEditor
+				value={value}
+				expectedType={expectedType}
+				title={fieldLabel(column?.name ?? colKey)}
+				nullable={Boolean(column?.nullable)}
+				onFinishedEditing={(next) => (next === undefined ? onCancel() : onCommit(next))}
+			/>
 		</div>
 	);
 }

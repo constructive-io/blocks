@@ -1,128 +1,15 @@
 import { describe, expect, it, vi } from 'vitest';
-import { buildSchema, graphqlSync } from 'graphql';
+import type { IntrospectionObjectType, IntrospectionQuery } from 'graphql';
 
-import {
-	MetaContractError,
-	SCHEMA_INTROSPECTION_QUERY,
-	cleanTable,
-} from '@constructive-io/data';
-import type {
-	CleanTable,
-	IntrospectionQueryResponse,
-	MetaQuery,
-} from '@constructive-io/data';
+import { MetaContractError, TableModelError, readCellError } from '@constructive-io/data';
+import type { MetaQuery, TableModel } from '@constructive-io/data';
 
 import type { SheetsExecuteFn } from '../context/sheets-execute';
 import { createMetaContractFixture } from '../testing/meta-contract-fixture';
 import { createPostGraphileAdapter } from './postgraphile-adapter';
+import { createTortureBackend, tortureIntrospection, tortureMeta, type TortureServer } from './__tests__/torture-backend';
 
 const fields = (names: readonly string[]) => names.map((name) => ({ name }));
-
-function mutationTable(name: string, primaryKeyFields: string[]): CleanTable {
-	return {
-		name,
-		fields: [
-			...primaryKeyFields.map((fieldName) => ({
-				name: fieldName,
-				type: { gqlType: 'UUID', isArray: false },
-				isPrimaryKey: true,
-			})),
-			{ name: 'label', type: { gqlType: 'String', isArray: false } },
-		],
-		relations: { belongsTo: [], hasOne: [], hasMany: [], manyToMany: [] },
-		query: {
-			all: `all${name}s`,
-			one: name.charAt(0).toLowerCase() + name.slice(1),
-			create: `create${name}`,
-			update: `update${name}`,
-			delete: `delete${name}`,
-		},
-	} as CleanTable;
-}
-
-const enumSchema = /* GraphQL */ `
-	schema {
-		query: RootQuery
-		mutation: RootMutation
-	}
-
-	scalar Cursor
-	scalar UUID
-
-	type RootQuery {
-		projects(first: Int, last: Int, offset: Int, before: Cursor, after: Cursor): ProjectsConnection!
-	}
-
-	type RootMutation {
-		createProject(input: CreateProjectInput!): CreateProjectPayload
-		updateProject(input: UpdateProjectInput!): UpdateProjectPayload
-	}
-
-	type Project { id: UUID!, status: ProjectStatus! }
-	type ProjectsConnection { nodes: [Project!]!, totalCount: Int! }
-	type CreateProjectPayload { project: Project }
-	type UpdateProjectPayload { project: Project }
-	input ProjectInput { status: ProjectStatus! }
-	input ProjectPatch { status: ProjectStatus }
-	input CreateProjectInput { project: ProjectInput! }
-	input UpdateProjectInput { id: UUID!, projectPatch: ProjectPatch! }
-	enum ProjectStatus { ACTIVE, ARCHIVED }
-`;
-
-function enumIntrospection(): IntrospectionQueryResponse {
-	const result = graphqlSync({
-		schema: buildSchema(enumSchema),
-		source: SCHEMA_INTROSPECTION_QUERY,
-	});
-	if (result.errors || !result.data) {
-		throw new Error(result.errors?.[0]?.message ?? 'No introspection data');
-	}
-	return result.data as unknown as IntrospectionQueryResponse;
-}
-
-function enumMeta(): MetaQuery {
-	return {
-		_meta: {
-			tables: [
-				{
-					name: 'Project',
-					query: {
-						all: 'projects',
-						create: 'createProject',
-						update: 'updateProject',
-					},
-					inflection: {
-						tableType: 'Project',
-						connection: 'ProjectsConnection',
-						patchType: 'ProjectPatch',
-						createInputType: 'CreateProjectInput',
-						createPayloadType: 'CreateProjectPayload',
-						updatePayloadType: 'UpdateProjectPayload',
-					},
-					fields: [
-						{
-							name: 'id',
-							type: { gqlType: 'UUID', pgType: 'uuid', isArray: false },
-							isPrimaryKey: true,
-						},
-						{
-							name: 'status',
-							type: {
-								gqlType: 'projectStatus',
-								pgType: 'project_status',
-								isArray: false,
-							},
-							enumValues: {
-								name: 'projectStatus',
-								values: ['active', 'archived'],
-							},
-						},
-					],
-				},
-			],
-		},
-	};
-}
 
 describe('PostGraphile metadata adapter', () => {
 	it('preflights once per executor and then returns current metadata', async () => {
@@ -168,81 +55,210 @@ describe('PostGraphile metadata adapter', () => {
 		await expect(adapter.fetchMeta(execute)).resolves.toBe(meta);
 		expect(execute).toHaveBeenCalledTimes(3);
 	});
+});
 
-	it('maps lowercase _meta enum labels to exact GraphQL mutation tokens', async () => {
-		const meta = enumMeta();
-		const introspection = enumIntrospection();
-		const execute = vi.fn(async (document: unknown) => {
-			const query = String(document);
-			if (query.includes('ConstructiveMetaContract')) return createMetaContractFixture();
-			if (query.includes('query ConstructiveMeta')) return meta;
-			if (query.includes('__schema')) return introspection;
-			return {};
-		}) as unknown as SheetsExecuteFn;
-		const adapter = createPostGraphileAdapter();
+/** The adapter over the captured torture schema, with every request recorded. */
+async function setup(options: { server?: TortureServer; introspection?: IntrospectionQuery; meta?: MetaQuery } = {}) {
+	const backend = createTortureBackend(options);
+	const adapter = createPostGraphileAdapter();
+	const meta = await adapter.fetchMeta(backend.execute);
+	const model = (name: string) => adapter.fetchTableModel(backend.execute, meta, name);
+	const ctx = (tableModel: TableModel) => ({ model: tableModel, tableName: tableModel.name });
+	return { backend, adapter, meta, model, ctx };
+}
 
-		const fetched = await adapter.fetchMeta(execute);
-		const table = cleanTable(fetched._meta!.tables![0]!);
-		const ctx = { table, allTables: [table], tableName: table.name };
-		await adapter.createRow(ctx, { status: 'active' }, execute);
-		await adapter.updateRow(ctx, 'project-1', { status: 'archived' }, execute);
+describe('PostGraphile adapter writes, through the table model', () => {
+	it('updates and deletes by every field of a composite key', async () => {
+		const { backend, adapter, model, ctx } = await setup();
+		const items = await model('WarehouseItem');
+		const [first] = (await adapter.listRows(ctx(items), { limit: 5 }, backend.execute)).rows;
+		const key = { warehouseCode: String(first!.warehouseCode), sku: String(first!.sku) };
 
-		const variables = vi.mocked(execute).mock.calls
-			.map(([, callVariables]) => callVariables)
-			.filter((callVariables) => callVariables !== undefined);
-		expect(variables).toEqual([
-			{ input: { project: { status: 'ACTIVE' } } },
-			{ input: { id: 'project-1', projectPatch: { status: 'ARCHIVED' } } },
+		const updated = await adapter.updateRow(ctx(items), key, { quantity: 7 }, backend.execute);
+		await adapter.deleteRow(ctx(items), key, backend.execute);
+
+		expect(updated).toMatchObject({ ...key, quantity: 7 });
+		expect(backend.mutationRequests().map((request) => request.variables)).toEqual([
+			{ input: { ...key, warehouseItemPatch: { quantity: 7 } } },
+			{ input: key },
 		]);
+		expect(backend.rows.WarehouseItem!.some((row) => row.warehouseCode === key.warehouseCode && row.sku === key.sku))
+			.toBe(false);
+	});
+
+	it('creates a row whose key has no default by sending the key', async () => {
+		const { backend, adapter, model, ctx } = await setup();
+		const countries = await model('Country');
+
+		const created = await adapter.createRow(ctx(countries), { isoCode: 'NZ', name: 'New Zealand' }, backend.execute);
+
+		expect(created).toEqual({ isoCode: 'NZ', name: 'New Zealand' });
+		expect(backend.mutationRequests()[0]!.variables).toEqual({ input: { country: { isoCode: 'NZ', name: 'New Zealand' } } });
+	});
+
+	it('writes enum values as the API names them, from a label or a value, and refuses anything else', async () => {
+		const { backend, adapter, model, ctx } = await setup();
+		const tasks = await model('Task');
+		const [task] = (await adapter.listRows(ctx(tasks), { limit: 1 }, backend.execute)).rows;
+
+		const fromLabel = await adapter.updateRow(ctx(tasks), task!.id as string, { status: 'in_progress' }, backend.execute);
+		const fromValue = await adapter.updateRow(ctx(tasks), task!.id as string, { status: 'DONE' }, backend.execute);
+		const sent = backend.mutationRequests().length;
+
+		expect(fromLabel?.status).toBe('IN_PROGRESS');
+		expect(fromValue?.status).toBe('DONE');
+		expect(backend.mutationRequests().map((request) => request.variables?.input)).toEqual([
+			{ id: task!.id, taskPatch: { status: 'IN_PROGRESS' } },
+			{ id: task!.id, taskPatch: { status: 'DONE' } },
+		]);
+		await expect(adapter.updateRow(ctx(tasks), task!.id as string, { status: 'archived' }, backend.execute))
+			.rejects.toThrow('"archived" is not one of its choices');
+		expect(backend.mutationRequests()).toHaveLength(sent);
+	});
+
+	it('round-trips large integers and decimals as exact strings', async () => {
+		const { backend, adapter, model, ctx } = await setup();
+		const scalars = await model('ScalarKind');
+		const rows = (await adapter.listRows(ctx(scalars), { limit: 10 }, backend.execute)).rows;
+		const row = rows.find((candidate) => typeof candidate.numericUnbounded === 'string' && candidate.numericUnbounded.length > 20);
+		expect(row).toBeDefined();
+		const { numericUnbounded, bigintValue } = row!;
+
+		const updated = await adapter.updateRow(ctx(scalars), row!.id as string, { numericUnbounded, bigintValue }, backend.execute);
+
+		expect(backend.mutationRequests()[0]!.variables?.input).toEqual({
+			id: row!.id,
+			scalarKindPatch: { numericUnbounded, bigintValue },
+		});
+		expect(updated).toMatchObject({ numericUnbounded, bigintValue });
+		expect(typeof updated?.numericUnbounded).toBe('string');
+	});
+
+	it('creates a row with exactly the values given, empty strings and nulls included', async () => {
+		const { backend, adapter, model, ctx } = await setup();
+		const scalars = await model('ScalarKind');
+
+		const created = await adapter.createRow(ctx(scalars), { label: '', textValue: null, boolRequired: false }, backend.execute);
+
+		expect(backend.mutationRequests()[0]!.variables).toEqual({
+			input: { scalarKind: { label: '', textValue: null, boolRequired: false } },
+		});
+		expect(created).toMatchObject({ label: '', textValue: null, boolRequired: false });
+	});
+
+	it('updates a field to an empty string or to null', async () => {
+		const { backend, adapter, model, ctx } = await setup();
+		const scalars = await model('ScalarKind');
+		const [row] = (await adapter.listRows(ctx(scalars), { limit: 1 }, backend.execute)).rows;
+
+		await adapter.updateRow(ctx(scalars), row!.id as string, { textValue: '' }, backend.execute);
+		const cleared = await adapter.updateRow(ctx(scalars), row!.id as string, { textValue: null, citextValue: undefined }, backend.execute);
+		const unchanged = await adapter.updateRow(ctx(scalars), row!.id as string, { textValue: undefined }, backend.execute);
+
+		expect(backend.mutationRequests().map((request) => request.variables?.input)).toEqual([
+			{ id: row!.id, scalarKindPatch: { textValue: '' } },
+			{ id: row!.id, scalarKindPatch: { textValue: null } },
+		]);
+		expect(cleared).toMatchObject({ textValue: null });
+		expect(unchanged).toBeNull();
+	});
+
+	it('refuses a field the create input does not accept instead of dropping it', async () => {
+		const { backend, adapter, model, ctx } = await setup();
+		const generated = await model('GeneratedValue');
+
+		await expect(adapter.createRow(ctx(generated), { id: 5, unitPrice: '1.50' }, backend.execute))
+			.rejects.toThrow(TableModelError);
+		expect(backend.mutationRequests()).toHaveLength(0);
+	});
+
+	it('refuses to write a computed column when the server marks it', async () => {
+		const { backend, adapter, model, ctx } = await setup({ server: 'v2' });
+		const generated = await model('GeneratedValue');
+		const [row] = (await adapter.listRows(ctx(generated), { limit: 1 }, backend.execute)).rows;
+
+		await expect(adapter.updateRow(ctx(generated), row!.id as number, { total: '9.99' }, backend.execute))
+			.rejects.toThrow('This value is calculated automatically.');
+		await expect(adapter.updateRow(ctx(generated), row!.id as number, { quantity: 3 }, backend.execute))
+			.resolves.toMatchObject({ quantity: 3 });
+		expect(backend.mutationRequests()).toHaveLength(1);
 	});
 });
 
-describe('PostGraphile primary-key mutation inputs', () => {
-	it('spreads a renamed primary key beside the patch', async () => {
-		const table = mutationTable('NodeTypeRegistry', ['name']);
-		const execute = vi.fn(async () => ({})) as unknown as SheetsExecuteFn;
-		const adapter = createPostGraphileAdapter();
+/** The captured schema with one root field removed. */
+function withoutQueryField(field: string): IntrospectionQuery {
+	const introspection = tortureIntrospection();
+	return {
+		__schema: {
+			...introspection.__schema,
+			types: introspection.__schema.types.map((type) =>
+				type.name === 'Query'
+					? { ...(type as IntrospectionObjectType), fields: (type as IntrospectionObjectType).fields.filter((candidate) => candidate.name !== field) }
+					: type,
+			),
+		},
+	};
+}
 
-		await adapter.updateRow(
-			{ table, allTables: [table], tableName: table.name },
-			{ name: 'invoice' },
-			{ label: 'Invoice' },
-			execute,
-		);
+describe('PostGraphile adapter failure isolation', () => {
+	it('keeps a page whose cells cannot be served, and still fails a write that returns such a cell', async () => {
+		const { backend, adapter, model, ctx } = await setup();
+		const special = await model('SpecialValue');
+		const rows = backend.rows.SpecialValue!;
+		rows[0]!.realValue = Number.NaN;
 
-		expect(vi.mocked(execute).mock.calls[0][1]).toEqual({
-			input: {
-				name: 'invoice',
-				nodeTypeRegistryPatch: { label: 'Invoice' },
-			},
+		const result = await adapter.listRows(ctx(special), { limit: 10 }, backend.execute);
+
+		expect(result.rows).toHaveLength(rows.length);
+		expect(result.rows[0]!.realValue).toBeNull();
+		expect(readCellError(result.rows[0], 'realValue')).toContain('NaN');
+		expect(readCellError(result.rows[0], 'label')).toBeNull();
+		expect(readCellError(result.rows[1], 'realValue')).toBeNull();
+		await expect(adapter.updateRow(ctx(special), rows[0]!.id as number, { label: 'renamed' }, backend.execute))
+			.rejects.toThrow('NaN');
+	});
+
+	it('keeps loading other tables when one table cannot be read', async () => {
+		const { backend, adapter, model, ctx } = await setup({ introspection: withoutQueryField('labels') });
+
+		const labels = await model('Label');
+		const tasks = await model('Task');
+
+		expect(labels.operations.list).toBeNull();
+		expect(labels.issues.map((issue) => issue.code)).toContain('LIST_UNAVAILABLE');
+		await expect(adapter.listRows(ctx(labels), { limit: 5 }, backend.execute)).rejects.toThrow(TableModelError);
+		await expect(adapter.listRows(ctx(tasks), { limit: 5, relations: 'all' }, backend.execute)).resolves.toMatchObject({
+			totalCount: expect.any(Number),
 		});
 	});
 
-	it('spreads every composite key for update and delete', async () => {
-		const table = mutationTable('ActionGoal', ['actionId', 'goalId']);
-		const execute = vi.fn(async () => ({})) as unknown as SheetsExecuteFn;
-		const adapter = createPostGraphileAdapter();
-		const primaryKey = { actionId: 'action-1', goalId: 'goal-1' };
+	it('loads the schema when one table declares enum labels the API does not have', async () => {
+		const meta = tortureMeta();
+		const task = meta._meta!.tables!.find((table) => table?.name === 'Task')!;
+		const status = task.fields!.find((field) => field?.name === 'status')!;
+		status.enumValues = { name: status.enumValues!.name, values: [...status.enumValues!.values, 'archived'] };
+		const { backend, adapter, model, ctx } = await setup({ meta });
 
-		await adapter.updateRow(
-			{ table, allTables: [table], tableName: table.name },
-			primaryKey,
-			{ label: 'Primary' },
-			execute,
-		);
-		await adapter.deleteRow(
-			{ table, allTables: [table], tableName: table.name },
-			primaryKey,
-			execute,
-		);
+		const tasks = await model('Task');
 
-		expect(vi.mocked(execute).mock.calls[0][1]).toEqual({
-			input: {
-				actionId: 'action-1',
-				goalId: 'goal-1',
-				actionGoalPatch: { label: 'Primary' },
-			},
+		expect(tasks.columns.find((column) => column.name === 'status')?.value.options?.map((option) => option.value)).toEqual([
+			'TODO', 'IN_PROGRESS', 'DONE_ISH', '_1ST_REVIEW', 'BLOCKED', 'DONE',
+		]);
+		await expect(adapter.listRows(ctx(tasks), { limit: 5 }, backend.execute)).resolves.toMatchObject({
+			rows: expect.any(Array),
 		});
-		expect(vi.mocked(execute).mock.calls[1][1]).toEqual({ input: primaryKey });
+	});
+
+	it('names every candidate when a bare table name is ambiguous', async () => {
+		const meta = tortureMeta();
+		const label = meta._meta!.tables!.find((table) => table?.name === 'Label')!;
+		meta._meta!.tables!.push({ ...label, schemaName: 'other_schema' });
+		const { model } = await setup({ meta });
+
+		await expect(model('Label')).rejects.toMatchObject({
+			code: 'TABLE_AMBIGUOUS',
+			candidates: ['sheets_torture.Label', 'other_schema.Label'],
+		});
+		await expect(model('other_schema.Label')).resolves.toMatchObject({ key: 'other_schema.Label' });
 	});
 });

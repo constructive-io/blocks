@@ -101,10 +101,21 @@ function useFluidHighlight(container: HTMLElement | null): { rect: Rect; visible
  * container; positioned siblings paint on top. No props needed — it locates
  * its own parent as the tracking container.
  *
- * Appears/fades instantly at the target; travel uses the dial-tunable fast
- * spring tier. Reduced-motion renders an untransitioned fill.
+ * Appears and moves instantly by default: a list highlight follows the pointer and the
+ * arrow keys, the most frequent interactions in a menu, so it must never trail behind
+ * them. `travel` slides it on the dial-tunable fast spring tier instead, for a selection
+ * indicator the user changes deliberately (a toggle group). Reduced motion never travels.
  */
-export function FluidHighlight({ className, inset = 0 }: { className?: string; inset?: number }) {
+export function FluidHighlight({
+	className,
+	inset = 0,
+	travel = false,
+}: {
+	className?: string;
+	inset?: number;
+	/** Slide between targets on a spring (a selection indicator), instead of moving at once. */
+	travel?: boolean;
+}) {
 	// offsetParent is the containing block this span is positioned against —
 	// measuring the target in the same coordinate space keeps rect math exact
 	// whether the container itself scrolls or sits inside scrolled content.
@@ -138,7 +149,7 @@ export function FluidHighlight({ className, inset = 0 }: { className?: string; i
 			initial={rect ? { ...rect, opacity: 0 } : false}
 			animate={rect ? { ...rect, opacity: state?.visible ? 1 : 0 } : { opacity: 0 }}
 			transition={
-				reduce ? { duration: 0 } : { type: 'spring', visualDuration: tier.duration, bounce: tier.bounce }
+				reduce || !travel ? { duration: 0 } : { type: 'spring', visualDuration: tier.duration, bounce: tier.bounce }
 			}
 		/>
 	);

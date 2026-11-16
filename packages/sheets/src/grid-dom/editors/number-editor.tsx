@@ -14,7 +14,10 @@
 
 import { useRef, useState } from 'react';
 
+import type { ColumnModel } from '@constructive-io/data';
 import { Button } from '@constructive-io/ui/button';
+
+import { parseColumnInput, type ColumnInputResult } from '../../cell-types/column-value';
 
 import { OVERLAY_SM } from '../../grid/editors/overlay-presets';
 import { cn } from '../../utils/cn';
@@ -27,14 +30,19 @@ function seedText(value: unknown): string {
 	return String(value);
 }
 
-/** Parse the input text to the committed value: '' -> null, else a finite number or NaN. */
-function parseValue(text: string): number | null {
+/**
+ * Parse the input text. With a table-model column its rules decide (whole numbers and
+ * exact decimals stay exact strings); without one, '' -> null, else a finite number.
+ */
+function parseValue(text: string, column: ColumnModel | null | undefined): ColumnInputResult {
+	if (column) return parseColumnInput(column, text, { fromText: true });
 	const trimmed = text.trim();
-	if (trimmed === '') return null;
-	return Number(trimmed);
+	if (trimmed === '') return { ok: true, value: null };
+	const n = Number(trimmed);
+	return Number.isFinite(n) ? { ok: true, value: n } : { ok: false, reason: 'Enter a number.' };
 }
 
-export function NumberEditorDom({ value, initialText, colKey, fieldMeta, onCommit, onCancel }: EditorProps) {
+export function NumberEditorDom({ value, initialText, colKey, fieldMeta, column, onCommit, onCancel }: EditorProps) {
 	// Type-to-edit seed (OVERWRITE): a typed printable char replaces the cell value; the
 	// parse/canSave guard below still rejects non-numeric content (e.g. a typed letter).
 	const [text, setText] = useState(() => (initialText != null ? initialText : seedText(value)));
@@ -42,14 +50,13 @@ export function NumberEditorDom({ value, initialText, colKey, fieldMeta, onCommi
 	// `escapedRef` tells the blur handler to skip its commit so Escape never double-fires.
 	const escapedRef = useRef(false);
 
-	const parsed = parseValue(text);
-	// Save is blocked only when the field has content that does not parse to a
-	// finite number; an empty field is a valid `null` commit.
-	const canSave = parsed === null || Number.isFinite(parsed);
+	const parsed = parseValue(text, column);
+	// Save is blocked while the text does not fit the column; an empty field clears it.
+	const canSave = parsed.ok;
 
 	function commit() {
-		if (!canSave) return;
-		onCommit(parsed);
+		if (!parsed.ok) return;
+		onCommit(parsed.value);
 	}
 
 	function handleKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
@@ -85,7 +92,7 @@ export function NumberEditorDom({ value, initialText, colKey, fieldMeta, onCommi
 	return (
 		<div
 			data-slot='number-editor'
-			className={cn('bg-popover flex items-center gap-2 rounded-lg border p-2.5 shadow-lg', OVERLAY_SM)}
+			className={cn('bg-popover flex flex-wrap items-center gap-2 rounded-lg border p-2.5 shadow-lg', OVERLAY_SM)}
 		>
 			<input
 				aria-label={`Edit ${fieldMeta?.name ?? colKey}`}
@@ -95,12 +102,17 @@ export function NumberEditorDom({ value, initialText, colKey, fieldMeta, onCommi
 				onBlur={handleBlur}
 				inputMode='decimal'
 				spellCheck={false}
-				className='bg-muted/40 border-border/40 min-w-0 flex-1 rounded-md border px-2.5 py-1.5 font-sans text-sm outline-none'
+				className='bg-muted/40 border-border/40 min-w-0 flex-1 rounded-md border px-2.5 py-1.5 font-sans text-sm tabular-nums outline-none focus-visible:border-ring/60 focus-visible:ring-[3px] focus-visible:ring-ring/35'
 				autoFocus
 			/>
 			<Button onClick={commit} disabled={!canSave} size='xs' variant='default' className='shrink-0'>
 				Save
 			</Button>
+			{parsed.ok === false && text.trim() !== '' ? (
+				<p role='alert' className='text-destructive basis-full text-xs'>
+					{parsed.reason}
+				</p>
+			) : null}
 		</div>
 	);
 }

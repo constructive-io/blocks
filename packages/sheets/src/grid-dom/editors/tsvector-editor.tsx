@@ -1,15 +1,21 @@
 'use client';
 
-// Native tsvector editor — a thin EditorProps adapter that RE-HOSTS the (now value-
-// native) `TsvectorEditor` verbatim. The UI (parsed-token chips, raw view, OVERLAY.md
-// width, own EditorFocusTrap) is reused as-is. tsvector is READ-ONLY display: the
-// source only ever calls `onFinishedEditing()` with no arg (Close / Escape), so the
-// contract maps purely to `onCancel()` — there is no value-commit path.
-// `EditorProps.value` is the raw row value, read directly by the source.
+// Native viewer for a full-text search value: an EditorProps adapter for the read-only
+// `TsvectorViewer`. There is no write path: Close, Escape and a press outside all cancel.
+// The host (overlay or record panel) provides the focus trap.
 
-import { TsvectorEditor } from '../../grid/editors/tsvector-editor';
+import { fieldLabel } from '../../cell-types/field-label';
+import { VIEW_ONLY_REASON } from '../../cell-types/column-value';
+import { TsvectorViewer } from '../../grid/editors/tsvector-editor';
 import type { EditorProps } from './editor-props';
 
-export function TsvectorEditorDom({ value, onCancel }: EditorProps) {
-	return <TsvectorEditor value={value} onFinishedEditing={() => onCancel()} />;
+export function TsvectorEditorDom({ value, column, colKey, readOnlyReason, onCancel }: EditorProps) {
+	return (
+		<TsvectorViewer
+			value={value}
+			title={fieldLabel(column?.name ?? colKey)}
+			note={readOnlyReason ?? VIEW_ONLY_REASON}
+			onClose={() => onCancel()}
+		/>
+	);
 }

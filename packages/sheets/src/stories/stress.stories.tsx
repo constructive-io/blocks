@@ -1,57 +1,170 @@
-// Stress / 10k Rows — THE acceptance-gate stress test for the TanStack DOM grid port.
+// Stress / 10k Rows: the virtualization and paging check for the DOM grid.
 //
-// Renders the PUBLIC <Sheets … __impl="dom"> through the in-memory paginating mock adapter
-// (createMockAdapter) — NO network, NO GraphQL/hub server. Exercises three things at once:
-//   1. Virtualization — only the visible window of rows is in the DOM, so scrolling a 10k (or
-//      100k) dataset stays smooth.
-//   2. Infinite-scroll page fetch — useSheetsInfiniteTable pulls pages of `pageSize` rows on
-//      demand as the viewport advances; the mock adapter slices by cursor/offset + reports
-//      hasNextPage until the end.
-//   3. Loading skeleton — rows not yet fetched paint SheetsCell kind "loading" → LoadingCellView.
-//      A non-zero `delayMs` keeps the skeleton visible long enough to observe while paging.
+// The grid runs against `createMockExecute` from the package's `/testing` entry: a
+// PostGraphile-shaped schema synthesized from the tables below, with every
+// document (the `_meta` request, introspection, list pages, writes) executed by
+// graphql-js over in-memory rows. Nothing is forced: each column's kind comes
+// from its GraphQL type, as against a live server. No network.
 //
-// The `rowCount` argType knob (1000 / 10000 / 100000) makes the dataset size adjustable so the
-// virtualization claim can be checked at three scales. Rows are built lazily per (rowCount) inside
-// StressGrid, so the 100k option only allocates when selected.
-import React, { useMemo } from 'react';
+// It shows three things at once:
+//   1. Virtualization: only the visible window of rows and columns is in the DOM.
+//   2. Paging: infinite scroll pulls pages of `pageSize` rows as the viewport
+//      advances; paginated mode reads one `first`/`offset` window at a time.
+//   3. Loading skeleton: rows not fetched yet paint the loading cell. A non-zero
+//      `delayMs` keeps it visible long enough to see.
+//
+// The `rowCount` control (1 000 / 10 000 / 100 000) changes the dataset size. Rows are
+// built per (rowCount, wide), so 100 000 rows are only allocated when chosen.
+import { useMemo } from 'react';
 import type { Meta, StoryObj } from '@storybook/react-vite';
+import { QueryClient } from '@tanstack/react-query';
 
-import { buildSimpleTable, buildAllCellTypesTable, makeRows } from './_support/fixtures';
-import { renderSheets } from './_support/decorators';
-import type { MetaTable } from '../forms/types';
+import type { SheetsConfig } from '../context/sheets-context';
+import type { SheetsExecuteFn, SheetsExecuteOptions } from '../context/sheets-execute';
+import { SheetsProvider } from '../context/sheets-provider';
+import { Sheets } from '../grid/sheets';
+import { createMockExecute, type MockTable, type MockTableField } from '../testing/mock-sheets-provider';
 
-// ─── Knobs ────────────────────────────────────────────────────────────────────────────────────
-// Custom (non-component) args that drive the fixture instead of <Sheets> props directly. Kept off
-// DataGridProps on purpose — the render builds rows/adapter from them.
+type Row = Record<string, unknown>;
+
 interface StressArgs {
-	/** Dataset size. Lazily generated, so 100k is only paid for when chosen. */
+	/** Dataset size. */
 	rowCount: number;
-	/** Page size for both infinite (first) and paginated (limit) modes. */
+	/** Page size for infinite (first) and paginated (limit) modes. */
 	pageSize: number;
-	/** Per-list latency (ms) — surfaces the LoadingCellView skeleton while pages stream in. */
+	/** Latency (ms) added to every request, so the loading skeleton shows while pages stream in. */
 	delayMs: number;
-	/** Infinite scroll (cursor paging) vs classic offset/limit pagination. */
+	/** Infinite scroll vs paginated mode. */
 	infiniteScroll: boolean;
-	/** Wide all-cell-types table (stresses horizontal virtualization + every view) vs the simple table. */
+	/** The wide table (about 25 columns of every common kind) vs the simple 6-column table. */
 	wide: boolean;
 }
 
-// ─── Render host ──────────────────────────────────────────────────────────────────────────────
-// One component the stories share. Memoizes the table + rows on the inputs that change the data
-// (rowCount, wide) so toggling unrelated knobs never regenerates 10k–100k rows, and so a given
-// (rowCount, wide) pair is byte-identical across renders (makeRows is seeded/deterministic).
-function StressGrid({ rowCount, pageSize, delayMs, infiniteScroll, wide }: StressArgs) {
-	const table: MetaTable = useMemo(() => (wide ? buildAllCellTypesTable() : buildSimpleTable('demo')), [wide]);
-	const rows = useMemo(() => makeRows(table, rowCount), [table, rowCount]);
+// ─── Tables ─────────────────────────────────────────────────────────────────────────────────────
 
-	return renderSheets({
-		table,
-		rows,
-		// Full-viewport for the stress test — the grid fills the fullscreen story frame.
-		height: '100vh',
-		delayMs,
-		sheetsProps: { infiniteScroll, pageSize }
-	});
+const SIMPLE_FIELDS: MockTableField[] = [
+	{ name: 'id', gqlType: 'UUID', pgType: 'uuid' },
+	{ name: 'name', gqlType: 'String', pgType: 'text' },
+	{ name: 'email', gqlType: 'String', pgType: 'email' },
+	{ name: 'score', gqlType: 'Int', pgType: 'int4' },
+	{ name: 'active', gqlType: 'Boolean', pgType: 'bool' },
+	{ name: 'createdAt', gqlType: 'Datetime', pgType: 'timestamptz' },
+];
+
+const WIDE_FIELDS: MockTableField[] = [
+	...SIMPLE_FIELDS,
+	{ name: 'title', gqlType: 'String', pgType: 'text' },
+	{ name: 'notes', gqlType: 'String', pgType: 'text' },
+	{ name: 'homepage', gqlType: 'String', pgType: 'url' },
+	{ name: 'quantity', gqlType: 'Int', pgType: 'int4' },
+	{ name: 'views', gqlType: 'BigInt', pgType: 'int8' },
+	{ name: 'price', gqlType: 'BigFloat', pgType: 'numeric' },
+	{ name: 'ratio', gqlType: 'Float', pgType: 'float8' },
+	{ name: 'archived', gqlType: 'Boolean', pgType: 'bool' },
+	{ name: 'dueOn', gqlType: 'Date', pgType: 'date' },
+	{ name: 'startsAt', gqlType: 'Time', pgType: 'time' },
+	{ name: 'updatedAt', gqlType: 'Datetime', pgType: 'timestamptz' },
+	{ name: 'externalId', gqlType: 'UUID', pgType: 'uuid' },
+	{ name: 'settings', gqlType: 'JSON', pgType: 'jsonb' },
+	{ name: 'tags', gqlType: 'String', pgType: 'text', isArray: true },
+	{ name: 'scores', gqlType: 'Int', pgType: 'int4', isArray: true },
+	{ name: 'region', gqlType: 'String', pgType: 'text' },
+	{ name: 'owner', gqlType: 'String', pgType: 'text' },
+	{ name: 'code', gqlType: 'String', pgType: 'text' },
+	{ name: 'level', gqlType: 'Int', pgType: 'int2' },
+];
+
+const NAMES = ['Ada', 'Grace', 'Alan', 'Edsger', 'Barbara', 'Donald', 'Frances', 'John', 'Radia', 'Ken'];
+const REGIONS = ['north', 'south', 'east', 'west'];
+const TAGS = ['urgent', 'finance', 'docs', 'q3', 'team', 'review'];
+
+/** A small deterministic PRNG, so a given (rowCount, wide) pair always builds the same rows. */
+function random(seed: number) {
+	let state = seed >>> 0;
+	return () => {
+		state = (state * 1664525 + 1013904223) >>> 0;
+		return state / 0x100000000;
+	};
+}
+
+function uuid(index: number, salt: number): string {
+	const hex = (index * 2654435761 + salt).toString(16).padStart(12, '0').slice(-12);
+	return `00000000-0000-4000-8000-${hex}`;
+}
+
+function buildRow(index: number, wide: boolean, next: () => number): Row {
+	const name = `${NAMES[index % NAMES.length]} ${index + 1}`;
+	const day = new Date(Date.UTC(2026, 0, 1) + index * 3_600_000).toISOString();
+	const row: Row = {
+		id: uuid(index, 1),
+		name,
+		email: `user${index + 1}@example.com`,
+		score: Math.floor(next() * 1000),
+		active: next() > 0.5,
+		createdAt: day,
+	};
+	if (!wide) return row;
+	return {
+		...row,
+		title: `Record ${index + 1}`,
+		notes: next() > 0.7 ? null : `Note for ${name}`,
+		homepage: `https://example.com/${index + 1}`,
+		quantity: Math.floor(next() * 50),
+		views: String(9_000_000_000 + index),
+		price: (next() * 1000).toFixed(2),
+		ratio: Math.round(next() * 1000) / 1000,
+		archived: next() > 0.9,
+		dueOn: day.slice(0, 10),
+		startsAt: `${String(8 + (index % 10)).padStart(2, '0')}:30:00`,
+		updatedAt: day,
+		externalId: uuid(index, 7),
+		settings: { theme: next() > 0.5 ? 'dark' : 'light', size: Math.floor(next() * 5) },
+		tags: TAGS.filter(() => next() > 0.6),
+		scores: [Math.floor(next() * 10), Math.floor(next() * 10)],
+		region: REGIONS[index % REGIONS.length],
+		owner: NAMES[(index * 7) % NAMES.length],
+		code: `C-${String(index).padStart(6, '0')}`,
+		level: index % 5,
+	};
+}
+
+function buildTable(rowCount: number, wide: boolean): MockTable {
+	const next = random(wide ? 7 : 1);
+	return {
+		name: wide ? 'WideRecord' : 'Person',
+		fields: wide ? WIDE_FIELDS : SIMPLE_FIELDS,
+		rows: Array.from({ length: rowCount }, (_, index) => buildRow(index, wide, next)),
+	};
+}
+
+function delayed(execute: SheetsExecuteFn, delayMs: number): SheetsExecuteFn {
+	if (delayMs <= 0) return execute;
+	return async <T,>(document: unknown, variables?: Record<string, unknown>, options?: SheetsExecuteOptions): Promise<T> => {
+		await new Promise((resolve) => setTimeout(resolve, delayMs));
+		return execute<T>(document, variables, options);
+	};
+}
+
+// ─── Render host ────────────────────────────────────────────────────────────────────────────────
+
+function StressGrid({ rowCount, pageSize, delayMs, infiniteScroll, wide }: StressArgs) {
+	const table = useMemo(() => buildTable(rowCount, wide), [rowCount, wide]);
+	const config = useMemo<SheetsConfig>(() => ({
+		endpoint: 'mock://stress',
+		auth: { mode: 'embedded', getToken: () => 'story' },
+		execute: delayed(createMockExecute({ tables: [table] }).execute, delayMs),
+		queryClient: new QueryClient({
+			defaultOptions: { queries: { retry: false, gcTime: 0, staleTime: 0 }, mutations: { retry: false } },
+		}),
+	}), [table, delayMs]);
+
+	return (
+		<div style={{ height: '100vh', width: '100%', display: 'flex', flexDirection: 'column', minHeight: 0 }}>
+			<SheetsProvider key={`${table.name}:${rowCount}`} config={config}>
+				<Sheets tableName={table.name} __impl='dom' infiniteScroll={infiniteScroll} pageSize={pageSize} />
+			</SheetsProvider>
+		</div>
+	);
 }
 
 const meta: Meta<typeof StressGrid> = {
@@ -63,87 +176,69 @@ const meta: Meta<typeof StressGrid> = {
 			name: 'Row count',
 			control: { type: 'select' },
 			options: [1000, 10000, 100000],
-			description: 'Total rows in the in-memory dataset (built lazily on selection).'
+			description: 'Total rows in the in-memory dataset.',
 		},
 		pageSize: {
 			name: 'Page size',
 			control: { type: 'number', min: 25, max: 500, step: 25 },
-			description: 'Rows fetched per page (infinite first / paginated limit).'
+			description: 'Rows fetched per page (infinite first / paginated limit).',
 		},
 		delayMs: {
-			name: 'List latency (ms)',
+			name: 'Request latency (ms)',
 			control: { type: 'number', min: 0, max: 2000, step: 50 },
-			description: 'Artificial per-page latency — keeps the loading skeleton visible.'
+			description: 'Latency added to every request, so the loading skeleton shows.',
 		},
 		infiniteScroll: {
 			name: 'Infinite scroll',
 			control: { type: 'boolean' },
-			description: 'On: cursor-paged infinite scroll. Off: classic offset/limit pagination.'
+			description: 'On: infinite scroll. Off: paginated.',
 		},
 		wide: {
 			name: 'Wide table',
 			control: { type: 'boolean' },
-			description: 'On: all-cell-types table (horizontal virtualization). Off: simple 6-column table.'
-		}
+			description: 'On: about 25 columns of every common kind. Off: the simple 6-column table.',
+		},
 	},
 	args: {
 		rowCount: 10000,
 		pageSize: 100,
 		delayMs: 250,
 		infiniteScroll: true,
-		wide: false
-	}
+		wide: false,
+	},
 };
 
 export default meta;
 type Story = StoryObj<StressArgs>;
 
-// ─── Stories ──────────────────────────────────────────────────────────────────────────────────
-
 /**
- * THE stress test. 10k rows, infinite scroll, 100-row pages, 250ms list latency. Scroll fast: the
- * grid stays smooth (only the visible window is in the DOM), pages stream in on demand, and rows
- * ahead of the loaded window paint the LoadingCellView skeleton until their page resolves. Flip the
- * `rowCount` knob to 100000 to confirm virtualization holds at 10× the data.
+ * 10 000 rows, infinite scroll, 100-row pages, 250 ms latency. Scroll fast: only the visible
+ * window is in the DOM, pages load on demand, and rows ahead of the loaded window show the
+ * loading skeleton until their page arrives.
  */
 export const TenThousandRows: Story = {
-	render: (args) => <StressGrid {...args} />
+	render: (args) => <StressGrid {...args} />,
 };
 
-/**
- * Same 10k dataset through classic offset/limit pagination (infiniteScroll off). The pager fetches
- * one `pageSize` window at a time via listRows({ limit, offset }); stepping pages is O(pageSize),
- * never O(rowCount).
- */
+/** The same 10 000 rows in paginated mode: each page reads one `first`/`offset` window. */
 export const Paginated: Story = {
 	args: { infiniteScroll: false },
-	render: (args) => <StressGrid {...args} />
+	render: (args) => <StressGrid {...args} />,
 };
 
-/**
- * Horizontal + vertical virtualization together: 10k rows of the wide all-cell-types table (~45
- * columns). Stresses column virtualization and every cell view at scale while infinite scroll
- * streams rows down.
- */
+/** Horizontal and vertical virtualization together: 10 000 rows of the wide table. */
 export const WideTable: Story = {
 	args: { wide: true },
-	render: (args) => <StressGrid {...args} />
+	render: (args) => <StressGrid {...args} />,
 };
 
-/**
- * Maximum-scale virtualization: 100k rows, smaller pages, no artificial latency. Proves the DOM
- * grid keeps a constant-size visible window regardless of dataset size — the row count in the DOM
- * does not grow with the 100k total.
- */
+/** 100 000 rows, 200-row pages, no latency: the DOM window stays the same size. */
 export const HundredThousandRows: Story = {
 	args: { rowCount: 100000, pageSize: 200, delayMs: 0 },
-	render: (args) => <StressGrid {...args} />
+	render: (args) => <StressGrid {...args} />,
 };
 
-/**
- * Fully adjustable harness — every knob (rowCount / pageSize / delayMs / infiniteScroll / wide)
- * live in the Storybook controls panel. Use it to dial in a scenario by hand.
- */
+/** Every control live in the Storybook panel. */
 export const Adjustable: Story = {
-	render: (args) => <StressGrid {...args} />
+	render: (args) => <StressGrid {...args} />,
 };

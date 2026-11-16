@@ -5,7 +5,8 @@
  * `redo` re-applies it (both may be async — a server mutation). `record` pushes a
  * new entry onto the undo stack and CLEARS the redo stack (a fresh edit forks the
  * timeline). `undo`/`redo` move the top entry across the two stacks, running the
- * matching thunk.
+ * matching thunk. A thunk that throws did not change anything: the entry goes back
+ * where it was, so the step can be tried again (the entry reports its own failure).
  *
  * The stacks live in refs so the handler identities (`undo`/`redo`/`record`) stay
  * STABLE across renders — keydown wiring binds them once. `canUndo`/`canRedo` are
@@ -13,7 +14,7 @@
  */
 import { useCallback, useRef, useState } from 'react';
 
-/** One reversible step: a label plus its undo / redo thunks. */
+/** One reversible step: a label plus its undo / redo thunks (throw when nothing changed). */
 export interface HistoryEntry {
 	label: string;
 	undo: () => Promise<void> | void;
@@ -58,21 +59,26 @@ export function useUndoRedo(maxDepth: number = DEFAULT_MAX_DEPTH): UseUndoRedoRe
 		[maxDepth, sync],
 	);
 
-	const undo = useCallback(async () => {
-		const entry = undoStack.current.pop();
-		if (!entry) return;
-		redoStack.current.push(entry);
-		sync();
-		await entry.undo();
-	}, [sync]);
-
-	const redo = useCallback(async () => {
-		const entry = redoStack.current.pop();
-		if (!entry) return;
-		undoStack.current.push(entry);
-		sync();
-		await entry.redo();
-	}, [sync]);
+	// Move the top entry from one stack to the other and run it; it moves back if it throws.
+	const step = useCallback(
+		async (from: { current: HistoryEntry[] }, to: { current: HistoryEntry[] }, run: (entry: HistoryEntry) => Promise<void> | void) => {
+			const entry = from.current.pop();
+			if (!entry) return;
+			to.current.push(entry);
+			sync();
+			try {
+				await run(entry);
+			} catch {
+				const index = to.current.lastIndexOf(entry);
+				if (index >= 0) to.current.splice(index, 1);
+				from.current.push(entry);
+				sync();
+			}
+		},
+		[sync],
+	);
+	const undo = useCallback(() => step(undoStack, redoStack, (entry) => entry.undo()), [step]);
+	const redo = useCallback(() => step(redoStack, undoStack, (entry) => entry.redo()), [step]);
 
 	const clear = useCallback(() => {
 		undoStack.current = [];

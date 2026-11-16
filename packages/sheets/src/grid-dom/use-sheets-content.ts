@@ -10,17 +10,26 @@
 // Phase 7 — here we only blank the leaked draft-id text and tag `styleHint.draft`
 // so Phase 7 can style from a neutral flag (no glide theme imports).
 
-import { useCallback, useMemo } from 'react';
+import { useCallback, useMemo, useRef } from 'react';
 
 import type { CellTypeRegistry } from '../cell-types/cell-type-registry';
+import type { CellType } from '../cell-types/types';
 import type { FieldMetadata } from '../cell-types/cell-type-resolver';
 import type { CellCreationMetadata } from '../grid/grid-cell-types';
 import type { CellProps } from '../cell-model/cell-props';
 import type { SheetsCell } from '../cell-model/sheets-cell';
 import type { SheetsRow } from '../grid/row-model';
 import type { RelationInfo } from '../store/relation-info-slice';
-import type { MetaQuery } from '@constructive-io/data';
-import { buildRelationFieldNameSet, resolveGridCellRoute } from '../grid/cell-routing';
+import type { ColumnModel, MetaQuery, RelationModel, TableModel } from '@constructive-io/data';
+import { readCellError, readRelationTotalCount } from '@constructive-io/data';
+import type { CellTypeMatchInput } from '../cell-types/define-cell-type';
+import {
+	CELL_READ_ERROR_TEXT,
+	buildRelationFieldNameSet,
+	relationCellReadOnlyReason,
+	resolveGridCellRoute,
+	resolveModelCellRoute,
+} from '../grid/cell-routing';
 import { getDraftMeta } from '../grid/row-model';
 import { unwrapRelationValue } from '../grid/sheets.utils';
 import { MEDIA_TYPES } from '../cell-types/cell-type-groups';
@@ -50,6 +59,12 @@ export interface SheetsCellResolution {
 	fieldMeta?: FieldMetadata;
 	/** Relation info for the column (when relational) — fed to a native overlay editor's EditorProps.relationInfo. */
 	relationInfo?: RelationInfo;
+	/** The table-model column behind this cell, or null when the cell is not a column. */
+	column?: ColumnModel | null;
+	/** The table-model relation behind this cell, or null when the cell is not a relation. */
+	relation?: RelationModel | null;
+	/** A problem with this draft cell's value (for example a missing required value), shown on the cell. */
+	errorMessage?: string;
 }
 
 export interface UseSheetsContentArgs {
@@ -63,16 +78,18 @@ export interface UseSheetsContentArgs {
 	relationInfoByField: ReadonlyMap<string, RelationInfo>;
 	/** Schema meta (same value the canvas path reads via useSheetsMeta). */
 	meta: MetaQuery | undefined;
+	/** The table model of the grid, or null while it loads. */
+	tableModel?: TableModel | null;
 	/** Disable every persisted-row editor when the table cannot expose update mutations. */
 	serverRowsReadOnly?: boolean;
 	/** Primary-key fields are immutable after insertion because they define row identity. */
 	serverReadOnlyFields?: ReadonlySet<string>;
 	/** Resolve the GraphQL mutation identity. */
 	getRowIdentifier?: (row: Readonly<Record<string, unknown>>) => SheetsRowIdentifier | null;
-	/** Relation editors still use scalar record APIs. */
-	supportsScalarSelfCommit?: boolean;
 	canUpload?: boolean;
 	canCreate?: boolean;
+	/** Host cell-type overrides by `Table.field` (`SheetsConfig.fieldTypeOverrides`). */
+	fieldTypeOverrides?: Readonly<Record<string, string>>;
 }
 
 function isDraftId(value: unknown): boolean {
@@ -110,6 +127,18 @@ function tagDraftStyle(cell: SheetsCell, hasError: boolean): SheetsCell {
 	return { ...cell, styleHint: { ...cell.styleHint, draft: true, error: hasError } };
 }
 
+/** The cell for a value the list read could not serve: a notice, read-only. */
+function unreadableCell(cellType: string): SheetsCell {
+	return {
+		kind: 'text',
+		data: '',
+		displayData: CELL_READ_ERROR_TEXT,
+		readonly: true,
+		styleHint: { unreadable: true },
+		meta: { cellType: cellType as CellType },
+	};
+}
+
 /**
  * Build the DOM content resolver. Returns `getSheetsCell(rowIndex, colKey)` which
  * mirrors the canvas `getCellContent` routing exactly (draftMeta → fieldMeta →
@@ -130,33 +159,42 @@ export function useSheetsContent(args: UseSheetsContentArgs) {
 		serverRowsReadOnly = false,
 		serverReadOnlyFields,
 		getRowIdentifier,
-		supportsScalarSelfCommit = true,
 		canUpload = true,
 		canCreate = true,
+		tableModel = null,
+		fieldTypeOverrides,
 	} = args;
+
+	const columnByName = useMemo(
+		() => new Map((tableModel?.columns ?? []).map((column) => [column.name, column] as const)),
+		[tableModel],
+	);
+	const relationByField = useMemo(
+		() => new Map((tableModel?.relations ?? []).map((relation) => [relation.fieldName, relation] as const)),
+		[tableModel],
+	);
 
 	const relationFieldNamesFromMeta = useMemo(() => buildRelationFieldNameSet(meta, tableName), [meta, tableName]);
 
-	// PER-RESOLVER RESULT CACHE. The cell host calls `getSheetsCell` for every visible
-	// cell on every re-render, almost always re-deriving an identical resolution. This
-	// Map memoizes the last resolution per `rowIndex|colKey`, keyed on the cell's raw
-	// VALUE: a repeat call whose value is reference-equal to the cached one returns the
-	// cached resolution and skips the full pipeline (route → relation unwrap →
-	// resolveTypeKey → toSheetsCell, which allocates ≥3 objects).
+	// The rows are read at call time, so the resolver keeps its identity when the row array
+	// changes (a page loads, a cell saves). The grid rows memoized on it then render again only
+	// when their own row object changes, not the whole window on every data change.
+	const dataRef = useRef(data);
+	dataRef.current = data;
+
+	// RESULT CACHE, per row object and column. The cell host calls `getSheetsCell` for every
+	// visible cell it renders, almost always re-deriving an identical resolution, and the full
+	// pipeline (route → relation unwrap → resolveTypeKey → toSheetsCell) allocates ≥3 objects.
 	//
-	// SAFETY: the deps below are IDENTICAL to the `getSheetsCell` useCallback's deps, so
-	// the cache is thrown away exactly when the resolver would change identity. Every
-	// input that can change a cell's resolution flows through one of these deps — most
-	// notably `data`: draft status/errors rebuild `combinedRows` (new array + new row
-	// objects, see useDraftRows), and any server-data / optimistic change recreates the
-	// rows array too. So `styleHint.draft/error` (derived from the row's DraftMeta) and
-	// the relation-unwrap fields (read off the same row object) cannot change without a
-	// new `data` reference resetting this cache — making the per-value compare sound:
-	// within one resolver identity the row objects are immutable, so a value that is
-	// reference-equal guarantees an identical resolution.
+	// SAFETY: a resolution reads only its row object's fields (draft meta, cell errors, the
+	// relation fields) and the deps below, never the row's index. Row objects are never
+	// changed in place: a server row is a new object after a refetch or an optimistic update
+	// (see useInfiniteGridData), and a draft row after any draft change (see useDraftRows).
+	// So a row object's cached resolution stays valid until one of these deps changes, which
+	// throws the whole cache away.
 	const cache = useMemo(
-		() => new Map<string, { value: unknown; resolution: SheetsCellResolution }>(),
-		[data, columnKeys, fieldMetaMap, registry, relationFieldNamesFromMeta, relationInfoByField, options, serverRowsReadOnly, serverReadOnlyFields, getRowIdentifier, supportsScalarSelfCommit, canUpload, canCreate],
+		() => new WeakMap<object, Map<string, SheetsCellResolution>>(),
+		[columnKeys, fieldMetaMap, registry, relationFieldNamesFromMeta, relationInfoByField, options, serverRowsReadOnly, serverReadOnlyFields, getRowIdentifier, canUpload, canCreate, tableModel, columnByName, relationByField, fieldTypeOverrides, tableName],
 	);
 
 	const getSheetsCell = useCallback(
@@ -167,72 +205,87 @@ export function useSheetsContent(args: UseSheetsContentArgs) {
 			// `kind: 'loading'` cell with NO component, so the host's kind→view map paints
 			// LoadingCellView (the canvas analogue is glide's loadingCell). Without this the row
 			// coerces to `{}` below and every cell renders as blank text instead of a skeleton.
-			const rawRow = (data as any[])[rowIndex];
-			const cacheKey = rowIndex + '|' + colKey;
+			const rawRow = (dataRef.current as any[])[rowIndex];
 			if (colKey && rawRow == null) {
-				// Cache the loading slot keyed on its (null) value: when the page loads, the row
-				// flips null → object, the value identity changes, and this naturally MISSES and
-				// recomputes (a new `data` proxy also resets the whole cache, so this is belt-and-braces).
-				const hit = cache.get(cacheKey);
-				if (hit && hit.value === rawRow) return hit.resolution;
-				const resolution: SheetsCellResolution = {
+				return {
 					cell: { kind: 'loading', data: null, displayData: '', readonly: true },
 					colKey,
 					typeKey: 'text',
+					column: null,
+					relation: null,
 				};
-				cache.set(cacheKey, { value: rawRow, resolution });
-				return resolution;
 			}
 			const rowData = rawRow ?? {};
 			if (!colKey) {
-				return { cell: { kind: 'text', data: '', displayData: '', readonly: false }, colKey, typeKey: 'text' };
+				return { cell: { kind: 'text', data: '', displayData: '', readonly: false }, colKey, typeKey: 'text', column: null, relation: null };
 			}
 
 			const rawValue = rowData?.[colKey];
 
-			// RESULT-CACHE FAST PATH: the resolution is fully determined by the row object's
-			// fields (see the cache declaration), and the row object is immutable within this
-			// resolver identity, so a reference-equal `rawValue` means an identical resolution.
-			const hit = cache.get(cacheKey);
-			if (hit && hit.value === rawValue) return hit.resolution;
+			// RESULT-CACHE FAST PATH: the row object fully determines its resolution (see the cache).
+			let rowCache = cache.get(rowData);
+			const hit = rowCache?.get(colKey);
+			if (hit) return hit;
 			const draftMeta = getDraftMeta(rowData);
 			const isDraftRow = Boolean(draftMeta?.isDraft);
-			const isDraftIdCell = isDraftRow && colKey === 'id';
 
-			const baseFieldMeta = fieldMetaMap.get(colKey);
+			const fieldMeta: FieldMetadata | undefined = fieldMetaMap.get(colKey);
+			const column = columnByName.get(colKey) ?? null;
+			const relation = relationByField.get(colKey) ?? null;
 			const relationInfo = relationInfoByField.get(colKey);
-			const isRelationFallback = relationFieldNamesFromMeta.has(colKey);
-			const isRelation = Boolean(relationInfo) || isRelationFallback;
+			// The name-based fallback only covers keys the table model does not describe as a column.
+			const isRelationFallback = !column && relationFieldNamesFromMeta.has(colKey);
+			const isRelation = Boolean(relation) || Boolean(relationInfo) || isRelationFallback;
+
+			// A table-model column routes from the model alone (kind, write flags, reasons).
+			// Relations keep the relation route; the relation lane owns their editing rules.
+			const cellError = column ? readCellError(rowData, colKey) : null;
+			const modelRoute = column && tableModel && !isRelation
+				? resolveModelCellRoute({
+					column,
+					table: tableModel,
+					isDraftRow,
+					cellError,
+					typeOverride: tableName ? fieldTypeOverrides?.[`${tableName}.${colKey}`] : null,
+					lockedFields: serverReadOnlyFields,
+				})
+				: null;
+
 			const foreignKeyField = relationInfo?.foreignKeyField;
 			const canEditRelationInline =
 				relationInfo?.kind === 'belongsTo' &&
 				typeof foreignKeyField === 'string' &&
 				fieldMetaMap.has(foreignKeyField);
-
-			const fieldMeta: FieldMetadata | undefined = baseFieldMeta;
-			const route = resolveGridCellRoute({
-				colKey,
-				fieldMeta,
-				relationInfo,
-				isRelationFallback,
-				isDraftIdCell,
-				hasForeignKeyField: canEditRelationInline,
-			});
-			const tableForcedReadOnly = !isDraftRow && (
+			const route = modelRoute
+				? null
+				: resolveGridCellRoute({
+					colKey,
+					fieldMeta,
+					relationInfo,
+					isRelationFallback,
+					hasForeignKeyField: canEditRelationInline,
+				});
+			// A table-model relation opens the relation editor, which decides each link and says why;
+			// the cell carries the relation-level reason (not editable, or the row cannot be written).
+			const relationReason = relation ? relationCellReadOnlyReason(relation, tableModel, isDraftRow) : null;
+			const tableForcedReadOnly = !modelRoute && !relation && !isDraftRow && (
 				serverRowsReadOnly || Boolean(serverReadOnlyFields?.has(colKey))
 			);
 
+			// A table-model relation hands its factory and editor the raw related record(s) of
+			// `row[relation.fieldName]`; only legacy relation info (no model relation) is wrapped.
 			let valueForCell = rawValue;
+			const legacyRelationInfo = relation ? undefined : relationInfo;
 
-			if (relationInfo && relationInfo.relationField && relationInfo.relationField !== colKey) {
-				const relatedValue = (rowData as any)?.[relationInfo.relationField];
+			if (legacyRelationInfo && legacyRelationInfo.relationField && legacyRelationInfo.relationField !== colKey) {
+				const relatedValue = (rowData as any)?.[legacyRelationInfo.relationField];
 				if (relatedValue !== undefined && relatedValue !== null) {
 					valueForCell = relatedValue;
 				} else if (typeof rawValue === 'string' && rawValue && !isDraftId(rawValue)) {
 					valueForCell = { id: rawValue };
 				}
-			} else if (relationInfo && valueForCell == null) {
-				const fkField = relationInfo.foreignKeyField;
+			} else if (legacyRelationInfo && valueForCell == null) {
+				const fkField = legacyRelationInfo.foreignKeyField;
 				const fkValue = fkField ? (rowData as any)?.[fkField] : undefined;
 				if (fkValue && !isDraftId(fkValue)) {
 					valueForCell = { id: fkValue };
@@ -244,40 +297,50 @@ export function useSheetsContent(args: UseSheetsContentArgs) {
 			}
 
 			// Consumer detection override: a registered def's match() may override the
-			// resolved typeKey. With no consumer cell types this returns route.cellType.
-			const matchInput = {
-				gqlType: fieldMeta?.type?.gqlType ?? '',
-				isArray: Boolean(fieldMeta?.type?.isArray),
-				pgAlias: fieldMeta?.type?.pgAlias ?? null,
+			// resolved typeKey. With no consumer cell types this returns the routed type.
+			const builtinCellType = modelRoute?.cellType ?? route?.cellType ?? 'text';
+			const matchInput: CellTypeMatchInput = {
+				gqlType: column?.value.typeName ?? fieldMeta?.type?.gqlType ?? '',
+				isArray: column ? column.value.isArray : Boolean(fieldMeta?.type?.isArray),
 				pgType: fieldMeta?.type?.pgType ?? null,
 				subtype: fieldMeta?.type?.subtype ?? null,
 				fieldName: colKey,
+				kind: column?.value.kind ?? null,
+				semantic: column?.value.semantic ?? null,
+				column,
 			};
-			const cellType = registry.resolveTypeKey(matchInput, () => route.cellType);
+			const cellType = registry.resolveTypeKey(matchInput, () => builtinCellType);
 			const rowIdentifier = !isDraftRow ? getRowIdentifier?.(rowData) : null;
 			const isMedia = MEDIA_TYPES.has(cellType);
-			const lacksScalarEditorIdentity =
-				isRelation &&
-				(!supportsScalarSelfCommit || (
-					rowIdentifier != null && typeof rowIdentifier === 'object'
-				));
 			const lacksMediaTarget = isMedia && (isDraftRow ? !canCreate || serverRowsReadOnly : rowIdentifier == null);
-			const readOnlyReason = isMedia && !canUpload ? 'Uploads need a storage endpoint' : undefined;
-			const forcedReadOnly = tableForcedReadOnly || lacksScalarEditorIdentity || lacksMediaTarget || !!readOnlyReason;
+			const readOnlyReason =
+				modelRoute?.readOnlyReason ?? relationReason ?? (isMedia && !canUpload ? 'Uploads need a storage endpoint' : null) ?? undefined;
+			const routeReadOnly = modelRoute
+				? Boolean(modelRoute.readOnlyReason)
+				: relation
+					? Boolean(relationReason)
+					: Boolean(route?.isReadonly);
+			const forcedReadOnly = tableForcedReadOnly || lacksMediaTarget || !!readOnlyReason;
 
 			const metadata: CellCreationMetadata = {
 				cellType,
 				fieldName: colKey,
 				fieldMeta,
 				relationInfo,
+				column,
+				relation,
+				table: tableModel,
+				relationTotalCount: relation?.hasTotalCount ? readRelationTotalCount(rowData, relation.fieldName) : null,
 				relationOptions: relationInfo ? options || {} : undefined,
-				canEdit: route.canEdit && !forcedReadOnly,
-				isReadonly: route.isReadonly || forcedReadOnly,
-				activationBehavior: route.activationBehavior,
+				canEdit: !routeReadOnly && (route && !relation ? route.canEdit : true) && !forcedReadOnly,
+				isReadonly: routeReadOnly || forcedReadOnly,
+				activationBehavior: route?.activationBehavior ?? 'double-click',
 			};
 
-			const resolvedCell = registry.toSheetsCell(cellType, valueForCell, { metadata });
-			const cell = forcedReadOnly && !resolvedCell.readonly
+			const resolvedCell = cellError
+				? unreadableCell(cellType)
+				: registry.toSheetsCell(cellType, valueForCell, { metadata });
+			const cell = (forcedReadOnly || routeReadOnly) && !resolvedCell.readonly
 				? { ...resolvedCell, readonly: true }
 				: resolvedCell;
 
@@ -294,20 +357,26 @@ export function useSheetsContent(args: UseSheetsContentArgs) {
 			// the DOM equivalent of applyDraftDisabledStyle / applyDraftErrorStyle.
 			const draftErrors = draftMeta?.errors ?? null;
 			const hasCellError = Boolean(draftErrors && colKey in draftErrors);
+			const errorMessage = hasCellError && draftErrors ? draftErrors[colKey] : undefined;
 			const styled = isDraftRow ? tagDraftStyle(displaySafe, hasCellError) : displaySafe;
 
-			const component = registry.getCellComponent(cellType);
+			// An unreadable cell always shows the built-in notice, never a consumer component.
+			const component = cellError ? undefined : registry.getCellComponent(cellType);
 			// Surface the already-computed field/relation meta so a native overlay editor
 			// (relation/image, Phase 5) can read EditorProps.fieldMeta / relationInfo without
 			// re-resolving — no extra work, just exposing what this routing already derived.
 			// `typeKey` is the resolved cellType — the single source of truth for edit-intent.
 			const resolution: SheetsCellResolution = {
-				cell: styled, component, colKey, typeKey: cellType, fieldMeta, relationInfo, rowIdentifier, readOnlyReason,
+				cell: styled, component, colKey, typeKey: cellType, fieldMeta, relationInfo, column, relation, rowIdentifier, readOnlyReason, errorMessage,
 			};
-			cache.set(cacheKey, { value: rawValue, resolution });
+			if (!rowCache) {
+				rowCache = new Map();
+				cache.set(rowData, rowCache);
+			}
+			rowCache.set(colKey, resolution);
 			return resolution;
 		},
-		[data, columnKeys, fieldMetaMap, registry, relationFieldNamesFromMeta, relationInfoByField, options, serverRowsReadOnly, serverReadOnlyFields, getRowIdentifier, supportsScalarSelfCommit, canUpload, canCreate],
+		[cache, columnKeys, fieldMetaMap, registry, relationFieldNamesFromMeta, relationInfoByField, options, serverRowsReadOnly, serverReadOnlyFields, getRowIdentifier, canUpload, canCreate, tableModel, columnByName, relationByField, fieldTypeOverrides, tableName],
 	);
 
 	return { getSheetsCell };

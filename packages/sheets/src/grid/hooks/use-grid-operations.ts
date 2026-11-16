@@ -31,21 +31,21 @@ export function summarizeDeleteResult(drafts: number, deleted: number, failed: n
 	if (failed === 0 && successes > 0) {
 		let message: string;
 		if (deleted === 0) {
-			message = `Discarded ${drafts} draft${drafts === 1 ? '' : 's'}`;
+			message = `${drafts} ${drafts === 1 ? 'draft' : 'drafts'} discarded`;
 		} else if (drafts === 0) {
-			message = `Deleted ${deleted} ${deleted === 1 ? 'row' : 'rows'}`;
+			message = deleted === 1 ? 'Row deleted' : `${deleted} rows deleted`;
 		} else {
-			message = `Deleted ${deleted} ${deleted === 1 ? 'row' : 'rows'}, discarded ${drafts} draft${drafts === 1 ? '' : 's'}`;
+			message = `${deleted} ${deleted === 1 ? 'row' : 'rows'} deleted, ${drafts} ${drafts === 1 ? 'draft' : 'drafts'} discarded`;
 		}
 		return { status: 'success', message };
 	}
 
 	if (successes > 0 && failed > 0) {
-		return { status: 'partial', message: `Deleted ${successes}, ${failed} failed` };
+		return { status: 'partial', message: `${successes} deleted, ${failed} not deleted` };
 	}
 
 	if (failed > 0) {
-		return { status: 'error', message: `Failed to delete ${failed} ${failed === 1 ? 'row' : 'rows'}` };
+		return { status: 'error', message: failed === 1 ? 'Row not deleted' : `${failed} rows not deleted` };
 	}
 
 	return null;
@@ -62,12 +62,11 @@ export function useGridOperations(
 		getRowIdentifier?: (row: Readonly<Record<string, unknown>>) => SheetsRowIdentifier | null;
 		canDeleteServerRows?: boolean;
 		feedback?: OperationFeedbackCallbacks;
+		/** Called once after a bulk delete with the error of every server delete that failed. */
+		onDeleteErrors?: (errors: readonly unknown[]) => void;
 	},
 ) {
-	const deleteSelected = useCallback(async () => {
-		if (!gridSelection) return;
-
-		const rows = gridSelection.rows.toArray();
+	const deleteRows = useCallback(async (rows: readonly number[]) => {
 		if (rows.length === 0) return;
 
 			// Start operation feedback
@@ -77,6 +76,7 @@ export function useGridOperations(
 			let failures = 0;
 			let serverSuccesses = 0;
 			let draftDiscards = 0;
+			const deleteErrors: unknown[] = [];
 			const records = rows.map((idx) => data[idx]);
 			let nextRecordIndex = 0;
 			const workerCount = Math.min(SHEETS_CONCURRENCY.bulkDelete, records.length);
@@ -113,6 +113,7 @@ export function useGridOperations(
 							serverSuccesses += 1;
 						} catch (error) {
 							sheetsLogger().error('Failed to delete record', { identifier, error });
+							deleteErrors.push(error);
 							failures += 1;
 						}
 					} else {
@@ -135,15 +136,22 @@ export function useGridOperations(
 				}
 			}
 
+		if (deleteErrors.length > 0) {
+			options?.onDeleteErrors?.(deleteErrors);
+		}
+
 		if (serverSuccesses > 0) {
 			options?.onAfterServerDeletes?.();
 		}
 
 		// Always clear selection so indices don't point to new rows after deletion
 		clearSelection();
-	}, [gridSelection, data, deleteRow, clearSelection, options]);
+	}, [data, deleteRow, clearSelection, options]);
+
+	const deleteSelected = useCallback(() => deleteRows(gridSelection?.rows.toArray() ?? []), [deleteRows, gridSelection]);
 
 	return {
+		deleteRows,
 		deleteSelected,
 	};
 }

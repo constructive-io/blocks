@@ -3,8 +3,12 @@
 // it is consumed by the draft-submission hook, use-sheets, and the image editor's
 // DOM re-host.
 
+import type { DraftFieldGap } from './draft-guidance';
+
 /** Result of submitting a draft row */
 export interface DraftSubmitResult {
 	/** The created row with its metadata-defined primary-key fields. */
 	createdRow: Record<string, unknown> | null;
+	/** Required fields the draft still lacks, when Save was refused before sending. */
+	missing?: readonly DraftFieldGap[];
 }

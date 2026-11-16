@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useLayoutEffect, useRef } from 'react';
+import React, { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 
 interface EditorFocusTrapProps {
 	children: React.ReactNode;
@@ -26,14 +26,15 @@ function getVisibleFocusable(container: HTMLElement): HTMLElement[] {
 
 export function EditorFocusTrap({ children, onEscape, onKeyDown, className, style }: EditorFocusTrapProps) {
 	const containerRef = useRef<HTMLDivElement>(null);
-	const previousActiveElement = useRef<Element | null>(null);
+	// The element to give focus back to on close (the grid, or the button that opened the
+	// editor). Read on the first render, before any child mounts: an `autoFocus` input inside
+	// the editor takes focus during the commit, before this component's own effects run.
+	const [previousActiveElement] = useState<Element | null>(() => (typeof document === 'undefined' ? null : document.activeElement));
 
 	// Focus the first visible focusable element synchronously before paint, so the
 	// editor input is focused instantly on open (no setTimeout settle, no focus-jump
 	// off an input the user already started typing in). Runs once on mount.
 	useLayoutEffect(() => {
-		previousActiveElement.current = document.activeElement;
-
 		if (!containerRef.current) return;
 
 		const visibleElements = getVisibleFocusable(containerRef.current);
@@ -49,11 +50,11 @@ export function EditorFocusTrap({ children, onEscape, onKeyDown, className, styl
 	// in DOM).
 	useEffect(() => {
 		return () => {
-			if (previousActiveElement.current instanceof HTMLElement && previousActiveElement.current.isConnected) {
-				previousActiveElement.current.focus();
+			if (previousActiveElement instanceof HTMLElement && previousActiveElement.isConnected) {
+				previousActiveElement.focus();
 			}
 		};
-	}, []);
+	}, [previousActiveElement]);
 
 	// Handle keyboard events — forward all keys to parent, then handle Escape/Tab
 	const handleKeyDown = useCallback(

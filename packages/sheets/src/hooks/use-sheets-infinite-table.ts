@@ -20,24 +20,13 @@ import { useQueries, useQueryClient } from '@tanstack/react-query';
 import { useSheetsContext } from '../context/sheets-context';
 import type { SheetsScopeKey } from '../context/sheets-context';
 
-import {
-	cleanTable,
-	type CleanTable,
-	type MetaTable,
-	type MutationOptions,
-	type PageInfo,
-	type QueryOptions,
-} from '@constructive-io/data';
-import { createError } from '@constructive-io/data';
+import { type MutationOptions, type PageInfo, type TableModel } from '@constructive-io/data';
 import type { FieldSelection } from '@constructive-io/data';
 import { reuseSheetsPlaceholderData } from './query-keys';
-import { toOrderByEnumValue } from '@constructive-io/data';
 import { useSheetsAdapter } from '../adapter/use-sheets-adapter';
-import { useSheetsMeta } from './use-sheets-meta';
 import { sheetsQueryKeys } from './query-keys';
-import { resolveRelationFieldMap } from './relation-field-resolution';
-import { validateOrderByVariables } from './orderby-enum-resolution';
-import { transformToPostGraphileVariables } from './use-sheets-table';
+import { relationsFromSelection, sortSpecs, whereFilter } from './list-query';
+import { useTableModel } from './use-table-model';
 
 type RowRecord = Record<string, unknown>;
 
@@ -55,8 +44,10 @@ export interface UseInfiniteTableOptions {
 	pageSize?: number;
 	/** Order by clauses */
 	orderBy?: Array<{ field: string; direction: 'asc' | 'desc' }>;
-	/** Filter conditions */
-	where?: Record<string, unknown>;
+	/** A filter in the server's filter input shape (any operator the model reports, relation and search fields included). */
+	where?: Readonly<Record<string, unknown>>;
+	/** Columns to fetch (the primary key and relation keys are always added). Omitted: every readable column. */
+	columns?: readonly string[];
 	/** Field selection preset or custom selection */
 	select?: FieldSelection;
 	/** Enable/disable the hook */
@@ -83,10 +74,14 @@ export interface UseInfiniteTableResult<T = RowRecord> {
 	pageSize: number;
 	/** Overall loading state (true if any page is loading) */
 	isLoading: boolean;
+	/** True while a page request for the current options is in flight, also while placeholder rows from the previous options show */
+	isFetching: boolean;
 	/** Whether initial data has been loaded */
 	hasInitialData: boolean;
-	/** Error from the most recent failed fetch */
+	/** Error from the most recent failed fetch, or why the table model is unavailable */
 	error: Error | null;
+	/** The table model, or null while it loads or when it failed */
+	model: TableModel | null;
 	/** Invalidate all pages and refetch */
 	invalidate: () => void;
 	/** Reset to initial state (clears all pages, refetches page 0) */
@@ -105,7 +100,7 @@ const sheetsInfiniteTableKeys = {
 	all: (scope: SheetsScopeKey, tableName: string) => sheetsQueryKeys.infiniteTable(scope, tableName),
 	page: (scope: SheetsScopeKey, tableName: string, pageIndex: number, optionsKey: string) =>
 		[...sheetsQueryKeys.infiniteTable(scope, tableName), 'page', pageIndex, optionsKey] as const,
-	totalCount: (scope: SheetsScopeKey, tableName: string, where?: Record<string, unknown>) =>
+	totalCount: (scope: SheetsScopeKey, tableName: string, where?: Readonly<Record<string, unknown>>) =>
 		sheetsQueryKeys.infiniteTableTotalCount(scope, tableName, where),
 };
 
@@ -116,10 +111,12 @@ const sheetsInfiniteTableKeys = {
 function createStableOptionsKey(options: {
 	pageSize: number;
 	orderBy?: Array<{ field: string; direction: 'asc' | 'desc' }>;
-	where?: Record<string, unknown>;
+	where?: Readonly<Record<string, unknown>>;
 	fieldSelection?: FieldSelection;
+	columns?: readonly string[];
 }): string {
 	return JSON.stringify({
+		columns: options.columns ?? null,
 		pageSize: options.pageSize,
 		orderBy: options.orderBy ?? null,
 		where: options.where ?? null,
@@ -135,17 +132,25 @@ export function useSheetsInfiniteTable<T extends RowRecord = RowRecord>(
 	tableName: string,
 	options: UseInfiniteTableOptions = {},
 ): UseInfiniteTableResult<T> {
-	const { pageSize = 100, orderBy, where, select: fieldSelection, enabled = true } = options;
+	const { pageSize = 100, orderBy, where, select: fieldSelection, columns, enabled = true } = options;
 
 	const queryClient = useQueryClient();
 	const { execute, scopeKey } = useSheetsContext();
-	const { data: meta } = useSheetsMeta({ enabled });
+	const {
+		model: table,
+		tableKey,
+		error: modelError,
+		refetch: refetchModel,
+		isLoading: isModelLoading,
+	} = useTableModel(tableName, { enabled });
+	// Cache entries are keyed by `TableModel.key`; the bare name is only a fallback before `_meta` loads.
+	const cacheRef = tableKey ?? tableName;
 	const adapter = useSheetsAdapter();
 
 	// Create stable options key using JSON serialization for deep comparison
 	const stableOptionsKey = useMemo(
-		() => createStableOptionsKey({ pageSize, orderBy, where, fieldSelection }),
-		[pageSize, orderBy, where, fieldSelection],
+		() => createStableOptionsKey({ pageSize, orderBy, where, fieldSelection, columns }),
+		[pageSize, orderBy, where, fieldSelection, columns],
 	);
 
 	// Track which pages we want to load
@@ -171,19 +176,6 @@ export function useSheetsInfiniteTable<T extends RowRecord = RowRecord>(
 	// Track previous stable key to detect actual changes
 	const prevStableKeyRef = useRef<string>(stableOptionsKey);
 	const prevTableNameRef = useRef<string>(tableName);
-
-	// Get table metadata
-	const tables = useMemo<CleanTable[]>(() => {
-		if (!meta?._meta?.tables) return [];
-		return meta._meta.tables
-			.filter((candidate): candidate is MetaTable => candidate != null)
-			.map((metaTable) => cleanTable(metaTable));
-	}, [meta]);
-
-	const table = useMemo<CleanTable | null>(
-		() => tables.find((candidate) => candidate.name === tableName) ?? null,
-		[tables, tableName],
-	);
 
 	// Synchronous render-time reset: clear cursors and state BEFORE pageQueries useMemo reads them.
 	// This follows the React 18+ "storing information from previous renders" pattern where setState
@@ -218,19 +210,25 @@ export function useSheetsInfiniteTable<T extends RowRecord = RowRecord>(
 		if (needsInvalidationRef.current) {
 			needsInvalidationRef.current = false;
 			queryClient.invalidateQueries({
-				queryKey: sheetsInfiniteTableKeys.all(scopeKey, tableName),
+				queryKey: sheetsInfiniteTableKeys.all(scopeKey, cacheRef),
 			});
 		}
-	}, [tableName, stableOptionsKey, queryClient, scopeKey]);
+	}, [cacheRef, stableOptionsKey, queryClient, scopeKey]);
 
-	// Helper to get page data from React Query cache
+	// Page data straight from the React Query cache, so an optimistic `setQueryData` reads back at
+	// once. Each page's query hash is computed once: a row read is O(1), never a key hash.
+	const pageHashes = useMemo(() => new Map<number, string>(), [scopeKey, cacheRef, stableOptionsKey]);
 	const getPageDataFromCache = useCallback(
 		(pageIndex: number): PageData<T> | undefined => {
-			return queryClient.getQueryData<PageData<T>>(
-				sheetsInfiniteTableKeys.page(scopeKey, tableName, pageIndex, stableOptionsKey),
-			);
+			let hash = pageHashes.get(pageIndex);
+			if (hash === undefined) {
+				const queryKey = sheetsInfiniteTableKeys.page(scopeKey, cacheRef, pageIndex, stableOptionsKey);
+				hash = queryClient.defaultQueryOptions({ queryKey }).queryHash;
+				pageHashes.set(pageIndex, hash);
+			}
+			return queryClient.getQueryCache().get<PageData<T>>(hash)?.state.data;
 		},
-		[queryClient, scopeKey, tableName, stableOptionsKey],
+		[queryClient, pageHashes, scopeKey, cacheRef, stableOptionsKey],
 	);
 
 	// Create query options for each requested page
@@ -255,64 +253,28 @@ export function useSheetsInfiniteTable<T extends RowRecord = RowRecord>(
 			const canFetch = isFirstPage || previousCursor !== undefined || canUseOffsetFallback;
 
 			return {
-				queryKey: sheetsInfiniteTableKeys.page(scopeKey, tableName, pageIndex, stableOptionsKey),
-				queryFn: async (): Promise<PageData<T>> => {
-					if (!table) {
-						throw createError.notFound(`Table '${tableName}' not found`);
-					}
-
-					// Build query options. `includePageInfo` is always set so the cursor
-					// chain works on every page (page 0 has no `after` to imply pageInfo).
-					const queryOptions: QueryOptions = {
-						first: pageSize,
-						orderBy,
-						where: where as QueryOptions['where'],
-						fieldSelection,
-						includePageInfo: true, // Always include for cursor chain
-					};
-
+				queryKey: sheetsInfiniteTableKeys.page(scopeKey, cacheRef, pageIndex, stableOptionsKey),
+				queryFn: async ({ signal }: { signal: AbortSignal }): Promise<PageData<T>> => {
 					// Prefer cursor-based pagination when possible; allow offset fallback for deep jumps.
-					if (!isFirstPage) {
-						if (previousCursor) {
-							queryOptions.after = previousCursor;
-						} else if (canUseOffsetFallback) {
-							queryOptions.offset = pageIndex * pageSize;
-						}
-					}
-
-					// Cache-bound resolution stays in the hook. The orderBy validation mutates
-					// `variables.orderBy` (PostGraphile enum strings) in place; we fold that
-					// result back into the `{ field, direction }[]` orderBy we hand the adapter,
-					// so the adapter rebuilds an identical (validated) variables payload.
-					const variables = transformToPostGraphileVariables(table, queryOptions);
-
-					const [relationFieldMap] = await Promise.all([
-						resolveRelationFieldMap({
-							table,
-							fieldSelection: queryOptions.fieldSelection,
-							scopeKey,
-							queryClient,
-							execute,
-						}),
-						validateOrderByVariables(variables, table, scopeKey, queryClient, execute),
-					]);
-
-					const validatedOrderByEnum = new Set((variables.orderBy as string[] | undefined) ?? []);
-					const availableOrderByFields = new Set(table.fields.map((field) => field.name));
-					const validatedOrderBy = orderBy?.filter(
-						({ field, direction }) =>
-							availableOrderByFields.has(field) && validatedOrderByEnum.has(toOrderByEnumValue(field, direction)),
-					);
+					// The connection's page info is always selected, so the cursor chain works on every page.
+					const after = !isFirstPage && previousCursor ? previousCursor : undefined;
+					const offset = !isFirstPage && !previousCursor && canUseOffsetFallback ? pageIndex * pageSize : undefined;
+					// The total belongs to the scope (filter, sort, page size), so only its first page counts
+					// it. Creates and deletes invalidate every page, which counts again.
+					const countsTotal = isFirstPage;
 
 					const res = await adapter.listRows<T>(
-						{ table, allTables: tables, tableName },
+						{ model: table, tableName },
 						{
-							...queryOptions,
-							orderBy: validatedOrderBy,
-							// resolveRelationFieldMap yields `string | null` (null = omit field). The
-							// contract narrows to `string`, but the null values are passed through to
-							// buildSelect unchanged at runtime — behavior is identical to before.
-							relationFieldMap: relationFieldMap as Record<string, string>,
+							limit: pageSize,
+							after,
+							offset,
+							where: whereFilter(where),
+							orderBy: sortSpecs(orderBy),
+							relations: relationsFromSelection(fieldSelection),
+							columns,
+							includeTotalCount: countsTotal,
+							signal,
 						},
 						execute,
 					);
@@ -334,7 +296,7 @@ export function useSheetsInfiniteTable<T extends RowRecord = RowRecord>(
 					const isCurrentGeneration = queryGeneration === generationRef.current;
 
 					// Update total count ref
-					if (res.totalCount !== undefined && isCurrentGeneration) {
+					if (countsTotal && isCurrentGeneration) {
 						totalCountRef.current = res.totalCount;
 					}
 
@@ -351,7 +313,7 @@ export function useSheetsInfiniteTable<T extends RowRecord = RowRecord>(
 						rows,
 						pageInfo,
 						pageIndex,
-						totalCount: res.totalCount,
+						totalCount: countsTotal ? res.totalCount : undefined,
 					};
 
 					return pageData;
@@ -370,8 +332,8 @@ export function useSheetsInfiniteTable<T extends RowRecord = RowRecord>(
 		});
 		}, [
 			table,
-			tables,
 			tableName,
+			cacheRef,
 			enabled,
 			scopeKey,
 			queryClient,
@@ -414,81 +376,51 @@ export function useSheetsInfiniteTable<T extends RowRecord = RowRecord>(
 		}
 	}, [enabled, table, getPageDataFromCache]);
 
-	// Compute loading states
-	const isLoading = queryResults.some((result) => result.isLoading);
+	// Compute loading states. Until the table model resolves no page query exists, so loading
+	// covers the model too; otherwise the grid paints empty before its loading placeholder.
+	const isLoading = isModelLoading || queryResults.some((result) => result.isLoading);
+	const isFetching = queryResults.some((result) => result.isFetching);
+
+	// The requested pages' results by page index. `useQueries` returns new result objects on every
+	// render, so this map, and every read built on it, changes only when a page's data, loading
+	// state or error changes. A render that changes no page (a cursor move, a typed key) keeps the
+	// row reads below, and the row array built on them, as they were.
+	const pagesKey = queryResults.map((result) => `${dataIdOf(result.data)}${result.isLoading ? 'L' : ''}${result.error ? 'E' : ''}`).join(',');
+	const pages = useMemo(() => {
+		const byPage = new Map<number, (typeof queryResults)[number]>();
+		Array.from(requestedPages).forEach((pageIndex, index) => {
+			const result = queryResults[index];
+			if (result) byPage.set(pageIndex, result);
+		});
+		return byPage;
+		// eslint-disable-next-line react-hooks/exhaustive-deps -- `pagesKey` covers every result's data, loading state and error
+	}, [requestedPages, pagesKey]);
+
+	// The page holding a row: the cache first (it already holds an optimistic update), else the result.
+	const pageOf = useCallback(
+		(pageIndex: number): PageData<T> | undefined => getPageDataFromCache(pageIndex) ?? pages.get(pageIndex)?.data,
+		[getPageDataFromCache, pages],
+	);
 
 	// Check if we have initial data - either from current query or from cache
-	const hasInitialData = useMemo(() => {
-		// Check query results first
-		const page0Query = queryResults.find((_, idx) => Array.from(requestedPages)[idx] === 0);
-		if (page0Query?.data) return true;
+	const hasInitialData = useMemo(() => pageOf(0) !== undefined, [pageOf]);
 
-		// Fall back to cache check
-		const cachedPage0 = getPageDataFromCache(0);
-		return cachedPage0 !== undefined;
-	}, [queryResults, requestedPages, getPageDataFromCache]);
+	const error = queryResults.find((result) => result.error)?.error ?? (enabled ? modelError : null);
 
-	const error = queryResults.find((result) => result.error)?.error ?? null;
-
-	// Get row at index - reads from React Query cache
-	// IMPORTANT: Always read from cache first since optimistic updates use setQueryData
-	// which updates cache but doesn't immediately update queryResults references
 	const getRowAtIndex = useCallback(
-		(rowIndex: number): T | null => {
-			const pageIndex = Math.floor(rowIndex / pageSize);
-			const rowIndexInPage = rowIndex % pageSize;
-
-			// Always read from React Query cache first - this ensures we get optimistically
-			// updated data from setQueryData calls (used in updateRowAtIndex)
-			const cachedData = getPageDataFromCache(pageIndex);
-			if (cachedData) {
-				return cachedData.rows[rowIndexInPage] ?? null;
-			}
-
-			// Fall back to query results if cache miss (shouldn't happen normally)
-			const queryIndex = Array.from(requestedPages).indexOf(pageIndex);
-			if (queryIndex !== -1 && queryResults[queryIndex]?.data) {
-				const pageData = queryResults[queryIndex].data;
-				return pageData.rows[rowIndexInPage] ?? null;
-			}
-
-			return null;
-		},
-		[pageSize, getPageDataFromCache, requestedPages, queryResults],
+		(rowIndex: number): T | null => pageOf(Math.floor(rowIndex / pageSize))?.rows[rowIndex % pageSize] ?? null,
+		[pageSize, pageOf],
 	);
 
-	// Check if row is loaded - reads from cache first for consistency with getRowAtIndex
 	const isRowLoaded = useCallback(
 		(rowIndex: number): boolean => {
-			const pageIndex = Math.floor(rowIndex / pageSize);
-			const rowIndexInPage = rowIndex % pageSize;
-
-			// Check cache first (consistent with getRowAtIndex)
-			const cachedData = getPageDataFromCache(pageIndex);
-			if (cachedData) {
-				return rowIndexInPage < cachedData.rows.length;
-			}
-
-			// Fallback to query results
-			const queryIndex = Array.from(requestedPages).indexOf(pageIndex);
-			if (queryIndex !== -1 && queryResults[queryIndex]?.data) {
-				return rowIndexInPage < queryResults[queryIndex].data.rows.length;
-			}
-
-			return false;
+			const page = pageOf(Math.floor(rowIndex / pageSize));
+			return page !== undefined && rowIndex % pageSize < page.rows.length;
 		},
-		[pageSize, getPageDataFromCache, requestedPages, queryResults],
+		[pageSize, pageOf],
 	);
 
-	// Check if page is loading
-	const isPageLoading = useCallback(
-		(pageIndex: number): boolean => {
-			const queryIndex = Array.from(requestedPages).indexOf(pageIndex);
-			if (queryIndex === -1) return false;
-			return queryResults[queryIndex]?.isLoading ?? false;
-		},
-		[requestedPages, queryResults],
-	);
+	const isPageLoading = useCallback((pageIndex: number): boolean => pages.get(pageIndex)?.isLoading ?? false, [pages]);
 
 	// Ensure rows in range are loaded
 	const ensureRowsLoaded = useCallback(
@@ -523,31 +455,25 @@ export function useSheetsInfiniteTable<T extends RowRecord = RowRecord>(
 	// Build loadedPages map from React Query cache for backward compatibility
 	const loadedPages = useMemo(() => {
 		const map = new Map<number, PageData<T>>();
-
-		// Add data from current query results
-		Array.from(requestedPages).forEach((pageIndex, idx) => {
-			const result = queryResults[idx];
-			if (result?.data) {
-				map.set(pageIndex, result.data);
-			}
-		});
-
+		for (const [pageIndex, result] of pages) if (result.data) map.set(pageIndex, result.data);
 		return map;
-	}, [requestedPages, queryResults]);
+	}, [pages]);
 
 	// Compute total count from query results or ref
 	const totalCount = useMemo(() => {
-		// Try to get from latest query result
-		for (const result of queryResults) {
-			if (result.data?.totalCount !== undefined) {
-				return result.data.totalCount;
-			}
+		for (const result of pages.values()) {
+			if (result.data?.totalCount !== undefined) return result.data.totalCount;
 		}
 		return totalCountRef.current;
-	}, [queryResults]);
+	}, [pages]);
 
 	// Invalidate all pages
 	const invalidate = useCallback(() => {
+		// A table whose model failed has no pages yet: load the model again; its pages follow.
+		if (!table) {
+			void refetchModel();
+			return;
+		}
 		// Clear cursor chain and bump generation to discard in-flight stale cursors
 		cursorChainRef.current.clear();
 		totalCountRef.current = 0;
@@ -558,8 +484,8 @@ export function useSheetsInfiniteTable<T extends RowRecord = RowRecord>(
 		setRequestedPages(new Set([0]));
 
 		// Invalidate React Query cache
-		queryClient.invalidateQueries({ queryKey: sheetsInfiniteTableKeys.all(scopeKey, tableName) });
-	}, [queryClient, scopeKey, tableName]);
+		queryClient.invalidateQueries({ queryKey: sheetsInfiniteTableKeys.all(scopeKey, cacheRef) });
+	}, [queryClient, scopeKey, cacheRef, table, refetchModel]);
 
 	// Reset to initial state
 	const reset = useCallback(() => {
@@ -572,7 +498,7 @@ export function useSheetsInfiniteTable<T extends RowRecord = RowRecord>(
 			const pageIndex = Math.floor(rowIndex / pageSize);
 			const rowIndexInPage = rowIndex % pageSize;
 
-			const queryKey = sheetsInfiniteTableKeys.page(scopeKey, tableName, pageIndex, stableOptionsKey);
+			const queryKey = sheetsInfiniteTableKeys.page(scopeKey, cacheRef, pageIndex, stableOptionsKey);
 			const cachedData = queryClient.getQueryData<PageData<T>>(queryKey);
 
 			if (!cachedData || !cachedData.rows[rowIndexInPage]) {
@@ -594,24 +520,45 @@ export function useSheetsInfiniteTable<T extends RowRecord = RowRecord>(
 
 			return true;
 		},
-		[pageSize, queryClient, scopeKey, tableName, stableOptionsKey],
+		[pageSize, queryClient, scopeKey, cacheRef, stableOptionsKey],
 	);
 
-	return {
-		getRowAtIndex,
-		totalCount,
-		isRowLoaded,
-		isPageLoading,
-		ensureRowsLoaded,
-		loadedPages,
-		pageSize,
-		isLoading,
-		hasInitialData,
-		error: error as Error | null,
-		invalidate,
-		reset,
-		updateRowAtIndex,
-	};
+	// One object per change of what it holds, so memoized consumers keep theirs across other renders.
+	return useMemo(
+		() => ({
+			getRowAtIndex,
+			totalCount,
+			isRowLoaded,
+			isPageLoading,
+			ensureRowsLoaded,
+			loadedPages,
+			pageSize,
+			isLoading,
+			isFetching,
+			hasInitialData,
+			error: error as Error | null,
+			model: table,
+			invalidate,
+			reset,
+			updateRowAtIndex,
+		}),
+		[getRowAtIndex, totalCount, isRowLoaded, isPageLoading, ensureRowsLoaded, loadedPages, pageSize, isLoading, isFetching, hasInitialData, error, table, invalidate, reset, updateRowAtIndex],
+	);
+}
+
+const dataIds = new WeakMap<object, number>();
+let lastDataId = 0;
+
+/** A number per data object, the same for the object's lifetime: its identity, usable in a key. */
+function dataIdOf(data: unknown): number {
+	if (data === null || typeof data !== 'object') return 0;
+	let id = dataIds.get(data);
+	if (id === undefined) {
+		lastDataId += 1;
+		id = lastDataId;
+		dataIds.set(data, id);
+	}
+	return id;
 }
 
 /**

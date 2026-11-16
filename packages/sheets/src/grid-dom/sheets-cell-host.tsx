@@ -1,5 +1,6 @@
-// The DOM cell host — the `getCellContent` → React port. Given a v9 cell it asks
-// the injected resolver for the {@link SheetsCellResolution} ({ cell, component? })
+// The DOM cell host — the `getCellContent` → React port. Given a cell's render context
+// (its row, column and state) it asks the injected resolver for the
+// {@link SheetsCellResolution} ({ cell, component? })
 // and renders the consumer component when present, else dispatches on the neutral
 // `kind` to the matching built-in view (cell-model/views/*).
 //
@@ -17,12 +18,11 @@
 // Dependency-light: local `cn` only, with no shared primitive dependency.
 import { memo, useCallback, useRef } from 'react';
 import type React from 'react';
-import type { Cell } from '@tanstack/react-table';
 
 import { cn } from '../utils/cn';
 import { getDraftMeta, type SheetsRow } from '../grid/row-model';
 import { DRAFT_ACTION_COLUMN_KEY } from '../grid/sheets.constants';
-import type { SheetsTableFeatures } from '../table/features';
+import { DRAFT_ROW_ERROR_KEY } from '../grid/draft-guidance';
 import type { RenderCellContext } from '../table/grid-viewport';
 import type { CellProps } from '../cell-model/cell-props';
 import { BadgesCellView } from '../cell-model/views/badges-view';
@@ -35,10 +35,9 @@ import { NumberCellView } from '../cell-model/views/number-view';
 import { RelationCellView } from '../cell-model/views/relation-view';
 import { TextCellView } from '../cell-model/views/text-view';
 import { UriCellView } from '../cell-model/views/uri-view';
-import { InlineCellEditor } from './inline-cell-editor';
+import { reportRejectedWrites } from '../grid/write-feedback';
+import { InlineCellEditor, type InlineEditMove } from './inline-cell-editor';
 import type { SheetsCellResolution } from './use-sheets-content';
-
-type SheetsTableCell = Cell<SheetsTableFeatures, SheetsRow, unknown>;
 
 /** Native DOM content resolver injected by the shell — mirrors `getCellContent`. */
 export type GetSheetsCellContent = (rowIndex: number, colKey: string) => SheetsCellResolution;
@@ -92,6 +91,8 @@ interface DraftActionInfo {
 	status: DraftActionStatus;
 	errored: boolean;
 	disabled: boolean;
+	/** Why the row was not saved: what it still needs, or the server's reason. */
+	errorMessage: string | null;
 }
 
 /**
@@ -100,30 +101,36 @@ interface DraftActionInfo {
  * the canvas: an error status surfaces the red dot but keeps the button live (the canvas
  * painter never disabled on error); `saving` disables (DraftActionCellView also self-locks).
  */
-function deriveDraftActionInfo(row: SheetsRow | undefined): DraftActionInfo | null {
+function deriveDraftActionInfo(row: SheetsRow | null | undefined): DraftActionInfo | null {
 	const meta = getDraftMeta(row);
 	if (!meta) return null;
 	const status: DraftActionStatus = meta.status;
-	return { draftRowId: meta.draftRowId, status, errored: status === 'error', disabled: status === 'saving' };
+	const errored = status === 'error';
+	const errorMessage = errored ? (meta.errors?.[DRAFT_ROW_ERROR_KEY] ?? null) : null;
+	return { draftRowId: meta.draftRowId, status, errored, disabled: status === 'saving', errorMessage };
 }
 
 interface SheetsCellHostInnerProps {
 	resolution: SheetsCellResolution;
+	/** The row is a new (draft) row: its values are checked as a whole when it is saved. */
+	isDraftRow: boolean;
 	rowId: string;
 	colKey: string;
 	rowIndex: number;
 	columnIndex: number;
 	value: unknown;
 	isEditing: boolean;
-	/** True when this is the active (keyboard cursor) cell — drives the focus ring + aria-selected + id. */
+	/** True when this is the active (keyboard cursor) cell — drives the focus ring. */
 	isActive: boolean;
+	/** True for the active cell and every cell of the active range — drives aria-selected. */
+	isSelected: boolean;
 	/** Open the overlay editor for this cell; undefined on render paths without editing (e.g. tests). */
 	openEditor?: OpenEditor;
 	/** Type-to-edit seed for the inline editor (only meaningful when `isEditing`). */
 	inlineInitialText?: string;
 	/** Commit an inline (in-cell) edit. Set on the inline-edit render path; reuses the host's
 	 * value-commit pipeline (bulk-or-single). */
-	onInlineCommit?: (rowIndex: number, colKey: string, value: unknown) => void;
+	onInlineCommit?: (rowIndex: number, colKey: string, value: unknown, move?: InlineEditMove) => void;
 	/** Cancel an inline (in-cell) edit — discards and closes. */
 	onInlineCancel?: () => void;
 	/** Park the active cell on this cell (click-to-activate). `shiftKey` extends the range from the
@@ -153,6 +160,7 @@ function toCellProps(props: SheetsCellHostInnerProps, onStartEdit: () => void): 
 		onStartEdit,
 		disabled: false,
 		readOnlyReason: props.resolution.readOnlyReason,
+		isActive: props.isActive,
 	};
 }
 
@@ -166,14 +174,14 @@ const SheetsCellHostInner = memo(
 
 		// Start editing anchored to THIS cell's DOM node — the host is the only place
 		// that knows the cell's rect (read off getBoundingClientRect, viewport coords,
-		// matching the OverlayManager's window.innerHeight assumption). No-op when the
-		// cell is readonly or no openEditor was threaded in.
+		// matching the OverlayManager's window.innerHeight assumption). A read-only cell
+		// still goes through the edit route: a value viewer opens, or the reason is shown.
 		const startEdit = useCallback(() => {
 			const open = props.openEditor;
 			const el = wrapperRef.current;
-			if (!open || !el || props.resolution.cell.readonly) return;
+			if (!open || !el) return;
 			open(props.rowIndex, props.colKey, el.getBoundingClientRect());
-		}, [props.openEditor, props.rowIndex, props.colKey, props.resolution.cell.readonly]);
+		}, [props.openEditor, props.rowIndex, props.colKey]);
 
 		// Click parks the active cell here (the grid root owns keys via aria-activedescendant).
 		// A shift-click EXTENDS the cell range from the latched anchor instead of resetting it.
@@ -207,20 +215,27 @@ const SheetsCellHostInner = memo(
 		const draftClasses = cn(
 			styleHint?.draft && 'bg-muted/40 text-muted-foreground',
 			styleHint?.error && 'bg-destructive/10 text-destructive',
+			// A value the server could not send shows a muted notice, never an empty cell.
+			styleHint?.unreadable && 'text-muted-foreground italic',
 		);
 		// The draft-action column renders the REAL <Button> (DraftActionCellView), which
 		// takes its own prop shape — bypass the kind→view map and the value/editor wiring.
 		const isDraftActionCell = props.colKey === DRAFT_ACTION_COLUMN_KEY || props.resolution.cell.kind === 'draft-action';
 		// Border wrapper carries the mouse activation handlers (click parks the active cell,
 		// double-click opens the editor). Keys are owned by the grid root (aria-activedescendant
-		// pattern), so the wrapper is NOT individually focusable. The gridcell role lives on the
-		// built-in view (or the consumer component) inside, so the host adds no second role="gridcell".
+		// pattern), so the wrapper is NOT individually focusable. It is the gridcell: the grid's
+		// aria-activedescendant points at its id, so its role, selection, column index and
+		// read-only state are what a screen reader announces. The views inside are plain content.
 		return (
 			<div
 				ref={wrapperRef}
+				role='gridcell'
 				id={`sheets-cell-${props.rowIndex}-${props.columnIndex}`}
-				aria-selected={props.isActive || undefined}
-				title={props.resolution.readOnlyReason}
+				aria-colindex={props.columnIndex + 1}
+				aria-selected={props.isSelected || undefined}
+				aria-readonly={props.resolution.readOnlyReason ? true : undefined}
+				aria-description={props.resolution.readOnlyReason ?? undefined}
+				title={props.resolution.readOnlyReason ?? props.resolution.errorMessage}
 				onClick={activate}
 				onDoubleClick={startEdit}
 				onContextMenu={contextMenu}
@@ -236,6 +251,7 @@ const SheetsCellHostInner = memo(
 						<DraftActionCellView
 							status={draftAction.status}
 							errored={draftAction.errored}
+							errorMessage={draftAction.errorMessage}
 							disabled={draftAction.disabled}
 							onSubmit={submitDraft}
 						/>
@@ -246,12 +262,15 @@ const SheetsCellHostInner = memo(
 					// shell short-circuits inline-toggle/overlay/none before here), so the cell kind is
 					// always text or number → derive the numeric variant from it.
 					<InlineCellEditor
-						ariaLabel={`Edit ${props.resolution.fieldMeta?.name ?? props.colKey}`}
+						ariaLabel={`Edit ${props.resolution.column?.name ?? props.resolution.fieldMeta?.name ?? props.colKey}`}
 						value={props.value}
 						initialText={props.inlineInitialText}
 						numeric={props.resolution.cell.kind === 'number'}
-						onCommit={(next) => props.onInlineCommit?.(props.rowIndex, props.colKey, next)}
+						column={props.resolution.column ?? null}
+						creating={props.isDraftRow}
+						onCommit={(next, move) => props.onInlineCommit?.(props.rowIndex, props.colKey, next, move)}
 						onCancel={() => props.onInlineCancel?.()}
+						onReject={(reason) => reportRejectedWrites([{ rowIndex: props.rowIndex, colKey: props.colKey, reason }], 1)}
 					/>
 				) : Component ? (
 					<Component {...cellProps} />
@@ -264,6 +283,9 @@ const SheetsCellHostInner = memo(
 	(prev, next) =>
 		prev.rowId === next.rowId &&
 		prev.colKey === next.colKey &&
+		// The id (the aria-activedescendant target) and aria-colindex come from the indexes.
+		prev.rowIndex === next.rowIndex &&
+		prev.columnIndex === next.columnIndex &&
 		prev.value === next.value &&
 		prev.isEditing === next.isEditing &&
 		// initialText seeds the inline editor on open; it only differs for the editing cell.
@@ -272,12 +294,16 @@ const SheetsCellHostInner = memo(
 		prev.onInlineCancel === next.onInlineCancel &&
 		// isActive must gate the memo or the focus ring will not move between cells.
 		prev.isActive === next.isActive &&
+		prev.isDraftRow === next.isDraftRow &&
+		prev.isSelected === next.isSelected &&
 		prev.openEditor === next.openEditor &&
 		prev.onActivateCell === next.onActivateCell &&
 		prev.onContextMenu === next.onContextMenu &&
 		prev.onSubmitDraftRow === next.onSubmitDraftRow &&
 		prev.resolution.cell.readonly === next.resolution.cell.readonly &&
 		prev.resolution.readOnlyReason === next.resolution.readOnlyReason &&
+		prev.resolution.errorMessage === next.resolution.errorMessage &&
+		prev.resolution.cell.styleHint?.unreadable === next.resolution.cell.styleHint?.unreadable &&
 		// styleHint.draft/error and the draft-action status can flip while `value` is
 		// unchanged (validation result arrives, save in flight), so gate on them too.
 		prev.resolution.cell.styleHint?.draft === next.resolution.cell.styleHint?.draft &&
@@ -285,25 +311,27 @@ const SheetsCellHostInner = memo(
 		sameDraftAction(prev.draftAction, next.draftAction)
 );
 
-/** Draft-action equality for the memo gate — status/errored/disabled drive the Button. */
+/** Draft-action equality for the memo gate — status/errored/disabled/reason drive the Button. */
 function sameDraftAction(a: DraftActionInfo | null | undefined, b: DraftActionInfo | null | undefined): boolean {
 	if (a === b) return true;
 	if (!a || !b) return false;
-	return a.draftRowId === b.draftRowId && a.status === b.status && a.errored === b.errored && a.disabled === b.disabled;
+	return (
+		a.draftRowId === b.draftRowId &&
+		a.status === b.status &&
+		a.errored === b.errored &&
+		a.disabled === b.disabled &&
+		a.errorMessage === b.errorMessage
+	);
 }
 
 export interface SheetsCellHostProps {
-	cell: SheetsTableCell;
+	/** The cell's row, column and state, from the viewport (`isEditing` renders the bare <input>). */
 	ctx: RenderCellContext;
 	getSheetsCellContent: GetSheetsCellContent;
 	/** Open the overlay editor for the activated cell (double-click; grid root owns Enter / F2). */
 	openEditor?: OpenEditor;
-	/** True when this cell is being edited IN PLACE (inline-edit intent); renders the bare <input>. */
-	isEditing?: boolean;
-	/** Type-to-edit seed for the inline editor (only meaningful when `isEditing`). */
-	inlineInitialText?: string;
 	/** Commit an inline (in-cell) edit — reuses the host value-commit pipeline. */
-	onInlineCommit?: (rowIndex: number, colKey: string, value: unknown) => void;
+	onInlineCommit?: (rowIndex: number, colKey: string, value: unknown, move?: InlineEditMove) => void;
 	/** Cancel an inline (in-cell) edit. */
 	onInlineCancel?: () => void;
 	/** Park the active cell on click; `shiftKey` extends the cell range from the anchor. */
@@ -316,32 +344,33 @@ export interface SheetsCellHostProps {
 }
 
 /**
- * Render a v9 cell as DOM. Wire via the {@link GridViewport} `renderCell` closure,
- * which injects the shell's resolver: `(c, ctx) => <SheetsCellHost cell={c} ctx={ctx}
+ * Render one cell as DOM. Wire via the {@link GridViewport} `renderCell` closure,
+ * which injects the shell's resolver: `(ctx) => <SheetsCellHost ctx={ctx}
  * getSheetsCellContent={getSheetsCellContent} openEditor={openEditor} />`.
  */
-export function SheetsCellHost({ cell, ctx, getSheetsCellContent, openEditor, isEditing, inlineInitialText, onInlineCommit, onInlineCancel, onActivateCell, onContextMenu, onSubmitDraftRow, className }: SheetsCellHostProps) {
-	const rowIndex = cell.row.index;
-	const colKey = cell.column.id;
-	const value = cell.getValue();
+export function SheetsCellHost({ ctx, getSheetsCellContent, openEditor, onInlineCommit, onInlineCancel, onActivateCell, onContextMenu, onSubmitDraftRow, className }: SheetsCellHostProps) {
+	const { rowIndex, columnId: colKey, row } = ctx;
+	const value = row?.[colKey];
 	const resolution = getSheetsCellContent(rowIndex, colKey);
 	// Only the draft-action column needs the row's draft status; for every other column
-	// this is null and the inner skips the Button branch. `cell.row.original` carries the
-	// Symbol-keyed DraftMeta (it's the live row ref, never spread away by the table).
-	const draftAction = colKey === DRAFT_ACTION_COLUMN_KEY ? deriveDraftActionInfo(cell.row.original) : null;
+	// this is null and the inner skips the Button branch. The row carries the
+	// Symbol-keyed DraftMeta (it's the live row ref, never spread away).
+	const draftAction = colKey === DRAFT_ACTION_COLUMN_KEY ? deriveDraftActionInfo(row) : null;
 	return (
 		<SheetsCellHostInner
 			resolution={resolution}
-			rowId={cell.row.id}
+			isDraftRow={Boolean(getDraftMeta(row))}
+			rowId={ctx.rowId}
 			colKey={colKey}
 			rowIndex={rowIndex}
 			columnIndex={ctx.columnIndex}
 			value={value}
-			isEditing={!!isEditing}
-			inlineInitialText={inlineInitialText}
+			isEditing={ctx.isEditing}
+			inlineInitialText={ctx.inlineInitialText}
 			onInlineCommit={onInlineCommit}
 			onInlineCancel={onInlineCancel}
 			isActive={ctx.isActive}
+			isSelected={ctx.isSelected}
 			openEditor={openEditor}
 			onActivateCell={onActivateCell}
 			onContextMenu={onContextMenu}

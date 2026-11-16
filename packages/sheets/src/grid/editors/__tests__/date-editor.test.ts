@@ -1,62 +1,50 @@
 import { describe, expect, it } from 'vitest';
 
-import {
-	extractDateOnly,
-	formatDate,
-	formatForInput,
-	resolveDateType,
-	toLocalDateString,
-} from '../date-editor';
+import { resolveDateType } from '../date-editor';
+import { normalizeTimeInput, readDateValueParts, writeDateValueParts } from '../date-value-parts';
 
-describe('date-editor time handling', () => {
-	it('respects explicit date type for empty draft values', () => {
+describe('date editor types', () => {
+	it('respects an explicit type, even for an empty draft value', () => {
 		expect(resolveDateType('', 'time')).toBe('time');
 		expect(resolveDateType(null, 'time')).toBe('time');
-	});
-
-	it('normalizes postgres time strings for native time input', () => {
-		expect(formatForInput('06:00:00.000000', 'time')).toBe('06:00:00');
-		expect(formatForInput('7:05:09', 'time')).toBe('07:05:09');
-	});
-
-	it('keeps time preview stable for server-provided raw time strings', () => {
-		expect(formatDate('06:00:00.000000', 'time')).toBe('06:00:00.000000');
+		expect(resolveDateType('2024-02-29T13:45:30+00:00')).toBe('timestamptz');
+		expect(resolveDateType('2024-02-29T13:45:30')).toBe('datetime');
+		expect(resolveDateType('2024-02-29')).toBe('date');
 	});
 });
 
-describe('date-editor date-only calendar handling', () => {
-	// toLocalDateString uses LOCAL getters, mirroring the local Date constructor,
-	// so this assertion is timezone-portable: it holds in every timezone, and
-	// would have caught the old toISOString-based write (which shifts the day
-	// backwards in any UTC+ zone).
-	it('toLocalDateString serializes the literal wall-clock day', () => {
-		expect(toLocalDateString(new Date(2026, 5, 18))).toBe('2026-06-18');
-		expect(toLocalDateString(new Date(2026, 0, 1))).toBe('2026-01-01');
-		expect(toLocalDateString(new Date(2026, 11, 31))).toBe('2026-12-31');
+describe('date value parts', () => {
+	it('round-trips every stored form exactly when nothing changes', () => {
+		for (const [text, type] of [
+			['2024-02-29', 'date'],
+			['0001-01-01', 'date'],
+			['13:45:30.123456', 'time'],
+			['06:45:30.000000+00:00', 'time'],
+			['2024-02-29T13:45:30.123456', 'datetime'],
+			['1970-01-01T00:00:00.000000', 'datetime'],
+		] as const) {
+			expect(writeDateValueParts(readDateValueParts(text, type)!, type)).toBe(text);
+		}
 	});
 
-	it('extractDateOnly returns the 10-char slice for date-only strings, else null', () => {
-		expect(extractDateOnly('2026-06-17')).toBe('2026-06-17');
-		expect(extractDateOnly('2026-06-17T00:00:00Z')).toBe('2026-06-17');
-		expect(extractDateOnly('2026-06-17T13:45:00+07:00')).toBe('2026-06-17');
-		expect(extractDateOnly(new Date(2026, 5, 17))).toBeNull();
-		expect(extractDateOnly('not a date')).toBeNull();
-		expect(extractDateOnly('06-2026-17')).toBeNull();
-		expect(extractDateOnly(null)).toBeNull();
-		expect(extractDateOnly(undefined)).toBeNull();
-		expect(extractDateOnly(12345)).toBeNull();
+	it('reads a day without any time zone shift', () => {
+		expect(readDateValueParts('2026-06-17', 'date')?.date).toBe('2026-06-17');
+		expect(readDateValueParts('2026-06-17T00:00:00Z', 'date')?.date).toBe('2026-06-17');
+		expect(readDateValueParts('not a date', 'date')).toBeNull();
 	});
 
-	it('formatDate renders date-only values without a timezone shift', () => {
-		expect(formatDate('2026-06-17', 'date')).toBe('2026-06-17');
-		expect(formatDate('2026-06-17T00:00:00Z', 'date')).toBe('2026-06-17');
-		expect(formatDate(new Date(2026, 5, 17), 'date')).toBe('2026-06-17');
-		expect(formatDate('', 'date')).toBe('');
+	it('keeps the same instant and its microseconds for a zoned value', () => {
+		const parts = readDateValueParts('2024-02-29T13:45:30.123456+00:00', 'timestamptz')!;
+		expect(parts.instant).toBe(true);
+		expect(parts.fraction).toBe('.123456');
+		const written = writeDateValueParts(parts, 'timestamptz');
+		expect(written).toContain('.123456');
+		expect(new Date(written.replace(/(\.\d{3})\d+/, '$1')).toISOString()).toBe('2024-02-29T13:45:30.123Z');
 	});
 
-	it('formatForInput renders date-only values without a timezone shift', () => {
-		expect(formatForInput('2026-06-17', 'date')).toBe('2026-06-17');
-		expect(formatForInput('2026-06-17T00:00:00Z', 'date')).toBe('2026-06-17');
-		expect(formatForInput(new Date(2026, 5, 17), 'date')).toBe('2026-06-17');
+	it('normalizes a time field value to whole seconds', () => {
+		expect(normalizeTimeInput('7:05')).toBe('07:05:00');
+		expect(normalizeTimeInput('07:05:09')).toBe('07:05:09');
+		expect(normalizeTimeInput('25:00')).toBeNull();
 	});
 });

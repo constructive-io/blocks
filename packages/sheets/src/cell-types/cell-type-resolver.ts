@@ -24,16 +24,15 @@ export interface CellTypeResolution {
 // Use double-click to activate overlay for all cell types
 const SINGLE_CLICK_CELL_TYPES = new Set<string>();
 
-const READONLY_CONDITIONS = new Map([
-	['id', (fieldMeta?: FieldMetadata) => fieldMeta?.type?.gqlType === 'UUID'],
-	['createdAt', () => true],
-	['updatedAt', () => true],
-]);
-
+/**
+ * Resolve a cell type from raw `_meta` field metadata.
+ *
+ * @deprecated The grid routes table-model columns with `cellTypeForColumn` and takes
+ * read-only state from the model's write flags. This resolver never marks a field
+ * read-only by its name; it only says whether the cell type itself is editable.
+ */
 export function resolveCellType(fieldName: string, fieldMeta?: FieldMetadata): CellTypeResolution {
-	// Check for readonly fields first
-	const readonlyCheck = READONLY_CONDITIONS.get(fieldName);
-	const isReadonly = readonlyCheck?.(fieldMeta) ?? false;
+	const isReadonly = false;
 
 	let cellType: string = 'text'; // Default fallback
 
@@ -56,7 +55,6 @@ export function resolveCellType(fieldName: string, fieldMeta?: FieldMetadata): C
 			cellType = mapToFrontendCellType({
 				gqlType: fieldMeta.type.gqlType,
 				isArray: !!fieldMeta.type.isArray,
-				pgAlias: fieldMeta.type.pgAlias,
 				pgType: fieldMeta.type.pgType,
 				subtype: fieldMeta.type.subtype ?? null,
 			});
@@ -77,12 +75,7 @@ export function resolveCellType(fieldName: string, fieldMeta?: FieldMetadata): C
 	};
 }
 
-export function shouldShowCellActivation(fieldName: string, cellType: string): boolean {
-	// Disable activation for specific readonly fields
-	if (fieldName === 'createdAt' || fieldName === 'updatedAt') {
-		return false;
-	}
-
+export function shouldShowCellActivation(_fieldName: string, cellType: string): boolean {
 	if (VIEWER_ONLY_TYPES.has(cellType)) {
 		return false;
 	}
@@ -90,17 +83,21 @@ export function shouldShowCellActivation(fieldName: string, cellType: string): b
 	return true;
 }
 
-// Helper for checking if a field is an image type (used by existing column logic)
+/**
+ * Whether raw field metadata describes an image column. Decided by the type only
+ * (a registered matcher or the image type), never by the field's name.
+ *
+ * @deprecated Read `ColumnModel.value.file?.kind === 'image'` from the table model.
+ */
 export function isImageField(fieldMeta?: FieldMetadata, fieldName?: string): boolean {
 	if (!fieldMeta || !fieldName) return false;
 
-	// Check if this field is configured as an image type
-	const isImageByType =
-		fieldMeta.type?.gqlType === 'JSON' && // Image fields are often JSON
-		(fieldName.toLowerCase().includes('image') ||
-			fieldName.toLowerCase().includes('picture') ||
-			fieldName.toLowerCase().includes('photo') ||
-			fieldName.toLowerCase().includes('avatar'));
+	if (mapToFrontendCellType({
+		gqlType: fieldMeta.type?.gqlType || '',
+		isArray: !!fieldMeta.type?.isArray,
+		pgType: fieldMeta.type?.pgType,
+		subtype: fieldMeta.type?.subtype ?? null,
+	}) === 'image') return true;
 
 	// Also check using CellRegistry matching
 	const matchedEntry = CellRegistry.findByMatch({
@@ -112,5 +109,5 @@ export function isImageField(fieldMeta?: FieldMetadata, fieldName?: string): boo
 		fieldName,
 	});
 
-	return isImageByType || matchedEntry?.type === 'image';
+	return matchedEntry?.type === 'image';
 }

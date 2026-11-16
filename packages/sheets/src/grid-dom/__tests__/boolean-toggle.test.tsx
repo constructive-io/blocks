@@ -168,36 +168,32 @@ function Harness({
 	);
 
 	const renderCell = useCallback<RenderCell>(
-		(c, ctx) => {
-			const editing = !!inlineCell && inlineCell.rowIndex === c.row.index && inlineCell.colKey === c.column.id;
-			return (
-				<SheetsCellHost
-					cell={c}
-					ctx={ctx}
-					getSheetsCellContent={getSheetsCellContent}
-					openEditor={openEditor}
-					isEditing={editing}
-					onInlineCommit={(rowIndex, colKey, value) => {
-						commitSpy(rowIndex, colKey, value);
-						setInlineCell(null);
-					}}
-					onInlineCancel={() => setInlineCell(null)}
-					onActivateCell={onActivateCell}
-				/>
-			);
-		},
-		[getSheetsCellContent, openEditor, onActivateCell, inlineCell, commitSpy],
+		(ctx) => (
+			<SheetsCellHost
+				ctx={ctx}
+				getSheetsCellContent={getSheetsCellContent}
+				openEditor={openEditor}
+				onInlineCommit={(rowIndex, colKey, value) => {
+					commitSpy(rowIndex, colKey, value);
+					setInlineCell(null);
+				}}
+				onInlineCancel={() => setInlineCell(null)}
+				onActivateCell={onActivateCell}
+			/>
+		),
+		[getSheetsCellContent, openEditor, onActivateCell, commitSpy],
+	);
+	const editingCell = useMemo(
+		() => (inlineCell ? { rowIndex: inlineCell.rowIndex, columnId: inlineCell.colKey } : undefined),
+		[inlineCell],
 	);
 
 	const table = useSheetsTableInstance({
 		columns: COLUMNS,
-		data: ROWS,
 		columnSizing: EMPTY,
 		columnPinning: EMPTY,
-		rowSelection: EMPTY,
 		onColumnSizingChange: noop,
 		onColumnPinningChange: noop,
-		onRowSelectionChange: noop,
 	});
 
 	const active = overlay.active;
@@ -243,7 +239,9 @@ function Harness({
 		<>
 			<GridViewport
 				table={table}
+				rows={ROWS}
 				renderCell={renderCell}
+				editingCell={editingCell}
 				onScroll={overlayClose}
 				activeCell={activeCell}
 				onGridKeyDown={onGridKeyDown}
@@ -340,6 +338,54 @@ describe('boolean inline-toggle (host activation -> commit !current, NO overlay)
 		// NO overlay — the boolean must never open the text (or any) editor.
 		expect(document.querySelector('[data-slot="text-editor"]')).toBeNull();
 		expect(document.querySelector('[data-slot="number-editor"]')).toBeNull();
+	});
+
+	it('one click on the checkbox commits the flipped value; a click elsewhere in the cell only selects', async () => {
+		const commitSpy = vi.fn();
+		const registry = createCellTypeRegistry([], BUILTINS);
+		await renderHarness(root, <Harness registry={registry} commitSpy={commitSpy} />);
+
+		const wrapper = booleanCellWrapper(true);
+		const view = wrapper.querySelector<HTMLElement>('[data-slot="boolean-cell"]')!;
+		await act(async () => {
+			view.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+		});
+		expect(commitSpy).not.toHaveBeenCalled();
+
+		const toggle = wrapper.querySelector<HTMLElement>('[data-slot="boolean-toggle"]')!;
+		await act(async () => {
+			toggle.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+		});
+		expect(commitSpy).toHaveBeenCalledTimes(1);
+		expect(commitSpy).toHaveBeenCalledWith(0, 'active', false);
+		// The click is not swallowed: the cell is also the active cell (it has the focus ring).
+		expect(document.getElementById(wrapper.id)?.className).toContain('ring-primary');
+	});
+
+	it('a Shift-click on the checkbox belongs to the selection and commits nothing', async () => {
+		const commitSpy = vi.fn();
+		const registry = createCellTypeRegistry([], BUILTINS);
+		await renderHarness(root, <Harness registry={registry} commitSpy={commitSpy} />);
+
+		const toggle = booleanCellWrapper(false).querySelector<HTMLElement>('[data-slot="boolean-toggle"]')!;
+		await act(async () => {
+			toggle.dispatchEvent(new MouseEvent('click', { bubbles: true, shiftKey: true }));
+		});
+		expect(commitSpy).not.toHaveBeenCalled();
+	});
+
+	it('a double-click on the checkbox is two flips, not three', async () => {
+		const commitSpy = vi.fn();
+		const registry = createCellTypeRegistry([], BUILTINS);
+		await renderHarness(root, <Harness registry={registry} commitSpy={commitSpy} />);
+
+		const toggle = booleanCellWrapper(true).querySelector<HTMLElement>('[data-slot="boolean-toggle"]')!;
+		await act(async () => {
+			toggle.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+			toggle.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+			toggle.dispatchEvent(new MouseEvent('dblclick', { bubbles: true }));
+		});
+		expect(commitSpy).toHaveBeenCalledTimes(2);
 	});
 
 	it('Enter (grid root) on a FALSE boolean commits true and opens NO overlay', async () => {

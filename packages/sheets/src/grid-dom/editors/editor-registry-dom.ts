@@ -39,10 +39,14 @@ import { InetEditorDom } from './inet-editor';
 import { IntervalEditorDom } from './interval-editor';
 import { JsonEditorDom } from './json-editor';
 import { NumberEditorDom } from './number-editor';
+import { RangeEditorDom } from './range-editor';
+import { RecordEditorDom } from './record-editor';
 import { RelationEditorDom } from './relation-editor';
+import { SelectEditorDom } from './select-editor';
 import { TextEditor } from './text-editor';
 import { TsvectorEditorDom } from './tsvector-editor';
 import { UrlEditorDom } from './url-editor';
+import { ValueViewerDom } from './value-viewer';
 
 /**
  * A native editor that optionally advertises its overlay-preset width class and whether it
@@ -82,10 +86,16 @@ export const DOM_EDITOR_REGISTRY: Record<string, NativeEditor> = {
 	// Text types
 	text: TextEditor,
 	varchar: TextEditor,
+	bitstring: TextEditor,
+	path: TextEditor,
+	// Choices (enums, allowed-values text)
+	select: SelectEditorDom,
+	'multi-select': SelectEditorDom,
 	// Number types (the whole NUMBER_TYPES family, incl. rating)
 	number: NumberEditorDom,
 	integer: NumberEditorDom,
 	smallint: NumberEditorDom,
+	bigint: NumberEditorDom,
 	decimal: NumberEditorDom,
 	currency: NumberEditorDom,
 	percentage: NumberEditorDom,
@@ -108,6 +118,13 @@ export const DOM_EDITOR_REGISTRY: Record<string, NativeEditor> = {
 	'geometry-collection': GeometryEditorDom,
 	// Other complex types
 	interval: IntervalEditorDom,
+	range: RangeEditorDom,
+	composite: RecordEditorDom,
+	point: RecordEditorDom,
+	// View-only kinds open a viewer that shows and copies the value
+	binary: ValueViewerDom,
+	vector: ValueViewerDom,
+	unknown: ValueViewerDom,
 	relation: RelationEditorDom,
 	tsvector: TsvectorEditorDom,
 	inet: InetEditorDom,

@@ -2,82 +2,101 @@
 // instance from S3 is a pure state-mirror; this is the dual-axis TanStack
 // Virtual shell that paints it).
 //
-// VERTICAL virtualizer over rows (dynamic height via measureElement), HORIZONTAL
-// virtualizer over columns. The STICKY column (start-pinned via columnPinning, or
-// the first column when nothing is pinned) is painted OUTSIDE the horizontal
-// virtual window — a separate `left: 0` element per row — so it stays put under
-// horizontal scroll. The horizontal virtualizer still counts it (so column start
-// offsets stay correct), but the item loop SKIPS the sticky index; it is never
+// VERTICAL virtualizer over rows, HORIZONTAL virtualizer over columns. The
+// FROZEN columns (the first `frozenCount` columns; without `frozenCount`, the
+// start-pinned column or else the first column) are painted OUTSIDE the
+// horizontal virtual window — sticky elements per row — so they stay put under
+// horizontal scroll. The horizontal virtualizer still counts them (so column
+// start offsets stay correct), but the item loop SKIPS them; they are never
 // double-painted.
 //
-// A sticky HEADER band (S1) sits at the top of the scroll content, reusing the
-// SAME column layout as the body (sticky-col header + the virtualized non-sticky
-// headers at the identical translateX offsets). Each header carries a sort caret
-// (clickable -> onHeaderClick) and a drag-resize handle on its right edge.
+// A sticky HEADER band sits at the top of the scroll content, reusing the SAME
+// column layout as the body (see `grid-header.tsx` for one header cell: sort
+// caret with priority, the column's menu, resize handle, drag to reorder).
 //
-// `renderCell` is injected so S4 stays host-decoupled and testable: S5 supplies
-// the real cell host. The root carries `data-impl="dom"` so tests / Chrome can
-// assert the DOM path is live.
-import { useImperativeHandle, useMemo, useRef } from 'react';
+// `renderCell` is injected so the viewport stays host-decoupled and testable. The
+// root carries `data-impl="dom"` so tests / Chrome can assert the DOM path is live.
+//
+// ROWS are drawn by index straight from `rows` (the v9 table holds columns only), and
+// each one is a memoized `GridBodyRow` that receives its own share of the selection
+// and editing state as primitives: a cursor move renders the row it leaves and the
+// row it enters, never the whole window. The header band is memoized the same way.
+import { memo, useEffect, useImperativeHandle, useMemo, useRef, useState } from 'react';
 import type { Ref } from 'react';
-import { useVirtualizer } from '@tanstack/react-virtual';
-import type { Cell, Column, Row, Table } from '@tanstack/react-table';
-
-import { Checkbox } from '@constructive-io/ui/checkbox';
+import { useVirtualizer, type VirtualItem } from '@tanstack/react-virtual';
+import type { Column, Header, Table } from '@tanstack/react-table';
 
 import { cn } from '../utils/cn';
 import type { SheetsRow } from '../grid/row-model';
 import type { SelectionRect } from '../selection/selection-model';
 import type { SheetsTableFeatures } from './features';
+import { HeaderCell, type GridViewportSortKey, type HeaderDrag, type HeaderDropTarget } from './grid-header';
+import { PINNED_HOVER_BG, RowMarkerCell, RowMarkerHeaderCell, markerWidthOf, type RowMarker } from './row-marker';
+import { fillColumnWidths } from './column-fill';
+import { useInnerWidth } from './use-inner-width';
+import { isEmptyGridPress } from './empty-press';
 
-/** Comfortable density default (DESIGN_SPEC §5). Drives the v-virtualizer estimate,
- *  range-band / fill-nub geometry, and hit-testing — change here propagates everywhere. */
-const ESTIMATED_ROW_HEIGHT = 44;
+export type { GridViewportSortKey } from './grid-header';
+export type { RowMarker } from './row-marker';
+
+/** Default row height (the "medium" setting). Drives the v-virtualizer estimate, range-band /
+ *  fill-nub geometry, and hit-testing when the shell passes no `rowHeight`. */
+const DEFAULT_ROW_HEIGHT = 44;
 /** Extra rows rendered above/below the visible window — fewer blank rows on fast vertical scroll. */
 const ROW_OVERSCAN = 12;
 /** Extra columns rendered left/right of the visible window — fewer blank cells on fast horizontal scroll. */
 const COLUMN_OVERSCAN = 6;
 /** Header band height (DESIGN_SPEC §5 comfortable) — slightly shorter than the body row. */
 const HEADER_HEIGHT = 40;
-/** Width of the optional leading row-marker (checkbox) column — glide's rowMarker analogue. */
-const MARKER_WIDTH = 40;
-
-// Row-hover tint for the PINNED (sticky) cells. The pinned column/marker sit OVER the
-// horizontally-scrolled body, so their hover background must be fully OPAQUE — a translucent
-// `bg-muted/50` (as used on the row itself) would let the scrolled-away cells bleed through the
-// pinned column on hover. `color-mix` precomputes the SAME tint as opaque: 50% muted over the
-// surface, so the pinned column matches the row exactly while staying solid. Theme-safe (the raw
-// `--muted`/`--background` vars flip in dark mode). Uses raw vars, not `--color-*`, because the UI
-// theme is `@theme inline` (the `--color-*` aliases aren't emitted at runtime).
-const PINNED_HOVER_BG = 'group-hover:bg-[color-mix(in_oklab,var(--muted)_50%,var(--background))]';
 
 type SheetsTable = Table<SheetsTableFeatures, SheetsRow>;
-type SheetsTableCell = Cell<SheetsTableFeatures, SheetsRow, unknown>;
 type SheetsTableColumn = Column<SheetsTableFeatures, SheetsRow, unknown>;
+type SheetsTableHeader = Header<SheetsTableFeatures, SheetsRow, unknown>;
 
-/** Sorting state mirror (the shell owns it via useGridState — `id:null` = unsorted). */
-export interface GridViewportSorting {
-	id: string | null;
-	desc: boolean;
-}
+const NO_SORT: readonly GridViewportSortKey[] = [];
 
-/** Per-cell layout context handed to the host alongside the v9 cell. */
+/** Everything a host needs to draw one cell: where it is, its row, and its state. */
 export interface RenderCellContext {
 	rowIndex: number;
 	columnIndex: number;
-	/** True for the sticky column, painted outside the h-virtual window. */
+	/** The column's id (its key). */
+	columnId: string;
+	/** The row at `rowIndex`; null for a row whose page has not loaded yet. */
+	row: SheetsRow | null | undefined;
+	/** The row's stable id (see `getRowId`). */
+	rowId: string;
+	/** True for a frozen column, painted outside the h-virtual window. */
 	isStickyColumn: boolean;
 	/** True when this cell is the active (keyboard cursor) cell. Drives the focus ring. */
 	isActive: boolean;
+	/** True for the active cell and every cell of the active range: the cell is selected (`aria-selected`). */
+	isSelected: boolean;
+	/** True when this cell is edited in place (see `editingCell`). */
+	isEditing: boolean;
+	/** Type-to-edit seed of the in-place editor; set only when `isEditing`. */
+	inlineInitialText?: string;
 }
 
-export type RenderCell = (cell: SheetsTableCell, ctx: RenderCellContext) => React.ReactNode;
+export type RenderCell = (ctx: RenderCellContext) => React.ReactNode;
+
+/** The cell edited in place: its row, its column and the text that opened it. */
+export interface GridEditingCell {
+	rowIndex: number;
+	columnId: string;
+	initialText?: string;
+}
+
+function defaultGetRowId(row: SheetsRow | null | undefined, index: number): string {
+	return row?.id != null ? String(row.id) : String(index);
+}
 
 /** Imperative handle for the later SheetsHandle scrollToRow path. */
 export interface GridViewportHandle {
 	scrollToIndex: (rowIndex: number) => void;
 	/** Scroll the given cell into view (row + column virtualizers). Used by keyboard nav. */
 	scrollToCell: (columnIndex: number, rowIndex: number) => void;
+	/** Give the grid root keyboard focus, so typing reaches the active cell. */
+	focus: () => void;
 }
 
 /** Visible row window (overscan-inclusive) reported to the shell for infinite-scroll prefetch. */
@@ -87,8 +106,15 @@ export interface VisibleRange {
 }
 
 export interface GridViewportProps {
+	/** The v9 table: the columns (sizes, pins, headers). Rows come from `rows`. */
 	table: SheetsTable;
+	/** The rows, drawn by index; an index whose page has not loaded reads back null. */
+	rows: readonly (SheetsRow | null | undefined)[];
+	/** A row's stable id. Default: its `id`, else its index. */
+	getRowId?: (row: SheetsRow | null | undefined, index: number) => string;
 	renderCell: RenderCell;
+	/** The cell edited in place, if any. */
+	editingCell?: GridEditingCell;
 	handleRef?: Ref<GridViewportHandle>;
 	/**
 	 * Fired on the scroll root's `scroll`. The DOM grid uses this to close (commit-or-
@@ -96,43 +122,62 @@ export interface GridViewportProps {
 	 * scroll, so Phase-4 closes rather than re-positions against a stale rect.
 	 */
 	onScroll?: (e: React.UIEvent<HTMLDivElement>) => void;
-	/** Sort caret state for the header. Defaults to unsorted (`{ id: null, desc: false }`). */
-	sorting?: GridViewportSorting;
-	/** Toggle sort for a column. The shell wires this to onHeaderClicked / toggleSorting. */
-	onHeaderClick?: (colKey: string) => void;
+	/** Sort keys, first key first, for the header carets. Defaults to unsorted. */
+	sort?: readonly GridViewportSortKey[];
+	/** Header click on a sortable column; `additive` is true for Shift+click. */
+	onHeaderClick?: (colKey: string, additive: boolean) => void;
+	/**
+	 * Why a column cannot be sorted, or null when it can. A column with a reason is not
+	 * clickable and shows the reason. Omitted: every column is sortable when `onHeaderClick` is set.
+	 */
+	getUnsortableReason?: (colKey: string) => string | null;
 	/**
 	 * Commit a column width from the header drag-resize handle. When provided, the handle
-	 * drives a manual pointer-drag against this (shell sizing lives in useGridState). When
-	 * omitted, the handle falls back to the v9 `header.getResizeHandler()` (columnResizeMode
-	 * 'onChange' feeds the table's own columnSizing state).
+	 * drives a manual pointer-drag against this. When omitted, the handle falls back to the
+	 * v9 `header.getResizeHandler()` (columnResizeMode 'onChange' feeds the table's own columnSizing state).
 	 */
 	onResize?: (colKey: string, width: number) => void;
 	/**
-	 * Total row count for the VERTICAL virtualizer. Defaults to the table's row-model length.
+	 * How many leading columns stay in place under horizontal scroll. Omitted: the start-pinned
+	 * column, else the first column.
+	 */
+	frozenCount?: number;
+	/** Row height in pixels. Default 44. */
+	rowHeight?: number;
+	/** Move a column beside another one (header drag). Omitted: headers cannot be dragged. */
+	onColumnMove?: (colKey: string, target: string, side: 'before' | 'after') => void;
+	/** The menu of a column's header (trigger and popup). Omitted: headers have no menu. */
+	renderHeaderMenu?: (colKey: string) => React.ReactNode;
+	/**
+	 * Total row count for the VERTICAL virtualizer. Defaults to `rows.length`.
 	 * Infinite scroll passes the server total here so the scrollbar spans every (lazily loaded)
-	 * row — the table's `data` is the same-length proxy, so this matches `rows.length` in practice
+	 * row — `rows` is the same-length proxy, so this matches `rows.length` in practice
 	 * but is threaded explicitly so the shell stays the single source of truth for row count.
 	 */
 	count?: number;
 	/**
 	 * Fired (effect-free, via the row virtualizer's `onChange`) with the current overscan-inclusive
-	 * visible window. The shell maps this to the canvas `onVisibleRegionChanged({ y, height })` so
-	 * infinite-scroll prefetch runs identically. Omitted in paginated mode.
+	 * visible window, for infinite-scroll prefetch. Omitted in paginated mode.
 	 */
 	onVisibleRangeChange?: (range: VisibleRange) => void;
 	/**
-	 * Optional leading checkbox / select-all column (glide's `rowMarkers` analogue). When supplied,
-	 * a sticky MARKER column (fixed {@link MARKER_WIDTH}px) is painted to the LEFT of the sticky col0,
-	 * driving the canonical {@link SheetsSelection} RangeSet. When OMITTED, the grid renders exactly as
-	 * before (no marker column) so existing tests/stories that pass no rowMarker are unaffected.
+	 * Optional leading checkbox / select-all column. When supplied, a sticky MARKER column is
+	 * painted to the LEFT of the frozen columns, driving the canonical SheetsSelection RangeSet.
+	 * When OMITTED, the grid renders without a marker column.
 	 */
 	rowMarker?: RowMarker;
 	/** Active (keyboard cursor) cell `[col, row]`. Drives the per-cell focus ring + aria-activedescendant. */
 	activeCell?: [number, number];
-	/** Active range (cell coords) — rendered as an inert pointer-events-none band overlay. P2 populates it. */
+	/** Active range (cell coords) — rendered as an inert pointer-events-none band overlay. */
 	activeRange?: SelectionRect;
-	/** Keydown handler for the grid root — the shell owns spreadsheet nav (arrows / Enter / F2). */
+	/**
+	 * Keydown handler for the grid root — the shell owns spreadsheet nav (arrows / Enter / F2).
+	 * Keys from a portalled surface rendered inside the grid (a header menu) are not grid keys
+	 * and do not reach it.
+	 */
 	onGridKeyDown?: (e: React.KeyboardEvent) => void;
+	/** The grid root took keyboard focus (Tab, or a script), not focus from a pointer press. */
+	onGridFocus?: () => void;
 	/**
 	 * Native clipboard handlers for the grid root. They fire only when the root (tabIndex=0) holds
 	 * focus and an overlay editor is NOT open (the editor owns its own clipboard while editing). The
@@ -150,60 +195,57 @@ export interface GridViewportProps {
 	 * routes this to the `fill.drag` command. Omitted = no nub rendered.
 	 */
 	onFillDrag?: (sourceRange: SelectionRect, target: [number, number]) => void;
+	/**
+	 * Columns that keep their width when the columns are narrower than the grid (the
+	 * user resized them). The others share the spare width; see {@link fillColumnWidths}.
+	 */
+	fixedWidthColumns?: ReadonlySet<string>;
+	/** Narrow kinds (checkbox and number columns): they take spare width only when no other column can. */
+	narrowColumns?: ReadonlySet<string>;
+	/**
+	 * A primary-button press on empty grid space (below the last row, a row line past the
+	 * last column, the header band past the last header). The shell clears the cursor.
+	 */
+	onPressEmpty?: () => void;
 	className?: string;
 }
 
-/** Selection wiring for the leading checkbox column. The shell derives this from SheetsSelection. */
-export interface RowMarker {
-	/** True when row `rowIndex` is in the canonical selection. */
-	isSelected: (rowIndex: number) => boolean;
-	/** Toggle row `rowIndex`; `shiftKey` requests a contiguous range-select from the last anchor. */
-	onToggleRow: (rowIndex: number, shiftKey: boolean) => void;
-	/** Every row selected — the header checkbox shows checked. */
-	allSelected: boolean;
-	/** Some (but not all) rows selected — the header checkbox shows indeterminate. */
-	someSelected: boolean;
-	/** Select-all / clear-all from the header checkbox. */
-	onToggleAll: () => void;
+/** The element shows keyboard focus (`:focus-visible`); true where the selector is unknown. */
+function isKeyboardFocus(element: HTMLElement): boolean {
+	try {
+		return element.matches(':focus-visible');
+	} catch {
+		return true;
+	}
 }
 
-function cellForColumnIndex(row: Row<SheetsTableFeatures, SheetsRow>, columnIndex: number): SheetsTableCell {
-	return row.getAllCells()[columnIndex];
-}
-
-/**
- * Project a half-open active {@link SelectionRect} (cell coords) into px box geometry for
- * the inert range-band overlay. X/width sum `columns[i].getSize()` across the spanned cols
- * (honoring the leading `markerWidth` offset); Y/height use the uniform ESTIMATED_ROW_HEIGHT.
- * INERT in P1 (nothing sets `activeRange`); wired so P2 just populates `current.range`.
- */
-function rangeBandStyle(range: SelectionRect, columns: SheetsTableColumn[], markerWidth: number): React.CSSProperties {
+/** Left offset and width (px) of a column span, from the drawn column widths plus the marker offset. */
+function spanGeometry(x: number, width: number, widths: readonly number[], markerWidth: number) {
 	let left = markerWidth;
-	for (let i = 0; i < range.x && i < columns.length; i++) left += columns[i].getSize();
-	let width = 0;
-	for (let i = range.x; i < range.x + range.width && i < columns.length; i++) width += columns[i].getSize();
+	for (let i = 0; i < x && i < widths.length; i++) left += widths[i]!;
+	let span = 0;
+	for (let i = x; i < x + width && i < widths.length; i++) span += widths[i]!;
+	return { left, width: span };
+}
+
+/** Box of the inert range-band overlay for a half-open {@link SelectionRect} (cell coords). */
+function rangeBandStyle(range: SelectionRect, widths: readonly number[], markerWidth: number, rowHeight: number): React.CSSProperties {
+	const { left, width } = spanGeometry(range.x, range.width, widths, markerWidth);
 	return {
-		transform: `translate(${left}px, ${range.y * ESTIMATED_ROW_HEIGHT}px)`,
+		transform: `translate(${left}px, ${range.y * rowHeight}px)`,
 		width,
-		height: range.height * ESTIMATED_ROW_HEIGHT
+		height: range.height * rowHeight
 	};
 }
 
 /** Side of the square fill-handle nub (px). Centered on the source rect's bottom-right corner. */
 const FILL_NUB_SIZE = 8;
 
-/**
- * Position the fill-handle nub centered on the BOTTOM-RIGHT corner of the source {@link SelectionRect}.
- * Reuses {@link rangeBandStyle}'s left/width math (column-width sum + markerWidth) so the nub tracks
- * scroll in the SAME body coordinate space as the range band; the corner is `(left+width, top+height)`.
- */
-function fillNubStyle(source: SelectionRect, columns: SheetsTableColumn[], markerWidth: number): React.CSSProperties {
-	let left = markerWidth;
-	for (let i = 0; i < source.x && i < columns.length; i++) left += columns[i].getSize();
-	let width = 0;
-	for (let i = source.x; i < source.x + source.width && i < columns.length; i++) width += columns[i].getSize();
+/** Position the fill-handle nub centered on the BOTTOM-RIGHT corner of the source {@link SelectionRect}. */
+function fillNubStyle(source: SelectionRect, widths: readonly number[], markerWidth: number, rowHeight: number): React.CSSProperties {
+	const { left, width } = spanGeometry(source.x, source.width, widths, markerWidth);
 	const right = left + width;
-	const bottom = (source.y + source.height) * ESTIMATED_ROW_HEIGHT;
+	const bottom = (source.y + source.height) * rowHeight;
 	return {
 		transform: `translate(${right - FILL_NUB_SIZE / 2}px, ${bottom - FILL_NUB_SIZE / 2}px)`,
 		width: FILL_NUB_SIZE,
@@ -255,190 +297,373 @@ export function hitTestCell(
 	return [col, row];
 }
 
-/** Index of the start-pinned column, else the first column (sticky-by-default). */
-function findStickyColumnIndex(columns: SheetsTableColumn[]): number {
-	const pinned = columns.findIndex((col) => col.getIsPinned() === 'start');
-	return pinned >= 0 ? pinned : columns.length > 0 ? 0 : -1;
-}
-
-/** Header label: shell meta title -> string header -> column id. `meta` is the empty v9 type, so read it loosely. */
-function columnTitle(column: SheetsTableColumn): string {
-	const meta = column.columnDef.meta as { title?: string } | undefined;
-	if (meta?.title) return meta.title;
-	const header = column.columnDef.header;
-	if (typeof header === 'string') return header;
-	return column.id;
-}
-
-interface HeaderCellProps {
-	column: SheetsTableColumn;
-	header: import('@tanstack/react-table').Header<SheetsTableFeatures, SheetsRow, unknown>;
-	sorting: GridViewportSorting;
-	onHeaderClick?: (colKey: string) => void;
-	onResize?: (colKey: string, width: number) => void;
-}
-
-/** A single header cell: title + sort caret (click toggles) + right-edge resize handle. */
-function HeaderCell({ column, header, sorting, onHeaderClick, onResize }: HeaderCellProps) {
-	const isSorted = sorting.id === column.id;
-	const direction: 'asc' | 'desc' | 'none' = isSorted ? (sorting.desc ? 'desc' : 'asc') : 'none';
-
-	function onResizePointerDown(e: React.PointerEvent<HTMLDivElement>) {
-		// Don't toggle sort while grabbing the handle, and don't select header text.
-		e.preventDefault();
-		e.stopPropagation();
-		if (onResize) {
-			const startX = e.clientX;
-			const startWidth = column.getSize();
-			const onMove = (move: PointerEvent) => onResize(column.id, Math.max(40, startWidth + (move.clientX - startX)));
-			const onUp = () => {
-				window.removeEventListener('pointermove', onMove);
-				window.removeEventListener('pointerup', onUp);
-			};
-			window.addEventListener('pointermove', onMove);
-			window.addEventListener('pointerup', onUp);
-			return;
-		}
-		// Fall back to the v9 feature handler (columnResizeMode 'onChange').
-		header.getResizeHandler()(e.nativeEvent);
+/**
+ * The column indices painted frozen: the first `frozenCount` columns, or without it the
+ * start-pinned column, else the first column (the grid's earlier sticky-by-default rule).
+ */
+function frozenColumnIndices(columns: readonly SheetsTableColumn[], frozenCount: number | undefined): number[] {
+	if (frozenCount !== undefined) {
+		return Array.from({ length: Math.max(0, Math.min(frozenCount, columns.length)) }, (_, index) => index);
 	}
+	const pinned = columns.findIndex((col) => col.getIsPinned() === 'start');
+	if (pinned >= 0) return [pinned];
+	return columns.length > 0 ? [0] : [];
+}
 
+/** Drag-to-reorder state for the header cells of one viewport. */
+function useHeaderDrag(onColumnMove: GridViewportProps['onColumnMove']): HeaderDrag | undefined {
+	const [dragging, setDragging] = useState<string | null>(null);
+	const [dropTarget, setDropTarget] = useState<HeaderDropTarget | null>(null);
+	const latest = useRef({ dragging, dropTarget, onColumnMove });
+	latest.current = { dragging, dropTarget, onColumnMove };
+	return useMemo<HeaderDrag | undefined>(() => {
+		if (!onColumnMove) return undefined;
+		const end = () => {
+			setDragging(null);
+			setDropTarget(null);
+		};
+		return {
+			dragging,
+			dropTarget,
+			start: (key) => setDragging(key),
+			over: (target) =>
+				setDropTarget((current) => (current?.key === target?.key && current?.side === target?.side ? current : target)),
+			drop: () => {
+				const { dragging: key, dropTarget: target, onColumnMove: move } = latest.current;
+				if (key && target && key !== target.key) move?.(key, target.key, target.side);
+				end();
+			},
+			end,
+		};
+	}, [onColumnMove, dragging, dropTarget]);
+}
+
+interface GridHeaderBandProps {
+	columns: readonly SheetsTableColumn[];
+	headersByColumnId: ReadonlyMap<string, SheetsTableHeader>;
+	frozen: readonly number[];
+	frozenLefts: readonly number[];
+	widths: readonly number[];
+	virtualColumns: readonly VirtualItem[];
+	markerWidth: number;
+	rowWidth: number;
+	contentWidth: number;
+	filler: number;
+	rowMarker: RowMarker | undefined;
+	sort: readonly GridViewportSortKey[];
+	onHeaderClick: GridViewportProps['onHeaderClick'];
+	getUnsortableReason: GridViewportProps['getUnsortableReason'];
+	onResize: GridViewportProps['onResize'];
+	drag: HeaderDrag | undefined;
+	renderHeaderMenu: GridViewportProps['renderHeaderMenu'];
+}
+
+/** The sticky header band, same column layout as the body. Memoized: a cursor move does not render it. */
+const GridHeaderBand = memo(function GridHeaderBand({
+	columns,
+	headersByColumnId,
+	frozen,
+	frozenLefts,
+	widths,
+	virtualColumns,
+	markerWidth,
+	rowWidth,
+	contentWidth,
+	filler,
+	rowMarker,
+	sort,
+	onHeaderClick,
+	getUnsortableReason,
+	onResize,
+	drag,
+	renderHeaderMenu
+}: GridHeaderBandProps) {
+	const lastFrozen = frozen[frozen.length - 1];
+	const headerCell = (index: number) => {
+		const column = columns[index]!;
+		const header = headersByColumnId.get(column.id);
+		if (!header) return null;
+		return (
+			<HeaderCell
+				column={column}
+				header={header}
+				colIndex={index}
+				sort={sort}
+				onHeaderClick={onHeaderClick}
+				getUnsortableReason={getUnsortableReason}
+				onResize={onResize}
+				width={widths[index]}
+				drag={drag}
+				menu={renderHeaderMenu?.(column.id)}
+			/>
+		);
+	};
 	return (
 		<div
-			role='columnheader'
-			data-part-id='sheets-header-cell'
-			data-col-key={column.id}
-			aria-sort={direction === 'asc' ? 'ascending' : direction === 'desc' ? 'descending' : 'none'}
-			onClick={() => onHeaderClick?.(column.id)}
-			className={cn(
-				'group relative flex h-full w-full select-none items-center gap-1 border-b border-border bg-background px-3 text-xs font-medium text-muted-foreground',
-				onHeaderClick && 'cursor-pointer hover:bg-muted/50 hover:text-foreground'
+			role='row'
+			data-part-id='sheets-header-row'
+			className='sticky top-0 z-30 flex bg-background'
+			style={{ height: HEADER_HEIGHT, width: rowWidth }}
+		>
+			{rowMarker && (
+				<div className='sticky left-0 z-40 flex shrink-0' style={{ width: markerWidth, height: '100%' }}>
+					<RowMarkerHeaderCell rowMarker={rowMarker} />
+				</div>
 			)}
-		>
-			<span className='truncate'>{columnTitle(column)}</span>
-			<SortCaret direction={direction} />
-			<div
-				role='separator'
-				aria-orientation='vertical'
-				data-part-id='sheets-resize-handle'
-				onClick={(e) => e.stopPropagation()}
-				onPointerDown={onResizePointerDown}
-				className='absolute right-0 top-0 h-full w-1 cursor-col-resize touch-none select-none bg-transparent hover:bg-primary/50'
-			/>
+			{frozen.map((index, position) => (
+				<div
+					key={columns[index]!.id}
+					data-frozen=''
+					className={cn('sticky z-40 flex shrink-0', index === lastFrozen && 'border-r border-border')}
+					style={{ left: frozenLefts[position], width: widths[index], height: '100%' }}
+				>
+					{headerCell(index)}
+				</div>
+			))}
+			{virtualColumns.map((virtualCol) => {
+				if (frozen.includes(virtualCol.index)) return null; // frozen header painted above
+				return (
+					<div
+						key={virtualCol.key}
+						className='absolute top-0 flex'
+						style={{ transform: `translateX(${virtualCol.start + markerWidth}px)`, width: virtualCol.size, height: '100%' }}
+					>
+						{headerCell(virtualCol.index)}
+					</div>
+				);
+			})}
+			{filler > 0 && (
+				<div
+					aria-hidden='true'
+					data-part-id='sheets-header-filler'
+					className='absolute top-0 h-full border-b border-border'
+					style={{ left: contentWidth, width: filler }}
+				/>
+			)}
 		</div>
 	);
+});
+
+interface GridBodyRowProps {
+	rowIndex: number;
+	row: SheetsRow | null | undefined;
+	rowId: string;
+	start: number;
+	height: number;
+	columnIds: readonly string[];
+	frozen: readonly number[];
+	frozenLefts: readonly number[];
+	widths: readonly number[];
+	virtualColumns: readonly VirtualItem[];
+	markerWidth: number;
+	rowMarker: RowMarker | undefined;
+	rowSelected: boolean;
+	/** Column of the active cell when it is in this row, else -1. */
+	activeColumn: number;
+	/** The active range's columns `[rangeStart, rangeEnd)` when it covers this row, else -1 and -1. */
+	rangeStart: number;
+	rangeEnd: number;
+	/** The column edited in place in this row, else null, and the text that opened the editor. */
+	editingColumnId: string | null;
+	editingText: string | undefined;
+	renderCell: RenderCell;
 }
 
-/** Up/down/neutral sort caret (inline SVG, no icon-lib dep — matches the package's glyph style). */
-function SortCaret({ direction }: { direction: 'asc' | 'desc' | 'none' }) {
-	return (
-		<svg
-			data-part-id='sheets-sort-caret'
-			data-direction={direction}
-			width='8'
-			height='8'
-			viewBox='0 0 8 8'
-			aria-hidden='true'
-			className={cn('ml-auto shrink-0', direction === 'none' && 'opacity-30')}
-		>
-			{direction === 'desc' ? <path d='M0 2 L4 6 L8 2 Z' fill='currentColor' /> : <path d='M0 6 L4 2 L8 6 Z' fill='currentColor' />}
-		</svg>
-	);
-}
-
-/** Header marker cell: the select-all checkbox (checked = all, indeterminate = some). */
-function RowMarkerHeaderCell({ rowMarker }: { rowMarker: RowMarker }) {
+/**
+ * One body row. Every prop is a primitive or keeps its identity until what it describes
+ * changes, so the memo skips the rows a cursor move, a range drag or an edit does not touch.
+ */
+const GridBodyRow = memo(function GridBodyRow({
+	rowIndex,
+	row,
+	rowId,
+	start,
+	height,
+	columnIds,
+	frozen,
+	frozenLefts,
+	widths,
+	virtualColumns,
+	markerWidth,
+	rowMarker,
+	rowSelected,
+	activeColumn,
+	rangeStart,
+	rangeEnd,
+	editingColumnId,
+	editingText,
+	renderCell
+}: GridBodyRowProps) {
+	const lastFrozen = frozen[frozen.length - 1];
+	const cell = (columnIndex: number, isStickyColumn: boolean) => {
+		const columnId = columnIds[columnIndex]!;
+		const isEditing = columnId === editingColumnId;
+		return renderCell({
+			rowIndex,
+			columnIndex,
+			columnId,
+			row,
+			rowId,
+			isStickyColumn,
+			isActive: activeColumn === columnIndex,
+			isSelected: activeColumn === columnIndex || (columnIndex >= rangeStart && columnIndex < rangeEnd),
+			isEditing,
+			inlineInitialText: isEditing ? editingText : undefined
+		});
+	};
 	return (
 		<div
-			role='columnheader'
-			data-part-id='sheets-row-marker-header'
-			data-slot='row-marker-header'
-			className='flex h-full w-full select-none items-center justify-center border-b border-border bg-background'
+			role='row'
+			data-index={rowIndex}
+			data-row={rowIndex}
+			data-selected={rowSelected || undefined}
+			aria-rowindex={rowIndex + 1}
+			className={cn('group absolute left-0 top-0 flex border-b border-border', rowSelected ? 'bg-primary/5' : 'hover:bg-muted/50')}
+			style={{ transform: `translateY(${start}px)`, height, width: '100%' }}
 		>
-			<Checkbox
-				checked={rowMarker.allSelected}
-				indeterminate={rowMarker.someSelected}
-				onClick={() => rowMarker.onToggleAll()}
-				aria-label={rowMarker.allSelected ? 'Deselect all rows' : 'Select all rows'}
-			/>
+			{rowMarker && (
+				<div className='sticky left-0 z-20 flex shrink-0' style={{ width: markerWidth }}>
+					<RowMarkerCell rowIndex={rowIndex} rowMarker={rowMarker} isActiveRow={activeColumn !== -1} />
+				</div>
+			)}
+			{frozen.map((index, position) => (
+				<div
+					key={columnIds[index]}
+					className={cn('sticky z-10 flex shrink-0 bg-background', PINNED_HOVER_BG, index === lastFrozen && 'border-r border-border')}
+					data-col={index}
+					style={{ left: frozenLefts[position], width: widths[index] }}
+				>
+					{cell(index, true)}
+				</div>
+			))}
+			{virtualColumns.map((virtualCol) => {
+				if (frozen.includes(virtualCol.index)) return null; // frozen col painted above
+				return (
+					<div
+						key={virtualCol.key}
+						className='absolute top-0 flex'
+						data-col={virtualCol.index}
+						style={{ transform: `translateX(${virtualCol.start + markerWidth}px)`, width: virtualCol.size, height: '100%' }}
+					>
+						{cell(virtualCol.index, false)}
+					</div>
+				);
+			})}
 		</div>
 	);
-}
+});
 
-/** Body marker cell per row: a checkbox reflecting selection; click (with shiftKey) drives the toggle. */
-function RowMarkerCell({ rowIndex, rowMarker }: { rowIndex: number; rowMarker: RowMarker }) {
-	const selected = rowMarker.isSelected(rowIndex);
-	// Reveal-on-hover (DESIGN_SPEC §9): checkbox is hidden until the row is hovered, but stays
-	// visible once this row is checked OR any selection is active (so multi-select stays legible).
-	const reveal = selected || rowMarker.someSelected || rowMarker.allSelected;
-	return (
-		<div
-			data-part-id='sheets-row-marker-cell'
-			data-slot='row-marker-cell'
-			// Stop the click from bubbling into the row (which would also start a cell edit).
-			onClick={(e) => e.stopPropagation()}
-			onDoubleClick={(e) => e.stopPropagation()}
-			className={`flex h-full w-full select-none items-center justify-center bg-background ${PINNED_HOVER_BG}`}
-		>
-			<Checkbox
-				checked={selected}
-				// base-ui Checkbox renders a <button>; onClick carries the native shiftKey for range-select.
-				onClick={(e) => rowMarker.onToggleRow(rowIndex, e.shiftKey)}
-				aria-label={`Select row ${rowIndex}`}
-				className={cn(!reveal && 'opacity-0 transition-opacity group-hover:opacity-100 motion-reduce:transition-none')}
-			/>
-		</div>
-	);
+/** The same array while its content key is the same, so memoized children keep their props. */
+function useStableArray<T>(items: readonly T[], key: string): readonly T[] {
+	// eslint-disable-next-line react-hooks/exhaustive-deps -- the key describes the items
+	return useMemo(() => items, [key]);
 }
 
 export function GridViewport({
 	table,
+	rows,
+	getRowId = defaultGetRowId,
 	renderCell,
+	editingCell,
 	handleRef,
 	onScroll,
-	sorting = { id: null, desc: false },
+	sort = NO_SORT,
 	onHeaderClick,
+	getUnsortableReason,
 	onResize,
+	frozenCount,
+	rowHeight = DEFAULT_ROW_HEIGHT,
+	onColumnMove,
+	renderHeaderMenu,
 	count,
 	onVisibleRangeChange,
 	rowMarker,
 	activeCell,
 	activeRange,
 	onGridKeyDown,
+	onGridFocus,
 	onCopy,
 	onCut,
 	onPaste,
 	activeDescendantId,
 	onFillDrag,
+	fixedWidthColumns,
+	narrowColumns,
+	onPressEmpty,
 	className
 }: GridViewportProps) {
 	const scrollRef = useRef<HTMLDivElement>(null);
+	const innerWidth = useInnerWidth(scrollRef);
 
-	const rows = table.getRowModel().rows;
+	const rowCount = count ?? rows.length;
 	const columns = table.getAllLeafColumns();
+	const columnIds = useMemo(() => columns.map((column) => column.id), [columns]);
 
 	// Report the visible window WITHOUT an effect: the virtualizer's `onChange` fires on every
 	// recompute (scroll/resize/measure) with the live instance, whose `.range` is the overscan-
 	// inclusive {startIndex,endIndex}. Keep the ref current each render so the latch never goes stale.
 	const onVisibleRangeChangeRef = useRef(onVisibleRangeChange);
 	onVisibleRangeChangeRef.current = onVisibleRangeChange;
+	const lastRangeRef = useRef<string | null>(null);
 
 	const rowVirtualizer = useVirtualizer({
-		count: count ?? rows.length,
+		count: rowCount,
 		getScrollElement: () => scrollRef.current,
-		estimateSize: () => ESTIMATED_ROW_HEIGHT,
+		estimateSize: () => rowHeight,
 		overscan: ROW_OVERSCAN,
 		onChange: (instance) => {
 			const range = instance.range;
-			if (range) onVisibleRangeChangeRef.current?.({ startIndex: range.startIndex, endIndex: range.endIndex });
+			if (!range) return;
+			// Report only real changes, and after the render: the virtualizer can notify while this
+			// component renders (first measure), and a host state update there re-renders it mid-render
+			// in a loop ("Too many re-renders" once a table has rows).
+			const key = `${range.startIndex}:${range.endIndex}`;
+			if (key === lastRangeRef.current) return;
+			lastRangeRef.current = key;
+			const { startIndex, endIndex } = range;
+			queueMicrotask(() => onVisibleRangeChangeRef.current?.({ startIndex, endIndex }));
 		}
 	});
+
+	// A new row height changes every row's size: drop the measured sizes so rows lay out again.
+	const measuredRowHeight = useRef(rowHeight);
+	useEffect(() => {
+		if (measuredRowHeight.current === rowHeight) return;
+		measuredRowHeight.current = rowHeight;
+		rowVirtualizer.measure();
+	}, [rowHeight, rowVirtualizer]);
+
+	// The optional leading marker column shifts EVERYTHING right by its width: the frozen columns
+	// pin after it, virtualized columns translate by it, and the content width grows by it.
+	const markerWidth = markerWidthOf(rowMarker);
+	const frozenNow = frozenColumnIndices(columns, frozenCount);
+	const frozen = useStableArray(frozenNow, frozenNow.join());
+
+	// The widths drawn: the columns' own widths, with spare grid width shared among the columns
+	// the user has not resized (O(columns), recomputed only when an input changes). Never stored.
+	const baseWidths = columns.map((column) => column.getSize());
+	const fixedFlags = columns.map((column) => fixedWidthColumns?.has(column.id) ?? false);
+	const narrowFlags = columns.map((column) => narrowColumns?.has(column.id) ?? false);
+	const fillKey = `${innerWidth - markerWidth}|${baseWidths.join()}|${fixedFlags.join()}|${narrowFlags.join()}|${frozen.join()}`;
+	const fill = useMemo(
+		() =>
+			fillColumnWidths({
+				widths: baseWidths,
+				fixed: fixedFlags,
+				frozen: columns.map((_, index) => frozen.includes(index)),
+				narrow: narrowFlags,
+				available: innerWidth - markerWidth,
+			}),
+		// eslint-disable-next-line react-hooks/exhaustive-deps -- the key covers every input
+		[fillKey],
+	);
+	const widths = fill.widths;
 
 	const columnVirtualizer = useVirtualizer({
 		horizontal: true,
 		count: columns.length,
 		getScrollElement: () => scrollRef.current,
-		estimateSize: (index) => columns[index].getSize(),
+		estimateSize: (index) => widths[index] ?? columns[index].getSize(),
 		getItemKey: (index) => columns[index]?.id ?? index,
 		overscan: COLUMN_OVERSCAN
 	});
@@ -450,27 +675,35 @@ export function GridViewport({
 			scrollToCell: (columnIndex: number, rowIndex: number) => {
 				rowVirtualizer.scrollToIndex(rowIndex);
 				columnVirtualizer.scrollToIndex(columnIndex);
-			}
+			},
+			focus: () => scrollRef.current?.focus({ preventScroll: true })
 		}),
 		[rowVirtualizer, columnVirtualizer]
 	);
 
-	const stickyIndex = findStickyColumnIndex(columns);
-	const hasStickyColumn = stickyIndex >= 0;
-	const stickyColumn = hasStickyColumn ? columns[stickyIndex] : undefined;
-	const stickyWidth = stickyColumn ? stickyColumn.getSize() : 0;
-	const stickyHeader = stickyColumn ? table.getLeafHeaders().find((h) => h.column.id === stickyColumn.id) : undefined;
 	const headersByColumnId = useMemo(() => new Map(table.getLeafHeaders().map((h) => [h.column.id, h])), [table, columns]);
+	const drag = useHeaderDrag(onColumnMove);
+
+	const frozenLefts = useMemo(() => {
+		const lefts: number[] = [];
+		let left = markerWidth;
+		for (const index of frozen) {
+			lefts.push(left);
+			left += widths[index]!;
+		}
+		return lefts;
+	}, [frozen, widths, markerWidth]);
 
 	const totalWidth = columnVirtualizer.getTotalSize();
-	const virtualColumns = columnVirtualizer.getVirtualItems();
-
-	// The optional leading marker column shifts EVERYTHING right by MARKER_WIDTH: the sticky col0
-	// pins at `left: markerWidth` (the marker owns `left: 0`), virtualized columns translate by an
-	// extra markerWidth, and the header/body content width grows by markerWidth. When no rowMarker
-	// is supplied, markerWidth is 0 and the layout is byte-identical to before.
-	const markerWidth = rowMarker ? MARKER_WIDTH : 0;
+	const virtualColumnsNow = columnVirtualizer.getVirtualItems();
+	const virtualColumns = useStableArray(
+		virtualColumnsNow,
+		virtualColumnsNow.map((column) => `${column.key}:${column.start}:${column.size}`).join()
+	);
 	const contentWidth = totalWidth + markerWidth;
+	// Every column keeps its width and they end before the grid's edge: the rows (lines, hover,
+	// selection) still run to the edge over an inert filler, with no cell and no focus stop.
+	const rowWidth = contentWidth + fill.filler;
 
 	// Fill-handle SOURCE rect: the active range, else a 1×1 rect at the active cell. Drives the nub
 	// position (its bottom-right corner) and is the `from` handed to onFillDrag. Absent when neither.
@@ -486,7 +719,7 @@ export function GridViewport({
 		const source = fillSource;
 		const scrollEl = scrollRef.current;
 		if (!scrollEl) return;
-		const colWidths = columns.map((c) => c.getSize());
+		const colWidths = widths;
 		let target: [number, number] = [source.x + source.width - 1, source.y + source.height - 1];
 		const onMove = (move: PointerEvent) => {
 			const rect = scrollEl.getBoundingClientRect();
@@ -496,9 +729,9 @@ export function GridViewport({
 				scrollTop: scrollEl.scrollTop,
 				markerWidth,
 				headerHeight: HEADER_HEIGHT,
-				rowHeight: ESTIMATED_ROW_HEIGHT,
+				rowHeight,
 				colWidths,
-				rowCount: count ?? rows.length
+				rowCount
 			});
 		};
 		const onUp = () => {
@@ -518,123 +751,79 @@ export function GridViewport({
 			role='grid'
 			tabIndex={0}
 			onScroll={onScroll}
-			onKeyDown={(e) => onGridKeyDown?.(e)}
+			onPointerDown={(e) => {
+				if (onPressEmpty && e.button === 0 && isEmptyGridPress(e.target as Element, e.currentTarget, e.clientX, e.clientY)) onPressEmpty();
+			}}
+			onKeyDown={(e) => {
+				if (e.currentTarget.contains(e.target as Node)) onGridKeyDown?.(e);
+			}}
+			onFocus={(e) => {
+				if (e.target === e.currentTarget && isKeyboardFocus(e.currentTarget)) onGridFocus?.();
+			}}
 			onCopy={onCopy}
 			onCut={onCut}
 			onPaste={onPaste}
 			aria-activedescendant={activeDescendantId}
-			aria-rowcount={count ?? rows.length}
+			aria-rowcount={rowCount}
 			aria-colcount={columns.length}
 			className={cn('relative h-full w-full overflow-auto outline-none', className)}
 		>
-			{/* Sticky HEADER band — same column layout as the body. */}
-			<div
-				role='row'
-				data-part-id='sheets-header-row'
-				className='sticky top-0 z-30 flex bg-background'
-				style={{ height: HEADER_HEIGHT, width: contentWidth }}
-			>
-				{rowMarker && (
-					<div className='sticky left-0 z-40 flex shrink-0' style={{ width: markerWidth, height: '100%' }}>
-						<RowMarkerHeaderCell rowMarker={rowMarker} />
-					</div>
-				)}
-				{stickyColumn && stickyHeader && (
-					<div className='sticky z-40 flex shrink-0 border-r border-border' style={{ left: markerWidth, width: stickyWidth, height: '100%' }}>
-						<HeaderCell
-							column={stickyColumn}
-							header={stickyHeader}
-							sorting={sorting}
-							onHeaderClick={onHeaderClick}
-							onResize={onResize}
-						/>
-					</div>
-				)}
-				{virtualColumns.map((virtualCol) => {
-					if (virtualCol.index === stickyIndex) return null; // sticky header painted above
-					const column = columns[virtualCol.index];
-					const header = headersByColumnId.get(column.id);
-					if (!header) return null;
-					return (
-						<div
-							key={virtualCol.key}
-							className='absolute top-0 flex'
-							style={{ transform: `translateX(${virtualCol.start + markerWidth}px)`, width: virtualCol.size, height: '100%' }}
-						>
-							<HeaderCell
-								column={column}
-								header={header}
-								sorting={sorting}
-								onHeaderClick={onHeaderClick}
-								onResize={onResize}
-							/>
-						</div>
-					);
-				})}
-			</div>
+			<GridHeaderBand
+				columns={columns}
+				headersByColumnId={headersByColumnId}
+				frozen={frozen}
+				frozenLefts={frozenLefts}
+				widths={widths}
+				virtualColumns={virtualColumns}
+				markerWidth={markerWidth}
+				rowWidth={rowWidth}
+				contentWidth={contentWidth}
+				filler={fill.filler}
+				rowMarker={rowMarker}
+				sort={sort}
+				onHeaderClick={onHeaderClick}
+				getUnsortableReason={getUnsortableReason}
+				onResize={onResize}
+				drag={drag}
+				renderHeaderMenu={renderHeaderMenu}
+			/>
 
-			{/* BODY — virtualized rows × columns. */}
-			<div style={{ height: rowVirtualizer.getTotalSize(), width: contentWidth, position: 'relative' }}>
+			{/* BODY — virtualized rows × columns. Cells are not text: a double-click or a drag must not
+			    leave a native text selection on them. An inline editor's field stays selectable. */}
+			<div
+				className='select-none [&_[contenteditable=true]]:select-text [&_input]:select-text [&_textarea]:select-text'
+				style={{ height: rowVirtualizer.getTotalSize(), width: rowWidth, position: 'relative' }}
+			>
 				{rowVirtualizer.getVirtualItems().map((virtualRow) => {
-					const row = rows[virtualRow.index];
-					// Defensive: when `count` (server total) leads the loaded `rows` window, the proxy
-					// should still back every index — but guard the off-by-one race rather than crash.
-					if (!row) return null;
-					const rowSelected = rowMarker?.isSelected(virtualRow.index) ?? false;
+					const index = virtualRow.index;
+					// Defensive: when `count` (server total) leads `rows`, guard the off-by-one race.
+					if (index >= rows.length) return null;
+					const row = rows[index];
+					const inRange = activeRange !== undefined && index >= activeRange.y && index < activeRange.y + activeRange.height;
+					const editingHere = editingCell?.rowIndex === index;
 					return (
-						<div
+						<GridBodyRow
 							key={virtualRow.key}
-							role='row'
-							data-index={virtualRow.index}
-							data-row={virtualRow.index}
-							data-selected={rowSelected || undefined}
-							aria-rowindex={virtualRow.index + 1}
-							className={cn(
-							'group absolute left-0 top-0 flex border-b border-border',
-							rowSelected ? 'bg-primary/5' : 'hover:bg-muted/50'
-						)}
-							style={{ transform: `translateY(${virtualRow.start}px)`, height: ESTIMATED_ROW_HEIGHT, width: '100%' }}
-						>
-							{rowMarker && (
-								<div className='sticky left-0 z-20 flex shrink-0' style={{ width: markerWidth }}>
-									<RowMarkerCell rowIndex={virtualRow.index} rowMarker={rowMarker} />
-								</div>
-							)}
-							{hasStickyColumn && (
-								<div
-									className={`sticky z-10 flex shrink-0 border-r border-border bg-background ${PINNED_HOVER_BG}`}
-									data-col={stickyIndex}
-									aria-colindex={stickyIndex + 1}
-									style={{ left: markerWidth, width: stickyWidth }}
-								>
-									{renderCell(cellForColumnIndex(row, stickyIndex), {
-										rowIndex: virtualRow.index,
-										columnIndex: stickyIndex,
-										isStickyColumn: true,
-										isActive: activeCell?.[0] === stickyIndex && activeCell?.[1] === virtualRow.index
-									})}
-								</div>
-							)}
-							{virtualColumns.map((virtualCol) => {
-								if (virtualCol.index === stickyIndex) return null; // sticky col painted by the element above
-								return (
-									<div
-										key={virtualCol.key}
-										className='absolute top-0 flex'
-										data-col={virtualCol.index}
-										aria-colindex={virtualCol.index + 1}
-										style={{ transform: `translateX(${virtualCol.start + markerWidth}px)`, width: virtualCol.size, height: '100%' }}
-									>
-										{renderCell(cellForColumnIndex(row, virtualCol.index), {
-											rowIndex: virtualRow.index,
-											columnIndex: virtualCol.index,
-											isStickyColumn: false,
-											isActive: activeCell?.[0] === virtualCol.index && activeCell?.[1] === virtualRow.index
-										})}
-									</div>
-								);
-							})}
-						</div>
+							rowIndex={index}
+							row={row}
+							rowId={getRowId(row, index)}
+							start={virtualRow.start}
+							height={rowHeight}
+							columnIds={columnIds}
+							frozen={frozen}
+							frozenLefts={frozenLefts}
+							widths={widths}
+							virtualColumns={virtualColumns}
+							markerWidth={markerWidth}
+							rowMarker={rowMarker}
+							rowSelected={rowMarker?.isSelected(index) ?? false}
+							activeColumn={activeCell?.[1] === index ? activeCell[0] : -1}
+							rangeStart={inRange ? activeRange.x : -1}
+							rangeEnd={inRange ? activeRange.x + activeRange.width : -1}
+							editingColumnId={editingHere ? editingCell.columnId : null}
+							editingText={editingHere ? editingCell.initialText : undefined}
+							renderCell={renderCell}
+						/>
 					);
 				})}
 				{activeRange && (
@@ -642,7 +831,7 @@ export function GridViewport({
 						data-part-id='sheets-range-band'
 						aria-hidden='true'
 						className='pointer-events-none absolute z-[5] border border-primary/50 bg-primary/10'
-						style={rangeBandStyle(activeRange, columns, markerWidth)}
+						style={rangeBandStyle(activeRange, widths, markerWidth, rowHeight)}
 					/>
 				)}
 				{fillSource && (
@@ -652,7 +841,7 @@ export function GridViewport({
 						aria-label='Fill handle'
 						onPointerDown={onFillNubPointerDown}
 						className='absolute z-10 cursor-crosshair touch-none select-none rounded-[1px] border border-background bg-primary'
-						style={fillNubStyle(fillSource, columns, markerWidth)}
+						style={fillNubStyle(fillSource, widths, markerWidth, rowHeight)}
 					/>
 				)}
 			</div>

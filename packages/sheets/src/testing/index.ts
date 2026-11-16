@@ -3,3 +3,6 @@
 // pull in the in-memory mock backend.
 export * from './mock-sheets-provider';
 export * from './meta-contract-fixture';
+export { createModelBackend } from './model-backend';
+export type { ModelBackend, ModelBackendOptions, ModelBackendUploadOptions, RecordedUpload } from './model-backend';
+export { buildMetaSchemaSdl } from './meta-schema';

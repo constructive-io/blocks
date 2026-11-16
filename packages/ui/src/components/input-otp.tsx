@@ -292,6 +292,7 @@ function InputOtp({
 					);
 				})}
 				<FluidHighlight
+					travel
 					className={cn(
 						'z-10 border bg-transparent',
 						size === 'sm' ? 'rounded-md' : 'rounded-lg',

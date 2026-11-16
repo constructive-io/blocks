@@ -16,22 +16,22 @@ export function BadgesCellView(props: CellProps) {
 
 	return (
 		<div
-			role="gridcell"
 			data-slot="badges-cell"
 			className={cn(
 				'flex h-full w-full items-center gap-1 overflow-hidden px-3',
 				// Single row in the fixed-height cell (no vertical cramming): pills that run
 				// past the right edge fade out, signalling more items beyond the cut (DESIGN_SPEC §7).
-				// The mask only bites when content actually reaches the right edge, so a short list
-				// (nothing near the edge) shows no fade.
-				'[mask-image:linear-gradient(to_right,black,black_calc(100%_-_1.5rem),transparent)]',
+				// The fade runs over the last 2rem of the content and is fully clear by the end
+				// padding, so a cut pill dissolves instead of stopping mid-letter at the cell edge.
+				// It only bites when content reaches that far, so a short list shows no fade.
+				'[mask-image:linear-gradient(to_right,black,black_calc(100%_-_2.75rem),transparent_calc(100%_-_0.75rem))]',
 			)}
 		>
 			{items.map((item, index) => (
 				<span
 					key={`${index}-${item}`}
 					className={cn(
-						'inline-flex shrink-0 items-center rounded-md px-2 py-0.5 text-xs font-medium',
+						'inline-flex shrink-0 items-center rounded-md px-2 py-0.5 text-xs font-medium tabular-nums',
 						BADGE_TONES[resolveBadgeTone(item)],
 					)}
 				>

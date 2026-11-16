@@ -28,6 +28,8 @@ export interface SheetsCellStyleHint {
 	faded?: boolean;
 	/** This draft cell has a field-level validation error (draftMeta.errors[colKey]). */
 	error?: boolean;
+	/** The server could not send this value: the cell shows a muted notice instead. */
+	unreadable?: boolean;
 	[extra: string]: unknown;
 }
 

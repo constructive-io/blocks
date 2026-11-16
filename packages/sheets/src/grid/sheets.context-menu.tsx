@@ -13,7 +13,18 @@
  * its `run` requests the SAME AlertDialog confirm the toolbar Delete uses.
  */
 import { useState, type ReactNode } from 'react';
-import { RiAddLine, RiClipboardLine, RiDeleteBin6Line, RiEraserLine, RiScissorsLine, RiFileCopyLine } from '@remixicon/react';
+import {
+	RiAddLine,
+	RiClipboardLine,
+	RiExpandDiagonalLine,
+	RiDeleteBin6Line,
+	RiEraserLine,
+	RiExternalLinkLine,
+	RiFileCopyLine,
+	RiScissorsLine,
+	RiSortAsc,
+	RiSortDesc,
+} from '@remixicon/react';
 
 import {
 	AlertDialog,
@@ -34,6 +45,9 @@ import {
 	DropdownMenuTrigger,
 } from '@constructive-io/ui/dropdown-menu';
 
+import { INSTANT_POPUP } from './popup-classes';
+import { rowRemovalConfirm, rowRemovalLabel, type RowRemoval } from './row-removal';
+
 /** Where the menu is anchored + the cell it acts on. `null` = closed. */
 export interface ContextMenuState {
 	clientX: number;
@@ -49,6 +63,8 @@ export interface ContextMenuItem {
 	shortcut?: string;
 	destructive?: boolean;
 	disabled?: boolean;
+	/** Why the item is disabled, shown on hover. */
+	reason?: string;
 	run?: () => void;
 }
 
@@ -57,14 +73,17 @@ export interface BuildContextMenuItemsArgs {
 	onAction: (commandId: string) => void;
 	/** True when the command's `canRun` passes against the latched context. */
 	isEnabled: (commandId: string) => boolean;
+	/** Why a command cannot run here, or null; shown on its disabled item. */
+	reasonFor?: (commandId: string) => string | null;
 	/** Append a draft row (the toolbar Add-row path). */
 	onAddRow: () => void;
 	/** Open the destructive delete confirm (the AlertDialog). */
 	requestDelete: () => void;
-	/** Count of currently selected rows — gates Delete + drives its label. */
-	selectedRowCount: number;
+	/** What removing the rows under the menu does: gates Delete and names it. */
+	removal: RowRemoval;
 	canAddRows?: boolean;
-	canDeleteRows?: boolean;
+	/** Offer "Open record" (the grid has a record panel). */
+	canOpenRecords?: boolean;
 }
 
 /**
@@ -75,25 +94,32 @@ export interface BuildContextMenuItemsArgs {
 export function buildContextMenuItems({
 	onAction,
 	isEnabled,
+	reasonFor,
 	onAddRow,
 	requestDelete,
-	selectedRowCount,
+	removal,
 	canAddRows = true,
-	canDeleteRows = true,
+	canOpenRecords = false,
 }: BuildContextMenuItemsArgs): ContextMenuItem[] {
-	const cmd = (key: string, commandId: string, label: string, icon: ReactNode, shortcut?: string): ContextMenuItem => ({
-		key,
-		label,
-		icon,
-		shortcut,
-		disabled: !isEnabled(commandId),
-		run: () => onAction(commandId),
-	});
+	const cmd = (key: string, commandId: string, label: string, icon: ReactNode, shortcut?: string): ContextMenuItem => {
+		const disabled = !isEnabled(commandId);
+		const reason = disabled ? reasonFor?.(commandId) ?? undefined : undefined;
+		return { key, label, icon, shortcut, disabled, ...(reason ? { reason } : {}), run: () => onAction(commandId) };
+	};
+	// "Open link" shows only for a cell that holds an email or a web address.
+	const open: ContextMenuItem[] = [
+		...(isEnabled('cell.openLink') ? [cmd('open-link', 'cell.openLink', 'Open link', <RiExternalLinkLine className='size-4' aria-hidden='true' />)] : []),
+		...(canOpenRecords ? [cmd('open-record', 'record.open', 'Open record', <RiExpandDiagonalLine className='size-4' aria-hidden='true' />)] : []),
+	];
 	return [
+		...(open.length > 0 ? [...open, { key: 'sep-open', separator: true }] : []),
 		cmd('copy', 'clipboard.copy', 'Copy', <RiFileCopyLine className='size-4' aria-hidden='true' />, '⌘C'),
 		cmd('cut', 'clipboard.cut', 'Cut', <RiScissorsLine className='size-4' aria-hidden='true' />, '⌘X'),
 		cmd('paste', 'clipboard.paste', 'Paste', <RiClipboardLine className='size-4' aria-hidden='true' />, '⌘V'),
 		cmd('clear', 'cell.clear', 'Clear', <RiEraserLine className='size-4' aria-hidden='true' />),
+		{ key: 'sep-view', separator: true },
+		cmd('sort-asc', 'view.sortAscending', 'Sort ascending', <RiSortAsc className='size-4' aria-hidden='true' />),
+		cmd('sort-desc', 'view.sortDescending', 'Sort descending', <RiSortDesc className='size-4' aria-hidden='true' />),
 		{ key: 'sep', separator: true },
 		{
 			key: 'add-row',
@@ -104,10 +130,11 @@ export function buildContextMenuItems({
 		},
 		{
 			key: 'delete-rows',
-			label: selectedRowCount > 1 ? `Delete ${selectedRowCount} rows` : 'Delete row',
+			label: rowRemovalLabel(removal),
 			icon: <RiDeleteBin6Line className='size-4' aria-hidden='true' />,
 			destructive: true,
-			disabled: !canDeleteRows || selectedRowCount === 0,
+			disabled: removal.blockedReason !== null,
+			...(removal.blockedReason ? { reason: removal.blockedReason } : {}),
 			run: requestDelete,
 		},
 	];
@@ -122,14 +149,17 @@ export interface SheetsContextMenuProps {
 	onAction: (commandId: string) => void;
 	/** True when the command's `canRun` passes against the latched context. */
 	isEnabled: (commandId: string) => boolean;
+	/** Why a command cannot run here, or null; shown on its disabled item. */
+	reasonFor?: (commandId: string) => string | null;
 	/** Append a draft row (the toolbar Add-row path). */
 	onAddRow: () => void;
-	/** Delete the selected row(s) (the toolbar deleteSelected path) — guarded by the AlertDialog. */
-	onDeleteRows: () => void;
-	/** Count of currently selected rows — drives the destructive dialog copy. */
-	selectedRowCount: number;
+	/** Remove these rows (a saved row is deleted, a new row discarded) — guarded by the AlertDialog. */
+	onDeleteRows: (rows: readonly number[]) => void;
+	/** What removing the rows under the menu does (the selected rows, else the cursor's). */
+	removal: RowRemoval;
 	canAddRows?: boolean;
-	canDeleteRows?: boolean;
+	/** Offer "Open record" (the grid has a record panel). */
+	canOpenRecords?: boolean;
 }
 
 export function SheetsContextMenu({
@@ -137,23 +167,32 @@ export function SheetsContextMenu({
 	onClose,
 	onAction,
 	isEnabled,
+	reasonFor,
 	onAddRow,
 	onDeleteRows,
-	selectedRowCount,
+	removal,
 	canAddRows = true,
-	canDeleteRows = true,
+	canOpenRecords = false,
 }: SheetsContextMenuProps) {
-	const [confirmDelete, setConfirmDelete] = useState(false);
+	// The confirm keeps the rows it was opened for: the menu closes, and the cursor may move, first.
+	// The plan outlives `confirmOpen` so the words stay put while the dialog animates out.
+	const [confirmOpen, setConfirmOpen] = useState(false);
+	const [confirming, setConfirming] = useState<RowRemoval | null>(null);
+	const confirm = confirming ? rowRemovalConfirm(confirming) : null;
 	const open = state !== null;
 
 	const items = buildContextMenuItems({
 		onAction,
 		isEnabled,
+		reasonFor,
 		onAddRow,
-		requestDelete: () => setConfirmDelete(true),
-		selectedRowCount,
+		requestDelete: () => {
+			setConfirming(removal);
+			setConfirmOpen(true);
+		},
+		removal,
 		canAddRows,
-		canDeleteRows,
+		canOpenRecords,
 	});
 
 	return (
@@ -171,7 +210,7 @@ export function SheetsContextMenu({
 						height: 0,
 					}}
 				/>
-				<DropdownMenuContent align='start'>
+				<DropdownMenuContent align='start' className={INSTANT_POPUP}>
 					{items.map((item) =>
 						item.separator ? (
 							<DropdownMenuSeparator key={item.key} />
@@ -180,6 +219,7 @@ export function SheetsContextMenu({
 								key={item.key}
 								variant={item.destructive ? 'destructive' : 'default'}
 								disabled={item.disabled}
+								title={item.reason}
 								onClick={() => {
 									// Run then close — a menu pick is a one-shot (the popup dismisses).
 									item.run?.();
@@ -197,25 +237,22 @@ export function SheetsContextMenu({
 
 			{/* Destructive confirm — mirrors the toolbar Delete AlertDialog. Driven open after the
 			    menu closes so the two overlays never fight for focus. */}
-			<AlertDialog open={confirmDelete} onOpenChange={setConfirmDelete}>
+			<AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
 				<AlertDialogContent>
 					<AlertDialogHeader>
-						<AlertDialogTitle>Delete rows?</AlertDialogTitle>
-						<AlertDialogDescription>
-							This will permanently delete {selectedRowCount} {selectedRowCount === 1 ? 'row' : 'rows'}. This action cannot be
-							undone.
-						</AlertDialogDescription>
+						<AlertDialogTitle>{confirm?.title}</AlertDialogTitle>
+						<AlertDialogDescription>{confirm?.description}</AlertDialogDescription>
 					</AlertDialogHeader>
 					<AlertDialogFooter>
 						<AlertDialogCancel>Cancel</AlertDialogCancel>
 						<AlertDialogAction
 							className='bg-destructive text-white hover:bg-destructive/90'
 							onClick={() => {
-								onDeleteRows();
-								setConfirmDelete(false);
+								if (confirming) onDeleteRows(confirming.rows);
+								setConfirmOpen(false);
 							}}
 						>
-							Delete
+							{confirm?.action}
 						</AlertDialogAction>
 					</AlertDialogFooter>
 				</AlertDialogContent>
