@@ -6854,6 +6854,11 @@
           "type": "registry:lib"
         },
         {
+          "path": "registry/constructive/blocks/sheets/grid/views/view-names.ts",
+          "target": "@ui/sheets/grid/views/view-names.ts",
+          "type": "registry:lib"
+        },
+        {
           "path": "registry/constructive/blocks/sheets/grid/views/view-storage.ts",
           "target": "@ui/sheets/grid/views/view-storage.ts",
           "type": "registry:lib"
