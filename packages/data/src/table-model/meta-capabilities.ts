@@ -14,7 +14,7 @@ import type {
  * older server keeps loading and the query only selects what exists.
  */
 export const META_OPTIONAL_CAPABILITIES = {
-	metaTable: { typeName: 'MetaTable', fields: ['kind', 'description', 'isJunction'] },
+	metaTable: { typeName: 'MetaTable', fields: ['kind', 'description', 'isJunction', 'tableName'] },
 	metaField: {
 		typeName: 'MetaField',
 		fields: ['allowedValues', 'isRequiredOnCreate', 'isWritableOnCreate', 'isWritableOnUpdate', 'isComputed', 'file'],
@@ -137,7 +137,7 @@ function uploadSelection(capabilities: MetaCapabilities): string {
  * loads unchanged.
  */
 export function buildMetaQuerySource(capabilities: MetaCapabilities = emptyMetaCapabilities()): string {
-	const tableExtras = present(capabilities, 'metaTable', ['kind', 'description', 'isJunction']);
+	const tableExtras = present(capabilities, 'metaTable', ['kind', 'description', 'isJunction', 'tableName']);
 	const typeExtras = present(capabilities, 'metaType', ['maxLength', 'precision', 'scale']);
 	const tableFieldExtras = [
 		present(capabilities, 'metaField', [

@@ -45,6 +45,8 @@ export interface MetaschemaTable {
 	description?: string | null;
 	/** Optional capability: whether the table only links rows of two other tables. */
 	isJunction?: boolean | null;
+	/** Optional capability: the SQL table name (with `schemaName`, the table's physical identity). */
+	tableName?: string | null;
 
 	/** @deprecated Legacy pre-July contract field. */
 	checkConstraints?: Array<MetaschemaCheckConstraint | null> | null;

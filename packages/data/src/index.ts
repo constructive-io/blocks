@@ -89,6 +89,9 @@ export {
 } from './console-data-tables';
 export type { SelectConsoleDataTablesOptions } from './console-data-tables';
 
+export { isSystemTable, tableRolesFromCatalog } from './system-tables';
+export type { PlatformTableCategory, TableRole, TableRoles } from './system-tables';
+
 export {
 	assessTableWriteCapability,
 	getRowIdentityDefinition,
