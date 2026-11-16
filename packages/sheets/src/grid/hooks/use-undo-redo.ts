@@ -6,9 +6,11 @@
  * new entry onto the undo stack and CLEARS the redo stack (a fresh edit forks the
  * timeline). `undo`/`redo` move the top entry across the two stacks, running the
  * matching thunk. A thunk that throws did not change anything: the entry goes back
- * where it was, so the step can be tried again (the entry reports its own failure).
+ * where it was, under any edit recorded meanwhile, so the step can be tried again (the
+ * entry reports its own failure). A stack cleared or forked since has no place for it.
  * Steps run one at a time: one asked for while another runs (a held Mod+Z against a
- * slow server) starts when it ends, so writes reach the server in the order asked.
+ * slow server) starts when it ends, so writes reach the server in the order asked. An
+ * edit or a clear cancels the steps asked for before it that have not started.
  *
  * The stacks live in refs so the handler identities (`undo`/`redo`/`record`) stay
  * STABLE across renders — keydown wiring binds them once. `canUndo`/`canRedo` are
@@ -43,6 +45,8 @@ const DEFAULT_MAX_DEPTH = 100;
 export function useUndoRedo(maxDepth: number = DEFAULT_MAX_DEPTH): UseUndoRedoResult {
 	const undoStack = useRef<HistoryEntry[]>([]);
 	const redoStack = useRef<HistoryEntry[]>([]);
+	// Moves on at every edit and clear: a step asked for before one of them does not run after it.
+	const generation = useRef(0);
 	const [canUndo, setCanUndo] = useState(false);
 	const [canRedo, setCanRedo] = useState(false);
 
@@ -56,6 +60,7 @@ export function useUndoRedo(maxDepth: number = DEFAULT_MAX_DEPTH): UseUndoRedoRe
 			undoStack.current.push(entry);
 			if (undoStack.current.length > maxDepth) undoStack.current.shift();
 			redoStack.current = [];
+			generation.current += 1;
 			sync();
 		},
 		[maxDepth, sync],
@@ -67,17 +72,24 @@ export function useUndoRedo(maxDepth: number = DEFAULT_MAX_DEPTH): UseUndoRedoRe
 	// Move the top entry from one stack to the other and run it; it moves back if it throws.
 	const step = useCallback(
 		(from: { current: HistoryEntry[] }, to: { current: HistoryEntry[] }, run: (entry: HistoryEntry) => Promise<void> | void) => {
+			const asked = generation.current;
 			const next = running.current.then(async () => {
-				const entry = from.current.pop();
+				if (generation.current !== asked) return;
+				const source = from.current;
+				const entry = source.pop();
 				if (!entry) return;
+				const place = source.length;
 				to.current.push(entry);
 				sync();
 				try {
 					await run(entry);
 				} catch {
+					// Nothing changed: the entry leaves the other stack and goes back to its place,
+					// under any edit recorded meanwhile. A stack replaced since (a clear, or the redo
+					// stack an edit forked) has no place for it, so it is dropped.
 					const index = to.current.lastIndexOf(entry);
 					if (index >= 0) to.current.splice(index, 1);
-					from.current.push(entry);
+					if (from.current === source) source.splice(Math.min(place, source.length), 0, entry);
 					sync();
 				}
 			});
@@ -92,6 +104,7 @@ export function useUndoRedo(maxDepth: number = DEFAULT_MAX_DEPTH): UseUndoRedoRe
 	const clear = useCallback(() => {
 		undoStack.current = [];
 		redoStack.current = [];
+		generation.current += 1;
 		sync();
 	}, [sync]);
 

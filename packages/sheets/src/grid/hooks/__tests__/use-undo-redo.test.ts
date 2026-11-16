@@ -193,3 +193,85 @@ describe('steps that wait for the server', () => {
 		expect(api.canRedo).toBe(false);
 	});
 });
+
+describe('an edit or a clear while a step waits for the server', () => {
+	function waiting(log: string[], name: string) {
+		let refuse!: (error: Error) => void;
+		const entry: HistoryEntry = {
+			label: name,
+			undo: () =>
+				new Promise<void>((_resolve, reject) => {
+					log.push(`undo:${name}`);
+					refuse = reject;
+				}),
+			redo: () => void log.push(`redo:${name}`),
+		};
+		return { entry, refuse: () => refuse(new Error('refused')) };
+	}
+
+	it('puts a refused undo back under the newer edit, so the next undo is the edit', async () => {
+		const log: string[] = [];
+		const a = waiting(log, 'a');
+		act(() => api.record(a.entry));
+		let pending!: Promise<void>;
+		await act(async () => {
+			pending = api.undo();
+			await Promise.resolve();
+		});
+		act(() => api.record(entry(log, 'e')));
+		await act(async () => {
+			a.refuse();
+			await pending;
+		});
+		await act(() => api.undo());
+		expect(log).toEqual(['undo:a', 'undo:e']);
+	});
+
+	it('drops a refused step whose history was cleared', async () => {
+		const log: string[] = [];
+		const a = waiting(log, 'a');
+		act(() => api.record(a.entry));
+		let pending!: Promise<void>;
+		await act(async () => {
+			pending = api.undo();
+			await Promise.resolve();
+		});
+		act(() => api.clear());
+		await act(async () => {
+			a.refuse();
+			await pending;
+		});
+		expect(api.canUndo).toBe(false);
+		expect(api.canRedo).toBe(false);
+	});
+
+	it('does not run a step asked for before the edit', async () => {
+		const log: string[] = [];
+		let answer!: () => void;
+		act(() => {
+			api.record(entry(log, 'a'));
+			api.record({
+				label: 'b',
+				undo: () =>
+					new Promise<void>((resolve) => {
+						log.push('undo:b');
+						answer = resolve;
+					}),
+				redo: () => void log.push('redo:b'),
+			});
+		});
+		let both!: Promise<unknown>;
+		await act(async () => {
+			both = Promise.all([api.undo(), api.undo()]);
+			await Promise.resolve();
+		});
+		act(() => api.record(entry(log, 'e')));
+		await act(async () => {
+			answer();
+			await both;
+		});
+		// The second press was for `a`; after the edit it must not undo `e` (or `a`).
+		expect(log).toEqual(['undo:b']);
+		expect(api.canUndo).toBe(true);
+	});
+});
