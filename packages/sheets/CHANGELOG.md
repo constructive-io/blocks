@@ -3,6 +3,26 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.15.1](https://github.com/constructive-io/blocks/compare/@constructive-io/sheets@0.15.0...@constructive-io/sheets@0.15.1) (2026-11-16)
+
+
+### Bug Fixes
+
+* **sheets:** an edit or a clear during a waiting undo keeps the history right ([77d29de](https://github.com/constructive-io/blocks/commit/77d29ded8cf1c7248f48f97cd36d3c49ef0b7665))
+* **sheets:** duplicating a view with a long name no longer freezes the page ([c6f8267](https://github.com/constructive-io/blocks/commit/c6f82673488192fbe12f064242b954690161ca17))
+* **sheets:** keep a refused undo in the history, and run undo steps one at a time ([e9e4d57](https://github.com/constructive-io/blocks/commit/e9e4d5791e3b247611ef41f826e4cd248403571a))
+* **sheets:** the file editor names a new row's missing fields ([52a09a7](https://github.com/constructive-io/blocks/commit/52a09a77960249ff8eba9adab806c41b5ca735b7))
+* **sheets:** the multiline cell editor and its notice follow the cell when the grid scrolls ([8cab575](https://github.com/constructive-io/blocks/commit/8cab57501ae86830f15abb7780ab120177fda7d7))
+
+
+### Performance Improvements
+
+* **sheets:** the multiline cell editor renders on scroll only when its cell moved ([8d6e659](https://github.com/constructive-io/blocks/commit/8d6e659ab89e1b8f4e96daab10a16faae5bd6248))
+
+
+
+
+
 # [0.15.0](https://github.com/constructive-io/blocks/compare/@constructive-io/sheets@0.14.1...@constructive-io/sheets@0.15.0) (2026-11-16)
 
 
