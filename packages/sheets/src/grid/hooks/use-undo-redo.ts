@@ -7,6 +7,8 @@
  * timeline). `undo`/`redo` move the top entry across the two stacks, running the
  * matching thunk. A thunk that throws did not change anything: the entry goes back
  * where it was, so the step can be tried again (the entry reports its own failure).
+ * Steps run one at a time: one asked for while another runs (a held Mod+Z against a
+ * slow server) starts when it ends, so writes reach the server in the order asked.
  *
  * The stacks live in refs so the handler identities (`undo`/`redo`/`record`) stay
  * STABLE across renders — keydown wiring binds them once. `canUndo`/`canRedo` are
@@ -59,21 +61,28 @@ export function useUndoRedo(maxDepth: number = DEFAULT_MAX_DEPTH): UseUndoRedoRe
 		[maxDepth, sync],
 	);
 
+	// The step running now; the next one waits for it. A step never rejects.
+	const running = useRef<Promise<void>>(Promise.resolve());
+
 	// Move the top entry from one stack to the other and run it; it moves back if it throws.
 	const step = useCallback(
-		async (from: { current: HistoryEntry[] }, to: { current: HistoryEntry[] }, run: (entry: HistoryEntry) => Promise<void> | void) => {
-			const entry = from.current.pop();
-			if (!entry) return;
-			to.current.push(entry);
-			sync();
-			try {
-				await run(entry);
-			} catch {
-				const index = to.current.lastIndexOf(entry);
-				if (index >= 0) to.current.splice(index, 1);
-				from.current.push(entry);
+		(from: { current: HistoryEntry[] }, to: { current: HistoryEntry[] }, run: (entry: HistoryEntry) => Promise<void> | void) => {
+			const next = running.current.then(async () => {
+				const entry = from.current.pop();
+				if (!entry) return;
+				to.current.push(entry);
 				sync();
-			}
+				try {
+					await run(entry);
+				} catch {
+					const index = to.current.lastIndexOf(entry);
+					if (index >= 0) to.current.splice(index, 1);
+					from.current.push(entry);
+					sync();
+				}
+			});
+			running.current = next;
+			return next;
 		},
 		[sync],
 	);

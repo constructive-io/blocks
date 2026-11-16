@@ -324,3 +324,50 @@ describe('useBatchCommit — undo/redo', () => {
 		expect(update.mock.calls).toEqual([['r0', { name: 'A' }]]);
 	});
 });
+
+describe('useBatchCommit — a refused undo', () => {
+	it('stays on the undo stack, so the user can try it again', async () => {
+		const onServerError = vi.fn();
+		const update = vi.fn().mockResolvedValue({ updatedRow: null });
+		const rows: SheetsRow[] = [
+			{ id: 'r0', name: 'A' },
+			{ id: 'r1', name: 'B' },
+		];
+		const h = mount({
+			combinedRows: rows,
+			fieldMetaMap: META,
+			relationInfoByField: new Map(),
+			update,
+			onServerError,
+			editCell: vi.fn(),
+		});
+
+		await act(async () => {
+			await h.commit([
+				{ rowIndex: 0, colKey: 'name', value: 'A2' },
+				{ rowIndex: 1, colKey: 'name', value: 'B2' },
+			]);
+		});
+
+		// The undo puts row 0 back, then the server refuses row 1.
+		update.mockReset().mockResolvedValueOnce({ updatedRow: null }).mockRejectedValueOnce(new Error('violates check constraint'));
+		await act(async () => {
+			await h.history.undo();
+		});
+		expect(onServerError).toHaveBeenCalledOnce();
+		expect(h.history.canUndo).toBe(true);
+		expect(h.history.canRedo).toBe(false);
+
+		// Trying again writes both prior values; they are values, so row 0 takes its value again.
+		update.mockReset().mockResolvedValue({ updatedRow: null });
+		await act(async () => {
+			await h.history.undo();
+		});
+		expect(update.mock.calls).toEqual([
+			['r0', { name: 'A' }],
+			['r1', { name: 'B' }],
+		]);
+		expect(h.history.canUndo).toBe(false);
+		expect(h.history.canRedo).toBe(true);
+	});
+});
