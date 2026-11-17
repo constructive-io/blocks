@@ -5,13 +5,13 @@
 
 import { createError, isRequiredInput } from '@constructive-io/data';
 
-import type { SheetsExecuteFn } from '../context/sheets-execute';
+import type { SheetsStorageTransport } from '../context/sheets-context';
 import {
 	UPLOAD_PAYLOAD_FIELDS,
 	readUploadPayload,
 	type UploadPayload,
 	type UploadRequestInput,
-	type UploadRequester,
+	type UploadRoute,
 } from '../context/sheets-upload-presigned';
 import type { UploadOperation } from './storage-catalog';
 import type { ResolvedUploadChoices } from './upload-config';
@@ -59,16 +59,19 @@ function inputValues(op: UploadOperation, file: UploadRequestInput, context: Upl
 	return input;
 }
 
-/** A requester that sends the operation's mutation on the storage executor. */
-export function createUploadRequester(
-	execute: SheetsExecuteFn,
+/** The route of an upload through the plane's own upload mutation, on the storage transport. */
+export function createUploadRoute(
+	storage: SheetsStorageTransport,
 	op: UploadOperation,
 	context: UploadRequestContext,
-): UploadRequester {
+): UploadRoute {
 	const selection = UPLOAD_PAYLOAD_FIELDS.filter((name) => op.payloadFields.has(name)).join(' ');
 	const source = `mutation SheetsUploadFile($input: ${op.argType}) { ${op.field}(${op.argName}: $input) { ${selection} } }`;
-	return async (file, signal): Promise<UploadPayload> => {
-		const data = await execute<Record<string, unknown>>(source, { input: inputValues(op, file, context) }, { signal });
-		return readUploadPayload(data?.[op.field]);
+	return {
+		request: async (file, signal): Promise<UploadPayload> => {
+			const data = await storage.execute<Record<string, unknown>>(source, { input: inputValues(op, file, context) }, { signal });
+			return readUploadPayload(data?.[op.field]);
+		},
+		put: storage.put,
 	};
 }

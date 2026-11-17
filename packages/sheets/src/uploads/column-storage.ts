@@ -15,8 +15,8 @@ import type { SheetsStorageTransport } from '../context/sheets-context';
 import type { SheetsUploadFn } from '../context/sheets-execute';
 import {
 	discoverSoleUploadCapability,
+	discoveredUploadRoute,
 	fetchMediaDownloadUrls,
-	requestDiscoveredUpload,
 } from '../context/sheets-upload-discovery';
 import { transferFile, withUnfinishedUpload, type FileProjection, type TransferOptions } from '../context/sheets-upload-presigned';
 import { downloadUrlSourceOf, fetchDownloadUrls } from './download-urls';
@@ -79,11 +79,11 @@ function discoveryStorage(storage: SheetsStorageTransport, choices: ResolvedUplo
 		const cap = await discoverSoleUploadCapability(storage);
 		if (!cap.hasFileProjection) throw createError.badRequest('The storage service does not return the file details an upload needs.');
 		try {
-			const payload = await transferFile(file, (input, signal) => requestDiscoveredUpload(storage.execute, cap, {
-				...input,
+			const route = discoveredUploadRoute(storage, cap, {
 				...(choices.bucketKey ? { bucketKey: choices.bucketKey } : { isPublic: choices.isPublic }),
 				...(databaseId ? { databaseId } : {}),
-			}, signal), options, storage.put);
+			});
+			const payload = await transferFile(file, route, options);
 			return payload.file;
 		} catch (error) {
 			throw withUnfinishedUpload(error, { filesType: cap.download?.fileTypeName ?? null });

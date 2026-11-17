@@ -346,33 +346,33 @@ async function putWithFetch(url: string, body: Blob | ArrayBuffer, options: Shee
 }
 
 /**
- * PUT bytes to a presigned URL with exactly the given headers, through `put`
- * (the host's `SheetsConfig.transport.put`, else the page's own), and turn the
- * answer into Sheets' upload errors: a refusal keeps its status and body
- * (`putResponseOf`), no answer is "blocked", and only the user's own cancel is
- * an AbortError, so an upload that failed never looks cancelled.
+ * A PUT of bytes to a presigned URL, with exactly the given headers, through
+ * `put` (else the page's own), that turns the answer into Sheets' upload errors:
+ * a refusal keeps its status and body (`putResponseOf`), no answer is "blocked",
+ * and only a cancel of the upload's own signal is an AbortError, so an upload
+ * that failed never looks cancelled.
  */
-export async function putFile(
-	url: string,
-	body: Blob | ArrayBuffer,
-	options: PutFileOptions,
-	put?: SheetsPutFn,
-): Promise<void> {
-	if (options.signal?.aborted) throw abortError();
+function uploadSender(put?: SheetsPutFn): (url: string, body: Blob | ArrayBuffer, options: PutFileOptions) => Promise<void> {
 	const send = put ? hostPut(put) : pagePut;
-	const total = body instanceof ArrayBuffer ? body.byteLength : body.size;
-	let response: SheetsPutResponse;
-	try {
-		response = await send(url, body, options);
-	} catch {
+	return async (url, body, options) => {
 		if (options.signal?.aborted) throw abortError();
-		throw blockedError();
-	}
-	if (response.status < 200 || response.status >= 300) {
-		throw putRejected(response.status, response.statusText ?? '', response.body);
-	}
-	options.onProgress?.({ loaded: total, total, percentage: 100 });
+		const total = body instanceof ArrayBuffer ? body.byteLength : body.size;
+		let response: SheetsPutResponse;
+		try {
+			response = await send(url, body, options);
+		} catch {
+			if (options.signal?.aborted) throw abortError();
+			throw blockedError();
+		}
+		if (response.status < 200 || response.status >= 300) {
+			throw putRejected(response.status, response.statusText ?? '', response.body);
+		}
+		options.onProgress?.({ loaded: total, total, percentage: 100 });
+	};
 }
+
+/** PUT bytes to a presigned URL with exactly the given headers, from the page (XHR when progress is wanted). */
+export const putFile = uploadSender();
 
 /**
  * PUT an already-read buffer. Kept for callers of the earlier API; new code
@@ -403,6 +403,17 @@ export interface UploadRequestInput {
 /** Sends the upload mutation for one file. The signal aborts the request when the user cancels. */
 export type UploadRequester = (input: UploadRequestInput, signal?: AbortSignal) => Promise<UploadPayload>;
 
+/**
+ * How one upload reaches its storage: `request` asks the storage API for a
+ * signed URL (its upload mutation), and `put` sends the bytes there. Each upload
+ * path builds it from its `SheetsStorageTransport`.
+ */
+export interface UploadRoute {
+	request: UploadRequester;
+	/** The host's PUT (`SheetsStorageTransport.put`); absent: the page's own. */
+	put?: SheetsPutFn;
+}
+
 function isExpired(payload: UploadPayload, now = Date.now()): boolean {
 	if (!payload.expiresAt) return false;
 	const expiry = Date.parse(payload.expiresAt);
@@ -422,24 +433,19 @@ export interface TransferOptions {
 }
 
 /**
- * Upload one file through a requester: hash, request, PUT with the returned
- * headers (through the storage transport's `put` when it has one). A URL that
- * expired before or during the PUT is requested again once.
+ * Upload one file along its route: hash, request a URL, PUT with the returned
+ * headers. A URL that expired before or during the PUT is requested again once.
  * Any error after the server issued a file id carries it (`unfinishedUploadOf`);
  * the row itself is left for the storage service to expire.
  */
-export async function transferFile(
-	file: File,
-	request: UploadRequester,
-	options: TransferOptions = {},
-	put?: SheetsPutFn,
-): Promise<UploadPayload> {
+export async function transferFile(file: File, route: UploadRoute, options: TransferOptions = {}): Promise<UploadPayload> {
+	const putBytes = uploadSender(route.put);
 	const contentType = file.type || 'application/octet-stream';
 	const contentHash = await sha256HexOfFile(file);
 	if (options.signal?.aborted) throw abortError();
 	const input: UploadRequestInput = { contentHash, contentType, size: file.size, filename: file.name };
 
-	let payload = await request(input, options.signal);
+	let payload = await route.request(input, options.signal);
 	// From here on the server has issued a file id: the newest `payload` names it.
 	const putOrRenew = async (): Promise<UploadPayload> => {
 		for (let renewals = 0; ; renewals += 1) {
@@ -449,19 +455,19 @@ export async function transferFile(
 			}
 			if (options.signal?.aborted) throw abortError();
 			if (isExpired(payload) && renewals === 0) {
-				payload = await request(input, options.signal);
+				payload = await route.request(input, options.signal);
 				continue;
 			}
 			try {
-				await putFile(payload.uploadUrl!, file, {
+				await putBytes(payload.uploadUrl!, file, {
 					headers: payload.uploadHeaders ?? fallbackPutHeaders(contentType, contentHash, payload.fileId),
 					onProgress: options.onProgress,
 					signal: options.signal,
-				}, put);
+				});
 				return payload;
 			} catch (error) {
 				if (renewals > 0 || !looksExpired(error, payload)) throw error;
-				payload = await request(input, options.signal);
+				payload = await route.request(input, options.signal);
 			}
 		}
 	};
