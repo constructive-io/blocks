@@ -149,8 +149,14 @@ text, checked before it is saved.
 
 ## 4. Render a grid
 
-Sheets is client-side. `Sheets` fills its parent, so give the parent a bounded
-height.
+Sheets is client-side. Its root is `display: contents`, so its toolbar and its
+grid (with the status bar at its foot) are children of your container. Make that
+container a flex column with a bounded height and `min-height: 0`, for example
+`display: flex; flex-direction: column; min-height: 0; height: 100%`; the grid
+takes the space under the toolbar. In a plain block container the grid is as tall
+as the container plus the toolbar, so the status bar falls out of view. Clip that
+container with `overflow: clip` rather than `overflow: hidden`: a hidden box can
+still be scrolled, and the grid's focus would scroll it away from its overlay editors.
 
 ### Embedded mode (the host owns the session)
 
