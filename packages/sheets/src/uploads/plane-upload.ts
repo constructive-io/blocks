@@ -39,7 +39,7 @@ export function planeUpload(
 		if (refusal) throw createError.badRequest(refusal);
 		let payload: UploadPayload;
 		try {
-			payload = await transferFile(file, request, options);
+			payload = await transferFile(file, request, options, storage.put);
 		} catch (error) {
 			// Name the files table beside the file id the error may carry.
 			throw withUnfinishedUpload(error, { filesType: details.plane.filesType, filesTableKey: details.plane.filesTableKey });

@@ -156,6 +156,7 @@ with `authEndpoint` and wrap the grid in `SheetsAuthGate` from
 | `views` | | Where saved views are kept (default: browser local storage) |
 | `map` | | The map's tiles and place search, or `'off'` for either (default: OpenStreetMap; [details](./docs/EMBEDDING.md#map-editor)) |
 | `executeUpload` | | A host uploader; takes precedence over storage |
+| `transport` | | `{ fetch?, put? }`: the host sends the GraphQL and the upload bytes itself ([details](./docs/HOST_INTEGRATION.md#host-transport)) |
 | `execute` | | A custom GraphQL executor |
 | `adapter` | | A custom `SheetsBackendAdapter` |
 | `queryClient` | | Reuse your TanStack Query client |

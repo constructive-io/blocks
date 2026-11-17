@@ -517,7 +517,7 @@ function projectionToFileValue(file: FileProjection, fallbackName: string, fallb
  * `createSheetsUpload` directly. The grid uses the model-driven path instead.
  */
 export function createPresignedSheetsUpload(
-	{ endpoint, execute }: SheetsStorageTransport,
+	{ endpoint, execute, put }: SheetsStorageTransport,
 	bucketKey?: string,
 ): SheetsUploadFn {
 	return async (file, _path, options) => {
@@ -532,6 +532,7 @@ export function createPresignedSheetsUpload(
 				file,
 				(input) => requestDiscoveredUpload(execute, cap, { ...input, bucketKey }),
 				{ onProgress: options?.onProgress },
+				put,
 			);
 		} catch (error) {
 			throw withUnfinishedUpload(error, { filesType: cap.download?.fileTypeName ?? null });

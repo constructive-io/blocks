@@ -11,6 +11,12 @@ export type {
 	SheetsAuthEmbedded,
 	SheetsAuthStandalone,
 	SheetsScopeKey,
+	SheetsTransport,
+	SheetsFetchFn,
+	SheetsFetchInit,
+	SheetsPutFn,
+	SheetsPutOptions,
+	SheetsPutResponse,
 } from './context/sheets-context';
 export type {
 	SheetsExecuteFn,

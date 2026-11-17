@@ -1,4 +1,5 @@
 import type { SheetsConfig } from '../context/sheets-context';
+import { pageFetch } from '../context/sheets-execute';
 
 /**
  * Execute a GraphQL mutation against the auth endpoint.
@@ -19,9 +20,10 @@ export async function executeAuthMutation<TResult = unknown>(
 		Accept: 'application/graphql-response+json',
 	};
 
+	const send = config.transport?.fetch ?? pageFetch;
 	let response: Response;
 	try {
-		response = await fetch(url, {
+		response = await send(url, {
 			method: 'POST',
 			headers,
 			body: JSON.stringify({

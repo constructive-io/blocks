@@ -83,7 +83,7 @@ function discoveryStorage(storage: SheetsStorageTransport, choices: ResolvedUplo
 				...input,
 				...(choices.bucketKey ? { bucketKey: choices.bucketKey } : { isPublic: choices.isPublic }),
 				...(databaseId ? { databaseId } : {}),
-			}, signal), options);
+			}, signal), options, storage.put);
 			return payload.file;
 		} catch (error) {
 			throw withUnfinishedUpload(error, { filesType: cap.download?.fileTypeName ?? null });
