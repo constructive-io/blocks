@@ -3,7 +3,7 @@ import { print } from 'graphql';
 
 import { ConstructiveError, createError, isAuthenticationCode, parseGraphQLError, TypedDocumentString } from '@constructive-io/data';
 
-import type { SheetsConfig, SheetsStorageTransport } from './sheets-context';
+import type { SheetsConfig, SheetsFetchFn, SheetsStorageTransport } from './sheets-context';
 import { createPresignedSheetsUpload } from './sheets-upload-presigned';
 
 // The presigned uploader lives with the upload protocol; it stays importable from here.
@@ -163,6 +163,9 @@ function parseGraphQLResponse(response: GraphQLResponse, onAuthError?: () => voi
 // Factory
 // ============================================================================
 
+/** The page's own fetch, read per call (so a test or polyfill that replaces it applies). */
+export const pageFetch: SheetsFetchFn = (url, init) => fetch(url, init);
+
 export function createSheetsExecute(
 	config: SheetsConfig,
 	getToken: () => string | null,
@@ -186,9 +189,10 @@ export function createSheetsExecute(
 			headers['Authorization'] = `Bearer ${token}`;
 		}
 
+		const send = config.transport?.fetch ?? pageFetch;
 		let response: Response;
 		try {
-			response = await fetch(url, {
+			response = await send(url, {
 				method: 'POST',
 				headers,
 				body: JSON.stringify({
@@ -255,6 +259,7 @@ export function resolveStorageTransport(
 	return {
 		endpoint,
 		execute: config.storage?.execute ?? createSheetsExecute({ ...config, endpoint }, getToken),
+		put: config.transport?.put,
 	};
 }
 
@@ -263,6 +268,7 @@ export function createSheetsUpload(config: SheetsConfig, getToken: () => string 
 	const transport = resolveStorageTransport(config, getToken) ?? {
 		endpoint: config.endpoint,
 		execute: config.execute ?? createSheetsExecute(config, getToken),
+		put: config.transport?.put,
 	};
 	return createPresignedSheetsUpload(transport, config.upload?.bucketKey);
 }

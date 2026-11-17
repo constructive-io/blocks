@@ -12,7 +12,7 @@ import type { SheetsStorageTransport } from '../context/sheets-context';
 import { transferFile, withUnfinishedUpload, type TransferOptions, type UploadPayload } from '../context/sheets-upload-presigned';
 import { bucketLimitsFor, bucketRefusal, rememberLandedBucket } from './bucket-limits';
 import type { PlaneDetails } from './storage-catalog';
-import { createUploadRequester, uploadOperationProblem, type UploadRequestContext } from './upload-request';
+import { createUploadRoute, uploadOperationProblem, type UploadRequestContext } from './upload-request';
 
 export type PlaneUpload =
 	| { status: 'ready'; send: (file: File, options?: TransferOptions) => Promise<UploadPayload> }
@@ -32,14 +32,14 @@ export function planeUpload(
 	const problem = uploadOperationProblem(op, context);
 	if (problem) return { status: 'unavailable', reason: problem };
 
-	const request = createUploadRequester(storage.execute, op, context);
+	const route = createUploadRoute(storage, op, context);
 	const requiresOwner = op.inputFields.some((field) => field.name === 'ownerId');
 	const send = async (file: File, options?: TransferOptions): Promise<UploadPayload> => {
 		const refusal = bucketRefusal(file, await bucketLimitsFor(storage, adapter, details, context.choices, requiresOwner));
 		if (refusal) throw createError.badRequest(refusal);
 		let payload: UploadPayload;
 		try {
-			payload = await transferFile(file, request, options);
+			payload = await transferFile(file, route, options);
 		} catch (error) {
 			// Name the files table beside the file id the error may carry.
 			throw withUnfinishedUpload(error, { filesType: details.plane.filesType, filesTableKey: details.plane.filesTableKey });

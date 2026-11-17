@@ -26,9 +26,69 @@ export interface SheetsAuthStandalone {
 	mode: 'standalone';
 }
 
+/** What a host transport's `fetch` is asked to send: one GraphQL POST. */
+export interface SheetsFetchInit {
+	method: 'POST';
+	headers: Record<string, string>;
+	body: string;
+	signal?: AbortSignal;
+}
+
+/**
+ * Sends one GraphQL request and answers like the global `fetch`: any HTTP status
+ * resolves; no answer (a network failure, or an abort) rejects.
+ */
+export type SheetsFetchFn = (url: string, init: SheetsFetchInit) => Promise<Response>;
+
+/** Bytes of an upload that left so far. */
+export interface UploadProgressEvent {
+	loaded: number;
+	total: number;
+	percentage: number;
+}
+
+export interface SheetsPutOptions {
+	/** Exactly the headers the upload payload names. The URL is signed over them. */
+	headers: Record<string, string>;
+	onProgress?: (progress: UploadProgressEvent) => void;
+	signal?: AbortSignal;
+}
+
+/** The answer to a PUT, whatever its status. */
+export interface SheetsPutResponse {
+	status: number;
+	statusText?: string;
+	body: string;
+}
+
+/**
+ * Sends a file's bytes to its presigned URL. Resolves with the answer, whatever
+ * its status. Rejects only when no answer came: a network failure, or an abort
+ * (with an error named `AbortError`).
+ */
+export type SheetsPutFn = (url: string, body: Blob, options: SheetsPutOptions) => Promise<SheetsPutResponse>;
+
+/**
+ * Carries the grid's network traffic for a host that must not send it from the
+ * page, for example a desktop app whose page origin no API lists for CORS.
+ * Sheets keeps its own handling of each answer: errors, a lost session, an
+ * expired upload URL, progress.
+ */
+export interface SheetsTransport {
+	/** Every GraphQL request: data, storage, and auth in standalone mode. Default: the global `fetch`. */
+	fetch?: SheetsFetchFn;
+	/**
+	 * Every upload's bytes, in the grid and through `createSheetsUpload`. Default: the
+	 * page's own PUT (`XMLHttpRequest` when progress is shown, else the global `fetch`).
+	 */
+	put?: SheetsPutFn;
+}
+
 export interface SheetsStorageTransport {
 	endpoint: string;
 	execute: SheetsExecuteFn;
+	/** The host's PUT for upload bytes (`SheetsConfig.transport.put`). Absent: the page's own. */
+	put?: SheetsPutFn;
 }
 
 export interface SheetsConfig {
@@ -58,6 +118,12 @@ export interface SheetsConfig {
 	 * `connect-src`.
 	 */
 	map?: SheetsMapConfig;
+	/**
+	 * Optional: how requests leave the page. A host gives its own `fetch` and `put`
+	 * to send them from elsewhere (see {@link SheetsTransport}). An injected
+	 * `execute` or `executeUpload` replaces the transport for what it covers.
+	 */
+	transport?: SheetsTransport;
 	/** Optional: inject custom execute function */
 	execute?: SheetsExecuteFn;
 	/** Optional: inject custom upload function */

@@ -53,6 +53,7 @@ referentially stable (for example with `useMemo`).
 | `displayFields` | `Record<tableKeyOrName, string[]>` | The fields that label a record of a table (record titles, relation chips, pickers), in priority order. Tables without an entry use the built-in rule. |
 | `fieldTypeOverrides` | `Record<'Table.column', cellType>` | Forces the cell type of one column (for example `'Task.notes': 'textarea'`). Writes still go through the column's own parser. |
 | `locale` | `string` | BCP-47 locale for dates and numbers. Default `en-US`. |
+| `transport` | `{ fetch?, put? }` | How requests leave the page: the host's own `fetch` for every GraphQL request and `put` for upload bytes (see "Host transport"). |
 | `execute` | `SheetsExecuteFn` | Replaces the data executor (see "Custom executor"). |
 | `adapter` | `SheetsBackendAdapter` | Replaces the whole data layer (see "Custom adapter"). |
 | `storage` | `{ endpoint, execute? }` | The tenant's storage endpoint, for uploads and file previews. |
@@ -177,6 +178,32 @@ response, and `partialResultOf(error)` returns the data of a read that came back
 with field errors. The grid uses the second to keep a page whose rows have one cell
 the server could not send (a float NaN): the row loads and that cell shows "This
 value cannot be shown". An executor that throws a plain error loses that page.
+
+## Host transport
+
+A host that must not send requests from the page gives Sheets its own transport,
+`config.transport = { fetch, put }` (types `SheetsTransport`, `SheetsFetchFn` and
+`SheetsPutFn`). A desktop app is the usual case: its page origin (a dev server's
+`http://localhost:<port>`, or `file://`) is in no API's CORS list, so the host
+sends the requests from its own process instead.
+
+- `fetch` carries every GraphQL request: the data endpoint, the storage endpoint,
+  and the auth endpoint in standalone mode. It answers like the global `fetch`:
+  any HTTP status resolves, and a request that got no answer rejects. Sheets keeps
+  its own handling of the answer (the bearer token it adds, 401 and
+  `onAuthError`, partial rows, error codes).
+- `put` carries the bytes of each upload to its presigned URL, with exactly the
+  headers the upload payload names (the URL is signed over them): the grid's file
+  columns and `createSheetsUpload`. For `uploadToFilesTable`, which takes its own
+  `storage`, set `put` on that storage object (`SheetsStorageTransport.put`).
+  `put` resolves with the answer whatever its status, and rejects only when no
+  answer came. Sheets turns a refused PUT into its usual errors and renews an
+  expired URL once. A rejection is a cancel only when the upload's own `signal`
+  was aborted; anything else is a failed upload the user sees. Call `onProgress`
+  as bytes leave; Sheets reports 100% when the PUT succeeds.
+- Either part can be left out; the page's own `fetch` (and `XMLHttpRequest` for
+  upload progress) then carries that part. An injected `execute`,
+  `storage.execute` or `executeUpload` replaces the transport for what it covers.
 
 ## Custom adapter
 

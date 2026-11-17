@@ -80,6 +80,21 @@ describe('createSheetsExecute auth callbacks', () => {
 		expect(onAuthError).toHaveBeenCalledTimes(1);
 	});
 
+	it('reaches onAuthError for a 401 that a host transport answers, without the page fetch', async () => {
+		const onAuthError = vi.fn();
+		const pageFetch = vi.spyOn(globalThis, 'fetch');
+		const hostFetch = vi.fn(async () => new Response('', { status: 401, statusText: 'Unauthorized' }));
+		const execute = createSheetsExecute(
+			{ ...createEmbeddedConfig(onAuthError), transport: { fetch: hostFetch } },
+			() => 'token-123',
+		);
+
+		await expect(execute('{ viewer { id } }')).rejects.toMatchObject({ code: 'UNAUTHENTICATED' });
+		expect(onAuthError).toHaveBeenCalledTimes(1);
+		expect(hostFetch).toHaveBeenCalledWith('https://example.com/graphql', expect.objectContaining({ method: 'POST' }));
+		expect(pageFetch).not.toHaveBeenCalled();
+	});
+
 	it('calls onAuthError for GraphQL UNAUTHENTICATED errors', async () => {
 		const onAuthError = vi.fn();
 		vi.spyOn(globalThis, 'fetch').mockResolvedValue(
@@ -474,6 +489,38 @@ describe('createSheetsUpload — presigned seam', () => {
 			code: 'STORAGE_UPLOAD_BLOCKED',
 			message: expect.stringContaining('allow this site in the storage settings'),
 		});
+	});
+
+	it('sends the bytes through a host transport put, and a host put with no answer is a failure, not a cancel', async () => {
+		stubDigest();
+		const pageFetch = vi.spyOn(globalThis, 'fetch');
+		const execute = makeSchemaExecute(ROOT_UPLOAD_SDL, {
+			uploadAppFile: () => uploadPayload({ uploadUrl: 'https://s3.local/put?sig=abc', fileId: 'f', key: 'k', deduplicated: false }),
+			appFile: (args: { id: string }) => ({ id: args.id, downloadUrl: 'https://cdn.local/public/k' }),
+		});
+		const puts: { url: string; headers: Record<string, string>; body: Blob }[] = [];
+		const answers = [async () => ({ status: 200, body: '' }), async (): Promise<never> => { throw new DOMException('stopped', 'AbortError'); }];
+		const config: SheetsConfig = {
+			endpoint: 'https://transport.example.com/graphql',
+			auth: { mode: 'standalone' },
+			execute,
+			transport: {
+				put: (url, body, options) => {
+					puts.push({ url, headers: options.headers, body });
+					return answers[puts.length - 1]!();
+				},
+			},
+		};
+		const upload = createSheetsUpload(config, () => null);
+		const file = createTestFile();
+
+		await expect(upload(file)).resolves.toMatchObject({ url: 'https://cdn.local/public/k' });
+		expect(puts).toEqual([{ url: 'https://s3.local/put?sig=abc', headers: expect.objectContaining({ 'Content-Type': file.type }), body: file }]);
+		expect(pageFetch).not.toHaveBeenCalled();
+
+		// The host gave up (it rejected with an AbortError), but the user cancelled nothing:
+		// the upload must fail where the user sees it, not end like a cancel.
+		await expect(upload(createTestFile())).rejects.toMatchObject({ code: 'STORAGE_UPLOAD_BLOCKED' });
 	});
 
 	it('PUT failure ⇒ leaves the row for server expiry and preserves the PUT error', async () => {

@@ -22,6 +22,7 @@ import {
 	withUnfinishedUpload,
 	type FileProjection,
 	type UploadPayload,
+	type UploadRoute,
 } from './sheets-upload-presigned';
 
 // ============================================================================
@@ -406,10 +407,14 @@ function resolveConnectionDownloadField(
 // Fallback: upload op call
 // ============================================================================
 
-interface UploadOpInput {
+/** Where a discovered upload lands: a bucket by key, or the public or private default bucket, and the database. */
+export interface UploadChoice {
 	bucketKey?: string;
 	isPublic?: boolean;
 	databaseId?: string;
+}
+
+interface UploadOpInput extends UploadChoice {
 	contentHash: string;
 	contentType: string;
 	size: number;
@@ -512,14 +517,20 @@ function projectionToFileValue(file: FileProjection, fallbackName: string, fallb
 	};
 }
 
+/** The route of an upload through a discovered upload mutation, landing where `choice` says. */
+export function discoveredUploadRoute(storage: SheetsStorageTransport, cap: UploadCapability, choice: UploadChoice): UploadRoute {
+	return {
+		request: (input, signal) => requestDiscoveredUpload(storage.execute, cap, { ...input, ...choice }, signal),
+		put: storage.put,
+	};
+}
+
 /**
  * An uploader over the fallback discovery, for hosts that call
  * `createSheetsUpload` directly. The grid uses the model-driven path instead.
  */
-export function createPresignedSheetsUpload(
-	{ endpoint, execute }: SheetsStorageTransport,
-	bucketKey?: string,
-): SheetsUploadFn {
+export function createPresignedSheetsUpload(storage: SheetsStorageTransport, bucketKey?: string): SheetsUploadFn {
+	const { endpoint, execute } = storage;
 	return async (file, _path, options) => {
 		if (!endpoint) throw createError.badRequest('No GraphQL endpoint configured.');
 		const cap = await discoverUploadCapability(endpoint, execute);
@@ -528,11 +539,9 @@ export function createPresignedSheetsUpload(
 		}
 		let payload: UploadPayload;
 		try {
-			payload = await transferFile(
-				file,
-				(input) => requestDiscoveredUpload(execute, cap, { ...input, bucketKey }),
-				{ onProgress: options?.onProgress },
-			);
+			payload = await transferFile(file, discoveredUploadRoute(storage, cap, { bucketKey }), {
+				onProgress: options?.onProgress,
+			});
 		} catch (error) {
 			throw withUnfinishedUpload(error, { filesType: cap.download?.fileTypeName ?? null });
 		}
