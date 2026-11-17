@@ -3,6 +3,17 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.16.0](https://github.com/constructive-io/blocks/compare/@constructive-io/sheets@0.15.1...@constructive-io/sheets@0.16.0) (2026-11-17)
+
+
+### Features
+
+* **sheets:** let a host send the grid's requests and upload bytes ([9ab935e](https://github.com/constructive-io/blocks/commit/9ab935eb1c38f6d0501421980a2c80899e639055))
+
+
+
+
+
 ## [0.15.1](https://github.com/constructive-io/blocks/compare/@constructive-io/sheets@0.15.0...@constructive-io/sheets@0.15.1) (2026-11-16)
 
 
