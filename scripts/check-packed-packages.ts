@@ -120,6 +120,12 @@ await writeFile(
       name: 'constructive-package-consumer',
       private: true,
       type: 'module',
+      pnpm: {
+        overrides: {
+          // csstype 3.2.4 adds CSS pathLength, conflicting with Motion's SVG pathLength.
+          csstype: '3.2.3'
+        }
+      },
       dependencies: {
         '@constructive-io/command-palette': `file:${commandPaletteTarball}`,
         '@constructive-io/data': `file:${dataTarball}`,
