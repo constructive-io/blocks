@@ -1,0 +1,28 @@
+# yaml-language-server: $schema=https://coderabbit.ai/integrations/schema.v2.json
+language: en-US
+reviews:
+  profile: chill
+  high_level_summary: true
+  review_status: true
+  poem: false
+  auto_review:
+    enabled: true
+    drafts: false
+  path_filters:
+    - "!pnpm-lock.yaml"
+    - "!**/dist/**"
+    - "!**/__snapshots__/**"
+    - "!apps/blocks/src/generated/**"
+    - "!packages/schema-builder/src/schema/schema-builder-policies/components/policies/policy-diagram/generated/**"
+    - "!apps/registry/public/r/**"
+    - "!apps/registry/registry/**"
+    - "!apps/registry/registry.json"
+    - "!**/.next/**"
+    - "!.artifacts/**"
+    - "!storybook-static/**"
+  path_instructions:
+    - path: "**/*.{ts,tsx}"
+      instructions: >-
+        Follow AGENTS.md and CLAUDE.md. Keep canonical sources separate from generated registry output, preserve the @constructive namespace, and ensure registryDependencies match imports. Blocks must use injected endpoints, sessions and adapters rather than live-endpoint or generated-SDK dependencies.
+chat:
+  art: false
