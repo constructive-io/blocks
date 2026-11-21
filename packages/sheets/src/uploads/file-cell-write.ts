@@ -121,6 +121,7 @@ export async function resolveFileLink(
 	let delay = policy.initialDelayMs;
 	for (;;) {
 		const url = (await resolveUrls([fileId])).get(fileId);
+		if (signal?.aborted) throw signal.reason ?? new Error('Cancelled');
 		if (url) {
 			if (isSignedUrl(url)) throw new Error(LINK_NEEDS_PUBLIC_MESSAGE);
 			return url;
