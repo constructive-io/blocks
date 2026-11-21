@@ -3,6 +3,23 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.6.0](https://github.com/constructive-io/blocks/compare/@constructive-io/registry@0.5.0...@constructive-io/registry@0.6.0) (2026-11-21)
+
+
+### Bug Fixes
+
+* **registry:** expect compose-refs in the ai install closure ([f957dfb](https://github.com/constructive-io/blocks/commit/f957dfbd0386ebea484489c9e3956dfc57a0698b))
+
+
+### Features
+
+* **coding-agent:** add the coding agent workspace template ([8b0d727](https://github.com/constructive-io/blocks/commit/8b0d727446cb69324f3522659520a67f11f67e5b))
+* **registry:** register the app kits and document blocks for wiring from the registry alone ([fe74762](https://github.com/constructive-io/blocks/commit/fe74762efa9a12eb86aeb5e42236701af9b28939))
+
+
+
+
+
 # [0.5.0](https://github.com/constructive-io/blocks/compare/@constructive-io/registry@0.4.0...@constructive-io/registry@0.5.0) (2026-10-19)
 
 
