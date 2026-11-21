@@ -21,7 +21,7 @@ import { incompleteDraftMessage } from '../../grid/draft-guidance';
 import type { DraftSubmitResult } from '../../grid/draft-types';
 import { cellElementFor, type FileCellWriteJob, type FileUploadState } from '../../hooks/use-sheets-upload';
 import type { SheetsRowIdentifier } from '../../row-identity';
-import { fileWriteMessage } from '../file-cell-write';
+import { FileProcessingTimeoutError, fileWriteMessage } from '../file-cell-write';
 import { storedFilesOf, type StoredFile } from '../../utils/file.utils';
 
 /** Uploads in flight at once, per editor. */
@@ -205,8 +205,10 @@ export function useFileEditor(args: UseFileEditorArgs) {
 		const controller = new AbortController();
 		controllers.current.set(entry.key, controller);
 		patch(entry.key, { status: 'uploading', progress: 0, error: null });
+		let reused = false;
 		try {
 			let projection = sent.current.get(entry.key);
+			reused = projection !== undefined;
 			if (!projection) {
 				projection = await upload.send(entry.file, {
 					recordId,
@@ -220,6 +222,9 @@ export function useFileEditor(args: UseFileEditorArgs) {
 			patch(entry.key, { status: 'uploaded', progress: 100, element });
 		} catch (error) {
 			if (controller.signal.aborted || isAbortError(error)) return;
+			// Reuse the uploaded file once, for a link still being confirmed; a file that never
+			// gets a link (rejected, or only signed URLs) is uploaded again on the next retry.
+			if (reused || !(error instanceof FileProcessingTimeoutError)) sent.current.delete(entry.key);
 			const message = error instanceof Error && error.message ? error.message : 'Upload failed';
 			patch(entry.key, { status: 'failed', progress: null, error: message });
 			onUploadError?.(message);
