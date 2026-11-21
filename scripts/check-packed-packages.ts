@@ -777,6 +777,8 @@ import tailwindcss from '@tailwindcss/postcss';
 const require = createRequire(import.meta.url);
 const packageJsonPath = require.resolve('@constructive-io/sheets/package.json');
 const manifest = JSON.parse(await readFile(packageJsonPath, 'utf8'));
+assert.equal(manifest.peerDependencies['@constructive-io/data'], '${dataVersion}');
+assert.equal(manifest.peerDependencies['@constructive-io/ui'], '${uiVersion}');
 assert.ok(manifest.dependencies['@remixicon/react']);
 assert.ok(manifest.dependencies['lucide-react']);
 assert.equal(manifest.exports['./styles.css'], './dist/styles.css');

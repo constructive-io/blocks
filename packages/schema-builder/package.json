@@ -132,8 +132,6 @@
     "react-dom": "^18.0.0 || ^19.0.0"
   },
   "devDependencies": {
-    "@constructive-io/data": "workspace:*",
-    "@constructive-io/ui": "workspace:*",
     "@tanstack/react-query": "^5.90.16",
     "@testing-library/react": "^16.3.1",
     "@types/node": "^24.10.1",

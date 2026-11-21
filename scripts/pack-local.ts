@@ -40,8 +40,9 @@ function run(command: string, args: string[], options?: { ignoreLifecycleScripts
 await rm(destination, { recursive: true, force: true });
 await mkdir(destination, { recursive: true });
 
+await run('pnpm', ['run', 'prepublishOnly']);
+
 for (const packageName of packages) {
-  await run('pnpm', ['--filter', packageName, 'build']);
   // The verified build already exists; suppress package prepack hooks so UI and Schema Builder are not built twice.
   await run(
     'pnpm',
