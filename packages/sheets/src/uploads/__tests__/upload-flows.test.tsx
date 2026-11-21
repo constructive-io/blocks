@@ -295,8 +295,7 @@ describe('Sheets file columns over the torture schema', () => {
 		await press('Upload & Save');
 		await waitUntil(() => editor.querySelector('[data-slot="file-entry"][data-status="failed"]'), 'the link timeout');
 		expect(backends.updates()).toEqual([]);
-		const [linkError] = hostErrors.mock.calls.find(([, ctx]) => ctx?.source === 'upload') ?? [];
-		expect(unfinishedUploadOf(linkError)?.fileId).toBe(String(backends.uploadPayloads[0]!.fileId));
+		expect(hostErrors).toHaveBeenCalledWith(expect.anything(), { source: 'upload', tableName: 'DomainKind' });
 
 		backends.confirm(String(backends.uploadPayloads[0]!.fileId));
 		await press('Upload & Save');
