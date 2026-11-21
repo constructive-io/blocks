@@ -126,16 +126,27 @@ export function useColumnStorage(table: TableModel | null | undefined, column: C
 	// The error names a file row the upload left, if any (`unfinishedUploadOf`).
 	const reported = useMemo((): ColumnStorage | undefined => {
 		if (!loaded || loaded.upload.status !== 'ready' || !onError) return loaded;
-		const { send } = loaded.upload;
+		const { send, linkOf } = loaded.upload;
+		const report = (error: unknown) => {
+			if (!isAbortError(error)) onError(error, { source: 'upload', tableName });
+		};
 		const reportingSend: SendFile = async (file, options) => {
 			try {
 				return await send(file, options);
 			} catch (error) {
-				if (!isAbortError(error)) onError(error, { source: 'upload', tableName });
+				report(error);
 				throw error;
 			}
 		};
-		return { ...loaded, upload: { ...loaded.upload, send: reportingSend } };
+		const reportingLinkOf: LinkOf | undefined = linkOf && (async (projection, signal) => {
+			try {
+				return await linkOf(projection, signal);
+			} catch (error) {
+				report(error);
+				throw error;
+			}
+		});
+		return { ...loaded, upload: { ...loaded.upload, send: reportingSend, linkOf: reportingLinkOf } };
 	}, [loaded, onError, tableName]);
 	return { storage: enabled ? reported ?? null : null, isLoading: enabled && query.isPending, error: query.error ?? null };
 }

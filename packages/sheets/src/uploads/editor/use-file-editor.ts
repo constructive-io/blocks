@@ -16,7 +16,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import type { ColumnModel, TableModel } from '@constructive-io/data';
 
-import { isAbortError } from '../../context/sheets-upload-presigned';
+import { isAbortError, type FileProjection } from '../../context/sheets-upload-presigned';
 import { incompleteDraftMessage } from '../../grid/draft-guidance';
 import type { DraftSubmitResult } from '../../grid/draft-types';
 import { cellElementFor, type FileCellWriteJob, type FileUploadState } from '../../hooks/use-sheets-upload';
@@ -118,6 +118,8 @@ export function useFileEditor(args: UseFileEditorArgs) {
 	const [phase, setPhase] = useState<FileEditorPhase>({ name: 'idle' });
 	const entriesRef = useRef(entries);
 	const controllers = useRef(new Map<string, AbortController>());
+	// Files already uploaded whose cell element is not known yet: a retry resolves it without uploading again.
+	const sent = useRef(new Map<string, FileProjection>());
 	const committed = useRef<SaveTarget | null>(null);
 	const mounted = useRef(true);
 	/** Set when the user cancels an upload during a save: that save stops before writing. */
@@ -155,6 +157,7 @@ export function useFileEditor(args: UseFileEditorArgs) {
 			controller.abort();
 		}
 		controllers.current.delete(entry.key);
+		sent.current.delete(entry.key);
 		if (entry.previewUrl) URL.revokeObjectURL(entry.previewUrl);
 	}, []);
 
@@ -203,12 +206,17 @@ export function useFileEditor(args: UseFileEditorArgs) {
 		controllers.current.set(entry.key, controller);
 		patch(entry.key, { status: 'uploading', progress: 0, error: null });
 		try {
-			const projection = await upload.send(entry.file, {
-				recordId,
-				signal: controller.signal,
-				onProgress: ({ percentage }) => patch(entry.key, { progress: percentage }),
-			});
+			let projection = sent.current.get(entry.key);
+			if (!projection) {
+				projection = await upload.send(entry.file, {
+					recordId,
+					signal: controller.signal,
+					onProgress: ({ percentage }) => patch(entry.key, { progress: percentage }),
+				});
+				sent.current.set(entry.key, projection);
+			}
 			const element = await cellElementFor(column, projection, upload, entry.file, controller.signal);
+			sent.current.delete(entry.key);
 			patch(entry.key, { status: 'uploaded', progress: 100, element });
 		} catch (error) {
 			if (controller.signal.aborted || isAbortError(error)) return;

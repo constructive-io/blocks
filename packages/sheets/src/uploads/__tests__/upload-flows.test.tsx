@@ -281,6 +281,31 @@ describe('Sheets file columns over the torture schema', () => {
 		expect(chip.querySelector('[title]')?.getAttribute('title')).toContain(url);
 	});
 
+	it('keeps an uploaded file whose link is not ready yet: the retry writes its link without uploading it again', async () => {
+		await mount({}, {
+			processing: { initialDelayMs: 10, maxDelayMs: 10, timeoutMs: 60 },
+			columns: { DomainKind: { attachmentLink: { bucketKey: 'docs' } } },
+		});
+		backends.storage.rows.AppBucket!.push({
+			id: '00000000-0000-4000-8000-0000000000b3', key: 'docs', type: 'public', isPublic: true,
+			allowedMimeTypes: null, maxFileSize: null, allowCustomKeys: false,
+		});
+		const editor = await openEditor(1, 'attachmentLink');
+		await pick(editor, new File(['%PDF'], 'report.pdf', { type: 'application/pdf' }));
+		await press('Upload & Save');
+		await waitUntil(() => editor.querySelector('[data-slot="file-entry"][data-status="failed"]'), 'the link timeout');
+		expect(backends.updates()).toEqual([]);
+		expect(hostErrors).toHaveBeenCalledWith(expect.anything(), { source: 'upload', tableName: 'DomainKind' });
+
+		backends.confirm(String(backends.uploadPayloads[0]!.fileId));
+		await press('Upload & Save');
+		await waitUntil(() => backends.updates().length === 1, 'the link write');
+
+		expect(backends.uploadInputs).toHaveLength(1);
+		expect(backends.puts).toHaveLength(1);
+		expect(patchOf(backends.updates()[0])).toEqual({ attachmentLink: `https://storage.mock/download/${String(backends.uploadPayloads[0]!.key)}` });
+	});
+
 	it('skips the PUT for bytes the storage service already holds and writes the existing file', async () => {
 		await mount();
 		const file = png('again.png', 'same-bytes');
@@ -556,6 +581,10 @@ describe('Sheets file columns over the torture schema', () => {
 
 		expect(toast.error).toHaveBeenCalledWith({ message: expect.stringContaining('needs a public bucket') });
 		expect(backends.uploadInputs).toHaveLength(1);
+		expect(hostErrors).toHaveBeenCalledWith(
+			expect.objectContaining({ message: expect.stringContaining('needs a public bucket') }),
+			{ source: 'upload', tableName: 'DomainKind' },
+		);
 		expect(backends.updates()).toEqual([]);
 	});
 
