@@ -3,6 +3,17 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.10.4](https://github.com/constructive-io/blocks/compare/@constructive-io/schema-builder@0.10.3...@constructive-io/schema-builder@0.10.4) (2026-11-21)
+
+
+### Bug Fixes
+
+* build workspace dependencies before Lerna publish ([#71](https://github.com/constructive-io/blocks/issues/71)) ([74a2153](https://github.com/constructive-io/blocks/commit/74a21538cd86c0b97f549fe2eb734aa1c55c14da))
+
+
+
+
+
 ## [0.10.3](https://github.com/constructive-io/blocks/compare/@constructive-io/schema-builder@0.10.2...@constructive-io/schema-builder@0.10.3) (2026-11-21)
 
 **Note:** Version bump only for package @constructive-io/schema-builder

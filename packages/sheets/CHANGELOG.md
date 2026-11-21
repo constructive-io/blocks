@@ -3,6 +3,18 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.16.3](https://github.com/constructive-io/blocks/compare/@constructive-io/sheets@0.16.2...@constructive-io/sheets@0.16.3) (2026-11-21)
+
+
+### Bug Fixes
+
+* build workspace dependencies before Lerna publish ([#71](https://github.com/constructive-io/blocks/issues/71)) ([74a2153](https://github.com/constructive-io/blocks/commit/74a21538cd86c0b97f549fe2eb734aa1c55c14da))
+* **sheets:** link-column retry reuses the uploaded file; link failures reach onError ([#70](https://github.com/constructive-io/blocks/issues/70)) ([4c6e77d](https://github.com/constructive-io/blocks/commit/4c6e77dadca8359112dc3f3aacf9cfec5e0f3793))
+
+
+
+
+
 ## [0.16.2](https://github.com/constructive-io/blocks/compare/@constructive-io/sheets@0.16.1...@constructive-io/sheets@0.16.2) (2026-11-21)
 
 **Note:** Version bump only for package @constructive-io/sheets
