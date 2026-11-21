@@ -3,6 +3,43 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.7.0](https://github.com/constructive-io/blocks/compare/blocks@0.6.0...blocks@0.7.0) (2026-11-21)
+
+
+### Bug Fixes
+
+* **auth-pages:** confirm an email with the sign-up password ([253aedd](https://github.com/constructive-io/blocks/commit/253aedd5557bf0d34b2195b62db30b31246426bb))
+* **blocks:** keep app kit preview links inside the Pages base path ([5d86594](https://github.com/constructive-io/blocks/commit/5d865941f72c3387eafde8c4e60780353b030c30))
+* **scope-access:** ask each scope's pending invitations only for fields it has ([8353df6](https://github.com/constructive-io/blocks/commit/8353df6f74f1c2ece9cd4477f3958251ecfe5473))
+* **scope-access:** give fallback callbacks explicit return types ([2ec6922](https://github.com/constructive-io/blocks/commit/2ec6922b285ad91f67d40562ac68aa2091e3993c))
+* **scope-access:** keep a new organization active while the list reloads ([a08d56b](https://github.com/constructive-io/blocks/commit/a08d56b83eb0296f5a177cabf3f64314bbe78cee))
+* **scope-access:** keep entity accounts off member lists, and let an entity add a bucket ([36a0adc](https://github.com/constructive-io/blocks/commit/36a0adccd8319d1ff7ac5f96f3661194161f4c80))
+* **scope-access:** keep the chosen workspace when the list fails to load ([f43b528](https://github.com/constructive-io/blocks/commit/f43b5284b0e9631c05d0addaa9bd8527640376dd))
+* **scope-access:** read only the invite senders, and offer presets a scope can grant in full ([f4adcfb](https://github.com/constructive-io/blocks/commit/f4adcfb51e6d8d0e08753e13e630e93fa8052bb4))
+
+
+### Features
+
+* **blocks:** pass the console storage transport to Sheets ([a91d6f8](https://github.com/constructive-io/blocks/commit/a91d6f841a831b96a9290d351520b0dea7f11cee))
+* **registry:** publish scope-access, scope-panels and workspace-switcher ([8a10c12](https://github.com/constructive-io/blocks/commit/8a10c12e9563cfa140af7e9884bde95f5b34fc1b))
+* **resource-kit:** honor write capabilities and create date defaults ([5e49160](https://github.com/constructive-io/blocks/commit/5e49160fc0b171387e0040151788480b41a5d64e))
+* **resource-kit:** let a record page carry sections below its related lists ([be117f5](https://github.com/constructive-io/blocks/commit/be117f515e1f1cdfd399c6b01b980868e4e256fb))
+* **resource-kit:** start a create form on a field's value default ([3ce30b3](https://github.com/constructive-io/blocks/commit/3ce30b35810e4116866d4398dd4f5bbfd0a29e5f))
+* **scope-access:** one access core for every membership scope ([b8ce1fb](https://github.com/constructive-io/blocks/commit/b8ce1fb80e9c2157f8612b72b1f109fe76ec44e5))
+* **scope-access:** panels, invitations, workspaces and files for any scope ([e763826](https://github.com/constructive-io/blocks/commit/e76382618ae7cb03da8f397541f5b8fe9aa6e5aa))
+* **users-pack:** name the members' scope in the App access copy ([f82212a](https://github.com/constructive-io/blocks/commit/f82212a47b144af92d6db721e23ae00d90348610))
+* **users-pack:** offer Viewer, Editor and Admin profile presets ([9c9e526](https://github.com/constructive-io/blocks/commit/9c9e52665166f8bc864fae30da7be4e32b4f8576))
+* **workspace-switcher:** read the workspace state where a provider may be absent ([b9d289c](https://github.com/constructive-io/blocks/commit/b9d289c2553caeea4275943591df65ebe8696778))
+
+
+### Performance Improvements
+
+* **scope-access:** introspect only the endpoints a block needs, once per page ([92e7c1e](https://github.com/constructive-io/blocks/commit/92e7c1e1ce937dac64919140e325f6d7f7efabf8))
+
+
+
+
+
 # [0.6.0](https://github.com/constructive-io/blocks/compare/blocks@0.5.0...blocks@0.6.0) (2026-10-19)
 
 

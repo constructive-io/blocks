@@ -3,6 +3,18 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.16.1](https://github.com/constructive-io/blocks/compare/@constructive-io/sheets@0.16.0...@constructive-io/sheets@0.16.1) (2026-11-21)
+
+
+### Bug Fixes
+
+* constrain packed-consumer motion type dependencies ([#68](https://github.com/constructive-io/blocks/issues/68)) ([158b168](https://github.com/constructive-io/blocks/commit/158b1684fbc2e7dee3d85293fc3444a3f772c79e))
+* **sheets:** attachment columns store the file's public downloadUrl, not FileProjection.url ([#69](https://github.com/constructive-io/blocks/issues/69)) ([417c2b3](https://github.com/constructive-io/blocks/commit/417c2b35be782479e1d971dd3e75a3a438a51f5c))
+
+
+
+
+
 # [0.16.0](https://github.com/constructive-io/blocks/compare/@constructive-io/sheets@0.15.1...@constructive-io/sheets@0.16.0) (2026-11-17)
 
 
