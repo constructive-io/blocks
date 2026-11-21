@@ -76,3 +76,13 @@ npm publish .artifacts/npm/constructive-io-schema-builder-0.4.0.tgz --access pub
 
 Verify all five packages with `npm view` and a clean consumer install. Published
 versions are immutable; release corrections as a forward patch.
+
+If a maintainer publishes directly with `pnpm exec lerna publish`, Lerna runs
+the root `prepublishOnly` script after versioning and before packing. This
+builds workspace dependencies even when they are not part of the release and
+regenerates the `dist/package.json` manifests with the current versions.
+
+If Lerna already committed the versions but publishing failed, retry from a
+clean, up-to-date `main` with `pnpm exec lerna publish from-package`. Review
+the proposed package list before confirming: this selects versions missing
+from npm, rather than creating another set of versions.

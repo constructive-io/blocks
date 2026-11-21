@@ -119,8 +119,6 @@
     "zustand": "^5"
   },
   "devDependencies": {
-    "@constructive-io/data": "workspace:*",
-    "@constructive-io/ui": "workspace:*",
     "@storybook/addon-a11y": "^10.1.11",
     "@storybook/react-vite": "^10.1.11",
     "@tailwindcss/postcss": "^4.1.18",
