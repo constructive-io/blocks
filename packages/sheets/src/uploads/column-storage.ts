@@ -111,7 +111,13 @@ export async function loadColumnStorage(target: ColumnStorageTarget): Promise<Co
 	const { resolveUrls } = loaded;
 	if (!resolveUrls) return { ...loaded, upload: { status: 'unavailable', reason: LINK_NEEDS_URLS_REASON } };
 	const policy = processingPolicyOf(target.config);
-	const linkOf: LinkOf = (projection, signal) => resolveFileLink(resolveUrls, projection.id, policy, signal);
+	const linkOf: LinkOf = async (projection, signal) => {
+		try {
+			return await resolveFileLink(resolveUrls, projection.id, policy, signal);
+		} catch (error) {
+			throw withUnfinishedUpload(error, { fileId: projection.id });
+		}
+	};
 	return { ...loaded, upload: { ...loaded.upload, linkOf } };
 }
 
