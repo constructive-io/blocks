@@ -15,8 +15,8 @@ import { useSheetsContext, type SheetsStorageTransport } from '../context/sheets
 import type { SheetsExecuteFn } from '../context/sheets-execute';
 import { isAbortError, type FileProjection, type UploadProgressEvent } from '../context/sheets-upload-presigned';
 import { sheetsIdentifierToRowKey, type SheetsRowIdentifier } from '../row-identity';
-import { loadColumnStorage, type ColumnStorage, type SendFile } from '../uploads/column-storage';
-import { FILE_NOT_LIVE_CODE, fileWriteMessage, writeFileCell } from '../uploads/file-cell-write';
+import { loadColumnStorage, type ColumnStorage, type LinkOf, type SendFile } from '../uploads/column-storage';
+import { FILE_NOT_LIVE_CODE, LINK_NEEDS_PUBLIC_MESSAGE, fileWriteMessage, writeFileCell } from '../uploads/file-cell-write';
 import { pendingWriteKey, setPendingFileWrite } from '../uploads/pending-file-writes';
 import { processingPolicyOf, type ProcessingPolicy } from '../uploads/upload-config';
 import { sheetsMutationKeys, sheetsQueryKeys } from './query-keys';
@@ -32,9 +32,6 @@ export type UploadResponse = unknown;
 // Cell values
 // ============================================================================
 
-const LINK_WITHOUT_PUBLIC_URL =
-	'This column stores a link to each file, so it needs a public bucket. The file was stored without a public address.';
-
 /** The row key of a row, read with the table model's primary key; null when a key field is missing. */
 export function rowKeyOfRow(table: TableModel, row: Readonly<Record<string, unknown>>): SheetsRowIdentifier | null {
 	if (table.primaryKey.length === 0) return null;
@@ -47,11 +44,21 @@ export function rowKeyOfRow(table: TableModel, row: Readonly<Record<string, unkn
 	return Object.fromEntries(table.primaryKey.map((field, index) => [field, values[index]])) as SheetsRowIdentifier;
 }
 
-/** The element a column stores for one uploaded file. Throws when the column cannot hold it. */
-export function cellElementFor(column: Pick<ColumnModel, 'value'>, projection: FileProjection, file?: File): unknown {
+/**
+ * The element a column stores for one uploaded file. A link column stores the
+ * file's public download URL, which waits for the server to confirm the upload.
+ * Throws when the column cannot hold the file.
+ */
+export async function cellElementFor(
+	column: Pick<ColumnModel, 'value'>,
+	projection: FileProjection,
+	upload: { linkOf?: LinkOf },
+	file?: File,
+	signal?: AbortSignal,
+): Promise<unknown> {
 	if (column.value.file?.kind === 'attachment') {
-		if (!projection.url) throw new Error(LINK_WITHOUT_PUBLIC_URL);
-		return projection.url;
+		if (!upload.linkOf) throw new Error(LINK_NEEDS_PUBLIC_MESSAGE);
+		return upload.linkOf(projection, signal);
 	}
 	return projection.filename || !file ? projection : { ...projection, filename: file.name };
 }
@@ -128,7 +135,7 @@ export function useColumnStorage(table: TableModel | null | undefined, column: C
 				throw error;
 			}
 		};
-		return { ...loaded, upload: { status: 'ready', send: reportingSend } };
+		return { ...loaded, upload: { ...loaded.upload, send: reportingSend } };
 	}, [loaded, onError, tableName]);
 	return { storage: enabled ? reported ?? null : null, isLoading: enabled && query.isPending, error: query.error ?? null };
 }
@@ -156,7 +163,7 @@ export function useColumnMediaResolver(
 
 export type FileUploadState =
 	| { status: 'loading' }
-	| { status: 'ready'; send: SendFile }
+	| { status: 'ready'; send: SendFile; linkOf?: LinkOf }
 	| { status: 'unavailable'; reason: string };
 
 /** Why the cell cannot be written, from the table model, or null. */
@@ -269,6 +276,8 @@ export interface FieldUploadTransport {
 	adapter: Pick<SheetsBackendAdapter, 'updateRow'>;
 	/** Sends the file to storage (from `useColumnStorage(...).storage.upload`). */
 	send: SendFile;
+	/** A link column's link resolver, from the same upload state. */
+	linkOf?: LinkOf;
 	policy?: ProcessingPolicy;
 	onProgress?: (progress: UploadProgress) => void;
 	onProcessing?: () => void;
@@ -293,7 +302,7 @@ export async function executeFieldUpload(
 	const missing = target.table.primaryKey.filter((field) => rowKey[field] === undefined || rowKey[field] === null);
 	if (missing.length > 0) throw new Error(`The row key has no value for ${missing.join(', ')}.`);
 	const value = file
-		? cellElementFor(column, await transport.send(file, { onProgress: transport.onProgress, signal: transport.signal }), file)
+		? await cellElementFor(column, await transport.send(file, { onProgress: transport.onProgress, signal: transport.signal }), transport, file, transport.signal)
 		: null;
 	return writeFileCell({
 		adapter: transport.adapter,
@@ -348,7 +357,7 @@ export function useSheetsFieldUpload(
 		if (file) {
 			if (upload.status !== 'ready') throw new Error(upload.status === 'unavailable' ? upload.reason : 'Storage is not ready yet.');
 			const projection = await upload.send(file, { onProgress: options.onProgress, recordId: typeof id === 'object' ? undefined : id });
-			value = cellElementFor(column, projection, file);
+			value = await cellElementFor(column, projection, upload, file);
 		}
 		return writeCell({ table, column, rowKey: id, rowId: typeof id === 'object' ? JSON.stringify(id) : String(id), value });
 	}

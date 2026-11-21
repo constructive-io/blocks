@@ -94,6 +94,44 @@ export interface FileCellWrite {
 	signal?: AbortSignal;
 }
 
+/** True for a URL that carries a storage signature, which expires. */
+function isSignedUrl(url: string): boolean {
+	try {
+		return [...new URL(url).searchParams.keys()].some((name) => /^(x-amz-|x-goog-|signature$|awsaccesskeyid$)/i.test(name));
+	} catch {
+		return false;
+	}
+}
+
+export const LINK_NEEDS_PUBLIC_MESSAGE =
+	'This column stores a link to each file, so it needs a public bucket. The file was stored without a public address.';
+
+/**
+ * The durable link of an uploaded file: its files row's download URL, which the
+ * server hands out once it has confirmed the upload. Waits for the confirmation
+ * within the policy. A signed URL is refused: it expires, so it cannot be stored.
+ */
+export async function resolveFileLink(
+	resolveUrls: (ids: readonly string[]) => Promise<Map<string, string>>,
+	fileId: string,
+	policy: ProcessingPolicy,
+	signal?: AbortSignal,
+): Promise<string> {
+	const started = Date.now();
+	let delay = policy.initialDelayMs;
+	for (;;) {
+		const url = (await resolveUrls([fileId])).get(fileId);
+		if (signal?.aborted) throw signal.reason ?? new Error('Cancelled');
+		if (url) {
+			if (isSignedUrl(url)) throw new Error(LINK_NEEDS_PUBLIC_MESSAGE);
+			return url;
+		}
+		if (Date.now() - started + delay > policy.timeoutMs) throw new FileProcessingTimeoutError();
+		await wait(delay, signal);
+		delay = Math.min(delay * 2, policy.maxDelayMs);
+	}
+}
+
 /** Write the cell and return the stored value. Waits out FILE_REF_FILE_NOT_LIVE within the policy. */
 export async function writeFileCell(write: FileCellWrite): Promise<unknown> {
 	const { adapter, execute, model, column, rowKey, value, policy, signal } = write;

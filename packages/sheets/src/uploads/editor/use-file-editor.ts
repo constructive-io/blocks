@@ -208,7 +208,8 @@ export function useFileEditor(args: UseFileEditorArgs) {
 				signal: controller.signal,
 				onProgress: ({ percentage }) => patch(entry.key, { progress: percentage }),
 			});
-			patch(entry.key, { status: 'uploaded', progress: 100, element: cellElementFor(column, projection, entry.file) });
+			const element = await cellElementFor(column, projection, upload, entry.file, controller.signal);
+			patch(entry.key, { status: 'uploaded', progress: 100, element });
 		} catch (error) {
 			if (controller.signal.aborted || isAbortError(error)) return;
 			const message = error instanceof Error && error.message ? error.message : 'Upload failed';

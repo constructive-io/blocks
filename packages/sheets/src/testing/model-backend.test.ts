@@ -47,7 +47,7 @@ describe('model backend storage uploads', () => {
 			key: hash('c'),
 			uploadUrl: expect.stringContaining(String(payload.fileId)),
 			uploadHeaders: { 'Content-Type': 'image/png', 'x-amz-meta-upload-id': payload.fileId, 'x-amz-checksum-sha256': expect.any(String) },
-			file: { id: payload.fileId, key: hash('c'), mime: 'image/png', size: 10, filename: 'c.png', url: expect.any(String) },
+			file: { id: payload.fileId, key: hash('c'), mime: 'image/png', size: 10, filename: 'c.png' },
 		});
 		expect(listed.rows.find((row) => row.id === payload.fileId)).toMatchObject({ key: hash('c'), mimeType: 'image/png', status: 'uploaded' });
 		expect(backend.uploads.map((entry) => entry.outcome)).toEqual(['requested']);

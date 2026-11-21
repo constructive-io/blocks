@@ -29,8 +29,6 @@ export interface ModelBackendUploadOptions {
 	rejectUpload?: (input: Readonly<Row>) => boolean;
 	/** Fail an upload request: return a message (and optional code), or null to let it through. */
 	failure?: (input: Readonly<Row>) => { message: string; code?: string } | null;
-	/** Address of public buckets, for the projection `url`. Default `https://cdn.mock`. */
-	publicUrlPrefix?: string;
 	/** Address of upload URLs. Default `https://storage.mock/upload`. */
 	uploadUrlPrefix?: string;
 }
@@ -128,7 +126,6 @@ export function createUploadService(
 ): UploadService {
 	const surfaces = surfacesOf(models);
 	const refusalsLeft = new Map<string, number>();
-	const publicUrlPrefix = (options.publicUrlPrefix ?? 'https://cdn.mock').replace(/\/$/, '');
 	const uploadUrlPrefix = (options.uploadUrlPrefix ?? 'https://storage.mock/upload').replace(/\/$/, '');
 
 	const fileRow = (fileId: string): { surface: StorageSurface; row: Row } | null => {
@@ -161,7 +158,6 @@ export function createUploadService(
 			mime: input.contentType,
 			size: input.size,
 			...(typeof input.filename === 'string' && input.filename ? { filename: input.filename } : {}),
-			...(bucket.isPublic === true ? { url: `${publicUrlPrefix}/${key}` } : {}),
 		};
 	}
 
@@ -295,7 +291,10 @@ export function createUploadService(
 		resolveField(model, row, fieldName) {
 			const surface = surfaces.find((candidate) => candidate.files.key === model.key);
 			if (!surface || fieldName !== surface.downloadUrlField) return null;
-			return { value: LIVE_STATUSES.has(String(row.status)) ? `https://storage.mock/download/${String(row.key)}` : null };
+			if (!LIVE_STATUSES.has(String(row.status))) return null;
+			// A private file's URL is signed, like the presigned GET the server hands out.
+			const url = `https://storage.mock/download/${String(row.key)}`;
+			return { value: row.isPublic === false ? `${url}?X-Amz-Signature=mock` : url };
 		},
 		confirm(fileId) {
 			const found = fileRow(fileId);
