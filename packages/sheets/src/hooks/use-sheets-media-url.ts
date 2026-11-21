@@ -1,7 +1,7 @@
 // Preview URLs for stored files.
 //
-// A projection with a durable public `url` is shown as is. Otherwise the file
-// id is resolved to a signed download URL, batched across the visible cells
+// An attachment link is shown as is. A projection's file id is resolved to its
+// download URL, batched across the visible cells
 // (one request per 100 ids), and cached in the authenticated query cache. A
 // signed URL never enters a cell value: it expires.
 //

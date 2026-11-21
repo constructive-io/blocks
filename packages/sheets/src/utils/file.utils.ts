@@ -1,11 +1,10 @@
 // What a file cell holds, read through the value domains the backend defines:
 //
-//   image / upload  an object with at least one of `url`, `id`, `key`, plus
-//                   optional `bucket`, `bucket_id`, `provider`, `mime`, `size`,
-//                   `filename` (and `versions` for images). The upload
-//                   mutation returns exactly this projection; `url` is set only
-//                   for a public bucket and is durable.
-//   attachment      an http(s) URL string.
+//   image / upload  an object with `id` and `key`, plus optional `bucket_id`,
+//                   `mime`, `size`, `filename` (and `versions` for images).
+//                   The upload mutation returns exactly this projection. It
+//                   carries no URL: previews read the files row's `downloadUrl`.
+//   attachment      an http(s) URL string: the file's public download URL.
 //   lists           an array of the above (upload[]).
 //
 // Nothing here guesses other property names. A signed download URL never
@@ -19,7 +18,7 @@ export interface StoredFile {
 	id: string | null;
 	/** Object key from the projection, or null. */
 	key: string | null;
-	/** Durable URL: the projection's public `url`, or the attachment link. Never a signed URL. */
+	/** Durable URL: the attachment link. Never a signed URL. */
 	url: string | null;
 	filename: string | null;
 	mime: string | null;
@@ -42,7 +41,7 @@ function fromObject(value: Record<string, unknown>): StoredFile {
 	return {
 		id: text(value.id),
 		key: text(value.key),
-		url: text(value.url),
+		url: null,
 		filename: text(value.filename),
 		mime: text(value.mime),
 		size: size(value.size),

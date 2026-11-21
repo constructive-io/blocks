@@ -109,15 +109,6 @@ describe('Sheets media previews', () => {
 		expect(Array.from(container.querySelectorAll('img'), (img) => img.getAttribute('src'))).toEqual(urls);
 	}
 
-	it('renders a durable URL without looking up storage and preserves the copied value', async () => {
-		const storage = vi.fn();
-		const value = { ...projection(1), url: cdnUrl };
-		expect(mediaCell(value, 'image', 0).props.cell.data).toEqual([cdnUrl]);
-		await render([value], { endpoint: storageEndpoint, execute: storage });
-		await expectPreviews([cdnUrl]);
-		expect(storage).not.toHaveBeenCalled();
-	});
-
 	it('loads visible image IDs in batches of 100 even when singular reads are available', async () => {
 		const appFile = vi.fn();
 		const appFiles = vi.fn(({ where, first }: FileFilter) => ({

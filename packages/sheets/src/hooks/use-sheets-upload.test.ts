@@ -11,7 +11,7 @@ import { tortureIntrospection, tortureMeta, tortureRows } from '../adapter/__tes
 import { createPostGraphileAdapter } from '../adapter/postgraphile-adapter';
 import type { FileProjection } from '../context/sheets-upload-presigned';
 import { createModelBackend } from '../testing/model-backend';
-import type { SendFile } from '../uploads/column-storage';
+import type { LinkOf, SendFile } from '../uploads/column-storage';
 import { executeFieldUpload } from './use-sheets-upload';
 
 const D2 = '00000000-0000-4000-8000-0000000000d2';
@@ -45,12 +45,14 @@ describe('executeFieldUpload', () => {
 		expect(updates().map(({ variables }) => variables)).toEqual([{ input: { id: D2, domainKindPatch: { avatar: projection } } }]);
 	});
 
-	it('stores a link column as the projection public URL', async () => {
+	it('stores a link column as the link resolved for the uploaded file', async () => {
 		const { backend, table, updates, adapter } = await setup();
-		const send = vi.fn<SendFile>().mockResolvedValue({ ...projection, url: publicUrl });
+		const send = vi.fn<SendFile>().mockResolvedValue(projection);
+		const linkOf = vi.fn<LinkOf>().mockResolvedValue(publicUrl);
 
-		await expect(executeFieldUpload({ table, column: 'attachmentLink', rowKey: D2 }, file, { execute: backend.execute, adapter, send }))
+		await expect(executeFieldUpload({ table, column: 'attachmentLink', rowKey: D2 }, file, { execute: backend.execute, adapter, send, linkOf }))
 			.resolves.toBe(publicUrl);
+		expect(linkOf).toHaveBeenCalledWith(projection, undefined);
 		expect(updates()[0]!.variables).toEqual({ input: { id: D2, domainKindPatch: { attachmentLink: publicUrl } } });
 	});
 

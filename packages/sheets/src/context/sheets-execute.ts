@@ -35,8 +35,6 @@ export interface SheetsFileValue {
 	mime: string;
 	size: number;
 	filename: string;
-	/** Public URL supplied by storage, when available. */
-	url?: string;
 }
 
 export interface SheetsUploadResult {

@@ -23,7 +23,8 @@ import { downloadUrlSourceOf, fetchDownloadUrls } from './download-urls';
 import { planeUpload } from './plane-upload';
 import { loadPlaneDetails, loadStorageCatalog } from './storage-catalog';
 import { resolveUploadBinding } from './upload-binding';
-import { uploadChoicesFor, type ResolvedUploadChoices, type SheetsUploadConfig } from './upload-config';
+import { resolveFileLink } from './file-cell-write';
+import { processingPolicyOf, uploadChoicesFor, type ResolvedUploadChoices, type SheetsUploadConfig } from './upload-config';
 
 export interface SendFileOptions extends TransferOptions {
 	/** The row the file is for, passed to a host-injected uploader. */
@@ -33,8 +34,12 @@ export interface SendFileOptions extends TransferOptions {
 /** Sends one file to storage and resolves to its projection. */
 export type SendFile = (file: File, options?: SendFileOptions) => Promise<FileProjection>;
 
+/** Resolves the durable link a link column stores for an uploaded file, once the server confirms it. */
+export type LinkOf = (projection: FileProjection, signal?: AbortSignal) => Promise<string>;
+
 export type ColumnUploadState =
-	| { status: 'ready'; send: SendFile }
+	/** `linkOf` is set for a link (attachment) column. */
+	| { status: 'ready'; send: SendFile; linkOf?: LinkOf }
 	| { status: 'unavailable'; reason: string };
 
 export interface ColumnStorage {
@@ -61,6 +66,7 @@ export interface ColumnStorageTarget {
 export const NO_STORAGE_REASON = 'Uploads need a storage endpoint';
 
 const LINK_NEEDS_PUBLIC_REASON = 'This column stores a link to each file, so it needs a public bucket.';
+const LINK_NEEDS_URLS_REASON = 'This column stores a link to each file, so it needs a storage service that hands out file URLs.';
 
 function hostUpload(executeUpload: SheetsUploadFn, target: ColumnStorageTarget): SendFile {
 	return async (file, options) => {
@@ -99,6 +105,17 @@ function discoveryStorage(storage: SheetsStorageTransport, choices: ResolvedUplo
 
 /** Resolve the column's storage. Never throws for a deterministic "cannot": that is an unavailable state. */
 export async function loadColumnStorage(target: ColumnStorageTarget): Promise<ColumnStorage> {
+	const loaded = await resolveColumnStorage(target);
+	if (target.column.value.file?.kind !== 'attachment' || loaded.upload.status !== 'ready') return loaded;
+	// A link column stores the file's download URL, read back by file id once the upload is confirmed.
+	const { resolveUrls } = loaded;
+	if (!resolveUrls) return { ...loaded, upload: { status: 'unavailable', reason: LINK_NEEDS_URLS_REASON } };
+	const policy = processingPolicyOf(target.config);
+	const linkOf: LinkOf = (projection, signal) => resolveFileLink(resolveUrls, projection.id, policy, signal);
+	return { ...loaded, upload: { ...loaded.upload, linkOf } };
+}
+
+async function resolveColumnStorage(target: ColumnStorageTarget): Promise<ColumnStorage> {
 	const { storage, adapter, table, column, config, databaseId, executeUpload } = target;
 	const choices = uploadChoicesFor(config, table, column.name);
 	const file = column.value.file;

@@ -4,11 +4,12 @@
 // Both APIs are the model backend (graphql-js against the captured schema),
 // each with its own rows, so every document the grid sends is validated the
 // way the server would; the model backend also serves the files table's
-// download URL (`https://storage.mock/download/<key>`, once a row is live).
+// download URL (`https://storage.mock/download/<key>` once a row is live, signed
+// for a private file).
 // On top of that:
 //   • the storage API answers `uploadAppFile` like the presigned upload plugin:
 //     it records a files row as `requested`, returns `uploadHeaders`, a file
-//     projection (with `url` for a public bucket), or `deduplicated: true` for
+//     projection, or `deduplicated: true` for
 //     bytes it already holds live;
 //   • `XMLHttpRequest` is replaced by a recording fake that plays the PUT;
 //   • a managed file column refuses a write naming a files row that is not live
@@ -56,8 +57,6 @@ export interface UploadBackendsOptions {
 	put?: (put: RecordedPut, index: number) => PutAnswer | 'network-error' | 'hang';
 	/** The captured server to model: its introspection and `_meta`. Default v2. */
 	server?: 'v2' | 'baseline';
-	/** Public buckets have a public address, so projections carry `url`. Default true. */
-	publicUrls?: boolean;
 	/** `expiresAt` of each issued upload URL, by issue order. Default an hour from now. */
 	expiresAt?: (index: number) => string;
 }
@@ -195,7 +194,6 @@ export function createUploadBackends(options: UploadBackendsOptions = {}): Uploa
 			mime: file.mimeType,
 			size: Number(file.size),
 			...(file.filename ? { filename: file.filename } : {}),
-			...(bucket.isPublic && options.publicUrls !== false ? { url: `https://cdn.test/${String(file.key)}` } : {}),
 		});
 		const existing = storageFiles.find((file) => file.key === hash && file.bucketId === bucket.id);
 		if (existing && LIVE.has(String(existing.status))) {

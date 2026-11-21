@@ -179,7 +179,6 @@ export function createMockExecute(opts: MockSheetsOptions): MockExecuteHandle {
 				filename: name,
 				mime: file.type || 'application/octet-stream',
 				size: file.size,
-				url,
 			},
 			url,
 		};

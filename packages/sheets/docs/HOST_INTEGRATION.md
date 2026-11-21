@@ -439,8 +439,9 @@ read-only with the reason "Uploads need a storage endpoint".
    signed over them). An expired URL is requested again once. A server without
    `uploadHeaders` gets `Content-Type`, the checksum and the upload-id headers.
 7. **Writes the cell**: the returned file projection for image and upload
-   columns, its public `url` for attachment columns, the whole list in the order
-   shown for list columns, or `null` to clear.
+   columns, the file's public download URL for attachment columns (read by
+   file id once the server confirms the upload; a signed URL is refused), the
+   whole list in the order shown for list columns, or `null` to clear.
 8. **Waits for confirmation.** A managed file column refuses a file the server
    has not confirmed yet (`FILE_REF_FILE_NOT_LIVE`; the confirm job runs about
    30 seconds after the request). The cell shows "Processing file…" and the write
@@ -448,10 +449,9 @@ read-only with the reason "Uploads need a storage endpoint".
    with a retry. Closing the editor does not drop the file: the cell keeps
    processing, and a failure stays on the cell until retried or discarded.
 
-Previews use the projection's public `url` when it has one. Otherwise the file
-id is resolved to a signed download URL through the files table's download URL
-field, in batches of 100, and kept in the query cache only: a signed URL never
-enters a cell value. A file whose URL cannot be resolved shows its name.
+Previews resolve the projection's file id to its download URL through the
+files table's download URL field, in batches of 100, and keep it in the query
+cache only: a signed URL never enters a cell value. A file whose URL cannot be resolved shows its name.
 
 A storage files table opened in the grid gets a "File" column with a preview and
 a download link for each live file.
@@ -493,8 +493,8 @@ mutation. Previews on that path resolve files by an `id` field.
 
 An injected `executeUpload` takes precedence for uploads and receives
 `{ tableName, fieldName, recordId, onProgress }`. Return
-`{ file: SheetsFileValue, url?: string }`; put a durable public URL on `file.url`
-when storage provides one. The cell write, the confirmation wait and the previews
+`{ file: SheetsFileValue }`. An attachment column also needs the storage
+endpoint, which hands out the file's link by id. The cell write, the confirmation wait and the previews
 still run in Sheets.
 
 For custom UIs: `useColumnStorage(table, column)` resolves where a column uploads

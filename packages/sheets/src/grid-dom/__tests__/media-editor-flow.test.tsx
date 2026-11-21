@@ -175,7 +175,7 @@ describe('Sheets media editor flows', () => {
 		expect(backend.mutations).toEqual([]);
 	});
 
-	it('opens a stored attachment link from its file chip and keeps the cell unchanged when a new file has no public URL', async () => {
+	it('opens a stored attachment link from its file chip, view-only when no storage can hand out a link for a new file', async () => {
 		const backend = mockBackend([{ id: 'row-1', link: attachmentUrl }]);
 		const executeUpload = vi.fn<SheetsUploadFn>().mockResolvedValue({ file: projection });
 		await render(backend.execute, executeUpload);
@@ -183,10 +183,12 @@ describe('Sheets media editor flows', () => {
 		const attachmentCell = await waitUntil(() => Array.from(container.querySelectorAll<HTMLElement>('[data-slot="file-cell"]'))
 			.find((cell) => cell.querySelector('[title]')?.getAttribute('title')?.includes(attachmentUrl)));
 		await click(attachmentCell, 'dblclick');
-		await pickFile(new File(['hello'], 'attachment.pdf', { type: 'application/pdf' }));
-		await click(await waitUntil(() => button('Upload & Save')));
-
-		await waitUntil(() => toast.error.mock.calls.some(([message]) => message.message.includes('needs a public bucket')));
+		// The host uploader returns a projection, and the link is the files row's download URL, which needs storage.
+		const editor = await waitUntil(() => document.querySelector<HTMLElement>('[data-slot="image-editor"] [data-upload-state="unavailable"]'));
+		expect(editor.querySelector('[role="note"]')?.textContent)
+			.toBe('This column stores a link to each file, so it needs a storage service that hands out file URLs.');
+		expect(editor.querySelector('[data-slot="file-dropzone"]')).toBeNull();
+		expect(executeUpload).not.toHaveBeenCalled();
 		expect(backend.mutations).toEqual([]);
 		expect(attachmentCell.textContent).toBe('attachment.pdf');
 	});

@@ -39,8 +39,6 @@ export interface FileProjection {
 	mime?: string;
 	size?: number;
 	filename?: string;
-	/** Durable public URL; set only for a public bucket. */
-	url?: string;
 }
 
 /** The upload mutation's answer, normalized. */

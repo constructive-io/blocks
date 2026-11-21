@@ -208,8 +208,10 @@ describe('Sheets file columns over the torture schema', () => {
 		expect(backends.puts[0]!.body).toBe(file);
 		expect(backends.updates()[0]!.variables).toEqual({ input: { id: D2, domainKindPatch: { avatar: payload.file } } });
 
+		// The thumbnail is the files row's download URL, which the server hands out once the upload is confirmed.
+		backends.confirm(String(payload.fileId));
 		const thumbnail = await waitUntil(() => cell(1, 'avatar').querySelector('img'), 'the new thumbnail');
-		expect(thumbnail.getAttribute('src')).toBe((payload.file as { url: string }).url);
+		expect(thumbnail.getAttribute('src')).toBe(`https://storage.mock/download/${String(payload.key)}`);
 	});
 
 	it('creates a draft row first and uploads into the row the create returned', async () => {
@@ -254,7 +256,7 @@ describe('Sheets file columns over the torture schema', () => {
 		await waitUntil(() => cell(0, 'gallery').textContent?.includes('3 files'), 'the file count');
 	});
 
-	it('writes the public URL into a link column, uploading into the bucket the column is bound to', async () => {
+	it('writes the file download URL into a link column once the upload is confirmed, uploading into the bucket the column is bound to', async () => {
 		await mount({}, { columns: { DomainKind: { attachmentLink: { bucketKey: 'docs' } } } });
 		backends.storage.rows.AppBucket!.push({
 			id: '00000000-0000-4000-8000-0000000000b3', key: 'docs', type: 'public', isPublic: true,
@@ -263,11 +265,15 @@ describe('Sheets file columns over the torture schema', () => {
 		const editor = await openEditor(1, 'attachmentLink');
 		await pick(editor, new File(['%PDF'], 'report.pdf', { type: 'application/pdf' }));
 		await press('Upload & Save');
+		await waitUntil(() => backends.puts.length === 1, 'the PUT');
+		expect(backends.updates()).toEqual([]);
+		// The files row has no download URL until the confirm job marks it live.
+		backends.confirm(String(backends.uploadPayloads[0]!.fileId));
 		await waitUntil(() => backends.updates().length === 1, 'the link write');
 
 		expect(backends.uploadInputs[0]).toMatchObject({ bucketKey: 'docs', contentType: 'application/pdf', filename: 'report.pdf' });
 		expect(backends.uploadInputs[0]).not.toHaveProperty('isPublic');
-		const url = (backends.uploadPayloads[0]!.file as { url: string }).url;
+		const url = `https://storage.mock/download/${String(backends.uploadPayloads[0]!.key)}`;
 		expect(patchOf(backends.updates()[0])).toEqual({ attachmentLink: url });
 		// A link carries no file name, so the chip shows the link's last segment and the title the whole link.
 		const chip = await waitUntil(() => cell(1, 'attachmentLink').querySelector('[data-slot="file-cell"]'), 'the link chip');
@@ -472,7 +478,7 @@ describe('Sheets file columns over the torture schema', () => {
 			};
 		});
 		const thumbnail = await waitUntil(() => cell(0, 'avatar').querySelector('img'), 'the signed thumbnail');
-		expect(thumbnail.getAttribute('src')).toBe('https://storage.mock/download/avatars/a.png');
+		expect(thumbnail.getAttribute('src')).toBe('https://storage.mock/download/avatars/a.png?X-Amz-Signature=mock');
 		await waitUntil(() => cell(1, 'avatar').querySelector('[data-slot="file-cell"]'), 'the unresolved file chip');
 		expect(cell(1, 'avatar').textContent).toBe('lost.png');
 
@@ -489,9 +495,9 @@ describe('Sheets file columns over the torture schema', () => {
 		await mount({}, {}, 'AppFile');
 		expect(columnKeys()).toContain('__file_preview__');
 		const preview = await waitUntil(() => cell(0, '__file_preview__').querySelector('img'), 'the file preview');
-		expect(preview.getAttribute('src')).toBe('https://storage.mock/download/avatars/a.png');
+		expect(preview.getAttribute('src')).toBe('https://storage.mock/download/avatars/a.png?X-Amz-Signature=mock');
 		expect(cell(0, '__file_preview__').querySelector('a[aria-label="Download a.png"]')?.getAttribute('href'))
-			.toBe('https://storage.mock/download/avatars/a.png');
+			.toBe('https://storage.mock/download/avatars/a.png?X-Amz-Signature=mock');
 		// The second file is still `requested`: no URL yet, so no download link.
 		expect(cell(1, '__file_preview__').querySelector('a')).toBeNull();
 		expect(cell(1, '__file_preview__').textContent).toContain('1.jpg');
@@ -535,11 +541,17 @@ describe('Sheets file columns over the torture schema', () => {
 		expect(backends.storage.mutations).toEqual([]);
 	});
 
-	it('writes nothing into a link column when the stored file has no public address', async () => {
-		await mount({ publicUrls: false });
+	it('writes nothing into a link column whose bucket only hands out signed URLs', async () => {
+		await mount({}, { columns: { DomainKind: { attachmentLink: { bucketKey: 'vault' } } } });
+		backends.storage.rows.AppBucket!.push({
+			id: '00000000-0000-4000-8000-0000000000b4', key: 'vault', type: 'private', isPublic: false,
+			allowedMimeTypes: null, maxFileSize: null, allowCustomKeys: false,
+		});
 		const editor = await openEditor(1, 'attachmentLink');
 		await pick(editor, png('diagram.png'));
 		await press('Upload & Save');
+		await waitUntil(() => backends.puts.length === 1, 'the PUT');
+		backends.confirm(String(backends.uploadPayloads[0]!.fileId));
 		await waitUntil(() => toast.error.mock.calls.length > 0, 'the error');
 
 		expect(toast.error).toHaveBeenCalledWith({ message: expect.stringContaining('needs a public bucket') });
@@ -573,12 +585,12 @@ describe('Sheets file columns over the torture schema', () => {
 		expect(patchOf(backends.updates()[0]).avatar).toEqual(backends.uploadPayloads[0]!.file);
 	});
 
-	it('opens a file cell without storage to view and open its file, with the reason and no upload or remove', async () => {
+	it('opens a link cell without storage to view and open its file, with the reason and no upload or remove', async () => {
 		await mount({}, {}, 'DomainKind', undefined, false);
-		const editor = await openEditor(0, 'document');
+		const editor = await openEditor(0, 'attachmentLink');
 
 		expect(editor.querySelector('[role="note"]')?.textContent).toBe('Uploads need a storage endpoint');
-		expect(editor.querySelector('a[aria-label="Open doc.pdf"]')?.getAttribute('href')).toBe('https://cdn.example.com/doc.pdf');
+		expect(editor.querySelector('a[aria-label="Open report.pdf"]')?.getAttribute('href')).toBe('https://example.com/files/report.pdf');
 		expect(editor.querySelector('[data-slot="file-dropzone"]')).toBeNull();
 		expect(button('Remove file', editor)).toBeUndefined();
 		expect(button('Close', editor)).toBeDefined();

@@ -297,7 +297,6 @@ describe('createSheetsUpload — presigned seam', () => {
 				size: file.size,
 			},
 		});
-		expect(result.file.url).toBeUndefined();
 	});
 
 	it('relay node fallback: downloadUrl via node(nodeId:) with a base64 global id (not the raw pk)', async () => {
@@ -740,7 +739,6 @@ describe('createSheetsUpload — presigned seam', () => {
 				size: file.size,
 			},
 		});
-		expect(result.file.url).toBeUndefined();
 	});
 
 	it('connection condition-style (b): downloadUrl via appFiles(condition:{id:$id}), no operator wrapper', async () => {
