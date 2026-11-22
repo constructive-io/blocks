@@ -174,7 +174,7 @@ pnpm build:pages
 pnpm pack:local
 ```
 
-Development and release verification use Node 24 LTS and pnpm 10.28.0. All
+Development and release verification use Node 26 LTS and pnpm 10.28.0. All
 first-party executable tooling is TypeScript and runs through `tsx`.
 Use `pnpm check:full` when validating Storybook, registry installation, and
 publishable package artifacts together.
