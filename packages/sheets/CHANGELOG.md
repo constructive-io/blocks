@@ -3,6 +3,17 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.16.4](https://github.com/constructive-io/blocks/compare/@constructive-io/sheets@0.16.3...@constructive-io/sheets@0.16.4) (2026-11-22)
+
+
+### Bug Fixes
+
+* **sheets:** cancelling a link-column upload aborts its download URL lookup ([76f41f2](https://github.com/constructive-io/blocks/commit/76f41f2776c2e1ee607e04c1c1bc4b5491aca633))
+
+
+
+
+
 ## [0.16.3](https://github.com/constructive-io/blocks/compare/@constructive-io/sheets@0.16.2...@constructive-io/sheets@0.16.3) (2026-11-21)
 
 
