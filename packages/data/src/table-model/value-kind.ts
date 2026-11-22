@@ -108,11 +108,13 @@ export function columnFile(field: MetaschemaField): ColumnFileModel | null {
 			kind: meta.kind as ColumnFileModel['kind'],
 			multiple: meta.isMultiple ?? field.type.isArray,
 			filesType: meta.filesType ?? null,
+			bucketKey: meta.bucketKey ?? null,
+			isPublic: meta.isPublic ?? null,
 		};
 	}
 	const codec = elementCodecName(field);
 	if (!FILE_DOMAINS.has(codec)) return null;
-	return { kind: codec as ColumnFileModel['kind'], multiple: field.type.isArray, filesType: null };
+	return { kind: codec as ColumnFileModel['kind'], multiple: field.type.isArray, filesType: null, bucketKey: null, isPublic: null };
 }
 
 export function columnSemantic(field: MetaschemaField, file: ColumnFileModel | null): ColumnSemantic | null {

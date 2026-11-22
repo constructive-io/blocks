@@ -21,6 +21,7 @@ Real `_meta`, introspection and row output from one API schema (`sheets_torture`
 | `MetaHasRelation.remoteKeys: [MetaField!]!` | `Person.ownedProjects`: `keys [id]`, `remoteKeys [ownerId]`; `Person.reviewedProjects`: `remoteKeys [reviewerId]`; `Person.personProfile` (hasOne): `remoteKeys [personId]` |
 | `MetaField.isComputed: Boolean` | `GeneratedValue.total` (stored generated) and `GeneratedValue.id` (identity ALWAYS) are `true`; `serialNo` (identity BY DEFAULT), `createdAt` (`now()`) and every other field are `false`. Null on nested fields. |
 | `MetaField.file: MetaFileField` | `DomainKind.gallery.file = { kind: "upload", isMultiple: true, filesType: "AppFile" }`; `avatar` is `image`, `attachmentLink` is `attachment`; `contactEmail.file = null` |
+| `MetaFileField.bucketKey: String` / `isPublic: Boolean` | The bucket a `DataFileRef` binds the column to (from its `@fileBucketKey` / `@fileIsPublic` tags). The torture seed binds none, so every value is `null`; these two fields were added to the v2 files by hand, not captured. |
 | `MetaType.maxLength / precision / scale: Int` | `ScalarKind.varcharValue.type.maxLength = 40`, `charValue 3`, `bitValue 8`; `numericBounded { precision: 12, scale: 4 }`; `ArrayKind.shortCodeList.maxLength = 5` (per item); unbounded columns `null` |
 | `MetaScalarEncoding.srid / dimensions` | `StructuredKind.pin.type.encoding.srid = 4326`, `outline.srid = null` (no SRID declared); `embedding.dimensions = 3`, `anyEmbedding.dimensions = null` |
 

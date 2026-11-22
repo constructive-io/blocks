@@ -281,6 +281,38 @@ describe('Sheets file columns over the torture schema', () => {
 		expect(chip.querySelector('[title]')?.getAttribute('title')).toContain(url);
 	});
 
+	it('uploads into the bucket the server binds the column to, unless the host names another for the column', async () => {
+		const docsBucket = {
+			id: '00000000-0000-4000-8000-0000000000b3', key: 'docs', type: 'public', isPublic: true,
+			allowedMimeTypes: null, maxFileSize: null, allowCustomKeys: false,
+		};
+		const boundToDocs = () => {
+			const dataMeta = tortureMetaOf('v2');
+			const field = dataMeta._meta!.tables!.find((table) => table?.name === 'DomainKind')!.fields!.find((candidate) => candidate?.name === 'document')!;
+			(field.file as { bucketKey: string | null }).bucketKey = 'docs';
+			return dataMeta;
+		};
+		const uploadDocument = async () => {
+			backends.storage.rows.AppBucket!.push(structuredClone(docsBucket));
+			const editor = await openEditor(1, 'document');
+			await pick(editor, new File(['png-bytes'], 'scan.png', { type: 'image/png' }));
+			await press('Upload & Save');
+			await waitUntil(() => backends.uploadInputs.length === 1, 'the upload request');
+			return backends.uploadInputs[0];
+		};
+
+		await mount({ dataMeta: boundToDocs() }, { bucketKey: 'public' });
+		const bound = await uploadDocument();
+		// The server rejects a file from any other bucket (FILE_REF_BUCKET_MISMATCH), even the host's default.
+		expect(bound).toMatchObject({ bucketKey: 'docs', filename: 'scan.png' });
+		expect(bound).not.toHaveProperty('isPublic');
+
+		await act(async () => root.unmount());
+		root = createRoot(container);
+		await mount({ dataMeta: boundToDocs() }, { columns: { DomainKind: { document: { bucketKey: 'public' } } } });
+		expect(await uploadDocument()).toMatchObject({ bucketKey: 'public', filename: 'scan.png' });
+	});
+
 	it('keeps an uploaded file whose link is not ready yet: the retry writes its link without uploading it again', async () => {
 		await mount({}, {
 			processing: { initialDelayMs: 10, maxDelayMs: 10, timeoutMs: 60 },

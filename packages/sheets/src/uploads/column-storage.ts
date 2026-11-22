@@ -117,8 +117,8 @@ export async function loadColumnStorage(target: ColumnStorageTarget): Promise<Co
 
 async function resolveColumnStorage(target: ColumnStorageTarget): Promise<ColumnStorage> {
 	const { storage, adapter, table, column, config, databaseId, executeUpload } = target;
-	const choices = uploadChoicesFor(config, table, column.name);
 	const file = column.value.file;
+	const choices = uploadChoicesFor(config, table, column.name, file);
 	const unavailable = (reason: string, resolveUrls: ColumnStorage['resolveUrls'] = null, previewKey: string | null = null): ColumnStorage =>
 		({ choices, upload: { status: 'unavailable', reason }, resolveUrls, previewKey });
 

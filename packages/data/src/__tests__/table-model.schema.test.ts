@@ -405,7 +405,7 @@ describe('table model over the captured torture schema', () => {
 		expect(column('GeneratedValue', 'total').write.updateReason).toBeTruthy();
 		expect(column('GeneratedValue', 'serialNo').write).toMatchObject({ create: true, update: true });
 		expect(model('OpenTask').kind).toBe('view');
-		expect(column('DomainKind', 'gallery').value.file).toEqual({ kind: 'upload', multiple: true, filesType: 'AppFile' });
+		expect(column('DomainKind', 'gallery').value.file).toEqual({ kind: 'upload', multiple: true, filesType: 'AppFile', bucketKey: null, isPublic: null });
 		expect(column('ScalarKind', 'varcharValue').value.maxLength).toBe(40);
 		expect(column('ScalarKind', 'numericBounded').value).toMatchObject({ precision: 12, scale: 4 });
 		expect(column('StructuredKind', 'pin').value.srid).toBe(4326);
