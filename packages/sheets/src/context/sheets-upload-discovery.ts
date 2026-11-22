@@ -571,7 +571,13 @@ function toGlobalId(typeName: string, id: string): string {
 }
 
 /** Resolve one file's download URL through a discovered accessor. The URL can expire. */
-export async function fetchDownloadUrl(execute: SheetsExecuteFn, cap: DownloadByIdResult, fileId: string): Promise<string> {
+export async function fetchDownloadUrl(
+	execute: SheetsExecuteFn,
+	cap: DownloadByIdResult,
+	fileId: string,
+	signal?: AbortSignal,
+): Promise<string> {
+	const options = signal ? { signal } : undefined;
 	const missing = () => createError.badRequest('Upload succeeded but no downloadUrl was returned for the file.');
 	if (cap.fileByIdArgName === 'nodeId') {
 		const nodeId = toGlobalId(cap.fileTypeName, fileId);
@@ -584,7 +590,7 @@ export async function fetchDownloadUrl(execute: SheetsExecuteFn, cap: DownloadBy
 				}
 			}
 		`.trim();
-		const data = await execute<Record<string, { downloadUrl?: string | null } | null>>(query, { nodeId });
+		const data = await execute<Record<string, { downloadUrl?: string | null } | null>>(query, { nodeId }, options);
 		const url = data?.[cap.fileByIdField]?.downloadUrl;
 		if (!url) throw missing();
 		return url;
@@ -610,6 +616,7 @@ export async function fetchDownloadUrl(execute: SheetsExecuteFn, cap: DownloadBy
 		const data = await execute<Record<string, Record<string, Array<{ downloadUrl?: string | null }> | null> | null>>(
 			query,
 			{ id: fileId },
+			options,
 		);
 		const url = data?.[cap.fileByIdField]?.[nodesField]?.[0]?.downloadUrl;
 		if (!url) throw missing();
@@ -625,7 +632,7 @@ export async function fetchDownloadUrl(execute: SheetsExecuteFn, cap: DownloadBy
 			}
 		}
 	`.trim();
-	const data = await execute<Record<string, { downloadUrl?: string | null } | null>>(query, { id: fileId });
+	const data = await execute<Record<string, { downloadUrl?: string | null } | null>>(query, { id: fileId }, options);
 	const url = data?.[cap.fileByIdField]?.downloadUrl;
 	if (!url) throw missing();
 	return url;
@@ -635,6 +642,7 @@ export async function fetchDownloadUrl(execute: SheetsExecuteFn, cap: DownloadBy
 export async function fetchMediaDownloadUrls(
 	{ endpoint, execute }: SheetsStorageTransport,
 	getActiveIds: () => readonly string[],
+	signal?: AbortSignal,
 ): Promise<Map<string, string>> {
 	const { batch, download } = await discoverStorageCapabilities(endpoint, execute);
 	const ids = getActiveIds();
@@ -648,12 +656,12 @@ export async function fetchMediaDownloadUrls(
 			}${first}) { ${batch.connectionNodesField} { id downloadUrl } }
 		}`;
 		type FileNode = { id: string; downloadUrl: string | null };
-		const data = await execute<Record<string, Record<string, (FileNode | null)[] | null> | null>>(query, { ids });
+		const data = await execute<Record<string, Record<string, (FileNode | null)[] | null> | null>>(query, { ids }, signal ? { signal } : undefined);
 		for (const row of data?.[batch.fileByIdField]?.[batch.connectionNodesField!] ?? []) {
 			if (row?.downloadUrl) urls.set(row.id, row.downloadUrl);
 		}
 	} else if (download) {
-		const results = await Promise.allSettled(ids.map((id) => fetchDownloadUrl(execute, download, id)));
+		const results = await Promise.allSettled(ids.map((id) => fetchDownloadUrl(execute, download, id, signal)));
 		results.forEach((result, index) => {
 			if (result.status === 'fulfilled') urls.set(ids[index]!, result.value);
 		});

@@ -24,7 +24,7 @@ public registry and binds to each host through an explicit adapter.
 
 ## Verification
 
-Use Node 24 LTS and pnpm 10.28.0, then run `pnpm check`, `pnpm build:pages`, and
+Use Node 26 LTS and pnpm 10.28.0, then run `pnpm check`, `pnpm build:pages`, and
 `pnpm pack:local` before release-related changes.
 
 ## Local development

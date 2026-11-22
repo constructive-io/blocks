@@ -10,6 +10,8 @@ export default defineConfig({
     globals: true,
     environment: 'jsdom',
     setupFiles: './test/setup.ts',
+    // Node 25+ defines its own localStorage, which hides jsdom's unless a storage file is given.
+    poolOptions: { forks: { execArgv: ['--no-experimental-webstorage'] } },
     include: ['src/**/*.{test,spec}.{ts,tsx}'],
     exclude: ['**/node_modules/**', '**/dist/**', '**/.next/**'],
     // The demo-source generator and feature-pack interaction tests compile real
