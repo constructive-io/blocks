@@ -3,6 +3,18 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.16.5](https://github.com/constructive-io/blocks/compare/@constructive-io/sheets@0.16.4...@constructive-io/sheets@0.16.5) (2026-11-22)
+
+
+### Bug Fixes
+
+* **sheets:** a request cancelled by its own signal rejects with an AbortError, not a network error ([39c65b6](https://github.com/constructive-io/blocks/commit/39c65b61faab3d6026a2f2507ff093fa8528cd8c))
+* **sheets:** upload a file column into the bucket _meta binds it to ([#73](https://github.com/constructive-io/blocks/issues/73)) ([07e4326](https://github.com/constructive-io/blocks/commit/07e4326dec61cf828612d60408d10df69e779f5c)), closes [constructive-io/constructive-planning#2565](https://github.com/constructive-io/constructive-planning/issues/2565)
+
+
+
+
+
 ## [0.16.4](https://github.com/constructive-io/blocks/compare/@constructive-io/sheets@0.16.3...@constructive-io/sheets@0.16.4) (2026-11-22)
 
 

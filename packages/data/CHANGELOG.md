@@ -3,6 +3,17 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.10.2](https://github.com/constructive-io/blocks/compare/@constructive-io/data@0.10.1...@constructive-io/data@0.10.2) (2026-11-22)
+
+
+### Bug Fixes
+
+* **sheets:** upload a file column into the bucket _meta binds it to ([#73](https://github.com/constructive-io/blocks/issues/73)) ([07e4326](https://github.com/constructive-io/blocks/commit/07e4326dec61cf828612d60408d10df69e779f5c)), closes [constructive-io/constructive-planning#2565](https://github.com/constructive-io/constructive-planning/issues/2565)
+
+
+
+
+
 ## [0.10.1](https://github.com/constructive-io/blocks/compare/@constructive-io/data@0.10.0...@constructive-io/data@0.10.1) (2026-11-21)
 
 **Note:** Version bump only for package @constructive-io/data

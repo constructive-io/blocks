@@ -3,6 +3,14 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.7.3](https://github.com/constructive-io/blocks/compare/blocks@0.7.2...blocks@0.7.3) (2026-11-22)
+
+**Note:** Version bump only for package blocks
+
+
+
+
+
 ## [0.7.2](https://github.com/constructive-io/blocks/compare/blocks@0.7.1...blocks@0.7.2) (2026-11-21)
 
 **Note:** Version bump only for package blocks
