@@ -171,7 +171,10 @@ type SheetsExecuteFn = <T = unknown>(
 
 `execute` resolves to the response's `data` and throws on any GraphQL error. The
 grid passes `options.signal` when a request can be cancelled (a changed filter or
-sort aborts the page it no longer needs); an executor may ignore it.
+sort aborts the page it no longer needs); an executor may ignore it. One that
+honours it rejects the aborted request with an error named `AbortError`, as
+`createSheetsExecute` does: Sheets treats that as a cancel, and reports any other
+rejection to `onError` as a failure.
 `createSheetsExecute(config, getToken)` builds the default one. Errors it throws
 keep the whole response: `responseErrorsOf(error)` returns every error of the
 response, and `partialResultOf(error)` returns the data of a read that came back
@@ -191,7 +194,9 @@ sends the requests from its own process instead.
   and the auth endpoint in standalone mode. It answers like the global `fetch`:
   any HTTP status resolves, and a request that got no answer rejects. Sheets keeps
   its own handling of the answer (the bearer token it adds, 401 and
-  `onAuthError`, partial rows, error codes).
+  `onAuthError`, partial rows, error codes). As with `put`, a rejection is a
+  cancel only when the request's own `signal` was aborted; anything else is a
+  network failure.
 - `put` carries the bytes of each upload to its presigned URL, with exactly the
   headers the upload payload names (the URL is signed over them): the grid's file
   columns and `createSheetsUpload`. For `uploadToFilesTable`, which takes its own

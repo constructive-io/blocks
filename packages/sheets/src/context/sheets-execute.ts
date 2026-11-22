@@ -4,7 +4,7 @@ import { print } from 'graphql';
 import { ConstructiveError, createError, isAuthenticationCode, parseGraphQLError, TypedDocumentString } from '@constructive-io/data';
 
 import type { SheetsConfig, SheetsFetchFn, SheetsStorageTransport } from './sheets-context';
-import { createPresignedSheetsUpload } from './sheets-upload-presigned';
+import { abortError, createPresignedSheetsUpload } from './sheets-upload-presigned';
 
 // The presigned uploader lives with the upload protocol; it stays importable from here.
 export { createPresignedSheetsUpload };
@@ -17,7 +17,10 @@ type ExecutableDocument = TypedDocumentString<any, any> | DocumentNode | string 
 
 /** Per-request options. An executor that does not support one ignores it. */
 export interface SheetsExecuteOptions {
-	/** Aborts the request, for example when the filter or sort it was for has changed. */
+	/**
+	 * Aborts the request, for example when the filter or sort it was for has changed.
+	 * An executor that honours it rejects the aborted request with an error named `AbortError`.
+	 */
 	signal?: AbortSignal;
 }
 
@@ -200,6 +203,7 @@ export function createSheetsExecute(
 				...(options?.signal ? { signal: options.signal } : {}),
 			});
 		} catch (error) {
+			if (options?.signal?.aborted) throw abortError('The request was cancelled.');
 			throw createError.network(error instanceof Error ? error : undefined);
 		}
 

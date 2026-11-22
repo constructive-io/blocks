@@ -25,7 +25,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { MetaQuery } from '@constructive-io/data';
 
-import type { SheetsConfig } from '../../context/sheets-context';
+import type { SheetsConfig, SheetsFetchFn } from '../../context/sheets-context';
+import { createSheetsExecute } from '../../context/sheets-execute';
 import { SheetsProvider } from '../../context/sheets-provider';
 import { unfinishedUploadOf } from '../../context/sheets-upload-presigned';
 import { Sheets } from '../../grid/sheets';
@@ -540,17 +541,25 @@ describe('Sheets file columns over the torture schema', () => {
 		expect(cell(1, 'avatar').querySelector('[data-slot="file-cell-pending"], [data-slot="file-cell-failed"]')).toBeNull();
 	});
 
-	it('Escape while a link column waits for its link aborts the link lookup and writes nothing', async () => {
+	it('Escape while a link column waits for its link aborts the link lookup, writes nothing and reports no error', async () => {
 		const lookups: Array<{ signal: AbortSignal | undefined }> = [];
+		// The lookup runs through the default executor over a fetch that, like the platform's,
+		// hangs until the request is aborted and then rejects with the signal's reason.
+		const hangingFetch: SheetsFetchFn = (_url, init) => {
+			lookups.push({ signal: init.signal });
+			return new Promise<Response>((_resolve, reject) => init.signal?.addEventListener('abort', () => reject(init.signal!.reason), { once: true }));
+		};
+		const lookupExecute = createSheetsExecute(
+			{ endpoint: 'https://storage.test/graphql', auth: { mode: 'embedded', getToken: () => null }, transport: { fetch: hangingFetch } },
+			() => null,
+		);
 		await mount({}, { columns: { DomainKind: { attachmentLink: { bucketKey: 'docs' } } } }, 'DomainKind', (backends) => {
 			const execute = backends.storage.execute;
-			// After the PUT, a download-URL lookup hangs until the client aborts it.
-			backends.storage.execute = (<T,>(document: unknown, variables?: Record<string, unknown>, options?: { signal?: AbortSignal }) => {
-				if (backends.puts.length === 0 || !/downloadUrl/.test(String(document))) return execute<T>(document as string, variables, options);
-				const signal = options?.signal;
-				lookups.push({ signal });
-				return new Promise<T>((_resolve, reject) => signal?.addEventListener('abort', () => reject(signal.reason), { once: true }));
-			}) as typeof execute;
+			// After the PUT, the download-URL lookup takes the hanging route.
+			backends.storage.execute = (<T,>(document: unknown, variables?: Record<string, unknown>, options?: { signal?: AbortSignal }) =>
+				backends.puts.length > 0 && /downloadUrl/.test(String(document))
+					? lookupExecute<T>(document as string, variables, options)
+					: execute<T>(document as string, variables, options)) as typeof execute;
 		});
 		backends.storage.rows.AppBucket!.push({
 			id: '00000000-0000-4000-8000-0000000000b3', key: 'docs', type: 'public', isPublic: true,
@@ -569,6 +578,7 @@ describe('Sheets file columns over the torture schema', () => {
 		await settle(50);
 		expect(lookups).toHaveLength(1);
 		expect(backends.updates()).toEqual([]);
+		expect(hostErrors).not.toHaveBeenCalled();
 	});
 
 	it('requests a new upload URL once when the first one has expired', async () => {

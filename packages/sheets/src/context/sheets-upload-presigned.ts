@@ -277,13 +277,14 @@ export function putResponseOf(error: unknown): { status: number; body: string } 
 
 export type PutFileOptions = SheetsPutOptions;
 
-function abortError(): Error {
+/** What a cancelled upload or request rejects with: an error named `AbortError`. */
+export function abortError(message = 'The upload was cancelled.'): Error {
 	return typeof DOMException === 'function'
-		? new DOMException('The upload was cancelled.', 'AbortError')
-		: Object.assign(new Error('The upload was cancelled.'), { name: 'AbortError' });
+		? new DOMException(message, 'AbortError')
+		: Object.assign(new Error(message), { name: 'AbortError' });
 }
 
-/** True for the error a cancelled upload rejects with. */
+/** True for the error a cancelled upload or request rejects with. */
 export function isAbortError(error: unknown): boolean {
 	return Boolean(error && typeof error === 'object' && (error as { name?: unknown }).name === 'AbortError');
 }
