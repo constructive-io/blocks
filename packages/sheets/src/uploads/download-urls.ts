@@ -64,8 +64,9 @@ function urlQueryFor({ files, downloadUrlField }: Omit<DownloadUrlSource, 'execu
 }
 
 /** Download URLs by file id. Ids without a URL have no entry. */
-export async function fetchDownloadUrls(source: DownloadUrlSource, ids: readonly string[]): Promise<Map<string, string>> {
+export async function fetchDownloadUrls(source: DownloadUrlSource, ids: readonly string[], signal?: AbortSignal): Promise<Map<string, string>> {
 	const urls = new Map<string, string>();
+	const options = signal ? { signal } : undefined;
 	const query = urlQueryFor(source);
 	if (ids.length === 0 || !query) return urls;
 	const collect = (data: unknown) => {
@@ -76,9 +77,9 @@ export async function fetchDownloadUrls(source: DownloadUrlSource, ids: readonly
 		}
 	};
 	if (query.operator === 'in') {
-		collect(await source.execute(query.source, query.variables(ids)));
+		collect(await source.execute(query.source, query.variables(ids), options));
 	} else {
-		const results = await Promise.allSettled(ids.map((id) => source.execute(query.source, query.variables([id]))));
+		const results = await Promise.allSettled(ids.map((id) => source.execute(query.source, query.variables([id]), options)));
 		for (const result of results) if (result.status === 'fulfilled') collect(result.value);
 	}
 	return urls;

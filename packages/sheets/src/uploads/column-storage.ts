@@ -46,7 +46,7 @@ export interface ColumnStorage {
 	choices: ResolvedUploadChoices;
 	upload: ColumnUploadState;
 	/** Resolves download URLs by file id, or null when this column's previews cannot be signed. */
-	resolveUrls: ((ids: readonly string[]) => Promise<Map<string, string>>) | null;
+	resolveUrls: ((ids: readonly string[], signal?: AbortSignal) => Promise<Map<string, string>>) | null;
 	/** Identity of the URL resolver, for batching and caching. */
 	previewKey: string | null;
 }
@@ -98,7 +98,7 @@ function discoveryStorage(storage: SheetsStorageTransport, choices: ResolvedUplo
 	return {
 		choices,
 		upload: { status: 'ready', send },
-		resolveUrls: (ids) => fetchMediaDownloadUrls(storage, () => ids),
+		resolveUrls: (ids, signal) => fetchMediaDownloadUrls(storage, () => ids, signal),
 		previewKey: `${storage.endpoint}|discovery`,
 	};
 }
@@ -144,7 +144,7 @@ async function resolveColumnStorage(target: ColumnStorageTarget): Promise<Column
 	const details = await loadPlaneDetails(storage, adapter, catalog, binding.plane);
 	const previewKey = `${storage.endpoint}|${details.plane.filesTableKey}`;
 	const urlSource = downloadUrlSourceOf(storage, details);
-	const resolveUrls = urlSource ? (ids: readonly string[]) => fetchDownloadUrls(urlSource, ids) : null;
+	const resolveUrls = urlSource ? (ids: readonly string[], signal?: AbortSignal) => fetchDownloadUrls(urlSource, ids, signal) : null;
 	if (executeUpload) return { choices, upload: { status: 'ready', send: hostUpload(executeUpload, target) }, resolveUrls, previewKey };
 
 	const upload = planeUpload(storage, adapter, details, { choices, databaseId });

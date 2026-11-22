@@ -112,7 +112,7 @@ export const LINK_NEEDS_PUBLIC_MESSAGE =
  * within the policy. A signed URL is refused: it expires, so it cannot be stored.
  */
 export async function resolveFileLink(
-	resolveUrls: (ids: readonly string[]) => Promise<Map<string, string>>,
+	resolveUrls: (ids: readonly string[], signal?: AbortSignal) => Promise<Map<string, string>>,
 	fileId: string,
 	policy: ProcessingPolicy,
 	signal?: AbortSignal,
@@ -120,7 +120,7 @@ export async function resolveFileLink(
 	const started = Date.now();
 	let delay = policy.initialDelayMs;
 	for (;;) {
-		const url = (await resolveUrls([fileId])).get(fileId);
+		const url = (await resolveUrls([fileId], signal)).get(fileId);
 		if (signal?.aborted) throw signal.reason ?? new Error('Cancelled');
 		if (url) {
 			if (isSignedUrl(url)) throw new Error(LINK_NEEDS_PUBLIC_MESSAGE);

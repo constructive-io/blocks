@@ -508,6 +508,37 @@ describe('Sheets file columns over the torture schema', () => {
 		expect(cell(1, 'avatar').querySelector('[data-slot="file-cell-pending"], [data-slot="file-cell-failed"]')).toBeNull();
 	});
 
+	it('Escape while a link column waits for its link aborts the link lookup and writes nothing', async () => {
+		const lookups: Array<{ signal: AbortSignal | undefined }> = [];
+		await mount({}, { columns: { DomainKind: { attachmentLink: { bucketKey: 'docs' } } } }, 'DomainKind', (backends) => {
+			const execute = backends.storage.execute;
+			// After the PUT, a download-URL lookup hangs until the client aborts it.
+			backends.storage.execute = (<T,>(document: unknown, variables?: Record<string, unknown>, options?: { signal?: AbortSignal }) => {
+				if (backends.puts.length === 0 || !/downloadUrl/.test(String(document))) return execute<T>(document as string, variables, options);
+				const signal = options?.signal;
+				lookups.push({ signal });
+				return new Promise<T>((_resolve, reject) => signal?.addEventListener('abort', () => reject(signal.reason), { once: true }));
+			}) as typeof execute;
+		});
+		backends.storage.rows.AppBucket!.push({
+			id: '00000000-0000-4000-8000-0000000000b3', key: 'docs', type: 'public', isPublic: true,
+			allowedMimeTypes: null, maxFileSize: null, allowCustomKeys: false,
+		});
+		const editor = await openEditor(1, 'attachmentLink');
+		await pick(editor, new File(['%PDF'], 'report.pdf', { type: 'application/pdf' }));
+		await press('Upload & Save');
+		await waitUntil(() => lookups.length === 1, 'the link lookup');
+
+		await act(async () => {
+			editor.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }));
+		});
+		await waitUntil(() => !document.querySelector('[data-slot="image-editor"]'), 'the editor to close');
+		expect(lookups[0]!.signal?.aborted).toBe(true);
+		await settle(50);
+		expect(lookups).toHaveLength(1);
+		expect(backends.updates()).toEqual([]);
+	});
+
 	it('requests a new upload URL once when the first one has expired', async () => {
 		await mount({ expiresAt: (index) => (index === 0 ? new Date(Date.now() - 1_000).toISOString() : new Date(Date.now() + 3_600_000).toISOString()) });
 		const editor = await openEditor(1, 'avatar');
