@@ -27,7 +27,7 @@ vi.mock('../../../hooks/use-table-model', () => ({
 			key: '.posts',
 			name: 'posts',
 			primaryKey: ['id'],
-			columns: [{ name: 'cover', value: { file: { kind: 'image', multiple: false, filesType: null } } }],
+			columns: [{ name: 'cover', value: { file: { kind: 'image', multiple: false, filesType: null, bucketKey: null, isPublic: null } } }],
 		},
 		tableKey: '.posts',
 		metaTable: null,

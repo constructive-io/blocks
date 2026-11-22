@@ -108,7 +108,7 @@ function rowsFor(
 }
 
 function accessKey(details: PlaneDetails, choices: ResolvedUploadChoices): string {
-	return `${details.plane.filesTableKey}|${choices.bucketKey ?? (choices.isPublic ? 'public' : 'private')}`;
+	return `${details.plane.filesTableKey}|${choices.bucketKey ? `key:${choices.bucketKey}` : `default:${choices.isPublic ? 'public' : 'private'}`}`;
 }
 
 /** Remember which bucket an upload landed in, so the next one is checked against it. */

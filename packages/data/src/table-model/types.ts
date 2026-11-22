@@ -160,6 +160,10 @@ export interface ColumnFileModel {
 	multiple: boolean;
 	/** GraphQL type name of the files table behind the column, or null when it is not known. */
 	filesType: string | null;
+	/** Bucket key the server binds the column to; its files must be uploaded there. Null when it binds none. */
+	bucketKey: string | null;
+	/** Public (true) or private (false) bucket the server binds the column to; null when it does not say. */
+	isPublic: boolean | null;
 }
 
 /** How one GraphQL input position is shaped. Drives the write codec. */

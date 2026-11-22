@@ -2,14 +2,15 @@
 //
 // Every field is optional. A server that names the files table of each file
 // column needs none of them: Sheets reads the upload operation from the
-// storage service's own `_meta`. The fields below choose a bucket, supply an
-// owner for entity-scoped storage, and bind columns the server leaves open.
+// storage service's own `_meta`, and the bucket a column is bound to from its
+// `_meta` file binding. The fields below choose a bucket, supply an owner for
+// entity-scoped storage, and bind columns the server leaves open.
 
 /** Per-column upload choices. Each field overrides the matching top-level field. */
 export interface SheetsUploadColumnConfig {
 	/** Files table (GraphQL type name) to upload into, when the server does not bind the column to one. */
 	filesType?: string;
-	/** Bucket key to upload into. */
+	/** Bucket key to upload into, over the bucket the server binds the column to. */
 	bucketKey?: string;
 	/** Which default bucket to use when no bucket key is set: the public one (true) or the private one (false). */
 	isPublic?: boolean;
@@ -28,7 +29,10 @@ export interface SheetsUploadProcessingConfig {
 }
 
 export interface SheetsUploadConfig {
-	/** Bucket key to upload into. Omit to use the default bucket chosen by `isPublic`. */
+	/**
+	 * Bucket key for file columns the server binds to no bucket. Omit to use the
+	 * default bucket chosen by `isPublic`.
+	 */
 	bucketKey?: string;
 	/** Which default bucket to use when no bucket key is set. Default true (the public default bucket). */
 	isPublic?: boolean;
@@ -54,18 +58,28 @@ export interface ResolvedUploadChoices {
 	ownerId: string | null;
 }
 
-/** Choices for one column: the per-column entry (by table key first, then table name) over the top level. */
+/** The bucket the server binds a file column to (`MetaField.file`). */
+export interface BoundUploadBucket {
+	bucketKey: string | null;
+	isPublic: boolean | null;
+}
+
+/**
+ * Choices for one column: the per-column entry (by table key first, then table
+ * name), then the bucket the server binds the column to, then the top level.
+ */
 export function uploadChoicesFor(
 	config: SheetsUploadConfig | undefined,
 	table: { key: string; name: string },
 	columnName: string,
+	bound?: BoundUploadBucket | null,
 ): ResolvedUploadChoices {
 	const byTable = config?.columns?.[table.key] ?? config?.columns?.[table.name];
 	const column = byTable?.[columnName];
 	return {
 		filesType: column?.filesType ?? config?.filesType ?? null,
-		bucketKey: column?.bucketKey ?? config?.bucketKey ?? null,
-		isPublic: column?.isPublic ?? config?.isPublic ?? true,
+		bucketKey: column?.bucketKey ?? bound?.bucketKey ?? config?.bucketKey ?? null,
+		isPublic: column?.isPublic ?? bound?.isPublic ?? config?.isPublic ?? true,
 		ownerId: column?.ownerId ?? config?.ownerId ?? null,
 	};
 }

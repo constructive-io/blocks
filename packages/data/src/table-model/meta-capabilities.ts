@@ -23,7 +23,7 @@ export const META_OPTIONAL_CAPABILITIES = {
 	metaBelongsTo: { typeName: 'MetaBelongsToRelation', fields: ['refKeys'] },
 	metaHas: { typeName: 'MetaHasRelation', fields: ['remoteKeys'] },
 	metaStorage: { typeName: 'MetaStorage', fields: ['filesType', 'bucketsType', 'downloadUrlField', 'upload'] },
-	metaFileField: { typeName: 'MetaFileField', fields: ['kind', 'isMultiple', 'filesType'] },
+	metaFileField: { typeName: 'MetaFileField', fields: ['kind', 'isMultiple', 'filesType', 'bucketKey', 'isPublic'] },
 	metaStorageUpload: {
 		typeName: 'MetaStorageUpload',
 		fields: ['mutation', 'inputType', 'payloadType', 'bulkMutation', 'requiresOwnerId'],
@@ -116,7 +116,7 @@ function present<Alias extends MetaOptionalTypeAlias>(
 
 function fileSelection(capabilities: MetaCapabilities): string {
 	if (!has(capabilities, 'metaField', 'file') || !has(capabilities, 'metaFileField', 'kind')) return '';
-	return `file { ${present(capabilities, 'metaFileField', ['kind', 'isMultiple', 'filesType'])} }`;
+	return `file { ${present(capabilities, 'metaFileField', ['kind', 'isMultiple', 'filesType', 'bucketKey', 'isPublic'])} }`;
 }
 
 function uploadSelection(capabilities: MetaCapabilities): string {

@@ -98,6 +98,8 @@ export interface MetaschemaFileField {
 	kind: string;
 	isMultiple?: boolean | null;
 	filesType?: string | null;
+	bucketKey?: string | null;
+	isPublic?: boolean | null;
 }
 
 export interface MetaschemaEnum {

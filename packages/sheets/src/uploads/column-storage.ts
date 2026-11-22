@@ -117,12 +117,15 @@ export async function loadColumnStorage(target: ColumnStorageTarget): Promise<Co
 
 async function resolveColumnStorage(target: ColumnStorageTarget): Promise<ColumnStorage> {
 	const { storage, adapter, table, column, config, databaseId, executeUpload } = target;
-	const choices = uploadChoicesFor(config, table, column.name);
 	const file = column.value.file;
+	const choices = uploadChoicesFor(config, table, column.name, file);
 	const unavailable = (reason: string, resolveUrls: ColumnStorage['resolveUrls'] = null, previewKey: string | null = null): ColumnStorage =>
 		({ choices, upload: { status: 'unavailable', reason }, resolveUrls, previewKey });
 
-	if (file?.kind === 'attachment' && !choices.bucketKey && !choices.isPublic) return unavailable(LINK_NEEDS_PUBLIC_REASON);
+	// A link needs a public bucket: the default one asked for by access, or the one the server binds and says is private.
+	if (file?.kind === 'attachment' && !choices.isPublic && (!choices.bucketKey || choices.bucketKey === file.bucketKey && file.isPublic === false)) {
+		return unavailable(LINK_NEEDS_PUBLIC_REASON);
+	}
 	if (!storage) {
 		return executeUpload
 			? { choices, upload: { status: 'ready', send: hostUpload(executeUpload, target) }, resolveUrls: null, previewKey: null }
