@@ -4,7 +4,7 @@
   "title": "Sheets",
   "description": "A CRUD grid for the tables of a Constructive API, driven by the table model, with accessible DOM cells and adapter-owned data access.",
   "dependencies": [
-    "@constructive-io/data@^0.10.2",
+    "@constructive-io/data@^0.10.3",
     "@internationalized/date",
     "@remixicon/react",
     "@tanstack/react-form",
