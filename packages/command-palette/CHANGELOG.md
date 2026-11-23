@@ -3,6 +3,14 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.7.5](https://github.com/constructive-io/blocks/compare/@constructive-io/command-palette@0.7.4...@constructive-io/command-palette@0.7.5) (2026-11-23)
+
+**Note:** Version bump only for package @constructive-io/command-palette
+
+
+
+
+
 ## [0.7.4](https://github.com/constructive-io/blocks/compare/@constructive-io/command-palette@0.7.3...@constructive-io/command-palette@0.7.4) (2026-11-21)
 
 **Note:** Version bump only for package @constructive-io/command-palette

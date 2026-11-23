@@ -3,6 +3,14 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.5.5](https://github.com/constructive-io/blocks/compare/json-schema-to-blocks@0.5.4...json-schema-to-blocks@0.5.5) (2026-11-23)
+
+**Note:** Version bump only for package json-schema-to-blocks
+
+
+
+
+
 ## [0.5.4](https://github.com/constructive-io/blocks/compare/json-schema-to-blocks@0.5.3...json-schema-to-blocks@0.5.4) (2026-11-21)
 
 **Note:** Version bump only for package json-schema-to-blocks

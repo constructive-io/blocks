@@ -1,6 +1,6 @@
 {
   "name": "@constructive-io/sheets",
-  "version": "0.16.5",
+  "version": "0.16.6",
   "description": "Portable, extensible spreadsheet-like CRUD grid for PostGraphile (or any) backends",
   "private": false,
   "license": "MIT",
