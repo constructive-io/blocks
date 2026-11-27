@@ -277,6 +277,8 @@ export function PhoneInputBlock({ props }: BlockProps) {
  */
 export function FileUploadBlock({ props }: BlockProps) {
 	const field = useNodeField(props);
+	const accept = typeof props.accept === 'string' ? props.accept : undefined;
+	const multiple = Boolean(props.multiple);
 
 	return (
 		<FieldShell props={props} id={field.id} error={field.error}>
@@ -284,7 +286,16 @@ export function FileUploadBlock({ props }: BlockProps) {
 				id={field.id}
 				name={field.name}
 				type="file"
-				onChange={(event) => field.setValue(event.target.files?.[0]?.name ?? null)}
+				accept={accept}
+				multiple={multiple}
+				onChange={(event) => {
+					const files = Array.from(event.target.files ?? []);
+					if (multiple) {
+						field.setValue(files.length > 0 ? files.map((file) => file.name) : null);
+					} else {
+						field.setValue(files[0]?.name ?? null);
+					}
+				}}
 				disabled={field.disabled}
 				required={field.required}
 			/>

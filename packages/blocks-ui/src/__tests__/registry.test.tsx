@@ -151,4 +151,35 @@ describe('defaultBlockRegistry', () => {
 		fireEvent.change(input, { target: { value: '1e' } });
 		expect(onChange).toHaveBeenLastCalledWith({ reading_time: null });
 	});
+
+	it('renders a file input with accept/multiple for FileUpload blocks', () => {
+		const onChange = vi.fn();
+		render(
+			<DocumentRenderer
+				document={form(
+					field('FileUpload', { name: 'photo', label: 'Photo', accept: 'image/*' }),
+					field('FileUpload', { name: 'gallery', label: 'Gallery', accept: 'image/*', multiple: true }),
+				)}
+				registry={defaultBlockRegistry}
+				onChange={onChange}
+			/>,
+		);
+
+		const photo = screen.getByLabelText(/Photo/) as HTMLInputElement;
+		expect(photo.type).toBe('file');
+		expect(photo.accept).toBe('image/*');
+		expect(photo.multiple).toBe(false);
+
+		const singleFile = new File(['abc'], 'guest.jpg', { type: 'image/jpeg' });
+		fireEvent.change(photo, { target: { files: [singleFile] } });
+		expect(onChange).toHaveBeenLastCalledWith({ photo: 'guest.jpg' });
+
+		const gallery = screen.getByLabelText(/Gallery/) as HTMLInputElement;
+		expect(gallery.type).toBe('file');
+		expect(gallery.multiple).toBe(true);
+
+		const secondFile = new File(['def'], 'party.png', { type: 'image/png' });
+		fireEvent.change(gallery, { target: { files: [singleFile, secondFile] } });
+		expect(onChange).toHaveBeenLastCalledWith({ photo: 'guest.jpg', gallery: ['guest.jpg', 'party.png'] });
+	});
 });

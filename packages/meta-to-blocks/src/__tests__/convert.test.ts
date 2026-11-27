@@ -201,6 +201,82 @@ describe('tableToSchema', () => {
 
 		expect(schema.properties?.shape).toMatchObject({ type: 'string', maxLength: 255 });
 	});
+
+	it('lowers image, upload, attachment, and _meta file columns to FileUpload controls', () => {
+		const guestPhotos: MetaTable = {
+			name: 'guest_photos',
+			fields: [
+				{
+					name: 'photo',
+					type: { gqlType: 'Image', pgType: 'image' },
+					isNotNull: true,
+					file: { kind: 'image', isMultiple: false, filesType: 'AppFile', bucketKey: 'public', isPublic: true },
+				},
+				{
+					name: 'gallery',
+					type: { gqlType: '[Image]', pgType: 'image[]', isArray: true },
+					file: { kind: 'image', isMultiple: true, filesType: 'AppFile', bucketKey: 'public', isPublic: true },
+				},
+				{
+					name: 'document',
+					type: { gqlType: 'JSON', pgType: 'jsonb' },
+					file: { kind: 'upload', isMultiple: false, filesType: 'AppFile', bucketKey: 'private', isPublic: false },
+				},
+				{
+					name: 'receipt',
+					type: { gqlType: 'String', pgType: 'attachment' },
+				},
+				{
+					name: 'legacy_uploads',
+					type: { gqlType: 'ConstructiveInternalTypeUpload', pgType: 'uploadArray', isArray: true },
+				},
+				{
+					name: 'meta_multi_photos',
+					type: { gqlType: 'JSON', pgType: 'jsonb' },
+					file: { kind: 'image', isMultiple: true, filesType: 'AppFile' },
+				},
+			],
+		};
+
+		const schema = tableToSchema(guestPhotos);
+		expect(schema.properties?.meta_multi_photos).toMatchObject({
+			type: ['array', 'null'],
+			items: { type: 'string', format: 'data-url' },
+		});
+
+		const byName = new Map(tableToNodes(guestPhotos).map((node) => [node.props.name, node]));
+
+		expect(byName.get('photo')?.type).toBe('FileUpload');
+		expect(byName.get('photo')?.props.accept).toBe('image/*');
+		expect(byName.get('photo')?.props.multiple).toBeUndefined();
+		expect(byName.get('photo')?.props.file).toEqual({
+			kind: 'image',
+			isMultiple: false,
+			filesType: 'AppFile',
+			bucketKey: 'public',
+			isPublic: true,
+		});
+
+		expect(byName.get('gallery')?.type).toBe('FileUpload');
+		expect(byName.get('gallery')?.props.accept).toBe('image/*');
+		expect(byName.get('gallery')?.props.multiple).toBe(true);
+
+		expect(byName.get('document')?.type).toBe('FileUpload');
+		expect(byName.get('document')?.props.accept).toBeUndefined();
+		expect(byName.get('document')?.props.file).toEqual({
+			kind: 'upload',
+			isMultiple: false,
+			filesType: 'AppFile',
+			bucketKey: 'private',
+			isPublic: false,
+		});
+
+		expect(byName.get('receipt')?.type).toBe('FileUpload');
+		expect(byName.get('legacy_uploads')?.type).toBe('FileUpload');
+		expect(byName.get('legacy_uploads')?.props.multiple).toBe(true);
+		expect(byName.get('meta_multi_photos')?.type).toBe('FileUpload');
+		expect(byName.get('meta_multi_photos')?.props.multiple).toBe(true);
+	});
 });
 
 describe('titleize', () => {
