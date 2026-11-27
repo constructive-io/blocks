@@ -29,6 +29,14 @@ export interface MetaType {
 	encoding?: MetaEncoding | null;
 }
 
+export interface MetaFile {
+	kind?: 'image' | 'upload' | 'attachment' | string | null;
+	isMultiple?: boolean | null;
+	filesType?: string | null;
+	bucketKey?: string | null;
+	isPublic?: boolean | null;
+}
+
 export interface MetaField {
 	name: string;
 	type?: MetaType | null;
@@ -38,6 +46,7 @@ export interface MetaField {
 	isForeignKey?: boolean | null;
 	description?: string | null;
 	enumValues?: MetaEnum | null;
+	file?: MetaFile | null;
 }
 
 export interface MetaTableRef {

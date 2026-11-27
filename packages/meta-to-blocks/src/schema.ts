@@ -31,6 +31,9 @@ const scalarTypes: Record<string, JSONSchema> = {
 	InternetAddress: { type: 'string', maxLength: 45 },
 	Interval: { type: 'string', format: 'json' },
 	GeoJSON: { type: 'string', format: 'json' },
+	Image: { type: 'string', format: 'data-url' },
+	Upload: { type: 'string', format: 'data-url' },
+	Attachment: { type: 'string', format: 'data-url' },
 };
 
 /** Postgres types whose GraphQL scalar is too coarse to pick a widget from. */
@@ -65,6 +68,9 @@ const pgTypes: Record<string, JSONSchema> = {
 	tsvector: { type: 'string', format: 'json' },
 	email: { type: 'string', format: 'email', maxLength: 320 },
 	citext: { type: 'string', maxLength: 255 },
+	image: { type: 'string', format: 'data-url' },
+	upload: { type: 'string', format: 'data-url' },
+	attachment: { type: 'string', format: 'data-url' },
 };
 
 /** `_meta` scalar encodings, which are more specific than either type name. */
@@ -199,21 +205,63 @@ export function selectFields(table: MetaTable, options: MetaOptions = {}): MetaF
 	);
 }
 
+const FILE_KINDS = new Set(['image', 'upload', 'attachment']);
+
+function fileKindOf(field: MetaField): string | undefined {
+	const explicit = field.file?.kind;
+	if (typeof explicit === 'string' && explicit.length > 0) return explicit;
+	const pg = baseType(field.type?.pgType);
+	if (pg && FILE_KINDS.has(pg)) return pg;
+	const gql = unwrap(field.type?.gqlType)?.toLowerCase();
+	if (gql && FILE_KINDS.has(gql)) return gql;
+	return undefined;
+}
+
+/** File columns (`image`, `upload`, `attachment`, or `_meta` `field.file`) lower to `FileUpload`. */
+function fileAnnotation(field: MetaField): { widget: string; props?: Record<string, unknown> } | undefined {
+	const kind = fileKindOf(field);
+	if (!kind && !field.file) return undefined;
+
+	const multiple = Boolean(field.file?.isMultiple || isArrayColumn(field));
+	const fileMeta: Record<string, unknown> = {};
+	if (kind) fileMeta.kind = kind;
+	if (field.file?.isMultiple != null) fileMeta.isMultiple = field.file.isMultiple;
+	else if (multiple) fileMeta.isMultiple = true;
+	if (field.file?.filesType) fileMeta.filesType = field.file.filesType;
+	if (field.file?.bucketKey) fileMeta.bucketKey = field.file.bucketKey;
+	if (field.file?.isPublic != null) fileMeta.isPublic = field.file.isPublic;
+
+	const props: Record<string, unknown> = {
+		...(kind === 'image' ? { accept: 'image/*' } : {}),
+		...(multiple ? { multiple: true } : {}),
+		...(Object.keys(fileMeta).length > 0 ? { file: fileMeta } : {}),
+	};
+
+	return {
+		widget: 'FileUpload',
+		...(Object.keys(props).length > 0 ? { props } : {}),
+	};
+}
+
 /** One column → its JSON Schema property (including `x-ui` presentation). */
 export function fieldToSchema(table: MetaTable, field: MetaField, override?: FieldOverride): JSONSchema {
 	const values = enumValues(field);
+	const file = values ? undefined : fileAnnotation(field);
 	const scalar: JSONSchema = values
 		? { type: 'string', enum: values }
-		: typeToSchema(field.type);
+		: file
+			? { type: 'string', format: 'data-url' }
+			: typeToSchema(field.type);
 
 	const inner: JSONSchema = {
 		...scalar,
 		...(field.description ? { description: field.description } : {}),
 	};
 
-	const fk = foreignKeyAnnotation(table, field);
+	const fk = file ? undefined : foreignKeyAnnotation(table, field);
+	const baseUi = file ?? fk;
 	const ui = {
-		...fk,
+		...baseUi,
 		// `author_id` picks an author, so the label loses the id suffix.
 		...(fk ? { label: titleize(field.name) } : {}),
 		...(override?.widget ? { widget: override.widget } : {}),
@@ -223,8 +271,8 @@ export function fieldToSchema(table: MetaTable, field: MetaField, override?: Fie
 		...(override?.hidden ? { hidden: true } : {}),
 		...(override?.disabled ? { disabled: true } : {}),
 		...(override?.order != null ? { order: override.order } : {}),
-		...(fk?.props || override?.props
-			? { props: { ...(fk?.props as Record<string, unknown>), ...override?.props } }
+		...(baseUi?.props || override?.props
+			? { props: { ...(baseUi?.props as Record<string, unknown>), ...override?.props } }
 			: {}),
 	};
 
