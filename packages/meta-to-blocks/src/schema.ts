@@ -101,7 +101,7 @@ function varcharLength(pgType: string | null | undefined): number | undefined {
 }
 
 function baseType(pgType: string | null | undefined): string | undefined {
-	return pgType?.replace(/^_/, '').replace(/\[\]$/, '').replace(/\(.*\)$/, '').trim() || undefined;
+	return pgType?.replace(/^_/, '').replace(/(?:\[\]|Array)$/, '').replace(/\(.*\)$/, '').trim() || undefined;
 }
 
 /**
@@ -136,7 +136,12 @@ export function structuredConstraints(table: MetaTable): MetaConstraints | undef
 }
 
 function isArrayColumn(field: MetaField): boolean {
-	return Boolean(field.type?.isArray) || Boolean(field.type?.pgType?.endsWith('[]')) || field.type?.pgType?.startsWith('_') === true;
+	return (
+		Boolean(field.type?.isArray) ||
+		Boolean(field.type?.pgType?.endsWith('[]')) ||
+		Boolean(field.type?.pgType?.endsWith('Array')) ||
+		field.type?.pgType?.startsWith('_') === true
+	);
 }
 
 function enumValues(field: MetaField): string[] | undefined {
@@ -212,7 +217,7 @@ function fileKindOf(field: MetaField): string | undefined {
 	if (typeof explicit === 'string' && explicit.length > 0) return explicit;
 	const pg = baseType(field.type?.pgType);
 	if (pg && FILE_KINDS.has(pg)) return pg;
-	const gql = unwrap(field.type?.gqlType)?.toLowerCase();
+	const gql = unwrap(field.type?.gqlType)?.replace(/^ConstructiveInternalType/, '').toLowerCase();
 	if (gql && FILE_KINDS.has(gql)) return gql;
 	return undefined;
 }
@@ -276,7 +281,8 @@ export function fieldToSchema(table: MetaTable, field: MetaField, override?: Fie
 			: {}),
 	};
 
-	const schema: JSONSchema = isArrayColumn(field) ? { type: 'array', items: inner } : inner;
+	const isArray = isArrayColumn(field) || Boolean(field.file?.isMultiple);
+	const schema: JSONSchema = isArray ? { type: 'array', items: inner } : inner;
 	// A nullable column keeps its widget but accepts an explicit null.
 	if (!field.isNotNull) schema.type = [schema.type as JSONSchemaType, 'null'];
 
